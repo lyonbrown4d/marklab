@@ -14,7 +14,6 @@ import TabsBar from '@/components/TabsBar'
 import AppStatusBar from '@/components/AppStatusBar'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
 import TerminalPanel from '@/components/TerminalPanel'
-import { Toaster } from '@/components/ui/sonner'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
 import type { GraphData } from '@/logic/graph'
 import type {
@@ -552,6 +551,7 @@ export default function AppLayout() {
           editorValue={state.editorValue}
           files={state.files}
           fileContents={state.fileContents}
+          dirtyPaths={state.dirtyPaths}
           workspaceIndex={state.workspaceIndex}
           tabs={state.tabs.map(getWorkspaceTabId)}
           totalFiles={totalFiles}
@@ -565,7 +565,6 @@ export default function AppLayout() {
 
   return (
     <div className="app-shell flex h-full flex-col">
-      <Toaster richColors closeButton />
       <ExportStatusOverlay />
       <Titlebar
         activePath={state.activePath}

@@ -5,8 +5,10 @@ import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
+import { cn } from '@/lib/utils'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
+const LARGE_MARKDOWN_VIEW_FADE_LIMIT = 30_000
 
 type WysiwygEditorPageProps = {
   activePath: string | null
@@ -21,6 +23,7 @@ function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: Wysiw
   const activePathRef = useRef(activePath)
   const valueRef = useRef(value)
   const stats = useDocumentStats(value, showStatusBar)
+  const shouldAnimateView = value.length <= LARGE_MARKDOWN_VIEW_FADE_LIMIT
   const slashLabels = useMemo<SlashCommandLabels>(
     () => ({
       textGroup: t('slash.textGroup'),
@@ -62,7 +65,7 @@ function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: Wysiw
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
         <div className="editor-paper relative h-full w-full overflow-hidden">
-          <div className="h-full animate-[view-fade_140ms_ease-out]">
+          <div className={cn('h-full', shouldAnimateView && 'animate-[view-fade_140ms_ease-out]')}>
             <Suspense fallback={<EditorPaneFallback />}>
               <MarkdownEditor
                 ref={editorRef}

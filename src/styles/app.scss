@@ -75,7 +75,7 @@
     box-shadow 160ms ease;
 }
 
-.editor-paper:has(.ProseMirror-focused) {
+.editor-paper:focus-within {
   border-color: color-mix(in srgb, hsl(var(--ring)) 42%, hsl(var(--border)));
   box-shadow:
     0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 16%, transparent),

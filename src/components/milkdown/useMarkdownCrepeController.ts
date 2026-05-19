@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, type PointerEvent } from 'react'
 import {
   configureMarkdownCrepe,
-  type MarkViewFactory,
   type NodeViewFactory,
 } from '@/components/milkdown/configureMarkdownCrepe'
 import { createMarkdownCrepe } from '@/components/milkdown/createMarkdownCrepe'
@@ -40,7 +39,6 @@ import type { MarkdownAssetImportStrategy } from '@/store/useAppStore'
 type UseMarkdownCrepeControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
   markdownAssetImportStrategy: MarkdownAssetImportStrategy
-  markViewFactory: MarkViewFactory
   nodeViewFactory: NodeViewFactory
 }
 
@@ -53,11 +51,50 @@ const scheduleMicrotask = (task: () => void) => {
   void Promise.resolve().then(task)
 }
 
+const LARGE_MARKDOWN_AUTO_FOCUS_LIMIT = 50_000
+const LARGE_MARKDOWN_DEFER_CREATE_LIMIT = 30_000
+
+const scheduleMarkdownEditorCreate = (markdown: string, task: () => void) => {
+  let cancelled = false
+
+  if (markdown.length <= LARGE_MARKDOWN_DEFER_CREATE_LIMIT) {
+    let frame: number | null = window.requestAnimationFrame(() => {
+      frame = null
+      if (!cancelled) task()
+    })
+    return () => {
+      cancelled = true
+      if (frame !== null) window.cancelAnimationFrame(frame)
+    }
+  }
+
+  let firstFrame: number | null = null
+  let secondFrame: number | null = null
+  let timer: number | null = null
+
+  firstFrame = window.requestAnimationFrame(() => {
+    firstFrame = null
+    secondFrame = window.requestAnimationFrame(() => {
+      secondFrame = null
+      timer = window.setTimeout(() => {
+        timer = null
+        if (!cancelled) task()
+      }, 0)
+    })
+  })
+
+  return () => {
+    cancelled = true
+    if (firstFrame !== null) window.cancelAnimationFrame(firstFrame)
+    if (secondFrame !== null) window.cancelAnimationFrame(secondFrame)
+    if (timer !== null) window.clearTimeout(timer)
+  }
+}
+
 export const useMarkdownCrepeController = ({
   activePath,
   darkMode,
   markdownAssetImportStrategy,
-  markViewFactory,
   nodeViewFactory,
   onChange,
   placeholder,
@@ -211,72 +248,94 @@ export const useMarkdownCrepeController = ({
 
   useFocusHeadingEvent(activePath, crepeRef)
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const root = rootRef.current
     if (!root) return
-
-    const crepe = createMarkdownCrepe({
-      root,
-      initialValue: latestValue.current,
-      darkMode,
-      onSlashImageImport: pickAndImportImage,
-      placeholder,
-      slashLabels,
-    })
-
-    configureMarkdownCrepe(crepe, {
-      getImageDocumentPath,
-      markViewFactory,
-      nodeViewFactory,
-      onMarkdownUpdated: (markdown) => {
-        if (applyingExternalValueRef.current) {
-          latestValue.current = markdown
-          return
-        }
-        if (markdown === latestValue.current) return
-        latestValue.current = markdown
-        localEchoRef.current = {
-          path: activePathRef.current,
-          value: markdown,
-        }
-        onChangeRef.current(markdown)
-      },
-      resolveImageSrc,
-      subscribeImageDocumentPath,
-    })
+    const valueAtSchedule = latestValue.current
 
     let destroyed = false
-    void crepe
-      .create()
-      .then(() => {
-        if (destroyed) return
-        crepeRef.current = crepe
-        if (readCrepeMarkdown(crepe, latestValue.current) !== latestValue.current) {
-          applyExternalValue(crepe, latestValue.current, { preserveSelection: false })
-        }
-        lastSyncedPathRef.current = activePathRef.current
-        if (!hasInitializedEditorRef.current) {
-          hasInitializedEditorRef.current = true
-          if (activePathRef.current) {
-            scrollEditorToTop()
-            focusEditor()
+    let crepe: ReturnType<typeof createMarkdownCrepe> | null = null
+    let initialViewportFrame: number | null = null
+
+    const cancelCreate = scheduleMarkdownEditorCreate(valueAtSchedule, () => {
+      if (destroyed) return
+      const initialValueAtCreate = latestValue.current
+      const initialPathAtCreate = activePathRef.current
+
+      crepe = createMarkdownCrepe({
+        root,
+        initialValue: initialValueAtCreate,
+        darkMode,
+        onSlashImageImport: pickAndImportImage,
+        placeholder,
+        slashLabels,
+      })
+
+      configureMarkdownCrepe(crepe, {
+        getImageDocumentPath,
+        nodeViewFactory,
+        onMarkdownUpdated: (markdown) => {
+          if (applyingExternalValueRef.current) {
+            latestValue.current = markdown
+            return
           }
-        }
+          if (markdown === latestValue.current) return
+          latestValue.current = markdown
+          localEchoRef.current = {
+            path: activePathRef.current,
+            value: markdown,
+          }
+          onChangeRef.current(markdown)
+        },
+        resolveImageSrc,
+        subscribeImageDocumentPath,
       })
-      .catch((error) => {
-        if (destroyed) return
-        console.error('Failed to initialize Milkdown', error)
-      })
+
+      void crepe
+        .create()
+        .then(() => {
+          if (destroyed || !crepe) return
+          crepeRef.current = crepe
+          if (
+            latestValue.current !== initialValueAtCreate ||
+            activePathRef.current !== initialPathAtCreate
+          ) {
+            applyExternalValue(crepe, latestValue.current, { preserveSelection: false })
+          }
+          lastSyncedPathRef.current = activePathRef.current
+          if (!hasInitializedEditorRef.current) {
+            hasInitializedEditorRef.current = true
+            if (activePathRef.current) {
+              initialViewportFrame = window.requestAnimationFrame(() => {
+                initialViewportFrame = null
+                if (destroyed || crepeRef.current !== crepe) return
+                scrollEditorToTop()
+                if (initialValueAtCreate.length <= LARGE_MARKDOWN_AUTO_FOCUS_LIMIT) {
+                  focusEditor()
+                }
+              })
+            }
+          }
+        })
+        .catch((error) => {
+          if (destroyed) return
+          console.error('Failed to initialize Milkdown', error)
+        })
+    })
 
     return () => {
       destroyed = true
+      cancelCreate()
       scheduledExternalApplyRef.current += 1
-      if (crepeRef.current === crepe) {
+      if (initialViewportFrame !== null) {
+        window.cancelAnimationFrame(initialViewportFrame)
+      }
+      if (crepe && crepeRef.current === crepe) {
         latestValue.current = readCrepeMarkdown(crepe, latestValue.current)
         crepeRef.current = null
       }
       try {
-        crepe.destroy()
+        crepe?.destroy()
       } catch {
         // Crepe can be half-initialized during React dev teardown.
       }
@@ -286,7 +345,6 @@ export const useMarkdownCrepeController = ({
     darkMode,
     focusEditor,
     getImageDocumentPath,
-    markViewFactory,
     nodeViewFactory,
     pickAndImportImage,
     placeholder,

@@ -24,6 +24,7 @@ type RightSidebarProps = {
   editorValue: string
   files: FileEntry[]
   fileContents: Record<string, string>
+  dirtyPaths?: Record<string, true>
   workspaceIndex?: FsWorkspaceIndex | null
   tabs: string[]
   totalFiles: number
@@ -38,6 +39,7 @@ const RightSidebarComponent = ({
   editorValue,
   files,
   fileContents,
+  dirtyPaths,
   workspaceIndex,
   tabs,
   totalFiles,
@@ -66,6 +68,7 @@ const RightSidebarComponent = ({
     editorValue,
     files,
     fileContents,
+    dirtyPaths,
     workspaceIndex,
   })
   const targetLabel = targetPath ? createFileLabel(targetPath) : t('inspector.none')

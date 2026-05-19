@@ -1,8 +1,11 @@
-import { useDeferredValue, useMemo } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import keyBy from 'lodash-es/keyBy'
 import { useWorkspaceMarkdownContents } from '@/app/useWorkspaceMarkdownContents'
-import { getMarkdownSourceDiagnostics } from '@/logic/markdownDiagnostics'
+import {
+  getMarkdownSourceDiagnostics,
+  type MarkdownSourceDiagnostic,
+} from '@/logic/markdownDiagnostics'
 import {
   createFileLabel,
   extractHeadings,
@@ -11,7 +14,7 @@ import {
   resolveRelativePath,
   splitLinkTarget,
 } from '@/logic/paths'
-import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
+import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
 import { isTauriRuntime } from '@/utils/tauri'
 import type { SidebarBacklink } from '@/components/RightSidebarContent'
@@ -23,6 +26,7 @@ type UseRightSidebarDataArgs = {
   editorValue: string
   files: FileEntry[]
   fileContents: Record<string, string>
+  dirtyPaths?: Record<string, true>
   workspaceIndex?: FsWorkspaceIndex | null
 }
 
@@ -33,6 +37,7 @@ export function useRightSidebarData({
   editorValue,
   files,
   fileContents,
+  dirtyPaths = {},
   workspaceIndex,
 }: UseRightSidebarDataArgs) {
   const tauriAvailable = isTauriRuntime()
@@ -67,12 +72,36 @@ export function useRightSidebarData({
   const indexedTargetFile = deferredTargetPath
     ? indexedFilesByPath?.[deferredTargetPath]
     : undefined
+  const targetIsDirty = Boolean(deferredTargetPath && dirtyPaths[deferredTargetPath])
+  const shouldUseIndexedTarget = Boolean(indexedTargetFile && !targetIsDirty)
+  const shouldWaitForIndexedActiveTarget = Boolean(
+    tauriAvailable &&
+    !workspaceIndex &&
+    deferredTargetPath &&
+    deferredTargetPath === activePath &&
+    !targetIsDirty,
+  )
   const workspaceContents = useWorkspaceMarkdownContents(
     files,
     deferredFileContents,
-    !collapsed && !workspaceIndex,
+    !collapsed && !workspaceIndex && !tauriAvailable,
   )
   const targetContent = useMemo(() => {
+    if (collapsed) return ''
+    if (!deferredTargetPath) return ''
+    if (shouldUseIndexedTarget || shouldWaitForIndexedActiveTarget) return ''
+    if (deferredTargetPath === activePath) return deferredEditorValue
+    return workspaceContents[deferredTargetPath] ?? ''
+  }, [
+    activePath,
+    collapsed,
+    deferredEditorValue,
+    deferredTargetPath,
+    shouldUseIndexedTarget,
+    shouldWaitForIndexedActiveTarget,
+    workspaceContents,
+  ])
+  const statsContent = useMemo(() => {
     if (collapsed) return ''
     if (!deferredTargetPath) return ''
     if (deferredTargetPath === activePath) return deferredEditorValue
@@ -80,11 +109,18 @@ export function useRightSidebarData({
   }, [activePath, collapsed, deferredEditorValue, deferredTargetPath, workspaceContents])
   const outline = useMemo(() => {
     if (collapsed) return []
-    if (deferredTargetPath && deferredTargetPath !== activePath && indexedTargetFile) {
+    if (shouldUseIndexedTarget && indexedTargetFile) {
       return indexedTargetFile.headings
     }
+    if (shouldWaitForIndexedActiveTarget) return []
     return extractHeadings(targetContent)
-  }, [activePath, collapsed, deferredTargetPath, indexedTargetFile, targetContent])
+  }, [
+    collapsed,
+    indexedTargetFile,
+    shouldUseIndexedTarget,
+    shouldWaitForIndexedActiveTarget,
+    targetContent,
+  ])
   const backlinks = useMemo<SidebarBacklink[]>(() => {
     if (collapsed) return []
     if (!deferredTargetPath) return []
@@ -141,6 +177,14 @@ export function useRightSidebarData({
   ])
   const problems = useMemo(() => {
     if (collapsed) return []
+    if (shouldUseIndexedTarget && indexedTargetFile) {
+      return getIndexedMarkdownSourceDiagnostics({
+        activePath: deferredTargetPath,
+        file: indexedTargetFile,
+        workspaceIndex,
+      })
+    }
+    if (shouldWaitForIndexedActiveTarget) return []
     return getMarkdownSourceDiagnostics({
       activePath: deferredTargetPath,
       content: targetContent,
@@ -148,16 +192,34 @@ export function useRightSidebarData({
       fileContents: workspaceContents,
       workspaceIndex,
     })
-  }, [collapsed, files, workspaceIndex, deferredTargetPath, targetContent, workspaceContents])
-  const documentStats = useMemo(() => getDocumentStats(targetContent), [targetContent])
+  }, [
+    collapsed,
+    deferredTargetPath,
+    files,
+    indexedTargetFile,
+    shouldUseIndexedTarget,
+    shouldWaitForIndexedActiveTarget,
+    targetContent,
+    workspaceContents,
+    workspaceIndex,
+  ])
+  const documentStats = useIdleDocumentStats(statsContent, !collapsed)
   const outgoingLinkCount = useMemo(() => {
     if (collapsed) return 0
     if (!deferredTargetPath) return 0
-    if (deferredTargetPath !== activePath && indexedTargetFile) {
+    if (shouldUseIndexedTarget && indexedTargetFile) {
       return indexedTargetFile.links.filter((link) => !link.is_external).length
     }
+    if (shouldWaitForIndexedActiveTarget) return 0
     return extractLinks(targetContent).filter((link) => !isExternalLink(link.target)).length
-  }, [activePath, collapsed, deferredTargetPath, indexedTargetFile, targetContent])
+  }, [
+    collapsed,
+    deferredTargetPath,
+    indexedTargetFile,
+    shouldUseIndexedTarget,
+    shouldWaitForIndexedActiveTarget,
+    targetContent,
+  ])
   const errorProblems = useMemo(
     () => problems.filter((problem) => problem.severity === 'error'),
     [problems],
@@ -201,6 +263,99 @@ const normalizeLinkedPath = (
   return normalized.endsWith('.md') || normalized.endsWith('.markdown')
     ? normalized
     : `${normalized}.md`
+}
+
+type IdleWindow = Window & {
+  cancelIdleCallback?: (handle: number) => void
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+}
+
+const EMPTY_DOCUMENT_STATS = {
+  lines: 0,
+  words: 0,
+}
+
+const scheduleIdleUpdate = (callback: () => void) => {
+  const idleWindow = window as IdleWindow
+
+  if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+    const handle = idleWindow.requestIdleCallback(callback, { timeout: 900 })
+    return () => idleWindow.cancelIdleCallback?.(handle)
+  }
+
+  const timer = window.setTimeout(callback, 160)
+  return () => window.clearTimeout(timer)
+}
+
+const useIdleDocumentStats = (value: string, enabled: boolean) => {
+  const [stats, setStats] = useState(EMPTY_DOCUMENT_STATS)
+
+  useEffect(() => {
+    if (!enabled) return
+
+    return scheduleIdleUpdate(() => {
+      setStats(getDocumentStats(value))
+    })
+  }, [enabled, value])
+
+  return enabled ? stats : EMPTY_DOCUMENT_STATS
+}
+
+const getIndexedMarkdownSourceDiagnostics = ({
+  activePath,
+  file,
+  workspaceIndex,
+}: {
+  activePath: string | null
+  file: FsIndexedMarkdownFile
+  workspaceIndex?: FsWorkspaceIndex | null
+}): MarkdownSourceDiagnostic[] => {
+  if (!activePath || !workspaceIndex) return []
+
+  const markdownFileSet = new Set(workspaceIndex.files.map((item) => item.path))
+  const diagnostics: MarkdownSourceDiagnostic[] = []
+
+  file.links.forEach((link) => {
+    if (link.is_external) return
+
+    const startColumn = link.column
+    const endColumn = startColumn + Math.max(1, link.target.length)
+
+    if (!link.target_path || !markdownFileSet.has(link.target_path)) {
+      if (link.link_type === 'wiki') {
+        diagnostics.push({
+          line: link.line,
+          startColumn,
+          endColumn,
+          message: `Cannot find linked note "${link.target}"`,
+          severity: 'error',
+        })
+        return
+      }
+
+      const { path } = splitLinkTarget(link.target)
+      diagnostics.push({
+        line: link.line,
+        startColumn,
+        endColumn,
+        message: `Cannot find linked file "${path || activePath}"`,
+        severity: 'error',
+      })
+      return
+    }
+
+    if (link.target_anchor && !link.target_heading_slug) {
+      diagnostics.push({
+        line: link.line,
+        startColumn,
+        endColumn,
+        message: `Cannot find heading "${link.target_anchor}" in ${link.target_path}`,
+        severity: 'warning',
+      })
+    }
+  })
+
+  return diagnostics
 }
 
 const getDocumentStats = (value: string) => {

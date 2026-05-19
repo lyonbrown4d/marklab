@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import path from 'node:path'
 import { constants as zlibConstants } from 'node:zlib'
 import TurboConsole from 'unplugin-turbo-console/vite'
@@ -23,6 +24,9 @@ export default defineConfig(({ command }) => {
     },
     plugins: [
       react(),
+      babel({
+        presets: [reactCompilerPreset()],
+      }),
       isBuild &&
         compression({
           include: /\.(html|xml|css|json|js|mjs|svg|wasm)$/,

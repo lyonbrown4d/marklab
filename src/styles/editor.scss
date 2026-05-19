@@ -61,6 +61,121 @@
   outline: none;
 }
 
+.crepe .milkdown .ProseMirror p {
+  min-height: 1.5rem;
+  margin: 0.125rem 0;
+  padding: 0.125rem 0.25rem;
+  border-radius: calc(var(--radius) - 4px);
+  line-height: 1.5rem;
+}
+
+.crepe .milkdown .ProseMirror h1,
+.crepe .milkdown .ProseMirror h2,
+.crepe .milkdown .ProseMirror h3,
+.crepe .milkdown .ProseMirror h4,
+.crepe .milkdown .ProseMirror h5,
+.crepe .milkdown .ProseMirror h6 {
+  margin: 1.35em 0 0.45em;
+  padding: 0.125rem 0.25rem;
+  border-radius: calc(var(--radius) - 4px);
+  color: hsl(var(--foreground));
+  letter-spacing: 0;
+}
+
+.crepe .milkdown .ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.crepe .milkdown .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+.crepe .milkdown .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.28;
+}
+
+.crepe .milkdown .ProseMirror h4 {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.32;
+}
+
+.crepe .milkdown .ProseMirror h5 {
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.crepe .milkdown .ProseMirror h6 {
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: hsl(var(--muted-foreground));
+}
+
+.crepe .milkdown .ProseMirror blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid hsl(var(--border));
+  padding: 0.25rem 0 0.25rem 1rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.crepe .milkdown .ProseMirror ul,
+.crepe .milkdown .ProseMirror ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.crepe .milkdown .ProseMirror li {
+  margin: 0.125rem 0;
+  padding-left: 0.125rem;
+}
+
+.crepe .milkdown .ProseMirror hr {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.crepe .milkdown .ProseMirror strong {
+  font-weight: 700;
+}
+
+.crepe .milkdown .ProseMirror em {
+  font-style: italic;
+}
+
+.crepe .milkdown .ProseMirror del {
+  text-decoration: line-through;
+}
+
+.crepe .milkdown .ProseMirror code {
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0.125rem 0.25rem;
+  background: color-mix(in srgb, hsl(var(--muted)) 82%, hsl(var(--background)));
+  color: hsl(var(--destructive));
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+}
+
+.crepe .milkdown .ProseMirror a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.crepe .milkdown .ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid color-mix(in srgb, hsl(var(--ring)) 65%, transparent);
+  outline-offset: 2px;
+}
+
 .crepe .milkdown .marko-md-block {
   position: relative;
   transition:

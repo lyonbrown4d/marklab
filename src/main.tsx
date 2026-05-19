@@ -11,6 +11,7 @@ import '@/styles/search.scss'
 import '@/i18n/setup'
 import App from '@/App.tsx'
 import { queryClient } from '@/app/queryClient'
+import { Toaster } from '@/components/ui/sonner'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -51,6 +52,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
+      <Toaster richColors closeButton />
       {ReactQueryDevtools && (
         <Suspense fallback={null}>
           <ReactQueryDevtools initialIsOpen={false} />

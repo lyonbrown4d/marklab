@@ -14,11 +14,7 @@ import {
 } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useHotkeys, type RegisterableHotkey } from '@tanstack/react-hotkeys'
-import {
-  ProsemirrorAdapterProvider,
-  useMarkViewFactory,
-  useNodeViewFactory,
-} from '@prosemirror-adapter/react'
+import { ProsemirrorAdapterProvider, useNodeViewFactory } from '@prosemirror-adapter/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import type {
@@ -43,7 +39,6 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
   const darkMode = useDarkMode()
   const shellRef = useRef<HTMLDivElement | null>(null)
   const nodeViewFactory = useNodeViewFactory()
-  const markViewFactory = useMarkViewFactory()
   const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
   const markdownAssetImportStrategy = useAppStore((state) => state.markdownAssetImportStrategy)
   const {
@@ -59,7 +54,6 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     ...props,
     darkMode,
     markdownAssetImportStrategy,
-    markViewFactory,
     nodeViewFactory,
   })
   const shortcutDefinitions = useMemo(() => {
