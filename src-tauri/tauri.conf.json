@@ -59,6 +59,9 @@
       "desktop": {
         "schemes": ["marko"]
       }
+    },
+    "macos-fps": {
+      "enabled": true
     }
   },
   "bundle": {

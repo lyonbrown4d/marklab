@@ -58,6 +58,7 @@ fn run_impl() {
     .plugin(tauri_plugin_clipboard_manager::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+    .plugin(tauri_plugin_macos_fps::init())
     .plugin(tauri_plugin_store::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_os::init())

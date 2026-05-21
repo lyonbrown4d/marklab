@@ -6,7 +6,7 @@ authors = ["you"]
 license = ""
 repository = ""
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.85"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -49,6 +49,7 @@ tauri-plugin-deep-link = "2.4.9"
 tauri-plugin-store = "2.4.3"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-os = "2.3.2"
+tauri-plugin-macos-fps = "0.1"
 mime_guess = "2.0.5"
 url = "2.5.8"
 slug = "0.1.6"
