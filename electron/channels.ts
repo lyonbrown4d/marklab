@@ -1,0 +1,28 @@
+export const nativeIpcChannels = {
+  appReadyIsReady: 'marko:app-ready:is-ready',
+  appReadySignal: 'marko:app-ready',
+  appReadyWhenReady: 'marko:app-ready:when-ready',
+  clipboardReadImage: 'marko:clipboard:read-image',
+  clipboardReadText: 'marko:clipboard:read-text',
+  clipboardWriteText: 'marko:clipboard:write-text',
+  commandInvoke: 'marko:command:invoke',
+  dialogOpen: 'marko:dialog:open',
+  dialogSave: 'marko:dialog:save',
+  lifecycleGetLaunchInfo: 'marko:lifecycle:get-launch-info',
+  menuCommand: 'marko:menu:command',
+  menuRendererReady: 'marko:menu:renderer-ready',
+  platformGet: 'marko:platform:get',
+  settingsPersistGet: 'marko:settings:persist:get',
+  settingsPersistRemove: 'marko:settings:persist:remove',
+  settingsPersistSet: 'marko:settings:persist:set',
+  shellOpenPath: 'marko:shell:open-path',
+  shellRevealPath: 'marko:shell:reveal-path',
+  windowClose: 'marko:window:close',
+  windowIsMaximized: 'marko:window:is-maximized',
+  windowMaximize: 'marko:window:maximize',
+  windowMinimize: 'marko:window:minimize',
+  windowStartDrag: 'marko:window:start-drag',
+  windowUnmaximize: 'marko:window:unmaximize',
+} as const
+
+export type NativeIpcChannel = (typeof nativeIpcChannels)[keyof typeof nativeIpcChannels]

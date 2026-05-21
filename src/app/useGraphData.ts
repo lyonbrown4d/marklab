@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { buildGraphFromRustGraph, type GraphData } from '@/logic/graph'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import type { GraphContentMode } from '@/store/useAppStore'
 
 const EMPTY_GRAPH: GraphData = { nodes: [], edges: [], layoutKey: 'empty' }
@@ -13,7 +13,7 @@ export function useGraphData(
   activePath: string | null,
   contentMode: GraphContentMode,
 ) {
-  const tauriAvailable = isTauriRuntime()
+  const desktopAvailable = isDesktopRuntime()
   const enabled = Boolean(mode)
   const workspaceIndexKey = useMemo(() => {
     if (!workspaceIndex) return ''
@@ -25,14 +25,14 @@ export function useGraphData(
   const outlineQuery = useQuery({
     queryKey: ['outline-graph', activePath],
     queryFn: () => fsApi.getOutlineGraph(activePath ?? ''),
-    enabled: mode === 'file' && tauriAvailable && Boolean(activePath),
+    enabled: mode === 'file' && desktopAvailable && Boolean(activePath),
     staleTime: 2_000,
   })
 
   const workspaceGraphQuery = useQuery({
     queryKey: ['workspace-graph', workspaceIndexKey],
     queryFn: () => fsApi.getWorkspaceGraph(),
-    enabled: mode === 'workspace' && tauriAvailable && Boolean(workspaceIndex),
+    enabled: mode === 'workspace' && desktopAvailable && Boolean(workspaceIndex),
     staleTime: 2_000,
   })
 

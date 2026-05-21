@@ -6,7 +6,7 @@ import { Terminal } from '@xterm/xterm'
 import { terminalApi, type TerminalSessionInfo } from '@/services/terminalApi'
 import type { ThemeMode } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import {
   primeTerminalEventListeners,
   subscribeTerminalSessionEvents,
@@ -57,7 +57,7 @@ export default function TerminalSessionPane({
   const resizeFrameRef = useRef<number | null>(null)
   const [session, setSession] = useState<TerminalSessionInfo | null>(null)
   const [status, setStatus] = useState<TerminalStatus>(
-    isTauriRuntime() ? 'connecting' : 'unavailable',
+    isDesktopRuntime() ? 'connecting' : 'unavailable',
   )
   const [error, setError] = useState<string | null>(null)
 
@@ -92,7 +92,7 @@ export default function TerminalSessionPane({
   }, [error, onStateChange, session, status, tabKey])
 
   useEffect(() => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       return
     }
 

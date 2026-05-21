@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import SearchResultPreview from '@/components/SearchResultPreview'
 
 type CommandFile = {
@@ -67,7 +67,7 @@ export default function TitlebarCommandDialog({
   const fullTextSearch = useQuery({
     queryKey: ['command-workspace-search', debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 8),
-    enabled: open && isTauriRuntime() && debouncedQuery.length >= 2,
+    enabled: open && isDesktopRuntime() && debouncedQuery.length >= 2,
     placeholderData: keepPreviousData,
     staleTime: 5_000,
   })

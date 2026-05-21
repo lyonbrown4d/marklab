@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Locale } from '@/i18n/resources'
 import { getInitialLocale } from '@/i18n/utils'
-import { createIdleJsonStorage } from '@/store/persistStorage'
+import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import {
   areWorkspaceTabsEqual,
   fileViewTabId,
@@ -170,7 +170,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'marko.app',
-      storage: createIdleJsonStorage('marko.app'),
+      storage: createElectronSettingsJsonStorage('marko.app'),
       version: 11,
       migrate: (persistedState, version) => {
         const state = (persistedState ?? {}) as Partial<AppState> & { theme?: string }

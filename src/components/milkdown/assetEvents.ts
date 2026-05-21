@@ -1,13 +1,14 @@
 import type { ClipboardEvent, DragEvent } from 'react'
-import { convertFileSrc, isTauri } from '@tauri-apps/api/core'
-import { readImage, readText } from '@tauri-apps/plugin-clipboard-manager'
-import { open } from '@tauri-apps/plugin-dialog'
 import { MARKO_FILE_TREE_ITEM_MIME, readFileTreeDragPayload } from '@/logic/fileDragPayload'
 import { extractHeadings } from '@/logic/paths'
 import { rememberResolvedMarkdownImageSource } from '@/components/milkdown/markdownImageSource'
 import { fsApi } from '@/services/fsApi'
 import { beginMarkdownAssetSyncTask } from '@/store/useMarkdownAssetSyncStore'
 import type { MarkdownAssetImportStrategy } from '@/store/useAppStore'
+import { convertAssetFileSrc, convertAssetFileSrcSync } from '@/runtime/assets'
+import { readClipboardImagePng, readClipboardText } from '@/runtime/clipboard'
+import { openDialog } from '@/runtime/dialog'
+import { isDesktopRuntime } from '@/runtime/environment'
 
 type FileWithPath = File & {
   path?: unknown
@@ -138,7 +139,7 @@ export const imagePathSourcesFromDropEvent = (event: DragEvent<HTMLElement>) => 
   return pathSourcesFromDataTransfer(event.dataTransfer)
 }
 
-export const imageSourcesFromTauriDropPaths = (paths: string[]) => {
+export const imageSourcesFromRuntimeDropPaths = (paths: string[]) => {
   return paths.filter(isImagePath).map((path) => ({
     kind: 'path' as const,
     name: fileNameFromPath(path),
@@ -147,8 +148,8 @@ export const imageSourcesFromTauriDropPaths = (paths: string[]) => {
 }
 
 export const pickMarkdownImageSource = async (): Promise<MarkdownImageImportSource | null> => {
-  if (isTauri()) {
-    const selectedPath = await open({
+  if (isDesktopRuntime()) {
+    const selectedPath = await openDialog({
       multiple: false,
       filters: [
         {
@@ -171,12 +172,12 @@ export const pickMarkdownImageSource = async (): Promise<MarkdownImageImportSour
 
 export const readNativeClipboardImageSource =
   async (): Promise<MarkdownImageImportSource | null> => {
-    if (!isTauri()) return null
+    if (!isDesktopRuntime()) return null
 
     const imageSource = await readNativeClipboardImage().catch(() => null)
     if (imageSource) return imageSource
 
-    const text = await readText().catch(() => '')
+    const text = await readClipboardText().catch(() => '')
     return imageSourcesFromClipboardText(text)[0] ?? null
   }
 
@@ -204,7 +205,7 @@ const syncMarkdownAssetInBackground = ({
       rememberResolvedMarkdownImageSource(
         activePath,
         result.markdown_target,
-        convertFileSrc(result.absolute_path),
+        convertAssetFileSrc(result.absolute_path),
       )
       const replaced = replaceImageSource(previewSrc, result.markdown_target)
       if (replaced) {
@@ -263,9 +264,7 @@ const createPreviewImageSource = (source: Exclude<MarkdownImageImportSource, { k
 
 const previewPathSource = (path: string) => {
   const localPath = fileUriToPath(path) ?? path
-  if (isTauri() && isAbsolutePath(localPath)) {
-    return convertFileSrc(localPath)
-  }
+  if (isAbsolutePath(localPath)) return convertAssetFileSrcSync(localPath) ?? path
   return path
 }
 
@@ -423,38 +422,12 @@ const pickMarkdownImageFile = () => {
 }
 
 const readNativeClipboardImage = async (): Promise<MarkdownImageImportSource | null> => {
-  const image = await readImage()
-  try {
-    const [{ height, width }, rgba] = await Promise.all([image.size(), image.rgba()])
-    const png = await rgbaToPng(rgba, width, height)
-    return {
-      kind: 'file',
-      file: new File([png], `clipboard-${Date.now()}.png`, { type: 'image/png' }),
-    }
-  } finally {
-    await image.close().catch(() => {})
+  const png = await readClipboardImagePng()
+  if (!png) return null
+  return {
+    kind: 'file',
+    file: new File([png], `clipboard-${Date.now()}.png`, { type: 'image/png' }),
   }
-}
-
-const rgbaToPng = async (rgba: Uint8Array, width: number, height: number) => {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const context = canvas.getContext('2d')
-  if (!context) {
-    throw new Error('Canvas 2D context is not available')
-  }
-
-  context.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0)
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob)
-        return
-      }
-      reject(new Error('Failed to encode clipboard image'))
-    }, 'image/png')
-  })
 }
 
 const resolveSourcePath = async (path: string) => {

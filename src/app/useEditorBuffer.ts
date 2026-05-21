@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLatest, useUnmount } from 'ahooks'
 import { produce } from 'immer'
 import { fsApi, fsBufferStatusSchema } from '@/services/fsApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { listen } from '@/runtime/events'
+import { isDesktopRuntime } from '@/runtime/environment'
 
 const BUFFER_SYNC_DEBOUNCE_MS = 800
 const EMPTY_FILE_CONTENTS: Record<string, string> = {}
@@ -119,7 +120,7 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
   }, [])
 
   useEffect(() => {
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
     Object.values(syncTimers.current).forEach((timer) => window.clearTimeout(timer))
     syncTimers.current = {}
     syncedContentsRef.current = {}
@@ -134,7 +135,7 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
 
   useEffect(() => {
     if (!activePath) return
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
     const hasLocalChange = Boolean(
       dirtyPathsRef.current[activePath] || syncTimers.current[activePath],
     )
@@ -189,31 +190,18 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
   }, [activePath, dirtyPathsRef, fileContentsRef, setPathLoading, setPathSaveState, workspaceKey])
 
   useEffect(() => {
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
 
     let cancelled = false
     let unlisten: (() => void) | undefined
 
-    void import('@tauri-apps/api/event').then(({ listen }) =>
-      listen<unknown>('fs-buffer-status', (event) => {
-        const parsed = fsBufferStatusSchema.safeParse(event.payload)
-        if (!parsed.success) return
+    void listen<unknown>('fs-buffer-status', (event) => {
+      const parsed = fsBufferStatusSchema.safeParse(event.payload)
+      if (!parsed.success) return
 
-        const { path, revision, dirty } = parsed.data
-        const currentWorkspace = workspaceKeyRef.current
-        if (dirty) {
-          const revisionVersion = revisionVersionRef.current[path]?.[revision]
-          const revisionContent = revisionContentRef.current[path]?.[revision]
-          if (revisionVersion == null || revisionContent == null) return
-
-          const hasNewChange = changeVersionRef.current[path] !== revisionVersion
-          const currentValue = fileContentsRef.current[path] ?? ''
-          if (hasNewChange || currentValue !== revisionContent) return
-
-          markPathDirty(currentWorkspace, path, { status: 'saving' })
-          return
-        }
-
+      const { path, revision, dirty } = parsed.data
+      const currentWorkspace = workspaceKeyRef.current
+      if (dirty) {
         const revisionVersion = revisionVersionRef.current[path]?.[revision]
         const revisionContent = revisionContentRef.current[path]?.[revision]
         if (revisionVersion == null || revisionContent == null) return
@@ -222,15 +210,26 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
         const currentValue = fileContentsRef.current[path] ?? ''
         if (hasNewChange || currentValue !== revisionContent) return
 
-        markPathClean(currentWorkspace, path, revisionContent)
-      }).then((nextUnlisten) => {
-        if (cancelled) {
-          nextUnlisten()
-          return
-        }
-        unlisten = nextUnlisten
-      }),
-    )
+        markPathDirty(currentWorkspace, path, { status: 'saving' })
+        return
+      }
+
+      const revisionVersion = revisionVersionRef.current[path]?.[revision]
+      const revisionContent = revisionContentRef.current[path]?.[revision]
+      if (revisionVersion == null || revisionContent == null) return
+
+      const hasNewChange = changeVersionRef.current[path] !== revisionVersion
+      const currentValue = fileContentsRef.current[path] ?? ''
+      if (hasNewChange || currentValue !== revisionContent) return
+
+      markPathClean(currentWorkspace, path, revisionContent)
+    }).then((nextUnlisten) => {
+      if (cancelled) {
+        nextUnlisten()
+        return
+      }
+      unlisten = nextUnlisten
+    })
 
     return () => {
       cancelled = true
@@ -241,7 +240,7 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
   useUnmount(() => {
     Object.values(syncTimers.current).forEach((timer) => window.clearTimeout(timer))
     syncTimers.current = {}
-    if (isTauriRuntime()) {
+    if (isDesktopRuntime()) {
       void fsApi.flushBuffers().catch((error) => {
         console.error('flush buffers on unmount failed', error)
       })
@@ -281,7 +280,7 @@ export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArg
       )
       setPathSaveState(currentWorkspace, path, { status: isDirty ? 'unsaved' : 'saved' })
 
-      if (!isTauriRuntime()) return
+      if (!isDesktopRuntime()) return
       const currentTimer = syncTimers.current[path]
       if (currentTimer) {
         window.clearTimeout(currentTimer)

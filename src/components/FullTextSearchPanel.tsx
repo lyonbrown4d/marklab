@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
 import SearchResultPreview from '@/components/SearchResultPreview'
 
@@ -16,7 +16,7 @@ type FullTextSearchPanelProps = {
 export default function FullTextSearchPanel({ query, onOpenResult }: FullTextSearchPanelProps) {
   const { t } = useI18n()
   const debouncedQuery = useDebounce(query.trim(), { wait: 180 })
-  const enabled = isTauriRuntime() && debouncedQuery.length >= 2
+  const enabled = isDesktopRuntime() && debouncedQuery.length >= 2
   const searchQuery = useQuery({
     queryKey: ['workspace-search', debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 20),

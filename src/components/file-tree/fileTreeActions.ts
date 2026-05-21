@@ -1,8 +1,9 @@
 import type { NodeApi } from 'react-arborist'
-import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { createFileLabel } from '@/logic/paths'
 import { fsApi } from '@/services/fsApi'
 import type { FileTreeNode } from '@/logic/fileTree'
+import { writeClipboardText } from '@/runtime/clipboard'
+import { revealPathInSystem } from '@/runtime/opener'
 
 export const appendChildPath = (parentPath: string, name: string) =>
   [parentPath, name].filter(Boolean).join('/')
@@ -24,8 +25,7 @@ export const createMarkdownLink = (path: string) =>
 
 export const copyText = async (value: string) => {
   try {
-    const { writeText } = await import('@tauri-apps/plugin-clipboard-manager')
-    await writeText(value)
+    await writeClipboardText(value)
     return
   } catch {
     await navigator.clipboard?.writeText(value)
@@ -39,7 +39,7 @@ export const copyAbsolutePath = async (path: string) => {
 
 export const revealPath = async (path: string) => {
   const metadata = await fsApi.getPathMetadata(path)
-  await revealItemInDir(metadata.absolute_path)
+  await revealPathInSystem(metadata.absolute_path)
 }
 
 export const openPathInSystem = async (path: string) => {

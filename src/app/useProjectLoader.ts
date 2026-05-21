@@ -1,5 +1,4 @@
 import { useCallback } from 'react'
-import { open } from '@tauri-apps/plugin-dialog'
 import { useLatest } from 'ahooks'
 import type { NavigateFunction } from 'react-router-dom'
 import isEqual from 'lodash-es/isEqual'
@@ -7,7 +6,8 @@ import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/useAppStore'
 import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi, type FsSnapshot } from '@/services/fsApi'
-import { runInTauri } from '@/utils/tauri'
+import { openDialog } from '@/runtime/dialog'
+import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
 
 type UseProjectLoaderArgs = {
@@ -29,6 +29,7 @@ type UseProjectLoaderArgs = {
 }
 
 type LoadWorkspaceOptions = {
+  preserveCurrentRoute?: boolean
   snapshot?: FsSnapshot
 }
 
@@ -49,6 +50,10 @@ const toEntryIdentity = (entry: FileEntry) => [entry.path, entry.kind]
 const fetchSnapshot = async () => {
   return fsApi.getSnapshot()
 }
+
+const isMarkdownFilePath = (path: string) => /\.(md|markdown)$/i.test(path)
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 export function useProjectLoader({
   rootPath,
@@ -79,7 +84,7 @@ export function useProjectLoader({
 
   const loadWorkspace = useCallback(
     async (options?: LoadWorkspaceOptions) => {
-      await runInTauri(async () => {
+      await runInDesktop(async () => {
         const snapshot = options?.snapshot ?? (await fetchSnapshot())
         const rootInfo = snapshot.root
         if (rootPathRef.current !== rootInfo.path) {
@@ -134,7 +139,7 @@ export function useProjectLoader({
           if (nextActiveTabId !== currentActiveTabId) {
             setActiveTabId(nextActiveTabId)
           }
-          if (preserveCurrentRouteRef.current) return
+          if (options?.preserveCurrentRoute ?? preserveCurrentRouteRef.current) return
           const nextRoute =
             nextActiveTab.kind === 'file'
               ? pathToFileViewRoute(nextActiveTab.path, nextActiveTab.view)
@@ -167,67 +172,115 @@ export function useProjectLoader({
 
   const openFolder = useCallback(
     async (path: string) => {
-      await runInTauri(async () => {
-        await fsApi.setRoot(path)
-        touchRecentProject(path)
-      })
+      try {
+        await runInDesktop(async () => {
+          const preferSingleFile = isMarkdownFilePath(path)
+          if (preferSingleFile) {
+            try {
+              await fsApi.setSingleFile(path)
+            } catch (singleFileError) {
+              try {
+                await fsApi.setRoot(path)
+              } catch {
+                throw singleFileError
+              }
+            }
+          } else {
+            try {
+              await fsApi.setRoot(path)
+            } catch (folderError) {
+              try {
+                await fsApi.setSingleFile(path)
+              } catch {
+                throw folderError
+              }
+            }
+          }
+          touchRecentProject(path)
+          await loadWorkspace({ preserveCurrentRoute: false })
+        })
+      } catch (error) {
+        if (typeof window !== 'undefined') {
+          window.alert(`Failed to open path:\n${path}\n\n${errorMessage(error)}`)
+        }
+      }
     },
-    [touchRecentProject],
+    [loadWorkspace, touchRecentProject],
   )
 
   const onSelectFolder = useCallback(async () => {
-    await runInTauri(async () => {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: t('dialog.selectProjectTitle'),
+    try {
+      await runInDesktop(async () => {
+        const selected = await openDialog({
+          directory: true,
+          multiple: false,
+          title: t('dialog.selectProjectTitle'),
+        })
+        if (typeof selected === 'string') {
+          await openFolder(selected)
+        }
       })
-      if (typeof selected === 'string') {
-        await openFolder(selected)
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.alert(`Failed to select folder:\n${errorMessage(error)}`)
       }
-    })
+    }
   }, [openFolder, t])
 
   const onSelectSingleFile = useCallback(async () => {
-    await runInTauri(async () => {
-      const selected = await open({
-        directory: false,
-        multiple: false,
-        title: t('dialog.selectFileTitle'),
-        filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }],
+    try {
+      await runInDesktop(async () => {
+        const selected = await openDialog({
+          directory: false,
+          multiple: false,
+          title: t('dialog.selectFileTitle'),
+          filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }],
+        })
+        if (typeof selected === 'string') {
+          await openFolder(selected)
+        }
       })
-      if (typeof selected === 'string') {
-        await fsApi.setSingleFile(selected)
-        touchRecentProject(selected)
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.alert(`Failed to select file:\n${errorMessage(error)}`)
       }
-    })
-  }, [t, touchRecentProject])
+    }
+  }, [openFolder, t])
 
   const onUseInternalRoot = useCallback(async () => {
-    await runInTauri(() => fsApi.setRoot(null))
-  }, [])
+    try {
+      await runInDesktop(async () => {
+        await fsApi.setRoot(null)
+        await loadWorkspace({ preserveCurrentRoute: false })
+      })
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.alert(`Failed to open local workspace:\n${errorMessage(error)}`)
+      }
+    }
+  }, [loadWorkspace])
 
   const createFile = useCallback(async (path: string) => {
-    await runInTauri(async () => {
+    await runInDesktop(async () => {
       const normalized = path.endsWith('.md') || path.endsWith('.markdown') ? path : `${path}.md`
       await fsApi.createFile(normalized)
     })
   }, [])
 
   const createFolder = useCallback(async (path: string) => {
-    await runInTauri(() => fsApi.createDir(path))
+    await runInDesktop(() => fsApi.createDir(path))
   }, [])
 
   const renamePath = useCallback(async (from: string, to: string) => {
-    await runInTauri(() => fsApi.renamePath(from, to))
+    await runInDesktop(() => fsApi.renamePath(from, to))
   }, [])
 
   const movePath = useCallback(async (from: string, to: string) => {
-    await runInTauri(() => fsApi.movePath(from, to))
+    await runInDesktop(() => fsApi.movePath(from, to))
   }, [])
 
   const deletePath = useCallback(async (path: string) => {
-    await runInTauri(() => fsApi.deletePath(path))
+    await runInDesktop(() => fsApi.deletePath(path))
   }, [])
 
   return {

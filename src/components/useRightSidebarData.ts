@@ -16,7 +16,7 @@ import {
 } from '@/logic/paths'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import type { SidebarBacklink } from '@/components/RightSidebarContent'
 
 type UseRightSidebarDataArgs = {
@@ -40,19 +40,19 @@ export function useRightSidebarData({
   dirtyPaths = {},
   workspaceIndex,
 }: UseRightSidebarDataArgs) {
-  const tauriAvailable = isTauriRuntime()
+  const desktopAvailable = isDesktopRuntime()
   const deferredEditorValue = useDeferredValue(editorValue)
   const deferredFileContents = useDeferredValue(fileContents)
   const deferredTargetPath = useDeferredValue(targetPath)
   const metadataQuery = useQuery({
     queryKey: ['path-metadata', targetPath],
     queryFn: () => fsApi.getPathMetadata(targetPath ?? ''),
-    enabled: !collapsed && tauriAvailable && Boolean(targetPath),
+    enabled: !collapsed && desktopAvailable && Boolean(targetPath),
     staleTime: 10_000,
   })
   const displayMetadata = useMemo(() => {
     if (!targetPath) return null
-    if (!tauriAvailable) {
+    if (!desktopAvailable) {
       return {
         path: targetPath,
         absolute_path: targetPath,
@@ -64,7 +64,7 @@ export function useRightSidebarData({
     const metadata = metadataQuery.data
     if (!metadata || metadata.path !== targetPath) return null
     return metadata
-  }, [metadataQuery.data, targetPath, tauriAvailable])
+  }, [metadataQuery.data, targetPath, desktopAvailable])
   const indexedFilesByPath = useMemo(() => {
     if (!workspaceIndex) return null
     return keyBy(workspaceIndex.files, 'path')
@@ -75,7 +75,7 @@ export function useRightSidebarData({
   const targetIsDirty = Boolean(deferredTargetPath && dirtyPaths[deferredTargetPath])
   const shouldUseIndexedTarget = Boolean(indexedTargetFile && !targetIsDirty)
   const shouldWaitForIndexedActiveTarget = Boolean(
-    tauriAvailable &&
+    desktopAvailable &&
     !workspaceIndex &&
     deferredTargetPath &&
     deferredTargetPath === activePath &&
@@ -84,7 +84,7 @@ export function useRightSidebarData({
   const workspaceContents = useWorkspaceMarkdownContents(
     files,
     deferredFileContents,
-    !collapsed && !workspaceIndex && !tauriAvailable,
+    !collapsed && !workspaceIndex && !desktopAvailable,
   )
   const targetContent = useMemo(() => {
     if (collapsed) return ''

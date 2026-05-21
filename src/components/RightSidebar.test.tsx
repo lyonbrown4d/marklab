@@ -13,8 +13,8 @@ import {
   type FocusSourcePositionRequest,
 } from '@/utils/editorNavigation'
 
-vi.mock('@/utils/tauri', () => ({
-  isTauriRuntime: () => false,
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => false,
 }))
 
 type RightSidebarProps = ComponentProps<typeof RightSidebar>

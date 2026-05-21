@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api/core'
-import { save } from '@tauri-apps/plugin-dialog'
+import { saveDialog } from '@/runtime/dialog'
+import { invoke } from '@/runtime/ipc'
 
 /** Supported export formats. */
 export type ExportFormat = 'pdf' | 'docx' | 'html'
@@ -50,7 +50,7 @@ async function exportMarkdown(
     // Defer so native menu can close before the save dialog opens (macOS)
     await new Promise((r) => setTimeout(r, 0))
 
-    const path = await save({
+    const path = await saveDialog({
       defaultPath,
       filters: [{ name: config.filterName, extensions: config.extensions }],
     })

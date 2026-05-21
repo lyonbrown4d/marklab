@@ -16,7 +16,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { gitApi, type GitDiffRequest, type GitFileChange } from '@/services/gitApi'
 import { fsApi } from '@/services/fsApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { listen } from '@/runtime/events'
+import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
 import { countChangedFiles, gitStatusQueryKey } from '@/logic/gitStatus'
 
@@ -73,7 +74,7 @@ export default function ScmPanel({ rootPath, rootKind, collapsed, onOpenDiff }: 
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [commitMessage, setCommitMessage] = useState('')
-  const enabled = isTauriRuntime() && rootKind !== 'single' && Boolean(rootPath)
+  const enabled = isDesktopRuntime() && rootKind !== 'single' && Boolean(rootPath)
   const queryKey = useMemo(() => gitStatusQueryKey(rootPath), [rootPath])
 
   const statusQuery = useQuery({
@@ -98,12 +99,10 @@ export default function ScmPanel({ rootPath, rootKind, collapsed, onOpenDiff }: 
     if (!enabled) return
     let unlisten: (() => void) | undefined
 
-    void import('@tauri-apps/api/event').then(({ listen }) => {
-      void listen('fs-changed', () => {
-        debouncedInvalidateStatus()
-      }).then((fn) => {
-        unlisten = fn
-      })
+    void listen('fs-changed', () => {
+      debouncedInvalidateStatus()
+    }).then((fn) => {
+      unlisten = fn
     })
 
     return () => {

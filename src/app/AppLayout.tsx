@@ -28,7 +28,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { exportApi } from '@/services/exportApi'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { requestExportContent } from '@/utils/exportContent'
-import { isTauriRuntime } from '@/utils/tauri'
+import { listen } from '@/runtime/events'
+import { isDesktopRuntime } from '@/runtime/environment'
 import type { SaveState } from '@/app/useEditorBuffer'
 import {
   requestFocusHeading,
@@ -36,7 +37,7 @@ import {
   type FocusHeadingRequest,
 } from '@/utils/editorNavigation'
 import { useLatest } from 'ahooks'
-import { useTauriReadySignal } from '@/app/useTauriReadySignal'
+import { useDesktopReadySignal } from '@/app/useDesktopReadySignal'
 import type { GitDiffRequest } from '@/services/gitApi'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import type { FsSearchResult } from '@/services/fsApi'
@@ -118,7 +119,7 @@ export default function AppLayout() {
     id: 'marko-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
   })
-  useTauriReadySignal()
+  useDesktopReadySignal()
 
   const handleOpenFile = useCallback(
     (path: string) => {
@@ -258,7 +259,7 @@ export default function AppLayout() {
   }, [pendingHeading, state.activePath, state.viewMode])
 
   useEffect(() => {
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
     const flushOnClose = () => {
       void fsApi.flushBuffers()
     }
@@ -379,7 +380,7 @@ export default function AppLayout() {
         return
       }
       if (id === 'file.export_pdf' || id === 'file.export_docx' || id === 'file.export_html') {
-        if (!isTauriRuntime()) return
+        if (!isDesktopRuntime()) return
         const format =
           id === 'file.export_pdf' ? 'pdf' : id === 'file.export_docx' ? 'docx' : 'html'
         const { activePath, rootPath, editorValue } = currentState
@@ -437,13 +438,11 @@ export default function AppLayout() {
     window.addEventListener('marko:menu-action', domHandler)
 
     let unlisten: (() => void) | undefined
-    if (isTauriRuntime()) {
-      void import('@tauri-apps/api/event').then(({ listen }) => {
-        void listen<string>('menu-action', (event) => {
-          handleMenuAction(event.payload)
-        }).then((fn) => {
-          unlisten = fn
-        })
+    if (isDesktopRuntime()) {
+      void listen<string>('menu-action', (event) => {
+        handleMenuAction(event.payload)
+      }).then((fn) => {
+        unlisten = fn
       })
     }
 

@@ -7,8 +7,9 @@ import Titlebar from '@/components/Titlebar'
 import i18n from '@/i18n/setup'
 import { useAppStore } from '@/store/useAppStore'
 
-vi.mock('@tauri-apps/api/window', () => ({
-  getCurrentWindow: () => ({
+vi.mock('@/runtime/window', () => ({
+  isDesktopRuntime: () => false,
+  getCurrentRuntimeWindow: async () => ({
     close: vi.fn(),
     isMaximized: vi.fn(),
     maximize: vi.fn(),
@@ -18,9 +19,9 @@ vi.mock('@tauri-apps/api/window', () => ({
   }),
 }))
 
-vi.mock('@/utils/tauri', () => ({
+vi.mock('@/runtime/environment', () => ({
   inferPlatformFromUserAgent: () => 'windows',
-  isTauriRuntime: () => false,
+  isDesktopRuntime: () => false,
 }))
 
 type TitlebarProps = ComponentProps<typeof Titlebar>

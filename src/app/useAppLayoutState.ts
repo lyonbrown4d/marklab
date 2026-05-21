@@ -13,6 +13,9 @@ import { getWorkspaceTabId } from '@/logic/tabs'
 import { useEditorRoutes } from '@/app/useEditorRoutes'
 import { useRouteTabSync } from '@/app/useRouteTabSync'
 import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
+import { listen } from '@/runtime/events'
+import { isDesktopRuntime } from '@/runtime/environment'
+import { appApi } from '@/services/appApi'
 
 export function useAppLayoutState() {
   const {
@@ -141,9 +144,33 @@ export function useAppLayoutState() {
   }, [loadWorkspace])
 
   useEffect(() => {
+    if (!isDesktopRuntime()) return
+
+    const openArgs = (args: string[]) => {
+      const paths = args.filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('marko:'))
+      for (const path of paths) void openFolder(path)
+    }
+
+    let unlistenSingleInstance: (() => void) | undefined
+    void appApi.getLaunchInfo().then((info) => {
+      openArgs(info.args)
+    })
+    void listen<{ args: string[]; cwd: string }>('single-instance', (event) => {
+      openArgs(event.payload.args)
+    }).then((fn) => {
+      unlistenSingleInstance = fn
+    })
+
+    return () => {
+      if (unlistenSingleInstance) unlistenSingleInstance()
+    }
+  }, [openFolder])
+
+  useEffect(() => {
+    if (!isDesktopRuntime()) return
+
     let unlisten: (() => void) | undefined
     const setup = async () => {
-      const { listen } = await import('@tauri-apps/api/event')
       unlisten = await listen<unknown>('fs-changed', (event) => {
         const parsed = fsSnapshotSchema.safeParse(event.payload)
         if (!parsed.success) return
@@ -152,9 +179,7 @@ export function useAppLayoutState() {
         })
       })
     }
-    if (typeof window !== 'undefined') {
-      void setup()
-    }
+    void setup()
     return () => {
       if (unlisten) {
         unlisten()

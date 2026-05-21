@@ -1,18 +1,12 @@
-import { invoke } from '@tauri-apps/api/core'
+import { dispatchMenuAction, getLaunchInfo, getPlatform } from '@/runtime/app'
 
 export type AppPlatform = 'windows' | 'linux' | 'macos' | 'unknown'
-
-function normalizePlatform(raw: string): AppPlatform {
-  if (raw === 'windows' || raw === 'linux' || raw === 'macos') return raw
-  return 'unknown'
-}
+export type AppLaunchInfo = Awaited<ReturnType<typeof getLaunchInfo>>
 
 export const appApi = {
-  async getPlatform() {
-    const result = await invoke<string>('app_get_platform')
-    return normalizePlatform(result)
-  },
+  getPlatform,
+  getLaunchInfo,
   menuDispatch(id: string) {
-    return invoke('menu_dispatch', { id })
+    return dispatchMenuAction(id)
   },
 }

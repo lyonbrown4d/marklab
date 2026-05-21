@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@/runtime/ipc'
 import { z } from 'zod'
 
 export const terminalSessionSchema = z.object({

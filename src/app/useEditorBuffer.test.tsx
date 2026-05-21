@@ -15,8 +15,8 @@ const eventHandlers = vi.hoisted(
   () => new Map<string, (event: { payload: unknown }) => void | Promise<void>>(),
 )
 
-vi.mock('@/utils/tauri', () => ({
-  isTauriRuntime: () => true,
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
 }))
 
 vi.mock('@/services/fsApi', async (importOriginal) => {
@@ -27,7 +27,7 @@ vi.mock('@/services/fsApi', async (importOriginal) => {
   }
 })
 
-vi.mock('@tauri-apps/api/event', () => ({
+vi.mock('@/runtime/events', () => ({
   listen: vi.fn(async (event: string, handler: (event: { payload: unknown }) => void) => {
     eventHandlers.set(event, handler)
     return vi.fn()

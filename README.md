@@ -2,18 +2,22 @@
 
 A desktop Markdown workspace that blends a Typora-style editor with a project graph.
 
+Marko uses Electron for its desktop runtime and native integration while keeping
+the React editor and typed runtime boundary explicit.
+
 ## Features
 
-- Markdown editing powered by Milkdown + CodeMirror.
+- Markdown editing with block, source, and graph-oriented views.
 - Graph view built on React Flow for navigating relationships.
 - Tabs, recent projects, and theme switching.
-- Tauri desktop app (Windows/macOS/Linux).
+- Desktop app targeting Windows, macOS, and Linux.
 
 ## Tech Stack
 
 - React 19 + Vite + TypeScript
-- Tauri 2 (Rust)
-- Milkdown, CodeMirror 6
+- Electron desktop runtime
+- vite-plugin-electron for Electron main/preload integration
+- Lexical, Monaco, CodeMirror 6
 - React Flow, Zustand, Radix UI, Tailwind CSS
 
 ## Development
@@ -22,11 +26,22 @@ A desktop Markdown workspace that blends a Typora-style editor with a project gr
 pnpm dev
 ```
 
-## Desktop (Tauri)
+## Desktop (Electron)
+
+```bash
+pnpm electron:dev
+```
+
+Compatibility aliases are also available:
 
 ```bash
 pnpm dev:desktop
+pnpm build:desktop
 ```
+
+## Electron Migration
+
+See [docs/electron-migration.md](docs/electron-migration.md).
 
 ## Build
 

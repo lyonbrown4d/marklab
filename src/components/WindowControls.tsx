@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useI18n } from '@/i18n/useI18n'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/window'
 import type { AppPlatform } from '@/services/appApi'
 
 type WindowControlsProps = {
@@ -27,7 +27,7 @@ export default function WindowControls({
 }: WindowControlsProps) {
   const { t } = useI18n()
 
-  if ((platform !== 'windows' && platform !== 'linux') || !isTauriRuntime()) {
+  if ((platform !== 'windows' && platform !== 'linux') || !isDesktopRuntime()) {
     return null
   }
 

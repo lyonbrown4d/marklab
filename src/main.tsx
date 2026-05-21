@@ -28,16 +28,16 @@ if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN !== 'false') {
     })
 }
 
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
   const loadReactDevTools = () => {
     const script = document.createElement('script')
     script.src = 'http://localhost:8097'
     script.async = true
     script.onload = () => {
-      console.log('✅ React DevTools loaded')
+      console.log('React DevTools loaded')
     }
     script.onerror = () => {
-      console.warn('⚠️ React DevTools not available. Make sure to run: npm run devtools')
+      console.warn('React DevTools not available. Start the standalone DevTools first.')
     }
 
     // 延迟加载，确保 React 已初始化

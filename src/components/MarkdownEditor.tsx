@@ -28,11 +28,12 @@ import {
   imageSourcesFromPasteEvent,
   imagePathSourcesFromDropEvent,
   imageSourcesFromFiles,
-  imageSourcesFromTauriDropPaths,
+  imageSourcesFromRuntimeDropPaths,
   readNativeClipboardImageSource,
   type MarkdownImageImportSource,
 } from '@/components/milkdown/assetEvents'
 import { resolveShortcutBindings } from '@/logic/shortcuts'
+import { onRuntimeWebviewFileDrop } from '@/runtime/webview'
 import { useAppStore } from '@/store/useAppStore'
 
 const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
@@ -145,7 +146,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     getMarkdown,
   }))
 
-  useTauriImageDrop({
+  useRuntimeImageDrop({
     shellRef,
     importImageSources,
     placeSelectionAtClientPoint,
@@ -187,7 +188,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
 
 export default MarkdownEditor
 
-const useTauriImageDrop = ({
+const useRuntimeImageDrop = ({
   importImageSources,
   placeSelectionAtClientPoint,
   shellRef,
@@ -201,19 +202,12 @@ const useTauriImageDrop = ({
     let unlisten: (() => void) | undefined
 
     const setup = async () => {
-      const [{ isTauri }, { getCurrentWebview }] = await Promise.all([
-        import('@tauri-apps/api/core'),
-        import('@tauri-apps/api/webview'),
-      ])
-      if (!isTauri() || disposed) return
-
-      const nextUnlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        if (event.payload.type !== 'drop') return
+      const nextUnlisten = await onRuntimeWebviewFileDrop((event) => {
         const rect = shellRef.current?.getBoundingClientRect()
         if (!rect) return
 
-        const clientX = event.payload.position.x / window.devicePixelRatio
-        const clientY = event.payload.position.y / window.devicePixelRatio
+        const clientX = event.position.x / window.devicePixelRatio
+        const clientY = event.position.y / window.devicePixelRatio
         const inside =
           clientX >= rect.left &&
           clientX <= rect.right &&
@@ -221,17 +215,17 @@ const useTauriImageDrop = ({
           clientY <= rect.bottom
         if (!inside) return
 
-        const sources = imageSourcesFromTauriDropPaths(event.payload.paths)
+        const sources = imageSourcesFromRuntimeDropPaths(event.paths)
         if (sources.length === 0) return
 
         placeSelectionAtClientPoint(clientX, clientY)
         void importImageSources(sources)
       })
       if (disposed) {
-        nextUnlisten()
+        nextUnlisten?.()
         return
       }
-      unlisten = nextUnlisten
+      unlisten = nextUnlisten ?? undefined
     }
 
     void setup()

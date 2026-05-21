@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useI18n } from '@/i18n/useI18n'
 import type { ThemeMode } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 
 type TerminalPanelProps = {
   onClose: () => void
@@ -25,7 +25,7 @@ type TerminalTab = TerminalRuntimeState & {
 }
 
 function initialTerminalStatus(): TerminalStatus {
-  return isTauriRuntime() ? 'connecting' : 'unavailable'
+  return isDesktopRuntime() ? 'connecting' : 'unavailable'
 }
 
 function createTerminalTab(index: number): TerminalTab {

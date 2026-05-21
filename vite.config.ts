@@ -3,6 +3,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import path from 'node:path'
 import { constants as zlibConstants } from 'node:zlib'
+import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import { compression, defineAlgorithm } from 'vite-plugin-compression2'
 
@@ -13,20 +14,41 @@ const includesAny = (id: string, values: string[]) => values.some((value) => id.
 const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
 
 // https://vite.dev/config/
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
   const isServe = command === 'serve'
+  const isPerf = mode === 'perf'
+  const isElectron = mode === 'electron'
 
   return {
     server: {
       port: 5173,
-      strictPort: true, // fail if port is taken so Tauri doesn't load wrong address
+      strictPort: true, // fail if port is taken so Electron loads the expected dev server
     },
     plugins: [
       react(),
       babel({
         presets: [reactCompilerPreset()],
       }),
+      isElectron &&
+        electron({
+          main: {
+            entry: 'electron/main.ts',
+          },
+          preload: {
+            input: 'electron/preload.ts',
+            vite: {
+              build: {
+                rollupOptions: {
+                  output: {
+                    entryFileNames: '[name].cjs',
+                    chunkFileNames: '[name].cjs',
+                  },
+                },
+              },
+            },
+          },
+        }),
       isBuild &&
         compression({
           include: /\.(html|xml|css|json|js|mjs|svg|wasm)$/,
@@ -43,6 +65,7 @@ export default defineConfig(({ command }) => {
           ],
         }),
       isServe &&
+        !isPerf &&
         !process.env.VITEST &&
         TurboConsole({
           /* options here */

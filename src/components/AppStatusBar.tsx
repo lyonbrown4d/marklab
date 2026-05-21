@@ -19,7 +19,7 @@ import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic
 import { useI18n } from '@/i18n/useI18n'
 import { gitApi } from '@/services/gitApi'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 import type { SaveState } from '@/app/useEditorBuffer'
 import type { FileEntry, ViewMode, WorkspaceTab } from '@/store/useAppStore'
 
@@ -72,7 +72,7 @@ function AppStatusBar({
   const assetSyncPending = useMarkdownAssetSyncStore((state) => state.pending)
   const assetSyncFailed = useMarkdownAssetSyncStore((state) => state.failed)
   const assetSyncLastError = useMarkdownAssetSyncStore((state) => state.lastError)
-  const gitEnabled = isTauriRuntime() && rootKind !== 'single' && Boolean(rootPath)
+  const gitEnabled = isDesktopRuntime() && rootKind !== 'single' && Boolean(rootPath)
   const queryKey = useMemo(() => gitStatusQueryKey(rootPath), [rootPath])
 
   const gitStatusQuery = useQuery({

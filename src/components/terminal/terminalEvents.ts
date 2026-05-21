@@ -1,4 +1,3 @@
-import type { UnlistenFn } from '@tauri-apps/api/event'
 import mitt from 'mitt'
 import {
   terminalExitEventSchema,
@@ -6,7 +5,8 @@ import {
   type TerminalExitEvent,
   type TerminalOutputEvent,
 } from '@/services/terminalApi'
-import { isTauriRuntime } from '@/utils/tauri'
+import { listen, type RuntimeUnlistenFn } from '@/runtime/events'
+import { isDesktopRuntime } from '@/runtime/environment'
 
 type TerminalEventHandlers = {
   onExit: (event: TerminalExitEvent) => void
@@ -25,8 +25,8 @@ const sessionSubscriberCounts = new Map<string, number>()
 const pendingOutputEvents = new Map<string, TerminalOutputEvent[]>()
 
 let listenerPromise: Promise<void> | null = null
-let outputUnlisten: UnlistenFn | null = null
-let exitUnlisten: UnlistenFn | null = null
+let outputUnlisten: RuntimeUnlistenFn | null = null
+let exitUnlisten: RuntimeUnlistenFn | null = null
 
 function updateSubscriberCount(sessionId: string, delta: 1 | -1) {
   const nextCount = Math.max(0, (sessionSubscriberCounts.get(sessionId) ?? 0) + delta)
@@ -55,10 +55,10 @@ function dispatchExit(event: TerminalExitEvent) {
 }
 
 function ensureTerminalEventListeners() {
-  if (!isTauriRuntime() || listenerPromise) return
+  if (!isDesktopRuntime() || listenerPromise) return
 
-  listenerPromise = import('@tauri-apps/api/event')
-    .then(async ({ listen }) => {
+  listenerPromise = Promise.resolve()
+    .then(async () => {
       outputUnlisten = await listen<unknown>('terminal-output', (event) => {
         const payload = terminalOutputEventSchema.safeParse(event.payload)
         if (payload.success) dispatchOutput(payload.data)

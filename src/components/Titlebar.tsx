@@ -26,7 +26,8 @@ import { appApi, type AppPlatform } from '@/services/appApi'
 import AppMenuBar from '@/components/AppMenuBar'
 import AppLogo from '@/components/AppLogo'
 import SettingsDialog from '@/components/SettingsDialog'
-import { inferPlatformFromUserAgent, isTauriRuntime } from '@/utils/tauri'
+import { inferPlatformFromUserAgent } from '@/runtime/environment'
+import { getCurrentRuntimeWindow, isDesktopRuntime } from '@/runtime/window'
 import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
@@ -115,9 +116,7 @@ function Titlebar({
   onSettingsOpenChange,
 }: TitlebarProps) {
   const getAppWindow = useCallback(async () => {
-    if (!isTauriRuntime()) return null
-    const { getCurrentWindow } = await import('@tauri-apps/api/window')
-    return getCurrentWindow()
+    return getCurrentRuntimeWindow()
   }, [])
   const { t } = useI18n()
   const [platform, setPlatform] = useState<AppPlatform>(inferPlatformFromUserAgent())
@@ -134,7 +133,7 @@ function Titlebar({
   const errorLabel = t('save.error')
 
   useEffect(() => {
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
     void appApi
       .getPlatform()
       .then((next) => setPlatform(next))
@@ -222,7 +221,7 @@ function Titlebar({
   }, [platform, shortcutOverrides])
 
   const onMenuAction = useCallback((id: string) => {
-    if (!isTauriRuntime()) return
+    if (!isDesktopRuntime()) return
     void appApi.menuDispatch(id)
   }, [])
   const onFocusFileSearch = useCallback(() => requestFileSearchFocus(), [])
@@ -319,11 +318,11 @@ function Titlebar({
     [onCommandOpenChange, onOpenSearchResult],
   )
 
-  const isMacTauri = platform === 'macos' && isTauriRuntime()
+  const isMacDesktop = platform === 'macos' && isDesktopRuntime()
 
   const handleTitlebarMouseDown = useCallback(
     (e: ReactMouseEvent) => {
-      if (!isTauriRuntime() || platform !== 'macos') return
+      if (!isDesktopRuntime() || platform !== 'macos') return
       if (e.button !== 0) return
       const target = e.target as HTMLElement
       if (
@@ -339,8 +338,7 @@ function Titlebar({
 
   return (
     <header
-      className={`app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5 ${isMacTauri ? 'pl-[68px]' : ''}`}
-      data-tauri-drag-region
+      className={`app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5 ${isMacDesktop ? 'pl-[68px]' : ''}`}
       onMouseDown={handleTitlebarMouseDown}
     >
       <TooltipProvider>

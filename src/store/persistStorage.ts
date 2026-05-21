@@ -1,4 +1,5 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
+import { getElectronRuntime } from '@/runtime/electron'
 
 type IdleHandle = { kind: 'idle'; id: number } | { kind: 'timeout'; id: number }
 
@@ -88,6 +89,57 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
         scheduledFlush = null
       }
       storage.removeItem(key)
+    },
+  }
+}
+
+function parseStorageValue<S>(value: string | null, storage: Storage, key: string) {
+  if (!value) return null
+  try {
+    return JSON.parse(value) as StorageValue<S>
+  } catch {
+    storage.removeItem(key)
+    return null
+  }
+}
+
+function getLocalStorage(): Storage | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
+export const createElectronSettingsJsonStorage = <S>(
+  name = 'marko.app',
+): PersistStorage<S> | undefined => {
+  const electronPersist = getElectronRuntime()?.settings?.persist
+  if (!electronPersist) return createIdleJsonStorage<S>(name)
+
+  return {
+    getItem: async (key) => {
+      const value = await electronPersist.getItem(key)
+      if (value) return value as StorageValue<S>
+
+      const localStorage = getLocalStorage()
+      const localValue = localStorage
+        ? parseStorageValue<S>(localStorage.getItem(key), localStorage, key)
+        : null
+      if (localValue) {
+        const result = await electronPersist.setItem(key, localValue)
+        if (result.ok) localStorage?.removeItem(key)
+      }
+      return localValue
+    },
+    setItem: async (key, value) => {
+      const result = await electronPersist.setItem(key, value)
+      if (!result.ok) throw new Error(result.error ?? 'Unable to persist settings.')
+    },
+    removeItem: async (key) => {
+      const result = await electronPersist.removeItem(key)
+      if (!result.ok) throw new Error(result.error ?? 'Unable to remove persisted settings.')
     },
   }
 }

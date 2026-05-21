@@ -10,7 +10,7 @@ import {
 import type { FileEntry } from '@/store/useAppStore'
 import { fsApi, type FsMarkdownDiagnostic, type FsWorkspaceIndex } from '@/services/fsApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
-import { isTauriRuntime } from '@/utils/tauri'
+import { isDesktopRuntime } from '@/runtime/environment'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -95,7 +95,7 @@ export default function MarkdownSourceEditor({
     const requestId = diagnosticsRequestRef.current + 1
     diagnosticsRequestRef.current = requestId
 
-    if (isTauriRuntime() && context.activePath) {
+    if (isDesktopRuntime() && context.activePath) {
       void fsApi
         .analyzeMarkdownBuffer(context.activePath, content)
         .then((diagnostics) => {
