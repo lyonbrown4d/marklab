@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export function InspectorMetric({
+export const InspectorMetric = ({
   icon,
   label,
   value,
@@ -10,7 +10,7 @@ export function InspectorMetric({
   label: string
   value: ReactNode
   tone?: 'normal' | 'warning' | 'error'
-}) {
+}) => {
   const toneClass =
     tone === 'error'
       ? 'text-destructive'
@@ -27,7 +27,7 @@ export function InspectorMetric({
   )
 }
 
-export function InspectorEmptyState({
+export const InspectorEmptyState = ({
   icon,
   title,
   description,
@@ -35,7 +35,7 @@ export function InspectorEmptyState({
   icon: ReactNode
   title: string
   description: string
-}) {
+}) => {
   return (
     <div className="flex min-h-28 flex-col items-center justify-center rounded-md border border-dashed border-sidebar-border/80 bg-background/45 px-3 text-center">
       <div className="mb-2 rounded-md border border-border bg-muted p-2 text-muted-foreground">
@@ -49,7 +49,7 @@ export function InspectorEmptyState({
   )
 }
 
-export function ProblemGroupHeader({
+export const ProblemGroupHeader = ({
   label,
   count,
   tone,
@@ -57,7 +57,7 @@ export function ProblemGroupHeader({
   label: string
   count: number
   tone: 'warning' | 'error'
-}) {
+}) => {
   return (
     <div
       className={`flex items-center justify-between rounded px-2 py-1 text-[11px] font-medium ${
@@ -70,7 +70,7 @@ export function ProblemGroupHeader({
   )
 }
 
-export function PropertyCell({ label, value }: { label: string; value: ReactNode }) {
+export const PropertyCell = ({ label, value }: { label: string; value: ReactNode }) => {
   return (
     <div className="rounded-md border border-border bg-background/55 p-2">
       <div className="truncate text-[10px] text-muted-foreground">{label}</div>

@@ -6,18 +6,20 @@ import { useI18n } from '@/i18n/useI18n'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { cn } from '@/lib/utils'
-
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
-const LARGE_MARKDOWN_VIEW_FADE_LIMIT = 30_000
-
+const LARGE_MARKDOWN_VIEW_FADE_LIMIT = 30000
 type WysiwygEditorPageProps = {
   activePath: string | null
   value: string
   onChange: (value: string) => void
   showStatusBar: boolean
 }
-
-function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: WysiwygEditorPageProps) {
+const WysiwygEditorPage = ({
+  activePath,
+  value,
+  onChange,
+  showStatusBar,
+}: WysiwygEditorPageProps) => {
   const { t } = useI18n()
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
   const activePathRef = useRef(activePath)
@@ -52,7 +54,6 @@ function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: Wysiw
     activePathRef.current = activePath
     valueRef.current = value
   }, [activePath, value])
-
   useEffect(() => {
     return onExportContentRequest(({ expectedActivePath, respond }) => {
       if (typeof respond !== 'function') return
@@ -60,7 +61,6 @@ function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: Wysiw
       respond(editorRef.current?.getMarkdown() ?? valueRef.current)
     })
   }, [])
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
@@ -99,5 +99,4 @@ function WysiwygEditorPage({ activePath, value, onChange, showStatusBar }: Wysiw
     </div>
   )
 }
-
 export default memo(WysiwygEditorPage)

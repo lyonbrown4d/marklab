@@ -1,0 +1,161 @@
+import { KeepAlive } from 'keepalive-for-react'
+import {
+  Group as ResizableGroup,
+  Panel as ResizablePanel,
+  Separator as ResizableSeparator,
+  type useDefaultLayout,
+  type usePanelRef,
+} from 'react-resizable-panels'
+import type { ReactNode, RefObject } from 'react'
+import Sidebar from '@/components/Sidebar'
+import RightSidebar from '@/components/RightSidebar'
+import TabsBar from '@/components/TabsBar'
+import type { useAppLayoutState } from '@/app/useAppLayoutState'
+import type { FileViewKind } from '@/store/useAppStore'
+import type { GitDiffRequest } from '@/services/gitApi'
+import type { FsSearchResult } from '@/services/fsApi'
+import { getWorkspaceTabId } from '@/logic/tabs'
+
+type AppLayoutState = ReturnType<typeof useAppLayoutState>
+
+type AppWorkspacePanelsProps = {
+  state: AppLayoutState
+  workspacePanelLayout: ReturnType<typeof useDefaultLayout>
+  workspaceGroupElementRef: RefObject<HTMLDivElement | null>
+  leftSidebarPanelRef: ReturnType<typeof usePanelRef>
+  rightSidebarPanelRef: ReturnType<typeof usePanelRef>
+  outlet: ReactNode
+  routeCacheKey: string
+  routeCacheMax: number
+  totalFiles: number
+  onOpenFile: (path: string) => void
+  onOpenFileView: (path: string, view: FileViewKind) => void
+  onOpenGitDiff: (request: GitDiffRequest) => void
+  onOpenSearchResult: (result: FsSearchResult) => void
+}
+
+export const AppWorkspacePanels = ({
+  state,
+  workspacePanelLayout,
+  workspaceGroupElementRef,
+  leftSidebarPanelRef,
+  rightSidebarPanelRef,
+  outlet,
+  routeCacheKey,
+  routeCacheMax,
+  totalFiles,
+  onOpenFile,
+  onOpenFileView,
+  onOpenGitDiff,
+  onOpenSearchResult,
+}: AppWorkspacePanelsProps) => {
+  return (
+    <ResizableGroup
+      className="min-h-0 flex-1"
+      defaultLayout={workspacePanelLayout.defaultLayout}
+      elementRef={workspaceGroupElementRef}
+      id="marko-workspace-panels"
+      onLayoutChanged={workspacePanelLayout.onLayoutChanged}
+      orientation="horizontal"
+      resizeTargetMinimumSize={{ coarse: 28, fine: 8 }}
+    >
+      <ResizablePanel
+        className="min-h-0"
+        collapsedSize="48px"
+        collapsible
+        defaultSize="320px"
+        disabled={state.sidebarCollapsed}
+        groupResizeBehavior="preserve-pixel-size"
+        id="left-sidebar"
+        maxSize="520px"
+        minSize="240px"
+        panelRef={leftSidebarPanelRef}
+      >
+        <Sidebar
+          collapsed={state.sidebarCollapsed}
+          recentProjects={state.recentProjects}
+          files={state.files}
+          fileTree={state.fileTree}
+          activePath={state.activeResourcePath}
+          onOpenFile={onOpenFile}
+          onOpenFileView={onOpenFileView}
+          onOpenProject={state.onOpenProject}
+          onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
+          onCreateFile={state.createFile}
+          onCreateFolder={state.createFolder}
+          onRenamePath={state.renamePath}
+          onMovePath={state.movePath}
+          onDeletePath={state.deletePath}
+          onUseInternalRoot={state.onUseInternalRoot}
+          rootKind={state.rootKind}
+          rootPath={state.rootPath}
+          onOpenGitDiff={onOpenGitDiff}
+          onInspectPath={state.onInspectPath}
+          onOpenSearchResult={onOpenSearchResult}
+        />
+      </ResizablePanel>
+      <ResizableSeparator
+        className="resize-handle resize-handle-vertical"
+        disabled={state.sidebarCollapsed}
+        id="left-sidebar-resize"
+      />
+      <ResizablePanel className="min-h-0" id="workspace-main" minSize="360px">
+        <section className="workspace-main flex h-full min-w-0 flex-1 flex-col overflow-hidden border-x border-border/80">
+          <TabsBar
+            tabs={state.tabs}
+            dirtyPaths={state.dirtyPaths}
+            saveStates={state.saveStates}
+            activeTabId={state.activeTabId}
+            onOpenTab={state.onOpenTab}
+            onCloseTab={state.onCloseTab}
+            viewMode={state.viewMode}
+            onChangeView={state.setViewMode}
+            silentSave={state.silentSave}
+          />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <KeepAlive
+              activeCacheKey={routeCacheKey}
+              cacheNodeClassName="h-full"
+              containerClassName="h-full"
+              max={routeCacheMax}
+            >
+              {outlet}
+            </KeepAlive>
+          </div>
+        </section>
+      </ResizablePanel>
+      <ResizableSeparator
+        className="resize-handle resize-handle-vertical"
+        disabled={state.rightSidebarCollapsed}
+        id="right-sidebar-resize"
+      />
+      <ResizablePanel
+        className="min-h-0"
+        collapsedSize="56px"
+        collapsible
+        defaultSize="288px"
+        disabled={state.rightSidebarCollapsed}
+        groupResizeBehavior="preserve-pixel-size"
+        id="right-sidebar"
+        maxSize="460px"
+        minSize="240px"
+        panelRef={rightSidebarPanelRef}
+      >
+        <RightSidebar
+          collapsed={state.rightSidebarCollapsed}
+          activePath={state.activePath}
+          editorValue={state.editorValue}
+          files={state.files}
+          fileContents={state.fileContents}
+          dirtyPaths={state.dirtyPaths}
+          workspaceIndex={state.workspaceIndex}
+          tabs={state.tabs.map(getWorkspaceTabId)}
+          totalFiles={totalFiles}
+          onOpenFileView={onOpenFileView}
+          viewMode={state.viewMode}
+          inspectedPath={state.inspectedPath}
+        />
+      </ResizablePanel>
+    </ResizableGroup>
+  )
+}

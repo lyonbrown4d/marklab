@@ -3,7 +3,7 @@ import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
-export default function WorkspaceGraphPage() {
+const WorkspaceGraphPage = () => {
   const context = useLayoutContext()
   const { t } = useI18n()
 
@@ -24,3 +24,5 @@ export default function WorkspaceGraphPage() {
     />
   )
 }
+
+export default WorkspaceGraphPage

@@ -32,12 +32,12 @@ type TerminalSessionPaneProps = {
   onStateChange: (tabKey: string, state: TerminalRuntimeState) => void
 }
 
-function applyTerminalTheme(terminal: Terminal) {
+const applyTerminalTheme = (terminal: Terminal) => {
   terminal.options.theme = readTerminalTheme()
   if (terminal.rows > 0) terminal.refresh(0, terminal.rows - 1)
 }
 
-export default function TerminalSessionPane({
+const TerminalSessionPane = ({
   active,
   exitedLabel,
   restartKey,
@@ -46,7 +46,7 @@ export default function TerminalSessionPane({
   theme,
   visible,
   onStateChange,
-}: TerminalSessionPaneProps) {
+}: TerminalSessionPaneProps) => {
   const activeAndVisible = active && visible
   const containerRef = useRef<HTMLDivElement | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -285,3 +285,5 @@ export default function TerminalSessionPane({
     </div>
   )
 }
+
+export default TerminalSessionPane

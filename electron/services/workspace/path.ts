@@ -1,14 +1,10 @@
 import path from 'node:path'
-
 import type { FsStateData } from './types.js'
-
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
-
-export function normalizeRelativePath(value: string): string {
+export const normalizeRelativePath = (value: string): string => {
   return value.replace(/\\/g, '/')
 }
-
-export function toWorkspaceRelative(root: string, absolutePath: string): string | null {
+export const toWorkspaceRelative = (root: string, absolutePath: string): string | null => {
   const relative = normalizeRelativePath(
     path.relative(path.resolve(root), path.resolve(absolutePath)),
   )
@@ -16,8 +12,7 @@ export function toWorkspaceRelative(root: string, absolutePath: string): string 
   if (relative === '..' || relative.startsWith('../')) return null
   return relative
 }
-
-export function resolveWorkspacePath(data: FsStateData, relative: string): string {
+export const resolveWorkspacePath = (data: FsStateData, relative: string): string => {
   if (typeof relative !== 'string' || relative.trim() === '') {
     throw new Error('Path must not be empty')
   }
@@ -30,12 +25,10 @@ export function resolveWorkspacePath(data: FsStateData, relative: string): strin
   ) {
     throw new Error('Path must be relative')
   }
-
   const normalized = normalizeRelativePath(path.normalize(relative))
   if (normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) {
     throw new Error('Parent paths are not allowed')
   }
-
   if (data.rootKind === 'single') {
     if (!data.singleFile) throw new Error('Single-file path is not set')
     const fileName = path.basename(data.singleFile)
@@ -44,7 +37,6 @@ export function resolveWorkspacePath(data: FsStateData, relative: string): strin
     }
     return path.resolve(data.singleFile)
   }
-
   const root = path.resolve(data.rootPath)
   const resolved = path.resolve(root, normalized)
   const relativeToRoot = normalizeRelativePath(path.relative(root, resolved))
@@ -57,20 +49,17 @@ export function resolveWorkspacePath(data: FsStateData, relative: string): strin
   }
   return resolved
 }
-
-export function workspaceRootForAssets(data: FsStateData): string {
+export const workspaceRootForAssets = (data: FsStateData): string => {
   if (data.rootKind === 'single') {
     return data.singleFile ? path.dirname(data.singleFile) : data.rootPath
   }
   return data.rootPath
 }
-
-export function isMarkdownPath(value: string): boolean {
+export const isMarkdownPath = (value: string): boolean => {
   const ext = path.extname(value).toLowerCase()
   return ext === '.md' || ext === '.markdown'
 }
-
-export function isExternalTarget(target: string): boolean {
+export const isExternalTarget = (target: string): boolean => {
   try {
     const url = new URL(target)
     return ['http:', 'https:', 'data:', 'blob:', 'asset:', 'file:'].includes(url.protocol)
@@ -78,7 +67,6 @@ export function isExternalTarget(target: string): boolean {
     return false
   }
 }
-
-export function stripAssetQueryAndHash(target: string): string {
+export const stripAssetQueryAndHash = (target: string): string => {
   return target.split('#')[0]?.split('?')[0] ?? target
 }

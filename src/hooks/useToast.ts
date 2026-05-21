@@ -1,6 +1,6 @@
 type ToastVariant = 'success' | 'error' | 'info'
 
-export function useToast() {
+export const useToast = () => {
   return (message: string, _variant: ToastVariant = 'info') => {
     void _variant
     console.log(message)

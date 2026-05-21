@@ -2,7 +2,7 @@ import type { DialogProps } from '@radix-ui/react-dialog'
 import { Command } from '@/components/ui/command'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
-export default function AppCommandDialog({ children, ...props }: DialogProps) {
+const AppCommandDialog = ({ children, ...props }: DialogProps) => {
   return (
     <Dialog {...props}>
       <DialogContent
@@ -17,3 +17,5 @@ export default function AppCommandDialog({ children, ...props }: DialogProps) {
     </Dialog>
   )
 }
+
+export default AppCommandDialog

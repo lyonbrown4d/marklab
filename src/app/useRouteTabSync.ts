@@ -36,7 +36,7 @@ type UseRouteTabSyncArgs = {
   setInspectedPath: (path: string | null) => void
 }
 
-export function useRouteTabSync({
+export const useRouteTabSync = ({
   gitDiffMatch,
   sourceMatch,
   graphFileMatch,
@@ -54,7 +54,7 @@ export function useRouteTabSync({
   setTabs,
   setActiveTabId,
   setInspectedPath,
-}: UseRouteTabSyncArgs) {
+}: UseRouteTabSyncArgs) => {
   useEffect(() => {
     if (!gitDiffMatch) return
     if (!isGitDiffSection(gitDiffSection) || !gitDiffPath) return
@@ -163,7 +163,7 @@ type OpenRouteFileArgs = {
   setInspectedPath: (path: string | null) => void
 }
 
-function openRouteFile({
+const openRouteFile = ({
   path,
   view,
   inspect,
@@ -172,7 +172,7 @@ function openRouteFile({
   setTabs,
   setActiveTabId,
   setInspectedPath,
-}: OpenRouteFileArgs) {
+}: OpenRouteFileArgs) => {
   const id = view === 'edit' ? fileTabId(path) : fileViewTabId(path, view)
   const currentTabs = tabsRef.current
   if (!currentTabs.some((tab) => getWorkspaceTabId(tab) === id)) {
@@ -190,11 +190,11 @@ type OpenRouteWorkspaceGraphArgs = {
   setActiveTabId: (id: string | null) => void
 }
 
-function openRouteWorkspaceGraph({
+const openRouteWorkspaceGraph = ({
   tabsRef,
   setTabs,
   setActiveTabId,
-}: OpenRouteWorkspaceGraphArgs) {
+}: OpenRouteWorkspaceGraphArgs) => {
   const id = workspaceGraphTabId()
   const currentTabs = tabsRef.current
   if (!currentTabs.some((tab) => getWorkspaceTabId(tab) === id)) {
@@ -213,7 +213,7 @@ type OpenRouteGitDiffArgs = {
   setInspectedPath: (path: string | null) => void
 }
 
-function openRouteGitDiff({
+const openRouteGitDiff = ({
   path,
   section,
   inspectedPathRef,
@@ -221,7 +221,7 @@ function openRouteGitDiff({
   setTabs,
   setActiveTabId,
   setInspectedPath,
-}: OpenRouteGitDiffArgs) {
+}: OpenRouteGitDiffArgs) => {
   const id = gitDiffTabId(section, path)
   const currentTabs = tabsRef.current
   if (!currentTabs.some((tab) => getWorkspaceTabId(tab) === id)) {

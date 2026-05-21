@@ -4,11 +4,11 @@ import { fsApi } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
 import { isDesktopRuntime } from '@/runtime/environment'
 
-export function useWorkspaceMarkdownContents(
+export const useWorkspaceMarkdownContents = (
   entries: FileEntry[],
   fileContents: Record<string, string>,
   enabled: boolean,
-) {
+) => {
   const desktopAvailable = isDesktopRuntime()
   const files = useMemo(() => entries.filter((entry) => entry.kind === 'file'), [entries])
   const filesKey = useMemo(() => files.map((file) => file.path).join('\n'), [files])

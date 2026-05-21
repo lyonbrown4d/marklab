@@ -6,7 +6,7 @@ type SettingsRowProps = {
   control: ReactNode
 }
 
-export default function SettingsRow({ title, description, control }: SettingsRowProps) {
+const SettingsRow = ({ title, description, control }: SettingsRowProps) => {
   return (
     <div className="settings-row-surface flex items-start justify-between gap-4 rounded-md p-3">
       <div className="min-w-0">
@@ -17,3 +17,5 @@ export default function SettingsRow({ title, description, control }: SettingsRow
     </div>
   )
 }
+
+export default SettingsRow

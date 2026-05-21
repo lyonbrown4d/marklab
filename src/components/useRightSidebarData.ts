@@ -30,7 +30,7 @@ type UseRightSidebarDataArgs = {
   workspaceIndex?: FsWorkspaceIndex | null
 }
 
-export function useRightSidebarData({
+export const useRightSidebarData = ({
   collapsed,
   activePath,
   targetPath,
@@ -39,7 +39,7 @@ export function useRightSidebarData({
   fileContents,
   dirtyPaths = {},
   workspaceIndex,
-}: UseRightSidebarDataArgs) {
+}: UseRightSidebarDataArgs) => {
   const desktopAvailable = isDesktopRuntime()
   const deferredEditorValue = useDeferredValue(editorValue)
   const deferredFileContents = useDeferredValue(fileContents)

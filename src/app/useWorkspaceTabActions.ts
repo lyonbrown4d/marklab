@@ -31,7 +31,7 @@ type UseWorkspaceTabActionsArgs = {
   defaultFileView: FileViewKind
 }
 
-export function useWorkspaceTabActions({
+export const useWorkspaceTabActions = ({
   activeTabIdRef,
   currentFilePathRef,
   inspectedPathRef,
@@ -43,7 +43,7 @@ export function useWorkspaceTabActions({
   setActiveTabId,
   setInspectedPath,
   defaultFileView,
-}: UseWorkspaceTabActionsArgs) {
+}: UseWorkspaceTabActionsArgs) => {
   const setViewMode = useCallback(
     (mode: ViewMode) => {
       const tab = tabsRef.current.find((item) => getWorkspaceTabId(item) === activeTabIdRef.current)
@@ -254,18 +254,22 @@ export function useWorkspaceTabActions({
   }
 }
 
-function navigateIfNeeded(currentPathname: string, nextRoute: string, navigate: NavigateFunction) {
+const navigateIfNeeded = (
+  currentPathname: string,
+  nextRoute: string,
+  navigate: NavigateFunction,
+) => {
   if (currentPathname === nextRoute) return
   startTransition(() => {
     navigate(nextRoute)
   })
 }
 
-function navigateToTab(
+const navigateToTab = (
   tab: WorkspaceTab | null,
   currentPathname: string,
   navigate: NavigateFunction,
-) {
+) => {
   if (tab?.kind === 'file') {
     navigateIfNeeded(currentPathname, pathToFileViewRoute(tab.path, tab.view), navigate)
     return
@@ -281,7 +285,7 @@ function navigateToTab(
   navigateIfNeeded(currentPathname, '/', navigate)
 }
 
-function openFileView({
+const openFileView = ({
   path,
   view,
   inspectedPathRef,
@@ -297,7 +301,7 @@ function openFileView({
   setTabs: (tabs: WorkspaceTab[]) => void
   setActiveTabId: (id: string | null) => void
   setInspectedPath: (path: string | null) => void
-}) {
+}) => {
   const currentTabs = tabsRef.current
   const id = view === 'edit' ? fileTabId(path) : fileViewTabId(path, view)
   const nextTabs = currentTabs.some((tab) => getWorkspaceTabId(tab) === id)

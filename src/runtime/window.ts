@@ -1,5 +1,4 @@
 import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
-
 export type RuntimeWindowHandle = {
   minimize: () => Promise<void>
   maximize: () => Promise<void>
@@ -8,14 +7,11 @@ export type RuntimeWindowHandle = {
   close: () => Promise<void>
   startDragging: () => Promise<void>
 }
-
-export function isDesktopRuntime() {
+export const isDesktopRuntime = () => {
   return isElectronRuntime()
 }
-
-export async function getCurrentRuntimeWindow(): Promise<RuntimeWindowHandle | null> {
+export const getCurrentRuntimeWindow = async (): Promise<RuntimeWindowHandle | null> => {
   const electron = getElectronRuntime()
   if (electron) return electron.window
-
   return null
 }

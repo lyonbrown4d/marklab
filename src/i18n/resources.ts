@@ -6,7 +6,7 @@ export const supportedLocales = ['zh-CN', 'en-US'] as const
 export const resources = {
   'zh-CN': {
     translation: {
-      'app.name': 'marko',
+      'app.name': 'marklab',
       'titlebar.subtitle': 'Typora 风格 · 项目图谱',
       'actions.openProject': '打开项目',
       'actions.openFile': '打开文件',
@@ -30,9 +30,9 @@ export const resources = {
       'theme.light': '明亮',
       'theme.dark': '暗色',
       'theme.groupShadcn': 'Shadcn',
-      'theme.groupMarko': 'Marko',
-      'theme.markoLight': 'Marko 明亮',
-      'theme.markoDark': 'Marko 暗色',
+      'theme.groupMarko': 'Marklab',
+      'theme.markoLight': 'Marklab 明亮',
+      'theme.markoDark': 'Marklab 暗色',
       'sidebar.recentProjects': '最近项目',
       'sidebar.noRecentProjects': '暂无项目',
       'sidebar.files': '文件',
@@ -281,7 +281,7 @@ export const resources = {
   },
   'en-US': {
     translation: {
-      'app.name': 'marko',
+      'app.name': 'marklab',
       'titlebar.subtitle': 'Typora-style · Project graph',
       'actions.openProject': 'Open Project',
       'actions.openFile': 'Open File',
@@ -305,9 +305,9 @@ export const resources = {
       'theme.light': 'Light',
       'theme.dark': 'Dark',
       'theme.groupShadcn': 'Shadcn',
-      'theme.groupMarko': 'Marko',
-      'theme.markoLight': 'Marko Light',
-      'theme.markoDark': 'Marko Dark',
+      'theme.groupMarko': 'Marklab',
+      'theme.markoLight': 'Marklab Light',
+      'theme.markoDark': 'Marklab Dark',
       'sidebar.recentProjects': 'Recent Projects',
       'sidebar.noRecentProjects': 'No recent projects',
       'sidebar.files': 'Files',
@@ -562,7 +562,7 @@ export const resources = {
   },
 } as const
 
-export function normalizeLocale(input?: string | null): Locale {
+export const normalizeLocale = (input?: string | null): Locale => {
   if (!input) return defaultLocale
   const normalized = input.toLowerCase()
   if (normalized.startsWith('zh')) return 'zh-CN'

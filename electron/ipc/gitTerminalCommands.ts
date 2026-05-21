@@ -1,39 +1,31 @@
 import type * as Electron from 'electron'
-
 import type { NativeCommandHandlers } from './commandInvoke.js'
 import { GitService } from '../services/git/service.js'
 import { TerminalService } from '../services/terminal/service.js'
-
 type CommandPayload = Record<string, unknown> | undefined
-
 export type GitTerminalIpcBridge = {
   commandHandlers: NativeCommandHandlers
   git: GitService
   terminal: TerminalService
 }
-
-export function registerGitTerminalIpc(
+export const registerGitTerminalIpc = (
   ipcMain: Electron.IpcMain,
   app: Electron.App,
   terminalCwd: () => string,
-): GitTerminalIpcBridge {
+): GitTerminalIpcBridge => {
   const git = new GitService()
   const terminal = new TerminalService(() => terminalCwd() || app.getPath('home'))
   const commandHandlers = createGitTerminalCommandHandlers(git, terminal)
-
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
-
   app.on('before-quit', () => {
     terminal.dispose()
   })
-
   return { commandHandlers, git, terminal }
 }
-
-function createGitTerminalCommandHandlers(
+const createGitTerminalCommandHandlers = (
   git: GitService,
   terminal: TerminalService,
-): NativeCommandHandlers {
+): NativeCommandHandlers => {
   return {
     git_discover_repo: (payload) => git.discover(commandPayload(payload)?.rootPath),
     git_init_repo: (payload) => git.init(commandPayload(payload)?.rootPath),
@@ -68,16 +60,14 @@ function createGitTerminalCommandHandlers(
     },
   }
 }
-
-function registerLegacyCommandHandlers(
+const registerLegacyCommandHandlers = (
   ipcMain: Electron.IpcMain,
   commandHandlers: NativeCommandHandlers,
-): void {
+): void => {
   for (const [command, handler] of Object.entries(commandHandlers)) {
     ipcMain.handle(command, (event, payload: unknown) => handler(payload, event))
   }
 }
-
-function commandPayload(payload: unknown): CommandPayload {
+const commandPayload = (payload: unknown): CommandPayload => {
   return payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : undefined
 }

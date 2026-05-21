@@ -13,14 +13,14 @@ type ShortcutRecorderRowProps = {
   onChange: (action: ShortcutActionId, bindings: string[] | null) => void
 }
 
-export default function ShortcutRecorderRow({
+const ShortcutRecorderRow = ({
   action,
   label,
   bindings,
   defaultBindings,
   overrides,
   onChange,
-}: ShortcutRecorderRowProps) {
+}: ShortcutRecorderRowProps) => {
   const { t } = useI18n()
   const platform = detectPlatform()
   const hasOverride = Object.prototype.hasOwnProperty.call(overrides, action)
@@ -81,3 +81,5 @@ export default function ShortcutRecorderRow({
     </div>
   )
 }
+
+export default ShortcutRecorderRow

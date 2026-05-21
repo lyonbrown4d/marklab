@@ -1,26 +1,28 @@
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
 }
-
 export type ElectronCommandArgs = Record<string, unknown> | undefined
-
 export type ElectronOpenDialogOptions = {
   title?: string
   defaultPath?: string
   buttonLabel?: string
-  filters?: Array<{ name: string; extensions: string[] }>
+  filters?: Array<{
+    name: string
+    extensions: string[]
+  }>
   multiple?: boolean
   directory?: boolean
   file?: boolean
 }
-
 export type ElectronSaveDialogOptions = {
   title?: string
   defaultPath?: string
   buttonLabel?: string
-  filters?: Array<{ name: string; extensions: string[] }>
+  filters?: Array<{
+    name: string
+    extensions: string[]
+  }>
 }
-
 export type ElectronFileDropEvent = {
   paths: string[]
   position: {
@@ -28,32 +30,28 @@ export type ElectronFileDropEvent = {
     y: number
   }
 }
-
 export type ElectronLaunchSource = 'startup' | 'second-instance' | 'open-url'
-
 export type ElectronSingleInstanceEvent = {
   args: string[]
   cwd: string
 }
-
 export type ElectronDeepLinkEvent = {
   url: string
   source: ElectronLaunchSource
   receivedAt: number
 }
-
 export type ElectronLaunchInfo = ElectronSingleInstanceEvent & {
   deepLinks: ElectronDeepLinkEvent[]
 }
-
 export type ElectronRuntimeEvent<T = unknown> = {
   event: string
   id: number
   payload: T
 }
-
 export type ElectronRuntimeApi = {
-  appReady: () => Promise<{ ok: boolean }>
+  appReady: () => Promise<{
+    ok: boolean
+  }>
   lifecycle?: {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>
   }
@@ -71,7 +69,9 @@ export type ElectronRuntimeApi = {
     get: () => Promise<ElectronPlatformInfo>
   }
   menu: {
-    dispatch: (id: string) => Promise<{ ok: boolean }>
+    dispatch: (id: string) => Promise<{
+      ok: boolean
+    }>
     onCommand: (handler: (id: string) => void) => () => void
   }
   dialog: {
@@ -80,18 +80,41 @@ export type ElectronRuntimeApi = {
   }
   clipboard: {
     readText: () => Promise<string>
-    writeText: (text: string) => Promise<{ ok: boolean }>
-    readImage: () => Promise<{ dataUrl: string; width: number; height: number } | null>
+    writeText: (text: string) => Promise<{
+      ok: boolean
+    }>
+    readImage: () => Promise<{
+      dataUrl: string
+      width: number
+      height: number
+    } | null>
   }
   shell: {
-    openPath: (path: string) => Promise<{ ok: boolean; path?: string; error?: string }>
-    revealPath: (path: string) => Promise<{ ok: boolean; path?: string; error?: string }>
+    openPath: (path: string) => Promise<{
+      ok: boolean
+      path?: string
+      error?: string
+    }>
+    revealPath: (path: string) => Promise<{
+      ok: boolean
+      path?: string
+      error?: string
+    }>
   }
   settings?: {
     persist?: {
       getItem: (key: string) => Promise<unknown>
-      setItem: (key: string, value: unknown) => Promise<{ ok: boolean; error?: string }>
-      removeItem: (key: string) => Promise<{ ok: boolean; error?: string }>
+      setItem: (
+        key: string,
+        value: unknown,
+      ) => Promise<{
+        ok: boolean
+        error?: string
+      }>
+      removeItem: (key: string) => Promise<{
+        ok: boolean
+        error?: string
+      }>
     }
   }
   assets?: {
@@ -109,18 +132,15 @@ export type ElectronRuntimeApi = {
     startDragging: () => Promise<void>
   }
 }
-
 declare global {
   interface Window {
     markoElectron?: ElectronRuntimeApi
   }
 }
-
-export function getElectronRuntime() {
+export const getElectronRuntime = () => {
   if (typeof window === 'undefined') return null
   return window.markoElectron ?? null
 }
-
-export function isElectronRuntime() {
+export const isElectronRuntime = () => {
   return getElectronRuntime() !== null
 }

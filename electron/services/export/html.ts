@@ -1,36 +1,29 @@
 import path from 'node:path'
-
 import rehypeStringify from 'rehype-stringify'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
-
 import { normalizeMarkdownForExport } from './markdown.js'
-
 type RenderHtmlOptions = {
   resourceBasePath?: string
   resolveRelativeResources?: boolean
 }
-
 type HastNode = {
   type: string
   tagName?: string
   properties?: Record<string, unknown>
   children?: HastNode[]
 }
-
 type HastElement = HastNode & {
   type: 'element'
   tagName: string
   properties: Record<string, unknown>
 }
-
 const safeLinkSchemes = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
 const safeImageSchemes = new Set(['http:', 'https:', 'file:', 'data:'])
-
-export function renderHtml(markdown: string, options: RenderHtmlOptions = {}): string {
+export const renderHtml = (markdown: string, options: RenderHtmlOptions = {}): string => {
   const body = renderMarkdownBody(markdown, options)
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -94,8 +87,7 @@ ${body}
 </body>
 </html>`
 }
-
-function renderMarkdownBody(markdown: string, options: RenderHtmlOptions): string {
+const renderMarkdownBody = (markdown: string, options: RenderHtmlOptions): string => {
   const file = unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -103,11 +95,9 @@ function renderMarkdownBody(markdown: string, options: RenderHtmlOptions): strin
     .use(rewriteResourceUrls, options)
     .use(rehypeStringify)
     .processSync(normalizeMarkdownForExport(markdown))
-
   return String(file)
 }
-
-function rewriteResourceUrls(options: RenderHtmlOptions) {
+const rewriteResourceUrls = (options: RenderHtmlOptions) => {
   return (tree: HastNode) => {
     visit(tree, (node) => {
       if (!isHastElement(node)) return
@@ -119,31 +109,27 @@ function rewriteResourceUrls(options: RenderHtmlOptions) {
     })
   }
 }
-
-function isHastElement(node: HastNode): node is HastElement {
+const isHastElement = (node: HastNode): node is HastElement => {
   return node.type === 'element' && typeof node.tagName === 'string' && Boolean(node.properties)
 }
-
-function rewriteStringProperty(
+const rewriteStringProperty = (
   node: HastElement,
   propertyName: 'href' | 'src',
   options: RenderHtmlOptions,
   safeSchemes: Set<string>,
-): void {
+): void => {
   const value = node.properties[propertyName]
   if (typeof value !== 'string') return
   node.properties[propertyName] = resolveResourceUrl(value, options, safeSchemes)
 }
-
-function resolveResourceUrl(
+const resolveResourceUrl = (
   value: string,
   options: RenderHtmlOptions,
   safeSchemes: Set<string>,
-): string {
+): string => {
   const trimmed = value.trim()
   if (!trimmed) return ''
   if (trimmed.startsWith('#')) return trimmed
-
   const scheme = /^[a-z][a-z\d+.-]*:/i.exec(trimmed)?.[0].toLowerCase()
   if (scheme) {
     if (!safeSchemes.has(scheme)) return '#'
@@ -151,13 +137,11 @@ function resolveResourceUrl(
     if (scheme === 'data:') return safeSchemes.has('data:') ? trimmed : '#'
     return trimmed
   }
-
   const split = splitUrlSuffix(trimmed)
   const targetPath = decodeFilePath(split.path)
   if (isLocalAbsolutePath(targetPath)) {
     return fileUrlFromPath(targetPath) + split.suffix
   }
-
   if (
     options.resolveRelativeResources &&
     options.resourceBasePath &&
@@ -165,11 +149,14 @@ function resolveResourceUrl(
   ) {
     return fileUrlFromPath(path.resolve(options.resourceBasePath, targetPath)) + split.suffix
   }
-
   return trimmed
 }
-
-function splitUrlSuffix(value: string): { path: string; suffix: string } {
+const splitUrlSuffix = (
+  value: string,
+): {
+  path: string
+  suffix: string
+} => {
   const hashIndex = value.indexOf('#')
   const queryIndex = value.indexOf('?')
   const indexes = [hashIndex, queryIndex].filter((index) => index >= 0)
@@ -177,20 +164,17 @@ function splitUrlSuffix(value: string): { path: string; suffix: string } {
   if (suffixIndex < 0) return { path: value, suffix: '' }
   return { path: value.slice(0, suffixIndex), suffix: value.slice(suffixIndex) }
 }
-
-function decodeFilePath(value: string): string {
+const decodeFilePath = (value: string): string => {
   try {
     return decodeURIComponent(value)
   } catch {
     return value
   }
 }
-
-function isLocalAbsolutePath(value: string): boolean {
+const isLocalAbsolutePath = (value: string): boolean => {
   return path.isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value)
 }
-
-function isRelativeResourcePath(value: string): boolean {
+const isRelativeResourcePath = (value: string): boolean => {
   return (
     Boolean(value) &&
     !value.startsWith('/') &&
@@ -198,8 +182,7 @@ function isRelativeResourcePath(value: string): boolean {
     !/^[A-Za-z]:[\\/]/.test(value)
   )
 }
-
-function fileUrlFromPath(value: string): string {
+const fileUrlFromPath = (value: string): string => {
   const resolved = path.resolve(value)
   const normalized = resolved.replace(/\\/g, '/')
   const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`

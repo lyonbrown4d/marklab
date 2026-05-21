@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 
-export function TeamSwitcher({
+export const TeamSwitcher = ({
   teams,
 }: {
   teams: {
@@ -20,7 +20,7 @@ export function TeamSwitcher({
     logo: React.ElementType
     plan: string
   }[]
-}) {
+}) => {
   const [activeTeam, setActiveTeam] = React.useState(teams[0])
 
   if (!activeTeam) {

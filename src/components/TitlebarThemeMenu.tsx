@@ -19,7 +19,7 @@ type TitlebarThemeMenuProps = {
   onAbout: () => void
 }
 
-export default function TitlebarThemeMenu({ theme, setTheme, onAbout }: TitlebarThemeMenuProps) {
+const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps) => {
   const { t, locale, setLocale } = useI18n()
 
   return (
@@ -81,9 +81,11 @@ export default function TitlebarThemeMenu({ theme, setTheme, onAbout }: Titlebar
         <DropdownMenuSeparator />
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onAbout}>
           <CircleHelp className="mr-2 h-3.5 w-3.5" />
-          About marko
+          About marklab
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
+
+export default TitlebarThemeMenu

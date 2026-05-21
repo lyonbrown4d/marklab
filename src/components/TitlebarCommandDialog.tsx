@@ -51,7 +51,7 @@ type TitlebarCommandDialogProps = {
   onAction: (id: string) => void
 }
 
-export default function TitlebarCommandDialog({
+const TitlebarCommandDialog = ({
   open,
   onOpenChange,
   files,
@@ -60,7 +60,7 @@ export default function TitlebarCommandDialog({
   onOpenHeading,
   onOpenSearchResult,
   onAction,
-}: TitlebarCommandDialogProps) {
+}: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounce(query.trim(), { wait: 160 })
@@ -210,10 +210,12 @@ export default function TitlebarCommandDialog({
         <CommandGroup heading="Help">
           <CommandItem onSelect={() => onAction('help.about')}>
             <CircleHelp className="h-4 w-4" />
-            About marko
+            About marklab
           </CommandItem>
         </CommandGroup>
       </CommandList>
     </AppCommandDialog>
   )
 }
+
+export default TitlebarCommandDialog

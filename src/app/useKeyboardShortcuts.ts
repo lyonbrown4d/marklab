@@ -138,14 +138,14 @@ export const useKeyboardShortcuts = ({
   })
 }
 
-function openAdjacentTab(
+const openAdjacentTab = (
   action: ShortcutActionId,
   {
     activeTabId,
     tabs,
     onOpenTab,
   }: Pick<UseKeyboardShortcutsArgs, 'activeTabId' | 'onOpenTab' | 'tabs'>,
-) {
+) => {
   if (tabs.length === 0) return
   const activeIndex = activeTabId
     ? tabs.findIndex((tab) => getWorkspaceTabId(tab) === activeTabId)

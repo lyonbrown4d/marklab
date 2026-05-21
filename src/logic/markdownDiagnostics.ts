@@ -35,13 +35,13 @@ type MarkdownDiagnosticsContext = {
   workspaceIndex?: FsWorkspaceIndex | null
 }
 
-export function getMarkdownSourceDiagnostics({
+export const getMarkdownSourceDiagnostics = ({
   activePath,
   content,
   files,
   fileContents,
   workspaceIndex,
-}: MarkdownDiagnosticsContext): MarkdownSourceDiagnostic[] {
+}: MarkdownDiagnosticsContext): MarkdownSourceDiagnostic[] => {
   if (!activePath) return []
 
   const indexedFilesByPath = keyBy(workspaceIndex?.files ?? [], 'path') as Record<
@@ -115,7 +115,7 @@ export function getMarkdownSourceDiagnostics({
   return diagnostics
 }
 
-function resolveLinkTargetText(linkType: MarkdownLink['type'], lineSuffix: string) {
+const resolveLinkTargetText = (linkType: MarkdownLink['type'], lineSuffix: string) => {
   if (linkType === 'markdown') {
     const match = lineSuffix.match(/^\[[^\]]*\]\(([^)]*)\)/)
     if (!match) return null
@@ -138,7 +138,7 @@ function resolveLinkTargetText(linkType: MarkdownLink['type'], lineSuffix: strin
   }
 }
 
-function resolveMarkdownTarget(activePath: string, target: string, markdownFiles: Set<string>) {
+const resolveMarkdownTarget = (activePath: string, target: string, markdownFiles: Set<string>) => {
   if (!target.trim()) return activePath
   const normalized = normalizeRelativePath(activePath, target)
   const candidates = [
@@ -152,11 +152,11 @@ function resolveMarkdownTarget(activePath: string, target: string, markdownFiles
   return null
 }
 
-function resolveWikiTarget(
+const resolveWikiTarget = (
   target: string,
   wikiNameIndex: Map<string, string>,
   markdownFiles: Set<string>,
-) {
+) => {
   const normalized = target.trim()
   if (!normalized) return null
   const direct = wikiNameIndex.get(normalized.toLowerCase())
@@ -168,11 +168,11 @@ function resolveWikiTarget(
   return null
 }
 
-function getHeadingsFromSource(
+const getHeadingsFromSource = (
   path: string,
   indexedFilesByPath: Record<string, FsIndexedMarkdownFile>,
   fileContents: Record<string, string>,
-) {
+) => {
   const indexedFile = indexedFilesByPath[path]
   if (indexedFile) return indexedFile.headings
   const content = fileContents[path]
@@ -180,18 +180,18 @@ function getHeadingsFromSource(
   return extractHeadings(content)
 }
 
-function addMarkdownExtensionIfMissing(path: string, forceMarkdown = false) {
+const addMarkdownExtensionIfMissing = (path: string, forceMarkdown = false) => {
   if (!path) return path
   if (MARKDOWN_EXTENSIONS.test(path)) return path
   if (forceMarkdown) return `${path}.markdown`
   return `${path}.md`
 }
 
-function normalizeRelativePath(activePath: string, target: string) {
+const normalizeRelativePath = (activePath: string, target: string) => {
   return resolveRelativePath(activePath, target)
 }
 
-function buildWikiNameIndex(paths: string[]) {
+const buildWikiNameIndex = (paths: string[]) => {
   const index = new Map<string, string>()
   paths.forEach((path) => {
     index.set(path.toLowerCase(), path)

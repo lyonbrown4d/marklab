@@ -3,10 +3,10 @@ import { cn } from '@/lib/utils'
 
 type AppLogoProps = ImgHTMLAttributes<HTMLImageElement>
 
-export default function AppLogo({ alt = 'marko', className, ...props }: AppLogoProps) {
+const AppLogo = ({ alt = 'marklab', className, ...props }: AppLogoProps) => {
   return (
     <img
-      src="/marko.svg"
+      src="/marklab.svg"
       alt={alt}
       draggable={false}
       className={cn('block select-none', className)}
@@ -14,3 +14,5 @@ export default function AppLogo({ alt = 'marko', className, ...props }: AppLogoP
     />
   )
 }
+
+export default AppLogo

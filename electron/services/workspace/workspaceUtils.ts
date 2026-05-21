@@ -1,0 +1,186 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
+import { isMarkdownPath, normalizeRelativePath, toWorkspaceRelative } from './path.js'
+import type { FsEntry, FsStateData } from './types.js'
+
+export type WatchEventName = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
+
+export const stringArg = (value: unknown, key: string): string => {
+  const result =
+    value && typeof value === 'object' && key in value
+      ? (value as Record<string, unknown>)[key]
+      : value
+  if (typeof result !== 'string') throw new Error(`${key} must be a string`)
+  return result
+}
+
+export const nullableStringArg = (value: unknown, key: string): string | null => {
+  const result =
+    value && typeof value === 'object' && key in value
+      ? (value as Record<string, unknown>)[key]
+      : null
+  if (result == null) return null
+  if (typeof result !== 'string') throw new Error(`${key} must be a string`)
+  return result
+}
+
+export const pathExists = async (value: string): Promise<boolean> => {
+  try {
+    await fs.promises.access(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const safeStatSync = (value: string): ReturnType<typeof fs.statSync> | null => {
+  try {
+    return fs.statSync(value)
+  } catch {
+    return null
+  }
+}
+
+export const isTempWritePath = (value: string): boolean => {
+  return path.extname(value).toLowerCase() === '.tmp'
+}
+
+export const hasHiddenPathSegment = (value: string): boolean => {
+  return normalizeRelativePath(value)
+    .split('/')
+    .some((segment) => segment.startsWith('.'))
+}
+
+export const isPathInsideOrEqual = (root: string, absolutePath: string): boolean => {
+  const relative = normalizeRelativePath(
+    path.relative(path.resolve(root), path.resolve(absolutePath)),
+  )
+  return (
+    relative === '' ||
+    relative === '.' ||
+    (!relative.startsWith('../') && relative !== '..' && !path.isAbsolute(relative))
+  )
+}
+
+export const normalizeAbsolutePath = (value: string): string => {
+  const resolved = path.resolve(value)
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved
+}
+
+export const samePath = (left: string, right: string): boolean => {
+  return normalizeAbsolutePath(left) === normalizeAbsolutePath(right)
+}
+
+export const isWorkspaceWatchEvent = (value: string): value is WatchEventName => {
+  return (
+    value === 'add' ||
+    value === 'change' ||
+    value === 'unlink' ||
+    value === 'addDir' ||
+    value === 'unlinkDir'
+  )
+}
+
+export const sanitizeFileStem = (value: string): string => {
+  return value
+    .replace(/[\\/:"*?<>|\p{C}]/gu, '-')
+    .split(/\s+/)
+    .join(' ')
+    .replace(/^[. ]+|[. ]+$/g, '')
+}
+
+export const decodeURIComponentSafe = (value: string): string => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+export const errorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error)
+}
+
+export const ensureDefaultFile = (root: string): void => {
+  const hasMarkdown = findMarkdownFile(root)
+  if (!hasMarkdown) fs.writeFileSync(path.join(root, 'Untitled.md'), '')
+}
+
+export const listWorkspaceEntries = async (state: FsStateData): Promise<FsEntry[]> => {
+  if (state.rootKind === 'single') {
+    if (!state.singleFile) return []
+    const name = path.basename(state.singleFile)
+    return [{ path: name, name, kind: 'file' as const }]
+  }
+
+  const entries = await walkWorkspace(state.rootPath)
+  entries.sort((a, b) => a.path.localeCompare(b.path))
+  return entries
+}
+
+export const listWorkspaceKnownPaths = async (
+  state: FsStateData,
+): Promise<{ paths: string[]; assetPaths: string[] }> => {
+  if (state.rootKind === 'single') {
+    if (!state.singleFile) return { paths: [], assetPaths: [] }
+    return { paths: [path.basename(state.singleFile)], assetPaths: [] }
+  }
+
+  const paths: string[] = []
+  const assetPaths: string[] = []
+  const visit = async (directory: string) => {
+    if (!(await pathExists(directory))) return
+    for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
+      if (dirent.name.startsWith('.')) continue
+      const absolutePath = path.join(directory, dirent.name)
+      const relativePath = toWorkspaceRelative(state.rootPath, absolutePath)
+      if (!relativePath) continue
+      paths.push(relativePath)
+      if (dirent.isDirectory()) {
+        await visit(absolutePath)
+      } else if (dirent.isFile() && !isMarkdownPath(dirent.name)) {
+        assetPaths.push(relativePath)
+      }
+    }
+  }
+
+  await visit(state.rootPath)
+  return {
+    paths: paths.sort((a, b) => a.localeCompare(b)),
+    assetPaths: assetPaths.sort((a, b) => a.localeCompare(b)),
+  }
+}
+
+const walkWorkspace = async (root: string): Promise<FsEntry[]> => {
+  const entries: FsEntry[] = []
+  const visit = async (directory: string) => {
+    if (!(await pathExists(directory))) return
+    for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
+      if (dirent.name.startsWith('.')) continue
+      const absolutePath = path.join(directory, dirent.name)
+      const relativePath = toWorkspaceRelative(root, absolutePath)
+      if (!relativePath) continue
+      if (dirent.isDirectory()) {
+        entries.push({ path: relativePath, name: dirent.name, kind: 'folder' as const })
+        await visit(absolutePath)
+      } else if (dirent.isFile() && isMarkdownPath(dirent.name)) {
+        entries.push({ path: relativePath, name: dirent.name, kind: 'file' as const })
+      }
+    }
+  }
+
+  await visit(root)
+  return entries
+}
+
+const findMarkdownFile = (root: string): boolean => {
+  if (!fs.existsSync(root)) return false
+  for (const name of fs.readdirSync(root, { withFileTypes: true })) {
+    if (name.name.startsWith('.')) continue
+    const absolutePath = path.join(root, name.name)
+    if (name.isDirectory() && findMarkdownFile(absolutePath)) return true
+    if (name.isFile() && isMarkdownPath(name.name)) return true
+  }
+  return false
+}

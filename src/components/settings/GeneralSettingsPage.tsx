@@ -33,7 +33,7 @@ const generalSettingsSchema = z.object({
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>
 
-export default function GeneralSettingsPage() {
+const GeneralSettingsPage = () => {
   const { t } = useI18n()
   const silentSave = useAppStore((state) => state.silentSave)
   const setSilentSave = useAppStore((state) => state.setSilentSave)
@@ -180,3 +180,5 @@ export default function GeneralSettingsPage() {
     </div>
   )
 }
+
+export default GeneralSettingsPage

@@ -12,7 +12,7 @@ type HighlightRange = {
   end: number
 }
 
-function HighlightText({ text, ranges }: { text: string; ranges: HighlightRange[] }) {
+const HighlightText = ({ text, ranges }: { text: string; ranges: HighlightRange[] }) => {
   if (!text || ranges.length === 0) return <>{text}</>
 
   const chars = Array.from(text)
@@ -49,7 +49,7 @@ function HighlightText({ text, ranges }: { text: string; ranges: HighlightRange[
   return <>{parts}</>
 }
 
-export default function SearchResultPreview({ result, compact = false }: SearchResultPreviewProps) {
+const SearchResultPreview = ({ result, compact = false }: SearchResultPreviewProps) => {
   const Icon = compact ? Search : FileSearch
   return (
     <>
@@ -74,3 +74,5 @@ export default function SearchResultPreview({ result, compact = false }: SearchR
     </>
   )
 }
+
+export default SearchResultPreview

@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { getWindowState, setWindowState } from './services/settingsStore.js'
 import type { PersistedWindowState } from './types.js'
-
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -12,37 +11,30 @@ const MAIN_WINDOW_MIN_HEIGHT = 480
 const MAIN_WINDOW_DEFAULT_WIDTH = 800
 const MAIN_WINDOW_DEFAULT_HEIGHT = 600
 const WINDOW_STATE_SAVE_DELAY_MS = 250
-
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
-
-export type MarkoWindows = {
+export type MarklabWindows = {
   splash: BrowserWindow
   main: BrowserWindow
 }
-
 type WindowBounds = {
   height: number
   width: number
   x: number
   y: number
 }
-
-function isDevMode() {
+const isDevMode = () => {
   return !app.isPackaged
 }
-
-function getRendererUrl(page = '') {
+const getRendererUrl = (page = '') => {
   if (isDevMode()) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? DEV_SERVER_URL
     return new URL(page, devServerUrl.endsWith('/') ? devServerUrl : `${devServerUrl}/`).toString()
   }
-
   return path.join(projectRoot, 'dist', page || 'index.html')
 }
-
-function secureWebPreferences() {
+const secureWebPreferences = () => {
   return {
     contextIsolation: true,
     nodeIntegration: false,
@@ -50,16 +42,13 @@ function secureWebPreferences() {
     preload: preloadPath,
   } satisfies Electron.WebPreferences
 }
-
-function delay(ms: number) {
+const delay = (ms: number) => {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, ms)
   })
 }
-
-async function loadDevUrl(window: BrowserWindow, url: string) {
+const loadDevUrl = async (window: BrowserWindow, url: string) => {
   let lastError: unknown
-
   for (let attempt = 0; attempt < DEV_LOAD_RETRIES; attempt += 1) {
     try {
       await window.loadURL(url)
@@ -69,25 +58,20 @@ async function loadDevUrl(window: BrowserWindow, url: string) {
       await delay(DEV_LOAD_RETRY_MS)
     }
   }
-
   throw lastError
 }
-
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value && typeof value === 'object')
 }
-
-function normalizedDimension(value: unknown, min: number, fallback: number): number {
+const normalizedDimension = (value: unknown, min: number, fallback: number): number => {
   return typeof value === 'number' && Number.isFinite(value)
     ? Math.max(min, Math.round(value))
     : fallback
 }
-
-function normalizedCoordinate(value: unknown): number | undefined {
+const normalizedCoordinate = (value: unknown): number | undefined => {
   return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : undefined
 }
-
-function normalizeWindowState(value: unknown): PersistedWindowState | null {
+const normalizeWindowState = (value: unknown): PersistedWindowState | null => {
   if (!isRecord(value)) return null
   return {
     width: normalizedDimension(value.width, MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_DEFAULT_WIDTH),
@@ -97,8 +81,7 @@ function normalizeWindowState(value: unknown): PersistedWindowState | null {
     isMaximized: value.isMaximized === true,
   }
 }
-
-function readWindowState(): PersistedWindowState | null {
+const readWindowState = (): PersistedWindowState | null => {
   try {
     return normalizeWindowState(getWindowState())
   } catch (error) {
@@ -106,8 +89,7 @@ function readWindowState(): PersistedWindowState | null {
     return null
   }
 }
-
-function writeWindowState(window: BrowserWindow): void {
+const writeWindowState = (window: BrowserWindow): void => {
   try {
     const bounds = window.getNormalBounds()
     const state: PersistedWindowState = {
@@ -122,16 +104,13 @@ function writeWindowState(window: BrowserWindow): void {
     console.warn('Unable to persist window state.', error)
   }
 }
-
-function rectanglesIntersect(a: WindowBounds, b: WindowBounds): boolean {
+const rectanglesIntersect = (a: WindowBounds, b: WindowBounds): boolean => {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
-
-function hasVisibleArea(bounds: WindowBounds): boolean {
+const hasVisibleArea = (bounds: WindowBounds): boolean => {
   return screen.getAllDisplays().some((display) => rectanglesIntersect(bounds, display.workArea))
 }
-
-function restoredWindowBounds() {
+const restoredWindowBounds = () => {
   const state = readWindowState()
   if (!state) {
     return {
@@ -142,7 +121,6 @@ function restoredWindowBounds() {
       isMaximized: false,
     }
   }
-
   const bounds = {
     width: state.width,
     height: state.height,
@@ -157,7 +135,6 @@ function restoredWindowBounds() {
           height: state.height,
         }
       : null
-
   return {
     bounds:
       visibleBounds && !hasVisibleArea(visibleBounds)
@@ -166,10 +143,8 @@ function restoredWindowBounds() {
     isMaximized: state.isMaximized,
   }
 }
-
-function persistWindowState(window: BrowserWindow): void {
+const persistWindowState = (window: BrowserWindow): void => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
-
   const saveNow = () => {
     if (saveTimer) {
       clearTimeout(saveTimer)
@@ -177,24 +152,21 @@ function persistWindowState(window: BrowserWindow): void {
     }
     if (!window.isDestroyed()) writeWindowState(window)
   }
-
   const scheduleSave = () => {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(saveNow, WINDOW_STATE_SAVE_DELAY_MS)
   }
-
   window.on('resize', scheduleSave)
   window.on('move', scheduleSave)
   window.on('maximize', scheduleSave)
   window.on('unmaximize', scheduleSave)
   window.on('close', saveNow)
 }
-
-export function createSplashWindow() {
+export const createSplashWindow = () => {
   return new BrowserWindow({
     width: 420,
     height: 280,
-    title: 'marko',
+    title: 'marklab',
     resizable: false,
     fullscreen: false,
     frame: false,
@@ -204,50 +176,41 @@ export function createSplashWindow() {
     webPreferences: secureWebPreferences(),
   })
 }
-
-export function createMainWindow() {
+export const createMainWindow = () => {
   const restored = restoredWindowBounds()
   const main = new BrowserWindow({
     ...restored.bounds,
     minWidth: MAIN_WINDOW_MIN_WIDTH,
     minHeight: MAIN_WINDOW_MIN_HEIGHT,
-    title: 'marko',
+    title: 'marklab',
     resizable: true,
     fullscreen: false,
     frame: false,
     show: false,
     webPreferences: secureWebPreferences(),
   })
-
   persistWindowState(main)
   if (restored.isMaximized) main.maximize()
   return main
 }
-
-export async function loadSplashWindow(splash: BrowserWindow) {
+export const loadSplashWindow = async (splash: BrowserWindow) => {
   const splashPage = getRendererUrl('splashscreen.html')
   if (isDevMode()) {
     await loadDevUrl(splash, splashPage)
     return
   }
-
   await splash.loadFile(splashPage)
 }
-
-export async function loadMainWindow(main: BrowserWindow) {
+export const loadMainWindow = async (main: BrowserWindow) => {
   if (isDevMode()) {
     await loadDevUrl(main, getRendererUrl())
     return
   }
-
   await main.loadFile(getRendererUrl())
 }
-
-export async function createMarkoWindows(): Promise<MarkoWindows> {
+export const createMarklabWindows = async (): Promise<MarklabWindows> => {
   const splash = createSplashWindow()
   const main = createMainWindow()
-
   await Promise.all([loadSplashWindow(splash), loadMainWindow(main)])
-
   return { splash, main }
 }

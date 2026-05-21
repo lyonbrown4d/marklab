@@ -7,7 +7,7 @@ type EditorPaneFallbackProps = {
   path?: string | null
 }
 
-export default function EditorPaneFallback({ label, path }: EditorPaneFallbackProps) {
+const EditorPaneFallback = ({ label, path }: EditorPaneFallbackProps) => {
   const { t } = useI18n()
   const loadingLabel = label ?? t('editor.loading')
 
@@ -28,3 +28,5 @@ export default function EditorPaneFallback({ label, path }: EditorPaneFallbackPr
     </div>
   )
 }
+
+export default EditorPaneFallback

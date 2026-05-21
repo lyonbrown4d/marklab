@@ -10,7 +10,7 @@ type EditorEmptyStateProps = {
   onOpenFile: (path: string) => void
 }
 
-export default function EditorEmptyState({ files, onOpenFile }: EditorEmptyStateProps) {
+const EditorEmptyState = ({ files, onOpenFile }: EditorEmptyStateProps) => {
   const { t } = useI18n()
   const visibleFiles = files.slice(0, 6)
 
@@ -60,3 +60,5 @@ export default function EditorEmptyState({ files, onOpenFile }: EditorEmptyState
     </div>
   )
 }
+
+export default EditorEmptyState

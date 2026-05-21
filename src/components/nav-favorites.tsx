@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-export function NavFavorites({
+export const NavFavorites = ({
   favorites,
 }: {
   favorites: {
@@ -25,7 +25,7 @@ export function NavFavorites({
     url: string
     emoji: string
   }[]
-}) {
+}) => {
   const { isMobile } = useSidebar()
 
   return (

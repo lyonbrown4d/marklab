@@ -90,7 +90,7 @@ const renderActiveTabIcon = (tab: WorkspaceTab | null) => {
   return <FileText className="h-3.5 w-3.5" />
 }
 
-function Titlebar({
+const Titlebar = ({
   activePath,
   activeTab,
   dirtyPaths,
@@ -114,7 +114,7 @@ function Titlebar({
   onCommandOpenChange,
   settingsOpen,
   onSettingsOpenChange,
-}: TitlebarProps) {
+}: TitlebarProps) => {
   const getAppWindow = useCallback(async () => {
     return getCurrentRuntimeWindow()
   }, [])
@@ -184,7 +184,7 @@ function Titlebar({
       },
       {
         label: 'Help',
-        items: [{ id: 'help.about', label: 'About marko' }],
+        items: [{ id: 'help.about', label: 'About marklab' }],
       },
     ],
     [t],

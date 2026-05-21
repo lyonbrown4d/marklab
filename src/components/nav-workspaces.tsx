@@ -14,7 +14,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 
-export function NavWorkspaces({
+export const NavWorkspaces = ({
   workspaces,
 }: {
   workspaces: {
@@ -25,7 +25,7 @@ export function NavWorkspaces({
       emoji: React.ReactNode
     }[]
   }[]
-}) {
+}) => {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Workspaces</SidebarGroupLabel>

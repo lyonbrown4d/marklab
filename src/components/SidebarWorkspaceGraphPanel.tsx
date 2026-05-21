@@ -4,12 +4,12 @@ import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/componen
 import type { SidebarWorkspaceGraphPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
 
-export default function SidebarWorkspaceGraphPanel({
+const SidebarWorkspaceGraphPanel = ({
   fileCount,
   onOpenWorkspaceGraph,
   recentProjects,
   rootPath,
-}: SidebarWorkspaceGraphPanelProps) {
+}: SidebarWorkspaceGraphPanelProps) => {
   const { t } = useI18n()
 
   return (
@@ -49,3 +49,5 @@ export default function SidebarWorkspaceGraphPanel({
     </SidebarGroup>
   )
 }
+
+export default SidebarWorkspaceGraphPanel

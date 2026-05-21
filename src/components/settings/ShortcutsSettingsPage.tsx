@@ -11,7 +11,7 @@ import {
 import { useAppStore } from '@/store/useAppStore'
 import ShortcutRecorderRow from '@/components/settings/ShortcutRecorderRow'
 
-export default function ShortcutsSettingsPage() {
+const ShortcutsSettingsPage = () => {
   const { t } = useI18n()
   const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
   const setShortcutOverride = useAppStore((state) => state.setShortcutOverride)
@@ -68,3 +68,5 @@ export default function ShortcutsSettingsPage() {
     </div>
   )
 }
+
+export default ShortcutsSettingsPage

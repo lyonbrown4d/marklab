@@ -7,12 +7,12 @@ import type { GraphContentMode } from '@/store/useAppStore'
 
 const EMPTY_GRAPH: GraphData = { nodes: [], edges: [], layoutKey: 'empty' }
 
-export function useGraphData(
+export const useGraphData = (
   mode: 'file' | 'workspace' | null,
   workspaceIndex: FsWorkspaceIndex | null,
   activePath: string | null,
   contentMode: GraphContentMode,
-) {
+) => {
   const desktopAvailable = isDesktopRuntime()
   const enabled = Boolean(mode)
   const workspaceIndexKey = useMemo(() => {

@@ -1,15 +1,15 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="marko-bg" x1="164" y1="128" x2="860" y2="896" gradientUnits="userSpaceOnUse">
+    <linearGradient id="marklab-bg" x1="164" y1="128" x2="860" y2="896" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#17342F"/>
       <stop offset="0.52" stop-color="#0F2724"/>
       <stop offset="1" stop-color="#0B1C1A"/>
     </linearGradient>
-    <linearGradient id="marko-accent" x1="318" y1="270" x2="720" y2="768" gradientUnits="userSpaceOnUse">
+    <linearGradient id="marklab-accent" x1="318" y1="270" x2="720" y2="768" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#8BE7D0"/>
       <stop offset="1" stop-color="#2FB59E"/>
     </linearGradient>
-    <filter id="marko-shadow" x="120" y="116" width="784" height="828" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="marklab-shadow" x="120" y="116" width="784" height="828" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feFlood flood-opacity="0" result="BackgroundImageFix"/>
       <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
       <feOffset dy="28"/>
@@ -21,17 +21,17 @@
     </filter>
   </defs>
 
-  <rect width="1024" height="1024" rx="228" fill="url(#marko-bg)"/>
+  <rect width="1024" height="1024" rx="228" fill="url(#marklab-bg)"/>
   <path d="M820 196C857.555 238.521 880 294.37 880 355V669C880 801.548 772.548 909 640 909H384C284.345 909 198.883 848.249 162.613 761.794C206.595 810.48 270.229 841 341 841H597C729.548 841 837 733.548 837 601V287C837 254.982 830.73 224.428 819.365 196H820Z" fill="#071412" fill-opacity="0.2"/>
 
-  <g filter="url(#marko-shadow)">
+  <g filter="url(#marklab-shadow)">
     <path d="M294 188H666L786 308V772C786 821.706 745.706 862 696 862H294C244.294 862 204 821.706 204 772V278C204 228.294 244.294 188 294 188Z" fill="#F7FAF8"/>
     <path d="M666 188V278C666 294.569 679.431 308 696 308H786L666 188Z" fill="#D8F2EB"/>
     <path d="M286 300C286 282.327 300.327 268 318 268H564C581.673 268 596 282.327 596 300C596 317.673 581.673 332 564 332H318C300.327 332 286 317.673 286 300Z" fill="#123530" fill-opacity="0.16"/>
     <path d="M286 400C286 382.327 300.327 368 318 368H672C689.673 368 704 382.327 704 400C704 417.673 689.673 432 672 432H318C300.327 432 286 417.673 286 400Z" fill="#123530" fill-opacity="0.12"/>
     <path d="M286 500C286 482.327 300.327 468 318 468H502C519.673 468 534 482.327 534 500C534 517.673 519.673 532 502 532H318C300.327 532 286 517.673 286 500Z" fill="#123530" fill-opacity="0.12"/>
 
-    <path d="M304 698V598C304 576.461 321.461 559 343 559H361C374.306 559 386.691 565.787 393.859 576.999L457 675.75L520.141 576.999C527.309 565.787 539.694 559 553 559H571C592.539 559 610 576.461 610 598V698C610 718.987 592.987 736 572 736C551.013 736 534 718.987 534 698V655.59L488.025 727.504C481.047 738.419 468.986 745.026 456.033 745.026C443.08 745.026 431.02 738.419 424.041 727.504L380 658.616V698C380 718.987 362.987 736 342 736C321.013 736 304 718.987 304 698Z" fill="url(#marko-accent)"/>
+    <path d="M304 698V598C304 576.461 321.461 559 343 559H361C374.306 559 386.691 565.787 393.859 576.999L457 675.75L520.141 576.999C527.309 565.787 539.694 559 553 559H571C592.539 559 610 576.461 610 598V698C610 718.987 592.987 736 572 736C551.013 736 534 718.987 534 698V655.59L488.025 727.504C481.047 738.419 468.986 745.026 456.033 745.026C443.08 745.026 431.02 738.419 424.041 727.504L380 658.616V698C380 718.987 362.987 736 342 736C321.013 736 304 718.987 304 698Z" fill="url(#marklab-accent)"/>
 
     <path d="M616 660C616 641.222 631.222 626 650 626C668.778 626 684 641.222 684 660C684 678.778 668.778 694 650 694C631.222 694 616 678.778 616 660Z" fill="#123530"/>
     <path d="M682 586C682 570.536 694.536 558 710 558C725.464 558 738 570.536 738 586C738 601.464 725.464 614 710 614C694.536 614 682 601.464 682 586Z" fill="#2FB59E"/>

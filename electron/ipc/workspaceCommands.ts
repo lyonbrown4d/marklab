@@ -1,49 +1,41 @@
 import type { App, BrowserWindow, IpcMain, Shell } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-
 import type { NativeCommandHandlers } from './commandInvoke.js'
 import { ExportService } from '../services/export/exportService.js'
 import { isMarkdownPath, normalizeRelativePath } from '../services/workspace/path.js'
 import { WorkspaceService } from '../services/workspace/workspaceService.js'
-
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
   export: ExportService
   workspace: WorkspaceService
 }
-
-export function registerWorkspaceCommandsIpc(
+export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
   app: App,
   BrowserWindowClass: typeof BrowserWindow,
   shell: Shell,
-): WorkspaceCommandServices {
+): WorkspaceCommandServices => {
   const workspace = new WorkspaceService(app, shell)
   const exportService = new ExportService(shell, BrowserWindowClass)
   const commandHandlers = createWorkspaceCommandHandlers(workspace, exportService)
-
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
-
   workspace.onBufferStatus((status) => {
     for (const window of BrowserWindowClass.getAllWindows()) {
       window.webContents.send('fs-buffer-status', status)
     }
   })
-
   workspace.onSnapshotChanged((snapshot) => {
     for (const window of BrowserWindowClass.getAllWindows()) {
       window.webContents.send('fs-changed', snapshot)
     }
   })
-
   return { commandHandlers, export: exportService, workspace }
 }
-
-function createWorkspaceCommandHandlers(
+const createWorkspaceCommandHandlers = (
   workspace: WorkspaceService,
   exportService: ExportService,
-): NativeCommandHandlers {
+): NativeCommandHandlers => {
   return {
     fs_get_root_info: () => workspace.rootInfo(),
     fs_get_snapshot: () => workspace.snapshot(),
@@ -80,24 +72,29 @@ function createWorkspaceCommandHandlers(
     export_open_output_path: (payload) => exportService.openOutputPath(payload),
   }
 }
-
-function registerLegacyCommandHandlers(
+const registerLegacyCommandHandlers = (
   ipcMain: IpcMain,
   commandHandlers: NativeCommandHandlers,
-): void {
+): void => {
   for (const [command, handler] of Object.entries(commandHandlers)) {
     ipcMain.handle(command, (event, payload: unknown) => handler(payload, event))
   }
 }
-
-async function listMarkdownFiles(
+const listMarkdownFiles = async (
   value: unknown,
-): Promise<Array<{ path: string; relative_path: string }>> {
+): Promise<
+  Array<{
+    path: string
+    relative_path: string
+  }>
+> => {
   const root = pathArg(value, 'root')
   const stat = await fs.stat(root).catch(() => null)
   if (!stat?.isDirectory()) throw new Error('Project path is not a directory')
-
-  const files: Array<{ path: string; relative_path: string }> = []
+  const files: Array<{
+    path: string
+    relative_path: string
+  }> = []
   const visit = async (directory: string) => {
     for (const dirent of await fs.readdir(directory, { withFileTypes: true })) {
       if (dirent.name.startsWith('.')) continue
@@ -112,34 +109,28 @@ async function listMarkdownFiles(
       }
     }
   }
-
   await visit(root)
   return files.sort((left, right) => left.relative_path.localeCompare(right.relative_path))
 }
-
-async function readMarkdownFile(value: unknown): Promise<string> {
+const readMarkdownFile = async (value: unknown): Promise<string> => {
   return fs.readFile(markdownPathArg(value, 'path'), 'utf8')
 }
-
-async function writeMarkdownFile(value: unknown): Promise<void> {
+const writeMarkdownFile = async (value: unknown): Promise<void> => {
   const filePath = markdownPathArg(value, 'path')
   const content = stringArg(value, 'content')
   await fs.writeFile(filePath, content)
 }
-
-function markdownPathArg(value: unknown, key: string): string {
+const markdownPathArg = (value: unknown, key: string): string => {
   const filePath = pathArg(value, key)
   if (!isMarkdownPath(filePath)) throw new Error('Path must be a Markdown file')
   return filePath
 }
-
-function pathArg(value: unknown, key: string): string {
+const pathArg = (value: unknown, key: string): string => {
   const result = stringArg(value, key)
   if (result.includes('\0')) throw new Error(`${key} contains invalid characters`)
   return path.resolve(result)
 }
-
-function stringArg(value: unknown, key: string): string {
+const stringArg = (value: unknown, key: string): string => {
   const result =
     value && typeof value === 'object' && key in value
       ? (value as Record<string, unknown>)[key]

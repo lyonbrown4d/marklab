@@ -15,7 +15,7 @@ type RightSidebarSummaryProps = {
   lineCount: number
 }
 
-export function RightSidebarSummary({
+export const RightSidebarSummary = ({
   activePath,
   targetPath,
   targetLabel,
@@ -24,7 +24,7 @@ export function RightSidebarSummary({
   backlinksCount,
   problemsCount,
   lineCount,
-}: RightSidebarSummaryProps) {
+}: RightSidebarSummaryProps) => {
   const { t } = useI18n()
 
   return (

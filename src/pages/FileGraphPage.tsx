@@ -5,7 +5,7 @@ import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
-export default function FileGraphPage() {
+const FileGraphPage = () => {
   const params = useParams()
   const context = useLayoutContext()
   const { t } = useI18n()
@@ -32,3 +32,5 @@ export default function FileGraphPage() {
     />
   )
 }
+
+export default FileGraphPage

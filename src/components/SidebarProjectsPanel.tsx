@@ -11,11 +11,11 @@ import {
 import type { SidebarProjectsPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
 
-export default function SidebarProjectsPanel({
+const SidebarProjectsPanel = ({
   onOpenProject,
   onUseInternalRoot,
   recentProjects,
-}: SidebarProjectsPanelProps) {
+}: SidebarProjectsPanelProps) => {
   const { t } = useI18n()
 
   return (
@@ -64,3 +64,5 @@ export default function SidebarProjectsPanel({
     </SidebarGroup>
   )
 }
+
+export default SidebarProjectsPanel

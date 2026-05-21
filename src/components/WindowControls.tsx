@@ -18,13 +18,13 @@ type WindowControlsProps = {
   } | null>
 }
 
-export default function WindowControls({
+const WindowControls = ({
   platform,
   isWindows,
   isMaximized,
   setIsMaximized,
   getAppWindow,
-}: WindowControlsProps) {
+}: WindowControlsProps) => {
   const { t } = useI18n()
 
   if ((platform !== 'windows' && platform !== 'linux') || !isDesktopRuntime()) {
@@ -102,3 +102,5 @@ export default function WindowControls({
     </div>
   )
 }
+
+export default WindowControls

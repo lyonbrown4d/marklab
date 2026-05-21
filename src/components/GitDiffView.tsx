@@ -29,7 +29,7 @@ const languageForPath = (path: string) => {
   return 'plaintext'
 }
 
-export default function GitDiffView({ rootPath, request, onClose, onOpenFile }: GitDiffViewProps) {
+const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
   const diffQuery = useQuery({
@@ -113,3 +113,5 @@ export default function GitDiffView({ rootPath, request, onClose, onOpenFile }: 
     </div>
   )
 }
+
+export default GitDiffView

@@ -17,7 +17,7 @@ const createRootEntry = (promptLabel: string, action: (path: string) => void) =>
   action(path)
 }
 
-export default function SidebarExplorerPanel({
+const SidebarExplorerPanel = ({
   activePath,
   fileCount,
   fileTree,
@@ -31,7 +31,7 @@ export default function SidebarExplorerPanel({
   onMovePath,
   onRenamePath,
   rootKind,
-}: SidebarExplorerPanelProps) {
+}: SidebarExplorerPanelProps) => {
   const { t } = useI18n()
   const [filter, setFilter] = useState('')
   const filterInputRef = useRef<HTMLInputElement | null>(null)
@@ -141,3 +141,5 @@ export default function SidebarExplorerPanel({
     </div>
   )
 }
+
+export default SidebarExplorerPanel

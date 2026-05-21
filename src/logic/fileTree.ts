@@ -26,7 +26,7 @@ export const filterTree = (nodes: FileTreeNode[], query: string): FileTreeNode[]
     .filter((node): node is FileTreeNode => node !== null)
 }
 
-export function buildFileTree(entries: FileEntry[]) {
+export const buildFileTree = (entries: FileEntry[]) => {
   const root: FileTreeNode = { name: 'root', path: '', type: 'folder', children: [] }
 
   entries.forEach((entry) => {

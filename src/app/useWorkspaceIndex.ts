@@ -5,7 +5,7 @@ import type { FileEntry } from '@/store/useAppStore'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 
-export function useWorkspaceIndex(entries: FileEntry[], enabled: boolean) {
+export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()
   const desktopAvailable = isDesktopRuntime()
   const entriesKey = useMemo(

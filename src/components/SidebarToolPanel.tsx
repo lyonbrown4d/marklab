@@ -6,7 +6,7 @@ import SidebarSearchPanel from '@/components/SidebarSearchPanel'
 import SidebarWorkspaceGraphPanel from '@/components/SidebarWorkspaceGraphPanel'
 import type { SidebarToolPanelProps } from '@/components/sidebarPanelTypes'
 
-export default function SidebarToolPanel({
+const SidebarToolPanel = ({
   activeActivity,
   activePath,
   fileCount,
@@ -28,7 +28,7 @@ export default function SidebarToolPanel({
   recentProjects,
   rootKind,
   rootPath,
-}: SidebarToolPanelProps) {
+}: SidebarToolPanelProps) => {
   return (
     <SidebarContent className="h-full p-1.5">
       {activeActivity === 'search' ? (
@@ -73,3 +73,5 @@ export default function SidebarToolPanel({
     </SidebarContent>
   )
 }
+
+export default SidebarToolPanel

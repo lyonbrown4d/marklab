@@ -1,5 +1,4 @@
 import type * as Electron from 'electron'
-
 import { registerAppReadyIpc } from './appReady.js'
 import { registerClipboardIpc } from './clipboard.js'
 import { registerCommandInvokeIpc, type NativeCommandHandlers } from './commandInvoke.js'
@@ -14,7 +13,6 @@ import { registerWindowControlsIpc } from './windowControls.js'
 import { registerWorkspaceCommandsIpc, type WorkspaceCommandServices } from './workspaceCommands.js'
 import type { MenuDispatchBridge } from '../services/menuDispatch.js'
 import { getPlatformInfo } from '../services/platform.js'
-
 export type NativeIpcDependencies = {
   app: Electron.App
   BrowserWindow: typeof Electron.BrowserWindow
@@ -25,14 +23,12 @@ export type NativeIpcDependencies = {
   onRendererReady?: () => void
   shell: Electron.Shell
 }
-
 export type NativeIpcRegistration = {
   commands: WorkspaceCommandServices
   gitTerminal: GitTerminalIpcBridge
   menu: MenuDispatchBridge
 }
-
-export function registerNativeIpc(dependencies: NativeIpcDependencies): NativeIpcRegistration {
+export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIpcRegistration => {
   registerAppReadyIpc(dependencies.ipcMain, dependencies.app, dependencies.onRendererReady)
   registerClipboardIpc(dependencies.ipcMain, dependencies.clipboard)
   registerDialogIpc(dependencies.ipcMain, dependencies.dialog, dependencies.BrowserWindow)
@@ -50,7 +46,6 @@ export function registerNativeIpc(dependencies: NativeIpcDependencies): NativeIp
   const gitTerminal = registerGitTerminalIpc(dependencies.ipcMain, dependencies.app, () =>
     commands.workspace.terminalCwd(),
   )
-
   const menu = registerMenuDispatchIpc(dependencies.ipcMain, () =>
     dependencies.BrowserWindow.getFocusedWindow(),
   )
@@ -60,13 +55,12 @@ export function registerNativeIpc(dependencies: NativeIpcDependencies): NativeIp
   )
   return { commands, gitTerminal, menu }
 }
-
-function createRuntimeCommandHandlers(
+const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,
   gitTerminal: GitTerminalIpcBridge,
   menu: MenuDispatchBridge,
   onRendererReady?: () => void,
-): NativeCommandHandlers {
+): NativeCommandHandlers => {
   return {
     ...commands.commandHandlers,
     ...gitTerminal.commandHandlers,
@@ -82,8 +76,7 @@ function createRuntimeCommandHandlers(
     },
   }
 }
-
-function menuActionId(payload: unknown): string {
+const menuActionId = (payload: unknown): string => {
   const id = payload && typeof payload === 'object' ? (payload as Record<string, unknown>).id : null
   if (typeof id !== 'string' || !id.trim()) {
     throw new Error('menu_dispatch requires an id string')

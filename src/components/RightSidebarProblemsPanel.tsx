@@ -18,14 +18,14 @@ const problemClasses = (severity: MarkdownSourceDiagnostic['severity']) => {
   return severity === 'error' ? 'text-destructive' : 'text-amber-500'
 }
 
-export function RightSidebarProblemsPanel({
+export const RightSidebarProblemsPanel = ({
   targetPath,
   targetLabel,
   problems,
   errorProblems,
   warningProblems,
   onOpenProblem,
-}: RightSidebarProblemsPanelProps) {
+}: RightSidebarProblemsPanelProps) => {
   const { t } = useI18n()
 
   return (
@@ -83,7 +83,7 @@ type ProblemRowProps = {
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
 }
 
-function ProblemRow({ problem, onOpenProblem }: ProblemRowProps) {
+const ProblemRow = ({ problem, onOpenProblem }: ProblemRowProps) => {
   const { t } = useI18n()
   const iconClassName = `h-4 w-4 shrink-0 ${problemClasses(problem.severity)}`
 

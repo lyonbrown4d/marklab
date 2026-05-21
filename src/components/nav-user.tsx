@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-export function NavUser({
+export const NavUser = ({
   user,
 }: {
   user: {
@@ -25,7 +25,7 @@ export function NavUser({
     email: string
     avatar: string
   }
-}) {
+}) => {
   const { isMobile } = useSidebar()
 
   return (

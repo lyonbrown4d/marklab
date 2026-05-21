@@ -28,7 +28,7 @@ let listenerPromise: Promise<void> | null = null
 let outputUnlisten: RuntimeUnlistenFn | null = null
 let exitUnlisten: RuntimeUnlistenFn | null = null
 
-function updateSubscriberCount(sessionId: string, delta: 1 | -1) {
+const updateSubscriberCount = (sessionId: string, delta: 1 | -1) => {
   const nextCount = Math.max(0, (sessionSubscriberCounts.get(sessionId) ?? 0) + delta)
   if (nextCount === 0) {
     sessionSubscriberCounts.delete(sessionId)
@@ -37,7 +37,7 @@ function updateSubscriberCount(sessionId: string, delta: 1 | -1) {
   sessionSubscriberCounts.set(sessionId, nextCount)
 }
 
-function dispatchOutput(event: TerminalOutputEvent) {
+const dispatchOutput = (event: TerminalOutputEvent) => {
   if (!sessionSubscriberCounts.has(event.id)) {
     const pending = pendingOutputEvents.get(event.id) ?? []
     pending.push(event)
@@ -49,12 +49,12 @@ function dispatchOutput(event: TerminalOutputEvent) {
   terminalEvents.emit('output', event)
 }
 
-function dispatchExit(event: TerminalExitEvent) {
+const dispatchExit = (event: TerminalExitEvent) => {
   pendingOutputEvents.delete(event.id)
   terminalEvents.emit('exit', event)
 }
 
-function ensureTerminalEventListeners() {
+const ensureTerminalEventListeners = () => {
   if (!isDesktopRuntime() || listenerPromise) return
 
   listenerPromise = Promise.resolve()
@@ -77,11 +77,14 @@ function ensureTerminalEventListeners() {
     })
 }
 
-export function primeTerminalEventListeners() {
+export const primeTerminalEventListeners = () => {
   ensureTerminalEventListeners()
 }
 
-export function subscribeTerminalSessionEvents(sessionId: string, handlers: TerminalEventHandlers) {
+export const subscribeTerminalSessionEvents = (
+  sessionId: string,
+  handlers: TerminalEventHandlers,
+) => {
   ensureTerminalEventListeners()
   updateSubscriberCount(sessionId, 1)
 

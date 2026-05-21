@@ -1,6 +1,6 @@
 # Electron Runtime
 
-Marko uses Electron as the desktop runtime.
+Marklab uses Electron as the desktop runtime.
 
 ## Current Runtime
 
@@ -92,20 +92,20 @@ platform signing/notarization requirements are explicit.
 
 ## Native Capability Owners
 
-| Capability          | Electron owner                          |
-| ------------------- | --------------------------------------- |
-| window controls     | `BrowserWindow` methods via IPC         |
-| menus               | `Menu` + `webContents.send`             |
-| dialogs             | `dialog`                                |
-| clipboard           | `clipboard`                             |
-| opener              | `shell`                                 |
-| single instance     | `app.requestSingleInstanceLock()`       |
-| deep links          | `app.setAsDefaultProtocolClient()`      |
-| local assets        | `marko-asset` protocol + scoped paths   |
-| events              | `webContents.send` + preload listeners  |
-| filesystem services | Electron main service with validation   |
-| terminal PTY        | Electron main service/native dependency |
-| export              | Electron main export service            |
+| Capability          | Electron owner                                      |
+| ------------------- | --------------------------------------------------- |
+| window controls     | `BrowserWindow` methods via IPC                     |
+| menus               | `Menu` + `webContents.send`                         |
+| dialogs             | `dialog`                                            |
+| clipboard           | `clipboard`                                         |
+| opener              | `shell`                                             |
+| single instance     | `app.requestSingleInstanceLock()`                   |
+| deep links          | `marklab:` primary protocol, `marko:` compatibility |
+| local assets        | `marko-asset` compatibility protocol + scoped paths |
+| events              | `webContents.send` + preload listeners              |
+| filesystem services | Electron main service with validation               |
+| terminal PTY        | Electron main service/native dependency             |
+| export              | Electron main export service                        |
 
 ## Acceptance Checklist
 

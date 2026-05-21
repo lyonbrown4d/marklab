@@ -1,4 +1,4 @@
-export function encode(text: string) {
+export const encode = (text: string) => {
   const utf8 = new TextEncoder().encode(text)
   let binary = ''
   utf8.forEach((byte) => {
@@ -6,9 +6,7 @@ export function encode(text: string) {
   })
   return btoa(binary)
 }
-
 const isDevelopment = () => {
   return import.meta.env.MODE === 'development'
 }
-
 export { isDevelopment }

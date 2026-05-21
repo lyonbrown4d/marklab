@@ -6,7 +6,7 @@ import FullTextSearchPanel from '@/components/FullTextSearchPanel'
 import type { SidebarSearchPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
 
-export default function SidebarSearchPanel({ onOpenSearchResult }: SidebarSearchPanelProps) {
+const SidebarSearchPanel = ({ onOpenSearchResult }: SidebarSearchPanelProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
 
@@ -28,3 +28,5 @@ export default function SidebarSearchPanel({ onOpenSearchResult }: SidebarSearch
     </SidebarGroup>
   )
 }
+
+export default SidebarSearchPanel

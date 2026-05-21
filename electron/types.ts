@@ -1,7 +1,7 @@
-export type MarkoPlatform = 'windows' | 'macos' | 'linux' | 'unknown'
+export type MarklabPlatform = 'windows' | 'macos' | 'linux' | 'unknown'
 
 export type PlatformInfo = {
-  platform: MarkoPlatform
+  platform: MarklabPlatform
   arch: string
   nodePlatform: string
 }

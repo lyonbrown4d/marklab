@@ -66,7 +66,7 @@ const formatBytes = (size: number) => {
   return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
-export function RightSidebarContent({
+export const RightSidebarContent = ({
   activePath,
   targetPath,
   targetLabel,
@@ -83,7 +83,7 @@ export function RightSidebarContent({
   onOpenHeading,
   onOpenBacklink,
   onOpenProblem,
-}: RightSidebarContentProps) {
+}: RightSidebarContentProps) => {
   const { t } = useI18n()
 
   return (
@@ -269,6 +269,6 @@ export function RightSidebarContent({
   )
 }
 
-export function RightSidebarCollapsed({ tabs, totalFiles }: RightSidebarCollapsedProps) {
+export const RightSidebarCollapsed = ({ tabs, totalFiles }: RightSidebarCollapsedProps) => {
   return <RightSidebarCollapsedRail tabs={tabs} totalFiles={totalFiles} />
 }

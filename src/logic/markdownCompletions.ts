@@ -57,7 +57,7 @@ const LANGUAGE_ALIASES: Record<string, string[]> = {
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 
-export function getMarkdownCompletions({
+export const getMarkdownCompletions = ({
   activePath,
   content,
   line,
@@ -65,7 +65,7 @@ export function getMarkdownCompletions({
   files,
   fileContents,
   workspaceIndex,
-}: MarkdownCompletionContext): MarkdownCompletionItem[] {
+}: MarkdownCompletionContext): MarkdownCompletionItem[] => {
   const currentLine = getLine(content, line)
   const prefix = currentLine.slice(0, Math.max(0, column - 1))
 
@@ -124,11 +124,11 @@ export function getMarkdownCompletions({
   })
 }
 
-function getLine(content: string, line: number) {
+const getLine = (content: string, line: number) => {
   return content.split(/\r?\n/)[Math.max(0, line - 1)] ?? ''
 }
 
-function getCodeFenceContext(prefix: string) {
+const getCodeFenceContext = (prefix: string) => {
   const match = prefix.match(/(^|\s)```([\w+-]*)$/)
   if (!match) return null
   const query = match[2] ?? ''
@@ -138,7 +138,7 @@ function getCodeFenceContext(prefix: string) {
   }
 }
 
-function getWikiLinkContext(prefix: string) {
+const getWikiLinkContext = (prefix: string) => {
   const start = prefix.lastIndexOf('[[')
   if (start < 0) return null
   const query = prefix.slice(start + 2)
@@ -149,7 +149,7 @@ function getWikiLinkContext(prefix: string) {
   }
 }
 
-function getMarkdownLinkTargetContext(prefix: string) {
+const getMarkdownLinkTargetContext = (prefix: string) => {
   const start = prefix.lastIndexOf('](')
   if (start < 0) return null
   const target = prefix.slice(start + 2)
@@ -160,7 +160,7 @@ function getMarkdownLinkTargetContext(prefix: string) {
   }
 }
 
-function languageCompletions(query: string, replacementStartColumn: number) {
+const languageCompletions = (query: string, replacementStartColumn: number) => {
   const normalizedQuery = query.toLowerCase()
   return LANGUAGE_COMPLETIONS.filter((language) =>
     matchesLanguageQuery(language, normalizedQuery),
@@ -173,14 +173,14 @@ function languageCompletions(query: string, replacementStartColumn: number) {
   }))
 }
 
-function matchesLanguageQuery(language: string, query: string) {
+const matchesLanguageQuery = (language: string, query: string) => {
   if (!query) return true
   return (
     language.includes(query) || (LANGUAGE_ALIASES[language] ?? []).some((alias) => alias === query)
   )
 }
 
-function fileCompletions({
+const fileCompletions = ({
   activePath,
   files,
   workspaceIndex,
@@ -194,7 +194,7 @@ function fileCompletions({
   query: string
   replacementStartColumn: number
   mode: 'markdown' | 'wiki'
-}) {
+}) => {
   const normalizedQuery = query.toLowerCase()
   const paths = workspaceIndex
     ? workspaceIndex.files.map((file) => file.path)
@@ -221,7 +221,7 @@ function fileCompletions({
     })
 }
 
-function headingCompletions({
+const headingCompletions = ({
   content,
   query,
   detailPath,
@@ -231,7 +231,7 @@ function headingCompletions({
   query: string
   detailPath?: string
   replacementStartColumn: number
-}) {
+}) => {
   const normalizedQuery = normalizeHeadingAnchor(query)
   const lowerQuery = query.toLowerCase()
   return extractHeadings(content)
@@ -250,7 +250,7 @@ function headingCompletions({
     }))
 }
 
-function headingCompletionsFromIndex({
+const headingCompletionsFromIndex = ({
   file,
   query,
   detailPath,
@@ -260,7 +260,7 @@ function headingCompletionsFromIndex({
   query: string
   detailPath?: string
   replacementStartColumn: number
-}) {
+}) => {
   if (!file) return []
   const normalizedQuery = normalizeHeadingAnchor(query)
   const lowerQuery = query.toLowerCase()
@@ -280,7 +280,7 @@ function headingCompletionsFromIndex({
     }))
 }
 
-function createRelativeLinkTarget(activePath: string | null, targetPath: string) {
+const createRelativeLinkTarget = (activePath: string | null, targetPath: string) => {
   if (!activePath) return targetPath
   const fromDir = activePath.split('/').slice(0, -1)
   const targetParts = targetPath.split('/')
@@ -301,12 +301,12 @@ function createRelativeLinkTarget(activePath: string | null, targetPath: string)
   return [...up, ...down, targetFile].join('/') || targetPath
 }
 
-function resolveLinkedFilePath(
+const resolveLinkedFilePath = (
   activePath: string | null,
   target: string,
   files: FileEntry[],
   workspaceIndex?: FsWorkspaceIndex | null,
-) {
+) => {
   if (!activePath) return null
   if (!target.trim()) return activePath
 

@@ -4,9 +4,7 @@ import type { FileEntry } from '@/store/useAppStore'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useDocumentStats } from '@/pages/useDocumentStats'
-
 const MarkdownSourceEditor = lazy(() => import('@/components/MarkdownSourceEditor'))
-
 type SourceCodePageProps = {
   activePath: string | null
   value: string
@@ -16,8 +14,7 @@ type SourceCodePageProps = {
   onChange: (value: string) => void
   showStatusBar: boolean
 }
-
-function SourceCodePage({
+const SourceCodePage = ({
   activePath,
   value,
   files,
@@ -25,7 +22,7 @@ function SourceCodePage({
   workspaceIndex,
   onChange,
   showStatusBar,
-}: SourceCodePageProps) {
+}: SourceCodePageProps) => {
   const { t } = useI18n()
   const stats = useDocumentStats(value, showStatusBar)
   const sourceFileContents = useMemo(
@@ -38,7 +35,6 @@ function SourceCodePage({
         : fileContents,
     [activePath, fileContents, value],
   )
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
@@ -77,5 +73,4 @@ function SourceCodePage({
     </div>
   )
 }
-
 export default memo(SourceCodePage)

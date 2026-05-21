@@ -14,7 +14,7 @@ type SettingsShellProps = {
   sections: SettingsShellSection[]
 }
 
-export default function SettingsShell({ defaultValue, sections }: SettingsShellProps) {
+const SettingsShell = ({ defaultValue, sections }: SettingsShellProps) => {
   return (
     <Tabs defaultValue={defaultValue} className="settings-dialog-body min-h-0 overflow-hidden">
       <TabsList className="settings-dialog-tabs flex h-full flex-col items-stretch justify-start rounded-none border-r border-border bg-muted/35 p-2">
@@ -47,3 +47,5 @@ export default function SettingsShell({ defaultValue, sections }: SettingsShellP
     </Tabs>
   )
 }
+
+export default SettingsShell

@@ -4,7 +4,7 @@ import type { Locale } from '@/i18n/resources'
 import i18n from '@/i18n/setup'
 import { useAppStore } from '@/store/useAppStore'
 
-export function useI18n() {
+export const useI18n = () => {
   const { t } = useTranslation()
   const locale = useAppStore((state) => state.locale)
   const setLocaleStore = useAppStore((state) => state.setLocale)

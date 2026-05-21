@@ -21,7 +21,7 @@ const graphSettingsSchema = z.object({
 
 type GraphSettingsValues = z.infer<typeof graphSettingsSchema>
 
-export default function GraphSettingsPage() {
+const GraphSettingsPage = () => {
   const { t } = useI18n()
   const graphMiniMapEnabled = useAppStore((state) => state.graphMiniMapEnabled)
   const setGraphMiniMapEnabled = useAppStore((state) => state.setGraphMiniMapEnabled)
@@ -92,3 +92,5 @@ export default function GraphSettingsPage() {
     </div>
   )
 }
+
+export default GraphSettingsPage

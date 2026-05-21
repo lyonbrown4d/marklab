@@ -1,8 +1,14 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
 import { getElectronRuntime } from '@/runtime/electron'
-
-type IdleHandle = { kind: 'idle'; id: number } | { kind: 'timeout'; id: number }
-
+type IdleHandle =
+  | {
+      kind: 'idle'
+      id: number
+    }
+  | {
+      kind: 'timeout'
+      id: number
+    }
 const scheduleIdle = (callback: () => void): IdleHandle => {
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
     return {
@@ -12,7 +18,6 @@ const scheduleIdle = (callback: () => void): IdleHandle => {
   }
   return { kind: 'timeout', id: globalThis.setTimeout(callback, 120) }
 }
-
 const cancelIdle = (handle: IdleHandle | null) => {
   if (!handle || typeof window === 'undefined') return
   if (handle.kind === 'idle' && 'cancelIdleCallback' in window) {
@@ -21,21 +26,17 @@ const cancelIdle = (handle: IdleHandle | null) => {
   }
   globalThis.clearTimeout(handle.id)
 }
-
 export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> | undefined => {
   if (typeof window === 'undefined') return undefined
-
   let storage: Storage
   try {
     storage = window.localStorage
   } catch {
     return undefined
   }
-
   const pending = new Map<string, StorageValue<S>>()
   let scheduledFlush: IdleHandle | null = null
   let listenersInstalled = false
-
   const flush = () => {
     scheduledFlush = null
     if (pending.size === 0) return
@@ -45,7 +46,6 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
       storage.setItem(key, JSON.stringify(value))
     })
   }
-
   const ensureFlushListeners = () => {
     if (listenersInstalled) return
     listenersInstalled = true
@@ -57,18 +57,15 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
       }
     })
   }
-
   const scheduleFlush = () => {
     ensureFlushListeners()
     if (scheduledFlush) return
     scheduledFlush = scheduleIdle(flush)
   }
-
   return {
     getItem: (key) => {
       const pendingValue = pending.get(key)
       if (pendingValue) return pendingValue
-
       const value = storage.getItem(key)
       if (!value) return null
       try {
@@ -92,8 +89,7 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
     },
   }
 }
-
-function parseStorageValue<S>(value: string | null, storage: Storage, key: string) {
+const parseStorageValue = <S>(value: string | null, storage: Storage, key: string) => {
   if (!value) return null
   try {
     return JSON.parse(value) as StorageValue<S>
@@ -102,8 +98,7 @@ function parseStorageValue<S>(value: string | null, storage: Storage, key: strin
     return null
   }
 }
-
-function getLocalStorage(): Storage | null {
+const getLocalStorage = (): Storage | null => {
   if (typeof window === 'undefined') return null
   try {
     return window.localStorage
@@ -111,18 +106,15 @@ function getLocalStorage(): Storage | null {
     return null
   }
 }
-
 export const createElectronSettingsJsonStorage = <S>(
   name = 'marko.app',
 ): PersistStorage<S> | undefined => {
   const electronPersist = getElectronRuntime()?.settings?.persist
   if (!electronPersist) return createIdleJsonStorage<S>(name)
-
   return {
     getItem: async (key) => {
       const value = await electronPersist.getItem(key)
       if (value) return value as StorageValue<S>
-
       const localStorage = getLocalStorage()
       const localValue = localStorage
         ? parseStorageValue<S>(localStorage.getItem(key), localStorage, key)

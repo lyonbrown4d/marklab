@@ -4,7 +4,7 @@ import { isGitDiffSection } from '@/logic/routing'
 import { FileRouteNotFound } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
-export default function GitDiffRoutePage() {
+const GitDiffRoutePage = () => {
   const params = useParams()
   const context = useLayoutContext()
   const section = params.section
@@ -23,3 +23,5 @@ export default function GitDiffRoutePage() {
     />
   )
 }
+
+export default GitDiffRoutePage

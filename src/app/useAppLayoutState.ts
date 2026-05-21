@@ -17,7 +17,7 @@ import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { appApi } from '@/services/appApi'
 
-export function useAppLayoutState() {
+export const useAppLayoutState = () => {
   const {
     rootPath,
     rootKind,
@@ -147,7 +147,10 @@ export function useAppLayoutState() {
     if (!isDesktopRuntime()) return
 
     const openArgs = (args: string[]) => {
-      const paths = args.filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('marko:'))
+      const paths = args.filter(
+        (arg) =>
+          arg && !arg.startsWith('-') && !arg.startsWith('marko:') && !arg.startsWith('marklab:'),
+      )
       for (const path of paths) void openFolder(path)
     }
 

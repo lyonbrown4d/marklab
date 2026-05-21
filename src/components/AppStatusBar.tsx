@@ -43,18 +43,18 @@ const viewLabelKeys: Record<ViewMode, string> = {
   graph: 'tabs.graph',
 }
 
-function basename(path: string) {
+const basename = (path: string) => {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
-function getActiveResourceLabel(activeTab: WorkspaceTab | null, activePath: string | null) {
+const getActiveResourceLabel = (activeTab: WorkspaceTab | null, activePath: string | null) => {
   if (!activeTab) return null
   if (activeTab.kind === 'workspace-graph') return 'workspace-graph'
   if (activeTab.kind === 'git-diff') return `${createFileLabel(activeTab.path)} · Diff`
   return activePath ?? activeTab.path
 }
 
-function AppStatusBar({
+const AppStatusBar = ({
   rootKind,
   rootPath,
   files,
@@ -66,7 +66,7 @@ function AppStatusBar({
   saveStates,
   terminalOpen,
   onToggleTerminal,
-}: AppStatusBarProps) {
+}: AppStatusBarProps) => {
   const { t } = useI18n()
   const [, setSearchParams] = useSearchParams()
   const assetSyncPending = useMarkdownAssetSyncStore((state) => state.pending)

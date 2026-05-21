@@ -8,7 +8,7 @@ type RightSidebarCollapsedRailProps = {
   totalFiles: number
 }
 
-export function RightSidebarCollapsedRail({ tabs, totalFiles }: RightSidebarCollapsedRailProps) {
+export const RightSidebarCollapsedRail = ({ tabs, totalFiles }: RightSidebarCollapsedRailProps) => {
   const { t } = useI18n()
   return (
     <TooltipProvider>

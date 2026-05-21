@@ -1,5 +1,7 @@
-import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { nativeIpcChannels } from './channels.js'
+import { allowedCommands, allowedEvents } from './preload/allowlists.js'
+import { onFileDrop } from './preload/fileDrop.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -14,81 +16,14 @@ import type {
 
 type MenuActionHandler = (id: string) => void
 type RuntimeEventHandler<T = unknown> = (event: RuntimeEventPayload<T>) => void
-type FileDropHandler = (event: {
-  paths: string[]
-  position: {
-    x: number
-    y: number
-  }
-}) => void
-
-const allowedCommands = new Set([
-  'app-ready',
-  'app_get_platform',
-  'menu_dispatch',
-  'fs_get_root_info',
-  'fs_get_snapshot',
-  'fs_list_entries',
-  'fs_set_root',
-  'fs_set_single_file',
-  'fs_open_file',
-  'fs_read_file',
-  'fs_get_workspace_index',
-  'fs_get_workspace_graph',
-  'fs_get_outline_graph',
-  'fs_analyze_markdown_buffer',
-  'fs_search_workspace',
-  'fs_rebuild_search_index',
-  'fs_update_buffer',
-  'fs_write_file',
-  'fs_flush_buffers',
-  'fs_get_buffer_status',
-  'fs_get_background_tasks',
-  'fs_create_file',
-  'fs_create_dir',
-  'fs_rename_path',
-  'fs_move_path',
-  'fs_delete_path',
-  'fs_get_path_metadata',
-  'fs_open_path_in_system',
-  'fs_import_markdown_asset',
-  'fs_import_markdown_asset_base64',
-  'fs_resolve_markdown_asset',
-  'list_markdown_files',
-  'read_markdown_file',
-  'write_markdown_file',
-  'git_discover_repo',
-  'git_init_repo',
-  'git_get_status',
-  'git_get_file_diff',
-  'git_commit_all',
-  'terminal_create',
-  'terminal_write',
-  'terminal_resize',
-  'terminal_close',
-  'export_markdown',
-  'export_open_output_path',
-] as const)
-
-const allowedEvents = new Set([
-  'fs-changed',
-  'fs-buffer-status',
-  'export-task',
-  'terminal-output',
-  'terminal-exit',
-  'menu-action',
-  'single-instance',
-  'deep-link',
-  'app-ready',
-] as const)
 
 let nextRuntimeEventId = 1
 
-function emitMenuAction(id: string) {
+const emitMenuAction = (id: string): void => {
   window.dispatchEvent(new CustomEvent('marko:menu-action', { detail: id }))
 }
 
-function menuCommandFromPayload(payload: unknown) {
+const menuCommandFromPayload = (payload: unknown): string | null => {
   if (typeof payload === 'string') return payload
   if (
     payload &&
@@ -101,7 +36,7 @@ function menuCommandFromPayload(payload: unknown) {
   return null
 }
 
-async function runWindowAction(channel: string) {
+const runWindowAction = async (channel: string): Promise<void> => {
   const result = await ipcRenderer.invoke(channel)
   if (result && typeof result === 'object' && 'ok' in result && !result.ok) {
     if ('supported' in result && result.supported === false) return
@@ -109,19 +44,23 @@ async function runWindowAction(channel: string) {
   }
 }
 
-function assertAllowedCommand(command: string): void {
-  if (!allowedCommands.has(command as typeof allowedCommands extends Set<infer T> ? T : never)) {
+const assertAllowedCommand = (command: string): void => {
+  if (!allowedCommands.has(command)) {
     throw new Error(`Unsupported command: ${command}`)
   }
 }
 
-function assertAllowedEvent(eventName: string): void {
-  if (!allowedEvents.has(eventName as typeof allowedEvents extends Set<infer T> ? T : never)) {
+const assertAllowedEvent = (eventName: string): void => {
+  if (!allowedEvents.has(eventName)) {
     throw new Error(`Unsupported event: ${eventName}`)
   }
 }
 
-function emitRuntimeEvent<T>(eventName: string, payload: T, handler: RuntimeEventHandler<T>): void {
+const emitRuntimeEvent = <T>(
+  eventName: string,
+  payload: T,
+  handler: RuntimeEventHandler<T>,
+): void => {
   handler({
     event: eventName,
     id: nextRuntimeEventId,
@@ -130,7 +69,10 @@ function emitRuntimeEvent<T>(eventName: string, payload: T, handler: RuntimeEven
   nextRuntimeEventId += 1
 }
 
-function listenToRuntimeEvent<T>(eventName: string, handler: RuntimeEventHandler<T>) {
+const listenToRuntimeEvent = <T>(
+  eventName: string,
+  handler: RuntimeEventHandler<T>,
+): (() => void) => {
   assertAllowedEvent(eventName)
 
   if (eventName === 'menu-action') {
@@ -156,71 +98,6 @@ function listenToRuntimeEvent<T>(eventName: string, handler: RuntimeEventHandler
   ipcRenderer.on(eventName, listener)
   return () => {
     ipcRenderer.removeListener(eventName, listener)
-  }
-}
-
-function isFileDragEvent(event: DragEvent): boolean {
-  const types = event.dataTransfer?.types
-  return Boolean(types && Array.from(types).includes('Files'))
-}
-
-function getFilePath(file: File): string | null {
-  try {
-    const resolved = webUtils.getPathForFile(file)
-    if (resolved) return resolved
-  } catch {
-    // Electron can deny path resolution for synthetic File objects.
-  }
-
-  const legacyPath = (file as File & { path?: unknown }).path
-  return typeof legacyPath === 'string' && legacyPath ? legacyPath : null
-}
-
-function getDroppedFilePaths(files: FileList): string[] {
-  const paths = new Set<string>()
-  for (const file of Array.from(files)) {
-    const filePath = getFilePath(file)
-    if (filePath) paths.add(filePath)
-  }
-  return [...paths]
-}
-
-function getFileDropPosition(event: DragEvent) {
-  const scale = window.devicePixelRatio || 1
-  return {
-    x: Math.round(event.clientX * scale),
-    y: Math.round(event.clientY * scale),
-  }
-}
-
-function onFileDrop(handler: FileDropHandler) {
-  const dragOverListener = (event: DragEvent) => {
-    if (!isFileDragEvent(event)) return
-    event.preventDefault()
-  }
-
-  const dropListener = (event: DragEvent) => {
-    if (!isFileDragEvent(event)) return
-    event.preventDefault()
-    event.stopPropagation()
-
-    const files = event.dataTransfer?.files
-    if (!files) return
-
-    const paths = getDroppedFilePaths(files)
-    if (paths.length === 0) return
-
-    handler({
-      paths,
-      position: getFileDropPosition(event),
-    })
-  }
-
-  window.addEventListener('dragover', dragOverListener, true)
-  window.addEventListener('drop', dropListener, true)
-  return () => {
-    window.removeEventListener('dragover', dragOverListener, true)
-    window.removeEventListener('drop', dropListener, true)
   }
 }
 

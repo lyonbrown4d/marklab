@@ -18,7 +18,7 @@ type SettingsDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { t } = useI18n()
 
   return (
@@ -65,3 +65,5 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     </Dialog>
   )
 }
+
+export default SettingsDialog

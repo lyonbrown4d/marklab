@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 
-export function NavSecondary({
+export const NavSecondary = ({
   items,
   ...props
 }: {
@@ -20,7 +20,7 @@ export function NavSecondary({
     icon: LucideIcon
     badge?: React.ReactNode
   }[]
-} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
+} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) => {
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>

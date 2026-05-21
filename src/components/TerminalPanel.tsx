@@ -24,11 +24,11 @@ type TerminalTab = TerminalRuntimeState & {
   restartKey: number
 }
 
-function initialTerminalStatus(): TerminalStatus {
+const initialTerminalStatus = (): TerminalStatus => {
   return isDesktopRuntime() ? 'connecting' : 'unavailable'
 }
 
-function createTerminalTab(index: number): TerminalTab {
+const createTerminalTab = (index: number): TerminalTab => {
   return {
     error: null,
     index,
@@ -39,7 +39,7 @@ function createTerminalTab(index: number): TerminalTab {
   }
 }
 
-function TerminalStatusIcon({ status }: { status: TerminalStatus }) {
+const TerminalStatusIcon = ({ status }: { status: TerminalStatus }) => {
   if (status === 'connecting') {
     return <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
   }
@@ -49,7 +49,7 @@ function TerminalStatusIcon({ status }: { status: TerminalStatus }) {
   return <TerminalIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 }
 
-export default function TerminalPanel({ onClose, theme, visible }: TerminalPanelProps) {
+const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
   const { t } = useI18n()
   const nextTabIndexRef = useRef(2)
   const [tabs, setTabs] = useState<TerminalTab[]>(() => [createTerminalTab(1)])
@@ -255,3 +255,5 @@ export default function TerminalPanel({ onClose, theme, visible }: TerminalPanel
     </TooltipProvider>
   )
 }
+
+export default TerminalPanel

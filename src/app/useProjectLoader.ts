@@ -55,7 +55,7 @@ const isMarkdownFilePath = (path: string) => /\.(md|markdown)$/i.test(path)
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-export function useProjectLoader({
+export const useProjectLoader = ({
   rootPath,
   rootKind,
   entries,
@@ -71,7 +71,7 @@ export function useProjectLoader({
   setTabs,
   setActiveTabId,
   touchRecentProject,
-}: UseProjectLoaderArgs) {
+}: UseProjectLoaderArgs) => {
   const { t } = useI18n()
   const entriesRef = useLatest(entries)
   const tabsRef = useLatest(tabs)

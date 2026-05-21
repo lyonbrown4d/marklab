@@ -69,13 +69,13 @@ const ActivityButton = ({
   )
 }
 
-export default function SidebarActivityRail({
+const SidebarActivityRail = ({
   activeActivity,
   fileCount,
   recentProjectCount,
   onSelectActivity,
   onUseInternalRoot,
-}: SidebarActivityRailProps) {
+}: SidebarActivityRailProps) => {
   const { t } = useI18n()
   const activities: SidebarActivityItem[] = [
     {
@@ -133,3 +133,5 @@ export default function SidebarActivityRail({
     </TooltipProvider>
   )
 }
+
+export default SidebarActivityRail

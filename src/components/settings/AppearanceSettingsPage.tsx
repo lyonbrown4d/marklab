@@ -30,7 +30,7 @@ const appearanceSettingsSchema = z.object({
 
 type AppearanceSettingsValues = z.infer<typeof appearanceSettingsSchema>
 
-export default function AppearanceSettingsPage() {
+const AppearanceSettingsPage = () => {
   const { t, locale, setLocale } = useI18n()
   const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
@@ -115,7 +115,9 @@ export default function AppearanceSettingsPage() {
   )
 }
 
-function ThemePreview({ swatchClass }: { swatchClass: string }) {
+export default AppearanceSettingsPage
+
+const ThemePreview = ({ swatchClass }: { swatchClass: string }) => {
   return (
     <span className={`theme-swatch ${swatchClass} block h-9 w-12 shrink-0 overflow-hidden rounded`}>
       <span className="theme-swatch-preview relative block h-full w-full">

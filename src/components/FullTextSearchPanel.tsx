@@ -13,7 +13,7 @@ type FullTextSearchPanelProps = {
   onOpenResult: (result: FsSearchResult) => void
 }
 
-export default function FullTextSearchPanel({ query, onOpenResult }: FullTextSearchPanelProps) {
+const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) => {
   const { t } = useI18n()
   const debouncedQuery = useDebounce(query.trim(), { wait: 180 })
   const enabled = isDesktopRuntime() && debouncedQuery.length >= 2
@@ -63,3 +63,5 @@ export default function FullTextSearchPanel({ query, onOpenResult }: FullTextSea
     </div>
   )
 }
+
+export default FullTextSearchPanel

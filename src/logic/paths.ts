@@ -1,4 +1,4 @@
-export function normalizePath(value: string) {
+export const normalizePath = (value: string) => {
   const parts = value.split('/').filter(Boolean)
   const stack: string[] = []
   for (const part of parts) {
@@ -12,7 +12,7 @@ export function normalizePath(value: string) {
   return stack.join('/')
 }
 
-export function resolveRelativePath(base: string, target: string) {
+export const resolveRelativePath = (base: string, target: string) => {
   const [pathPart] = target.split('#')
   if (pathPart.startsWith('/')) {
     return normalizePath(pathPart.slice(1))
@@ -22,7 +22,7 @@ export function resolveRelativePath(base: string, target: string) {
   return normalizePath(joined)
 }
 
-export function splitLinkTarget(target: string) {
+export const splitLinkTarget = (target: string) => {
   const hashIndex = target.indexOf('#')
   if (hashIndex === -1) {
     return { path: target, anchor: null }
@@ -33,7 +33,7 @@ export function splitLinkTarget(target: string) {
   }
 }
 
-export function normalizeHeadingAnchor(anchor: string) {
+export const normalizeHeadingAnchor = (anchor: string) => {
   const value = anchor.trim()
   if (!value) return ''
   try {
@@ -43,12 +43,12 @@ export function normalizeHeadingAnchor(anchor: string) {
   }
 }
 
-export function createFileLabel(relativePath: string) {
+export const createFileLabel = (relativePath: string) => {
   const base = relativePath.split('/').pop() ?? relativePath
   return base.replace(/\.(md|markdown)$/i, '')
 }
 
-export function slugify(label: string) {
+export const slugify = (label: string) => {
   return label
     .trim()
     .toLowerCase()
@@ -58,11 +58,11 @@ export function slugify(label: string) {
     .replace(/^-|-$/g, '')
 }
 
-export function isExternalLink(target: string) {
+export const isExternalLink = (target: string) => {
   return /^(https?:\/\/|mailto:|tel:)/i.test(target)
 }
 
-export function extractLinks(content: string) {
+export const extractLinks = (content: string) => {
   const links: Array<{
     text: string
     target: string
@@ -120,7 +120,7 @@ export function extractLinks(content: string) {
   return links
 }
 
-export function extractHeadings(content: string) {
+export const extractHeadings = (content: string) => {
   const headings: Array<{ level: number; text: string; slug: string }> = []
   const usedSlugs = new Map<string, number>()
   const headingRegex = /^(#{1,6})\s+(.+)$/gm

@@ -24,7 +24,7 @@ const waitForFirstStablePaint = async () => {
   ])
 }
 
-export function useDesktopReadySignal() {
+export const useDesktopReadySignal = () => {
   useEffect(() => {
     if (!isDesktopRuntime()) return
 

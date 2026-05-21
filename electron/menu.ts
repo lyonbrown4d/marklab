@@ -1,5 +1,4 @@
 import { Menu, type BrowserWindow, type MenuItemConstructorOptions, app } from 'electron'
-
 export const MENU_ACTION_IDS = [
   'file.new',
   'file.open_project',
@@ -24,31 +23,27 @@ export const MENU_ACTION_IDS = [
   'theme.marko-dark',
   'help.about',
 ] as const
-
 export type MenuActionId = (typeof MENU_ACTION_IDS)[number]
 export type MenuActionDispatcher = (id: MenuActionId) => void
-
-function sendMenuAction(
+const sendMenuAction = (
   window: BrowserWindow | null,
   id: MenuActionId,
   dispatch?: MenuActionDispatcher,
-) {
+) => {
   if (dispatch) {
     dispatch(id)
     return
   }
-
   if (!window || window.isDestroyed()) return
   window.webContents.send('menu-action', id)
 }
-
-function actionItem(
+const actionItem = (
   window: BrowserWindow,
   id: MenuActionId,
   label: string,
   accelerator?: string,
   dispatch?: MenuActionDispatcher,
-): MenuItemConstructorOptions {
+): MenuItemConstructorOptions => {
   return {
     id,
     label,
@@ -56,8 +51,7 @@ function actionItem(
     click: () => sendMenuAction(window, id, dispatch),
   }
 }
-
-export function installNativeMenu(mainWindow: BrowserWindow, dispatch?: MenuActionDispatcher) {
+export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActionDispatcher) => {
   const fileMenu: MenuItemConstructorOptions = {
     label: 'File',
     submenu: [
@@ -73,7 +67,6 @@ export function installNativeMenu(mainWindow: BrowserWindow, dispatch?: MenuActi
       process.platform === 'darwin' ? { role: 'close' } : { role: 'quit' },
     ],
   }
-
   const editMenu: MenuItemConstructorOptions = {
     label: 'Edit',
     submenu: [
@@ -93,7 +86,6 @@ export function installNativeMenu(mainWindow: BrowserWindow, dispatch?: MenuActi
       actionItem(mainWindow, 'edit.select_all', 'Select All', 'CmdOrCtrl+A', dispatch),
     ],
   }
-
   const viewMenu: MenuItemConstructorOptions = {
     label: 'View',
     submenu: [
@@ -114,23 +106,20 @@ export function installNativeMenu(mainWindow: BrowserWindow, dispatch?: MenuActi
       { role: 'toggleDevTools' },
     ],
   }
-
   const themeMenu: MenuItemConstructorOptions = {
     label: 'Theme',
     submenu: [
       actionItem(mainWindow, 'theme.light', 'Light', undefined, dispatch),
       actionItem(mainWindow, 'theme.dark', 'Dark', undefined, dispatch),
       { type: 'separator' },
-      actionItem(mainWindow, 'theme.marko-light', 'Marko Light', undefined, dispatch),
-      actionItem(mainWindow, 'theme.marko-dark', 'Marko Dark', undefined, dispatch),
+      actionItem(mainWindow, 'theme.marko-light', 'Marklab Light', undefined, dispatch),
+      actionItem(mainWindow, 'theme.marko-dark', 'Marklab Dark', undefined, dispatch),
     ],
   }
-
   const helpMenu: MenuItemConstructorOptions = {
     label: 'Help',
-    submenu: [actionItem(mainWindow, 'help.about', 'About marko', undefined, dispatch)],
+    submenu: [actionItem(mainWindow, 'help.about', 'About marklab', undefined, dispatch)],
   }
-
   const template: MenuItemConstructorOptions[] = [fileMenu, editMenu, viewMenu, themeMenu, helpMenu]
   if (process.platform === 'darwin') {
     template.unshift({
@@ -148,6 +137,5 @@ export function installNativeMenu(mainWindow: BrowserWindow, dispatch?: MenuActi
       ],
     })
   }
-
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }

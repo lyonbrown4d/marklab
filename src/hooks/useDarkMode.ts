@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore'
 
-export function useDarkMode() {
+export const useDarkMode = () => {
   const theme = useAppStore((state) => state.theme)
   return theme === 'dark' || theme === 'marko-dark'
 }

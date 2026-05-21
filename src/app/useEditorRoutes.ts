@@ -18,7 +18,7 @@ type UseEditorRoutesArgs = {
   tabViewModes: Record<string, ViewMode>
 }
 
-export function useEditorRoutes({ entries, activeTab, tabViewModes }: UseEditorRoutesArgs) {
+export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorRoutesArgs) => {
   const params = useParams()
   const editMatch = useMatch(FILE_ROUTE_PATTERN)
   const gitDiffMatch = useMatch(GIT_DIFF_ROUTE_PATTERN)

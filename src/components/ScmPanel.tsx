@@ -47,7 +47,7 @@ const statusLabels: Record<GitFileChange['status'], string> = {
   pruned: '-',
 }
 
-function ChangeRow({
+const ChangeRow = ({
   change,
   section,
   onOpenDiff,
@@ -55,7 +55,7 @@ function ChangeRow({
   change: GitFileChange
   section: GitDiffRequest['section']
   onOpenDiff: (request: GitDiffRequest) => void
-}) {
+}) => {
   return (
     <button
       type="button"
@@ -70,7 +70,7 @@ function ChangeRow({
   )
 }
 
-export default function ScmPanel({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) {
+const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) => {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [commitMessage, setCommitMessage] = useState('')
@@ -299,3 +299,5 @@ export default function ScmPanel({ rootPath, rootKind, collapsed, onOpenDiff }: 
     </SidebarGroup>
   )
 }
+
+export default ScmPanel

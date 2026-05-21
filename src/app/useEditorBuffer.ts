@@ -25,7 +25,7 @@ type WorkspaceDirtyPaths = Record<string, Record<string, true>>
 type WorkspaceLoadingPaths = Record<string, Record<string, true>>
 type WorkspaceSaveStates = Record<string, Record<string, SaveState>>
 
-export function useEditorBuffer({ activePath, workspaceKey }: UseEditorBufferArgs) {
+export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArgs) => {
   const [workspaceFileContents, setWorkspaceFileContents] = useState<WorkspaceContents>({})
   const [workspaceDirtyPaths, setWorkspaceDirtyPaths] = useState<WorkspaceDirtyPaths>({})
   const [workspaceLoadingPaths, setWorkspaceLoadingPaths] = useState<WorkspaceLoadingPaths>({})

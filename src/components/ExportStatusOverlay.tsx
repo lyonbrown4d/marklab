@@ -25,7 +25,7 @@ const getFormatLabel = (format: string) => {
   return format.toUpperCase()
 }
 
-export default function ExportStatusOverlay() {
+const ExportStatusOverlay = () => {
   const { t } = useI18n()
 
   useEffect(() => {
@@ -86,3 +86,5 @@ export default function ExportStatusOverlay() {
 
   return null
 }
+
+export default ExportStatusOverlay

@@ -4,9 +4,7 @@ import type { GraphContentMode } from '@/store/useAppStore'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphMarkdownEditing } from '@/pages/useGraphMarkdownEditing'
-
 const GraphPage = lazy(() => import('@/pages/GraphPage'))
-
 type GraphViewPageProps = {
   graph: GraphData
   markdown: string
@@ -17,8 +15,7 @@ type GraphViewPageProps = {
   editable: boolean
   showEmptyMessage: boolean
 }
-
-function GraphViewPage({
+const GraphViewPage = ({
   graph,
   markdown,
   onOpenFile,
@@ -27,7 +24,7 @@ function GraphViewPage({
   contentMode,
   editable,
   showEmptyMessage,
-}: GraphViewPageProps) {
+}: GraphViewPageProps) => {
   const { t } = useI18n()
   const { editorGraph, updateHeadingContent, updateHeadingTitle } = useGraphMarkdownEditing({
     graph,
@@ -36,7 +33,6 @@ function GraphViewPage({
   })
   const canEdit = editable && editorGraph.nodes.some((node) => node.type === 'heading')
   const graphContentMode = canEdit ? 'full' : contentMode
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
@@ -64,5 +60,4 @@ function GraphViewPage({
     </div>
   )
 }
-
 export default memo(GraphViewPage)

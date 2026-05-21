@@ -21,14 +21,14 @@ type MarkdownSourceEditorProps = {
   onChange: (value: string) => void
 }
 
-export default function MarkdownSourceEditor({
+const MarkdownSourceEditor = ({
   activePath,
   value,
   files,
   fileContents,
   workspaceIndex,
   onChange,
-}: MarkdownSourceEditorProps) {
+}: MarkdownSourceEditorProps) => {
   const darkMode = useDarkMode()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const diagnosticHostRef = useRef<{
@@ -236,7 +236,7 @@ export default function MarkdownSourceEditor({
         height="100%"
         language="markdown"
         theme={darkMode ? 'vs-dark' : 'vs'}
-        path={activePath ?? 'marko-empty.md'}
+        path={activePath ?? 'marklab-empty.md'}
         value={value}
         onChange={(next) => onChange(next ?? '')}
         onMount={handleMount}
@@ -257,3 +257,5 @@ export default function MarkdownSourceEditor({
     </div>
   )
 }
+
+export default MarkdownSourceEditor

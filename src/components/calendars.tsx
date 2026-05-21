@@ -12,14 +12,14 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 
-export function Calendars({
+export const Calendars = ({
   calendars,
 }: {
   calendars: {
     name: string
     items: string[]
   }[]
-}) {
+}) => {
   return (
     <>
       {calendars.map((calendar, index) => (

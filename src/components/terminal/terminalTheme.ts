@@ -1,10 +1,10 @@
 import type { ITheme } from '@xterm/xterm'
 
-export function shellName(shell: string) {
+export const shellName = (shell: string) => {
   return shell.split(/[\\/]/).filter(Boolean).pop() ?? shell
 }
 
-export function readTerminalTheme(): ITheme {
+export const readTerminalTheme = (): ITheme => {
   if (typeof window === 'undefined') {
     return {
       background: '#ffffff',

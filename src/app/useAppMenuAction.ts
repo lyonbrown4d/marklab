@@ -1,0 +1,92 @@
+import { useCallback } from 'react'
+import { exportApi } from '@/services/exportApi'
+import { requestExportContent } from '@/utils/exportContent'
+import { isDesktopRuntime } from '@/runtime/environment'
+import type { useAppLayoutState } from '@/app/useAppLayoutState'
+
+type AppLayoutState = ReturnType<typeof useAppLayoutState>
+
+type UseAppMenuActionArgs = {
+  stateRef: { current: AppLayoutState }
+  setSettingsOpen: (open: boolean) => void
+}
+
+export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuActionArgs) => {
+  return useCallback(
+    (id: string) => {
+      const currentState = stateRef.current
+
+      const executeEdit = (action: string) => {
+        if (typeof document === 'undefined') return
+        if (action === 'edit.undo') document.execCommand('undo')
+        if (action === 'edit.redo') document.execCommand('redo')
+        if (action === 'edit.cut') document.execCommand('cut')
+        if (action === 'edit.copy') document.execCommand('copy')
+        if (action === 'edit.paste') document.execCommand('paste')
+        if (action === 'edit.select_all') document.execCommand('selectAll')
+      }
+
+      const createUntitledPath = () => {
+        const files = new Set(
+          currentState.files
+            .filter((entry) => entry.kind === 'file')
+            .map((entry) => entry.path.toLowerCase()),
+        )
+        if (!files.has('untitled.md')) return 'Untitled.md'
+        for (let index = 1; index <= 999; index += 1) {
+          const next = `Untitled-${index}.md`
+          if (!files.has(next.toLowerCase())) return next
+        }
+        return `Untitled-${Date.now()}.md`
+      }
+
+      if (id.startsWith('edit.')) {
+        executeEdit(id)
+        return
+      }
+      if (id === 'file.open_project') {
+        void currentState.onSelectProject()
+        return
+      }
+      if (id === 'file.open_file') {
+        void currentState.onSelectSingleFile()
+        return
+      }
+      if (id === 'file.new') {
+        const next = createUntitledPath()
+        void currentState.createFile(next).then(() => currentState.onOpenFile(next))
+        return
+      }
+      if (id === 'file.export_pdf' || id === 'file.export_docx' || id === 'file.export_html') {
+        if (!isDesktopRuntime()) return
+        const format =
+          id === 'file.export_pdf' ? 'pdf' : id === 'file.export_docx' ? 'docx' : 'html'
+        const { activePath, rootPath, editorValue } = currentState
+        void (async () => {
+          const content = await requestExportContent(editorValue, {
+            expectedActivePath: activePath,
+          })
+          await exportApi.exportMarkdown(content, format, {
+            rootPath,
+            activePath,
+          })
+        })().catch((err) => window.alert(String(err)))
+        return
+      }
+      if (id === 'view.wysiwyg') currentState.setViewMode('wysiwyg')
+      if (id === 'view.source') currentState.setViewMode('source')
+      if (id === 'view.graph') currentState.setViewMode('graph')
+      if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
+      if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
+      if (id === 'settings.open') setSettingsOpen(true)
+      if (id === 'theme.light') currentState.setTheme('light')
+      if (id === 'theme.dark') currentState.setTheme('dark')
+      if (id === 'theme.marko-light') currentState.setTheme('marko-light')
+      if (id === 'theme.marko-dark') currentState.setTheme('marko-dark')
+      if (id === 'help.about') {
+        window.alert('marklab\nA desktop Markdown workspace with graph navigation.')
+      }
+    },
+    [setSettingsOpen, stateRef],
+  )
+}

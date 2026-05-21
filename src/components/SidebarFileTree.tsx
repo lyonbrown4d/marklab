@@ -20,7 +20,7 @@ import type { FileTreeNode } from '@/logic/fileTree'
 
 export type { ContextLabels } from '@/components/file-tree/types'
 
-export default function SidebarFileTree({
+const SidebarFileTree = ({
   activePath,
   labels,
   nodes,
@@ -34,7 +34,7 @@ export default function SidebarFileTree({
   onMovePath,
   readonlyTree,
   searchTerm,
-}: SidebarFileTreeProps) {
+}: SidebarFileTreeProps) => {
   const treeRef = useRef<TreeApi<FileTreeNode> | undefined>(undefined)
   const [dndRootElement, setDndRootElement] = useState<HTMLDivElement | null>(null)
   const setTreeContainerRef = useCallback((element: HTMLDivElement | null) => {
@@ -251,3 +251,5 @@ export default function SidebarFileTree({
     </div>
   )
 }
+
+export default SidebarFileTree
