@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto'
+import path from 'node:path'
+
+import { isMarkdownPath } from '@electron/services/workspace/path.js'
 import {
   buildOutlineGraph,
   buildWorkspaceGraph,
@@ -5,21 +9,42 @@ import {
   parseMarkdownDocument,
   searchDocuments,
 } from '@electron/services/workspace/markdown.js'
+import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
+import os from 'node:os'
 import type {
   FsGraph,
   FsMarkdownDiagnostic,
+  FsRootInfo,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
+import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient.js'
-import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
+import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
+
+const SEARCH_INDEX_REBUILD_DELAY_MS = 600
+
+type SearchDocumentToIndex = {
+  path: string
+  title: string
+  content: string
+}
 
 export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly analysisWorker = new WorkspaceAnalysisWorkerClient(
     this.logger.child('analysis-worker'),
   )
+  private readonly workspaceSearchIndex = new WorkspaceSearchIndex()
+  private activeWorkspaceSearchKey = ''
+  private needsSearchIndexRebuild = true
+  private searchIndexRebuildTimer: ReturnType<typeof setTimeout> | null = null
 
   override dispose(): void {
+    if (this.searchIndexRebuildTimer) {
+      clearTimeout(this.searchIndexRebuildTimer)
+      this.searchIndexRebuildTimer = null
+    }
+    void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
     super.dispose()
   }
@@ -94,37 +119,134 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const query = stringArg(value, 'query')
     const limitValue = value && typeof value === 'object' && 'limit' in value ? value.limit : 20
     const limit = typeof limitValue === 'number' && Number.isFinite(limitValue) ? limitValue : 20
-    return this.runSearchIndexTask(async () => {
-      const documents = await this.workspaceDocuments()
-      return this.runWorkerTask(
-        () =>
-          this.analysisWorker.run({
-            type: 'search-documents',
-            documents,
-            query,
-            limit,
-          }),
-        async () => searchDocuments(documents, query, limit),
-        'search-documents',
-      )
-    })
+
+    return this.runSearchIndexTask(
+      async () => {
+        await this.openWorkspaceSearchIndex()
+        await this.rebuildSearchIndexIfNeeded()
+
+        const indexedResult = await this.workspaceSearchIndex.search(query, limit)
+        if (indexedResult.length > 0) return indexedResult
+
+        const documents = await this.workspaceDocuments()
+        return searchDocuments(documents, query, limit)
+      },
+      async () => {
+        const documents = await this.workspaceDocuments()
+        return searchDocuments(documents, query, limit)
+      },
+      'search-documents',
+    )
   }
 
   async rebuildSearchIndex(): Promise<void> {
-    await this.runSearchIndexTask(async () => {
-      const documents = await this.workspaceDocuments()
-      const knownPaths = await this.workspaceKnownPaths()
-      await this.runWorkerTask(
-        () =>
-          this.analysisWorker.run({
-            type: 'workspace-index',
-            documents,
-            knownPaths,
-          }),
-        async () => this.buildWorkspaceIndexFromDocuments(documents, knownPaths),
-        'workspace-index',
-      )
+    this.needsSearchIndexRebuild = true
+    await this.buildSearchIndexFromWorkspace()
+  }
+
+  override async setRoot(value: unknown): Promise<FsRootInfo> {
+    const result = await super.setRoot(value)
+    this.resetSearchIndexState()
+    return result
+  }
+
+  override async setSingleFile(value: unknown): Promise<FsRootInfo> {
+    const result = await super.setSingleFile(value)
+    this.resetSearchIndexState()
+    return result
+  }
+
+  protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
+    if (event === 'change' && _changedPath && !isMarkdownPath(_changedPath)) return
+
+    this.needsSearchIndexRebuild = true
+    this.scheduleSearchIndexRebuild()
+  }
+
+  protected override onBuffersFlushed(relativePaths: string[]): void {
+    const markdownPaths = relativePaths.filter((value) => isMarkdownPath(value))
+    if (markdownPaths.length === 0) return
+
+    void this.runSearchIndexTask(
+      async () => {
+        await this.openWorkspaceSearchIndex()
+        const documents = await this.loadDocuments(markdownPaths)
+        for (const document of documents) {
+          await this.workspaceSearchIndex.upsertDocument(document)
+        }
+      },
+      async () => {
+        this.needsSearchIndexRebuild = true
+      },
+      'search-index',
+    ).catch((error) => {
+      this.logger.warn('search index update from flush failed; scheduling full rebuild', { error })
+      this.needsSearchIndexRebuild = true
     })
+  }
+
+  private async openWorkspaceSearchIndex(): Promise<void> {
+    const workspaceSearchKey = this.getWorkspaceSearchKey()
+    const dbPath = this.getWorkspaceSearchIndexPath()
+    await this.workspaceSearchIndex.open(dbPath)
+
+    if (this.activeWorkspaceSearchKey !== workspaceSearchKey) {
+      this.activeWorkspaceSearchKey = workspaceSearchKey
+      this.needsSearchIndexRebuild = !(await this.workspaceSearchIndex.hasDocuments())
+    }
+  }
+
+  private async rebuildSearchIndexIfNeeded(): Promise<void> {
+    if (!this.needsSearchIndexRebuild) return
+    await this.buildSearchIndexFromWorkspace()
+    this.needsSearchIndexRebuild = false
+  }
+
+  private async buildSearchIndexFromWorkspace(): Promise<void> {
+    const documents = await this.workspaceDocuments()
+    const indexable = documents.map<SearchDocumentToIndex>((document) => ({
+      path: document.path,
+      title: fileLabel(document.path),
+      content: document.content,
+    }))
+    await this.workspaceSearchIndex.rebuild(indexable)
+  }
+
+  private scheduleSearchIndexRebuild(): void {
+    if (this.searchIndexRebuildTimer) {
+      clearTimeout(this.searchIndexRebuildTimer)
+    }
+
+    this.searchIndexRebuildTimer = setTimeout(() => {
+      this.searchIndexRebuildTimer = null
+      void this.runSearchIndexTask(
+        async () => {
+          await this.buildSearchIndexFromWorkspace()
+          this.needsSearchIndexRebuild = false
+        },
+        async () => {
+          this.needsSearchIndexRebuild = true
+        },
+        'search-index',
+      ).catch((error) => {
+        this.logger.warn('scheduled search index rebuild failed', { error })
+      })
+    }, SEARCH_INDEX_REBUILD_DELAY_MS)
+  }
+
+  private getWorkspaceSearchIndexPath(): string {
+    const appName = this.app.getName() || 'marklab'
+    const baseDataDir =
+      process.platform === 'linux'
+        ? (process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share'))
+        : this.app.getPath('appData')
+
+    return path.join(baseDataDir, appName, 'search-index', `${this.getWorkspaceSearchKey()}.sqlite`)
+  }
+
+  private getWorkspaceSearchKey(): string {
+    const raw = `${this.state.rootKind}|${this.state.rootPath}|${this.state.singleFile ?? ''}`
+    return createHash('sha256').update(raw).digest('hex')
   }
 
   private buildWorkspaceIndexFromDocuments(
@@ -138,19 +260,32 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     }
   }
 
-  private async runWorkerTask<T>(
-    task: () => Promise<T>,
-    fallback: () => Promise<T> | T,
-    taskName: string,
-  ): Promise<T> {
-    try {
-      return await task()
-    } catch (error) {
-      this.logger.warn('workspace analysis worker task failed; using main-thread fallback', {
-        error,
-        task: taskName,
-      })
-      return fallback()
+  private resetSearchIndexState(): void {
+    this.activeWorkspaceSearchKey = ''
+    this.needsSearchIndexRebuild = true
+    void this.workspaceSearchIndex.close().catch((error) => {
+      this.logger.warn('search index close failed while switching workspace', { error })
+    })
+  }
+
+  private async loadDocuments(relativePaths: string[]): Promise<Array<SearchDocumentToIndex>> {
+    const documents: Array<SearchDocumentToIndex> = []
+    for (const relativePath of relativePaths) {
+      try {
+        const content = await this.readFile({ path: relativePath })
+        documents.push({
+          path: relativePath,
+          title: fileLabel(relativePath),
+          content,
+        })
+      } catch (error) {
+        this.logger.warn('failed to read flushed file for search index update', {
+          error,
+          path: relativePath,
+        })
+        await this.workspaceSearchIndex.removeDocument(relativePath).catch(() => undefined)
+      }
     }
+    return documents
   }
 }

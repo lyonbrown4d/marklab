@@ -24,10 +24,20 @@ const createContentSecurityPolicy = (): string => {
   const scriptSources = ["'self'", 'blob:']
   const styleSources = ["'self'", "'unsafe-inline'"]
   const fontSources = ["'self'", 'data:']
+  const connectSources = [
+    "'self'",
+    'marklab-asset:',
+    'http://localhost:*',
+    'http://127.0.0.1:*',
+    'ws://localhost:*',
+    'ws://127.0.0.1:*',
+  ]
   if (isDev) {
+    scriptSources.push("'unsafe-eval'")
     scriptSources.push("'unsafe-inline'")
     styleSources.push('https://fonts.googleapis.com')
     fontSources.push('https://fonts.gstatic.com')
+    connectSources.push('https://fonts.googleapis.com', 'https://www.react-grab.com')
   }
   if (!app.isPackaged && process.env.VITE_REACT_DEVTOOLS === 'true') {
     scriptSources.push('http://localhost:8097')
@@ -41,7 +51,7 @@ const createContentSecurityPolicy = (): string => {
     `style-src ${styleSources.join(' ')}`,
     "img-src 'self' data: blob: file: marklab-asset: http: https:",
     `font-src ${fontSources.join(' ')}`,
-    "connect-src 'self' marklab-asset: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
+    `connect-src ${connectSources.join(' ')}`,
     "media-src 'self' data: blob: file: marklab-asset:",
     "worker-src 'self' blob:",
   ].join('; ')

@@ -67,7 +67,7 @@ const isAllowedAssetPath = (
 const normalizeAssetResponse = (
   response: Response,
   assetPath: string,
-  headers: Record<string, string> | undefined,
+  headers: Headers | undefined,
 ): Response => {
   const contentType = inferContentType(assetPath, headers)
   if (!contentType) return response
@@ -84,10 +84,7 @@ const normalizeAssetResponse = (
   })
 }
 
-const inferContentType = (
-  assetPath: string,
-  headers: Record<string, string> | undefined,
-): string | null => {
+const inferContentType = (assetPath: string, headers: Headers | undefined): string | null => {
   const requestDestination = fetchRequestDestination(headers)
   const extension = path.extname(assetPath).toLowerCase()
   if (requestDestination === 'script' && extension === '.ts') {
@@ -96,10 +93,9 @@ const inferContentType = (
   return null
 }
 
-const fetchRequestDestination = (headers: Record<string, string> | undefined): string | null => {
+const fetchRequestDestination = (headers: Headers | undefined): string | null => {
   if (!headers) return null
-  const destination =
-    headers['sec-fetch-dest'] ?? headers['Sec-Fetch-Dest'] ?? headers['SEC-FETCH-DEST'] ?? null
+  const destination = headers.get('sec-fetch-dest')
   return destination ? destination.toLowerCase() : null
 }
 

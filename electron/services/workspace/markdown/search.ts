@@ -4,7 +4,7 @@ import { headingLevelsByLine } from '@electron/services/workspace/markdown/headi
 import { charLength, sliceChars } from '@electron/services/workspace/markdown/text.js'
 import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
 
-type SearchTerm = {
+export type SearchTerm = {
   raw: string
   folded: string
 }
@@ -152,7 +152,7 @@ const createSearchCandidate = (
   }
 }
 
-const parseSearchTerms = (query: string): SearchTerm[] => {
+export const parseSearchTerms = (query: string): SearchTerm[] => {
   const rawTerms: string[] = []
   const pattern = /"([^"]+)"|'([^']+)'|`([^`]+)`|(\S+)/g
   for (const match of query.matchAll(pattern)) {
@@ -225,7 +225,7 @@ const mergeRanges = (
   return merged
 }
 
-const countOccurrences = (text: string, term: string): number => {
+export const countOccurrences = (text: string, term: string): number => {
   let count = 0
   let from = 0
   while (from <= text.length) {
@@ -237,6 +237,6 @@ const countOccurrences = (text: string, term: string): number => {
   return count
 }
 
-const foldSearchText = (value: string): string => {
+export const foldSearchText = (value: string): string => {
   return value.normalize('NFKC').toLocaleLowerCase()
 }

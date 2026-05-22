@@ -25,6 +25,7 @@ import {
   listWorkspaceEntries,
   listWorkspaceKnownPaths,
   samePath,
+  type WatchEventName,
 } from '@electron/services/workspace/workspaceUtils.js'
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
 
@@ -44,7 +45,7 @@ export class WorkspaceBase {
   protected state: FsStateData
 
   constructor(
-    app: App,
+    protected readonly app: App,
     protected readonly shell: Shell,
     protected readonly logger: Logger = noopLogger,
   ) {
@@ -61,13 +62,14 @@ export class WorkspaceBase {
     this.watcher = new WorkspaceWatcher({
       getState: () => this.state,
       logger: this.logger.child('watcher'),
-      onChanged: (absolutePath) => this.handleWatchedPathChanged(absolutePath),
+      onChanged: (absolutePath, event) => this.handleWatchedPathChanged(absolutePath, event),
       setStatus: (status, message) => this.setTask('watcher', 'Workspace watcher', status, message),
     })
     this.buffers = new WorkspaceBufferStore({
       logger: this.logger.child('buffers'),
       resolvePath: (relativePath) => this.resolve(relativePath),
       markOwnWrite: (absolutePath) => this.watcher.markOwnWrite(absolutePath),
+      onBuffersFlushed: (relativePaths) => this.onBuffersFlushed(relativePaths),
       scheduleSnapshotChanged: () => this.scheduleSnapshotChanged(),
       setTask: (id, label, status, message) => this.setTask(id, label, status, message),
       errorMessage,
@@ -165,23 +167,58 @@ export class WorkspaceBase {
     }
   }
 
-  protected runSearchIndexTask<T>(work: () => Promise<T>): Promise<T> {
+  protected runSearchIndexTask<T>(
+    work: () => Promise<T>,
+    fallback: (() => Promise<T> | T) | null = null,
+    taskName = 'search-index',
+  ): Promise<T> {
     this.searchIndexRuns += 1
-    this.logger.info('search index task started', { activeRuns: this.searchIndexRuns })
+    this.logger.info('search index task started', {
+      task: taskName,
+      activeRuns: this.searchIndexRuns,
+    })
     this.setTask('search-index', 'Search index', 'running', null)
     return work()
       .catch((taskError: unknown) => {
+        if (!fallback) {
+          this.setTask('search-index', 'Search index', 'error', errorMessage(taskError))
+          this.logger.error('search index task failed', { task: taskName, error: taskError })
+          throw taskError
+        }
         this.setTask('search-index', 'Search index', 'error', errorMessage(taskError))
-        this.logger.error('search index task failed', { error: taskError })
-        throw taskError
+        this.logger.error('search index task failed', { task: taskName, error: taskError })
+        return fallback()
       })
       .finally(() => {
         this.searchIndexRuns -= 1
-        this.logger.info('search index task finished', { activeRuns: this.searchIndexRuns })
+        this.logger.info('search index task finished', {
+          task: taskName,
+          activeRuns: this.searchIndexRuns,
+        })
         if (this.searchIndexRuns === 0 && this.tasks.get('search-index')?.status !== 'error') {
           this.setTask('search-index', 'Search index', 'idle', null)
         }
       })
+  }
+
+  protected runWorkerTask<T>(
+    task: () => Promise<T>,
+    fallback: () => Promise<T> | T,
+    taskName: string,
+  ): Promise<T> {
+    try {
+      return task()
+    } catch (error) {
+      this.logger.warn('workspace analysis worker failed; using main-thread fallback', {
+        error,
+        task: taskName,
+      })
+      return Promise.resolve(fallback())
+    }
+  }
+
+  protected onBuffersFlushed(relativePaths: string[]): void {
+    void relativePaths
   }
 
   protected scheduleSnapshotChanged(options?: { restartWatcher?: boolean }): void {
@@ -228,7 +265,12 @@ export class WorkspaceBase {
     return { root: this.rootInfo(), entries: await this.listEntries() }
   }
 
-  private handleWatchedPathChanged(changedPath: string | null): void {
+  protected onWorkspacePathChanged(_changedPath: string | null, _event?: WatchEventName): void {
+    void _changedPath
+    void _event
+  }
+
+  protected handleWatchedPathChanged(changedPath: string | null, event?: WatchEventName): void {
     if (this.state.rootKind === 'single') {
       if (changedPath && !this.isCurrentSingleFile(changedPath)) return
       if (changedPath) {
@@ -237,6 +279,7 @@ export class WorkspaceBase {
         this.invalidateCurrentSingleFileBuffer()
       }
       this.scheduleSnapshotChanged()
+      this.onWorkspacePathChanged(changedPath ? path.basename(changedPath) : null, event)
       return
     }
 
@@ -245,6 +288,10 @@ export class WorkspaceBase {
     } else {
       this.buffers.invalidateAllClean()
     }
+    const relativePath = changedPath
+      ? toWorkspaceRelative(workspaceRootForAssets(this.state), changedPath)
+      : null
+    this.onWorkspacePathChanged(relativePath, event)
     this.scheduleSnapshotChanged()
   }
 

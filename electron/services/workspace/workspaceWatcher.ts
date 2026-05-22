@@ -10,6 +10,7 @@ import {
   hasHiddenPathSegment,
   isPathInsideOrEqual,
   isTempWritePath,
+  type WatchEventName,
   isWorkspaceWatchEvent,
   normalizeAbsolutePath,
   safeStatSync,
@@ -18,7 +19,7 @@ import {
 type WorkspaceWatcherOptions = {
   getState: () => FsStateData
   logger?: Logger
-  onChanged: (absolutePath: string | null) => void
+  onChanged: (absolutePath: string | null, eventName?: WatchEventName) => void
   setStatus: (status: BackgroundTaskStatus['status'], message: string | null) => void
 }
 
@@ -103,7 +104,7 @@ export class WorkspaceWatcher {
     watcher.on('all', (eventName, changedPath) => {
       if (!isWorkspaceWatchEvent(eventName)) return
       if (this.disposed || version !== this.watcherVersion) return
-      this.handleWatchEvent(changedPath, version)
+      this.handleWatchEvent(changedPath, version, eventName)
     })
     watcher.on('error', (error) => {
       if (this.watcher === watcher) this.watcher = null
@@ -125,13 +126,13 @@ export class WorkspaceWatcher {
     this.options.setStatus('running', message ?? 'Watcher active')
   }
 
-  private handleWatchEvent(watchedPath: string, version: number): void {
+  private handleWatchEvent(watchedPath: string, version: number, eventName: WatchEventName): void {
     if (this.disposed || version !== this.watcherVersion) return
 
     const changedPath = this.resolveWatchedPath(watchedPath)
     if (changedPath === 'ignore') return
     if (this.isOwnWriteEvent(changedPath)) return
-    this.options.onChanged(changedPath)
+    this.options.onChanged(changedPath, eventName)
   }
 
   private resolveWatchedPath(watchedPath: string): string | 'ignore' | null {

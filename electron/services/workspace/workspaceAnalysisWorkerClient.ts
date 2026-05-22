@@ -1,4 +1,4 @@
-import { Worker } from 'node:worker_threads'
+import { type WorkerOptions, Worker } from 'node:worker_threads'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -53,7 +53,7 @@ export class WorkspaceAnalysisWorkerClient {
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker
-    const worker = new Worker(workerEntryPath, { type: 'module' })
+    const worker = new Worker(workerEntryPath, { type: 'module' } as WorkerOptions)
     worker.on('message', (message) => this.handleMessage(message as RawWorkerMessage))
     worker.on('error', (error) => {
       this.logger.warn('workspace analysis worker failed', { error })

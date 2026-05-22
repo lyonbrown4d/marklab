@@ -17,6 +17,7 @@ type WorkspaceBufferStoreOptions = {
   resolvePath: (relativePath: string) => string
   markOwnWrite: (absolutePath: string) => void
   scheduleSnapshotChanged: () => void
+  onBuffersFlushed?: (relativePaths: string[]) => void
   setTask: (
     id: string,
     label: string,
@@ -165,6 +166,7 @@ export class WorkspaceBufferStore {
     this.options.setTask('buffer-flush', 'Save queue', 'running', `${dirty.length} pending`)
     this.logger.info('buffer flush started', { dirtyCount: dirty.length })
     let flushed = 0
+    const flushedPaths: string[] = []
     try {
       for (const [relativePath, record] of dirty) {
         const absolutePath = this.options.resolvePath(relativePath)
@@ -176,11 +178,15 @@ export class WorkspaceBufferStore {
 
         record.dirty = false
         flushed += 1
+        flushedPaths.push(relativePath)
         this.emitBufferStatus(this.statusFor(relativePath, record))
       }
 
       this.updateFlushIdleTask()
-      if (flushed > 0) this.options.scheduleSnapshotChanged()
+      if (flushed > 0) {
+        this.options.scheduleSnapshotChanged()
+        this.options.onBuffersFlushed?.(flushedPaths)
+      }
       this.logger.info('buffer flush finished', { flushed })
       return flushed
     } catch (error) {
@@ -227,6 +233,15 @@ export class WorkspaceBufferStore {
 
   private emitBufferStatus(status: FsBufferStatus): void {
     for (const listener of this.listeners) listener(status)
+  }
+
+  getDirtyRecords(): Array<{ path: string; content: string }> {
+    const dirty: Array<{ path: string; content: string }> = []
+    for (const [relativePath, record] of this.buffers) {
+      if (!record.dirty) continue
+      dirty.push({ path: relativePath, content: record.content })
+    }
+    return dirty
   }
 
   private currentFlushTaskStatus(): BackgroundTaskStatus['status'] | null {
