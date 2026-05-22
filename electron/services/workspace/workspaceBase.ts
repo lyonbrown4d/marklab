@@ -19,6 +19,12 @@ import type {
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceBufferStore } from '@electron/services/workspace/workspaceBuffers.js'
+import { loadWorkspaceDocuments } from '@electron/services/workspace/workspaceDocumentLoader.js'
+import {
+  runSearchIndexTask as runSearchIndexTaskWithStatus,
+  runWorkerTask as runWorkerTaskWithFallback,
+  type SearchIndexTaskState,
+} from '@electron/services/workspace/workspaceTaskUtils.js'
 import {
   ensureDefaultFile,
   errorMessage,
@@ -32,15 +38,16 @@ import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.
 type SnapshotListener = (snapshot: FsSnapshot) => void
 
 const WATCH_DEBOUNCE_MS = 250
+const WORKSPACE_DOCUMENT_READ_BATCH_SIZE = 8
 
 export class WorkspaceBase {
   protected readonly buffers: WorkspaceBufferStore
   protected readonly tasks = new Map<string, BackgroundTaskStatus>()
   protected readonly snapshotListeners = new Set<SnapshotListener>()
   protected readonly watcher: WorkspaceWatcher
+  protected readonly searchIndexTaskState: SearchIndexTaskState = { runs: 0 }
   protected snapshotTimer: ReturnType<typeof setTimeout> | null = null
   protected pendingSnapshotWatcherRestart = false
-  protected searchIndexRuns = 0
   protected disposed = false
   protected state: FsStateData
 
@@ -136,16 +143,13 @@ export class WorkspaceBase {
     replacePath?: string,
     replaceContent?: string,
   ): Promise<Array<{ path: string; content: string }>> {
-    const entries = (await this.listEntries()).filter((entry) => entry.kind === 'file')
-    const documents: Array<{ path: string; content: string }> = []
-    for (const entry of entries) {
-      if (entry.path === replacePath && replaceContent != null) {
-        documents.push({ path: entry.path, content: replaceContent })
-        continue
-      }
-      documents.push({ path: entry.path, content: await this.readFile({ path: entry.path }) })
-    }
-    return documents
+    return loadWorkspaceDocuments({
+      batchSize: WORKSPACE_DOCUMENT_READ_BATCH_SIZE,
+      entries: await this.listEntries(),
+      readFile: (entryPath) => this.readFile({ path: entryPath }),
+      replaceContent,
+      replacePath,
+    })
   }
 
   protected async workspaceKnownPaths(): Promise<{ paths: string[]; assetPaths: string[] }> {
@@ -172,33 +176,15 @@ export class WorkspaceBase {
     fallback: (() => Promise<T> | T) | null = null,
     taskName = 'search-index',
   ): Promise<T> {
-    this.searchIndexRuns += 1
-    this.logger.info('search index task started', {
-      task: taskName,
-      activeRuns: this.searchIndexRuns,
+    return runSearchIndexTaskWithStatus({
+      fallback,
+      getStatus: () => this.tasks.get('search-index')?.status,
+      logger: this.logger,
+      setTask: (id, label, status, message) => this.setTask(id, label, status, message),
+      state: this.searchIndexTaskState,
+      taskName,
+      work,
     })
-    this.setTask('search-index', 'Search index', 'running', null)
-    return work()
-      .catch((taskError: unknown) => {
-        if (!fallback) {
-          this.setTask('search-index', 'Search index', 'error', errorMessage(taskError))
-          this.logger.error('search index task failed', { task: taskName, error: taskError })
-          throw taskError
-        }
-        this.setTask('search-index', 'Search index', 'error', errorMessage(taskError))
-        this.logger.error('search index task failed', { task: taskName, error: taskError })
-        return fallback()
-      })
-      .finally(() => {
-        this.searchIndexRuns -= 1
-        this.logger.info('search index task finished', {
-          task: taskName,
-          activeRuns: this.searchIndexRuns,
-        })
-        if (this.searchIndexRuns === 0 && this.tasks.get('search-index')?.status !== 'error') {
-          this.setTask('search-index', 'Search index', 'idle', null)
-        }
-      })
   }
 
   protected runWorkerTask<T>(
@@ -206,15 +192,7 @@ export class WorkspaceBase {
     fallback: () => Promise<T> | T,
     taskName: string,
   ): Promise<T> {
-    try {
-      return task()
-    } catch (error) {
-      this.logger.warn('workspace analysis worker failed; using main-thread fallback', {
-        error,
-        task: taskName,
-      })
-      return Promise.resolve(fallback())
-    }
+    return runWorkerTaskWithFallback(task, fallback, taskName, this.logger)
   }
 
   protected onBuffersFlushed(relativePaths: string[]): void {

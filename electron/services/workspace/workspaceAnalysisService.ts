@@ -19,6 +19,7 @@ import type {
 } from '@electron/services/workspace/types.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
+import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient.js'
 import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
 
@@ -35,15 +36,29 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.logger.child('analysis-worker'),
   )
   private readonly workspaceSearchIndex = new WorkspaceSearchIndex()
+  private readonly searchIndexUpdateQueue =
+    new WorkspaceSearchIndexUpdateQueue<SearchDocumentToIndex>({
+      delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
+      loadDocuments: (paths) => this.loadDocuments(paths),
+      logger: this.logger.child('search-index-updates'),
+      markNeedsRebuild: () => {
+        this.needsSearchIndexRebuild = true
+      },
+      openIndex: () => this.openWorkspaceSearchIndex(),
+      rebuildAll: async () => {
+        await this.buildSearchIndexFromWorkspace()
+        this.needsSearchIndexRebuild = false
+      },
+      removeDocument: (pathValue) => this.workspaceSearchIndex.removeDocument(pathValue),
+      removePathPrefix: (pathValue) => this.workspaceSearchIndex.removePathPrefix(pathValue),
+      runTask: (work, fallback, taskName) => this.runSearchIndexTask(work, fallback, taskName),
+      upsertDocument: (document) => this.workspaceSearchIndex.upsertDocument(document),
+    })
   private activeWorkspaceSearchKey = ''
   private needsSearchIndexRebuild = true
-  private searchIndexRebuildTimer: ReturnType<typeof setTimeout> | null = null
 
   override dispose(): void {
-    if (this.searchIndexRebuildTimer) {
-      clearTimeout(this.searchIndexRebuildTimer)
-      this.searchIndexRebuildTimer = null
-    }
+    this.searchIndexUpdateQueue.dispose()
     void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
     super.dispose()
@@ -123,13 +138,11 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     return this.runSearchIndexTask(
       async () => {
         await this.openWorkspaceSearchIndex()
+        await this.searchIndexUpdateQueue.flushPending()
         await this.rebuildSearchIndexIfNeeded()
 
         const indexedResult = await this.workspaceSearchIndex.search(query, limit)
-        if (indexedResult.length > 0) return indexedResult
-
-        const documents = await this.workspaceDocuments()
-        return searchDocuments(documents, query, limit)
+        return indexedResult
       },
       async () => {
         const documents = await this.workspaceDocuments()
@@ -140,8 +153,10 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async rebuildSearchIndex(): Promise<void> {
+    await this.openWorkspaceSearchIndex()
     this.needsSearchIndexRebuild = true
     await this.buildSearchIndexFromWorkspace()
+    this.needsSearchIndexRebuild = false
   }
 
   override async setRoot(value: unknown): Promise<FsRootInfo> {
@@ -157,10 +172,13 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
-    if (event === 'change' && _changedPath && !isMarkdownPath(_changedPath)) return
-
+    if (!this.indexChangeAffectsSearch(_changedPath, event)) return
+    if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
+      this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
+      return
+    }
     this.needsSearchIndexRebuild = true
-    this.scheduleSearchIndexRebuild()
+    this.searchIndexUpdateQueue.scheduleFullRebuild()
   }
 
   protected override onBuffersFlushed(relativePaths: string[]): void {
@@ -212,28 +230,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     await this.workspaceSearchIndex.rebuild(indexable)
   }
 
-  private scheduleSearchIndexRebuild(): void {
-    if (this.searchIndexRebuildTimer) {
-      clearTimeout(this.searchIndexRebuildTimer)
-    }
-
-    this.searchIndexRebuildTimer = setTimeout(() => {
-      this.searchIndexRebuildTimer = null
-      void this.runSearchIndexTask(
-        async () => {
-          await this.buildSearchIndexFromWorkspace()
-          this.needsSearchIndexRebuild = false
-        },
-        async () => {
-          this.needsSearchIndexRebuild = true
-        },
-        'search-index',
-      ).catch((error) => {
-        this.logger.warn('scheduled search index rebuild failed', { error })
-      })
-    }, SEARCH_INDEX_REBUILD_DELAY_MS)
-  }
-
   private getWorkspaceSearchIndexPath(): string {
     const appName = this.app.getName() || 'marklab'
     const baseDataDir =
@@ -260,7 +256,14 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     }
   }
 
+  private indexChangeAffectsSearch(pathValue: string | null, event?: WatchEventName): boolean {
+    if (!pathValue || !event) return true
+    if (event === 'addDir') return false
+    return event === 'unlinkDir' || isMarkdownPath(pathValue)
+  }
+
   private resetSearchIndexState(): void {
+    this.searchIndexUpdateQueue.clear()
     this.activeWorkspaceSearchKey = ''
     this.needsSearchIndexRebuild = true
     void this.workspaceSearchIndex.close().catch((error) => {
