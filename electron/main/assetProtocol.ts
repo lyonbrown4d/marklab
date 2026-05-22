@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 
-const ASSET_PROTOCOL = 'marko-asset'
+const ASSET_PROTOCOL = 'marklab-asset'
 
 let assetProtocolRegistered = false
 let assetProtocolPrivilegesRegistered = false

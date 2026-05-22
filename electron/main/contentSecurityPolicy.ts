@@ -39,10 +39,10 @@ const createContentSecurityPolicy = (): string => {
     "object-src 'none'",
     `script-src ${scriptSources.join(' ')}`,
     `style-src ${styleSources.join(' ')}`,
-    "img-src 'self' data: blob: file: marko-asset: http: https:",
+    "img-src 'self' data: blob: file: marklab-asset: http: https:",
     `font-src ${fontSources.join(' ')}`,
-    "connect-src 'self' marko-asset: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
-    "media-src 'self' data: blob: file: marko-asset:",
+    "connect-src 'self' marklab-asset: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
+    "media-src 'self' data: blob: file: marklab-asset:",
     "worker-src 'self' blob:",
   ].join('; ')
 }

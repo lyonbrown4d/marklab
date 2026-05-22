@@ -20,7 +20,7 @@ type RuntimeEventHandler<T = unknown> = (event: RuntimeEventPayload<T>) => void
 let nextRuntimeEventId = 1
 
 const emitMenuAction = (id: string): void => {
-  window.dispatchEvent(new CustomEvent('marko:menu-action', { detail: id }))
+  window.dispatchEvent(new CustomEvent('marklab:menu-action', { detail: id }))
 }
 
 const menuCommandFromPayload = (payload: unknown): string | null => {
@@ -191,7 +191,7 @@ const desktopApi = {
   assets: {
     convertFileSrc: (filePath: string) => {
       if (typeof filePath !== 'string' || !filePath) return ''
-      return `marko-asset://local/?path=${encodeURIComponent(filePath)}`
+      return `marklab-asset://local/?path=${encodeURIComponent(filePath)}`
     },
   },
   webview: {

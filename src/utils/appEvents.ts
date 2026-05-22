@@ -1,10 +1,10 @@
 import mitt, { type Handler } from 'mitt'
 
 export const APP_EVENT = {
-  exportContent: 'marko:get-export-content',
-  focusFileSearch: 'marko:focus-file-search',
-  focusHeading: 'marko:focus-heading',
-  focusSourcePosition: 'marko:focus-source-position',
+  exportContent: 'marklab:get-export-content',
+  focusFileSearch: 'marklab:focus-file-search',
+  focusHeading: 'marklab:focus-heading',
+  focusSourcePosition: 'marklab:focus-source-position',
 } as const
 
 export type AppEventMap = {

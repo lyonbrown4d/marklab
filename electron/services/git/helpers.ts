@@ -1,12 +1,10 @@
-import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff'
+import { simpleGit } from 'simple-git'
 
 import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types.js'
-
-const MAX_GIT_OUTPUT = 16 * 1024 * 1024
 
 type GitExecResult = {
   stdout: string
@@ -30,20 +28,33 @@ export const runGit = async (
   args: string[],
   options: GitExecOptions = {},
 ): Promise<GitExecResult> => {
+  const git = simpleGit({ baseDir: cwd, binary: 'git' })
   try {
-    return await execGitFile('git', args, {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: MAX_GIT_OUTPUT,
-      shell: false,
-      windowsHide: true,
-    })
-  } catch (error) {
-    const failure = error as Error & { stdout?: string; stderr?: string }
-    if (options.allowFailure) {
-      return { stdout: failure.stdout ?? '', stderr: failure.stderr ?? failure.message }
+    const stdout = await git.raw(args)
+    return {
+      stdout: outputToString(stdout),
+      stderr: '',
     }
-    throw new Error((failure.stderr ?? failure.message).trim(), { cause: error })
+  } catch (error) {
+    const failure = error as Error & {
+      stdout?: string | Buffer
+      stderr?: string | Buffer
+      message?: string
+    }
+    if (options.allowFailure) {
+      return {
+        stdout: outputToString(failure.stdout),
+        stderr: outputToString(failure.stderr, failure.message),
+      }
+    }
+    const message = outputToString(failure.stderr, failure.message)
+    const command = args.join(' ')
+    throw new Error(
+      `Git command failed: git ${command} (cwd: ${cwd})${message ? ` - ${message.trim()}` : ''}`,
+      {
+        cause: error,
+      },
+    )
   }
 }
 
@@ -191,26 +202,12 @@ export const syntheticUnifiedDiff = (
   )
 }
 
-const execGitFile = (
-  file: string,
-  args: string[],
-  options: {
-    cwd: string
-    encoding: 'utf8'
-    maxBuffer: number
-    shell: false
-    windowsHide: true
-  },
-): Promise<GitExecResult> => {
-  return new Promise((resolve, reject) => {
-    execFile(file, args, options, (error, stdout, stderr) => {
-      if (error) {
-        reject(Object.assign(error, { stdout, stderr }))
-        return
-      }
-      resolve({ stdout, stderr })
-    })
-  })
+const outputToString = (output: string | Buffer | undefined, fallback = ''): string => {
+  if (typeof output === 'string') return output
+  if (output && typeof output === 'object') {
+    return output.toString('utf8')
+  }
+  return fallback
 }
 
 const statusFromCode = (code: string): GitFileChange['status'] | null => {

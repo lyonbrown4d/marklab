@@ -18,7 +18,7 @@ export const dispatchMenuAction = async (id: string) => {
   const electron = getElectronRuntime()
   if (electron) return electron.menu.dispatch(id)
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('marko:menu-action', { detail: id }))
+    window.dispatchEvent(new CustomEvent('marklab:menu-action', { detail: id }))
   }
   return { ok: true }
 }

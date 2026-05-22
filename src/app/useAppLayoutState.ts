@@ -147,10 +147,7 @@ export const useAppLayoutState = () => {
     if (!isDesktopRuntime()) return
 
     const openArgs = (args: string[]) => {
-      const paths = args.filter(
-        (arg) =>
-          arg && !arg.startsWith('-') && !arg.startsWith('marko:') && !arg.startsWith('marklab:'),
-      )
+      const paths = args.filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('marklab:'))
       for (const path of paths) void openFolder(path)
     }
 

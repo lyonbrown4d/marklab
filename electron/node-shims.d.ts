@@ -183,3 +183,24 @@ declare module 'node:util' {
     fn: (...args: [...TArgs, (error: Error | null, result: TResult) => void]) => void,
   ): (...args: TArgs) => Promise<TResult>
 }
+
+declare module 'node:worker_threads' {
+  export type WorkerOptions = {
+    eval?: boolean
+    type?: 'classic' | 'module'
+  }
+
+  export class Worker {
+    constructor(filename: string | URL, options?: WorkerOptions)
+    on(event: 'error', handler: (error: Error) => void): Worker
+    on(event: 'exit', handler: (code: number) => void): Worker
+    on(event: 'message', handler: (message: unknown) => void): Worker
+    postMessage(message: unknown): void
+    terminate(): Promise<number>
+  }
+
+  export const parentPort: {
+    on(event: 'message', handler: (message: unknown) => void): void
+    postMessage(message: unknown): void
+  } | null
+}

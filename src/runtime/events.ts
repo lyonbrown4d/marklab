@@ -50,7 +50,7 @@ export const listen = <T>(
     )
   }
   if (typeof window !== 'undefined') {
-    const domEventName = `marko:${event}`
+    const domEventName = `marklab:${event}`
     const listener = (domEvent: Event) => {
       handler(toRuntimeEvent(event, (domEvent as CustomEvent<T>).detail))
     }
@@ -65,7 +65,7 @@ export const emit = <T>(event: string, payload?: T): Promise<void> => {
     return Promise.resolve(electron.events.emit(event, payload))
   }
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(`marko:${event}`, { detail: payload }))
+    window.dispatchEvent(new CustomEvent(`marklab:${event}`, { detail: payload }))
   }
   return Promise.resolve()
 }

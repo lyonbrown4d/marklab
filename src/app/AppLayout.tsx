@@ -269,7 +269,7 @@ const AppLayout = () => {
       if (typeof detail === 'string') handleMenuAction(detail)
     }
 
-    window.addEventListener('marko:menu-action', domHandler)
+    window.addEventListener('marklab:menu-action', domHandler)
 
     let unlisten: (() => void) | undefined
     if (isDesktopRuntime()) {
@@ -281,7 +281,7 @@ const AppLayout = () => {
     }
 
     return () => {
-      window.removeEventListener('marko:menu-action', domHandler)
+      window.removeEventListener('marklab:menu-action', domHandler)
       if (unlisten) unlisten()
     }
   }, [handleMenuAction])
