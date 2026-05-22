@@ -37,7 +37,12 @@ export const resolveMarkdownImageSource = async (documentPath: string | null, sr
       documentPath,
       target,
     })
-    if (resolved.is_external || !resolved.exists || !resolved.absolute_path) {
+    if (
+      resolved.is_external ||
+      !resolved.exists ||
+      !resolved.absolute_path ||
+      (resolved.media_type && !resolved.media_type.startsWith('image/'))
+    ) {
       return src
     }
     const resolvedSrc = await convertAssetFileSrc(resolved.absolute_path)

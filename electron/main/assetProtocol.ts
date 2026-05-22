@@ -36,7 +36,8 @@ export const registerAssetProtocol = (getNativeIpc: () => NativeIpcRegistration 
     if (!isAllowedAssetPath(assetPath, getNativeIpc())) {
       return new Response('Asset path is not allowed', { status: 403 })
     }
-    return net.fetch(pathToFileURL(assetPath).toString())
+    const response = await net.fetch(pathToFileURL(assetPath).toString())
+    return normalizeAssetResponse(response, assetPath, request.headers)
   })
 }
 
@@ -61,6 +62,45 @@ const isAllowedAssetPath = (
   if (nativeIpc?.commands.workspace.isAssetPathAllowed(assetPath)) return true
 
   return defaultAssetRoots().some((root) => isPathInsideOrEqual(root, assetPath))
+}
+
+const normalizeAssetResponse = (
+  response: Response,
+  assetPath: string,
+  headers: Record<string, string> | undefined,
+): Response => {
+  const contentType = inferContentType(assetPath, headers)
+  if (!contentType) return response
+
+  const currentContentType = response.headers.get('content-type')
+  if (currentContentType && currentContentType.toLowerCase() === contentType) return response
+
+  const nextHeaders = new Headers(response.headers)
+  nextHeaders.set('content-type', contentType)
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: nextHeaders,
+  })
+}
+
+const inferContentType = (
+  assetPath: string,
+  headers: Record<string, string> | undefined,
+): string | null => {
+  const requestDestination = fetchRequestDestination(headers)
+  const extension = path.extname(assetPath).toLowerCase()
+  if (requestDestination === 'script' && extension === '.ts') {
+    return 'application/octet-stream'
+  }
+  return null
+}
+
+const fetchRequestDestination = (headers: Record<string, string> | undefined): string | null => {
+  if (!headers) return null
+  const destination =
+    headers['sec-fetch-dest'] ?? headers['Sec-Fetch-Dest'] ?? headers['SEC-FETCH-DEST'] ?? null
+  return destination ? destination.toLowerCase() : null
 }
 
 const defaultAssetRoots = (): string[] => {

@@ -1,4 +1,6 @@
 import { Worker } from 'node:worker_threads'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import type { Logger } from '@electron/services/logger.js'
 import type {
@@ -15,15 +17,10 @@ type PendingTask = {
 
 type RawWorkerMessage = WorkspaceAnalysisWorkerResponse
 
-const workerEntryUrl = new URL('./workspaceAnalysisWorkerEntry.js', import.meta.url)
-
-const nodeWorkerUrl = (url: URL): URL => {
-  if (url.protocol === 'file:' && url.pathname.startsWith('/assets/')) {
-    const relativeAssetPath = '.' + url.pathname
-    return new URL(relativeAssetPath, import.meta.url)
-  }
-  return url
-}
+const workerEntryPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'workspaceAnalysisWorkerEntry.js',
+)
 
 export class WorkspaceAnalysisWorkerClient {
   private worker: Worker | null = null
@@ -56,8 +53,7 @@ export class WorkspaceAnalysisWorkerClient {
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker
-
-    const worker = new Worker(nodeWorkerUrl(workerEntryUrl))
+    const worker = new Worker(workerEntryPath, { type: 'module' })
     worker.on('message', (message) => this.handleMessage(message as RawWorkerMessage))
     worker.on('error', (error) => {
       this.logger.warn('workspace analysis worker failed', { error })

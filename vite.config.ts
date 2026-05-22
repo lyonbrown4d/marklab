@@ -49,8 +49,17 @@ export default defineConfig(({ command, mode }) => {
                 alias,
               },
               build: {
+                assetsInlineLimit: 0,
                 rollupOptions: {
+                  input: {
+                    main: path.resolve(__dirname, 'electron/main.ts'),
+                    workspaceAnalysisWorkerEntry: path.resolve(
+                      __dirname,
+                      'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
+                    ),
+                  },
                   output: {
+                    entryFileNames: '[name].js',
                     banner: electronMainRequireBanner,
                   },
                 },

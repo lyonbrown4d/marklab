@@ -1,3 +1,6 @@
 onlyBuiltDependencies:
+  - '@homebridge/node-pty-prebuilt-multiarch'
+  - '@parcel/watcher'
+  - better-sqlite3
   - electron
   - esbuild

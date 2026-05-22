@@ -2,6 +2,11 @@ import type * as Electron from 'electron'
 import { nativeIpcChannels } from '@electron/channels.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type { RuntimeCommandPayload } from '@electron/types.js'
+
+const LEGACY_COMMAND_INVOKE_CHANNEL = 'marko:command:invoke'
+const MARKLAB_COMMAND_PREFIX = 'marklab:'
+const LEGACY_COMMAND_PREFIX = 'marko:'
+const LEGACY_COMMAND_PREFIX_LENGTH = LEGACY_COMMAND_PREFIX.length
 export type NativeCommandHandler = (
   payload: unknown,
   event: Electron.IpcMainInvokeEvent,
@@ -12,8 +17,12 @@ export const registerCommandInvokeIpc = (
   handlers: NativeCommandHandlers,
   logger: Logger = noopLogger,
 ): void => {
-  ipcMain.handle(nativeIpcChannels.commandInvoke, async (event, payload: unknown) => {
-    const request = parseCommandInvokePayload(payload)
+  const invokeHandler = async (
+    event: Electron.IpcMainInvokeEvent,
+    payload: unknown,
+    args: unknown,
+  ) => {
+    const request = parseCommandInvokePayload(payload, args)
     const handler = handlers[request.command]
     if (!handler) {
       logger.warn('unsupported command invoke', { command: request.command })
@@ -34,18 +43,61 @@ export const registerCommandInvokeIpc = (
       logger.error('command invoke failed', { command: request.command, error })
       throw error
     }
-  })
+  }
+  ipcMain.handle(nativeIpcChannels.commandInvoke, invokeHandler)
+  ipcMain.handle(LEGACY_COMMAND_INVOKE_CHANNEL, invokeHandler)
 }
-const parseCommandInvokePayload = (payload: unknown): RuntimeCommandPayload => {
+const parseCommandInvokePayload = (
+  payload: unknown,
+  legacyArgs: unknown,
+): RuntimeCommandPayload => {
+  if (typeof payload === 'string') {
+    const command = normalizeLegacyCommand(payload)
+    return {
+      command,
+      args: legacyArgs,
+    }
+  }
+
   if (!payload || typeof payload !== 'object') {
     throw new Error('Command invoke payload must be an object')
   }
-  const command = (payload as Record<string, unknown>).command
+  const request = payload as Record<string, unknown>
+  const command = request.command
+  const args = request.args
+
+  if (
+    typeof command === 'string' &&
+    command === LEGACY_COMMAND_INVOKE_CHANNEL &&
+    args &&
+    typeof args === 'object'
+  ) {
+    const nested = args as Record<string, unknown>
+    if (typeof nested.command === 'string') {
+      return {
+        command: normalizeLegacyCommand(nested.command),
+        args: nested.args,
+      }
+    }
+  }
+
+  if (typeof command === 'string' && command.startsWith(LEGACY_COMMAND_PREFIX)) {
+    return {
+      command: normalizeLegacyCommand(command),
+      args,
+    }
+  }
+
   if (typeof command !== 'string' || !command.trim()) {
     throw new Error('Command name is required')
   }
   return {
     command,
-    args: (payload as Record<string, unknown>).args,
+    args,
   }
+}
+
+const normalizeLegacyCommand = (command: string): string => {
+  if (!command.startsWith(LEGACY_COMMAND_PREFIX)) return command
+  return `${MARKLAB_COMMAND_PREFIX}${command.slice(LEGACY_COMMAND_PREFIX_LENGTH)}`
 }
