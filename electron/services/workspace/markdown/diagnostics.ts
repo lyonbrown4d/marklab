@@ -1,7 +1,11 @@
-import type { FsMarkdownDiagnostic, FsMarkdownLink, FsWorkspaceIndex } from '../types.js'
-import { resolveIndexedLinkPath } from './targets.js'
-import { charLength } from './text.js'
-import { normalizeWorkspacePath } from './utils.js'
+import type {
+  FsMarkdownDiagnostic,
+  FsMarkdownLink,
+  FsWorkspaceIndex,
+} from '@electron/services/workspace/types.js'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
+import { charLength } from '@electron/services/workspace/markdown/text.js'
+import { normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
 
 export const diagnosticsForFile = (
   index: FsWorkspaceIndex,

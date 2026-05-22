@@ -50,6 +50,17 @@ export default defineConfig([
           message: 'Use an arrow function assigned to a const instead of a function declaration.',
         },
       ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message: 'Use @ or @electron path aliases instead of relative TypeScript imports.',
+            },
+          ],
+        },
+      ],
       'react-refresh/only-export-components': 'off',
     },
   },

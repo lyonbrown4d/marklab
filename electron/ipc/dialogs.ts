@@ -1,6 +1,6 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import type { OpenDialogOptions, SaveDialogOptions } from '../types.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import type { OpenDialogOptions, SaveDialogOptions } from '@electron/types.js'
 const openProperties = (
   options: OpenDialogOptions,
 ): Array<'openFile' | 'openDirectory' | 'multiSelections'> => {

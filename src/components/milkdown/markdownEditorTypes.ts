@@ -1,4 +1,4 @@
-import type { SlashCommandLabels } from './slashMenuConfig'
+import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 
 export type MarkdownEditorProps = {
   activePath: string | null

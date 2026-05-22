@@ -5,7 +5,7 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
-import { normalizeMarkdownForExport } from './markdown.js'
+import { normalizeMarkdownForExport } from '@electron/services/export/markdown.js'
 type RenderHtmlOptions = {
   resourceBasePath?: string
   resolveRelativeResources?: boolean

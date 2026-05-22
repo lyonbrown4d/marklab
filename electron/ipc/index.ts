@@ -1,27 +1,46 @@
 import type * as Electron from 'electron'
-import { registerAppReadyIpc } from './appReady.js'
-import { registerClipboardIpc } from './clipboard.js'
-import { registerCommandInvokeIpc, type NativeCommandHandlers } from './commandInvoke.js'
-import { registerDialogIpc } from './dialogs.js'
-import { registerGitTerminalIpc, type GitTerminalIpcBridge } from './gitTerminalCommands.js'
-import { registerLifecycleIpc } from './lifecycle.js'
-import { registerMenuDispatchIpc } from './menu.js'
-import { registerPlatformIpc } from './platform.js'
-import { registerSettingsIpc } from './settings.js'
-import { registerShellIpc } from './shell.js'
-import { registerWindowControlsIpc } from './windowControls.js'
-import { registerWorkspaceCommandsIpc, type WorkspaceCommandServices } from './workspaceCommands.js'
-import type { MenuDispatchBridge } from '../services/menuDispatch.js'
-import { getPlatformInfo } from '../services/platform.js'
+import { registerAppReadyIpc } from '@electron/ipc/appReady.js'
+import { registerClipboardIpc } from '@electron/ipc/clipboard.js'
+import {
+  registerCommandInvokeIpc,
+  type NativeCommandHandlers,
+} from '@electron/ipc/commandInvoke.js'
+import { registerDialogIpc } from '@electron/ipc/dialogs.js'
+import {
+  registerGitTerminalIpc,
+  type GitTerminalIpcBridge,
+} from '@electron/ipc/gitTerminalCommands.js'
+import { registerLifecycleIpc } from '@electron/ipc/lifecycle.js'
+import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
+import { registerPlatformIpc } from '@electron/ipc/platform.js'
+import { registerSettingsIpc } from '@electron/ipc/settings.js'
+import { registerShellIpc } from '@electron/ipc/shell.js'
+import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
+import {
+  registerWorkspaceCommandsIpc,
+  type WorkspaceCommandServices,
+} from '@electron/ipc/workspaceCommands.js'
+import type { ExportService } from '@electron/services/export/exportService.js'
+import type { GitService } from '@electron/services/git/service.js'
+import type { Logger } from '@electron/services/logger.js'
+import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
+import { getPlatformInfo } from '@electron/services/platform.js'
+import type { TerminalService } from '@electron/services/terminal/service.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 export type NativeIpcDependencies = {
   app: Electron.App
   BrowserWindow: typeof Electron.BrowserWindow
   clipboard: Electron.Clipboard
   dialog: Electron.Dialog
   ipcMain: Electron.IpcMain
-  getLaunchInfo: () => import('../types.js').AppLaunchInfo
+  getLaunchInfo: () => import('@electron/types.js').AppLaunchInfo
+  exportService: ExportService
+  gitService: GitService
+  logger: Logger
   onRendererReady?: () => void
   shell: Electron.Shell
+  terminalService: TerminalService
+  workspaceService: WorkspaceService
 }
 export type NativeIpcRegistration = {
   commands: WorkspaceCommandServices
@@ -29,6 +48,7 @@ export type NativeIpcRegistration = {
   menu: MenuDispatchBridge
 }
 export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIpcRegistration => {
+  const logger = dependencies.logger.child('ipc')
   registerAppReadyIpc(dependencies.ipcMain, dependencies.app, dependencies.onRendererReady)
   registerClipboardIpc(dependencies.ipcMain, dependencies.clipboard)
   registerDialogIpc(dependencies.ipcMain, dependencies.dialog, dependencies.BrowserWindow)
@@ -37,22 +57,25 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerSettingsIpc(dependencies.ipcMain)
   registerShellIpc(dependencies.ipcMain, dependencies.shell)
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
-  const commands = registerWorkspaceCommandsIpc(
-    dependencies.ipcMain,
-    dependencies.app,
-    dependencies.BrowserWindow,
-    dependencies.shell,
-  )
-  const gitTerminal = registerGitTerminalIpc(dependencies.ipcMain, dependencies.app, () =>
-    commands.workspace.terminalCwd(),
-  )
+  const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, dependencies.BrowserWindow, {
+    exportService: dependencies.exportService,
+    logger: logger.child('workspace'),
+    workspaceService: dependencies.workspaceService,
+  })
+  const gitTerminal = registerGitTerminalIpc(dependencies.ipcMain, dependencies.app, {
+    gitService: dependencies.gitService,
+    logger: logger.child('git-terminal'),
+    terminalService: dependencies.terminalService,
+  })
   const menu = registerMenuDispatchIpc(dependencies.ipcMain, () =>
     dependencies.BrowserWindow.getFocusedWindow(),
   )
   registerCommandInvokeIpc(
     dependencies.ipcMain,
     createRuntimeCommandHandlers(commands, gitTerminal, menu, dependencies.onRendererReady),
+    logger.child('command-invoke'),
   )
+  logger.info('native IPC registered')
   return { commands, gitTerminal, menu }
 }
 const createRuntimeCommandHandlers = (

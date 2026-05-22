@@ -1,8 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { isMarkdownPath, normalizeRelativePath, toWorkspaceRelative } from './path.js'
-import type { FsEntry, FsStateData } from './types.js'
+import {
+  isMarkdownPath,
+  normalizeRelativePath,
+  toWorkspaceRelative,
+} from '@electron/services/workspace/path.js'
+import type { FsEntry, FsStateData } from '@electron/services/workspace/types.js'
 
 export type WatchEventName = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
 

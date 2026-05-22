@@ -1,11 +1,11 @@
 import type { IpcMain } from 'electron'
-import { nativeIpcChannels } from '../channels.js'
+import { nativeIpcChannels } from '@electron/channels.js'
 import {
   getRendererPersistValue,
   removeRendererPersistValue,
   setRendererPersistValue,
-} from '../services/settingsStore.js'
-import type { SettingsPersistResult } from '../types.js'
+} from '@electron/services/settingsStore.js'
+import type { SettingsPersistResult } from '@electron/types.js'
 const toSettingsPersistResult = (action: () => void): SettingsPersistResult => {
   try {
     action()

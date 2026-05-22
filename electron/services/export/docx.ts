@@ -1,4 +1,4 @@
-import { parseMarkdown } from './markdown.js'
+import { parseMarkdown } from '@electron/services/export/markdown.js'
 import {
   contentTypesXml,
   documentRelationshipsXml,
@@ -7,8 +7,8 @@ import {
   numberingXml,
   rootRelationshipsXml,
   stylesXml,
-} from './docxXml.js'
-import { createZip } from './docxZip.js'
+} from '@electron/services/export/docxXml.js'
+import { createZip } from '@electron/services/export/docxZip.js'
 
 export const renderDocx = (markdown: string): Uint8Array => {
   return createZip([

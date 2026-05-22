@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import { getPlatformInfo } from '../services/platform.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import { getPlatformInfo } from '@electron/services/platform.js'
 export const registerPlatformIpc = (ipcMain: IpcMain): void => {
   ipcMain.handle(nativeIpcChannels.platformGet, () => getPlatformInfo())
 }

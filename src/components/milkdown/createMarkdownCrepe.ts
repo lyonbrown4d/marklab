@@ -1,6 +1,9 @@
 import { Crepe } from '@milkdown/crepe'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
-import { createSlashMenuConfig, type SlashCommandLabels } from './slashMenuConfig'
+import {
+  createSlashMenuConfig,
+  type SlashCommandLabels,
+} from '@/components/milkdown/slashMenuConfig'
 
 type CreateMarkdownCrepeOptions = {
   root: HTMLElement

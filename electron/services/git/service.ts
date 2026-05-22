@@ -1,6 +1,7 @@
 import path from 'node:path'
 
-import type { GitFileDiff, GitRepoInfo, GitStatusSnapshot } from './types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import type { GitFileDiff, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types.js'
 import {
   allCommitChanges,
   compareChanges,
@@ -12,9 +13,11 @@ import {
   runGit,
   syntheticUnifiedDiff,
   validateRootPath,
-} from './helpers.js'
+} from '@electron/services/git/helpers.js'
 
 export class GitService {
+  constructor(private readonly logger: Logger = noopLogger) {}
+
   async discover(rootPath: unknown): Promise<GitRepoInfo> {
     const root = await validateRootPath(rootPath, { requireDirectory: false })
     if (!root.isDirectory) return { ...emptyRepoInfo }
@@ -29,6 +32,7 @@ export class GitService {
     const root = await validateRootPath(rootPath, { requireDirectory: true })
     if (await this.isRepository(root.path)) return this.repoInfo(root.path)
 
+    this.logger.info('git init started', { rootPath: root.path })
     const initWithMain = await runGit(root.path, ['init', '-b', 'main'], { allowFailure: true })
     if (initWithMain.stderr && initWithMain.stderr.includes('unknown switch')) {
       await runGit(root.path, ['init'])
@@ -36,7 +40,9 @@ export class GitService {
       throw new Error(`Failed to initialize git repository: ${initWithMain.stderr.trim()}`)
     }
 
-    return this.repoInfo(root.path)
+    const repo = await this.repoInfo(root.path)
+    this.logger.info('git init finished', { rootPath: root.path })
+    return repo
   }
 
   async status(rootPath: unknown): Promise<GitStatusSnapshot> {
@@ -139,7 +145,12 @@ export class GitService {
 
     await runGit(root.path, ['add', '-A'])
     const identityArgs = await this.commitIdentityArgs(root.path)
+    this.logger.info('git commit started', {
+      changeCount: allCommitChanges(snapshot).length,
+      rootPath: root.path,
+    })
     await runGit(root.path, [...identityArgs, 'commit', '-m', commitMessage])
+    this.logger.info('git commit finished', { rootPath: root.path })
     return this.status(root.path)
   }
 

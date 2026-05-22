@@ -13,6 +13,16 @@ const includesAny = (id: string, values: string[]) => values.some((value) => id.
 
 const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
 
+const alias = {
+  '@': path.resolve(__dirname, 'src'),
+  '@electron': path.resolve(__dirname, 'electron'),
+}
+
+const electronMainRequireBanner = [
+  "import { createRequire as __marklabCreateRequire } from 'node:module';",
+  'const require = __marklabCreateRequire(import.meta.url);',
+].join('\n')
+
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
@@ -34,10 +44,25 @@ export default defineConfig(({ command, mode }) => {
         electron({
           main: {
             entry: 'electron/main.ts',
+            vite: {
+              resolve: {
+                alias,
+              },
+              build: {
+                rollupOptions: {
+                  output: {
+                    banner: electronMainRequireBanner,
+                  },
+                },
+              },
+            },
           },
           preload: {
             input: 'electron/preload.ts',
             vite: {
+              resolve: {
+                alias,
+              },
               build: {
                 rollupOptions: {
                   output: {
@@ -72,9 +97,7 @@ export default defineConfig(({ command, mode }) => {
         }),
     ].filter(Boolean),
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, 'src'),
-      },
+      alias,
     },
     css: {
       preprocessorOptions: {

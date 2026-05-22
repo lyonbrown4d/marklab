@@ -1,6 +1,10 @@
 import path from 'node:path'
 
-import { isMarkdownPath, normalizeRelativePath, stripAssetQueryAndHash } from '../path.js'
+import {
+  isMarkdownPath,
+  normalizeRelativePath,
+  stripAssetQueryAndHash,
+} from '@electron/services/workspace/path.js'
 
 export const fileLabel = (filePath: string): string => {
   const base = path.posix.basename(normalizeRelativePath(filePath))

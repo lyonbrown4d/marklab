@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff'
 
-import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from './types.js'
+import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types.js'
 
 const MAX_GIT_OUTPUT = 16 * 1024 * 1024
 

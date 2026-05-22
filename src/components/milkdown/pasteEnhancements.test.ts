@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizePastedUrl } from './pasteEnhancements'
+import { normalizePastedUrl } from '@/components/milkdown/pasteEnhancements'
 
 describe('normalizePastedUrl', () => {
   it('accepts http and https URLs as-is', () => {

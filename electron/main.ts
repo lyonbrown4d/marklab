@@ -1,8 +1,12 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
-import { registerNativeIpc, type NativeIpcRegistration } from './ipc/index.js'
-import { installNativeMenu } from './menu.js'
-import { registerAssetProtocol, registerAssetProtocolPrivileges } from './main/assetProtocol.js'
-import { installContentSecurityPolicy } from './main/contentSecurityPolicy.js'
+import { createElectronContainer, type ElectronContainer } from '@electron/container.js'
+import { registerNativeIpc, type NativeIpcRegistration } from '@electron/ipc/index.js'
+import { installNativeMenu } from '@electron/menu.js'
+import {
+  registerAssetProtocol,
+  registerAssetProtocolPrivileges,
+} from '@electron/main/assetProtocol.js'
+import { installContentSecurityPolicy } from '@electron/main/contentSecurityPolicy.js'
 import {
   createSingleInstancePayload,
   getLaunchInfo,
@@ -10,15 +14,17 @@ import {
   publishDeepLinksFromArgs,
   publishDeepLinkUrl,
   registerDeepLinkProtocol,
-} from './main/deepLinks.js'
-import type { DeepLinkPayload, SingleInstancePayload } from './types.js'
-import { createMarklabWindows, type MarklabWindows } from './window.js'
+} from '@electron/main/deepLinks.js'
+import type { DeepLinkPayload, SingleInstancePayload } from '@electron/types.js'
+import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
 
 const APP_READY_FALLBACK_MS = 5000
 let windows: MarklabWindows | null = null
 let didShowMain = false
+let rendererReady = false
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 let nativeIpc: NativeIpcRegistration | null = null
+let container: ElectronContainer | null = null
 let legacyIpcRegistered = false
 let allowAppQuit = false
 let allowMainWindowClose = false
@@ -32,6 +38,20 @@ type PendingRuntimeEvent =
 const pendingRuntimeEvents: PendingRuntimeEvent[] = []
 
 registerAssetProtocolPrivileges()
+
+const getContainer = (): ElectronContainer => {
+  container ??= createElectronContainer({
+    app,
+    BrowserWindow,
+    clipboard,
+    dialog,
+    getLaunchInfo,
+    ipcMain,
+    onRendererReady: handleRendererReady,
+    shell,
+  })
+  return container
+}
 
 const showMainWindow = (): void => {
   if (didShowMain || !windows) return
@@ -49,6 +69,11 @@ const showMainWindow = (): void => {
   if (!windows.splash.isDestroyed()) {
     windows.splash.close()
   }
+}
+
+const handleRendererReady = (): void => {
+  rendererReady = true
+  showMainWindow()
 }
 
 const sendRendererEvent = (eventName: string, payload: unknown): boolean => {
@@ -76,9 +101,13 @@ const flushPendingRuntimeEvents = (): void => {
 
 const flushWorkspaceBuffers = async (reason: string): Promise<void> => {
   try {
-    await nativeIpc?.commands.workspace.flushBuffers()
+    const flushed = await nativeIpc?.commands.workspace.flushBuffers()
+    container?.cradle.logger.info('workspace buffers flushed', { flushed, reason })
   } catch (error) {
-    console.warn(`Failed to flush workspace buffers before ${reason}.`, error)
+    container?.cradle.logger.warn('workspace buffer flush failed before lifecycle transition', {
+      error,
+      reason,
+    })
   }
 }
 
@@ -107,7 +136,7 @@ const registerLegacyShellIpc = (): void => {
   legacyIpcRegistered = true
 
   ipcMain.handle('app-ready', () => {
-    showMainWindow()
+    handleRendererReady()
     return { ok: true }
   })
 
@@ -128,22 +157,36 @@ const registerLegacyShellIpc = (): void => {
 }
 
 const bootstrap = async (): Promise<void> => {
+  container = getContainer()
+  const logger = container.cradle.logger
+  logger.info('bootstrap started')
   installContentSecurityPolicy()
   registerAssetProtocol(() => nativeIpc)
   registerLegacyShellIpc()
   didShowMain = false
-  windows = await createMarklabWindows()
+  rendererReady = false
   if (!nativeIpc) {
     nativeIpc = registerNativeIpc({
       app,
       BrowserWindow,
       clipboard,
       dialog,
+      exportService: container.cradle.exportService,
+      gitService: container.cradle.gitService,
       getLaunchInfo,
       ipcMain,
-      onRendererReady: showMainWindow,
+      logger,
+      onRendererReady: handleRendererReady,
       shell,
+      terminalService: container.cradle.terminalService,
+      workspaceService: container.cradle.workspaceService,
     })
+  }
+  try {
+    windows = await createMarklabWindows(logger.child('window'))
+  } catch (error) {
+    logger.error('window creation failed', { error })
+    throw error
   }
   installNativeMenu(windows.main, (id) => {
     if (windows?.main && nativeIpc?.menu.dispatchToWindow(windows.main, id)) return
@@ -152,10 +195,13 @@ const bootstrap = async (): Promise<void> => {
   installMainWindowCloseFlush(windows.main)
 
   fallbackTimer = setTimeout(showMainWindow, APP_READY_FALLBACK_MS)
+  if (rendererReady) showMainWindow()
   flushPendingRuntimeEvents()
+  logger.info('bootstrap finished')
 
   windows.main.on('closed', () => {
     windows = null
+    logger.info('main window closed')
   })
 }
 
@@ -163,38 +209,50 @@ publishDeepLinksFromArgs(launchInfo.args, 'startup', queueDeepLinkPayload)
 
 app.on('open-url', (event, url) => {
   event.preventDefault()
+  container?.cradle.logger.info('deep link received from open-url')
   publishDeepLinkUrl(url, 'open-url', queueDeepLinkPayload)
   if (windows?.main && !windows.main.isDestroyed()) {
     showMainWindow()
     if (windows.main.isMinimized()) windows.main.restore()
     windows.main.focus()
   } else if (app.isReady()) {
-    void bootstrap()
+    void bootstrap().catch((error) => {
+      container?.cradle.logger.error('bootstrap failed after open-url', { error })
+      throw error
+    })
   }
 })
 
 const singleInstanceLock = app.requestSingleInstanceLock()
 
 if (!singleInstanceLock) {
+  getContainer().cradle.logger.warn('single instance lock unavailable, quitting')
   app.quit()
 } else {
-  registerDeepLinkProtocol()
+  registerDeepLinkProtocol(getContainer().cradle.logger.child('deep-link'))
 
   app.on('second-instance', (_event, commandLine, workingDirectory) => {
+    container?.cradle.logger.info('second instance received')
     const payload = createSingleInstancePayload(commandLine, workingDirectory)
     if (windows?.main && !windows.main.isDestroyed()) {
       showMainWindow()
       if (windows.main.isMinimized()) windows.main.restore()
       windows.main.focus()
     } else {
-      void bootstrap()
+      void bootstrap().catch((error) => {
+        container?.cradle.logger.error('bootstrap failed after second-instance', { error })
+        throw error
+      })
     }
     queueOrSendRuntimeEvent({ eventName: 'single-instance', payload })
     publishDeepLinksFromArgs(payload.args, 'second-instance', queueDeepLinkPayload)
   })
 
   app.whenReady().then(() => {
-    void bootstrap()
+    void bootstrap().catch((error) => {
+      container?.cradle.logger.error('bootstrap failed', { error })
+      throw error
+    })
   })
 
   app.on('activate', () => {
@@ -203,7 +261,10 @@ if (!singleInstanceLock) {
       return
     }
 
-    void bootstrap()
+    void bootstrap().catch((error) => {
+      container?.cradle.logger.error('bootstrap failed during activate', { error })
+      throw error
+    })
   })
 }
 
@@ -223,6 +284,7 @@ app.on('before-quit', (event) => {
     await flushWorkspaceBuffers('quit')
     allowAppQuit = true
     allowMainWindowClose = true
+    container?.cradle.logger.info('app quit continuing after flush')
     app.quit()
   })()
 })

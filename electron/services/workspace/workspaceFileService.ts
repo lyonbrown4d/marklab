@@ -1,10 +1,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { isMarkdownPath, workspaceRootForAssets } from './path.js'
-import type { FsBufferStatus, FsPathMetadata, FsRootInfo } from './types.js'
-import { WorkspaceBase } from './workspaceBase.js'
-import { ensureDefaultFile, isPathInsideOrEqual, pathExists, stringArg } from './workspaceUtils.js'
+import { isMarkdownPath, workspaceRootForAssets } from '@electron/services/workspace/path.js'
+import type {
+  FsBufferStatus,
+  FsPathMetadata,
+  FsRootInfo,
+} from '@electron/services/workspace/types.js'
+import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
+import {
+  ensureDefaultFile,
+  isPathInsideOrEqual,
+  pathExists,
+  stringArg,
+} from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceFileService extends WorkspaceBase {
   async snapshot() {
@@ -53,6 +62,10 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.buffers.clear()
     this.watcher.restart()
     this.scheduleSnapshotChanged()
+    this.logger.info('workspace root changed', {
+      rootKind: this.state.rootKind,
+      rootPath: this.state.rootPath,
+    })
     return this.rootInfo()
   }
 
@@ -72,6 +85,7 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.buffers.clear()
     this.watcher.restart()
     this.scheduleSnapshotChanged()
+    this.logger.info('single file workspace opened', { path: path.basename(resolved) })
     return this.rootInfo()
   }
 
@@ -120,6 +134,7 @@ export class WorkspaceFileService extends WorkspaceBase {
       this.buffers.delete(relativePath)
     }
     this.scheduleSnapshotChanged({ restartWatcher: true })
+    this.logger.info('file created', { path: relativePath })
   }
 
   async createDir(value: unknown): Promise<void> {
@@ -127,6 +142,7 @@ export class WorkspaceFileService extends WorkspaceBase {
     const absolutePath = this.resolve(stringArg(value, 'path'))
     await fs.promises.mkdir(absolutePath, { recursive: true })
     this.scheduleSnapshotChanged({ restartWatcher: true })
+    this.logger.info('folder created', { path: stringArg(value, 'path') })
   }
 
   async renamePath(value: unknown): Promise<void> {
@@ -138,6 +154,7 @@ export class WorkspaceFileService extends WorkspaceBase {
     await fs.promises.rename(this.resolve(from), target)
     this.buffers.rename(from, to)
     this.scheduleSnapshotChanged({ restartWatcher: true })
+    this.logger.info('path renamed', { from, to })
   }
 
   async movePath(value: unknown): Promise<void> {
@@ -156,6 +173,10 @@ export class WorkspaceFileService extends WorkspaceBase {
     }
     this.buffers.deleteUnder(relativePath)
     this.scheduleSnapshotChanged({ restartWatcher: true })
+    this.logger.info('path deleted', {
+      path: relativePath,
+      kind: stat.isDirectory() ? 'folder' : 'file',
+    })
   }
 
   async pathMetadata(value: unknown): Promise<FsPathMetadata> {
@@ -175,6 +196,8 @@ export class WorkspaceFileService extends WorkspaceBase {
   async openPathInSystem(value: unknown): Promise<void> {
     const metadata = await this.pathMetadata(value)
     const error = await this.shell.openPath(metadata.absolute_path)
+    if (error) this.logger.warn('open path in system failed', { path: metadata.path, error })
     if (error) throw new Error(`Failed to open path: ${error}`)
+    this.logger.info('path opened in system', { path: metadata.path })
   }
 }

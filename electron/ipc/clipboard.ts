@@ -1,6 +1,6 @@
 import type { Clipboard, IpcMain } from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import type { ClipboardImage } from '../types.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import type { ClipboardImage } from '@electron/types.js'
 export const registerClipboardIpc = (ipcMain: IpcMain, clipboard: Clipboard): void => {
   ipcMain.handle(nativeIpcChannels.clipboardReadText, () => clipboard.readText())
   ipcMain.handle(nativeIpcChannels.clipboardWriteText, (_event, text: unknown) => {

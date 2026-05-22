@@ -1,8 +1,8 @@
 import path from 'node:path'
 
-import { stripAssetQueryAndHash } from '../path.js'
-import { decodeURIComponentSafe } from './text.js'
-import { unwrapLinkDestination } from './utils.js'
+import { stripAssetQueryAndHash } from '@electron/services/workspace/path.js'
+import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text.js'
+import { unwrapLinkDestination } from '@electron/services/workspace/markdown/utils.js'
 
 const assetMediaTypes: Record<string, string> = {
   '.aac': 'audio/aac',

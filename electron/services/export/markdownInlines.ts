@@ -1,5 +1,9 @@
-import { isAsciiAlphanumeric, isAsciiDigit, unescapeMarkdownText } from './markdownText.js'
-import type { MarkdownInline } from './markdownTypes.js'
+import {
+  isAsciiAlphanumeric,
+  isAsciiDigit,
+  unescapeMarkdownText,
+} from '@electron/services/export/markdownText.js'
+import type { MarkdownInline } from '@electron/services/export/markdownTypes.js'
 
 type LinkDestination = {
   url: string

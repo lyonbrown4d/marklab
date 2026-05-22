@@ -2,7 +2,7 @@ import { unified } from 'unified'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 
-import { charLength, sliceChars } from './text.js'
+import { charLength, sliceChars } from '@electron/services/workspace/markdown/text.js'
 
 export type MarkdownPoint = {
   line: number

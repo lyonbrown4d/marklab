@@ -1,8 +1,9 @@
 import { BrowserWindow, app, screen } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { getWindowState, setWindowState } from './services/settingsStore.js'
-import type { PersistedWindowState } from './types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { getWindowState, setWindowState } from '@electron/services/settingsStore.js'
+import type { PersistedWindowState } from '@electron/types.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -81,15 +82,15 @@ const normalizeWindowState = (value: unknown): PersistedWindowState | null => {
     isMaximized: value.isMaximized === true,
   }
 }
-const readWindowState = (): PersistedWindowState | null => {
+const readWindowState = (logger: Logger): PersistedWindowState | null => {
   try {
     return normalizeWindowState(getWindowState())
   } catch (error) {
-    console.warn('Unable to read persisted window state.', error)
+    logger.warn('unable to read persisted window state', { error })
     return null
   }
 }
-const writeWindowState = (window: BrowserWindow): void => {
+const writeWindowState = (window: BrowserWindow, logger: Logger): void => {
   try {
     const bounds = window.getNormalBounds()
     const state: PersistedWindowState = {
@@ -101,7 +102,7 @@ const writeWindowState = (window: BrowserWindow): void => {
     }
     setWindowState(state)
   } catch (error) {
-    console.warn('Unable to persist window state.', error)
+    logger.warn('unable to persist window state', { error })
   }
 }
 const rectanglesIntersect = (a: WindowBounds, b: WindowBounds): boolean => {
@@ -110,8 +111,8 @@ const rectanglesIntersect = (a: WindowBounds, b: WindowBounds): boolean => {
 const hasVisibleArea = (bounds: WindowBounds): boolean => {
   return screen.getAllDisplays().some((display) => rectanglesIntersect(bounds, display.workArea))
 }
-const restoredWindowBounds = () => {
-  const state = readWindowState()
+const restoredWindowBounds = (logger: Logger) => {
+  const state = readWindowState(logger)
   if (!state) {
     return {
       bounds: {
@@ -143,14 +144,14 @@ const restoredWindowBounds = () => {
     isMaximized: state.isMaximized,
   }
 }
-const persistWindowState = (window: BrowserWindow): void => {
+const persistWindowState = (window: BrowserWindow, logger: Logger): void => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   const saveNow = () => {
     if (saveTimer) {
       clearTimeout(saveTimer)
       saveTimer = null
     }
-    if (!window.isDestroyed()) writeWindowState(window)
+    if (!window.isDestroyed()) writeWindowState(window, logger)
   }
   const scheduleSave = () => {
     if (saveTimer) clearTimeout(saveTimer)
@@ -176,8 +177,8 @@ export const createSplashWindow = () => {
     webPreferences: secureWebPreferences(),
   })
 }
-export const createMainWindow = () => {
-  const restored = restoredWindowBounds()
+export const createMainWindow = (logger: Logger = noopLogger) => {
+  const restored = restoredWindowBounds(logger)
   const main = new BrowserWindow({
     ...restored.bounds,
     minWidth: MAIN_WINDOW_MIN_WIDTH,
@@ -189,7 +190,7 @@ export const createMainWindow = () => {
     show: false,
     webPreferences: secureWebPreferences(),
   })
-  persistWindowState(main)
+  persistWindowState(main, logger)
   if (restored.isMaximized) main.maximize()
   return main
 }
@@ -208,9 +209,11 @@ export const loadMainWindow = async (main: BrowserWindow) => {
   }
   await main.loadFile(getRendererUrl())
 }
-export const createMarklabWindows = async (): Promise<MarklabWindows> => {
+export const createMarklabWindows = async (
+  logger: Logger = noopLogger,
+): Promise<MarklabWindows> => {
   const splash = createSplashWindow()
-  const main = createMainWindow()
+  const main = createMainWindow(logger)
   await Promise.all([loadSplashWindow(splash), loadMainWindow(main)])
   return { splash, main }
 }

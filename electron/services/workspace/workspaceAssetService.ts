@@ -1,14 +1,17 @@
 import fs from 'node:fs'
 
-import type { FsMarkdownAssetImportResult, FsMarkdownAssetResolveResult } from './types.js'
+import type {
+  FsMarkdownAssetImportResult,
+  FsMarkdownAssetResolveResult,
+} from '@electron/services/workspace/types.js'
 import {
   copyAssetToDocumentAssets,
   preserveAssetPath,
   resolveMarkdownAssetTarget,
   writeAssetBytes,
-} from './workspaceAssetOperations.js'
-import { WorkspaceAnalysisService } from './workspaceAnalysisService.js'
-import { nullableStringArg, stringArg } from './workspaceUtils.js'
+} from '@electron/services/workspace/workspaceAssetOperations.js'
+import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
+import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceAssetService extends WorkspaceAnalysisService {
   async importMarkdownAsset(value: unknown): Promise<FsMarkdownAssetImportResult> {

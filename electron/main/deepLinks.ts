@@ -1,11 +1,12 @@
 import { app } from 'electron'
 
+import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type {
   AppLaunchInfo,
   AppLaunchSource,
   DeepLinkPayload,
   SingleInstancePayload,
-} from '../types.js'
+} from '@electron/types.js'
 
 const DEEP_LINK_SCHEME = 'marklab'
 const SUPPORTED_DEEP_LINK_SCHEMES = new Set([DEEP_LINK_SCHEME, 'marko'])
@@ -48,7 +49,7 @@ export const publishDeepLinkUrl = (
   publishDeepLink(createDeepLinkPayload(parsed, source), publish)
 }
 
-export const registerDeepLinkProtocol = (): void => {
+export const registerDeepLinkProtocol = (logger: Logger = noopLogger): void => {
   try {
     const processWithLaunchPath = process as typeof process & {
       argv?: readonly unknown[]
@@ -63,7 +64,7 @@ export const registerDeepLinkProtocol = (): void => {
       }
     }
   } catch (error) {
-    console.warn(`Unable to register ${DEEP_LINK_SCHEME}: deep link protocol.`, error)
+    logger.warn('unable to register deep link protocol', { error, scheme: DEEP_LINK_SCHEME })
   }
 }
 
@@ -75,8 +76,7 @@ const getProcessArgs = (): string[] => {
 const getProcessCwd = (): string => {
   try {
     return process.cwd()
-  } catch (error) {
-    console.warn('Unable to resolve process cwd.', error)
+  } catch {
     return ''
   }
 }

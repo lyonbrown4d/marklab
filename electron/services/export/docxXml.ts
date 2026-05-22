@@ -1,4 +1,4 @@
-import type { MarkdownBlock, MarkdownInline } from './markdown.js'
+import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdown.js'
 
 type InlineRun = {
   text: string

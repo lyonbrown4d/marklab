@@ -2,8 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { watch, type FSWatcher } from 'chokidar'
 
-import { normalizeRelativePath } from './path.js'
-import type { BackgroundTaskStatus, FsStateData } from './types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { normalizeRelativePath } from '@electron/services/workspace/path.js'
+import type { BackgroundTaskStatus, FsStateData } from '@electron/services/workspace/types.js'
 import {
   errorMessage,
   hasHiddenPathSegment,
@@ -12,10 +13,11 @@ import {
   isWorkspaceWatchEvent,
   normalizeAbsolutePath,
   safeStatSync,
-} from './workspaceUtils.js'
+} from '@electron/services/workspace/workspaceUtils.js'
 
 type WorkspaceWatcherOptions = {
   getState: () => FsStateData
+  logger?: Logger
   onChanged: (absolutePath: string | null) => void
   setStatus: (status: BackgroundTaskStatus['status'], message: string | null) => void
 }
@@ -23,6 +25,7 @@ type WorkspaceWatcherOptions = {
 const OWN_WRITE_EVENT_SUPPRESS_MS = 1500
 
 export class WorkspaceWatcher {
+  private readonly logger: Logger
   private watcher: FSWatcher | null = null
   private readonly recentOwnWrites = new Map<string, number>()
   private currentWatchRoot: string | null = null
@@ -30,10 +33,13 @@ export class WorkspaceWatcher {
   private watcherVersion = 0
   private disposed = false
 
-  constructor(private readonly options: WorkspaceWatcherOptions) {}
+  constructor(private readonly options: WorkspaceWatcherOptions) {
+    this.logger = options.logger ?? noopLogger
+  }
 
   restart(): void {
     if (this.disposed) return
+    this.logger.info('watcher restarting')
     this.watcherVersion += 1
     this.stop()
     this.currentWatchRoot = null
@@ -47,7 +53,7 @@ export class WorkspaceWatcher {
       .catch((error) => {
         if (this.disposed || version !== this.watcherVersion) return
         this.options.setStatus('error', errorMessage(error))
-        console.warn('workspace watcher failed to start', error)
+        this.logger.error('watcher failed to start', { error })
       })
   }
 
@@ -60,6 +66,7 @@ export class WorkspaceWatcher {
   dispose(): void {
     this.disposed = true
     this.watcherVersion += 1
+    this.logger.info('watcher disposing')
     this.stop()
     this.options.setStatus('idle', 'Stopped')
   }
@@ -70,7 +77,7 @@ export class WorkspaceWatcher {
     if (!watcher) return
 
     void watcher.close().catch((error) => {
-      console.warn('workspace watcher close failed', error)
+      this.logger.warn('watcher close failed', { error })
     })
   }
 
@@ -86,6 +93,7 @@ export class WorkspaceWatcher {
     const stat = safeStatSync(watchRoot)
     if (!stat?.isDirectory()) return
     this.currentWatchRoot = path.resolve(watchRoot)
+    this.logger.info('watcher starting', { watchRoot: this.currentWatchRoot })
 
     const watcher = watch(this.currentWatchRoot, {
       ignoreInitial: true,
@@ -100,7 +108,7 @@ export class WorkspaceWatcher {
     watcher.on('error', (error) => {
       if (this.watcher === watcher) this.watcher = null
       this.options.setStatus('error', errorMessage(error))
-      console.warn('workspace watcher error', error)
+      this.logger.error('watcher error', { error })
     })
     this.watcher = watcher
   }

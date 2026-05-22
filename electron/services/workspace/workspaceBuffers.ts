@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import type { BackgroundTaskStatus, FsBufferStatus } from './types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import type { BackgroundTaskStatus, FsBufferStatus } from '@electron/services/workspace/types.js'
 
 type BufferRecord = {
   content: string
@@ -12,6 +13,7 @@ type BufferRecord = {
 type BufferStatusListener = (status: FsBufferStatus) => void
 
 type WorkspaceBufferStoreOptions = {
+  logger?: Logger
   resolvePath: (relativePath: string) => string
   markOwnWrite: (absolutePath: string) => void
   scheduleSnapshotChanged: () => void
@@ -32,8 +34,10 @@ export class WorkspaceBufferStore {
   private autoFlushTimer: ReturnType<typeof setInterval> | null = null
   private flushInFlight: Promise<number> | null = null
   private disposed = false
+  private readonly logger: Logger
 
   constructor(private readonly options: WorkspaceBufferStoreOptions) {
+    this.logger = options.logger ?? noopLogger
     this.startAutoFlushWorker()
   }
 
@@ -159,6 +163,7 @@ export class WorkspaceBufferStore {
     }
 
     this.options.setTask('buffer-flush', 'Save queue', 'running', `${dirty.length} pending`)
+    this.logger.info('buffer flush started', { dirtyCount: dirty.length })
     let flushed = 0
     try {
       for (const [relativePath, record] of dirty) {
@@ -176,9 +181,11 @@ export class WorkspaceBufferStore {
 
       this.updateFlushIdleTask()
       if (flushed > 0) this.options.scheduleSnapshotChanged()
+      this.logger.info('buffer flush finished', { flushed })
       return flushed
     } catch (error) {
       this.options.setTask('buffer-flush', 'Save queue', 'error', this.options.errorMessage(error))
+      this.logger.error('buffer flush failed', { error })
       throw error
     }
   }
@@ -204,7 +211,7 @@ export class WorkspaceBufferStore {
       if (this.disposed || this.flushInFlight) return
       if (this.getBackgroundDirtyCount() === 0) return
       void this.flush().catch((error) => {
-        console.warn('background buffer flush failed', error)
+        this.logger.warn('background buffer flush failed', { error })
       })
     }, BUFFER_AUTO_FLUSH_INTERVAL_MS)
   }

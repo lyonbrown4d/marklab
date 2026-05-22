@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { FsStateData } from './types.js'
+import type { FsStateData } from '@electron/services/workspace/types.js'
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 export const normalizeRelativePath = (value: string): string => {
   return value.replace(/\\/g, '/')

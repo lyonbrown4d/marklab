@@ -1,23 +1,27 @@
-import type { App, BrowserWindow, IpcMain, Shell } from 'electron'
+import type { BrowserWindow, IpcMain } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { NativeCommandHandlers } from './commandInvoke.js'
-import { ExportService } from '../services/export/exportService.js'
-import { isMarkdownPath, normalizeRelativePath } from '../services/workspace/path.js'
-import { WorkspaceService } from '../services/workspace/workspaceService.js'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
+import { ExportService } from '@electron/services/export/exportService.js'
+import { isMarkdownPath, normalizeRelativePath } from '@electron/services/workspace/path.js'
+import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { Logger } from '@electron/services/logger.js'
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
   export: ExportService
   workspace: WorkspaceService
 }
+type WorkspaceIpcDependencies = {
+  exportService: ExportService
+  logger: Logger
+  workspaceService: WorkspaceService
+}
 export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
-  app: App,
   BrowserWindowClass: typeof BrowserWindow,
-  shell: Shell,
+  { exportService, logger, workspaceService }: WorkspaceIpcDependencies,
 ): WorkspaceCommandServices => {
-  const workspace = new WorkspaceService(app, shell)
-  const exportService = new ExportService(shell, BrowserWindowClass)
+  const workspace = workspaceService
   const commandHandlers = createWorkspaceCommandHandlers(workspace, exportService)
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
   workspace.onBufferStatus((status) => {
@@ -30,6 +34,7 @@ export const registerWorkspaceCommandsIpc = (
       window.webContents.send('fs-changed', snapshot)
     }
   })
+  logger.info('workspace IPC registered')
   return { commandHandlers, export: exportService, workspace }
 }
 const createWorkspaceCommandHandlers = (

@@ -8,9 +8,9 @@ import {
   openingFence,
   splitTableRow,
   stripBlockquotePrefix,
-} from './markdownBlockSyntax.js'
-import { parseInlines } from './markdownInlines.js'
-import type { MarkdownBlock, MarkdownInline } from './markdownTypes.js'
+} from '@electron/services/export/markdownBlockSyntax.js'
+import { parseInlines } from '@electron/services/export/markdownInlines.js'
+import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes.js'
 
 export const parseBlocks = (lines: string[]): MarkdownBlock[] => {
   const blocks: MarkdownBlock[] = []

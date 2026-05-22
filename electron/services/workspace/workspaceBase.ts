@@ -2,8 +2,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
 
-import { parseMarkdownDocument } from './markdown.js'
-import { resolveWorkspacePath, toWorkspaceRelative, workspaceRootForAssets } from './path.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import {
+  resolveWorkspacePath,
+  toWorkspaceRelative,
+  workspaceRootForAssets,
+} from '@electron/services/workspace/path.js'
 import type {
   BackgroundTaskStatus,
   FsBufferStatus,
@@ -12,16 +17,16 @@ import type {
   FsSnapshot,
   FsStateData,
   FsWorkspaceIndex,
-} from './types.js'
-import { WorkspaceBufferStore } from './workspaceBuffers.js'
+} from '@electron/services/workspace/types.js'
+import { WorkspaceBufferStore } from '@electron/services/workspace/workspaceBuffers.js'
 import {
   ensureDefaultFile,
   errorMessage,
   listWorkspaceEntries,
   listWorkspaceKnownPaths,
   samePath,
-} from './workspaceUtils.js'
-import { WorkspaceWatcher } from './workspaceWatcher.js'
+} from '@electron/services/workspace/workspaceUtils.js'
+import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
 
 type SnapshotListener = (snapshot: FsSnapshot) => void
 
@@ -41,6 +46,7 @@ export class WorkspaceBase {
   constructor(
     app: App,
     protected readonly shell: Shell,
+    protected readonly logger: Logger = noopLogger,
   ) {
     const internalRoot = path.join(app.getPath('userData'), 'workspace')
     this.state = {
@@ -54,15 +60,21 @@ export class WorkspaceBase {
     this.initializeBackgroundTasks()
     this.watcher = new WorkspaceWatcher({
       getState: () => this.state,
+      logger: this.logger.child('watcher'),
       onChanged: (absolutePath) => this.handleWatchedPathChanged(absolutePath),
       setStatus: (status, message) => this.setTask('watcher', 'Workspace watcher', status, message),
     })
     this.buffers = new WorkspaceBufferStore({
+      logger: this.logger.child('buffers'),
       resolvePath: (relativePath) => this.resolve(relativePath),
       markOwnWrite: (absolutePath) => this.watcher.markOwnWrite(absolutePath),
       scheduleSnapshotChanged: () => this.scheduleSnapshotChanged(),
       setTask: (id, label, status, message) => this.setTask(id, label, status, message),
       errorMessage,
+    })
+    this.logger.info('workspace service initialized', {
+      rootKind: this.state.rootKind,
+      rootPath: this.state.rootPath,
     })
     this.watcher.restart()
     app.on('will-quit', () => this.dispose())
@@ -94,6 +106,7 @@ export class WorkspaceBase {
 
   dispose(): void {
     this.disposed = true
+    this.logger.info('workspace service disposing')
     if (this.snapshotTimer) {
       clearTimeout(this.snapshotTimer)
       this.snapshotTimer = null
@@ -154,14 +167,17 @@ export class WorkspaceBase {
 
   protected runSearchIndexTask<T>(work: () => Promise<T>): Promise<T> {
     this.searchIndexRuns += 1
+    this.logger.info('search index task started', { activeRuns: this.searchIndexRuns })
     this.setTask('search-index', 'Search index', 'running', null)
     return work()
       .catch((taskError: unknown) => {
         this.setTask('search-index', 'Search index', 'error', errorMessage(taskError))
+        this.logger.error('search index task failed', { error: taskError })
         throw taskError
       })
       .finally(() => {
         this.searchIndexRuns -= 1
+        this.logger.info('search index task finished', { activeRuns: this.searchIndexRuns })
         if (this.searchIndexRuns === 0 && this.tasks.get('search-index')?.status !== 'error') {
           this.setTask('search-index', 'Search index', 'idle', null)
         }
@@ -203,7 +219,7 @@ export class WorkspaceBase {
       if (shouldRestartWatcher) this.watcher.restart()
       for (const listener of this.snapshotListeners) listener(snapshot)
     } catch (emitError) {
-      console.warn('workspace snapshot changed event failed', emitError)
+      this.logger.warn('workspace snapshot changed event failed', { error: emitError })
       if (shouldRestartWatcher) this.watcher.restart()
     }
   }

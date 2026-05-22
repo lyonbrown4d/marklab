@@ -1,25 +1,32 @@
 import type * as Electron from 'electron'
-import type { NativeCommandHandlers } from './commandInvoke.js'
-import { GitService } from '../services/git/service.js'
-import { TerminalService } from '../services/terminal/service.js'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
+import { GitService } from '@electron/services/git/service.js'
+import type { Logger } from '@electron/services/logger.js'
+import { TerminalService } from '@electron/services/terminal/service.js'
 type CommandPayload = Record<string, unknown> | undefined
 export type GitTerminalIpcBridge = {
   commandHandlers: NativeCommandHandlers
   git: GitService
   terminal: TerminalService
 }
+type GitTerminalIpcDependencies = {
+  gitService: GitService
+  logger: Logger
+  terminalService: TerminalService
+}
 export const registerGitTerminalIpc = (
   ipcMain: Electron.IpcMain,
   app: Electron.App,
-  terminalCwd: () => string,
+  { gitService, logger, terminalService }: GitTerminalIpcDependencies,
 ): GitTerminalIpcBridge => {
-  const git = new GitService()
-  const terminal = new TerminalService(() => terminalCwd() || app.getPath('home'))
+  const git = gitService
+  const terminal = terminalService
   const commandHandlers = createGitTerminalCommandHandlers(git, terminal)
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
   app.on('before-quit', () => {
     terminal.dispose()
   })
+  logger.info('git and terminal IPC registered')
   return { commandHandlers, git, terminal }
 }
 const createGitTerminalCommandHandlers = (

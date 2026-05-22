@@ -1,10 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { Notification, type BrowserWindow, type Shell } from 'electron'
-import type { ExportTaskPayload } from '../../types.js'
-import { validateExistingLocalPath } from '../pathValidation.js'
-import { renderDocx } from './docx.js'
-import { renderHtml } from './html.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import type { ExportTaskPayload } from '@electron/types.js'
+import { validateExistingLocalPath } from '@electron/services/pathValidation.js'
+import { renderDocx } from '@electron/services/export/docx.js'
+import { renderHtml } from '@electron/services/export/html.js'
 type ExportFormat = 'html' | 'pdf' | 'docx'
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 let exportTaskCounter = 0
@@ -13,12 +14,18 @@ export class ExportService {
   constructor(
     private readonly shell: Shell,
     private readonly BrowserWindowClass: typeof BrowserWindow,
+    private readonly logger: Logger = noopLogger,
   ) {}
   exportMarkdown(value: unknown): string {
     const markdown = stringArg(value, 'markdown')
     const format = parseExportFormat(value)
     const outputPath = validateExportOutputPath(value)
     const taskId = createExportTaskId(format)
+    this.logger.info('export task queued', {
+      format,
+      outputFile: path.basename(outputPath),
+      taskId,
+    })
     this.emitExportTask({
       id: taskId,
       format,
@@ -38,7 +45,14 @@ export class ExportService {
       throw new Error('Path was not selected by the export dialog.')
     }
     const error = await this.shell.openPath(validated.path)
+    if (error) {
+      this.logger.warn('open export output failed', {
+        error,
+        outputFile: path.basename(validated.path),
+      })
+    }
     if (error) throw new Error(`Failed to open exported path: ${error}`)
+    this.logger.info('export output opened', { outputFile: path.basename(validated.path) })
   }
   private async runExport(
     taskId: string,
@@ -49,6 +63,11 @@ export class ExportService {
     try {
       await this.writeExport(taskId, markdown, format, outputPath)
       this.allowedOutputPaths.add(outputPath)
+      this.logger.info('export task finished', {
+        format,
+        outputFile: path.basename(outputPath),
+        taskId,
+      })
       this.emitExportTask({
         id: taskId,
         format,
@@ -60,6 +79,12 @@ export class ExportService {
       this.notifyExportFinished(format, outputPath)
     } catch (error) {
       const message = errorMessage(error)
+      this.logger.error('export task failed', {
+        error,
+        format,
+        outputFile: path.basename(outputPath),
+        taskId,
+      })
       this.emitExportTask({
         id: taskId,
         format,

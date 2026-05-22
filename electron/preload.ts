@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { nativeIpcChannels } from './channels.js'
-import { allowedCommands, allowedEvents } from './preload/allowlists.js'
-import { onFileDrop } from './preload/fileDrop.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
+import { onFileDrop } from '@electron/preload/fileDrop.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -12,7 +12,7 @@ import type {
   SaveDialogOptions,
   SettingsPersistResult,
   WindowActionResult,
-} from './types.js'
+} from '@electron/types.js'
 
 type MenuActionHandler = (id: string) => void
 type RuntimeEventHandler<T = unknown> = (event: RuntimeEventPayload<T>) => void

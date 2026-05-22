@@ -1,6 +1,6 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import type { StartDragResult, WindowActionResult } from '../types.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import type { StartDragResult, WindowActionResult } from '@electron/types.js'
 const windowFromEvent = (
   event: Electron.IpcMainInvokeEvent,
   BrowserWindowCtor: typeof Electron.BrowserWindow,

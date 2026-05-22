@@ -1,10 +1,10 @@
 import { toString } from 'mdast-util-to-string'
 import { visit } from 'unist-util-visit'
 
-import type { FsMarkdownHeading } from '../types.js'
-import type { MarkdownRoot } from './ast.js'
-import { isHeadingNode } from './ast.js'
-import { uniqueGithubSlug } from './slugs.js'
+import type { FsMarkdownHeading } from '@electron/services/workspace/types.js'
+import type { MarkdownRoot } from '@electron/services/workspace/markdown/ast.js'
+import { isHeadingNode } from '@electron/services/workspace/markdown/ast.js'
+import { uniqueGithubSlug } from '@electron/services/workspace/markdown/slugs.js'
 
 export type HeadingEntry = {
   heading: FsMarkdownHeading

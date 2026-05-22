@@ -2,7 +2,7 @@ import { app, net, protocol } from 'electron'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import type { NativeIpcRegistration } from '../ipc/index.js'
+import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 
 const ASSET_PROTOCOL = 'marko-asset'
 

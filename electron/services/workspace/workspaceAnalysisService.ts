@@ -4,10 +4,14 @@ import {
   diagnosticsForFile,
   parseMarkdownDocument,
   searchDocuments,
-} from './markdown.js'
-import type { FsGraph, FsMarkdownDiagnostic, FsWorkspaceIndex } from './types.js'
-import { WorkspaceFileService } from './workspaceFileService.js'
-import { stringArg } from './workspaceUtils.js'
+} from '@electron/services/workspace/markdown.js'
+import type {
+  FsGraph,
+  FsMarkdownDiagnostic,
+  FsWorkspaceIndex,
+} from '@electron/services/workspace/types.js'
+import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
+import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceAnalysisService extends WorkspaceFileService {
   async workspaceIndex(): Promise<FsWorkspaceIndex> {

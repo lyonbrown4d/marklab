@@ -1,6 +1,6 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import type { MenuCommandPayload } from '../types.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import type { MenuCommandPayload } from '@electron/types.js'
 export type MenuDispatchBridge = {
   dispatchToFocusedWindow: (command: string, payload?: unknown) => boolean
   dispatchToWindow: (window: Electron.BrowserWindow, command: string, payload?: unknown) => boolean

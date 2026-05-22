@@ -9,9 +9,15 @@ import '@/styles/editor.scss'
 import '@/styles/motion.scss'
 import '@/styles/search.scss'
 import '@/i18n/setup'
+import '@/lib/monaco'
 import App from '@/App.tsx'
 import { queryClient } from '@/app/queryClient'
 import { Toaster } from '@/components/ui/sonner'
+import { isDesktopRuntime } from '@/runtime/environment'
+
+const isElectronUserAgent = () => {
+  return typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron')
+}
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -20,7 +26,12 @@ const ReactQueryDevtools = import.meta.env.DEV
     })
   : null
 
-if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN !== 'false') {
+if (
+  import.meta.env.DEV &&
+  import.meta.env.VITE_REACT_SCAN === 'true' &&
+  !isDesktopRuntime() &&
+  !isElectronUserAgent()
+) {
   void import('react-scan')
     .then(({ scan }) => scan({ enabled: true }))
     .catch((error) => {

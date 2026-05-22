@@ -1,9 +1,9 @@
-import { parseBlocks } from './markdownBlocks.js'
-import { normalizeHtmlBreaks } from './markdownText.js'
-import type { MarkdownBlock } from './markdownTypes.js'
+import { parseBlocks } from '@electron/services/export/markdownBlocks.js'
+import { normalizeHtmlBreaks } from '@electron/services/export/markdownText.js'
+import type { MarkdownBlock } from '@electron/services/export/markdownTypes.js'
 
-export type { MarkdownBlock, MarkdownInline } from './markdownTypes.js'
-export { plainTextFromInlines } from './markdownInlines.js'
+export type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes.js'
+export { plainTextFromInlines } from '@electron/services/export/markdownInlines.js'
 
 export const parseMarkdown = (markdown: string): MarkdownBlock[] => {
   const lines = normalizeMarkdownForExport(markdown).split(/\r?\n/)

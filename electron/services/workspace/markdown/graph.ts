@@ -5,12 +5,12 @@ import type {
   FsIndexedMarkdownFile,
   FsMarkdownLink,
   FsWorkspaceIndex,
-} from '../types.js'
-import { parseMarkdownAst } from './ast.js'
-import { parseMarkdownBlocks } from './blocks.js'
-import { extractHeadingEntries } from './headings.js'
-import { resolveIndexedLinkPath } from './targets.js'
-import { fileLabel } from './utils.js'
+} from '@electron/services/workspace/types.js'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast.js'
+import { parseMarkdownBlocks } from '@electron/services/workspace/markdown/blocks.js'
+import { extractHeadingEntries } from '@electron/services/workspace/markdown/headings.js'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
+import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
 
 type GraphTarget = {
   id: string

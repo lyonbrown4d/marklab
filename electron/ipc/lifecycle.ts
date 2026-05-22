@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron'
-import { nativeIpcChannels } from '../channels.js'
-import type { AppLaunchInfo } from '../types.js'
+import { nativeIpcChannels } from '@electron/channels.js'
+import type { AppLaunchInfo } from '@electron/types.js'
 export const registerLifecycleIpc = (
   ipcMain: IpcMain,
   getLaunchInfo: () => AppLaunchInfo,

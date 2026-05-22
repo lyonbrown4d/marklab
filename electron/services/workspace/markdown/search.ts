@@ -1,8 +1,8 @@
-import type { FsSearchResult } from '../types.js'
-import { parseMarkdownAst } from './ast.js'
-import { headingLevelsByLine } from './headings.js'
-import { charLength, sliceChars } from './text.js'
-import { fileLabel } from './utils.js'
+import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast.js'
+import { headingLevelsByLine } from '@electron/services/workspace/markdown/headings.js'
+import { charLength, sliceChars } from '@electron/services/workspace/markdown/text.js'
+import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
 
 type SearchTerm = {
   raw: string

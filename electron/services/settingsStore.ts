@@ -2,7 +2,8 @@ import Store from 'electron-store'
 import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { PersistedWindowState, RendererPersistKey } from '../types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import type { PersistedWindowState, RendererPersistKey } from '@electron/types.js'
 type SettingsSchema = {
   rendererPersist?: Partial<Record<RendererPersistKey, unknown>>
   windowState?: PersistedWindowState
@@ -12,6 +13,10 @@ const LEGACY_WINDOW_STATE_FILE = 'window-state.json'
 const rendererPersistKeys = new Set<RendererPersistKey>(['marko.app'])
 let settingsStore: Store<SettingsSchema> | null = null
 let didMigrateLegacyWindowState = false
+let logger: Logger = noopLogger
+export const configureSettingsStoreLogger = (nextLogger: Logger): void => {
+  logger = nextLogger
+}
 const getStore = (): Store<SettingsSchema> => {
   settingsStore ??= new Store<SettingsSchema>({ name: SETTINGS_STORE_NAME })
   return settingsStore
@@ -51,7 +56,7 @@ const readLegacyWindowState = (): PersistedWindowState | null => {
     if (!fs.existsSync(statePath)) return null
     return normalizeWindowState(JSON.parse(fs.readFileSync(statePath, 'utf8')))
   } catch (error) {
-    console.warn('Unable to read legacy window state.', error)
+    logger.warn('unable to read legacy window state', { error })
     return null
   }
 }

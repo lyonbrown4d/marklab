@@ -5,7 +5,12 @@ import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
 import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
-import type { TerminalExitEvent, TerminalOutputEvent, TerminalSessionInfo } from './types.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
+import type {
+  TerminalExitEvent,
+  TerminalOutputEvent,
+  TerminalSessionInfo,
+} from '@electron/services/terminal/types.js'
 type NodePtyModule = typeof import('@homebridge/node-pty-prebuilt-multiarch')
 type CwdProvider = () => string
 type TerminalSession =
@@ -28,7 +33,10 @@ export class TerminalService {
   private readonly sessions = new Map<string, TerminalSession>()
   private nextId = 1
   private ptyModule: NodePtyModule | null | undefined
-  constructor(private readonly defaultCwd: string | CwdProvider = os.homedir()) {}
+  constructor(
+    private readonly defaultCwd: string | CwdProvider = os.homedir(),
+    private readonly logger: Logger = noopLogger,
+  ) {}
   create(
     webContents: Electron.WebContents,
     rows: unknown,
@@ -60,6 +68,7 @@ export class TerminalService {
       })
       terminal.onExit(({ exitCode, signal }) => {
         this.sessions.delete(id)
+        this.logger.info('terminal session exited', { exitCode, id, kind: 'pty', signal })
         this.emitExit(webContents, {
           id,
           exit_code: typeof exitCode === 'number' ? exitCode : null,
@@ -67,6 +76,7 @@ export class TerminalService {
         })
       })
       this.sessions.set(id, { kind: 'pty', process: terminal, webContents })
+      this.logger.info('terminal session created', { cwd, id, kind: 'pty', shell })
       return { id, shell, cwd }
     }
     const child = spawn(shell, [], {
@@ -83,9 +93,16 @@ export class TerminalService {
     })
     child.on('exit', (code, signal) => {
       this.sessions.delete(id)
+      this.logger.info('terminal session exited', {
+        exitCode: code,
+        id,
+        kind: 'fallback',
+        signal,
+      })
       this.emitExit(webContents, { id, exit_code: code, signal })
     })
     this.sessions.set(id, { kind: 'fallback', process: child, webContents })
+    this.logger.warn('terminal session using fallback backend', { cwd, id, shell })
     this.emitOutput(webContents, {
       id,
       data: '\r\n[marklab] PTY backend is unavailable; terminal is running without resize/full-screen parity.\r\n',
@@ -113,6 +130,7 @@ export class TerminalService {
     const session = this.sessions.get(sessionId)
     if (!session) return
     this.sessions.delete(sessionId)
+    this.logger.info('terminal session closed', { id: sessionId, kind: session.kind })
     if (session.kind === 'pty') {
       session.process.kill()
       return
@@ -136,6 +154,7 @@ export class TerminalService {
       this.ptyModule = require('@homebridge/node-pty-prebuilt-multiarch') as NodePtyModule
     } catch {
       this.ptyModule = null
+      this.logger.warn('pty backend unavailable')
     }
     return this.ptyModule
   }

@@ -1,13 +1,20 @@
-import { parseMarkdownAst } from './markdown/ast.js'
-import { extractHeadingEntries } from './markdown/headings.js'
-import { extractMarkdownReferences } from './markdown/references.js'
-import type { FsIndexedMarkdownFile } from './types.js'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast.js'
+import { extractHeadingEntries } from '@electron/services/workspace/markdown/headings.js'
+import { extractMarkdownReferences } from '@electron/services/workspace/markdown/references.js'
+import type { FsIndexedMarkdownFile } from '@electron/services/workspace/types.js'
 
-export { diagnosticsForFile } from './markdown/diagnostics.js'
-export { buildOutlineGraph, buildWorkspaceGraph } from './markdown/graph.js'
-export { searchDocuments } from './markdown/search.js'
-export { fileLabel, normalizeMarkdownTarget, targetIsMarkdown } from './markdown/utils.js'
-export { guessMediaType } from './markdown/media.js'
+export { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
+export {
+  buildOutlineGraph,
+  buildWorkspaceGraph,
+} from '@electron/services/workspace/markdown/graph.js'
+export { searchDocuments } from '@electron/services/workspace/markdown/search.js'
+export {
+  fileLabel,
+  normalizeMarkdownTarget,
+  targetIsMarkdown,
+} from '@electron/services/workspace/markdown/utils.js'
+export { guessMediaType } from '@electron/services/workspace/markdown/media.js'
 
 export const parseMarkdownDocument = (
   sourcePath: string,
