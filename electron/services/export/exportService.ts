@@ -5,12 +5,15 @@ import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type { ExportTaskPayload } from '@electron/types.js'
 import { validateExistingLocalPath } from '@electron/services/pathValidation.js'
 import { renderDocx } from '@electron/services/export/docx.js'
+import { ExportQueue } from '@electron/services/export/exportQueue.js'
 import { renderHtml } from '@electron/services/export/html.js'
 type ExportFormat = 'html' | 'pdf' | 'docx'
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 let exportTaskCounter = 0
 export class ExportService {
   private readonly allowedOutputPaths = new Set<string>()
+  private readonly queue = new ExportQueue(1)
+
   constructor(
     private readonly shell: Shell,
     private readonly BrowserWindowClass: typeof BrowserWindow,
@@ -34,7 +37,11 @@ export class ExportService {
       progress: 0,
       message: 'Export queued',
     })
-    void this.runExport(taskId, markdown, format, outputPath)
+    void this.queue
+      .enqueue(() => this.runExport(taskId, markdown, format, outputPath))
+      .catch((error) => {
+        this.logger.error('queued export task failed unexpectedly', { error, taskId })
+      })
     return taskId
   }
   async openOutputPath(value: unknown): Promise<void> {

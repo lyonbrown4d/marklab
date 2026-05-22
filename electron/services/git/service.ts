@@ -15,7 +15,17 @@ import {
   validateRootPath,
 } from '@electron/services/git/helpers.js'
 
+type CachedStatusSnapshot = {
+  snapshot: GitStatusSnapshot
+  updatedAt: number
+}
+
+const STATUS_CACHE_TTL_MS = 700
+
 export class GitService {
+  private readonly statusCache = new Map<string, CachedStatusSnapshot>()
+  private readonly statusInFlight = new Map<string, Promise<GitStatusSnapshot>>()
+
   constructor(private readonly logger: Logger = noopLogger) {}
 
   async discover(rootPath: unknown): Promise<GitRepoInfo> {
@@ -42,6 +52,7 @@ export class GitService {
 
     const repo = await this.repoInfo(root.path)
     this.logger.info('git init finished', { rootPath: root.path })
+    this.invalidateStatusCache(root.path)
     return repo
   }
 
@@ -51,22 +62,7 @@ export class GitService {
       return emptyStatusSnapshot()
     }
 
-    const repo = await this.repoInfo(root.path)
-    const { stdout } = await runGit(root.path, [
-      'status',
-      '--porcelain=v1',
-      '-z',
-      '--untracked-files=all',
-    ])
-    const changes = parsePorcelainStatus(stdout)
-
-    return {
-      repo,
-      staged: changes.staged.sort(compareChanges),
-      unstaged: changes.unstaged.sort(compareChanges),
-      untracked: changes.untracked.sort(compareChanges),
-      conflicts: changes.conflicts.sort(compareChanges),
-    }
+    return this.statusForRepository(root.path)
   }
 
   async fileDiff(rootPath: unknown, filePath: unknown, section: unknown): Promise<GitFileDiff> {
@@ -139,19 +135,86 @@ export class GitService {
     if (!(await this.isRepository(root.path)))
       throw new Error('Current directory is not a Git repository')
 
-    const snapshot = await this.status(root.path)
+    this.invalidateStatusCache(root.path)
+    const snapshot = await this.readStatusSnapshot(root.path)
     if (snapshot.conflicts.length > 0) throw new Error('Cannot commit while conflicts are present')
     if (allCommitChanges(snapshot).length === 0) throw new Error('No changes to commit')
 
     await runGit(root.path, ['add', '-A'])
+    this.invalidateStatusCache(root.path)
     const identityArgs = await this.commitIdentityArgs(root.path)
     this.logger.info('git commit started', {
       changeCount: allCommitChanges(snapshot).length,
       rootPath: root.path,
     })
     await runGit(root.path, [...identityArgs, 'commit', '-m', commitMessage])
+    this.invalidateStatusCache(root.path)
     this.logger.info('git commit finished', { rootPath: root.path })
-    return this.status(root.path)
+    return this.statusForRepository(root.path)
+  }
+
+  private statusForRepository(root: string): Promise<GitStatusSnapshot> {
+    const cached = this.statusCache.get(root)
+    if (cached && Date.now() - cached.updatedAt < STATUS_CACHE_TTL_MS) {
+      return Promise.resolve(this.cloneStatusSnapshot(cached.snapshot))
+    }
+
+    const inFlight = this.statusInFlight.get(root)
+    if (inFlight) return inFlight.then((snapshot) => this.cloneStatusSnapshot(snapshot))
+
+    const request = this.readStatusSnapshot(root)
+      .then((snapshot) => {
+        this.statusCache.set(root, {
+          snapshot: this.cloneStatusSnapshot(snapshot),
+          updatedAt: Date.now(),
+        })
+        return snapshot
+      })
+      .finally(() => {
+        this.statusInFlight.delete(root)
+      })
+
+    this.statusInFlight.set(root, request)
+    return request.then((snapshot) => this.cloneStatusSnapshot(snapshot))
+  }
+
+  private async readStatusSnapshot(root: string): Promise<GitStatusSnapshot> {
+    const repo = await this.repoInfo(root)
+    const { stdout } = await runGit(root, [
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    ])
+    const changes = parsePorcelainStatus(stdout)
+
+    return {
+      repo,
+      staged: changes.staged.sort(compareChanges),
+      unstaged: changes.unstaged.sort(compareChanges),
+      untracked: changes.untracked.sort(compareChanges),
+      conflicts: changes.conflicts.sort(compareChanges),
+    }
+  }
+
+  private invalidateStatusCache(root?: string): void {
+    if (!root) {
+      this.statusCache.clear()
+      this.statusInFlight.clear()
+      return
+    }
+    this.statusCache.delete(root)
+    this.statusInFlight.delete(root)
+  }
+
+  private cloneStatusSnapshot(snapshot: GitStatusSnapshot): GitStatusSnapshot {
+    return {
+      repo: { ...snapshot.repo },
+      staged: snapshot.staged.map((change) => ({ ...change })),
+      unstaged: snapshot.unstaged.map((change) => ({ ...change })),
+      untracked: snapshot.untracked.map((change) => ({ ...change })),
+      conflicts: snapshot.conflicts.map((change) => ({ ...change })),
+    }
   }
 
   private async isRepository(root: string): Promise<boolean> {

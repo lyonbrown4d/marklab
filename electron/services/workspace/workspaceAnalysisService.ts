@@ -66,8 +66,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   async workspaceIndex(): Promise<FsWorkspaceIndex> {
     return this.runSearchIndexTask(async () => {
-      const documents = await this.workspaceDocuments()
-      const knownPaths = await this.workspaceKnownPaths()
+      const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
       return this.runWorkerTask(
         () =>
           this.analysisWorker.run({
@@ -82,8 +81,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async workspaceGraph(): Promise<FsGraph> {
-    const documents = await this.workspaceDocuments()
-    const knownPaths = await this.workspaceKnownPaths()
+    const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
     return this.runWorkerTask(
       () =>
         this.analysisWorker.run({
@@ -114,8 +112,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   async analyzeMarkdownBuffer(value: unknown): Promise<FsMarkdownDiagnostic[]> {
     const pathValue = stringArg(value, 'path')
     const content = stringArg(value, 'content')
-    const documents = await this.workspaceDocuments(pathValue, content)
-    const knownPaths = await this.workspaceKnownPaths()
+    const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths(pathValue, content)
     return this.runWorkerTask(
       () =>
         this.analysisWorker.run({

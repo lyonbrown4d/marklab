@@ -3,12 +3,12 @@ import path from 'node:path'
 import type { App, Shell } from 'electron'
 
 import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import { resolveWorkspacePath } from '@electron/services/workspace/path.js'
 import {
-  resolveWorkspacePath,
-  toWorkspaceRelative,
-  workspaceRootForAssets,
-} from '@electron/services/workspace/path.js'
+  currentSingleFileName,
+  isCurrentSingleFilePath,
+  relativePathsForAbsolutePaths,
+} from '@electron/services/workspace/workspacePathInvalidation.js'
 import type {
   BackgroundTaskStatus,
   FsBufferStatus,
@@ -16,11 +16,14 @@ import type {
   FsRootInfo,
   FsSnapshot,
   FsStateData,
-  FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceBufferStore } from '@electron/services/workspace/workspaceBuffers.js'
-import { loadWorkspaceDocuments } from '@electron/services/workspace/workspaceDocumentLoader.js'
 import {
+  loadWorkspaceDocuments,
+  type WorkspaceDocument,
+} from '@electron/services/workspace/workspaceDocumentLoader.js'
+import {
+  initializeWorkspaceBackgroundTasks,
   runSearchIndexTask as runSearchIndexTaskWithStatus,
   runWorkerTask as runWorkerTaskWithFallback,
   type SearchIndexTaskState,
@@ -30,7 +33,8 @@ import {
   errorMessage,
   listWorkspaceEntries,
   listWorkspaceKnownPaths,
-  samePath,
+  listWorkspacePathSnapshot,
+  type WorkspaceKnownPaths,
   type WatchEventName,
 } from '@electron/services/workspace/workspaceUtils.js'
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
@@ -65,7 +69,9 @@ export class WorkspaceBase {
     }
     fs.mkdirSync(internalRoot, { recursive: true })
     ensureDefaultFile(internalRoot)
-    this.initializeBackgroundTasks()
+    initializeWorkspaceBackgroundTasks((id, label, status, message) =>
+      this.setTask(id, label, status, message),
+    )
     this.watcher = new WorkspaceWatcher({
       getState: () => this.state,
       logger: this.logger.child('watcher'),
@@ -125,16 +131,6 @@ export class WorkspaceBase {
     this.snapshotListeners.clear()
   }
 
-  protected async buildWorkspaceIndex(): Promise<FsWorkspaceIndex> {
-    const documents = await this.workspaceDocuments()
-    const knownPaths = await this.workspaceKnownPaths()
-    return {
-      files: documents.map((document) => parseMarkdownDocument(document.path, document.content)),
-      paths: knownPaths.paths,
-      asset_paths: knownPaths.assetPaths,
-    }
-  }
-
   protected async listEntries(): Promise<FsEntry[]> {
     return listWorkspaceEntries(this.state)
   }
@@ -142,18 +138,45 @@ export class WorkspaceBase {
   protected async workspaceDocuments(
     replacePath?: string,
     replaceContent?: string,
-  ): Promise<Array<{ path: string; content: string }>> {
+  ): Promise<WorkspaceDocument[]> {
+    return this.loadWorkspaceDocumentsFromEntries(
+      await this.listEntries(),
+      replacePath,
+      replaceContent,
+    )
+  }
+
+  protected async workspaceDocumentsAndKnownPaths(
+    replacePath?: string,
+    replaceContent?: string,
+  ): Promise<{ documents: WorkspaceDocument[]; knownPaths: WorkspaceKnownPaths }> {
+    const pathSnapshot = await listWorkspacePathSnapshot(this.state)
+    return {
+      documents: await this.loadWorkspaceDocumentsFromEntries(
+        pathSnapshot.entries,
+        replacePath,
+        replaceContent,
+      ),
+      knownPaths: pathSnapshot.knownPaths,
+    }
+  }
+
+  protected async workspaceKnownPaths(): Promise<WorkspaceKnownPaths> {
+    return listWorkspaceKnownPaths(this.state)
+  }
+
+  private async loadWorkspaceDocumentsFromEntries(
+    entries: FsEntry[],
+    replacePath?: string,
+    replaceContent?: string,
+  ): Promise<WorkspaceDocument[]> {
     return loadWorkspaceDocuments({
       batchSize: WORKSPACE_DOCUMENT_READ_BATCH_SIZE,
-      entries: await this.listEntries(),
+      entries,
       readFile: (entryPath) => this.readFile({ path: entryPath }),
       replaceContent,
       replacePath,
     })
-  }
-
-  protected async workspaceKnownPaths(): Promise<{ paths: string[]; assetPaths: string[] }> {
-    return listWorkspaceKnownPaths(this.state)
   }
 
   protected readFile(value: unknown): Promise<string> {
@@ -219,12 +242,6 @@ export class WorkspaceBase {
     this.tasks.set(id, { id, label, status, message })
   }
 
-  private initializeBackgroundTasks(): void {
-    this.setTask('search-index', 'Search index', 'idle', null)
-    this.setTask('buffer-flush', 'Save queue', 'idle', null)
-    this.setTask('watcher', 'Workspace watcher', 'idle', null)
-  }
-
   private async emitSnapshotChanged(): Promise<void> {
     if (this.disposed) return
     const shouldRestartWatcher = this.pendingSnapshotWatcherRestart
@@ -250,11 +267,12 @@ export class WorkspaceBase {
 
   protected handleWatchedPathChanged(changedPath: string | null, event?: WatchEventName): void {
     if (this.state.rootKind === 'single') {
-      if (changedPath && !this.isCurrentSingleFile(changedPath)) return
+      if (changedPath && !isCurrentSingleFilePath(this.state, changedPath)) return
       if (changedPath) {
-        this.invalidateCleanBuffersForAbsolutePaths([changedPath])
+        this.invalidateCleanBuffers([changedPath])
       } else {
-        this.invalidateCurrentSingleFileBuffer()
+        const singleFileName = currentSingleFileName(this.state)
+        if (singleFileName) this.buffers.invalidateCleanForRelativePaths([singleFileName])
       }
       this.scheduleSnapshotChanged()
       this.onWorkspacePathChanged(changedPath ? path.basename(changedPath) : null, event)
@@ -262,33 +280,20 @@ export class WorkspaceBase {
     }
 
     if (changedPath) {
-      this.invalidateCleanBuffersForAbsolutePaths([changedPath])
+      this.invalidateCleanBuffers([changedPath])
     } else {
       this.buffers.invalidateAllClean()
     }
     const relativePath = changedPath
-      ? toWorkspaceRelative(workspaceRootForAssets(this.state), changedPath)
+      ? relativePathsForAbsolutePaths(this.state, [changedPath])[0]
       : null
     this.onWorkspacePathChanged(relativePath, event)
     this.scheduleSnapshotChanged()
   }
 
-  private invalidateCurrentSingleFileBuffer(): void {
-    const singleFile = this.state.singleFile
-    if (!singleFile) return
-    this.buffers.invalidateCleanForRelativePaths([path.basename(singleFile)])
-  }
-
-  private invalidateCleanBuffersForAbsolutePaths(absolutePaths: string[]): void {
-    const relativePaths: string[] = []
-    for (const absolutePath of absolutePaths) {
-      const relativePath = toWorkspaceRelative(workspaceRootForAssets(this.state), absolutePath)
-      if (relativePath) relativePaths.push(relativePath)
-    }
-    this.buffers.invalidateCleanForRelativePaths(relativePaths)
-  }
-
-  private isCurrentSingleFile(absolutePath: string): boolean {
-    return Boolean(this.state.singleFile && samePath(this.state.singleFile, absolutePath))
+  private invalidateCleanBuffers(absolutePaths: string[]): void {
+    this.buffers.invalidateCleanForRelativePaths(
+      relativePathsForAbsolutePaths(this.state, absolutePaths),
+    )
   }
 }

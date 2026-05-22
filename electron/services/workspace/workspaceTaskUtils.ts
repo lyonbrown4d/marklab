@@ -13,6 +13,12 @@ export type SearchIndexTaskState = {
   runs: number
 }
 
+export const initializeWorkspaceBackgroundTasks = (setTask: SetTask): void => {
+  setTask('search-index', 'Search index', 'idle', null)
+  setTask('buffer-flush', 'Save queue', 'idle', null)
+  setTask('watcher', 'Workspace watcher', 'idle', null)
+}
+
 type RunSearchIndexTaskOptions<T> = {
   fallback?: (() => Promise<T> | T) | null
   getStatus: () => BackgroundTaskStatus['status'] | null | undefined

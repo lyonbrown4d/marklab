@@ -9,6 +9,9 @@ import {
 import type { FsEntry, FsStateData } from '@electron/services/workspace/types.js'
 
 export type WatchEventName = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
+export type WorkspaceKnownPaths = { paths: string[]; assetPaths: string[] }
+export type WorkspacePathSnapshot = { entries: FsEntry[]; knownPaths: WorkspaceKnownPaths }
+type WorkspaceWalkOptions = { entries: boolean; knownPaths: boolean }
 
 export const stringArg = (value: unknown, key: string): string => {
   const result =
@@ -112,25 +115,37 @@ export const ensureDefaultFile = (root: string): void => {
 }
 
 export const listWorkspaceEntries = async (state: FsStateData): Promise<FsEntry[]> => {
-  if (state.rootKind === 'single') {
-    if (!state.singleFile) return []
-    const name = path.basename(state.singleFile)
-    return [{ path: name, name, kind: 'file' as const }]
-  }
-
-  const entries = await walkWorkspace(state.rootPath)
-  entries.sort((a, b) => a.path.localeCompare(b.path))
-  return entries
+  if (state.rootKind === 'single') return singleFilePathSnapshot(state.singleFile).entries
+  return (await walkWorkspace(state.rootPath, { entries: true, knownPaths: false })).entries
 }
 
-export const listWorkspaceKnownPaths = async (
-  state: FsStateData,
-): Promise<{ paths: string[]; assetPaths: string[] }> => {
-  if (state.rootKind === 'single') {
-    if (!state.singleFile) return { paths: [], assetPaths: [] }
-    return { paths: [path.basename(state.singleFile)], assetPaths: [] }
-  }
+export const listWorkspaceKnownPaths = async (state: FsStateData): Promise<WorkspaceKnownPaths> => {
+  if (state.rootKind === 'single') return singleFilePathSnapshot(state.singleFile).knownPaths
+  return (await walkWorkspace(state.rootPath, { entries: false, knownPaths: true })).knownPaths
+}
 
+export const listWorkspacePathSnapshot = async (
+  state: FsStateData,
+): Promise<WorkspacePathSnapshot> => {
+  if (state.rootKind === 'single') return singleFilePathSnapshot(state.singleFile)
+
+  return walkWorkspace(state.rootPath, { entries: true, knownPaths: true })
+}
+
+const singleFilePathSnapshot = (singleFile: string | null): WorkspacePathSnapshot => {
+  if (!singleFile) return { entries: [], knownPaths: { paths: [], assetPaths: [] } }
+  const name = path.basename(singleFile)
+  return {
+    entries: [{ path: name, name, kind: 'file' as const }],
+    knownPaths: { paths: [name], assetPaths: [] },
+  }
+}
+
+const walkWorkspace = async (
+  root: string,
+  options: WorkspaceWalkOptions,
+): Promise<WorkspacePathSnapshot> => {
+  const entries: FsEntry[] = []
   const paths: string[] = []
   const assetPaths: string[] = []
   const visit = async (directory: string) => {
@@ -138,44 +153,32 @@ export const listWorkspaceKnownPaths = async (
     for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
       if (dirent.name.startsWith('.')) continue
       const absolutePath = path.join(directory, dirent.name)
-      const relativePath = toWorkspaceRelative(state.rootPath, absolutePath)
+      const relativePath = toWorkspaceRelative(root, absolutePath)
       if (!relativePath) continue
-      paths.push(relativePath)
+      if (options.knownPaths) paths.push(relativePath)
       if (dirent.isDirectory()) {
+        if (options.entries) {
+          entries.push({ path: relativePath, name: dirent.name, kind: 'folder' as const })
+        }
         await visit(absolutePath)
-      } else if (dirent.isFile() && !isMarkdownPath(dirent.name)) {
+      } else if (dirent.isFile() && isMarkdownPath(dirent.name)) {
+        if (options.entries) {
+          entries.push({ path: relativePath, name: dirent.name, kind: 'file' as const })
+        }
+      } else if (dirent.isFile() && options.knownPaths) {
         assetPaths.push(relativePath)
       }
     }
   }
 
-  await visit(state.rootPath)
-  return {
-    paths: paths.sort((a, b) => a.localeCompare(b)),
-    assetPaths: assetPaths.sort((a, b) => a.localeCompare(b)),
-  }
-}
-
-const walkWorkspace = async (root: string): Promise<FsEntry[]> => {
-  const entries: FsEntry[] = []
-  const visit = async (directory: string) => {
-    if (!(await pathExists(directory))) return
-    for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
-      if (dirent.name.startsWith('.')) continue
-      const absolutePath = path.join(directory, dirent.name)
-      const relativePath = toWorkspaceRelative(root, absolutePath)
-      if (!relativePath) continue
-      if (dirent.isDirectory()) {
-        entries.push({ path: relativePath, name: dirent.name, kind: 'folder' as const })
-        await visit(absolutePath)
-      } else if (dirent.isFile() && isMarkdownPath(dirent.name)) {
-        entries.push({ path: relativePath, name: dirent.name, kind: 'file' as const })
-      }
-    }
-  }
-
   await visit(root)
-  return entries
+  return {
+    entries: entries.sort((a, b) => a.path.localeCompare(b.path)),
+    knownPaths: {
+      paths: paths.sort((a, b) => a.localeCompare(b)),
+      assetPaths: assetPaths.sort((a, b) => a.localeCompare(b)),
+    },
+  }
 }
 
 const findMarkdownFile = (root: string): boolean => {
