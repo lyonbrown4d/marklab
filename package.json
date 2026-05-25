@@ -2,6 +2,8 @@
   "name": "marklab",
   "private": true,
   "version": "0.1.1",
+  "description": "Desktop-first local Markdown workspace for Marklab.",
+  "author": "Marklab",
   "type": "module",
   "main": "dist-electron/main.js",
   "packageManager": "pnpm@10.26.0",
@@ -14,6 +16,11 @@
     "electron:start": "pnpm electron:build && electron .",
     "dev:desktop": "pnpm electron:dev",
     "build:desktop": "pnpm electron:build",
+    "package": "pnpm build:desktop && electron-builder --dir --publish never",
+    "dist": "pnpm build:desktop && electron-builder --publish never",
+    "dist:win": "pnpm build:desktop && electron-builder --win --publish never",
+    "dist:mac": "pnpm build:desktop && electron-builder --mac --publish never",
+    "dist:linux": "pnpm build:desktop && electron-builder --linux --publish never",
     "lint": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -29,6 +36,64 @@
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
+  },
+  "build": {
+    "appId": "app.marklab.desktop",
+    "productName": "Marklab",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*"
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "!node_modules/**/*",
+      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
+      "package.json"
+    ],
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false,
+    "protocols": [
+      {
+        "name": "Marklab Deep Links",
+        "schemes": [
+          "marklab",
+          "marko"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "category": "Office",
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ]
+    }
   },
   "dependencies": {
     "@codemirror/language": "^6.12.3",
@@ -68,13 +133,13 @@
     "@xyflow/react": "^12.10.2",
     "ahooks": "^3.9.7",
     "awilix": "^13.0.3",
-    "better-sqlite3": "^12.10.0",
     "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "diff": "^9.0.0",
+    "docx": "^9.7.0",
     "electron-log": "^5.4.4",
     "electron-store": "^11.0.2",
     "github-slugger": "^2.0.0",
@@ -131,6 +196,7 @@
     "autoprefixer": "^10.5.0",
     "babel-plugin-react-compiler": "1.0.0",
     "electron": "42.2.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",

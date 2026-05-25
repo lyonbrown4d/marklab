@@ -1,17 +1,19 @@
+import { runSqliteTransaction } from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
+import type { SqliteDatabase } from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
+
 export type SearchSchemaDatabase = {
   prepare(statement: string): {
     run: () => unknown
     get: () => { user_version?: number } | undefined
   }
-  transaction<T>(fn: () => T): () => T
-  pragma(statement: string): unknown
+  exec(statement: string): void
 }
 
-export const ensureSearchSchema = (database: SearchSchemaDatabase): void => {
+export const ensureSearchSchema = (database: SearchSchemaDatabase & SqliteDatabase): void => {
   const currentVersion = Number(database.prepare('PRAGMA user_version').get()?.user_version ?? 0)
   if (currentVersion === SQL_SCHEMA_VERSION) return
 
-  database.transaction(() => {
+  runSqliteTransaction(database, () => {
     database
       .prepare(
         `
@@ -64,8 +66,22 @@ export const ensureSearchSchema = (database: SearchSchemaDatabase): void => {
         `,
       )
       .run()
-    database.pragma(`user_version = ${SQL_SCHEMA_VERSION}`)
-  })()
+    database
+      .prepare(
+        `
+          CREATE VIRTUAL TABLE IF NOT EXISTS search_documents_fts USING fts5(
+            path,
+            title,
+            body,
+            document_id UNINDEXED,
+            content='',
+            tokenize='unicode61'
+          )
+        `,
+      )
+      .run()
+    database.exec(`PRAGMA user_version = ${SQL_SCHEMA_VERSION}`)
+  })
 }
 
-export const SQL_SCHEMA_VERSION = 1
+export const SQL_SCHEMA_VERSION = 2

@@ -157,7 +157,7 @@ export const parseSearchTerms = (query: string): SearchTerm[] => {
   const pattern = /"([^"]+)"|'([^']+)'|`([^`]+)`|(\S+)/g
   for (const match of query.matchAll(pattern)) {
     const raw = (match[1] ?? match[2] ?? match[3] ?? match[4] ?? '').trim()
-    const normalized = raw.replace(/^["'`:+~*?()[\]-]+|["'`:+~*?()[\]-]+$/g, '')
+    const normalized = raw.replace(/^["'`]+|["'`]+$/g, '')
     if (normalized) rawTerms.push(normalized)
   }
 
@@ -238,5 +238,9 @@ export const countOccurrences = (text: string, term: string): number => {
 }
 
 export const foldSearchText = (value: string): string => {
-  return value.normalize('NFKC').toLocaleLowerCase()
+  return value
+    .normalize('NFKD')
+    .replace(/\p{Mark}/gu, '')
+    .normalize('NFKC')
+    .toLocaleLowerCase()
 }

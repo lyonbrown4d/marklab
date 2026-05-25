@@ -5,7 +5,7 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
-import { normalizeMarkdownForExport } from '@electron/services/export/markdown.js'
+import { normalizeHtmlBreaks } from '@electron/services/export/markdownText.js'
 type RenderHtmlOptions = {
   resourceBasePath?: string
   resolveRelativeResources?: boolean
@@ -94,7 +94,7 @@ const renderMarkdownBody = (markdown: string, options: RenderHtmlOptions): strin
     .use(remarkRehype)
     .use(rewriteResourceUrls, options)
     .use(rehypeStringify)
-    .processSync(normalizeMarkdownForExport(markdown))
+    .processSync(normalizeHtmlBreaks(markdown))
   return String(file)
 }
 const rewriteResourceUrls = (options: RenderHtmlOptions) => {

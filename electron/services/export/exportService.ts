@@ -120,7 +120,7 @@ export class ExportService {
       return
     }
     if (format === 'docx') {
-      await fs.promises.writeFile(outputPath, renderDocx(markdown))
+      await fs.promises.writeFile(outputPath, await renderDocx(markdown))
       return
     }
     throw new Error(`Unsupported export format: ${format}`)

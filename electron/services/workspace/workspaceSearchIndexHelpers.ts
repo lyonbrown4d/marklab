@@ -1,5 +1,6 @@
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import { charLength, sliceChars } from '@electron/services/workspace/markdown/text.js'
+import { foldSearchText } from '@electron/services/workspace/markdown/search.js'
 
 export type SearchRow = {
   path: string
@@ -15,20 +16,15 @@ type MatchRange = {
 }
 
 export const buildMatchExpression = (terms: string[]): string => {
-  const normalized = terms.map((term) => escapeFtsTerm(term)).filter(Boolean)
+  const normalized = terms.map((term) => buildTermMatchExpression(term)).filter(Boolean)
   if (normalized.length === 0) return ''
-  return normalized
-    .map((term) => {
-      const token = term.includes(' ') ? `"${term}"` : term
-      return `(path:${token} OR title:${token} OR body:${token})`
-    })
-    .join(' AND ')
+  return normalized.join(' AND ')
 }
 
 export const toSearchResult = (row: SearchRow, terms: string[]): FsSearchResult => {
   const line = Number(row.line_no) || 1
   const normalizedLine = row.line_text.normalize('NFKC')
-  const normalizedLineFolded = normalizedLine.toLocaleLowerCase()
+  const normalizedLineFolded = foldSearchText(normalizedLine)
   const occurrences = findTermOccurrences(normalizedLineFolded, terms)
   const bestMatch = occurrences[0]
   const lineLength = charLength(normalizedLine)
@@ -44,13 +40,13 @@ export const toSearchResult = (row: SearchRow, terms: string[]): FsSearchResult 
     : snippetLength
   const snippetLine = sliceChars(normalizedLine, snippetStart, snippetEnd).trim()
   const snippet = snippetLine || row.title
-  const snippetFolded = snippet.normalize('NFKC').toLocaleLowerCase()
+  const snippetFolded = foldSearchText(snippet)
   const snippetHighlights = findTermOccurrences(snippetFolded, terms).map(({ start, end }) => ({
     start,
     end,
   }))
-  const normalizedPath = row.path.normalize('NFKC').toLocaleLowerCase()
-  const normalizedTitle = row.title.normalize('NFKC').toLocaleLowerCase()
+  const normalizedPath = foldSearchText(row.path)
+  const normalizedTitle = foldSearchText(row.title)
   const pathTitleHit = terms.some(
     (term) => normalizedPath.includes(term) || normalizedTitle.includes(term),
   )
@@ -73,11 +69,18 @@ export const toSearchResult = (row: SearchRow, terms: string[]): FsSearchResult 
   }
 }
 
-const escapeFtsTerm = (value: string): string => {
-  return value
-    .replace(/"/g, '""')
-    .replace(/[:^"()]/g, ' ')
-    .trim()
+const buildTermMatchExpression = (value: string): string => {
+  const tokens = ftsTokens(value)
+  if (tokens.length === 0) return ''
+  const fieldExpressions = ['path', 'title', 'body'].map(
+    (column) => `(${tokens.map((token) => `${column}:"${token}"*`).join(' AND ')})`,
+  )
+  return `(${fieldExpressions.join(' OR ')})`
+}
+
+const ftsTokens = (value: string): string[] => {
+  const tokens = value.match(/[\p{Letter}\p{Number}_]+/gu) ?? []
+  return [...new Set(tokens.map((token) => token.replace(/"/g, '""')).filter(Boolean))]
 }
 
 const normalizeRanges = (ranges: MatchRange[]): MatchRange[] => {

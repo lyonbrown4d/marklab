@@ -2,29 +2,29 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import { isMarkdownPath } from '@electron/services/workspace/path.js'
+import { buildMatchExpression } from '@electron/services/workspace/workspaceSearchIndexHelpers.js'
+import { parseSearchTerms, searchDocuments } from '@electron/services/workspace/markdown/search.js'
 import {
-  buildMatchExpression,
-  toSearchResult,
-  type SearchRow,
-} from '@electron/services/workspace/workspaceSearchIndexHelpers.js'
-import { parseSearchTerms } from '@electron/services/workspace/markdown/search.js'
-import {
-  escapeLikePrefix,
-  hashText,
-  normalizePathPrefix,
-} from '@electron/services/workspace/workspaceSearchIndexUtils.js'
+  openSearchDatabase,
+  runSqliteTransaction,
+  type SqliteDatabase,
+} from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
 import { ensureSearchSchema } from '@electron/services/workspace/workspaceSearchIndexSchema.js'
-import Database from 'better-sqlite3'
-
-type SqliteDatabase = InstanceType<typeof Database>
+import {
+  clearSearchRows,
+  loadDocumentsForRows,
+  loadIndexedDocuments,
+  removeSearchDocumentRows,
+  removeSearchRowsByPrefix,
+  upsertSearchDocumentRows,
+  type SearchDocumentRow,
+  type WorkspaceSearchDocument,
+} from '@electron/services/workspace/workspaceSearchIndexStorage.js'
 
 const MAX_SEARCH_LIMIT = 100
+const MAX_FTS_CANDIDATES = 500
 
-export type WorkspaceSearchDocument = {
-  path: string
-  title: string
-  content: string
-}
+export type { WorkspaceSearchDocument }
 
 export class WorkspaceSearchIndex {
   private databasePath: string | null = null
@@ -36,10 +36,7 @@ export class WorkspaceSearchIndex {
 
     await this.close()
     await fs.mkdir(path.dirname(normalizedPath), { recursive: true })
-    this.database = new Database(normalizedPath)
-    this.database.pragma('journal_mode = WAL')
-    this.database.pragma('synchronous = NORMAL')
-    this.database.pragma('foreign_keys = ON')
+    this.database = openSearchDatabase(normalizedPath)
     this.databasePath = normalizedPath
 
     await this.ensureSchema()
@@ -54,7 +51,7 @@ export class WorkspaceSearchIndex {
 
   async hasDocuments(): Promise<boolean> {
     const database = this.requireDatabase()
-    const result = database.prepare('SELECT COUNT(*) AS count FROM search_documents').get() as {
+    const result = database.prepare('SELECT COUNT(*) AS count FROM search_documents_fts').get() as {
       count: number
     }
     return result.count > 0
@@ -63,194 +60,76 @@ export class WorkspaceSearchIndex {
   async rebuild(documents: WorkspaceSearchDocument[]): Promise<void> {
     const database = this.requireDatabase()
     const indexable = documents.filter((document) => isMarkdownPath(document.path))
-    const insert = database.transaction(() => {
-      database.prepare('DELETE FROM search_lines_fts').run()
-      database.prepare('DELETE FROM search_lines').run()
-      database.prepare('DELETE FROM search_documents').run()
-      for (const document of indexable) this.upsertDocumentInTransaction(database, document)
+    runSqliteTransaction(database, () => {
+      clearSearchRows(database)
+      for (const document of indexable) upsertSearchDocumentRows(database, document)
     })
-    insert()
   }
 
   async upsertDocument(document: WorkspaceSearchDocument): Promise<void> {
     if (!isMarkdownPath(document.path)) return
     const database = this.requireDatabase()
-    database.transaction(() => {
-      this.deleteDocumentRows(database, document.path)
-      this.upsertDocumentInTransaction(database, document)
-    })()
+    runSqliteTransaction(database, () => {
+      removeSearchDocumentRows(database, document.path)
+      upsertSearchDocumentRows(database, document)
+    })
   }
 
   async removeDocument(pathValue: string): Promise<void> {
     const database = this.requireDatabase()
-    database.transaction(() => this.deleteDocumentRows(database, pathValue))()
+    runSqliteTransaction(database, () => removeSearchDocumentRows(database, pathValue))
   }
 
   async removePathPrefix(prefix: string): Promise<void> {
     const database = this.requireDatabase()
-    const normalizedPrefix = normalizePathPrefix(prefix)
-    const likePrefix = `${escapeLikePrefix(normalizedPrefix)}/%`
-    const exactPrefix = normalizedPrefix
-    database.transaction(() => {
-      database
-        .prepare(
-          `
-          DELETE FROM search_lines_fts
-          WHERE rowid IN (
-            SELECT id
-            FROM search_lines
-            WHERE path = @exactPrefix OR path LIKE @likePrefix ESCAPE '\\'
-          )
-        `,
-        )
-        .run({ exactPrefix, likePrefix })
-      database
-        .prepare(
-          `
-          DELETE FROM search_lines
-          WHERE path = @exactPrefix OR path LIKE @likePrefix ESCAPE '\\'
-        `,
-        )
-        .run({ exactPrefix, likePrefix })
-      database
-        .prepare(
-          `
-          DELETE FROM search_documents
-          WHERE path = @exactPrefix OR path LIKE @likePrefix ESCAPE '\\'
-        `,
-        )
-        .run({ exactPrefix, likePrefix })
-    })()
+    runSqliteTransaction(database, () => removeSearchRowsByPrefix(database, prefix))
   }
 
   async search(query: string, limit: number): Promise<FsSearchResult[]> {
     const terms = parseSearchTerms(query)
-      .map((term) => term.folded)
-      .filter((term) => term.length > 0)
     if (terms.length === 0) return []
 
     const finalLimit = Math.min(Math.max(Math.trunc(limit), 1), MAX_SEARCH_LIMIT)
-    const match = buildMatchExpression(terms)
-    if (!match) return []
+    const match = buildMatchExpression(terms.map((term) => term.folded))
+    if (!match) return this.searchIndexedDocuments(query, finalLimit)
 
     const statement = this.requireDatabase().prepare(`
       SELECT
-        l.path AS path,
-        l.title AS title,
-        l.line_no AS line_no,
-        l.line_text AS line_text,
-        bm25(search_lines_fts) AS rank
-      FROM search_lines_fts
-      JOIN search_lines AS l ON l.id = search_lines_fts.rowid
-      WHERE search_lines_fts MATCH @match
-      ORDER BY bm25(search_lines_fts, 6.0, 2.4, 1.0) ASC
+        d.id AS document_id,
+        d.path AS path,
+        d.title AS title,
+        bm25(search_documents_fts) AS rank
+      FROM search_documents_fts
+      JOIN search_documents AS d ON d.id = search_documents_fts.rowid
+      WHERE search_documents_fts MATCH @match
+      ORDER BY bm25(search_documents_fts, 6.0, 2.4, 1.0) ASC
       LIMIT @limit
     `)
 
-    const rows = ((): SearchRow[] => {
+    const rows = ((): SearchDocumentRow[] => {
       try {
-        return statement.all({ match, limit: finalLimit }) as SearchRow[]
+        return statement.all({
+          match,
+          limit: Math.min(Math.max(finalLimit * 8, 50), MAX_FTS_CANDIDATES),
+        }) as SearchDocumentRow[]
       } catch {
         return []
       }
     })()
 
-    return rows.map((row) => toSearchResult(row, terms))
+    if (rows.length === 0) return this.searchIndexedDocuments(query, finalLimit)
+    const documents = loadDocumentsForRows(this.requireDatabase(), rows)
+    const results = searchDocuments(documents, query, finalLimit)
+    if (results.length > 0) return results
+    return this.searchIndexedDocuments(query, finalLimit)
   }
 
   private async ensureSchema(): Promise<void> {
     ensureSearchSchema(this.requireDatabase())
   }
 
-  private deleteDocumentRows(database: SqliteDatabase, pathValue: string): void {
-    database
-      .prepare(
-        `
-        DELETE FROM search_lines_fts
-        WHERE rowid IN (
-          SELECT id
-          FROM search_lines
-          WHERE path = @path
-        )
-      `,
-      )
-      .run({ path: pathValue })
-    database.prepare('DELETE FROM search_lines WHERE path = @path').run({ path: pathValue })
-    database.prepare('DELETE FROM search_documents WHERE path = @path').run({ path: pathValue })
-  }
-
-  private upsertDocumentInTransaction(
-    database: SqliteDatabase,
-    document: WorkspaceSearchDocument,
-  ): void {
-    const now = Date.now()
-    const contentHash = hashText(document.content)
-    const upsert = database.prepare(`
-      INSERT INTO search_documents (path, title, content_hash, updated_ms, size_bytes, indexed_at)
-      VALUES (@path, @title, @content_hash, @updated_ms, @size_bytes, @indexed_at)
-      ON CONFLICT(path) DO UPDATE SET
-        title = excluded.title,
-        content_hash = excluded.content_hash,
-        updated_ms = excluded.updated_ms,
-        size_bytes = excluded.size_bytes,
-        indexed_at = excluded.indexed_at
-    `)
-    upsert.run({
-      path: document.path,
-      title: document.title,
-      content_hash: contentHash,
-      updated_ms: now,
-      size_bytes: document.content.length,
-      indexed_at: now,
-    })
-
-    const documentId = Number(
-      (
-        database.prepare('SELECT id FROM search_documents WHERE path = @path').get({
-          path: document.path,
-        }) as { id: number } | undefined
-      )?.id ?? 0,
-    )
-    if (!documentId) return
-
-    const insertLine = database.prepare(`
-      INSERT INTO search_lines (
-        document_id, path, title, line_no, line_text
-      ) VALUES (
-        @document_id, @path, @title, @line_no, @line_text
-      )
-    `)
-    const insertFts = database.prepare(`
-      INSERT INTO search_lines_fts (
-        rowid,
-        path,
-        title,
-        body,
-        document_id,
-        line_no
-      ) VALUES (@rowid, @path, @title, @body, @document_id, @line_no)
-    `)
-
-    const lines = document.content.split(/\r?\n/)
-    for (let lineNumber = 1; lineNumber <= lines.length; lineNumber += 1) {
-      const lineText = lines[lineNumber - 1] ?? ''
-      const lineResult = insertLine.run({
-        document_id: documentId,
-        path: document.path,
-        title: document.title,
-        line_no: lineNumber,
-        line_text: lineText,
-      })
-      if (!lineResult.lastInsertRowid) continue
-      insertFts.run({
-        rowid: Number(lineResult.lastInsertRowid),
-        path: document.path,
-        title: document.title,
-        body: lineText,
-        document_id: documentId,
-        line_no: lineNumber,
-      })
-    }
+  private searchIndexedDocuments(query: string, limit: number): FsSearchResult[] {
+    return searchDocuments(loadIndexedDocuments(this.requireDatabase()), query, limit)
   }
 
   private requireDatabase(): SqliteDatabase {

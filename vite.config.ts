@@ -23,6 +23,8 @@ const electronMainRequireBanner = [
   'const require = __marklabCreateRequire(import.meta.url);',
 ].join('\n')
 
+const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch']
+
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
@@ -51,6 +53,7 @@ export default defineConfig(({ command, mode }) => {
               build: {
                 assetsInlineLimit: 0,
                 rollupOptions: {
+                  external: electronMainExternal,
                   input: {
                     main: path.resolve(__dirname, 'electron/main.ts'),
                     workspaceAnalysisWorkerEntry: path.resolve(
