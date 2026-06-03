@@ -107,12 +107,13 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
   const groups = useMemo<ChangeGroup[]>(() => {
     const snapshot = statusQuery.data
     if (!snapshot?.repo.is_repository) return []
-    return [
+    const nextGroups: ChangeGroup[] = [
       { id: 'conflicts', label: t('scm.conflicts'), changes: snapshot.conflicts },
       { id: 'staged', label: t('scm.staged'), changes: snapshot.staged },
       { id: 'unstaged', label: t('scm.changes'), changes: snapshot.unstaged },
       { id: 'untracked', label: t('scm.untracked'), changes: snapshot.untracked },
-    ].filter((group) => group.changes.length > 0)
+    ]
+    return nextGroups.filter((group) => group.changes.length > 0)
   }, [statusQuery.data, t])
 
   if (!enabled) return null

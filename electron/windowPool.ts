@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { createLoadedMainWindow } from '@electron/window.js'
+import { hideWindowWithMotion } from '@electron/windowMotion.js'
 
 const DEFAULT_MAX_IDLE_MAIN_WINDOWS = 1
 
@@ -86,7 +87,7 @@ export const createMarklabWindowPool = (
       return
     }
 
-    window.hide()
+    hideWindowWithMotion(window)
     idleMainWindows.push(window)
     logger.debug('released main window to idle pool', stats())
   }

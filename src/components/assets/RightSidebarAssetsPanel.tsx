@@ -74,7 +74,12 @@ export const RightSidebarAssetsPanel = ({ report }: RightSidebarAssetsPanelProps
             </div>
           </div>
           {report.indexed && (
-            <Badge variant={report.workspaceMissingCount > 0 ? 'destructive' : 'secondary'}>
+            <Badge
+              variant="secondary"
+              className={
+                report.workspaceMissingCount > 0 ? 'bg-destructive/10 text-destructive' : ''
+              }
+            >
               {report.workspaceMissingCount} missing
             </Badge>
           )}

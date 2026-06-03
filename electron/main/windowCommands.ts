@@ -8,6 +8,7 @@ import type { MenuActionDispatcher } from '@electron/menu.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { FsRootInfo } from '@electron/services/workspace/types.js'
 import { isPathInsideOrEqual, samePath } from '@electron/services/workspace/workspaceUtils.js'
+import { showWindowWithMotion } from '@electron/windowMotion.js'
 import type { MarklabWindowPool } from '@electron/windowPool.js'
 
 type AppWindowOpenResult = {
@@ -42,8 +43,7 @@ const openPooledMainWindow = async (
   const main = await dependencies.getWindowPool().acquireMainWindow()
   dependencies.installManagedMainWindowLifecycle(main, logger)
   if (main.isMinimized()) main.restore()
-  main.show()
-  main.focus()
+  showWindowWithMotion(main, { focus: true })
   logger.info('main window opened from pool', {
     reason,
     requestedPath,

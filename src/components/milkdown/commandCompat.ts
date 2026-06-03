@@ -1,12 +1,9 @@
-type MilkdownCommandCall = (key: string, ...args: unknown[]) => unknown
+type MilkdownCommandCall = (key: unknown, ...args: unknown[]) => unknown
 
-type MilkdownCommands = {
-  call?: MilkdownCommandCall
-  [commandKey: string]: unknown
-}
+type MilkdownCommands = object
 
 type MilkdownCommand = {
-  key: string
+  key: unknown
 }
 
 export const callMilkdownCommand = (
@@ -17,11 +14,15 @@ export const callMilkdownCommand = (
   if (!commands || typeof commands !== 'object') return false
 
   try {
-    if (typeof commands.call === 'function') {
-      return Boolean(commands.call(command.key, ...args))
+    const commandKey = command.key
+    const call = (commands as { call?: unknown }).call
+    if (typeof call === 'function') {
+      return Boolean((call as MilkdownCommandCall)(commandKey, ...args))
     }
 
-    const commandRunner = commands[command.key]
+    if (typeof commandKey !== 'string') return false
+
+    const commandRunner = (commands as Record<string, unknown>)[commandKey]
     if (typeof commandRunner === 'function') {
       return Boolean(commandRunner(...args))
     }

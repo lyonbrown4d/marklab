@@ -149,7 +149,10 @@ const AssetRow = ({
 const AssetStatusBadge = ({ status }: { status: MarkdownAssetReference['status'] }) => {
   if (status === 'missing') {
     return (
-      <Badge variant="destructive" className="shrink-0 text-[10px]">
+      <Badge
+        variant="outline"
+        className="shrink-0 border-destructive/30 bg-destructive/10 text-[10px] text-destructive"
+      >
         missing
       </Badge>
     )

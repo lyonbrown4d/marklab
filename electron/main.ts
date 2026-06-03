@@ -21,6 +21,7 @@ import {
 } from '@electron/main/windowCommands.js'
 import type { DeepLinkPayload, SingleInstancePayload } from '@electron/types.js'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
+import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion.js'
 import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool.js'
 
 const APP_READY_FALLBACK_MS = 5000
@@ -71,11 +72,13 @@ const showMainWindow = (): void => {
   }
 
   if (!windows.main.isDestroyed()) {
-    windows.main.show()
-    windows.main.focus()
+    showWindowWithMotion(windows.main, { focus: true })
   }
   if (!windows.splash.isDestroyed()) {
-    windows.splash.close()
+    const splash = windows.splash
+    hideWindowWithMotion(splash, () => {
+      if (!splash.isDestroyed()) splash.close()
+    })
   }
 }
 
