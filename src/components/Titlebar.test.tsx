@@ -114,7 +114,8 @@ describe('Titlebar command palette', () => {
     const onOpenHeading = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenHeading }))
 
-    await userEvent.click(await screen.findByText('## Indexed Detail'))
+    await userEvent.type(screen.getByRole('combobox'), 'indexed')
+    await userEvent.click(await screen.findByRole('option', { name: /Indexed Detail/i }))
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'indexed-detail')
   })
