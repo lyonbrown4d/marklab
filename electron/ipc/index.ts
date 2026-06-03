@@ -41,6 +41,7 @@ export type NativeIpcDependencies = {
   shell: Electron.Shell
   terminalService: TerminalService
   workspaceService: WorkspaceService
+  windowCommandHandlers?: NativeCommandHandlers
 }
 export type NativeIpcRegistration = {
   commands: WorkspaceCommandServices
@@ -72,7 +73,13 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   )
   registerCommandInvokeIpc(
     dependencies.ipcMain,
-    createRuntimeCommandHandlers(commands, gitTerminal, menu, dependencies.onRendererReady),
+    createRuntimeCommandHandlers(
+      commands,
+      gitTerminal,
+      menu,
+      dependencies.windowCommandHandlers,
+      dependencies.onRendererReady,
+    ),
     logger.child('command-invoke'),
   )
   logger.info('native IPC registered')
@@ -82,11 +89,13 @@ const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,
   gitTerminal: GitTerminalIpcBridge,
   menu: MenuDispatchBridge,
+  windowCommandHandlers: NativeCommandHandlers = {},
   onRendererReady?: () => void,
 ): NativeCommandHandlers => {
   return {
     ...commands.commandHandlers,
     ...gitTerminal.commandHandlers,
+    ...windowCommandHandlers,
     'app-ready': () => {
       onRendererReady?.()
       return { ok: true }

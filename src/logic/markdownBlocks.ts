@@ -39,6 +39,12 @@ export type MarkdownBlock =
       kind: 'divider'
       editable: boolean
     }
+  | {
+      id: string
+      kind: 'table'
+      text: string
+      editable: boolean
+    }
 
 export type MarkdownBlockCommit = {
   id: string
@@ -206,7 +212,7 @@ const serializeMarkdownBlock = (block: MarkdownBlock) => {
 
 type MarkdownBlockInput = {
   id: string
-  kind: 'paragraph' | 'blockquote' | 'code' | 'list' | 'divider'
+  kind: 'paragraph' | 'blockquote' | 'code' | 'list' | 'divider' | 'table'
   text?: string | null
   language?: string | null
   ordered?: boolean | null
@@ -245,6 +251,16 @@ export const normalizeMarkdownBlocks = (
           kind: 'code',
           text,
           language: block.language ?? undefined,
+          editable: false,
+        },
+      ]
+    }
+    if (block.kind === 'table') {
+      return [
+        {
+          id: block.id,
+          kind: 'table',
+          text,
           editable: false,
         },
       ]

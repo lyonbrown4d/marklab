@@ -13,6 +13,7 @@ import {
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import StatusCenter from '@/components/StatusCenter'
 import { createFileLabel } from '@/logic/paths'
 import { SIDEBAR_ACTIVITY_PARAM } from '@/logic/routing'
 import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic/gitStatus'
@@ -221,6 +222,13 @@ const AppStatusBar = ({
             <PanelsTopLeft className="h-3.5 w-3.5" />
             {t('statusBar.tabs', { count: String(tabs.length) })}
           </span>
+          <div className="h-3.5 w-px bg-border/80" />
+          <StatusCenter
+            activePath={activePath}
+            dirtyPaths={dirtyPaths}
+            saveStates={saveStates}
+            terminalOpen={terminalOpen}
+          />
           <div className="h-3.5 w-px bg-border/80" />
           <span className="min-w-0 max-w-[320px] truncate">{activeLabel}</span>
           {activeSaveState?.status === 'saved' && (

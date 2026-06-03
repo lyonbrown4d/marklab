@@ -51,10 +51,13 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     [entries, routePath],
   )
   const activeFilePath = activeTab?.kind === 'file' ? activeTab.path : null
-  const currentFilePath = graphWorkspaceMatch ? null : (routeFilePath ?? activeFilePath)
-  const activeResourcePath = graphWorkspaceMatch
-    ? getWorkspaceTabPath(activeTab)
-    : (routeFilePath ?? getWorkspaceTabPath(activeTab))
+  const currentFilePath =
+    !internalRouteActive || graphWorkspaceMatch ? null : (routeFilePath ?? activeFilePath)
+  const activeResourcePath = !internalRouteActive
+    ? null
+    : graphWorkspaceMatch
+      ? getWorkspaceTabPath(activeTab)
+      : (routeFilePath ?? getWorkspaceTabPath(activeTab))
   const viewMode: ViewMode = sourceMatch
     ? 'source'
     : graphFileMatch || graphWorkspaceMatch

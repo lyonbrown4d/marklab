@@ -9,6 +9,7 @@ import {
   type TreeApi,
 } from 'react-arborist'
 import { AutoSizer } from 'react-virtualized-auto-sizer'
+import { FileConfirmDialog, FileNameDialog } from '@/components/file-tree/FileOperationDialogs'
 import { FileTreeNodeRenderer } from '@/components/file-tree/FileTreeNodeRenderer'
 import {
   appendChildPath,
@@ -19,6 +20,17 @@ import type { SidebarFileTreeProps } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
 
 export type { ContextLabels } from '@/components/file-tree/types'
+
+type CreateDialogRequest = {
+  kind: 'file' | 'folder'
+  parentPath: string
+}
+
+type DeleteDialogRequest = {
+  name: string
+  path: string
+  type: FileTreeNode['type']
+}
 
 const SidebarFileTree = ({
   activePath,
@@ -37,9 +49,24 @@ const SidebarFileTree = ({
 }: SidebarFileTreeProps) => {
   const treeRef = useRef<TreeApi<FileTreeNode> | undefined>(undefined)
   const [dndRootElement, setDndRootElement] = useState<HTMLDivElement | null>(null)
+  const [createRequest, setCreateRequest] = useState<CreateDialogRequest | null>(null)
+  const [deleteRequest, setDeleteRequest] = useState<DeleteDialogRequest | null>(null)
   const setTreeContainerRef = useCallback((element: HTMLDivElement | null) => {
     setDndRootElement(element)
   }, [])
+  const createDialogTitle = createRequest?.kind === 'file' ? labels.newFile : labels.newFolder
+  const createDialogDescription =
+    createRequest?.kind === 'file' ? labels.newFilePrompt : labels.newFolderPrompt
+  const createDialogDefaultValue =
+    createRequest?.kind === 'file'
+      ? 'Untitled.md'
+      : createRequest?.kind === 'folder'
+        ? 'folder'
+        : ''
+  const deleteDialogDescription =
+    deleteRequest?.type === 'folder'
+      ? labels.deleteFolderConfirm.replace('{name}', deleteRequest.name)
+      : labels.deleteConfirm.replace('{name}', deleteRequest?.name ?? '')
 
   const getActiveNode = useCallback(() => {
     const tree = treeRef.current
@@ -79,32 +106,53 @@ const SidebarFileTree = ({
     [onRenamePath, readonlyTree],
   )
 
-  const handleDeleteNode = useCallback(
+  const requestDeleteNode = useCallback(
     (node: NodeApi<FileTreeNode> | null) => {
       if (!node || node.isRoot || readonlyTree) return
-      const message =
-        node.data.type === 'folder'
-          ? labels.deleteFolderConfirm.replace('{name}', node.data.name)
-          : labels.deleteConfirm.replace('{name}', node.data.name)
-      if (!window.confirm(message)) return
-      onDeletePath(node.data.path)
+      setDeleteRequest({
+        name: node.data.name,
+        path: node.data.path,
+        type: node.data.type,
+      })
     },
-    [labels.deleteConfirm, labels.deleteFolderConfirm, onDeletePath, readonlyTree],
+    [readonlyTree],
   )
 
-  const promptCreate = useCallback(
+  const requestCreateNode = useCallback(
     (node: NodeApi<FileTreeNode> | null, kind: 'file' | 'folder') => {
       if (readonlyTree) return
-      const promptLabel = kind === 'file' ? labels.newFilePrompt : labels.newFolderPrompt
-      const fallback = kind === 'file' ? 'Untitled.md' : 'folder'
-      const name = window.prompt(promptLabel, fallback)?.trim()
-      if (!name) return
-      const nextPath = appendChildPath(getCreateParentPath(node), name)
-      if (kind === 'file') onCreateFile(nextPath)
-      else onCreateFolder(nextPath)
+      setCreateRequest({
+        kind,
+        parentPath: getCreateParentPath(node),
+      })
     },
-    [labels.newFilePrompt, labels.newFolderPrompt, onCreateFile, onCreateFolder, readonlyTree],
+    [readonlyTree],
   )
+
+  const handleCreateSubmit = useCallback(
+    (name: string) => {
+      if (!createRequest) return
+      const nextPath = appendChildPath(createRequest.parentPath, name)
+      if (createRequest.kind === 'file') onCreateFile(nextPath)
+      else onCreateFolder(nextPath)
+      setCreateRequest(null)
+    },
+    [createRequest, onCreateFile, onCreateFolder],
+  )
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteRequest) return
+    onDeletePath(deleteRequest.path)
+    setDeleteRequest(null)
+  }, [deleteRequest, onDeletePath])
+
+  const closeCreateDialog = useCallback((open: boolean) => {
+    if (!open) setCreateRequest(null)
+  }, [])
+
+  const closeDeleteDialog = useCallback((open: boolean) => {
+    if (!open) setDeleteRequest(null)
+  }, [])
 
   const handleKeyDownCapture = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -119,7 +167,7 @@ const SidebarFileTree = ({
       if (isCommand && key === 'n') {
         event.preventDefault()
         event.stopPropagation()
-        promptCreate(node, event.shiftKey ? 'folder' : 'file')
+        requestCreateNode(node, event.shiftKey ? 'folder' : 'file')
         return
       }
 
@@ -134,7 +182,7 @@ const SidebarFileTree = ({
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         event.stopPropagation()
-        handleDeleteNode(node)
+        requestDeleteNode(node)
         return
       }
 
@@ -149,7 +197,7 @@ const SidebarFileTree = ({
         onOpenFile(node.data.path)
       }
     },
-    [getActiveNode, handleDeleteNode, onOpenFile, promptCreate, readonlyTree],
+    [getActiveNode, onOpenFile, readonlyTree, requestCreateNode, requestDeleteNode],
   )
 
   const disableDrop = useCallback(
@@ -179,76 +227,93 @@ const SidebarFileTree = ({
         {...props}
         activePath={activePath}
         labels={labels}
-        onCreateFile={onCreateFile}
-        onCreateFolder={onCreateFolder}
-        onDeletePath={onDeletePath}
         onInspectPath={onInspectPath}
         onOpenFile={onOpenFile}
         onOpenFileView={onOpenFileView}
+        onRequestCreate={requestCreateNode}
+        onRequestDelete={requestDeleteNode}
         readonlyTree={readonlyTree}
       />
     ),
     [
       activePath,
       labels,
-      onCreateFile,
-      onCreateFolder,
-      onDeletePath,
       onInspectPath,
       onOpenFile,
       onOpenFileView,
+      requestCreateNode,
+      requestDeleteNode,
       readonlyTree,
     ],
   )
 
   return (
-    <div
-      ref={setTreeContainerRef}
-      className="h-full min-h-0 w-full overflow-hidden"
-      onKeyDownCapture={handleKeyDownCapture}
-    >
-      {dndRootElement && (
-        <AutoSizer
-          className="h-full w-full"
-          renderProp={({ height, width }) => {
-            const treeHeight = height ?? 0
-            const treeWidth = width ?? 0
-            if (treeHeight <= 0 || treeWidth <= 0) return null
+    <>
+      <div
+        ref={setTreeContainerRef}
+        className="h-full min-h-0 w-full overflow-hidden"
+        onKeyDownCapture={handleKeyDownCapture}
+      >
+        {dndRootElement && (
+          <AutoSizer
+            className="h-full w-full"
+            renderProp={({ height, width }) => {
+              const treeHeight = height ?? 0
+              const treeWidth = width ?? 0
+              if (treeHeight <= 0 || treeWidth <= 0) return null
 
-            return (
-              <Tree<FileTreeNode>
-                ref={treeRef}
-                data={nodes}
-                idAccessor="path"
-                childrenAccessor="children"
-                rowHeight={28}
-                indent={13}
-                overscanCount={8}
-                height={treeHeight}
-                width={treeWidth}
-                openByDefault={false}
-                selection={activePath ?? undefined}
-                searchTerm={searchTerm}
-                searchMatch={(treeNode, term) =>
-                  treeNode.data.name.toLowerCase().includes(term.toLowerCase())
-                }
-                dndRootElement={dndRootElement}
-                disableDrag={readonlyTree}
-                disableDrop={disableDrop}
-                disableEdit={readonlyTree}
-                disableMultiSelection
-                className="outline-none"
-                onActivate={handleActivate}
-                onMove={handleMove}
-                onRename={handleRename}
-              >
-                {renderNode}
-              </Tree>
-            )
-          }}
-        />
-      )}
-    </div>
+              return (
+                <Tree<FileTreeNode>
+                  ref={treeRef}
+                  data={nodes}
+                  idAccessor="path"
+                  childrenAccessor="children"
+                  rowHeight={28}
+                  indent={13}
+                  overscanCount={8}
+                  height={treeHeight}
+                  width={treeWidth}
+                  openByDefault={false}
+                  selection={activePath ?? undefined}
+                  searchTerm={searchTerm}
+                  searchMatch={(treeNode, term) =>
+                    treeNode.data.name.toLowerCase().includes(term.toLowerCase())
+                  }
+                  dndRootElement={dndRootElement}
+                  disableDrag={readonlyTree}
+                  disableDrop={disableDrop}
+                  disableEdit={readonlyTree}
+                  disableMultiSelection
+                  className="outline-none"
+                  onActivate={handleActivate}
+                  onMove={handleMove}
+                  onRename={handleRename}
+                >
+                  {renderNode}
+                </Tree>
+              )
+            }}
+          />
+        )}
+      </div>
+      <FileNameDialog
+        open={createRequest !== null}
+        title={createDialogTitle}
+        description={createDialogDescription}
+        defaultValue={createDialogDefaultValue}
+        confirmLabel={createDialogTitle}
+        onOpenChange={closeCreateDialog}
+        onSubmit={handleCreateSubmit}
+      />
+      <FileConfirmDialog
+        open={deleteRequest !== null}
+        title={labels.delete}
+        description={deleteDialogDescription}
+        confirmLabel={labels.delete}
+        onOpenChange={closeDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+      />
+    </>
   )
 }
 

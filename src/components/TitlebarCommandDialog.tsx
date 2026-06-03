@@ -1,14 +1,19 @@
 import {
   CircleHelp,
   FileText,
+  FilePlus2,
+  FolderPlus,
   FolderOpen,
   GitGraph,
   ListTree,
   PanelLeft,
   PanelRight,
   PenLine,
+  RefreshCw,
   Search,
   Settings2,
+  Terminal,
+  X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -49,6 +54,8 @@ type TitlebarCommandDialogProps = {
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
   onAction: (id: string) => void
+  canCreateWorkspaceEntries: boolean
+  searchIndexRebuilding: boolean
 }
 
 const TitlebarCommandDialog = ({
@@ -60,6 +67,8 @@ const TitlebarCommandDialog = ({
   onOpenHeading,
   onOpenSearchResult,
   onAction,
+  canCreateWorkspaceEntries,
+  searchIndexRebuilding,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
@@ -140,6 +149,21 @@ const TitlebarCommandDialog = ({
           </>
         )}
         <CommandGroup heading="File">
+          <CommandItem disabled={!canCreateWorkspaceEntries} onSelect={() => onAction('file.new')}>
+            <FilePlus2 className="h-4 w-4" />
+            New File
+          </CommandItem>
+          <CommandItem
+            disabled={!canCreateWorkspaceEntries}
+            onSelect={() => onAction('file.new_folder')}
+          >
+            <FolderPlus className="h-4 w-4" />
+            New Folder
+          </CommandItem>
+          <CommandItem onSelect={() => onAction('window.open_current_workspace_in_new_window')}>
+            <PanelRight className="h-4 w-4" />
+            New Window
+          </CommandItem>
           <CommandItem onSelect={() => onAction('file.open_project')}>
             <FolderOpen className="h-4 w-4" />
             {t('actions.openProject')}
@@ -151,6 +175,10 @@ const TitlebarCommandDialog = ({
           <CommandItem onSelect={() => onAction('view.focus_file_search')}>
             <Search className="h-4 w-4" />
             {t('sidebar.searchAction')}
+          </CommandItem>
+          <CommandItem onSelect={() => onAction('tab.close')}>
+            <X className="h-4 w-4" />
+            Close Current Tab
           </CommandItem>
           <CommandItem onSelect={() => onAction('file.export_pdf')}>
             <FileText className="h-4 w-4" />
@@ -166,6 +194,24 @@ const TitlebarCommandDialog = ({
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />
+        <CommandGroup heading="Workspace">
+          <CommandItem onSelect={() => onAction('workspace.open_graph')}>
+            <GitGraph className="h-4 w-4" />
+            Workspace Graph
+          </CommandItem>
+          <CommandItem onSelect={() => onAction('terminal.open')}>
+            <Terminal className="h-4 w-4" />
+            Open Terminal
+          </CommandItem>
+          <CommandItem
+            disabled={searchIndexRebuilding}
+            onSelect={() => onAction('workspace.rebuild_search_index')}
+          >
+            <RefreshCw className="h-4 w-4" />
+            {searchIndexRebuilding ? 'Rebuilding Search Index...' : 'Rebuild Search Index'}
+          </CommandItem>
+        </CommandGroup>
+        <CommandSeparator />
         <CommandGroup heading="View">
           <CommandItem onSelect={() => onAction('view.wysiwyg')}>
             <PenLine className="h-4 w-4" />
@@ -177,7 +223,7 @@ const TitlebarCommandDialog = ({
           </CommandItem>
           <CommandItem onSelect={() => onAction('view.graph')}>
             <GitGraph className="h-4 w-4" />
-            {t('tabs.workspaceGraph')}
+            Graph View
           </CommandItem>
           <CommandItem onSelect={() => onAction('view.toggle_sidebar')}>
             <PanelLeft className="h-4 w-4" />

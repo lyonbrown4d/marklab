@@ -47,12 +47,20 @@ type TitlebarProps = {
   onToggleRightSidebar: () => void
   onSelectProject: () => void
   onSelectSingleFile: () => void
+  onCreateFile: () => void
+  onCreateFolder: () => void
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
+  onOpenWorkspaceGraph: () => void
+  onCloseActiveTab: () => void
+  onOpenTerminal: () => void
+  onRebuildSearchIndex: () => void
   onChangeView: (mode: ViewMode) => void
   files: FileEntry[]
   workspaceIndex: FsWorkspaceIndex | null
+  canCreateWorkspaceEntries: boolean
+  searchIndexRebuilding: boolean
   isMaximized: boolean
   setIsMaximized: (value: boolean) => void
   theme: ThemeMode
@@ -100,12 +108,20 @@ const Titlebar = ({
   onToggleRightSidebar,
   onSelectProject,
   onSelectSingleFile,
+  onCreateFile,
+  onCreateFolder,
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
+  onOpenWorkspaceGraph,
+  onCloseActiveTab,
+  onOpenTerminal,
+  onRebuildSearchIndex,
   onChangeView,
   files,
   workspaceIndex,
+  canCreateWorkspaceEntries,
+  searchIndexRebuilding,
   isMaximized,
   setIsMaximized,
   theme,
@@ -145,6 +161,7 @@ const Titlebar = ({
         label: 'File',
         items: [
           { id: 'file.new', label: 'New File' },
+          { id: 'window.open_current_workspace_in_new_window', label: 'New Window' },
           { id: 'file.open_project', label: t('actions.openProject') },
           { id: 'file.open_file', label: t('actions.openFile') },
           { id: 'file.export_pdf', label: t('actions.exportPdf') },
@@ -222,6 +239,10 @@ const Titlebar = ({
 
   const onMenuAction = useCallback((id: string) => {
     if (!isDesktopRuntime()) return
+    if (id === 'window.open_current_workspace_in_new_window') {
+      void appApi.openCurrentWorkspaceInNewWindow()
+      return
+    }
     void appApi.menuDispatch(id)
   }, [])
   const onFocusFileSearch = useCallback(() => requestFileSearchFocus(), [])
@@ -251,6 +272,22 @@ const Titlebar = ({
         onSelectSingleFile()
         return
       }
+      if (id === 'file.new') {
+        onCreateFile()
+        return
+      }
+      if (id === 'file.new_folder') {
+        onCreateFolder()
+        return
+      }
+      if (id === 'window.open_current_workspace_in_new_window') {
+        onMenuAction(id)
+        return
+      }
+      if (id === 'tab.close') {
+        onCloseActiveTab()
+        return
+      }
       if (id === 'view.toggle_sidebar') {
         onToggleSidebar()
         return
@@ -265,6 +302,18 @@ const Titlebar = ({
       }
       if (id === 'settings.open') {
         onSettingsOpenChange(true)
+        return
+      }
+      if (id === 'workspace.open_graph') {
+        onOpenWorkspaceGraph()
+        return
+      }
+      if (id === 'terminal.open') {
+        onOpenTerminal()
+        return
+      }
+      if (id === 'workspace.rebuild_search_index') {
+        onRebuildSearchIndex()
         return
       }
       if (
@@ -282,8 +331,14 @@ const Titlebar = ({
     },
     [
       onChangeView,
+      onCloseActiveTab,
+      onCreateFile,
+      onCreateFolder,
       onFocusFileSearch,
       onMenuAction,
+      onOpenTerminal,
+      onOpenWorkspaceGraph,
+      onRebuildSearchIndex,
       onSelectProject,
       onSelectSingleFile,
       onToggleRightSidebar,
@@ -492,6 +547,8 @@ const Titlebar = ({
         onOpenHeading={onCommandOpenHeading}
         onOpenSearchResult={onCommandOpenSearchResult}
         onAction={onCommandAction}
+        canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+        searchIndexRebuilding={searchIndexRebuilding}
       />
       <SettingsDialog open={settingsOpen} onOpenChange={onSettingsOpenChange} />
       <WindowControls

@@ -305,6 +305,7 @@ const estimateHeadingNodeHeight = (node: Node<GraphNodeData>) => {
     if (block.kind === 'list') return height + Math.min(120, 28 + block.items.length * 22)
     if (block.kind === 'divider') return height + 34
     if (block.kind === 'blockquote') return height + 56
+    if (block.kind === 'table') return height + 70
     return height + 44
   }, 52)
 

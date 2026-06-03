@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import {
-  appendChildPath,
   copyAbsolutePath,
   copyText,
   createMarkdownLink,
@@ -40,9 +39,11 @@ type IconComponent = ComponentType<{ className?: string }>
 
 type FileTreeContextMenuProps = Omit<
   SidebarFileTreeActions,
-  'activePath' | 'onMovePath' | 'onRenamePath'
+  'activePath' | 'onMovePath' | 'onRenamePath' | 'onCreateFile' | 'onCreateFolder' | 'onDeletePath'
 > & {
   node: NodeApi<FileTreeNode>
+  onRequestCreate: (node: NodeApi<FileTreeNode>, kind: 'file' | 'folder') => void
+  onRequestDelete: (node: NodeApi<FileTreeNode>) => void
 }
 
 const isApplePlatform =
@@ -132,12 +133,11 @@ const MenuItem = ({
 export const FileTreeContextMenu = ({
   labels,
   node,
-  onCreateFile,
-  onCreateFolder,
-  onDeletePath,
   onInspectPath,
   onOpenFile,
   onOpenFileView,
+  onRequestCreate,
+  onRequestDelete,
   readonlyTree,
 }: FileTreeContextMenuProps) => {
   const item = node.data
@@ -164,26 +164,17 @@ export const FileTreeContextMenu = ({
 
   const handleCreateFile = () => {
     if (!isFolder || readonlyTree) return
-    const name = window.prompt(labels.newFilePrompt, 'Untitled.md')
-    if (!name) return
-    onCreateFile(appendChildPath(item.path, name))
+    onRequestCreate(node, 'file')
   }
 
   const handleCreateFolder = () => {
     if (!isFolder || readonlyTree) return
-    const name = window.prompt(labels.newFolderPrompt, 'folder')
-    if (!name) return
-    onCreateFolder(appendChildPath(item.path, name))
+    onRequestCreate(node, 'folder')
   }
 
   const handleDelete = () => {
     if (readonlyTree) return
-    const message =
-      item.type === 'folder'
-        ? labels.deleteFolderConfirm.replace('{name}', item.name)
-        : labels.deleteConfirm.replace('{name}', item.name)
-    if (!window.confirm(message)) return
-    onDeletePath(item.path)
+    onRequestDelete(node)
   }
 
   return (

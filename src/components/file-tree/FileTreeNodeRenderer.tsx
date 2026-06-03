@@ -10,7 +10,16 @@ import { createFileTreeDragPayload, MARKO_FILE_TREE_ITEM_MIME } from '@/logic/fi
 import type { FileTreeNode } from '@/logic/fileTree'
 
 type FileTreeNodeRendererProps = NodeRendererProps<FileTreeNode> &
-  Omit<SidebarFileTreeActions, 'onMovePath' | 'onRenamePath'>
+  Omit<
+    SidebarFileTreeActions,
+    'onMovePath' | 'onRenamePath' | 'onCreateFile' | 'onCreateFolder' | 'onDeletePath'
+  > & {
+    onRequestCreate: (
+      node: NodeRendererProps<FileTreeNode>['node'],
+      kind: 'file' | 'folder',
+    ) => void
+    onRequestDelete: (node: NodeRendererProps<FileTreeNode>['node']) => void
+  }
 
 const imageFilePattern = /\.(apng|avif|bmp|gif|jpe?g|png|svg|webp)$/i
 
@@ -19,12 +28,11 @@ export const FileTreeNodeRenderer = ({
   dragHandle,
   labels,
   node,
-  onCreateFile,
-  onCreateFolder,
-  onDeletePath,
   onInspectPath,
   onOpenFile,
   onOpenFileView,
+  onRequestCreate,
+  onRequestDelete,
   readonlyTree,
   style,
 }: FileTreeNodeRendererProps) => {
@@ -120,12 +128,11 @@ export const FileTreeNodeRenderer = ({
         <FileTreeContextMenu
           labels={labels}
           node={node}
-          onCreateFile={onCreateFile}
-          onCreateFolder={onCreateFolder}
-          onDeletePath={onDeletePath}
           onInspectPath={onInspectPath}
           onOpenFile={onOpenFile}
           onOpenFileView={onOpenFileView}
+          onRequestCreate={onRequestCreate}
+          onRequestDelete={onRequestDelete}
           readonlyTree={readonlyTree}
         />
       </ContextMenu>

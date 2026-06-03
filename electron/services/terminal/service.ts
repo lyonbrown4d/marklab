@@ -52,32 +52,37 @@ export class TerminalService {
     const size = normalizedSize(rows, cols)
     const pty = this.loadPty()
     if (pty) {
-      const terminal = pty.spawn(shell, [], {
-        cols: size.cols,
-        rows: size.rows,
-        cwd,
-        env: {
-          ...process.env,
-          TERM: process.env.TERM || 'xterm-256color',
-          COLORTERM: process.env.COLORTERM || 'truecolor',
-        },
-        name: 'xterm-256color',
-      })
-      terminal.onData((data) => {
-        this.emitOutput(webContents, { id, data })
-      })
-      terminal.onExit(({ exitCode, signal }) => {
-        this.sessions.delete(id)
-        this.logger.info('terminal session exited', { exitCode, id, kind: 'pty', signal })
-        this.emitExit(webContents, {
-          id,
-          exit_code: typeof exitCode === 'number' ? exitCode : null,
-          signal: signal === undefined || signal === null ? null : String(signal),
+      try {
+        const terminal = pty.spawn(shell, [], {
+          cols: size.cols,
+          rows: size.rows,
+          cwd,
+          env: {
+            ...process.env,
+            TERM: process.env.TERM || 'xterm-256color',
+            COLORTERM: process.env.COLORTERM || 'truecolor',
+          },
+          name: 'xterm-256color',
         })
-      })
-      this.sessions.set(id, { kind: 'pty', process: terminal, webContents })
-      this.logger.info('terminal session created', { cwd, id, kind: 'pty', shell })
-      return { id, shell, cwd }
+        terminal.onData((data) => {
+          this.emitOutput(webContents, { id, data })
+        })
+        terminal.onExit(({ exitCode, signal }) => {
+          this.sessions.delete(id)
+          this.logger.info('terminal session exited', { exitCode, id, kind: 'pty', signal })
+          this.emitExit(webContents, {
+            id,
+            exit_code: typeof exitCode === 'number' ? exitCode : null,
+            signal: signal === undefined || signal === null ? null : String(signal),
+          })
+        })
+        this.sessions.set(id, { kind: 'pty', process: terminal, webContents })
+        this.logger.info('terminal session created', { cwd, id, kind: 'pty', shell })
+        return { id, shell, cwd }
+      } catch (error) {
+        this.ptyModule = null
+        this.logger.warn('pty backend failed to spawn; falling back to child process', { error })
+      }
     }
     const child = spawn(shell, [], {
       cwd,

@@ -15,6 +15,10 @@ import {
   publishDeepLinkUrl,
   registerDeepLinkProtocol,
 } from '@electron/main/deepLinks.js'
+import {
+  createAppWindowCommandHandlers,
+  createNativeMenuActionDispatcher,
+} from '@electron/main/windowCommands.js'
 import type { DeepLinkPayload, SingleInstancePayload } from '@electron/types.js'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
 import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool.js'
@@ -29,8 +33,7 @@ let container: ElectronContainer | null = null
 let windowPool: MarklabWindowPool | null = null
 let legacyIpcRegistered = false
 let allowAppQuit = false
-let allowMainWindowClose = false
-let closeFlushInProgress = false
+let allowAllMainWindowClose = false
 let quitFlushInProgress = false
 
 type PendingRuntimeEvent =
@@ -38,6 +41,9 @@ type PendingRuntimeEvent =
   | { eventName: 'deep-link'; payload: DeepLinkPayload }
 
 const pendingRuntimeEvents: PendingRuntimeEvent[] = []
+const managedMainWindows = new WeakSet<BrowserWindow>()
+const windowsAllowedToClose = new WeakSet<BrowserWindow>()
+const windowsFlushingBeforeClose = new WeakSet<BrowserWindow>()
 
 registerAssetProtocolPrivileges()
 
@@ -115,23 +121,53 @@ const flushWorkspaceBuffers = async (reason: string): Promise<void> => {
 
 const installMainWindowCloseFlush = (main: BrowserWindow): void => {
   main.on('close', (event) => {
-    if (allowMainWindowClose) return
+    if (allowAllMainWindowClose || windowsAllowedToClose.has(main)) return
     event.preventDefault()
-    if (closeFlushInProgress) return
+    if (windowsFlushingBeforeClose.has(main)) return
 
-    closeFlushInProgress = true
+    windowsFlushingBeforeClose.add(main)
     void (async () => {
       await flushWorkspaceBuffers('window close')
-      allowMainWindowClose = true
+      windowsAllowedToClose.add(main)
       try {
         if (!main.isDestroyed()) main.close()
       } finally {
-        allowMainWindowClose = false
-        closeFlushInProgress = false
+        windowsAllowedToClose.delete(main)
+        windowsFlushingBeforeClose.delete(main)
       }
     })()
   })
 }
+
+const installManagedMainWindowLifecycle = (
+  main: BrowserWindow,
+  logger = getContainer().cradle.logger,
+): void => {
+  if (managedMainWindows.has(main)) return
+  managedMainWindows.add(main)
+  installMainWindowCloseFlush(main)
+  main.on('closed', () => {
+    if (windows?.main === main) windows = null
+    logger.info('main window closed', { windowId: main.id })
+  })
+}
+
+const ensureWindowPool = (): MarklabWindowPool => {
+  const logger = getContainer().cradle.logger
+  windowPool ??= createMarklabWindowPool(logger.child('window-pool'))
+  return windowPool
+}
+
+const appWindowCommandDependencies = {
+  getContainer,
+  getNativeIpc: () => nativeIpc,
+  getPrimaryWindow: () => windows?.main ?? null,
+  getWindowPool: ensureWindowPool,
+  installManagedMainWindowLifecycle,
+}
+
+const appWindowCommandHandlers = createAppWindowCommandHandlers(appWindowCommandDependencies)
+const dispatchNativeMenuAction = createNativeMenuActionDispatcher(appWindowCommandDependencies)
 
 const registerLegacyShellIpc = (): void => {
   if (legacyIpcRegistered) return
@@ -153,7 +189,9 @@ const registerLegacyShellIpc = (): void => {
     if (typeof payload?.id !== 'string') {
       throw new Error('menu_dispatch requires an id string')
     }
-    windows?.main.webContents.send('menu-action', payload.id)
+    const target = BrowserWindow.getFocusedWindow() ?? windows?.main ?? null
+    if (target && nativeIpc?.menu.dispatchToWindow(target, payload.id)) return { ok: true }
+    target?.webContents.send('menu-action', payload.id)
     return { ok: true }
   })
 }
@@ -182,30 +220,22 @@ const bootstrap = async (): Promise<void> => {
       shell,
       terminalService: container.cradle.terminalService,
       workspaceService: container.cradle.workspaceService,
+      windowCommandHandlers: appWindowCommandHandlers,
     })
   }
   try {
-    windowPool ??= createMarklabWindowPool(logger.child('window-pool'))
-    windows = await createMarklabWindows(logger.child('window'), windowPool)
+    windows = await createMarklabWindows(logger.child('window'), ensureWindowPool())
   } catch (error) {
     logger.error('window creation failed', { error })
     throw error
   }
-  installNativeMenu(windows.main, (id) => {
-    if (windows?.main && nativeIpc?.menu.dispatchToWindow(windows.main, id)) return
-    windows?.main.webContents.send('menu-action', id)
-  })
-  installMainWindowCloseFlush(windows.main)
+  installNativeMenu(windows.main, dispatchNativeMenuAction)
+  installManagedMainWindowLifecycle(windows.main, logger)
 
   fallbackTimer = setTimeout(showMainWindow, APP_READY_FALLBACK_MS)
   if (rendererReady) showMainWindow()
   flushPendingRuntimeEvents()
   logger.info('bootstrap finished')
-
-  windows.main.on('closed', () => {
-    windows = null
-    logger.info('main window closed')
-  })
 }
 
 publishDeepLinksFromArgs(launchInfo.args, 'startup', queueDeepLinkPayload)
@@ -286,7 +316,7 @@ app.on('before-quit', (event) => {
   void (async () => {
     await flushWorkspaceBuffers('quit')
     allowAppQuit = true
-    allowMainWindowClose = true
+    allowAllMainWindowClose = true
     windowPool?.destroyIdleWindows()
     container?.cradle.logger.info('app quit continuing after flush')
     app.quit()

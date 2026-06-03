@@ -5,6 +5,7 @@ import FileGraphPage from '@/pages/FileGraphPage'
 import GitDiffRoutePage from '@/pages/GitDiffRoutePage'
 import SourceFilePage from '@/pages/SourceFilePage'
 import WorkspaceGraphPage from '@/pages/WorkspaceGraphPage'
+import WorkspaceHomePage from '@/pages/WorkspaceHomePage'
 import {
   FILE_ROUTE_PATTERN,
   GIT_DIFF_ROUTE_PATTERN,
@@ -17,7 +18,7 @@ const App = () => (
   <HashRouter>
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<EditFilePage />} />
+        <Route index element={<WorkspaceHomePage />} />
         <Route path={GIT_DIFF_ROUTE_PATTERN} element={<GitDiffRoutePage />} />
         <Route path={SOURCE_ROUTE_PATTERN} element={<SourceFilePage />} />
         <Route path={GRAPH_FILE_ROUTE_PATTERN} element={<FileGraphPage />} />

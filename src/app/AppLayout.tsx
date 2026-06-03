@@ -1,5 +1,6 @@
 import { useLocation, useOutlet } from 'react-router-dom'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
+import { useQueryClient } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
 import AppStatusBar from '@/components/AppStatusBar'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
@@ -33,6 +34,20 @@ import { AppShellPanels } from '@/app/AppShellPanels'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
 
+const createUntitledPath = (files: FileEntry[]) => {
+  const existingPaths = new Set(
+    files.filter((entry) => entry.kind === 'file').map((entry) => entry.path.toLowerCase()),
+  )
+  if (!existingPaths.has('untitled.md')) return 'Untitled.md'
+  for (let index = 1; index <= 999; index += 1) {
+    const next = `Untitled-${index}.md`
+    if (!existingPaths.has(next.toLowerCase())) return next
+  }
+  return `Untitled-${Date.now()}.md`
+}
+
+const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
 export type LayoutContext = {
   activePath: string | null
   editorValue: string
@@ -51,24 +66,30 @@ export type LayoutContext = {
   currentView: ViewMode
   activeTab: WorkspaceTab | null
   rootPath: string
+  recentProjects: string[]
   showEditorStatusBar: boolean
   graphMiniMapEnabled: boolean
   graphContentMode: GraphContentMode
   onCloseActiveTab: () => void
+  onOpenProject: (path: string) => void
 }
 
 const AppLayout = () => {
   const state = useAppLayoutState()
   const stateRef = useLatest(state)
+  const queryClient = useQueryClient()
   const location = useLocation()
   const stateOpenFile = state.onOpenFile
   const stateOpenFileView = state.onOpenFileView
   const stateOpenGitDiff = state.onOpenGitDiff
+  const stateCreateFile = state.createFile
+  const stateCreateFolder = state.createFolder
   const [pendingHeading, setPendingHeading] = useState<FocusHeadingRequest | null>(null)
   const [commandOpen, setCommandOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalInitialized, setTerminalInitialized] = useState(false)
+  const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
   const workspaceGroupElementRef = useRef<HTMLDivElement | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
   const leftSidebarPanelRef = usePanelRef()
@@ -121,6 +142,52 @@ const AppLayout = () => {
     setTerminalOpen(!terminalOpen)
   }, [terminalOpen])
 
+  const openTerminalArea = useCallback(() => {
+    setTerminalInitialized(true)
+    setTerminalOpen(true)
+  }, [])
+
+  const handleCreateFile = useCallback(() => {
+    if (state.rootKind === 'single') {
+      window.alert('New files are unavailable for single-file workspaces.')
+      return
+    }
+    const nextPath = createUntitledPath(state.files)
+    void stateCreateFile(nextPath)
+      .then(() => stateOpenFile(nextPath))
+      .catch((error) => {
+        window.alert(`Failed to create file:\n${getErrorMessage(error)}`)
+      })
+  }, [state.files, state.rootKind, stateCreateFile, stateOpenFile])
+
+  const handleCreateFolder = useCallback(() => {
+    if (state.rootKind === 'single') {
+      window.alert('New folders are unavailable for single-file workspaces.')
+      return
+    }
+    const nextPath = window.prompt('New folder name', 'folder')?.trim()
+    if (!nextPath) return
+    void stateCreateFolder(nextPath).catch((error) => {
+      window.alert(`Failed to create folder:\n${getErrorMessage(error)}`)
+    })
+  }, [state.rootKind, stateCreateFolder])
+
+  const handleRebuildSearchIndex = useCallback(() => {
+    if (searchIndexRebuilding || !isDesktopRuntime()) return
+    setSearchIndexRebuilding(true)
+    void (async () => {
+      await fsApi.rebuildSearchIndex()
+      await queryClient.invalidateQueries({ queryKey: ['workspace-index'] })
+      await queryClient.invalidateQueries({ queryKey: ['command-workspace-search'] })
+    })()
+      .catch((error) => {
+        window.alert(`Failed to rebuild search index:\n${getErrorMessage(error)}`)
+      })
+      .finally(() => {
+        setSearchIndexRebuilding(false)
+      })
+  }, [queryClient, searchIndexRebuilding])
+
   const handleOpenGitDiff = useCallback(
     (request: GitDiffRequest) => {
       stateOpenGitDiff(request.path, request.section)
@@ -169,10 +236,12 @@ const AppLayout = () => {
       currentView: state.viewMode,
       activeTab: state.activeTab,
       rootPath: state.rootPath,
+      recentProjects: state.recentProjects,
       showEditorStatusBar: state.showEditorStatusBar,
       graphMiniMapEnabled: state.graphMiniMapEnabled,
       graphContentMode: state.graphContentMode,
       onCloseActiveTab: state.onCloseActiveTab,
+      onOpenProject: state.onOpenProject,
     } as LayoutContext
   }, [
     state.activePath,
@@ -192,10 +261,12 @@ const AppLayout = () => {
     state.viewMode,
     state.activeTab,
     state.rootPath,
+    state.recentProjects,
     state.showEditorStatusBar,
     state.graphMiniMapEnabled,
     state.graphContentMode,
     state.onCloseActiveTab,
+    state.onOpenProject,
   ])
   const outlet = useOutlet(outletContext)
   const routeCacheKey = useMemo(
@@ -317,12 +388,20 @@ const AppLayout = () => {
         onToggleRightSidebar={state.toggleRightSidebar}
         onSelectProject={state.onSelectProject}
         onSelectSingleFile={state.onSelectSingleFile}
+        onCreateFile={handleCreateFile}
+        onCreateFolder={handleCreateFolder}
         onOpenFile={handleOpenFile}
         onOpenHeading={openHeading}
         onOpenSearchResult={handleOpenSearchResult}
+        onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
+        onCloseActiveTab={state.onCloseActiveTab}
+        onOpenTerminal={openTerminalArea}
+        onRebuildSearchIndex={handleRebuildSearchIndex}
         onChangeView={state.setViewMode}
         files={state.files}
         workspaceIndex={state.workspaceIndex}
+        canCreateWorkspaceEntries={state.rootKind !== 'single'}
+        searchIndexRebuilding={searchIndexRebuilding}
         isMaximized={state.isMaximized}
         setIsMaximized={state.setIsMaximized}
         theme={state.theme}

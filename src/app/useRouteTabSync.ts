@@ -17,6 +17,7 @@ type LatestRef<T> = {
 }
 
 type UseRouteTabSyncArgs = {
+  activeTabId: string | null
   gitDiffMatch: unknown
   sourceMatch: unknown
   graphFileMatch: unknown
@@ -37,6 +38,7 @@ type UseRouteTabSyncArgs = {
 }
 
 export const useRouteTabSync = ({
+  activeTabId,
   gitDiffMatch,
   sourceMatch,
   graphFileMatch,
@@ -55,6 +57,30 @@ export const useRouteTabSync = ({
   setActiveTabId,
   setInspectedPath,
 }: UseRouteTabSyncArgs) => {
+  useEffect(() => {
+    if (locationPathname !== '/') return
+    if (gitDiffMatch || sourceMatch || graphFileMatch || graphWorkspaceMatch || isRouteFile) return
+    if (lastHandledRouteRef.current !== locationPathname) {
+      lastHandledRouteRef.current = locationPathname
+    }
+    if (!activeTabId && !inspectedPathRef.current) return
+
+    setActiveTabId(null)
+    setInspectedPath(null)
+  }, [
+    activeTabId,
+    gitDiffMatch,
+    graphFileMatch,
+    graphWorkspaceMatch,
+    inspectedPathRef,
+    isRouteFile,
+    lastHandledRouteRef,
+    locationPathname,
+    setActiveTabId,
+    setInspectedPath,
+    sourceMatch,
+  ])
+
   useEffect(() => {
     if (!gitDiffMatch) return
     if (!isGitDiffSection(gitDiffSection) || !gitDiffPath) return

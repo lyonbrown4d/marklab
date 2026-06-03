@@ -109,7 +109,7 @@ export const fsSearchResultSchema = z.object({
 
 export const fsMarkdownBlockSchema = z.object({
   id: z.string(),
-  kind: z.enum(['paragraph', 'blockquote', 'code', 'list', 'divider']),
+  kind: z.enum(['paragraph', 'blockquote', 'code', 'list', 'divider', 'table']),
   text: z.string().nullable().optional(),
   level: z.number().nullable().optional(),
   language: z.string().nullable().optional(),

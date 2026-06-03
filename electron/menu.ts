@@ -6,6 +6,7 @@ export const MENU_ACTION_IDS = [
   'file.export_pdf',
   'file.export_docx',
   'file.export_html',
+  'window.open_current_workspace_in_new_window',
   'edit.undo',
   'edit.redo',
   'edit.cut',
@@ -55,6 +56,14 @@ export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActi
   const fileMenu: MenuItemConstructorOptions = {
     label: 'File',
     submenu: [
+      actionItem(
+        mainWindow,
+        'window.open_current_workspace_in_new_window',
+        'New Window',
+        'CmdOrCtrl+Shift+N',
+        dispatch,
+      ),
+      { type: 'separator' },
       actionItem(mainWindow, 'file.open_project', 'Open Folder...', 'CmdOrCtrl+O', dispatch),
       actionItem(mainWindow, 'file.open_file', 'Open File...', 'CmdOrCtrl+Shift+O', dispatch),
       { type: 'separator' },

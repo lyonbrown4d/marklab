@@ -1,0 +1,88 @@
+import type { SaveState } from '@/app/useEditorBuffer'
+import type { BackgroundTaskStatus } from '@/services/fsApi'
+import type { TerminalExitEvent, TerminalOutputEvent } from '@/services/terminalApi'
+
+export type ExportTaskStatus = 'started' | 'finished' | 'failed'
+
+export type ExportTaskPayload = {
+  id: string
+  format: string
+  output_path: string
+  status: ExportTaskStatus
+  progress?: number | null
+  message?: string | null
+}
+
+export type ExportTaskEntry = ExportTaskPayload & {
+  updatedAt: number
+}
+
+export type TerminalEventEntry = {
+  id: string
+  status: 'running' | 'exited'
+  message: string
+  updatedAt: number
+}
+
+export const TEXT = {
+  activeBuffer: 'Active buffer',
+  backgroundTasks: 'Background tasks',
+  checkingBuffer: 'Checking buffer...',
+  dirty: 'dirty',
+  exportAndTerminal: 'Export and terminal',
+  noActiveFile: 'No active file',
+  noBackgroundTasks: 'No background tasks',
+  noEvents: 'No recent events',
+  noSaveActivity: 'No pending file saves',
+  ready: 'Ready',
+  saved: 'saved',
+  saveQueue: 'Save queue',
+  statusCenter: 'Status Center',
+  synced: 'synced',
+  terminalClosed: 'Terminal panel closed',
+  terminalOpen: 'Terminal panel open',
+  unavailable: 'Desktop runtime unavailable',
+}
+
+export const basename = (path: string) => {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path
+}
+
+export const formatTime = (timestamp: number) => {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+export const formatExportLabel = (task: ExportTaskEntry) => {
+  const format = task.format === 'docx' ? 'Word' : task.format.toUpperCase()
+  if (task.status === 'started') return `Exporting ${format}`
+  if (task.status === 'finished') return `Exported ${format}`
+  return `Export ${format} failed`
+}
+
+export const getTaskToneClass = (status: BackgroundTaskStatus['status']) => {
+  if (status === 'running') return 'bg-sky-500'
+  if (status === 'error') return 'bg-destructive'
+  return 'bg-muted-foreground/45'
+}
+
+export const getSaveToneClass = (status: SaveState['status']) => {
+  if (status === 'saving') return 'bg-sky-500'
+  if (status === 'error') return 'bg-destructive'
+  if (status === 'unsaved') return 'bg-amber-500'
+  return 'bg-emerald-500'
+}
+
+export const summarizeTerminalOutput = (event: TerminalOutputEvent) => {
+  const text = event.data.replace(/\s+/g, ' ').trim()
+  return text ? `Terminal output: ${text.slice(0, 80)}` : 'Terminal output received'
+}
+
+export const summarizeTerminalExit = (event: TerminalExitEvent) => {
+  if (event.exit_code != null) return `Terminal exited with code ${event.exit_code}`
+  if (event.signal) return `Terminal exited by ${event.signal}`
+  return 'Terminal exited'
+}

@@ -11,6 +11,7 @@ const MAIN_WINDOW_MIN_WIDTH = 640
 const MAIN_WINDOW_MIN_HEIGHT = 480
 const MAIN_WINDOW_DEFAULT_WIDTH = 800
 const MAIN_WINDOW_DEFAULT_HEIGHT = 600
+const SPLASH_READY_FALLBACK_MS = 700
 const WINDOW_STATE_SAVE_DELAY_MS = 250
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
@@ -167,7 +168,7 @@ const persistWindowState = (window: BrowserWindow, logger: Logger): void => {
   window.on('close', saveNow)
 }
 export const createSplashWindow = () => {
-  return new BrowserWindow({
+  const splash = new BrowserWindow({
     width: 420,
     height: 280,
     title: 'marklab',
@@ -176,9 +177,26 @@ export const createSplashWindow = () => {
     frame: false,
     alwaysOnTop: true,
     center: true,
-    show: true,
+    show: false,
+    skipTaskbar: true,
+    backgroundColor: '#0b1c1a',
     webPreferences: secureWebPreferences(),
   })
+
+  const showSplash = () => {
+    if (splash.isDestroyed() || splash.isVisible()) return
+    splash.show()
+  }
+
+  const showFallbackTimer = setTimeout(showSplash, SPLASH_READY_FALLBACK_MS)
+  const clearShowFallbackTimer = () => clearTimeout(showFallbackTimer)
+
+  splash.once('ready-to-show', showSplash)
+  splash.webContents.once('did-finish-load', showSplash)
+  splash.once('show', clearShowFallbackTimer)
+  splash.once('closed', clearShowFallbackTimer)
+
+  return splash
 }
 export const createMainWindow = (logger: Logger = noopLogger) => {
   const restored = restoredWindowBounds(logger)

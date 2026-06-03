@@ -6,16 +6,12 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import SidebarFileTree from '@/components/SidebarFileTree'
+import { FileNameDialog } from '@/components/file-tree/FileOperationDialogs'
 import type { SidebarExplorerPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
 import { filterTree } from '@/logic/fileTree'
 
-const createRootEntry = (promptLabel: string, action: (path: string) => void) => {
-  const value = window.prompt(promptLabel)
-  const path = value?.trim()
-  if (!path) return
-  action(path)
-}
+type RootCreateKind = 'file' | 'folder'
 
 const SidebarExplorerPanel = ({
   activePath,
@@ -34,6 +30,7 @@ const SidebarExplorerPanel = ({
 }: SidebarExplorerPanelProps) => {
   const { t } = useI18n()
   const [filter, setFilter] = useState('')
+  const [rootCreateKind, setRootCreateKind] = useState<RootCreateKind | null>(null)
   const filterInputRef = useRef<HTMLInputElement | null>(null)
   const readonlyTree = rootKind === 'single'
   const hasVisibleFiles = useMemo(() => filterTree(fileTree, filter).length > 0, [fileTree, filter])
@@ -64,6 +61,19 @@ const SidebarExplorerPanel = ({
     }),
     [t],
   )
+  const rootCreateTitle = rootCreateKind === 'file' ? labels.newFile : labels.newFolder
+  const rootCreateDescription =
+    rootCreateKind === 'file' ? labels.newFilePrompt : labels.newFolderPrompt
+
+  const handleRootCreate = (path: string) => {
+    if (rootCreateKind === 'file') {
+      onCreateFile(path)
+      return
+    }
+    if (rootCreateKind === 'folder') {
+      onCreateFolder(path)
+    }
+  }
 
   useEffect(() => {
     if (focusFileFilterRequest === 0) return
@@ -87,7 +97,7 @@ const SidebarExplorerPanel = ({
                   size="icon"
                   className="h-6 w-6 rounded-md"
                   aria-label={t('sidebar.newFile')}
-                  onClick={() => createRootEntry(labels.newFilePrompt, onCreateFile)}
+                  onClick={() => setRootCreateKind('file')}
                 >
                   <FilePlus2 className="h-3.5 w-3.5" />
                 </Button>
@@ -96,7 +106,7 @@ const SidebarExplorerPanel = ({
                   size="icon"
                   className="h-6 w-6 rounded-md"
                   aria-label={t('sidebar.newFolder')}
-                  onClick={() => createRootEntry(labels.newFolderPrompt, onCreateFolder)}
+                  onClick={() => setRootCreateKind('folder')}
                 >
                   <FolderPlus className="h-3.5 w-3.5" />
                 </Button>
@@ -138,6 +148,17 @@ const SidebarExplorerPanel = ({
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
+      <FileNameDialog
+        open={rootCreateKind !== null}
+        title={rootCreateTitle}
+        description={rootCreateDescription}
+        defaultValue=""
+        confirmLabel={rootCreateTitle}
+        onOpenChange={(open) => {
+          if (!open) setRootCreateKind(null)
+        }}
+        onSubmit={handleRootCreate}
+      />
     </div>
   )
 }

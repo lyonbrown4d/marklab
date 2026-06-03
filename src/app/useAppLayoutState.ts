@@ -188,6 +188,7 @@ export const useAppLayoutState = () => {
   }, [loadWorkspace])
 
   useRouteTabSync({
+    activeTabId,
     gitDiffMatch,
     sourceMatch,
     graphFileMatch,
