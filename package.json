@@ -101,6 +101,7 @@
     },
     "linux": {
       "category": "Office",
+      "maintainer": "Marklab Maintainers <lyonbrown4d@users.noreply.github.com>",
       "target": [
         "AppImage",
         "deb",
