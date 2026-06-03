@@ -58,7 +58,6 @@ export const useAppLayoutState = () => {
   const navigate = useNavigate()
   const lastHandledRouteRef = useRef<string | null>(null)
   const sessionRestoreStartedRef = useRef(false)
-
   const activeTab = useMemo(
     () => tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? null,
     [activeTabId, tabs],
@@ -106,7 +105,6 @@ export const useAppLayoutState = () => {
     setInspectedPath,
     defaultFileView,
   })
-
   const workspaceKey = `${rootKind}:${rootPath}`
   const routeSyncEnabled =
     sessionRestored &&
@@ -146,7 +144,6 @@ export const useAppLayoutState = () => {
     setActiveTabId,
     touchRecentProject,
   })
-
   useEffect(() => {
     if (!hasHydrated || sessionRestoreStartedRef.current) return
     sessionRestoreStartedRef.current = true
@@ -178,7 +175,6 @@ export const useAppLayoutState = () => {
       cancelled = true
     }
   }, [hasHydrated, loadWorkspace, rootKind, rootPath])
-
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
@@ -201,7 +197,6 @@ export const useAppLayoutState = () => {
       if (unlistenSingleInstance) unlistenSingleInstance()
     }
   }, [openFolder])
-
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
@@ -245,7 +240,6 @@ export const useAppLayoutState = () => {
     setActiveTabId,
     setInspectedPath,
   })
-
   const fileTree = useMemo(() => buildFileTree(entries), [entries])
   const workspaceIndex = useWorkspaceIndex(
     entries,

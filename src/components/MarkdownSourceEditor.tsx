@@ -11,6 +11,7 @@ import type { FileEntry } from '@/store/useAppStore'
 import { fsApi, type FsMarkdownDiagnostic, type FsWorkspaceIndex } from '@/services/fsApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { useAppStore } from '@/store/useAppStore'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -30,6 +31,8 @@ const MarkdownSourceEditor = ({
   onChange,
 }: MarkdownSourceEditorProps) => {
   const darkMode = useDarkMode()
+  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
+  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const diagnosticHostRef = useRef<{
     editor: Parameters<OnMount>[0]
@@ -247,9 +250,9 @@ const MarkdownSourceEditor = ({
           scrollBeyondLastLine: false,
           fontSize: 14,
           lineNumbers: 'on',
-          smoothScrolling: true,
-          cursorBlinking: 'smooth',
-          cursorSmoothCaretAnimation: 'on',
+          smoothScrolling: motionSmoothScrolling,
+          cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
+          cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
           cursorSurroundingLines: 3,
           cursorSurroundingLinesStyle: 'all',
           cursorWidth: 2,

@@ -48,6 +48,10 @@
   scrollbar-gutter: stable;
 }
 
+:root[data-motion-smooth-scrolling='false'] .motion-scroll-viewport {
+  scroll-behavior: auto;
+}
+
 .motion-panel {
   min-width: 0;
   will-change: flex-basis, flex-grow, opacity, transform;
@@ -103,6 +107,14 @@
     background-color 180ms ease,
     opacity 180ms ease,
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root[data-motion-panels='false'] .motion-panel,
+:root[data-motion-panels='false'] .motion-panel-surface,
+:root[data-motion-panels='false'] .is-panel-layout-animating > [data-panel],
+:root[data-motion-panels='false'] .is-panel-layout-animating .resize-handle {
+  transition: none;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

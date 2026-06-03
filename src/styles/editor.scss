@@ -54,6 +54,10 @@
   caret-color: transparent;
 }
 
+:root[data-motion-cursor='false'] .crepe .milkdown .ProseMirror.marklab-animated-cursor-host {
+  caret-color: hsl(var(--primary));
+}
+
 .marklab-animated-caret {
   --marklab-caret-x: 0px;
   --marklab-caret-y: 0px;
@@ -81,6 +85,10 @@
 .marklab-animated-caret.is-visible {
   animation: marklab-caret-blink 1.1s ease-in-out infinite;
   opacity: 1;
+}
+
+:root[data-motion-cursor='false'] .marklab-animated-caret {
+  display: none;
 }
 
 @keyframes marklab-caret-blink {

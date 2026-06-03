@@ -29,6 +29,9 @@ const generalSettingsSchema = z.object({
   showEditorStatusBar: z.boolean(),
   defaultFileView: z.enum(['edit', 'source', 'graph']),
   markdownAssetImportStrategy: z.enum(['copy-to-document-assets', 'preserve-path']),
+  motionSmoothScrolling: z.boolean(),
+  motionAnimatedCursor: z.boolean(),
+  motionAnimatedPanels: z.boolean(),
 })
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>
@@ -45,6 +48,12 @@ const GeneralSettingsPage = () => {
   const setMarkdownAssetImportStrategy = useAppStore(
     (state) => state.setMarkdownAssetImportStrategy,
   )
+  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
+  const setMotionSmoothScrolling = useAppStore((state) => state.setMotionSmoothScrolling)
+  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
+  const setMotionAnimatedCursor = useAppStore((state) => state.setMotionAnimatedCursor)
+  const motionAnimatedPanels = useAppStore((state) => state.motionAnimatedPanels)
+  const setMotionAnimatedPanels = useAppStore((state) => state.setMotionAnimatedPanels)
   const form = useForm<GeneralSettingsValues>({
     mode: 'onChange',
     resolver: zodResolver(generalSettingsSchema),
@@ -53,6 +62,9 @@ const GeneralSettingsPage = () => {
       showEditorStatusBar,
       defaultFileView,
       markdownAssetImportStrategy,
+      motionSmoothScrolling,
+      motionAnimatedCursor,
+      motionAnimatedPanels,
     },
   })
 
@@ -176,6 +188,71 @@ const GeneralSettingsPage = () => {
             )}
           />
         </div>
+      </section>
+      <section className="settings-row-surface space-y-3 rounded-md p-3">
+        <div>
+          <div className="mb-1 text-sm font-medium">{t('settings.motion')}</div>
+          <div className="text-xs leading-5 text-muted-foreground">
+            {t('settings.motionDescription')}
+          </div>
+        </div>
+        <SettingsRow
+          title={t('settings.motionSmoothScrolling')}
+          description={t('settings.motionSmoothScrollingDescription')}
+          control={
+            <Controller
+              control={form.control}
+              name="motionSmoothScrolling"
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked)
+                    setMotionSmoothScrolling(checked)
+                  }}
+                />
+              )}
+            />
+          }
+        />
+        <SettingsRow
+          title={t('settings.motionAnimatedCursor')}
+          description={t('settings.motionAnimatedCursorDescription')}
+          control={
+            <Controller
+              control={form.control}
+              name="motionAnimatedCursor"
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked)
+                    setMotionAnimatedCursor(checked)
+                  }}
+                />
+              )}
+            />
+          }
+        />
+        <SettingsRow
+          title={t('settings.motionAnimatedPanels')}
+          description={t('settings.motionAnimatedPanelsDescription')}
+          control={
+            <Controller
+              control={form.control}
+              name="motionAnimatedPanels"
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked)
+                    setMotionAnimatedPanels(checked)
+                  }}
+                />
+              )}
+            />
+          }
+        />
       </section>
     </div>
   )

@@ -48,7 +48,7 @@ const TitlebarCommandDialog = ({
   const [query, setQuery] = useState('')
   const trimmedQuery = query.trim()
   const debouncedQuery = useDebounce(trimmedQuery, { wait: 160 })
-  const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory(open)
+  const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
   const fullTextSearch = useQuery({
     queryKey: ['command-workspace-search', debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 8),

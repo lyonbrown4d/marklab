@@ -62,6 +62,9 @@ type AppState = {
   graphMiniMapEnabled: boolean
   graphContentMode: GraphContentMode
   markdownAssetImportStrategy: MarkdownAssetImportStrategy
+  motionSmoothScrolling: boolean
+  motionAnimatedCursor: boolean
+  motionAnimatedPanels: boolean
   shortcutOverrides: ShortcutBindings
   setRootPath: (path: string) => void
   setRootKind: (kind: 'internal' | 'external' | 'single') => void
@@ -78,6 +81,9 @@ type AppState = {
   setGraphMiniMapEnabled: (enabled: boolean) => void
   setGraphContentMode: (mode: GraphContentMode) => void
   setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
+  setMotionSmoothScrolling: (enabled: boolean) => void
+  setMotionAnimatedCursor: (enabled: boolean) => void
+  setMotionAnimatedPanels: (enabled: boolean) => void
   setShortcutOverride: (action: ShortcutActionId, bindings: string[] | null) => void
   resetShortcutOverrides: () => void
   toggleSidebar: () => void
@@ -106,6 +112,9 @@ export const useAppStore = create<AppState>()(
       graphMiniMapEnabled: true,
       graphContentMode: 'summary',
       markdownAssetImportStrategy: 'copy-to-document-assets',
+      motionSmoothScrolling: true,
+      motionAnimatedCursor: true,
+      motionAnimatedPanels: true,
       shortcutOverrides: {},
       setRootPath: (path) => set((state) => (state.rootPath === path ? state : { rootPath: path })),
       setRootKind: (kind) => set((state) => (state.rootKind === kind ? state : { rootKind: kind })),
@@ -148,6 +157,18 @@ export const useAppStore = create<AppState>()(
             ? state
             : { markdownAssetImportStrategy },
         ),
+      setMotionSmoothScrolling: (motionSmoothScrolling) =>
+        set((state) =>
+          state.motionSmoothScrolling === motionSmoothScrolling ? state : { motionSmoothScrolling },
+        ),
+      setMotionAnimatedCursor: (motionAnimatedCursor) =>
+        set((state) =>
+          state.motionAnimatedCursor === motionAnimatedCursor ? state : { motionAnimatedCursor },
+        ),
+      setMotionAnimatedPanels: (motionAnimatedPanels) =>
+        set((state) =>
+          state.motionAnimatedPanels === motionAnimatedPanels ? state : { motionAnimatedPanels },
+        ),
       setShortcutOverride: (action, bindings) =>
         set((state) => {
           const next = { ...state.shortcutOverrides }
@@ -176,7 +197,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'marko.app',
       storage: createElectronSettingsJsonStorage('marko.app'),
-      version: 11,
+      version: 12,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
@@ -231,6 +252,9 @@ export const useAppStore = create<AppState>()(
             state.markdownAssetImportStrategy === 'preserve-path'
               ? 'preserve-path'
               : 'copy-to-document-assets',
+          motionSmoothScrolling: state.motionSmoothScrolling ?? true,
+          motionAnimatedCursor: state.motionAnimatedCursor ?? true,
+          motionAnimatedPanels: state.motionAnimatedPanels ?? true,
           shortcutOverrides: sanitizeShortcutOverrides(
             version < 10
               ? (state as { shortcutOverrides?: unknown }).shortcutOverrides
@@ -255,6 +279,9 @@ export const useAppStore = create<AppState>()(
         graphMiniMapEnabled: state.graphMiniMapEnabled,
         graphContentMode: state.graphContentMode,
         markdownAssetImportStrategy: state.markdownAssetImportStrategy,
+        motionSmoothScrolling: state.motionSmoothScrolling,
+        motionAnimatedCursor: state.motionAnimatedCursor,
+        motionAnimatedPanels: state.motionAnimatedPanels,
         shortcutOverrides: state.shortcutOverrides,
       }),
     },

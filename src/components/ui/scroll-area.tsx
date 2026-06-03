@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
 
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/store/useAppStore'
 
 export interface ScrollAreaProps extends React.ComponentPropsWithoutRef<
   typeof ScrollAreaPrimitive.Root
@@ -40,6 +41,8 @@ const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
 >(({ className, children, viewportClassName, smoothWheel = true, ...props }, ref) => {
+  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
+  const smoothWheelEnabled = smoothWheel && motionSmoothScrolling
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const animationFrameRef = React.useRef<number | null>(null)
   const animationStartRef = React.useRef(0)
@@ -78,7 +81,7 @@ const ScrollArea = React.forwardRef<
   const handleWheel = React.useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
       const viewport = viewportRef.current
-      if (!smoothWheel || !viewport || shouldSkipSmoothWheel(event)) return
+      if (!smoothWheelEnabled || !viewport || shouldSkipSmoothWheel(event)) return
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
       const maxScrollTop = viewport.scrollHeight - viewport.clientHeight
@@ -102,7 +105,7 @@ const ScrollArea = React.forwardRef<
       animationStartRef.current = performance.now()
       animationFrameRef.current = window.requestAnimationFrame(animateScroll)
     },
-    [animateScroll, cancelSmoothScroll, smoothWheel],
+    [animateScroll, cancelSmoothScroll, smoothWheelEnabled],
   )
 
   return (

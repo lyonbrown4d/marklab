@@ -10,6 +10,11 @@ const prefersReducedMotion = () => {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches
 }
 
+const isAnimatedCursorEnabled = () => {
+  if (typeof document === 'undefined') return false
+  return !prefersReducedMotion() && document.documentElement.dataset.motionCursor !== 'false'
+}
+
 const getCaretParent = (view: EditorView) => view.dom.parentElement ?? view.dom
 
 const createAnimatedCursorView = (initialView: EditorView) => {
@@ -36,7 +41,7 @@ const createAnimatedCursorView = (initialView: EditorView) => {
   const updateCaret = () => {
     animationFrame = null
     const { selection } = view.state
-    if (!selection.empty || !view.hasFocus()) {
+    if (!isAnimatedCursorEnabled() || !selection.empty || !view.hasFocus()) {
       setVisible(false)
       return
     }

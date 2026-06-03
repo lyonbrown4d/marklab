@@ -33,6 +33,7 @@ import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { AppShellPanels } from '@/app/AppShellPanels'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
+import { useAppStore } from '@/store/useAppStore'
 
 const createUntitledPath = (files: FileEntry[]) => {
   const existingPaths = new Set(
@@ -76,6 +77,9 @@ export type LayoutContext = {
 
 const AppLayout = () => {
   const state = useAppLayoutState()
+  const motionSmoothScrolling = useAppStore((store) => store.motionSmoothScrolling)
+  const motionAnimatedCursor = useAppStore((store) => store.motionAnimatedCursor)
+  const motionAnimatedPanels = useAppStore((store) => store.motionAnimatedPanels)
   const stateRef = useLatest(state)
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -280,7 +284,12 @@ const AppLayout = () => {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = state.theme
-  }, [state.theme])
+    document.documentElement.dataset.motionSmoothScrolling = motionSmoothScrolling
+      ? 'true'
+      : 'false'
+    document.documentElement.dataset.motionCursor = motionAnimatedCursor ? 'true' : 'false'
+    document.documentElement.dataset.motionPanels = motionAnimatedPanels ? 'true' : 'false'
+  }, [motionAnimatedCursor, motionAnimatedPanels, motionSmoothScrolling, state.theme])
 
   const openHeading = useCallback(
     (path: string, slug: string) => {

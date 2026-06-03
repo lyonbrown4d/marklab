@@ -36,8 +36,8 @@ const writeSearchHistory = (history: string[]) => {
   }
 }
 
-export const useCommandSearchHistory = (enabled: boolean) => {
-  const [searches, setSearches] = useState<string[]>(() => (enabled ? readSearchHistory() : []))
+export const useCommandSearchHistory = () => {
+  const [searches, setSearches] = useState<string[]>(readSearchHistory)
 
   const rememberSearch = useCallback((value: string) => {
     const nextSearch = normalizeSearchTerm(value)

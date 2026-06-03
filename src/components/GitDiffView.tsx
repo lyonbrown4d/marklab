@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { gitApi, type GitDiffRequest } from '@/services/gitApi'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
+import { useAppStore } from '@/store/useAppStore'
 
 type GitDiffViewProps = {
   rootPath: string
@@ -32,6 +33,8 @@ const languageForPath = (path: string) => {
 const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
+  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
+  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
   const diffQuery = useQuery({
     queryKey: ['git-file-diff', rootPath, request.path, request.section],
     queryFn: () => gitApi.getFileDiff(rootPath, request.path, request.section),
@@ -103,9 +106,9 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
               fontSize: 13,
               lineNumbers: 'on',
               automaticLayout: true,
-              smoothScrolling: true,
-              cursorBlinking: 'smooth',
-              cursorSmoothCaretAnimation: 'on',
+              smoothScrolling: motionSmoothScrolling,
+              cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
+              cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
               cursorWidth: 2,
               renderWhitespace: 'selection',
               originalEditable: false,
