@@ -2,6 +2,11 @@ name: Release Desktop
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag. Defaults to app-v<package.json version>.'
+        required: false
+        type: string
   push:
     tags:
       - 'app-v*'
@@ -9,155 +14,184 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_VERSION: '24'
+
 jobs:
-  test:
-    name: Test
+  validate:
+    name: Validate
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
       - name: Enable pnpm
         run: corepack enable
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck frontend
-        run: pnpm exec tsc --noEmit
+      - name: Typecheck
+        run: pnpm exec tsc -b --pretty false
 
-      - name: Lint frontend
+      - name: Lint
         run: pnpm exec eslint .
 
-      - name: Test frontend
+      - name: Test
         run: pnpm test
 
-      - name: Check Rust formatting
-        run: cargo fmt --all -- --check
-        working-directory: src-tauri
-
-      - name: Test Rust
-        run: cargo test
-        working-directory: src-tauri
-
-  create-release:
-    name: Create GitHub Release
-    needs: test
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-22.04
-    outputs:
-      release-id: ${{ steps.release.outputs.release-id }}
-    steps:
-      - name: Create or reuse draft release
-        id: release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_BODY: Automated desktop release. Installers are attached below.
-          RELEASE_NAME: marko ${{ github.ref_name }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          release_id="$(
-            gh api "repos/$GITHUB_REPOSITORY/releases" \
-              --jq "map(select(.tag_name == \"$RELEASE_TAG\"))[0].id"
-          )"
-
-          if [ -z "$release_id" ] || [ "$release_id" = "null" ]; then
-            gh release create "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --draft \
-              --verify-tag \
-              --title "$RELEASE_NAME" \
-              --notes "$RELEASE_BODY"
-
-            release_id="$(
-              gh api "repos/$GITHUB_REPOSITORY/releases" \
-                --jq "map(select(.tag_name == \"$RELEASE_TAG\"))[0].id"
-            )"
-          fi
-
-          if [ -z "$release_id" ] || [ "$release_id" = "null" ]; then
-            echo "Unable to resolve release id for $RELEASE_TAG" >&2
-            exit 1
-          fi
-          echo "release-id=$release_id" >> "$GITHUB_OUTPUT"
-
-  build-release:
-    name: Build ${{ matrix.platform }}
-    needs:
-      - test
-      - create-release
-    if: ${{ always() && needs.test.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
+  build:
+    name: Build ${{ matrix.name }}
+    needs: validate
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04
-            args: ''
-          - platform: macos-latest
-            args: '--target universal-apple-darwin'
-          - platform: windows-latest
-            args: ''
-    runs-on: ${{ matrix.platform }}
+          - name: linux
+            os: ubuntu-22.04
+            command: pnpm dist:linux
+          - name: macos
+            os: macos-latest
+            command: pnpm dist:mac
+          - name: windows
+            os: windows-latest
+            command: pnpm dist:win
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Install Linux packaging dependencies
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Enable pnpm
-        run: corepack enable
+          sudo apt-get install -y libfuse2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Enable pnpm
+        run: corepack enable
 
-      - name: Add macOS universal Rust targets
-        if: matrix.platform == 'macos-latest'
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and upload Tauri bundles
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Electron bundles
+        run: ${{ matrix.command }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          releaseId: ${{ needs.create-release.outputs.release-id }}
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'app-v__VERSION__' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('marko {0}', github.ref_name) || 'marko v__VERSION__' }}
-          releaseBody: 'Automated desktop release. Installers are attached below.'
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          name: marklab-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/*.tar.gz
+            release/*.zip
+            release/*.blockmap
+            release/*.yml
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-artifacts
+
+      - name: Resolve release tag
+        id: release-tag
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            release_tag="${GITHUB_REF_NAME}"
+          elif [ -n "${{ github.event.inputs.tag }}" ]; then
+            release_tag="${{ github.event.inputs.tag }}"
+          else
+            version="$(node -p "require('./package.json').version")"
+            release_tag="app-v${version}"
+          fi
+
+          if [ -z "$release_tag" ]; then
+            echo "Unable to resolve release tag." >&2
+            exit 1
+          fi
+
+          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create or reuse draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "marklab $RELEASE_TAG" \
+              --notes "Automated desktop release. Installers are attached below."
+            exit 0
+          fi
+
+          create_args=(
+            "$RELEASE_TAG"
+            --repo "$GITHUB_REPOSITORY"
+            --draft
+            --title "marklab $RELEASE_TAG"
+            --notes "Automated desktop release. Installers are attached below."
+          )
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            create_args+=(--verify-tag)
+          else
+            create_args+=(--target "$GITHUB_SHA")
+          fi
+
+          gh release create "${create_args[@]}"
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
+        shell: bash
+        run: |
+          mapfile -t assets < <(
+            find downloaded-artifacts -type f \
+              \( -name '*.AppImage' \
+              -o -name '*.deb' \
+              -o -name '*.dmg' \
+              -o -name '*.exe' \
+              -o -name '*.tar.gz' \
+              -o -name '*.zip' \
+              -o -name '*.blockmap' \
+              -o -name '*.yml' \) \
+              | sort
+          )
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release assets found." >&2
+            exit 1
+          fi
+
+          gh release upload "$RELEASE_TAG" "${assets[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
