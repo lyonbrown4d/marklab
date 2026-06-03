@@ -4,14 +4,14 @@ import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
-import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
+import type { IPty } from 'node-pty'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type {
   TerminalExitEvent,
   TerminalOutputEvent,
   TerminalSessionInfo,
 } from '@electron/services/terminal/types.js'
-type NodePtyModule = typeof import('@homebridge/node-pty-prebuilt-multiarch')
+type NodePtyModule = typeof import('node-pty')
 type CwdProvider = () => string
 type TerminalSession =
   | {
@@ -156,7 +156,7 @@ export class TerminalService {
   private loadPty(): NodePtyModule | null {
     if (this.ptyModule !== undefined) return this.ptyModule
     try {
-      this.ptyModule = require('@homebridge/node-pty-prebuilt-multiarch') as NodePtyModule
+      this.ptyModule = require('node-pty') as NodePtyModule
     } catch {
       this.ptyModule = null
       this.logger.warn('pty backend unavailable')

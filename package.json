@@ -7,14 +7,27 @@
   "type": "module",
   "main": "dist-electron/main.js",
   "packageManager": "pnpm@10.26.0",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "node-pty"
+    ],
+    "patchedDependencies": {
+      "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:electron": "pnpm electron:build",
     "electron:dev": "vite --mode electron",
-    "electron:build": "vite build --mode electron",
+    "native:rebuild": "node scripts/rebuild-node-pty.mjs",
+    "electron:build": "pnpm native:rebuild && vite build --mode electron",
     "electron:start": "pnpm electron:build && electron .",
-    "dev:desktop": "pnpm electron:dev",
+    "dev:desktop": "pnpm native:rebuild && pnpm electron:dev",
     "build:desktop": "pnpm electron:build",
     "package": "pnpm build:desktop && electron-builder --dir --publish never",
     "dist": "pnpm build:desktop && electron-builder --publish never",
@@ -42,7 +55,7 @@
     "productName": "Marklab",
     "asar": true,
     "asarUnpack": [
-      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*"
+      "node_modules/node-pty/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
@@ -52,7 +65,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "!node_modules/**/*",
-      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
+      "node_modules/node-pty/**/*",
       "package.json"
     ],
     "npmRebuild": false,
@@ -98,7 +111,6 @@
   "dependencies": {
     "@codemirror/language": "^6.12.3",
     "@dagrejs/dagre": "^3.0.0",
-    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@hookform/resolvers": "^5.4.0",
     "@milkdown/core": "^7.21.2",
     "@milkdown/crepe": "^7.21.2",
@@ -153,6 +165,7 @@
     "mermaid": "^11.15.0",
     "mitt": "3.0.1",
     "monaco-editor": "^0.55.1",
+    "node-pty": "^1.1.0",
     "react": "^19.2.7",
     "react-arborist": "^3.8.0",
     "react-day-picker": "^10.0.1",
@@ -180,6 +193,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
+    "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^10.0.1",
     "@rolldown/plugin-babel": "0.2.3",
     "@tailwindcss/postcss": "^4.3.0",
