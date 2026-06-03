@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import type { usePanelRef } from 'react-resizable-panels'
 
-const PANEL_LAYOUT_ANIMATION_MS = 220
+const PANEL_LAYOUT_ANIMATION_MS = 260
 const panelLayoutAnimationTimers = new WeakMap<HTMLElement, number>()
 
 const animatePanelLayoutChange = (element: HTMLElement | null, updateLayout: () => void) => {

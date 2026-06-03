@@ -10,6 +10,7 @@ export const useWorkspaceStoreSlice = () =>
       entries: state.entries,
       tabs: state.tabs,
       activeTabId: state.activeTabId,
+      hasHydrated: state.hasHydrated,
       setRootPath: state.setRootPath,
       setRootKind: state.setRootKind,
       setEntries: state.setEntries,

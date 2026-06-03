@@ -15,6 +15,7 @@ import type { FileViewKind } from '@/store/useAppStore'
 import type { GitDiffRequest } from '@/services/gitApi'
 import type { FsSearchResult } from '@/services/fsApi'
 import { getWorkspaceTabId } from '@/logic/tabs'
+import { cn } from '@/lib/utils'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -51,7 +52,7 @@ export const AppWorkspacePanels = ({
 }: AppWorkspacePanelsProps) => {
   return (
     <ResizableGroup
-      className="min-h-0 flex-1"
+      className="motion-panel-group min-h-0 flex-1"
       defaultLayout={workspacePanelLayout.defaultLayout}
       elementRef={workspaceGroupElementRef}
       id="marko-workspace-panels"
@@ -60,7 +61,10 @@ export const AppWorkspacePanels = ({
       resizeTargetMinimumSize={{ coarse: 28, fine: 8 }}
     >
       <ResizablePanel
-        className="min-h-0"
+        className={cn(
+          'motion-panel motion-panel-left min-h-0',
+          state.sidebarCollapsed && 'motion-panel-collapsed',
+        )}
         collapsedSize="48px"
         collapsible
         defaultSize="320px"
@@ -99,8 +103,12 @@ export const AppWorkspacePanels = ({
         disabled={state.sidebarCollapsed}
         id="left-sidebar-resize"
       />
-      <ResizablePanel className="min-h-0" id="workspace-main" minSize="360px">
-        <section className="workspace-main flex h-full min-w-0 flex-1 flex-col overflow-hidden border-x border-border/80">
+      <ResizablePanel
+        className="motion-panel motion-panel-main min-h-0"
+        id="workspace-main"
+        minSize="360px"
+      >
+        <section className="workspace-main motion-panel-surface flex h-full min-w-0 flex-1 flex-col overflow-hidden border-x border-border/80">
           <TabsBar
             tabs={state.tabs}
             dirtyPaths={state.dirtyPaths}
@@ -115,8 +123,8 @@ export const AppWorkspacePanels = ({
           <div className="min-h-0 flex-1 overflow-hidden">
             <KeepAlive
               activeCacheKey={routeCacheKey}
-              cacheNodeClassName="h-full"
-              containerClassName="h-full"
+              cacheNodeClassName="motion-view h-full"
+              containerClassName="motion-view-stack h-full"
               max={routeCacheMax}
             >
               {outlet}
@@ -130,7 +138,10 @@ export const AppWorkspacePanels = ({
         id="right-sidebar-resize"
       />
       <ResizablePanel
-        className="min-h-0"
+        className={cn(
+          'motion-panel motion-panel-right min-h-0',
+          state.rightSidebarCollapsed && 'motion-panel-collapsed',
+        )}
         collapsedSize="56px"
         collapsible
         defaultSize="288px"

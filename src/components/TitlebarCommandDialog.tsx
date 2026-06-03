@@ -1,49 +1,19 @@
-import {
-  CircleHelp,
-  FileText,
-  FilePlus2,
-  FolderPlus,
-  FolderOpen,
-  GitGraph,
-  ListTree,
-  PanelLeft,
-  PanelRight,
-  PenLine,
-  RefreshCw,
-  Search,
-  Settings2,
-  Terminal,
-  X,
-} from 'lucide-react'
-import { useState } from 'react'
+import { SearchX } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useDebounce } from 'ahooks'
 import AppCommandDialog from '@/components/AppCommandDialog'
-import {
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@/components/ui/command'
+import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
-import SearchResultPreview from '@/components/SearchResultPreview'
-
-type CommandFile = {
-  path: string
-  label: string
-}
-
-type CommandHeading = {
-  path: string
-  slug: string
-  text: string
-  level: number
-  label: string
-}
+import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandSearchHistory from '@/components/command/CommandSearchHistory'
+import CommandSearchResults, {
+  type CommandFile,
+  type CommandHeading,
+} from '@/components/command/CommandSearchResults'
+import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
 
 type TitlebarCommandDialogProps = {
   open: boolean
@@ -55,6 +25,8 @@ type TitlebarCommandDialogProps = {
   onOpenSearchResult: (result: FsSearchResult) => void
   onAction: (id: string) => void
   canCreateWorkspaceEntries: boolean
+  workspaceIndexed: boolean
+  indexedFileCount: number
   searchIndexRebuilding: boolean
 }
 
@@ -68,11 +40,15 @@ const TitlebarCommandDialog = ({
   onOpenSearchResult,
   onAction,
   canCreateWorkspaceEntries,
+  workspaceIndexed,
+  indexedFileCount,
   searchIndexRebuilding,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
-  const debouncedQuery = useDebounce(query.trim(), { wait: 160 })
+  const trimmedQuery = query.trim()
+  const debouncedQuery = useDebounce(trimmedQuery, { wait: 160 })
+  const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory(open)
   const fullTextSearch = useQuery({
     queryKey: ['command-workspace-search', debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 8),
@@ -80,185 +56,69 @@ const TitlebarCommandDialog = ({
     placeholderData: keepPreviousData,
     staleTime: 5_000,
   })
+  const fullTextResults = debouncedQuery === trimmedQuery ? (fullTextSearch.data ?? []) : []
+  const emptyQueryLabel =
+    trimmedQuery.length > 0 ? `No results for "${trimmedQuery}"` : 'No command results'
+  const handleOpenFile = useCallback(
+    (path: string) => {
+      rememberSearch(trimmedQuery)
+      onOpenFile(path)
+    },
+    [onOpenFile, rememberSearch, trimmedQuery],
+  )
+  const handleOpenHeading = useCallback(
+    (path: string, slug: string) => {
+      rememberSearch(trimmedQuery)
+      onOpenHeading(path, slug)
+    },
+    [onOpenHeading, rememberSearch, trimmedQuery],
+  )
+  const handleOpenSearchResult = useCallback(
+    (result: FsSearchResult) => {
+      rememberSearch(trimmedQuery)
+      onOpenSearchResult(result)
+    },
+    [onOpenSearchResult, rememberSearch, trimmedQuery],
+  )
 
   return (
     <AppCommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput value={query} onValueChange={setQuery} placeholder={t('sidebar.search')} />
       <CommandList>
-        <CommandEmpty>{t('center.noFile')}</CommandEmpty>
-        {fullTextSearch.data && fullTextSearch.data.length > 0 && (
-          <>
-            <CommandGroup heading={t('search.fullText')}>
-              {fullTextSearch.data.map((result) => (
-                <CommandItem
-                  key={`${result.path}:${result.line}:${result.column}`}
-                  value={`${result.title} ${result.path} ${result.snippet}`}
-                  onSelect={() => onOpenSearchResult(result)}
-                >
-                  <SearchResultPreview result={result} compact />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
-        {files.length > 0 && (
-          <>
-            <CommandGroup heading={t('command.files')}>
-              {files.map((file) => (
-                <CommandItem
-                  key={file.path}
-                  value={`${file.label} ${file.path}`}
-                  onSelect={() => onOpenFile(file.path)}
-                >
-                  <FileText className="h-4 w-4" />
-                  <span className="min-w-0">
-                    <span className="block truncate">{file.label}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {file.path}
-                    </span>
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
-        {headings.length > 0 && (
-          <>
-            <CommandGroup heading={t('command.headings')}>
-              {headings.map((heading) => (
-                <CommandItem
-                  key={`${heading.path}#${heading.slug}`}
-                  value={`${heading.text} ${heading.slug} ${heading.path}`}
-                  onSelect={() => onOpenHeading(heading.path, heading.slug)}
-                >
-                  <ListTree className="h-4 w-4" />
-                  <span className="min-w-0">
-                    <span className="block truncate">
-                      {'#'.repeat(Math.min(heading.level, 6))} {heading.text}
-                    </span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {heading.label}#{heading.slug}
-                    </span>
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
-        <CommandGroup heading="File">
-          <CommandItem disabled={!canCreateWorkspaceEntries} onSelect={() => onAction('file.new')}>
-            <FilePlus2 className="h-4 w-4" />
-            New File
-          </CommandItem>
-          <CommandItem
-            disabled={!canCreateWorkspaceEntries}
-            onSelect={() => onAction('file.new_folder')}
-          >
-            <FolderPlus className="h-4 w-4" />
-            New Folder
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('window.open_current_workspace_in_new_window')}>
-            <PanelRight className="h-4 w-4" />
-            New Window
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('file.open_project')}>
-            <FolderOpen className="h-4 w-4" />
-            {t('actions.openProject')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('file.open_file')}>
-            <FileText className="h-4 w-4" />
-            {t('actions.openFile')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('view.focus_file_search')}>
-            <Search className="h-4 w-4" />
-            {t('sidebar.searchAction')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('tab.close')}>
-            <X className="h-4 w-4" />
-            Close Current Tab
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('file.export_pdf')}>
-            <FileText className="h-4 w-4" />
-            {t('actions.exportPdf')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('file.export_docx')}>
-            <FileText className="h-4 w-4" />
-            {t('actions.exportDocx')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('file.export_html')}>
-            <FileText className="h-4 w-4" />
-            {t('actions.exportHtml')}
-          </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading="Workspace">
-          <CommandItem onSelect={() => onAction('workspace.open_graph')}>
-            <GitGraph className="h-4 w-4" />
-            Workspace Graph
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('terminal.open')}>
-            <Terminal className="h-4 w-4" />
-            Open Terminal
-          </CommandItem>
-          <CommandItem
-            disabled={searchIndexRebuilding}
-            onSelect={() => onAction('workspace.rebuild_search_index')}
-          >
-            <RefreshCw className="h-4 w-4" />
-            {searchIndexRebuilding ? 'Rebuilding Search Index...' : 'Rebuild Search Index'}
-          </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading="View">
-          <CommandItem onSelect={() => onAction('view.wysiwyg')}>
-            <PenLine className="h-4 w-4" />
-            {t('editor.modeWysiwyg')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('view.source')}>
-            <FileText className="h-4 w-4" />
-            {t('editor.modeSource')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('view.graph')}>
-            <GitGraph className="h-4 w-4" />
-            Graph View
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('view.toggle_sidebar')}>
-            <PanelLeft className="h-4 w-4" />
-            {t('actions.toggleSidebar')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('view.toggle_right_sidebar')}>
-            <PanelRight className="h-4 w-4" />
-            {t('actions.toggleRightSidebar')}
-          </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading={t('menu.settings')}>
-          <CommandItem onSelect={() => onAction('settings.open')}>
-            <Settings2 className="h-4 w-4" />
-            {t('menu.settings')}
-          </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading={t('menu.theme')}>
-          <CommandItem onSelect={() => onAction('theme.light')}>{t('theme.light')}</CommandItem>
-          <CommandItem onSelect={() => onAction('theme.dark')}>{t('theme.dark')}</CommandItem>
-          <CommandItem onSelect={() => onAction('theme.marko-light')}>
-            {t('theme.markoLight')}
-          </CommandItem>
-          <CommandItem onSelect={() => onAction('theme.marko-dark')}>
-            {t('theme.markoDark')}
-          </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading="Help">
-          <CommandItem onSelect={() => onAction('help.about')}>
-            <CircleHelp className="h-4 w-4" />
-            About marklab
-          </CommandItem>
-        </CommandGroup>
+        <CommandEmpty>
+          <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
+            <SearchX className="h-5 w-5 text-muted-foreground" />
+            <p className="text-sm text-foreground">{emptyQueryLabel}</p>
+            <p className="text-xs text-muted-foreground">
+              Try a title, path fragment, heading, command, or a 2+ character full-text query.
+            </p>
+          </div>
+        </CommandEmpty>
+        <CommandSearchHistory
+          query={query}
+          searches={searches}
+          onSelectSearch={setQuery}
+          onClearSearches={clearSearchHistory}
+        />
+        <CommandSearchResults
+          query={query}
+          files={files}
+          headings={headings}
+          fullTextResults={fullTextResults}
+          fullTextFetching={fullTextSearch.isFetching}
+          fullTextError={fullTextSearch.isError}
+          workspaceIndexed={workspaceIndexed}
+          indexedFileCount={indexedFileCount}
+          searchIndexRebuilding={searchIndexRebuilding}
+          onOpenFile={handleOpenFile}
+          onOpenHeading={handleOpenHeading}
+          onOpenSearchResult={handleOpenSearchResult}
+        />
+        <CommandActionSections
+          canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+          searchIndexRebuilding={searchIndexRebuilding}
+          onAction={onAction}
+        />
       </CommandList>
     </AppCommandDialog>
   )

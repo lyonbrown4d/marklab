@@ -104,6 +104,9 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
               lineNumbers: 'on',
               automaticLayout: true,
               smoothScrolling: true,
+              cursorBlinking: 'smooth',
+              cursorSmoothCaretAnimation: 'on',
+              cursorWidth: 2,
               renderWhitespace: 'selection',
               originalEditable: false,
             }}

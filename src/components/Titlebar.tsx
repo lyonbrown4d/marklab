@@ -548,6 +548,8 @@ const Titlebar = ({
         onOpenSearchResult={onCommandOpenSearchResult}
         onAction={onCommandAction}
         canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+        workspaceIndexed={Boolean(workspaceIndex)}
+        indexedFileCount={workspaceIndex?.files.length ?? 0}
         searchIndexRebuilding={searchIndexRebuilding}
       />
       <SettingsDialog open={settingsOpen} onOpenChange={onSettingsOpenChange} />

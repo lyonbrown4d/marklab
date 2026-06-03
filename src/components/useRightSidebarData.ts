@@ -3,21 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import keyBy from 'lodash-es/keyBy'
 import { useWorkspaceMarkdownContents } from '@/app/useWorkspaceMarkdownContents'
 import {
+  buildBacklinksFromMarkdownContents,
+  buildBacklinksFromWorkspaceIndex,
+} from '@/logic/backlinks'
+import {
   getMarkdownSourceDiagnostics,
   type MarkdownSourceDiagnostic,
 } from '@/logic/markdownDiagnostics'
-import {
-  createFileLabel,
-  extractHeadings,
-  extractLinks,
-  isExternalLink,
-  resolveRelativePath,
-  splitLinkTarget,
-} from '@/logic/paths'
+import { getMarkdownAssetReport } from '@/logic/assets'
+import { extractHeadings, splitLinkTarget } from '@/logic/paths'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
 import { isDesktopRuntime } from '@/runtime/environment'
-import type { SidebarBacklink } from '@/components/RightSidebarContent'
 
 type UseRightSidebarDataArgs = {
   collapsed: boolean
@@ -121,51 +118,24 @@ export const useRightSidebarData = ({
     shouldWaitForIndexedActiveTarget,
     targetContent,
   ])
-  const backlinks = useMemo<SidebarBacklink[]>(() => {
+  const backlinks = useMemo(() => {
     if (collapsed) return []
     if (!deferredTargetPath) return []
 
     if (workspaceIndex) {
-      return workspaceIndex.files.flatMap((file) => {
-        if (file.path === deferredTargetPath) return []
-        return file.links
-          .filter((link) => !link.is_external && link.target_path === deferredTargetPath)
-          .map((link) => ({
-            sourcePath: file.path,
-            text: link.text || link.target,
-            context: link.context,
-            line: link.line,
-            column: link.column,
-          }))
+      return buildBacklinksFromWorkspaceIndex({
+        targetPath: deferredTargetPath,
+        workspaceIndex,
       })
     }
 
-    const nameIndex = new Map<string, string>()
-    files
-      .filter((file) => file.kind === 'file')
-      .forEach((file) => {
-        nameIndex.set(createFileLabel(file.path).toLowerCase(), file.path)
-      })
-
-    const results: SidebarBacklink[] = []
-    files
-      .filter((file) => file.kind === 'file' && file.path !== deferredTargetPath)
-      .forEach((file) => {
-        const content =
-          file.path === activePath ? deferredEditorValue : (workspaceContents[file.path] ?? '')
-        extractLinks(content).forEach((link) => {
-          const linkedPath = normalizeLinkedPath(file.path, link, nameIndex)
-          if (linkedPath !== deferredTargetPath) return
-          results.push({
-            sourcePath: file.path,
-            text: link.text || link.target,
-            context: link.context,
-            line: link.line,
-            column: link.column,
-          })
-        })
-      })
-    return results
+    return buildBacklinksFromMarkdownContents({
+      activePath,
+      activeContent: deferredEditorValue,
+      targetPath: deferredTargetPath,
+      files,
+      fileContents: workspaceContents,
+    })
   }, [
     activePath,
     collapsed,
@@ -204,22 +174,6 @@ export const useRightSidebarData = ({
     workspaceIndex,
   ])
   const documentStats = useIdleDocumentStats(statsContent, !collapsed)
-  const outgoingLinkCount = useMemo(() => {
-    if (collapsed) return 0
-    if (!deferredTargetPath) return 0
-    if (shouldUseIndexedTarget && indexedTargetFile) {
-      return indexedTargetFile.links.filter((link) => !link.is_external).length
-    }
-    if (shouldWaitForIndexedActiveTarget) return 0
-    return extractLinks(targetContent).filter((link) => !isExternalLink(link.target)).length
-  }, [
-    collapsed,
-    deferredTargetPath,
-    indexedTargetFile,
-    shouldUseIndexedTarget,
-    shouldWaitForIndexedActiveTarget,
-    targetContent,
-  ])
   const errorProblems = useMemo(
     () => problems.filter((problem) => problem.severity === 'error'),
     [problems],
@@ -227,6 +181,14 @@ export const useRightSidebarData = ({
   const warningProblems = useMemo(
     () => problems.filter((problem) => problem.severity !== 'error'),
     [problems],
+  )
+  const assetReport = useMemo(
+    () =>
+      getMarkdownAssetReport({
+        workspaceIndex: collapsed ? null : workspaceIndex,
+        activePath: deferredTargetPath,
+      }),
+    [collapsed, deferredTargetPath, workspaceIndex],
   )
 
   return {
@@ -236,33 +198,10 @@ export const useRightSidebarData = ({
     errorProblems,
     warningProblems,
     documentStats,
-    outgoingLinkCount,
     displayMetadata,
     loadingMetadata: metadataQuery.isFetching && !metadataQuery.data,
+    assetReport,
   }
-}
-
-const normalizeLinkedPath = (
-  sourcePath: string,
-  link: ReturnType<typeof extractLinks>[number],
-  nameIndex: Map<string, string>,
-) => {
-  if (isExternalLink(link.target)) return null
-
-  const { path: linkPath } = splitLinkTarget(link.target)
-  if (link.type === 'wiki') {
-    return nameIndex.get(linkPath.toLowerCase()) ?? `${linkPath}.md`
-  }
-
-  if (linkPath.trim().length === 0) {
-    return sourcePath
-  }
-
-  const normalized = resolveRelativePath(sourcePath, linkPath)
-  if (!normalized) return null
-  return normalized.endsWith('.md') || normalized.endsWith('.markdown')
-    ? normalized
-    : `${normalized}.md`
 }
 
 type IdleWindow = Window & {

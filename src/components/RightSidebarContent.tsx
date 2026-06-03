@@ -4,14 +4,17 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { InspectorEmptyState, PropertyCell } from '@/components/RightSidebarPrimitives'
 import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRail'
+import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
 import { RightSidebarProblemsPanel } from '@/components/RightSidebarProblemsPanel'
 import { RightSidebarSummary } from '@/components/RightSidebarSummary'
 import { useI18n } from '@/i18n/useI18n'
+import type { BacklinkReference } from '@/logic/backlinks'
+import type { MarkdownAssetReport } from '@/logic/assets'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import { createFileLabel } from '@/logic/paths'
 import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/useAppStore'
-import { CircleAlert, FileText, Link2, ListTree } from 'lucide-react'
+import { CircleAlert, FileText, ImageIcon, Link2, ListTree } from 'lucide-react'
 
 type SidebarHeading = {
   level: number
@@ -19,13 +22,7 @@ type SidebarHeading = {
   slug: string
 }
 
-export type SidebarBacklink = {
-  sourcePath: string
-  text: string
-  context: string
-  line: number
-  column: number
-}
+export type SidebarBacklink = BacklinkReference
 
 type RightSidebarContentProps = {
   activePath: string | null
@@ -41,9 +38,9 @@ type RightSidebarContentProps = {
     lines: number
     words: number
   }
-  outgoingLinkCount: number
   displayMetadata: FsPathMetadata | null
   loadingMetadata: boolean
+  assetReport: MarkdownAssetReport
   onOpenHeading: (slug: string) => void
   onOpenBacklink: (backlink: SidebarBacklink) => void
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
@@ -77,9 +74,9 @@ export const RightSidebarContent = ({
   errorProblems,
   warningProblems,
   documentStats,
-  outgoingLinkCount,
   displayMetadata,
   loadingMetadata,
+  assetReport,
   onOpenHeading,
   onOpenBacklink,
   onOpenProblem,
@@ -100,7 +97,7 @@ export const RightSidebarContent = ({
       />
 
       <Tabs defaultValue="outline" className="mt-1.5 flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-8 w-full grid-cols-4 rounded-md border border-sidebar-border bg-background/65 p-0.5">
+        <TabsList className="grid h-8 w-full grid-cols-5 rounded-md border border-sidebar-border bg-background/65 p-0.5">
           <TabsTrigger value="outline" className="gap-1 rounded px-1 text-[11px]">
             <ListTree className="h-3.5 w-3.5" />
             {t('inspector.outline')}
@@ -112,6 +109,10 @@ export const RightSidebarContent = ({
           <TabsTrigger value="problems" className="gap-1 rounded px-1 text-[11px]">
             <CircleAlert className="h-3.5 w-3.5" />
             {t('inspector.problems')}
+          </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-1 rounded px-1 text-[11px]">
+            <ImageIcon className="h-3.5 w-3.5" />
+            {t('inspector.assets')}
           </TabsTrigger>
           <TabsTrigger value="properties" className="gap-1 rounded px-1 text-[11px]">
             <FileText className="h-3.5 w-3.5" />
@@ -184,9 +185,22 @@ export const RightSidebarContent = ({
                       <span className="block truncate text-xs font-medium">
                         {createFileLabel(backlink.sourcePath)}
                       </span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        {backlink.text}
+                      <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {backlink.text}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0 rounded px-1 py-0 text-[10px]"
+                        >
+                          L{backlink.line}:{backlink.column}
+                        </Badge>
                       </span>
+                      {backlink.targetAnchor && (
+                        <span className="block truncate text-[10px] text-muted-foreground/70">
+                          #{backlink.targetAnchor}
+                        </span>
+                      )}
                       {backlink.context && (
                         <span className="mt-0.5 block whitespace-normal text-[11px] leading-4 text-muted-foreground/80">
                           {backlink.context}
@@ -211,6 +225,10 @@ export const RightSidebarContent = ({
           />
         </TabsContent>
 
+        <TabsContent value="assets" className="mt-1 min-h-0 flex-1 overflow-hidden">
+          <RightSidebarAssetsPanel report={assetReport} />
+        </TabsContent>
+
         <TabsContent value="properties" className="mt-1 min-h-0 flex-1 overflow-hidden">
           <ScrollArea className="h-full" viewportClassName="p-2">
             <div className="mb-2 flex items-center justify-between">
@@ -231,7 +249,7 @@ export const RightSidebarContent = ({
                   <PropertyCell label={t('status.lines')} value={documentStats.lines} />
                   <PropertyCell label={t('status.words')} value={documentStats.words} />
                   <PropertyCell label={t('inspector.outline')} value={outline.length} />
-                  <PropertyCell label={t('inspector.backlinks')} value={outgoingLinkCount} />
+                  <PropertyCell label={t('inspector.backlinks')} value={backlinks.length} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <PropertyCell label={t('inspector.kind')} value={displayMetadata.kind} />

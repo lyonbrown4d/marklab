@@ -6,6 +6,7 @@ import type { ReactNodeViewUserOptions } from '@prosemirror-adapter/react'
 import { createMarkdownImageNodeView } from '@/components/milkdown/imageNodeView'
 import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
+import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 
 export type NodeViewFactory = (options: ReactNodeViewUserOptions) => NodeViewConstructor
 
@@ -44,6 +45,7 @@ export const configureMarkdownCrepe = (
       }),
     )
     .use(pasteLinkOnSelection)
+    .use(animatedCursor)
 
   return crepe
 }

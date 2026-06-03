@@ -42,13 +42,85 @@
   }
 }
 
+.motion-scroll-viewport {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.motion-panel {
+  min-width: 0;
+  will-change: flex-basis, flex-grow, opacity, transform;
+  transition:
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.motion-panel-left,
+.motion-panel-right,
+.motion-terminal-shell {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.motion-panel-left.motion-panel-collapsed {
+  opacity: 0.98;
+  transform: translate3d(-2px, 0, 0);
+}
+
+.motion-panel-right.motion-panel-collapsed {
+  opacity: 0.98;
+  transform: translate3d(2px, 0, 0);
+}
+
+.motion-terminal-shell.motion-panel-collapsed {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+}
+
+.motion-panel-surface {
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.motion-view {
+  animation: view-fade 160ms ease-out both;
+}
+
+.is-panel-layout-animating > [data-panel] {
+  transition:
+    flex-grow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.is-panel-layout-animating .resize-handle {
+  transition:
+    background-color 180ms ease,
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .motion-scroll-viewport {
+    scroll-behavior: auto;
+  }
+
   .panel-enter {
     animation: none;
   }
 
+  .motion-panel,
+  .motion-panel-surface,
+  .motion-view,
   .layout-rail {
+    animation: none;
     transition: none;
+    transform: none;
   }
 
   .is-panel-layout-animating > [data-panel] {

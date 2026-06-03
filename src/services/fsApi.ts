@@ -63,6 +63,7 @@ export const fsMarkdownLinkSchema = z.object({
 
 export const fsMarkdownAssetSchema = z.object({
   source_path: z.string(),
+  text: z.string().nullable().optional(),
   target: z.string(),
   target_path: z.string().nullable().optional(),
   is_external: z.boolean(),
@@ -81,6 +82,8 @@ export const fsIndexedMarkdownFileSchema = z.object({
 
 export const fsWorkspaceIndexSchema = z.object({
   files: z.array(fsIndexedMarkdownFileSchema),
+  paths: z.array(z.string()).optional(),
+  asset_paths: z.array(z.string()).optional(),
 })
 
 export const fsMarkdownDiagnosticSchema = z.object({
@@ -185,6 +188,8 @@ export type FsIndexedMarkdownFile = {
 }
 export type FsWorkspaceIndex = {
   files: FsIndexedMarkdownFile[]
+  paths?: string[]
+  asset_paths?: string[]
 }
 export type FsMarkdownDiagnostic = z.infer<typeof fsMarkdownDiagnosticSchema>
 export type FsSearchResult = z.infer<typeof fsSearchResultSchema>

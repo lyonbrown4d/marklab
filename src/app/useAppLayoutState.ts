@@ -6,7 +6,7 @@ import { buildFileTree } from '@/logic/fileTree'
 import { useProjectLoader } from '@/app/useProjectLoader'
 import { useEditorBuffer } from '@/app/useEditorBuffer'
 import { useGraphData } from '@/app/useGraphData'
-import { fsSnapshotSchema } from '@/services/fsApi'
+import { fsApi, fsSnapshotSchema } from '@/services/fsApi'
 import { useWorkspaceIndex } from '@/app/useWorkspaceIndex'
 import { useLayoutStoreSlice, useWorkspaceStoreSlice } from '@/store/selectors'
 import { getWorkspaceTabId } from '@/logic/tabs'
@@ -25,6 +25,7 @@ export const useAppLayoutState = () => {
     entries,
     tabs,
     activeTabId,
+    hasHydrated,
     setRootPath,
     setRootKind,
     setEntries,
@@ -50,10 +51,13 @@ export const useAppLayoutState = () => {
   const [isMaximized, setIsMaximized] = useState(false)
   const [tabViewModes, setTabViewModes] = useState<Record<string, ViewMode>>({})
   const [inspectedPath, setInspectedPath] = useState<string | null>(null)
+  const [sessionRestored, setSessionRestored] = useState(false)
+  const [hasHandledRoute, setHasHandledRoute] = useState(false)
 
   const location = useLocation()
   const navigate = useNavigate()
   const lastHandledRouteRef = useRef<string | null>(null)
+  const sessionRestoreStartedRef = useRef(false)
 
   const activeTab = useMemo(
     () => tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? null,
@@ -104,6 +108,10 @@ export const useAppLayoutState = () => {
   })
 
   const workspaceKey = `${rootKind}:${rootPath}`
+  const routeSyncEnabled =
+    sessionRestored &&
+    (location.pathname !== '/' || !activeTabId || tabs.length === 0 || hasHandledRoute)
+  const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
   const { fileContents, editorValue, dirtyPaths, loadingPaths, saveStates, onEditorChange } =
     useEditorBuffer({
       activePath: currentFilePath,
@@ -140,8 +148,36 @@ export const useAppLayoutState = () => {
   })
 
   useEffect(() => {
-    void loadWorkspace()
-  }, [loadWorkspace])
+    if (!hasHydrated || sessionRestoreStartedRef.current) return
+    sessionRestoreStartedRef.current = true
+
+    let cancelled = false
+    const restoreSession = async () => {
+      try {
+        if (isDesktopRuntime() && rootPath) {
+          try {
+            if (rootKind === 'single') {
+              await fsApi.setSingleFile(rootPath)
+            } else if (rootKind === 'external') {
+              await fsApi.setRoot(rootPath)
+            }
+          } catch (error) {
+            console.warn('Failed to restore persisted workspace root.', error)
+          }
+        }
+        await loadWorkspace()
+      } catch (error) {
+        console.warn('Failed to restore workspace session.', error)
+      } finally {
+        if (!cancelled) setSessionRestored(true)
+      }
+    }
+
+    void restoreSession()
+    return () => {
+      cancelled = true
+    }
+  }, [hasHydrated, loadWorkspace, rootKind, rootPath])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
@@ -189,6 +225,7 @@ export const useAppLayoutState = () => {
 
   useRouteTabSync({
     activeTabId,
+    enabled: routeSyncEnabled,
     gitDiffMatch,
     sourceMatch,
     graphFileMatch,
@@ -203,6 +240,7 @@ export const useAppLayoutState = () => {
     lastHandledRouteRef,
     inspectedPathRef,
     tabsRef,
+    onRouteHandled: markRouteHandled,
     setTabs,
     setActiveTabId,
     setInspectedPath,

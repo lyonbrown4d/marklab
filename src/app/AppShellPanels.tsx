@@ -33,7 +33,7 @@ export const AppShellPanels = ({
 }: AppShellPanelsProps) => {
   return (
     <ResizableGroup
-      className="min-h-0 flex-1"
+      className="motion-panel-group min-h-0 flex-1"
       defaultLayout={shellPanelLayout.defaultLayout}
       elementRef={shellGroupElementRef}
       id="marko-shell-panels"
@@ -41,7 +41,11 @@ export const AppShellPanels = ({
       orientation="vertical"
       resizeTargetMinimumSize={{ coarse: 28, fine: 8 }}
     >
-      <ResizablePanel className="min-h-0" id="workspace-area" minSize="260px">
+      <ResizablePanel
+        className="motion-panel motion-shell-workspace min-h-0"
+        id="workspace-area"
+        minSize="260px"
+      >
         {workspacePanels}
       </ResizablePanel>
       <ResizableSeparator
@@ -53,7 +57,10 @@ export const AppShellPanels = ({
         id="terminal-resize"
       />
       <ResizablePanel
-        className="min-h-0"
+        className={cn(
+          'motion-panel motion-terminal-shell min-h-0',
+          terminalOpen ? 'motion-panel-open' : 'motion-panel-collapsed',
+        )}
         collapsedSize="0px"
         collapsible
         defaultSize="280px"

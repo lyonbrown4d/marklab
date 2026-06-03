@@ -50,7 +50,7 @@ const RightSidebarComponent = ({
   const [pendingHeading, setPendingHeading] = useState<FocusHeadingRequest | null>(null)
   const [pendingSourcePosition, setPendingSourcePosition] =
     useState<FocusSourcePositionRequest | null>(null)
-  const targetPath = inspectedPath ?? activePath
+  const targetPath = activePath ? (inspectedPath ?? activePath) : null
   const {
     outline,
     backlinks,
@@ -58,9 +58,9 @@ const RightSidebarComponent = ({
     errorProblems,
     warningProblems,
     documentStats,
-    outgoingLinkCount,
     displayMetadata,
     loadingMetadata,
+    assetReport,
   } = useRightSidebarData({
     collapsed,
     activePath,
@@ -149,9 +149,9 @@ const RightSidebarComponent = ({
           errorProblems={errorProblems}
           warningProblems={warningProblems}
           documentStats={documentStats}
-          outgoingLinkCount={outgoingLinkCount}
           displayMetadata={displayMetadata}
           loadingMetadata={loadingMetadata}
+          assetReport={assetReport}
           onOpenHeading={handleOpenHeading}
           onOpenBacklink={handleOpenBacklink}
           onOpenProblem={handleOpenProblem}

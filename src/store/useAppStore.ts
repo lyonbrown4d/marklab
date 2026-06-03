@@ -50,6 +50,7 @@ type AppState = {
   entries: FileEntry[]
   tabs: WorkspaceTab[]
   activeTabId: string | null
+  hasHydrated: boolean
   viewMode: ViewMode
   theme: ThemeMode
   locale: Locale
@@ -67,6 +68,7 @@ type AppState = {
   setEntries: (entries: FileEntry[]) => void
   setTabs: (tabs: WorkspaceTab[]) => void
   setActiveTabId: (id: string | null) => void
+  setHasHydrated: (hydrated: boolean) => void
   setViewMode: (mode: ViewMode) => void
   setTheme: (theme: ThemeMode) => void
   setLocale: (locale: Locale) => void
@@ -92,6 +94,7 @@ export const useAppStore = create<AppState>()(
       entries: [],
       tabs: [],
       activeTabId: null,
+      hasHydrated: false,
       viewMode: 'wysiwyg',
       theme: 'marko-light',
       locale: getInitialLocale(),
@@ -118,6 +121,8 @@ export const useAppStore = create<AppState>()(
         }),
       setActiveTabId: (activeTabId) =>
         set((state) => (state.activeTabId === activeTabId ? state : { activeTabId })),
+      setHasHydrated: (hasHydrated) =>
+        set((state) => (state.hasHydrated === hasHydrated ? state : { hasHydrated })),
       setViewMode: (mode) => set((state) => (state.viewMode === mode ? state : { viewMode: mode })),
       setTheme: (theme) => set((state) => (state.theme === theme ? state : { theme })),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
@@ -172,6 +177,9 @@ export const useAppStore = create<AppState>()(
       name: 'marko.app',
       storage: createElectronSettingsJsonStorage('marko.app'),
       version: 11,
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
       migrate: (persistedState, version) => {
         const state = (persistedState ?? {}) as Partial<AppState> & { theme?: string }
         const legacyTheme =
