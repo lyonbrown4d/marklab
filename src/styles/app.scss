@@ -97,6 +97,23 @@
   color: hsl(var(--foreground));
 }
 
+.menu-bar-surface {
+  background: hsl(var(--popover));
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, hsl(var(--card)) 82%, transparent),
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
+.menu-surface {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow:
+    0 16px 42px -28px color-mix(in srgb, hsl(var(--foreground)) 46%, transparent),
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
 .command-trigger {
   background: color-mix(in srgb, hsl(var(--muted)) 72%, hsl(var(--card)));
   border: 1px solid color-mix(in srgb, hsl(var(--border)) 88%, transparent);

@@ -13,7 +13,7 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        'z-50 min-w-[180px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 p-1 text-sm text-foreground shadow-xl backdrop-blur',
+        'menu-surface z-50 min-w-[180px] overflow-hidden rounded-lg p-1 text-sm',
         'data-[state=open]:animate-[menu-float_130ms_cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
         className,
       )}
@@ -30,7 +30,7 @@ const ContextMenuItem = React.forwardRef<
   <ContextMenuPrimitive.Item
     ref={ref}
     className={cn(
-      'flex cursor-default select-none items-center rounded-md px-2 py-1.5 outline-none transition-colors focus:bg-accent/70 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'flex cursor-default select-none items-center rounded-md px-2 py-1.5 outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
     {...props}

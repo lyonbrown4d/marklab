@@ -19,6 +19,9 @@ export type MarklabWindows = {
   splash: BrowserWindow
   main: BrowserWindow
 }
+export type MainWindowPool = {
+  acquireMainWindow: () => Promise<BrowserWindow>
+}
 type WindowBounds = {
   height: number
   width: number
@@ -209,11 +212,17 @@ export const loadMainWindow = async (main: BrowserWindow) => {
   }
   await main.loadFile(getRendererUrl())
 }
+export const createLoadedMainWindow = async (logger: Logger = noopLogger) => {
+  const main = createMainWindow(logger)
+  await loadMainWindow(main)
+  return main
+}
 export const createMarklabWindows = async (
   logger: Logger = noopLogger,
+  mainWindowPool?: MainWindowPool,
 ): Promise<MarklabWindows> => {
   const splash = createSplashWindow()
-  const main = createMainWindow(logger)
-  await Promise.all([loadSplashWindow(splash), loadMainWindow(main)])
+  const mainWindow = mainWindowPool?.acquireMainWindow() ?? createLoadedMainWindow(logger)
+  const [main] = await Promise.all([mainWindow, loadSplashWindow(splash)])
   return { splash, main }
 }

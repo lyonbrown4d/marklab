@@ -17,6 +17,7 @@ import {
 } from '@electron/main/deepLinks.js'
 import type { DeepLinkPayload, SingleInstancePayload } from '@electron/types.js'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
+import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool.js'
 
 const APP_READY_FALLBACK_MS = 5000
 let windows: MarklabWindows | null = null
@@ -25,6 +26,7 @@ let rendererReady = false
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 let nativeIpc: NativeIpcRegistration | null = null
 let container: ElectronContainer | null = null
+let windowPool: MarklabWindowPool | null = null
 let legacyIpcRegistered = false
 let allowAppQuit = false
 let allowMainWindowClose = false
@@ -183,7 +185,8 @@ const bootstrap = async (): Promise<void> => {
     })
   }
   try {
-    windows = await createMarklabWindows(logger.child('window'))
+    windowPool ??= createMarklabWindowPool(logger.child('window-pool'))
+    windows = await createMarklabWindows(logger.child('window'), windowPool)
   } catch (error) {
     logger.error('window creation failed', { error })
     throw error
@@ -284,6 +287,7 @@ app.on('before-quit', (event) => {
     await flushWorkspaceBuffers('quit')
     allowAppQuit = true
     allowMainWindowClose = true
+    windowPool?.destroyIdleWindows()
     container?.cradle.logger.info('app quit continuing after flush')
     app.quit()
   })()
