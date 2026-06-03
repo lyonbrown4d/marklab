@@ -5,6 +5,7 @@ import { Slice, type Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
 import { Selection } from '@milkdown/kit/prose/state'
 import clamp from 'lodash-es/clamp'
 import { slugify } from '@/logic/paths'
+import { callMilkdownCommand } from '@/components/milkdown/commandCompat'
 
 export type PendingExternalValue = {
   path: string | null
@@ -139,7 +140,7 @@ export const insertImageIntoCrepe = (crepe: Crepe | null, src: string, alt = '')
   let inserted = false
   crepe.editor.action((ctx) => {
     const commands = ctx.get(commandsCtx)
-    inserted = commands.call(insertImageCommand.key, {
+    inserted = callMilkdownCommand(commands, insertImageCommand, {
       src,
       alt,
       title: '',

@@ -16,6 +16,7 @@ import {
 } from '@milkdown/kit/preset/commonmark'
 import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import type { ShortcutActionId } from '@/logic/shortcuts'
+import { callMilkdownCommand } from '@/components/milkdown/commandCompat'
 
 const headingShortcutLevels: Partial<Record<ShortcutActionId, number>> = {
   'editor.heading1': 1,
@@ -42,33 +43,33 @@ export const runMarkdownEditorShortcut = (
     const commands = ctx.get(commandsCtx)
 
     const setParagraph = () =>
-      commands.call(setBlockTypeCommand.key, {
+      callMilkdownCommand(commands, setBlockTypeCommand, {
         nodeType: paragraphSchema.type(ctx),
       })
 
     const setHeading = (level: number) =>
-      commands.call(setBlockTypeCommand.key, {
+      callMilkdownCommand(commands, setBlockTypeCommand, {
         nodeType: headingSchema.type(ctx),
         attrs: { level },
       })
 
     const setCodeBlock = () =>
-      commands.call(setBlockTypeCommand.key, {
+      callMilkdownCommand(commands, setBlockTypeCommand, {
         nodeType: codeBlockSchema.type(ctx),
       })
 
     const wrapInBulletList = () =>
-      commands.call(wrapInBlockTypeCommand.key, {
+      callMilkdownCommand(commands, wrapInBlockTypeCommand, {
         nodeType: bulletListSchema.type(ctx),
       })
 
     const wrapInOrderedList = () =>
-      commands.call(wrapInBlockTypeCommand.key, {
+      callMilkdownCommand(commands, wrapInBlockTypeCommand, {
         nodeType: orderedListSchema.type(ctx),
       })
 
     const wrapInBlockquote = () =>
-      commands.call(wrapInBlockTypeCommand.key, {
+      callMilkdownCommand(commands, wrapInBlockTypeCommand, {
         nodeType: blockquoteSchema.type(ctx),
       })
 
@@ -94,16 +95,16 @@ export const runMarkdownEditorShortcut = (
         handled = setParagraph()
         break
       case 'editor.bold':
-        handled = commands.call(toggleStrongCommand.key)
+        handled = callMilkdownCommand(commands, toggleStrongCommand)
         break
       case 'editor.italic':
-        handled = commands.call(toggleEmphasisCommand.key)
+        handled = callMilkdownCommand(commands, toggleEmphasisCommand)
         break
       case 'editor.inlineCode':
-        handled = commands.call(toggleInlineCodeCommand.key)
+        handled = callMilkdownCommand(commands, toggleInlineCodeCommand)
         break
       case 'editor.strike':
-        handled = commands.call(toggleStrikethroughCommand.key)
+        handled = callMilkdownCommand(commands, toggleStrikethroughCommand)
         break
       case 'editor.link': {
         const href = window.prompt('Link URL')
@@ -128,7 +129,7 @@ export const runMarkdownEditorShortcut = (
         handled = wrapInBulletList()
         break
       case 'editor.table':
-        handled = commands.call(insertTableCommand.key, { row: 3, col: 3 })
+        handled = callMilkdownCommand(commands, insertTableCommand, { row: 3, col: 3 })
         break
       case 'editor.clearFormat':
         handled = clearFormat()

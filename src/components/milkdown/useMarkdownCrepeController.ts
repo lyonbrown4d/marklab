@@ -291,8 +291,7 @@ export const useMarkdownCrepeController = ({
         subscribeImageDocumentPath,
       })
 
-      void crepe
-        .create()
+      void Promise.resolve(crepe.create())
         .then(() => {
           if (destroyed || !crepe) return
           crepeRef.current = crepe
