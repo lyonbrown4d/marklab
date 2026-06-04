@@ -16,6 +16,8 @@ import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { appApi } from '@/services/appApi'
+import { toast } from 'sonner'
+import { useI18n } from '@/i18n/useI18n'
 
 export const useAppLayoutState = () => {
   const {
@@ -53,6 +55,10 @@ export const useAppLayoutState = () => {
   const [inspectedPath, setInspectedPath] = useState<string | null>(null)
   const [sessionRestored, setSessionRestored] = useState(false)
   const [hasHandledRoute, setHasHandledRoute] = useState(false)
+  const [restoreStatusMessage, setRestoreStatusMessage] = useState<string | null>(null)
+  const [isRestoringSession, setIsRestoringSession] = useState(false)
+  const restoreInProgressRef = useRef(false)
+  const { t } = useI18n()
 
   const location = useLocation()
   const navigate = useNavigate()
@@ -144,43 +150,62 @@ export const useAppLayoutState = () => {
     setActiveTabId,
     touchRecentProject,
   })
+
+  const restoreWorkspaceSession = useCallback(async () => {
+    if (restoreInProgressRef.current) return
+    restoreInProgressRef.current = true
+    setIsRestoringSession(true)
+    try {
+      if (isDesktopRuntime() && rootPath) {
+        try {
+          if (rootKind === 'single') {
+            await fsApi.setSingleFile(rootPath)
+          } else if (rootKind === 'external') {
+            await fsApi.setRoot(rootPath)
+          }
+        } catch (error) {
+          setRestoreStatusMessage(t('app.restoreRootFailed'))
+          void error
+        }
+      }
+      await loadWorkspace()
+      setRestoreStatusMessage(null)
+    } catch (error) {
+      setRestoreStatusMessage(t('app.restoreSessionFailed'))
+      void error
+    } finally {
+      setIsRestoringSession(false)
+      restoreInProgressRef.current = false
+    }
+  }, [loadWorkspace, rootKind, rootPath, t])
+
   useEffect(() => {
     if (!hasHydrated || sessionRestoreStartedRef.current) return
     sessionRestoreStartedRef.current = true
 
     let cancelled = false
-    const restoreSession = async () => {
-      try {
-        if (isDesktopRuntime() && rootPath) {
-          try {
-            if (rootKind === 'single') {
-              await fsApi.setSingleFile(rootPath)
-            } else if (rootKind === 'external') {
-              await fsApi.setRoot(rootPath)
-            }
-          } catch (error) {
-            console.warn('Failed to restore persisted workspace root.', error)
-          }
-        }
-        await loadWorkspace()
-      } catch (error) {
-        console.warn('Failed to restore workspace session.', error)
-      } finally {
-        if (!cancelled) setSessionRestored(true)
-      }
-    }
+    void (async () => {
+      await restoreWorkspaceSession()
+      if (!cancelled) setSessionRestored(true)
+    })()
 
-    void restoreSession()
     return () => {
       cancelled = true
     }
-  }, [hasHydrated, loadWorkspace, rootKind, rootPath])
+  }, [hasHydrated, restoreWorkspaceSession])
+
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
     const openArgs = (args: string[]) => {
       const paths = args.filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('marklab:'))
-      for (const path of paths) void openFolder(path)
+      for (const path of paths) {
+        void openFolder(path).catch((error) => {
+          toast.error(t('app.openPathFromArgumentsFailed'), {
+            description: `${path}\n${String(error)}`,
+          })
+        })
+      }
     }
 
     let unlistenSingleInstance: (() => void) | undefined
@@ -194,9 +219,12 @@ export const useAppLayoutState = () => {
     })
 
     return () => {
-      if (unlistenSingleInstance) unlistenSingleInstance()
+      if (unlistenSingleInstance) {
+        unlistenSingleInstance()
+      }
     }
-  }, [openFolder])
+  }, [openFolder, t])
+
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
@@ -276,6 +304,9 @@ export const useAppLayoutState = () => {
     graph: graphState.graph,
     graphLoading: graphState.loading,
     workspaceIndex,
+    restoreStatusMessage,
+    isRestoringSession,
+    restoreSession: restoreWorkspaceSession,
     inspectedPath: inspectedPath ?? activeResourcePath,
     editorValue,
     isMaximized,

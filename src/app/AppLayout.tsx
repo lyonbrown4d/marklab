@@ -34,6 +34,7 @@ import { AppShellPanels } from '@/app/AppShellPanels'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
 import { useAppStore } from '@/store/useAppStore'
+import { toast } from 'sonner'
 
 const createUntitledPath = (files: FileEntry[]) => {
   const existingPaths = new Set(
@@ -153,39 +154,63 @@ const AppLayout = () => {
 
   const handleCreateFile = useCallback(() => {
     if (state.rootKind === 'single') {
-      window.alert('New files are unavailable for single-file workspaces.')
+      toast.info('New files are unavailable for single-file workspaces.')
       return
     }
     const nextPath = createUntitledPath(state.files)
     void stateCreateFile(nextPath)
-      .then(() => stateOpenFile(nextPath))
+      .then(() => {
+        toast.success('Created file')
+        stateOpenFile(nextPath)
+      })
       .catch((error) => {
-        window.alert(`Failed to create file:\n${getErrorMessage(error)}`)
+        toast.error('Failed to create file', {
+          description: getErrorMessage(error),
+        })
       })
   }, [state.files, state.rootKind, stateCreateFile, stateOpenFile])
 
   const handleCreateFolder = useCallback(() => {
     if (state.rootKind === 'single') {
-      window.alert('New folders are unavailable for single-file workspaces.')
+      toast.info('New folders are unavailable for single-file workspaces.')
       return
     }
     const nextPath = window.prompt('New folder name', 'folder')?.trim()
     if (!nextPath) return
-    void stateCreateFolder(nextPath).catch((error) => {
-      window.alert(`Failed to create folder:\n${getErrorMessage(error)}`)
-    })
+    void stateCreateFolder(nextPath)
+      .then(() => {
+        toast.success('Created folder')
+      })
+      .catch((error) => {
+        toast.error('Failed to create folder', {
+          description: getErrorMessage(error),
+        })
+      })
   }, [state.rootKind, stateCreateFolder])
 
   const handleRebuildSearchIndex = useCallback(() => {
     if (searchIndexRebuilding || !isDesktopRuntime()) return
+    const toastId = 'search-index-rebuild'
+    toast.loading('Rebuilding search index…', {
+      id: toastId,
+    })
     setSearchIndexRebuilding(true)
-    void (async () => {
+    const rebuildPromise = (async () => {
       await fsApi.rebuildSearchIndex()
       await queryClient.invalidateQueries({ queryKey: ['workspace-index'] })
       await queryClient.invalidateQueries({ queryKey: ['command-workspace-search'] })
     })()
+    void rebuildPromise
+      .then(() => {
+        toast.success('Search index rebuilt', {
+          id: toastId,
+        })
+      })
       .catch((error) => {
-        window.alert(`Failed to rebuild search index:\n${getErrorMessage(error)}`)
+        toast.error('Failed to rebuild search index', {
+          id: toastId,
+          description: getErrorMessage(error),
+        })
       })
       .finally(() => {
         setSearchIndexRebuilding(false)
@@ -442,6 +467,9 @@ const AppLayout = () => {
         saveStates={state.saveStates}
         terminalOpen={terminalOpen}
         onToggleTerminal={toggleTerminalArea}
+        onRestoreSession={state.restoreSession}
+        restoreStatusMessage={state.restoreStatusMessage}
+        restoreStatusBusy={state.isRestoringSession}
       />
     </div>
   )

@@ -11,6 +11,7 @@ import {
 import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { FileConfirmDialog, FileNameDialog } from '@/components/file-tree/FileOperationDialogs'
 import { FileTreeNodeRenderer } from '@/components/file-tree/FileTreeNodeRenderer'
+import { toast } from 'sonner'
 import {
   appendChildPath,
   getCreateParentPath,
@@ -89,7 +90,14 @@ const SidebarFileTree = ({
       for (const dragNode of dragNodes) {
         const nextPath = appendChildPath(targetParentPath, dragNode.data.name)
         if (nextPath && nextPath !== dragNode.data.path) {
-          await onMovePath(dragNode.data.path, nextPath)
+          try {
+            await onMovePath(dragNode.data.path, nextPath)
+          } catch (error) {
+            toast.error(labels.actionFailed, {
+              description: String(error),
+            })
+            break
+          }
         }
       }
     },
@@ -101,7 +109,13 @@ const SidebarFileTree = ({
       if (readonlyTree) return
       const nextName = name.trim()
       if (!nextName || nextName === node.data.name || nextName.includes('/')) return
-      await onRenamePath(node.data.path, renamePath(node.data.path, nextName))
+      try {
+        await onRenamePath(node.data.path, renamePath(node.data.path, nextName))
+      } catch (error) {
+        toast.error(labels.actionFailed, {
+          description: String(error),
+        })
+      }
     },
     [onRenamePath, readonlyTree],
   )
@@ -133,17 +147,32 @@ const SidebarFileTree = ({
     (name: string) => {
       if (!createRequest) return
       const nextPath = appendChildPath(createRequest.parentPath, name)
-      if (createRequest.kind === 'file') onCreateFile(nextPath)
-      else onCreateFolder(nextPath)
-      setCreateRequest(null)
+      try {
+        if (createRequest.kind === 'file') {
+          onCreateFile(nextPath)
+        } else {
+          onCreateFolder(nextPath)
+        }
+        setCreateRequest(null)
+      } catch (error) {
+        toast.error(labels.actionFailed, {
+          description: String(error),
+        })
+      }
     },
     [createRequest, onCreateFile, onCreateFolder],
   )
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteRequest) return
-    onDeletePath(deleteRequest.path)
-    setDeleteRequest(null)
+    try {
+      onDeletePath(deleteRequest.path)
+      setDeleteRequest(null)
+    } catch (error) {
+      toast.error(labels.actionFailed, {
+        description: String(error),
+      })
+    }
   }, [deleteRequest, onDeletePath])
 
   const closeCreateDialog = useCallback((open: boolean) => {

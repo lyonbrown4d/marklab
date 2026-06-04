@@ -9,6 +9,7 @@ import { fsApi, type FsSnapshot } from '@/services/fsApi'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
+import { toast } from 'sonner'
 
 type UseProjectLoaderArgs = {
   rootPath: string
@@ -200,9 +201,9 @@ export const useProjectLoader = ({
           await loadWorkspace({ preserveCurrentRoute: false })
         })
       } catch (error) {
-        if (typeof window !== 'undefined') {
-          window.alert(`Failed to open path:\n${path}\n\n${errorMessage(error)}`)
-        }
+        toast.error('Failed to open path', {
+          description: `${path}\n${errorMessage(error)}`,
+        })
       }
     },
     [loadWorkspace, touchRecentProject],
@@ -221,9 +222,9 @@ export const useProjectLoader = ({
         }
       })
     } catch (error) {
-      if (typeof window !== 'undefined') {
-        window.alert(`Failed to select folder:\n${errorMessage(error)}`)
-      }
+      toast.error('Failed to select folder', {
+        description: errorMessage(error),
+      })
     }
   }, [openFolder, t])
 
@@ -241,9 +242,9 @@ export const useProjectLoader = ({
         }
       })
     } catch (error) {
-      if (typeof window !== 'undefined') {
-        window.alert(`Failed to select file:\n${errorMessage(error)}`)
-      }
+      toast.error('Failed to select file', {
+        description: errorMessage(error),
+      })
     }
   }, [openFolder, t])
 
@@ -254,9 +255,9 @@ export const useProjectLoader = ({
         await loadWorkspace({ preserveCurrentRoute: false })
       })
     } catch (error) {
-      if (typeof window !== 'undefined') {
-        window.alert(`Failed to open local workspace:\n${errorMessage(error)}`)
-      }
+      toast.error('Failed to open local workspace', {
+        description: errorMessage(error),
+      })
     }
   }, [loadWorkspace])
 

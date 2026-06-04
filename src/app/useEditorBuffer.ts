@@ -4,8 +4,11 @@ import { produce } from 'immer'
 import { fsApi, fsBufferStatusSchema } from '@/services/fsApi'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { useI18n } from '@/i18n/useI18n'
+import { toast } from 'sonner'
 
 const BUFFER_SYNC_DEBOUNCE_MS = 800
+const BUFFER_ERROR_TOAST_ID_PREFIX = 'editor-buffer-error'
 const EMPTY_FILE_CONTENTS: Record<string, string> = {}
 const EMPTY_DIRTY_PATHS: Record<string, true> = {}
 const EMPTY_SAVE_STATES: Record<string, SaveState> = {}
@@ -26,6 +29,7 @@ type WorkspaceLoadingPaths = Record<string, Record<string, true>>
 type WorkspaceSaveStates = Record<string, Record<string, SaveState>>
 
 export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArgs) => {
+  const { t } = useI18n()
   const [workspaceFileContents, setWorkspaceFileContents] = useState<WorkspaceContents>({})
   const [workspaceDirtyPaths, setWorkspaceDirtyPaths] = useState<WorkspaceDirtyPaths>({})
   const [workspaceLoadingPaths, setWorkspaceLoadingPaths] = useState<WorkspaceLoadingPaths>({})
@@ -129,9 +133,12 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     revisionContentRef.current = {}
     loadToken.current += 1
     void fsApi.flushBuffers().catch((error) => {
-      console.error('flush buffers on workspace switch failed', error)
+      toast.error(t('editor.flushBuffersFailed'), {
+        id: `${BUFFER_ERROR_TOAST_ID_PREFIX}:flush`,
+        description: String(error),
+      })
     })
-  }, [workspaceKey])
+  }, [workspaceKey, t])
 
   useEffect(() => {
     if (!activePath) return
@@ -178,7 +185,10 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       })
       .catch((error) => {
         if (loadToken.current !== token) return
-        console.error('open file failed', error)
+        toast.error(t('editor.openFileFailed'), {
+          id: `${BUFFER_ERROR_TOAST_ID_PREFIX}:open:${activePath}`,
+          description: String(error),
+        })
         setPathSaveState(requestWorkspace, activePath, {
           status: 'error',
           message: String(error),
@@ -186,8 +196,8 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       })
       .finally(() => {
         setPathLoading(requestWorkspace, activePath, false)
-      })
-  }, [activePath, dirtyPathsRef, fileContentsRef, setPathLoading, setPathSaveState, workspaceKey])
+    })
+  }, [activePath, dirtyPathsRef, fileContentsRef, setPathLoading, setPathSaveState, workspaceKey, t])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
@@ -242,7 +252,10 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     syncTimers.current = {}
     if (isDesktopRuntime()) {
       void fsApi.flushBuffers().catch((error) => {
-        console.error('flush buffers on unmount failed', error)
+        toast.error(t('editor.flushBuffersFailed'), {
+          id: `${BUFFER_ERROR_TOAST_ID_PREFIX}:flush`,
+          description: String(error),
+        })
       })
     }
   })
@@ -325,7 +338,10 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
                   markPathClean(currentWorkspace, path, revisionContent)
                 })
                 .catch((error) => {
-                  console.error('flush buffer after update failed', error)
+                  toast.error(t('editor.syncFileFailed'), {
+                    id: `${BUFFER_ERROR_TOAST_ID_PREFIX}:sync:${path}`,
+                    description: String(error),
+                  })
                 })
               return
             }
@@ -333,7 +349,10 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
             markPathClean(currentWorkspace, path, latestValue)
           })
           .catch((error) => {
-            console.error('update buffer failed', error)
+            toast.error(t('editor.updateFileFailed'), {
+              id: `${BUFFER_ERROR_TOAST_ID_PREFIX}:update:${path}`,
+              description: String(error),
+            })
             markPathDirty(currentWorkspace, path, {
               status: 'error',
               message: String(error),
@@ -349,6 +368,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       markPathDirty,
       setPathSaveState,
       workspaceKeyRef,
+      t,
     ],
   )
 

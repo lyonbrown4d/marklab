@@ -4,6 +4,7 @@ import { fsApi, fsBufferStatusSchema, type FsWorkspaceIndex } from '@/services/f
 import type { FileEntry } from '@/store/useAppStore'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { toast } from 'sonner'
 
 export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()
@@ -28,7 +29,9 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
       const parsed = fsBufferStatusSchema.safeParse(event.payload)
       if (!parsed.success) return
       void queryClient.invalidateQueries({ queryKey: ['workspace-index'] }).catch((error) => {
-        console.error('refresh workspace index failed', error)
+        toast.error('Failed to refresh workspace index', {
+          description: String(error),
+        })
       })
     }).then((nextUnlisten) => {
       if (cancelled) {

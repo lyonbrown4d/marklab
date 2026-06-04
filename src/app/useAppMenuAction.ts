@@ -3,6 +3,7 @@ import { exportApi } from '@/services/exportApi'
 import { requestExportContent } from '@/utils/exportContent'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
+import { toast } from 'sonner'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -70,7 +71,11 @@ export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuAction
             rootPath,
             activePath,
           })
-        })().catch((err) => window.alert(String(err)))
+        })().catch((err) => {
+          toast.error('Export failed', {
+            description: String(err),
+          })
+        })
         return
       }
       if (id === 'view.wysiwyg') currentState.setViewMode('wysiwyg')
@@ -84,7 +89,9 @@ export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuAction
       if (id === 'theme.marko-light') currentState.setTheme('marko-light')
       if (id === 'theme.marko-dark') currentState.setTheme('marko-dark')
       if (id === 'help.about') {
-        window.alert('marklab\nA desktop Markdown workspace with graph navigation.')
+        toast('marklab', {
+          description: 'A desktop Markdown workspace with graph navigation.',
+        })
       }
     },
     [setSettingsOpen, stateRef],

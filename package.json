@@ -12,8 +12,13 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@homebridge/node-pty-prebuilt-multiarch",
+      "@parcel/watcher",
+      "better-sqlite3",
       "electron",
-      "node-pty"
+      "electron-winstaller",
+      "esbuild",
+      "msgpackr-extract"
     ],
     "patchedDependencies": {
       "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"

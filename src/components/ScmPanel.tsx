@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import debounce from 'lodash-es/debounce'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -55,9 +56,12 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
 
   const invalidateStatus = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey }).catch((error) => {
-      console.error('refresh git status failed', error)
+      toast.error(t('scm.statusRefreshFailed'), {
+        id: 'scm-status-refresh',
+        description: String(error),
+      })
     })
-  }, [queryClient, queryKey])
+  }, [queryClient, queryKey, t])
 
   const debouncedInvalidateStatus = useMemo(
     () => debounce(invalidateStatus, 250),
@@ -85,9 +89,23 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
       await fsApi.flushBuffers()
       return gitApi.initRepo(rootPath)
     },
+    onMutate: () => {
+      toast.loading(t('scm.initializing'), {
+        id: 'scm-init',
+      })
+    },
     onSuccess: () => {
       setInitDialogOpen(false)
+      toast.success(t('scm.initSuccess'), {
+        id: 'scm-init',
+      })
       invalidateStatus()
+    },
+    onError: (error) => {
+      toast.error(t('scm.initFailed'), {
+        id: 'scm-init',
+        description: String(error),
+      })
     },
   })
 
@@ -96,11 +114,25 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
       await fsApi.flushBuffers()
       return gitApi.commitAll(rootPath, commitMessage.trim())
     },
+    onMutate: () => {
+      toast.loading(t('scm.committing'), {
+        id: 'scm-commit',
+      })
+    },
     onSuccess: (snapshot) => {
       setCommitMessage('')
       setCommitDialogOpen(false)
       queryClient.setQueryData(queryKey, snapshot)
+      toast.success(t('scm.commitSuccess'), {
+        id: 'scm-commit',
+      })
       invalidateStatus()
+    },
+    onError: (error) => {
+      toast.error(t('scm.commitFailed'), {
+        id: 'scm-commit',
+        description: String(error),
+      })
     },
   })
 

@@ -8,6 +8,7 @@ import {
   GitBranch,
   Loader2,
   PanelsTopLeft,
+  RotateCcw,
   Terminal,
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
@@ -36,6 +37,9 @@ type AppStatusBarProps = {
   saveStates: Record<string, SaveState>
   terminalOpen: boolean
   onToggleTerminal: () => void
+  onRestoreSession: () => void
+  restoreStatusMessage: string | null
+  restoreStatusBusy: boolean
 }
 
 const viewLabelKeys: Record<ViewMode, string> = {
@@ -67,6 +71,9 @@ const AppStatusBar = ({
   saveStates,
   terminalOpen,
   onToggleTerminal,
+  onRestoreSession,
+  restoreStatusMessage,
+  restoreStatusBusy,
 }: AppStatusBarProps) => {
   const { t } = useI18n()
   const [, setSearchParams] = useSearchParams()
@@ -180,6 +187,34 @@ const AppStatusBar = ({
             <FolderOpen className="h-3.5 w-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{workspaceLabel}</span>
           </div>
+          {restoreStatusMessage ? (
+            <div className="inline-flex min-w-0 items-center gap-1.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-flex min-w-0 items-center gap-1.5 text-amber-600">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="max-w-[180px] truncate">{restoreStatusMessage}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{restoreStatusMessage}</TooltipContent>
+              </Tooltip>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1.5 px-2"
+                onClick={onRestoreSession}
+                disabled={restoreStatusBusy}
+              >
+                {restoreStatusBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                {t('app.restoreRetry')}
+              </Button>
+            </div>
+          ) : null}
           <div className="hidden items-center gap-1.5 px-1 md:flex">
             <FileText className="h-3.5 w-3.5" />
             <span>{t('statusBar.files', { count: String(markdownFileCount) })}</span>
