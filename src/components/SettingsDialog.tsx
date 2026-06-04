@@ -10,16 +10,61 @@ import { useI18n } from '@/i18n/useI18n'
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage'
 import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
-import SettingsShell from '@/components/settings/SettingsShell'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useMemo, useState } from 'react'
 
 type SettingsDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
+const settingsRoutes = [
+  {
+    value: 'general',
+    labelKey: 'settings.general',
+    icon: Save,
+    render: () => <GeneralSettingsPage />,
+  },
+  {
+    value: 'appearance',
+    labelKey: 'settings.appearance',
+    icon: Palette,
+    render: () => <AppearanceSettingsPage />,
+  },
+  {
+    value: 'graph',
+    labelKey: 'settings.graphEditor',
+    icon: GitGraph,
+    render: () => <GraphSettingsPage />,
+  },
+  {
+    value: 'shortcuts',
+    labelKey: 'settings.shortcuts',
+    icon: Keyboard,
+    render: () => <ShortcutsSettingsPage />,
+  },
+] satisfies Array<{
+  value: string
+  labelKey: string
+  icon: typeof Save
+  render: () => JSX.Element
+}>
+
 const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { t } = useI18n()
+  const [route, setRoute] = useState(settingsRoutes[0]?.value ?? 'general')
+  const section = useMemo(() => {
+    return (
+      settingsRoutes.find((entry) => entry.value === route)?.value ??
+      settingsRoutes[0]?.value ??
+      'general'
+    )
+  }, [route])
+
+  const onSectionChange = (nextRoute: string) => {
+    setRoute(nextRoute)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,36 +76,42 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </DialogTitle>
           <DialogDescription>{t('settings.description')}</DialogDescription>
         </DialogHeader>
-
-        <SettingsShell
-          defaultValue="general"
-          sections={[
-            {
-              value: 'general',
-              label: t('settings.general'),
-              icon: Save,
-              content: <GeneralSettingsPage />,
-            },
-            {
-              value: 'appearance',
-              label: t('settings.appearance'),
-              icon: Palette,
-              content: <AppearanceSettingsPage />,
-            },
-            {
-              value: 'graph',
-              label: t('settings.graphEditor'),
-              icon: GitGraph,
-              content: <GraphSettingsPage />,
-            },
-            {
-              value: 'shortcuts',
-              label: t('settings.shortcuts'),
-              icon: Keyboard,
-              content: <ShortcutsSettingsPage />,
-            },
-          ]}
-        />
+        <Tabs
+          value={section}
+          onValueChange={onSectionChange}
+          className="settings-dialog-body h-full min-h-0 overflow-hidden"
+        >
+          <TabsList className="settings-dialog-tabs flex h-full flex-col items-stretch justify-start rounded-none border-r border-border bg-muted/35 p-2">
+            {settingsRoutes.map((routeConfig) => {
+              const Icon = routeConfig.icon
+              return (
+                <TabsTrigger
+                  key={routeConfig.value}
+                  value={routeConfig.value}
+                  className="settings-dialog-tab-trigger justify-start gap-2 rounded-md"
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t(routeConfig.labelKey)}</span>
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+          <div className="h-full min-h-0 min-w-0 overflow-hidden">
+            {settingsRoutes.map((routeConfig) => (
+              <TabsContent
+                key={routeConfig.value}
+                value={routeConfig.value}
+                className="m-0 min-h-0 h-full overflow-hidden"
+              >
+                <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0">
+                  <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
+                    {routeConfig.render()}
+                  </div>
+                </div>
+              </TabsContent>
+            ))}
+          </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

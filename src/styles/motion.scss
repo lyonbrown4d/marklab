@@ -48,6 +48,27 @@
   scrollbar-gutter: stable;
 }
 
+.settings-scroll-viewport {
+  scroll-behavior: auto;
+  scrollbar-gutter: stable;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent);
+    border-radius: 999px;
+  }
+}
+
 :root[data-motion-smooth-scrolling='false'] .motion-scroll-viewport {
   scroll-behavior: auto;
 }

@@ -9,10 +9,10 @@ type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
 type UseAppMenuActionArgs = {
   stateRef: { current: AppLayoutState }
-  setSettingsOpen: (open: boolean) => void
+  openSettings: () => void
 }
 
-export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuActionArgs) => {
+export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
   return useCallback(
     (id: string) => {
       const currentState = stateRef.current
@@ -83,7 +83,7 @@ export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuAction
       if (id === 'view.graph') currentState.setViewMode('graph')
       if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
       if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
-      if (id === 'settings.open') setSettingsOpen(true)
+      if (id === 'settings.open') openSettings()
       if (id === 'theme.light') currentState.setTheme('light')
       if (id === 'theme.dark') currentState.setTheme('dark')
       if (id === 'theme.marko-light') currentState.setTheme('marko-light')
@@ -94,6 +94,6 @@ export const useAppMenuAction = ({ stateRef, setSettingsOpen }: UseAppMenuAction
         })
       }
     },
-    [setSettingsOpen, stateRef],
+    [openSettings, stateRef],
   )
 }

@@ -25,7 +25,6 @@ import { useI18n } from '@/i18n/useI18n'
 import { appApi, type AppPlatform } from '@/services/appApi'
 import AppMenuBar from '@/components/AppMenuBar'
 import AppLogo from '@/components/AppLogo'
-import SettingsDialog from '@/components/SettingsDialog'
 import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { getCurrentRuntimeWindow, isDesktopRuntime } from '@/runtime/window'
 import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
@@ -67,8 +66,7 @@ type TitlebarProps = {
   setTheme: (theme: ThemeMode) => void
   commandOpen: boolean
   onCommandOpenChange: (open: boolean) => void
-  settingsOpen: boolean
-  onSettingsOpenChange: (open: boolean) => void
+  onOpenSettings: () => void
 }
 
 const getActiveTabLabel = (tab: WorkspaceTab | null) => {
@@ -128,8 +126,7 @@ const Titlebar = ({
   setTheme,
   commandOpen,
   onCommandOpenChange,
-  settingsOpen,
-  onSettingsOpenChange,
+  onOpenSettings,
 }: TitlebarProps) => {
   const getAppWindow = useCallback(async () => {
     return getCurrentRuntimeWindow()
@@ -301,7 +298,7 @@ const Titlebar = ({
         return
       }
       if (id === 'settings.open') {
-        onSettingsOpenChange(true)
+        onOpenSettings()
         return
       }
       if (id === 'workspace.open_graph') {
@@ -344,7 +341,7 @@ const Titlebar = ({
       onToggleRightSidebar,
       onToggleSidebar,
       onCommandOpenChange,
-      onSettingsOpenChange,
+      onOpenSettings,
       setTheme,
     ],
   )
@@ -514,7 +511,7 @@ const Titlebar = ({
                 variant="ghost"
                 size="icon"
                 className="chrome-button h-8 w-8 rounded-md"
-                onClick={() => onSettingsOpenChange(true)}
+                onClick={onOpenSettings}
                 aria-label={t('menu.settings')}
               >
                 <Settings2 className="h-4 w-4" />
@@ -552,7 +549,6 @@ const Titlebar = ({
         indexedFileCount={workspaceIndex?.files.length ?? 0}
         searchIndexRebuilding={searchIndexRebuilding}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={onSettingsOpenChange} />
       <WindowControls
         platform={platform}
         isWindows={isWindows}

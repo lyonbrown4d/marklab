@@ -36,7 +36,11 @@ const SettingsShell = ({ defaultValue, sections }: SettingsShellProps) => {
       <div className="min-h-0 min-w-0 overflow-hidden">
         {sections.map((section) => (
           <TabsContent key={section.value} value={section.value} className="m-0 min-h-0">
-            <ScrollArea className="h-full" viewportClassName="h-full">
+            <ScrollArea
+              className="h-full"
+              viewportClassName="settings-scroll-viewport h-full"
+              smoothWheel={false}
+            >
               <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
                 {section.content}
               </div>

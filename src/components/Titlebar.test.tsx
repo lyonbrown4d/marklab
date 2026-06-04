@@ -74,8 +74,7 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   setTheme: vi.fn(),
   commandOpen: false,
   onCommandOpenChange: vi.fn(),
-  settingsOpen: false,
-  onSettingsOpenChange: vi.fn(),
+  onOpenSettings: vi.fn(),
   ...overrides,
 })
 

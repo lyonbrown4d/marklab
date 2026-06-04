@@ -1,4 +1,5 @@
 import { useLocation, useOutlet } from 'react-router-dom'
+import SettingsDialog from '@/components/SettingsDialog'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
@@ -91,10 +92,10 @@ const AppLayout = () => {
   const stateCreateFolder = state.createFolder
   const [pendingHeading, setPendingHeading] = useState<FocusHeadingRequest | null>(null)
   const [commandOpen, setCommandOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalInitialized, setTerminalInitialized] = useState(false)
   const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const workspaceGroupElementRef = useRef<HTMLDivElement | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
   const leftSidebarPanelRef = usePanelRef()
@@ -108,6 +109,9 @@ const AppLayout = () => {
     id: 'marko-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
   })
+  const openSettings = useCallback(() => {
+    setSettingsOpen(true)
+  }, [])
   useDesktopReadySignal()
   useAppPanelLayoutSync({
     leftSidebarPanelRef,
@@ -121,7 +125,7 @@ const AppLayout = () => {
   })
   const handleMenuAction = useAppMenuAction({
     stateRef,
-    setSettingsOpen,
+    openSettings,
   })
 
   const handleOpenFile = useCallback(
@@ -361,7 +365,7 @@ const AppLayout = () => {
     onOpenCommandPalette: () => setCommandOpen(true),
     onOpenFile: () => handleMenuAction('file.open_file'),
     onOpenProject: () => handleMenuAction('file.open_project'),
-    onOpenSettings: () => setSettingsOpen(true),
+    onOpenSettings: openSettings,
     onOpenTab: state.onOpenTab,
     onSetViewMode: state.setViewMode,
     onToggleRightSidebar: state.toggleRightSidebar,
@@ -442,9 +446,9 @@ const AppLayout = () => {
         setTheme={state.setTheme}
         commandOpen={commandOpen}
         onCommandOpenChange={setCommandOpen}
-        settingsOpen={settingsOpen}
-        onSettingsOpenChange={setSettingsOpen}
+        onOpenSettings={openSettings}
       />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <AppShellPanels
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}
