@@ -32,12 +32,26 @@ type WindowBounds = {
 const isDevMode = () => {
   return !app.isPackaged
 }
+const isMacOS = () => process.platform === 'darwin'
 const getRendererUrl = (page = '') => {
   if (isDevMode()) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? DEV_SERVER_URL
     return new URL(page, devServerUrl.endsWith('/') ? devServerUrl : `${devServerUrl}/`).toString()
   }
   return path.join(projectRoot, 'dist', page || 'index.html')
+}
+const mainWindowChromeOptions = (): Pick<
+  Electron.BrowserWindowConstructorOptions,
+  'frame' | 'titleBarStyle' | 'trafficLightPosition'
+> => {
+  if (isMacOS()) {
+    return {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 16, y: 16 },
+    }
+  }
+
+  return { frame: false }
 }
 const secureWebPreferences = () => {
   return {
@@ -207,10 +221,13 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     title: 'marklab',
     resizable: true,
     fullscreen: false,
-    frame: false,
+    ...mainWindowChromeOptions(),
     show: false,
     webPreferences: secureWebPreferences(),
   })
+  if (isMacOS()) {
+    main.setWindowButtonVisibility(true)
+  }
   persistWindowState(main, logger)
   if (restored.isMaximized) main.maximize()
   return main
