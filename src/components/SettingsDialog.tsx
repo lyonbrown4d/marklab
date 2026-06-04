@@ -12,7 +12,7 @@ import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useMemo, useState } from 'react'
+import { type ReactElement, useMemo, useState } from 'react'
 
 type SettingsDialogProps = {
   open: boolean
@@ -48,7 +48,7 @@ const settingsRoutes = [
   value: string
   labelKey: string
   icon: typeof Save
-  render: () => JSX.Element
+  render: () => ReactElement
 }>
 
 const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {

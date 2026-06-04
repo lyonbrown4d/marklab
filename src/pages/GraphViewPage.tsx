@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense } from 'react'
+import { lazy, memo, Suspense, useMemo } from 'react'
 import type { GraphData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/useAppStore'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
@@ -26,12 +26,24 @@ const GraphViewPage = ({
   showEmptyMessage,
 }: GraphViewPageProps) => {
   const { t } = useI18n()
-  const { editorGraph, updateHeadingContent, updateHeadingTitle } = useGraphMarkdownEditing({
+  const {
+    addChildHeading,
+    addSiblingHeading,
+    addSiblingHeadingBefore,
+    deleteHeading,
+    editorGraph,
+    updateHeadingContent,
+    updateHeadingTitle,
+  } = useGraphMarkdownEditing({
     graph,
     markdown,
     onChange,
   })
-  const canEdit = editable && editorGraph.nodes.some((node) => node.type === 'heading')
+  const hasHeadingNodes = useMemo(
+    () => editorGraph.nodes.some((node) => node.type === 'heading'),
+    [editorGraph.nodes],
+  )
+  const canEdit = editable && hasHeadingNodes
   const graphContentMode = canEdit ? 'full' : contentMode
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -45,6 +57,10 @@ const GraphViewPage = ({
                 showMiniMap={showMiniMap}
                 contentMode={graphContentMode}
                 editable={canEdit}
+                onAddChildHeading={addChildHeading}
+                onAddSiblingHeading={addSiblingHeading}
+                onAddSiblingHeadingBefore={addSiblingHeadingBefore}
+                onDeleteHeading={deleteHeading}
                 onUpdateHeadingTitle={updateHeadingTitle}
                 onUpdateHeadingContent={updateHeadingContent}
               />

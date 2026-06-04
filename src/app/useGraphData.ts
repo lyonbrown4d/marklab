@@ -15,6 +15,7 @@ export const useGraphData = (
 ) => {
   const desktopAvailable = isDesktopRuntime()
   const enabled = Boolean(mode)
+  const hasWorkspaceIndex = Boolean(workspaceIndex)
   const workspaceIndexKey = useMemo(() => {
     if (!workspaceIndex) return ''
     return workspaceIndex.files
@@ -32,7 +33,7 @@ export const useGraphData = (
   const workspaceGraphQuery = useQuery({
     queryKey: ['workspace-graph', workspaceIndexKey],
     queryFn: () => fsApi.getWorkspaceGraph(),
-    enabled: mode === 'workspace' && desktopAvailable && Boolean(workspaceIndex),
+    enabled: mode === 'workspace' && desktopAvailable && hasWorkspaceIndex,
     staleTime: 2_000,
   })
 
@@ -47,14 +48,14 @@ export const useGraphData = (
         : EMPTY_GRAPH
     }
 
-    if (mode === 'workspace' && workspaceIndex) {
+    if (mode === 'workspace' && hasWorkspaceIndex) {
       if (workspaceGraphQuery.data) {
         return buildGraphFromRustGraph(workspaceGraphQuery.data, graphContentMode)
       }
     }
 
     return EMPTY_GRAPH
-  }, [contentMode, enabled, mode, outlineQuery.data, workspaceGraphQuery.data, workspaceIndex])
+  }, [contentMode, enabled, hasWorkspaceIndex, mode, outlineQuery.data, workspaceGraphQuery.data])
 
   const loading =
     mode === 'file'

@@ -10,7 +10,7 @@ type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string },
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
 
-export const ExternalNode = ({ data }: NodeProps<ExternalGraphNode>) => {
+export const ExternalNode = memo(({ data }: NodeProps<ExternalGraphNode>) => {
   return (
     <div className="rounded-md border border-amber-500/35 bg-card px-3 py-2 shadow-sm">
       <Handle type="target" position={Position.Left} />
@@ -19,9 +19,9 @@ export const ExternalNode = ({ data }: NodeProps<ExternalGraphNode>) => {
       <div className="text-xs text-muted-foreground">{data.subtitle}</div>
     </div>
   )
-}
+})
 
-export const MissingNode = ({ data }: NodeProps<MissingGraphNode>) => {
+export const MissingNode = memo(({ data }: NodeProps<MissingGraphNode>) => {
   return (
     <div className="rounded-md border border-destructive/35 bg-card px-3 py-2 shadow-sm">
       <Handle type="target" position={Position.Left} />
@@ -30,7 +30,7 @@ export const MissingNode = ({ data }: NodeProps<MissingGraphNode>) => {
       <div className="text-xs text-muted-foreground">{data.subtitle}</div>
     </div>
   )
-}
+})
 
 export const HeadingNode = memo(({ id, data }: NodeProps<HeadingGraphNode>) => {
   const onUpdateTitle = data.onUpdateTitle
@@ -70,7 +70,10 @@ export const HeadingNode = memo(({ id, data }: NodeProps<HeadingGraphNode>) => {
   )
 
   return (
-    <div className="w-[260px] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-sm">
+    <div
+      className="w-[260px] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-sm"
+      data-graph-node-id={id}
+    >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
       <MarkdownBlockSurface blocks={blocks} onCommitBlock={commitBlock} />

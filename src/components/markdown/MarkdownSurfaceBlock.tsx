@@ -26,6 +26,8 @@ const MarkdownSurfaceBlock = ({ block, onCommitBlock }: MarkdownSurfaceBlockProp
   if (block.kind === 'heading') {
     return (
       <HeadingView
+        blockId={block.id}
+        blockRole={'role' in block ? block.role : undefined}
         level={block.level}
         text={block.text}
         editable={block.editable}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { GitGraph } from 'lucide-react'
 import {
   Background,
@@ -8,14 +8,26 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react'
-import type { Node } from '@xyflow/react'
+import type { Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/react'
 import type { GraphContentMode } from '@/store/useAppStore'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { mergeGraphNodePositions } from '@/logic/graphViewState'
 import { ExternalNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
 import { useI18n } from '@/i18n/useI18n'
+import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
 
-const nodeTypes = { external: ExternalNode, missing: MissingNode, heading: HeadingNode }
+const nodeTypes: NodeTypes = { external: ExternalNode, missing: MissingNode, heading: HeadingNode }
+const fitViewOptions = { padding: 0.22 }
+const proOptions = { hideAttribution: true }
+
+const getMiniMapNodeColor = (node: Node) =>
+  node.type === 'heading'
+    ? 'hsl(var(--primary))'
+    : node.type === 'missing'
+      ? 'hsl(var(--destructive))'
+      : node.type === 'external'
+        ? '#f59e0b'
+        : 'hsl(var(--muted-foreground))'
 
 type GraphPageProps = {
   graph: GraphData
@@ -23,6 +35,10 @@ type GraphPageProps = {
   showMiniMap: boolean
   contentMode: GraphContentMode
   editable: boolean
+  onAddChildHeading: (nodeId: string) => string | null
+  onAddSiblingHeading: (nodeId: string) => string | null
+  onAddSiblingHeadingBefore: (nodeId: string) => string | null
+  onDeleteHeading: (nodeId: string) => string | null
   onUpdateHeadingTitle: (nodeId: string, title: string) => void
   onUpdateHeadingContent: NonNullable<GraphNodeData['onUpdateContent']>
 }
@@ -33,13 +49,40 @@ const GraphPageComponent = ({
   showMiniMap,
   contentMode,
   editable,
+  onAddChildHeading,
+  onAddSiblingHeading,
+  onAddSiblingHeadingBefore,
+  onDeleteHeading,
   onUpdateHeadingTitle,
   onUpdateHeadingContent,
 }: GraphPageProps) => {
   const { t } = useI18n()
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
+  const [selectedHeadingId, setSelectedHeadingId] = useState<string | null>(null)
+  const graphShellRef = useRef<HTMLDivElement | null>(null)
   const layoutKeyRef = useRef(graph.layoutKey)
+  const onUpdateHeadingTitleRef = useRef(onUpdateHeadingTitle)
+  const onUpdateHeadingContentRef = useRef(onUpdateHeadingContent)
+
+  useEffect(() => {
+    onUpdateHeadingTitleRef.current = onUpdateHeadingTitle
+  }, [onUpdateHeadingTitle])
+
+  useEffect(() => {
+    onUpdateHeadingContentRef.current = onUpdateHeadingContent
+  }, [onUpdateHeadingContent])
+
+  const handleUpdateHeadingTitle = useCallback((nodeId: string, title: string) => {
+    onUpdateHeadingTitleRef.current(nodeId, title)
+  }, [])
+
+  const handleUpdateHeadingContent = useCallback<NonNullable<GraphNodeData['onUpdateContent']>>(
+    (nodeId, content, contentBlocks) => {
+      onUpdateHeadingContentRef.current(nodeId, content, contentBlocks)
+    },
+    [],
+  )
 
   useEffect(() => {
     const preservePositions = layoutKeyRef.current === graph.layoutKey
@@ -49,27 +92,91 @@ const GraphPageComponent = ({
         ...node.data,
         contentMode,
         editable: editable && node.type === 'heading',
-        onUpdateTitle: onUpdateHeadingTitle,
-        onUpdateContent: onUpdateHeadingContent,
+        onUpdateTitle: handleUpdateHeadingTitle,
+        onUpdateContent: handleUpdateHeadingContent,
       },
     }))
     setNodes((currentNodes) => mergeGraphNodePositions(nextNodes, currentNodes, preservePositions))
-    setEdges(graph.edges)
     layoutKeyRef.current = graph.layoutKey
   }, [
     contentMode,
     editable,
-    graph.edges,
     graph.layoutKey,
     graph.nodes,
-    onUpdateHeadingContent,
-    onUpdateHeadingTitle,
-    setEdges,
+    handleUpdateHeadingContent,
+    handleUpdateHeadingTitle,
     setNodes,
   ])
 
+  useEffect(() => {
+    setEdges(graph.edges)
+  }, [graph.edges, setEdges])
+
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node<GraphNodeData>) => {
+      if (editable && node.type === 'heading') return
+      if (node.id.startsWith('file:')) {
+        onOpenFile(node.id.replace('file:', ''))
+        return
+      }
+      const path = typeof node.data?.path === 'string' ? node.data.path : null
+      if (path) {
+        onOpenFile(path)
+      }
+    },
+    [editable, onOpenFile],
+  )
+
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: OnSelectionChangeParams<Node<GraphNodeData>>) => {
+      const heading = selectedNodes.find((node) => node.type === 'heading')
+      setSelectedHeadingId(heading?.id ?? null)
+    },
+    [],
+  )
+
+  const clearSelection = useCallback(() => {
+    setSelectedHeadingId(null)
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
+    )
+  }, [setNodes])
+
+  const selectHeading = useCallback(
+    (nodeId: string | null) => {
+      const nextId = nodeId?.startsWith('heading:') ? nodeId : null
+      setSelectedHeadingId(nextId)
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          const selected = Boolean(nextId && node.id === nextId)
+          return node.selected === selected ? node : { ...node, selected }
+        }),
+      )
+    },
+    [setNodes],
+  )
+
+  const { handleGraphMouseDown } = useGraphKeyboardActions({
+    editable,
+    edges,
+    graphShellRef,
+    nodes,
+    selectedHeadingId,
+    clearSelection,
+    onAddChildHeading,
+    onAddSiblingHeading,
+    onAddSiblingHeadingBefore,
+    onDeleteHeading,
+    selectHeading,
+  })
+
   return (
-    <div className="relative h-full bg-background">
+    <div
+      ref={graphShellRef}
+      className="relative h-full bg-background outline-none"
+      tabIndex={0}
+      onMouseDown={handleGraphMouseDown}
+    >
       <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-border bg-card/95 px-2.5 py-1.5 text-xs text-muted-foreground shadow-sm">
         <GitGraph className="h-3.5 w-3.5 text-primary" />
         <span>
@@ -87,8 +194,12 @@ const GraphPageComponent = ({
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onSelectionChange={handleSelectionChange}
         nodesDraggable
         nodesConnectable={false}
+        deleteKeyCode={null}
+        nodesFocusable={false}
+        edgesFocusable={false}
         elementsSelectable
         panOnDrag
         zoomOnScroll
@@ -98,38 +209,15 @@ const GraphPageComponent = ({
         onlyRenderVisibleElements
         minZoom={0.15}
         maxZoom={2.2}
-        onNodeClick={(_, node: Node<GraphNodeData>) => {
-          if (editable && node.type === 'heading') return
-          if (node.id.startsWith('file:')) {
-            onOpenFile(node.id.replace('file:', ''))
-            return
-          }
-          const path = typeof node.data?.path === 'string' ? node.data.path : null
-          if (path) {
-            onOpenFile(path)
-          }
-        }}
+        onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.22 }}
-        proOptions={{ hideAttribution: true }}
+        fitViewOptions={fitViewOptions}
+        proOptions={proOptions}
       >
         <Background gap={16} size={1} />
         <Controls />
         {showMiniMap && (
-          <MiniMap
-            pannable
-            zoomable
-            className="!bg-card/90"
-            nodeColor={(node) =>
-              node.type === 'heading'
-                ? 'hsl(var(--primary))'
-                : node.type === 'missing'
-                  ? 'hsl(var(--destructive))'
-                  : node.type === 'external'
-                    ? '#f59e0b'
-                    : 'hsl(var(--muted-foreground))'
-            }
-          />
+          <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}
       </ReactFlow>
       {nodes.length === 0 && (

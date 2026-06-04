@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-hotkeys'
 
 export type ShortcutPlatform = 'mac' | 'windows' | 'linux'
-export type ShortcutScope = 'app' | 'editor'
+export type ShortcutScope = 'app' | 'editor' | 'graph'
 
 export const shortcutActions = [
   { id: 'app.commandPalette', scope: 'app', labelKey: 'shortcuts.commandPalette' },
@@ -43,6 +43,16 @@ export const shortcutActions = [
   { id: 'editor.bulletList', scope: 'editor', labelKey: 'shortcuts.bulletList' },
   { id: 'editor.table', scope: 'editor', labelKey: 'shortcuts.table' },
   { id: 'editor.clearFormat', scope: 'editor', labelKey: 'shortcuts.clearFormat' },
+  { id: 'graph.addSibling', scope: 'graph', labelKey: 'shortcuts.graphAddSibling' },
+  { id: 'graph.addSiblingBefore', scope: 'graph', labelKey: 'shortcuts.graphAddSiblingBefore' },
+  { id: 'graph.addChild', scope: 'graph', labelKey: 'shortcuts.graphAddChild' },
+  { id: 'graph.delete', scope: 'graph', labelKey: 'shortcuts.graphDelete' },
+  { id: 'graph.editTitle', scope: 'graph', labelKey: 'shortcuts.graphEditTitle' },
+  { id: 'graph.selectPrevious', scope: 'graph', labelKey: 'shortcuts.graphSelectPrevious' },
+  { id: 'graph.selectNext', scope: 'graph', labelKey: 'shortcuts.graphSelectNext' },
+  { id: 'graph.selectParent', scope: 'graph', labelKey: 'shortcuts.graphSelectParent' },
+  { id: 'graph.selectChild', scope: 'graph', labelKey: 'shortcuts.graphSelectChild' },
+  { id: 'graph.clearSelection', scope: 'graph', labelKey: 'shortcuts.graphClearSelection' },
 ] as const
 
 export type ShortcutActionId = (typeof shortcutActions)[number]['id']
@@ -94,6 +104,22 @@ export const shortcutCategories = [
       'editor.clearFormat',
     ],
   },
+  {
+    id: 'graph',
+    labelKey: 'shortcuts.graphCategory',
+    actions: [
+      'graph.addSibling',
+      'graph.addSiblingBefore',
+      'graph.addChild',
+      'graph.delete',
+      'graph.editTitle',
+      'graph.selectPrevious',
+      'graph.selectNext',
+      'graph.selectParent',
+      'graph.selectChild',
+      'graph.clearSelection',
+    ],
+  },
 ] as const satisfies ReadonlyArray<{
   id: string
   labelKey: string
@@ -134,6 +160,16 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'editor.bulletList': ['Control+Shift+]', 'Meta+Alt+U'],
   'editor.table': ['Control+T', 'Meta+Alt+T'],
   'editor.clearFormat': ['Mod+\\'],
+  'graph.addSibling': ['Enter'],
+  'graph.addSiblingBefore': ['Shift+Enter'],
+  'graph.addChild': ['Tab'],
+  'graph.delete': ['Delete', 'Backspace'],
+  'graph.editTitle': ['F2'],
+  'graph.selectPrevious': ['ArrowUp'],
+  'graph.selectNext': ['ArrowDown'],
+  'graph.selectParent': ['ArrowLeft'],
+  'graph.selectChild': ['ArrowRight'],
+  'graph.clearSelection': ['Escape'],
 }
 
 const shortcutActionIdSet = new Set<ShortcutActionId>(shortcutActions.map((action) => action.id))

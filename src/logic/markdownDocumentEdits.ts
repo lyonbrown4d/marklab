@@ -35,6 +35,21 @@ export const replaceMarkdownLineRange = (
   return serializeMarkdownLines(document)
 }
 
+export const insertMarkdownHeadingAtLine = (
+  markdown: string,
+  line: number,
+  level: number,
+  title: string,
+) => {
+  const lineIndex = lineNumberToIndex(line)
+  if (lineIndex === null || level < 1 || level > 6) return markdown
+
+  const document = parseMarkdownLines(markdown)
+  const insertIndex = Math.min(lineIndex, document.lines.length)
+  document.lines.splice(insertIndex, 0, `${'#'.repeat(level)} ${normalizeHeadingTitle(title)}`)
+  return serializeMarkdownLines(document)
+}
+
 const parseMarkdownLines = (markdown: string): MarkdownLineDocument => {
   return {
     lineEnding: detectLineEnding(markdown),

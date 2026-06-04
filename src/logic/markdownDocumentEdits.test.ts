@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  insertMarkdownHeadingAtLine,
   replaceMarkdownHeadingTitle,
   replaceMarkdownLineRange,
 } from '@/logic/markdownDocumentEdits'
@@ -50,5 +51,29 @@ describe('replaceMarkdownLineRange', () => {
   it('returns original markdown for invalid line ranges', () => {
     expect(replaceMarkdownLineRange('# Title\nOld', 0, 1, 'New')).toBe('# Title\nOld')
     expect(replaceMarkdownLineRange('# Title\nOld', 2, 1, 'New')).toBe('# Title\nOld')
+  })
+})
+
+describe('insertMarkdownHeadingAtLine', () => {
+  it('inserts a heading before the given 1-based line', () => {
+    expect(insertMarkdownHeadingAtLine('# One\nBody\n# Two', 3, 2, 'Child')).toBe(
+      '# One\nBody\n## Child\n# Two',
+    )
+  })
+
+  it('appends a heading when the line is after the document end', () => {
+    expect(insertMarkdownHeadingAtLine('# One\nBody', 20, 1, 'Next')).toBe('# One\nBody\n# Next')
+  })
+
+  it('preserves original CRLF line endings', () => {
+    expect(insertMarkdownHeadingAtLine('# One\r\nBody\r\n', 2, 2, 'Child')).toBe(
+      '# One\r\n## Child\r\nBody\r\n',
+    )
+  })
+
+  it('returns original markdown for invalid heading coordinates', () => {
+    expect(insertMarkdownHeadingAtLine('# One', 0, 2, 'Child')).toBe('# One')
+    expect(insertMarkdownHeadingAtLine('# One', 1, 0, 'Child')).toBe('# One')
+    expect(insertMarkdownHeadingAtLine('# One', 1, 7, 'Child')).toBe('# One')
   })
 })

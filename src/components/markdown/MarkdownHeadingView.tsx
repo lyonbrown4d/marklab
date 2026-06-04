@@ -6,6 +6,8 @@ type MarkdownHeadingViewProps = {
   level: number
   text?: string
   editable?: boolean
+  blockId?: string
+  blockRole?: string
   contentRef?: (element: HTMLElement | null) => void
   selected?: boolean
   compact?: boolean
@@ -41,6 +43,8 @@ const MarkdownHeadingView = ({
   level,
   text = '',
   editable = false,
+  blockId,
+  blockRole,
   contentRef,
   selected = false,
   compact = false,
@@ -63,6 +67,8 @@ const MarkdownHeadingView = ({
   return (
     <MarkdownEditableText
       className={`marko-md-block nodrag rounded-sm border border-transparent px-1 outline-none focus:border-ring focus:bg-background ${headingClass}`}
+      data-markdown-block-id={blockId}
+      data-markdown-block-role={blockRole}
       data-selected={selected ? 'true' : 'false'}
       editable={editable}
       value={text}
