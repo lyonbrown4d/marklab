@@ -111,6 +111,7 @@ jobs:
             release/*.zip
             release/*.blockmap
             release/*.yml
+            !release/builder-debug.yml
 
   publish-release:
     name: Publish GitHub Release
@@ -183,6 +184,7 @@ jobs:
         run: |
           mapfile -t assets < <(
             find downloaded-artifacts -type f \
+              ! -name 'builder-debug.yml' \
               \( -name '*.AppImage' \
               -o -name '*.deb' \
               -o -name '*.dmg' \
