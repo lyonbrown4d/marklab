@@ -1,75 +1,77 @@
-import type { BrowserWindow, IpcMain } from 'electron'
+import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import { ExportService } from '@electron/services/export/exportService.js'
+import type { ExportService } from '@electron/services/export/exportService.js'
 import { isMarkdownPath, normalizeRelativePath } from '@electron/services/workspace/path.js'
-import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { Logger } from '@electron/services/logger.js'
+
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
   export: ExportService
-  workspace: WorkspaceService
+  workspace: WindowWorkspaceRegistry
 }
+
 type WorkspaceIpcDependencies = {
   exportService: ExportService
   logger: Logger
-  workspaceService: WorkspaceService
+  workspaceRegistry: WindowWorkspaceRegistry
 }
+
+type WorkspaceForEvent = (event: IpcMainInvokeEvent) => WorkspaceService
+
 export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
-  BrowserWindowClass: typeof BrowserWindow,
-  { exportService, logger, workspaceService }: WorkspaceIpcDependencies,
+  { exportService, logger, workspaceRegistry }: WorkspaceIpcDependencies,
 ): WorkspaceCommandServices => {
-  const workspace = workspaceService
-  const commandHandlers = createWorkspaceCommandHandlers(workspace, exportService)
+  const commandHandlers = createWorkspaceCommandHandlers(
+    (event) => workspaceRegistry.serviceForWebContents(event.sender),
+    exportService,
+  )
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
-  workspace.onBufferStatus((status) => {
-    for (const window of BrowserWindowClass.getAllWindows()) {
-      window.webContents.send('fs-buffer-status', status)
-    }
-  })
-  workspace.onSnapshotChanged((snapshot) => {
-    for (const window of BrowserWindowClass.getAllWindows()) {
-      window.webContents.send('fs-changed', snapshot)
-    }
-  })
   logger.info('workspace IPC registered')
-  return { commandHandlers, export: exportService, workspace }
+  return { commandHandlers, export: exportService, workspace: workspaceRegistry }
 }
+
 const createWorkspaceCommandHandlers = (
-  workspace: WorkspaceService,
+  workspaceForEvent: WorkspaceForEvent,
   exportService: ExportService,
 ): NativeCommandHandlers => {
   return {
-    fs_get_root_info: () => workspace.rootInfo(),
-    fs_get_snapshot: () => workspace.snapshot(),
-    fs_list_entries: () => workspace.entries(),
-    fs_set_root: (payload) => workspace.setRoot(payload),
-    fs_set_single_file: (payload) => workspace.setSingleFile(payload),
-    fs_open_file: (payload) => workspace.openFile(payload),
-    fs_read_file: (payload) => workspace.readFile(payload),
-    fs_get_workspace_index: () => workspace.workspaceIndex(),
-    fs_get_workspace_graph: () => workspace.workspaceGraph(),
-    fs_get_outline_graph: (payload) => workspace.outlineGraph(payload),
-    fs_analyze_markdown_buffer: (payload) => workspace.analyzeMarkdownBuffer(payload),
-    fs_search_workspace: (payload) => workspace.searchWorkspace(payload),
-    fs_rebuild_search_index: () => workspace.rebuildSearchIndex(),
-    fs_update_buffer: (payload) => workspace.updateBuffer(payload),
-    fs_write_file: (payload) => workspace.writeFile(payload),
-    fs_flush_buffers: () => workspace.flushBuffers(),
-    fs_get_buffer_status: (payload) => workspace.getBufferStatus(payload),
-    fs_get_background_tasks: () => workspace.getBackgroundTasks(),
-    fs_create_file: (payload) => workspace.createFile(payload),
-    fs_create_dir: (payload) => workspace.createDir(payload),
-    fs_rename_path: (payload) => workspace.renamePath(payload),
-    fs_move_path: (payload) => workspace.movePath(payload),
-    fs_delete_path: (payload) => workspace.deletePath(payload),
-    fs_get_path_metadata: (payload) => workspace.pathMetadata(payload),
-    fs_open_path_in_system: (payload) => workspace.openPathInSystem(payload),
-    fs_import_markdown_asset: (payload) => workspace.importMarkdownAsset(payload),
-    fs_import_markdown_asset_base64: (payload) => workspace.importMarkdownAssetBase64(payload),
-    fs_resolve_markdown_asset: (payload) => workspace.resolveMarkdownAsset(payload),
+    fs_get_root_info: (_payload, event) => workspaceForEvent(event).rootInfo(),
+    fs_get_snapshot: (_payload, event) => workspaceForEvent(event).snapshot(),
+    fs_list_entries: (_payload, event) => workspaceForEvent(event).entries(),
+    fs_set_root: (payload, event) => workspaceForEvent(event).setRoot(payload),
+    fs_set_single_file: (payload, event) => workspaceForEvent(event).setSingleFile(payload),
+    fs_open_file: (payload, event) => workspaceForEvent(event).openFile(payload),
+    fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
+    fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
+    fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
+    fs_get_outline_graph: (payload, event) => workspaceForEvent(event).outlineGraph(payload),
+    fs_analyze_markdown_buffer: (payload, event) =>
+      workspaceForEvent(event).analyzeMarkdownBuffer(payload),
+    fs_search_workspace: (payload, event) => workspaceForEvent(event).searchWorkspace(payload),
+    fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
+    fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),
+    fs_write_file: (payload, event) => workspaceForEvent(event).writeFile(payload),
+    fs_flush_buffers: (_payload, event) => workspaceForEvent(event).flushBuffers(),
+    fs_get_buffer_status: (payload, event) => workspaceForEvent(event).getBufferStatus(payload),
+    fs_get_background_tasks: (_payload, event) => workspaceForEvent(event).getBackgroundTasks(),
+    fs_create_file: (payload, event) => workspaceForEvent(event).createFile(payload),
+    fs_create_dir: (payload, event) => workspaceForEvent(event).createDir(payload),
+    fs_rename_path: (payload, event) => workspaceForEvent(event).renamePath(payload),
+    fs_move_path: (payload, event) => workspaceForEvent(event).movePath(payload),
+    fs_delete_path: (payload, event) => workspaceForEvent(event).deletePath(payload),
+    fs_get_path_metadata: (payload, event) => workspaceForEvent(event).pathMetadata(payload),
+    fs_open_path_in_system: (payload, event) => workspaceForEvent(event).openPathInSystem(payload),
+    fs_import_markdown_asset: (payload, event) =>
+      workspaceForEvent(event).importMarkdownAsset(payload),
+    fs_import_markdown_asset_base64: (payload, event) =>
+      workspaceForEvent(event).importMarkdownAssetBase64(payload),
+    fs_resolve_markdown_asset: (payload, event) =>
+      workspaceForEvent(event).resolveMarkdownAsset(payload),
     list_markdown_files: (payload) => listMarkdownFiles(payload),
     read_markdown_file: (payload) => readMarkdownFile(payload),
     write_markdown_file: (payload) => writeMarkdownFile(payload),

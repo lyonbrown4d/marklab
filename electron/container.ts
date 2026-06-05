@@ -4,9 +4,12 @@ import type * as Electron from 'electron'
 import { ExportService } from '@electron/services/export/exportService.js'
 import { GitService } from '@electron/services/git/service.js'
 import { createElectronLogger, type Logger } from '@electron/services/logger.js'
-import { configureSettingsStoreLogger } from '@electron/services/settingsStore.js'
+import {
+  configureSettingsStoreLogger,
+  removeRendererSession,
+} from '@electron/services/settingsStore.js'
 import { TerminalService } from '@electron/services/terminal/service.js'
-import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { AppLaunchInfo } from '@electron/types.js'
 
 export type ElectronRuntimeDependencies = {
@@ -25,7 +28,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   gitService: GitService
   logger: Logger
   terminalService: TerminalService
-  workspaceService: WorkspaceService
+  workspaceRegistry: WindowWorkspaceRegistry
 }
 
 export type ElectronContainer = AwilixContainer<ElectronCradle>
@@ -51,8 +54,10 @@ export const createElectronContainer = (
     onRendererReady: asValue(dependencies.onRendererReady ?? (() => undefined)),
     shell: asValue(dependencies.shell),
     logger: asValue(logger),
-    workspaceService: asFunction(({ app, logger, shell }) => {
-      return new WorkspaceService(app, shell, logger.child('workspace'))
+    workspaceRegistry: asFunction(({ app, logger, shell }) => {
+      return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
+        onSessionDisposed: removeRendererSession,
+      })
     }).singleton(),
     exportService: asFunction(({ BrowserWindow, logger, shell }) => {
       return new ExportService(shell, BrowserWindow, logger.child('export'))
@@ -60,9 +65,10 @@ export const createElectronContainer = (
     gitService: asFunction(({ logger }) => {
       return new GitService(logger.child('git'))
     }).singleton(),
-    terminalService: asFunction(({ app, logger, workspaceService }) => {
+    terminalService: asFunction(({ app, logger, workspaceRegistry }) => {
       return new TerminalService(
-        () => workspaceService.terminalCwd() || app.getPath('home'),
+        (webContents) =>
+          workspaceRegistry.terminalCwdForWebContents(webContents) || app.getPath('home'),
         logger.child('terminal'),
       )
     }).singleton(),

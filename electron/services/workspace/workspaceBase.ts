@@ -50,6 +50,7 @@ export class WorkspaceBase {
   protected readonly snapshotListeners = new Set<SnapshotListener>()
   protected readonly watcher: WorkspaceWatcher
   protected readonly searchIndexTaskState: SearchIndexTaskState = { runs: 0 }
+  protected readonly disposeOnWillQuit = () => this.dispose()
   protected snapshotTimer: ReturnType<typeof setTimeout> | null = null
   protected pendingSnapshotWatcherRestart = false
   protected disposed = false
@@ -92,7 +93,7 @@ export class WorkspaceBase {
       rootPath: this.state.rootPath,
     })
     this.watcher.restart()
-    app.on('will-quit', () => this.dispose())
+    app.on('will-quit', this.disposeOnWillQuit)
   }
 
   rootInfo(): FsRootInfo {
@@ -120,7 +121,9 @@ export class WorkspaceBase {
   }
 
   dispose(): void {
+    if (this.disposed) return
     this.disposed = true
+    this.app.removeListener('will-quit', this.disposeOnWillQuit)
     this.logger.info('workspace service disposing')
     if (this.snapshotTimer) {
       clearTimeout(this.snapshotTimer)

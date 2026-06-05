@@ -12,7 +12,7 @@ import type {
   TerminalSessionInfo,
 } from '@electron/services/terminal/types.js'
 type NodePtyModule = typeof import('node-pty')
-type CwdProvider = () => string
+type CwdProvider = (webContents?: Electron.WebContents) => string
 type TerminalSession =
   | {
       kind: 'pty'
@@ -46,7 +46,7 @@ export class TerminalService {
     const id = `terminal-${this.nextId}`
     this.nextId += 1
     const cwd = normalizeCwd(
-      typeof cwdOverride === 'string' ? cwdOverride : resolveCwd(this.defaultCwd),
+      typeof cwdOverride === 'string' ? cwdOverride : resolveCwd(this.defaultCwd, webContents),
     )
     const shell = defaultShell()
     const size = normalizedSize(rows, cols)
@@ -184,10 +184,13 @@ const clampInteger = (value: unknown, min: number, max: number, fallback: number
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
   return Math.trunc(value < min ? min : value > max ? max : value)
 }
-const resolveCwd = (defaultCwd: string | CwdProvider): string => {
+const resolveCwd = (
+  defaultCwd: string | CwdProvider,
+  webContents?: Electron.WebContents,
+): string => {
   if (typeof defaultCwd === 'string') return defaultCwd
   try {
-    return defaultCwd()
+    return defaultCwd(webContents)
   } catch {
     return os.homedir()
   }

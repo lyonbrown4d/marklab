@@ -3,12 +3,16 @@ import { fsApi, fsSnapshotSchema, type FsSnapshot } from '@/services/fsApi'
 import { appApi } from '@/services/appApi'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
+import { useAppStore, type ViewMode, type WorkspaceTab } from '@/store/useAppStore'
 import { toast } from 'sonner'
 import { useI18n } from '@/i18n/useI18n'
 
 type LoadWorkspace = (options?: {
+  activeTabId?: string | null
   preserveCurrentRoute?: boolean
   snapshot?: FsSnapshot
+  tabs?: WorkspaceTab[]
 }) => Promise<void>
 
 type UseWorkspaceRestoreArgs = {
@@ -24,6 +28,64 @@ type UseWorkspaceRestoreResult = {
   restoreStatusMessage: string | null
   isRestoringSession: boolean
   restoreWorkspaceSession: () => Promise<void>
+}
+
+type WorkspaceSessionSeedPayload = {
+  state?: Record<string, unknown>
+  version?: number
+}
+
+type ParsedWorkspaceSessionSeed = {
+  activeTabId?: string | null
+  tabs?: WorkspaceTab[]
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+const hasOwn = (value: Record<string, unknown>, key: string): boolean => {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+const isRootKind = (value: unknown): value is 'internal' | 'external' | 'single' => {
+  return value === 'internal' || value === 'external' || value === 'single'
+}
+
+const isViewMode = (value: unknown): value is ViewMode => {
+  return value === 'wysiwyg' || value === 'source' || value === 'graph'
+}
+
+const applyWorkspaceSessionSeed = (payload: unknown): ParsedWorkspaceSessionSeed => {
+  if (!isRecord(payload) || !isRecord(payload.state)) return {}
+  const seed = payload.state
+  const tabs = Array.isArray(seed.tabs) ? normalizeWorkspaceTabs(seed.tabs) : undefined
+  const activeTabId =
+    hasOwn(seed, 'activeTabId') && typeof seed.activeTabId === 'string'
+      ? normalizeWorkspaceTabId(seed.activeTabId, tabs ?? [])
+      : hasOwn(seed, 'activeTabId')
+        ? null
+        : undefined
+
+  useAppStore.setState((state) => ({
+    ...state,
+    ...(typeof seed.rootPath === 'string' ? { rootPath: seed.rootPath } : {}),
+    ...(isRootKind(seed.rootKind) ? { rootKind: seed.rootKind } : {}),
+    ...(tabs ? { tabs } : {}),
+    ...(activeTabId !== undefined ? { activeTabId } : {}),
+    ...(typeof seed.sidebarCollapsed === 'boolean'
+      ? { sidebarCollapsed: seed.sidebarCollapsed }
+      : {}),
+    ...(typeof seed.rightSidebarCollapsed === 'boolean'
+      ? { rightSidebarCollapsed: seed.rightSidebarCollapsed }
+      : {}),
+    ...(isViewMode(seed.viewMode) ? { viewMode: seed.viewMode } : {}),
+  }))
+
+  return {
+    ...(tabs ? { tabs } : {}),
+    ...(activeTabId !== undefined ? { activeTabId } : {}),
+  }
 }
 
 export const useWorkspaceRestore = ({
@@ -113,6 +175,28 @@ export const useWorkspaceRestore = ({
       }
     }
   }, [openFolder, t])
+
+  useEffect(() => {
+    if (!isDesktopRuntime()) return
+
+    let unlistenWorkspaceSeed: (() => void) | undefined
+    void listen<WorkspaceSessionSeedPayload>('workspace-session-seed', (event) => {
+      const seed = applyWorkspaceSessionSeed(event.payload)
+      void loadWorkspace({
+        activeTabId: seed.activeTabId,
+        preserveCurrentRoute: false,
+        tabs: seed.tabs,
+      })
+    }).then((fn) => {
+      unlistenWorkspaceSeed = fn
+    })
+
+    return () => {
+      if (unlistenWorkspaceSeed) {
+        unlistenWorkspaceSeed()
+      }
+    }
+  }, [loadWorkspace])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return

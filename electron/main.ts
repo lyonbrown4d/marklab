@@ -15,10 +15,7 @@ import {
   publishDeepLinkUrl,
   registerDeepLinkProtocol,
 } from '@electron/main/deepLinks.js'
-import {
-  createAppWindowCommandHandlers,
-  createNativeMenuActionDispatcher,
-} from '@electron/main/windowCommands.js'
+import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
 import type { DeepLinkPayload, SingleInstancePayload } from '@electron/types.js'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion.js'
@@ -148,6 +145,7 @@ const installManagedMainWindowLifecycle = (
 ): void => {
   if (managedMainWindows.has(main)) return
   managedMainWindows.add(main)
+  getContainer().cradle.workspaceRegistry.registerWindow(main)
   installMainWindowCloseFlush(main)
   main.on('closed', () => {
     if (windows?.main === main) windows = null
@@ -161,16 +159,15 @@ const ensureWindowPool = (): MarklabWindowPool => {
   return windowPool
 }
 
-const appWindowCommandDependencies = {
+const windowCommandSetup = createWindowCommandSetup({
   getContainer,
   getNativeIpc: () => nativeIpc,
   getPrimaryWindow: () => windows?.main ?? null,
   getWindowPool: ensureWindowPool,
   installManagedMainWindowLifecycle,
-}
-
-const appWindowCommandHandlers = createAppWindowCommandHandlers(appWindowCommandDependencies)
-const dispatchNativeMenuAction = createNativeMenuActionDispatcher(appWindowCommandDependencies)
+})
+const appWindowCommandHandlers = windowCommandSetup.commandHandlers
+const dispatchNativeMenuAction = windowCommandSetup.dispatchMenuAction
 
 const registerLegacyShellIpc = (): void => {
   if (legacyIpcRegistered) return
@@ -222,7 +219,7 @@ const bootstrap = async (): Promise<void> => {
       onRendererReady: handleRendererReady,
       shell,
       terminalService: container.cradle.terminalService,
-      workspaceService: container.cradle.workspaceService,
+      workspaceRegistry: container.cradle.workspaceRegistry,
       windowCommandHandlers: appWindowCommandHandlers,
     })
   }

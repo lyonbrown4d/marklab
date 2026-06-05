@@ -10,7 +10,6 @@ import {
   searchDocuments,
 } from '@electron/services/workspace/markdown.js'
 import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
-import os from 'node:os'
 import type {
   FsGraph,
   FsMarkdownDiagnostic,
@@ -228,13 +227,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   private getWorkspaceSearchIndexPath(): string {
-    const appName = this.app.getName() || 'marklab'
-    const baseDataDir =
-      process.platform === 'linux'
-        ? (process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share'))
-        : this.app.getPath('appData')
-
-    return path.join(baseDataDir, appName, 'search-index', `${this.getWorkspaceSearchKey()}.sqlite`)
+    return path.join(
+      this.app.getPath('userData'),
+      'cache',
+      'search-index',
+      `${this.getWorkspaceSearchKey()}.sqlite`,
+    )
   }
 
   private getWorkspaceSearchKey(): string {

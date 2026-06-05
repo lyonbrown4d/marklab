@@ -30,8 +30,10 @@ type UseProjectLoaderArgs = {
 }
 
 type LoadWorkspaceOptions = {
+  activeTabId?: string | null
   preserveCurrentRoute?: boolean
   snapshot?: FsSnapshot
+  tabs?: WorkspaceTab[]
 }
 
 const isFile = (entry: FileEntry) => {
@@ -117,7 +119,10 @@ export const useProjectLoader = ({
         if (filesOnly.length > 0) {
           const available = new Set(filesOnly.map((file) => file.path))
           const defaultPath = filesOnly[0].path
-          const nextTabs = tabsRef.current.filter((tab) => {
+          const seedTabs = options?.tabs ?? tabsRef.current
+          const seedActiveTabId =
+            options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
+          const nextTabs = seedTabs.filter((tab) => {
             if (tab.kind === 'workspace-graph') return true
             return available.has(tab.path)
           })
@@ -128,7 +133,7 @@ export const useProjectLoader = ({
           if (!areTabListsEqual(tabsRef.current, finalTabs)) {
             setTabs(finalTabs)
           }
-          const currentActiveTabId = activeTabIdRef.current
+          const currentActiveTabId = seedActiveTabId
           const currentActiveTab = finalTabs.find(
             (tab) => getWorkspaceTabId(tab) === currentActiveTabId,
           )

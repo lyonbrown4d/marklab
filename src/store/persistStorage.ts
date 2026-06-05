@@ -89,23 +89,6 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
     },
   }
 }
-const parseStorageValue = <S>(value: string | null, storage: Storage, key: string) => {
-  if (!value) return null
-  try {
-    return JSON.parse(value) as StorageValue<S>
-  } catch {
-    storage.removeItem(key)
-    return null
-  }
-}
-const getLocalStorage = (): Storage | null => {
-  if (typeof window === 'undefined') return null
-  try {
-    return window.localStorage
-  } catch {
-    return null
-  }
-}
 export const createElectronSettingsJsonStorage = <S>(
   name = 'marko.app',
 ): PersistStorage<S> | undefined => {
@@ -114,16 +97,7 @@ export const createElectronSettingsJsonStorage = <S>(
   return {
     getItem: async (key) => {
       const value = await electronPersist.getItem(key)
-      if (value) return value as StorageValue<S>
-      const localStorage = getLocalStorage()
-      const localValue = localStorage
-        ? parseStorageValue<S>(localStorage.getItem(key), localStorage, key)
-        : null
-      if (localValue) {
-        const result = await electronPersist.setItem(key, localValue)
-        if (result.ok) localStorage?.removeItem(key)
-      }
-      return localValue
+      return value as StorageValue<S> | null
     },
     setItem: async (key, value) => {
       const result = await electronPersist.setItem(key, value)
