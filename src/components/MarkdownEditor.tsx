@@ -170,6 +170,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
       <ScrollArea
         ref={scrollAreaRef}
         className="h-full flex-1"
+        smoothWheel={false}
         viewportClassName="editor-scroll-viewport"
       >
         <div className="milkdown min-h-full" ref={rootRef} />

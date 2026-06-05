@@ -1,7 +1,8 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import keyBy from 'lodash-es/keyBy'
 import { useWorkspaceMarkdownContents } from '@/app/useWorkspaceMarkdownContents'
+import { useMarkdownTextAnalysis } from '@/hooks/useMarkdownTextAnalysis'
 import {
   buildBacklinksFromMarkdownContents,
   buildBacklinksFromWorkspaceIndex,
@@ -11,7 +12,7 @@ import {
   type MarkdownSourceDiagnostic,
 } from '@/logic/markdownDiagnostics'
 import { getMarkdownAssetReport } from '@/logic/assets'
-import { extractHeadings, splitLinkTarget } from '@/logic/paths'
+import { splitLinkTarget } from '@/logic/paths'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -104,19 +105,26 @@ export const useRightSidebarData = ({
     if (deferredTargetPath === activePath) return deferredEditorValue
     return workspaceContents[deferredTargetPath] ?? ''
   }, [activePath, collapsed, deferredEditorValue, deferredTargetPath, workspaceContents])
+  const textAnalysis = useMarkdownTextAnalysis(
+    statsContent,
+    !collapsed && Boolean(deferredTargetPath),
+    deferredTargetPath ?? 'empty',
+  )
   const outline = useMemo(() => {
     if (collapsed) return []
     if (shouldUseIndexedTarget && indexedTargetFile) {
       return indexedTargetFile.headings
     }
     if (shouldWaitForIndexedActiveTarget) return []
-    return extractHeadings(targetContent)
+    if (!targetContent) return []
+    return textAnalysis.outline
   }, [
     collapsed,
     indexedTargetFile,
     shouldUseIndexedTarget,
     shouldWaitForIndexedActiveTarget,
     targetContent,
+    textAnalysis.outline,
   ])
   const backlinks = useMemo(() => {
     if (collapsed) return []
@@ -173,7 +181,7 @@ export const useRightSidebarData = ({
     workspaceContents,
     workspaceIndex,
   ])
-  const documentStats = useIdleDocumentStats(statsContent, !collapsed)
+  const documentStats = !collapsed ? textAnalysis.stats : { lines: 0, words: 0 }
   const errorProblems = useMemo(
     () => problems.filter((problem) => problem.severity === 'error'),
     [problems],
@@ -198,46 +206,12 @@ export const useRightSidebarData = ({
     errorProblems,
     warningProblems,
     documentStats,
+    documentStatsLoading: textAnalysis.isLoading,
+    documentStatsError: textAnalysis.error,
     displayMetadata,
     loadingMetadata: metadataQuery.isFetching && !metadataQuery.data,
     assetReport,
   }
-}
-
-type IdleWindow = Window & {
-  cancelIdleCallback?: (handle: number) => void
-  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
-}
-
-const EMPTY_DOCUMENT_STATS = {
-  lines: 0,
-  words: 0,
-}
-
-const scheduleIdleUpdate = (callback: () => void) => {
-  const idleWindow = window as IdleWindow
-
-  if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
-    const handle = idleWindow.requestIdleCallback(callback, { timeout: 900 })
-    return () => idleWindow.cancelIdleCallback?.(handle)
-  }
-
-  const timer = window.setTimeout(callback, 160)
-  return () => window.clearTimeout(timer)
-}
-
-const useIdleDocumentStats = (value: string, enabled: boolean) => {
-  const [stats, setStats] = useState(EMPTY_DOCUMENT_STATS)
-
-  useEffect(() => {
-    if (!enabled) return
-
-    return scheduleIdleUpdate(() => {
-      setStats(getDocumentStats(value))
-    })
-  }, [enabled, value])
-
-  return enabled ? stats : EMPTY_DOCUMENT_STATS
 }
 
 const getIndexedMarkdownSourceDiagnostics = ({
@@ -295,12 +269,4 @@ const getIndexedMarkdownSourceDiagnostics = ({
   })
 
   return diagnostics
-}
-
-const getDocumentStats = (value: string) => {
-  const trimmed = value.trim()
-  return {
-    lines: value.length === 0 ? 0 : value.split(/\r\n|\r|\n/).length,
-    words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).filter(Boolean).length,
-  }
 }

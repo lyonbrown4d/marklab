@@ -25,6 +25,14 @@ const electronMainRequireBanner = [
 
 const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch']
 
+const electronMainEntry = {
+  main: path.resolve(__dirname, 'electron/main.ts'),
+  workspaceAnalysisWorkerEntry: path.resolve(
+    __dirname,
+    'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
+  ),
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
@@ -45,7 +53,7 @@ export default defineConfig(({ command, mode }) => {
       isElectron &&
         electron({
           main: {
-            entry: 'electron/main.ts',
+            entry: electronMainEntry,
             vite: {
               resolve: {
                 alias,
@@ -54,13 +62,6 @@ export default defineConfig(({ command, mode }) => {
                 assetsInlineLimit: 0,
                 rollupOptions: {
                   external: electronMainExternal,
-                  input: {
-                    main: path.resolve(__dirname, 'electron/main.ts'),
-                    workspaceAnalysisWorkerEntry: path.resolve(
-                      __dirname,
-                      'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
-                    ),
-                  },
                   output: {
                     entryFileNames: '[name].js',
                     banner: electronMainRequireBanner,

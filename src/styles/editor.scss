@@ -33,6 +33,11 @@
   background: hsl(var(--background));
 }
 
+.editor-scroll-viewport {
+  overscroll-behavior: auto;
+  scroll-behavior: auto;
+}
+
 .crepe.is-image-drop-target .milkdown {
   background: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--background)));
 }
