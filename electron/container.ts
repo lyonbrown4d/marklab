@@ -8,6 +8,7 @@ import {
   configureSettingsStoreLogger,
   removeRendererSession,
 } from '@electron/services/settingsStore.js'
+import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore.js'
 import { TerminalService } from '@electron/services/terminal/service.js'
 import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { AppLaunchInfo } from '@electron/types.js'
@@ -38,6 +39,7 @@ export const createElectronContainer = (
 ): ElectronContainer => {
   const logger = createElectronLogger({ isPackaged: dependencies.app.isPackaged }).child('main')
   configureSettingsStoreLogger(logger.child('settings'))
+  configureUserThemeStoreLogger(logger.child('themes'))
 
   const container = createContainer<ElectronCradle>({
     injectionMode: InjectionMode.PROXY,

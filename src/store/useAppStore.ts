@@ -5,16 +5,19 @@ import { getInitialLocale } from '@/i18n/utils'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import {
   areWorkspaceTabsEqual,
-  fileViewTabId,
   normalizeWorkspaceTabId,
   normalizeWorkspaceTabs,
 } from '@/logic/tabs'
 import {
   normalizeShortcutList,
-  sanitizeShortcutOverrides,
   type ShortcutActionId,
   type ShortcutBindings,
 } from '@/logic/shortcuts'
+import {
+  APP_STORE_VERSION,
+  migrateAppStoreState,
+  partializeAppStoreState,
+} from '@/store/appStorePersistence'
 
 export type ViewMode = 'wysiwyg' | 'source' | 'graph'
 export type FileViewKind = 'edit' | 'source' | 'graph'
@@ -43,7 +46,7 @@ export type FileEntry = {
   kind: 'file' | 'folder'
 }
 
-type AppState = {
+export type AppState = {
   rootPath: string
   rootKind: 'internal' | 'external' | 'single'
   recentProjects: string[]
@@ -53,6 +56,7 @@ type AppState = {
   hasHydrated: boolean
   viewMode: ViewMode
   theme: ThemeMode
+  customThemeId: string | null
   locale: Locale
   sidebarCollapsed: boolean
   rightSidebarCollapsed: boolean
@@ -65,6 +69,9 @@ type AppState = {
   motionSmoothScrolling: boolean
   motionAnimatedCursor: boolean
   motionAnimatedPanels: boolean
+  immersiveZenMode: boolean
+  immersiveFocusMode: boolean
+  immersiveTypewriterMode: boolean
   shortcutOverrides: ShortcutBindings
   setRootPath: (path: string) => void
   setRootKind: (kind: 'internal' | 'external' | 'single') => void
@@ -74,6 +81,7 @@ type AppState = {
   setHasHydrated: (hydrated: boolean) => void
   setViewMode: (mode: ViewMode) => void
   setTheme: (theme: ThemeMode) => void
+  setCustomThemeId: (themeId: string | null) => void
   setLocale: (locale: Locale) => void
   setSilentSave: (silent: boolean) => void
   setShowEditorStatusBar: (show: boolean) => void
@@ -84,6 +92,9 @@ type AppState = {
   setMotionSmoothScrolling: (enabled: boolean) => void
   setMotionAnimatedCursor: (enabled: boolean) => void
   setMotionAnimatedPanels: (enabled: boolean) => void
+  setImmersiveZenMode: (enabled: boolean) => void
+  setImmersiveFocusMode: (enabled: boolean) => void
+  setImmersiveTypewriterMode: (enabled: boolean) => void
   setShortcutOverride: (action: ShortcutActionId, bindings: string[] | null) => void
   resetShortcutOverrides: () => void
   toggleSidebar: () => void
@@ -103,6 +114,7 @@ export const useAppStore = create<AppState>()(
       hasHydrated: false,
       viewMode: 'wysiwyg',
       theme: 'marko-light',
+      customThemeId: null,
       locale: getInitialLocale(),
       sidebarCollapsed: false,
       rightSidebarCollapsed: false,
@@ -115,6 +127,9 @@ export const useAppStore = create<AppState>()(
       motionSmoothScrolling: true,
       motionAnimatedCursor: true,
       motionAnimatedPanels: true,
+      immersiveZenMode: false,
+      immersiveFocusMode: false,
+      immersiveTypewriterMode: false,
       shortcutOverrides: {},
       setRootPath: (path) => set((state) => (state.rootPath === path ? state : { rootPath: path })),
       setRootKind: (kind) => set((state) => (state.rootKind === kind ? state : { rootKind: kind })),
@@ -134,6 +149,8 @@ export const useAppStore = create<AppState>()(
         set((state) => (state.hasHydrated === hasHydrated ? state : { hasHydrated })),
       setViewMode: (mode) => set((state) => (state.viewMode === mode ? state : { viewMode: mode })),
       setTheme: (theme) => set((state) => (state.theme === theme ? state : { theme })),
+      setCustomThemeId: (customThemeId) =>
+        set((state) => (state.customThemeId === customThemeId ? state : { customThemeId })),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
       setSilentSave: (silentSave) =>
         set((state) => (state.silentSave === silentSave ? state : { silentSave })),
@@ -169,6 +186,20 @@ export const useAppStore = create<AppState>()(
         set((state) =>
           state.motionAnimatedPanels === motionAnimatedPanels ? state : { motionAnimatedPanels },
         ),
+      setImmersiveZenMode: (immersiveZenMode) =>
+        set((state) =>
+          state.immersiveZenMode === immersiveZenMode ? state : { immersiveZenMode },
+        ),
+      setImmersiveFocusMode: (immersiveFocusMode) =>
+        set((state) =>
+          state.immersiveFocusMode === immersiveFocusMode ? state : { immersiveFocusMode },
+        ),
+      setImmersiveTypewriterMode: (immersiveTypewriterMode) =>
+        set((state) =>
+          state.immersiveTypewriterMode === immersiveTypewriterMode
+            ? state
+            : { immersiveTypewriterMode },
+        ),
       setShortcutOverride: (action, bindings) =>
         set((state) => {
           const next = { ...state.shortcutOverrides }
@@ -197,93 +228,12 @@ export const useAppStore = create<AppState>()(
     {
       name: 'marko.app',
       storage: createElectronSettingsJsonStorage('marko.app'),
-      version: 12,
+      version: APP_STORE_VERSION,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
-      migrate: (persistedState, version) => {
-        const state = (persistedState ?? {}) as Partial<AppState> & { theme?: string }
-        const legacyTheme =
-          version < 6 && state.theme === 'light'
-            ? 'marko-light'
-            : version < 6 && state.theme === 'dark'
-              ? 'marko-dark'
-              : state.theme
-        const normalizedTheme: ThemeMode =
-          legacyTheme === 'light' ||
-          legacyTheme === 'dark' ||
-          legacyTheme === 'marko-light' ||
-          legacyTheme === 'marko-dark'
-            ? (legacyTheme as ThemeMode)
-            : 'marko-light'
-        const normalizedViewMode: ViewMode =
-          state.viewMode === 'graph' || state.viewMode === 'source' ? state.viewMode : 'wysiwyg'
-        const normalizedTabs = normalizeWorkspaceTabs(state.tabs)
-        const legacyActivePath =
-          typeof (state as { activePath?: unknown }).activePath === 'string'
-            ? ((state as { activePath?: string }).activePath ?? null)
-            : null
-        const persistedActiveTabId =
-          typeof state.activeTabId === 'string'
-            ? state.activeTabId
-            : legacyActivePath
-              ? fileViewTabId(legacyActivePath, 'edit')
-              : null
-        const normalizedActiveTabId = normalizeWorkspaceTabId(persistedActiveTabId, normalizedTabs)
-        return {
-          ...state,
-          tabs: normalizedTabs,
-          activeTabId: normalizedActiveTabId,
-          theme: normalizedTheme,
-          viewMode: normalizedViewMode,
-          rightSidebarCollapsed: state.rightSidebarCollapsed ?? false,
-          silentSave: state.silentSave ?? true,
-          showEditorStatusBar: state.showEditorStatusBar ?? true,
-          defaultFileView:
-            state.defaultFileView === 'source' || state.defaultFileView === 'graph'
-              ? state.defaultFileView
-              : 'edit',
-          graphMiniMapEnabled: state.graphMiniMapEnabled ?? true,
-          graphContentMode:
-            state.graphContentMode === 'none' || state.graphContentMode === 'full'
-              ? state.graphContentMode
-              : 'summary',
-          markdownAssetImportStrategy:
-            state.markdownAssetImportStrategy === 'preserve-path'
-              ? 'preserve-path'
-              : 'copy-to-document-assets',
-          motionSmoothScrolling: state.motionSmoothScrolling ?? true,
-          motionAnimatedCursor: state.motionAnimatedCursor ?? true,
-          motionAnimatedPanels: state.motionAnimatedPanels ?? true,
-          shortcutOverrides: sanitizeShortcutOverrides(
-            version < 10
-              ? (state as { shortcutOverrides?: unknown }).shortcutOverrides
-              : state.shortcutOverrides,
-          ),
-        } as AppState
-      },
-      partialize: (state) => ({
-        rootPath: state.rootPath,
-        rootKind: state.rootKind,
-        recentProjects: state.recentProjects,
-        tabs: state.tabs,
-        activeTabId: state.activeTabId,
-        viewMode: state.viewMode,
-        theme: state.theme,
-        locale: state.locale,
-        sidebarCollapsed: state.sidebarCollapsed,
-        rightSidebarCollapsed: state.rightSidebarCollapsed,
-        silentSave: state.silentSave,
-        showEditorStatusBar: state.showEditorStatusBar,
-        defaultFileView: state.defaultFileView,
-        graphMiniMapEnabled: state.graphMiniMapEnabled,
-        graphContentMode: state.graphContentMode,
-        markdownAssetImportStrategy: state.markdownAssetImportStrategy,
-        motionSmoothScrolling: state.motionSmoothScrolling,
-        motionAnimatedCursor: state.motionAnimatedCursor,
-        motionAnimatedPanels: state.motionAnimatedPanels,
-        shortcutOverrides: state.shortcutOverrides,
-      }),
+      migrate: migrateAppStoreState,
+      partialize: partializeAppStoreState,
     },
   ),
 )

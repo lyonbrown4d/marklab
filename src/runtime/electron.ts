@@ -43,6 +43,11 @@ export type ElectronDeepLinkEvent = {
 export type ElectronLaunchInfo = ElectronSingleInstanceEvent & {
   deepLinks: ElectronDeepLinkEvent[]
 }
+export type ElectronUserThemeInfo = {
+  createdAt: number
+  id: string
+  name: string
+}
 export type ElectronRuntimeEvent<T = unknown> = {
   event: string
   id: number
@@ -116,6 +121,31 @@ export type ElectronRuntimeApi = {
         error?: string
       }>
     }
+  }
+  themes?: {
+    importCss: (path: string) => Promise<{
+      error?: string
+      ok: boolean
+      theme?: ElectronUserThemeInfo
+    }>
+    list: () => Promise<{
+      error?: string
+      ok: boolean
+      themes: ElectronUserThemeInfo[]
+    }>
+    openFolder: () => Promise<{
+      error?: string
+      ok: boolean
+    }>
+    readCss: (id: string | null) => Promise<{
+      css?: string
+      error?: string
+      ok: boolean
+    }>
+    remove: (id: string) => Promise<{
+      error?: string
+      ok: boolean
+    }>
   }
   assets?: {
     convertFileSrc?: (path: string) => string

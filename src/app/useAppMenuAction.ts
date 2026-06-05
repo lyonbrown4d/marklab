@@ -3,6 +3,7 @@ import { exportApi } from '@/services/exportApi'
 import { requestExportContent } from '@/utils/exportContent'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
+import { useAppStore } from '@/store/useAppStore'
 import { toast } from 'sonner'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -13,6 +14,12 @@ type UseAppMenuActionArgs = {
 }
 
 export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
+  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
+  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
+  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
+  const setImmersiveZenMode = useAppStore((state) => state.setImmersiveZenMode)
+  const setImmersiveFocusMode = useAppStore((state) => state.setImmersiveFocusMode)
+  const setImmersiveTypewriterMode = useAppStore((state) => state.setImmersiveTypewriterMode)
   return useCallback(
     (id: string) => {
       const currentState = stateRef.current
@@ -83,6 +90,11 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       if (id === 'view.graph') currentState.setViewMode('graph')
       if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
       if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
+      if (id === 'view.toggle_zen_mode') setImmersiveZenMode(!immersiveZenMode)
+      if (id === 'view.toggle_focus_mode') setImmersiveFocusMode(!immersiveFocusMode)
+      if (id === 'view.toggle_typewriter_mode') {
+        setImmersiveTypewriterMode(!immersiveTypewriterMode)
+      }
       if (id === 'settings.open') openSettings()
       if (id === 'theme.light') currentState.setTheme('light')
       if (id === 'theme.dark') currentState.setTheme('dark')
@@ -94,6 +106,15 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
         })
       }
     },
-    [openSettings, stateRef],
+    [
+      immersiveFocusMode,
+      immersiveTypewriterMode,
+      immersiveZenMode,
+      openSettings,
+      setImmersiveFocusMode,
+      setImmersiveTypewriterMode,
+      setImmersiveZenMode,
+      stateRef,
+    ],
   )
 }

@@ -55,6 +55,35 @@
   scroll-padding-block: 3rem;
 }
 
+.crepe.is-zen-editor .milkdown .ProseMirror {
+  max-width: 760px;
+  padding-top: 5rem;
+}
+
+.crepe.is-typewriter-editor .milkdown .ProseMirror {
+  padding-top: 22vh;
+  padding-bottom: 34vh;
+  scroll-padding-block: 22vh 34vh;
+}
+
+.crepe.is-focus-editor
+  .milkdown
+  .ProseMirror:has(.marko-md-block:focus-within)
+  .marko-md-block:not(:focus-within):not(:hover):not([data-selected='true']) {
+  opacity: 0.42;
+}
+
+.crepe.is-focus-editor .milkdown .marko-md-block:focus-within,
+.crepe.is-focus-editor .milkdown .marko-md-block[data-selected='true'] {
+  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 32%, transparent);
+  opacity: 1;
+}
+
+.markdown-source-editor.is-zen-editor {
+  background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)));
+}
+
 .crepe .milkdown .ProseMirror.marklab-animated-cursor-host {
   caret-color: transparent;
 }

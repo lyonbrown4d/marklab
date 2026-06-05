@@ -15,6 +15,7 @@ import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
 import { registerPlatformIpc } from '@electron/ipc/platform.js'
 import { registerSettingsIpc } from '@electron/ipc/settings.js'
 import { registerShellIpc } from '@electron/ipc/shell.js'
+import { registerThemeIpc } from '@electron/ipc/themes.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
 import {
   registerWorkspaceCommandsIpc,
@@ -57,6 +58,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerPlatformIpc(dependencies.ipcMain)
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)
   registerShellIpc(dependencies.ipcMain, dependencies.shell)
+  registerThemeIpc(dependencies.ipcMain, dependencies.shell)
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
     exportService: dependencies.exportService,

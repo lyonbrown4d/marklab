@@ -60,6 +60,30 @@ export type SettingsPersistResult = {
   error?: string
 }
 
+export type UserThemeInfo = {
+  createdAt: number
+  id: string
+  name: string
+}
+
+export type UserThemeListResult = {
+  error?: string
+  ok: boolean
+  themes: UserThemeInfo[]
+}
+
+export type UserThemeImportResult = {
+  error?: string
+  ok: boolean
+  theme?: UserThemeInfo
+}
+
+export type UserThemeCssResult = {
+  css?: string
+  error?: string
+  ok: boolean
+}
+
 export type StartDragResult = WindowActionResult & {
   supported: boolean
 }

@@ -35,6 +35,7 @@ import { AppShellPanels } from '@/app/AppShellPanels'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
 import { useAppStore } from '@/store/useAppStore'
+import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { toast } from 'sonner'
 
 const createUntitledPath = (files: FileEntry[]) => {
@@ -82,6 +83,10 @@ const AppLayout = () => {
   const motionSmoothScrolling = useAppStore((store) => store.motionSmoothScrolling)
   const motionAnimatedCursor = useAppStore((store) => store.motionAnimatedCursor)
   const motionAnimatedPanels = useAppStore((store) => store.motionAnimatedPanels)
+  const customThemeId = useAppStore((store) => store.customThemeId)
+  const immersiveZenMode = useAppStore((store) => store.immersiveZenMode)
+  const immersiveFocusMode = useAppStore((store) => store.immersiveFocusMode)
+  const immersiveTypewriterMode = useAppStore((store) => store.immersiveTypewriterMode)
   const stateRef = useLatest(state)
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -96,6 +101,7 @@ const AppLayout = () => {
   const [terminalInitialized, setTerminalInitialized] = useState(false)
   const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const effectiveTerminalOpen = terminalOpen && !immersiveZenMode
   const workspaceGroupElementRef = useRef<HTMLDivElement | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
   const leftSidebarPanelRef = usePanelRef()
@@ -112,6 +118,7 @@ const AppLayout = () => {
   const openSettings = useCallback(() => {
     setSettingsOpen(true)
   }, [])
+  useUserThemeCss(customThemeId)
   useDesktopReadySignal()
   useAppPanelLayoutSync({
     leftSidebarPanelRef,
@@ -119,9 +126,9 @@ const AppLayout = () => {
     terminalPanelRef,
     workspaceGroupElementRef,
     shellGroupElementRef,
-    sidebarCollapsed: state.sidebarCollapsed,
-    rightSidebarCollapsed: state.rightSidebarCollapsed,
-    terminalOpen,
+    sidebarCollapsed: state.sidebarCollapsed || immersiveZenMode,
+    rightSidebarCollapsed: state.rightSidebarCollapsed || immersiveZenMode,
+    terminalOpen: effectiveTerminalOpen,
   })
   const handleMenuAction = useAppMenuAction({
     stateRef,
@@ -270,7 +277,7 @@ const AppLayout = () => {
       activeTab: state.activeTab,
       rootPath: state.rootPath,
       recentProjects: state.recentProjects,
-      showEditorStatusBar: state.showEditorStatusBar,
+      showEditorStatusBar: state.showEditorStatusBar && !immersiveZenMode,
       graphMiniMapEnabled: state.graphMiniMapEnabled,
       graphContentMode: state.graphContentMode,
       onCloseActiveTab: state.onCloseActiveTab,
@@ -296,6 +303,7 @@ const AppLayout = () => {
     state.rootPath,
     state.recentProjects,
     state.showEditorStatusBar,
+    immersiveZenMode,
     state.graphMiniMapEnabled,
     state.graphContentMode,
     state.onCloseActiveTab,
@@ -318,7 +326,22 @@ const AppLayout = () => {
       : 'false'
     document.documentElement.dataset.motionCursor = motionAnimatedCursor ? 'true' : 'false'
     document.documentElement.dataset.motionPanels = motionAnimatedPanels ? 'true' : 'false'
-  }, [motionAnimatedCursor, motionAnimatedPanels, motionSmoothScrolling, state.theme])
+    document.documentElement.dataset.customTheme = customThemeId ? 'true' : 'false'
+    document.documentElement.dataset.immersiveZen = immersiveZenMode ? 'true' : 'false'
+    document.documentElement.dataset.immersiveFocus = immersiveFocusMode ? 'true' : 'false'
+    document.documentElement.dataset.immersiveTypewriter = immersiveTypewriterMode
+      ? 'true'
+      : 'false'
+  }, [
+    customThemeId,
+    immersiveFocusMode,
+    immersiveTypewriterMode,
+    immersiveZenMode,
+    motionAnimatedCursor,
+    motionAnimatedPanels,
+    motionSmoothScrolling,
+    state.theme,
+  ])
 
   const openHeading = useCallback(
     (path: string, slug: string) => {
@@ -410,6 +433,7 @@ const AppLayout = () => {
       onOpenFileView={handleOpenFileView}
       onOpenGitDiff={handleOpenGitDiff}
       onOpenSearchResult={handleOpenSearchResult}
+      immersiveZenMode={immersiveZenMode}
     />
   )
 
@@ -454,27 +478,29 @@ const AppLayout = () => {
         shellGroupElementRef={shellGroupElementRef}
         terminalPanelRef={terminalPanelRef}
         workspacePanels={workspacePanels}
-        terminalOpen={terminalOpen}
+        terminalOpen={effectiveTerminalOpen}
         terminalInitialized={terminalInitialized}
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
       />
-      <AppStatusBar
-        rootKind={state.rootKind}
-        rootPath={state.rootPath}
-        files={state.files}
-        tabs={state.tabs}
-        activeTab={state.activeTab}
-        activePath={state.activePath}
-        viewMode={state.viewMode}
-        dirtyPaths={state.dirtyPaths}
-        saveStates={state.saveStates}
-        terminalOpen={terminalOpen}
-        onToggleTerminal={toggleTerminalArea}
-        onRestoreSession={state.restoreSession}
-        restoreStatusMessage={state.restoreStatusMessage}
-        restoreStatusBusy={state.isRestoringSession}
-      />
+      {!immersiveZenMode && (
+        <AppStatusBar
+          rootKind={state.rootKind}
+          rootPath={state.rootPath}
+          files={state.files}
+          tabs={state.tabs}
+          activeTab={state.activeTab}
+          activePath={state.activePath}
+          viewMode={state.viewMode}
+          dirtyPaths={state.dirtyPaths}
+          saveStates={state.saveStates}
+          terminalOpen={terminalOpen}
+          onToggleTerminal={toggleTerminalArea}
+          onRestoreSession={state.restoreSession}
+          restoreStatusMessage={state.restoreStatusMessage}
+          restoreStatusBusy={state.isRestoringSession}
+        />
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
   type MarkdownAssetImportStrategy,
 } from '@/store/useAppStore'
 import SettingsRow from '@/components/settings/SettingsRow'
+import ImmersiveSettingsSection from '@/components/settings/ImmersiveSettingsSection'
 
 const fileViews: Array<{ value: FileViewKind; labelKey: string; icon: ElementType }> = [
   { value: 'edit', labelKey: 'editor.modeWysiwyg', icon: PenLine },
@@ -189,6 +190,7 @@ const GeneralSettingsPage = () => {
           />
         </div>
       </section>
+      <ImmersiveSettingsSection />
       <section className="settings-row-surface space-y-3 rounded-md p-3">
         <div>
           <div className="mb-1 text-sm font-medium">{t('settings.motion')}</div>

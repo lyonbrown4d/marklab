@@ -33,6 +33,7 @@ type AppWorkspacePanelsProps = {
   onOpenFileView: (path: string, view: FileViewKind) => void
   onOpenGitDiff: (request: GitDiffRequest) => void
   onOpenSearchResult: (result: FsSearchResult) => void
+  immersiveZenMode: boolean
 }
 
 export const AppWorkspacePanels = ({
@@ -49,7 +50,11 @@ export const AppWorkspacePanels = ({
   onOpenFileView,
   onOpenGitDiff,
   onOpenSearchResult,
+  immersiveZenMode,
 }: AppWorkspacePanelsProps) => {
+  const sidebarCollapsed = state.sidebarCollapsed || immersiveZenMode
+  const rightSidebarCollapsed = state.rightSidebarCollapsed || immersiveZenMode
+
   return (
     <ResizableGroup
       className="motion-panel-group min-h-0 flex-1"
@@ -63,12 +68,12 @@ export const AppWorkspacePanels = ({
       <ResizablePanel
         className={cn(
           'motion-panel motion-panel-left min-h-0',
-          state.sidebarCollapsed && 'motion-panel-collapsed',
+          sidebarCollapsed && 'motion-panel-collapsed',
         )}
         collapsedSize="48px"
         collapsible
         defaultSize="320px"
-        disabled={state.sidebarCollapsed}
+        disabled={sidebarCollapsed}
         groupResizeBehavior="preserve-pixel-size"
         id="left-sidebar"
         maxSize="520px"
@@ -76,7 +81,7 @@ export const AppWorkspacePanels = ({
         panelRef={leftSidebarPanelRef}
       >
         <Sidebar
-          collapsed={state.sidebarCollapsed}
+          collapsed={sidebarCollapsed}
           recentProjects={state.recentProjects}
           files={state.files}
           fileTree={state.fileTree}
@@ -100,7 +105,7 @@ export const AppWorkspacePanels = ({
       </ResizablePanel>
       <ResizableSeparator
         className="resize-handle resize-handle-vertical"
-        disabled={state.sidebarCollapsed}
+        disabled={sidebarCollapsed}
         id="left-sidebar-resize"
       />
       <ResizablePanel
@@ -109,17 +114,19 @@ export const AppWorkspacePanels = ({
         minSize="360px"
       >
         <section className="workspace-main motion-panel-surface flex h-full min-w-0 flex-1 flex-col overflow-hidden border-x border-border/80">
-          <TabsBar
-            tabs={state.tabs}
-            dirtyPaths={state.dirtyPaths}
-            saveStates={state.saveStates}
-            activeTabId={state.activeTabId}
-            onOpenTab={state.onOpenTab}
-            onCloseTab={state.onCloseTab}
-            viewMode={state.viewMode}
-            onChangeView={state.setViewMode}
-            silentSave={state.silentSave}
-          />
+          {!immersiveZenMode && (
+            <TabsBar
+              tabs={state.tabs}
+              dirtyPaths={state.dirtyPaths}
+              saveStates={state.saveStates}
+              activeTabId={state.activeTabId}
+              onOpenTab={state.onOpenTab}
+              onCloseTab={state.onCloseTab}
+              viewMode={state.viewMode}
+              onChangeView={state.setViewMode}
+              silentSave={state.silentSave}
+            />
+          )}
           <div className="min-h-0 flex-1 overflow-hidden">
             <KeepAlive
               activeCacheKey={routeCacheKey}
@@ -134,18 +141,18 @@ export const AppWorkspacePanels = ({
       </ResizablePanel>
       <ResizableSeparator
         className="resize-handle resize-handle-vertical"
-        disabled={state.rightSidebarCollapsed}
+        disabled={rightSidebarCollapsed}
         id="right-sidebar-resize"
       />
       <ResizablePanel
         className={cn(
           'motion-panel motion-panel-right min-h-0',
-          state.rightSidebarCollapsed && 'motion-panel-collapsed',
+          rightSidebarCollapsed && 'motion-panel-collapsed',
         )}
         collapsedSize="56px"
         collapsible
         defaultSize="288px"
-        disabled={state.rightSidebarCollapsed}
+        disabled={rightSidebarCollapsed}
         groupResizeBehavior="preserve-pixel-size"
         id="right-sidebar"
         maxSize="460px"
@@ -153,7 +160,7 @@ export const AppWorkspacePanels = ({
         panelRef={rightSidebarPanelRef}
       >
         <RightSidebar
-          collapsed={state.rightSidebarCollapsed}
+          collapsed={rightSidebarCollapsed}
           activePath={state.activePath}
           editorValue={state.editorValue}
           files={state.files}

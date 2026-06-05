@@ -54,6 +54,46 @@
   background: hsl(var(--card));
 }
 
+:root[data-immersive-zen='true'] {
+  .motion-panel-left,
+  .motion-panel-right,
+  #left-sidebar-resize,
+  #right-sidebar-resize,
+  #terminal-resize {
+    display: none !important;
+  }
+
+  .workspace-main {
+    border-inline: 0;
+    background:
+      radial-gradient(
+        circle at 50% 0%,
+        color-mix(in srgb, hsl(var(--primary)) 10%, transparent),
+        transparent 34rem
+      ),
+      hsl(var(--background));
+  }
+
+  .editor-stage {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, hsl(var(--muted)) 18%, transparent),
+        transparent 12rem
+      ),
+      hsl(var(--background));
+  }
+
+  .editor-paper {
+    max-width: min(980px, calc(100vw - 64px));
+    margin-inline: auto;
+    border-color: color-mix(in srgb, hsl(var(--border)) 48%, transparent);
+    box-shadow:
+      0 26px 90px -64px color-mix(in srgb, hsl(var(--foreground)) 36%, transparent),
+      0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 5%, transparent);
+  }
+}
+
 .editor-stage {
   background:
     linear-gradient(

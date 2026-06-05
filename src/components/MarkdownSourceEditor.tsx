@@ -33,6 +33,9 @@ const MarkdownSourceEditor = ({
   const darkMode = useDarkMode()
   const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
+  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
+  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
+  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const diagnosticHostRef = useRef<{
     editor: Parameters<OnMount>[0]
@@ -234,7 +237,16 @@ const MarkdownSourceEditor = ({
   }, [activePath])
 
   return (
-    <div className="h-full overflow-hidden">
+    <div
+      className={[
+        'markdown-source-editor h-full overflow-hidden',
+        immersiveZenMode ? 'is-zen-editor' : '',
+        immersiveFocusMode ? 'is-focus-editor' : '',
+        immersiveTypewriterMode ? 'is-typewriter-editor' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <Editor
         height="100%"
         language="markdown"
@@ -250,16 +262,20 @@ const MarkdownSourceEditor = ({
           scrollBeyondLastLine: false,
           fontSize: 14,
           lineNumbers: 'on',
+          renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
           smoothScrolling: motionSmoothScrolling,
           cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
           cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
-          cursorSurroundingLines: 3,
+          cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
           cursorSurroundingLinesStyle: 'all',
           cursorWidth: 2,
           renderWhitespace: 'selection',
           automaticLayout: true,
           lineNumbersMinChars: 3,
-          padding: { top: 24, bottom: 24 },
+          padding: {
+            top: immersiveTypewriterMode ? 120 : 24,
+            bottom: immersiveTypewriterMode ? 180 : 24,
+          },
         }}
       />
     </div>

@@ -3,6 +3,12 @@ import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
+import {
+  recentProjectsStateKeys,
+  rendererPersistKeys,
+  sessionStateKeys,
+  settingsStateKeys,
+} from '@electron/services/settingsPersistKeys.js'
 import type { PersistedWindowState, RendererPersistKey } from '@electron/types.js'
 
 type SettingsSchema = {
@@ -24,31 +30,6 @@ const STATE_DIR = 'state'
 const APP_SESSION_FILE = 'app-session.json'
 const RECENT_PROJECTS_FILE = 'recent-projects.json'
 const WINDOW_STATE_FILE = 'window-state.json'
-const rendererPersistKeys = new Set<RendererPersistKey>(['marko.app'])
-const settingsStateKeys = new Set([
-  'defaultFileView',
-  'graphContentMode',
-  'graphMiniMapEnabled',
-  'locale',
-  'markdownAssetImportStrategy',
-  'motionAnimatedCursor',
-  'motionAnimatedPanels',
-  'motionSmoothScrolling',
-  'shortcutOverrides',
-  'showEditorStatusBar',
-  'silentSave',
-  'theme',
-])
-const sessionStateKeys = new Set([
-  'activeTabId',
-  'rightSidebarCollapsed',
-  'rootKind',
-  'rootPath',
-  'sidebarCollapsed',
-  'tabs',
-  'viewMode',
-])
-const recentProjectsStateKeys = new Set(['recentProjects'])
 let settingsStore: Store<SettingsSchema> | null = null
 let logger: Logger = noopLogger
 

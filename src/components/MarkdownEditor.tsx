@@ -42,6 +42,9 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
   const nodeViewFactory = useNodeViewFactory()
   const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
   const markdownAssetImportStrategy = useAppStore((state) => state.markdownAssetImportStrategy)
+  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
+  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
+  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
   const {
     focusEditor,
     getMarkdown,
@@ -152,7 +155,15 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     placeSelectionAtClientPoint,
   })
   const dropzoneRootProps = getRootProps({
-    className: `crepe flex h-full flex-1 flex-col ${isDragAccept ? 'is-image-drop-target' : ''}`,
+    className: [
+      'crepe flex h-full flex-1 flex-col',
+      isDragAccept ? 'is-image-drop-target' : '',
+      immersiveZenMode ? 'is-zen-editor' : '',
+      immersiveFocusMode ? 'is-focus-editor' : '',
+      immersiveTypewriterMode ? 'is-typewriter-editor' : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
     onDragOverCapture: handleDragOverCapture,
     onDropCapture: handleDropCapture,
     onPasteCapture: handlePasteCapture,

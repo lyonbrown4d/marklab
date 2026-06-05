@@ -11,6 +11,9 @@ import type {
   RuntimeEventPayload,
   SaveDialogOptions,
   SettingsPersistResult,
+  UserThemeCssResult,
+  UserThemeImportResult,
+  UserThemeListResult,
   WindowActionResult,
 } from '@electron/types.js'
 
@@ -170,6 +173,17 @@ const desktopApi = {
           key,
         ) as Promise<SettingsPersistResult>,
     },
+  },
+  themes: {
+    list: () => ipcRenderer.invoke(nativeIpcChannels.themeList) as Promise<UserThemeListResult>,
+    importCss: (path: string) =>
+      ipcRenderer.invoke(nativeIpcChannels.themeImportCss, path) as Promise<UserThemeImportResult>,
+    readCss: (id: string | null) =>
+      ipcRenderer.invoke(nativeIpcChannels.themeReadCss, id) as Promise<UserThemeCssResult>,
+    remove: (id: string) =>
+      ipcRenderer.invoke(nativeIpcChannels.themeRemove, id) as Promise<SettingsPersistResult>,
+    openFolder: () =>
+      ipcRenderer.invoke(nativeIpcChannels.themeOpenFolder) as Promise<SettingsPersistResult>,
   },
   window: {
     minimize: () => runWindowAction(nativeIpcChannels.windowMinimize),
