@@ -101,7 +101,7 @@ describe('RightSidebar', () => {
     try {
       renderRightSidebar(createProps())
 
-      const headingButton = screen.getByText('Details').closest('button')
+      const headingButton = (await screen.findByText('Details')).closest('button')
       expect(headingButton).toBeInTheDocument()
       fireEvent.click(headingButton!)
 
