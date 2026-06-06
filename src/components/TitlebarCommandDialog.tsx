@@ -1,5 +1,5 @@
 import { SearchX } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useDebounce } from 'ahooks'
 import AppCommandDialog from '@/components/AppCommandDialog'
@@ -8,12 +8,15 @@ import { useI18n } from '@/i18n/useI18n'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandSearchOverview from '@/components/command/CommandSearchOverview'
 import CommandSearchHistory from '@/components/command/CommandSearchHistory'
 import CommandSearchResults, {
   type CommandFile,
   type CommandHeading,
 } from '@/components/command/CommandSearchResults'
+import { parseCommandSearchScope } from '@/components/command/commandSearchScope'
 import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
+import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
 
 type TitlebarCommandDialogProps = {
   open: boolean
@@ -28,6 +31,7 @@ type TitlebarCommandDialogProps = {
   workspaceIndexed: boolean
   indexedFileCount: number
   searchIndexRebuilding: boolean
+  knowledgeSummary: WorkspaceKnowledgeSummary
 }
 
 const TitlebarCommandDialog = ({
@@ -43,16 +47,19 @@ const TitlebarCommandDialog = ({
   workspaceIndexed,
   indexedFileCount,
   searchIndexRebuilding,
+  knowledgeSummary,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
-  const trimmedQuery = query.trim()
+  const parsedSearch = useMemo(() => parseCommandSearchScope(query), [query])
+  const trimmedQuery = parsedSearch.query
   const debouncedQuery = useDebounce(trimmedQuery, { wait: 160 })
+  const canSearchFullText = parsedSearch.scope === 'all' || parsedSearch.scope === 'text'
   const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
   const fullTextSearch = useQuery({
     queryKey: ['command-workspace-search', debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 8),
-    enabled: open && isDesktopRuntime() && debouncedQuery.length >= 2,
+    enabled: open && canSearchFullText && isDesktopRuntime() && debouncedQuery.length >= 2,
     placeholderData: keepPreviousData,
     staleTime: 5_000,
   })
@@ -84,6 +91,13 @@ const TitlebarCommandDialog = ({
   return (
     <AppCommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput value={query} onValueChange={setQuery} placeholder={t('sidebar.search')} />
+      <CommandSearchOverview
+        query={trimmedQuery}
+        filesCount={files.length}
+        headingsCount={headings.length}
+        fullTextCount={fullTextResults.length}
+        knowledgeSummary={knowledgeSummary}
+      />
       <CommandList>
         <CommandEmpty>
           <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
@@ -102,6 +116,7 @@ const TitlebarCommandDialog = ({
         />
         <CommandSearchResults
           query={query}
+          scope={parsedSearch.scope}
           files={files}
           headings={headings}
           fullTextResults={fullTextResults}

@@ -10,6 +10,7 @@ import {
   type FocusSourcePositionRequest,
 } from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
+import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
 import {
   RightSidebarCollapsed,
   RightSidebarContent,
@@ -61,6 +62,7 @@ const RightSidebarComponent = ({
     displayMetadata,
     loadingMetadata,
     assetReport,
+    knowledge,
   } = useRightSidebarData({
     collapsed,
     activePath,
@@ -86,6 +88,29 @@ const RightSidebarComponent = ({
       column: backlink.column,
     })
     onOpenFileView(backlink.sourcePath, 'source')
+  }
+
+  const handleOpenKnowledgeFile = (path: string) => {
+    onOpenFileView(path, 'edit')
+  }
+
+  const handleOpenKnowledgeReference = (reference: KnowledgeLinkReference) => {
+    setPendingSourcePosition({
+      path: reference.path,
+      line: reference.firstLine,
+      column: reference.firstColumn,
+    })
+    onOpenFileView(reference.path, 'source')
+  }
+
+  const handleOpenMissingLink = (reference: KnowledgeMissingReference) => {
+    if (!targetPath) return
+    setPendingSourcePosition({
+      path: targetPath,
+      line: reference.line,
+      column: reference.column,
+    })
+    onOpenFileView(targetPath, 'source')
   }
 
   const handleOpenProblem = (problem: MarkdownSourceDiagnostic) => {
@@ -148,12 +173,16 @@ const RightSidebarComponent = ({
           problems={problems}
           errorProblems={errorProblems}
           warningProblems={warningProblems}
+          knowledge={knowledge}
           documentStats={documentStats}
           displayMetadata={displayMetadata}
           loadingMetadata={loadingMetadata}
           assetReport={assetReport}
           onOpenHeading={handleOpenHeading}
           onOpenBacklink={handleOpenBacklink}
+          onOpenKnowledgeFile={handleOpenKnowledgeFile}
+          onOpenKnowledgeReference={handleOpenKnowledgeReference}
+          onOpenMissingLink={handleOpenMissingLink}
           onOpenProblem={handleOpenProblem}
         />
       ) : (

@@ -29,6 +29,7 @@ import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { getCurrentRuntimeWindow, isDesktopRuntime } from '@/runtime/window'
 import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
+import { buildWorkspaceKnowledgeSummary } from '@/logic/knowledge'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import WindowControls from '@/components/WindowControls'
 import TitlebarThemeMenu from '@/components/TitlebarThemeMenu'
@@ -227,6 +228,10 @@ const Titlebar = ({
       })),
     )
   }, [workspaceIndex])
+  const workspaceKnowledgeSummary = useMemo(
+    () => buildWorkspaceKnowledgeSummary(workspaceIndex),
+    [workspaceIndex],
+  )
   const commandPaletteShortcut = useMemo(() => {
     const hotkeyPlatform =
       platform === 'macos' ? 'mac' : platform === 'windows' ? 'windows' : 'linux'
@@ -548,6 +553,7 @@ const Titlebar = ({
         workspaceIndexed={Boolean(workspaceIndex)}
         indexedFileCount={workspaceIndex?.files.length ?? 0}
         searchIndexRebuilding={searchIndexRebuilding}
+        knowledgeSummary={workspaceKnowledgeSummary}
       />
       <WindowControls
         platform={platform}

@@ -1,20 +1,27 @@
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { InspectorEmptyState, PropertyCell } from '@/components/RightSidebarPrimitives'
+import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRail'
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
+import { RightSidebarKnowledgePanel } from '@/components/RightSidebarKnowledgePanel'
+import { RightSidebarPropertiesPanel } from '@/components/RightSidebarPropertiesPanel'
 import { RightSidebarProblemsPanel } from '@/components/RightSidebarProblemsPanel'
 import { RightSidebarSummary } from '@/components/RightSidebarSummary'
 import { useI18n } from '@/i18n/useI18n'
 import type { BacklinkReference } from '@/logic/backlinks'
 import type { MarkdownAssetReport } from '@/logic/assets'
+import type {
+  KnowledgeInsights,
+  KnowledgeLinkReference,
+  KnowledgeMissingReference,
+} from '@/logic/knowledge'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import { createFileLabel } from '@/logic/paths'
 import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/useAppStore'
-import { CircleAlert, FileText, ImageIcon, Link2, ListTree } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { CircleAlert, FileText, ImageIcon, Link2, ListTree, Network } from 'lucide-react'
 
 type SidebarHeading = {
   level: number
@@ -34,6 +41,7 @@ type RightSidebarContentProps = {
   problems: MarkdownSourceDiagnostic[]
   errorProblems: MarkdownSourceDiagnostic[]
   warningProblems: MarkdownSourceDiagnostic[]
+  knowledge: KnowledgeInsights
   documentStats: {
     lines: number
     words: number
@@ -43,24 +51,15 @@ type RightSidebarContentProps = {
   assetReport: MarkdownAssetReport
   onOpenHeading: (slug: string) => void
   onOpenBacklink: (backlink: SidebarBacklink) => void
+  onOpenKnowledgeFile: (path: string) => void
+  onOpenKnowledgeReference: (reference: KnowledgeLinkReference) => void
+  onOpenMissingLink: (reference: KnowledgeMissingReference) => void
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
 }
 
 type RightSidebarCollapsedProps = {
   tabs: string[]
   totalFiles: number
-}
-
-const formatBytes = (size: number) => {
-  if (!Number.isFinite(size) || size <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let value = size
-  let unitIndex = 0
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex += 1
-  }
-  return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
 export const RightSidebarContent = ({
@@ -73,12 +72,16 @@ export const RightSidebarContent = ({
   problems,
   errorProblems,
   warningProblems,
+  knowledge,
   documentStats,
   displayMetadata,
   loadingMetadata,
   assetReport,
   onOpenHeading,
   onOpenBacklink,
+  onOpenKnowledgeFile,
+  onOpenKnowledgeReference,
+  onOpenMissingLink,
   onOpenProblem,
 }: RightSidebarContentProps) => {
   const { t } = useI18n()
@@ -97,7 +100,7 @@ export const RightSidebarContent = ({
       />
 
       <Tabs defaultValue="outline" className="mt-1.5 flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-8 w-full grid-cols-5 rounded-md border border-sidebar-border bg-background/65 p-0.5">
+        <TabsList className="grid h-8 w-full grid-cols-6 rounded-md border border-sidebar-border bg-background/65 p-0.5">
           <TabsTrigger value="outline" className="gap-1 rounded px-1 text-[11px]">
             <ListTree className="h-3.5 w-3.5" />
             {t('inspector.outline')}
@@ -105,6 +108,10 @@ export const RightSidebarContent = ({
           <TabsTrigger value="backlinks" className="gap-1 rounded px-1 text-[11px]">
             <Link2 className="h-3.5 w-3.5" />
             {t('inspector.backlinks')}
+          </TabsTrigger>
+          <TabsTrigger value="knowledge" className="gap-1 rounded px-1 text-[11px]">
+            <Network className="h-3.5 w-3.5" />
+            {t('inspector.knowledge')}
           </TabsTrigger>
           <TabsTrigger value="problems" className="gap-1 rounded px-1 text-[11px]">
             <CircleAlert className="h-3.5 w-3.5" />
@@ -214,6 +221,17 @@ export const RightSidebarContent = ({
           </ScrollArea>
         </TabsContent>
 
+        <TabsContent value="knowledge" className="mt-1 min-h-0 flex-1 overflow-hidden">
+          <RightSidebarKnowledgePanel
+            targetPath={targetPath}
+            targetLabel={targetLabel}
+            knowledge={knowledge}
+            onOpenFile={onOpenKnowledgeFile}
+            onOpenReference={onOpenKnowledgeReference}
+            onOpenMissing={onOpenMissingLink}
+          />
+        </TabsContent>
+
         <TabsContent value="problems" className="mt-1 min-h-0 flex-1 overflow-hidden">
           <RightSidebarProblemsPanel
             targetPath={targetPath}
@@ -230,57 +248,13 @@ export const RightSidebarContent = ({
         </TabsContent>
 
         <TabsContent value="properties" className="mt-1 min-h-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full" viewportClassName="p-2">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                {t('inspector.properties')}
-              </div>
-              {loadingMetadata && (
-                <Badge variant="secondary" className="text-[10px]">
-                  {t('inspector.loading')}
-                </Badge>
-              )}
-            </div>
-            {!displayMetadata ? (
-              <div className="text-xs text-muted-foreground">{t('inspector.none')}</div>
-            ) : (
-              <div className="space-y-2 text-xs">
-                <div className="grid grid-cols-2 gap-2">
-                  <PropertyCell label={t('status.lines')} value={documentStats.lines} />
-                  <PropertyCell label={t('status.words')} value={documentStats.words} />
-                  <PropertyCell label={t('inspector.outline')} value={outline.length} />
-                  <PropertyCell label={t('inspector.backlinks')} value={backlinks.length} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <PropertyCell label={t('inspector.kind')} value={displayMetadata.kind} />
-                  <PropertyCell
-                    label={t('inspector.size')}
-                    value={formatBytes(displayMetadata.size_bytes)}
-                  />
-                  <PropertyCell
-                    label={t('inspector.modified')}
-                    value={
-                      displayMetadata.modified_ms
-                        ? new Date(displayMetadata.modified_ms).toLocaleString()
-                        : t('inspector.unknown')
-                    }
-                  />
-                  <PropertyCell
-                    label={t('inspector.readonly')}
-                    value={displayMetadata.readonly ? t('common.yes') : t('common.no')}
-                  />
-                </div>
-                <div>
-                  <div className="text-muted-foreground">{t('inspector.path')}</div>
-                  <div className="break-all font-medium">{displayMetadata.path}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">{t('inspector.absolutePath')}</div>
-                  <div className="break-all">{displayMetadata.absolute_path}</div>
-                </div>
-              </div>
-            )}
-          </ScrollArea>
+          <RightSidebarPropertiesPanel
+            outlineCount={outline.length}
+            backlinksCount={backlinks.length}
+            documentStats={documentStats}
+            displayMetadata={displayMetadata}
+            loadingMetadata={loadingMetadata}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -28,6 +28,7 @@ const createAnimatedCursorView = (initialView: EditorView) => {
   let view = initialView
   let animationFrame: number | null = null
   const caretParent = getCaretParent(view)
+  const scrollHost = view.dom.closest<HTMLElement>('.editor-scroll-viewport')
   const caret = document.createElement('span')
   caret.className = 'marklab-animated-caret'
   caret.setAttribute('aria-hidden', 'true')
@@ -69,9 +70,13 @@ const createAnimatedCursorView = (initialView: EditorView) => {
 
   const handleFocus = () => scheduleUpdate()
   const handleBlur = () => scheduleUpdate()
+  const handleScroll = () => scheduleUpdate()
+  const handleResize = () => scheduleUpdate()
 
   view.dom.addEventListener('focus', handleFocus)
   view.dom.addEventListener('blur', handleBlur)
+  scrollHost?.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('resize', handleResize)
   scheduleUpdate()
 
   return {
@@ -87,6 +92,8 @@ const createAnimatedCursorView = (initialView: EditorView) => {
       view.dom.classList.remove('marklab-animated-cursor-host')
       view.dom.removeEventListener('focus', handleFocus)
       view.dom.removeEventListener('blur', handleBlur)
+      scrollHost?.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleResize)
       caret.remove()
     },
   }

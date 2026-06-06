@@ -12,6 +12,7 @@ import {
   type MarkdownSourceDiagnostic,
 } from '@/logic/markdownDiagnostics'
 import { getMarkdownAssetReport } from '@/logic/assets'
+import { buildKnowledgeInsights } from '@/logic/knowledge'
 import { splitLinkTarget } from '@/logic/paths'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/useAppStore'
@@ -198,6 +199,16 @@ export const useRightSidebarData = ({
       }),
     [collapsed, deferredTargetPath, workspaceIndex],
   )
+  const knowledge = useMemo(
+    () =>
+      collapsed
+        ? buildKnowledgeInsights({ targetPath: null, workspaceIndex: null })
+        : buildKnowledgeInsights({
+            targetPath: deferredTargetPath,
+            workspaceIndex,
+          }),
+    [collapsed, deferredTargetPath, workspaceIndex],
+  )
 
   return {
     outline,
@@ -211,6 +222,7 @@ export const useRightSidebarData = ({
     displayMetadata,
     loadingMetadata: metadataQuery.isFetching && !metadataQuery.data,
     assetReport,
+    knowledge,
   }
 }
 

@@ -347,6 +347,7 @@
 }
 
 .command-dialog-surface {
+  width: min(780px, calc(100vw - 32px));
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
   border: 1px solid hsl(var(--border));
@@ -356,6 +357,7 @@
 }
 
 .command-dialog-command {
+  min-height: min(680px, calc(100vh - 80px));
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
 }

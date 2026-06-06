@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
 import SearchResultPreview from '@/components/SearchResultPreview'
 import CommandSearchStatus from '@/components/command/CommandSearchStatus'
+import type { CommandSearchScope } from '@/components/command/commandSearchScope'
 import type { FsSearchResult } from '@/services/fsApi'
 
 export type CommandFile = {
@@ -20,6 +21,7 @@ export type CommandHeading = {
 
 type CommandSearchResultsProps = {
   query: string
+  scope: CommandSearchScope
   files: CommandFile[]
   headings: CommandHeading[]
   fullTextResults: FsSearchResult[]
@@ -52,6 +54,7 @@ const renderMoreHint = (count: number) => {
 
 const CommandSearchResults = ({
   query,
+  scope,
   files,
   headings,
   fullTextResults,
@@ -64,9 +67,12 @@ const CommandSearchResults = ({
   onOpenHeading,
   onOpenSearchResult,
 }: CommandSearchResultsProps) => {
-  const trimmedQuery = query.trim()
+  const trimmedQuery = query.trim().replace(/^[@#?]\s*/, '')
   const normalizedQuery = trimmedQuery.toLocaleLowerCase()
   const hasQuery = normalizedQuery.length > 0
+  const showFiles = scope === 'all' || scope === 'files'
+  const showHeadings = scope === 'all' || scope === 'headings'
+  const showFullText = scope === 'all' || scope === 'text'
   const groupedResults = useMemo(() => {
     if (!hasQuery) {
       return {
@@ -110,7 +116,7 @@ const CommandSearchResults = ({
         indexedFileCount={indexedFileCount}
         searchIndexRebuilding={searchIndexRebuilding}
       />
-      {visibleTitleMatches.length > 0 && (
+      {showFiles && visibleTitleMatches.length > 0 && (
         <>
           <CommandGroup heading={hasQuery ? 'Title matches' : 'Files'}>
             {visibleTitleMatches.map((file) => (
@@ -133,7 +139,7 @@ const CommandSearchResults = ({
           <CommandSeparator />
         </>
       )}
-      {visiblePathMatches.length > 0 && (
+      {showFiles && visiblePathMatches.length > 0 && (
         <>
           <CommandGroup heading="Path matches">
             {visiblePathMatches.map((file) => (
@@ -158,7 +164,7 @@ const CommandSearchResults = ({
           <CommandSeparator />
         </>
       )}
-      {visibleHeadingMatches.length > 0 && (
+      {showHeadings && visibleHeadingMatches.length > 0 && (
         <>
           <CommandGroup heading="Headings">
             {visibleHeadingMatches.map((heading) => (
@@ -185,7 +191,7 @@ const CommandSearchResults = ({
           <CommandSeparator />
         </>
       )}
-      {fullTextResults.length > 0 && (
+      {showFullText && fullTextResults.length > 0 && (
         <>
           <CommandGroup heading="Full text">
             {fullTextResults.map((result) => (

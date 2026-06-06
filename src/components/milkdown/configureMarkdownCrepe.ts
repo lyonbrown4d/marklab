@@ -7,6 +7,7 @@ import { createMarkdownImageNodeView } from '@/components/milkdown/imageNodeView
 import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
+import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 
 export type NodeViewFactory = (options: ReactNodeViewUserOptions) => NodeViewConstructor
 
@@ -46,6 +47,7 @@ export const configureMarkdownCrepe = (
     )
     .use(pasteLinkOnSelection)
     .use(animatedCursor)
+    .use(typewriterScroll)
 
   return crepe
 }

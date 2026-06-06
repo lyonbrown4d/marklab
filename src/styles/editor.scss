@@ -38,6 +38,10 @@
   scroll-behavior: auto;
 }
 
+.crepe.is-smooth-editor .editor-scroll-viewport {
+  scroll-behavior: smooth;
+}
+
 .crepe.is-image-drop-target .milkdown {
   background: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--background)));
 }

@@ -45,6 +45,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
   const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
   const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
   const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
+  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
   const {
     focusEditor,
     getMarkdown,
@@ -158,6 +159,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     className: [
       'crepe flex h-full flex-1 flex-col',
       isDragAccept ? 'is-image-drop-target' : '',
+      motionSmoothScrolling ? 'is-smooth-editor' : '',
       immersiveZenMode ? 'is-zen-editor' : '',
       immersiveFocusMode ? 'is-focus-editor' : '',
       immersiveTypewriterMode ? 'is-typewriter-editor' : '',
@@ -181,7 +183,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
       <ScrollArea
         ref={scrollAreaRef}
         className="h-full flex-1"
-        smoothWheel={false}
+        smoothWheel={motionSmoothScrolling}
         viewportClassName="editor-scroll-viewport"
       >
         <div className="milkdown min-h-full" ref={rootRef} />

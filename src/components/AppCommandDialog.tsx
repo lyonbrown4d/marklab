@@ -7,7 +7,7 @@ const AppCommandDialog = ({ children, ...props }: DialogProps) => {
     <Dialog {...props}>
       <DialogContent
         aria-describedby={undefined}
-        className="command-dialog-surface overflow-hidden rounded-md p-0"
+        className="command-dialog-surface max-w-[780px] overflow-hidden rounded-md p-0"
       >
         <DialogTitle className="sr-only">Command palette</DialogTitle>
         <Command className="command-dialog-command [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
