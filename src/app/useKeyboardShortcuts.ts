@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   useHotkeys,
   type RegisterableHotkey,
@@ -46,59 +46,130 @@ export const useKeyboardShortcuts = ({
   onToggleRightSidebar,
   onToggleSidebar,
 }: UseKeyboardShortcutsArgs) => {
+  const argsRef = useRef<UseKeyboardShortcutsArgs>({
+    activeTabId,
+    shortcutOverrides,
+    tabs,
+    viewMode,
+    onCloseActiveTab,
+    onCreateFile,
+    onOpenCommandPalette,
+    onOpenFile,
+    onOpenProject,
+    onOpenSettings,
+    onOpenTab,
+    onSetViewMode,
+    onToggleRightSidebar,
+    onToggleSidebar,
+  })
+
+  useEffect(() => {
+    argsRef.current = {
+      activeTabId,
+      shortcutOverrides,
+      tabs,
+      viewMode,
+      onCloseActiveTab,
+      onCreateFile,
+      onOpenCommandPalette,
+      onOpenFile,
+      onOpenProject,
+      onOpenSettings,
+      onOpenTab,
+      onSetViewMode,
+      onToggleRightSidebar,
+      onToggleSidebar,
+    }
+  }, [
+    activeTabId,
+    shortcutOverrides,
+    tabs,
+    viewMode,
+    onCloseActiveTab,
+    onCreateFile,
+    onOpenCommandPalette,
+    onOpenFile,
+    onOpenProject,
+    onOpenSettings,
+    onOpenTab,
+    onSetViewMode,
+    onToggleRightSidebar,
+    onToggleSidebar,
+  ])
+
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
   const definitions = useMemo<UseHotkeyDefinition[]>(() => {
     const execute = (action: ShortcutActionId) => {
+      const {
+        activeTabId: currentActiveTabId,
+        tabs: currentTabs,
+        viewMode: currentViewMode,
+        onCloseActiveTab: closeActiveTab,
+        onCreateFile: createFile,
+        onOpenCommandPalette: openCommandPalette,
+        onOpenFile: openFile,
+        onOpenProject: openProject,
+        onOpenSettings: openSettings,
+        onOpenTab: openTab,
+        onSetViewMode: setViewMode,
+        onToggleRightSidebar: toggleRightSidebar,
+        onToggleSidebar: toggleSidebar,
+      } = argsRef.current
+
       if (action === 'app.commandPalette') {
-        onOpenCommandPalette()
+        openCommandPalette()
         return
       }
       if (action === 'app.settings') {
-        onOpenSettings()
+        openSettings()
         return
       }
       if (action === 'file.new') {
-        onCreateFile()
+        createFile()
         return
       }
       if (action === 'file.openProject') {
-        onOpenProject()
+        openProject()
         return
       }
       if (action === 'file.openFile') {
-        onOpenFile()
+        openFile()
         return
       }
       if (action === 'tab.next' || action === 'tab.previous') {
-        openAdjacentTab(action, { activeTabId, onOpenTab, tabs })
+        openAdjacentTab(action, {
+          activeTabId: currentActiveTabId,
+          onOpenTab: openTab,
+          tabs: currentTabs,
+        })
         return
       }
       if (action === 'tab.close') {
-        onCloseActiveTab()
+        closeActiveTab()
         return
       }
       if (action === 'view.wysiwyg') {
-        onSetViewMode('wysiwyg')
+        setViewMode('wysiwyg')
         return
       }
       if (action === 'view.source') {
-        onSetViewMode('source')
+        setViewMode('source')
         return
       }
       if (action === 'view.graph') {
-        onSetViewMode('graph')
+        setViewMode('graph')
         return
       }
       if (action === 'view.toggleSource') {
-        onSetViewMode(viewMode === 'source' ? 'wysiwyg' : 'source')
+        setViewMode(currentViewMode === 'source' ? 'wysiwyg' : 'source')
         return
       }
       if (action === 'view.toggleSidebar') {
-        onToggleSidebar()
+        toggleSidebar()
         return
       }
       if (action === 'view.toggleRightSidebar') {
-        onToggleRightSidebar()
+        toggleRightSidebar()
       }
     }
 
@@ -113,22 +184,7 @@ export const useKeyboardShortcuts = ({
           },
         })),
       )
-  }, [
-    activeTabId,
-    bindings,
-    onCloseActiveTab,
-    onCreateFile,
-    onOpenCommandPalette,
-    onOpenFile,
-    onOpenProject,
-    onOpenSettings,
-    onOpenTab,
-    onSetViewMode,
-    onToggleRightSidebar,
-    onToggleSidebar,
-    tabs,
-    viewMode,
-  ])
+  }, [bindings])
 
   useHotkeys(definitions, {
     conflictBehavior: 'replace',

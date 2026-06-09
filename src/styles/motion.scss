@@ -50,6 +50,7 @@
 
 .settings-scroll-viewport {
   scroll-behavior: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   overflow-y: auto;
   scrollbar-width: thin;

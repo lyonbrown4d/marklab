@@ -14,9 +14,6 @@ type UseAppMenuActionArgs = {
 }
 
 export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
-  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
-  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
-  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
   const setImmersiveZenMode = useAppStore((state) => state.setImmersiveZenMode)
   const setImmersiveFocusMode = useAppStore((state) => state.setImmersiveFocusMode)
   const setImmersiveTypewriterMode = useAppStore((state) => state.setImmersiveTypewriterMode)
@@ -90,10 +87,14 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       if (id === 'view.graph') currentState.setViewMode('graph')
       if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
       if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
-      if (id === 'view.toggle_zen_mode') setImmersiveZenMode(!immersiveZenMode)
-      if (id === 'view.toggle_focus_mode') setImmersiveFocusMode(!immersiveFocusMode)
+      if (id === 'view.toggle_zen_mode') {
+        setImmersiveZenMode(!useAppStore.getState().immersiveZenMode)
+      }
+      if (id === 'view.toggle_focus_mode') {
+        setImmersiveFocusMode(!useAppStore.getState().immersiveFocusMode)
+      }
       if (id === 'view.toggle_typewriter_mode') {
-        setImmersiveTypewriterMode(!immersiveTypewriterMode)
+        setImmersiveTypewriterMode(!useAppStore.getState().immersiveTypewriterMode)
       }
       if (id === 'settings.open') openSettings()
       if (id === 'theme.light') currentState.setTheme('light')
@@ -107,9 +108,6 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       }
     },
     [
-      immersiveFocusMode,
-      immersiveTypewriterMode,
-      immersiveZenMode,
       openSettings,
       setImmersiveFocusMode,
       setImmersiveTypewriterMode,

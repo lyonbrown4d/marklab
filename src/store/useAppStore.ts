@@ -133,7 +133,8 @@ export const useAppStore = create<AppState>()(
       shortcutOverrides: {},
       setRootPath: (path) => set((state) => (state.rootPath === path ? state : { rootPath: path })),
       setRootKind: (kind) => set((state) => (state.rootKind === kind ? state : { rootKind: kind })),
-      setEntries: (entries) => set((state) => (state.entries === entries ? state : { entries })),
+      setEntries: (entries) =>
+        set((state) => (areFileEntriesEqual(state.entries, entries) ? state : { entries })),
       setTabs: (tabs) =>
         set((state) => {
           const normalizedTabs = normalizeWorkspaceTabs(tabs)
@@ -202,15 +203,28 @@ export const useAppStore = create<AppState>()(
         ),
       setShortcutOverride: (action, bindings) =>
         set((state) => {
+          if (
+            bindings === null &&
+            !Object.prototype.hasOwnProperty.call(state.shortcutOverrides, action)
+          ) {
+            return state
+          }
+
           const next = { ...state.shortcutOverrides }
           if (bindings === null) {
             delete next[action]
           } else {
-            next[action] = normalizeShortcutList(bindings)
+            const normalized = normalizeShortcutList(bindings)
+            const current = state.shortcutOverrides[action]
+            if (current && areStringArraysEqual(current, normalized)) return state
+            next[action] = normalized
           }
           return { shortcutOverrides: next }
         }),
-      resetShortcutOverrides: () => set({ shortcutOverrides: {} }),
+      resetShortcutOverrides: () =>
+        set((state) =>
+          Object.keys(state.shortcutOverrides).length === 0 ? state : { shortcutOverrides: {} },
+        ),
       toggleSidebar: () =>
         set((state) => ({
           sidebarCollapsed: !state.sidebarCollapsed,
@@ -221,6 +235,7 @@ export const useAppStore = create<AppState>()(
         })),
       touchRecentProject: (path) =>
         set((state) => {
+          if (state.recentProjects[0] === path) return state
           const next = [path, ...state.recentProjects.filter((p) => p !== path)]
           return { recentProjects: next.slice(0, 8) }
         }),
@@ -237,3 +252,17 @@ export const useAppStore = create<AppState>()(
     },
   ),
 )
+
+const areStringArraysEqual = (left: string[], right: string[]) => {
+  if (left.length !== right.length) return false
+  return left.every((value, index) => value === right[index])
+}
+
+const areFileEntriesEqual = (left: FileEntry[], right: FileEntry[]) => {
+  if (left === right) return true
+  if (left.length !== right.length) return false
+  return left.every((entry, index) => {
+    const next = right[index]
+    return Boolean(next) && entry.path === next.path && entry.kind === next.kind
+  })
+}

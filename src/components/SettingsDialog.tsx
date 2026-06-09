@@ -12,7 +12,7 @@ import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { type ReactElement, useMemo, useState } from 'react'
+import { type ReactElement, useCallback, useMemo, useState } from 'react'
 
 type SettingsDialogProps = {
   open: boolean
@@ -61,10 +61,14 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
       'general'
     )
   }, [route])
+  const activeRoute = useMemo(
+    () => settingsRoutes.find((entry) => entry.value === section) ?? settingsRoutes[0],
+    [section],
+  )
 
-  const onSectionChange = (nextRoute: string) => {
+  const onSectionChange = useCallback((nextRoute: string) => {
     setRoute(nextRoute)
-  }
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,19 +101,13 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
             })}
           </TabsList>
           <div className="h-full min-h-0 min-w-0 overflow-hidden">
-            {settingsRoutes.map((routeConfig) => (
-              <TabsContent
-                key={routeConfig.value}
-                value={routeConfig.value}
-                className="m-0 min-h-0 h-full overflow-hidden"
-              >
-                <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0">
-                  <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
-                    {routeConfig.render()}
-                  </div>
+            <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
+              <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0">
+                <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
+                  {activeRoute.render()}
                 </div>
-              </TabsContent>
-            ))}
+              </div>
+            </TabsContent>
           </div>
         </Tabs>
       </DialogContent>

@@ -1,48 +1,46 @@
-import { useCallback, useMemo, type MouseEvent, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject,
+} from 'react'
 import {
   useHotkeys,
   type RegisterableHotkey,
   type UseHotkeyDefinition,
 } from '@tanstack/react-hotkeys'
-import type { Edge, Node } from '@xyflow/react'
+import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
-import { resolveShortcutBindings, type ShortcutActionId } from '@/logic/shortcuts'
+import { resolveShortcutBindings } from '@/logic/shortcuts'
 import {
-  getFirstChildHeadingId,
-  getNextHeadingId,
-  getParentHeadingId,
-  getPreviousHeadingId,
-} from '@/logic/graphKeyboardNavigation'
+  buildContainsChildrenMap,
+  getDescendants,
+  getHiddenNodeIds,
+  getVisibleGraphElements,
+} from '@/logic/graphVisibility'
+import {
+  getInitialKeyboardNavigationTarget,
+  getKeyboardNavigationTarget,
+  graphShortcutActions,
+  isTextEditingTarget,
+  preventGraphHotkeyDefault,
+  type GraphHotkeyAction,
+} from '@/pages/graphKeyboardActions'
+import { useGraphTitleFocus } from '@/pages/useGraphTitleFocus'
 import { useAppStore } from '@/store/useAppStore'
 
-type GraphHotkeyAction =
-  | 'add-child'
-  | 'add-sibling'
-  | 'add-sibling-before'
-  | 'clear-selection'
-  | 'delete'
-  | 'edit-title'
-  | 'navigate-child'
-  | 'navigate-down'
-  | 'navigate-parent'
-  | 'navigate-up'
-
-const graphShortcutActions = [
-  ['graph.addSibling', 'add-sibling'],
-  ['graph.addSiblingBefore', 'add-sibling-before'],
-  ['graph.addChild', 'add-child'],
-  ['graph.delete', 'delete'],
-  ['graph.editTitle', 'edit-title'],
-  ['graph.selectPrevious', 'navigate-up'],
-  ['graph.selectNext', 'navigate-down'],
-  ['graph.selectParent', 'navigate-parent'],
-  ['graph.selectChild', 'navigate-child'],
-  ['graph.clearSelection', 'clear-selection'],
-] as const satisfies ReadonlyArray<readonly [ShortcutActionId, GraphHotkeyAction]>
+const ZOOM_STEP_IN = 1.16
+const ZOOM_STEP_OUT = 1 / ZOOM_STEP_IN
+const MIN_ZOOM = 0.15
+const MAX_ZOOM = 2.2
 
 type UseGraphKeyboardActionsArgs = {
   editable: boolean
   edges: Edge[]
+  flowInstance: ReactFlowInstance<Node<GraphNodeData>, Edge> | null
   graphShellRef: RefObject<HTMLDivElement | null>
   nodes: Node<GraphNodeData>[]
   selectedHeadingId: string | null
@@ -57,6 +55,7 @@ type UseGraphKeyboardActionsArgs = {
 export const useGraphKeyboardActions = ({
   editable,
   edges,
+  flowInstance,
   graphShellRef,
   nodes,
   selectedHeadingId,
@@ -68,39 +67,198 @@ export const useGraphKeyboardActions = ({
   selectHeading,
 }: UseGraphKeyboardActionsArgs) => {
   const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set())
+  const { focusHeadingTitle, focusHeadingTitleSoon } = useGraphTitleFocus(graphShellRef)
+
+  const containsChildrenByNode = useMemo(() => buildContainsChildrenMap(edges), [edges])
+
+  const hiddenNodeIds = useMemo(
+    () => getHiddenNodeIds(nodes, collapsedNodeIds, containsChildrenByNode),
+    [collapsedNodeIds, containsChildrenByNode, nodes],
+  )
+
+  const { visibleEdges, visibleNodes } = useMemo(
+    () => getVisibleGraphElements(nodes, edges, hiddenNodeIds),
+    [edges, hiddenNodeIds, nodes],
+  )
+
   const focusSelectedHeadingTitle = useCallback(() => {
-    if (!selectedHeadingId) return
-    const nodeElement = Array.from(
-      graphShellRef.current?.querySelectorAll<HTMLElement>('[data-graph-node-id]') ?? [],
-    ).find((element) => element.dataset.graphNodeId === selectedHeadingId)
-    const titleElement = nodeElement?.querySelector<HTMLElement>(
-      '[data-markdown-block-role="title"]',
-    )
-    if (!titleElement) return
-    titleElement.focus()
-    selectElementText(titleElement)
-  }, [graphShellRef, selectedHeadingId])
+    focusHeadingTitle(selectedHeadingId)
+  }, [focusHeadingTitle, selectedHeadingId])
+
+  const fitHeading = useCallback(
+    (headingId: string | null) => {
+      if (!flowInstance || !headingId) return
+      const selectedNode = visibleNodes.find((node) => node.id === headingId)
+      if (!selectedNode) return
+      flowInstance.fitView({
+        nodes: [selectedNode],
+        padding: 0.32,
+        duration: 120,
+      })
+    },
+    [flowInstance, visibleNodes],
+  )
+
+  const fitSelectedHeading = useCallback(() => {
+    fitHeading(selectedHeadingId)
+  }, [fitHeading, selectedHeadingId])
+
+  const fitVisibleGraph = useCallback(() => {
+    if (!flowInstance || visibleNodes.length === 0) return
+    flowInstance.fitView({ padding: 0.22, duration: 160 })
+  }, [flowInstance, visibleNodes.length])
+
+  const adjustZoom = useCallback(
+    (direction: 'in' | 'out') => {
+      if (!flowInstance) return
+      const viewport = flowInstance.getViewport()
+      const nextZoom =
+        direction === 'in'
+          ? Math.min(MAX_ZOOM, viewport.zoom * ZOOM_STEP_IN)
+          : Math.max(MIN_ZOOM, viewport.zoom * ZOOM_STEP_OUT)
+      flowInstance.setViewport({ ...viewport, zoom: nextZoom }, { duration: 120 })
+    },
+    [flowInstance],
+  )
+
+  const collapseSelectedHeading = useCallback(
+    (includeDescendants: boolean) => {
+      if (!selectedHeadingId || !containsChildrenByNode.has(selectedHeadingId)) return
+      const descendants = includeDescendants
+        ? getDescendants([selectedHeadingId], containsChildrenByNode)
+        : new Set<string>()
+
+      setCollapsedNodeIds((current) => {
+        const next = new Set(current)
+        next.add(selectedHeadingId)
+        descendants.forEach((nodeId) => next.add(nodeId))
+        return next
+      })
+    },
+    [containsChildrenByNode, selectedHeadingId],
+  )
+
+  const expandSelectedHeading = useCallback(
+    (includeDescendants: boolean) => {
+      if (!selectedHeadingId) return
+      const descendants = includeDescendants
+        ? getDescendants([selectedHeadingId], containsChildrenByNode)
+        : new Set<string>()
+
+      setCollapsedNodeIds((current) => {
+        if (!current.has(selectedHeadingId) && descendants.size === 0) return current
+        const next = new Set(current)
+        next.delete(selectedHeadingId)
+        descendants.forEach((nodeId) => next.delete(nodeId))
+        return next
+      })
+    },
+    [containsChildrenByNode, selectedHeadingId],
+  )
 
   const executeGraphHotkey = useCallback(
     (action: GraphHotkeyAction, event: KeyboardEvent) => {
-      if (!editable || !selectedHeadingId) return
       if (event.defaultPrevented || isTextEditingTarget(event.target)) return
+
+      if (action === 'fit-view') {
+        preventGraphHotkeyDefault(event)
+        fitVisibleGraph()
+        return
+      }
+
+      if (action === 'zoom-in') {
+        preventGraphHotkeyDefault(event)
+        adjustZoom('in')
+        return
+      }
+
+      if (action === 'zoom-out') {
+        preventGraphHotkeyDefault(event)
+        adjustZoom('out')
+        return
+      }
+
+      if (action === 'clear-selection') {
+        preventGraphHotkeyDefault(event)
+        clearSelection()
+        return
+      }
+
+      if (!selectedHeadingId) {
+        const nextSelection = getInitialKeyboardNavigationTarget(action, visibleNodes)
+        if (!nextSelection) return
+        preventGraphHotkeyDefault(event)
+        selectHeading(nextSelection)
+        fitHeading(nextSelection)
+        return
+      }
+
+      if (action === 'focus-selection') {
+        preventGraphHotkeyDefault(event)
+        fitSelectedHeading()
+        return
+      }
+
+      if (action === 'collapse') {
+        preventGraphHotkeyDefault(event)
+        collapseSelectedHeading(false)
+        return
+      }
+
+      if (action === 'collapse-subtree') {
+        preventGraphHotkeyDefault(event)
+        collapseSelectedHeading(true)
+        return
+      }
+
+      if (action === 'expand') {
+        preventGraphHotkeyDefault(event)
+        expandSelectedHeading(false)
+        return
+      }
+
+      if (action === 'expand-subtree') {
+        preventGraphHotkeyDefault(event)
+        expandSelectedHeading(true)
+        return
+      }
+
+      const nextSelection = getKeyboardNavigationTarget(
+        action,
+        visibleNodes,
+        visibleEdges,
+        selectedHeadingId,
+      )
+      if (nextSelection !== undefined) {
+        preventGraphHotkeyDefault(event)
+        selectHeading(nextSelection)
+        fitHeading(nextSelection)
+      }
+
+      if (!editable) return
 
       if (action === 'add-sibling') {
         preventGraphHotkeyDefault(event)
-        selectHeading(onAddSiblingHeading(selectedHeadingId))
+        const nextHeadingId = onAddSiblingHeading(selectedHeadingId)
+        selectHeading(nextHeadingId)
+        focusHeadingTitleSoon(nextHeadingId)
         return
       }
 
       if (action === 'add-sibling-before') {
         preventGraphHotkeyDefault(event)
-        selectHeading(onAddSiblingHeadingBefore(selectedHeadingId))
+        const nextHeadingId = onAddSiblingHeadingBefore(selectedHeadingId)
+        selectHeading(nextHeadingId)
+        focusHeadingTitleSoon(nextHeadingId)
         return
       }
 
       if (action === 'add-child') {
         preventGraphHotkeyDefault(event)
-        selectHeading(onAddChildHeading(selectedHeadingId))
+        const nextHeadingId = onAddChildHeading(selectedHeadingId)
+        selectHeading(nextHeadingId)
+        focusHeadingTitleSoon(nextHeadingId)
         return
       }
 
@@ -113,49 +271,48 @@ export const useGraphKeyboardActions = ({
       if (action === 'edit-title') {
         preventGraphHotkeyDefault(event)
         focusSelectedHeadingTitle()
-        return
-      }
-
-      const nextSelection = getKeyboardNavigationTarget(action, nodes, edges, selectedHeadingId)
-      if (nextSelection !== undefined) {
-        preventGraphHotkeyDefault(event)
-        selectHeading(nextSelection)
-        return
-      }
-
-      if (action === 'clear-selection') {
-        preventGraphHotkeyDefault(event)
-        clearSelection()
       }
     },
     [
+      adjustZoom,
+      collapseSelectedHeading,
       clearSelection,
       editable,
-      edges,
+      fitHeading,
+      expandSelectedHeading,
+      fitSelectedHeading,
+      fitVisibleGraph,
+      focusHeadingTitleSoon,
       focusSelectedHeadingTitle,
-      nodes,
       onAddChildHeading,
       onAddSiblingHeading,
       onAddSiblingHeadingBefore,
       onDeleteHeading,
       selectHeading,
       selectedHeadingId,
+      visibleNodes,
+      visibleEdges,
     ],
   )
+  const executeGraphHotkeyRef = useRef(executeGraphHotkey)
+
+  useEffect(() => {
+    executeGraphHotkeyRef.current = executeGraphHotkey
+  }, [executeGraphHotkey])
 
   const hotkeyDefinitions = useMemo<UseHotkeyDefinition[]>(() => {
     const bindings = resolveShortcutBindings(shortcutOverrides)
     return graphShortcutActions.flatMap(([shortcutAction, graphAction]) =>
       bindings[shortcutAction].map((hotkey) => ({
         hotkey: hotkey as RegisterableHotkey,
-        callback: (event) => executeGraphHotkey(graphAction, event),
+        callback: (event) => executeGraphHotkeyRef.current(graphAction, event),
         options: {
-          enabled: editable,
+          enabled: true,
           meta: { name: shortcutAction },
         },
       })),
     )
-  }, [editable, executeGraphHotkey, shortcutOverrides])
+  }, [shortcutOverrides])
 
   useHotkeys(hotkeyDefinitions, {
     conflictBehavior: 'replace',
@@ -173,36 +330,5 @@ export const useGraphKeyboardActions = ({
     [graphShellRef],
   )
 
-  return { handleGraphMouseDown }
-}
-
-const getKeyboardNavigationTarget = (
-  action: GraphHotkeyAction,
-  nodes: Node<GraphNodeData>[],
-  edges: Edge[],
-  selectedHeadingId: string,
-) => {
-  if (action === 'navigate-up') return getPreviousHeadingId(nodes, selectedHeadingId)
-  if (action === 'navigate-down') return getNextHeadingId(nodes, selectedHeadingId)
-  if (action === 'navigate-parent') return getParentHeadingId(nodes, edges, selectedHeadingId)
-  if (action === 'navigate-child') return getFirstChildHeadingId(nodes, edges, selectedHeadingId)
-  return undefined
-}
-
-const preventGraphHotkeyDefault = (event: KeyboardEvent) => {
-  event.preventDefault()
-  event.stopPropagation()
-}
-
-const isTextEditingTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) return false
-  return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
-}
-
-const selectElementText = (element: HTMLElement) => {
-  const selection = window.getSelection()
-  const range = document.createRange()
-  range.selectNodeContents(element)
-  selection?.removeAllRanges()
-  selection?.addRange(range)
+  return { handleGraphMouseDown, visibleEdges, visibleNodes }
 }

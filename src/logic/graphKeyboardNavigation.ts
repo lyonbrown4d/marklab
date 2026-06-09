@@ -1,5 +1,14 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
+import { isContainsEdge } from '@/logic/graphVisibility'
+
+export const getFirstHeadingId = (nodes: Node<GraphNodeData>[]) =>
+  getLineSortedHeadings(nodes)[0]?.id ?? null
+
+export const getLastHeadingId = (nodes: Node<GraphNodeData>[]) => {
+  const headings = getLineSortedHeadings(nodes)
+  return headings[headings.length - 1]?.id ?? null
+}
 
 export const getPreviousHeadingId = (nodes: Node<GraphNodeData>[], selectedId: string) => {
   const headings = getLineSortedHeadings(nodes)
@@ -18,7 +27,7 @@ export const getParentHeadingId = (
   edges: Edge[],
   selectedId: string,
 ) => {
-  const parentId = edges.find((edge) => edge.target === selectedId)?.source
+  const parentId = edges.find((edge) => isContainsEdge(edge) && edge.target === selectedId)?.source
   if (!parentId) return null
   return nodes.some((node) => node.id === parentId && node.type === 'heading') ? parentId : null
 }
@@ -29,7 +38,9 @@ export const getFirstChildHeadingId = (
   selectedId: string,
 ) => {
   const childIds = new Set(
-    edges.filter((edge) => edge.source === selectedId).map((edge) => edge.target),
+    edges
+      .filter((edge) => isContainsEdge(edge) && edge.source === selectedId)
+      .map((edge) => edge.target),
   )
   return getLineSortedHeadings(nodes).find((node) => childIds.has(node.id))?.id ?? null
 }

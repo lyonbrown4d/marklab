@@ -5,14 +5,20 @@ import type { GraphNodeData } from '@/logic/graph'
 import { resolveHeadingSectionCommit } from '@/logic/markdownBlockCommits'
 import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic/markdownBlocks'
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
+import { cn } from '@/lib/utils'
 
 type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
 
-export const ExternalNode = memo(({ data }: NodeProps<ExternalGraphNode>) => {
+export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNode>) => {
   return (
-    <div className="rounded-md border border-amber-500/35 bg-card px-3 py-2 shadow-sm">
+    <div
+      className={cn(
+        'cursor-pointer rounded-md border border-amber-500/35 bg-card px-3 py-2 shadow-sm transition-colors',
+        selected && 'border-amber-500 ring-2 ring-amber-500/25',
+      )}
+    >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
       <div className="text-sm font-semibold">{data.label}</div>
@@ -21,9 +27,14 @@ export const ExternalNode = memo(({ data }: NodeProps<ExternalGraphNode>) => {
   )
 })
 
-export const MissingNode = memo(({ data }: NodeProps<MissingGraphNode>) => {
+export const MissingNode = memo(({ data, selected }: NodeProps<MissingGraphNode>) => {
   return (
-    <div className="rounded-md border border-destructive/35 bg-card px-3 py-2 shadow-sm">
+    <div
+      className={cn(
+        'cursor-pointer rounded-md border border-destructive/35 bg-card px-3 py-2 shadow-sm transition-colors',
+        selected && 'border-destructive ring-2 ring-destructive/25',
+      )}
+    >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
       <div className="text-sm font-semibold">{data.label}</div>
@@ -32,7 +43,7 @@ export const MissingNode = memo(({ data }: NodeProps<MissingGraphNode>) => {
   )
 })
 
-export const HeadingNode = memo(({ id, data }: NodeProps<HeadingGraphNode>) => {
+export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphNode>) => {
   const onUpdateTitle = data.onUpdateTitle
   const onUpdateContent = data.onUpdateContent
   const blocks = useMemo(
@@ -71,7 +82,10 @@ export const HeadingNode = memo(({ id, data }: NodeProps<HeadingGraphNode>) => {
 
   return (
     <div
-      className="w-[260px] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-sm"
+      className={cn(
+        'w-[260px] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-sm transition-colors',
+        selected && 'border-primary bg-primary/5 ring-2 ring-primary/25',
+      )}
       data-graph-node-id={id}
     >
       <Handle type="target" position={Position.Left} />

@@ -4,6 +4,7 @@ import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
 import type { GraphContentMode } from '@/store/useAppStore'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
+import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 
 export type GraphNodeData = Record<string, unknown> & {
   label: string
@@ -80,6 +81,7 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
         id: `${parentId}->${headingId}-${edges.length}`,
         source: parentId,
         target: headingId,
+        data: { kind: 'contains' },
       })
       headingStack.push({ level: heading.level, id: headingId })
     })
@@ -166,6 +168,7 @@ export const buildGraphFromRustGraph = (
   graph: FsGraph,
   contentMode: GraphContentMode = 'none',
 ): GraphData => {
+  const includeContent = contentMode !== 'none'
   const nodes: Node<GraphNodeData>[] = graph.nodes.map((node) => ({
     id: node.id,
     type: node.kind === 'file' ? undefined : node.kind,
@@ -179,10 +182,12 @@ export const buildGraphFromRustGraph = (
       line: node.line ?? undefined,
       level: node.level ?? undefined,
       slug: node.slug ?? undefined,
-      content: node.content ?? undefined,
-      contentBlocks: normalizeMarkdownBlocks(node.content_blocks ?? undefined),
-      contentStartLine: node.content_start_line ?? undefined,
-      contentEndLine: node.content_end_line ?? undefined,
+      content: includeContent ? (node.content ?? undefined) : undefined,
+      contentBlocks: includeContent
+        ? normalizeMarkdownBlocks(node.content_blocks ?? undefined)
+        : undefined,
+      contentStartLine: includeContent ? (node.content_start_line ?? undefined) : undefined,
+      contentEndLine: includeContent ? (node.content_end_line ?? undefined) : undefined,
       contentMode,
     },
     position: { x: 0, y: 0 },
@@ -192,6 +197,7 @@ export const buildGraphFromRustGraph = (
     source: edge.source,
     target: edge.target,
     type: edge.kind === 'contains' ? 'smoothstep' : undefined,
+    data: { kind: edge.kind },
   }))
 
   if (nodes.length > 0 && graph.mode === 'outline') {
@@ -200,18 +206,6 @@ export const buildGraphFromRustGraph = (
     applyGraphLayout(nodes, edges)
   }
   return { nodes, edges, layoutKey: createGraphLayoutKey(graph.mode, nodes, edges) }
-}
-
-const createGraphLayoutKey = (scope: string, nodes: Node<GraphNodeData>[], edges: Edge[]) => {
-  const nodeKey = nodes
-    .map((node) => node.id)
-    .sort()
-    .join('|')
-  const edgeKey = edges
-    .map((edge) => `${edge.source}->${edge.target}`)
-    .sort()
-    .join('|')
-  return `${scope}:${nodeKey}:${edgeKey}`
 }
 
 const applyOutlineLayout = (nodes: Node<GraphNodeData>[], edges: Edge[]) => {

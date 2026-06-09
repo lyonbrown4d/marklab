@@ -53,6 +53,18 @@ export const shortcutActions = [
   { id: 'graph.selectParent', scope: 'graph', labelKey: 'shortcuts.graphSelectParent' },
   { id: 'graph.selectChild', scope: 'graph', labelKey: 'shortcuts.graphSelectChild' },
   { id: 'graph.clearSelection', scope: 'graph', labelKey: 'shortcuts.graphClearSelection' },
+  { id: 'graph.focusSelection', scope: 'graph', labelKey: 'shortcuts.graphFocusSelection' },
+  { id: 'graph.fitView', scope: 'graph', labelKey: 'shortcuts.graphFitView' },
+  { id: 'graph.zoomIn', scope: 'graph', labelKey: 'shortcuts.graphZoomIn' },
+  { id: 'graph.zoomOut', scope: 'graph', labelKey: 'shortcuts.graphZoomOut' },
+  { id: 'graph.collapse', scope: 'graph', labelKey: 'shortcuts.graphCollapse' },
+  { id: 'graph.expand', scope: 'graph', labelKey: 'shortcuts.graphExpand' },
+  {
+    id: 'graph.collapseSubtree',
+    scope: 'graph',
+    labelKey: 'shortcuts.graphCollapseSubtree',
+  },
+  { id: 'graph.expandSubtree', scope: 'graph', labelKey: 'shortcuts.graphExpandSubtree' },
 ] as const
 
 export type ShortcutActionId = (typeof shortcutActions)[number]['id']
@@ -118,6 +130,14 @@ export const shortcutCategories = [
       'graph.selectParent',
       'graph.selectChild',
       'graph.clearSelection',
+      'graph.focusSelection',
+      'graph.fitView',
+      'graph.zoomIn',
+      'graph.zoomOut',
+      'graph.collapse',
+      'graph.expand',
+      'graph.collapseSubtree',
+      'graph.expandSubtree',
     ],
   },
 ] as const satisfies ReadonlyArray<{
@@ -170,6 +190,14 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'graph.selectParent': ['ArrowLeft'],
   'graph.selectChild': ['ArrowRight'],
   'graph.clearSelection': ['Escape'],
+  'graph.focusSelection': ['Space'],
+  'graph.fitView': ['Home', 'Mod+0'],
+  'graph.zoomIn': ['=', 'NumpadAdd'],
+  'graph.zoomOut': ['-', 'NumpadSubtract'],
+  'graph.collapse': ['['],
+  'graph.expand': [']'],
+  'graph.collapseSubtree': ['Shift+['],
+  'graph.expandSubtree': ['Shift+]'],
 }
 
 const shortcutActionIdSet = new Set<ShortcutActionId>(shortcutActions.map((action) => action.id))

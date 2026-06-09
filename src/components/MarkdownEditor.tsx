@@ -61,20 +61,26 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     markdownAssetImportStrategy,
     nodeViewFactory,
   })
+  const runShortcutActionRef = useRef(runShortcutAction)
+
+  useEffect(() => {
+    runShortcutActionRef.current = runShortcutAction
+  }, [runShortcutAction])
+
   const shortcutDefinitions = useMemo(() => {
     const bindings = resolveShortcutBindings(shortcutOverrides)
     return editorShortcutActionIds.flatMap((action) =>
       bindings[action].map((hotkey) => ({
         hotkey: hotkey as RegisterableHotkey,
         callback: () => {
-          runShortcutAction(action)
+          runShortcutActionRef.current(action)
         },
         options: {
           meta: { name: action },
         },
       })),
     )
-  }, [runShortcutAction, shortcutOverrides])
+  }, [shortcutOverrides])
   const importDroppedImageSources = useCallback(
     async (event: DragEvent<HTMLDivElement>) => {
       placeSelectionAtClientPoint(event.clientX, event.clientY)

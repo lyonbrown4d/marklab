@@ -5,10 +5,11 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react'
-import type { Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/react'
+import type { Edge, Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/react'
 import type { GraphContentMode } from '@/store/useAppStore'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { mergeGraphNodePositions } from '@/logic/graphViewState'
@@ -60,6 +61,10 @@ const GraphPageComponent = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const [selectedHeadingId, setSelectedHeadingId] = useState<string | null>(null)
+  const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<
+    Node<GraphNodeData>,
+    Edge
+  > | null>(null)
   const graphShellRef = useRef<HTMLDivElement | null>(null)
   const layoutKeyRef = useRef(graph.layoutKey)
   const onUpdateHeadingTitleRef = useRef(onUpdateHeadingTitle)
@@ -156,9 +161,10 @@ const GraphPageComponent = ({
     [setNodes],
   )
 
-  const { handleGraphMouseDown } = useGraphKeyboardActions({
+  const { handleGraphMouseDown, visibleEdges, visibleNodes } = useGraphKeyboardActions({
     editable,
     edges,
+    flowInstance,
     graphShellRef,
     nodes,
     selectedHeadingId,
@@ -173,28 +179,29 @@ const GraphPageComponent = ({
   return (
     <div
       ref={graphShellRef}
-      className="relative h-full bg-background outline-none"
+      className="relative h-full bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
       tabIndex={0}
       onMouseDown={handleGraphMouseDown}
     >
       <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-border bg-card/95 px-2.5 py-1.5 text-xs text-muted-foreground shadow-sm">
         <GitGraph className="h-3.5 w-3.5 text-primary" />
         <span>
-          {nodes.length} {t('graph.nodes')}
+          {visibleNodes.length} {t('graph.nodes')}
         </span>
         <span className="h-3 w-px bg-border" />
         <span>
-          {edges.length} {t('graph.edges')}
+          {visibleEdges.length} {t('graph.edges')}
         </span>
       </div>
-      <ReactFlow
+      <ReactFlow<Node<GraphNodeData>, Edge>
         className="h-full w-full"
-        nodes={nodes}
-        edges={edges}
+        nodes={visibleNodes}
+        edges={visibleEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onSelectionChange={handleSelectionChange}
+        onInit={setFlowInstance}
         nodesDraggable
         nodesConnectable={false}
         deleteKeyCode={null}
@@ -220,7 +227,7 @@ const GraphPageComponent = ({
           <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}
       </ReactFlow>
-      {nodes.length === 0 && (
+      {visibleNodes.length === 0 && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
           <div className="max-w-sm rounded-md border border-border bg-card/95 p-5 text-center shadow-sm">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted">
