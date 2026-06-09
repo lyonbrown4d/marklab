@@ -1,7 +1,7 @@
 {
   "name": "marklab",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Desktop-first local Markdown workspace for Marklab.",
   "author": "Marklab",
   "type": "module",
