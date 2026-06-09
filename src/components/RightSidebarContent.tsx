@@ -19,7 +19,7 @@ import type {
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import { createFileLabel } from '@/logic/paths'
 import type { FsPathMetadata } from '@/services/fsApi'
-import type { ViewMode } from '@/store/useAppStore'
+import type { ViewMode } from '@/store/appTypes'
 import { Badge } from '@/components/ui/badge'
 import { CircleAlert, FileText, ImageIcon, Link2, ListTree, Network } from 'lucide-react'
 

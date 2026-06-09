@@ -10,7 +10,7 @@ import {
   gitDiffTabId,
   workspaceGraphTabId,
 } from '@/logic/tabs'
-import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/useAppStore'
+import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 type LatestRef<T> = {
   current: T

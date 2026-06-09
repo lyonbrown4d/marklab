@@ -1,5 +1,5 @@
 import uniqBy from 'lodash-es/uniqBy'
-import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/useAppStore'
+import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
 const FILE_VIEWS = new Set<string>(['edit', 'source', 'graph'])

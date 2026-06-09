@@ -7,11 +7,11 @@ import {
   getMarkdownSourceDiagnostics,
   MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
 } from '@/logic/markdownDiagnostics'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import { fsApi, type FsMarkdownDiagnostic, type FsWorkspaceIndex } from '@/services/fsApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -31,11 +31,11 @@ const MarkdownSourceEditor = ({
   onChange,
 }: MarkdownSourceEditorProps) => {
   const darkMode = useDarkMode()
-  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
-  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
-  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
-  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
-  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
+  const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
+  const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
+  const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
+  const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
+  const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const diagnosticHostRef = useRef<{
     editor: Parameters<OnMount>[0]

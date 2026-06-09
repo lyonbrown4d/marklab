@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fsApi, fsBufferStatusSchema, type FsWorkspaceIndex } from '@/services/fsApi'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { toast } from 'sonner'

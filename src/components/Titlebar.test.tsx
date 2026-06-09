@@ -5,7 +5,7 @@ import type { ComponentProps } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
 import i18n from '@/i18n/setup'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 vi.mock('@/runtime/window', () => ({
   isDesktopRuntime: () => false,
@@ -95,7 +95,7 @@ const renderTitlebar = (props: TitlebarProps) => {
 
 beforeEach(async () => {
   localStorage.clear()
-  useAppStore.setState({ locale: 'en-US' })
+  usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
 

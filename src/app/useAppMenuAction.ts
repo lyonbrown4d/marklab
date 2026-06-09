@@ -3,7 +3,7 @@ import { exportApi } from '@/services/exportApi'
 import { requestExportContent } from '@/utils/exportContent'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { toast } from 'sonner'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -14,9 +14,11 @@ type UseAppMenuActionArgs = {
 }
 
 export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
-  const setImmersiveZenMode = useAppStore((state) => state.setImmersiveZenMode)
-  const setImmersiveFocusMode = useAppStore((state) => state.setImmersiveFocusMode)
-  const setImmersiveTypewriterMode = useAppStore((state) => state.setImmersiveTypewriterMode)
+  const setImmersiveZenMode = usePreferencesStore((state) => state.setImmersiveZenMode)
+  const setImmersiveFocusMode = usePreferencesStore((state) => state.setImmersiveFocusMode)
+  const setImmersiveTypewriterMode = usePreferencesStore(
+    (state) => state.setImmersiveTypewriterMode,
+  )
   return useCallback(
     (id: string) => {
       const currentState = stateRef.current
@@ -88,13 +90,13 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
       if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
       if (id === 'view.toggle_zen_mode') {
-        setImmersiveZenMode(!useAppStore.getState().immersiveZenMode)
+        setImmersiveZenMode(!usePreferencesStore.getState().immersiveZenMode)
       }
       if (id === 'view.toggle_focus_mode') {
-        setImmersiveFocusMode(!useAppStore.getState().immersiveFocusMode)
+        setImmersiveFocusMode(!usePreferencesStore.getState().immersiveFocusMode)
       }
       if (id === 'view.toggle_typewriter_mode') {
-        setImmersiveTypewriterMode(!useAppStore.getState().immersiveTypewriterMode)
+        setImmersiveTypewriterMode(!usePreferencesStore.getState().immersiveTypewriterMode)
       }
       if (id === 'settings.open') openSettings()
       if (id === 'theme.light') currentState.setTheme('light')

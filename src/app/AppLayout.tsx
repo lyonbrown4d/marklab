@@ -14,7 +14,7 @@ import type {
   ThemeMode,
   ViewMode,
   WorkspaceTab,
-} from '@/store/useAppStore'
+} from '@/store/appTypes'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { listen } from '@/runtime/events'
@@ -34,7 +34,7 @@ import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { AppShellPanels } from '@/app/AppShellPanels'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { toast } from 'sonner'
 
@@ -80,13 +80,13 @@ export type LayoutContext = {
 
 const AppLayout = () => {
   const state = useAppLayoutState()
-  const motionSmoothScrolling = useAppStore((store) => store.motionSmoothScrolling)
-  const motionAnimatedCursor = useAppStore((store) => store.motionAnimatedCursor)
-  const motionAnimatedPanels = useAppStore((store) => store.motionAnimatedPanels)
-  const customThemeId = useAppStore((store) => store.customThemeId)
-  const immersiveZenMode = useAppStore((store) => store.immersiveZenMode)
-  const immersiveFocusMode = useAppStore((store) => store.immersiveFocusMode)
-  const immersiveTypewriterMode = useAppStore((store) => store.immersiveTypewriterMode)
+  const motionSmoothScrolling = usePreferencesStore((store) => store.motionSmoothScrolling)
+  const motionAnimatedCursor = usePreferencesStore((store) => store.motionAnimatedCursor)
+  const motionAnimatedPanels = usePreferencesStore((store) => store.motionAnimatedPanels)
+  const customThemeId = usePreferencesStore((store) => store.customThemeId)
+  const immersiveZenMode = usePreferencesStore((store) => store.immersiveZenMode)
+  const immersiveFocusMode = usePreferencesStore((store) => store.immersiveFocusMode)
+  const immersiveTypewriterMode = usePreferencesStore((store) => store.immersiveTypewriterMode)
   const stateRef = useLatest(state)
   const queryClient = useQueryClient()
   const location = useLocation()

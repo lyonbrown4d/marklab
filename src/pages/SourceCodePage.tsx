@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useMemo } from 'react'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useDocumentStats } from '@/pages/useDocumentStats'

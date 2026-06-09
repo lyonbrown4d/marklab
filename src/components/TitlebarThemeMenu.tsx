@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
-import type { ThemeMode } from '@/store/useAppStore'
+import type { ThemeMode } from '@/store/appTypes'
 
 type TitlebarThemeMenuProps = {
   theme: ThemeMode

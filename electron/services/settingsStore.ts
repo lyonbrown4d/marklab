@@ -4,10 +4,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
-  recentProjectsStateKeys,
+  preferenceStateKeys,
   rendererPersistKeys,
-  sessionStateKeys,
-  settingsStateKeys,
+  workspaceRecentProjectsStateKeys,
+  workspaceSessionStateKeys,
 } from '@electron/services/settingsPersistKeys.js'
 import type { PersistedWindowState, RendererPersistKey } from '@electron/types.js'
 
@@ -45,6 +45,12 @@ const getStore = (): Store<SettingsSchema> => {
 const assertRendererPersistKey: (key: string) => asserts key is RendererPersistKey = (key) => {
   if (!rendererPersistKeys.has(key as RendererPersistKey)) {
     throw new Error(`Unsupported settings persist key: ${key}`)
+  }
+}
+
+const assertWorkspacePersistKey = (key: RendererPersistKey): void => {
+  if (key !== 'marklab.workspace') {
+    throw new Error(`Unsupported workspace session persist key: ${key}`)
   }
 }
 
@@ -187,9 +193,10 @@ const removeSessionPersistValue = (sessionKey?: string | null): void => {
 }
 
 const readSettingsPersistValue = (key: RendererPersistKey): PersistedRendererValue | null => {
+  if (key !== 'marklab.preferences') return null
   const value = normalizePersistedRendererValue(getStore().get('rendererPersist')?.[key])
   if (!value) return null
-  return rendererPersistValue(pickState(value.state ?? {}, settingsStateKeys), value.version)
+  return rendererPersistValue(pickState(value.state ?? {}, preferenceStateKeys), value.version)
 }
 
 const mergeRendererPersistValues = (
@@ -212,8 +219,8 @@ const readCombinedRendererPersistValue = (
   key: RendererPersistKey,
   sessionKey?: string | null,
 ): PersistedRendererValue | null => {
+  if (key === 'marklab.preferences') return readSettingsPersistValue(key)
   return mergeRendererPersistValues([
-    readSettingsPersistValue(key),
     readSessionPersistValue(sessionKey),
     readRendererPersistFile(recentProjectsPath()),
   ])
@@ -230,23 +237,30 @@ const writeRendererPersistValue = (
     return
   }
 
-  const store = getStore()
-  const rendererPersist = store.get('rendererPersist') ?? {}
-  store.set('rendererPersist', {
-    ...rendererPersist,
-    [key]: rendererPersistValue(
-      pickState(normalized.state ?? {}, settingsStateKeys),
-      normalized.version,
-    ),
-  })
+  if (key === 'marklab.preferences') {
+    const store = getStore()
+    const rendererPersist = store.get('rendererPersist') ?? {}
+    store.set('rendererPersist', {
+      ...rendererPersist,
+      [key]: rendererPersistValue(
+        pickState(normalized.state ?? {}, preferenceStateKeys),
+        normalized.version,
+      ),
+    })
+    return
+  }
+
   writeSessionPersistValue(
     sessionKey,
-    rendererPersistValue(pickState(normalized.state ?? {}, sessionStateKeys), normalized.version),
+    rendererPersistValue(
+      pickState(normalized.state ?? {}, workspaceSessionStateKeys),
+      normalized.version,
+    ),
   )
   writeJsonFile(
     recentProjectsPath(),
     rendererPersistValue(
-      pickState(normalized.state ?? {}, recentProjectsStateKeys),
+      pickState(normalized.state ?? {}, workspaceRecentProjectsStateKeys),
       normalized.version,
     ),
   )
@@ -276,9 +290,13 @@ export const setRendererPersistValue = (
 
 export const removeRendererPersistValue = (key: string, sessionKey?: string | null): void => {
   assertRendererPersistKey(key)
-  const rendererPersist = { ...(getStore().get('rendererPersist') ?? {}) }
-  delete rendererPersist[key]
-  getStore().set('rendererPersist', rendererPersist)
+  if (key === 'marklab.preferences') {
+    const rendererPersist = { ...(getStore().get('rendererPersist') ?? {}) }
+    delete rendererPersist[key]
+    getStore().set('rendererPersist', rendererPersist)
+    return
+  }
+
   removeSessionPersistValue(sessionKey)
   removeJsonFile(recentProjectsPath())
 }
@@ -290,7 +308,8 @@ export const writeRendererPersistSession = (
   version?: number,
 ): PersistedRendererValue => {
   assertRendererPersistKey(key)
-  const value = rendererPersistValue(pickState(state, sessionStateKeys), version)
+  assertWorkspacePersistKey(key)
+  const value = rendererPersistValue(pickState(state, workspaceSessionStateKeys), version)
   writeSessionPersistValue(sessionKey, value)
   return value
 }
@@ -302,6 +321,7 @@ export const copyRendererPersistSession = (
   overrides: Record<string, unknown> = {},
 ): PersistedRendererValue | null => {
   assertRendererPersistKey(key)
+  assertWorkspacePersistKey(key)
   const source = readSessionPersistValue(sourceSessionKey)
   if (!source) return writeRendererPersistSession(key, targetSessionKey, overrides)
   return writeRendererPersistSession(

@@ -10,7 +10,7 @@ import {
   type ShortcutActionId,
   type ShortcutBindings,
 } from '@/logic/shortcuts'
-import type { ViewMode, WorkspaceTab } from '@/store/useAppStore'
+import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import { getWorkspaceTabId } from '@/logic/tabs'
 
 type UseKeyboardShortcutsArgs = {

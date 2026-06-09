@@ -1,63 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Locale } from '@/i18n/resources'
 import { getInitialLocale } from '@/i18n/utils'
-import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
-import {
-  areWorkspaceTabsEqual,
-  normalizeWorkspaceTabId,
-  normalizeWorkspaceTabs,
-} from '@/logic/tabs'
 import {
   normalizeShortcutList,
   type ShortcutActionId,
   type ShortcutBindings,
 } from '@/logic/shortcuts'
-import {
-  APP_STORE_VERSION,
-  migrateAppStoreState,
-  partializeAppStoreState,
-} from '@/store/appStorePersistence'
+import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import type {
+  AppLocale,
+  FileViewKind,
+  GraphContentMode,
+  MarkdownAssetImportStrategy,
+  ThemeMode,
+} from '@/store/appTypes'
 
-export type ViewMode = 'wysiwyg' | 'source' | 'graph'
-export type FileViewKind = 'edit' | 'source' | 'graph'
-export type ThemeMode = 'light' | 'dark' | 'marko-light' | 'marko-dark'
-export type GitDiffSection = 'staged' | 'unstaged' | 'untracked' | 'conflicts'
-export type GraphContentMode = 'none' | 'summary' | 'full'
-export type MarkdownAssetImportStrategy = 'copy-to-document-assets' | 'preserve-path'
-
-export type WorkspaceTab =
-  | {
-      kind: 'file'
-      view: FileViewKind
-      path: string
-    }
-  | {
-      kind: 'workspace-graph'
-    }
-  | {
-      kind: 'git-diff'
-      path: string
-      section: GitDiffSection
-    }
-
-export type FileEntry = {
-  path: string
-  kind: 'file' | 'folder'
-}
-
-export type AppState = {
-  rootPath: string
-  rootKind: 'internal' | 'external' | 'single'
-  recentProjects: string[]
-  entries: FileEntry[]
-  tabs: WorkspaceTab[]
-  activeTabId: string | null
-  hasHydrated: boolean
-  viewMode: ViewMode
+export type PreferencesState = {
   theme: ThemeMode
   customThemeId: string | null
-  locale: Locale
+  locale: AppLocale
   sidebarCollapsed: boolean
   rightSidebarCollapsed: boolean
   silentSave: boolean
@@ -73,16 +34,9 @@ export type AppState = {
   immersiveFocusMode: boolean
   immersiveTypewriterMode: boolean
   shortcutOverrides: ShortcutBindings
-  setRootPath: (path: string) => void
-  setRootKind: (kind: 'internal' | 'external' | 'single') => void
-  setEntries: (entries: FileEntry[]) => void
-  setTabs: (tabs: WorkspaceTab[]) => void
-  setActiveTabId: (id: string | null) => void
-  setHasHydrated: (hydrated: boolean) => void
-  setViewMode: (mode: ViewMode) => void
   setTheme: (theme: ThemeMode) => void
   setCustomThemeId: (themeId: string | null) => void
-  setLocale: (locale: Locale) => void
+  setLocale: (locale: AppLocale) => void
   setSilentSave: (silent: boolean) => void
   setShowEditorStatusBar: (show: boolean) => void
   setDefaultFileView: (view: FileViewKind) => void
@@ -99,20 +53,11 @@ export type AppState = {
   resetShortcutOverrides: () => void
   toggleSidebar: () => void
   toggleRightSidebar: () => void
-  touchRecentProject: (path: string) => void
 }
 
-export const useAppStore = create<AppState>()(
+export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
-      rootPath: '',
-      rootKind: 'internal',
-      recentProjects: [],
-      entries: [],
-      tabs: [],
-      activeTabId: null,
-      hasHydrated: false,
-      viewMode: 'wysiwyg',
       theme: 'marko-light',
       customThemeId: null,
       locale: getInitialLocale(),
@@ -131,24 +76,6 @@ export const useAppStore = create<AppState>()(
       immersiveFocusMode: false,
       immersiveTypewriterMode: false,
       shortcutOverrides: {},
-      setRootPath: (path) => set((state) => (state.rootPath === path ? state : { rootPath: path })),
-      setRootKind: (kind) => set((state) => (state.rootKind === kind ? state : { rootKind: kind })),
-      setEntries: (entries) =>
-        set((state) => (areFileEntriesEqual(state.entries, entries) ? state : { entries })),
-      setTabs: (tabs) =>
-        set((state) => {
-          const normalizedTabs = normalizeWorkspaceTabs(tabs)
-          const activeTabId = normalizeWorkspaceTabId(state.activeTabId, normalizedTabs)
-          return areWorkspaceTabsEqual(state.tabs, normalizedTabs) &&
-            state.activeTabId === activeTabId
-            ? state
-            : { tabs: normalizedTabs, activeTabId }
-        }),
-      setActiveTabId: (activeTabId) =>
-        set((state) => (state.activeTabId === activeTabId ? state : { activeTabId })),
-      setHasHydrated: (hasHydrated) =>
-        set((state) => (state.hasHydrated === hasHydrated ? state : { hasHydrated })),
-      setViewMode: (mode) => set((state) => (state.viewMode === mode ? state : { viewMode: mode })),
       setTheme: (theme) => set((state) => (state.theme === theme ? state : { theme })),
       setCustomThemeId: (customThemeId) =>
         set((state) => (state.customThemeId === customThemeId ? state : { customThemeId })),
@@ -225,30 +152,14 @@ export const useAppStore = create<AppState>()(
         set((state) =>
           Object.keys(state.shortcutOverrides).length === 0 ? state : { shortcutOverrides: {} },
         ),
-      toggleSidebar: () =>
-        set((state) => ({
-          sidebarCollapsed: !state.sidebarCollapsed,
-        })),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       toggleRightSidebar: () =>
-        set((state) => ({
-          rightSidebarCollapsed: !state.rightSidebarCollapsed,
-        })),
-      touchRecentProject: (path) =>
-        set((state) => {
-          if (state.recentProjects[0] === path) return state
-          const next = [path, ...state.recentProjects.filter((p) => p !== path)]
-          return { recentProjects: next.slice(0, 8) }
-        }),
+        set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed })),
     }),
     {
-      name: 'marko.app',
-      storage: createElectronSettingsJsonStorage('marko.app'),
-      version: APP_STORE_VERSION,
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true)
-      },
-      migrate: migrateAppStoreState,
-      partialize: partializeAppStoreState,
+      name: 'marklab.preferences',
+      storage: createElectronSettingsJsonStorage<PreferencesState>('marklab.preferences'),
+      version: 1,
     },
   ),
 )
@@ -256,13 +167,4 @@ export const useAppStore = create<AppState>()(
 const areStringArraysEqual = (left: string[], right: string[]) => {
   if (left.length !== right.length) return false
   return left.every((value, index) => value === right[index])
-}
-
-const areFileEntriesEqual = (left: FileEntry[], right: FileEntry[]) => {
-  if (left === right) return true
-  if (left.length !== right.length) return false
-  return left.every((entry, index) => {
-    const next = right[index]
-    return Boolean(next) && entry.path === next.path && entry.kind === next.kind
-  })
 }

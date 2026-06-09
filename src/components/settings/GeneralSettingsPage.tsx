@@ -6,11 +6,8 @@ import { Code2, GitGraph, PenLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
-import {
-  useAppStore,
-  type FileViewKind,
-  type MarkdownAssetImportStrategy,
-} from '@/store/useAppStore'
+import type { FileViewKind, MarkdownAssetImportStrategy } from '@/store/appTypes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import SettingsRow from '@/components/settings/SettingsRow'
 import ImmersiveSettingsSection from '@/components/settings/ImmersiveSettingsSection'
 
@@ -39,22 +36,24 @@ type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>
 
 const GeneralSettingsPage = () => {
   const { t } = useI18n()
-  const silentSave = useAppStore((state) => state.silentSave)
-  const setSilentSave = useAppStore((state) => state.setSilentSave)
-  const showEditorStatusBar = useAppStore((state) => state.showEditorStatusBar)
-  const setShowEditorStatusBar = useAppStore((state) => state.setShowEditorStatusBar)
-  const defaultFileView = useAppStore((state) => state.defaultFileView)
-  const setDefaultFileView = useAppStore((state) => state.setDefaultFileView)
-  const markdownAssetImportStrategy = useAppStore((state) => state.markdownAssetImportStrategy)
-  const setMarkdownAssetImportStrategy = useAppStore(
+  const silentSave = usePreferencesStore((state) => state.silentSave)
+  const setSilentSave = usePreferencesStore((state) => state.setSilentSave)
+  const showEditorStatusBar = usePreferencesStore((state) => state.showEditorStatusBar)
+  const setShowEditorStatusBar = usePreferencesStore((state) => state.setShowEditorStatusBar)
+  const defaultFileView = usePreferencesStore((state) => state.defaultFileView)
+  const setDefaultFileView = usePreferencesStore((state) => state.setDefaultFileView)
+  const markdownAssetImportStrategy = usePreferencesStore(
+    (state) => state.markdownAssetImportStrategy,
+  )
+  const setMarkdownAssetImportStrategy = usePreferencesStore(
     (state) => state.setMarkdownAssetImportStrategy,
   )
-  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
-  const setMotionSmoothScrolling = useAppStore((state) => state.setMotionSmoothScrolling)
-  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
-  const setMotionAnimatedCursor = useAppStore((state) => state.setMotionAnimatedCursor)
-  const motionAnimatedPanels = useAppStore((state) => state.motionAnimatedPanels)
-  const setMotionAnimatedPanels = useAppStore((state) => state.setMotionAnimatedPanels)
+  const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
+  const setMotionSmoothScrolling = usePreferencesStore((state) => state.setMotionSmoothScrolling)
+  const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
+  const setMotionAnimatedCursor = usePreferencesStore((state) => state.setMotionAnimatedCursor)
+  const motionAnimatedPanels = usePreferencesStore((state) => state.motionAnimatedPanels)
+  const setMotionAnimatedPanels = usePreferencesStore((state) => state.setMotionAnimatedPanels)
   const form = useForm<GeneralSettingsValues>({
     mode: 'onChange',
     resolver: zodResolver(generalSettingsSchema),

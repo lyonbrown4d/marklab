@@ -8,7 +8,7 @@ import { shellName } from '@/components/terminal/terminalTheme'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
-import type { ThemeMode } from '@/store/useAppStore'
+import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/environment'
 

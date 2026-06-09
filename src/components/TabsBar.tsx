@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { createFileLabel } from '@/logic/paths'
 import { useI18n } from '@/i18n/useI18n'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import type { ViewMode, WorkspaceTab } from '@/store/useAppStore'
+import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
 

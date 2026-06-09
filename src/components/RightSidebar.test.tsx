@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, PropsWithChildren } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import i18n from '@/i18n/setup'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
   onFocusHeadingRequest,
   onFocusSourcePositionRequest,
@@ -89,7 +89,7 @@ const renderRightSidebar = (props: RightSidebarProps) =>
 
 beforeEach(async () => {
   localStorage.clear()
-  useAppStore.setState({ locale: 'en-US' })
+  usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
 

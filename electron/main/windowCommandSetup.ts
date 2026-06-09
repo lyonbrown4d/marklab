@@ -36,7 +36,12 @@ export const createWindowCommandSetup = ({
 }: WindowCommandSetupArgs): WindowCommandSetup => {
   const dependencies = {
     copyWorkspaceSession: (sourceSessionKey: string, targetSessionKey: string, overrides = {}) =>
-      copyRendererPersistSession('marko.app', sourceSessionKey, targetSessionKey, overrides),
+      copyRendererPersistSession(
+        'marklab.workspace',
+        sourceSessionKey,
+        targetSessionKey,
+        overrides,
+      ),
     getCurrentWorkspaceRoot: () =>
       getContainer().cradle.workspaceRegistry.rootInfoForWindow(
         BrowserWindow.getFocusedWindow() ?? getPrimaryWindow(),
@@ -51,7 +56,7 @@ export const createWindowCommandSetup = ({
     getWindowPool,
     installManagedMainWindowLifecycle,
     writeWorkspaceSession: (targetSessionKey: string, state: Record<string, unknown>) =>
-      writeRendererPersistSession('marko.app', targetSessionKey, state),
+      writeRendererPersistSession('marklab.workspace', targetSessionKey, state),
   }
 
   return {

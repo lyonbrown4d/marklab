@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { InspectorMetric } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
-import type { ViewMode } from '@/store/useAppStore'
+import type { ViewMode } from '@/store/appTypes'
 import { CircleAlert, FileText, Hash, Link2 } from 'lucide-react'
 
 type RightSidebarSummaryProps = {

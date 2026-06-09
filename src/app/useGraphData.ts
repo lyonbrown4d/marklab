@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { buildGraphFromRustGraph, type GraphData } from '@/logic/graph'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
-import type { GraphContentMode } from '@/store/useAppStore'
+import type { GraphContentMode } from '@/store/appTypes'
 
 const EMPTY_GRAPH: GraphData = { nodes: [], edges: [], layoutKey: 'empty' }
 

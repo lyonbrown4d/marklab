@@ -4,7 +4,9 @@ import { appApi } from '@/services/appApi'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
-import { useAppStore, type ViewMode, type WorkspaceTab } from '@/store/useAppStore'
+import type { RootKind, WorkspaceTab } from '@/store/appTypes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { toast } from 'sonner'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -18,7 +20,7 @@ type LoadWorkspace = (options?: {
 type UseWorkspaceRestoreArgs = {
   hasHydrated: boolean
   rootPath: string
-  rootKind: 'internal' | 'external' | 'single'
+  rootKind: RootKind
   openFolder: (path: string) => Promise<void>
   loadWorkspace: LoadWorkspace
 }
@@ -48,12 +50,8 @@ const hasOwn = (value: Record<string, unknown>, key: string): boolean => {
   return Object.prototype.hasOwnProperty.call(value, key)
 }
 
-const isRootKind = (value: unknown): value is 'internal' | 'external' | 'single' => {
+const isRootKind = (value: unknown): value is RootKind => {
   return value === 'internal' || value === 'external' || value === 'single'
-}
-
-const isViewMode = (value: unknown): value is ViewMode => {
-  return value === 'wysiwyg' || value === 'source' || value === 'graph'
 }
 
 const applyWorkspaceSessionSeed = (payload: unknown): ParsedWorkspaceSessionSeed => {
@@ -67,20 +65,34 @@ const applyWorkspaceSessionSeed = (payload: unknown): ParsedWorkspaceSessionSeed
         ? null
         : undefined
 
-  useAppStore.setState((state) => ({
-    ...state,
-    ...(typeof seed.rootPath === 'string' ? { rootPath: seed.rootPath } : {}),
-    ...(isRootKind(seed.rootKind) ? { rootKind: seed.rootKind } : {}),
-    ...(tabs ? { tabs } : {}),
-    ...(activeTabId !== undefined ? { activeTabId } : {}),
-    ...(typeof seed.sidebarCollapsed === 'boolean'
-      ? { sidebarCollapsed: seed.sidebarCollapsed }
-      : {}),
-    ...(typeof seed.rightSidebarCollapsed === 'boolean'
-      ? { rightSidebarCollapsed: seed.rightSidebarCollapsed }
-      : {}),
-    ...(isViewMode(seed.viewMode) ? { viewMode: seed.viewMode } : {}),
-  }))
+  const workspacePatch: {
+    activeTabId?: string | null
+    rootKind?: RootKind
+    rootPath?: string
+    tabs?: WorkspaceTab[]
+  } = {}
+  const preferencesPatch: {
+    rightSidebarCollapsed?: boolean
+    sidebarCollapsed?: boolean
+  } = {}
+
+  if (typeof seed.rootPath === 'string') workspacePatch.rootPath = seed.rootPath
+  if (isRootKind(seed.rootKind)) workspacePatch.rootKind = seed.rootKind
+  if (tabs) workspacePatch.tabs = tabs
+  if (activeTabId !== undefined) workspacePatch.activeTabId = activeTabId
+  if (typeof seed.sidebarCollapsed === 'boolean') {
+    preferencesPatch.sidebarCollapsed = seed.sidebarCollapsed
+  }
+  if (typeof seed.rightSidebarCollapsed === 'boolean') {
+    preferencesPatch.rightSidebarCollapsed = seed.rightSidebarCollapsed
+  }
+
+  if (Object.keys(workspacePatch).length > 0) {
+    useWorkspaceStore.setState(workspacePatch)
+  }
+  if (Object.keys(preferencesPatch).length > 0) {
+    usePreferencesStore.setState(preferencesPatch)
+  }
 
   return {
     ...(tabs ? { tabs } : {}),

@@ -1,8 +1,9 @@
 import { useShallow } from 'zustand/react/shallow'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 
 export const useWorkspaceStoreSlice = () =>
-  useAppStore(
+  useWorkspaceStore(
     useShallow((state) => ({
       rootPath: state.rootPath,
       rootKind: state.rootKind,
@@ -21,7 +22,7 @@ export const useWorkspaceStoreSlice = () =>
   )
 
 export const useLayoutStoreSlice = () =>
-  useAppStore(
+  usePreferencesStore(
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
       rightSidebarCollapsed: state.rightSidebarCollapsed,

@@ -34,7 +34,7 @@ import { resolveMarkdownImageSource } from '@/components/milkdown/markdownImageS
 import { useFocusHeadingEvent } from '@/components/milkdown/useFocusHeadingEvent'
 import type { MarkdownEditorProps } from '@/components/milkdown/markdownEditorTypes'
 import type { ShortcutActionId } from '@/logic/shortcuts'
-import type { MarkdownAssetImportStrategy } from '@/store/useAppStore'
+import type { MarkdownAssetImportStrategy } from '@/store/appTypes'
 
 type UseMarkdownCrepeControllerOptions = MarkdownEditorProps & {
   darkMode: boolean

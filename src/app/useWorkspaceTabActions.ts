@@ -11,7 +11,7 @@ import {
   gitDiffTabId,
   workspaceGraphTabId,
 } from '@/logic/tabs'
-import type { FileViewKind, GitDiffSection, ViewMode, WorkspaceTab } from '@/store/useAppStore'
+import type { FileViewKind, GitDiffSection, ViewMode, WorkspaceTab } from '@/store/appTypes'
 
 type LatestRef<T> = {
   readonly current: T

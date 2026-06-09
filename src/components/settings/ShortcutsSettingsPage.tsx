@@ -8,14 +8,14 @@ import {
   shortcutActions,
   shortcutCategories,
 } from '@/logic/shortcuts'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import ShortcutRecorderRow from '@/components/settings/ShortcutRecorderRow'
 
 const ShortcutsSettingsPage = () => {
   const { t } = useI18n()
-  const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
-  const setShortcutOverride = useAppStore((state) => state.setShortcutOverride)
-  const resetShortcutOverrides = useAppStore((state) => state.resetShortcutOverrides)
+  const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
+  const setShortcutOverride = usePreferencesStore((state) => state.setShortcutOverride)
+  const resetShortcutOverrides = usePreferencesStore((state) => state.resetShortcutOverrides)
   const shortcutBindings = useMemo(
     () => resolveShortcutBindings(shortcutOverrides),
     [shortcutOverrides],

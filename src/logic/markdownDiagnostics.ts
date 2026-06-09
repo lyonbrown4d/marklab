@@ -1,5 +1,5 @@
 import keyBy from 'lodash-es/keyBy'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import {
   createFileLabel,

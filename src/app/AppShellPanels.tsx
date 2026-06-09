@@ -7,7 +7,7 @@ import {
 } from 'react-resizable-panels'
 import type { ReactNode, RefObject } from 'react'
 import TerminalPanel from '@/components/TerminalPanel'
-import type { ThemeMode } from '@/store/useAppStore'
+import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 
 type AppShellPanelsProps = {

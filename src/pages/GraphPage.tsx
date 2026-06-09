@@ -10,7 +10,7 @@ import {
   useNodesState,
 } from '@xyflow/react'
 import type { Edge, Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/react'
-import type { GraphContentMode } from '@/store/useAppStore'
+import type { GraphContentMode } from '@/store/appTypes'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { mergeGraphNodePositions } from '@/logic/graphViewState'
 import { ExternalNode, HeadingNode, MissingNode } from '@/components/GraphNodes'

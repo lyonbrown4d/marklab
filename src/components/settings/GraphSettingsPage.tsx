@@ -5,7 +5,8 @@ import { Map } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
-import { useAppStore, type GraphContentMode } from '@/store/useAppStore'
+import type { GraphContentMode } from '@/store/appTypes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import SettingsRow from '@/components/settings/SettingsRow'
 
 const graphContentModes: Array<{ value: GraphContentMode; labelKey: string }> = [
@@ -23,10 +24,10 @@ type GraphSettingsValues = z.infer<typeof graphSettingsSchema>
 
 const GraphSettingsPage = () => {
   const { t } = useI18n()
-  const graphMiniMapEnabled = useAppStore((state) => state.graphMiniMapEnabled)
-  const setGraphMiniMapEnabled = useAppStore((state) => state.setGraphMiniMapEnabled)
-  const graphContentMode = useAppStore((state) => state.graphContentMode)
-  const setGraphContentMode = useAppStore((state) => state.setGraphContentMode)
+  const graphMiniMapEnabled = usePreferencesStore((state) => state.graphMiniMapEnabled)
+  const setGraphMiniMapEnabled = usePreferencesStore((state) => state.setGraphMiniMapEnabled)
+  const graphContentMode = usePreferencesStore((state) => state.graphContentMode)
+  const setGraphContentMode = usePreferencesStore((state) => state.setGraphContentMode)
   const form = useForm<GraphSettingsValues>({
     mode: 'onChange',
     resolver: zodResolver(graphSettingsSchema),

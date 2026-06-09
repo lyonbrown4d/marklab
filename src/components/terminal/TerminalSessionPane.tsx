@@ -4,7 +4,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'
 import { terminalApi, type TerminalSessionInfo } from '@/services/terminalApi'
-import type { ThemeMode } from '@/store/useAppStore'
+import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/environment'
 import {

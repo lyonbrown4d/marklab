@@ -23,7 +23,7 @@ import { gitApi } from '@/services/gitApi'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { SaveState } from '@/app/useEditorBuffer'
-import type { FileEntry, ViewMode, WorkspaceTab } from '@/store/useAppStore'
+import type { FileEntry, ViewMode, WorkspaceTab } from '@/store/appTypes'
 
 type AppStatusBarProps = {
   rootKind: 'internal' | 'external' | 'single'

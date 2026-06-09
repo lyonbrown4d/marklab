@@ -26,7 +26,9 @@ const cancelIdle = (handle: IdleHandle | null) => {
   }
   globalThis.clearTimeout(handle.id)
 }
-export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> | undefined => {
+export const createIdleJsonStorage = <S>(
+  name = 'marklab.preferences',
+): PersistStorage<S> | undefined => {
   if (typeof window === 'undefined') return undefined
   let storage: Storage
   try {
@@ -90,7 +92,7 @@ export const createIdleJsonStorage = <S>(name = 'marko.app'): PersistStorage<S> 
   }
 }
 export const createElectronSettingsJsonStorage = <S>(
-  name = 'marko.app',
+  name = 'marklab.preferences',
 ): PersistStorage<S> | undefined => {
   const electronPersist = getElectronRuntime()?.settings?.persist
   if (!electronPersist) return createIdleJsonStorage<S>(name)

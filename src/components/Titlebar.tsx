@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import type { FileEntry, ThemeMode, ViewMode, WorkspaceTab } from '@/store/useAppStore'
+import type { FileEntry, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { useI18n } from '@/i18n/useI18n'
 import { appApi, type AppPlatform } from '@/services/appApi'
@@ -33,7 +33,7 @@ import { buildWorkspaceKnowledgeSummary } from '@/logic/knowledge'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import WindowControls from '@/components/WindowControls'
 import TitlebarThemeMenu from '@/components/TitlebarThemeMenu'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { formatShortcutList, resolveShortcutBindings } from '@/logic/shortcuts'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 
@@ -134,7 +134,7 @@ const Titlebar = ({
   }, [])
   const { t } = useI18n()
   const [platform, setPlatform] = useState<AppPlatform>(inferPlatformFromUserAgent())
-  const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
+  const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const isWindows =
     typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('windows')
   const showInlineMenu = platform === 'windows' || platform === 'linux'

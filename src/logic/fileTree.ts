@@ -1,4 +1,4 @@
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 
 export type FileTreeNode = {
   name: string

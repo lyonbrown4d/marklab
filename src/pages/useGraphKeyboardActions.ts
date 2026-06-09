@@ -30,7 +30,7 @@ import {
   type GraphHotkeyAction,
 } from '@/pages/graphKeyboardActions'
 import { useGraphTitleFocus } from '@/pages/useGraphTitleFocus'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const ZOOM_STEP_IN = 1.16
 const ZOOM_STEP_OUT = 1 / ZOOM_STEP_IN
@@ -66,7 +66,7 @@ export const useGraphKeyboardActions = ({
   onDeleteHeading,
   selectHeading,
 }: UseGraphKeyboardActionsArgs) => {
-  const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
+  const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set())
   const { focusHeadingTitle, focusHeadingTitleSoon } = useGraphTitleFocus(graphShellRef)
 

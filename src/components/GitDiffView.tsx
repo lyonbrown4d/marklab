@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { gitApi, type GitDiffRequest } from '@/services/gitApi'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type GitDiffViewProps = {
   rootPath: string
@@ -33,8 +33,8 @@ const languageForPath = (path: string) => {
 const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
-  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
-  const motionAnimatedCursor = useAppStore((state) => state.motionAnimatedCursor)
+  const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
+  const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
   const diffQuery = useQuery({
     queryKey: ['git-file-diff', rootPath, request.path, request.section],
     queryFn: () => gitApi.getFileDiff(rootPath, request.path, request.section),

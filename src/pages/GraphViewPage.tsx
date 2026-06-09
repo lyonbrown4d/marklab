@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useMemo } from 'react'
 import type { GraphData } from '@/logic/graph'
-import type { GraphContentMode } from '@/store/useAppStore'
+import type { GraphContentMode } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphMarkdownEditing } from '@/pages/useGraphMarkdownEditing'

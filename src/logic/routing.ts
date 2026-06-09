@@ -1,5 +1,5 @@
 import { generatePath } from 'react-router-dom'
-import type { FileViewKind, GitDiffSection } from '@/store/useAppStore'
+import type { FileViewKind, GitDiffSection } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
 const SIDEBAR_ACTIVITIES = new Set<string>(['explorer', 'search', 'scm', 'graph', 'projects'])

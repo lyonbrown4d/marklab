@@ -6,7 +6,7 @@ import type { FileTreeNode } from '@/logic/fileTree'
 import { isSidebarActivity, SIDEBAR_ACTIVITY_PARAM, type SidebarActivityId } from '@/logic/routing'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { GitDiffRequest } from '@/services/gitApi'
-import type { FileEntry, FileViewKind } from '@/store/useAppStore'
+import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import { onFileSearchFocusRequest } from '@/utils/appEvents'
 
 type SidebarProps = {

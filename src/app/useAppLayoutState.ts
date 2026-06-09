@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
 import { useLocation, useNavigate } from 'react-router-dom'
-import type { ViewMode } from '@/store/useAppStore'
+import type { ViewMode } from '@/store/appTypes'
 import { buildFileTree } from '@/logic/fileTree'
 import { useProjectLoader } from '@/app/useProjectLoader'
 import { useEditorBuffer } from '@/app/useEditorBuffer'

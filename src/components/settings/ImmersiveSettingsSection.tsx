@@ -1,16 +1,18 @@
 import { Switch } from '@/components/ui/switch'
 import SettingsRow from '@/components/settings/SettingsRow'
 import { useI18n } from '@/i18n/useI18n'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const ImmersiveSettingsSection = () => {
   const { t } = useI18n()
-  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
-  const setImmersiveZenMode = useAppStore((state) => state.setImmersiveZenMode)
-  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
-  const setImmersiveFocusMode = useAppStore((state) => state.setImmersiveFocusMode)
-  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
-  const setImmersiveTypewriterMode = useAppStore((state) => state.setImmersiveTypewriterMode)
+  const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
+  const setImmersiveZenMode = usePreferencesStore((state) => state.setImmersiveZenMode)
+  const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
+  const setImmersiveFocusMode = usePreferencesStore((state) => state.setImmersiveFocusMode)
+  const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
+  const setImmersiveTypewriterMode = usePreferencesStore(
+    (state) => state.setImmersiveTypewriterMode,
+  )
 
   return (
     <section className="settings-row-surface space-y-3 rounded-md p-3">

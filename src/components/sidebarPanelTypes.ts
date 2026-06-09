@@ -2,7 +2,7 @@ import type { FileTreeNode } from '@/logic/fileTree'
 import type { SidebarActivityId } from '@/logic/routing'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { GitDiffRequest } from '@/services/gitApi'
-import type { FileViewKind } from '@/store/useAppStore'
+import type { FileViewKind } from '@/store/appTypes'
 
 export type SidebarToolPanelProps = {
   activeActivity: SidebarActivityId

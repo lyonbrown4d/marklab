@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useMatch, useParams } from 'react-router-dom'
-import type { FileViewKind, ViewMode } from '@/store/useAppStore'
+import type { FileViewKind, ViewMode } from '@/store/appTypes'
 import {
   FILE_ROUTE_PATTERN,
   GIT_DIFF_ROUTE_PATTERN,
@@ -9,8 +9,8 @@ import {
   SOURCE_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
-import type { WorkspaceTab } from '@/store/useAppStore'
-import type { FileEntry } from '@/store/useAppStore'
+import type { WorkspaceTab } from '@/store/appTypes'
+import type { FileEntry } from '@/store/appTypes'
 
 type UseEditorRoutesArgs = {
   entries: FileEntry[]

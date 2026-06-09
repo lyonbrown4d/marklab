@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
 
 const files: FileEntry[] = [

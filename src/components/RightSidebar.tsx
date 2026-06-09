@@ -1,7 +1,7 @@
 import { useI18n } from '@/i18n/useI18n'
 import { memo, useEffect, useState } from 'react'
 import { createFileLabel } from '@/logic/paths'
-import type { FileEntry, FileViewKind, ViewMode } from '@/store/useAppStore'
+import type { FileEntry, FileViewKind, ViewMode } from '@/store/appTypes'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
 import {
   requestFocusHeading,

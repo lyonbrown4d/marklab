@@ -2,7 +2,7 @@ import { FileText, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import AppLogo from '@/components/AppLogo'
 import { useI18n } from '@/i18n/useI18n'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 
 type EditorEmptyStateProps = {

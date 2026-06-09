@@ -1,8 +1,11 @@
 import type { RendererPersistKey } from '@electron/types.js'
 
-export const rendererPersistKeys = new Set<RendererPersistKey>(['marko.app'])
+export const rendererPersistKeys = new Set<RendererPersistKey>([
+  'marklab.preferences',
+  'marklab.workspace',
+])
 
-export const settingsStateKeys = new Set([
+export const preferenceStateKeys = new Set([
   'customThemeId',
   'defaultFileView',
   'graphContentMode',
@@ -15,20 +18,14 @@ export const settingsStateKeys = new Set([
   'motionAnimatedCursor',
   'motionAnimatedPanels',
   'motionSmoothScrolling',
+  'rightSidebarCollapsed',
   'shortcutOverrides',
   'showEditorStatusBar',
+  'sidebarCollapsed',
   'silentSave',
   'theme',
 ])
 
-export const sessionStateKeys = new Set([
-  'activeTabId',
-  'rightSidebarCollapsed',
-  'rootKind',
-  'rootPath',
-  'sidebarCollapsed',
-  'tabs',
-  'viewMode',
-])
+export const workspaceSessionStateKeys = new Set(['activeTabId', 'rootKind', 'rootPath', 'tabs'])
 
-export const recentProjectsStateKeys = new Set(['recentProjects'])
+export const workspaceRecentProjectsStateKeys = new Set(['recentProjects'])

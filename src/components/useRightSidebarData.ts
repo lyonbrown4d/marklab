@@ -15,7 +15,7 @@ import { getMarkdownAssetReport } from '@/logic/assets'
 import { buildKnowledgeInsights } from '@/logic/knowledge'
 import { splitLinkTarget } from '@/logic/paths'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import { isDesktopRuntime } from '@/runtime/environment'
 
 type UseRightSidebarDataArgs = {

@@ -2,7 +2,7 @@ import type { Edge, Node } from '@xyflow/react'
 import { graphlib, layout as dagreLayout } from '@dagrejs/dagre'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
-import type { GraphContentMode } from '@/store/useAppStore'
+import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 

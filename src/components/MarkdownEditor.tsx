@@ -34,18 +34,20 @@ import {
 } from '@/components/milkdown/assetEvents'
 import { resolveShortcutBindings } from '@/logic/shortcuts'
 import { onRuntimeWebviewFileDrop } from '@/runtime/webview'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
   const shellRef = useRef<HTMLDivElement | null>(null)
   const nodeViewFactory = useNodeViewFactory()
-  const shortcutOverrides = useAppStore((state) => state.shortcutOverrides)
-  const markdownAssetImportStrategy = useAppStore((state) => state.markdownAssetImportStrategy)
-  const immersiveZenMode = useAppStore((state) => state.immersiveZenMode)
-  const immersiveFocusMode = useAppStore((state) => state.immersiveFocusMode)
-  const immersiveTypewriterMode = useAppStore((state) => state.immersiveTypewriterMode)
-  const motionSmoothScrolling = useAppStore((state) => state.motionSmoothScrolling)
+  const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
+  const markdownAssetImportStrategy = usePreferencesStore(
+    (state) => state.markdownAssetImportStrategy,
+  )
+  const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
+  const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
+  const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
+  const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const {
     focusEditor,
     getMarkdown,

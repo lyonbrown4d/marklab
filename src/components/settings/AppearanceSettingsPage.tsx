@@ -6,7 +6,8 @@ import { Check, FolderOpen, Languages, Palette, Trash2, Upload } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
-import { useAppStore, type ThemeMode } from '@/store/useAppStore'
+import type { ThemeMode } from '@/store/appTypes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
 import { toast } from 'sonner'
 
@@ -35,10 +36,10 @@ type AppearanceSettingsValues = z.infer<typeof appearanceSettingsSchema>
 
 const AppearanceSettingsPage = () => {
   const { t, locale, setLocale } = useI18n()
-  const theme = useAppStore((state) => state.theme)
-  const setTheme = useAppStore((state) => state.setTheme)
-  const customThemeId = useAppStore((state) => state.customThemeId)
-  const setCustomThemeId = useAppStore((state) => state.setCustomThemeId)
+  const theme = usePreferencesStore((state) => state.theme)
+  const setTheme = usePreferencesStore((state) => state.setTheme)
+  const customThemeId = usePreferencesStore((state) => state.customThemeId)
+  const setCustomThemeId = usePreferencesStore((state) => state.setCustomThemeId)
   const [customThemes, setCustomThemes] = useState<UserThemeInfo[]>([])
   const [themeBusy, setThemeBusy] = useState(false)
   const customThemesSupported = userThemeApi.isSupported()

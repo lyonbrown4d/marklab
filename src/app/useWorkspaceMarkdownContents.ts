@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fsApi } from '@/services/fsApi'
-import type { FileEntry } from '@/store/useAppStore'
+import type { FileEntry } from '@/store/appTypes'
 import { isDesktopRuntime } from '@/runtime/environment'
 
 export const useWorkspaceMarkdownContents = (

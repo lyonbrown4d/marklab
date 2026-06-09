@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TabsBar from '@/components/TabsBar'
 import i18n from '@/i18n/setup'
-import { useAppStore } from '@/store/useAppStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const createProps = () => ({
   tabs: [{ kind: 'file' as const, view: 'source' as const, path: 'notes/current.md' }],
@@ -18,7 +18,7 @@ const createProps = () => ({
 
 beforeEach(async () => {
   localStorage.clear()
-  useAppStore.setState({ locale: 'en-US' })
+  usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
 

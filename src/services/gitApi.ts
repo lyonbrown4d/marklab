@@ -1,6 +1,6 @@
 import { invoke } from '@/runtime/ipc'
 import { z } from 'zod'
-import type { GitDiffSection } from '@/store/useAppStore'
+import type { GitDiffSection } from '@/store/appTypes'
 
 export const gitRepoInfoSchema = z.object({
   is_repository: z.boolean(),
