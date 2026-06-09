@@ -6,17 +6,25 @@ import {
   type ShortcutActionId,
   type ShortcutBindings,
 } from '@/logic/shortcuts'
+import { isDarkThemeMode } from '@/logic/themes'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import type {
   AppLocale,
+  DarkThemeMode,
   FileViewKind,
   GraphContentMode,
+  LightThemeMode,
   MarkdownAssetImportStrategy,
+  ThemeColorMode,
   ThemeMode,
+  ThemeModePreference,
 } from '@/store/appTypes'
 
 export type PreferencesState = {
   theme: ThemeMode
+  themeMode: ThemeModePreference
+  lightTheme: LightThemeMode
+  darkTheme: DarkThemeMode
   customThemeId: string | null
   locale: AppLocale
   sidebarCollapsed: boolean
@@ -35,6 +43,10 @@ export type PreferencesState = {
   immersiveTypewriterMode: boolean
   shortcutOverrides: ShortcutBindings
   setTheme: (theme: ThemeMode) => void
+  setThemeMode: (mode: ThemeModePreference) => void
+  syncSystemTheme: (mode: ThemeColorMode) => void
+  setLightTheme: (theme: LightThemeMode) => void
+  setDarkTheme: (theme: DarkThemeMode) => void
   setCustomThemeId: (themeId: string | null) => void
   setLocale: (locale: AppLocale) => void
   setSilentSave: (silent: boolean) => void
@@ -75,12 +87,18 @@ type PreferencesPersistedState = Pick<
   | 'sidebarCollapsed'
   | 'silentSave'
   | 'theme'
+  | 'themeMode'
+  | 'lightTheme'
+  | 'darkTheme'
 >
 
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
-      theme: 'marko-light',
+      theme: 'paper',
+      themeMode: 'system',
+      lightTheme: 'paper',
+      darkTheme: 'ink',
       customThemeId: null,
       locale: getInitialLocale(),
       sidebarCollapsed: false,
@@ -98,7 +116,55 @@ export const usePreferencesStore = create<PreferencesState>()(
       immersiveFocusMode: false,
       immersiveTypewriterMode: false,
       shortcutOverrides: {},
-      setTheme: (theme) => set((state) => (state.theme === theme ? state : { theme })),
+      setTheme: (theme) =>
+        set((state) => {
+          if (isDarkThemeMode(theme)) {
+            return state.theme === theme && state.darkTheme === theme && state.themeMode === 'dark'
+              ? state
+              : { theme, themeMode: 'dark', darkTheme: theme }
+          }
+          return state.theme === theme && state.lightTheme === theme && state.themeMode === 'light'
+            ? state
+            : { theme, themeMode: 'light', lightTheme: theme }
+        }),
+      setThemeMode: (themeMode) =>
+        set((state) => {
+          if (themeMode === 'system') {
+            return state.themeMode === 'system' ? state : { themeMode }
+          }
+          const theme = themeMode === 'light' ? state.lightTheme : state.darkTheme
+          return state.themeMode === themeMode && state.theme === theme
+            ? state
+            : { themeMode, theme }
+        }),
+      syncSystemTheme: (mode) =>
+        set((state) => {
+          if (state.themeMode !== 'system') return state
+          const theme = mode === 'light' ? state.lightTheme : state.darkTheme
+          return state.theme === theme ? state : { theme }
+        }),
+      setLightTheme: (lightTheme) =>
+        set((state) => {
+          const theme =
+            state.themeMode === 'light' ||
+            (state.themeMode === 'system' && !isDarkThemeMode(state.theme))
+              ? lightTheme
+              : state.theme
+          return state.lightTheme === lightTheme && state.theme === theme
+            ? state
+            : { lightTheme, theme }
+        }),
+      setDarkTheme: (darkTheme) =>
+        set((state) => {
+          const theme =
+            state.themeMode === 'dark' ||
+            (state.themeMode === 'system' && isDarkThemeMode(state.theme))
+              ? darkTheme
+              : state.theme
+          return state.darkTheme === darkTheme && state.theme === theme
+            ? state
+            : { darkTheme, theme }
+        }),
       setCustomThemeId: (customThemeId) =>
         set((state) => (state.customThemeId === customThemeId ? state : { customThemeId })),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
@@ -181,9 +247,12 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'marklab.preferences',
       storage: createElectronSettingsJsonStorage<PreferencesPersistedState>('marklab.preferences'),
-      version: 1,
+      version: 2,
       partialize: (state): PreferencesPersistedState => ({
         theme: state.theme,
+        themeMode: state.themeMode,
+        lightTheme: state.lightTheme,
+        darkTheme: state.darkTheme,
         customThemeId: state.customThemeId,
         locale: state.locale,
         sidebarCollapsed: state.sidebarCollapsed,

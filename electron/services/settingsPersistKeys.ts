@@ -24,6 +24,9 @@ export const preferenceStateKeys = new Set([
   'sidebarCollapsed',
   'silentSave',
   'theme',
+  'themeMode',
+  'lightTheme',
+  'darkTheme',
 ])
 
 export const workspaceSessionStateKeys = new Set(['activeTabId', 'rootKind', 'rootPath', 'tabs'])

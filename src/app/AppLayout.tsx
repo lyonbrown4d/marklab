@@ -84,6 +84,8 @@ const AppLayout = () => {
   const motionAnimatedCursor = usePreferencesStore((store) => store.motionAnimatedCursor)
   const motionAnimatedPanels = usePreferencesStore((store) => store.motionAnimatedPanels)
   const customThemeId = usePreferencesStore((store) => store.customThemeId)
+  const themeMode = usePreferencesStore((store) => store.themeMode)
+  const syncSystemTheme = usePreferencesStore((store) => store.syncSystemTheme)
   const immersiveZenMode = usePreferencesStore((store) => store.immersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((store) => store.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((store) => store.immersiveTypewriterMode)
@@ -119,6 +121,16 @@ const AppLayout = () => {
     setSettingsOpen(true)
   }, [])
   useUserThemeCss(customThemeId)
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const sync = () => syncSystemTheme(media.matches ? 'dark' : 'light')
+    sync()
+    media.addEventListener('change', sync)
+    return () => {
+      media.removeEventListener('change', sync)
+    }
+  }, [syncSystemTheme, themeMode])
   useDesktopReadySignal()
   useAppPanelLayoutSync({
     leftSidebarPanelRef,

@@ -21,10 +21,19 @@ export const MENU_ACTION_IDS = [
   'view.toggle_zen_mode',
   'view.toggle_focus_mode',
   'view.toggle_typewriter_mode',
-  'theme.light',
-  'theme.dark',
-  'theme.marko-light',
-  'theme.marko-dark',
+  'theme-mode.system',
+  'theme-mode.light',
+  'theme-mode.dark',
+  'theme.paper',
+  'theme.ivory',
+  'theme.sepia',
+  'theme.github',
+  'theme.solarized',
+  'theme.mist',
+  'theme.ink',
+  'theme.graphite',
+  'theme.nord',
+  'theme.obsidian',
   'help.about',
 ] as const
 export type MenuActionId = (typeof MENU_ACTION_IDS)[number]
@@ -55,6 +64,21 @@ const actionItem = (
     click: () => sendMenuAction(window, id, dispatch),
   }
 }
+const themeItems: Array<{ id: MenuActionId; label: string }> = [
+  { id: 'theme-mode.system', label: 'Follow System' },
+  { id: 'theme-mode.light', label: 'Light Mode' },
+  { id: 'theme-mode.dark', label: 'Dark Mode' },
+  { id: 'theme.paper', label: 'Paper' },
+  { id: 'theme.ivory', label: 'Ivory' },
+  { id: 'theme.sepia', label: 'Sepia' },
+  { id: 'theme.github', label: 'GitHub' },
+  { id: 'theme.solarized', label: 'Solarized' },
+  { id: 'theme.mist', label: 'Mist' },
+  { id: 'theme.ink', label: 'Ink' },
+  { id: 'theme.graphite', label: 'Graphite' },
+  { id: 'theme.nord', label: 'Nord' },
+  { id: 'theme.obsidian', label: 'Obsidian' },
+]
 export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActionDispatcher) => {
   const fileMenu: MenuItemConstructorOptions = {
     label: 'File',
@@ -130,13 +154,9 @@ export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActi
   }
   const themeMenu: MenuItemConstructorOptions = {
     label: 'Theme',
-    submenu: [
-      actionItem(mainWindow, 'theme.light', 'Light', undefined, dispatch),
-      actionItem(mainWindow, 'theme.dark', 'Dark', undefined, dispatch),
-      { type: 'separator' },
-      actionItem(mainWindow, 'theme.marko-light', 'Marklab Light', undefined, dispatch),
-      actionItem(mainWindow, 'theme.marko-dark', 'Marklab Dark', undefined, dispatch),
-    ],
+    submenu: themeItems.map((item) =>
+      actionItem(mainWindow, item.id, item.label, undefined, dispatch),
+    ),
   }
   const helpMenu: MenuItemConstructorOptions = {
     label: 'Help',

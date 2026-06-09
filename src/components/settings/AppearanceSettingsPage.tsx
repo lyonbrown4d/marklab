@@ -1,31 +1,17 @@
-import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, FolderOpen, Languages, Palette, Trash2, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Check, Languages, Palette } from 'lucide-react'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
   SettingsSection,
 } from '@/components/settings/SettingsRow'
+import CustomThemesSettingsSection from '@/components/settings/CustomThemesSettingsSection'
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
-import type { ThemeMode } from '@/store/appTypes'
+import { darkThemes, darkThemeValues, lightThemes, lightThemeValues } from '@/logic/themes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
-import { toast } from 'sonner'
-
-const themes: Array<{ value: ThemeMode; labelKey: string; swatchClass: string }> = [
-  { value: 'light', labelKey: 'theme.light', swatchClass: 'theme-swatch-light' },
-  { value: 'dark', labelKey: 'theme.dark', swatchClass: 'theme-swatch-dark' },
-  {
-    value: 'marko-light',
-    labelKey: 'theme.markoLight',
-    swatchClass: 'theme-swatch-marko-light',
-  },
-  { value: 'marko-dark', labelKey: 'theme.markoDark', swatchClass: 'theme-swatch-marko-dark' },
-]
 
 const locales: Array<{ value: Locale; labelKey: string }> = [
   { value: 'zh-CN', labelKey: 'language.zh' },
@@ -33,7 +19,9 @@ const locales: Array<{ value: Locale; labelKey: string }> = [
 ]
 
 const appearanceSettingsSchema = z.object({
-  theme: z.enum(['light', 'dark', 'marko-light', 'marko-dark']),
+  themeMode: z.enum(['system', 'light', 'dark']),
+  lightTheme: z.enum(lightThemeValues),
+  darkTheme: z.enum(darkThemeValues),
   locale: z.enum(['zh-CN', 'en-US']),
 })
 
@@ -41,84 +29,22 @@ type AppearanceSettingsValues = z.infer<typeof appearanceSettingsSchema>
 
 const AppearanceSettingsPage = () => {
   const { t, locale, setLocale } = useI18n()
-  const theme = usePreferencesStore((state) => state.theme)
-  const setTheme = usePreferencesStore((state) => state.setTheme)
-  const customThemeId = usePreferencesStore((state) => state.customThemeId)
-  const setCustomThemeId = usePreferencesStore((state) => state.setCustomThemeId)
-  const [customThemes, setCustomThemes] = useState<UserThemeInfo[]>([])
-  const [themeBusy, setThemeBusy] = useState(false)
-  const customThemesSupported = userThemeApi.isSupported()
+  const themeMode = usePreferencesStore((state) => state.themeMode)
+  const lightTheme = usePreferencesStore((state) => state.lightTheme)
+  const darkTheme = usePreferencesStore((state) => state.darkTheme)
+  const setThemeMode = usePreferencesStore((state) => state.setThemeMode)
+  const setLightTheme = usePreferencesStore((state) => state.setLightTheme)
+  const setDarkTheme = usePreferencesStore((state) => state.setDarkTheme)
   const form = useForm<AppearanceSettingsValues>({
     mode: 'onChange',
     resolver: zodResolver(appearanceSettingsSchema),
     values: {
-      theme,
+      themeMode,
+      lightTheme,
+      darkTheme,
       locale,
     },
   })
-
-  useEffect(() => {
-    if (!customThemesSupported) return
-    let cancelled = false
-    void userThemeApi
-      .list()
-      .then((themes) => {
-        if (!cancelled) setCustomThemes(themes)
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          toast.error('Failed to load custom themes', {
-            description: String(error),
-          })
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [customThemesSupported])
-
-  const refreshCustomThemes = async () => {
-    if (!customThemesSupported) return
-    setCustomThemes(await userThemeApi.list())
-  }
-
-  const importCustomTheme = async () => {
-    if (!customThemesSupported || themeBusy) return
-    setThemeBusy(true)
-    try {
-      const path = await userThemeApi.pickCssFile()
-      if (!path) return
-      const nextTheme = await userThemeApi.importCss(path)
-      setCustomThemeId(nextTheme.id)
-      await refreshCustomThemes()
-      toast.success('Custom theme imported', {
-        description: nextTheme.name,
-      })
-    } catch (error) {
-      toast.error('Failed to import custom theme', {
-        description: String(error),
-      })
-    } finally {
-      setThemeBusy(false)
-    }
-  }
-
-  const removeCustomTheme = async (themeId: string) => {
-    if (!customThemesSupported || themeBusy) return
-    setThemeBusy(true)
-    try {
-      await userThemeApi.remove(themeId)
-      if (customThemeId === themeId) setCustomThemeId(null)
-      await refreshCustomThemes()
-      toast.success('Custom theme removed')
-    } catch (error) {
-      toast.error('Failed to remove custom theme', {
-        description: String(error),
-      })
-    } finally {
-      setThemeBusy(false)
-    }
-  }
 
   return (
     <div className="space-y-5">
@@ -128,107 +54,97 @@ const AppearanceSettingsPage = () => {
         icon={Palette}
         surface={false}
       >
-        <SettingsChoiceGrid columns={2}>
+        <div className="space-y-4">
           <Controller
             control={form.control}
-            name="theme"
+            name="themeMode"
             render={({ field }) => (
-              <>
-                {themes.map((item) => (
+              <SettingsChoiceGrid columns={2}>
+                {(['system', 'light', 'dark'] as const).map((mode) => (
                   <SettingsChoiceButton
-                    key={item.value}
-                    selected={field.value === item.value}
-                    selectedVariant="ghost"
-                    unselectedVariant="ghost"
-                    className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
+                    key={mode}
+                    selected={field.value === mode}
                     onClick={() => {
-                      field.onChange(item.value)
-                      setTheme(item.value)
+                      field.onChange(mode)
+                      setThemeMode(mode)
                     }}
                   >
-                    <ThemePreview swatchClass={item.swatchClass} />
-                    <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
-                    {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
+                    {t(`themeMode.${mode}`)}
                   </SettingsChoiceButton>
                 ))}
-              </>
+              </SettingsChoiceGrid>
             )}
           />
-        </SettingsChoiceGrid>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              {t('settings.lightTheme')}
+            </div>
+            <SettingsChoiceGrid columns={2}>
+              <Controller
+                control={form.control}
+                name="lightTheme"
+                render={({ field }) => (
+                  <>
+                    {lightThemes.map((item) => (
+                      <SettingsChoiceButton
+                        key={item.value}
+                        selected={field.value === item.value}
+                        selectedVariant="ghost"
+                        unselectedVariant="ghost"
+                        className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
+                        onClick={() => {
+                          field.onChange(item.value)
+                          setLightTheme(item.value)
+                        }}
+                      >
+                        <ThemePreview swatchClass={item.swatchClass} />
+                        <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
+                        {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
+                      </SettingsChoiceButton>
+                    ))}
+                  </>
+                )}
+              />
+            </SettingsChoiceGrid>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              {t('settings.darkTheme')}
+            </div>
+            <SettingsChoiceGrid columns={2}>
+              <Controller
+                control={form.control}
+                name="darkTheme"
+                render={({ field }) => (
+                  <>
+                    {darkThemes.map((item) => (
+                      <SettingsChoiceButton
+                        key={item.value}
+                        selected={field.value === item.value}
+                        selectedVariant="ghost"
+                        unselectedVariant="ghost"
+                        className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
+                        onClick={() => {
+                          field.onChange(item.value)
+                          setDarkTheme(item.value)
+                        }}
+                      >
+                        <ThemePreview swatchClass={item.swatchClass} />
+                        <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
+                        {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
+                      </SettingsChoiceButton>
+                    ))}
+                  </>
+                )}
+              />
+            </SettingsChoiceGrid>
+          </div>
+        </div>
       </SettingsSection>
 
-      <SettingsSection
-        title={t('settings.customThemes')}
-        description={t('settings.customThemesDescription')}
-        icon={Upload}
-      >
-        <div className="mb-3 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={!customThemesSupported || themeBusy}
-            onClick={() => void importCustomTheme()}
-          >
-            <Upload className="h-4 w-4" />
-            {t('settings.importTheme')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!customThemesSupported || themeBusy}
-            onClick={() => void userThemeApi.openFolder()}
-          >
-            <FolderOpen className="h-4 w-4" />
-            {t('settings.openThemesFolder')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={customThemeId ? 'outline' : 'secondary'}
-            onClick={() => setCustomThemeId(null)}
-          >
-            {t('settings.useBuiltInTheme')}
-          </Button>
-        </div>
-        {customThemesSupported && customThemes.length > 0 ? (
-          <div className="space-y-2">
-            {customThemes.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2"
-              >
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left text-sm"
-                  onClick={() => setCustomThemeId(item.id)}
-                >
-                  <span className="block truncate font-medium">{item.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
-                </button>
-                {customThemeId === item.id && <Check className="h-4 w-4 text-primary" />}
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  disabled={themeBusy}
-                  onClick={() => void removeCustomTheme(item.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
-            {customThemesSupported
-              ? t('settings.noCustomThemes')
-              : t('settings.customThemesDesktopOnly')}
-          </div>
-        )}
-      </SettingsSection>
+      <CustomThemesSettingsSection />
 
       <SettingsSection
         title={t('menu.language')}
@@ -246,6 +162,8 @@ const AppearanceSettingsPage = () => {
                   <SettingsChoiceButton
                     key={item.value}
                     selected={field.value === item.value}
+                    selectedVariant="ghost"
+                    unselectedVariant="ghost"
                     onClick={() => {
                       field.onChange(item.value)
                       setLocale(item.value)

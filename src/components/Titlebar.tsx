@@ -33,8 +33,16 @@ import { buildWorkspaceKnowledgeSummary } from '@/logic/knowledge'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import WindowControls from '@/components/WindowControls'
 import TitlebarThemeMenu from '@/components/TitlebarThemeMenu'
+import TitlebarLanguageMenu from '@/components/TitlebarLanguageMenu'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { formatShortcutList, resolveShortcutBindings } from '@/logic/shortcuts'
+import {
+  builtInThemes,
+  themeActionId,
+  themeFromActionId,
+  themeModeActionId,
+  themeModeFromActionId,
+} from '@/logic/themes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 
 type TitlebarProps = {
@@ -191,10 +199,13 @@ const Titlebar = ({
       {
         label: 'Theme',
         items: [
-          { id: 'theme.light', label: t('theme.light') },
-          { id: 'theme.dark', label: t('theme.dark') },
-          { id: 'theme.marko-light', label: t('theme.markoLight') },
-          { id: 'theme.marko-dark', label: t('theme.markoDark') },
+          { id: themeModeActionId('system'), label: t('themeMode.system') },
+          { id: themeModeActionId('light'), label: t('themeMode.light') },
+          { id: themeModeActionId('dark'), label: t('themeMode.dark') },
+          ...builtInThemes.map((item) => ({
+            id: themeActionId(item.value),
+            label: t(item.labelKey),
+          })),
         ],
       },
       {
@@ -318,13 +329,14 @@ const Titlebar = ({
         onRebuildSearchIndex()
         return
       }
-      if (
-        id === 'theme.light' ||
-        id === 'theme.dark' ||
-        id === 'theme.marko-light' ||
-        id === 'theme.marko-dark'
-      ) {
-        setTheme(id as ThemeMode)
+      const themeMode = themeModeFromActionId(id)
+      if (themeMode) {
+        usePreferencesStore.getState().setThemeMode(themeMode)
+        return
+      }
+      const theme = themeFromActionId(id)
+      if (theme) {
+        setTheme(theme)
         return
       }
       if (id === 'help.about' || id.startsWith('file.export_')) {
@@ -510,6 +522,7 @@ const Titlebar = ({
             setTheme={setTheme}
             onAbout={() => onMenuAction('help.about')}
           />
+          <TitlebarLanguageMenu />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

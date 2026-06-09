@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
+import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
 
 type CommandActionSectionsProps = {
   canCreateWorkspaceEntries: boolean
@@ -127,14 +128,17 @@ const CommandActionSections = ({
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading={t('menu.theme')}>
-        <CommandItem onSelect={() => onAction('theme.light')}>{t('theme.light')}</CommandItem>
-        <CommandItem onSelect={() => onAction('theme.dark')}>{t('theme.dark')}</CommandItem>
-        <CommandItem onSelect={() => onAction('theme.marko-light')}>
-          {t('theme.markoLight')}
-        </CommandItem>
-        <CommandItem onSelect={() => onAction('theme.marko-dark')}>
-          {t('theme.markoDark')}
-        </CommandItem>
+        {(['system', 'light', 'dark'] as const).map((mode) => (
+          <CommandItem key={mode} onSelect={() => onAction(themeModeActionId(mode))}>
+            {t(`themeMode.${mode}`)}
+          </CommandItem>
+        ))}
+        <CommandSeparator />
+        {builtInThemes.map((item) => (
+          <CommandItem key={item.value} onSelect={() => onAction(themeActionId(item.value))}>
+            {t(item.labelKey)}
+          </CommandItem>
+        ))}
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading="Help">

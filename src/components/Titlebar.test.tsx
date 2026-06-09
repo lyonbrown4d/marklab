@@ -70,7 +70,7 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   searchIndexRebuilding: false,
   isMaximized: false,
   setIsMaximized: vi.fn(),
-  theme: 'marko-light',
+  theme: 'paper',
   setTheme: vi.fn(),
   commandOpen: false,
   onCommandOpenChange: vi.fn(),

@@ -4,6 +4,7 @@ import { requestExportContent } from '@/utils/exportContent'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { themeFromActionId, themeModeFromActionId } from '@/logic/themes'
 import { toast } from 'sonner'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -99,10 +100,16 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
         setImmersiveTypewriterMode(!usePreferencesStore.getState().immersiveTypewriterMode)
       }
       if (id === 'settings.open') openSettings()
-      if (id === 'theme.light') currentState.setTheme('light')
-      if (id === 'theme.dark') currentState.setTheme('dark')
-      if (id === 'theme.marko-light') currentState.setTheme('marko-light')
-      if (id === 'theme.marko-dark') currentState.setTheme('marko-dark')
+      const themeMode = themeModeFromActionId(id)
+      if (themeMode) {
+        usePreferencesStore.getState().setThemeMode(themeMode)
+        return
+      }
+      const theme = themeFromActionId(id)
+      if (theme) {
+        currentState.setTheme(theme)
+        return
+      }
       if (id === 'help.about') {
         toast('marklab', {
           description: 'A desktop Markdown workspace with graph navigation.',

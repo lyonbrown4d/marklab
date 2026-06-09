@@ -1,4 +1,4 @@
-import { CircleHelp, GitGraph, Languages, Palette, PenLine } from 'lucide-react'
+import { CircleHelp, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,8 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useI18n } from '@/i18n/useI18n'
-import type { Locale } from '@/i18n/resources'
-import type { ThemeMode } from '@/store/appTypes'
+import type { ThemeMode, ThemeModePreference } from '@/store/appTypes'
+import { builtInThemes } from '@/logic/themes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type TitlebarThemeMenuProps = {
   theme: ThemeMode
@@ -20,7 +21,9 @@ type TitlebarThemeMenuProps = {
 }
 
 const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps) => {
-  const { t, locale, setLocale } = useI18n()
+  const { t } = useI18n()
+  const themeMode = usePreferencesStore((state) => state.themeMode)
+  const setThemeMode = usePreferencesStore((state) => state.setThemeMode)
 
   return (
     <DropdownMenu>
@@ -34,49 +37,29 @@ const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps)
           <Palette className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>{t('menu.theme')}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={themeMode}
+          onValueChange={(value) => setThemeMode(value as ThemeModePreference)}
+        >
+          <DropdownMenuRadioItem value="system">{t('themeMode.system')}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="light">{t('themeMode.light')}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">{t('themeMode.dark')}</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
-          {t('theme.groupShadcn')}
+          {t('settings.themePreset')}
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={theme}
           onValueChange={(value) => setTheme(value as ThemeMode)}
         >
-          <DropdownMenuRadioItem value="light">{t('theme.light')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">{t('theme.dark')}</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
-          {t('theme.groupMarko')}
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={theme}
-          onValueChange={(value) => setTheme(value as ThemeMode)}
-        >
-          <DropdownMenuRadioItem value="marko-light">
-            <PenLine className="mr-1 h-3.5 w-3.5" />
-            {t('theme.markoLight')}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="marko-dark">
-            <GitGraph className="mr-1 h-3.5 w-3.5" />
-            {t('theme.markoDark')}
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t('menu.language')}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={locale}
-          onValueChange={(value) => setLocale(value as Locale)}
-        >
-          <DropdownMenuRadioItem value="zh-CN">
-            <Languages className="mr-1 h-3.5 w-3.5" />
-            {t('language.zh')}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="en-US">
-            <Languages className="mr-1 h-3.5 w-3.5" />
-            {t('language.en')}
-          </DropdownMenuRadioItem>
+          {builtInThemes.map((item) => (
+            <DropdownMenuRadioItem key={item.value} value={item.value}>
+              {t(item.labelKey)}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onAbout}>
