@@ -1,8 +1,14 @@
-import { FileText, ListTree } from 'lucide-react'
-import { useMemo } from 'react'
-import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
-import SearchResultPreview from '@/components/SearchResultPreview'
+import Fuse from 'fuse.js'
+import { Fragment, useMemo } from 'react'
+import { CommandGroup, CommandSeparator } from '@/components/ui/command'
 import CommandSearchStatus from '@/components/command/CommandSearchStatus'
+import {
+  CommandResultRowItem,
+  toFileRows,
+  toFullTextRows,
+  toHeadingRows,
+  type CommandResultRow,
+} from '@/components/command/CommandSearchResultRows'
 import type { CommandSearchScope } from '@/components/command/commandSearchScope'
 import type { FsSearchResult } from '@/services/fsApi'
 
@@ -38,9 +44,74 @@ type CommandSearchResultsProps = {
 const MAX_IDLE_FILE_RESULTS = 8
 const MAX_LOCAL_SEARCH_RESULTS = 12
 
-const includesSearch = (value: string, query: string) => value.toLocaleLowerCase().includes(query)
+const FILE_SEARCH_OPTIONS = {
+  includeMatches: true,
+  includeScore: true,
+  ignoreLocation: true,
+  threshold: 0.35,
+  keys: [
+    { name: 'label', weight: 0.7 },
+    { name: 'path', weight: 0.3 },
+  ],
+}
+
+const HEADING_SEARCH_OPTIONS = {
+  includeScore: true,
+  ignoreLocation: true,
+  threshold: 0.35,
+  keys: [
+    { name: 'text', weight: 0.55 },
+    { name: 'slug', weight: 0.2 },
+    { name: 'path', weight: 0.2 },
+    { name: 'label', weight: 0.05 },
+  ],
+}
+
+type FuseResultWithMatches<T> = {
+  item: T
+  matches?: ReadonlyArray<{
+    key?: string
+  }>
+}
+
+type LocalSearchGroups = {
+  titleMatches: CommandFile[]
+  pathMatches: CommandFile[]
+  headingMatches: CommandHeading[]
+}
+
+type CommandResultSection = {
+  id: string
+  heading: string
+  totalCount: number
+  rows: CommandResultRow[]
+}
 
 const getHiddenCount = (total: number, visible: number) => Math.max(total - visible, 0)
+
+const resultMatchesKey = <T,>(result: FuseResultWithMatches<T>, key: string) =>
+  result.matches?.some((match) => match.key === key) ?? false
+
+const groupFileSearchResults = (
+  results: ReadonlyArray<FuseResultWithMatches<CommandFile>>,
+): Pick<LocalSearchGroups, 'titleMatches' | 'pathMatches'> => {
+  const titleMatches: CommandFile[] = []
+  const pathMatches: CommandFile[] = []
+
+  for (const result of results) {
+    if (resultMatchesKey(result, 'label') || !resultMatchesKey(result, 'path')) {
+      titleMatches.push(result.item)
+      continue
+    }
+
+    pathMatches.push(result.item)
+  }
+
+  return {
+    titleMatches,
+    pathMatches,
+  }
+}
 
 const renderMoreHint = (count: number) => {
   if (count <= 0) return null
@@ -68,12 +139,13 @@ const CommandSearchResults = ({
   onOpenSearchResult,
 }: CommandSearchResultsProps) => {
   const trimmedQuery = query.trim().replace(/^[@#?]\s*/, '')
-  const normalizedQuery = trimmedQuery.toLocaleLowerCase()
-  const hasQuery = normalizedQuery.length > 0
+  const hasQuery = trimmedQuery.length > 0
   const showFiles = scope === 'all' || scope === 'files'
   const showHeadings = scope === 'all' || scope === 'headings'
   const showFullText = scope === 'all' || scope === 'text'
-  const groupedResults = useMemo(() => {
+  const fileFuse = useMemo(() => new Fuse(files, FILE_SEARCH_OPTIONS), [files])
+  const headingFuse = useMemo(() => new Fuse(headings, HEADING_SEARCH_OPTIONS), [headings])
+  const groupedResults = useMemo<LocalSearchGroups>(() => {
     if (!hasQuery) {
       return {
         titleMatches: files,
@@ -82,29 +154,67 @@ const CommandSearchResults = ({
       }
     }
 
-    const titleMatches = files.filter((file) => includesSearch(file.label, normalizedQuery))
-    const pathMatches = files.filter(
-      (file) =>
-        !includesSearch(file.label, normalizedQuery) && includesSearch(file.path, normalizedQuery),
-    )
-    const headingMatches = headings.filter(
-      (heading) =>
-        includesSearch(heading.text, normalizedQuery) ||
-        includesSearch(heading.slug, normalizedQuery) ||
-        includesSearch(heading.path, normalizedQuery),
-    )
+    const { titleMatches, pathMatches } = groupFileSearchResults(fileFuse.search(trimmedQuery))
+    const headingMatches = headingFuse.search(trimmedQuery).map((result) => result.item)
 
     return {
       titleMatches,
       pathMatches,
       headingMatches,
     }
-  }, [files, hasQuery, headings, normalizedQuery])
+  }, [fileFuse, files, hasQuery, headingFuse, trimmedQuery])
 
-  const titleLimit = hasQuery ? MAX_LOCAL_SEARCH_RESULTS : MAX_IDLE_FILE_RESULTS
-  const visibleTitleMatches = groupedResults.titleMatches.slice(0, titleLimit)
-  const visiblePathMatches = groupedResults.pathMatches.slice(0, MAX_LOCAL_SEARCH_RESULTS)
-  const visibleHeadingMatches = groupedResults.headingMatches.slice(0, MAX_LOCAL_SEARCH_RESULTS)
+  const resultSections = useMemo<CommandResultSection[]>(() => {
+    const sections: CommandResultSection[] = []
+    const titleLimit = hasQuery ? MAX_LOCAL_SEARCH_RESULTS : MAX_IDLE_FILE_RESULTS
+    const titleRows = toFileRows(groupedResults.titleMatches.slice(0, titleLimit), 'title-file')
+    const pathRows = toFileRows(
+      groupedResults.pathMatches.slice(0, MAX_LOCAL_SEARCH_RESULTS),
+      'path-file',
+    )
+    const headingRows = toHeadingRows(
+      groupedResults.headingMatches.slice(0, MAX_LOCAL_SEARCH_RESULTS),
+    )
+    const fullTextRows = toFullTextRows(fullTextResults)
+
+    if (showFiles && titleRows.length > 0) {
+      sections.push({
+        id: 'title-files',
+        heading: hasQuery ? 'Title matches' : 'Files',
+        totalCount: groupedResults.titleMatches.length,
+        rows: titleRows,
+      })
+    }
+
+    if (showFiles && pathRows.length > 0) {
+      sections.push({
+        id: 'path-files',
+        heading: 'Path matches',
+        totalCount: groupedResults.pathMatches.length,
+        rows: pathRows,
+      })
+    }
+
+    if (showHeadings && headingRows.length > 0) {
+      sections.push({
+        id: 'headings',
+        heading: 'Headings',
+        totalCount: groupedResults.headingMatches.length,
+        rows: headingRows,
+      })
+    }
+
+    if (showFullText && fullTextRows.length > 0) {
+      sections.push({
+        id: 'full-text',
+        heading: 'Full text',
+        totalCount: fullTextRows.length,
+        rows: fullTextRows,
+      })
+    }
+
+    return sections
+  }, [fullTextResults, groupedResults, hasQuery, showFiles, showFullText, showHeadings])
 
   return (
     <>
@@ -116,97 +226,23 @@ const CommandSearchResults = ({
         indexedFileCount={indexedFileCount}
         searchIndexRebuilding={searchIndexRebuilding}
       />
-      {showFiles && visibleTitleMatches.length > 0 && (
-        <>
-          <CommandGroup heading={hasQuery ? 'Title matches' : 'Files'}>
-            {visibleTitleMatches.map((file) => (
-              <CommandItem
-                key={file.path}
-                value={`${file.label} ${file.path}`}
-                onSelect={() => onOpenFile(file.path)}
-              >
-                <FileText className="h-4 w-4" />
-                <span className="min-w-0">
-                  <span className="block truncate">{file.label}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {file.path}
-                  </span>
-                </span>
-              </CommandItem>
+      {resultSections.map((section) => (
+        <Fragment key={section.id}>
+          <CommandGroup heading={section.heading}>
+            {section.rows.map((row) => (
+              <CommandResultRowItem
+                key={row.id}
+                row={row}
+                onOpenFile={onOpenFile}
+                onOpenHeading={onOpenHeading}
+                onOpenSearchResult={onOpenSearchResult}
+              />
             ))}
-            {renderMoreHint(getHiddenCount(groupedResults.titleMatches.length, titleLimit))}
+            {renderMoreHint(getHiddenCount(section.totalCount, section.rows.length))}
           </CommandGroup>
           <CommandSeparator />
-        </>
-      )}
-      {showFiles && visiblePathMatches.length > 0 && (
-        <>
-          <CommandGroup heading="Path matches">
-            {visiblePathMatches.map((file) => (
-              <CommandItem
-                key={file.path}
-                value={`${file.path} ${file.label}`}
-                onSelect={() => onOpenFile(file.path)}
-              >
-                <FileText className="h-4 w-4" />
-                <span className="min-w-0">
-                  <span className="block truncate">{file.path}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {file.label}
-                  </span>
-                </span>
-              </CommandItem>
-            ))}
-            {renderMoreHint(
-              getHiddenCount(groupedResults.pathMatches.length, MAX_LOCAL_SEARCH_RESULTS),
-            )}
-          </CommandGroup>
-          <CommandSeparator />
-        </>
-      )}
-      {showHeadings && visibleHeadingMatches.length > 0 && (
-        <>
-          <CommandGroup heading="Headings">
-            {visibleHeadingMatches.map((heading) => (
-              <CommandItem
-                key={`${heading.path}#${heading.slug}`}
-                value={`${heading.text} ${heading.slug} ${heading.path}`}
-                onSelect={() => onOpenHeading(heading.path, heading.slug)}
-              >
-                <ListTree className="h-4 w-4" />
-                <span className="min-w-0">
-                  <span className="block truncate">
-                    {'#'.repeat(Math.min(heading.level, 6))} {heading.text}
-                  </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {heading.label}#{heading.slug}
-                  </span>
-                </span>
-              </CommandItem>
-            ))}
-            {renderMoreHint(
-              getHiddenCount(groupedResults.headingMatches.length, MAX_LOCAL_SEARCH_RESULTS),
-            )}
-          </CommandGroup>
-          <CommandSeparator />
-        </>
-      )}
-      {showFullText && fullTextResults.length > 0 && (
-        <>
-          <CommandGroup heading="Full text">
-            {fullTextResults.map((result) => (
-              <CommandItem
-                key={`${result.path}:${result.line}:${result.column}`}
-                value={`${result.title} ${result.path} ${result.snippet}`}
-                onSelect={() => onOpenSearchResult(result)}
-              >
-                <SearchResultPreview result={result} compact />
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-        </>
-      )}
+        </Fragment>
+      ))}
     </>
   )
 }

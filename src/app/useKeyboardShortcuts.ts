@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import {
   useHotkeys,
   type RegisterableHotkey,
   type UseHotkeyDefinition,
 } from '@tanstack/react-hotkeys'
+import { useLatest } from 'ahooks'
 import {
   resolveShortcutBindings,
   shortcutActions,
@@ -46,7 +47,7 @@ export const useKeyboardShortcuts = ({
   onToggleRightSidebar,
   onToggleSidebar,
 }: UseKeyboardShortcutsArgs) => {
-  const argsRef = useRef<UseKeyboardShortcutsArgs>({
+  const argsRef = useLatest<UseKeyboardShortcutsArgs>({
     activeTabId,
     shortcutOverrides,
     tabs,
@@ -62,40 +63,6 @@ export const useKeyboardShortcuts = ({
     onToggleRightSidebar,
     onToggleSidebar,
   })
-
-  useEffect(() => {
-    argsRef.current = {
-      activeTabId,
-      shortcutOverrides,
-      tabs,
-      viewMode,
-      onCloseActiveTab,
-      onCreateFile,
-      onOpenCommandPalette,
-      onOpenFile,
-      onOpenProject,
-      onOpenSettings,
-      onOpenTab,
-      onSetViewMode,
-      onToggleRightSidebar,
-      onToggleSidebar,
-    }
-  }, [
-    activeTabId,
-    shortcutOverrides,
-    tabs,
-    viewMode,
-    onCloseActiveTab,
-    onCreateFile,
-    onOpenCommandPalette,
-    onOpenFile,
-    onOpenProject,
-    onOpenSettings,
-    onOpenTab,
-    onSetViewMode,
-    onToggleRightSidebar,
-    onToggleSidebar,
-  ])
 
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
   const definitions = useMemo<UseHotkeyDefinition[]>(() => {
@@ -184,7 +151,7 @@ export const useKeyboardShortcuts = ({
           },
         })),
       )
-  }, [bindings])
+  }, [argsRef, bindings])
 
   useHotkeys(definitions, {
     conflictBehavior: 'replace',

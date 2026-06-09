@@ -14,6 +14,7 @@ import {
 } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useHotkeys, type RegisterableHotkey } from '@tanstack/react-hotkeys'
+import { useLatest } from 'ahooks'
 import { ProsemirrorAdapterProvider, useNodeViewFactory } from '@prosemirror-adapter/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -63,11 +64,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     markdownAssetImportStrategy,
     nodeViewFactory,
   })
-  const runShortcutActionRef = useRef(runShortcutAction)
-
-  useEffect(() => {
-    runShortcutActionRef.current = runShortcutAction
-  }, [runShortcutAction])
+  const runShortcutActionRef = useLatest(runShortcutAction)
 
   const shortcutDefinitions = useMemo(() => {
     const bindings = resolveShortcutBindings(shortcutOverrides)
@@ -82,7 +79,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
         },
       })),
     )
-  }, [shortcutOverrides])
+  }, [runShortcutActionRef, shortcutOverrides])
   const importDroppedImageSources = useCallback(
     async (event: DragEvent<HTMLDivElement>) => {
       placeSelectionAtClientPoint(event.clientX, event.clientY)

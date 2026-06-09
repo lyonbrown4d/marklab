@@ -4,6 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Check, FolderOpen, Languages, Palette, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  SettingsChoiceButton,
+  SettingsChoiceGrid,
+  SettingsSection,
+} from '@/components/settings/SettingsRow'
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
 import type { ThemeMode } from '@/store/appTypes'
@@ -117,24 +122,25 @@ const AppearanceSettingsPage = () => {
 
   return (
     <div className="space-y-5">
-      <section>
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <Palette className="h-4 w-4 text-primary" />
-          {t('menu.theme')}
-        </div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('settings.themeDescription')}</div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <SettingsSection
+        title={t('menu.theme')}
+        description={t('settings.themeDescription')}
+        icon={Palette}
+        surface={false}
+      >
+        <SettingsChoiceGrid columns={2}>
           <Controller
             control={form.control}
             name="theme"
             render={({ field }) => (
               <>
                 {themes.map((item) => (
-                  <Button
+                  <SettingsChoiceButton
                     key={item.value}
-                    variant="ghost"
-                    data-selected={field.value === item.value ? 'true' : 'false'}
-                    className="theme-choice h-auto justify-start gap-3 rounded-md p-2 text-left shadow-none"
+                    selected={field.value === item.value}
+                    selectedVariant="ghost"
+                    unselectedVariant="ghost"
+                    className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
                     onClick={() => {
                       field.onChange(item.value)
                       setTheme(item.value)
@@ -143,22 +149,19 @@ const AppearanceSettingsPage = () => {
                     <ThemePreview swatchClass={item.swatchClass} />
                     <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
                     {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
-                  </Button>
+                  </SettingsChoiceButton>
                 ))}
               </>
             )}
           />
-        </div>
-      </section>
+        </SettingsChoiceGrid>
+      </SettingsSection>
 
-      <section className="settings-row-surface rounded-md p-3">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <Upload className="h-4 w-4 text-primary" />
-          {t('settings.customThemes')}
-        </div>
-        <div className="mb-3 text-xs leading-5 text-muted-foreground">
-          {t('settings.customThemesDescription')}
-        </div>
+      <SettingsSection
+        title={t('settings.customThemes')}
+        description={t('settings.customThemesDescription')}
+        icon={Upload}
+      >
         <div className="mb-3 flex flex-wrap gap-2">
           <Button
             type="button"
@@ -225,40 +228,37 @@ const AppearanceSettingsPage = () => {
               : t('settings.customThemesDesktopOnly')}
           </div>
         )}
-      </section>
+      </SettingsSection>
 
-      <section>
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <Languages className="h-4 w-4 text-primary" />
-          {t('menu.language')}
-        </div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          {t('settings.languageDescription')}
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <SettingsSection
+        title={t('menu.language')}
+        description={t('settings.languageDescription')}
+        icon={Languages}
+        surface={false}
+      >
+        <SettingsChoiceGrid columns={2}>
           <Controller
             control={form.control}
             name="locale"
             render={({ field }) => (
               <>
                 {locales.map((item) => (
-                  <Button
+                  <SettingsChoiceButton
                     key={item.value}
-                    variant={field.value === item.value ? 'secondary' : 'outline'}
-                    className="h-9 justify-start rounded-md"
+                    selected={field.value === item.value}
                     onClick={() => {
                       field.onChange(item.value)
                       setLocale(item.value)
                     }}
                   >
                     {t(item.labelKey)}
-                  </Button>
+                  </SettingsChoiceButton>
                 ))}
               </>
             )}
           />
-        </div>
-      </section>
+        </SettingsChoiceGrid>
+      </SettingsSection>
     </div>
   )
 }

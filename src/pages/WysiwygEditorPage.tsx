@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useMemo, useRef } from 'react'
+import { useLatest } from 'ahooks'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
@@ -22,8 +23,8 @@ const WysiwygEditorPage = ({
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
-  const activePathRef = useRef(activePath)
-  const valueRef = useRef(value)
+  const activePathRef = useLatest(activePath)
+  const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
   const shouldAnimateView = value.length <= LARGE_MARKDOWN_VIEW_FADE_LIMIT
   const slashLabels = useMemo<SlashCommandLabels>(
@@ -51,16 +52,12 @@ const WysiwygEditorPage = ({
   )
 
   useEffect(() => {
-    activePathRef.current = activePath
-    valueRef.current = value
-  }, [activePath, value])
-  useEffect(() => {
     return onExportContentRequest(({ expectedActivePath, respond }) => {
       if (typeof respond !== 'function') return
       if (expectedActivePath != null && activePathRef.current !== expectedActivePath) return
       respond(editorRef.current?.getMarkdown() ?? valueRef.current)
     })
-  }, [])
+  }, [activePathRef, valueRef])
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">

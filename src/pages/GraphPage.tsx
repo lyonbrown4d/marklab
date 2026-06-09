@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useLatest } from 'ahooks'
 import { GitGraph } from 'lucide-react'
 import {
   Background,
@@ -67,26 +68,21 @@ const GraphPageComponent = ({
   > | null>(null)
   const graphShellRef = useRef<HTMLDivElement | null>(null)
   const layoutKeyRef = useRef(graph.layoutKey)
-  const onUpdateHeadingTitleRef = useRef(onUpdateHeadingTitle)
-  const onUpdateHeadingContentRef = useRef(onUpdateHeadingContent)
+  const onUpdateHeadingTitleRef = useLatest(onUpdateHeadingTitle)
+  const onUpdateHeadingContentRef = useLatest(onUpdateHeadingContent)
 
-  useEffect(() => {
-    onUpdateHeadingTitleRef.current = onUpdateHeadingTitle
-  }, [onUpdateHeadingTitle])
-
-  useEffect(() => {
-    onUpdateHeadingContentRef.current = onUpdateHeadingContent
-  }, [onUpdateHeadingContent])
-
-  const handleUpdateHeadingTitle = useCallback((nodeId: string, title: string) => {
-    onUpdateHeadingTitleRef.current(nodeId, title)
-  }, [])
+  const handleUpdateHeadingTitle = useCallback(
+    (nodeId: string, title: string) => {
+      onUpdateHeadingTitleRef.current(nodeId, title)
+    },
+    [onUpdateHeadingTitleRef],
+  )
 
   const handleUpdateHeadingContent = useCallback<NonNullable<GraphNodeData['onUpdateContent']>>(
     (nodeId, content, contentBlocks) => {
       onUpdateHeadingContentRef.current(nodeId, content, contentBlocks)
     },
-    [],
+    [onUpdateHeadingContentRef],
   )
 
   useEffect(() => {

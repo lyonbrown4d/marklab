@@ -2,12 +2,15 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Map } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
 import type { GraphContentMode } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import SettingsRow from '@/components/settings/SettingsRow'
+import {
+  SettingsChoiceButton,
+  SettingsChoiceGrid,
+  SettingsSection,
+  SettingsSwitchRow,
+} from '@/components/settings/SettingsRow'
 
 const graphContentModes: Array<{ value: GraphContentMode; labelKey: string }> = [
   { value: 'none', labelKey: 'settings.graphContentNone' },
@@ -39,57 +42,50 @@ const GraphSettingsPage = () => {
 
   return (
     <div className="space-y-4">
-      <SettingsRow
-        title={t('settings.graphMiniMap')}
-        description={t('settings.graphMiniMapDescription')}
-        control={
-          <Controller
-            control={form.control}
-            name="graphMiniMapEnabled"
-            render={({ field }) => (
-              <Switch
-                checked={field.value}
-                onCheckedChange={(checked) => {
-                  field.onChange(checked)
-                  setGraphMiniMapEnabled(checked)
-                }}
-              />
-            )}
+      <Controller
+        control={form.control}
+        name="graphMiniMapEnabled"
+        render={({ field }) => (
+          <SettingsSwitchRow
+            title={t('settings.graphMiniMap')}
+            description={t('settings.graphMiniMapDescription')}
+            checked={field.value}
+            onCheckedChange={(checked) => {
+              field.onChange(checked)
+              setGraphMiniMapEnabled(checked)
+            }}
           />
-        }
+        )}
       />
-      <section className="settings-row-surface rounded-md p-3">
-        <div className="mb-1 flex items-center gap-2 text-sm font-medium">
-          <Map className="h-4 w-4 text-primary" />
-          {t('settings.graphContentMode')}
-        </div>
-        <div className="mb-3 text-xs leading-5 text-muted-foreground">
-          {t('settings.graphContentModeDescription')}
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <SettingsSection
+        title={t('settings.graphContentMode')}
+        description={t('settings.graphContentModeDescription')}
+        icon={Map}
+      >
+        <SettingsChoiceGrid columns={3}>
           <Controller
             control={form.control}
             name="graphContentMode"
             render={({ field }) => (
               <>
                 {graphContentModes.map((item) => (
-                  <Button
+                  <SettingsChoiceButton
                     key={item.value}
-                    variant={field.value === item.value ? 'secondary' : 'outline'}
-                    className="h-9 rounded-md"
+                    selected={field.value === item.value}
+                    className="justify-center"
                     onClick={() => {
                       field.onChange(item.value)
                       setGraphContentMode(item.value)
                     }}
                   >
                     {t(item.labelKey)}
-                  </Button>
+                  </SettingsChoiceButton>
                 ))}
               </>
             )}
           />
-        </div>
-      </section>
+        </SettingsChoiceGrid>
+      </SettingsSection>
     </div>
   )
 }

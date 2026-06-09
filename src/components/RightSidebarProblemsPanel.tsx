@@ -1,5 +1,6 @@
+import { useMemo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { InspectorEmptyState, ProblemGroupHeader } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
@@ -18,6 +19,20 @@ const problemClasses = (severity: MarkdownSourceDiagnostic['severity']) => {
   return severity === 'error' ? 'text-destructive' : 'text-amber-500'
 }
 
+type ProblemListItem =
+  | {
+      kind: 'header'
+      severity: MarkdownSourceDiagnostic['severity']
+      count: number
+    }
+  | {
+      kind: 'problem'
+      problem: MarkdownSourceDiagnostic
+      key: string
+    }
+
+const VIRTUALIZE_PROBLEM_THRESHOLD = 80
+
 export const RightSidebarProblemsPanel = ({
   targetPath,
   targetLabel,
@@ -27,9 +42,54 @@ export const RightSidebarProblemsPanel = ({
   onOpenProblem,
 }: RightSidebarProblemsPanelProps) => {
   const { t } = useI18n()
+  const scrollParentRef = useRef<HTMLDivElement | null>(null)
+  const problemItems = useMemo<ProblemListItem[]>(() => {
+    const items: ProblemListItem[] = []
+    if (errorProblems.length > 0) {
+      items.push({ kind: 'header', severity: 'error', count: errorProblems.length })
+      errorProblems.forEach((problem, index) => {
+        items.push({
+          kind: 'problem',
+          problem,
+          key: `error-${problem.line}-${problem.startColumn}-${index}`,
+        })
+      })
+    }
+    if (warningProblems.length > 0) {
+      items.push({ kind: 'header', severity: 'warning', count: warningProblems.length })
+      warningProblems.forEach((problem, index) => {
+        items.push({
+          kind: 'problem',
+          problem,
+          key: `warning-${problem.line}-${problem.startColumn}-${index}`,
+        })
+      })
+    }
+    return items
+  }, [errorProblems, warningProblems])
+  const virtualizer = useVirtualizer({
+    count: problemItems.length,
+    initialRect: { height: 640, width: 320 },
+    getScrollElement: () => scrollParentRef.current,
+    estimateSize: (index) => (problemItems[index]?.kind === 'header' ? 30 : 58),
+    overscan: 8,
+  })
+  const shouldVirtualize = problemItems.length > VIRTUALIZE_PROBLEM_THRESHOLD
+  const renderProblemItem = (item: ProblemListItem) =>
+    item.kind === 'header' ? (
+      <ProblemGroupHeader
+        label={
+          item.severity === 'error' ? t('inspector.problemError') : t('inspector.problemWarning')
+        }
+        count={item.count}
+        tone={item.severity}
+      />
+    ) : (
+      <ProblemRow problem={item.problem} onOpenProblem={onOpenProblem} />
+    )
 
   return (
-    <ScrollArea className="h-full" viewportClassName="p-1">
+    <div ref={scrollParentRef} className="h-full overflow-auto p-1">
       {!targetPath ? (
         <InspectorEmptyState
           icon={<FileText className="h-4 w-4" />}
@@ -42,39 +102,42 @@ export const RightSidebarProblemsPanel = ({
           title={t('inspector.noProblems')}
           description={targetLabel}
         />
-      ) : (
+      ) : !shouldVirtualize ? (
         <div className="flex flex-col gap-2">
-          {errorProblems.length > 0 && (
-            <ProblemGroupHeader
-              label={t('inspector.problemError')}
-              count={errorProblems.length}
-              tone="error"
-            />
-          )}
-          {errorProblems.map((problem, index) => (
-            <ProblemRow
-              key={`error-${problem.line}-${problem.startColumn}-${index}`}
-              problem={problem}
-              onOpenProblem={onOpenProblem}
-            />
-          ))}
-          {warningProblems.length > 0 && (
-            <ProblemGroupHeader
-              label={t('inspector.problemWarning')}
-              count={warningProblems.length}
-              tone="warning"
-            />
-          )}
-          {warningProblems.map((problem, index) => (
-            <ProblemRow
-              key={`warning-${problem.line}-${problem.startColumn}-${index}`}
-              problem={problem}
-              onOpenProblem={onOpenProblem}
-            />
+          {problemItems.map((item, index) => (
+            <div key={item.kind === 'problem' ? item.key : `${item.severity}-${index}`}>
+              {renderProblemItem(item)}
+            </div>
           ))}
         </div>
+      ) : (
+        <div
+          className="relative"
+          style={{
+            height: virtualizer.getTotalSize(),
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const item = problemItems[virtualItem.index]
+            if (!item) return null
+
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                className="absolute left-0 top-0 w-full pb-2"
+                style={{
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                {renderProblemItem(item)}
+              </div>
+            )
+          })}
+        </div>
       )}
-    </ScrollArea>
+    </div>
   )
 }
 

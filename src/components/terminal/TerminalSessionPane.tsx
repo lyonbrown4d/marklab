@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLatest } from 'ahooks'
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -52,7 +53,7 @@ const TerminalSessionPane = ({
   const fitAddonRef = useRef<FitAddon | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const sessionIdRef = useRef<string | null>(null)
-  const activeRef = useRef(activeAndVisible)
+  const activeRef = useLatest(activeAndVisible)
   const lastSizeRef = useRef<{ rows: number; cols: number } | null>(null)
   const resizeFrameRef = useRef<number | null>(null)
   const [session, setSession] = useState<TerminalSessionInfo | null>(null)
@@ -82,10 +83,6 @@ const TerminalSessionPane = ({
     }
     terminal.focus()
   }, [])
-
-  useEffect(() => {
-    activeRef.current = activeAndVisible
-  }, [activeAndVisible])
 
   useEffect(() => {
     onStateChange(tabKey, { session, status, error })
@@ -248,7 +245,7 @@ const TerminalSessionPane = ({
       lastSizeRef.current = null
       terminalRef.current = null
     }
-  }, [closeSession, exitedLabel, restartKey])
+  }, [activeRef, closeSession, exitedLabel, restartKey])
 
   useEffect(() => {
     const terminal = terminalRef.current

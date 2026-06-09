@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type RefObject,
-} from 'react'
+import { useCallback, useMemo, useState, type MouseEvent, type RefObject } from 'react'
+import { useLatest } from 'ahooks'
 import {
   useHotkeys,
   type RegisterableHotkey,
@@ -294,11 +287,7 @@ export const useGraphKeyboardActions = ({
       visibleEdges,
     ],
   )
-  const executeGraphHotkeyRef = useRef(executeGraphHotkey)
-
-  useEffect(() => {
-    executeGraphHotkeyRef.current = executeGraphHotkey
-  }, [executeGraphHotkey])
+  const executeGraphHotkeyRef = useLatest(executeGraphHotkey)
 
   const hotkeyDefinitions = useMemo<UseHotkeyDefinition[]>(() => {
     const bindings = resolveShortcutBindings(shortcutOverrides)
@@ -312,7 +301,7 @@ export const useGraphKeyboardActions = ({
         },
       })),
     )
-  }, [shortcutOverrides])
+  }, [executeGraphHotkeyRef, shortcutOverrides])
 
   useHotkeys(hotkeyDefinitions, {
     conflictBehavior: 'replace',

@@ -3,12 +3,15 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Code2, GitGraph, PenLine } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { useI18n } from '@/i18n/useI18n'
 import type { FileViewKind, MarkdownAssetImportStrategy } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import SettingsRow from '@/components/settings/SettingsRow'
+import {
+  SettingsChoiceButton,
+  SettingsChoiceGrid,
+  SettingsSection,
+  SettingsSwitchRow,
+} from '@/components/settings/SettingsRow'
 import ImmersiveSettingsSection from '@/components/settings/ImmersiveSettingsSection'
 
 const fileViews: Array<{ value: FileViewKind; labelKey: string; icon: ElementType }> = [
@@ -70,69 +73,56 @@ const GeneralSettingsPage = () => {
 
   return (
     <div className="space-y-4">
-      <SettingsRow
-        title={t('settings.silentSave')}
-        description={t('settings.silentSaveDescription')}
-        control={
-          <Controller
-            control={form.control}
-            name="silentSave"
-            render={({ field }) => (
-              <Switch
-                checked={field.value}
-                onCheckedChange={(checked) => {
-                  field.onChange(checked)
-                  setSilentSave(checked)
-                }}
-              />
-            )}
+      <Controller
+        control={form.control}
+        name="silentSave"
+        render={({ field }) => (
+          <SettingsSwitchRow
+            title={t('settings.silentSave')}
+            description={t('settings.silentSaveDescription')}
+            checked={field.value}
+            onCheckedChange={(checked) => {
+              field.onChange(checked)
+              setSilentSave(checked)
+            }}
           />
-        }
+        )}
       />
-      <SettingsRow
-        title={t('settings.detailedSave')}
-        description={t('settings.detailedSaveDescription')}
-        control={
-          <Controller
-            control={form.control}
-            name="silentSave"
-            render={({ field }) => (
-              <Switch
-                checked={!field.value}
-                onCheckedChange={(checked) => {
-                  field.onChange(!checked)
-                  setSilentSave(!checked)
-                }}
-              />
-            )}
+      <Controller
+        control={form.control}
+        name="silentSave"
+        render={({ field }) => (
+          <SettingsSwitchRow
+            title={t('settings.detailedSave')}
+            description={t('settings.detailedSaveDescription')}
+            checked={!field.value}
+            onCheckedChange={(checked) => {
+              field.onChange(!checked)
+              setSilentSave(!checked)
+            }}
           />
-        }
+        )}
       />
-      <SettingsRow
-        title={t('settings.statusBar')}
-        description={t('settings.statusBarDescription')}
-        control={
-          <Controller
-            control={form.control}
-            name="showEditorStatusBar"
-            render={({ field }) => (
-              <Switch
-                checked={field.value}
-                onCheckedChange={(checked) => {
-                  field.onChange(checked)
-                  setShowEditorStatusBar(checked)
-                }}
-              />
-            )}
+      <Controller
+        control={form.control}
+        name="showEditorStatusBar"
+        render={({ field }) => (
+          <SettingsSwitchRow
+            title={t('settings.statusBar')}
+            description={t('settings.statusBarDescription')}
+            checked={field.value}
+            onCheckedChange={(checked) => {
+              field.onChange(checked)
+              setShowEditorStatusBar(checked)
+            }}
           />
-        }
+        )}
       />
-      <section className="settings-row-surface rounded-md p-3">
-        <div className="mb-1 text-sm font-medium">{t('settings.defaultFileView')}</div>
-        <div className="mb-3 text-xs leading-5 text-muted-foreground">
-          {t('settings.defaultFileViewDescription')}
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <SettingsSection
+        title={t('settings.defaultFileView')}
+        description={t('settings.defaultFileViewDescription')}
+      >
+        <SettingsChoiceGrid columns={3}>
           <Controller
             control={form.control}
             name="defaultFileView"
@@ -141,10 +131,9 @@ const GeneralSettingsPage = () => {
                 {fileViews.map((item) => {
                   const Icon = item.icon
                   return (
-                    <Button
+                    <SettingsChoiceButton
                       key={item.value}
-                      variant={field.value === item.value ? 'secondary' : 'outline'}
-                      className="h-9 justify-start rounded-md"
+                      selected={field.value === item.value}
                       onClick={() => {
                         field.onChange(item.value)
                         setDefaultFileView(item.value)
@@ -152,109 +141,91 @@ const GeneralSettingsPage = () => {
                     >
                       <Icon className="h-4 w-4" />
                       <span className="truncate">{t(item.labelKey)}</span>
-                    </Button>
+                    </SettingsChoiceButton>
                   )
                 })}
               </>
             )}
           />
-        </div>
-      </section>
-      <section className="settings-row-surface rounded-md p-3">
-        <div className="mb-1 text-sm font-medium">{t('settings.assetStrategy')}</div>
-        <div className="mb-3 text-xs leading-5 text-muted-foreground">
-          {t('settings.assetStrategyDescription')}
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        </SettingsChoiceGrid>
+      </SettingsSection>
+      <SettingsSection
+        title={t('settings.assetStrategy')}
+        description={t('settings.assetStrategyDescription')}
+      >
+        <SettingsChoiceGrid columns={2}>
           <Controller
             control={form.control}
             name="markdownAssetImportStrategy"
             render={({ field }) => (
               <>
                 {assetImportStrategies.map((item) => (
-                  <Button
+                  <SettingsChoiceButton
                     key={item.value}
-                    variant={field.value === item.value ? 'secondary' : 'outline'}
-                    className="h-9 justify-start rounded-md"
+                    selected={field.value === item.value}
                     onClick={() => {
                       field.onChange(item.value)
                       setMarkdownAssetImportStrategy(item.value)
                     }}
                   >
                     <span className="truncate">{t(item.labelKey)}</span>
-                  </Button>
+                  </SettingsChoiceButton>
                 ))}
               </>
             )}
           />
-        </div>
-      </section>
+        </SettingsChoiceGrid>
+      </SettingsSection>
       <ImmersiveSettingsSection />
-      <section className="settings-row-surface space-y-3 rounded-md p-3">
-        <div>
-          <div className="mb-1 text-sm font-medium">{t('settings.motion')}</div>
-          <div className="text-xs leading-5 text-muted-foreground">
-            {t('settings.motionDescription')}
-          </div>
+      <SettingsSection title={t('settings.motion')} description={t('settings.motionDescription')}>
+        <div className="space-y-3">
+          <Controller
+            control={form.control}
+            name="motionSmoothScrolling"
+            render={({ field }) => (
+              <SettingsSwitchRow
+                title={t('settings.motionSmoothScrolling')}
+                description={t('settings.motionSmoothScrollingDescription')}
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked)
+                  setMotionSmoothScrolling(checked)
+                }}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="motionAnimatedCursor"
+            render={({ field }) => (
+              <SettingsSwitchRow
+                title={t('settings.motionAnimatedCursor')}
+                description={t('settings.motionAnimatedCursorDescription')}
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked)
+                  setMotionAnimatedCursor(checked)
+                }}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="motionAnimatedPanels"
+            render={({ field }) => (
+              <SettingsSwitchRow
+                title={t('settings.motionAnimatedPanels')}
+                description={t('settings.motionAnimatedPanelsDescription')}
+                checked={field.value}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked)
+                  setMotionAnimatedPanels(checked)
+                }}
+              />
+            )}
+          />
         </div>
-        <SettingsRow
-          title={t('settings.motionSmoothScrolling')}
-          description={t('settings.motionSmoothScrollingDescription')}
-          control={
-            <Controller
-              control={form.control}
-              name="motionSmoothScrolling"
-              render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked)
-                    setMotionSmoothScrolling(checked)
-                  }}
-                />
-              )}
-            />
-          }
-        />
-        <SettingsRow
-          title={t('settings.motionAnimatedCursor')}
-          description={t('settings.motionAnimatedCursorDescription')}
-          control={
-            <Controller
-              control={form.control}
-              name="motionAnimatedCursor"
-              render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked)
-                    setMotionAnimatedCursor(checked)
-                  }}
-                />
-              )}
-            />
-          }
-        />
-        <SettingsRow
-          title={t('settings.motionAnimatedPanels')}
-          description={t('settings.motionAnimatedPanelsDescription')}
-          control={
-            <Controller
-              control={form.control}
-              name="motionAnimatedPanels"
-              render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked)
-                    setMotionAnimatedPanels(checked)
-                  }}
-                />
-              )}
-            />
-          }
-        />
-      </section>
+      </SettingsSection>
     </div>
   )
 }
