@@ -6,7 +6,7 @@ import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { FileTreeContextMenu } from '@/components/file-tree/FileTreeContextMenu'
 import { InlineRenameField } from '@/components/file-tree/InlineRenameField'
 import type { SidebarFileTreeActions } from '@/components/file-tree/types'
-import { createFileTreeDragPayload, MARKO_FILE_TREE_ITEM_MIME } from '@/logic/fileDragPayload'
+import { createFileTreeDragPayload, MARKLAB_FILE_TREE_ITEM_MIME } from '@/logic/fileDragPayload'
 import type { FileTreeNode } from '@/logic/fileTree'
 
 type FileTreeNodeRendererProps = NodeRendererProps<FileTreeNode> &
@@ -57,7 +57,7 @@ export const FileTreeNodeRenderer = ({
     if (!isImageFile) return
     event.dataTransfer.effectAllowed = 'copy'
     event.dataTransfer.setData(
-      MARKO_FILE_TREE_ITEM_MIME,
+      MARKLAB_FILE_TREE_ITEM_MIME,
       createFileTreeDragPayload({
         kind: 'file',
         name: item.name,

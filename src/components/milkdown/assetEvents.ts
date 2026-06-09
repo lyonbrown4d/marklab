@@ -1,5 +1,5 @@
 import type { ClipboardEvent, DragEvent } from 'react'
-import { MARKO_FILE_TREE_ITEM_MIME, readFileTreeDragPayload } from '@/logic/fileDragPayload'
+import { MARKLAB_FILE_TREE_ITEM_MIME, readFileTreeDragPayload } from '@/logic/fileDragPayload'
 import { extractHeadings } from '@/logic/paths'
 import { rememberResolvedMarkdownImageSource } from '@/components/milkdown/markdownImageSource'
 import { fsApi } from '@/services/fsApi'
@@ -46,7 +46,7 @@ export const hasImageDataTransfer = (dataTransfer: DataTransfer) => {
   if (hasImageFiles(dataTransfer.files)) return true
   const fileTreePayload = readFileTreeDragPayload(dataTransfer)
   if (fileTreePayload && isImagePath(fileTreePayload.name)) return true
-  if (Array.from(dataTransfer.types).includes(MARKO_FILE_TREE_ITEM_MIME)) return true
+  if (Array.from(dataTransfer.types).includes(MARKLAB_FILE_TREE_ITEM_MIME)) return true
 
   return Array.from(dataTransfer.items).some((item) => {
     if (item.kind !== 'file') return false

@@ -72,7 +72,7 @@ export const configureMermaidPreview = (prev: CodeBlockConfig): CodeBlockConfig 
           securityLevel: 'strict',
           theme: resolveMermaidTheme(),
         })
-        return mermaid.render(`marko-mermaid-${currentRender}`, source)
+        return mermaid.render(`marklab-mermaid-${currentRender}`, source)
       })
       .then((result) => {
         if (currentRender !== mermaidRenderSequence) return

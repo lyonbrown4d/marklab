@@ -1,0 +1,183 @@
+.crepe .milkdown {
+  --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 6%, transparent);
+  --editor-control-active: color-mix(in srgb, hsl(var(--foreground)) 9%, transparent);
+  --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 98%, transparent);
+  --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 48%, transparent);
+  --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 94%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+}
+
+.dark .crepe .milkdown {
+  --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  --editor-control-active: color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+  --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 96%, transparent);
+  --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 36%, transparent);
+  --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 68%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 20%, transparent);
+}
+
+.crepe .milkdown .marklab-md-block {
+  border-radius: 0.25rem;
+  box-shadow: none;
+}
+
+.crepe .milkdown .marklab-md-block::before {
+  width: 0;
+  background: transparent;
+  opacity: 0;
+}
+
+.crepe .milkdown .marklab-md-block:hover {
+  background: var(--editor-control-hover);
+  box-shadow: none;
+}
+
+.crepe .milkdown .marklab-md-block:focus-within,
+.crepe .milkdown .marklab-md-block[data-selected='true'] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.crepe .milkdown .ProseMirror .ProseMirror-selectednode {
+  background: transparent;
+  outline: 0;
+  box-shadow: none;
+}
+
+.crepe .milkdown .milkdown-block-handle {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--editor-block-handle-icon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  opacity: 1;
+  outline: 0;
+}
+
+.crepe .milkdown .milkdown-block-handle:hover,
+.crepe .milkdown .milkdown-block-handle:focus-within,
+.crepe .milkdown .milkdown-block-handle[data-state='open'] {
+  box-shadow: none;
+  color: var(--editor-block-handle-icon-hover);
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item,
+.crepe .milkdown .milkdown-block-handle .operation-item:hover,
+.crepe .milkdown .milkdown-block-handle .operation-item:active,
+.crepe .milkdown .milkdown-block-handle .operation-item:focus,
+.crepe .milkdown .milkdown-block-handle .operation-item:focus-visible,
+.crepe .milkdown .milkdown-block-handle .operation-item[aria-pressed='true'],
+.crepe .milkdown .milkdown-block-handle .operation-item[data-active='true'] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  opacity: 1;
+  outline: 0;
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: grab;
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 2px;
+  width: 1px;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.crepe .milkdown .milkdown-block-handle:hover .operation-item::before,
+.crepe .milkdown .milkdown-block-handle:focus-within .operation-item::before,
+.crepe .milkdown .milkdown-block-handle[data-state='open'] .operation-item::before {
+  background: var(--editor-block-handle-line);
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item:active {
+  cursor: grabbing;
+}
+
+.crepe .milkdown .milkdown-block-handle svg,
+.crepe .milkdown .milkdown-block-handle svg * {
+  opacity: 1;
+  color: inherit;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.crepe .milkdown .milkdown-toolbar,
+.crepe .milkdown .milkdown-link-preview > .link-preview,
+.crepe .milkdown .milkdown-link-edit > .link-edit,
+.crepe .milkdown .milkdown-slash-menu,
+.crepe .milkdown .milkdown-code-block .list-wrapper {
+  border: 0;
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--editor-control-panel);
+  color: hsl(var(--popover-foreground));
+  box-shadow:
+    0 12px 32px color-mix(in srgb, hsl(var(--foreground)) 13%, transparent),
+    0 0 0 1px var(--editor-control-panel-line);
+  backdrop-filter: blur(12px);
+}
+
+.crepe .milkdown .milkdown-toolbar {
+  gap: 0.0625rem;
+  border-radius: 0.625rem;
+  padding: 0.125rem;
+}
+
+.crepe .milkdown .milkdown-toolbar .toolbar-item,
+.crepe .milkdown .milkdown-link-preview > .link-preview > .button,
+.crepe .milkdown .milkdown-link-preview > .link-preview > .link-icon,
+.crepe .milkdown .milkdown-link-edit > .link-edit > .button {
+  min-width: 1.625rem;
+  height: 1.625rem;
+  border: 0;
+  border-radius: 0.375rem;
+  color: var(--editor-control-muted);
+}
+
+.crepe .milkdown .milkdown-toolbar .toolbar-item:hover,
+.crepe .milkdown .milkdown-link-preview > .link-preview > .button:hover,
+.crepe .milkdown .milkdown-link-preview > .link-preview > .link-icon:hover,
+.crepe .milkdown .milkdown-link-edit > .link-edit > .button:hover,
+.crepe .milkdown .milkdown-slash-menu .menu-groups .menu-group li.hover,
+.crepe .milkdown .milkdown-slash-menu .menu-groups .menu-group li.active {
+  background: var(--editor-control-active);
+  color: hsl(var(--foreground));
+}
+
+.crepe .milkdown .milkdown-toolbar .toolbar-item[aria-pressed='true'],
+.crepe .milkdown .milkdown-toolbar .toolbar-item[data-active='true'],
+.crepe .milkdown .milkdown-toolbar .toolbar-item.active {
+  background: var(--editor-control-active);
+  color: hsl(var(--foreground));
+}
+
+.crepe .milkdown .milkdown-slash-menu {
+  padding: 0.375rem;
+}
+
+.crepe .milkdown .milkdown-slash-menu .menu-groups .menu-group li {
+  min-height: 2rem;
+  border-radius: 0.375rem;
+  padding-inline: 0.5rem;
+}

@@ -110,11 +110,11 @@ const AppLayout = () => {
   const rightSidebarPanelRef = usePanelRef()
   const terminalPanelRef = usePanelRef()
   const workspacePanelLayout = useDefaultLayout({
-    id: 'marko-workspace-panels',
+    id: 'marklab-workspace-panels',
     panelIds: ['left-sidebar', 'workspace-main', 'right-sidebar'],
   })
   const shellPanelLayout = useDefaultLayout({
-    id: 'marko-shell-panels',
+    id: 'marklab-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
   })
   const openSettings = useCallback(() => {

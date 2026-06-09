@@ -48,6 +48,47 @@ export type ElectronUserThemeInfo = {
   id: string
   name: string
 }
+export type ElectronUpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'installing'
+  | 'error'
+  | 'unavailable'
+export type ElectronUpdateInfo = {
+  releaseDate?: string
+  releaseName?: string
+  version: string
+}
+export type ElectronUpdateProgress = {
+  bytesPerSecond: number
+  percent: number
+  transferred: number
+  total: number
+}
+export type ElectronUpdateState = {
+  error?: string
+  info?: ElectronUpdateInfo
+  progress?: ElectronUpdateProgress
+  status: ElectronUpdateStatus
+}
+export type ElectronUpdateResult = ElectronUpdateState & {
+  ok: boolean
+}
+export type ElectronUpdateEvent = ElectronUpdateState & {
+  event:
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'download-progress'
+    | 'downloaded'
+    | 'installing'
+    | 'error'
+    | 'unavailable'
+}
 export type ElectronRuntimeEvent<T = unknown> = {
   event: string
   id: number
@@ -147,6 +188,13 @@ export type ElectronRuntimeApi = {
       ok: boolean
     }>
   }
+  updates?: {
+    check: () => Promise<ElectronUpdateResult>
+    download: () => Promise<ElectronUpdateResult>
+    getState: () => Promise<ElectronUpdateState>
+    install: () => Promise<ElectronUpdateResult>
+    onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
+  }
   assets?: {
     convertFileSrc?: (path: string) => string
   }
@@ -164,12 +212,12 @@ export type ElectronRuntimeApi = {
 }
 declare global {
   interface Window {
-    markoElectron?: ElectronRuntimeApi
+    marklabElectron?: ElectronRuntimeApi
   }
 }
 export const getElectronRuntime = () => {
   if (typeof window === 'undefined') return null
-  return window.markoElectron ?? null
+  return window.marklabElectron ?? null
 }
 export const isElectronRuntime = () => {
   return getElectronRuntime() !== null

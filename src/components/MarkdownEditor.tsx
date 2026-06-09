@@ -18,6 +18,7 @@ import { useLatest } from 'ahooks'
 import { ProsemirrorAdapterProvider, useNodeViewFactory } from '@prosemirror-adapter/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useDarkMode } from '@/hooks/useDarkMode'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   MarkdownEditorHandle,
   MarkdownEditorProps,
@@ -39,8 +40,10 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
+  const { t } = useI18n()
   const shellRef = useRef<HTMLDivElement | null>(null)
   const nodeViewFactory = useNodeViewFactory()
+  const isEditorEmpty = !/\S/.test(props.value)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const markdownAssetImportStrategy = usePreferencesStore(
     (state) => state.markdownAssetImportStrategy,
@@ -164,6 +167,7 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
     className: [
       'crepe flex h-full flex-1 flex-col',
       isDragAccept ? 'is-image-drop-target' : '',
+      isEditorEmpty ? 'is-empty-editor' : '',
       motionSmoothScrolling ? 'is-smooth-editor' : '',
       immersiveZenMode ? 'is-zen-editor' : '',
       immersiveFocusMode ? 'is-focus-editor' : '',
@@ -191,7 +195,12 @@ const MarkdownEditorInner = forwardRef<MarkdownEditorHandle, MarkdownEditorProps
         smoothWheel={motionSmoothScrolling}
         viewportClassName="editor-scroll-viewport"
       >
-        <div className="milkdown min-h-full" ref={rootRef} />
+        <div
+          className="milkdown min-h-full"
+          data-drop-hint={t('editor.dropImages')}
+          data-empty-hint={t('editor.emptyHint')}
+          ref={rootRef}
+        />
       </ScrollArea>
     </div>
   )

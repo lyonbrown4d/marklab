@@ -9,7 +9,7 @@ import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSear
 const tempDirs: string[] = []
 
 const createIndex = async (): Promise<WorkspaceSearchIndex> => {
-  const dir = await mkdtemp(path.join(tmpdir(), 'marko-search-index-'))
+  const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
   tempDirs.push(dir)
   const index = new WorkspaceSearchIndex()
   await index.open(path.join(dir, 'search.sqlite'))

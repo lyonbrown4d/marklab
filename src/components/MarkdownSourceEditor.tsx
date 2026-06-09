@@ -221,8 +221,8 @@ const MarkdownSourceEditor = ({
         {
           range,
           options: {
-            className: 'marko-search-hit-line',
-            inlineClassName: 'marko-search-hit-inline',
+            className: 'marklab-search-hit-line',
+            inlineClassName: 'marklab-search-hit-inline',
           },
         },
       ])

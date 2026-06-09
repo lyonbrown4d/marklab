@@ -16,6 +16,7 @@ import { registerPlatformIpc } from '@electron/ipc/platform.js'
 import { registerSettingsIpc } from '@electron/ipc/settings.js'
 import { registerShellIpc } from '@electron/ipc/shell.js'
 import { registerThemeIpc } from '@electron/ipc/themes.js'
+import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
 import {
   registerWorkspaceCommandsIpc,
@@ -41,6 +42,7 @@ export type NativeIpcDependencies = {
   onRendererReady?: () => void
   shell: Electron.Shell
   terminalService: TerminalService
+  updates?: Pick<UpdaterIpcDependencies, 'onBeforeInstall'>
   workspaceRegistry: WindowWorkspaceRegistry
   windowCommandHandlers?: NativeCommandHandlers
 }
@@ -59,6 +61,13 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)
   registerShellIpc(dependencies.ipcMain, dependencies.shell)
   registerThemeIpc(dependencies.ipcMain, dependencies.shell)
+  registerUpdatesIpc({
+    app: dependencies.app,
+    BrowserWindow: dependencies.BrowserWindow,
+    ipcMain: dependencies.ipcMain,
+    logger,
+    onBeforeInstall: dependencies.updates?.onBeforeInstall,
+  })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
     exportService: dependencies.exportService,

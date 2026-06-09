@@ -9,7 +9,7 @@ import type {
 } from '@electron/types.js'
 
 const DEEP_LINK_SCHEME = 'marklab'
-const SUPPORTED_DEEP_LINK_SCHEMES = new Set([DEEP_LINK_SCHEME, 'marko'])
+const SUPPORTED_DEEP_LINK_SCHEMES = new Set([DEEP_LINK_SCHEME])
 const MAX_DEEP_LINK_URL_LENGTH = 4096
 const MAX_STORED_DEEP_LINKS = 20
 

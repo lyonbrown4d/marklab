@@ -131,3 +131,50 @@ export type ExportTaskPayload = {
   progress?: number | null
   message?: string | null
 }
+
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'installing'
+  | 'error'
+  | 'unavailable'
+
+export type AppUpdateInfo = {
+  releaseDate?: string
+  releaseName?: string
+  version: string
+}
+
+export type UpdateProgressInfo = {
+  bytesPerSecond: number
+  percent: number
+  transferred: number
+  total: number
+}
+
+export type UpdateState = {
+  error?: string
+  info?: AppUpdateInfo
+  progress?: UpdateProgressInfo
+  status: UpdateStatus
+}
+
+export type UpdateResult = UpdateState & {
+  ok: boolean
+}
+
+export type UpdateEventPayload = UpdateState & {
+  event:
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'download-progress'
+    | 'downloaded'
+    | 'installing'
+    | 'error'
+    | 'unavailable'
+}

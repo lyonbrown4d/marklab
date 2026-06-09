@@ -76,12 +76,19 @@
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
+    "publish": [
+      {
+        "provider": "github",
+        "publishAutoUpdate": true,
+        "releaseType": "release",
+        "tagNamePrefix": "app-v"
+      }
+    ],
     "protocols": [
       {
         "name": "Marklab Deep Links",
         "schemes": [
-          "marklab",
-          "marko"
+          "marklab"
         ]
       }
     ],
@@ -93,9 +100,15 @@
       ]
     },
     "nsis": {
+      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}",
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "shortcutName": "Marklab",
+      "uninstallDisplayName": "Marklab"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -161,6 +174,7 @@
     "docx": "^9.7.1",
     "electron-log": "^5.4.4",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.9",
     "fuse.js": "^7.4.2",
     "github-slugger": "^2.0.0",
     "i18next": "^26.3.0",

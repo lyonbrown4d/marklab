@@ -11,11 +11,11 @@ $search-hit: (
   box-shadow: 0 0 0 1px map.get($search-hit, border);
 }
 
-.marko-search-hit-inline {
+.marklab-search-hit-inline {
   @include search-hit-surface;
   border-radius: 3px;
 }
 
-.marko-search-hit-line {
+.marklab-search-hit-line {
   @include search-hit-surface(outline);
 }

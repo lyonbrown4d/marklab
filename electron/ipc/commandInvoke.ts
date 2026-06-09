@@ -3,10 +3,6 @@ import { nativeIpcChannels } from '@electron/channels.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type { RuntimeCommandPayload } from '@electron/types.js'
 
-const LEGACY_COMMAND_INVOKE_CHANNEL = 'marko:command:invoke'
-const MARKLAB_COMMAND_PREFIX = 'marklab:'
-const LEGACY_COMMAND_PREFIX = 'marko:'
-const LEGACY_COMMAND_PREFIX_LENGTH = LEGACY_COMMAND_PREFIX.length
 export type NativeCommandHandler = (
   payload: unknown,
   event: Electron.IpcMainInvokeEvent,
@@ -45,16 +41,14 @@ export const registerCommandInvokeIpc = (
     }
   }
   ipcMain.handle(nativeIpcChannels.commandInvoke, invokeHandler)
-  ipcMain.handle(LEGACY_COMMAND_INVOKE_CHANNEL, invokeHandler)
 }
 const parseCommandInvokePayload = (
   payload: unknown,
   legacyArgs: unknown,
 ): RuntimeCommandPayload => {
   if (typeof payload === 'string') {
-    const command = normalizeLegacyCommand(payload)
     return {
-      command,
+      command: payload,
       args: legacyArgs,
     }
   }
@@ -66,28 +60,6 @@ const parseCommandInvokePayload = (
   const command = request.command
   const args = request.args
 
-  if (
-    typeof command === 'string' &&
-    command === LEGACY_COMMAND_INVOKE_CHANNEL &&
-    args &&
-    typeof args === 'object'
-  ) {
-    const nested = args as Record<string, unknown>
-    if (typeof nested.command === 'string') {
-      return {
-        command: normalizeLegacyCommand(nested.command),
-        args: nested.args,
-      }
-    }
-  }
-
-  if (typeof command === 'string' && command.startsWith(LEGACY_COMMAND_PREFIX)) {
-    return {
-      command: normalizeLegacyCommand(command),
-      args,
-    }
-  }
-
   if (typeof command !== 'string' || !command.trim()) {
     throw new Error('Command name is required')
   }
@@ -95,9 +67,4 @@ const parseCommandInvokePayload = (
     command,
     args,
   }
-}
-
-const normalizeLegacyCommand = (command: string): string => {
-  if (!command.startsWith(LEGACY_COMMAND_PREFIX)) return command
-  return `${MARKLAB_COMMAND_PREFIX}${command.slice(LEGACY_COMMAND_PREFIX_LENGTH)}`
 }

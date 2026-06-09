@@ -219,6 +219,9 @@ const bootstrap = async (): Promise<void> => {
       onRendererReady: handleRendererReady,
       shell,
       terminalService: container.cradle.terminalService,
+      updates: {
+        onBeforeInstall: () => flushWorkspaceBuffers('update install'),
+      },
       workspaceRegistry: container.cradle.workspaceRegistry,
       windowCommandHandlers: appWindowCommandHandlers,
     })

@@ -21,7 +21,7 @@ const MarkdownBlockquoteView = ({
   if (!contentRef) {
     return (
       <div
-        className={`marko-md-block nodrag my-2 rounded-sm border-l-2 border-primary/50 pl-3 ${selectedClass}`}
+        className={`marklab-md-block nodrag my-2 rounded-sm border-l-2 border-primary/50 pl-3 ${selectedClass}`}
         data-selected={selected ? 'true' : 'false'}
       >
         <MarkdownEditableText
@@ -36,7 +36,7 @@ const MarkdownBlockquoteView = ({
 
   return (
     <div
-      className={`marko-md-block my-3 rounded-sm border-l-2 border-primary/50 pl-3 ${selectedClass}`}
+      className={`marklab-md-block my-3 rounded-sm border-l-2 border-primary/50 pl-3 ${selectedClass}`}
       data-selected={selected ? 'true' : 'false'}
     >
       <div ref={contentRef} className="space-y-1 py-1 text-muted-foreground" />

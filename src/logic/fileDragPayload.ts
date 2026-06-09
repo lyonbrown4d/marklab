@@ -1,4 +1,4 @@
-export const MARKO_FILE_TREE_ITEM_MIME = 'application/x-marko-file-tree-item'
+export const MARKLAB_FILE_TREE_ITEM_MIME = 'application/x-marklab-file-tree-item'
 
 export type FileTreeDragPayload = {
   kind: 'file'
@@ -9,7 +9,7 @@ export type FileTreeDragPayload = {
 export const createFileTreeDragPayload = (payload: FileTreeDragPayload) => JSON.stringify(payload)
 
 export const readFileTreeDragPayload = (dataTransfer: DataTransfer) => {
-  const raw = dataTransfer.getData(MARKO_FILE_TREE_ITEM_MIME)
+  const raw = dataTransfer.getData(MARKLAB_FILE_TREE_ITEM_MIME)
   if (!raw) return null
 
   try {

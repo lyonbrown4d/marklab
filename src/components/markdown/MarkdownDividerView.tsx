@@ -7,7 +7,7 @@ type MarkdownDividerViewProps = {
 const MarkdownDividerView = ({ selected = false }: MarkdownDividerViewProps) => {
   return (
     <div
-      className={`marko-md-block my-5 rounded-sm px-1 py-2 ${selected ? 'bg-accent/45 ring-1 ring-ring' : ''}`}
+      className={`marklab-md-block my-5 rounded-sm px-1 py-2 ${selected ? 'bg-accent/45 ring-1 ring-ring' : ''}`}
       data-selected={selected ? 'true' : 'false'}
     >
       <div className="h-px bg-border" />

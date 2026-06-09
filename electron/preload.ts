@@ -14,6 +14,9 @@ import type {
   UserThemeCssResult,
   UserThemeImportResult,
   UserThemeListResult,
+  UpdateEventPayload,
+  UpdateResult,
+  UpdateState,
   WindowActionResult,
 } from '@electron/types.js'
 
@@ -185,6 +188,21 @@ const desktopApi = {
     openFolder: () =>
       ipcRenderer.invoke(nativeIpcChannels.themeOpenFolder) as Promise<SettingsPersistResult>,
   },
+  updates: {
+    getState: () => ipcRenderer.invoke(nativeIpcChannels.updatesGetState) as Promise<UpdateState>,
+    check: () => ipcRenderer.invoke(nativeIpcChannels.updatesCheck) as Promise<UpdateResult>,
+    download: () => ipcRenderer.invoke(nativeIpcChannels.updatesDownload) as Promise<UpdateResult>,
+    install: () => ipcRenderer.invoke(nativeIpcChannels.updatesInstall) as Promise<UpdateResult>,
+    onEvent: (handler: (payload: UpdateEventPayload) => void) => {
+      const listener = (_event: IpcRendererEvent, payload: UpdateEventPayload) => {
+        handler(payload)
+      }
+      ipcRenderer.on(nativeIpcChannels.updatesEvent, listener)
+      return () => {
+        ipcRenderer.removeListener(nativeIpcChannels.updatesEvent, listener)
+      }
+    },
+  },
   window: {
     minimize: () => runWindowAction(nativeIpcChannels.windowMinimize),
     maximize: () => runWindowAction(nativeIpcChannels.windowMaximize),
@@ -213,7 +231,7 @@ const desktopApi = {
   },
 }
 
-contextBridge.exposeInMainWorld('markoElectron', desktopApi)
+contextBridge.exposeInMainWorld('marklabElectron', desktopApi)
 
 desktopApi.menu.onCommand(() => {})
 
@@ -221,7 +239,7 @@ export type ElectronPreloadApi = typeof desktopApi
 
 declare global {
   interface Window {
-    markoElectron: ElectronPreloadApi
+    marklabElectron: ElectronPreloadApi
   }
 }
 

@@ -47,7 +47,7 @@ const ShortcutRecorderRow = ({
       </div>
       <div
         className="flex min-w-0 items-center justify-end gap-1.5"
-        data-marko-shortcut-recorder="true"
+        data-marklab-shortcut-recorder="true"
       >
         <Button
           variant={recorder.isRecording ? 'secondary' : 'outline'}

@@ -56,7 +56,7 @@ const MarkdownHeadingView = ({
   if (contentRef) {
     return (
       <div
-        className={`marko-md-block rounded-sm border px-1 ${selectedClass} ${headingClass}`}
+        className={`marklab-md-block rounded-sm border px-1 ${selectedClass} ${headingClass}`}
         data-selected={selected ? 'true' : 'false'}
       >
         <div ref={contentRef} />
@@ -66,7 +66,7 @@ const MarkdownHeadingView = ({
 
   return (
     <MarkdownEditableText
-      className={`marko-md-block nodrag rounded-sm border border-transparent px-1 outline-none focus:border-ring focus:bg-background ${headingClass}`}
+      className={`marklab-md-block nodrag rounded-sm border border-transparent px-1 outline-none focus:border-ring focus:bg-background ${headingClass}`}
       data-markdown-block-id={blockId}
       data-markdown-block-role={blockRole}
       data-selected={selected ? 'true' : 'false'}
