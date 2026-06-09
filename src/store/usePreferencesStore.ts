@@ -55,6 +55,28 @@ export type PreferencesState = {
   toggleRightSidebar: () => void
 }
 
+type PreferencesPersistedState = Pick<
+  PreferencesState,
+  | 'customThemeId'
+  | 'defaultFileView'
+  | 'graphContentMode'
+  | 'graphMiniMapEnabled'
+  | 'immersiveFocusMode'
+  | 'immersiveTypewriterMode'
+  | 'immersiveZenMode'
+  | 'locale'
+  | 'markdownAssetImportStrategy'
+  | 'motionAnimatedCursor'
+  | 'motionAnimatedPanels'
+  | 'motionSmoothScrolling'
+  | 'rightSidebarCollapsed'
+  | 'shortcutOverrides'
+  | 'showEditorStatusBar'
+  | 'sidebarCollapsed'
+  | 'silentSave'
+  | 'theme'
+>
+
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
@@ -158,8 +180,28 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'marklab.preferences',
-      storage: createElectronSettingsJsonStorage<PreferencesState>('marklab.preferences'),
+      storage: createElectronSettingsJsonStorage<PreferencesPersistedState>('marklab.preferences'),
       version: 1,
+      partialize: (state): PreferencesPersistedState => ({
+        theme: state.theme,
+        customThemeId: state.customThemeId,
+        locale: state.locale,
+        sidebarCollapsed: state.sidebarCollapsed,
+        rightSidebarCollapsed: state.rightSidebarCollapsed,
+        silentSave: state.silentSave,
+        showEditorStatusBar: state.showEditorStatusBar,
+        defaultFileView: state.defaultFileView,
+        graphMiniMapEnabled: state.graphMiniMapEnabled,
+        graphContentMode: state.graphContentMode,
+        markdownAssetImportStrategy: state.markdownAssetImportStrategy,
+        motionSmoothScrolling: state.motionSmoothScrolling,
+        motionAnimatedCursor: state.motionAnimatedCursor,
+        motionAnimatedPanels: state.motionAnimatedPanels,
+        immersiveZenMode: state.immersiveZenMode,
+        immersiveFocusMode: state.immersiveFocusMode,
+        immersiveTypewriterMode: state.immersiveTypewriterMode,
+        shortcutOverrides: state.shortcutOverrides,
+      }),
     },
   ),
 )

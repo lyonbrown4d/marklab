@@ -26,6 +26,13 @@ const cancelIdle = (handle: IdleHandle | null) => {
   }
   globalThis.clearTimeout(handle.id)
 }
+
+const cloneJsonValue = <T>(value: T): T => {
+  const serialized = JSON.stringify(value)
+  if (serialized === undefined) return null as T
+  return JSON.parse(serialized) as T
+}
+
 export const createIdleJsonStorage = <S>(
   name = 'marklab.preferences',
 ): PersistStorage<S> | undefined => {
@@ -102,7 +109,7 @@ export const createElectronSettingsJsonStorage = <S>(
       return value as StorageValue<S> | null
     },
     setItem: async (key, value) => {
-      const result = await electronPersist.setItem(key, value)
+      const result = await electronPersist.setItem(key, cloneJsonValue(value))
       if (!result.ok) throw new Error(result.error ?? 'Unable to persist settings.')
     },
     removeItem: async (key) => {

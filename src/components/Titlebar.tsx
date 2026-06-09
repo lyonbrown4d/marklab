@@ -415,7 +415,7 @@ const Titlebar = ({
             <TooltipContent>{t('actions.toggleSidebar')}</TooltipContent>
           </Tooltip>
           <div className="flex min-w-0 items-center gap-2 px-1 leading-none">
-            <AppLogo className="h-6 w-6 rounded-md shadow-sm" />
+            <AppLogo className="h-6 w-6" />
             <div className="truncate text-sm font-semibold tracking-[0.01em]">{t('app.name')}</div>
           </div>
           {showInlineMenu && <AppMenuBar groups={menuGroups} onAction={onMenuAction} />}

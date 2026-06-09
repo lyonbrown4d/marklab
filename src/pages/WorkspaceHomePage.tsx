@@ -138,7 +138,7 @@ const WorkspaceHomePage = () => {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 max-w-2xl">
               <div className="flex items-center gap-3">
-                <AppLogo className="h-11 w-11 rounded-md shadow-sm" />
+                <AppLogo className="h-11 w-11" />
                 <div className="min-w-0">
                   <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
                     Workspace home

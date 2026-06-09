@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>marklab logo directions</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --dark: #020617;
+        --text: #1e293b;
+        --muted: #64748b;
+        --line: #d8e1ea;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      main {
+        width: min(1080px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 52px 0;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+
+      .note {
+        max-width: 390px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .theme-card,
+      .card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: 0 18px 46px rgba(15, 23, 42, 0.07);
+      }
+
+      .theme-card.dark {
+        border-color: #1e293b;
+        background: var(--dark);
+        color: #f8fafc;
+      }
+
+      .stage {
+        display: grid;
+        min-height: 220px;
+        place-items: center;
+        border: 1px solid #edf2f7;
+        border-radius: 20px;
+        background-image:
+          linear-gradient(45deg, rgba(148, 163, 184, 0.18) 25%, transparent 25%),
+          linear-gradient(-45deg, rgba(148, 163, 184, 0.18) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.18) 75%),
+          linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.18) 75%);
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0;
+        background-size: 20px 20px;
+      }
+
+      .dark .stage {
+        border-color: #1e293b;
+        background-color: #020617;
+      }
+
+      .large {
+        width: 128px;
+        height: 128px;
+        filter: drop-shadow(0 18px 28px rgba(15, 23, 42, 0.12));
+      }
+
+      .dark .large {
+        filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.28));
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .mini-stage {
+        display: grid;
+        min-height: 164px;
+        place-items: center;
+        border: 1px solid #edf2f7;
+        border-radius: 20px;
+        background: #fbfdff;
+      }
+
+      .mini-stage img {
+        width: 104px;
+        height: 104px;
+      }
+
+      .sizes {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .sizes img:nth-child(1) {
+        width: 48px;
+        height: 48px;
+      }
+
+      .sizes img:nth-child(2) {
+        width: 32px;
+        height: 32px;
+      }
+
+      .sizes img:nth-child(3) {
+        width: 20px;
+        height: 20px;
+      }
+
+      h2 {
+        margin: 20px 0 8px;
+        font-size: 17px;
+        letter-spacing: -0.03em;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .dark p {
+        color: #94a3b8;
+      }
+
+      @media (max-width: 900px) {
+        header {
+          display: block;
+        }
+
+        .note {
+          margin-top: 16px;
+        }
+
+        .theme-grid,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>marklab<br />logo directions</h1>
+        <p class="note">
+          Transparent logo assets for light and dark app themes. The app component switches between these two files when the workspace theme changes.
+        </p>
+      </header>
+
+      <section class="theme-grid" aria-label="Theme-aware logo assets">
+        <article class="theme-card">
+          <div class="stage">
+            <img class="large" src="./marklab-light.svg" alt="Light theme transparent logo" />
+          </div>
+          <h2>Light theme</h2>
+          <p>Transparent asset using dark slate strokes and a restrained blue node accent.</p>
+        </article>
+
+        <article class="theme-card dark">
+          <div class="stage">
+            <img class="large" src="./marklab-dark.svg" alt="Dark theme transparent logo" />
+          </div>
+          <h2>Dark theme</h2>
+          <p>Transparent asset using light strokes so the mark stays clear on dark surfaces.</p>
+        </article>
+      </section>
+
+      <section class="grid" aria-label="Logo directions">
+        <article class="card">
+          <div class="mini-stage">
+            <img src="./marklab-logo-direction-1.svg" alt="Direction 1 logo" />
+          </div>
+          <div class="sizes" aria-label="Direction 1 small sizes">
+            <img src="./marklab-logo-direction-1.svg" alt="" />
+            <img src="./marklab-logo-direction-1.svg" alt="" />
+            <img src="./marklab-logo-direction-1.svg" alt="" />
+          </div>
+          <h2>1. Clean mind map</h2>
+          <p>Current default shape. Minimal M plus small graph cue.</p>
+        </article>
+
+        <article class="card">
+          <div class="mini-stage">
+            <img src="./marklab-logo-direction-2.svg" alt="Direction 2 logo" />
+          </div>
+          <div class="sizes" aria-label="Direction 2 small sizes">
+            <img src="./marklab-logo-direction-2.svg" alt="" />
+            <img src="./marklab-logo-direction-2.svg" alt="" />
+            <img src="./marklab-logo-direction-2.svg" alt="" />
+          </div>
+          <h2>2. Solid workspace</h2>
+          <p>Heavier and more block-like, useful if the product wants a stronger app icon silhouette.</p>
+        </article>
+
+        <article class="card">
+          <div class="mini-stage">
+            <img src="./marklab-logo-direction-3.svg" alt="Direction 3 logo" />
+          </div>
+          <div class="sizes" aria-label="Direction 3 small sizes">
+            <img src="./marklab-logo-direction-3.svg" alt="" />
+            <img src="./marklab-logo-direction-3.svg" alt="" />
+            <img src="./marklab-logo-direction-3.svg" alt="" />
+          </div>
+          <h2>3. Light graph tool</h2>
+          <p>More graph-editor oriented, still transparent and low-noise.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

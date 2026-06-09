@@ -18,7 +18,7 @@ const EditorEmptyState = ({ files, onOpenFile }: EditorEmptyStateProps) => {
     <div className="editor-stage flex h-full items-center justify-center p-6">
       <div className="editor-paper w-full max-w-xl rounded-md p-6 text-left">
         <div className="mb-4 flex items-start gap-3">
-          <AppLogo className="h-10 w-10 rounded-md shadow-sm" />
+          <AppLogo className="h-10 w-10" />
           <div className="min-w-0">
             <div className="text-base font-semibold">{t('editor.emptyTitle')}</div>
             <div className="mt-1 text-sm leading-6 text-muted-foreground">
