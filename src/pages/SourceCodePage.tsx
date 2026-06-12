@@ -39,7 +39,7 @@ const SourceCodePage = ({
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
         <div className="editor-paper relative h-full w-full overflow-hidden">
-          <div className="h-full animate-[view-fade_140ms_ease-out]">
+          <div className="motion-view h-full">
             <Suspense fallback={<EditorPaneFallback />}>
               <MarkdownSourceEditor
                 activePath={activePath}

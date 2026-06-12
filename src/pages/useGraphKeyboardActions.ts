@@ -123,6 +123,11 @@ export const useGraphKeyboardActions = ({
         : new Set<string>()
 
       setCollapsedNodeIds((current) => {
+        const alreadyCollapsed =
+          current.has(selectedHeadingId) &&
+          Array.from(descendants).every((nodeId) => current.has(nodeId))
+        if (alreadyCollapsed) return current
+
         const next = new Set(current)
         next.add(selectedHeadingId)
         descendants.forEach((nodeId) => next.add(nodeId))
@@ -140,7 +145,11 @@ export const useGraphKeyboardActions = ({
         : new Set<string>()
 
       setCollapsedNodeIds((current) => {
-        if (!current.has(selectedHeadingId) && descendants.size === 0) return current
+        const hasCollapsedNode =
+          current.has(selectedHeadingId) ||
+          Array.from(descendants).some((nodeId) => current.has(nodeId))
+        if (!hasCollapsedNode) return current
+
         const next = new Set(current)
         next.delete(selectedHeadingId)
         descendants.forEach((nodeId) => next.delete(nodeId))
@@ -314,7 +323,10 @@ export const useGraphKeyboardActions = ({
   const handleGraphMouseDown = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       if (isTextEditingTarget(event.target)) return
-      graphShellRef.current?.focus()
+      const graphShell = graphShellRef.current
+      if (graphShell && document.activeElement !== graphShell) {
+        graphShell.focus()
+      }
     },
     [graphShellRef],
   )

@@ -131,27 +131,32 @@ const GraphPageComponent = ({
   const handleSelectionChange = useCallback(
     ({ nodes: selectedNodes }: OnSelectionChangeParams<Node<GraphNodeData>>) => {
       const heading = selectedNodes.find((node) => node.type === 'heading')
-      setSelectedHeadingId(heading?.id ?? null)
+      const nextHeadingId = heading?.id ?? null
+      setSelectedHeadingId((current) => (current === nextHeadingId ? current : nextHeadingId))
     },
     [],
   )
 
   const clearSelection = useCallback(() => {
-    setSelectedHeadingId(null)
+    setSelectedHeadingId((current) => (current === null ? current : null))
     setNodes((currentNodes) =>
-      currentNodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
+      currentNodes.some((node) => node.selected)
+        ? currentNodes.map((node) => (node.selected ? { ...node, selected: false } : node))
+        : currentNodes,
     )
   }, [setNodes])
 
   const selectHeading = useCallback(
     (nodeId: string | null) => {
       const nextId = nodeId?.startsWith('heading:') ? nodeId : null
-      setSelectedHeadingId(nextId)
+      setSelectedHeadingId((current) => (current === nextId ? current : nextId))
       setNodes((currentNodes) =>
-        currentNodes.map((node) => {
-          const selected = Boolean(nextId && node.id === nextId)
-          return node.selected === selected ? node : { ...node, selected }
-        }),
+        currentNodes.some((node) => node.selected !== Boolean(nextId && node.id === nextId))
+          ? currentNodes.map((node) => {
+              const selected = Boolean(nextId && node.id === nextId)
+              return node.selected === selected ? node : { ...node, selected }
+            })
+          : currentNodes,
       )
     },
     [setNodes],

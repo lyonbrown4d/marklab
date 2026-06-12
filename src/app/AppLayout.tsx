@@ -166,9 +166,11 @@ const AppLayout = () => {
   }, [])
 
   const toggleTerminalArea = useCallback(() => {
-    if (!terminalOpen) setTerminalInitialized(true)
-    setTerminalOpen(!terminalOpen)
-  }, [terminalOpen])
+    setTerminalOpen((open) => {
+      if (!open) setTerminalInitialized(true)
+      return !open
+    })
+  }, [])
 
   const openTerminalArea = useCallback(() => {
     setTerminalInitialized(true)
