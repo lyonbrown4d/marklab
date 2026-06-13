@@ -65,8 +65,8 @@
 .crepe .milkdown .milkdown-block-handle {
   border: 0;
   background: transparent;
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  z-index: 20;
   box-shadow: none;
   color: var(--editor-block-handle-icon);
   display: flex;
@@ -83,6 +83,13 @@
   outline: 0;
   padding: 0;
   margin: 0;
+}
+
+.crepe .milkdown .milkdown-block-handle[data-show='false'],
+.crepe .milkdown .milkdown-block-handle[hidden] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
@@ -115,7 +122,8 @@
 .crepe .milkdown .milkdown-block-handle .operation-item:focus,
 .crepe .milkdown .milkdown-block-handle .operation-item:focus-visible,
 .crepe .milkdown .milkdown-block-handle .operation-item[aria-pressed='true'],
-.crepe .milkdown .milkdown-block-handle .operation-item[data-active='true'] {
+.crepe .milkdown .milkdown-block-handle .operation-item[data-active='true'],
+.crepe .milkdown .milkdown-block-handle .operation-item.active {
   border: 0;
   background: transparent;
   box-shadow: none;
