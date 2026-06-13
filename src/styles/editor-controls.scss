@@ -98,7 +98,6 @@
 .crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
 .crepe .milkdown .milkdown-block-handle:focus-within,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] {
-  background: color-mix(in srgb, hsl(var(--foreground)) 4%, transparent);
   border-radius: 6px;
 }
 
@@ -121,7 +120,7 @@
   background: transparent;
   box-shadow: none;
   color: inherit;
-  opacity: 0.92;
+  opacity: 0.9;
   outline: 0;
 }
 
@@ -136,6 +135,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition:
+    opacity var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
+  background: transparent;
 }
 
 .crepe .milkdown .milkdown-block-handle .operation-item svg {
@@ -143,11 +147,11 @@
   height: 13px;
 }
 
-.crepe .milkdown .milkdown-block-handle .operation-item::before {
+.crepe .milkdown .milkdown-block-handle .operation-item + .operation-item::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 6px;
+  bottom: 6px;
   left: 50%;
   width: 0.5px;
   transform: translateX(-50%);
