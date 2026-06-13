@@ -557,8 +557,26 @@
   height: 10px;
   border: 1px solid color-mix(in srgb, var(--graph-node-accent) 60%, hsl(var(--border)));
   background: hsl(var(--background));
+  transform: translateY(-50%);
   opacity: 0;
   transition: opacity var(--motion-duration-fast) ease;
+}
+
+.react-flow__edge-path {
+  stroke: color-mix(in srgb, hsl(var(--muted-foreground)) 56%, transparent);
+  transition:
+    stroke var(--motion-duration-fast) ease,
+    stroke-width var(--motion-duration-fast) ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: color-mix(in srgb, hsl(var(--primary)) 58%, transparent);
+  stroke-width: 2;
+}
+
+.react-flow__edge-path:hover {
+  stroke-width: 2;
 }
 
 .react-flow__controls {
