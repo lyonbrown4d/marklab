@@ -66,8 +66,29 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  opacity: 1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-duration-fast) ease,
+    visibility 0s linear var(--motion-duration-fast);
   outline: 0;
+}
+
+.crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
+.crepe .milkdown .marklab-md-block:focus-within .milkdown-block-handle,
+.crepe .milkdown .marklab-md-block[data-selected='true'] .milkdown-block-handle,
+.crepe .milkdown .milkdown-block-handle[data-state='open'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
+.crepe .milkdown .milkdown-block-handle:focus-within,
+.crepe .milkdown .milkdown-block-handle[data-state='open'] {
+  background: color-mix(in srgb, hsl(var(--foreground)) 4%, transparent);
+  border-radius: 6px;
 }
 
 .crepe .milkdown .milkdown-block-handle:hover,
@@ -97,7 +118,7 @@
   width: 28px;
   height: 28px;
   padding: 3px;
-  border-radius: 4px;
+  border-radius: 999px;
   cursor: grab;
 }
 

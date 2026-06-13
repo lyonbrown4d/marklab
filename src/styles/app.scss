@@ -564,15 +564,28 @@
 
 .react-flow__edge-path {
   stroke: color-mix(in srgb, hsl(var(--muted-foreground)) 56%, transparent);
+  stroke-linecap: round;
   transition:
     stroke var(--motion-duration-fast) ease,
     stroke-width var(--motion-duration-fast) ease;
 }
 
+.react-flow__arrowhead polyline {
+  stroke: color-mix(in srgb, hsl(var(--muted-foreground)) 56%, transparent);
+}
+
 .react-flow__edge.selected .react-flow__edge-path,
-.react-flow__edge:hover .react-flow__edge-path {
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
   stroke: color-mix(in srgb, hsl(var(--primary)) 58%, transparent);
   stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__arrowhead polyline,
+.react-flow__edge:hover .react-flow__arrowhead polyline,
+.react-flow__edge:focus-visible .react-flow__arrowhead polyline {
+  stroke: color-mix(in srgb, hsl(var(--primary)) 58%, transparent);
+  fill: color-mix(in srgb, hsl(var(--primary)) 58%, transparent);
 }
 
 .react-flow__edge-path:hover {
