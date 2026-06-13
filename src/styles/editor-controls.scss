@@ -4,9 +4,9 @@
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 98%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 48%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 60%, transparent);
-  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 86%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 20%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 72%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 92%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 36%, transparent);
 }
 
 .dark .crepe .milkdown {
@@ -15,21 +15,25 @@
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 96%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 36%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
-  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 68%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 58%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 32%, transparent);
 }
 
 .crepe .milkdown .marklab-md-block {
   border-radius: 0.25rem;
   background: transparent;
   box-shadow: none;
+  overflow: visible;
 }
 
 .crepe .milkdown .marklab-md-block::before {
-  width: 0;
-  background: transparent;
-  opacity: 0;
+  inset-block: 0.38rem;
+  left: -0.56rem;
+  width: 1px;
+  border-radius: 999px;
+  background: color-mix(in srgb, hsl(var(--foreground)) 16%, transparent);
+  opacity: 0.24;
   transition: background-color 140ms ease, opacity 140ms ease;
 }
 
@@ -41,7 +45,7 @@
 }
 
 .crepe .milkdown .marklab-md-block:hover {
-  background: color-mix(in srgb, hsl(var(--foreground)) 2%, transparent);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -49,6 +53,7 @@
 .crepe .milkdown .marklab-md-block[data-selected='true'] {
   background: transparent;
   box-shadow: none;
+  outline: 0;
 }
 
 .crepe .milkdown .ProseMirror .ProseMirror-selectednode {
@@ -60,6 +65,8 @@
 .crepe .milkdown .milkdown-block-handle {
   border: 0;
   background: transparent;
+  position: relative;
+  z-index: 1;
   box-shadow: none;
   color: var(--editor-block-handle-icon);
   display: flex;
@@ -73,6 +80,8 @@
     opacity var(--motion-duration-fast) ease,
     visibility 0s linear var(--motion-duration-fast);
   outline: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
@@ -95,6 +104,7 @@
 .crepe .milkdown .milkdown-block-handle:focus-within,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] {
   box-shadow: none;
+  background: transparent;
   color: var(--editor-block-handle-icon-hover);
 }
 
@@ -115,9 +125,9 @@
 
 .crepe .milkdown .milkdown-block-handle .operation-item {
   position: relative;
-  width: 28px;
-  height: 28px;
-  padding: 3px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: 999px;
   cursor: grab;
 }
@@ -125,20 +135,21 @@
 .crepe .milkdown .milkdown-block-handle .operation-item::before {
   content: '';
   position: absolute;
-  top: 7px;
-  bottom: 7px;
+  top: 0;
+  bottom: 0;
   left: 50%;
-  width: 1px;
+  width: 0.5px;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--editor-block-handle-line) 0%, transparent);
+  background: var(--editor-block-handle-line);
+  opacity: 0.7;
   pointer-events: none;
 }
 
 .crepe .milkdown .milkdown-block-handle:hover .operation-item::before,
 .crepe .milkdown .milkdown-block-handle:focus-within .operation-item::before,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] .operation-item::before {
-  background: var(--editor-block-handle-line);
+  opacity: 0.95;
 }
 
 .crepe .milkdown .milkdown-block-handle .operation-item:active {
