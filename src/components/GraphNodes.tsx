@@ -11,16 +11,19 @@ type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string },
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
 
+const graphHandleClass = 'graph-node-handle'
+
 export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNode>) => {
   return (
     <div
       className={cn(
-        'cursor-pointer rounded-md border border-amber-500/35 bg-card px-3 py-2 shadow-sm transition-colors',
-        selected && 'border-amber-500 ring-2 ring-amber-500/25',
+        'graph-node-shell graph-node-shell--external cursor-pointer rounded-md px-3 py-2',
+        selected && 'graph-node-shell--selected',
       )}
+      data-graph-node-selected={selected}
     >
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="target" position={Position.Left} className={graphHandleClass} />
+      <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <div className="text-sm font-semibold">{data.label}</div>
       <div className="text-xs text-muted-foreground">{data.subtitle}</div>
     </div>
@@ -31,12 +34,13 @@ export const MissingNode = memo(({ data, selected }: NodeProps<MissingGraphNode>
   return (
     <div
       className={cn(
-        'cursor-pointer rounded-md border border-destructive/35 bg-card px-3 py-2 shadow-sm transition-colors',
-        selected && 'border-destructive ring-2 ring-destructive/25',
+        'graph-node-shell graph-node-shell--missing cursor-pointer rounded-md px-3 py-2',
+        selected && 'graph-node-shell--selected',
       )}
+      data-graph-node-selected={selected}
     >
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="target" position={Position.Left} className={graphHandleClass} />
+      <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <div className="text-sm font-semibold">{data.label}</div>
       <div className="text-xs text-muted-foreground">{data.subtitle}</div>
     </div>
@@ -83,13 +87,14 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
   return (
     <div
       className={cn(
-        'w-[260px] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-sm transition-colors',
-        selected && 'border-primary bg-primary/5 ring-2 ring-primary/25',
+        'graph-node-shell graph-node-shell--heading w-[260px] rounded-md px-3 py-2',
+        selected && 'graph-node-shell--selected',
       )}
+      data-graph-node-selected={selected}
       data-graph-node-id={id}
     >
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="target" position={Position.Left} className={graphHandleClass} />
+      <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <MarkdownBlockSurface blocks={blocks} onCommitBlock={commitBlock} />
       <div className="mt-1 px-1 text-xs text-muted-foreground">{data.subtitle}</div>
     </div>

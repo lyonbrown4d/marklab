@@ -490,6 +490,77 @@
   border-left-color: hsl(var(--primary) / 0.5);
 }
 
+.graph-node-shell {
+  --graph-node-accent: hsl(var(--foreground));
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--graph-node-accent) 20%, hsl(var(--border)));
+  background: hsl(var(--card));
+  box-shadow: inset 0 0 0 1px hsl(var(--background) / 5);
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease;
+}
+
+.graph-node-shell--heading {
+  --graph-node-accent: hsl(var(--primary));
+}
+
+.graph-node-shell--external {
+  --graph-node-accent: hsl(45 93% 47%);
+}
+
+.graph-node-shell--missing {
+  --graph-node-accent: hsl(var(--destructive));
+}
+
+.graph-node-shell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  transition: background-color var(--motion-duration-fast) ease;
+}
+
+.graph-node-shell:hover {
+  border-color: color-mix(in srgb, var(--graph-node-accent) 35%, hsl(var(--border)));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--graph-node-accent) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.graph-node-shell[data-graph-node-selected='true'],
+.graph-node-shell--selected {
+  border-color: color-mix(in srgb, var(--graph-node-accent) 60%, hsl(var(--border)));
+  background: color-mix(in srgb, var(--graph-node-accent) 8%, hsl(var(--card)));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--graph-node-accent) 45%, transparent),
+    0 4px 12px color-mix(in srgb, var(--graph-node-accent) 20%, transparent);
+}
+
+.graph-node-shell[data-graph-node-selected='true']::before,
+.graph-node-shell--selected::before,
+.graph-node-shell:hover::before {
+  background: color-mix(in srgb, var(--graph-node-accent) 52%, transparent);
+}
+
+.graph-node-shell:hover .graph-node-handle,
+.graph-node-shell[data-graph-node-selected='true'] .graph-node-handle,
+.graph-node-shell--selected .graph-node-handle {
+  opacity: 1;
+}
+
+.graph-node-handle {
+  width: 10px;
+  height: 10px;
+  border: 1px solid color-mix(in srgb, var(--graph-node-accent) 60%, hsl(var(--border)));
+  background: hsl(var(--background));
+  opacity: 0;
+  transition: opacity var(--motion-duration-fast) ease;
+}
+
 .react-flow__controls {
   overflow: hidden;
   border: 1px solid hsl(var(--border));
