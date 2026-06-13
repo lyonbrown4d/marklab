@@ -73,6 +73,7 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
+  line-height: 1;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -93,6 +94,7 @@
   pointer-events: auto;
 }
 
+.crepe .milkdown .milkdown-block-handle:focus-within,
 .crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
 .crepe .milkdown .milkdown-block-handle:focus-within,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] {
@@ -130,6 +132,15 @@
   padding: 0;
   border-radius: 999px;
   cursor: grab;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item svg {
+  width: 13px;
+  height: 13px;
 }
 
 .crepe .milkdown .milkdown-block-handle .operation-item::before {
