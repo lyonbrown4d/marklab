@@ -2,6 +2,7 @@ import { validateHotkey } from '@tanstack/react-hotkeys'
 import { describe, expect, it } from 'vitest'
 import {
   defaultShortcutBindings,
+  detectShortcutConflicts,
   resolveShortcutBindings,
   sanitizeShortcutOverrides,
   shortcutActions,
@@ -28,5 +29,19 @@ describe('shortcuts', () => {
     })
 
     expect(overrides['app.commandPalette']).toEqual(['Mod+P'])
+  })
+
+  it('reports conflicting shortcuts', () => {
+    const overrides = sanitizeShortcutOverrides({
+      'editor.bold': ['Mod+B'],
+      'editor.italic': ['Mod+I'],
+      'editor.quote': ['Mod+B'],
+    })
+    const resolved = resolveShortcutBindings(overrides)
+    const conflicts = detectShortcutConflicts(resolved)
+
+    expect(conflicts['editor.bold']).toEqual(['editor.quote'])
+    expect(conflicts['editor.quote']).toEqual(['editor.bold'])
+    expect(conflicts['editor.italic']).toBeUndefined()
   })
 })

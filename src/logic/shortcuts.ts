@@ -216,6 +216,38 @@ export const resolveShortcutBindings = (
   )
 }
 
+export const detectShortcutConflicts = (
+  bindings: Record<ShortcutActionId, string[]>,
+): Partial<Record<ShortcutActionId, ShortcutActionId[]>> => {
+  const byShortcut = new Map<string, ShortcutActionId[]>()
+  const conflicts: Partial<Record<ShortcutActionId, ShortcutActionId[]>> = {}
+
+  shortcutActions.forEach((action) => {
+    bindings[action.id].forEach((binding) => {
+      const normalized = normalizeShortcut(binding)
+      if (!normalized) return
+      const existing = byShortcut.get(normalized)
+      if (existing) {
+        existing.push(action.id)
+      } else {
+        byShortcut.set(normalized, [action.id])
+      }
+    })
+  })
+
+  byShortcut.forEach((actions) => {
+    if (actions.length <= 1) return
+    for (const action of actions) {
+      const others = actions.filter((item) => item !== action)
+      if (others.length > 0) {
+        conflicts[action] = Array.from(new Set(others))
+      }
+    }
+  })
+
+  return conflicts
+}
+
 export const sanitizeShortcutOverrides = (input: unknown): ShortcutBindings => {
   if (!input || typeof input !== 'object') return {}
   const raw = input as Partial<Record<string, unknown>>
