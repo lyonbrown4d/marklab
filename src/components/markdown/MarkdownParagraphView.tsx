@@ -18,7 +18,6 @@ const MarkdownParagraphView = ({
   compact = false,
   onCommit,
 }: MarkdownParagraphViewProps) => {
-  const selectedClass = selected ? 'ring-1 ring-ring bg-accent/50' : ''
   const sizeClass = compact
     ? 'max-h-28 overflow-hidden px-2 py-1.5 text-xs text-muted-foreground'
     : 'px-1 py-0.5 text-[0.9375rem]'
@@ -26,7 +25,7 @@ const MarkdownParagraphView = ({
   if (contentRef) {
     return (
       <div
-        className={`marklab-md-block rounded-sm leading-6 ${selectedClass} ${sizeClass}`}
+        className={`marklab-md-block rounded-sm leading-6 ${sizeClass}`}
         data-selected={selected ? 'true' : 'false'}
       >
         <div ref={contentRef} />

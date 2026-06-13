@@ -13,7 +13,7 @@ const MarkdownListView = ({
   ordered = false,
   children,
 }: MarkdownListViewProps) => {
-  const selectedClass = selected ? 'ring-1 ring-ring bg-accent/35' : ''
+  const selectedClass = ''
 
   return (
     <div

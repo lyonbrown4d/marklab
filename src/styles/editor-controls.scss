@@ -1,12 +1,12 @@
 .crepe .milkdown {
-  --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 6%, transparent);
+  --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 5%, transparent);
   --editor-control-active: color-mix(in srgb, hsl(var(--foreground)) 9%, transparent);
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 98%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 48%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
-  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 94%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 60%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 86%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 20%, transparent);
 }
 
 .dark .crepe .milkdown {
@@ -15,13 +15,14 @@
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 96%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 36%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
   --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 68%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 20%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
 }
 
 .crepe .milkdown .marklab-md-block {
   border-radius: 0.25rem;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -29,16 +30,23 @@
   width: 0;
   background: transparent;
   opacity: 0;
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.crepe .milkdown .marklab-md-block:hover::before,
+.crepe .milkdown .marklab-md-block[data-selected='true']::before,
+.crepe .milkdown .marklab-md-block:focus-within::before {
+  opacity: 1;
+  background: var(--editor-block-handle-line);
 }
 
 .crepe .milkdown .marklab-md-block:hover {
-  background: var(--editor-control-hover);
+  background: color-mix(in srgb, hsl(var(--foreground)) 2%, transparent);
   box-shadow: none;
 }
 
 .crepe .milkdown .marklab-md-block:focus-within,
 .crepe .milkdown .marklab-md-block[data-selected='true'] {
-  border-color: transparent;
   background: transparent;
   box-shadow: none;
 }
@@ -80,15 +88,15 @@
   background: transparent;
   box-shadow: none;
   color: inherit;
-  opacity: 1;
+  opacity: 0.92;
   outline: 0;
 }
 
 .crepe .milkdown .milkdown-block-handle .operation-item {
   position: relative;
-  width: 32px;
-  height: 32px;
-  padding: 4px;
+  width: 28px;
+  height: 28px;
+  padding: 3px;
   border-radius: 4px;
   cursor: grab;
 }
@@ -98,10 +106,11 @@
   position: absolute;
   top: 7px;
   bottom: 7px;
-  left: 2px;
+  left: 50%;
   width: 1px;
+  transform: translateX(-50%);
   border-radius: 999px;
-  background: transparent;
+  background: color-mix(in srgb, var(--editor-block-handle-line) 0%, transparent);
   pointer-events: none;
 }
 
@@ -117,7 +126,7 @@
 
 .crepe .milkdown .milkdown-block-handle svg,
 .crepe .milkdown .milkdown-block-handle svg * {
-  opacity: 1;
+  opacity: 0.92;
   color: inherit;
   fill: currentColor;
   stroke: currentColor;

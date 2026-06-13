@@ -133,8 +133,8 @@
 
 .crepe.is-focus-editor .milkdown .marklab-md-block:focus-within,
 .crepe.is-focus-editor .milkdown .marklab-md-block[data-selected='true'] {
-  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 32%, transparent);
+  background: transparent;
+  box-shadow: none;
   opacity: 1;
 }
 
@@ -406,22 +406,21 @@
 .crepe .milkdown .marklab-md-block::before {
   content: '';
   position: absolute;
-  inset-block: 0.35rem;
-  left: -0.75rem;
-  width: 2px;
+  inset-block: 0.32rem;
+  left: -0.56rem;
+  width: 1px;
   border-radius: 999px;
   background: transparent;
   transition: background-color 140ms ease;
 }
 
 .crepe .milkdown .marklab-md-block:hover {
-  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
+  background: transparent;
 }
 
 .crepe .milkdown .marklab-md-block[data-selected='true'] {
-  border-color: hsl(var(--ring));
-  background: color-mix(in srgb, hsl(var(--accent)) 54%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 52%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 .crepe .milkdown .marklab-md-block:hover::before,

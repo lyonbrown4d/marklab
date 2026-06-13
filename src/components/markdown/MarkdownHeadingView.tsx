@@ -51,7 +51,7 @@ const MarkdownHeadingView = ({
   onCommit,
 }: MarkdownHeadingViewProps) => {
   const headingClass = getHeadingClass(level, compact)
-  const selectedClass = selected ? 'border-ring bg-accent/50' : 'border-transparent'
+  const selectedClass = 'border-transparent'
 
   if (contentRef) {
     return (

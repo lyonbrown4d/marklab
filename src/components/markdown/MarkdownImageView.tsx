@@ -11,7 +11,7 @@ type MarkdownImageViewProps = {
 const MarkdownImageView = ({ src, alt, title, selected = false }: MarkdownImageViewProps) => {
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const failed = failedSrc === src
-  const selectedClass = selected ? 'ring-1 ring-ring bg-accent/50' : ''
+  const selectedClass = ''
 
   if (!src || failed) {
     return (
