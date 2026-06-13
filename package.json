@@ -231,7 +231,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.0",
     "babel-plugin-react-compiler": "1.0.0",
-    "electron": "42.3.2",
+    "electron": "42.4.0",
     "electron-builder": "^26.15.3",
     "electron-builder-squirrel-windows": "26.15.3",
     "eslint": "^10.5.0",
