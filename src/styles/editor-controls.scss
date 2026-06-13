@@ -6,6 +6,8 @@
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
   --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 72%, transparent);
   --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 92%, transparent);
+  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 88%, transparent);
+  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 62%, transparent);
   --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 36%, transparent);
   --editor-block-handle-line-hover: color-mix(in srgb, hsl(var(--foreground)) 84%, transparent);
 }
@@ -18,6 +20,8 @@
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
   --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 58%, transparent);
   --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
+  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 74%, transparent);
+  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
   --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 28%, transparent);
   --editor-block-handle-line-hover: color-mix(in srgb, hsl(var(--foreground)) 62%, transparent);
 }
@@ -164,6 +168,22 @@
 .crepe .milkdown .milkdown-block-handle .operation-item svg {
   width: 13px;
   height: 13px;
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item:first-child {
+  color: var(--editor-block-handle-icon-add);
+}
+
+.crepe .milkdown .milkdown-block-handle .operation-item:last-child {
+  color: var(--editor-block-handle-icon-drag);
+}
+
+.crepe .milkdown .marklab-md-block:hover .milkdown-block-handle .operation-item,
+.crepe .milkdown .marklab-md-block:focus-within .milkdown-block-handle .operation-item,
+.crepe .milkdown .marklab-md-block[data-selected='true'] .milkdown-block-handle .operation-item,
+.crepe .milkdown .milkdown-block-handle[data-state='open'] .operation-item,
+.crepe .milkdown .milkdown-block-handle:hover .operation-item {
+  color: var(--editor-block-handle-icon-hover);
 }
 
 .crepe .milkdown .milkdown-block-handle .operation-item + .operation-item::before {
