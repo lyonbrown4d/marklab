@@ -76,7 +76,7 @@
 
 .crepe .milkdown .milkdown-block-handle {
   border: 1px solid var(--editor-block-handle-border);
-  background: var(--editor-block-handle-bg);
+  background: transparent;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   position: absolute;
@@ -88,14 +88,15 @@
   justify-content: center;
   gap: 2px;
   line-height: 1;
-  opacity: 0.7;
-  visibility: visible;
+  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transition:
     opacity var(--motion-duration-fast) ease,
     visibility 0s linear var(--motion-duration-fast),
     transform var(--motion-duration-fast) ease,
     background-color var(--motion-duration-fast) ease;
+  transform: translateX(-1px) translateY(1px) scale(0.98);
   outline: 0;
   padding: 0;
   margin: 0;
@@ -126,22 +127,10 @@
   transform: translateX(0);
 }
 
-.crepe .milkdown:hover .milkdown-block-handle {
-  opacity: 0.9;
-  visibility: visible;
-  pointer-events: auto;
-  background: var(--editor-block-handle-bg-hover);
-  transform: translateX(0);
-}
-
-.crepe .milkdown .milkdown-block-handle {
-  transform: translateX(-1px);
-}
-
 .crepe .milkdown .milkdown-block-handle:hover,
 .crepe .milkdown .milkdown-block-handle:focus-within,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] {
-  box-shadow: none;
+  box-shadow: 0 6px 18px -12px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
   background: var(--editor-block-handle-bg-hover);
   color: var(--editor-block-handle-icon-hover);
 }
@@ -176,6 +165,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
   transition:
     opacity var(--motion-duration-fast) ease,
     background-color var(--motion-duration-fast) ease,
