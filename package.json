@@ -174,7 +174,7 @@
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.11.0",
     "ahooks": "^3.9.7",
-    "awilix": "^13.0.4",
+    "awilix": "^13.0.5",
     "better-sqlite3": "^12.10.1",
     "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
@@ -201,11 +201,11 @@
     "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0",
     "react": "^19.2.7",
-    "react-arborist": "^3.10.4",
+    "react-arborist": "^3.10.5",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.7",
     "react-dropzone": "^15.0.0",
-    "react-hook-form": "^7.78.0",
+    "react-hook-form": "^7.79.0",
     "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.11.2",
@@ -252,7 +252,7 @@
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
@@ -269,6 +269,6 @@
     "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-electron": "^1.0.4",
     "vite-plugin-electron-renderer": "^1.0.0",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }
