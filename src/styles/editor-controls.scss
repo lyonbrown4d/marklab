@@ -115,6 +115,15 @@
   pointer-events: none;
 }
 
+.crepe .milkdown .milkdown-block-handle[data-show='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  background: var(--editor-block-handle-bg-hover);
+  box-shadow: 0 6px 18px -12px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
+  transform: translateX(0);
+}
+
 .crepe .milkdown .marklab-md-block:hover .milkdown-block-handle,
 .crepe .milkdown .marklab-md-block:focus-within .milkdown-block-handle,
 .crepe .milkdown .marklab-md-block[data-selected='true'] .milkdown-block-handle,
