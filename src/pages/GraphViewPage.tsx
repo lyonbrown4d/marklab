@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense, useMemo } from 'react'
+import '@xyflow/react/dist/style.css'
 import type { GraphData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'

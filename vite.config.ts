@@ -1,18 +1,21 @@
 import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { constants as zlibConstants } from 'node:zlib'
 import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import { compression, defineAlgorithm } from 'vite-plugin-compression2'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const isNodeModule = (id: string) => id.includes('/node_modules/')
 
 const includesAny = (id: string, values: string[]) => values.some((value) => id.includes(value))
 
 const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
+
+const isEnabled = (value: string | undefined) => value === '1' || value === 'true'
 
 const alias = {
   '@': path.resolve(__dirname, 'src'),
@@ -41,6 +44,33 @@ const distWorkspaceSearchIndexMigrationsDir = path.resolve(
   __dirname,
   'dist-electron/workspaceSearchIndexMigrations',
 )
+const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
+
+const resolveKatexFontsDir = (): string | null => {
+  const hoistedFontsDir = path.resolve(__dirname, 'node_modules/katex/dist/fonts')
+  if (existsSync(hoistedFontsDir)) return hoistedFontsDir
+
+  const pnpmDir = path.resolve(__dirname, 'node_modules/.pnpm')
+  if (!existsSync(pnpmDir)) return null
+
+  const candidates = readdirSync(pnpmDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('katex@'))
+    .map((entry) => path.resolve(pnpmDir, entry.name, 'node_modules/katex/dist/fonts'))
+    .filter(existsSync)
+    .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
+
+  return candidates[0] ?? null
+}
+
+const copyKatexFontsPlugin = () => ({
+  name: 'copy-katex-fonts',
+  writeBundle() {
+    const source = resolveKatexFontsDir()
+    if (!source) return
+    mkdirSync(distKatexFontsDir, { recursive: true })
+    cpSync(source, distKatexFontsDir, { recursive: true })
+  },
+})
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -48,6 +78,9 @@ export default defineConfig(({ command, mode }) => {
   const isServe = command === 'serve'
   const isPerf = mode === 'perf'
   const isElectron = mode === 'electron'
+  const shouldAnalyze = isBuild && (mode === 'analyze' || isEnabled(process.env.MARKLAB_ANALYZE))
+  const shouldCompress =
+    isBuild && !isElectron && (mode === 'compressed' || isEnabled(process.env.MARKLAB_COMPRESS))
 
   return {
     server: {
@@ -112,7 +145,7 @@ export default defineConfig(({ command, mode }) => {
             },
           },
         }),
-      isBuild &&
+      shouldCompress &&
         compression({
           include: /\.(html|xml|css|json|js|mjs|svg|wasm)$/,
           threshold: 10 * 1024,
@@ -127,12 +160,21 @@ export default defineConfig(({ command, mode }) => {
             }),
           ],
         }),
+      shouldAnalyze &&
+        visualizer({
+          brotliSize: true,
+          filename: 'dist/stats.html',
+          gzipSize: true,
+          open: false,
+          template: 'treemap',
+        }),
       isServe &&
         !isPerf &&
         !process.env.VITEST &&
         TurboConsole({
           /* options here */
         }),
+      isBuild && copyKatexFontsPlugin(),
     ].filter(Boolean),
     resolve: {
       alias,
@@ -155,7 +197,9 @@ export default defineConfig(({ command, mode }) => {
             const normalizedId = id.replaceAll('\\', '/')
             if (!isNodeModule(normalizedId)) return undefined
             if (normalizedId.includes('react-scan')) return 'dev-react-scan'
-            if (normalizedId.includes('reactflow')) return 'vendor-graph'
+            if (includesAny(normalizedId, ['reactflow', '@xyflow/react', '@xyflow/system'])) {
+              return 'vendor-graph'
+            }
             if (normalizedId.includes('lucide-react')) return 'vendor-icons'
             if (
               packagePathMatches(

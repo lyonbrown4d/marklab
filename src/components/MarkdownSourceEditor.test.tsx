@@ -66,6 +66,8 @@ const monaco = vi.hoisted(() => ({
   },
 }))
 
+vi.mock('@/lib/monaco', () => ({}))
+
 vi.mock('@monaco-editor/react', () => ({
   default: ({
     onMount,

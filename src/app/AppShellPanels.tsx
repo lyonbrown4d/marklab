@@ -5,10 +5,11 @@ import {
   type useDefaultLayout,
   type usePanelRef,
 } from 'react-resizable-panels'
-import type { ReactNode, RefObject } from 'react'
-import TerminalPanel from '@/components/TerminalPanel'
+import { lazy, Suspense, type ReactNode, type RefObject } from 'react'
 import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
+
+const TerminalPanel = lazy(() => import('@/components/TerminalPanel'))
 
 type AppShellPanelsProps = {
   shellPanelLayout: ReturnType<typeof useDefaultLayout>
@@ -71,7 +72,9 @@ export const AppShellPanels = ({
         panelRef={terminalPanelRef}
       >
         {terminalInitialized && (
-          <TerminalPanel onClose={onCloseTerminalArea} theme={theme} visible={terminalOpen} />
+          <Suspense fallback={null}>
+            <TerminalPanel onClose={onCloseTerminalArea} theme={theme} visible={terminalOpen} />
+          </Suspense>
         )}
       </ResizablePanel>
     </ResizableGroup>

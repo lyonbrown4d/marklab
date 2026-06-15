@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor, IPosition, languages as MonacoLanguages } from 'monaco-editor'
+import '@/lib/monaco'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
 import {
