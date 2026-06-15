@@ -4,11 +4,11 @@
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 98%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 48%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 72%, transparent);
-  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 92%, transparent);
-  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 88%, transparent);
-  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 62%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 36%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 86%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 100%, transparent);
+  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 94%, transparent);
+  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 72%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
   --editor-block-handle-line-hover: color-mix(in srgb, hsl(var(--foreground)) 84%, transparent);
 }
 
@@ -18,11 +18,11 @@
   --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 96%, transparent);
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 36%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
-  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 58%, transparent);
-  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
-  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 74%, transparent);
-  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
-  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 28%, transparent);
+  --editor-block-handle-icon: color-mix(in srgb, hsl(var(--foreground)) 72%, transparent);
+  --editor-block-handle-icon-hover: color-mix(in srgb, hsl(var(--foreground)) 90%, transparent);
+  --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--foreground)) 84%, transparent);
+  --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 60%, transparent);
+  --editor-block-handle-line: color-mix(in srgb, hsl(var(--foreground)) 38%, transparent);
   --editor-block-handle-line-hover: color-mix(in srgb, hsl(var(--foreground)) 62%, transparent);
 }
 
@@ -80,8 +80,8 @@
   justify-content: center;
   gap: 2px;
   line-height: 1;
-  opacity: 0;
-  visibility: hidden;
+  opacity: 0.7;
+  visibility: visible;
   pointer-events: none;
   transition:
     opacity var(--motion-duration-fast) ease,
@@ -109,6 +109,12 @@
 .crepe .milkdown .marklab-md-block[data-selected='true'] .milkdown-block-handle,
 .crepe .milkdown .milkdown-block-handle[data-state='open'] {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.crepe .milkdown:hover .milkdown-block-handle {
+  opacity: 0.9;
   visibility: visible;
   pointer-events: auto;
 }
