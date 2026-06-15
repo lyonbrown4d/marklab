@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
+import { cpSync, existsSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { constants as zlibConstants } from 'node:zlib'
 import electron from 'vite-plugin-electron/simple'
@@ -32,6 +33,14 @@ const electronMainEntry = {
     'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
   ),
 }
+const workspaceSearchIndexMigrationsDir = path.resolve(
+  __dirname,
+  'electron/services/workspace/workspaceSearchIndexMigrations',
+)
+const distWorkspaceSearchIndexMigrationsDir = path.resolve(
+  __dirname,
+  'dist-electron/workspaceSearchIndexMigrations',
+)
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -62,6 +71,22 @@ export default defineConfig(({ command, mode }) => {
                 assetsInlineLimit: 0,
                 rollupOptions: {
                   external: electronMainExternal,
+                  plugins: [
+                    {
+                      name: 'copy-workspace-search-index-migrations',
+                      writeBundle() {
+                        if (!existsSync(workspaceSearchIndexMigrationsDir)) return
+                        mkdirSync(distWorkspaceSearchIndexMigrationsDir, { recursive: true })
+                        cpSync(
+                          workspaceSearchIndexMigrationsDir,
+                          distWorkspaceSearchIndexMigrationsDir,
+                          {
+                            recursive: true,
+                          },
+                        )
+                      },
+                    },
+                  ],
                   output: {
                     entryFileNames: '[name].js',
                     banner: electronMainRequireBanner,

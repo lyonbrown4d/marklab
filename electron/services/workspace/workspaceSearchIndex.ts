@@ -5,11 +5,11 @@ import { isMarkdownPath } from '@electron/services/workspace/path.js'
 import { buildMatchExpression } from '@electron/services/workspace/workspaceSearchIndexHelpers.js'
 import { parseSearchTerms, searchDocuments } from '@electron/services/workspace/markdown/search.js'
 import {
+  ensureSearchSchema,
   openSearchDatabase,
   runSqliteTransaction,
   type SqliteDatabase,
 } from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
-import { ensureSearchSchema } from '@electron/services/workspace/workspaceSearchIndexSchema.js'
 import {
   clearSearchRows,
   loadDocumentsForRows,
@@ -102,7 +102,7 @@ export class WorkspaceSearchIndex {
       FROM search_documents_fts
       JOIN search_documents AS d ON d.id = search_documents_fts.rowid
       WHERE search_documents_fts MATCH @match
-      ORDER BY bm25(search_documents_fts, 6.0, 2.4, 1.0) ASC
+      ORDER BY bm25(search_documents_fts, 6.0, 2.4, 1.0, 0.0) ASC
       LIMIT @limit
     `)
 
@@ -125,7 +125,7 @@ export class WorkspaceSearchIndex {
   }
 
   private async ensureSchema(): Promise<void> {
-    ensureSearchSchema(this.requireDatabase())
+    await ensureSearchSchema(this.requireDatabase())
   }
 
   private searchIndexedDocuments(query: string, limit: number): FsSearchResult[] {

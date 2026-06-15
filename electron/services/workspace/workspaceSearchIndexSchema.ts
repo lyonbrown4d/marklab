@@ -1,87 +1,25 @@
-import { runSqliteTransaction } from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
-import type { SqliteDatabase } from '@electron/services/workspace/workspaceSearchIndexDatabase.js'
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export type SearchSchemaDatabase = {
-  prepare(statement: string): {
-    run: () => unknown
-    get: () => { user_version?: number } | undefined
-  }
-  exec(statement: string): void
-}
+export const searchDocumentsTable = sqliteTable('search_documents', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  path: text('path').notNull().unique(),
+  title: text('title').notNull(),
+  contentHash: text('content_hash').notNull(),
+  updatedMs: integer('updated_ms').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  indexedAt: integer('indexed_at').notNull(),
+})
 
-export const ensureSearchSchema = (database: SearchSchemaDatabase & SqliteDatabase): void => {
-  const currentVersion = Number(database.prepare('PRAGMA user_version').get()?.user_version ?? 0)
-  if (currentVersion === SQL_SCHEMA_VERSION) return
+export const searchLinesTable = sqliteTable('search_lines', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  documentId: integer('document_id')
+    .notNull()
+    .references(() => searchDocumentsTable.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(),
+  title: text('title').notNull(),
+  lineNo: integer('line_no').notNull(),
+  lineText: text('line_text').notNull(),
+})
 
-  runSqliteTransaction(database, () => {
-    database
-      .prepare(
-        `
-          CREATE TABLE IF NOT EXISTS search_documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            path TEXT NOT NULL UNIQUE,
-            title TEXT NOT NULL,
-            content_hash TEXT NOT NULL,
-            updated_ms INTEGER NOT NULL,
-            size_bytes INTEGER NOT NULL,
-            indexed_at INTEGER NOT NULL
-          )
-        `,
-      )
-      .run()
-    database
-      .prepare('CREATE INDEX IF NOT EXISTS search_documents_path_idx ON search_documents(path)')
-      .run()
-    database
-      .prepare(
-        `
-          CREATE TABLE IF NOT EXISTS search_lines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            document_id INTEGER NOT NULL,
-            path TEXT NOT NULL,
-            title TEXT NOT NULL,
-            line_no INTEGER NOT NULL,
-            line_text TEXT NOT NULL,
-            UNIQUE (document_id, line_no),
-            FOREIGN KEY (document_id) REFERENCES search_documents(id) ON DELETE CASCADE
-          )
-        `,
-      )
-      .run()
-    database
-      .prepare('CREATE INDEX IF NOT EXISTS search_lines_document_idx ON search_lines(document_id)')
-      .run()
-    database
-      .prepare(
-        `
-          CREATE VIRTUAL TABLE IF NOT EXISTS search_lines_fts USING fts5(
-            path,
-            title,
-            body,
-            document_id UNINDEXED,
-            line_no UNINDEXED,
-            content='',
-            tokenize='unicode61'
-          )
-        `,
-      )
-      .run()
-    database
-      .prepare(
-        `
-          CREATE VIRTUAL TABLE IF NOT EXISTS search_documents_fts USING fts5(
-            path,
-            title,
-            body,
-            document_id UNINDEXED,
-            content='',
-            tokenize='unicode61'
-          )
-        `,
-      )
-      .run()
-    database.exec(`PRAGMA user_version = ${SQL_SCHEMA_VERSION}`)
-  })
-}
-
-export const SQL_SCHEMA_VERSION = 2
+export const SEARCH_DOCUMENTS_FTS_TABLE = 'search_documents_fts'
+export const SEARCH_LINES_FTS_TABLE = 'search_lines_fts'
