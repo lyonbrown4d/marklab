@@ -11,6 +11,8 @@ import {
 import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore.js'
 import { TerminalService } from '@electron/services/terminal/service.js'
 import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
 import type { AppLaunchInfo } from '@electron/types.js'
 
 export type ElectronRuntimeDependencies = {
@@ -30,6 +32,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   logger: Logger
   terminalService: TerminalService
   workspaceRegistry: WindowWorkspaceRegistry
+  workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
 }
 
 export type ElectronContainer = AwilixContainer<ElectronCradle>
@@ -56,9 +59,13 @@ export const createElectronContainer = (
     onRendererReady: asValue(dependencies.onRendererReady ?? (() => undefined)),
     shell: asValue(dependencies.shell),
     logger: asValue(logger),
-    workspaceRegistry: asFunction(({ app, logger, shell }) => {
+    workspaceSearchIndexFactory: asFunction(() => {
+      return () => new WorkspaceSearchIndex()
+    }).singleton(),
+    workspaceRegistry: asFunction(({ app, logger, shell, workspaceSearchIndexFactory }) => {
       return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
         onSessionDisposed: removeRendererSession,
+        workspaceSearchIndexFactory,
       })
     }).singleton(),
     exportService: asFunction(({ BrowserWindow, logger, shell }) => {

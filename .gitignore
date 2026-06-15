@@ -146,3 +146,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Generated app icon assets
+resources/icons/

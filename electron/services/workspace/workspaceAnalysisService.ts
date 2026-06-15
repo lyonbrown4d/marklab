@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
+import type { App, Shell } from 'electron'
 
 import { isMarkdownPath } from '@electron/services/workspace/path.js'
+import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
   buildOutlineGraph,
   buildWorkspaceGraph,
@@ -30,11 +32,23 @@ type SearchDocumentToIndex = {
   content: string
 }
 
+export type WorkspaceSearchIndexFactory = () => WorkspaceSearchIndex
+
 export class WorkspaceAnalysisService extends WorkspaceFileService {
+  constructor(
+    app: App,
+    shell: Shell,
+    logger: Logger = noopLogger,
+    workspaceSearchIndexFactory: WorkspaceSearchIndexFactory = () => new WorkspaceSearchIndex(),
+  ) {
+    super(app, shell, logger)
+    this.workspaceSearchIndex = workspaceSearchIndexFactory()
+  }
+
   private readonly analysisWorker = new WorkspaceAnalysisWorkerClient(
     this.logger.child('analysis-worker'),
   )
-  private readonly workspaceSearchIndex = new WorkspaceSearchIndex()
+  private readonly workspaceSearchIndex: WorkspaceSearchIndex
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<SearchDocumentToIndex>({
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,

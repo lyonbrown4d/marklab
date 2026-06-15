@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import { Search, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,7 +55,7 @@ const ShortcutsSettingsPage = () => {
   const filteredSections = useMemo(() => {
     return shortcutCategories
       .map((category) => {
-        const rows: JSX.Element[] = []
+        const rows: ReactElement[] = []
         for (const action of category.actions) {
           const label = actionLabelMap[action]
           if (!label) continue

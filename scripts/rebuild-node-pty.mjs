@@ -6,16 +6,31 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(import.meta.url)
+const nativeBuildHome = path.join(repoRoot, '.native-build', 'home')
+const electronGypDir = path.join(nativeBuildHome, '.electron-gyp')
 
 const run = (command, args, cwd) => {
   const result = spawnSync(command, args, {
     cwd,
+    env: {
+      ...process.env,
+      HOME: nativeBuildHome,
+      USERPROFILE: nativeBuildHome,
+      npm_config_devdir: process.env.npm_config_devdir || electronGypDir,
+    },
     shell: process.platform === 'win32',
     stdio: 'inherit',
   })
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
   }
+}
+
+const shouldSkipRebuild = process.env.SKIP_NODE_PTY_REBUILD === '1'
+
+if (shouldSkipRebuild) {
+  console.log('Skipping node-pty rebuild because SKIP_NODE_PTY_REBUILD=1')
+  process.exit(0)
 }
 
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'))
@@ -49,21 +64,18 @@ const electronRebuildBin = () =>
 const rebuildWindowsFromShortPath = async () => {
   const packageJson = await readJson(path.join(repoRoot, 'package.json'))
   const electronVersion = normalizeVersion(packageJson.devDependencies?.electron)
-  const nodePtyVersion = normalizeVersion(packageJson.dependencies?.['node-pty'])
   const nodePtyRoot = path.dirname(require.resolve('node-pty/package.json', { paths: [repoRoot] }))
   const stagingRoot = path.join(repoRoot, '.native-build', 'node-pty')
+  const stagingNodePtyRoot = path.join(stagingRoot, 'node_modules', 'node-pty')
+  const packageJsonContent = JSON.stringify({ name: 'pty', version: '1.0.0', private: true }, null, 2)
 
   await rm(stagingRoot, { force: true, recursive: true })
   await mkdir(stagingRoot, { recursive: true })
+  await writeFile(path.join(stagingRoot, 'package.json'), `${packageJsonContent}\n`)
 
-  run('npm', ['init', '-y'], stagingRoot)
-  run(
-    'npm',
-    ['install', `node-pty@${nodePtyVersion}`, '--ignore-scripts', '--no-audit', '--no-fund'],
-    stagingRoot,
-  )
+  await mkdir(path.join(stagingRoot, 'node_modules'), { recursive: true })
+  await cp(nodePtyRoot, stagingNodePtyRoot, { recursive: true })
 
-  const stagingNodePtyRoot = path.join(stagingRoot, 'node_modules', 'node-pty')
   await removeSpectreMitigation(path.join(stagingNodePtyRoot, 'binding.gyp'))
   await removeSpectreMitigation(path.join(stagingNodePtyRoot, 'deps', 'winpty', 'src', 'winpty.gyp'))
 

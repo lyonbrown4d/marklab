@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { getWindowState, setWindowState } from '@electron/services/settingsStore.js'
+import { createWindowIcon } from '@electron/windowIcon.js'
 import type { PersistedWindowState } from '@electron/types.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
@@ -16,6 +17,7 @@ const WINDOW_STATE_SAVE_DELAY_MS = 250
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
+const appIcon = createWindowIcon(projectRoot)
 export type MarklabWindows = {
   splash: BrowserWindow
   main: BrowserWindow
@@ -186,6 +188,7 @@ export const createSplashWindow = () => {
     width: 420,
     height: 280,
     title: 'marklab',
+    icon: appIcon,
     resizable: false,
     fullscreen: false,
     frame: false,
@@ -219,6 +222,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     minWidth: MAIN_WINDOW_MIN_WIDTH,
     minHeight: MAIN_WINDOW_MIN_HEIGHT,
     title: 'marklab',
+    icon: appIcon,
     resizable: true,
     fullscreen: false,
     ...mainWindowChromeOptions(),
