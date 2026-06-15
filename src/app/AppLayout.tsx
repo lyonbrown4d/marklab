@@ -36,6 +36,7 @@ import { useAppMenuAction } from '@/app/useAppMenuAction'
 import { useAppPanelLayoutSync } from '@/app/useAppPanelLayoutSync'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
+import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 import { toast } from 'sonner'
 
 const createUntitledPath = (files: FileEntry[]) => {
@@ -103,6 +104,7 @@ const AppLayout = () => {
   const [terminalInitialized, setTerminalInitialized] = useState(false)
   const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const terminalPanelToggleGuard = useMemo(() => createToggleGuard(PANEL_TOGGLE_GUARD_MS), [])
   const effectiveTerminalOpen = terminalOpen && !immersiveZenMode
   const workspaceGroupElementRef = useRef<HTMLDivElement | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
@@ -162,20 +164,23 @@ const AppLayout = () => {
   )
 
   const closeTerminalArea = useCallback(() => {
+    if (!terminalPanelToggleGuard()) return
     setTerminalOpen(false)
-  }, [])
+  }, [terminalPanelToggleGuard])
 
   const toggleTerminalArea = useCallback(() => {
+    if (!terminalPanelToggleGuard()) return
     setTerminalOpen((open) => {
       if (!open) setTerminalInitialized(true)
       return !open
     })
-  }, [])
+  }, [terminalPanelToggleGuard])
 
   const openTerminalArea = useCallback(() => {
+    if (!terminalPanelToggleGuard()) return
     setTerminalInitialized(true)
     setTerminalOpen(true)
-  }, [])
+  }, [terminalPanelToggleGuard])
 
   const handleCreateFile = useCallback(() => {
     if (state.rootKind === 'single') {

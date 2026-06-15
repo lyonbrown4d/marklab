@@ -8,6 +8,7 @@ import {
 } from '@/logic/shortcuts'
 import { isDarkThemeMode } from '@/logic/themes'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 import type {
   AppLocale,
   DarkThemeMode,
@@ -19,6 +20,11 @@ import type {
   ThemeMode,
   ThemeModePreference,
 } from '@/store/appTypes'
+
+const sidebarGuards = {
+  left: createToggleGuard(PANEL_TOGGLE_GUARD_MS),
+  right: createToggleGuard(PANEL_TOGGLE_GUARD_MS),
+}
 
 export type PreferencesState = {
   theme: ThemeMode
@@ -240,9 +246,14 @@ export const usePreferencesStore = create<PreferencesState>()(
         set((state) =>
           Object.keys(state.shortcutOverrides).length === 0 ? state : { shortcutOverrides: {} },
         ),
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      toggleRightSidebar: () =>
-        set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed })),
+      toggleSidebar: () => {
+        if (!sidebarGuards.left()) return
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }))
+      },
+      toggleRightSidebar: () => {
+        if (!sidebarGuards.right()) return
+        set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed }))
+      },
     }),
     {
       name: 'marklab.preferences',
