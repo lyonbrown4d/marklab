@@ -29,6 +29,7 @@
     "build": "tsc -b && vite build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
     "build:compressed": "pnpm typecheck && vite build --mode compressed",
+    "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "desktop:prepare": "pnpm native:rebuild && pnpm icons:generate",
     "build:electron": "pnpm electron:build",

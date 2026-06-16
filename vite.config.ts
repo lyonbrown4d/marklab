@@ -81,6 +81,12 @@ export default defineConfig(({ command, mode }) => {
   const shouldAnalyze = isBuild && (mode === 'analyze' || isEnabled(process.env.MARKLAB_ANALYZE))
   const shouldCompress =
     isBuild && !isElectron && (mode === 'compressed' || isEnabled(process.env.MARKLAB_COMPRESS))
+  const shouldReportCompressedSize =
+    mode === 'analyze' ||
+    mode === 'compressed' ||
+    isEnabled(process.env.MARKLAB_REPORT_COMPRESSED_SIZE)
+  const shouldUseReactCompiler =
+    isBuild && (mode === 'compiler' || isEnabled(process.env.MARKLAB_REACT_COMPILER))
 
   return {
     server: {
@@ -89,9 +95,10 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins: [
       react(),
-      babel({
-        presets: [reactCompilerPreset()],
-      }),
+      shouldUseReactCompiler &&
+        babel({
+          presets: [reactCompilerPreset()],
+        }),
       isElectron &&
         electron({
           main: {
@@ -191,6 +198,7 @@ export default defineConfig(({ command, mode }) => {
       setupFiles: './src/test/setup.ts',
     },
     build: {
+      reportCompressedSize: shouldReportCompressedSize,
       rollupOptions: {
         output: {
           manualChunks(id) {

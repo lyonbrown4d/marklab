@@ -1,11 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import EditorEmptyState from '@/pages/EditorEmptyState'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
-import WysiwygEditorPage from '@/pages/WysiwygEditorPage'
 import { pathToRoute } from '@/logic/routing'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+
+const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'))
 
 const EditFilePage = () => {
   const params = useParams()
@@ -35,13 +37,17 @@ const EditFilePage = () => {
     return <EditorPaneFallback label={t('editor.loadingDocument')} path={activePath} />
   }
 
+  const fallback = <EditorPaneFallback label={t('editor.loadingDocument')} path={activePath} />
+
   return (
-    <WysiwygEditorPage
-      activePath={activePath}
-      value={context.editorValue}
-      onChange={context.onEditorChange}
-      showStatusBar={context.showEditorStatusBar}
-    />
+    <Suspense fallback={fallback}>
+      <WysiwygEditorPage
+        activePath={activePath}
+        value={context.editorValue}
+        onChange={context.onEditorChange}
+        showStatusBar={context.showEditorStatusBar}
+      />
+    </Suspense>
   )
 }
 
