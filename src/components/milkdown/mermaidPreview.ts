@@ -5,6 +5,7 @@ import escape from 'lodash-es/escape'
 const MERMAID_ALIASES = new Set(['mermaid', 'mmd'])
 let mermaidRenderSequence = 0
 let mermaidLoader: Promise<(typeof import('mermaid'))['default']> | null = null
+const MERMAID_PREVIEW_ROOT_MARGIN = '360px'
 
 const mermaidSupport = new LanguageSupport(
   StreamLanguage.define({
@@ -53,6 +54,38 @@ const getErrorMessage = (error: unknown) => {
   return String(error)
 }
 
+const createMermaidPlaceholder = () => {
+  const placeholder = document.createElement('div')
+  placeholder.className = 'milkdown-mermaid-preview'
+  placeholder.textContent = 'Loading diagram...'
+  return placeholder
+}
+
+const observeMermaidPreview = (target: HTMLElement, render: () => void) => {
+  if (!('IntersectionObserver' in window)) {
+    render()
+    return
+  }
+
+  let rendered = false
+  const runOnce = () => {
+    if (rendered) return
+    rendered = true
+    observer.disconnect()
+    render()
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        runOnce()
+      }
+    },
+    { rootMargin: MERMAID_PREVIEW_ROOT_MARGIN },
+  )
+
+  observer.observe(target)
+}
+
 export const configureMermaidPreview = (prev: CodeBlockConfig): CodeBlockConfig => ({
   ...prev,
   languages: ensureMermaidLanguage(prev.languages),
@@ -64,27 +97,32 @@ export const configureMermaidPreview = (prev: CodeBlockConfig): CodeBlockConfig 
     const source = content.trim()
     if (!source) return null
 
+    const placeholder = createMermaidPlaceholder()
+    applyPreview(placeholder)
+
     const currentRender = ++mermaidRenderSequence
-    void loadMermaid()
-      .then((mermaid) => {
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: 'strict',
-          theme: resolveMermaidTheme(),
+    observeMermaidPreview(placeholder, () => {
+      void loadMermaid()
+        .then((mermaid) => {
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'strict',
+            theme: resolveMermaidTheme(),
+          })
+          return mermaid.render(`marklab-mermaid-${currentRender}`, source)
         })
-        return mermaid.render(`marklab-mermaid-${currentRender}`, source)
-      })
-      .then((result) => {
-        if (currentRender !== mermaidRenderSequence) return
-        const preview = document.createElement('div')
-        preview.className = 'milkdown-mermaid-preview'
-        preview.innerHTML = result.svg
-        applyPreview(preview)
-      })
-      .catch((error) => {
-        if (currentRender !== mermaidRenderSequence) return
-        const message = escape(getErrorMessage(error))
-        applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
-      })
+        .then((result) => {
+          if (currentRender !== mermaidRenderSequence) return
+          const preview = document.createElement('div')
+          preview.className = 'milkdown-mermaid-preview'
+          preview.innerHTML = result.svg
+          applyPreview(preview)
+        })
+        .catch((error) => {
+          if (currentRender !== mermaidRenderSequence) return
+          const message = escape(getErrorMessage(error))
+          applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
+        })
+    })
   },
 })

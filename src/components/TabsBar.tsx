@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
+import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 
 type TabsBarProps = {
   tabs: WorkspaceTab[]
@@ -289,6 +290,8 @@ const TabsBarComponent = ({
                   className="h-6 w-6 rounded"
                   aria-label={t('editor.modeWysiwyg')}
                   disabled={!fileTabActive}
+                  onFocus={preloadWysiwygEditor}
+                  onMouseEnter={preloadWysiwygEditor}
                   onClick={() => onChangeView('wysiwyg')}
                 >
                   <PenLine className="h-3.5 w-3.5" />
@@ -304,6 +307,8 @@ const TabsBarComponent = ({
                   className="h-6 w-6 rounded"
                   aria-label={t('editor.modeSource')}
                   disabled={!fileTabActive}
+                  onFocus={preloadSourceEditor}
+                  onMouseEnter={preloadSourceEditor}
                   onClick={() => onChangeView('source')}
                 >
                   <Code2 className="h-3.5 w-3.5" />
@@ -319,6 +324,8 @@ const TabsBarComponent = ({
                   className="h-6 w-6 rounded"
                   aria-label={t('tabs.workspaceGraph')}
                   disabled={!fileTabActive}
+                  onFocus={preloadGraphView}
+                  onMouseEnter={preloadGraphView}
                   onClick={() => onChangeView('graph')}
                 >
                   <GitGraph className="h-3.5 w-3.5" />

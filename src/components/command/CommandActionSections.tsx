@@ -17,6 +17,7 @@ import {
 import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
 import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
+import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 
 type CommandActionSectionsProps = {
   canCreateWorkspaceEntries: boolean
@@ -80,7 +81,11 @@ const CommandActionSections = ({
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading="Workspace">
-        <CommandItem onSelect={() => onAction('workspace.open_graph')}>
+        <CommandItem
+          onFocus={preloadGraphView}
+          onMouseEnter={preloadGraphView}
+          onSelect={() => onAction('workspace.open_graph')}
+        >
           <GitGraph className="h-4 w-4" />
           Workspace Graph
         </CommandItem>
@@ -98,15 +103,27 @@ const CommandActionSections = ({
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading="View">
-        <CommandItem onSelect={() => onAction('view.wysiwyg')}>
+        <CommandItem
+          onFocus={preloadWysiwygEditor}
+          onMouseEnter={preloadWysiwygEditor}
+          onSelect={() => onAction('view.wysiwyg')}
+        >
           <PenLine className="h-4 w-4" />
           {t('editor.modeWysiwyg')}
         </CommandItem>
-        <CommandItem onSelect={() => onAction('view.source')}>
+        <CommandItem
+          onFocus={preloadSourceEditor}
+          onMouseEnter={preloadSourceEditor}
+          onSelect={() => onAction('view.source')}
+        >
           <FileText className="h-4 w-4" />
           {t('editor.modeSource')}
         </CommandItem>
-        <CommandItem onSelect={() => onAction('view.graph')}>
+        <CommandItem
+          onFocus={preloadGraphView}
+          onMouseEnter={preloadGraphView}
+          onSelect={() => onAction('view.graph')}
+        >
           <GitGraph className="h-4 w-4" />
           Graph View
         </CommandItem>

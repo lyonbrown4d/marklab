@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DiffEditor } from '@monaco-editor/react'
 import { FileText, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import { gitApi, type GitDiffRequest } from '@/services/gitApi'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { configureMonaco } from '@/lib/monaco'
 
 type GitDiffViewProps = {
   rootPath: string
@@ -33,6 +34,8 @@ const languageForPath = (path: string) => {
 const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
+  const [monacoReady, setMonacoReady] = useState(false)
+  const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
   const diffQuery = useQuery({
@@ -44,6 +47,29 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
   const openFile = useCallback(() => {
     onOpenFile(request.path)
   }, [onOpenFile, request.path])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void configureMonaco()
+      .then(() => {
+        if (!cancelled) {
+          setMonacoReady(true)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setMonacoLoadError(error)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const editorLoadError =
+    monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -89,6 +115,14 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
           </div>
         ) : diffQuery.isError ? (
           <div className="p-4 text-sm text-destructive">{String(diffQuery.error)}</div>
+        ) : monacoLoadError ? (
+          <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
+            Failed to load diff editor: {editorLoadError}
+          </div>
+        ) : !monacoReady ? (
+          <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+            {t('editor.loadingDocument')}
+          </div>
         ) : (
           <DiffEditor
             height="100%"
