@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor, IPosition, languages as MonacoLanguages } from 'monaco-editor'
-import '@/lib/monaco'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
 import {
@@ -37,6 +36,8 @@ const MarkdownSourceEditor = ({
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
+  const [monacoReady, setMonacoReady] = useState(false)
+  const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const diagnosticHostRef = useRef<{
     editor: Parameters<OnMount>[0]
@@ -55,6 +56,27 @@ const MarkdownSourceEditor = ({
     completionContextRef.current = { activePath, files, fileContents, workspaceIndex }
     diagnosticsContextRef.current = { activePath, files, fileContents, workspaceIndex }
   }, [activePath, fileContents, files, workspaceIndex])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void import('@/lib/monaco')
+      .then(({ configureMonaco }) => configureMonaco())
+      .then(() => {
+        if (!cancelled) {
+          setMonacoReady(true)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setMonacoLoadError(error)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const applyDiagnostics = useCallback(
     (
@@ -237,6 +259,9 @@ const MarkdownSourceEditor = ({
     })
   }, [activePath])
 
+  const editorLoadError =
+    monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
+
   return (
     <div
       className={[
@@ -248,37 +273,47 @@ const MarkdownSourceEditor = ({
         .filter(Boolean)
         .join(' ')}
     >
-      <Editor
-        height="100%"
-        language="markdown"
-        theme={darkMode ? 'vs-dark' : 'vs'}
-        path={activePath ?? 'marklab-empty.md'}
-        value={value}
-        onChange={(next) => onChange(next ?? '')}
-        onMount={handleMount}
-        options={{
-          minimap: { enabled: false },
-          wordWrap: 'on',
-          tabSize: 2,
-          scrollBeyondLastLine: false,
-          fontSize: 14,
-          lineNumbers: 'on',
-          renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
-          smoothScrolling: motionSmoothScrolling,
-          cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
-          cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
-          cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
-          cursorSurroundingLinesStyle: 'all',
-          cursorWidth: 2,
-          renderWhitespace: 'selection',
-          automaticLayout: true,
-          lineNumbersMinChars: 3,
-          padding: {
-            top: immersiveTypewriterMode ? 120 : 24,
-            bottom: immersiveTypewriterMode ? 180 : 24,
-          },
-        }}
-      />
+      {monacoLoadError ? (
+        <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
+          Failed to load source editor: {editorLoadError}
+        </div>
+      ) : monacoReady ? (
+        <Editor
+          height="100%"
+          language="markdown"
+          theme={darkMode ? 'vs-dark' : 'vs'}
+          path={activePath ?? 'marklab-empty.md'}
+          value={value}
+          onChange={(next) => onChange(next ?? '')}
+          onMount={handleMount}
+          options={{
+            minimap: { enabled: false },
+            wordWrap: 'on',
+            tabSize: 2,
+            scrollBeyondLastLine: false,
+            fontSize: 14,
+            lineNumbers: 'on',
+            renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
+            smoothScrolling: motionSmoothScrolling,
+            cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
+            cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
+            cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
+            cursorSurroundingLinesStyle: 'all',
+            cursorWidth: 2,
+            renderWhitespace: 'selection',
+            automaticLayout: true,
+            lineNumbersMinChars: 3,
+            padding: {
+              top: immersiveTypewriterMode ? 120 : 24,
+              bottom: immersiveTypewriterMode ? 180 : 24,
+            },
+          }}
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+          Loading source editor...
+        </div>
+      )}
     </div>
   )
 }

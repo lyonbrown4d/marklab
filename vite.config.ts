@@ -29,6 +29,26 @@ const electronMainRequireBanner = [
 
 const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch']
 
+const devOptimizeDepsInclude = [
+  'react',
+  'react-dom',
+  'react-dom/client',
+  'react/jsx-runtime',
+  'react-router-dom',
+  '@tanstack/react-query',
+  'zustand',
+  'sonner',
+  'lucide-react',
+]
+
+const devWarmupClientFiles = [
+  './src/main.tsx',
+  './src/App.tsx',
+  './src/app/AppLayout.tsx',
+  './src/app/AppShellPanels.tsx',
+  './src/pages/WorkspaceHomePage.tsx',
+]
+
 const electronMainEntry = {
   main: path.resolve(__dirname, 'electron/main.ts'),
   workspaceAnalysisWorkerEntry: path.resolve(
@@ -92,6 +112,12 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port: 5173,
       strictPort: true, // fail if port is taken so Electron loads the expected dev server
+      warmup: {
+        clientFiles: devWarmupClientFiles,
+      },
+    },
+    optimizeDeps: {
+      include: devOptimizeDepsInclude,
     },
     plugins: [
       react(),

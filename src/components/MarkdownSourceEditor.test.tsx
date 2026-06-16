@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
@@ -66,7 +66,9 @@ const monaco = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/monaco', () => ({}))
+vi.mock('@/lib/monaco', () => ({
+  configureMonaco: vi.fn(() => Promise.resolve()),
+}))
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({
@@ -106,7 +108,7 @@ beforeEach(() => {
 })
 
 describe('MarkdownSourceEditor', () => {
-  it('registers workspace-aware markdown completions', () => {
+  it('registers workspace-aware markdown completions', async () => {
     render(
       <MarkdownSourceEditor
         activePath="notes/current.md"
@@ -119,6 +121,10 @@ describe('MarkdownSourceEditor', () => {
         onChange={vi.fn()}
       />,
     )
+
+    await waitFor(() => {
+      expect(monaco.languages.registerCompletionItemProvider).toHaveBeenCalled()
+    })
 
     const providerCall = monaco.languages.registerCompletionItemProvider.mock
       .calls[0] as unknown as [string, CompletionProviderMock] | undefined
@@ -143,7 +149,7 @@ describe('MarkdownSourceEditor', () => {
     })
   })
 
-  it('publishes link diagnostics for missing targets', () => {
+  it('publishes link diagnostics for missing targets', async () => {
     render(
       <MarkdownSourceEditor
         activePath="notes/current.md"
@@ -171,6 +177,11 @@ describe('MarkdownSourceEditor', () => {
       />,
     )
 
+    await waitFor(() => {
+      const markers = monaco.editor.setModelMarkers.mock.calls.at(-1)?.[2] ?? []
+      expect(markers).toHaveLength(3)
+    })
+
     const markers = monaco.editor.setModelMarkers.mock.calls.at(-1)?.[2] ?? []
     expect(markers).toHaveLength(3)
     expect(markers).toEqual(
@@ -193,7 +204,7 @@ describe('MarkdownSourceEditor', () => {
     )
   })
 
-  it('focuses the requested source position for the active file', () => {
+  it('focuses the requested source position for the active file', async () => {
     render(
       <MarkdownSourceEditor
         activePath="source.md"
@@ -203,6 +214,8 @@ describe('MarkdownSourceEditor', () => {
         onChange={vi.fn()}
       />,
     )
+
+    await screen.findByLabelText('markdown source')
 
     requestFocusSourcePosition({ path: 'source.md', line: 3, column: 2, endColumn: 4 })
 
@@ -223,7 +236,7 @@ describe('MarkdownSourceEditor', () => {
     expect(monacoEditor.focus).toHaveBeenCalled()
   })
 
-  it('ignores source focus requests for other files', () => {
+  it('ignores source focus requests for other files', async () => {
     render(
       <MarkdownSourceEditor
         activePath="source.md"
@@ -233,6 +246,8 @@ describe('MarkdownSourceEditor', () => {
         onChange={vi.fn()}
       />,
     )
+
+    await screen.findByLabelText('markdown source')
 
     requestFocusSourcePosition({ path: 'other.md', line: 1, column: 1 })
 
