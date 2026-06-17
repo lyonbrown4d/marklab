@@ -57,7 +57,8 @@ start an external LSP process for now.
    tokens. Source diagnostics keep stale-request guards and skip realtime checks
    for very large buffers.
 
-10. [ ] Editor UI integration
+10. [x] Editor UI integration
 
-    Add clear broken-link markers, quick-fix menus, hover cards, command palette
-    actions, and Problems panel shortcuts for language-service actions.
+    Source editor now highlights Markdown and wiki link targets as interactive
+    ranges. These ranges align with hover previews, Ctrl/Cmd click navigation,
+    quick fixes, and rename/reference providers.

@@ -142,6 +142,22 @@
   background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)));
 }
 
+.markdown-source-editor .marklab-source-link-target {
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, hsl(var(--primary)) 8%, transparent);
+  color: color-mix(in srgb, hsl(var(--primary)) 88%, hsl(var(--foreground)));
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, hsl(var(--primary)) 62%, transparent);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.2em;
+}
+
+.markdown-source-editor .marklab-source-link-target:hover {
+  background: color-mix(in srgb, hsl(var(--primary)) 14%, transparent);
+  text-decoration-thickness: 0.14em;
+}
+
 .crepe .milkdown .ProseMirror.marklab-animated-cursor-host {
   caret-color: transparent;
 }

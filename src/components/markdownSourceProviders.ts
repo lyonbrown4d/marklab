@@ -7,6 +7,7 @@ import {
 } from '@/components/markdownSourceCompletion'
 import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
 import { registerMarkdownHoverProvider } from '@/components/markdownSourceHover'
+import { registerMarkdownLinkDecorations } from '@/components/markdownSourceLinkDecorations'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
 
@@ -34,6 +35,7 @@ export const registerMarkdownSourceProviders = ({
     registerMarkdownHoverProvider(monaco, getContext),
     registerMarkdownRenameProvider(monaco, getContext),
     registerMarkdownCodeActionProvider({ monaco, editor, getContext, onOpenFileView }),
+    registerMarkdownLinkDecorations(monaco, editor),
   ]
 
   return {
