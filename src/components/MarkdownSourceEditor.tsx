@@ -15,6 +15,7 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownCompletionProvider } from '@/components/markdownSourceCompletion'
 import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
+import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -52,16 +53,15 @@ const MarkdownSourceEditor = ({
   const diagnosticsDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const definitionDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const referencesDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const renameDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsTimerRef = useRef<number | null>(null)
   const diagnosticsRequestRef = useRef(0)
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const searchHighlightTimerRef = useRef<number | null>(null)
   const completionContextRef = useRef({ activePath, files, fileContents, workspaceIndex })
-  const diagnosticsContextRef = useRef({ activePath, files, fileContents, workspaceIndex })
 
   useEffect(() => {
     completionContextRef.current = { activePath, files, fileContents, workspaceIndex }
-    diagnosticsContextRef.current = { activePath, files, fileContents, workspaceIndex }
   }, [activePath, fileContents, files, workspaceIndex])
 
   useEffect(() => {
@@ -127,7 +127,7 @@ const MarkdownSourceEditor = ({
     if (!host || !model) return
 
     const content = model.getValue()
-    const context = diagnosticsContextRef.current
+    const context = completionContextRef.current
     const requestId = diagnosticsRequestRef.current + 1
     diagnosticsRequestRef.current = requestId
 
@@ -184,6 +184,11 @@ const MarkdownSourceEditor = ({
       monaco as typeof import('monaco-editor'),
       () => completionContextRef.current,
     )
+    renameDisposableRef.current?.dispose()
+    renameDisposableRef.current = registerMarkdownRenameProvider(
+      monaco,
+      () => completionContextRef.current,
+    )
 
     refreshDiagnostics()
   }
@@ -198,6 +203,8 @@ const MarkdownSourceEditor = ({
       definitionDisposableRef.current = null
       referencesDisposableRef.current?.dispose()
       referencesDisposableRef.current = null
+      renameDisposableRef.current?.dispose()
+      renameDisposableRef.current = null
       if (diagnosticsTimerRef.current !== null) {
         window.clearTimeout(diagnosticsTimerRef.current)
         diagnosticsTimerRef.current = null

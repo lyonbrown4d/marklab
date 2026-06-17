@@ -18,6 +18,10 @@ start an external LSP process for now.
 
 3. [ ] Rename references
 
+   First iteration shipped heading rename in the source editor. F2 on a Markdown
+   heading updates the heading text and rewrites workspace links targeting that
+   heading anchor. File rename integration is still pending.
+
    Update Markdown links, wiki links, and heading anchors when files or headings
    are renamed.
 

@@ -18,6 +18,10 @@ export type CompletionRequest = {
   column: number
 }
 
+export type RenameRequest = CompletionRequest & {
+  newName: string
+}
+
 export type DiagnosticsRequest = {
   path: string
   content: string
@@ -40,4 +44,19 @@ export type MarkdownLanguageReference = {
   context: string
   targetAnchor?: string | null
   targetHeadingSlug?: string | null
+}
+
+export type MarkdownLanguageTextEdit = {
+  path: string
+  line: number
+  startColumn: number
+  endColumn: number
+  newText: string
+}
+
+export type MarkdownLanguageRenameResult = {
+  edits: MarkdownLanguageTextEdit[]
+  appliedEdits: number
+  touchedFiles: string[]
+  rejectReason?: string | null
 }

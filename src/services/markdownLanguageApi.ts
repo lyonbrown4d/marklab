@@ -32,9 +32,26 @@ const markdownLanguageReferenceSchema = z.object({
   targetHeadingSlug: z.string().nullable().optional(),
 })
 
+const markdownLanguageTextEditSchema = z.object({
+  path: z.string(),
+  line: z.number(),
+  startColumn: z.number(),
+  endColumn: z.number(),
+  newText: z.string(),
+})
+
+const markdownLanguageRenameResultSchema = z.object({
+  edits: z.array(markdownLanguageTextEditSchema),
+  appliedEdits: z.number(),
+  touchedFiles: z.array(z.string()),
+  rejectReason: z.string().nullable().optional(),
+})
+
 export type MarkdownLanguageCompletionItem = z.infer<typeof markdownLanguageCompletionItemSchema>
 export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
 export type MarkdownLanguageReference = z.infer<typeof markdownLanguageReferenceSchema>
+export type MarkdownLanguageTextEdit = z.infer<typeof markdownLanguageTextEditSchema>
+export type MarkdownLanguageRenameResult = z.infer<typeof markdownLanguageRenameResultSchema>
 
 export const markdownLanguageApi = {
   async getCompletions({
@@ -100,5 +117,28 @@ export const markdownLanguageApi = {
       column,
     })
     return z.array(markdownLanguageReferenceSchema).parse(result)
+  },
+
+  async renameReferences({
+    path,
+    content,
+    line,
+    column,
+    newName,
+  }: {
+    path: string | null
+    content: string
+    line: number
+    column: number
+    newName: string
+  }) {
+    const result = await invoke<unknown>('markdown_language_rename_references', {
+      path,
+      content,
+      line,
+      column,
+      newName,
+    })
+    return markdownLanguageRenameResultSchema.parse(result)
   },
 }

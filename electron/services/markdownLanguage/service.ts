@@ -2,6 +2,7 @@ import type { WorkspaceService } from '@electron/services/workspace/workspaceSer
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
+import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames.js'
 import { getMarkdownReferences } from '@electron/services/markdownLanguage/references.js'
 import type {
   CompletionRequest,
@@ -9,6 +10,8 @@ import type {
   MarkdownLanguageDefinition,
   MarkdownLanguageCompletionItem,
   MarkdownLanguageReference,
+  MarkdownLanguageRenameResult,
+  RenameRequest,
 } from '@electron/services/markdownLanguage/types.js'
 
 type WorkspaceIndexCacheEntry = {
@@ -56,6 +59,14 @@ export class EmbeddedMarkdownLanguageService {
     return getMarkdownReferences(request, () => this.workspaceIndex(workspace))
   }
 
+  async renameReferences(
+    workspace: WorkspaceService,
+    value: unknown,
+  ): Promise<MarkdownLanguageRenameResult> {
+    const request = renameRequest(value)
+    return renameMarkdownReferences(workspace, request, () => this.workspaceIndex(workspace))
+  }
+
   private workspaceIndex(workspace: WorkspaceService): Promise<FsWorkspaceIndex> {
     const now = Date.now()
     const cached = this.indexCache.get(workspace)
@@ -87,6 +98,15 @@ const diagnosticsRequest = (value: unknown): DiagnosticsRequest => {
   return {
     path: stringArg(payload, 'path'),
     content: stringArg(payload, 'content'),
+  }
+}
+
+const renameRequest = (value: unknown): RenameRequest => {
+  const request = completionRequest(value)
+  const payload = objectArg(value)
+  return {
+    ...request,
+    newName: stringArg(payload, 'newName'),
   }
 }
 

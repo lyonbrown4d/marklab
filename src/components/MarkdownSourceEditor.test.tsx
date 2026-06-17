@@ -61,6 +61,7 @@ const monaco = vi.hoisted(() => ({
     },
     registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerReferenceProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    registerRenameProvider: vi.fn(() => ({ dispose: vi.fn() })),
   },
   MarkerSeverity: {
     Error: 1,
@@ -78,6 +79,9 @@ vi.mock('@/services/markdownLanguageApi', () => ({
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDefinition: vi.fn(() => Promise.resolve(null)),
     getReferences: vi.fn(() => Promise.resolve([])),
+    renameReferences: vi.fn(() =>
+      Promise.resolve({ edits: [], appliedEdits: 0, touchedFiles: [], rejectReason: null }),
+    ),
   },
 }))
 
