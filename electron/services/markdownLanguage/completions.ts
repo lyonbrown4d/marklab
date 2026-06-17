@@ -1,0 +1,262 @@
+import { TextDocument } from 'vscode-languageserver-textdocument'
+import { CompletionItemKind } from 'vscode-languageserver-types'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import {
+  createFileLabel,
+  createRelativeLinkTarget,
+  normalizeHeadingAnchor,
+  resolveLinkedFilePath,
+} from '@electron/services/markdownLanguage/linkTargets.js'
+import type {
+  CompletionRequest,
+  MarkdownLanguageCompletionItem,
+} from '@electron/services/markdownLanguage/types.js'
+
+const LANGUAGE_COMPLETIONS = [
+  'bash',
+  'css',
+  'html',
+  'javascript',
+  'json',
+  'markdown',
+  'mermaid',
+  'rust',
+  'shell',
+  'sql',
+  'toml',
+  'tsx',
+  'typescript',
+  'yaml',
+]
+
+const LANGUAGE_ALIASES: Record<string, string[]> = {
+  bash: ['sh'],
+  javascript: ['js'],
+  markdown: ['md'],
+  mermaid: ['mmd'],
+  shell: ['sh'],
+  typescript: ['ts'],
+  yaml: ['yml'],
+}
+
+export const createMarkdownCompletions = async (
+  request: CompletionRequest,
+  workspaceIndex: () => Promise<FsWorkspaceIndex>,
+): Promise<MarkdownLanguageCompletionItem[]> => {
+  const document = TextDocument.create(markdownUri(request.path), 'markdown', 0, request.content)
+  const prefix = getLinePrefix(document, request.line, request.column)
+
+  const fenceContext = getCodeFenceContext(prefix)
+  if (fenceContext) {
+    return languageCompletions(fenceContext.query, fenceContext.replacementStartColumn)
+  }
+
+  const index = await workspaceIndex()
+  const wikiContext = getWikiLinkContext(prefix)
+  if (wikiContext) {
+    return fileCompletions({
+      activePath: request.path,
+      workspaceIndex: index,
+      query: wikiContext.query,
+      replacementStartColumn: wikiContext.replacementStartColumn,
+      mode: 'wiki',
+    })
+  }
+
+  const markdownLinkContext = getMarkdownLinkTargetContext(prefix)
+  if (!markdownLinkContext) return []
+
+  const hashIndex = markdownLinkContext.target.indexOf('#')
+  if (hashIndex >= 0) {
+    return getHeadingCompletions({
+      request,
+      workspaceIndex: index,
+      target: markdownLinkContext.target,
+      hashIndex,
+      replacementStartColumn: markdownLinkContext.replacementStartColumn,
+    })
+  }
+
+  return fileCompletions({
+    activePath: request.path,
+    workspaceIndex: index,
+    query: markdownLinkContext.target,
+    replacementStartColumn: markdownLinkContext.replacementStartColumn,
+    mode: 'markdown',
+  })
+}
+
+const getHeadingCompletions = ({
+  request,
+  workspaceIndex,
+  target,
+  hashIndex,
+  replacementStartColumn,
+}: {
+  request: CompletionRequest
+  workspaceIndex: FsWorkspaceIndex
+  target: string
+  hashIndex: number
+  replacementStartColumn: number
+}) => {
+  const targetBeforeHash = target.slice(0, hashIndex)
+  const query = target.slice(hashIndex + 1)
+  const targetPath = targetBeforeHash.trim()
+    ? resolveLinkedFilePath(request.path, targetBeforeHash, workspaceIndex)
+    : request.path
+  const anchorReplacementStartColumn = replacementStartColumn + hashIndex + 1
+
+  if (targetPath === request.path) {
+    return headingCompletionsFromFile({
+      file: parseMarkdownDocument(request.path ?? '', request.content),
+      query,
+      detailPath: request.path ?? undefined,
+      replacementStartColumn: anchorReplacementStartColumn,
+    })
+  }
+
+  return headingCompletionsFromFile({
+    file: workspaceIndex.files.find((file) => file.path === targetPath),
+    query,
+    detailPath: targetPath ?? undefined,
+    replacementStartColumn: anchorReplacementStartColumn,
+  })
+}
+
+const markdownUri = (path: string | null) => {
+  return `marklab-markdown://${encodeURIComponent(path ?? 'untitled.md')}`
+}
+
+const getLinePrefix = (document: TextDocument, line: number, column: number) => {
+  const zeroBasedLine = Math.max(0, Math.min(document.lineCount - 1, line - 1))
+  const startOffset = document.offsetAt({ line: zeroBasedLine, character: 0 })
+  const endOffset = document.offsetAt({
+    line: zeroBasedLine,
+    character: Math.max(0, column - 1),
+  })
+  return document.getText().slice(startOffset, endOffset)
+}
+
+const getCodeFenceContext = (prefix: string) => {
+  const match = prefix.match(/(^|\s)```([\w+-]*)$/)
+  if (!match) return null
+  const query = match[2] ?? ''
+  return {
+    query,
+    replacementStartColumn: prefix.length - query.length + 1,
+  }
+}
+
+const getWikiLinkContext = (prefix: string) => {
+  const start = prefix.lastIndexOf('[[')
+  if (start < 0) return null
+  const query = prefix.slice(start + 2)
+  if (query.includes(']]')) return null
+  return {
+    query,
+    replacementStartColumn: start + 3,
+  }
+}
+
+const getMarkdownLinkTargetContext = (prefix: string) => {
+  const start = prefix.lastIndexOf('](')
+  if (start < 0) return null
+  const target = prefix.slice(start + 2)
+  if (target.includes(')')) return null
+  return {
+    target,
+    replacementStartColumn: start + 3,
+  }
+}
+
+const languageCompletions = (
+  query: string,
+  replacementStartColumn: number,
+): MarkdownLanguageCompletionItem[] => {
+  const normalizedQuery = query.toLowerCase()
+  return LANGUAGE_COMPLETIONS.filter((language) =>
+    matchesLanguageQuery(language, normalizedQuery),
+  ).map((language) => ({
+    label: language,
+    kind: 'language',
+    insertText: language,
+    detail: 'Code fence language',
+    replacementStartColumn,
+    lspKind: CompletionItemKind.Keyword,
+  }))
+}
+
+const matchesLanguageQuery = (language: string, query: string) => {
+  if (!query) return true
+  return (
+    language.includes(query) || (LANGUAGE_ALIASES[language] ?? []).some((alias) => alias === query)
+  )
+}
+
+const fileCompletions = ({
+  activePath,
+  workspaceIndex,
+  query,
+  replacementStartColumn,
+  mode,
+}: {
+  activePath: string | null
+  workspaceIndex: FsWorkspaceIndex
+  query: string
+  replacementStartColumn: number
+  mode: 'markdown' | 'wiki'
+}): MarkdownLanguageCompletionItem[] => {
+  const normalizedQuery = query.toLowerCase()
+  return workspaceIndex.files
+    .map((file) => file.path)
+    .filter((path) => {
+      const label = createFileLabel(path)
+      return (
+        path.toLowerCase().includes(normalizedQuery) ||
+        label.toLowerCase().includes(normalizedQuery)
+      )
+    })
+    .map((path) => {
+      const label = createFileLabel(path)
+      return {
+        label,
+        kind: 'file',
+        insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
+        detail: path,
+        replacementStartColumn,
+        lspKind: CompletionItemKind.File,
+      }
+    })
+}
+
+const headingCompletionsFromFile = ({
+  file,
+  query,
+  detailPath,
+  replacementStartColumn,
+}: {
+  file?: FsIndexedMarkdownFile
+  query: string
+  detailPath?: string
+  replacementStartColumn: number
+}): MarkdownLanguageCompletionItem[] => {
+  if (!file) return []
+  const normalizedQuery = normalizeHeadingAnchor(query)
+  const lowerQuery = query.toLowerCase()
+  return file.headings
+    .filter((heading) => {
+      if (!query) return true
+      return (
+        heading.slug.includes(normalizedQuery) || heading.text.toLowerCase().includes(lowerQuery)
+      )
+    })
+    .map((heading) => ({
+      label: heading.text,
+      kind: 'heading',
+      insertText: heading.slug,
+      detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
+      replacementStartColumn,
+      lspKind: CompletionItemKind.Reference,
+    }))
+}

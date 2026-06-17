@@ -7,9 +7,9 @@ type CompletionProviderMock = {
   provideCompletionItems: (
     model: { getValue: () => string },
     position: { lineNumber: number; column: number },
-  ) => {
+  ) => Promise<{
     suggestions: Array<Record<string, unknown>>
-  }
+  }>
 }
 
 const monacoEditor = vi.hoisted(() => ({
@@ -68,6 +68,13 @@ const monaco = vi.hoisted(() => ({
 
 vi.mock('@/lib/monaco', () => ({
   configureMonaco: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/services/markdownLanguageApi', () => ({
+  markdownLanguageApi: {
+    getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
+    getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
+  },
 }))
 
 vi.mock('@monaco-editor/react', () => ({
@@ -131,7 +138,7 @@ describe('MarkdownSourceEditor', () => {
     expect(providerCall?.[0]).toBe('markdown')
 
     const provider = providerCall?.[1]
-    const result = provider?.provideCompletionItems(
+    const result = await provider?.provideCompletionItems(
       { getValue: () => 'See [Target](' },
       { lineNumber: 1, column: 14 },
     )

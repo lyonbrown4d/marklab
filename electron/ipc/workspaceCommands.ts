@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
+import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
 import { isMarkdownPath, normalizeRelativePath } from '@electron/services/workspace/path.js'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
@@ -39,6 +40,8 @@ const createWorkspaceCommandHandlers = (
   workspaceForEvent: WorkspaceForEvent,
   exportService: ExportService,
 ): NativeCommandHandlers => {
+  const markdownLanguageService = new EmbeddedMarkdownLanguageService()
+
   return {
     fs_get_root_info: (_payload, event) => workspaceForEvent(event).rootInfo(),
     fs_get_snapshot: (_payload, event) => workspaceForEvent(event).snapshot(),
@@ -72,6 +75,10 @@ const createWorkspaceCommandHandlers = (
       workspaceForEvent(event).importMarkdownAssetBase64(payload),
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
+    markdown_language_get_completions: (payload, event) =>
+      markdownLanguageService.getCompletions(workspaceForEvent(event), payload),
+    markdown_language_get_diagnostics: (payload, event) =>
+      markdownLanguageService.getDiagnostics(workspaceForEvent(event), payload),
     list_markdown_files: (payload) => listMarkdownFiles(payload),
     read_markdown_file: (payload) => readMarkdownFile(payload),
     write_markdown_file: (payload) => writeMarkdownFile(payload),

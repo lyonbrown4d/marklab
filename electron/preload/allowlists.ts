@@ -32,6 +32,8 @@ const allowedCommandNames = [
   'fs_import_markdown_asset',
   'fs_import_markdown_asset_base64',
   'fs_resolve_markdown_asset',
+  'markdown_language_get_completions',
+  'markdown_language_get_diagnostics',
   'list_markdown_files',
   'read_markdown_file',
   'write_markdown_file',

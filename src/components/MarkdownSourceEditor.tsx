@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
-import type { editor as MonacoEditor, IPosition, languages as MonacoLanguages } from 'monaco-editor'
+import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
-import { getMarkdownCompletions } from '@/logic/markdownCompletions'
 import {
   getMarkdownSourceDiagnostics,
   MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
 } from '@/logic/markdownDiagnostics'
 import type { FileEntry } from '@/store/appTypes'
-import { fsApi, type FsMarkdownDiagnostic, type FsWorkspaceIndex } from '@/services/fsApi'
+import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@/services/fsApi'
+import { markdownLanguageApi } from '@/services/markdownLanguageApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { registerMarkdownCompletionProvider } from '@/components/markdownSourceCompletion'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -125,8 +126,8 @@ const MarkdownSourceEditor = ({
     diagnosticsRequestRef.current = requestId
 
     if (isDesktopRuntime() && context.activePath) {
-      void fsApi
-        .analyzeMarkdownBuffer(context.activePath, content)
+      void markdownLanguageApi
+        .getDiagnostics({ path: context.activePath, content })
         .then((diagnostics) => {
           if (diagnosticsRequestRef.current !== requestId) return
           applyDiagnostics(diagnostics)
@@ -160,35 +161,10 @@ const MarkdownSourceEditor = ({
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
     completionDisposableRef.current?.dispose()
-    completionDisposableRef.current = monaco.languages.registerCompletionItemProvider('markdown', {
-      triggerCharacters: ['[', '(', '#', '/', '`'],
-      provideCompletionItems: (model: MonacoEditor.ITextModel, position: IPosition) => {
-        const context = completionContextRef.current
-        const suggestions: MonacoLanguages.CompletionItem[] = getMarkdownCompletions({
-          ...context,
-          content: model.getValue(),
-          line: position.lineNumber,
-          column: position.column,
-        }).map((item) => ({
-          label: item.label,
-          kind:
-            item.kind === 'file'
-              ? monaco.languages.CompletionItemKind.File
-              : item.kind === 'heading'
-                ? monaco.languages.CompletionItemKind.Reference
-                : monaco.languages.CompletionItemKind.Keyword,
-          insertText: item.insertText,
-          detail: item.detail,
-          range: new monaco.Range(
-            position.lineNumber,
-            item.replacementStartColumn,
-            position.lineNumber,
-            position.column,
-          ),
-        }))
-        return { suggestions }
-      },
-    })
+    completionDisposableRef.current = registerMarkdownCompletionProvider(
+      monaco as typeof import('monaco-editor'),
+      () => completionContextRef.current,
+    )
     diagnosticsDisposableRef.current?.dispose()
     diagnosticsDisposableRef.current = editor.onDidChangeModelContent(() => scheduleDiagnostics())
 
