@@ -60,3 +60,17 @@ export type MarkdownLanguageRenameResult = {
   touchedFiles: string[]
   rejectReason?: string | null
 }
+
+export type MarkdownLanguageCodeAction =
+  | {
+      title: string
+      kind: 'create-file'
+      path: string
+      isPreferred?: boolean
+    }
+  | {
+      title: string
+      kind: 'replace-text'
+      edit: MarkdownLanguageTextEdit
+      isPreferred?: boolean
+    }

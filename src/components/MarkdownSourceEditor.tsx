@@ -12,10 +12,7 @@ import { markdownLanguageApi } from '@/services/markdownLanguageApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { registerMarkdownCompletionProvider } from '@/components/markdownSourceCompletion'
-import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
-import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
-import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
+import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -49,11 +46,7 @@ const MarkdownSourceEditor = ({
     editor: Parameters<OnMount>[0]
     monaco: typeof import('monaco-editor')
   } | null>(null)
-  const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const diagnosticsDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const definitionDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const referencesDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const renameDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsTimerRef = useRef<number | null>(null)
   const diagnosticsRequestRef = useRef(0)
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
@@ -166,45 +159,22 @@ const MarkdownSourceEditor = ({
     editorRef.current = editor
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
-    completionDisposableRef.current?.dispose()
-    completionDisposableRef.current = registerMarkdownCompletionProvider(
-      monaco as typeof import('monaco-editor'),
-      () => completionContextRef.current,
-    )
-    diagnosticsDisposableRef.current?.dispose()
-    diagnosticsDisposableRef.current = editor.onDidChangeModelContent(() => scheduleDiagnostics())
-    definitionDisposableRef.current?.dispose()
-    definitionDisposableRef.current = registerMarkdownDefinitionClick({
+    providersDisposableRef.current?.dispose()
+    providersDisposableRef.current = registerMarkdownSourceProviders({
+      monaco: monaco as typeof import('monaco-editor'),
       editor,
       getContext: () => completionContextRef.current,
       onOpenFileView,
+      scheduleDiagnostics,
     })
-    referencesDisposableRef.current?.dispose()
-    referencesDisposableRef.current = registerMarkdownReferenceProvider(
-      monaco as typeof import('monaco-editor'),
-      () => completionContextRef.current,
-    )
-    renameDisposableRef.current?.dispose()
-    renameDisposableRef.current = registerMarkdownRenameProvider(
-      monaco,
-      () => completionContextRef.current,
-    )
 
     refreshDiagnostics()
   }
 
   useEffect(() => {
     return () => {
-      completionDisposableRef.current?.dispose()
-      completionDisposableRef.current = null
-      diagnosticsDisposableRef.current?.dispose()
-      diagnosticsDisposableRef.current = null
-      definitionDisposableRef.current?.dispose()
-      definitionDisposableRef.current = null
-      referencesDisposableRef.current?.dispose()
-      referencesDisposableRef.current = null
-      renameDisposableRef.current?.dispose()
-      renameDisposableRef.current = null
+      providersDisposableRef.current?.dispose()
+      providersDisposableRef.current = null
       if (diagnosticsTimerRef.current !== null) {
         window.clearTimeout(diagnosticsTimerRef.current)
         diagnosticsTimerRef.current = null

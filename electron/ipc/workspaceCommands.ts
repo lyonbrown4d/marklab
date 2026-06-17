@@ -85,6 +85,8 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getReferences(workspaceForEvent(event), payload),
     markdown_language_rename_references: (payload, event) =>
       markdownLanguageService.renameReferences(workspaceForEvent(event), payload),
+    markdown_language_get_code_actions: (payload, event) =>
+      markdownLanguageService.getCodeActions(workspaceForEvent(event), payload),
     list_markdown_files: (payload) => listMarkdownFiles(payload),
     read_markdown_file: (payload) => readMarkdownFile(payload),
     write_markdown_file: (payload) => writeMarkdownFile(payload),

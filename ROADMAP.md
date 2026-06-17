@@ -25,10 +25,10 @@ start an external LSP process for now.
    Update Markdown links, wiki links, and heading anchors when files or headings
    are renamed.
 
-4. [ ] Code actions
+4. [x] Code actions
 
-   Offer quick fixes for broken links, broken anchors, missing files, and link
-   format conversions.
+   Offer quick fixes for broken links and broken anchors. First iteration
+   supports creating missing Markdown files and removing missing heading anchors.
 
 5. [ ] Hover preview
 

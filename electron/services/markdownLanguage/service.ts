@@ -1,5 +1,6 @@
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
 import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames.js'
@@ -7,6 +8,7 @@ import { getMarkdownReferences } from '@electron/services/markdownLanguage/refer
 import type {
   CompletionRequest,
   DiagnosticsRequest,
+  MarkdownLanguageCodeAction,
   MarkdownLanguageDefinition,
   MarkdownLanguageCompletionItem,
   MarkdownLanguageReference,
@@ -65,6 +67,14 @@ export class EmbeddedMarkdownLanguageService {
   ): Promise<MarkdownLanguageRenameResult> {
     const request = renameRequest(value)
     return renameMarkdownReferences(workspace, request, () => this.workspaceIndex(workspace))
+  }
+
+  async getCodeActions(
+    workspace: WorkspaceService,
+    value: unknown,
+  ): Promise<MarkdownLanguageCodeAction[]> {
+    const request = completionRequest(value)
+    return getMarkdownCodeActions(request, () => this.workspaceIndex(workspace))
   }
 
   private workspaceIndex(workspace: WorkspaceService): Promise<FsWorkspaceIndex> {

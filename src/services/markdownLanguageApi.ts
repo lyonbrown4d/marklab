@@ -47,11 +47,27 @@ const markdownLanguageRenameResultSchema = z.object({
   rejectReason: z.string().nullable().optional(),
 })
 
+const markdownLanguageCodeActionSchema = z.discriminatedUnion('kind', [
+  z.object({
+    title: z.string(),
+    kind: z.literal('create-file'),
+    path: z.string(),
+    isPreferred: z.boolean().optional(),
+  }),
+  z.object({
+    title: z.string(),
+    kind: z.literal('replace-text'),
+    edit: markdownLanguageTextEditSchema,
+    isPreferred: z.boolean().optional(),
+  }),
+])
+
 export type MarkdownLanguageCompletionItem = z.infer<typeof markdownLanguageCompletionItemSchema>
 export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
 export type MarkdownLanguageReference = z.infer<typeof markdownLanguageReferenceSchema>
 export type MarkdownLanguageTextEdit = z.infer<typeof markdownLanguageTextEditSchema>
 export type MarkdownLanguageRenameResult = z.infer<typeof markdownLanguageRenameResultSchema>
+export type MarkdownLanguageCodeAction = z.infer<typeof markdownLanguageCodeActionSchema>
 
 export const markdownLanguageApi = {
   async getCompletions({
@@ -140,5 +156,25 @@ export const markdownLanguageApi = {
       newName,
     })
     return markdownLanguageRenameResultSchema.parse(result)
+  },
+
+  async getCodeActions({
+    path,
+    content,
+    line,
+    column,
+  }: {
+    path: string | null
+    content: string
+    line: number
+    column: number
+  }) {
+    const result = await invoke<unknown>('markdown_language_get_code_actions', {
+      path,
+      content,
+      line,
+      column,
+    })
+    return z.array(markdownLanguageCodeActionSchema).parse(result)
   },
 }
