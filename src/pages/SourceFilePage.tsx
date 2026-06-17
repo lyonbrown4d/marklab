@@ -27,6 +27,7 @@ const SourceFilePage = () => {
       fileContents={context.fileContents}
       workspaceIndex={context.workspaceIndex}
       onChange={context.onEditorChange}
+      onOpenFileView={context.onOpenFileView}
       showStatusBar={context.showEditorStatusBar}
     />
   )

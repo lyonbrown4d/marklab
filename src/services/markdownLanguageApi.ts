@@ -11,7 +11,17 @@ const markdownLanguageCompletionItemSchema = z.object({
   lspKind: z.number(),
 })
 
+const markdownLanguageDefinitionSchema = z
+  .object({
+    path: z.string(),
+    line: z.number(),
+    column: z.number(),
+    endColumn: z.number().optional(),
+  })
+  .nullable()
+
 export type MarkdownLanguageCompletionItem = z.infer<typeof markdownLanguageCompletionItemSchema>
+export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
 
 export const markdownLanguageApi = {
   async getCompletions({
@@ -37,5 +47,25 @@ export const markdownLanguageApi = {
   async getDiagnostics({ path, content }: { path: string; content: string }) {
     const result = await invoke<unknown>('markdown_language_get_diagnostics', { path, content })
     return z.array(fsMarkdownDiagnosticSchema).parse(result)
+  },
+
+  async getDefinition({
+    path,
+    content,
+    line,
+    column,
+  }: {
+    path: string | null
+    content: string
+    line: number
+    column: number
+  }) {
+    const result = await invoke<unknown>('markdown_language_get_definition', {
+      path,
+      content,
+      line,
+      column,
+    })
+    return markdownLanguageDefinitionSchema.parse(result)
   },
 }

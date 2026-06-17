@@ -22,3 +22,10 @@ export type DiagnosticsRequest = {
   path: string
   content: string
 }
+
+export type MarkdownLanguageDefinition = {
+  path: string
+  line: number
+  column: number
+  endColumn?: number
+}

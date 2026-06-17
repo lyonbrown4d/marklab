@@ -1,9 +1,11 @@
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
+import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
 import type {
   CompletionRequest,
   DiagnosticsRequest,
+  MarkdownLanguageDefinition,
   MarkdownLanguageCompletionItem,
 } from '@electron/services/markdownLanguage/types.js'
 
@@ -34,6 +36,14 @@ export class EmbeddedMarkdownLanguageService {
       path: request.path,
       content: request.content,
     })
+  }
+
+  async getDefinition(
+    workspace: WorkspaceService,
+    value: unknown,
+  ): Promise<MarkdownLanguageDefinition | null> {
+    const request = completionRequest(value)
+    return getMarkdownDefinition(request, () => this.workspaceIndex(workspace))
   }
 
   private workspaceIndex(workspace: WorkspaceService): Promise<FsWorkspaceIndex> {

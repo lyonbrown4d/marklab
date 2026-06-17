@@ -34,6 +34,7 @@ const allowedCommandNames = [
   'fs_resolve_markdown_asset',
   'markdown_language_get_completions',
   'markdown_language_get_diagnostics',
+  'markdown_language_get_definition',
   'list_markdown_files',
   'read_markdown_file',
   'write_markdown_file',

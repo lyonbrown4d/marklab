@@ -79,6 +79,8 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getCompletions(workspaceForEvent(event), payload),
     markdown_language_get_diagnostics: (payload, event) =>
       markdownLanguageService.getDiagnostics(workspaceForEvent(event), payload),
+    markdown_language_get_definition: (payload, event) =>
+      markdownLanguageService.getDefinition(workspaceForEvent(event), payload),
     list_markdown_files: (payload) => listMarkdownFiles(payload),
     read_markdown_file: (payload) => readMarkdownFile(payload),
     write_markdown_file: (payload) => writeMarkdownFile(payload),

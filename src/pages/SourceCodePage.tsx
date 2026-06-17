@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useMemo } from 'react'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
-import type { FileEntry } from '@/store/appTypes'
+import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useDocumentStats } from '@/pages/useDocumentStats'
@@ -12,6 +12,7 @@ type SourceCodePageProps = {
   fileContents: Record<string, string>
   workspaceIndex: FsWorkspaceIndex | null
   onChange: (value: string) => void
+  onOpenFileView?: (path: string, view: FileViewKind) => void
   showStatusBar: boolean
 }
 const SourceCodePage = ({
@@ -21,6 +22,7 @@ const SourceCodePage = ({
   fileContents,
   workspaceIndex,
   onChange,
+  onOpenFileView,
   showStatusBar,
 }: SourceCodePageProps) => {
   const { t } = useI18n()
@@ -48,6 +50,7 @@ const SourceCodePage = ({
                 fileContents={sourceFileContents}
                 workspaceIndex={workspaceIndex}
                 onChange={onChange}
+                onOpenFileView={onOpenFileView}
               />
             </Suspense>
           </div>

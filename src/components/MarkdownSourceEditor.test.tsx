@@ -24,6 +24,7 @@ const monacoEditor = vi.hoisted(() => ({
   })),
   getModel: vi.fn(),
   onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),
+  onMouseDown: vi.fn(() => ({ dispose: vi.fn() })),
 }))
 
 const monaco = vi.hoisted(() => ({
@@ -74,6 +75,7 @@ vi.mock('@/services/markdownLanguageApi', () => ({
   markdownLanguageApi: {
     getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
+    getDefinition: vi.fn(() => Promise.resolve(null)),
   },
 }))
 

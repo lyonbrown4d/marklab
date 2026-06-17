@@ -6,13 +6,14 @@ import {
   getMarkdownSourceDiagnostics,
   MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
 } from '@/logic/markdownDiagnostics'
-import type { FileEntry } from '@/store/appTypes'
+import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@/services/fsApi'
 import { markdownLanguageApi } from '@/services/markdownLanguageApi'
 import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownCompletionProvider } from '@/components/markdownSourceCompletion'
+import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -21,6 +22,7 @@ type MarkdownSourceEditorProps = {
   fileContents: Record<string, string>
   workspaceIndex?: FsWorkspaceIndex | null
   onChange: (value: string) => void
+  onOpenFileView?: (path: string, view: FileViewKind) => void
 }
 
 const MarkdownSourceEditor = ({
@@ -30,6 +32,7 @@ const MarkdownSourceEditor = ({
   fileContents,
   workspaceIndex,
   onChange,
+  onOpenFileView,
 }: MarkdownSourceEditorProps) => {
   const darkMode = useDarkMode()
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
@@ -46,6 +49,7 @@ const MarkdownSourceEditor = ({
   } | null>(null)
   const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const definitionDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsTimerRef = useRef<number | null>(null)
   const diagnosticsRequestRef = useRef(0)
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
@@ -167,6 +171,12 @@ const MarkdownSourceEditor = ({
     )
     diagnosticsDisposableRef.current?.dispose()
     diagnosticsDisposableRef.current = editor.onDidChangeModelContent(() => scheduleDiagnostics())
+    definitionDisposableRef.current?.dispose()
+    definitionDisposableRef.current = registerMarkdownDefinitionClick({
+      editor,
+      getContext: () => completionContextRef.current,
+      onOpenFileView,
+    })
 
     refreshDiagnostics()
   }
@@ -177,6 +187,8 @@ const MarkdownSourceEditor = ({
       completionDisposableRef.current = null
       diagnosticsDisposableRef.current?.dispose()
       diagnosticsDisposableRef.current = null
+      definitionDisposableRef.current?.dispose()
+      definitionDisposableRef.current = null
       if (diagnosticsTimerRef.current !== null) {
         window.clearTimeout(diagnosticsTimerRef.current)
         diagnosticsTimerRef.current = null
