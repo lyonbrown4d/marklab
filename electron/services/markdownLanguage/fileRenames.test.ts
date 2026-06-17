@@ -110,4 +110,64 @@ describe('rewriteMarkdownFileReferencesForRename', () => {
     })
     expect(updateBuffer).not.toHaveBeenCalled()
   })
+
+  it('reads each touched source file once while applying multiple link edits', async () => {
+    const { host, readFile, updateBuffer } = createHost({
+      'notes/current.md': 'See [A](target.md)\nSee [B](target.md#two)',
+    })
+    const workspaceIndex = {
+      files: [
+        {
+          path: 'notes/current.md',
+          headings: [],
+          links: [
+            {
+              source_path: 'notes/current.md',
+              text: 'A',
+              target: 'target.md',
+              link_type: 'markdown',
+              target_path: 'notes/target.md',
+              target_anchor: null,
+              target_heading_slug: null,
+              is_external: false,
+              context: 'See [A](target.md)',
+              line: 1,
+              column: 5,
+            },
+            {
+              source_path: 'notes/current.md',
+              text: 'B',
+              target: 'target.md#two',
+              link_type: 'markdown',
+              target_path: 'notes/target.md',
+              target_anchor: 'two',
+              target_heading_slug: 'two',
+              is_external: false,
+              context: 'See [B](target.md#two)',
+              line: 2,
+              column: 5,
+            },
+          ],
+          assets: [],
+        },
+      ],
+    } satisfies FsWorkspaceIndex
+
+    const result = await rewriteMarkdownFileReferencesForRename({
+      host,
+      workspaceIndex,
+      fromPath: 'notes/target.md',
+      toPath: 'notes/final.md',
+    })
+
+    expect(result).toEqual({
+      appliedEdits: 2,
+      touchedFiles: ['notes/current.md'],
+    })
+    expect(readFile).toHaveBeenCalledTimes(1)
+    expect(updateBuffer).toHaveBeenCalledWith({
+      path: 'notes/current.md',
+      content: 'See [A](final.md)\nSee [B](final.md#two)',
+    })
+  })
 })

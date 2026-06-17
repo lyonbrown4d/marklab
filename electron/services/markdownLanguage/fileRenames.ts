@@ -27,6 +27,7 @@ export const rewriteMarkdownFileReferencesForRename = async ({
   toPath: string
 }): Promise<MarkdownFileRenameRewriteResult> => {
   const editsByPath = new Map<string, MarkdownLanguageTextEdit[]>()
+  const contentByPath = new Map<string, string>()
 
   for (const file of workspaceIndex.files) {
     const sourcePath = movedPath(file.path, fromPath, toPath)
@@ -36,7 +37,7 @@ export const rewriteMarkdownFileReferencesForRename = async ({
 
       const edit = linkTargetEdit({
         path: sourcePath,
-        content: await host.readFile({ path: sourcePath }),
+        content: await readFileCached(host, contentByPath, sourcePath),
         link,
         sourcePath,
         targetPath,
@@ -49,7 +50,7 @@ export const rewriteMarkdownFileReferencesForRename = async ({
     }
   }
 
-  return applyEdits(host, editsByPath)
+  return applyEdits(host, contentByPath, editsByPath)
 }
 
 const movedPath = (value: string, fromPath: string, toPath: string) => {
@@ -96,13 +97,14 @@ const nextLinkTarget = (link: FsMarkdownLink, sourcePath: string, targetPath: st
 
 const applyEdits = async (
   host: RewriteHost,
+  contentByPath: Map<string, string>,
   editsByPath: Map<string, MarkdownLanguageTextEdit[]>,
 ) => {
   let appliedEdits = 0
   const touchedFiles: string[] = []
 
   for (const [path, edits] of editsByPath) {
-    const content = await host.readFile({ path })
+    const content = await readFileCached(host, contentByPath, path)
     const nextContent = applyTextEdits(content, edits)
     if (nextContent === content) continue
     host.updateBuffer({ path, content: nextContent })
@@ -111,6 +113,19 @@ const applyEdits = async (
   }
 
   return { appliedEdits, touchedFiles }
+}
+
+const readFileCached = async (
+  host: RewriteHost,
+  contentByPath: Map<string, string>,
+  path: string,
+) => {
+  const cached = contentByPath.get(path)
+  if (cached != null) return cached
+
+  const content = await host.readFile({ path })
+  contentByPath.set(path, content)
+  return content
 }
 
 const applyTextEdits = (content: string, edits: MarkdownLanguageTextEdit[]) => {
