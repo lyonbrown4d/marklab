@@ -170,4 +170,48 @@ describe('rewriteMarkdownFileReferencesForRename', () => {
       content: 'See [A](final.md)\nSee [B](final.md#two)',
     })
   })
+
+  it('skips reads when a moved folder keeps relative link text unchanged', async () => {
+    const { host, readFile, updateBuffer } = createHost({
+      'notes/current.md': 'See [Target](target.md)',
+    })
+    const workspaceIndex = {
+      files: [
+        {
+          path: 'docs/current.md',
+          headings: [],
+          links: [
+            {
+              source_path: 'docs/current.md',
+              text: 'Target',
+              target: 'target.md',
+              link_type: 'markdown',
+              target_path: 'docs/target.md',
+              target_anchor: null,
+              target_heading_slug: null,
+              is_external: false,
+              context: 'See [Target](target.md)',
+              line: 1,
+              column: 5,
+            },
+          ],
+          assets: [],
+        },
+      ],
+    } satisfies FsWorkspaceIndex
+
+    const result = await rewriteMarkdownFileReferencesForRename({
+      host,
+      workspaceIndex,
+      fromPath: 'docs',
+      toPath: 'notes',
+    })
+
+    expect(result).toEqual({
+      appliedEdits: 0,
+      touchedFiles: [],
+    })
+    expect(readFile).not.toHaveBeenCalled()
+    expect(updateBuffer).not.toHaveBeenCalled()
+  })
 })

@@ -35,12 +35,16 @@ export const rewriteMarkdownFileReferencesForRename = async ({
       const targetPath = link.target_path ? movedPath(link.target_path, fromPath, toPath) : null
       if (!targetPath || targetPath === link.target_path) continue
 
+      if (sourcePath === targetPath && link.target.startsWith('#')) continue
+
+      const nextTarget = nextLinkTarget(link, sourcePath, targetPath)
+      if (nextTarget === link.target) continue
+
       const edit = linkTargetEdit({
         path: sourcePath,
         content: await readFileCached(host, contentByPath, sourcePath),
         link,
-        sourcePath,
-        targetPath,
+        nextTarget,
       })
       if (!edit) continue
 
@@ -63,17 +67,13 @@ const linkTargetEdit = ({
   path,
   content,
   link,
-  sourcePath,
-  targetPath,
+  nextTarget,
 }: {
   path: string
   content: string
   link: FsMarkdownLink
-  sourcePath: string
-  targetPath: string
+  nextTarget: string
 }): MarkdownLanguageTextEdit | null => {
-  if (sourcePath === targetPath && link.target.startsWith('#')) return null
-
   const lineText = content.split(/\r?\n/)[link.line - 1] ?? ''
   const searchStart = Math.max(0, link.column - 1)
   const targetStart = lineText.indexOf(link.target, searchStart)
@@ -85,7 +85,7 @@ const linkTargetEdit = ({
     line: link.line,
     startColumn: fallbackStart + 1,
     endColumn: fallbackStart + link.target.length + 1,
-    newText: nextLinkTarget(link, sourcePath, targetPath),
+    newText: nextTarget,
   }
 }
 
