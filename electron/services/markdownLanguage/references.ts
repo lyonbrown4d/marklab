@@ -5,6 +5,7 @@ import type {
   CompletionRequest,
   MarkdownLanguageReference,
 } from '@electron/services/markdownLanguage/types.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
 type ReferenceTarget = {
   path: string
@@ -17,12 +18,11 @@ export const getMarkdownReferences = async (
 ): Promise<MarkdownLanguageReference[]> => {
   if (!request.path) return []
 
-  const indexPromise = workspaceIndex()
-  const target = await getReferenceTarget(request, () => indexPromise)
+  const context = createMarkdownRequestContext(request, await workspaceIndex())
+  const target = await getReferenceTarget(request, () => Promise.resolve(context.index))
   if (!target) return []
 
-  const index = await indexPromise
-  return index.files.flatMap((file) =>
+  return context.index.files.flatMap((file) =>
     file.links
       .filter((link) => {
         if (link.is_external || link.target_path !== target.path) return false
