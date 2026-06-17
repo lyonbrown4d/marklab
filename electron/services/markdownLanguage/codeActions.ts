@@ -12,9 +12,10 @@ export const getMarkdownCodeActions = async (
 ): Promise<MarkdownLanguageCodeAction[]> => {
   if (!request.path) return []
 
-  const index = await workspaceIndex()
-  const filesByPath = new Map(index.files.map((file) => [file.path, file]))
   const currentFile = parseMarkdownDocument(request.path, request.content)
+  const index = await workspaceIndex()
+  const indexedFiles = [currentFile, ...index.files.filter((file) => file.path !== request.path)]
+  const filesByPath = new Map(indexedFiles.map((file) => [file.path, file]))
   const lineText = request.content.split(/\r?\n/)[request.line - 1] ?? ''
   const actions: MarkdownLanguageCodeAction[] = []
 
@@ -22,7 +23,7 @@ export const getMarkdownCodeActions = async (
     if (link.is_external) continue
     if (!isCursorOnLinkTarget(lineText, request.column, link)) continue
 
-    const targetPath = resolveIndexedLinkPath(link, filesByPath, index.files)
+    const targetPath = resolveIndexedLinkPath(link, filesByPath, indexedFiles)
     const targetFile = targetPath ? filesByPath.get(targetPath) : null
 
     if (link.target_path && !targetFile) {

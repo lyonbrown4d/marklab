@@ -78,4 +78,10 @@ describe('getMarkdownCodeActions', () => {
 
     expect(actions).toEqual([])
   })
+
+  it('uses unsaved current-document headings before offering anchor quick fixes', async () => {
+    const actions = await getActions('See [Draft](#draft)\n\n## Draft', 14)
+
+    expect(actions).toEqual([])
+  })
 })
