@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
 import { isMarkdownPath, workspaceRootForAssets } from '@electron/services/workspace/path.js'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   FsBufferStatus,
   FsPathMetadata,
@@ -150,9 +152,26 @@ export class WorkspaceFileService extends WorkspaceBase {
     const from = stringArg(value, 'from')
     const to = stringArg(value, 'to')
     const target = this.resolve(to)
+    const workspaceIndex = await this.getWorkspaceIndexForRename()
     await fs.promises.mkdir(path.dirname(target), { recursive: true })
     await fs.promises.rename(this.resolve(from), target)
     this.buffers.rename(from, to)
+    if (workspaceIndex) {
+      const rewrite = await rewriteMarkdownFileReferencesForRename({
+        host: this,
+        workspaceIndex,
+        fromPath: from,
+        toPath: to,
+      })
+      if (rewrite.appliedEdits > 0) {
+        this.logger.info('markdown rename references updated', {
+          from,
+          to,
+          appliedEdits: rewrite.appliedEdits,
+          touchedFiles: rewrite.touchedFiles.length,
+        })
+      }
+    }
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path renamed', { from, to })
   }
@@ -199,5 +218,12 @@ export class WorkspaceFileService extends WorkspaceBase {
     if (error) this.logger.warn('open path in system failed', { path: metadata.path, error })
     if (error) throw new Error(`Failed to open path: ${error}`)
     this.logger.info('path opened in system', { path: metadata.path })
+  }
+
+  private async getWorkspaceIndexForRename(): Promise<FsWorkspaceIndex | null> {
+    const service = this as unknown as {
+      workspaceIndex?: () => Promise<FsWorkspaceIndex>
+    }
+    return service.workspaceIndex ? service.workspaceIndex().catch(() => null) : null
   }
 }
