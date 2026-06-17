@@ -1,10 +1,10 @@
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
 import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   CompletionRequest,
   MarkdownLanguageCodeAction,
 } from '@electron/services/markdownLanguage/types.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
 export const getMarkdownCodeActions = async (
   request: CompletionRequest,
@@ -12,18 +12,18 @@ export const getMarkdownCodeActions = async (
 ): Promise<MarkdownLanguageCodeAction[]> => {
   if (!request.path) return []
 
-  const currentFile = parseMarkdownDocument(request.path, request.content)
-  const index = await workspaceIndex()
-  const indexedFiles = [currentFile, ...index.files.filter((file) => file.path !== request.path)]
-  const filesByPath = new Map(indexedFiles.map((file) => [file.path, file]))
+  const context = createMarkdownRequestContext(request, await workspaceIndex())
+  if (!context.currentFile) return []
+
+  const filesByPath = new Map(context.index.files.map((file) => [file.path, file]))
   const lineText = request.content.split(/\r?\n/)[request.line - 1] ?? ''
   const actions: MarkdownLanguageCodeAction[] = []
 
-  for (const link of currentFile.links.filter((item) => item.line === request.line)) {
+  for (const link of context.currentFile.links.filter((item) => item.line === request.line)) {
     if (link.is_external) continue
     if (!isCursorOnLinkTarget(lineText, request.column, link)) continue
 
-    const targetPath = resolveIndexedLinkPath(link, filesByPath, indexedFiles)
+    const targetPath = resolveIndexedLinkPath(link, filesByPath, context.index.files)
     const targetFile = targetPath ? filesByPath.get(targetPath) : null
 
     if (link.target_path && !targetFile) {

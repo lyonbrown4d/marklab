@@ -6,13 +6,14 @@ import type {
 } from '@electron/services/markdownLanguage/types.js'
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
 export const getMarkdownHover = async (
   request: CompletionRequest,
   workspaceIndex: () => Promise<FsWorkspaceIndex>,
 ): Promise<MarkdownLanguageHover | null> => {
   const index = await workspaceIndex()
-  const indexForRequest = indexWithCurrentDocument(request, index)
+  const { index: indexForRequest } = createMarkdownRequestContext(request, index)
   const definition = await getMarkdownDefinition(request, () => Promise.resolve(indexForRequest))
   if (!definition) return getBrokenLinkHover(request, indexForRequest)
 
@@ -30,19 +31,6 @@ export const getMarkdownHover = async (
       line: definition.line,
       heading: heading?.text ?? null,
     }),
-  }
-}
-
-const indexWithCurrentDocument = (
-  request: CompletionRequest,
-  index: FsWorkspaceIndex,
-): FsWorkspaceIndex => {
-  if (!request.path) return index
-
-  const currentFile = parseMarkdownDocument(request.path, request.content)
-  return {
-    ...index,
-    files: [currentFile, ...index.files.filter((file) => file.path !== request.path)],
   }
 }
 
