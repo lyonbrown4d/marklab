@@ -17,6 +17,8 @@ export const diagnosticsForFile = (
   const file = filesByPath.get(filePath)
   if (!file) return diagnostics
 
+  diagnostics.push(...duplicateHeadingDiagnostics(file))
+
   for (const link of file.links) {
     if (link.is_external) continue
 
@@ -25,6 +27,18 @@ export const diagnosticsForFile = (
 
     const targetFile = filesByPath.get(targetPath)
     if (!targetFile) {
+      const casingMatch = findPathIgnoringCase(filesByPath.keys(), targetPath)
+      if (casingMatch) {
+        diagnostics.push(
+          markdownDiagnostic(
+            link,
+            `Linked file path casing differs from workspace path "${casingMatch}"`,
+            'warning',
+          ),
+        )
+        continue
+      }
+
       diagnostics.push(
         markdownDiagnostic(link, `Cannot find linked file "${link.target}"`, 'error'),
       )
@@ -47,6 +61,18 @@ export const diagnosticsForFile = (
       if (asset.is_external || !asset.target_path) continue
       if (knownPaths.has(asset.target_path)) continue
 
+      const casingMatch = findPathIgnoringCase(knownPaths, asset.target_path)
+      if (casingMatch) {
+        diagnostics.push({
+          line: asset.line,
+          start_column: asset.column,
+          end_column: asset.column + charLength(asset.target),
+          message: `Local asset path casing differs from workspace path "${casingMatch}"`,
+          severity: 'warning',
+        })
+        continue
+      }
+
       diagnostics.push({
         line: asset.line,
         start_column: asset.column,
@@ -55,6 +81,31 @@ export const diagnosticsForFile = (
         severity: 'error',
       })
     }
+  }
+
+  return diagnostics
+}
+
+const duplicateHeadingDiagnostics = (
+  file: FsWorkspaceIndex['files'][number],
+): FsMarkdownDiagnostic[] => {
+  const diagnostics: FsMarkdownDiagnostic[] = []
+  const firstBySlug = new Map<string, number>()
+
+  for (const heading of file.headings) {
+    const firstLine = firstBySlug.get(heading.slug)
+    if (firstLine == null) {
+      firstBySlug.set(heading.slug, heading.line)
+      continue
+    }
+
+    diagnostics.push({
+      line: heading.line,
+      start_column: heading.column,
+      end_column: heading.column + Math.max(1, charLength(heading.text)),
+      message: `Duplicate heading anchor "${heading.slug}" also appears on line ${firstLine}`,
+      severity: 'warning',
+    })
   }
 
   return diagnostics
@@ -80,4 +131,12 @@ const workspaceKnownPaths = (index: FsWorkspaceIndex): Set<string> | null => {
 
   for (const file of index.files) paths.push(file.path)
   return new Set(paths.map(normalizeWorkspacePath))
+}
+
+const findPathIgnoringCase = (paths: Iterable<string>, targetPath: string): string | null => {
+  const normalizedTarget = normalizeWorkspacePath(targetPath).toLowerCase()
+  for (const candidate of paths) {
+    if (normalizeWorkspacePath(candidate).toLowerCase() === normalizedTarget) return candidate
+  }
+  return null
 }

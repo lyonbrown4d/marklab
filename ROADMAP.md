@@ -39,10 +39,11 @@ start an external LSP process for now.
    Rank suggestions by current directory, path distance, exact match, prefix
    match, and fuzzy match quality.
 
-7. [ ] Deeper diagnostics
+7. [x] Deeper diagnostics
 
-   Detect duplicate heading slugs, broken image assets, case-sensitive path
-   issues, empty links, frontmatter errors, and orphaned documents.
+   Detect duplicate heading slugs, broken image assets, and case-sensitive path
+   issues for Markdown links and local assets. Empty links, frontmatter errors,
+   and orphaned documents remain candidates for later quality passes.
 
 8. [ ] Incremental index
 
