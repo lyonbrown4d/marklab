@@ -63,6 +63,7 @@ export const getMarkdownDefinition = async (
     line: heading.line,
     column: 1,
     endColumn: Math.max(2, heading.text.length + 1),
+    headingSlug: heading.slug,
   }
 }
 

@@ -60,6 +60,7 @@ const monaco = vi.hoisted(() => ({
       Keyword: 3,
     },
     registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    registerReferenceProvider: vi.fn(() => ({ dispose: vi.fn() })),
   },
   MarkerSeverity: {
     Error: 1,
@@ -76,6 +77,7 @@ vi.mock('@/services/markdownLanguageApi', () => ({
     getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDefinition: vi.fn(() => Promise.resolve(null)),
+    getReferences: vi.fn(() => Promise.resolve([])),
   },
 }))
 

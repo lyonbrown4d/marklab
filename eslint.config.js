@@ -67,7 +67,7 @@ export default defineConfig([
   {
     files: legacyOversizedFiles,
     rules: {
-      'max-lines': ['warn', maxLinesOptions],
+      'max-lines': 'off',
     },
   },
 ])

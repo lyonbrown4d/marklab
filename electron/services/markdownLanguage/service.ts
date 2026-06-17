@@ -2,11 +2,13 @@ import type { WorkspaceService } from '@electron/services/workspace/workspaceSer
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
+import { getMarkdownReferences } from '@electron/services/markdownLanguage/references.js'
 import type {
   CompletionRequest,
   DiagnosticsRequest,
   MarkdownLanguageDefinition,
   MarkdownLanguageCompletionItem,
+  MarkdownLanguageReference,
 } from '@electron/services/markdownLanguage/types.js'
 
 type WorkspaceIndexCacheEntry = {
@@ -44,6 +46,14 @@ export class EmbeddedMarkdownLanguageService {
   ): Promise<MarkdownLanguageDefinition | null> {
     const request = completionRequest(value)
     return getMarkdownDefinition(request, () => this.workspaceIndex(workspace))
+  }
+
+  async getReferences(
+    workspace: WorkspaceService,
+    value: unknown,
+  ): Promise<MarkdownLanguageReference[]> {
+    const request = completionRequest(value)
+    return getMarkdownReferences(request, () => this.workspaceIndex(workspace))
   }
 
   private workspaceIndex(workspace: WorkspaceService): Promise<FsWorkspaceIndex> {

@@ -14,6 +14,7 @@ import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownCompletionProvider } from '@/components/markdownSourceCompletion'
 import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
+import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -50,6 +51,7 @@ const MarkdownSourceEditor = ({
   const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const definitionDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const referencesDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsTimerRef = useRef<number | null>(null)
   const diagnosticsRequestRef = useRef(0)
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
@@ -177,6 +179,11 @@ const MarkdownSourceEditor = ({
       getContext: () => completionContextRef.current,
       onOpenFileView,
     })
+    referencesDisposableRef.current?.dispose()
+    referencesDisposableRef.current = registerMarkdownReferenceProvider(
+      monaco as typeof import('monaco-editor'),
+      () => completionContextRef.current,
+    )
 
     refreshDiagnostics()
   }
@@ -189,6 +196,8 @@ const MarkdownSourceEditor = ({
       diagnosticsDisposableRef.current = null
       definitionDisposableRef.current?.dispose()
       definitionDisposableRef.current = null
+      referencesDisposableRef.current?.dispose()
+      referencesDisposableRef.current = null
       if (diagnosticsTimerRef.current !== null) {
         window.clearTimeout(diagnosticsTimerRef.current)
         diagnosticsTimerRef.current = null

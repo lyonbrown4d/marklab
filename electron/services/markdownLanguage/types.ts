@@ -28,4 +28,16 @@ export type MarkdownLanguageDefinition = {
   line: number
   column: number
   endColumn?: number
+  headingSlug?: string | null
+}
+
+export type MarkdownLanguageReference = {
+  path: string
+  line: number
+  column: number
+  endColumn: number
+  text: string
+  context: string
+  targetAnchor?: string | null
+  targetHeadingSlug?: string | null
 }

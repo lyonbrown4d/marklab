@@ -17,11 +17,24 @@ const markdownLanguageDefinitionSchema = z
     line: z.number(),
     column: z.number(),
     endColumn: z.number().optional(),
+    headingSlug: z.string().nullable().optional(),
   })
   .nullable()
 
+const markdownLanguageReferenceSchema = z.object({
+  path: z.string(),
+  line: z.number(),
+  column: z.number(),
+  endColumn: z.number(),
+  text: z.string(),
+  context: z.string(),
+  targetAnchor: z.string().nullable().optional(),
+  targetHeadingSlug: z.string().nullable().optional(),
+})
+
 export type MarkdownLanguageCompletionItem = z.infer<typeof markdownLanguageCompletionItemSchema>
 export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
+export type MarkdownLanguageReference = z.infer<typeof markdownLanguageReferenceSchema>
 
 export const markdownLanguageApi = {
   async getCompletions({
@@ -67,5 +80,25 @@ export const markdownLanguageApi = {
       column,
     })
     return markdownLanguageDefinitionSchema.parse(result)
+  },
+
+  async getReferences({
+    path,
+    content,
+    line,
+    column,
+  }: {
+    path: string | null
+    content: string
+    line: number
+    column: number
+  }) {
+    const result = await invoke<unknown>('markdown_language_get_references', {
+      path,
+      content,
+      line,
+      column,
+    })
+    return z.array(markdownLanguageReferenceSchema).parse(result)
   },
 }

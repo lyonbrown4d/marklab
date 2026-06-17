@@ -67,6 +67,9 @@ export const RightSidebarProblemsPanel = ({
     }
     return items
   }, [errorProblems, warningProblems])
+  // TanStack Virtual exposes imperative helpers that React Compiler cannot memoize safely.
+  // The virtualizer stays local to this component and is not passed into memoized children.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: problemItems.length,
     initialRect: { height: 640, width: 320 },

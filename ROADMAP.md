@@ -12,7 +12,7 @@ start an external LSP process for now.
    Support Ctrl/Cmd click and editor definition navigation for Markdown links,
    wiki links, and heading anchors.
 
-2. [ ] Find references
+2. [x] Find references
 
    Show backlinks for files and heading anchors across the workspace.
 
