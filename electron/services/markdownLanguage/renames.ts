@@ -1,5 +1,4 @@
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
 import { headingAnchorSlug } from '@electron/services/workspace/markdown/slugs.js'
 import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
@@ -7,6 +6,7 @@ import type {
   MarkdownLanguageTextEdit,
   RenameRequest,
 } from '@electron/services/markdownLanguage/types.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
 export const renameMarkdownReferences = async (
   workspace: WorkspaceService,
@@ -17,7 +17,10 @@ export const renameMarkdownReferences = async (
     return emptyRenameResult('No rename target')
   }
 
-  const currentFile = parseMarkdownDocument(request.path, request.content)
+  const context = createMarkdownRequestContext(request, await workspaceIndex())
+  const currentFile = context.currentFile
+  if (!currentFile) return emptyRenameResult('No rename target')
+
   const heading = currentFile.headings.find((item) => item.line === request.line)
   if (!heading) return emptyRenameResult('Rename is only supported on Markdown headings')
 
@@ -25,7 +28,6 @@ export const renameMarkdownReferences = async (
   const newSlug = headingAnchorSlug(newText)
   if (!newSlug) return emptyRenameResult('Heading text cannot be empty')
 
-  const index = await workspaceIndex()
   const edits = [
     headingTextEdit(request.path, request.content, request.line, heading.text, newText),
     ...(await headingReferenceEdits({
@@ -35,7 +37,7 @@ export const renameMarkdownReferences = async (
       targetPath: request.path,
       oldSlug: heading.slug,
       newSlug,
-      workspaceIndex: index,
+      workspaceIndex: context.index,
     })),
   ].filter((edit): edit is MarkdownLanguageTextEdit => Boolean(edit))
 
