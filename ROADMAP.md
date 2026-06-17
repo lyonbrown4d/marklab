@@ -51,10 +51,11 @@ start an external LSP process for now.
    invalidate it on workspace snapshot or buffer changes instead of rebuilding
    for each interactive request.
 
-9. [ ] Cancellation and debouncing
+9. [x] Cancellation and debouncing
 
-   Add stale request cancellation, idle diagnostics, large-file guards, and
-   workspace-index readiness fallbacks.
+   Completion, hover, and code action providers now honor Monaco cancellation
+   tokens. Source diagnostics keep stale-request guards and skip realtime checks
+   for very large buffers.
 
 10. [ ] Editor UI integration
 

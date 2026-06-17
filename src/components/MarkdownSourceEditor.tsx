@@ -24,6 +24,8 @@ type MarkdownSourceEditorProps = {
   onOpenFileView?: (path: string, view: FileViewKind) => void
 }
 
+const SOURCE_DIAGNOSTICS_MAX_CHARS = 500_000
+
 const MarkdownSourceEditor = ({
   activePath,
   value,
@@ -123,6 +125,11 @@ const MarkdownSourceEditor = ({
     const context = completionContextRef.current
     const requestId = diagnosticsRequestRef.current + 1
     diagnosticsRequestRef.current = requestId
+
+    if (content.length > SOURCE_DIAGNOSTICS_MAX_CHARS) {
+      applyDiagnostics([])
+      return
+    }
 
     if (isDesktopRuntime() && context.activePath) {
       void markdownLanguageApi

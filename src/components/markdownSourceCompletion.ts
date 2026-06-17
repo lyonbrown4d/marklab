@@ -13,6 +13,7 @@ export type MarkdownSourceCompletionContext = {
 }
 
 type MonacoModule = typeof import('monaco-editor')
+type CancellationLike = { isCancellationRequested: boolean }
 
 export const registerMarkdownCompletionProvider = (
   monaco: MonacoModule,
@@ -20,8 +21,15 @@ export const registerMarkdownCompletionProvider = (
 ) => {
   return monaco.languages.registerCompletionItemProvider('markdown', {
     triggerCharacters: ['[', '(', '#', '/', '`'],
-    provideCompletionItems: async (model: MonacoEditor.ITextModel, position: IPosition) => {
-      const completions = await getCompletionItems(model, position, getContext())
+    provideCompletionItems: async (
+      model: MonacoEditor.ITextModel,
+      position: IPosition,
+      _context: MonacoLanguages.CompletionContext,
+      token: CancellationLike = { isCancellationRequested: false },
+    ) => {
+      if (token.isCancellationRequested) return { suggestions: [] }
+      const completions = await getCompletionItems(model, position, getContext(), token)
+      if (token.isCancellationRequested) return { suggestions: [] }
       const suggestions: MonacoLanguages.CompletionItem[] = completions.map((item) => ({
         label: item.label,
         kind:
@@ -49,6 +57,7 @@ const getCompletionItems = async (
   model: MonacoEditor.ITextModel,
   position: IPosition,
   context: MarkdownSourceCompletionContext,
+  token: CancellationLike,
 ): Promise<Array<ReturnType<typeof getMarkdownCompletions>[number] & { sortText?: string }>> => {
   const content = model.getValue()
   const request = {
@@ -60,12 +69,14 @@ const getCompletionItems = async (
 
   if (isDesktopRuntime() && context.activePath) {
     return markdownLanguageApi.getCompletions(request).catch(() =>
-      getMarkdownCompletions({
-        ...context,
-        content,
-        line: position.lineNumber,
-        column: position.column,
-      }),
+      token.isCancellationRequested
+        ? []
+        : getMarkdownCompletions({
+            ...context,
+            content,
+            line: position.lineNumber,
+            column: position.column,
+          }),
     )
   }
 

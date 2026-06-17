@@ -6,6 +6,7 @@ import type { FileViewKind } from '@/store/appTypes'
 import type { MarkdownSourceCompletionContext } from '@/components/markdownSourceCompletion'
 
 type MonacoModule = typeof import('monaco-editor')
+type CancellationLike = { isCancellationRequested: boolean }
 
 export const registerMarkdownCodeActionProvider = ({
   monaco,
@@ -26,9 +27,16 @@ export const registerMarkdownCodeActionProvider = ({
   })
 
   return monaco.languages.registerCodeActionProvider('markdown', {
-    provideCodeActions: async (model, range) => {
+    provideCodeActions: async (
+      model,
+      range,
+      _context,
+      token: CancellationLike = { isCancellationRequested: false },
+    ) => {
       const context = getContext()
-      if (!context.activePath || !isDesktopRuntime()) return { actions: [], dispose: () => {} }
+      if (token.isCancellationRequested || !context.activePath || !isDesktopRuntime()) {
+        return { actions: [], dispose: () => {} }
+      }
 
       const actions = await markdownLanguageApi
         .getCodeActions({
@@ -39,6 +47,7 @@ export const registerMarkdownCodeActionProvider = ({
         })
         .catch(() => [])
 
+      if (token.isCancellationRequested) return { actions: [], dispose: () => {} }
       return {
         actions: actions.map((action) =>
           action.kind === 'create-file'
