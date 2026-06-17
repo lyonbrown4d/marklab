@@ -30,10 +30,9 @@ start an external LSP process for now.
    Offer quick fixes for broken links and broken anchors. First iteration
    supports creating missing Markdown files and removing missing heading anchors.
 
-5. [ ] Hover preview
+5. [x] Hover preview
 
-   Show lightweight previews for linked files, target headings, and broken link
-   states.
+   Show lightweight previews for linked files and target headings.
 
 6. [ ] Completion ranking
 

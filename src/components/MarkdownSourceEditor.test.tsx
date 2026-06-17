@@ -62,6 +62,7 @@ const monaco = vi.hoisted(() => ({
     },
     registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerReferenceProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    registerHoverProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerRenameProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerCodeActionProvider: vi.fn(() => ({ dispose: vi.fn() })),
   },
@@ -82,6 +83,7 @@ vi.mock('@/services/markdownLanguageApi', () => ({
     getDefinition: vi.fn(() => Promise.resolve(null)),
     getReferences: vi.fn(() => Promise.resolve([])),
     getCodeActions: vi.fn(() => Promise.resolve([])),
+    getHover: vi.fn(() => Promise.resolve(null)),
     renameReferences: vi.fn(() =>
       Promise.resolve({ edits: [], appliedEdits: 0, touchedFiles: [], rejectReason: null }),
     ),

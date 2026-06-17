@@ -6,6 +6,7 @@ import {
   type MarkdownSourceCompletionContext,
 } from '@/components/markdownSourceCompletion'
 import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
+import { registerMarkdownHoverProvider } from '@/components/markdownSourceHover'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
 
@@ -30,6 +31,7 @@ export const registerMarkdownSourceProviders = ({
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),
     registerMarkdownDefinitionClick({ editor, getContext, onOpenFileView }),
     registerMarkdownReferenceProvider(monaco, getContext),
+    registerMarkdownHoverProvider(monaco, getContext),
     registerMarkdownRenameProvider(monaco, getContext),
     registerMarkdownCodeActionProvider({ monaco, editor, getContext, onOpenFileView }),
   ]

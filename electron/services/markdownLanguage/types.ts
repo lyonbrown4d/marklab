@@ -74,3 +74,10 @@ export type MarkdownLanguageCodeAction =
       edit: MarkdownLanguageTextEdit
       isPreferred?: boolean
     }
+
+export type MarkdownLanguageHover = {
+  path: string
+  line: number
+  heading?: string | null
+  markdown: string
+}

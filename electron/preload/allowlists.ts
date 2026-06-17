@@ -38,6 +38,7 @@ const allowedCommandNames = [
   'markdown_language_get_references',
   'markdown_language_rename_references',
   'markdown_language_get_code_actions',
+  'markdown_language_get_hover',
   'list_markdown_files',
   'read_markdown_file',
   'write_markdown_file',
