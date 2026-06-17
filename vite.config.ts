@@ -220,6 +220,22 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     test: {
+      include: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/**/*.spec.ts',
+        'src/**/*.spec.tsx',
+        'electron/**/*.test.ts',
+        'electron/**/*.spec.ts',
+      ],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/dist-electron/**',
+        '**/release/**',
+        '**/.{idea,git,cache,output,temp}/**',
+        '**/coverage/**',
+      ],
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
     },

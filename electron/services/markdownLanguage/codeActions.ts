@@ -1,4 +1,5 @@
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
 import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   CompletionRequest,
@@ -12,7 +13,7 @@ export const getMarkdownCodeActions = async (
   if (!request.path) return []
 
   const index = await workspaceIndex()
-  const knownMarkdownFiles = new Set(index.files.map((file) => file.path))
+  const filesByPath = new Map(index.files.map((file) => [file.path, file]))
   const currentFile = parseMarkdownDocument(request.path, request.content)
   const lineText = request.content.split(/\r?\n/)[request.line - 1] ?? ''
   const actions: MarkdownLanguageCodeAction[] = []
@@ -21,22 +22,31 @@ export const getMarkdownCodeActions = async (
     if (link.is_external) continue
     if (!isCursorOnLinkTarget(lineText, request.column, link)) continue
 
-    if (link.target_path && !knownMarkdownFiles.has(link.target_path)) {
+    const targetPath = resolveIndexedLinkPath(link, filesByPath, index.files)
+    const targetFile = targetPath ? filesByPath.get(targetPath) : null
+
+    if (link.target_path && !targetFile) {
       actions.push({
-        title: `Create missing Markdown file "${link.target_path}"`,
+        title: `Create missing Markdown file "${targetPath ?? link.target_path}"`,
         kind: 'create-file',
-        path: link.target_path,
+        path: targetPath ?? link.target_path,
         isPreferred: true,
       })
     }
 
-    if (link.target_anchor && !link.target_heading_slug) {
+    if (
+      link.target_anchor &&
+      link.target_heading_slug &&
+      targetFile &&
+      !targetFile.headings.some((heading) => heading.slug === link.target_heading_slug)
+    ) {
       const edit = removeAnchorEdit(request.path, lineText, link)
       if (edit) {
         actions.push({
           title: `Remove missing heading anchor "#${link.target_anchor}"`,
           kind: 'replace-text',
           edit,
+          isPreferred: true,
         })
       }
     }
