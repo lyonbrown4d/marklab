@@ -34,9 +34,9 @@ start an external LSP process for now.
 
    Show lightweight previews for linked files and target headings.
 
-6. [ ] Completion ranking
+6. [x] Completion ranking
 
-   Rank suggestions by current directory, recent files, exact match, prefix
+   Rank suggestions by current directory, path distance, exact match, prefix
    match, and fuzzy match quality.
 
 7. [ ] Deeper diagnostics

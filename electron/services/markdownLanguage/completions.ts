@@ -8,6 +8,11 @@ import {
   normalizeHeadingAnchor,
   resolveLinkedFilePath,
 } from '@electron/services/markdownLanguage/linkTargets.js'
+import {
+  compareFileCompletionPaths,
+  fileCompletionSortText,
+  headingCompletionSortText,
+} from '@electron/services/markdownLanguage/completionRanking.js'
 import type {
   CompletionRequest,
   MarkdownLanguageCompletionItem,
@@ -217,6 +222,14 @@ const fileCompletions = ({
         label.toLowerCase().includes(normalizedQuery)
       )
     })
+    .sort((left, right) =>
+      compareFileCompletionPaths({
+        activePath,
+        query: normalizedQuery,
+        left,
+        right,
+      }),
+    )
     .map((path) => {
       const label = createFileLabel(path)
       return {
@@ -226,6 +239,7 @@ const fileCompletions = ({
         detail: path,
         replacementStartColumn,
         lspKind: CompletionItemKind.File,
+        sortText: fileCompletionSortText({ activePath, query: normalizedQuery, path, label }),
       }
     })
 }
@@ -258,5 +272,6 @@ const headingCompletionsFromFile = ({
       detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
       replacementStartColumn,
       lspKind: CompletionItemKind.Reference,
+      sortText: headingCompletionSortText(heading.text, heading.slug, query),
     }))
 }

@@ -9,6 +9,7 @@ export type MarkdownLanguageCompletionItem = {
   detail?: string
   replacementStartColumn: number
   lspKind: CompletionItemKind
+  sortText?: string
 }
 
 export type CompletionRequest = {

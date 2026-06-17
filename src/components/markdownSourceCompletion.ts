@@ -32,6 +32,7 @@ export const registerMarkdownCompletionProvider = (
               : monaco.languages.CompletionItemKind.Keyword,
         insertText: item.insertText,
         detail: item.detail,
+        sortText: item.sortText,
         range: new monaco.Range(
           position.lineNumber,
           item.replacementStartColumn,
@@ -48,7 +49,7 @@ const getCompletionItems = async (
   model: MonacoEditor.ITextModel,
   position: IPosition,
   context: MarkdownSourceCompletionContext,
-) => {
+): Promise<Array<ReturnType<typeof getMarkdownCompletions>[number] & { sortText?: string }>> => {
   const content = model.getValue()
   const request = {
     path: context.activePath,

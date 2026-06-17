@@ -9,6 +9,7 @@ const markdownLanguageCompletionItemSchema = z.object({
   detail: z.string().optional(),
   replacementStartColumn: z.number(),
   lspKind: z.number(),
+  sortText: z.string().optional(),
 })
 
 const markdownLanguageDefinitionSchema = z
