@@ -45,10 +45,11 @@ start an external LSP process for now.
    issues for Markdown links and local assets. Empty links, frontmatter errors,
    and orphaned documents remain candidates for later quality passes.
 
-8. [ ] Incremental index
+8. [x] Incremental index
 
-   Update file paths, headings, links, and diagnostics incrementally instead of
-   rebuilding the full workspace index for interactive requests.
+   Reuse a versioned workspace index cache for language-service requests and
+   invalidate it on workspace snapshot or buffer changes instead of rebuilding
+   for each interactive request.
 
 9. [ ] Cancellation and debouncing
 
