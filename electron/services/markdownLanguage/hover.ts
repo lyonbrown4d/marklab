@@ -12,10 +12,11 @@ export const getMarkdownHover = async (
   workspaceIndex: () => Promise<FsWorkspaceIndex>,
 ): Promise<MarkdownLanguageHover | null> => {
   const index = await workspaceIndex()
-  const definition = await getMarkdownDefinition(request, () => Promise.resolve(index))
-  if (!definition) return getBrokenLinkHover(request, index)
+  const indexForRequest = indexWithCurrentDocument(request, index)
+  const definition = await getMarkdownDefinition(request, () => Promise.resolve(indexForRequest))
+  if (!definition) return getBrokenLinkHover(request, indexForRequest)
 
-  const file = index.files.find((item) => item.path === definition.path)
+  const file = indexForRequest.files.find((item) => item.path === definition.path)
   const heading = definition.headingSlug
     ? file?.headings.find((item) => item.slug === definition.headingSlug)
     : null
@@ -29,6 +30,19 @@ export const getMarkdownHover = async (
       line: definition.line,
       heading: heading?.text ?? null,
     }),
+  }
+}
+
+const indexWithCurrentDocument = (
+  request: CompletionRequest,
+  index: FsWorkspaceIndex,
+): FsWorkspaceIndex => {
+  if (!request.path) return index
+
+  const currentFile = parseMarkdownDocument(request.path, request.content)
+  return {
+    ...index,
+    files: [currentFile, ...index.files.filter((file) => file.path !== request.path)],
   }
 }
 

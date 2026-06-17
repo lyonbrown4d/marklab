@@ -71,4 +71,15 @@ describe('getMarkdownHover', () => {
     expect(hover?.markdown).toContain('Missing heading anchor')
     expect(hover?.markdown).toContain('#missing-heading')
   })
+
+  it('uses unsaved current-document headings for same-document anchor hovers', async () => {
+    const hover = await getHover('See [Draft](#draft)\n\n## Draft', 14)
+
+    expect(hover).toMatchObject({
+      path: 'notes/current.md',
+      line: 3,
+      heading: 'Draft',
+    })
+    expect(hover?.markdown).toContain('### Draft')
+  })
 })
