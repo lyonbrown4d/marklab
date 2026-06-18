@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, FolderOpen, Trash2, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { SettingsSection } from '@/components/settings/SettingsRow'
+import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
 import { useI18n } from '@/i18n/useI18n'
 import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -85,7 +85,7 @@ const CustomThemesSettingsSection = () => {
       icon={Upload}
     >
       <div className="mb-3 flex flex-wrap gap-2">
-        <Button
+        <SettingsActionButton
           type="button"
           size="sm"
           variant="secondary"
@@ -94,8 +94,8 @@ const CustomThemesSettingsSection = () => {
         >
           <Upload className="h-4 w-4" />
           {t('settings.importTheme')}
-        </Button>
-        <Button
+        </SettingsActionButton>
+        <SettingsActionButton
           type="button"
           size="sm"
           variant="outline"
@@ -104,33 +104,33 @@ const CustomThemesSettingsSection = () => {
         >
           <FolderOpen className="h-4 w-4" />
           {t('settings.openThemesFolder')}
-        </Button>
-        <Button
+        </SettingsActionButton>
+        <SettingsActionButton
           type="button"
           size="sm"
           variant={customThemeId ? 'outline' : 'secondary'}
           onClick={() => setCustomThemeId(null)}
         >
           {t('settings.useBuiltInTheme')}
-        </Button>
+        </SettingsActionButton>
       </div>
       {customThemesSupported && customThemes.length > 0 ? (
-        <div className="space-y-2">
+        <div className="settings-theme-list space-y-2">
           {customThemes.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2"
+              className="settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5"
             >
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left text-sm"
+                className="settings-theme-item-trigger min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left text-sm"
                 onClick={() => setCustomThemeId(item.id)}
               >
                 <span className="block truncate font-medium">{item.name}</span>
                 <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
               </button>
               {customThemeId === item.id && <Check className="h-4 w-4 text-primary" />}
-              <Button
+              <SettingsIconButton
                 type="button"
                 size="icon"
                 variant="ghost"
@@ -139,12 +139,12 @@ const CustomThemesSettingsSection = () => {
                 onClick={() => void removeCustomTheme(item.id)}
               >
                 <Trash2 className="h-4 w-4" />
-              </Button>
+              </SettingsIconButton>
             </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+        <div className="settings-empty-state rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
           {customThemesSupported
             ? t('settings.noCustomThemes')
             : t('settings.customThemesDesktopOnly')}

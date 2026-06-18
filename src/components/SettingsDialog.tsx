@@ -1,4 +1,12 @@
-import { GitGraph, Keyboard, Palette, Save, SlidersHorizontal } from 'lucide-react'
+import {
+  FileText,
+  GitGraph,
+  Keyboard,
+  Palette,
+  PenLine,
+  Save,
+  SlidersHorizontal,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -10,6 +18,9 @@ import { useI18n } from '@/i18n/useI18n'
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage'
 import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
+import EditingSettingsPage from '@/components/settings/EditingSettingsPage'
+import FileSettingsPage from '@/components/settings/FileSettingsPage'
+import SavingSettingsPage from '@/components/settings/SavingSettingsPage'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { type ReactElement, useCallback, useMemo, useState } from 'react'
@@ -23,8 +34,26 @@ const settingsRoutes = [
   {
     value: 'general',
     labelKey: 'settings.general',
-    icon: Save,
+    icon: SlidersHorizontal,
     render: () => <GeneralSettingsPage />,
+  },
+  {
+    value: 'saving',
+    labelKey: 'settings.saveBehavior',
+    icon: Save,
+    render: () => <SavingSettingsPage />,
+  },
+  {
+    value: 'files',
+    labelKey: 'settings.files',
+    icon: FileText,
+    render: () => <FileSettingsPage />,
+  },
+  {
+    value: 'editing',
+    labelKey: 'settings.editing',
+    icon: PenLine,
+    render: () => <EditingSettingsPage />,
   },
   {
     value: 'appearance',
@@ -73,19 +102,21 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="settings-dialog-surface max-w-none gap-0 overflow-hidden rounded-md p-0">
-        <DialogHeader className="tab-strip border-b border-border/80 px-5 py-4">
-          <DialogTitle className="flex items-center gap-2 text-base">
+        <DialogHeader className="settings-dialog-header tab-strip border-b border-border/80 px-5 py-4">
+          <DialogTitle className="settings-dialog-title flex items-center gap-2 text-base">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             {t('settings.title')}
           </DialogTitle>
-          <DialogDescription>{t('settings.description')}</DialogDescription>
+          <DialogDescription className="settings-dialog-description">
+            {t('settings.description')}
+          </DialogDescription>
         </DialogHeader>
         <Tabs
           value={section}
           onValueChange={onSectionChange}
           className="settings-dialog-body h-full min-h-0 overflow-hidden"
         >
-          <TabsList className="settings-dialog-tabs flex h-full flex-col items-stretch justify-start rounded-none border-r border-border bg-muted/35 p-2">
+          <TabsList className="settings-dialog-tabs flex h-full flex-col items-stretch justify-start rounded-none border-r border-border p-2">
             {settingsRoutes.map((routeConfig) => {
               const Icon = routeConfig.icon
               return (
@@ -100,7 +131,7 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               )
             })}
           </TabsList>
-          <div className="h-full min-h-0 min-w-0 overflow-hidden">
+          <div className="settings-dialog-panel-shell h-full min-h-0 min-w-0 overflow-hidden">
             <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
               <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0">
                 <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">

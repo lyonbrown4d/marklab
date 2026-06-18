@@ -1,8 +1,8 @@
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { detectPlatform, useHotkeyRecorder } from '@tanstack/react-hotkeys'
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { formatShortcutList, type ShortcutActionId, type ShortcutBindings } from '@/logic/shortcuts'
+import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
 
 type ShortcutRecorderRowProps = {
   action: ShortcutActionId
@@ -42,7 +42,7 @@ const ShortcutRecorderRow = ({
     : ''
 
   return (
-    <div className="grid grid-cols-1 gap-3 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="settings-shortcut-row grid grid-cols-1 gap-3 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <div className="text-sm font-medium">{label}</div>
         <div className="mt-1 text-xs text-muted-foreground">
@@ -61,15 +61,15 @@ const ShortcutRecorderRow = ({
         className="flex min-w-0 items-center justify-end gap-1.5"
         data-marklab-shortcut-recorder="true"
       >
-        <Button
+        <SettingsActionButton
           variant={recorder.isRecording ? 'secondary' : 'outline'}
           size="sm"
           className="h-8 min-w-[112px] max-w-full justify-center rounded-md font-mono text-xs"
           onClick={recorder.startRecording}
         >
           {display}
-        </Button>
-        <Button
+        </SettingsActionButton>
+        <SettingsIconButton
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-md"
@@ -78,8 +78,8 @@ const ShortcutRecorderRow = ({
           onClick={() => onChange(action, [])}
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button
+        </SettingsIconButton>
+        <SettingsIconButton
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-md"
@@ -88,7 +88,7 @@ const ShortcutRecorderRow = ({
           onClick={() => onChange(action, null)}
         >
           <RotateCcw className="h-3.5 w-3.5" />
-        </Button>
+        </SettingsIconButton>
       </div>
     </div>
   )

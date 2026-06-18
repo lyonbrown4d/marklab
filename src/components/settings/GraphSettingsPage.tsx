@@ -42,21 +42,27 @@ const GraphSettingsPage = () => {
 
   return (
     <div className="space-y-4">
-      <Controller
-        control={form.control}
-        name="graphMiniMapEnabled"
-        render={({ field }) => (
-          <SettingsSwitchRow
-            title={t('settings.graphMiniMap')}
-            description={t('settings.graphMiniMapDescription')}
-            checked={field.value}
-            onCheckedChange={(checked) => {
-              field.onChange(checked)
-              setGraphMiniMapEnabled(checked)
-            }}
-          />
-        )}
-      />
+      <SettingsSection
+        title={t('settings.graphMiniMap')}
+        description={t('settings.graphMiniMapDescription')}
+        icon={Map}
+      >
+        <Controller
+          control={form.control}
+          name="graphMiniMapEnabled"
+          render={({ field }) => (
+            <SettingsSwitchRow
+              title={t('settings.graphMiniMap')}
+              description={t('settings.graphMiniMapDescription')}
+              checked={field.value}
+              onCheckedChange={(checked) => {
+                field.onChange(checked)
+                setGraphMiniMapEnabled(checked)
+              }}
+            />
+          )}
+        />
+      </SettingsSection>
       <SettingsSection
         title={t('settings.graphContentMode')}
         description={t('settings.graphContentModeDescription')}

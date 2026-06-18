@@ -1,0 +1,31 @@
+import * as React from 'react'
+import * as SwitchPrimitives from '@radix-ui/react-switch'
+import { cn } from '@/lib/utils'
+
+type SettingsSwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
+  className?: string
+}
+
+export const SettingsSwitch = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitives.Root>,
+  SettingsSwitchProps
+>(({ className, ...props }, ref) => (
+  <SwitchPrimitives.Root
+    className={cn(
+      'settings-switch peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+      className,
+    )}
+    {...props}
+    ref={ref}
+  >
+    <SwitchPrimitives.Thumb
+      className={cn(
+        'settings-switch-thumb pointer-events-none block h-4 w-4 rounded-full transition-transform duration-200 data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0',
+      )}
+    />
+  </SwitchPrimitives.Root>
+))
+
+SettingsSwitch.displayName = SwitchPrimitives.Root.displayName
+
+export default SettingsSwitch

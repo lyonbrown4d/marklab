@@ -1,5 +1,6 @@
-import { Switch } from '@/components/ui/switch'
-import SettingsRow from '@/components/settings/SettingsRow'
+import { Eye } from 'lucide-react'
+import SettingsRow, { SettingsSection } from '@/components/settings/SettingsRow'
+import SettingsSwitch from '@/components/settings/SettingsSwitch'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
@@ -15,31 +16,37 @@ const ImmersiveSettingsSection = () => {
   )
 
   return (
-    <section className="settings-row-surface space-y-3 rounded-md p-3">
-      <div>
-        <div className="mb-1 text-sm font-medium">{t('settings.immersiveEditing')}</div>
-        <div className="text-xs leading-5 text-muted-foreground">
-          {t('settings.immersiveEditingDescription')}
-        </div>
-      </div>
+    <SettingsSection
+      title={t('settings.immersiveEditing')}
+      description={t('settings.immersiveEditingDescription')}
+      icon={Eye}
+      className="space-y-3"
+    >
       <SettingsRow
         title={t('settings.zenMode')}
         description={t('settings.zenModeDescription')}
-        control={<Switch checked={immersiveZenMode} onCheckedChange={setImmersiveZenMode} />}
+        control={
+          <SettingsSwitch checked={immersiveZenMode} onCheckedChange={setImmersiveZenMode} />
+        }
       />
       <SettingsRow
         title={t('settings.focusMode')}
         description={t('settings.focusModeDescription')}
-        control={<Switch checked={immersiveFocusMode} onCheckedChange={setImmersiveFocusMode} />}
+        control={
+          <SettingsSwitch checked={immersiveFocusMode} onCheckedChange={setImmersiveFocusMode} />
+        }
       />
       <SettingsRow
         title={t('settings.typewriterMode')}
         description={t('settings.typewriterModeDescription')}
         control={
-          <Switch checked={immersiveTypewriterMode} onCheckedChange={setImmersiveTypewriterMode} />
+          <SettingsSwitch
+            checked={immersiveTypewriterMode}
+            onCheckedChange={setImmersiveTypewriterMode}
+          />
         }
       />
-    </section>
+    </SettingsSection>
   )
 }
 

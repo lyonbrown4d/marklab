@@ -1,6 +1,6 @@
 import type { ComponentProps, ElementType, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
+import SettingsSwitch from '@/components/settings/SettingsSwitch'
 
 type SettingsRowProps = {
   title: string
@@ -35,6 +35,8 @@ type SettingsSwitchRowProps = Omit<SettingsRowProps, 'control'> & {
   disabled?: boolean
 }
 
+type SettingsButtonProps = ComponentProps<typeof Button>
+
 const gridColumnClass: Record<NonNullable<SettingsChoiceGridProps['columns']>, string> = {
   2: 'sm:grid-cols-2',
   3: 'sm:grid-cols-3',
@@ -46,10 +48,12 @@ const joinClassNames = (...classNames: Array<string | false | null | undefined>)
 
 const SettingsRow = ({ title, description, control }: SettingsRowProps) => {
   return (
-    <div className="settings-row-surface flex items-start justify-between gap-4 rounded-md p-3">
-      <div className="min-w-0">
-        <div className="text-sm font-medium">{title}</div>
-        <div className="mt-1 text-xs leading-5 text-muted-foreground">{description}</div>
+    <div className="settings-row settings-row-surface flex items-start justify-between gap-4 rounded-md p-3">
+      <div className="settings-row-content min-w-0">
+        <div className="settings-row-title text-sm font-medium">{title}</div>
+        <div className="settings-row-description mt-1 text-xs leading-5 text-muted-foreground">
+          {description}
+        </div>
       </div>
       <div className="shrink-0 pt-0.5">{control}</div>
     </div>
@@ -66,13 +70,19 @@ export const SettingsSection = ({
 }: SettingsSectionProps) => {
   return (
     <section
-      className={joinClassNames(surface && 'settings-row-surface rounded-md p-3', className)}
+      className={joinClassNames(
+        'settings-section',
+        surface && 'settings-row-surface rounded-md p-3',
+        className,
+      )}
     >
-      <div className="mb-1 flex items-center gap-2 text-sm font-medium">
+      <div className="settings-section-title mb-1 flex items-center gap-2 text-sm font-medium">
         {Icon && <Icon className="h-4 w-4 text-primary" />}
         {title}
       </div>
-      <div className="mb-3 text-xs leading-5 text-muted-foreground">{description}</div>
+      <div className="settings-section-description mb-3 text-xs leading-5 text-muted-foreground">
+        {description}
+      </div>
       {children}
     </section>
   )
@@ -92,19 +102,27 @@ export const SettingsChoiceGrid = ({
 
 export const SettingsChoiceButton = ({
   selected,
-  selectedVariant = 'secondary',
+  selectedVariant = 'default',
   unselectedVariant = 'outline',
   className,
   type = 'button',
   ...props
 }: SettingsChoiceButtonProps) => {
+  const isSelected = selected
+  const isDisabled = props.disabled === true
   return (
     <Button
       {...props}
       type={type}
-      variant={selected ? selectedVariant : unselectedVariant}
-      data-selected={selected ? 'true' : 'false'}
-      className={joinClassNames('h-9 justify-start rounded-md', className)}
+      variant={isSelected ? selectedVariant : unselectedVariant}
+      data-selected={isSelected ? 'true' : 'false'}
+      aria-pressed={isSelected ? 'true' : 'false'}
+      className={joinClassNames(
+        'settings-choice-button h-9 justify-start rounded-md',
+        isSelected && 'settings-choice-button-selected',
+        isDisabled && 'settings-choice-button-disabled',
+        className,
+      )}
     />
   )
 }
@@ -120,7 +138,41 @@ export const SettingsSwitchRow = ({
     <SettingsRow
       title={title}
       description={description}
-      control={<Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />}
+      control={
+        <SettingsSwitch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
+      }
+    />
+  )
+}
+
+export const SettingsActionButton = ({
+  size = 'sm',
+  variant = 'secondary',
+  className,
+  ...props
+}: SettingsButtonProps) => {
+  return (
+    <Button
+      {...props}
+      size={size}
+      variant={variant}
+      className={joinClassNames('settings-action-button', className)}
+    />
+  )
+}
+
+export const SettingsIconButton = ({
+  size = 'icon',
+  variant = 'ghost',
+  className,
+  ...props
+}: SettingsButtonProps) => {
+  return (
+    <Button
+      {...props}
+      size={size}
+      variant={variant}
+      className={joinClassNames('settings-action-icon-button', className)}
     />
   )
 }

@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Search, RotateCcw, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Keyboard, Search, RotateCcw, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/i18n/useI18n'
 import {
@@ -12,6 +11,8 @@ import {
   type ShortcutActionId,
 } from '@/logic/shortcuts'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
+import { SettingsSection } from '@/components/settings/SettingsRow'
 import ShortcutRecorderRow from '@/components/settings/ShortcutRecorderRow'
 
 const ShortcutsSettingsPage = () => {
@@ -96,9 +97,14 @@ const ShortcutsSettingsPage = () => {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <SettingsSection
+        title={t('settings.shortcuts')}
+        description={t('settings.shortcutsDescription')}
+        icon={Keyboard}
+        className="space-y-4"
+      >
+        <div className="settings-shortcuts-search relative">
+          <Search className="settings-shortcuts-search-icon h-4 w-4 text-muted-foreground" />
           <Input
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
@@ -109,52 +115,48 @@ const ShortcutsSettingsPage = () => {
               }
             }}
             placeholder={t('shortcuts.searchPlaceholder')}
-            className="h-9 pl-8"
+            className="settings-shortcuts-search-input h-9 pl-8"
           />
           {keyword.trim().length > 0 && (
-            <Button
+            <SettingsIconButton
               type="button"
               variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md"
+              className="settings-shortcuts-search-clear h-7 w-7 rounded-md"
               aria-label={t('shortcuts.clearSearch')}
               onClick={() => setKeyword('')}
             >
               <X className="h-3.5 w-3.5" />
-            </Button>
+            </SettingsIconButton>
           )}
         </div>
-      </div>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm font-medium">{t('settings.shortcuts')}</div>
-          <div className="mt-1 text-xs leading-5 text-muted-foreground">
-            {t('settings.shortcutsDescription')}
+        <div className="settings-shortcuts-toolbar flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-muted-foreground">
+              {t('settings.shortcutsDescription')}
+            </div>
           </div>
+          <SettingsActionButton
+            variant="outline"
+            size="sm"
+            className="settings-shortcuts-reset h-8 shrink-0 rounded-md"
+            disabled={!hasOverrides}
+            onClick={resetShortcutOverrides}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t('shortcuts.resetAll')}
+          </SettingsActionButton>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 shrink-0 rounded-md"
-          disabled={!hasOverrides}
-          onClick={resetShortcutOverrides}
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          {t('shortcuts.resetAll')}
-        </Button>
-      </div>
+      </SettingsSection>
 
       {filteredSections.length === 0 && (
-        <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
+        <div className="settings-empty-state rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
           {t('shortcuts.noMatches')}
         </div>
       )}
       {filteredSections.map((category) => (
-        <section key={category.id} className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {t(category.labelKey)}
-          </div>
-          <div className="divide-y divide-border rounded-md border border-border">
+        <section key={category.id} className="settings-shortcut-category">
+          <div className="settings-shortcut-category-title">{t(category.labelKey)}</div>
+          <div className="settings-shortcut-list rounded-md border border-border">
             {category.rows}
           </div>
         </section>
