@@ -15,6 +15,7 @@ import {
   insertImageIntoCrepe,
   placeCrepeSelectionAtClientPoint,
   readCrepeMarkdown,
+  normalizeMarkdownLineBreaks,
   replaceImageSourceInCrepe,
   replaceCrepeMarkdown,
   type PendingExternalValue,
@@ -275,17 +276,18 @@ export const useMarkdownCrepeController = ({
         getImageDocumentPath,
         nodeViewFactory,
         onMarkdownUpdated: (markdown) => {
+          const nextMarkdown = normalizeMarkdownLineBreaks(markdown)
           if (applyingExternalValueRef.current) {
-            latestValue.current = markdown
+            latestValue.current = nextMarkdown
             return
           }
-          if (markdown === latestValue.current) return
-          latestValue.current = markdown
+          if (nextMarkdown === latestValue.current) return
+          latestValue.current = nextMarkdown
           localEchoRef.current = {
             path: activePathRef.current,
-            value: markdown,
+            value: nextMarkdown,
           }
-          onChangeRef.current(markdown)
+          onChangeRef.current(nextMarkdown)
         },
         resolveImageSrc,
         subscribeImageDocumentPath,
