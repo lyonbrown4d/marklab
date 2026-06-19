@@ -65,7 +65,9 @@ const TitlebarCommandDialog = ({
   })
   const fullTextResults = debouncedQuery === trimmedQuery ? (fullTextSearch.data ?? []) : []
   const emptyQueryLabel =
-    trimmedQuery.length > 0 ? `No results for "${trimmedQuery}"` : 'No command results'
+    trimmedQuery.length > 0
+      ? t('command.noResultsFor', { query: trimmedQuery })
+      : t('command.noResults')
   const handleOpenFile = useCallback(
     (path: string) => {
       rememberSearch(trimmedQuery)
@@ -87,6 +89,9 @@ const TitlebarCommandDialog = ({
     },
     [onOpenSearchResult, rememberSearch, trimmedQuery],
   )
+  const handleCommandPaletteAction = useCallback(() => {
+    setQuery('')
+  }, [])
 
   return (
     <AppCommandDialog open={open} onOpenChange={onOpenChange}>
@@ -103,9 +108,7 @@ const TitlebarCommandDialog = ({
           <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" />
             <p className="text-sm text-foreground">{emptyQueryLabel}</p>
-            <p className="text-xs text-muted-foreground">
-              Try a title, path fragment, heading, command, or a 2+ character full-text query.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('command.searchHint')}</p>
           </div>
         </CommandEmpty>
         <CommandSearchHistory
@@ -132,6 +135,7 @@ const TitlebarCommandDialog = ({
         <CommandActionSections
           canCreateWorkspaceEntries={canCreateWorkspaceEntries}
           searchIndexRebuilding={searchIndexRebuilding}
+          onCommandPaletteAction={handleCommandPaletteAction}
           onAction={onAction}
         />
       </CommandList>

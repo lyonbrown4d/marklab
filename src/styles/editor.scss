@@ -637,6 +637,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .crepe.is-smooth-editor .editor-scroll-viewport {
+    scroll-behavior: auto;
+  }
+
+  .crepe .milkdown .ProseMirror,
+  .crepe .milkdown .marklab-md-block,
+  .crepe .milkdown .marklab-md-block::before,
+  .markdown-source-editor .marklab-source-link-target,
+  .crepe .milkdown .ProseMirror a {
+    animation: none;
+    transition: none;
+  }
+
   .crepe .milkdown .ProseMirror.marklab-animated-cursor-host {
     caret-color: hsl(var(--primary));
   }

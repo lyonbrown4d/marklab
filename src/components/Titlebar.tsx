@@ -45,6 +45,13 @@ import {
 } from '@/logic/themes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 
+type TabLabelText = {
+  workspaceGraph: string
+  source: string
+  graph: string
+  diff: string
+}
+
 type TitlebarProps = {
   activePath: string | null
   activeTab: WorkspaceTab | null
@@ -78,19 +85,23 @@ type TitlebarProps = {
   onOpenSettings: () => void
 }
 
-const getActiveTabLabel = (tab: WorkspaceTab | null) => {
+const getActiveTabLabel = (tab: WorkspaceTab | null, labels: TabLabelText) => {
   if (!tab) return ''
-  if (tab.kind === 'workspace-graph') return 'Workspace Graph'
+  if (tab.kind === 'workspace-graph') return labels.workspaceGraph
   const label = createFileLabel(tab.path)
-  if (tab.kind === 'git-diff') return `${label} · Diff`
-  if (tab.view === 'source') return `${label} · Source`
-  if (tab.view === 'graph') return `${label} · Graph`
+  if (tab.kind === 'git-diff') return `${label} · ${labels.diff}`
+  if (tab.view === 'source') return `${label} · ${labels.source}`
+  if (tab.view === 'graph') return `${label} · ${labels.graph}`
   return label
 }
 
-const getActiveTabTitle = (tab: WorkspaceTab | null, activePath: string | null) => {
+const getActiveTabTitle = (
+  tab: WorkspaceTab | null,
+  activePath: string | null,
+  labels: TabLabelText,
+) => {
   if (!tab) return ''
-  if (tab.kind === 'workspace-graph') return 'Workspace Graph'
+  if (tab.kind === 'workspace-graph') return labels.workspaceGraph
   if (tab.kind === 'git-diff') return tab.path
   return activePath ?? tab.path
 }
@@ -146,8 +157,17 @@ const Titlebar = ({
   const isWindows =
     typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('windows')
   const showInlineMenu = platform === 'windows' || platform === 'linux'
-  const activeTabLabel = getActiveTabLabel(activeTab)
-  const activeTabTitle = getActiveTabTitle(activeTab, activePath)
+  const tabLabels = useMemo(
+    () => ({
+      workspaceGraph: t('tabs.workspaceGraph'),
+      source: t('editor.modeSource'),
+      graph: t('tabs.graph'),
+      diff: t('scm.diffTitle'),
+    }),
+    [t],
+  )
+  const activeTabLabel = getActiveTabLabel(activeTab, tabLabels)
+  const activeTabTitle = getActiveTabTitle(activeTab, activePath, tabLabels)
   const activeSaveState = activePath ? saveStates[activePath] : undefined
   const showDirtyIndicator = Boolean(activePath && !silentSave && dirtyPaths[activePath])
   const showErrorIndicator = activeSaveState?.status === 'error'
@@ -164,10 +184,10 @@ const Titlebar = ({
   const menuGroups = useMemo(
     () => [
       {
-        label: 'File',
+        label: t('menu.file'),
         items: [
-          { id: 'file.new', label: 'New File' },
-          { id: 'window.open_current_workspace_in_new_window', label: 'New Window' },
+          { id: 'file.new', label: t('sidebar.newFile') },
+          { id: 'window.open_current_workspace_in_new_window', label: t('actions.newWindow') },
           { id: 'file.open_project', label: t('actions.openProject') },
           { id: 'file.open_file', label: t('actions.openFile') },
           { id: 'file.export_pdf', label: t('actions.exportPdf') },
@@ -176,18 +196,18 @@ const Titlebar = ({
         ],
       },
       {
-        label: 'Edit',
+        label: t('menu.edit'),
         items: [
-          { id: 'edit.undo', label: 'Undo' },
-          { id: 'edit.redo', label: 'Redo' },
-          { id: 'edit.cut', label: 'Cut' },
-          { id: 'edit.copy', label: 'Copy' },
-          { id: 'edit.paste', label: 'Paste' },
-          { id: 'edit.select_all', label: 'Select All' },
+          { id: 'edit.undo', label: t('edit.undo') },
+          { id: 'edit.redo', label: t('edit.redo') },
+          { id: 'edit.cut', label: t('edit.cut') },
+          { id: 'edit.copy', label: t('edit.copy') },
+          { id: 'edit.paste', label: t('edit.paste') },
+          { id: 'edit.select_all', label: t('edit.selectAll') },
         ],
       },
       {
-        label: 'View',
+        label: t('menu.view'),
         items: [
           { id: 'view.wysiwyg', label: t('editor.modeWysiwyg') },
           { id: 'view.source', label: t('editor.modeSource') },
@@ -197,7 +217,7 @@ const Titlebar = ({
         ],
       },
       {
-        label: 'Theme',
+        label: t('menu.theme'),
         items: [
           { id: themeModeActionId('system'), label: t('themeMode.system') },
           { id: themeModeActionId('light'), label: t('themeMode.light') },
@@ -209,8 +229,8 @@ const Titlebar = ({
         ],
       },
       {
-        label: 'Help',
-        items: [{ id: 'help.about', label: 'About marklab' }],
+        label: t('menu.help'),
+        items: [{ id: 'help.about', label: t('actions.about') }],
       },
     ],
     [t],

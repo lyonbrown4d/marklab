@@ -47,7 +47,7 @@ const ActivityButton = ({
         <Button
           variant="ghost"
           size="icon"
-          className={`relative h-9 w-9 rounded-md ${
+          className={`activity-rail-button relative h-9 w-9 rounded-md ${
             active
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground/70'

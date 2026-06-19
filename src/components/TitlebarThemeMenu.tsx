@@ -64,7 +64,7 @@ const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps)
         <DropdownMenuSeparator />
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onAbout}>
           <CircleHelp className="mr-2 h-3.5 w-3.5" />
-          About marklab
+          {t('actions.about')}
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>

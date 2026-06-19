@@ -22,13 +22,13 @@ import {
   preventGraphHotkeyDefault,
   type GraphHotkeyAction,
 } from '@/pages/graphKeyboardActions'
+import {
+  adjustGraphZoom,
+  fitGraphHeading,
+  fitVisibleGraph as fitVisibleGraphViewport,
+} from '@/pages/graphViewportActions'
 import { useGraphTitleFocus } from '@/pages/useGraphTitleFocus'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-
-const ZOOM_STEP_IN = 1.16
-const ZOOM_STEP_OUT = 1 / ZOOM_STEP_IN
-const MIN_ZOOM = 0.15
-const MAX_ZOOM = 2.2
 
 type UseGraphKeyboardActionsArgs = {
   editable: boolean
@@ -38,6 +38,7 @@ type UseGraphKeyboardActionsArgs = {
   nodes: Node<GraphNodeData>[]
   selectedHeadingId: string | null
   clearSelection: () => void
+  onHotkeyFeedback?: (action: GraphHotkeyAction) => void
   onAddChildHeading: (nodeId: string) => string | null
   onAddSiblingHeading: (nodeId: string) => string | null
   onAddSiblingHeadingBefore: (nodeId: string) => string | null
@@ -53,6 +54,7 @@ export const useGraphKeyboardActions = ({
   nodes,
   selectedHeadingId,
   clearSelection,
+  onHotkeyFeedback,
   onAddChildHeading,
   onAddSiblingHeading,
   onAddSiblingHeadingBefore,
@@ -81,14 +83,7 @@ export const useGraphKeyboardActions = ({
 
   const fitHeading = useCallback(
     (headingId: string | null) => {
-      if (!flowInstance || !headingId) return
-      const selectedNode = visibleNodes.find((node) => node.id === headingId)
-      if (!selectedNode) return
-      flowInstance.fitView({
-        nodes: [selectedNode],
-        padding: 0.32,
-        duration: 120,
-      })
+      fitGraphHeading(flowInstance, visibleNodes, headingId)
     },
     [flowInstance, visibleNodes],
   )
@@ -98,19 +93,12 @@ export const useGraphKeyboardActions = ({
   }, [fitHeading, selectedHeadingId])
 
   const fitVisibleGraph = useCallback(() => {
-    if (!flowInstance || visibleNodes.length === 0) return
-    flowInstance.fitView({ padding: 0.22, duration: 160 })
+    fitVisibleGraphViewport(flowInstance, visibleNodes.length)
   }, [flowInstance, visibleNodes.length])
 
   const adjustZoom = useCallback(
     (direction: 'in' | 'out') => {
-      if (!flowInstance) return
-      const viewport = flowInstance.getViewport()
-      const nextZoom =
-        direction === 'in'
-          ? Math.min(MAX_ZOOM, viewport.zoom * ZOOM_STEP_IN)
-          : Math.max(MIN_ZOOM, viewport.zoom * ZOOM_STEP_OUT)
-      flowInstance.setViewport({ ...viewport, zoom: nextZoom }, { duration: 120 })
+      adjustGraphZoom(flowInstance, direction)
     },
     [flowInstance],
   )
@@ -166,24 +154,28 @@ export const useGraphKeyboardActions = ({
       if (action === 'fit-view') {
         preventGraphHotkeyDefault(event)
         fitVisibleGraph()
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'zoom-in') {
         preventGraphHotkeyDefault(event)
         adjustZoom('in')
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'zoom-out') {
         preventGraphHotkeyDefault(event)
         adjustZoom('out')
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'clear-selection') {
         preventGraphHotkeyDefault(event)
         clearSelection()
+        onHotkeyFeedback?.(action)
         return
       }
 
@@ -199,30 +191,35 @@ export const useGraphKeyboardActions = ({
       if (action === 'focus-selection') {
         preventGraphHotkeyDefault(event)
         fitSelectedHeading()
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'collapse') {
         preventGraphHotkeyDefault(event)
         collapseSelectedHeading(false)
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'collapse-subtree') {
         preventGraphHotkeyDefault(event)
         collapseSelectedHeading(true)
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'expand') {
         preventGraphHotkeyDefault(event)
         expandSelectedHeading(false)
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'expand-subtree') {
         preventGraphHotkeyDefault(event)
         expandSelectedHeading(true)
+        onHotkeyFeedback?.(action)
         return
       }
 
@@ -245,6 +242,7 @@ export const useGraphKeyboardActions = ({
         const nextHeadingId = onAddSiblingHeading(selectedHeadingId)
         selectHeading(nextHeadingId)
         focusHeadingTitleSoon(nextHeadingId)
+        if (nextHeadingId) onHotkeyFeedback?.(action)
         return
       }
 
@@ -253,6 +251,7 @@ export const useGraphKeyboardActions = ({
         const nextHeadingId = onAddSiblingHeadingBefore(selectedHeadingId)
         selectHeading(nextHeadingId)
         focusHeadingTitleSoon(nextHeadingId)
+        if (nextHeadingId) onHotkeyFeedback?.(action)
         return
       }
 
@@ -261,18 +260,21 @@ export const useGraphKeyboardActions = ({
         const nextHeadingId = onAddChildHeading(selectedHeadingId)
         selectHeading(nextHeadingId)
         focusHeadingTitleSoon(nextHeadingId)
+        if (nextHeadingId) onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'delete') {
         preventGraphHotkeyDefault(event)
         selectHeading(onDeleteHeading(selectedHeadingId))
+        onHotkeyFeedback?.(action)
         return
       }
 
       if (action === 'edit-title') {
         preventGraphHotkeyDefault(event)
         focusSelectedHeadingTitle()
+        onHotkeyFeedback?.(action)
       }
     },
     [
@@ -290,6 +292,7 @@ export const useGraphKeyboardActions = ({
       onAddSiblingHeading,
       onAddSiblingHeadingBefore,
       onDeleteHeading,
+      onHotkeyFeedback,
       selectHeading,
       selectedHeadingId,
       visibleNodes,

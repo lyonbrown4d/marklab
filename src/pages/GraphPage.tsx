@@ -17,6 +17,7 @@ import { mergeGraphNodePositions } from '@/logic/graphViewState'
 import { ExternalNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
+import type { GraphHotkeyAction } from '@/pages/graphKeyboardActions'
 
 const nodeTypes: NodeTypes = { external: ExternalNode, missing: MissingNode, heading: HeadingNode }
 const fitViewOptions = { padding: 0.22 }
@@ -30,6 +31,23 @@ const getMiniMapNodeColor = (node: Node) =>
       : node.type === 'external'
         ? '#f59e0b'
         : 'hsl(var(--muted-foreground))'
+
+const graphFeedbackKeyByAction: Partial<Record<GraphHotkeyAction, string>> = {
+  'add-child': 'graph.feedback.addChild',
+  'add-sibling': 'graph.feedback.addSibling',
+  'add-sibling-before': 'graph.feedback.addSiblingBefore',
+  'clear-selection': 'graph.feedback.clearSelection',
+  delete: 'graph.feedback.delete',
+  'edit-title': 'graph.feedback.editTitle',
+  collapse: 'graph.feedback.collapse',
+  'collapse-subtree': 'graph.feedback.collapseSubtree',
+  expand: 'graph.feedback.expand',
+  'expand-subtree': 'graph.feedback.expandSubtree',
+  'fit-view': 'graph.feedback.fitView',
+  'focus-selection': 'graph.feedback.focusSelection',
+  'zoom-in': 'graph.feedback.zoomIn',
+  'zoom-out': 'graph.feedback.zoomOut',
+}
 
 type GraphPageProps = {
   graph: GraphData
@@ -62,6 +80,7 @@ const GraphPageComponent = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const [selectedHeadingId, setSelectedHeadingId] = useState<string | null>(null)
+  const [graphFeedback, setGraphFeedback] = useState<string | null>(null)
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<
     Node<GraphNodeData>,
     Edge
@@ -146,6 +165,21 @@ const GraphPageComponent = ({
     )
   }, [setNodes])
 
+  const showGraphFeedback = useCallback(
+    (action: GraphHotkeyAction) => {
+      const key = graphFeedbackKeyByAction[action]
+      if (!key) return
+      setGraphFeedback(t(key))
+    },
+    [t],
+  )
+
+  useEffect(() => {
+    if (!graphFeedback) return
+    const timer = window.setTimeout(() => setGraphFeedback(null), 900)
+    return () => window.clearTimeout(timer)
+  }, [graphFeedback])
+
   const selectHeading = useCallback(
     (nodeId: string | null) => {
       const nextId = nodeId?.startsWith('heading:') ? nodeId : null
@@ -170,6 +204,7 @@ const GraphPageComponent = ({
     nodes,
     selectedHeadingId,
     clearSelection,
+    onHotkeyFeedback: showGraphFeedback,
     onAddChildHeading,
     onAddSiblingHeading,
     onAddSiblingHeadingBefore,
@@ -194,6 +229,11 @@ const GraphPageComponent = ({
           {visibleEdges.length} {t('graph.edges')}
         </span>
       </div>
+      {graphFeedback && (
+        <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border border-border bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-sm">
+          {graphFeedback}
+        </div>
+      )}
       <ReactFlow<Node<GraphNodeData>, Edge>
         className="h-full w-full"
         nodes={visibleNodes}

@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type KeyboardEvent,
   type MouseEvent,
@@ -17,6 +18,13 @@ import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 
+type TabLabelText = {
+  workspaceGraph: string
+  source: string
+  graph: string
+  diff: string
+}
+
 type TabsBarProps = {
   tabs: WorkspaceTab[]
   dirtyPaths: Record<string, true>
@@ -29,15 +37,15 @@ type TabsBarProps = {
   silentSave: boolean
 }
 
-const getTabLabel = (tab: WorkspaceTab) => {
-  if (tab.kind === 'workspace-graph') return 'Workspace Graph'
+const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
+  if (tab.kind === 'workspace-graph') return labels.workspaceGraph
   const label = createFileLabel(tab.path)
   if (tab.kind === 'file') {
-    if (tab.view === 'source') return `${label} · Source`
-    if (tab.view === 'graph') return `${label} · Graph`
+    if (tab.view === 'source') return `${label} · ${labels.source}`
+    if (tab.view === 'graph') return `${label} · ${labels.graph}`
     return label
   }
-  return `${label} · Diff`
+  return `${label} · ${labels.diff}`
 }
 
 const renderTabIcon = (tab: WorkspaceTab) => {
@@ -55,6 +63,8 @@ type WorkspaceTabButtonProps = {
   isActive: boolean
   isDirty: boolean
   hasError: boolean
+  label: string
+  closeLabel: string
   dirtyLabel: string
   errorLabel: string
   errorMessage?: string
@@ -70,13 +80,14 @@ const WorkspaceTabButton = memo(
     isActive,
     isDirty,
     hasError,
+    label,
+    closeLabel,
     dirtyLabel,
     errorLabel,
     errorMessage,
     onOpenTab,
     onCloseTab,
   }: WorkspaceTabButtonProps) => {
-    const label = getTabLabel(tab)
     const openTab = useCallback(() => {
       onOpenTab(id)
     }, [id, onOpenTab])
@@ -145,7 +156,7 @@ const WorkspaceTabButton = memo(
           }`}
           onClick={closeTab}
           onKeyDown={handleCloseKeyDown}
-          aria-label="Close tab"
+          aria-label={closeLabel}
         >
           <X className="h-3.5 w-3.5" />
         </span>
@@ -159,6 +170,8 @@ const WorkspaceTabButton = memo(
     prev.isActive === next.isActive &&
     prev.isDirty === next.isDirty &&
     prev.hasError === next.hasError &&
+    prev.label === next.label &&
+    prev.closeLabel === next.closeLabel &&
     prev.dirtyLabel === next.dirtyLabel &&
     prev.errorLabel === next.errorLabel &&
     prev.errorMessage === next.errorMessage &&
@@ -182,8 +195,18 @@ const TabsBarComponent = ({
   const compact = tabs.length >= 8
   const activeTab = tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? null
   const fileTabActive = activeTab?.kind === 'file'
+  const tabLabels = useMemo(
+    () => ({
+      workspaceGraph: t('tabs.workspaceGraph'),
+      source: t('editor.modeSource'),
+      graph: t('tabs.graph'),
+      diff: t('scm.diffTitle'),
+    }),
+    [t],
+  )
   const dirtyLabel = t('save.unsaved')
   const errorLabel = t('save.error')
+  const closeLabel = t('actions.closeTab')
 
   const handleTabsWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget
@@ -255,6 +278,7 @@ const TabsBarComponent = ({
           >
             {tabs.map((tab) => {
               const id = getWorkspaceTabId(tab)
+              const label = getTabLabel(tab, tabLabels)
               const saveState = tab.kind === 'file' ? saveStates[tab.path] : undefined
               const isDirty = tab.kind === 'file' && !silentSave && Boolean(dirtyPaths[tab.path])
               const hasError = saveState?.status === 'error'
@@ -268,6 +292,8 @@ const TabsBarComponent = ({
                   isActive={isActive}
                   isDirty={isDirty}
                   hasError={hasError}
+                  label={label}
+                  closeLabel={closeLabel}
                   dirtyLabel={dirtyLabel}
                   errorLabel={errorLabel}
                   errorMessage={saveState?.message}

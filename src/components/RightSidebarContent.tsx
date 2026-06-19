@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRail'
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
@@ -22,6 +23,15 @@ import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/appTypes'
 import { Badge } from '@/components/ui/badge'
 import { CircleAlert, FileText, ImageIcon, Link2, ListTree, Network } from 'lucide-react'
+
+const inspectorTabs = [
+  { value: 'outline', labelKey: 'inspector.outline', icon: ListTree },
+  { value: 'backlinks', labelKey: 'inspector.backlinks', icon: Link2 },
+  { value: 'knowledge', labelKey: 'inspector.knowledge', icon: Network },
+  { value: 'problems', labelKey: 'inspector.problems', icon: CircleAlert },
+  { value: 'assets', labelKey: 'inspector.assets', icon: ImageIcon },
+  { value: 'properties', labelKey: 'inspector.properties', icon: FileText },
+] as const
 
 type SidebarHeading = {
   level: number
@@ -100,32 +110,31 @@ export const RightSidebarContent = ({
       />
 
       <Tabs defaultValue="outline" className="mt-1.5 flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-8 w-full grid-cols-6 rounded-md border border-sidebar-border bg-background/65 p-0.5">
-          <TabsTrigger value="outline" className="gap-1 rounded px-1 text-[11px]">
-            <ListTree className="h-3.5 w-3.5" />
-            {t('inspector.outline')}
-          </TabsTrigger>
-          <TabsTrigger value="backlinks" className="gap-1 rounded px-1 text-[11px]">
-            <Link2 className="h-3.5 w-3.5" />
-            {t('inspector.backlinks')}
-          </TabsTrigger>
-          <TabsTrigger value="knowledge" className="gap-1 rounded px-1 text-[11px]">
-            <Network className="h-3.5 w-3.5" />
-            {t('inspector.knowledge')}
-          </TabsTrigger>
-          <TabsTrigger value="problems" className="gap-1 rounded px-1 text-[11px]">
-            <CircleAlert className="h-3.5 w-3.5" />
-            {t('inspector.problems')}
-          </TabsTrigger>
-          <TabsTrigger value="assets" className="gap-1 rounded px-1 text-[11px]">
-            <ImageIcon className="h-3.5 w-3.5" />
-            {t('inspector.assets')}
-          </TabsTrigger>
-          <TabsTrigger value="properties" className="gap-1 rounded px-1 text-[11px]">
-            <FileText className="h-3.5 w-3.5" />
-            {t('inspector.properties')}
-          </TabsTrigger>
-        </TabsList>
+        <TooltipProvider>
+          <TabsList className="grid h-8 w-full min-w-0 grid-cols-6 gap-0.5 rounded-md border border-sidebar-border bg-background/65 p-0.5">
+            {inspectorTabs.map(({ value, labelKey, icon: Icon }) => {
+              const label = t(labelKey)
+
+              return (
+                <Tooltip key={value}>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value={value}
+                      aria-label={label}
+                      className="h-7 min-w-0 rounded px-0"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="sr-only">{label}</span>
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="center">
+                    {label}
+                  </TooltipContent>
+                </Tooltip>
+              )
+            })}
+          </TabsList>
+        </TooltipProvider>
 
         <TabsContent value="outline" className="mt-1 min-h-0 flex-1 overflow-hidden">
           <ScrollArea className="h-full" viewportClassName="p-1">

@@ -1,6 +1,6 @@
 # marklab
 
-A desktop Markdown workspace that blends a Typora-style editor with a project graph.
+A desktop Markdown workspace that blends immersive editing with a project graph.
 
 Marklab uses Electron for its desktop runtime and native integration while keeping
 the React editor and typed runtime boundary explicit.

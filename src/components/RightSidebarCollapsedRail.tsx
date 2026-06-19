@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
 import { LayoutGrid, NotebookTabs } from 'lucide-react'
@@ -15,9 +14,14 @@ export const RightSidebarCollapsedRail = ({ tabs, totalFiles }: RightSidebarColl
       <div className="flex h-full flex-col items-center gap-2 pt-2">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t('inspector.totalFiles')}>
+            <div
+              className="right-rail-stat"
+              role="img"
+              tabIndex={0}
+              aria-label={t('inspector.totalFiles')}
+            >
               <LayoutGrid className="h-4 w-4" />
-            </Button>
+            </div>
           </TooltipTrigger>
           <TooltipContent side="left">
             {t('inspector.totalFiles')}: {totalFiles}
@@ -25,9 +29,14 @@ export const RightSidebarCollapsedRail = ({ tabs, totalFiles }: RightSidebarColl
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t('inspector.openTabs')}>
+            <div
+              className="right-rail-stat"
+              role="img"
+              tabIndex={0}
+              aria-label={t('inspector.openTabs')}
+            >
               <NotebookTabs className="h-4 w-4" />
-            </Button>
+            </div>
           </TooltipTrigger>
           <TooltipContent side="left">
             {t('inspector.openTabs')}: {tabs.length}
