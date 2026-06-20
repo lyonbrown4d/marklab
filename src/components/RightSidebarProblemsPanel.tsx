@@ -95,13 +95,13 @@ export const RightSidebarProblemsPanel = ({
     <div ref={scrollParentRef} className="h-full overflow-auto p-1">
       {!targetPath ? (
         <InspectorEmptyState
-          icon={<FileText className="h-4 w-4" />}
+          icon={<FileText className="size-4" />}
           title={t('inspector.none')}
           description={t('editor.empty')}
         />
       ) : problems.length === 0 ? (
         <InspectorEmptyState
-          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          icon={<CheckCircle2 className="size-4 text-emerald-500" />}
           title={t('inspector.noProblems')}
           description={targetLabel}
         />
@@ -151,13 +151,13 @@ type ProblemRowProps = {
 
 const ProblemRow = ({ problem, onOpenProblem }: ProblemRowProps) => {
   const { t } = useI18n()
-  const iconClassName = `h-4 w-4 shrink-0 ${problemClasses(problem.severity)}`
+  const iconClassName = `size-4 shrink-0 ${problemClasses(problem.severity)}`
 
   return (
     <Button
       variant="ghost"
       size="sm"
-      className="inspector-row h-auto min-h-9 w-full justify-start rounded-md px-2 py-1 text-left"
+      className="h-auto min-h-9 w-full justify-start rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
       onClick={() => onOpenProblem(problem)}
     >
       {problem.severity === 'error' ? (

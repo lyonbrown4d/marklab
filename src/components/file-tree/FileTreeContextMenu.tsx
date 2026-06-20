@@ -119,7 +119,7 @@ const MenuItem = ({
     >
       <Icon
         className={cn(
-          'h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/file-tree-menu:text-accent-foreground group-data-[active=true]/file-tree-menu:text-accent-foreground group-data-[highlighted]/file-tree-menu:text-accent-foreground',
+          'size-4 shrink-0 text-muted-foreground transition-colors group-hover/file-tree-menu:text-accent-foreground group-data-[active=true]/file-tree-menu:text-accent-foreground group-data-[highlighted]/file-tree-menu:text-accent-foreground',
           destructive &&
             'text-destructive/80 group-hover/file-tree-menu:text-destructive group-data-[active=true]/file-tree-menu:text-destructive group-data-[highlighted]/file-tree-menu:text-destructive',
         )}
@@ -183,7 +183,7 @@ export const FileTreeContextMenu = ({
       className="w-[16rem] rounded-lg border border-border/90 bg-popover p-1.5 shadow-xl"
     >
       <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
-        <HeaderIcon className="h-4 w-4 shrink-0 text-primary" />
+        <HeaderIcon className="size-4 shrink-0 text-primary" />
         <div className="min-w-0">
           <div className="truncate text-xs font-medium text-foreground">{item.name}</div>
           <div className="truncate text-[10px] text-muted-foreground">{item.path || item.name}</div>

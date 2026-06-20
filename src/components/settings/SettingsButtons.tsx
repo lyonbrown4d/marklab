@@ -8,7 +8,7 @@ export const SettingsEmptyState = ({ className, ...props }: ComponentProps<'div'
   return (
     <div
       className={cn(
-        'settings-empty-state rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground',
+        'rounded-md border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground',
         className,
       )}
       {...props}
@@ -27,7 +27,7 @@ export const SettingsActionButton = ({
       {...props}
       size={size}
       variant={variant}
-      className={cn('settings-action-button', className)}
+      className={cn('border-border/70 transition-colors hover:border-primary/40', className)}
     />
   )
 }
@@ -43,7 +43,10 @@ export const SettingsIconButton = ({
       {...props}
       size={size}
       variant={variant}
-      className={cn('settings-action-icon-button', className)}
+      className={cn(
+        'text-muted-foreground transition-colors hover:bg-foreground/[0.08] hover:text-foreground focus-visible:bg-foreground/[0.08] focus-visible:text-foreground',
+        className,
+      )}
     />
   )
 }

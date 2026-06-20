@@ -1,0 +1,62 @@
+.root.root {
+  width: 2.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-width: 2px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 9999px;
+  appearance: none;
+  cursor: pointer;
+  background: color-mix(in srgb, hsl(var(--foreground)) 18%, hsl(var(--background)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--border)) 76%, transparent);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+  vertical-align: middle;
+}
+
+.root.root:hover {
+  background: color-mix(in srgb, hsl(var(--foreground)) 24%, hsl(var(--background)));
+}
+
+.root.root[data-state='checked'] {
+  background: hsl(var(--primary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 54%, hsl(var(--foreground)));
+}
+
+.root.root[data-state='checked']:hover {
+  background: color-mix(in srgb, hsl(var(--primary)) 88%, hsl(var(--foreground)) 12%);
+}
+
+.root.root:disabled,
+.root.root[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.thumb {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  pointer-events: none;
+  border-radius: 9999px;
+  transform: translateX(0);
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  background: hsl(var(--background));
+  box-shadow:
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 20%, transparent),
+    0 0 0 1px color-mix(in srgb, hsl(var(--border)) 70%, transparent);
+}
+
+.root.root[data-state='checked'] .thumb {
+  transform: translateX(1rem);
+  background: hsl(var(--primary-foreground));
+}
+
+.root.root[data-state='unchecked'] .thumb {
+  transform: translateX(0);
+}

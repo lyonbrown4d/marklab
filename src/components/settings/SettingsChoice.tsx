@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import styles from '@/components/settings/SettingsChoice.module.scss'
 
 type SettingsChoiceGridProps = {
   children: ReactNode
@@ -26,14 +27,7 @@ export const SettingsChoiceGrid = ({
   className,
 }: SettingsChoiceGridProps) => {
   return (
-    <div
-      role="group"
-      className={cn(
-        'settings-choice-grid grid grid-cols-1 gap-2',
-        gridColumnClass[columns],
-        className,
-      )}
-    >
+    <div role="group" className={cn('grid grid-cols-1 gap-2', gridColumnClass[columns], className)}>
       {children}
     </div>
   )
@@ -56,9 +50,10 @@ export const SettingsChoiceButton = ({
       data-selected={selected ? 'true' : 'false'}
       aria-pressed={selected ? 'true' : 'false'}
       className={cn(
-        'settings-choice-button h-9 justify-start rounded-md',
-        selected && 'settings-choice-button-selected',
-        isDisabled && 'settings-choice-button-disabled',
+        'h-9 justify-start rounded-md',
+        styles.button,
+        selected && styles.selected,
+        isDisabled && styles.disabled,
         className,
       )}
     />

@@ -3,10 +3,7 @@
 }
 
 button,
-[role='button'],
-.settings-row-surface [role='button'],
-.settings-choice-button,
-.settings-switch {
+[role='button'] {
   cursor: pointer;
 }
 
@@ -17,8 +14,6 @@ a,
 
 button:focus-visible,
 [role='button']:focus-visible,
-.settings-choice-button:focus-visible,
-.settings-switch:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
@@ -33,8 +28,6 @@ label:focus-visible {
 
 button:hover:not(:disabled),
 [role='button']:hover:not([aria-disabled='true'], [data-disabled='true'], [disabled='true']),
-.settings-choice-button:hover,
-.settings-switch:hover,
 a:hover,
 [role='link']:hover {
   transition:
@@ -212,11 +205,6 @@ button[disabled],
 
 .sidebar-section-header {
   color: color-mix(in srgb, hsl(var(--sidebar-foreground)) 56%, transparent);
-}
-
-.side-stat {
-  border: 1px solid color-mix(in srgb, hsl(var(--sidebar-border)) 80%, transparent);
-  background: color-mix(in srgb, hsl(var(--sidebar)) 58%, hsl(var(--sidebar-accent)) 42%);
 }
 
 .tab-strip {
@@ -399,109 +387,14 @@ button[disabled],
   border-radius: 999px;
 }
 
-.settings-row-surface {
-  background: hsl(var(--card));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent 22%);
-  box-shadow:
-    0 1px 0 color-mix(in srgb, hsl(var(--foreground)) 3%, transparent),
-    0 0 0 1px color-mix(in srgb, hsl(var(--card)) 80%, transparent);
-}
-
-.settings-choice-button {
-  background: hsl(var(--background));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent 18%);
-  color: hsl(var(--foreground));
-  cursor: pointer;
-  box-shadow: none;
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease;
-}
-
-.settings-choice-button:hover {
-  background: color-mix(in srgb, hsl(var(--accent)) 36%, hsl(var(--background)) 64%);
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 22%, hsl(var(--border)) 78%);
-  box-shadow: none;
-}
-
-.settings-choice-button:disabled,
-.settings-choice-button-disabled,
-.settings-choice-button-disabled:hover {
-  background: color-mix(in srgb, hsl(var(--muted)) 86%, hsl(var(--background)) 14%);
-  border-color: color-mix(in srgb, hsl(var(--muted)) 78%, hsl(var(--border)) 22%);
-  color: hsl(var(--foreground));
-  box-shadow: none;
-}
-
-.settings-choice-button-selected {
-  color: hsl(var(--foreground));
-  background: color-mix(in srgb, hsl(var(--primary)) 16%, hsl(var(--card)) 84%);
-  border-color: color-mix(in srgb, hsl(var(--ring)) 62%, hsl(var(--border)) 38%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 18%, transparent);
-}
-
-.settings-choice-button:focus-visible,
-.settings-choice-button-selected:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 24%, transparent),
-    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
-}
-
-.settings-choice-button-selected:hover {
-  background: color-mix(in srgb, hsl(var(--primary)) 20%, hsl(var(--card)) 80%);
-  color: hsl(var(--foreground));
-}
-
-.settings-choice-button svg,
-.settings-action-button svg,
-.settings-action-icon-button svg,
 .settings-dialog-tab-trigger svg {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
 }
 
-.settings-choice-button-selected svg,
 .settings-theme-check {
   color: hsl(var(--primary));
-}
-
-.settings-action-button {
-  background: color-mix(in srgb, hsl(var(--secondary)) 74%, hsl(var(--background)) 26%);
-  color: hsl(var(--foreground));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
-  box-shadow: none;
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease,
-    box-shadow var(--motion-duration-fast) ease;
-}
-
-.settings-action-button:hover {
-  background: color-mix(in srgb, hsl(var(--secondary)) 82%, hsl(var(--foreground)) 8%);
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 26%, hsl(var(--border)) 74%);
-  box-shadow: none;
-}
-
-.settings-action-button:disabled,
-.settings-action-button:disabled:hover {
-  opacity: 0.5;
-}
-
-.settings-action-icon-button {
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 80%, transparent);
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease;
-}
-
-.settings-action-icon-button:hover {
-  background: color-mix(in srgb, hsl(var(--accent)) 44%, hsl(var(--background)) 56%);
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 30%, hsl(var(--border)) 70%);
 }
 
 .settings-dialog-tabs {
@@ -594,134 +487,6 @@ button[disabled],
   background: hsl(var(--sidebar-primary));
 }
 
-.right-rail-stat {
-  display: inline-flex;
-  height: 2.25rem;
-  width: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius);
-  color: color-mix(in srgb, hsl(var(--sidebar-foreground)) 70%, transparent);
-  outline: none;
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease;
-}
-
-.right-rail-stat:hover,
-.right-rail-stat:focus-visible {
-  color: hsl(var(--sidebar-foreground));
-  background: color-mix(in srgb, hsl(var(--sidebar-accent)) 70%, hsl(var(--sidebar)) 30%);
-}
-
-.settings-switch {
-  background: color-mix(in srgb, hsl(var(--input)) 72%, hsl(var(--foreground)) 28%);
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 34%, hsl(var(--border)) 66%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, hsl(var(--background)) 58%, transparent 42%),
-    color-mix(in srgb, hsl(var(--input)) 70%, hsl(var(--foreground)) 30%)
-  );
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease,
-    box-shadow var(--motion-duration-fast) ease;
-}
-
-.settings-switch[data-state='unchecked'] {
-  background: color-mix(in srgb, hsl(var(--input)) 68%, hsl(var(--foreground)) 32%);
-}
-
-.settings-switch[data-state='unchecked']:hover {
-  background: color-mix(in srgb, hsl(var(--input)) 58%, hsl(var(--foreground)) 42%);
-}
-
-.settings-switch[data-state='checked'] {
-  background: color-mix(in srgb, hsl(var(--primary)) 84%, hsl(var(--ring)) 16%);
-  border-color: hsl(var(--ring));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary-foreground)) 20%, transparent),
-    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
-}
-
-.settings-switch[data-state='checked']:hover {
-  background: color-mix(in srgb, hsl(var(--primary)) 92%, hsl(var(--foreground)) 8%);
-}
-
-.settings-switch:hover {
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 46%, hsl(var(--ring)) 54%);
-}
-
-.settings-switch:disabled,
-.settings-switch:disabled:hover,
-.settings-switch[data-state='disabled'],
-.settings-switch[data-state='disabled']:hover {
-  box-shadow: none;
-  opacity: 0.45;
-}
-
-.settings-switch > span {
-  background: hsl(var(--background));
-  box-shadow:
-    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 30%, transparent),
-    0 0 0 1px color-mix(in srgb, hsl(var(--border)) 78%, transparent 22%);
-  transition: transform var(--motion-duration-fast) ease;
-}
-
-.settings-switch[data-state='checked'] > span {
-  transform: translateX(1.05rem);
-}
-
-.settings-switch[data-state='unchecked'] > span {
-  transform: translateX(0);
-}
-
-.settings-section {
-  margin: 0;
-}
-
-.settings-section-icon {
-  background: color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--background)) 88%);
-  color: hsl(var(--primary));
-}
-
-.settings-section-title {
-  color: color-mix(in srgb, hsl(var(--foreground)) 92%, transparent);
-}
-
-.settings-section-description {
-  color: color-mix(in srgb, hsl(var(--muted-foreground)) 88%, transparent);
-}
-
-.settings-row {
-  transition: border-color var(--motion-duration-fast) ease;
-}
-
-.settings-row:hover {
-  border-color: color-mix(in srgb, hsl(var(--border)) 58%, hsl(var(--foreground)) 42%);
-}
-
-.settings-field-control {
-  max-width: min(18rem, 45%);
-}
-
-.settings-row-title {
-  color: color-mix(in srgb, hsl(var(--foreground)) 92%, transparent);
-}
-
-.settings-row-description {
-  color: color-mix(in srgb, hsl(var(--muted-foreground)) 90%, transparent);
-}
-
-.settings-subsection-title {
-  color: color-mix(in srgb, hsl(var(--foreground)) 84%, transparent);
-}
-
-.settings-select-trigger {
-  background: hsl(var(--background));
-}
-
 .settings-theme-list {
   margin-top: 0.5rem;
 }
@@ -753,10 +518,6 @@ button[disabled],
 .settings-theme-item-trigger:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 26%, transparent);
-}
-
-.settings-empty-state {
-  background: color-mix(in srgb, hsl(var(--muted)) 78%, hsl(var(--background)) 22%);
 }
 
 .settings-shortcuts-search {
@@ -855,14 +616,6 @@ button[disabled],
     flex: 0 0 auto;
   }
 
-  .settings-field {
-    flex-direction: column;
-  }
-
-  .settings-field-control {
-    max-width: none;
-    width: 100%;
-  }
 }
 
 .command-dialog-surface {
@@ -997,14 +750,6 @@ button[disabled],
 
 .theme-swatch-preview {
   background: var(--swatch-bg);
-}
-
-.inspector-row {
-  border-left: 2px solid transparent;
-}
-
-.inspector-row:hover {
-  border-left-color: hsl(var(--primary) / 0.5);
 }
 
 .graph-node-shell {
@@ -1347,15 +1092,4 @@ button[disabled],
 .react-flow__node.selected .graph-node-shell {
   border-color: color-mix(in srgb, hsl(var(--primary)) 64%, hsl(var(--border)));
   box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
-}
-
-.right-rail-stat {
-  color: hsl(var(--muted-foreground));
-  background: transparent;
-}
-
-.right-rail-stat:hover,
-.right-rail-stat:focus-visible {
-  color: hsl(var(--foreground));
-  background: color-mix(in srgb, hsl(var(--foreground)) 7%, transparent);
 }

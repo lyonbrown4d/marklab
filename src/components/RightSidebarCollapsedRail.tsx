@@ -14,7 +14,12 @@ export const RightSidebarCollapsedRail = ({ tabs, totalFiles }: RightSidebarColl
       <div className="flex h-full flex-col items-center gap-2 pt-2">
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="right-rail-stat" role="img" aria-label={t('inspector.totalFiles')}>
+            <div
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              role="img"
+              tabIndex={0}
+              aria-label={t('inspector.totalFiles')}
+            >
               <LayoutGrid className="size-4" />
             </div>
           </TooltipTrigger>
@@ -24,7 +29,12 @@ export const RightSidebarCollapsedRail = ({ tabs, totalFiles }: RightSidebarColl
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="right-rail-stat" role="img" aria-label={t('inspector.openTabs')}>
+            <div
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground focus-visible:bg-foreground/[0.07] focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              role="img"
+              tabIndex={0}
+              aria-label={t('inspector.openTabs')}
+            >
               <NotebookTabs className="size-4" />
             </div>
           </TooltipTrigger>

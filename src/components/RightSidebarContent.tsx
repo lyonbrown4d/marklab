@@ -140,13 +140,13 @@ export const RightSidebarContent = ({
           <ScrollArea className="h-full" viewportClassName="p-1">
             {!targetPath ? (
               <InspectorEmptyState
-                icon={<FileText className="h-4 w-4" />}
+                icon={<FileText className="size-4" />}
                 title={t('inspector.none')}
                 description={t('editor.empty')}
               />
             ) : outline.length === 0 ? (
               <InspectorEmptyState
-                icon={<ListTree className="h-4 w-4" />}
+                icon={<ListTree className="size-4" />}
                 title={t('inspector.noOutline')}
                 description={targetLabel}
               />
@@ -157,7 +157,7 @@ export const RightSidebarContent = ({
                     key={`${heading.slug}-${heading.level}`}
                     variant="ghost"
                     size="sm"
-                    className="inspector-row h-7 w-full justify-start rounded-md px-2 text-xs"
+                    className="h-7 w-full justify-start rounded-md px-2 text-xs transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
                     style={{ paddingLeft: 6 + (heading.level - 1) * 12 }}
                     onClick={() => onOpenHeading(heading.slug)}
                   >
@@ -176,13 +176,13 @@ export const RightSidebarContent = ({
           <ScrollArea className="h-full" viewportClassName="p-1">
             {!targetPath ? (
               <InspectorEmptyState
-                icon={<FileText className="h-4 w-4" />}
+                icon={<FileText className="size-4" />}
                 title={t('inspector.none')}
                 description={t('editor.empty')}
               />
             ) : backlinks.length === 0 ? (
               <InspectorEmptyState
-                icon={<Link2 className="h-4 w-4" />}
+                icon={<Link2 className="size-4" />}
                 title={t('inspector.noBacklinks')}
                 description={targetLabel}
               />
@@ -193,10 +193,10 @@ export const RightSidebarContent = ({
                     key={`${backlink.sourcePath}-${index}`}
                     variant="ghost"
                     size="sm"
-                    className="inspector-row h-auto min-h-11 w-full items-start justify-start rounded-md px-2 py-1.5 text-left"
+                    className="h-auto min-h-11 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
                     onClick={() => onOpenBacklink(backlink)}
                   >
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-medium">
                         {createFileLabel(backlink.sourcePath)}

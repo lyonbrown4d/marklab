@@ -16,7 +16,7 @@ const SidebarWorkspaceGraphPanel = ({
     <SidebarGroup className="sidebar-section rounded-md p-1">
       <SidebarGroupLabel className="sidebar-section-header flex h-8 items-center justify-between px-2 text-[11px] uppercase">
         <span>{t('tabs.workspaceGraph')}</span>
-        <GitGraph className="h-3.5 w-3.5" />
+        <GitGraph className="size-3.5" />
       </SidebarGroupLabel>
       <SidebarGroupContent className="space-y-2 px-1 pb-1">
         <Button
@@ -25,15 +25,15 @@ const SidebarWorkspaceGraphPanel = ({
           className="h-8 w-full justify-start rounded-md px-2 text-xs"
           onClick={onOpenWorkspaceGraph}
         >
-          <GitGraph className="h-4 w-4" />
+          <GitGraph className="size-4" />
           {t('tabs.workspaceGraph')}
         </Button>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="side-stat rounded px-2 py-1.5">
+          <div className="rounded border border-sidebar-border/70 bg-muted/30 px-2 py-1.5 transition-colors hover:bg-sidebar-accent/60">
             <div className="text-[10px] uppercase text-muted-foreground">{t('sidebar.files')}</div>
             <div className="font-semibold">{fileCount}</div>
           </div>
-          <div className="side-stat rounded px-2 py-1.5">
+          <div className="rounded border border-sidebar-border/70 bg-muted/30 px-2 py-1.5 transition-colors hover:bg-sidebar-accent/60">
             <div className="text-[10px] uppercase text-muted-foreground">
               {t('sidebar.recentProjects')}
             </div>

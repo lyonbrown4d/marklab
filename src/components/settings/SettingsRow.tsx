@@ -54,11 +54,11 @@ type SettingsSelectFieldProps = Omit<SettingsRowProps, 'control'> & {
 }
 
 export const SettingsPageStack = ({ className, ...props }: ComponentProps<'div'>) => {
-  return <div className={cn('settings-page-stack flex flex-col gap-4', className)} {...props} />
+  return <div className={cn('flex flex-col gap-4', className)} {...props} />
 }
 
 export const SettingsFieldGroup = ({ className, ...props }: ComponentProps<typeof FieldGroup>) => {
-  return <FieldGroup className={cn('settings-field-group gap-3', className)} {...props} />
+  return <FieldGroup className={cn('gap-3', className)} {...props} />
 }
 
 export const SettingsSubsection = ({
@@ -73,13 +73,11 @@ export const SettingsSubsection = ({
   className?: string
 }) => {
   return (
-    <div className={cn('settings-subsection flex flex-col gap-2', className)}>
-      <div className="settings-subsection-header flex flex-col gap-1">
-        <div className="settings-subsection-title text-xs font-medium">{title}</div>
+    <div className={cn('flex flex-col gap-2', className)}>
+      <div className="flex flex-col gap-1">
+        <div className="text-xs font-medium">{title}</div>
         {description && (
-          <div className="settings-subsection-description text-xs leading-5 text-muted-foreground">
-            {description}
-          </div>
+          <div className="text-xs leading-5 text-muted-foreground">{description}</div>
         )}
       </div>
       {children}
@@ -99,27 +97,23 @@ export const SettingsSection = ({
   return (
     <section
       className={cn(
-        'settings-section flex flex-col gap-3',
-        surface && 'settings-section-surface settings-row-surface rounded-md p-3',
+        'flex flex-col gap-3',
+        surface && 'rounded-md border border-border/80 bg-card/70 p-3',
         className,
       )}
     >
-      <header className="settings-section-header flex items-start gap-3">
+      <header className="flex items-start gap-3">
         {Icon && (
-          <span className="settings-section-icon mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md">
+          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Icon className="size-4" aria-hidden="true" />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="settings-section-title text-sm font-medium">{title}</div>
-          <div className="settings-section-description mt-1 text-xs leading-5 text-muted-foreground">
-            {description}
-          </div>
+          <div className="text-sm font-medium">{title}</div>
+          <div className="mt-1 text-xs leading-5 text-muted-foreground">{description}</div>
         </div>
       </header>
-      <div className={cn('settings-section-body flex flex-col gap-3', bodyClassName)}>
-        {children}
-      </div>
+      <div className={cn('flex flex-col gap-3', bodyClassName)}>{children}</div>
     </section>
   )
 }
@@ -136,17 +130,15 @@ export const SettingsField = ({
       orientation="horizontal"
       data-disabled={disabled ? 'true' : undefined}
       className={cn(
-        'settings-field settings-row settings-row-surface items-start justify-between rounded-md p-3',
+        'items-start justify-between rounded-md border border-border/70 bg-background/60 p-3 data-[disabled=true]:opacity-60',
         className,
       )}
     >
-      <FieldContent className="settings-row-content min-w-0 gap-1">
-        <FieldTitle className="settings-row-title">{title}</FieldTitle>
-        <FieldDescription className="settings-row-description text-xs leading-5">
-          {description}
-        </FieldDescription>
+      <FieldContent className="min-w-0 gap-1">
+        <FieldTitle>{title}</FieldTitle>
+        <FieldDescription className="text-xs leading-5">{description}</FieldDescription>
       </FieldContent>
-      <div className="settings-field-control shrink-0 pt-0.5">{control}</div>
+      <div className="shrink-0 pt-0.5">{control}</div>
     </Field>
   )
 }
@@ -194,7 +186,7 @@ export const SettingsSelectField = ({
       className={className}
       control={
         <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-          <SelectTrigger className="settings-select-trigger min-w-40">
+          <SelectTrigger className="min-w-40">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>

@@ -6,6 +6,7 @@ import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { FileTreeContextMenu } from '@/components/file-tree/FileTreeContextMenu'
 import { InlineRenameField } from '@/components/file-tree/InlineRenameField'
 import type { SidebarFileTreeActions } from '@/components/file-tree/types'
+import { cn } from '@/lib/utils'
 import { createFileTreeDragPayload, MARKLAB_FILE_TREE_ITEM_MIME } from '@/logic/fileDragPayload'
 import type { FileTreeNode } from '@/logic/fileTree'
 
@@ -79,11 +80,12 @@ export const FileTreeNodeRenderer = ({
           <Button
             variant="ghost"
             size="sm"
-            className={`group relative h-[28px] w-full justify-start rounded-md px-2 text-xs transition-all ${
+            className={cn(
+              'group relative h-7 w-full justify-start rounded-md px-2 text-xs transition-colors',
               isActive
                 ? 'bg-accent text-accent-foreground before:absolute before:left-0 before:top-1 before:h-5 before:w-0.5 before:rounded-full before:bg-primary'
-                : 'text-sidebar-foreground/85 hover:bg-sidebar-accent'
-            }`}
+                : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            )}
             aria-current={isActive ? 'page' : undefined}
             data-file-tree-node="true"
             draggable={isImageFile}
@@ -99,25 +101,26 @@ export const FileTreeNodeRenderer = ({
               <>
                 {hasChildren ? (
                   <ChevronRight
-                    className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
-                      node.isOpen ? 'rotate-90' : ''
-                    }`}
+                    className={cn(
+                      'size-3.5 text-muted-foreground transition-transform',
+                      node.isOpen && 'rotate-90',
+                    )}
                   />
                 ) : (
                   <span className="w-3.5" />
                 )}
                 {hasChildren && node.isOpen ? (
-                  <FolderOpen className="h-4 w-4 text-primary" />
+                  <FolderOpen className="size-4 text-primary" />
                 ) : hasChildren ? (
-                  <Folder className="h-4 w-4 text-muted-foreground" />
+                  <Folder className="size-4 text-muted-foreground" />
                 ) : (
-                  <FolderX className="h-4 w-4 text-muted-foreground/70" />
+                  <FolderX className="size-4 text-muted-foreground/70" />
                 )}
               </>
             ) : (
               <>
                 <span className="w-3.5" />
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <FileText className="size-4 text-muted-foreground" />
               </>
             )}
             {node.isEditing ? (

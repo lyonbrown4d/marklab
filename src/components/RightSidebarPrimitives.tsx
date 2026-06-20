@@ -20,7 +20,7 @@ export const InspectorMetric = ({
   )
 
   return (
-    <div className="side-stat flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1">
+    <div className="flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-sidebar-accent/60">
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">{label}</span>
       <span className={cn('shrink-0 text-xs font-semibold tabular-nums', toneClass)}>{value}</span>

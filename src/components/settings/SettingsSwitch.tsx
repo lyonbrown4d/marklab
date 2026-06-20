@@ -1,16 +1,19 @@
 import * as React from 'react'
-import { Switch } from '@/components/ui/switch'
+import * as SwitchPrimitives from '@radix-ui/react-switch'
 import { cn } from '@/lib/utils'
+import styles from '@/components/settings/SettingsSwitch.module.scss'
 
-type SettingsSwitchProps = React.ComponentPropsWithoutRef<typeof Switch>
+type SettingsSwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
 
 export const SettingsSwitch = React.forwardRef<
-  React.ElementRef<typeof Switch>,
+  React.ElementRef<typeof SwitchPrimitives.Root>,
   SettingsSwitchProps
 >(({ className, ...props }, ref) => (
-  <Switch ref={ref} className={cn('settings-switch', className)} {...props} />
+  <SwitchPrimitives.Root ref={ref} className={cn(styles.root, className)} {...props}>
+    <SwitchPrimitives.Thumb className={styles.thumb} />
+  </SwitchPrimitives.Root>
 ))
 
-SettingsSwitch.displayName = 'SettingsSwitch'
+SettingsSwitch.displayName = SwitchPrimitives.Root.displayName
 
 export default SettingsSwitch

@@ -32,7 +32,7 @@ export const RightSidebarKnowledgePanel = ({
   if (!targetPath) {
     return (
       <InspectorEmptyState
-        icon={<FileText className="h-4 w-4" />}
+        icon={<FileText className="size-4" />}
         title={t('inspector.none')}
         description={t('editor.empty')}
       />
@@ -106,7 +106,7 @@ const KnowledgeSection = ({
 }) => (
   <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
     <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-      <Network className="h-3.5 w-3.5" />
+      <Network className="size-3.5" />
       {title}
     </div>
     {items.length === 0 ? (
@@ -118,10 +118,10 @@ const KnowledgeSection = ({
             key={item.path}
             variant="ghost"
             size="sm"
-            className="inspector-row h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left"
+            className="h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
             onClick={() => (onOpenReference ? onOpenReference(item) : onOpen?.(item.path))}
           >
-            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <FileText className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-medium">{item.label}</span>
               <span className="block truncate text-[11px] text-muted-foreground">{item.path}</span>
@@ -149,7 +149,7 @@ const MissingLinksSection = ({
 }) => (
   <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
     <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-      <CircleAlert className="h-3.5 w-3.5" />
+      <CircleAlert className="size-3.5" />
       {title}
     </div>
     {items.length === 0 ? (
@@ -161,10 +161,10 @@ const MissingLinksSection = ({
             key={`${item.target}-${item.line}-${index}`}
             variant="ghost"
             size="sm"
-            className="inspector-row h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left"
+            className="h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
             onClick={() => onOpen(item)}
           >
-            <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Link2 className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-medium">{item.text}</span>
               <span className="block truncate text-[11px] text-muted-foreground">
