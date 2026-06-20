@@ -1,6 +1,10 @@
 import { commandsCtx } from '@milkdown/kit/core'
 import type { Ctx } from '@milkdown/kit/ctx'
 import { clearTextInCurrentBlockCommand } from '@milkdown/kit/preset/commonmark'
+import {
+  markdownEditorSlashCommands,
+  type SlashCommandGroupId,
+} from '@/components/milkdown/editorCommandCatalog'
 
 const imageIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -35,27 +39,16 @@ export const createSlashMenuConfig = (
 ) => ({
   textGroup: {
     label: labels.textGroup,
-    text: { label: labels.text },
-    h1: { label: labels.heading1 },
-    h2: { label: labels.heading2 },
-    h3: { label: labels.heading3 },
-    h4: { label: labels.heading4 },
-    h5: { label: labels.heading5 },
-    h6: { label: labels.heading6 },
-    quote: { label: labels.quote },
-    divider: { label: labels.divider },
+    ...createNativeSlashItems(labels, 'text'),
   },
   listGroup: {
     label: labels.listGroup,
-    bulletList: { label: labels.bulletList },
-    orderedList: { label: labels.orderedList },
-    taskList: { label: labels.taskList },
+    ...createNativeSlashItems(labels, 'list'),
   },
   advancedGroup: {
     label: labels.advancedGroup,
     image: null,
-    codeBlock: { label: labels.codeBlock },
-    table: { label: labels.table },
+    ...createNativeSlashItems(labels, 'advanced'),
     math: null,
   },
   buildMenu: (builder: {
@@ -80,3 +73,11 @@ export const createSlashMenuConfig = (
     })
   },
 })
+
+const createNativeSlashItems = (labels: SlashCommandLabels, group: SlashCommandGroupId) => {
+  return Object.fromEntries(
+    markdownEditorSlashCommands
+      .filter((command) => command.group === group && command.mode === 'native')
+      .map((command) => [command.key, { label: labels[command.labelKey] }]),
+  )
+}

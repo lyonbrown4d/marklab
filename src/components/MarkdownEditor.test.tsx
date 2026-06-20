@@ -8,6 +8,22 @@ const dropzoneState = vi.hoisted(() => ({
   isDragAccept: false,
 }))
 
+const hotkeysMock = vi.hoisted(() => ({
+  useHotkeys: vi.fn(),
+}))
+
+const controllerMock = vi.hoisted(() => ({
+  focusEditor: vi.fn(),
+  getMarkdown: vi.fn(() => ''),
+  importImageSources: vi.fn(async () => {}),
+  placeSelectionAtClientPoint: vi.fn(),
+  runShortcutAction: vi.fn(),
+}))
+
+const preferencesState = vi.hoisted(() => ({
+  shortcutOverrides: {} as Record<string, string[]>,
+}))
+
 vi.mock('react-dropzone', () => ({
   useDropzone: vi.fn(() => ({
     isDragAccept: dropzoneState.isDragAccept,
@@ -20,7 +36,7 @@ vi.mock('react-dropzone', () => ({
 }))
 
 vi.mock('@tanstack/react-hotkeys', () => ({
-  useHotkeys: vi.fn(),
+  useHotkeys: hotkeysMock.useHotkeys,
 }))
 
 vi.mock('@prosemirror-adapter/react', () => ({
@@ -49,13 +65,13 @@ vi.mock('@/components/ui/scroll-area', () => ({
 
 vi.mock('@/components/milkdown/useMarkdownCrepeController', () => ({
   useMarkdownCrepeController: vi.fn(() => ({
-    focusEditor: vi.fn(),
-    getMarkdown: vi.fn(() => ''),
+    focusEditor: controllerMock.focusEditor,
+    getMarkdown: controllerMock.getMarkdown,
     handlers: {},
-    importImageSources: vi.fn(async () => {}),
-    placeSelectionAtClientPoint: vi.fn(),
+    importImageSources: controllerMock.importImageSources,
+    placeSelectionAtClientPoint: controllerMock.placeSelectionAtClientPoint,
     rootRef: { current: null },
-    runShortcutAction: vi.fn(),
+    runShortcutAction: controllerMock.runShortcutAction,
     scrollAreaRef: { current: null },
   })),
 }))
@@ -81,7 +97,7 @@ vi.mock('@/runtime/webview', () => ({
 vi.mock('@/store/usePreferencesStore', () => ({
   usePreferencesStore: <T,>(selector: (state: Record<string, unknown>) => T) =>
     selector({
-      shortcutOverrides: {},
+      shortcutOverrides: preferencesState.shortcutOverrides,
       markdownAssetImportStrategy: 'copy',
       immersiveZenMode: false,
       immersiveFocusMode: false,
@@ -122,9 +138,44 @@ const renderEditor = (value: string) =>
     />,
   )
 
+type HotkeyDefinition = {
+  handler?: () => void
+  hotkey?: string
+  [key: string]: unknown
+  keys?: string
+  key?: string
+}
+
+const registeredHotkeys = () => {
+  return (hotkeysMock.useHotkeys.mock.calls[0]?.[0] ?? []) as HotkeyDefinition[]
+}
+
+const findRegisteredHotkey = (hotkey: string) => {
+  return registeredHotkeys().find((definition) =>
+    [definition.hotkey, definition.keys, definition.key].includes(hotkey),
+  )
+}
+
+const triggerRegisteredHotkey = (definition: HotkeyDefinition | undefined) => {
+  expect(definition).toBeDefined()
+  const callback = Object.values(definition ?? {}).find(
+    (value): value is (event?: { preventDefault: () => void }) => void =>
+      typeof value === 'function',
+  )
+  expect(callback).toBeDefined()
+  callback?.({ preventDefault: vi.fn() })
+}
+
 describe('MarkdownEditor shell', () => {
   beforeEach(() => {
     dropzoneState.isDragAccept = false
+    preferencesState.shortcutOverrides = {}
+    hotkeysMock.useHotkeys.mockClear()
+    controllerMock.focusEditor.mockClear()
+    controllerMock.getMarkdown.mockClear()
+    controllerMock.importImageSources.mockClear()
+    controllerMock.placeSelectionAtClientPoint.mockClear()
+    controllerMock.runShortcutAction.mockClear()
   })
 
   it('marks empty documents and exposes localized editor hints', () => {
@@ -154,5 +205,39 @@ describe('MarkdownEditor shell', () => {
     renderEditor('# Heading')
 
     expect(screen.getByTestId('markdown-editor-shell')).toHaveClass('is-image-drop-target')
+  })
+
+  it('registers editor shortcuts and forwards triggered actions to the controller', () => {
+    renderEditor('# Heading')
+
+    const boldShortcut = findRegisteredHotkey('Mod+B')
+    const headingShortcut = findRegisteredHotkey('Mod+1')
+
+    expect(boldShortcut).toBeDefined()
+    expect(headingShortcut).toBeDefined()
+
+    triggerRegisteredHotkey(boldShortcut)
+    triggerRegisteredHotkey(headingShortcut)
+
+    expect(controllerMock.runShortcutAction).toHaveBeenCalledWith('editor.bold')
+    expect(controllerMock.runShortcutAction).toHaveBeenCalledWith('editor.heading1')
+  })
+
+  it('registers customized editor shortcut overrides', () => {
+    preferencesState.shortcutOverrides = {
+      'editor.bold': ['Mod+Shift+B'],
+    }
+
+    renderEditor('# Heading')
+
+    const defaultBoldShortcut = findRegisteredHotkey('Mod+B')
+    const customizedBoldShortcut = findRegisteredHotkey('Mod+Shift+B')
+
+    expect(defaultBoldShortcut).toBeUndefined()
+    expect(customizedBoldShortcut).toBeDefined()
+
+    triggerRegisteredHotkey(customizedBoldShortcut)
+
+    expect(controllerMock.runShortcutAction).toHaveBeenCalledWith('editor.bold')
   })
 })

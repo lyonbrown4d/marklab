@@ -12,7 +12,7 @@ const createIndex = async (): Promise<WorkspaceSearchIndex> => {
   const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
   tempDirs.push(dir)
   const index = new WorkspaceSearchIndex()
-  await index.open(path.join(dir, 'search.sqlite'))
+  await index.open(path.join(dir, 'search'))
   return index
 }
 
@@ -55,7 +55,7 @@ describe('WorkspaceSearchIndex', () => {
     expect(results[0]?.snippet_highlights.length).toBeGreaterThan(0)
   })
 
-  it('treats FTS syntax characters as search text without throwing', async () => {
+  it('treats query syntax characters as search text without throwing', async () => {
     const index = await createIndex()
     await index.rebuild([
       {

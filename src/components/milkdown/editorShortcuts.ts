@@ -17,15 +17,10 @@ import {
 import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import type { ShortcutActionId } from '@/logic/shortcuts'
 import { callMilkdownCommand } from '@/components/milkdown/commandCompat'
-
-const headingShortcutLevels: Partial<Record<ShortcutActionId, number>> = {
-  'editor.heading1': 1,
-  'editor.heading2': 2,
-  'editor.heading3': 3,
-  'editor.heading4': 4,
-  'editor.heading5': 5,
-  'editor.heading6': 6,
-}
+import {
+  markdownEditorHeadingShortcutLevels,
+  markdownEditorShortcutActionIds,
+} from '@/components/milkdown/editorCommandCatalog'
 
 type MarkdownEditorShortcutOptions = {
   onImageImport?: () => Promise<boolean>
@@ -84,7 +79,7 @@ export const runMarkdownEditorShortcut = (
       return setParagraph()
     }
 
-    const headingLevel = headingShortcutLevels[action]
+    const headingLevel = markdownEditorHeadingShortcutLevels[action]
     if (headingLevel) {
       handled = setHeading(headingLevel)
       return
@@ -140,24 +135,4 @@ export const runMarkdownEditorShortcut = (
   return handled
 }
 
-export const editorShortcutActionIds = [
-  'editor.paragraph',
-  'editor.heading1',
-  'editor.heading2',
-  'editor.heading3',
-  'editor.heading4',
-  'editor.heading5',
-  'editor.heading6',
-  'editor.bold',
-  'editor.italic',
-  'editor.inlineCode',
-  'editor.strike',
-  'editor.link',
-  'editor.image',
-  'editor.codeBlock',
-  'editor.quote',
-  'editor.orderedList',
-  'editor.bulletList',
-  'editor.table',
-  'editor.clearFormat',
-] as const satisfies readonly ShortcutActionId[]
+export const editorShortcutActionIds = markdownEditorShortcutActionIds

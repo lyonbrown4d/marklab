@@ -56,14 +56,6 @@ const electronMainEntry = {
     'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
   ),
 }
-const workspaceSearchIndexMigrationsDir = path.resolve(
-  __dirname,
-  'electron/services/workspace/workspaceSearchIndexMigrations',
-)
-const distWorkspaceSearchIndexMigrationsDir = path.resolve(
-  __dirname,
-  'dist-electron/workspaceSearchIndexMigrations',
-)
 const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
 
 const resolveKatexFontsDir = (): string | null => {
@@ -137,22 +129,6 @@ export default defineConfig(({ command, mode }) => {
                 assetsInlineLimit: 0,
                 rollupOptions: {
                   external: electronMainExternal,
-                  plugins: [
-                    {
-                      name: 'copy-workspace-search-index-migrations',
-                      writeBundle() {
-                        if (!existsSync(workspaceSearchIndexMigrationsDir)) return
-                        mkdirSync(distWorkspaceSearchIndexMigrationsDir, { recursive: true })
-                        cpSync(
-                          workspaceSearchIndexMigrationsDir,
-                          distWorkspaceSearchIndexMigrationsDir,
-                          {
-                            recursive: true,
-                          },
-                        )
-                      },
-                    },
-                  ],
                   output: {
                     entryFileNames: '[name].js',
                     banner: electronMainRequireBanner,

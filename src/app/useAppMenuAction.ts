@@ -6,6 +6,7 @@ import type { useAppLayoutState } from '@/app/useAppLayoutState'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { themeFromActionId, themeModeFromActionId } from '@/logic/themes'
 import { toast } from 'sonner'
+import { executeFocusedEditCommand } from '@/app/focusedEditCommand'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -24,16 +25,6 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
     (id: string) => {
       const currentState = stateRef.current
 
-      const executeEdit = (action: string) => {
-        if (typeof document === 'undefined') return
-        if (action === 'edit.undo') document.execCommand('undo')
-        if (action === 'edit.redo') document.execCommand('redo')
-        if (action === 'edit.cut') document.execCommand('cut')
-        if (action === 'edit.copy') document.execCommand('copy')
-        if (action === 'edit.paste') document.execCommand('paste')
-        if (action === 'edit.select_all') document.execCommand('selectAll')
-      }
-
       const createUntitledPath = () => {
         const files = new Set(
           currentState.files
@@ -49,7 +40,7 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       }
 
       if (id.startsWith('edit.')) {
-        executeEdit(id)
+        executeFocusedEditCommand(id)
         return
       }
       if (id === 'file.open_project') {

@@ -215,8 +215,8 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   private async openWorkspaceSearchIndex(): Promise<void> {
     const workspaceSearchKey = this.getWorkspaceSearchKey()
-    const dbPath = this.getWorkspaceSearchIndexPath()
-    await this.workspaceSearchIndex.open(dbPath)
+    const indexPath = this.getWorkspaceSearchIndexPath()
+    await this.workspaceSearchIndex.open(indexPath)
 
     if (this.activeWorkspaceSearchKey !== workspaceSearchKey) {
       this.activeWorkspaceSearchKey = workspaceSearchKey
@@ -245,7 +245,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       this.app.getPath('userData'),
       'cache',
       'search-index',
-      `${this.getWorkspaceSearchKey()}.sqlite`,
+      this.getWorkspaceSearchKey(),
     )
   }
 
