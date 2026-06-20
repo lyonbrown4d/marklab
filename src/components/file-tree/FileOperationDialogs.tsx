@@ -1,5 +1,9 @@
-import { useRef, type FormEvent } from 'react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useRef } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useWatch } from 'react-hook-form'
+import { z } from 'zod'
+import AppAlert from '@/components/AppAlert'
+import AppButton from '@/components/AppButton'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +15,13 @@ import {
 import { Input } from '@/components/ui/input'
 
 const CANCEL_LABEL = 'Cancel'
+const REQUIRED_NAME_MESSAGE = 'Enter a name to continue.'
+
+const fileNameFormSchema = z.object({
+  name: z.string().refine((value) => value.trim().length > 0, REQUIRED_NAME_MESSAGE),
+})
+
+type FileNameFormValues = z.input<typeof fileNameFormSchema>
 
 type FileNameDialogProps = {
   open: boolean
@@ -41,15 +52,35 @@ export const FileNameDialog = ({
   onSubmit,
 }: FileNameDialogProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, touchedFields },
+  } = useForm<FileNameFormValues>({
+    resolver: zodResolver(fileNameFormSchema),
+    defaultValues: { name: defaultValue },
+    mode: 'onChange',
+  })
+  const nameValue = useWatch({ control, name: 'name' }) ?? ''
+  const nameField = register('name')
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const value = inputRef.current?.value ?? ''
-    const name = value.trim()
-    if (!name) return
+  useEffect(() => {
+    if (!open) return
+    reset({ name: defaultValue })
+    const frame = window.requestAnimationFrame(() => {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [defaultValue, open, reset])
+
+  const handleFormSubmit = handleSubmit((values) => {
+    const name = values.name.trim()
     onSubmit(name)
     onOpenChange(false)
-  }
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,21 +88,35 @@ export const FileNameDialog = ({
         className="sm:max-w-sm"
         onOpenAutoFocus={(event) => {
           event.preventDefault()
-          inputRef.current?.focus()
-          inputRef.current?.select()
         }}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <Input key={`${open}:${defaultValue}`} ref={inputRef} defaultValue={defaultValue} />
+        <form className="flex flex-col gap-4" onSubmit={handleFormSubmit}>
+          <div className="flex flex-col gap-1.5">
+            <Input
+              {...nameField}
+              ref={(node) => {
+                nameField.ref(node)
+                inputRef.current = node
+              }}
+              aria-invalid={Boolean(errors.name)}
+            />
+            {touchedFields.name && errors.name ? (
+              <AppAlert tone="destructive" className="px-2 py-1.5 text-xs">
+                {errors.name.message}
+              </AppAlert>
+            ) : null}
+          </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <AppButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {CANCEL_LABEL}
-            </Button>
-            <Button type="submit">{confirmLabel}</Button>
+            </AppButton>
+            <AppButton type="submit" disabled={nameValue.trim().length === 0}>
+              {confirmLabel}
+            </AppButton>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -100,12 +145,12 @@ export const FileConfirmDialog = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <AppButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {CANCEL_LABEL}
-          </Button>
-          <Button type="button" variant="destructive" onClick={handleConfirm}>
+          </AppButton>
+          <AppButton type="button" variant="destructive" onClick={handleConfirm}>
             {confirmLabel}
-          </Button>
+          </AppButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

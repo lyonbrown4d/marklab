@@ -5,6 +5,7 @@ export const APP_EVENT = {
   focusFileSearch: 'marklab:focus-file-search',
   focusHeading: 'marklab:focus-heading',
   focusSourcePosition: 'marklab:focus-source-position',
+  menuAction: 'marklab:menu-action',
 } as const
 
 export type AppEventMap = {
@@ -23,6 +24,7 @@ export type AppEventMap = {
     column: number
     endColumn?: number
   }
+  [APP_EVENT.menuAction]: string
 }
 
 const appEvents = mitt<AppEventMap>()
@@ -49,4 +51,12 @@ export const requestFileSearchFocus = () => {
 
 export const onFileSearchFocusRequest = (handler: () => void) => {
   return onAppEvent(APP_EVENT.focusFileSearch, handler)
+}
+
+export const requestMenuAction = (id: string) => {
+  emitAppEvent(APP_EVENT.menuAction, id)
+}
+
+export const onMenuActionRequest = (handler: (id: string) => void) => {
+  return onAppEvent(APP_EVENT.menuAction, handler)
 }

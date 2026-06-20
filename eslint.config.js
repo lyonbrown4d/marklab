@@ -70,4 +70,10 @@ export default defineConfig([
       'max-lines': 'off',
     },
   },
+  {
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
 ])

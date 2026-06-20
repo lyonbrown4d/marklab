@@ -1,6 +1,7 @@
 import { Clock3, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
+import { useI18n } from '@/i18n/useI18n'
 
 type CommandSearchHistoryProps = {
   query: string
@@ -17,6 +18,7 @@ const CommandSearchHistory = ({
   onSelectSearch,
   onClearSearches,
 }: CommandSearchHistoryProps) => {
+  const { t } = useI18n()
   const trimmedQuery = query.trim().toLocaleLowerCase()
   const visibleSearches = useMemo(() => {
     const nextSearches = trimmedQuery
@@ -30,21 +32,25 @@ const CommandSearchHistory = ({
 
   return (
     <>
-      <CommandGroup heading={trimmedQuery ? 'Search history' : 'Recent searches'}>
+      <CommandGroup
+        heading={
+          trimmedQuery ? t('command.search.historySearch') : t('command.search.historyRecent')
+        }
+      >
         {visibleSearches.map((item) => (
           <CommandItem
             key={item}
             value={`recent search ${item}`}
             onSelect={() => onSelectSearch(item)}
           >
-            <Clock3 className="h-4 w-4" />
+            <Clock3 className="size-4" />
             <span className="min-w-0 truncate">{item}</span>
           </CommandItem>
         ))}
         {!trimmedQuery && (
           <CommandItem value="clear recent searches" onSelect={onClearSearches}>
-            <Trash2 className="h-4 w-4" />
-            Clear recent searches
+            <Trash2 className="size-4" />
+            {t('command.search.clearHistory')}
           </CommandItem>
         )}
       </CommandGroup>

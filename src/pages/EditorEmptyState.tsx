@@ -1,6 +1,8 @@
 import { FileText, Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import AppLogo from '@/components/AppLogo'
+import AppButton from '@/components/AppButton'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useI18n } from '@/i18n/useI18n'
 import type { FileEntry } from '@/store/appTypes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
@@ -16,47 +18,54 @@ const EditorEmptyState = ({ files, onOpenFile }: EditorEmptyStateProps) => {
 
   return (
     <div className="editor-stage flex h-full items-center justify-center p-6">
-      <div className="editor-paper w-full max-w-xl rounded-md p-6 text-left">
-        <div className="mb-4 flex items-start gap-3">
-          <AppLogo className="h-10 w-10" />
+      <Card className="editor-paper w-full max-w-xl gap-4 rounded-xl py-6 text-left">
+        <CardHeader className="flex-row items-start gap-3 px-6">
+          <AppLogo className="size-10" />
           <div className="min-w-0">
-            <div className="text-base font-semibold">{t('editor.emptyTitle')}</div>
-            <div className="mt-1 text-sm leading-6 text-muted-foreground">
+            <CardTitle className="text-base">{t('editor.emptyTitle')}</CardTitle>
+            <CardDescription className="mt-1 leading-6">
               {t('editor.emptyDescription')}
-            </div>
+            </CardDescription>
           </div>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mb-4 h-8 rounded-md"
-          onClick={() => requestFileSearchFocus()}
-        >
-          <Search className="h-4 w-4" />
-          {t('editor.emptySearch')}
-        </Button>
-        {visibleFiles.length > 0 && (
-          <div>
-            <div className="mb-2 text-[11px] uppercase text-muted-foreground">
-              {t('editor.emptyRecent')}
+        </CardHeader>
+        <CardContent className="px-6">
+          <AppButton
+            variant="secondary"
+            size="sm"
+            className="mb-4 h-8 rounded-md"
+            onClick={() => requestFileSearchFocus()}
+          >
+            <Search data-icon="inline-start" />
+            {t('editor.emptySearch')}
+          </AppButton>
+          {visibleFiles.length > 0 && (
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] uppercase text-muted-foreground">
+                  {t('editor.emptyRecent')}
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {visibleFiles.length}
+                </Badge>
+              </div>
+              <div className="grid gap-1">
+                {visibleFiles.map((file) => (
+                  <AppButton
+                    key={file.path}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 justify-start rounded-md px-2 text-xs"
+                    onClick={() => onOpenFile(file.path)}
+                  >
+                    <FileText className="text-muted-foreground" data-icon="inline-start" />
+                    <span className="truncate">{file.path}</span>
+                  </AppButton>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-1">
-              {visibleFiles.map((file) => (
-                <Button
-                  key={file.path}
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 justify-start rounded-md px-2 text-xs"
-                  onClick={() => onOpenFile(file.path)}
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{file.path}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

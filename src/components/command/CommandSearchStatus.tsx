@@ -1,4 +1,8 @@
-import { AlertCircle, Database, Loader2, Search } from 'lucide-react'
+import { AlertCircle, Database, Search } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Spinner } from '@/components/ui/spinner'
+import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
 
 type CommandSearchStatusProps = {
   query: string
@@ -11,6 +15,27 @@ type CommandSearchStatusProps = {
 
 const statusClassName = 'mx-2 mt-2 flex items-start gap-2 rounded-md border px-2 py-1.5 text-xs'
 
+const statusToneClassName = {
+  muted: 'border-border bg-muted/35 text-muted-foreground',
+  info: 'border-primary/20 bg-primary/5 text-foreground',
+  danger: 'border-destructive/30 bg-destructive/10 text-destructive',
+}
+
+const StatusNotice = ({
+  children,
+  icon,
+  tone = 'muted',
+}: {
+  children: ReactNode
+  icon: ReactNode
+  tone?: keyof typeof statusToneClassName
+}) => (
+  <div className={cn(statusClassName, statusToneClassName[tone])}>
+    {icon}
+    <span>{children}</span>
+  </div>
+)
+
 const CommandSearchStatus = ({
   query,
   fullTextFetching,
@@ -19,67 +44,54 @@ const CommandSearchStatus = ({
   indexedFileCount,
   searchIndexRebuilding,
 }: CommandSearchStatusProps) => {
+  const { t } = useI18n()
   const trimmedQuery = query.trim()
-  const indexedFileLabel = indexedFileCount === 1 ? 'file' : 'files'
 
   if (searchIndexRebuilding) {
     return (
-      <div
-        className={`${statusClassName} border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300`}
-      >
-        <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-        <span>Search index is rebuilding. Title and path results stay available.</span>
-      </div>
+      <StatusNotice icon={<Spinner className="mt-0.5 size-3.5 shrink-0" />} tone="info">
+        {t('command.search.status.rebuilding')}
+      </StatusNotice>
     )
   }
 
   if (!workspaceIndexed) {
     return (
-      <div className={`${statusClassName} border-border bg-muted/35 text-muted-foreground`}>
-        <Database className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>Index is warming up. Path results use the current workspace snapshot for now.</span>
-      </div>
+      <StatusNotice icon={<Database className="mt-0.5 size-3.5 shrink-0" />}>
+        {t('command.search.status.warming')}
+      </StatusNotice>
     )
   }
 
   if (fullTextError) {
     return (
-      <div
-        className={`${statusClassName} border-destructive/30 bg-destructive/10 text-destructive`}
-      >
-        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>Full-text search could not complete. Title and path search are still available.</span>
-      </div>
+      <StatusNotice icon={<AlertCircle className="mt-0.5 size-3.5 shrink-0" />} tone="danger">
+        {t('command.search.status.fullTextError')}
+      </StatusNotice>
     )
   }
 
   if (fullTextFetching) {
     return (
-      <div className={`${statusClassName} border-border bg-muted/35 text-muted-foreground`}>
-        <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-        <span>Searching indexed content...</span>
-      </div>
+      <StatusNotice icon={<Spinner className="mt-0.5 size-3.5 shrink-0" />}>
+        {t('command.search.status.searching')}
+      </StatusNotice>
     )
   }
 
   if (trimmedQuery.length > 0 && trimmedQuery.length < 2) {
     return (
-      <div className={`${statusClassName} border-border bg-muted/35 text-muted-foreground`}>
-        <Search className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>Type at least 2 characters to include full-text results.</span>
-      </div>
+      <StatusNotice icon={<Search className="mt-0.5 size-3.5 shrink-0" />}>
+        {t('command.search.status.minQuery')}
+      </StatusNotice>
     )
   }
 
   if (!trimmedQuery) {
     return (
-      <div className={`${statusClassName} border-border bg-muted/35 text-muted-foreground`}>
-        <Database className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>
-          Index ready - {indexedFileCount} indexed {indexedFileLabel}. Type to search titles, paths,
-          headings, and full text.
-        </span>
-      </div>
+      <StatusNotice icon={<Database className="mt-0.5 size-3.5 shrink-0" />}>
+        {t('command.search.status.ready', { count: indexedFileCount })}
+      </StatusNotice>
     )
   }
 

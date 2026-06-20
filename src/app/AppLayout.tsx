@@ -18,6 +18,7 @@ import type {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { listen } from '@/runtime/events'
+import { onMenuActionRequest } from '@/utils/appEvents'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { SaveState } from '@/app/useEditorBuffer'
 import {
@@ -421,6 +422,7 @@ const AppLayout = () => {
     }
 
     window.addEventListener('marklab:menu-action', domHandler)
+    const unsubscribeRendererMenuAction = onMenuActionRequest(handleMenuAction)
 
     let unlisten: (() => void) | undefined
     if (isDesktopRuntime()) {
@@ -432,6 +434,7 @@ const AppLayout = () => {
     }
 
     return () => {
+      unsubscribeRendererMenuAction()
       window.removeEventListener('marklab:menu-action', domHandler)
       if (unlisten) unlisten()
     }

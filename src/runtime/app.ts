@@ -3,6 +3,7 @@ import { emit } from '@/runtime/events'
 import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { invoke } from '@/runtime/ipc'
 import type { AppPlatform } from '@/services/appApi'
+import { requestMenuAction } from '@/utils/appEvents'
 
 export type AppWindowOpenResult = {
   ok: boolean
@@ -28,9 +29,7 @@ export const getPlatform = async (): Promise<AppPlatform> => {
 export const dispatchMenuAction = async (id: string) => {
   const electron = getElectronRuntime()
   if (electron) return electron.menu.dispatch(id)
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('marklab:menu-action', { detail: id }))
-  }
+  requestMenuAction(id)
   return { ok: true }
 }
 export const signalAppReady = async () => {

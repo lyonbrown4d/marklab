@@ -1,8 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useDebounce } from 'ahooks'
-import { Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search } from 'lucide-react'
+import AppButton from '@/components/AppButton'
+import AppEmptyState from '@/components/AppEmptyState'
+import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
@@ -27,9 +31,12 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
 
   if (query.trim().length < 2) {
     return (
-      <div className="rounded-md border border-dashed border-sidebar-border px-2 py-3 text-xs text-muted-foreground">
-        {t('search.minQuery')}
-      </div>
+      <AppEmptyState
+        compact
+        className="border-sidebar-border bg-sidebar-accent/20"
+        icon={<Search className="size-4" />}
+        title={t('search.minQuery')}
+      />
     )
   }
 
@@ -37,13 +44,25 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
     <div className="flex min-h-0 flex-1 flex-col gap-1">
       <div className="flex h-6 items-center justify-between px-1 text-[11px] uppercase text-muted-foreground">
         <span>{t('search.fullText')}</span>
-        {searchQuery.isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        {searchQuery.isFetching ? (
+          <Spinner className="size-3.5" />
+        ) : searchQuery.data?.length ? (
+          <Badge variant="outline" className="h-5 rounded px-1.5 py-0 text-[10px]">
+            {searchQuery.data.length}
+          </Badge>
+        ) : null}
       </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="h-full pr-1">
-        {searchQuery.data?.length ? (
+        {searchQuery.isFetching && !searchQuery.data?.length ? (
+          <div className="flex flex-col gap-2 p-1">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-11/12" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : searchQuery.data?.length ? (
           <div className="flex flex-col gap-1">
             {searchQuery.data.map((result) => (
-              <Button
+              <AppButton
                 key={`${result.path}:${result.line}:${result.column}`}
                 variant="ghost"
                 size="sm"
@@ -51,13 +70,15 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
                 onClick={() => onOpenResult(result)}
               >
                 <SearchResultPreview result={result} />
-              </Button>
+              </AppButton>
             ))}
           </div>
         ) : (
-          <div className="px-1 py-2 text-xs text-muted-foreground">
-            {searchQuery.isFetching ? t('search.searching') : t('search.noResults')}
-          </div>
+          <AppEmptyState
+            compact
+            className="border-sidebar-border bg-sidebar-accent/20"
+            title={searchQuery.isFetching ? t('search.searching') : t('search.noResults')}
+          />
         )}
       </ScrollArea>
     </div>

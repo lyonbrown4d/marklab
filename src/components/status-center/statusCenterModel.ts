@@ -24,6 +24,8 @@ export type TerminalEventEntry = {
   updatedAt: number
 }
 
+type Translate = (key: string, options?: Record<string, unknown>) => string
+
 export const TEXT = {
   activeBuffer: 'Active buffer',
   backgroundTasks: 'Background tasks',
@@ -56,8 +58,14 @@ export const formatTime = (timestamp: number) => {
   })
 }
 
-export const formatExportLabel = (task: ExportTaskEntry) => {
+export const formatExportLabel = (task: ExportTaskEntry, t?: Translate) => {
   const format = task.format === 'docx' ? 'Word' : task.format.toUpperCase()
+  if (t) {
+    if (task.status === 'started') return t('statusCenter.exportStarted', { format })
+    if (task.status === 'finished') return t('statusCenter.exportFinished', { format })
+    return t('statusCenter.exportFailed', { format })
+  }
+
   if (task.status === 'started') return `Exporting ${format}`
   if (task.status === 'finished') return `Exported ${format}`
   return `Export ${format} failed`

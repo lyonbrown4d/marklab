@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DiffEditor } from '@monaco-editor/react'
-import { FileText, X } from 'lucide-react'
+import { AlertTriangle, FileText, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
+import AppAlert from '@/components/AppAlert'
+import AppButton from '@/components/AppButton'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { gitApi, type GitDiffRequest } from '@/services/gitApi'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
@@ -75,7 +77,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
     <div className="flex h-full flex-col overflow-hidden">
       <div className="tab-strip flex h-10 items-center justify-between gap-3 border-b border-border/80 px-3">
         <div className="flex min-w-0 items-center gap-2 text-xs">
-          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <FileText className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate font-medium">{request.path}</span>
           <span className="shrink-0 text-muted-foreground">
             {diffQuery.data
@@ -87,23 +89,23 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button
+          <AppButton
             variant="ghost"
             size="sm"
             className="h-7 rounded-md px-2 text-xs"
             onClick={openFile}
           >
             {t('scm.openFile')}
-          </Button>
-          <Button
+          </AppButton>
+          <AppButton
             variant="ghost"
             size="icon"
             className="h-7 w-7 rounded-md"
             onClick={onClose}
             aria-label={t('scm.closeDiff')}
           >
-            <X className="h-4 w-4" />
-          </Button>
+            <X className="size-4" />
+          </AppButton>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -114,14 +116,29 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
             <Skeleton className="h-4 w-1/2" />
           </div>
         ) : diffQuery.isError ? (
-          <div className="p-4 text-sm text-destructive">{String(diffQuery.error)}</div>
+          <div className="flex h-full items-center justify-center p-6">
+            <AppAlert
+              tone="destructive"
+              className="max-w-lg"
+              icon={<AlertTriangle className="size-4" />}
+            >
+              {String(diffQuery.error)}
+            </AppAlert>
+          </div>
         ) : monacoLoadError ? (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
-            Failed to load diff editor: {editorLoadError}
+          <div className="flex h-full items-center justify-center p-6">
+            <AppAlert
+              tone="destructive"
+              className="max-w-lg"
+              icon={<AlertTriangle className="size-4" />}
+            >
+              {t('scm.diffEditorLoadFailed', { error: editorLoadError })}
+            </AppAlert>
           </div>
         ) : !monacoReady ? (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-            {t('editor.loadingDocument')}
+          <div className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
+            <Spinner className="size-4" />
+            <span>{t('editor.loadingDocument')}</span>
           </div>
         ) : (
           <DiffEditor

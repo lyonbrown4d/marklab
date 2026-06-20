@@ -2,8 +2,12 @@ import { FileText, FolderOpen, Hash, Link2, Network, Search, TriangleAlert } fro
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLogo from '@/components/AppLogo'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { useI18n } from '@/i18n/useI18n'
 import { pathToWorkspaceGraphRoute } from '@/logic/routing'
+import { appApi } from '@/services/appApi'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
@@ -89,158 +93,174 @@ const getDocuments = (
 }
 
 const openProjectPicker = () => {
-  window.dispatchEvent(new CustomEvent('marklab:menu-action', { detail: 'file.open_project' }))
+  void appApi.menuDispatch('file.open_project')
 }
 
 const WorkspaceHomePage = () => {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const { files, workspaceIndex, rootPath, recentProjects, onOpenFile, onOpenProject } =
     useLayoutContext()
   const metrics = useMemo(() => getMetrics(files, workspaceIndex), [files, workspaceIndex])
   const documents = useMemo(() => getDocuments(files, workspaceIndex), [files, workspaceIndex])
   const firstDocument = documents[0]?.path
-  const workspaceName = rootPath ? pathName(rootPath) : 'Internal workspace'
-  const workspacePath = rootPath || 'Built-in local workspace'
+  const workspaceName = rootPath ? pathName(rootPath) : t('workspaceHome.internalWorkspace')
+  const workspacePath = rootPath || t('workspaceHome.builtInWorkspace')
   const indexCaption = metrics.indexReady
-    ? `${count(metrics.indexedFiles)} indexed Markdown files`
-    : 'Workspace index pending'
+    ? t('workspaceHome.indexedMarkdownFiles', { count: count(metrics.indexedFiles) })
+    : t('workspaceHome.indexPending')
   const stats = [
     {
-      label: 'Files',
+      label: t('workspaceHome.files'),
       value: count(metrics.files),
-      caption: `${count(metrics.folders)} folders tracked`,
-      icon: <FileText className="h-5 w-5 text-sky-600" />,
+      caption: t('workspaceHome.foldersTracked', { count: count(metrics.folders) }),
+      icon: <FileText className="size-5 text-muted-foreground" />,
     },
     {
-      label: 'Titles',
+      label: t('workspaceHome.titles'),
       value: metrics.indexReady ? count(metrics.headings) : '...',
       caption: indexCaption,
-      icon: <Hash className="h-5 w-5 text-emerald-600" />,
+      icon: <Hash className="size-5 text-muted-foreground" />,
     },
     {
-      label: 'Links',
+      label: t('workspaceHome.links'),
       value: metrics.indexReady ? count(metrics.links) : '...',
-      caption: 'Markdown and wiki references',
-      icon: <Link2 className="h-5 w-5 text-amber-600" />,
+      caption: t('workspaceHome.linksCaption'),
+      icon: <Link2 className="size-5 text-muted-foreground" />,
     },
     {
-      label: 'Issues',
+      label: t('workspaceHome.issues'),
       value: metrics.indexReady ? count(metrics.issues) : '...',
-      caption: 'Missing files, anchors, or assets',
-      icon: <TriangleAlert className="h-5 w-5 text-rose-600" />,
+      caption: t('workspaceHome.issuesCaption'),
+      icon: <TriangleAlert className="size-5 text-destructive" />,
     },
   ]
 
   return (
     <div className="h-full overflow-auto bg-background p-4 text-foreground md:p-6">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-        <section className="rounded-lg border border-border/80 bg-background p-6 shadow-sm md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex items-center gap-3">
-                <AppLogo className="h-11 w-11" />
-                <div className="min-w-0">
-                  <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
-                    Workspace home
+        <Card className="gap-0 py-0">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 max-w-2xl">
+                <div className="flex items-center gap-3">
+                  <AppLogo className="h-11 w-11" />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                        {t('workspaceHome.eyebrow')}
+                      </div>
+                      <Badge variant={metrics.indexReady ? 'secondary' : 'outline'}>
+                        {metrics.indexReady
+                          ? t('workspaceHome.indexReady')
+                          : t('workspaceHome.indexing')}
+                      </Badge>
+                    </div>
+                    <h1 className="mt-1 truncate text-3xl font-semibold tracking-tight md:text-4xl">
+                      {workspaceName}
+                    </h1>
                   </div>
-                  <h1 className="mt-1 truncate text-3xl font-semibold tracking-tight md:text-4xl">
-                    {workspaceName}
-                  </h1>
+                </div>
+                <p className="mt-5 text-sm leading-6 text-muted-foreground">
+                  {t('workspaceHome.description')}
+                </p>
+                <div className="mt-4 rounded-lg border border-border/80 bg-muted/30 p-4 text-xs leading-5 text-muted-foreground">
+                  <span className="block font-medium text-foreground">{workspaceName}</span>
+                  <span className="break-all">{workspacePath}</span>
                 </div>
               </div>
-              <p className="mt-5 text-sm leading-6 text-muted-foreground">
-                A fast overview of your current workspace, recent projects, indexed structure, and
-                the most useful next actions.
-              </p>
-              <div className="mt-4 rounded-md border border-border/80 bg-muted/30 p-4 text-xs leading-5 text-muted-foreground">
-                <span className="block font-medium text-foreground">{workspaceName}</span>
-                <span className="break-all">{workspacePath}</span>
+              <div className="flex flex-wrap gap-2">
+                <Button className="rounded-md" onClick={() => requestFileSearchFocus()}>
+                  <Search data-icon="inline-start" />
+                  {t('workspaceHome.searchWorkspace')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="rounded-md"
+                  onClick={() => navigate(pathToWorkspaceGraphRoute())}
+                >
+                  <Network data-icon="inline-start" />
+                  {t('workspaceHome.workspaceGraph')}
+                </Button>
+                <Button variant="ghost" className="rounded-md" onClick={openProjectPicker}>
+                  <FolderOpen data-icon="inline-start" />
+                  {t('actions.openProject')}
+                </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button className="rounded-md" onClick={() => requestFileSearchFocus()}>
-                <Search className="h-4 w-4" />
-                Search workspace
-              </Button>
-              <Button
-                variant="secondary"
-                className="rounded-md"
-                onClick={() => navigate(pathToWorkspaceGraphRoute())}
-              >
-                <Network className="h-4 w-4" />
-                Workspace graph
-              </Button>
-              <Button variant="ghost" className="rounded-md" onClick={openProjectPicker}>
-                <FolderOpen className="h-4 w-4" />
-                Open project
-              </Button>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-md border border-border/80 bg-background p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="rounded-md bg-muted p-2">{stat.icon}</div>
-                <div className="text-right text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  {stat.label}
+            <Card key={stat.label} className="gap-0 py-0">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-lg bg-muted p-2">{stat.icon}</div>
+                  <div className="text-right text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {stat.label}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 text-3xl font-semibold tracking-tight">{stat.value}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{stat.caption}</div>
-            </div>
+                <div className="mt-4 text-3xl font-semibold tracking-tight">{stat.value}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{stat.caption}</div>
+              </CardContent>
+            </Card>
           ))}
         </section>
 
         <section className="grid min-h-[320px] gap-5 lg:grid-cols-[0.85fr_1fr_0.85fr]">
-          <Panel title="Quick entries" subtitle="Jump into the next useful view.">
-            <QuickButton icon={<Search className="h-4 w-4" />} onClick={requestFileSearchFocus}>
-              Find a file or note
+          <Panel
+            title={t('workspaceHome.quickEntries')}
+            subtitle={t('workspaceHome.quickSubtitle')}
+          >
+            <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
+              {t('workspaceHome.findFileOrNote')}
             </QuickButton>
-            <QuickButton
-              icon={<Network className="h-4 w-4" />}
-              onClick={() => navigate(pathToWorkspaceGraphRoute())}
-            >
-              Explore workspace graph
+            <QuickButton icon={<Network />} onClick={() => navigate(pathToWorkspaceGraphRoute())}>
+              {t('workspaceHome.exploreGraph')}
             </QuickButton>
             <QuickButton
               disabled={!firstDocument}
-              icon={<FileText className="h-4 w-4" />}
+              icon={<FileText />}
               onClick={() => firstDocument && onOpenFile(firstDocument)}
             >
-              {firstDocument ? `Open ${pathName(firstDocument)}` : 'No document yet'}
+              {firstDocument
+                ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
+                : t('workspaceHome.noDocumentYet')}
             </QuickButton>
           </Panel>
 
-          <Panel title="Workspace documents" subtitle={indexCaption}>
+          <Panel title={t('workspaceHome.documents')} subtitle={indexCaption}>
             {documents.length > 0 ? (
               documents.map((document) => (
                 <ListButton key={document.path} onClick={() => onOpenFile(document.path)}>
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm">{document.path}</span>
                     <span className="block text-xs text-muted-foreground">
                       {document.headings === null
-                        ? 'Waiting for workspace index'
-                        : `${count(document.headings)} titles, ${count(document.links ?? 0)} links`}
+                        ? t('workspaceHome.waitingForIndex')
+                        : t('workspaceHome.documentStats', {
+                            headings: count(document.headings),
+                            links: count(document.links ?? 0),
+                          })}
                     </span>
                   </span>
                 </ListButton>
               ))
             ) : (
-              <EmptyBlock>No files are available in this workspace yet.</EmptyBlock>
+              <EmptyBlock>{t('workspaceHome.noFiles')}</EmptyBlock>
             )}
           </Panel>
 
-          <Panel title="Recent projects" subtitle="Open a known workspace quickly.">
+          <Panel
+            title={t('workspaceHome.recentProjects')}
+            subtitle={t('workspaceHome.recentSubtitle')}
+          >
             {recentProjects.length > 0 ? (
               recentProjects.slice(0, 4).map((project) => (
                 <ListButton key={project} onClick={() => onOpenProject(project)}>
-                  <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0">
                     <span className="block truncate text-sm">{pathName(project)}</span>
                     <span className="block truncate text-xs text-muted-foreground">{project}</span>
@@ -248,7 +268,7 @@ const WorkspaceHomePage = () => {
                 </ListButton>
               ))
             ) : (
-              <EmptyBlock>Recent projects will appear after you open a workspace.</EmptyBlock>
+              <EmptyBlock>{t('workspaceHome.noRecentProjects')}</EmptyBlock>
             )}
           </Panel>
         </section>

@@ -1,5 +1,10 @@
+import { useEffect, useRef } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { GitCommitHorizontal } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useForm, useWatch } from 'react-hook-form'
+import { z } from 'zod'
+import AppAlert from '@/components/AppAlert'
+import AppButton from '@/components/AppButton'
 import {
   Dialog,
   DialogContent,
@@ -9,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'
 
 type GitCommitDialogProps = {
@@ -25,6 +31,12 @@ type GitCommitDialogProps = {
   disabledReason?: string
 }
 
+const gitCommitFormSchema = z.object({
+  message: z.string().refine((value) => value.trim().length > 0, 'Commit message is required.'),
+})
+
+type GitCommitFormValues = z.input<typeof gitCommitFormSchema>
+
 export const GitCommitDialog = ({
   open,
   onOpenChange,
@@ -39,6 +51,30 @@ export const GitCommitDialog = ({
   disabledReason,
 }: GitCommitDialogProps) => {
   const { t } = useI18n()
+  const wasOpenRef = useRef(open)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, touchedFields },
+  } = useForm<GitCommitFormValues>({
+    resolver: zodResolver(gitCommitFormSchema),
+    defaultValues: { message },
+    mode: 'onChange',
+  })
+  const messageValue = useWatch({ control, name: 'message' }) ?? ''
+  const canSubmit = canCommit && messageValue.trim().length > 0
+  const messageField = register('message', {
+    onChange: (event) => onMessageChange(event.target.value),
+  })
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      reset({ message })
+    }
+    wasOpenRef.current = open
+  }, [message, open, reset])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,45 +89,57 @@ export const GitCommitDialog = ({
           </DialogDescription>
         </DialogHeader>
         <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault()
-            if (!canCommit) return
+          className="flex flex-col gap-3"
+          onSubmit={handleSubmit(() => {
+            if (!canSubmit) return
             onCommit()
-          }}
+          })}
         >
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <label htmlFor="git-commit-message" className="text-sm font-medium">
               {t('scm.commitMessage')}
             </label>
             <Input
               id="git-commit-message"
-              value={message}
-              onChange={(event) => onMessageChange(event.target.value)}
+              {...messageField}
               placeholder={t('scm.commitPlaceholder')}
               disabled={isCommitting}
+              aria-invalid={Boolean(errors.message)}
               autoFocus
             />
+            {touchedFields.message && errors.message ? (
+              <AppAlert tone="destructive" className="px-2 py-1.5 text-xs">
+                {errors.message.message}
+              </AppAlert>
+            ) : null}
           </div>
-          {disabledReason && <div className="text-sm text-destructive">{disabledReason}</div>}
+          {disabledReason && (
+            <AppAlert tone="destructive" className="px-2 py-1.5 text-xs">
+              {disabledReason}
+            </AppAlert>
+          )}
           {error ? (
-            <div role="alert" className="text-sm text-destructive">
+            <AppAlert tone="destructive" className="px-2 py-1.5 text-xs">
               {String(error)}
-            </div>
+            </AppAlert>
           ) : null}
           <DialogFooter>
-            <Button
+            <AppButton
               type="button"
               variant="ghost"
               disabled={isCommitting}
               onClick={() => onOpenChange(false)}
             >
               {t('scm.cancel')}
-            </Button>
-            <Button type="submit" disabled={!canCommit}>
-              <GitCommitHorizontal className="h-4 w-4" />
+            </AppButton>
+            <AppButton type="submit" disabled={!canSubmit}>
+              {isCommitting ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <GitCommitHorizontal data-icon="inline-start" />
+              )}
               {isCommitting ? t('scm.committing') : t('scm.commitAll')}
-            </Button>
+            </AppButton>
           </DialogFooter>
         </form>
       </DialogContent>

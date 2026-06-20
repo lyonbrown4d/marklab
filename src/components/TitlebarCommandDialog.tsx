@@ -1,5 +1,5 @@
 import { SearchX } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useDebounce } from 'ahooks'
 import AppCommandDialog from '@/components/AppCommandDialog'
@@ -51,10 +51,17 @@ const TitlebarCommandDialog = ({
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
   const parsedSearch = useMemo(() => parseCommandSearchScope(query), [query])
+  const deferredParsedSearch = useMemo(
+    () => parseCommandSearchScope(deferredQuery),
+    [deferredQuery],
+  )
   const trimmedQuery = parsedSearch.query
-  const debouncedQuery = useDebounce(trimmedQuery, { wait: 160 })
-  const canSearchFullText = parsedSearch.scope === 'all' || parsedSearch.scope === 'text'
+  const deferredTrimmedQuery = deferredParsedSearch.query
+  const debouncedQuery = useDebounce(deferredTrimmedQuery, { wait: 160 })
+  const canSearchFullText =
+    deferredParsedSearch.scope === 'all' || deferredParsedSearch.scope === 'text'
   const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
   const fullTextSearch = useQuery({
     queryKey: ['command-workspace-search', debouncedQuery],
@@ -63,31 +70,31 @@ const TitlebarCommandDialog = ({
     placeholderData: keepPreviousData,
     staleTime: 5_000,
   })
-  const fullTextResults = debouncedQuery === trimmedQuery ? (fullTextSearch.data ?? []) : []
+  const fullTextResults = debouncedQuery === deferredTrimmedQuery ? (fullTextSearch.data ?? []) : []
   const emptyQueryLabel =
     trimmedQuery.length > 0
       ? t('command.noResultsFor', { query: trimmedQuery })
       : t('command.noResults')
   const handleOpenFile = useCallback(
     (path: string) => {
-      rememberSearch(trimmedQuery)
+      rememberSearch(deferredTrimmedQuery)
       onOpenFile(path)
     },
-    [onOpenFile, rememberSearch, trimmedQuery],
+    [deferredTrimmedQuery, onOpenFile, rememberSearch],
   )
   const handleOpenHeading = useCallback(
     (path: string, slug: string) => {
-      rememberSearch(trimmedQuery)
+      rememberSearch(deferredTrimmedQuery)
       onOpenHeading(path, slug)
     },
-    [onOpenHeading, rememberSearch, trimmedQuery],
+    [deferredTrimmedQuery, onOpenHeading, rememberSearch],
   )
   const handleOpenSearchResult = useCallback(
     (result: FsSearchResult) => {
-      rememberSearch(trimmedQuery)
+      rememberSearch(deferredTrimmedQuery)
       onOpenSearchResult(result)
     },
-    [onOpenSearchResult, rememberSearch, trimmedQuery],
+    [deferredTrimmedQuery, onOpenSearchResult, rememberSearch],
   )
   const handleCommandPaletteAction = useCallback(() => {
     setQuery('')
@@ -97,7 +104,7 @@ const TitlebarCommandDialog = ({
     <AppCommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput value={query} onValueChange={setQuery} placeholder={t('sidebar.search')} />
       <CommandSearchOverview
-        query={trimmedQuery}
+        query={deferredTrimmedQuery}
         filesCount={files.length}
         headingsCount={headings.length}
         fullTextCount={fullTextResults.length}
@@ -118,8 +125,8 @@ const TitlebarCommandDialog = ({
           onClearSearches={clearSearchHistory}
         />
         <CommandSearchResults
-          query={query}
-          scope={parsedSearch.scope}
+          query={deferredQuery}
+          scope={deferredParsedSearch.scope}
           files={files}
           headings={headings}
           fullTextResults={fullTextResults}

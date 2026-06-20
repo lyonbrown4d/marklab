@@ -2,6 +2,7 @@ import Fuse from 'fuse.js'
 import { Fragment, useMemo } from 'react'
 import { CommandGroup, CommandSeparator } from '@/components/ui/command'
 import CommandSearchStatus from '@/components/command/CommandSearchStatus'
+import { useI18n } from '@/i18n/useI18n'
 import {
   CommandResultRowItem,
   toFileRows,
@@ -113,14 +114,10 @@ const groupFileSearchResults = (
   }
 }
 
-const renderMoreHint = (count: number) => {
+const renderMoreHint = (count: number, label: string) => {
   if (count <= 0) return null
 
-  return (
-    <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-      {count} more matches hidden. Keep typing to narrow.
-    </div>
-  )
+  return <div className="px-2 py-1.5 text-[11px] text-muted-foreground">{label}</div>
 }
 
 const CommandSearchResults = ({
@@ -138,6 +135,7 @@ const CommandSearchResults = ({
   onOpenHeading,
   onOpenSearchResult,
 }: CommandSearchResultsProps) => {
+  const { t } = useI18n()
   const trimmedQuery = query.trim().replace(/^[@#?]\s*/, '')
   const hasQuery = trimmedQuery.length > 0
   const showFiles = scope === 'all' || scope === 'files'
@@ -180,7 +178,7 @@ const CommandSearchResults = ({
     if (showFiles && titleRows.length > 0) {
       sections.push({
         id: 'title-files',
-        heading: hasQuery ? 'Title matches' : 'Files',
+        heading: hasQuery ? t('command.search.titleMatches') : t('command.files'),
         totalCount: groupedResults.titleMatches.length,
         rows: titleRows,
       })
@@ -189,7 +187,7 @@ const CommandSearchResults = ({
     if (showFiles && pathRows.length > 0) {
       sections.push({
         id: 'path-files',
-        heading: 'Path matches',
+        heading: t('command.search.pathMatches'),
         totalCount: groupedResults.pathMatches.length,
         rows: pathRows,
       })
@@ -198,7 +196,7 @@ const CommandSearchResults = ({
     if (showHeadings && headingRows.length > 0) {
       sections.push({
         id: 'headings',
-        heading: 'Headings',
+        heading: t('command.headings'),
         totalCount: groupedResults.headingMatches.length,
         rows: headingRows,
       })
@@ -207,14 +205,14 @@ const CommandSearchResults = ({
     if (showFullText && fullTextRows.length > 0) {
       sections.push({
         id: 'full-text',
-        heading: 'Full text',
+        heading: t('search.fullText'),
         totalCount: fullTextRows.length,
         rows: fullTextRows,
       })
     }
 
     return sections
-  }, [fullTextResults, groupedResults, hasQuery, showFiles, showFullText, showHeadings])
+  }, [fullTextResults, groupedResults, hasQuery, showFiles, showFullText, showHeadings, t])
 
   return (
     <>
@@ -238,7 +236,12 @@ const CommandSearchResults = ({
                 onOpenSearchResult={onOpenSearchResult}
               />
             ))}
-            {renderMoreHint(getHiddenCount(section.totalCount, section.rows.length))}
+            {renderMoreHint(
+              getHiddenCount(section.totalCount, section.rows.length),
+              t('command.search.moreHidden', {
+                count: getHiddenCount(section.totalCount, section.rows.length),
+              }),
+            )}
           </CommandGroup>
           <CommandSeparator />
         </Fragment>

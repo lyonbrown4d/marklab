@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 type SectionProps = {
   children: ReactNode
@@ -6,7 +7,7 @@ type SectionProps = {
 }
 
 export const Section = ({ children, title }: SectionProps) => (
-  <section className="space-y-2">
+  <section className="flex flex-col gap-2">
     <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
       {title}
     </h3>
@@ -15,7 +16,7 @@ export const Section = ({ children, title }: SectionProps) => (
 )
 
 export const EmptyState = ({ label }: { label: string }) => (
-  <div className="rounded-md border border-dashed border-border/80 px-3 py-2 text-xs text-muted-foreground">
+  <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
     {label}
   </div>
 )
@@ -28,7 +29,7 @@ type StatusRowProps = {
 
 export const StatusRow = ({ children, dotClassName, meta }: StatusRowProps) => (
   <div className="flex min-w-0 items-start gap-2 rounded-md border border-border/70 bg-background/70 px-3 py-2">
-    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClassName}`} />
+    <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', dotClassName)} />
     <div className="min-w-0 flex-1">
       <div className="truncate text-xs text-foreground">{children}</div>
       {meta && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{meta}</div>}
