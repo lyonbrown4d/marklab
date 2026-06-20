@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use napi::bindgen_prelude::*;
@@ -12,6 +12,7 @@ use unicode_normalization::char::is_combining_mark;
 use unicode_normalization::UnicodeNormalization;
 
 #[napi(object)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct SearchDocument {
     pub path: String,
     pub title: String,
@@ -129,6 +130,8 @@ impl NativeSearchIndex {
 
 struct SearchEngine {
     index: Index,
+    documents: Vec<SearchDocument>,
+    documents_path: PathBuf,
     schema: SearchSchema,
     reader: IndexReader,
     writer: IndexWriter,
@@ -166,8 +169,12 @@ impl SearchEngine {
             .try_into()
             .map_err(to_error)?;
         let writer = index.writer(50_000_000).map_err(to_error)?;
+        let documents_path = Path::new(index_path).join("documents.json");
+        let documents = load_document_snapshot(&documents_path);
         Ok(Self {
             index,
+            documents,
+            documents_path,
             schema,
             reader,
             writer,
@@ -175,28 +182,34 @@ impl SearchEngine {
     }
 
     fn has_documents(&self) -> Result<bool> {
-        let searcher = self.reader.searcher();
-        Ok(searcher.num_docs() > 0)
+        Ok(!self.documents.is_empty())
     }
 
     fn rebuild(&mut self, documents: Vec<SearchDocument>) -> Result<()> {
         self.writer.delete_all_documents().map_err(to_error)?;
-        for document in documents {
+        self.documents = documents;
+        let documents_to_index = self.documents.clone();
+        for document in documents_to_index {
             self.add_document(document)?;
         }
-        self.commit()
+        self.commit()?;
+        self.save_documents()
     }
 
     fn upsert_document(&mut self, document: SearchDocument) -> Result<()> {
         self.remove_document(&document.path)?;
-        self.add_document(document)?;
-        self.commit()
+        self.add_document(document.clone())?;
+        self.documents.push(document);
+        self.commit()?;
+        self.save_documents()
     }
 
     fn remove_document(&mut self, path: &str) -> Result<()> {
         self.writer
             .delete_term(Term::from_field_text(self.schema.path, path));
-        self.commit()
+        self.documents.retain(|document| document.path != path);
+        self.commit()?;
+        self.save_documents()
     }
 
     fn remove_path_prefix(&mut self, prefix: &str) -> Result<()> {
@@ -210,7 +223,9 @@ impl SearchEngine {
             .parse_query(&format!("path:\"{}*\"", escaped))
             .map_err(to_error)?;
         self.writer.delete_query(query).map_err(to_error)?;
-        self.commit()
+        self.documents.retain(|document| !path_matches_prefix(&document.path, normalized));
+        self.commit()?;
+        self.save_documents()
     }
 
     fn search(&self, query: &str, limit: u32) -> Result<Vec<SearchResult>> {
@@ -219,21 +234,27 @@ impl SearchEngine {
             return Ok(Vec::new());
         }
 
+        let terms = query_tokens(query);
+        if terms.is_empty() {
+            return Ok(Vec::new());
+        }
         let parser = QueryParser::for_index(
             &self.index,
             vec![self.schema.search_text],
         );
-        let query_text = query_tokens(query).join(" ");
-        if query_text.is_empty() {
-            return Ok(Vec::new());
-        }
-        let parsed = parser.parse_query(&query_text).map_err(to_error)?;
+        let query_text = terms
+            .iter()
+            .map(|token| format!("{}*", token))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        let Ok(parsed) = parser.parse_query(&query_text) else {
+            return Ok(self.search_document_snapshot(&terms, limit));
+        };
         let searcher = self.reader.searcher();
         let top_docs = searcher
             .search(&parsed, &TopDocs::with_limit(limit.min(100) as usize))
             .map_err(to_error)?;
 
-        let terms = parse_terms(query);
         let mut results = Vec::with_capacity(top_docs.len());
         for (score, address) in top_docs {
             let document = searcher.doc(address).map_err(to_error)?;
@@ -251,6 +272,9 @@ impl SearchEngine {
                 snippet_highlights: snippet.highlights,
                 score: score as f64,
             });
+        }
+        if results.is_empty() {
+            return Ok(self.search_document_snapshot(&terms, limit));
         }
         Ok(results)
     }
@@ -277,6 +301,30 @@ impl SearchEngine {
         self.writer.commit().map_err(to_error)?;
         self.reader.reload().map_err(to_error)?;
         Ok(())
+    }
+
+    fn save_documents(&self) -> Result<()> {
+        let content = serde_json::to_vec(&self.documents).map_err(to_error)?;
+        fs::write(&self.documents_path, content).map_err(to_error)
+    }
+
+    fn search_document_snapshot(&self, terms: &[String], limit: u32) -> Vec<SearchResult> {
+        let mut results = self
+            .documents
+            .iter()
+            .filter_map(|document| search_snapshot_document(document, terms))
+            .collect::<Vec<_>>();
+        results.sort_by(|left, right| {
+            right
+                .score
+                .partial_cmp(&left.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| left.path.cmp(&right.path))
+                .then_with(|| left.line.cmp(&right.line))
+                .then_with(|| left.column.cmp(&right.column))
+        });
+        results.truncate(limit.min(100) as usize);
+        results
     }
 }
 
@@ -375,6 +423,35 @@ fn query_tokens(query: &str) -> Vec<String> {
     tokens
 }
 
+fn search_snapshot_document(document: &SearchDocument, terms: &[String]) -> Option<SearchResult> {
+    let title = file_label(&document.path);
+    let folded_path = fold_text(&document.path);
+    let folded_title = fold_text(&title);
+    let folded_content = fold_text(&document.content);
+    let matches_all = terms.iter().all(|term| {
+        folded_path.contains(term) || folded_title.contains(term) || folded_content.contains(term)
+    });
+    if !matches_all {
+        return None;
+    }
+    let snippet = best_snippet(&document.path, &document.content, &title, terms);
+    let path_title_bonus = terms
+        .iter()
+        .filter(|term| folded_path.contains(*term) || folded_title.contains(*term))
+        .count() as f64
+        * 18.0;
+    Some(SearchResult {
+        path: document.path.clone(),
+        title,
+        line: snippet.line,
+        column: snippet.column,
+        end_column: snippet.end_column,
+        snippet: snippet.snippet,
+        snippet_highlights: snippet.highlights,
+        score: path_title_bonus + 1.0,
+    })
+}
+
 fn first_match(text: &str, terms: &[String]) -> Option<(usize, usize)> {
     terms
         .iter()
@@ -399,6 +476,17 @@ fn find_highlights(text: &str, terms: &[String]) -> Vec<SearchHighlight> {
     }
     ranges.sort_by_key(|range| (range.start, range.end));
     ranges
+}
+
+fn path_matches_prefix(path: &str, prefix: &str) -> bool {
+    path == prefix || path.starts_with(&format!("{}/", prefix))
+}
+
+fn load_document_snapshot(path: &Path) -> Vec<SearchDocument> {
+    fs::read(path)
+        .ok()
+        .and_then(|content| serde_json::from_slice(&content).ok())
+        .unwrap_or_default()
 }
 
 fn fold_text(value: &str) -> String {

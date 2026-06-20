@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -97,8 +97,14 @@ const findNativeModuleInDir = (dir: string): string[] => {
   if (!existsSync(dir)) return []
   return readdirSync(dir)
     .filter((file) => file.endsWith('.node'))
-    .sort()
     .map((file) => path.join(dir, file))
+    .sort((left, right) => {
+      try {
+        return statSync(right).mtimeMs - statSync(left).mtimeMs
+      } catch {
+        return right.localeCompare(left)
+      }
+    })
 }
 
 const normalizeInteger = (value: unknown): number => {

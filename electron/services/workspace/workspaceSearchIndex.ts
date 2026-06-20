@@ -15,7 +15,7 @@ export class WorkspaceSearchIndex {
 
   async open(indexPath: string): Promise<void> {
     const normalizedPath = path.resolve(indexPath)
-    const nativeIndexPath = path.join(path.dirname(normalizedPath), 'tantivy')
+    const nativeIndexPath = normalizedPath
     if (nativeIndexPath === this.indexPath) return
 
     await this.close()

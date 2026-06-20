@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,8 +32,48 @@ if (!force && nativeOutputs.some(existsSync) && newestOutputMtime >= newestSourc
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 const result = spawnSync(pnpm, ['--dir', nativeSearchRoot, 'build'], {
   cwd: repoRoot,
-  shell: false,
+  shell: process.platform === 'win32',
   stdio: 'inherit',
 })
 
+if (result.error) {
+  console.error(result.error.message)
+}
+
+if (result.status === 0) {
+  process.exit(0)
+}
+
+const compiledLibrary = findNewestCompiledLibrary()
+if (compiledLibrary && statSync(compiledLibrary).mtimeMs >= newestSourceMtime) {
+  const fallbackOutput = path.join(
+    nativeSearchRoot,
+    `marklab-search-native.${process.platform}-${process.arch}.${Math.trunc(newestSourceMtime)}.node`,
+  )
+  copyFileSync(compiledLibrary, fallbackOutput)
+  console.warn(`Copied native search binary to ${path.relative(repoRoot, fallbackOutput)}.`)
+  process.exit(0)
+}
+
 process.exit(result.status ?? 1)
+
+function findNewestCompiledLibrary() {
+  const targetRoot = path.join(nativeSearchRoot, 'target')
+  if (!existsSync(targetRoot)) return null
+  return listFiles(targetRoot)
+    .filter((file) =>
+      [
+        'marklab_search_native.dll',
+        'libmarklab_search_native.dylib',
+        'libmarklab_search_native.so',
+      ].includes(path.basename(file)),
+    )
+    .sort((left, right) => statSync(right).mtimeMs - statSync(left).mtimeMs)[0]
+}
+
+function listFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name)
+    return entry.isDirectory() ? listFiles(fullPath) : [fullPath]
+  })
+}

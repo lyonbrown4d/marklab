@@ -38,6 +38,44 @@ describe('WorkspaceSearchIndex', () => {
     expect(results[0]?.path).toBe('notes/project.md')
   })
 
+  it('matches short prefixes in indexed content', async () => {
+    const index = await createIndex()
+    await index.rebuild([
+      {
+        path: 'notes/markdown-search.md',
+        title: 'markdown-search',
+        content: 'markdown native search',
+      },
+    ])
+
+    const results = await index.search('ma', 10)
+    await index.close()
+
+    expect(results[0]?.path).toBe('notes/markdown-search.md')
+  })
+
+  it('keeps native indexes isolated per workspace key', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
+    tempDirs.push(dir)
+    const first = new WorkspaceSearchIndex()
+    await first.open(path.join(dir, 'first'))
+    await first.rebuild([
+      {
+        path: 'notes/first.md',
+        title: 'first',
+        content: 'alpha',
+      },
+    ])
+    await first.close()
+
+    const second = new WorkspaceSearchIndex()
+    await second.open(path.join(dir, 'second'))
+    const hasDocuments = await second.hasDocuments()
+    await second.close()
+
+    expect(hasDocuments).toBe(false)
+  })
+
   it('uses the same case and unicode folding as memory search', async () => {
     const index = await createIndex()
     await index.rebuild([

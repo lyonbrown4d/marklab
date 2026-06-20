@@ -1,4 +1,6 @@
-import { clearTextInCurrentBlockCommand } from '@milkdown/kit/preset/commonmark'
+import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
+import { clearTextInCurrentBlockCommand, insertImageCommand } from '@milkdown/kit/preset/commonmark'
+import { Slice } from '@milkdown/kit/prose/model'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createSlashMenuConfig,
@@ -18,12 +20,38 @@ const labels: SlashCommandLabels = {
   heading6: 'Heading 6',
   quote: 'Quote',
   divider: 'Divider',
+  link: 'Link',
+  linkUrlPrompt: 'Enter link URL',
+  linkTextPrompt: 'Enter link text',
+  bold: 'Bold',
+  italic: 'Italic',
+  inlineCode: 'Inline code',
+  strike: 'Strikethrough',
+  clearFormat: 'Clear format',
   bulletList: 'Bullet list',
   orderedList: 'Ordered list',
   taskList: 'Task list',
   image: 'Image',
+  imageUrl: 'Image URL',
+  imageUrlPrompt: 'Enter image URL',
+  imageAltPrompt: 'Enter image description',
   codeBlock: 'Code block',
+  codeTypeScript: 'TypeScript code',
+  codeJavaScript: 'JavaScript code',
+  codeJson: 'JSON code',
+  codeBash: 'Bash code',
+  codeHtml: 'HTML code',
+  mermaid: 'Mermaid diagram',
   table: 'Table',
+  footnote: 'Footnote',
+  frontmatter: 'Frontmatter',
+  details: 'Details',
+  toc: 'Table of contents',
+  calloutNote: 'Note callout',
+  calloutTip: 'Tip callout',
+  calloutImportant: 'Important callout',
+  calloutWarning: 'Warning callout',
+  calloutCaution: 'Caution callout',
 }
 
 describe('createSlashMenuConfig', () => {
@@ -39,8 +67,8 @@ describe('createSlashMenuConfig', () => {
       h4: { label: 'Heading 4' },
       h5: { label: 'Heading 5' },
       h6: { label: 'Heading 6' },
-      quote: { label: 'Quote' },
-      divider: { label: 'Divider' },
+      quote: { label: 'Quote · blockquote' },
+      divider: { label: 'Divider · hr' },
     })
     expect(config.listGroup).toMatchObject({
       label: 'List',
@@ -51,7 +79,7 @@ describe('createSlashMenuConfig', () => {
     expect(config.advancedGroup).toMatchObject({
       label: 'Advanced',
       image: null,
-      codeBlock: { label: 'Code block' },
+      codeBlock: { label: 'Code block · fence' },
       table: { label: 'Table' },
       math: null,
     })
@@ -84,5 +112,203 @@ describe('createSlashMenuConfig', () => {
     )
     expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
     expect(onImageImport).toHaveBeenCalledTimes(1)
+  })
+
+  it('registers markdown template slash commands from the shared catalog', () => {
+    const config = createSlashMenuConfig(labels, async () => true)
+    const addItem = vi.fn()
+
+    config.buildMenu({
+      getGroup: vi.fn(() => ({ addItem })),
+    })
+
+    expect(addItem).toHaveBeenCalledWith(
+      'mermaid',
+      expect.objectContaining({
+        label: 'Mermaid diagram · diagram',
+        icon: expect.stringContaining('<svg'),
+      }),
+    )
+    expect(addItem).toHaveBeenCalledWith(
+      'code-typescript',
+      expect.objectContaining({ label: 'TypeScript code · ts' }),
+    )
+    expect(addItem).toHaveBeenCalledWith(
+      'callout-warning',
+      expect.objectContaining({ label: 'Warning callout · warn' }),
+    )
+    expect(addItem).toHaveBeenCalledWith('link', expect.objectContaining({ label: 'Link · url' }))
+    expect(addItem).toHaveBeenCalledWith(
+      'bold',
+      expect.objectContaining({ label: 'Bold · strong' }),
+    )
+    expect(addItem).toHaveBeenCalledWith(
+      'frontmatter',
+      expect.objectContaining({ label: 'Frontmatter · yaml meta' }),
+    )
+    expect(addItem).toHaveBeenCalledWith(
+      'details',
+      expect.objectContaining({ label: 'Details · collapse' }),
+    )
+    expect(addItem).toHaveBeenCalledWith(
+      'toc',
+      expect.objectContaining({ label: 'Table of contents · contents' }),
+    )
+  })
+
+  it('inserts custom markdown templates as parsed editor content', () => {
+    const config = createSlashMenuConfig(labels, async () => true)
+    const addItem = vi.fn()
+    const call = vi.fn()
+    const parser = vi.fn(() => ({ content: { childCount: 1 } }))
+    const replaceRange = vi.fn(function replaceRange() {
+      return tr
+    })
+    const scrollIntoView = vi.fn(function scrollIntoView() {
+      return tr
+    })
+    const tr = { replaceRange, scrollIntoView }
+    const view = {
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      state: {
+        selection: {
+          $from: {
+            after: vi.fn(() => 8),
+            before: vi.fn(() => 2),
+            depth: 1,
+          },
+          from: 4,
+          to: 4,
+        },
+        tr,
+      },
+    }
+
+    config.buildMenu({
+      getGroup: vi.fn(() => ({ addItem })),
+    })
+
+    const [, item] = addItem.mock.calls.find(([key]) => key === 'mermaid') as [
+      string,
+      { onRun: (ctx: { get: (token: unknown) => unknown }) => void },
+    ]
+
+    item.onRun({
+      get: (token) => {
+        if (token === commandsCtx) return { call }
+        if (token === editorViewCtx) return view
+        if (token === parserCtx) return parser
+        return null
+      },
+    })
+
+    expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
+    expect(parser).toHaveBeenCalledWith(expect.stringContaining('```mermaid'))
+    expect(replaceRange).toHaveBeenCalledWith(2, 8, expect.any(Slice))
+    expect(view.dispatch).toHaveBeenCalledWith(tr)
+    expect(view.focus).toHaveBeenCalledTimes(1)
+  })
+
+  it('prompts for an image URL and inserts it through the native image command', () => {
+    const config = createSlashMenuConfig(labels, async () => true)
+    const addItem = vi.fn()
+    const call = vi.fn()
+    const focus = vi.fn()
+    const prompt = vi
+      .spyOn(window, 'prompt')
+      .mockReturnValueOnce('https://example.com/image.png')
+      .mockReturnValueOnce('Example image')
+
+    config.buildMenu({
+      getGroup: vi.fn(() => ({ addItem })),
+    })
+
+    const [, item] = addItem.mock.calls.find(([key]) => key === 'image-url') as [
+      string,
+      { onRun: (ctx: { get: (token: unknown) => unknown }) => void },
+    ]
+
+    item.onRun({
+      get: (token) => {
+        if (token === commandsCtx) return { call }
+        if (token === editorViewCtx) return { focus }
+        return null
+      },
+    })
+
+    expect(prompt).toHaveBeenCalledWith('Enter image URL')
+    expect(prompt).toHaveBeenCalledWith('Enter image description')
+    expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
+    expect(call).toHaveBeenCalledWith(insertImageCommand.key, {
+      alt: 'Example image',
+      src: 'https://example.com/image.png',
+      title: '',
+    })
+    expect(focus).toHaveBeenCalledTimes(1)
+
+    prompt.mockRestore()
+  })
+
+  it('prompts for a link and inserts a parsed markdown link', () => {
+    const config = createSlashMenuConfig(labels, async () => true)
+    const addItem = vi.fn()
+    const call = vi.fn()
+    const parser = vi.fn(() => ({ content: { childCount: 1 } }))
+    const replaceRange = vi.fn(function replaceRange() {
+      return tr
+    })
+    const scrollIntoView = vi.fn(function scrollIntoView() {
+      return tr
+    })
+    const tr = { replaceRange, scrollIntoView }
+    const view = {
+      dispatch: vi.fn(),
+      focus: vi.fn(),
+      state: {
+        selection: {
+          $from: {
+            after: vi.fn(() => 8),
+            before: vi.fn(() => 2),
+            depth: 1,
+          },
+          from: 4,
+          to: 4,
+        },
+        tr,
+      },
+    }
+    const prompt = vi
+      .spyOn(window, 'prompt')
+      .mockReturnValueOnce('https://example.com/docs')
+      .mockReturnValueOnce('Docs')
+
+    config.buildMenu({
+      getGroup: vi.fn(() => ({ addItem })),
+    })
+
+    const [, item] = addItem.mock.calls.find(([key]) => key === 'link') as [
+      string,
+      { onRun: (ctx: { get: (token: unknown) => unknown }) => void },
+    ]
+
+    item.onRun({
+      get: (token) => {
+        if (token === commandsCtx) return { call }
+        if (token === editorViewCtx) return view
+        if (token === parserCtx) return parser
+        return null
+      },
+    })
+
+    expect(prompt).toHaveBeenCalledWith('Enter link URL')
+    expect(prompt).toHaveBeenCalledWith('Enter link text')
+    expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
+    expect(parser).toHaveBeenCalledWith('[Docs](https://example.com/docs)\n')
+    expect(replaceRange).toHaveBeenCalledWith(2, 8, expect.any(Slice))
+    expect(view.dispatch).toHaveBeenCalledWith(tr)
+    expect(view.focus).toHaveBeenCalledTimes(1)
+
+    prompt.mockRestore()
   })
 })
