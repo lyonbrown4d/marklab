@@ -59,6 +59,12 @@ export const isMarkdownPath = (value: string): boolean => {
   const ext = path.extname(value).toLowerCase()
   return ext === '.md' || ext === '.markdown'
 }
+export const isCalendarPath = (value: string): boolean => {
+  return path.extname(value).toLowerCase() === '.ics'
+}
+export const isWorkspaceDocumentPath = (value: string): boolean => {
+  return isMarkdownPath(value) || isCalendarPath(value)
+}
 export const isExternalTarget = (target: string): boolean => {
   try {
     const url = new URL(target)

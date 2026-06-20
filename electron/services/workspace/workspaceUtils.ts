@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import {
   isMarkdownPath,
+  isWorkspaceDocumentPath,
   normalizeRelativePath,
   toWorkspaceRelative,
 } from '@electron/services/workspace/path.js'
@@ -161,7 +162,7 @@ const walkWorkspace = async (
           entries.push({ path: relativePath, name: dirent.name, kind: 'folder' as const })
         }
         await visit(absolutePath)
-      } else if (dirent.isFile() && isMarkdownPath(dirent.name)) {
+      } else if (dirent.isFile() && isWorkspaceDocumentPath(dirent.name)) {
         if (options.entries) {
           entries.push({ path: relativePath, name: dirent.name, kind: 'file' as const })
         }

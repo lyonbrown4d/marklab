@@ -2,61 +2,16 @@ import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { clearTextInCurrentBlockCommand, insertImageCommand } from '@milkdown/kit/preset/commonmark'
 import { Slice } from '@milkdown/kit/prose/model'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  createSlashMenuConfig,
-  type SlashCommandLabels,
-} from '@/components/milkdown/slashMenuConfig'
-
-const labels: SlashCommandLabels = {
-  textGroup: 'Text',
-  listGroup: 'List',
-  advancedGroup: 'Advanced',
-  text: 'Text',
-  heading1: 'Heading 1',
-  heading2: 'Heading 2',
-  heading3: 'Heading 3',
-  heading4: 'Heading 4',
-  heading5: 'Heading 5',
-  heading6: 'Heading 6',
-  quote: 'Quote',
-  divider: 'Divider',
-  link: 'Link',
-  linkUrlPrompt: 'Enter link URL',
-  linkTextPrompt: 'Enter link text',
-  bold: 'Bold',
-  italic: 'Italic',
-  inlineCode: 'Inline code',
-  strike: 'Strikethrough',
-  clearFormat: 'Clear format',
-  bulletList: 'Bullet list',
-  orderedList: 'Ordered list',
-  taskList: 'Task list',
-  image: 'Image',
-  imageUrl: 'Image URL',
-  imageUrlPrompt: 'Enter image URL',
-  imageAltPrompt: 'Enter image description',
-  codeBlock: 'Code block',
-  codeTypeScript: 'TypeScript code',
-  codeJavaScript: 'JavaScript code',
-  codeJson: 'JSON code',
-  codeBash: 'Bash code',
-  codeHtml: 'HTML code',
-  mermaid: 'Mermaid diagram',
-  table: 'Table',
-  footnote: 'Footnote',
-  frontmatter: 'Frontmatter',
-  details: 'Details',
-  toc: 'Table of contents',
-  calloutNote: 'Note callout',
-  calloutTip: 'Tip callout',
-  calloutImportant: 'Important callout',
-  calloutWarning: 'Warning callout',
-  calloutCaution: 'Caution callout',
-}
+import { createSlashMenuConfig } from '@/components/milkdown/slashMenuConfig'
+import { slashMenuTestLabels as labels } from '@/components/milkdown/slashMenuConfigTestFixtures'
 
 describe('createSlashMenuConfig', () => {
   it('builds native slash groups from the shared editor command catalog', () => {
-    const config = createSlashMenuConfig(labels, async () => true)
+    const config = createSlashMenuConfig(
+      labels,
+      async () => true,
+      async () => null,
+    )
 
     expect(config.textGroup).toMatchObject({
       label: 'Text',
@@ -87,7 +42,7 @@ describe('createSlashMenuConfig', () => {
 
   it('clears slash text before running the custom image import command', () => {
     const onImageImport = vi.fn(async () => true)
-    const config = createSlashMenuConfig(labels, onImageImport)
+    const config = createSlashMenuConfig(labels, onImageImport, async () => null)
     const addItem = vi.fn()
     const builder = {
       getGroup: vi.fn(() => ({ addItem })),
@@ -115,7 +70,11 @@ describe('createSlashMenuConfig', () => {
   })
 
   it('registers markdown template slash commands from the shared catalog', () => {
-    const config = createSlashMenuConfig(labels, async () => true)
+    const config = createSlashMenuConfig(
+      labels,
+      async () => true,
+      async () => null,
+    )
     const addItem = vi.fn()
 
     config.buildMenu({
@@ -154,10 +113,18 @@ describe('createSlashMenuConfig', () => {
       'toc',
       expect.objectContaining({ label: 'Table of contents · contents' }),
     )
+    expect(addItem).toHaveBeenCalledWith(
+      'calendar-file',
+      expect.objectContaining({ label: 'Calendar file · ics calendar' }),
+    )
   })
 
   it('inserts custom markdown templates as parsed editor content', () => {
-    const config = createSlashMenuConfig(labels, async () => true)
+    const config = createSlashMenuConfig(
+      labels,
+      async () => true,
+      async () => null,
+    )
     const addItem = vi.fn()
     const call = vi.fn()
     const parser = vi.fn(() => ({ content: { childCount: 1 } }))
@@ -211,7 +178,11 @@ describe('createSlashMenuConfig', () => {
   })
 
   it('prompts for an image URL and inserts it through the native image command', () => {
-    const config = createSlashMenuConfig(labels, async () => true)
+    const config = createSlashMenuConfig(
+      labels,
+      async () => true,
+      async () => null,
+    )
     const addItem = vi.fn()
     const call = vi.fn()
     const focus = vi.fn()
@@ -251,7 +222,11 @@ describe('createSlashMenuConfig', () => {
   })
 
   it('prompts for a link and inserts a parsed markdown link', () => {
-    const config = createSlashMenuConfig(labels, async () => true)
+    const config = createSlashMenuConfig(
+      labels,
+      async () => true,
+      async () => null,
+    )
     const addItem = vi.fn()
     const call = vi.fn()
     const parser = vi.fn(() => ({ content: { childCount: 1 } }))

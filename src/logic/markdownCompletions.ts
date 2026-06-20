@@ -1,12 +1,7 @@
 import type { FileEntry } from '@/store/appTypes'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
-import {
-  createFileLabel,
-  extractHeadings,
-  normalizeHeadingAnchor,
-  normalizePath,
-  resolveRelativePath,
-} from '@/logic/paths'
+import { fileCompletions, resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
+import { extractHeadings, normalizeHeadingAnchor } from '@/logic/paths'
 
 export type MarkdownCompletionKind = 'file' | 'heading' | 'language'
 
@@ -54,8 +49,6 @@ const LANGUAGE_ALIASES: Record<string, string[]> = {
   typescript: ['ts'],
   yaml: ['yml'],
 }
-
-const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 
 export const getMarkdownCompletions = ({
   activePath,
@@ -180,47 +173,6 @@ const matchesLanguageQuery = (language: string, query: string) => {
   )
 }
 
-const fileCompletions = ({
-  activePath,
-  files,
-  workspaceIndex,
-  query,
-  replacementStartColumn,
-  mode,
-}: {
-  activePath: string | null
-  files: FileEntry[]
-  workspaceIndex?: FsWorkspaceIndex | null
-  query: string
-  replacementStartColumn: number
-  mode: 'markdown' | 'wiki'
-}) => {
-  const normalizedQuery = query.toLowerCase()
-  const paths = workspaceIndex
-    ? workspaceIndex.files.map((file) => file.path)
-    : files
-        .filter((file) => file.kind === 'file' && MARKDOWN_EXTENSIONS.test(file.path))
-        .map((file) => file.path)
-  return paths
-    .filter((path) => {
-      const label = createFileLabel(path)
-      return (
-        path.toLowerCase().includes(normalizedQuery) ||
-        label.toLowerCase().includes(normalizedQuery)
-      )
-    })
-    .map((path) => {
-      const label = createFileLabel(path)
-      return {
-        label,
-        kind: 'file' as const,
-        insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
-        detail: path,
-        replacementStartColumn,
-      }
-    })
-}
-
 const headingCompletions = ({
   content,
   query,
@@ -278,48 +230,4 @@ const headingCompletionsFromIndex = ({
       detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
       replacementStartColumn,
     }))
-}
-
-const createRelativeLinkTarget = (activePath: string | null, targetPath: string) => {
-  if (!activePath) return targetPath
-  const fromDir = activePath.split('/').slice(0, -1)
-  const targetParts = targetPath.split('/')
-  const targetFile = targetParts[targetParts.length - 1] ?? targetPath
-  const targetDir = targetParts.slice(0, -1)
-
-  let commonLength = 0
-  while (
-    commonLength < fromDir.length &&
-    commonLength < targetDir.length &&
-    fromDir[commonLength] === targetDir[commonLength]
-  ) {
-    commonLength += 1
-  }
-
-  const up = new Array(fromDir.length - commonLength).fill('..')
-  const down = targetDir.slice(commonLength)
-  return [...up, ...down, targetFile].join('/') || targetPath
-}
-
-const resolveLinkedFilePath = (
-  activePath: string | null,
-  target: string,
-  files: FileEntry[],
-  workspaceIndex?: FsWorkspaceIndex | null,
-) => {
-  if (!activePath) return null
-  if (!target.trim()) return activePath
-
-  const normalized = resolveRelativePath(activePath, target)
-  const candidates = [
-    normalized,
-    MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.md`,
-    MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.markdown`,
-  ].map(normalizePath)
-  const existing = new Set(
-    workspaceIndex
-      ? workspaceIndex.files.map((file) => file.path)
-      : files.filter((file) => file.kind === 'file').map((file) => file.path),
-  )
-  return candidates.find((candidate) => existing.has(candidate)) ?? candidates[0]
 }

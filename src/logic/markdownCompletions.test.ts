@@ -6,6 +6,7 @@ import type { FsWorkspaceIndex } from '@/services/fsApi'
 const files: FileEntry[] = [
   { path: 'notes/current.md', kind: 'file' },
   { path: 'notes/target.md', kind: 'file' },
+  { path: 'notes/calendar.ics', kind: 'file' },
   { path: 'daily/today.md', kind: 'file' },
   { path: 'assets/logo.png', kind: 'file' },
 ]
@@ -43,6 +44,15 @@ const workspaceIndex = {
       links: [],
     },
   ],
+  paths: [
+    'notes',
+    'notes/current.md',
+    'notes/target.md',
+    'notes/calendar.ics',
+    'daily',
+    'daily/today.md',
+    'assets/logo.png',
+  ],
 } satisfies FsWorkspaceIndex
 
 describe('markdown completions', () => {
@@ -72,11 +82,40 @@ describe('markdown completions', () => {
         replacementStartColumn: 14,
       },
       {
+        label: 'calendar',
+        kind: 'file',
+        insertText: 'calendar.ics',
+        detail: 'notes/calendar.ics',
+        replacementStartColumn: 14,
+      },
+      {
         label: 'today',
         kind: 'file',
         insertText: '../daily/today.md',
         detail: 'daily/today.md',
         replacementStartColumn: 14,
+      },
+    ])
+  })
+
+  it('suggests calendar file links from the workspace path snapshot', () => {
+    expect(
+      getMarkdownCompletions({
+        activePath: 'notes/current.md',
+        content: 'See [Calendar](cal',
+        line: 1,
+        column: 19,
+        files,
+        fileContents,
+        workspaceIndex,
+      }),
+    ).toEqual([
+      {
+        label: 'calendar',
+        kind: 'file',
+        insertText: 'calendar.ics',
+        detail: 'notes/calendar.ics',
+        replacementStartColumn: 16,
       },
     ])
   })

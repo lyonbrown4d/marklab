@@ -1,9 +1,13 @@
-import { lazy, memo, Suspense, useEffect, useMemo, useRef } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLatest } from 'ahooks'
+import { toast } from 'sonner'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
+import type { FileEntry } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
+import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
+import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { cn } from '@/lib/utils'
@@ -13,12 +17,91 @@ type WysiwygEditorPageProps = {
   activePath: string | null
   value: string
   onChange: (value: string) => void
+  files: FileEntry[]
   showStatusBar: boolean
 }
+
+const INITIAL_ICS_CONTENT = [
+  'BEGIN:VCALENDAR',
+  'VERSION:2.0',
+  'PRODID:-//Marklab//Calendar//EN',
+  'CALSCALE:GREGORIAN',
+  'METHOD:PUBLISH',
+  'END:VCALENDAR',
+  '',
+].join('\r\n')
+
+const dirname = (path: string) => path.split('/').slice(0, -1).join('/')
+
+const basename = (path: string) => path.split('/').pop() ?? path
+
+const stripCalendarExtension = (path: string) => basename(path).replace(/\.ics$/i, '')
+
+const normalizeCalendarInputPath = (input: string, activePath: string) => {
+  let candidate = input.trim().replace(/\\/g, '/').replace(/^\/+/, '')
+  if (!candidate) {
+    return null
+  }
+
+  if (!/\.ics$/i.test(candidate)) {
+    candidate = `${candidate}.ics`
+  }
+
+  if (!candidate.includes('/')) {
+    const directory = dirname(activePath)
+    candidate = directory ? `${directory}/${candidate}` : candidate
+  }
+
+  return normalizePath(candidate)
+}
+
+const nextCalendarPath = (activePath: string, files: FileEntry[]) => {
+  const existingPaths = new Set(files.map((file) => file.path.toLowerCase()))
+  const directory = dirname(activePath)
+  const createPath = (name: string) => (directory ? `${directory}/${name}` : name)
+
+  for (let index = 0; index < 100; index += 1) {
+    const filename = index === 0 ? 'calendar.ics' : `calendar-${index}.ics`
+    const path = createPath(filename)
+    if (!existingPaths.has(path.toLowerCase())) {
+      return path
+    }
+  }
+
+  return createPath(`calendar-${Date.now()}.ics`)
+}
+
+const relativeLinkTarget = (fromPath: string, targetPath: string) => {
+  const fromParts = dirname(fromPath).split('/').filter(Boolean)
+  const targetParts = targetPath.split('/').filter(Boolean)
+  let shared = 0
+
+  while (fromParts[shared] && fromParts[shared] === targetParts[shared]) {
+    shared += 1
+  }
+
+  const upParts = fromParts.slice(shared).map(() => '..')
+  const downParts = targetParts.slice(shared)
+  const relative = [...upParts, ...downParts].join('/')
+
+  if (!relative.includes('/') && !relative.startsWith('.')) {
+    return `./${relative}`
+  }
+
+  return relative
+}
+
+const markdownLinkForCalendar = (activePath: string, calendarPath: string) => {
+  const label = stripCalendarExtension(calendarPath) || 'Calendar'
+  const target = relativeLinkTarget(activePath, calendarPath).replace(/>/g, '%3E')
+  return `[${label}](<${target}>)\n`
+}
+
 const WysiwygEditorPage = ({
   activePath,
   value,
   onChange,
+  files,
   showStatusBar,
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
@@ -73,9 +156,45 @@ const WysiwygEditorPage = ({
       calloutImportant: t('slash.calloutImportant'),
       calloutWarning: t('slash.calloutWarning'),
       calloutCaution: t('slash.calloutCaution'),
+      calendarFile: t('slash.calendarFile'),
+      calendarFilePrompt: t('slash.calendarFilePrompt'),
     }),
     [t],
   )
+  const onCalendarFileCreate = useCallback(async () => {
+    if (!activePath) {
+      return null
+    }
+
+    const defaultPath = nextCalendarPath(activePath, files)
+    const input = window.prompt(t('slash.calendarFilePrompt'), basename(defaultPath))
+    if (input === null) {
+      return null
+    }
+
+    const calendarPath = normalizeCalendarInputPath(input, activePath)
+    if (!calendarPath) {
+      return null
+    }
+
+    const existingPaths = new Set(files.map((file) => file.path.toLowerCase()))
+    if (existingPaths.has(calendarPath.toLowerCase())) {
+      toast.error(t('calendar.fileExists'))
+      return null
+    }
+
+    try {
+      await fsApi.createFile(calendarPath)
+      await fsApi.updateBuffer(calendarPath, INITIAL_ICS_CONTENT)
+      await fsApi.flushBuffers()
+      toast.success(t('calendar.fileCreated'))
+      return markdownLinkForCalendar(activePath, calendarPath)
+    } catch (error) {
+      console.error('Failed to create calendar file', error)
+      toast.error(t('calendar.createFailed'))
+      return null
+    }
+  }, [activePath, files, t])
 
   useEffect(() => {
     return onExportContentRequest(({ expectedActivePath, respond }) => {
@@ -97,6 +216,7 @@ const WysiwygEditorPage = ({
                 onChange={onChange}
                 placeholder={t('editor.placeholder')}
                 slashLabels={slashLabels}
+                onCalendarFileCreate={onCalendarFileCreate}
               />
             </Suspense>
           </div>

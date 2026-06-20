@@ -45,6 +45,9 @@ const LANGUAGE_ALIASES: Record<string, string[]> = {
   yaml: ['yml'],
 }
 
+const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
+const WORKSPACE_DOCUMENT_EXTENSIONS = /\.(md|markdown|ics)$/i
+
 export const createMarkdownCompletions = async (
   request: CompletionRequest,
   workspaceIndex: () => Promise<FsWorkspaceIndex>,
@@ -213,8 +216,7 @@ const fileCompletions = ({
   mode: 'markdown' | 'wiki'
 }): MarkdownLanguageCompletionItem[] => {
   const normalizedQuery = query.toLowerCase()
-  return workspaceIndex.files
-    .map((file) => file.path)
+  return workspaceDocumentPaths(workspaceIndex, mode)
     .filter((path) => {
       const label = createFileLabel(path)
       return (
@@ -242,6 +244,16 @@ const fileCompletions = ({
         sortText: fileCompletionSortText({ activePath, query: normalizedQuery, path, label }),
       }
     })
+}
+
+const workspaceDocumentPaths = (workspaceIndex: FsWorkspaceIndex, mode: 'markdown' | 'wiki') => {
+  const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_DOCUMENT_EXTENSIONS
+  const paths = [
+    ...workspaceIndex.files.map((file) => file.path),
+    ...(workspaceIndex.paths ?? []).filter((path) => extensionPattern.test(path)),
+  ]
+
+  return Array.from(new Set(paths)).filter((path) => extensionPattern.test(path))
 }
 
 const headingCompletionsFromFile = ({

@@ -98,6 +98,7 @@ export const useMarkdownCrepeController = ({
   markdownAssetImportStrategy,
   nodeViewFactory,
   onChange,
+  onCalendarFileCreate,
   placeholder,
   slashLabels,
   value,
@@ -156,6 +157,11 @@ export const useMarkdownCrepeController = ({
     if (!source) return false
     return importImageSources([source])
   }, [importImageSources])
+
+  const createCalendarFileLink = useCallback(async () => {
+    if (!onCalendarFileCreate) return null
+    return onCalendarFileCreate()
+  }, [onCalendarFileCreate])
 
   const runShortcutAction = useCallback(
     (action: ShortcutActionId) => {
@@ -268,6 +274,7 @@ export const useMarkdownCrepeController = ({
         initialValue: initialValueAtCreate,
         darkMode,
         onSlashImageImport: pickAndImportImage,
+        onSlashCalendarFileCreate: createCalendarFileLink,
         placeholder,
         slashLabels,
       })
@@ -347,6 +354,7 @@ export const useMarkdownCrepeController = ({
     focusEditor,
     getImageDocumentPath,
     nodeViewFactory,
+    createCalendarFileLink,
     pickAndImportImage,
     placeholder,
     resolveImageSrc,

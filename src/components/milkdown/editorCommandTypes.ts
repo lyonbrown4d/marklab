@@ -41,6 +41,7 @@ export type SlashCommandLabelKey =
   | 'calloutImportant'
   | 'calloutWarning'
   | 'calloutCaution'
+  | 'calendarFile'
 
 export type MarkdownEditorCommandId =
   | ShortcutActionId
@@ -62,6 +63,7 @@ export type MarkdownEditorCommandId =
   | 'editor.frontmatter'
   | 'editor.details'
   | 'editor.toc'
+  | 'editor.calendarFile'
 
 export type MarkdownEditorSlashCommand = {
   aliases?: readonly string[]

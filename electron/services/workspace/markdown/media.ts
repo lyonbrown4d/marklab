@@ -15,6 +15,7 @@ const assetMediaTypes: Record<string, string> = {
   '.heic': 'image/heic',
   '.heif': 'image/heif',
   '.ico': 'image/x-icon',
+  '.ics': 'text/calendar',
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',
   '.m4a': 'audio/mp4',

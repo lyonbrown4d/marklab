@@ -10,6 +10,7 @@ type CreateMarkdownCrepeOptions = {
   initialValue: string
   darkMode: boolean
   onSlashImageImport: () => Promise<boolean>
+  onSlashCalendarFileCreate: () => Promise<string | null>
   placeholder: string
   slashLabels: SlashCommandLabels
 }
@@ -19,6 +20,7 @@ export const createMarkdownCrepe = ({
   initialValue,
   darkMode,
   onSlashImageImport,
+  onSlashCalendarFileCreate,
   placeholder,
   slashLabels,
 }: CreateMarkdownCrepeOptions) =>
@@ -40,6 +42,10 @@ export const createMarkdownCrepe = ({
         text: placeholder,
         mode: 'block',
       },
-      [Crepe.Feature.BlockEdit]: createSlashMenuConfig(slashLabels, onSlashImageImport),
+      [Crepe.Feature.BlockEdit]: createSlashMenuConfig(
+        slashLabels,
+        onSlashImageImport,
+        onSlashCalendarFileCreate,
+      ),
     },
   })

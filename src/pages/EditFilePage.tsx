@@ -2,12 +2,14 @@ import { lazy, Suspense } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import EditorEmptyState from '@/pages/EditorEmptyState'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
+import { isCalendarFilePath } from '@/logic/ics'
 import { pathToRoute } from '@/logic/routing'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'))
+const CalendarFilePage = lazy(() => import('@/pages/CalendarFilePage'))
 
 const EditFilePage = () => {
   const params = useParams()
@@ -39,12 +41,26 @@ const EditFilePage = () => {
 
   const fallback = <EditorPaneFallback label={t('editor.loadingDocument')} path={activePath} />
 
+  if (isCalendarFilePath(activePath)) {
+    return (
+      <Suspense fallback={fallback}>
+        <CalendarFilePage
+          activePath={activePath}
+          value={context.editorValue}
+          onOpenSource={() => context.onOpenFileView(activePath, 'source')}
+          showStatusBar={context.showEditorStatusBar}
+        />
+      </Suspense>
+    )
+  }
+
   return (
     <Suspense fallback={fallback}>
       <WysiwygEditorPage
         activePath={activePath}
         value={context.editorValue}
         onChange={context.onEditorChange}
+        files={context.files}
         showStatusBar={context.showEditorStatusBar}
       />
     </Suspense>

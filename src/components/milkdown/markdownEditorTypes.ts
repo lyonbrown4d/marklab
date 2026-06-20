@@ -6,6 +6,7 @@ export type MarkdownEditorProps = {
   onChange: (value: string) => void
   placeholder: string
   slashLabels: SlashCommandLabels
+  onCalendarFileCreate?: () => Promise<string | null>
 }
 
 export type MarkdownEditorHandle = {

@@ -1,10 +1,11 @@
 import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
+const DOCUMENT_LABEL_EXTENSIONS = /\.(md|markdown|ics)$/i
 
 export const createFileLabel = (relativePath: string) => {
   const base = relativePath.split('/').pop() ?? relativePath
-  return base.replace(MARKDOWN_EXTENSIONS, '')
+  return base.replace(DOCUMENT_LABEL_EXTENSIONS, '')
 }
 
 export const createRelativeLinkTarget = (activePath: string | null, targetPath: string) => {

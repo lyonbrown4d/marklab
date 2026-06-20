@@ -134,6 +134,11 @@ export const markdownEditorCommandCatalog: readonly MarkdownEditorCommandSpec[] 
     slash: customSlash('advanced', 'image-url', 'imageUrl', ['url']),
   },
   {
+    id: 'editor.calendarFile',
+    kind: 'asset',
+    slash: customSlash('advanced', 'calendar-file', 'calendarFile', ['ics', 'calendar']),
+  },
+  {
     id: 'editor.codeBlock',
     actionId: 'editor.codeBlock',
     kind: 'block',

@@ -151,6 +151,8 @@ const slashLabels: SlashCommandLabels = {
   calloutImportant: 'Important callout',
   calloutWarning: 'Warning callout',
   calloutCaution: 'Caution callout',
+  calendarFile: 'Calendar file',
+  calendarFilePrompt: 'Calendar file name',
 }
 
 const renderEditor = (value: string) =>

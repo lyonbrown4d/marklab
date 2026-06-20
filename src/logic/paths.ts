@@ -45,7 +45,7 @@ export const normalizeHeadingAnchor = (anchor: string) => {
 
 export const createFileLabel = (relativePath: string) => {
   const base = relativePath.split('/').pop() ?? relativePath
-  return base.replace(/\.(md|markdown)$/i, '')
+  return base.replace(/\.(md|markdown|ics)$/i, '')
 }
 
 export const slugify = (label: string) => {

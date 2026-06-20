@@ -42,6 +42,13 @@ const linkIcon = `
   </svg>
 `
 
+const calendarIcon = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+    <path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" />
+    <path d="M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+  </svg>
+`
+
 export type SlashCommandLabels = {
   textGroup: string
   listGroup: string
@@ -87,11 +94,18 @@ export type SlashCommandLabels = {
   calloutImportant: string
   calloutWarning: string
   calloutCaution: string
+  calendarFile: string
+  calendarFilePrompt: string
 }
 
 type CustomSlashCommand = {
   icon: string
-  onRun: (ctx: Ctx, labels: SlashCommandLabels, onImageImport: () => Promise<boolean>) => void
+  onRun: (
+    ctx: Ctx,
+    labels: SlashCommandLabels,
+    onImageImport: () => Promise<boolean>,
+    onCalendarFileCreate: () => Promise<string | null>,
+  ) => void
 }
 
 const markdownTemplates: Record<string, string> = {
@@ -140,6 +154,16 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
       ctx.get(editorViewCtx).focus()
     },
   },
+  'calendar-file': {
+    icon: calendarIcon,
+    onRun: (ctx, _labels, _onImageImport, onCalendarFileCreate) => {
+      void onCalendarFileCreate().then((markdown) => {
+        if (markdown) {
+          insertMarkdownTemplate(ctx, markdown)
+        }
+      })
+    },
+  },
   link: {
     icon: linkIcon,
     onRun: (ctx, labels) => {
@@ -177,6 +201,7 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
 export const createSlashMenuConfig = (
   labels: SlashCommandLabels,
   onImageImport: () => Promise<boolean>,
+  onCalendarFileCreate: () => Promise<string | null>,
 ) => ({
   textGroup: {
     label: labels.textGroup,
@@ -213,7 +238,7 @@ export const createSlashMenuConfig = (
         builder.getGroup(command.group).addItem(command.key, {
           label: slashLabel(labels[command.labelKey], command.aliases),
           icon: item.icon,
-          onRun: (ctx) => item.onRun(ctx, labels, onImageImport),
+          onRun: (ctx) => item.onRun(ctx, labels, onImageImport, onCalendarFileCreate),
         })
       })
   },
