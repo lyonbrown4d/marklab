@@ -38,16 +38,10 @@ const settingsRoutes = [
     render: () => <GeneralSettingsPage />,
   },
   {
-    value: 'saving',
-    labelKey: 'settings.saveBehavior',
-    icon: Save,
-    render: () => <SavingSettingsPage />,
-  },
-  {
-    value: 'files',
-    labelKey: 'settings.files',
-    icon: FileText,
-    render: () => <FileSettingsPage />,
+    value: 'appearance',
+    labelKey: 'settings.appearance',
+    icon: Palette,
+    render: () => <AppearanceSettingsPage />,
   },
   {
     value: 'editing',
@@ -56,10 +50,16 @@ const settingsRoutes = [
     render: () => <EditingSettingsPage />,
   },
   {
-    value: 'appearance',
-    labelKey: 'settings.appearance',
-    icon: Palette,
-    render: () => <AppearanceSettingsPage />,
+    value: 'files',
+    labelKey: 'settings.files',
+    icon: FileText,
+    render: () => <FileSettingsPage />,
+  },
+  {
+    value: 'saving',
+    labelKey: 'settings.saveBehavior',
+    icon: Save,
+    render: () => <SavingSettingsPage />,
   },
   {
     value: 'graph',
@@ -125,7 +125,7 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   value={routeConfig.value}
                   className="settings-dialog-tab-trigger justify-start gap-2 rounded-md"
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="shrink-0" aria-hidden="true" />
                   <span className="truncate">{t(routeConfig.labelKey)}</span>
                 </TabsTrigger>
               )
@@ -133,7 +133,10 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           </TabsList>
           <div className="settings-dialog-panel-shell h-full min-h-0 min-w-0 overflow-hidden">
             <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
-              <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0">
+              <div
+                key={section}
+                className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0"
+              >
                 <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
                   {activeRoute.render()}
                 </div>

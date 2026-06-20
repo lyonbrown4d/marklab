@@ -8,6 +8,7 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
+  SettingsPageStack,
   SettingsSection,
   SettingsSwitchRow,
 } from '@/components/settings/SettingsRow'
@@ -41,7 +42,7 @@ const GraphSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-4">
+    <SettingsPageStack>
       <SettingsSection
         title={t('settings.graphMiniMap')}
         description={t('settings.graphMiniMapDescription')}
@@ -92,7 +93,7 @@ const GraphSettingsPage = () => {
           />
         </SettingsChoiceGrid>
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 

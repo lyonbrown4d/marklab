@@ -3,7 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { SettingsSection, SettingsSwitchRow } from '@/components/settings/SettingsRow'
+import {
+  SettingsFieldGroup,
+  SettingsPageStack,
+  SettingsSection,
+  SettingsSwitchRow,
+} from '@/components/settings/SettingsRow'
 import ImmersiveSettingsSection from '@/components/settings/ImmersiveSettingsSection'
 
 const editingSettingsSchema = z.object({
@@ -33,11 +38,11 @@ const EditingSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-4">
+    <SettingsPageStack>
       <ImmersiveSettingsSection />
 
       <SettingsSection title={t('settings.motion')} description={t('settings.motionDescription')}>
-        <div className="space-y-3">
+        <SettingsFieldGroup>
           <Controller
             control={form.control}
             name="motionSmoothScrolling"
@@ -83,9 +88,9 @@ const EditingSettingsPage = () => {
               />
             )}
           />
-        </div>
+        </SettingsFieldGroup>
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 

@@ -11,8 +11,13 @@ import {
   type ShortcutActionId,
 } from '@/logic/shortcuts'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
-import { SettingsSection } from '@/components/settings/SettingsRow'
+import {
+  SettingsActionButton,
+  SettingsEmptyState,
+  SettingsIconButton,
+  SettingsPageStack,
+  SettingsSection,
+} from '@/components/settings/SettingsRow'
 import ShortcutRecorderRow from '@/components/settings/ShortcutRecorderRow'
 
 const ShortcutsSettingsPage = () => {
@@ -96,12 +101,12 @@ const ShortcutsSettingsPage = () => {
   ])
 
   return (
-    <div className="space-y-5">
+    <SettingsPageStack className="gap-5">
       <SettingsSection
         title={t('settings.shortcuts')}
         description={t('settings.shortcutsDescription')}
         icon={Keyboard}
-        className="space-y-4"
+        bodyClassName="gap-4"
       >
         <div className="settings-shortcuts-search relative">
           <Search className="settings-shortcuts-search-icon h-4 w-4 text-muted-foreground" />
@@ -125,7 +130,7 @@ const ShortcutsSettingsPage = () => {
               aria-label={t('shortcuts.clearSearch')}
               onClick={() => setKeyword('')}
             >
-              <X className="h-3.5 w-3.5" />
+              <X />
             </SettingsIconButton>
           )}
         </div>
@@ -142,16 +147,14 @@ const ShortcutsSettingsPage = () => {
             disabled={!hasOverrides}
             onClick={resetShortcutOverrides}
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw data-icon="inline-start" />
             {t('shortcuts.resetAll')}
           </SettingsActionButton>
         </div>
       </SettingsSection>
 
       {filteredSections.length === 0 && (
-        <div className="settings-empty-state rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-          {t('shortcuts.noMatches')}
-        </div>
+        <SettingsEmptyState>{t('shortcuts.noMatches')}</SettingsEmptyState>
       )}
       {filteredSections.map((category) => (
         <section key={category.id} className="settings-shortcut-category">
@@ -161,7 +164,7 @@ const ShortcutsSettingsPage = () => {
           </div>
         </section>
       ))}
-    </div>
+    </SettingsPageStack>
   )
 }
 

@@ -21,6 +21,8 @@ export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNod
         selected && 'graph-node-shell--selected',
       )}
       data-graph-node-selected={selected}
+      data-graph-node-kind="external"
+      aria-label={data.label}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
@@ -38,6 +40,8 @@ export const MissingNode = memo(({ data, selected }: NodeProps<MissingGraphNode>
         selected && 'graph-node-shell--selected',
       )}
       data-graph-node-selected={selected}
+      data-graph-node-kind="missing"
+      aria-label={data.label}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
@@ -92,6 +96,8 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
       )}
       data-graph-node-selected={selected}
       data-graph-node-id={id}
+      data-graph-node-kind="heading"
+      aria-label={data.label}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />

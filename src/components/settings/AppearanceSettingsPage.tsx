@@ -5,7 +5,10 @@ import { Check, Languages, Palette } from 'lucide-react'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
+  SettingsFieldGroup,
+  SettingsPageStack,
   SettingsSection,
+  SettingsSubsection,
 } from '@/components/settings/SettingsRow'
 import CustomThemesSettingsSection from '@/components/settings/CustomThemesSettingsSection'
 import { useI18n } from '@/i18n/useI18n'
@@ -47,14 +50,14 @@ const AppearanceSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-5">
+    <SettingsPageStack className="gap-5">
       <SettingsSection
         title={t('menu.theme')}
         description={t('settings.themeDescription')}
         icon={Palette}
         surface={false}
       >
-        <div className="space-y-4">
+        <SettingsFieldGroup className="gap-4">
           <Controller
             control={form.control}
             name="themeMode"
@@ -76,10 +79,7 @@ const AppearanceSettingsPage = () => {
             )}
           />
 
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">
-              {t('settings.lightTheme')}
-            </div>
+          <SettingsSubsection title={t('settings.lightTheme')}>
             <SettingsChoiceGrid columns={2}>
               <Controller
                 control={form.control}
@@ -100,19 +100,16 @@ const AppearanceSettingsPage = () => {
                       >
                         <ThemePreview swatchClass={item.swatchClass} />
                         <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
-                        {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
+                        {field.value === item.value && <Check data-icon="inline-end" />}
                       </SettingsChoiceButton>
                     ))}
                   </>
                 )}
               />
             </SettingsChoiceGrid>
-          </div>
+          </SettingsSubsection>
 
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">
-              {t('settings.darkTheme')}
-            </div>
+          <SettingsSubsection title={t('settings.darkTheme')}>
             <SettingsChoiceGrid columns={2}>
               <Controller
                 control={form.control}
@@ -133,15 +130,15 @@ const AppearanceSettingsPage = () => {
                       >
                         <ThemePreview swatchClass={item.swatchClass} />
                         <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
-                        {field.value === item.value && <Check className="h-4 w-4 text-primary" />}
+                        {field.value === item.value && <Check data-icon="inline-end" />}
                       </SettingsChoiceButton>
                     ))}
                   </>
                 )}
               />
             </SettingsChoiceGrid>
-          </div>
-        </div>
+          </SettingsSubsection>
+        </SettingsFieldGroup>
       </SettingsSection>
 
       <CustomThemesSettingsSection />
@@ -177,7 +174,7 @@ const AppearanceSettingsPage = () => {
           />
         </SettingsChoiceGrid>
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 

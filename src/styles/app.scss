@@ -337,8 +337,8 @@ button[disabled],
 }
 
 .settings-dialog-surface {
-  width: min(920px, calc(100vw - 32px));
-  height: min(720px, calc(100vh - 32px));
+  width: min(960px, calc(100vw - 32px));
+  height: min(740px, calc(100vh - 32px));
   max-height: calc(100vh - 32px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -365,7 +365,7 @@ button[disabled],
 
 .settings-dialog-body {
   display: grid;
-  grid-template-columns: 168px minmax(0, 1fr);
+  grid-template-columns: 176px minmax(0, 1fr);
   background: hsl(var(--card));
 }
 
@@ -377,20 +377,42 @@ button[disabled],
   min-height: 100%;
 }
 
+.settings-scroll-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 28%, transparent)
+    color-mix(in srgb, hsl(var(--muted)) 38%, transparent);
+}
+
+.settings-scroll-viewport::-webkit-scrollbar {
+  width: 0.625rem;
+}
+
+.settings-scroll-viewport::-webkit-scrollbar-track {
+  background: color-mix(in srgb, hsl(var(--muted)) 30%, transparent);
+}
+
+.settings-scroll-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+  border: 0.1875rem solid hsl(var(--card));
+  border-radius: 999px;
+}
+
 .settings-row-surface {
   background: hsl(var(--card));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 86%, transparent 14%);
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent 22%);
   box-shadow:
-    0 1px 0 color-mix(in srgb, hsl(var(--foreground)) 4%, transparent),
-    0 0 0 1px color-mix(in srgb, hsl(var(--card)) 74%, transparent);
+    0 1px 0 color-mix(in srgb, hsl(var(--foreground)) 3%, transparent),
+    0 0 0 1px color-mix(in srgb, hsl(var(--card)) 80%, transparent);
 }
 
 .settings-choice-button {
   background: hsl(var(--background));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 80%, transparent 20%);
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent 18%);
   color: hsl(var(--foreground));
   cursor: pointer;
-  box-shadow: 0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  box-shadow: none;
   transition:
     background-color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease,
@@ -398,9 +420,9 @@ button[disabled],
 }
 
 .settings-choice-button:hover {
-  background: color-mix(in srgb, hsl(var(--background)) 90%, hsl(var(--foreground)) 10%);
-  border-color: color-mix(in srgb, hsl(var(--border)) 72%, hsl(var(--foreground)) 28%);
-  box-shadow: 0 2px 8px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+  background: color-mix(in srgb, hsl(var(--accent)) 36%, hsl(var(--background)) 64%);
+  border-color: color-mix(in srgb, hsl(var(--foreground)) 22%, hsl(var(--border)) 78%);
+  box-shadow: none;
 }
 
 .settings-choice-button:disabled,
@@ -414,9 +436,9 @@ button[disabled],
 
 .settings-choice-button-selected {
   color: hsl(var(--foreground));
-  background: color-mix(in srgb, hsl(var(--primary)) 22%, hsl(var(--card)) 78%);
-  border-color: color-mix(in srgb, hsl(var(--ring)) 70%, hsl(var(--border)) 30%);
-  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 26%, transparent);
+  background: color-mix(in srgb, hsl(var(--primary)) 16%, hsl(var(--card)) 84%);
+  border-color: color-mix(in srgb, hsl(var(--ring)) 62%, hsl(var(--border)) 38%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 18%, transparent);
 }
 
 .settings-choice-button:focus-visible,
@@ -428,15 +450,29 @@ button[disabled],
 }
 
 .settings-choice-button-selected:hover {
-  background: color-mix(in srgb, hsl(var(--primary)) 28%, hsl(var(--card)) 72%);
+  background: color-mix(in srgb, hsl(var(--primary)) 20%, hsl(var(--card)) 80%);
   color: hsl(var(--foreground));
 }
 
+.settings-choice-button svg,
+.settings-action-button svg,
+.settings-action-icon-button svg,
+.settings-dialog-tab-trigger svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-choice-button-selected svg,
+.settings-theme-check {
+  color: hsl(var(--primary));
+}
+
 .settings-action-button {
-  background: color-mix(in srgb, hsl(var(--secondary)) 84%, hsl(var(--background)) 16%);
+  background: color-mix(in srgb, hsl(var(--secondary)) 74%, hsl(var(--background)) 26%);
   color: hsl(var(--foreground));
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
-  box-shadow: 0 1px 1px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
+  box-shadow: none;
   transition:
     background-color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease,
@@ -445,11 +481,9 @@ button[disabled],
 }
 
 .settings-action-button:hover {
-  background: color-mix(in srgb, hsl(var(--secondary)) 92%, hsl(var(--foreground)) 8%);
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 36%, hsl(var(--border)) 64%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 18%, transparent),
-    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
+  background: color-mix(in srgb, hsl(var(--secondary)) 82%, hsl(var(--foreground)) 8%);
+  border-color: color-mix(in srgb, hsl(var(--foreground)) 26%, hsl(var(--border)) 74%);
+  box-shadow: none;
 }
 
 .settings-action-button:disabled,
@@ -471,26 +505,48 @@ button[disabled],
 }
 
 .settings-dialog-tabs {
-  background: color-mix(in srgb, hsl(var(--muted)) 36%, transparent);
+  gap: 0.25rem;
+  background: color-mix(in srgb, hsl(var(--muted)) 32%, transparent);
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger {
+  position: relative;
   cursor: pointer;
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 88%, transparent);
+  border: 1px solid transparent;
   transition:
     background-color var(--motion-duration-fast) ease,
     color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease;
 }
 
+.settings-dialog-tabs .settings-dialog-tab-trigger::before {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  width: 0.1875rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background-color var(--motion-duration-fast) ease;
+}
+
 .settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active'] {
-  background: color-mix(in srgb, hsl(var(--primary)) 18%, hsl(var(--accent)) 82%);
+  background: color-mix(in srgb, hsl(var(--card)) 78%, hsl(var(--accent)) 22%);
   color: hsl(var(--foreground));
-  border: 1px solid color-mix(in srgb, hsl(var(--ring)) 68%, hsl(var(--primary)) 32%);
-  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 20%, transparent);
+  border-color: color-mix(in srgb, hsl(var(--border)) 84%, transparent);
+  box-shadow: none;
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']::before {
+  background: hsl(var(--primary));
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger:hover {
-  background: color-mix(in srgb, hsl(var(--card)) 74%, hsl(var(--foreground)) 26%);
+  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
+  color: hsl(var(--foreground));
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger:focus-visible {
@@ -499,7 +555,7 @@ button[disabled],
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']:hover {
-  background: color-mix(in srgb, hsl(var(--primary)) 22%, hsl(var(--accent)) 78%);
+  background: color-mix(in srgb, hsl(var(--card)) 74%, hsl(var(--accent)) 26%);
 }
 
 .activity-rail-button {
@@ -559,24 +615,26 @@ button[disabled],
 }
 
 .settings-switch {
-  background: color-mix(in srgb, hsl(var(--input)) 82%, hsl(var(--background)) 18%);
-  border-color: color-mix(in srgb, hsl(var(--border)) 70%, hsl(var(--foreground)) 30%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--foreground)) 10%, transparent);
+  background: color-mix(in srgb, hsl(var(--input)) 72%, hsl(var(--foreground)) 28%);
+  border-color: color-mix(in srgb, hsl(var(--foreground)) 34%, hsl(var(--border)) 66%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
   background-image: linear-gradient(
     180deg,
-    color-mix(in srgb, hsl(var(--background)) 85%, transparent 15%),
-    color-mix(in srgb, hsl(var(--input)) 72%, transparent 28%)
+    color-mix(in srgb, hsl(var(--background)) 58%, transparent 42%),
+    color-mix(in srgb, hsl(var(--input)) 70%, hsl(var(--foreground)) 30%)
   );
   transition:
-    var(--motion-duration-fast) ease;
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
 }
 
 .settings-switch[data-state='unchecked'] {
-  background: color-mix(in srgb, hsl(var(--input)) 88%, hsl(var(--background)) 12%);
+  background: color-mix(in srgb, hsl(var(--input)) 68%, hsl(var(--foreground)) 32%);
 }
 
 .settings-switch[data-state='unchecked']:hover {
-  background: color-mix(in srgb, hsl(var(--input)) 94%, hsl(var(--foreground)) 6%);
+  background: color-mix(in srgb, hsl(var(--input)) 58%, hsl(var(--foreground)) 42%);
 }
 
 .settings-switch[data-state='checked'] {
@@ -592,7 +650,7 @@ button[disabled],
 }
 
 .settings-switch:hover {
-  border-color: color-mix(in srgb, hsl(var(--foreground)) 45%, hsl(var(--ring)) 55%);
+  border-color: color-mix(in srgb, hsl(var(--foreground)) 46%, hsl(var(--ring)) 54%);
 }
 
 .settings-switch:disabled,
@@ -603,7 +661,7 @@ button[disabled],
   opacity: 0.45;
 }
 
-.settings-switch-thumb {
+.settings-switch > span {
   background: hsl(var(--background));
   box-shadow:
     0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 30%, transparent),
@@ -611,16 +669,21 @@ button[disabled],
   transition: transform var(--motion-duration-fast) ease;
 }
 
-.settings-switch[data-state='checked'] .settings-switch-thumb {
+.settings-switch[data-state='checked'] > span {
   transform: translateX(1.05rem);
 }
 
-.settings-switch[data-state='unchecked'] .settings-switch-thumb {
+.settings-switch[data-state='unchecked'] > span {
   transform: translateX(0);
 }
 
 .settings-section {
   margin: 0;
+}
+
+.settings-section-icon {
+  background: color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--background)) 88%);
+  color: hsl(var(--primary));
 }
 
 .settings-section-title {
@@ -636,7 +699,11 @@ button[disabled],
 }
 
 .settings-row:hover {
-  border-color: color-mix(in srgb, hsl(var(--border)) 62%, hsl(var(--foreground)) 38%);
+  border-color: color-mix(in srgb, hsl(var(--border)) 58%, hsl(var(--foreground)) 42%);
+}
+
+.settings-field-control {
+  max-width: min(18rem, 45%);
 }
 
 .settings-row-title {
@@ -645,6 +712,14 @@ button[disabled],
 
 .settings-row-description {
   color: color-mix(in srgb, hsl(var(--muted-foreground)) 90%, transparent);
+}
+
+.settings-subsection-title {
+  color: color-mix(in srgb, hsl(var(--foreground)) 84%, transparent);
+}
+
+.settings-select-trigger {
+  background: hsl(var(--background));
 }
 
 .settings-theme-list {
@@ -726,28 +801,35 @@ button[disabled],
 
 .settings-shortcut-list {
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
-  background: hsl(var(--background));
+  border: none;
+  background: transparent;
 }
 
 .settings-shortcut-list .settings-shortcut-row {
-  background: transparent;
-  border-top: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  background: hsl(var(--card));
+  border-top: 0;
+  border-radius: var(--radius);
   transition:
     background-color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease;
 }
 
-.settings-shortcut-list .settings-shortcut-row:first-child {
-  border-top: none;
+.settings-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .settings-shortcut-list .settings-shortcut-row:hover {
-  background: color-mix(in srgb, hsl(var(--accent)) 24%, hsl(var(--background)) 76%);
+  background: color-mix(in srgb, hsl(var(--accent)) 20%, hsl(var(--card)) 80%);
 }
 
 .settings-shortcut-list .settings-shortcut-row:focus-within {
-  background: color-mix(in srgb, hsl(var(--accent)) 28%, hsl(var(--background)) 72%);
+  background: color-mix(in srgb, hsl(var(--accent)) 24%, hsl(var(--card)) 76%);
+}
+
+.settings-shortcut-conflict {
+  color: hsl(var(--destructive));
 }
 
 @media (max-width: 640px) {
@@ -771,6 +853,15 @@ button[disabled],
 
   .settings-dialog-tab-trigger {
     flex: 0 0 auto;
+  }
+
+  .settings-field {
+    flex-direction: column;
+  }
+
+  .settings-field-control {
+    max-width: none;
+    width: 100%;
   }
 }
 
@@ -1189,4 +1280,82 @@ button[disabled],
   .react-flow__controls-button:active {
     transform: none;
   }
+}
+
+/* Shell and graph polish: keep chrome quiet and content-led. */
+.app-titlebar {
+  border-bottom-color: color-mix(in srgb, hsl(var(--border)) 70%, transparent);
+  background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)) 12%);
+}
+
+.chrome-button {
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+}
+
+.chrome-button:hover,
+.chrome-button:focus-visible {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
+.command-trigger {
+  border-color: color-mix(in srgb, hsl(var(--border)) 72%, transparent);
+  background: color-mix(in srgb, hsl(var(--card)) 76%, transparent);
+  box-shadow: none;
+}
+
+.command-trigger:hover,
+.command-trigger:focus-visible {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 44%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--primary)) 8%);
+}
+
+.activity-rail-button {
+  background: transparent;
+  box-shadow: none;
+}
+
+.activity-rail-button:hover,
+.activity-rail-button[data-active='true'] {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--foreground)) 7%, transparent);
+}
+
+.activity-rail-button::before {
+  width: 2px;
+  background: hsl(var(--primary));
+  opacity: 0;
+}
+
+.activity-rail-button[data-active='true']::before {
+  opacity: 1;
+}
+
+.graph-node-shell[data-graph-node-kind='external'] {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 36%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 90%, hsl(var(--primary)) 10%);
+}
+
+.graph-node-shell[data-graph-node-kind='missing'] {
+  border-color: color-mix(in srgb, hsl(var(--destructive)) 34%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--destructive)) 8%);
+}
+
+.graph-node-shell[data-graph-node-selected='true'],
+.graph-node-shell--selected,
+.react-flow__node.selected .graph-node-shell {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 64%, hsl(var(--border)));
+  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
+}
+
+.right-rail-stat {
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+}
+
+.right-rail-stat:hover,
+.right-rail-stat:focus-visible {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--foreground)) 7%, transparent);
 }

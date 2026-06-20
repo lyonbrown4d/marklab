@@ -1,32 +1,38 @@
 import type { ComponentProps, ElementType, ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldTitle,
+} from '@/components/ui/field'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import SettingsSwitch from '@/components/settings/SettingsSwitch'
 
 type SettingsRowProps = {
-  title: string
-  description: string
+  title: ReactNode
+  description: ReactNode
   control: ReactNode
+  disabled?: boolean
+  className?: string
 }
 
 type SettingsSectionProps = {
-  title: string
-  description: string
+  title: ReactNode
+  description: ReactNode
   children: ReactNode
   icon?: ElementType
   surface?: boolean
   className?: string
-}
-
-type SettingsChoiceGridProps = {
-  children: ReactNode
-  columns?: 2 | 3
-  className?: string
-}
-
-type SettingsChoiceButtonProps = ComponentProps<typeof Button> & {
-  selected: boolean
-  selectedVariant?: ComponentProps<typeof Button>['variant']
-  unselectedVariant?: ComponentProps<typeof Button>['variant']
+  bodyClassName?: string
 }
 
 type SettingsSwitchRowProps = Omit<SettingsRowProps, 'control'> & {
@@ -35,27 +41,48 @@ type SettingsSwitchRowProps = Omit<SettingsRowProps, 'control'> & {
   disabled?: boolean
 }
 
-type SettingsButtonProps = ComponentProps<typeof Button>
-
-const gridColumnClass: Record<NonNullable<SettingsChoiceGridProps['columns']>, string> = {
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-3',
+type SettingsSelectOption = {
+  value: string
+  label: ReactNode
 }
 
-const joinClassNames = (...classNames: Array<string | false | null | undefined>) => {
-  return classNames.filter(Boolean).join(' ')
+type SettingsSelectFieldProps = Omit<SettingsRowProps, 'control'> & {
+  value: string
+  onValueChange: (value: string) => void
+  options: SettingsSelectOption[]
+  placeholder?: string
 }
 
-const SettingsRow = ({ title, description, control }: SettingsRowProps) => {
+export const SettingsPageStack = ({ className, ...props }: ComponentProps<'div'>) => {
+  return <div className={cn('settings-page-stack flex flex-col gap-4', className)} {...props} />
+}
+
+export const SettingsFieldGroup = ({ className, ...props }: ComponentProps<typeof FieldGroup>) => {
+  return <FieldGroup className={cn('settings-field-group gap-3', className)} {...props} />
+}
+
+export const SettingsSubsection = ({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: ReactNode
+  description?: ReactNode
+  children: ReactNode
+  className?: string
+}) => {
   return (
-    <div className="settings-row settings-row-surface flex items-start justify-between gap-4 rounded-md p-3">
-      <div className="settings-row-content min-w-0">
-        <div className="settings-row-title text-sm font-medium">{title}</div>
-        <div className="settings-row-description mt-1 text-xs leading-5 text-muted-foreground">
-          {description}
-        </div>
+    <div className={cn('settings-subsection flex flex-col gap-2', className)}>
+      <div className="settings-subsection-header flex flex-col gap-1">
+        <div className="settings-subsection-title text-xs font-medium">{title}</div>
+        {description && (
+          <div className="settings-subsection-description text-xs leading-5 text-muted-foreground">
+            {description}
+          </div>
+        )}
       </div>
-      <div className="shrink-0 pt-0.5">{control}</div>
+      {children}
     </div>
   )
 }
@@ -67,77 +94,79 @@ export const SettingsSection = ({
   icon: Icon,
   surface = true,
   className,
+  bodyClassName,
 }: SettingsSectionProps) => {
   return (
     <section
-      className={joinClassNames(
-        'settings-section',
-        surface && 'settings-row-surface rounded-md p-3',
+      className={cn(
+        'settings-section flex flex-col gap-3',
+        surface && 'settings-section-surface settings-row-surface rounded-md p-3',
         className,
       )}
     >
-      <div className="settings-section-title mb-1 flex items-center gap-2 text-sm font-medium">
-        {Icon && <Icon className="h-4 w-4 text-primary" />}
-        {title}
+      <header className="settings-section-header flex items-start gap-3">
+        {Icon && (
+          <span className="settings-section-icon mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md">
+            <Icon className="size-4" aria-hidden="true" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="settings-section-title text-sm font-medium">{title}</div>
+          <div className="settings-section-description mt-1 text-xs leading-5 text-muted-foreground">
+            {description}
+          </div>
+        </div>
+      </header>
+      <div className={cn('settings-section-body flex flex-col gap-3', bodyClassName)}>
+        {children}
       </div>
-      <div className="settings-section-description mb-3 text-xs leading-5 text-muted-foreground">
-        {description}
-      </div>
-      {children}
     </section>
   )
 }
 
-export const SettingsChoiceGrid = ({
-  children,
-  columns = 2,
+export const SettingsField = ({
+  title,
+  description,
+  control,
+  disabled,
   className,
-}: SettingsChoiceGridProps) => {
+}: SettingsRowProps) => {
   return (
-    <div className={joinClassNames('grid grid-cols-1 gap-2', gridColumnClass[columns], className)}>
-      {children}
-    </div>
-  )
-}
-
-export const SettingsChoiceButton = ({
-  selected,
-  selectedVariant = 'default',
-  unselectedVariant = 'outline',
-  className,
-  type = 'button',
-  ...props
-}: SettingsChoiceButtonProps) => {
-  const isSelected = selected
-  const isDisabled = props.disabled === true
-  return (
-    <Button
-      {...props}
-      type={type}
-      variant={isSelected ? selectedVariant : unselectedVariant}
-      data-selected={isSelected ? 'true' : 'false'}
-      aria-pressed={isSelected ? 'true' : 'false'}
-      className={joinClassNames(
-        'settings-choice-button h-9 justify-start rounded-md',
-        isSelected && 'settings-choice-button-selected',
-        isDisabled && 'settings-choice-button-disabled',
+    <Field
+      orientation="horizontal"
+      data-disabled={disabled ? 'true' : undefined}
+      className={cn(
+        'settings-field settings-row settings-row-surface items-start justify-between rounded-md p-3',
         className,
       )}
-    />
+    >
+      <FieldContent className="settings-row-content min-w-0 gap-1">
+        <FieldTitle className="settings-row-title">{title}</FieldTitle>
+        <FieldDescription className="settings-row-description text-xs leading-5">
+          {description}
+        </FieldDescription>
+      </FieldContent>
+      <div className="settings-field-control shrink-0 pt-0.5">{control}</div>
+    </Field>
   )
 }
 
-export const SettingsSwitchRow = ({
+const SettingsRow = SettingsField
+
+export const SettingsSwitchField = ({
   title,
   description,
   checked,
   onCheckedChange,
   disabled,
+  className,
 }: SettingsSwitchRowProps) => {
   return (
-    <SettingsRow
+    <SettingsField
       title={title}
       description={description}
+      disabled={disabled}
+      className={className}
       control={
         <SettingsSwitch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
       }
@@ -145,36 +174,49 @@ export const SettingsSwitchRow = ({
   )
 }
 
-export const SettingsActionButton = ({
-  size = 'sm',
-  variant = 'secondary',
+export const SettingsSwitchRow = SettingsSwitchField
+
+export const SettingsSelectField = ({
+  title,
+  description,
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  disabled,
   className,
-  ...props
-}: SettingsButtonProps) => {
+}: SettingsSelectFieldProps) => {
   return (
-    <Button
-      {...props}
-      size={size}
-      variant={variant}
-      className={joinClassNames('settings-action-button', className)}
+    <SettingsField
+      title={title}
+      description={description}
+      disabled={disabled}
+      className={className}
+      control={
+        <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+          <SelectTrigger className="settings-select-trigger min-w-40">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      }
     />
   )
 }
 
-export const SettingsIconButton = ({
-  size = 'icon',
-  variant = 'ghost',
-  className,
-  ...props
-}: SettingsButtonProps) => {
-  return (
-    <Button
-      {...props}
-      size={size}
-      variant={variant}
-      className={joinClassNames('settings-action-icon-button', className)}
-    />
-  )
-}
+export { SettingsChoiceButton, SettingsChoiceGrid } from '@/components/settings/SettingsChoice'
+export {
+  SettingsActionButton,
+  SettingsEmptyState,
+  SettingsIconButton,
+} from '@/components/settings/SettingsButtons'
 
 export default SettingsRow

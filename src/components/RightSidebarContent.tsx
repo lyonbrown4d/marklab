@@ -121,9 +121,9 @@ export const RightSidebarContent = ({
                     <TabsTrigger
                       value={value}
                       aria-label={label}
-                      className="h-7 min-w-0 rounded px-0"
+                      className="inspector-tab h-7 min-w-0 rounded px-0 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-1 focus-visible:ring-ring data-[state=active]:bg-sidebar-accent data-[state=active]:text-sidebar-accent-foreground data-[state=active]:shadow-none"
                     >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Icon className="size-4 shrink-0" aria-hidden="true" />
                       <span className="sr-only">{label}</span>
                     </TabsTrigger>
                   </TooltipTrigger>

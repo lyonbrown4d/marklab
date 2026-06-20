@@ -9,6 +9,7 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
+  SettingsPageStack,
   SettingsSection,
 } from '@/components/settings/SettingsRow'
 
@@ -50,7 +51,7 @@ const FileSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-4">
+    <SettingsPageStack>
       <SettingsSection
         title={t('settings.defaultFileView')}
         description={t('settings.defaultFileViewDescription')}
@@ -72,7 +73,7 @@ const FileSettingsPage = () => {
                         setDefaultFileView(item.value)
                       }}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon data-icon="inline-start" />
                       <span className="truncate">{t(item.labelKey)}</span>
                     </SettingsChoiceButton>
                   )
@@ -110,7 +111,7 @@ const FileSettingsPage = () => {
           />
         </SettingsChoiceGrid>
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 

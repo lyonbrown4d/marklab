@@ -4,7 +4,12 @@ import { z } from 'zod'
 import { CloudCog } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { SettingsSection, SettingsSwitchRow } from '@/components/settings/SettingsRow'
+import {
+  SettingsFieldGroup,
+  SettingsPageStack,
+  SettingsSection,
+  SettingsSwitchRow,
+} from '@/components/settings/SettingsRow'
 
 const saveSettingsSchema = z.object({
   silentSave: z.boolean(),
@@ -25,13 +30,13 @@ const SavingSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-4">
+    <SettingsPageStack>
       <SettingsSection
         title={t('settings.saveBehavior')}
         description={t('settings.detailedSaveDescription')}
         icon={CloudCog}
       >
-        <div className="space-y-3">
+        <SettingsFieldGroup>
           <Controller
             control={form.control}
             name="silentSave"
@@ -62,9 +67,9 @@ const SavingSettingsPage = () => {
               />
             )}
           />
-        </div>
+        </SettingsFieldGroup>
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 

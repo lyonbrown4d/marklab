@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Check, FolderOpen, Trash2, Upload } from 'lucide-react'
-import { SettingsSection } from '@/components/settings/SettingsRow'
-import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
+import {
+  SettingsActionButton,
+  SettingsEmptyState,
+  SettingsIconButton,
+  SettingsSection,
+} from '@/components/settings/SettingsRow'
 import { useI18n } from '@/i18n/useI18n'
 import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -92,7 +96,7 @@ const CustomThemesSettingsSection = () => {
           disabled={!customThemesSupported || themeBusy}
           onClick={() => void importCustomTheme()}
         >
-          <Upload className="h-4 w-4" />
+          <Upload data-icon="inline-start" />
           {t('settings.importTheme')}
         </SettingsActionButton>
         <SettingsActionButton
@@ -102,7 +106,7 @@ const CustomThemesSettingsSection = () => {
           disabled={!customThemesSupported || themeBusy}
           onClick={() => void userThemeApi.openFolder()}
         >
-          <FolderOpen className="h-4 w-4" />
+          <FolderOpen data-icon="inline-start" />
           {t('settings.openThemesFolder')}
         </SettingsActionButton>
         <SettingsActionButton
@@ -115,7 +119,7 @@ const CustomThemesSettingsSection = () => {
         </SettingsActionButton>
       </div>
       {customThemesSupported && customThemes.length > 0 ? (
-        <div className="settings-theme-list space-y-2">
+        <div className="settings-theme-list flex flex-col gap-2">
           {customThemes.map((item) => (
             <div
               key={item.id}
@@ -129,26 +133,26 @@ const CustomThemesSettingsSection = () => {
                 <span className="block truncate font-medium">{item.name}</span>
                 <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
               </button>
-              {customThemeId === item.id && <Check className="h-4 w-4 text-primary" />}
+              {customThemeId === item.id && <Check className="settings-theme-check" />}
               <SettingsIconButton
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8"
+                className="size-8"
                 disabled={themeBusy}
                 onClick={() => void removeCustomTheme(item.id)}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 />
               </SettingsIconButton>
             </div>
           ))}
         </div>
       ) : (
-        <div className="settings-empty-state rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+        <SettingsEmptyState className="px-3 py-4 text-left">
           {customThemesSupported
             ? t('settings.noCustomThemes')
             : t('settings.customThemesDesktopOnly')}
-        </div>
+        </SettingsEmptyState>
       )}
     </SettingsSection>
   )

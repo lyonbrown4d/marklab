@@ -85,9 +85,11 @@ export const FileTreeNodeRenderer = ({
                 : 'text-sidebar-foreground/85 hover:bg-sidebar-accent'
             }`}
             aria-current={isActive ? 'page' : undefined}
+            data-file-tree-node="true"
             draggable={isImageFile}
             onClick={handleClick}
-            onContextMenu={() => {
+            onContextMenu={(event) => {
+              event.stopPropagation()
               node.focus()
               node.select()
             }}

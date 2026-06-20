@@ -2,7 +2,11 @@ import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { detectPlatform, useHotkeyRecorder } from '@tanstack/react-hotkeys'
 import { useI18n } from '@/i18n/useI18n'
 import { formatShortcutList, type ShortcutActionId, type ShortcutBindings } from '@/logic/shortcuts'
-import { SettingsActionButton, SettingsIconButton } from '@/components/settings/SettingsRow'
+import {
+  SettingsActionButton,
+  SettingsField,
+  SettingsIconButton,
+} from '@/components/settings/SettingsRow'
 
 type ShortcutRecorderRowProps = {
   action: ShortcutActionId
@@ -41,56 +45,63 @@ const ShortcutRecorderRow = ({
     ? t('shortcuts.conflict', { actions: conflictLabels?.join(', ') })
     : ''
 
+  const description = (
+    <>
+      <span>
+        {hasOverride
+          ? t('shortcuts.defaultValue', { value: defaultDisplay })
+          : t('shortcuts.default')}
+      </span>
+      {hasConflict && (
+        <span className="settings-shortcut-conflict mt-1 flex items-start gap-1.5">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <span>{conflictDescription}</span>
+        </span>
+      )}
+    </>
+  )
+
   return (
-    <div className="settings-shortcut-row grid grid-cols-1 gap-3 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto]">
-      <div className="min-w-0">
-        <div className="text-sm font-medium">{label}</div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          {hasOverride
-            ? t('shortcuts.defaultValue', { value: defaultDisplay })
-            : t('shortcuts.default')}
+    <SettingsField
+      title={label}
+      description={description}
+      className="settings-shortcut-row"
+      control={
+        <div
+          className="flex min-w-0 items-center justify-end gap-1.5"
+          data-marklab-shortcut-recorder="true"
+        >
+          <SettingsActionButton
+            variant={recorder.isRecording ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 min-w-[112px] max-w-full justify-center rounded-md font-mono text-xs"
+            onClick={recorder.startRecording}
+          >
+            {display}
+          </SettingsActionButton>
+          <SettingsIconButton
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-md"
+            disabled={bindings.length === 0}
+            aria-label={t('shortcuts.clear')}
+            onClick={() => onChange(action, [])}
+          >
+            <Trash2 />
+          </SettingsIconButton>
+          <SettingsIconButton
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-md"
+            disabled={!hasOverride}
+            aria-label={t('shortcuts.reset')}
+            onClick={() => onChange(action, null)}
+          >
+            <RotateCcw />
+          </SettingsIconButton>
         </div>
-        {hasConflict && (
-          <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-300">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{conflictDescription}</span>
-          </div>
-        )}
-      </div>
-      <div
-        className="flex min-w-0 items-center justify-end gap-1.5"
-        data-marklab-shortcut-recorder="true"
-      >
-        <SettingsActionButton
-          variant={recorder.isRecording ? 'secondary' : 'outline'}
-          size="sm"
-          className="h-8 min-w-[112px] max-w-full justify-center rounded-md font-mono text-xs"
-          onClick={recorder.startRecording}
-        >
-          {display}
-        </SettingsActionButton>
-        <SettingsIconButton
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-md"
-          disabled={bindings.length === 0}
-          aria-label={t('shortcuts.clear')}
-          onClick={() => onChange(action, [])}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </SettingsIconButton>
-        <SettingsIconButton
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-md"
-          disabled={!hasOverride}
-          aria-label={t('shortcuts.reset')}
-          onClick={() => onChange(action, null)}
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </SettingsIconButton>
-      </div>
-    </div>
+      }
+    />
   )
 }
 

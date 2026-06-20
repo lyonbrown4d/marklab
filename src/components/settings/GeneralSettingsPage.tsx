@@ -4,7 +4,11 @@ import { z } from 'zod'
 import { MonitorCog } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { SettingsSection, SettingsSwitchRow } from '@/components/settings/SettingsRow'
+import {
+  SettingsPageStack,
+  SettingsSection,
+  SettingsSwitchRow,
+} from '@/components/settings/SettingsRow'
 
 const generalSettingsSchema = z.object({
   showEditorStatusBar: z.boolean(),
@@ -25,7 +29,7 @@ const GeneralSettingsPage = () => {
   })
 
   return (
-    <div className="space-y-4">
+    <SettingsPageStack>
       <SettingsSection
         title={t('settings.general')}
         description={t('settings.statusBarDescription')}
@@ -47,7 +51,7 @@ const GeneralSettingsPage = () => {
           )}
         />
       </SettingsSection>
-    </div>
+    </SettingsPageStack>
   )
 }
 
