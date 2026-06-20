@@ -113,6 +113,36 @@ describe('RightSidebar', () => {
     }
   })
 
+  it('keeps inspector tabs accessible while switching sections', async () => {
+    renderRightSidebar(createProps())
+
+    const outlineTab = screen.getByRole('tab', { name: /outline/i })
+    const backlinksTab = screen.getByRole('tab', { name: /backlinks/i })
+
+    expect(outlineTab).toHaveAttribute('aria-selected', 'true')
+
+    await userEvent.click(backlinksTab)
+
+    expect(outlineTab).toHaveAttribute('aria-selected', 'false')
+    expect(backlinksTab).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('shows empty inspector states when a document has no outline or backlinks', async () => {
+    renderRightSidebar(
+      createProps({
+        editorValue: 'Plain text only',
+        fileContents: { 'target.md': 'Plain text only' },
+        files: [{ path: 'target.md', kind: 'file' }],
+      }),
+    )
+
+    expect(await screen.findByText('No headings')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: /backlinks/i }))
+
+    expect(await screen.findByText('No backlinks')).toBeInTheDocument()
+  })
+
   it('shows backlinks with context and opens the source location', async () => {
     const onOpenFileView = vi.fn()
     const props = createProps({ onOpenFileView })

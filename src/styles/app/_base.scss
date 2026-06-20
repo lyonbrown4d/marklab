@@ -1,0 +1,62 @@
+* {
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent) transparent;
+}
+
+button,
+[role='button'] {
+  cursor: pointer;
+}
+
+a,
+[role='link'] {
+  cursor: pointer;
+}
+
+button:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[role='link']:focus-visible,
+label:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, hsl(var(--background)) 82%, transparent),
+    0 0 0 4px color-mix(in srgb, hsl(var(--ring)) 46%, transparent);
+}
+
+button:hover:not(:disabled),
+[role='button']:hover:not([aria-disabled='true'], [data-disabled='true'], [disabled='true']),
+a:hover,
+[role='link']:hover {
+  transition:
+    color var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+button:disabled,
+button[disabled],
+[role='button'][aria-disabled='true'],
+[role='button'][data-disabled='true'],
+[role='button'][disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, hsl(var(--foreground)) 24%, transparent);
+}
+

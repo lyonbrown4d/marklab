@@ -7,10 +7,12 @@ import {
   Home,
   type LucideIcon,
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
 import type { SidebarActivityId } from '@/logic/routing'
 
 type SidebarActivityItem = {
@@ -47,24 +49,34 @@ const ActivityButton = ({
         <Button
           variant="ghost"
           size="icon"
-          className={`activity-rail-button relative h-9 w-9 rounded-md ${
-            active
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70'
-          }`}
+          className={cn(
+            'relative size-9 rounded-lg text-sidebar-foreground/65 transition-colors',
+            'hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
+            active && 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm',
+          )}
           aria-label={label}
           data-active={active ? 'true' : 'false'}
           onClick={onClick}
         >
-          <Icon className="h-4 w-4" />
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary opacity-0 transition-opacity',
+              active && 'opacity-100',
+            )}
+          />
+          <Icon aria-hidden="true" />
           {badge ? (
-            <span className="absolute right-0.5 top-0.5 min-w-3.5 rounded-full bg-primary px-1 text-[9px] leading-3.5 text-primary-foreground">
+            <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-3.5 min-w-3.5 rounded-full px-1 text-[9px] leading-none shadow-sm">
               {badge > 99 ? '99' : badge}
-            </span>
+            </Badge>
           ) : null}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
+      <TooltipContent side="right" sideOffset={8}>
+        {label}
+      </TooltipContent>
     </Tooltip>
   )
 }
@@ -108,7 +120,7 @@ const SidebarActivityRail = ({
   ]
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={180}>
       <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-sidebar-border/80 bg-sidebar/95 py-1.5">
         <ActivityButton
           active={false}

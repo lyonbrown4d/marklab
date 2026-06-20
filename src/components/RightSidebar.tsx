@@ -11,11 +11,7 @@ import {
 } from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
-import {
-  RightSidebarCollapsed,
-  RightSidebarContent,
-  type SidebarBacklink,
-} from '@/components/RightSidebarContent'
+import { RightSidebarContent, type SidebarBacklink } from '@/components/RightSidebarContent'
 import { useRightSidebarData } from '@/components/useRightSidebarData'
 
 type RightSidebarProps = {
@@ -42,8 +38,6 @@ const RightSidebarComponent = ({
   fileContents,
   dirtyPaths,
   workspaceIndex,
-  tabs,
-  totalFiles,
   onOpenFileView,
   viewMode,
 }: RightSidebarProps) => {
@@ -185,9 +179,7 @@ const RightSidebarComponent = ({
           onOpenMissingLink={handleOpenMissingLink}
           onOpenProblem={handleOpenProblem}
         />
-      ) : (
-        <RightSidebarCollapsed tabs={tabs} totalFiles={totalFiles} />
-      )}
+      ) : null}
     </aside>
   )
 }

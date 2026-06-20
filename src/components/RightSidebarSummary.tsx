@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import { InspectorMetric } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import type { ViewMode } from '@/store/appTypes'
@@ -28,13 +29,16 @@ export const RightSidebarSummary = ({
   const { t } = useI18n()
 
   return (
-    <div className="sidebar-section rounded-md p-2">
+    <section
+      className="sticky top-1 shrink-0 rounded-lg border border-sidebar-border/70 bg-sidebar/95 p-2 shadow-sm backdrop-blur"
+      aria-label={t('inspector.title')}
+    >
       <div className="flex min-w-0 items-start gap-2">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-sidebar-border bg-background/70">
-          <FileText className="h-4 w-4 text-primary" />
+        <div className="grid size-8 shrink-0 place-items-center rounded-md border border-sidebar-border bg-background/75 text-primary">
+          <FileText className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{targetLabel}</div>
+          <div className="truncate text-sm font-semibold leading-5">{targetLabel}</div>
           <div
             className="mt-0.5 truncate text-[11px] text-muted-foreground"
             title={targetPath ?? ''}
@@ -50,29 +54,30 @@ export const RightSidebarSummary = ({
               : t('inspector.none')}
         </Badge>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
+      <Separator className="my-2 bg-sidebar-border/70" />
+      <div className="grid grid-cols-2 gap-1">
         <InspectorMetric
-          icon={<Hash className="h-3.5 w-3.5" />}
+          icon={<Hash className="size-3.5" aria-hidden="true" />}
           label={t('inspector.outline')}
           value={outlineCount}
         />
         <InspectorMetric
-          icon={<Link2 className="h-3.5 w-3.5" />}
+          icon={<Link2 className="size-3.5" aria-hidden="true" />}
           label={t('inspector.backlinks')}
           value={backlinksCount}
         />
         <InspectorMetric
-          icon={<CircleAlert className="h-3.5 w-3.5" />}
+          icon={<CircleAlert className="size-3.5" aria-hidden="true" />}
           label={t('inspector.problems')}
           value={problemsCount}
           tone={problemsCount > 0 ? 'warning' : 'normal'}
         />
         <InspectorMetric
-          icon={<FileText className="h-3.5 w-3.5" />}
+          icon={<FileText className="size-3.5" aria-hidden="true" />}
           label={t('status.lines')}
           value={lineCount}
         />
       </div>
-    </div>
+    </section>
   )
 }

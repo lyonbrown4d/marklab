@@ -1,0 +1,156 @@
+.app-shell {
+  background: hsl(var(--background));
+}
+
+.panel-surface {
+  border-radius: 0.625rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  transition:
+    background-color var(--motion-duration-base) ease,
+    border-color var(--motion-duration-base) ease,
+    box-shadow var(--motion-duration-base) ease;
+}
+
+.panel-surface:hover {
+  border-color: color-mix(in srgb, hsl(var(--border)) 62%, hsl(var(--foreground)) 38%);
+}
+
+.panel-enter {
+  animation: panel-enter var(--motion-duration-base) var(--motion-ease-standard) both;
+}
+
+.layout-rail {
+  transition: box-shadow var(--motion-duration-base) ease;
+}
+
+.is-panel-layout-animating > [data-panel] {
+  transition:
+    flex-grow var(--motion-duration-slow) var(--motion-ease-emphasized),
+    flex-basis var(--motion-duration-slow) var(--motion-ease-emphasized);
+}
+
+.workspace-rail {
+  background: hsl(var(--sidebar));
+  border-right-color: color-mix(in srgb, hsl(var(--sidebar-border)) 72%, transparent);
+}
+
+.workspace-main {
+  background: color-mix(in srgb, hsl(var(--card)) 84%, hsl(var(--background)) 16%);
+}
+
+.workspace-main [data-panel-content] {
+  outline: 1px solid color-mix(in srgb, hsl(var(--border)) 74%, transparent);
+}
+
+:root[data-immersive-zen='true'] {
+  .motion-panel-left,
+  .motion-panel-right,
+  #left-sidebar-resize,
+  #right-sidebar-resize,
+  #terminal-resize {
+    display: none !important;
+  }
+
+  .workspace-main {
+    border-inline: 0;
+    background: hsl(var(--background));
+  }
+
+  .editor-stage {
+    background: hsl(var(--background));
+  }
+
+  .editor-paper {
+    max-width: min(980px, calc(100vw - 64px));
+    margin-inline: auto;
+    border-color: color-mix(in srgb, hsl(var(--border)) 68%, transparent);
+    box-shadow:
+      0 10px 22px -16px color-mix(in srgb, hsl(var(--foreground)) 28%, transparent);
+  }
+}
+
+.editor-stage {
+  background: color-mix(in srgb, hsl(var(--background)) 94%, hsl(var(--card)) 6%);
+}
+
+.editor-paper {
+  background: hsl(var(--card));
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 86%, transparent);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 7%, transparent),
+    0 10px 28px -26px color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.editor-paper:focus-within {
+  border-color: color-mix(in srgb, hsl(var(--ring)) 42%, hsl(var(--border)));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 16%, transparent),
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 7%, transparent),
+    0 12px 28px -24px color-mix(in srgb, hsl(var(--foreground)) 22%, transparent);
+}
+
+.app-titlebar {
+  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--background)));
+  -webkit-app-region: drag;
+}
+
+.chrome-button {
+  color: color-mix(in srgb, hsl(var(--foreground)) 78%, transparent);
+}
+
+.chrome-button:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.menu-bar-surface {
+  background: hsl(var(--popover));
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  box-shadow: 0 1px 1px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
+.menu-surface {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 18px 38px -30px color-mix(in srgb, hsl(var(--foreground)) 28%, transparent);
+}
+
+.command-trigger {
+  background: hsl(var(--card));
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 88%, transparent);
+  box-shadow: none;
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.command-trigger:hover {
+  background: hsl(var(--secondary));
+  border-color: color-mix(in srgb, hsl(var(--border)) 70%, hsl(var(--foreground)) 30%);
+}
+
+.sidebar-section {
+  border: 1px solid color-mix(in srgb, hsl(var(--sidebar-border)) 78%, transparent);
+  background: hsl(var(--sidebar));
+}
+
+.sidebar-section-header {
+  color: color-mix(in srgb, hsl(var(--sidebar-foreground)) 56%, transparent);
+}
+
+.tab-strip {
+  background: hsl(var(--card));
+}
+
+.app-status-bar {
+  background: hsl(var(--card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, hsl(var(--card)) 64%, transparent);
+}
+

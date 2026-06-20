@@ -1,0 +1,42 @@
+.app-titlebar button,
+.app-titlebar input,
+.app-titlebar select {
+  -webkit-app-region: no-drag;
+}
+
+.window-controls .win-caption-btn.is-windows {
+  width: 46px;
+  height: 32px;
+  border-radius: 0;
+  color: inherit;
+}
+
+.window-controls .win-caption-btn.is-windows:hover {
+  background-color: color-mix(in srgb, hsl(var(--foreground)) 10%, transparent);
+}
+
+.window-controls .win-caption-btn.is-windows .win-caption-glyph {
+  font-family: 'Segoe MDL2 Assets', 'Segoe Fluent Icons', sans-serif;
+  font-size: 10px;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
+.window-controls .win-caption-close.is-windows:hover {
+  background-color: #e81123;
+  color: #fff;
+}
+
+.playground-cm .cm-editor,
+.playground-cm .cm-scroller {
+  height: 100%;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+

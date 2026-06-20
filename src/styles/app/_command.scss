@@ -1,0 +1,21 @@
+.command-dialog-surface {
+  width: min(780px, calc(100vw - 32px));
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow:
+    0 16px 40px -30px color-mix(in srgb, hsl(var(--foreground)) 34%, transparent),
+    0 0 0 1px color-mix(in srgb, hsl(var(--popover)) 74%, transparent);
+}
+
+.command-dialog-command {
+  min-height: min(680px, calc(100vh - 80px));
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+}
+
+.command-dialog-command [cmdk-input-wrapper] {
+  background: color-mix(in srgb, hsl(var(--popover)) 94%, hsl(var(--background)));
+  border-color: hsl(var(--border));
+}
+

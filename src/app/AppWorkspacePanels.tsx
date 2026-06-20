@@ -140,7 +140,7 @@ export const AppWorkspacePanels = ({
         </section>
       </ResizablePanel>
       <ResizableSeparator
-        className="resize-handle resize-handle-vertical"
+        className={cn('resize-handle resize-handle-vertical', rightSidebarCollapsed && 'hidden')}
         disabled={rightSidebarCollapsed}
         id="right-sidebar-resize"
       />
@@ -149,7 +149,7 @@ export const AppWorkspacePanels = ({
           'motion-panel motion-panel-right min-h-0',
           rightSidebarCollapsed && 'motion-panel-collapsed',
         )}
-        collapsedSize="56px"
+        collapsedSize="0px"
         collapsible
         defaultSize="288px"
         disabled={rightSidebarCollapsed}

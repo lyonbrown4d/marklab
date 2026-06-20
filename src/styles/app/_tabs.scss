@@ -1,0 +1,30 @@
+.tab-item {
+  color: color-mix(in srgb, hsl(var(--foreground)) 70%, transparent);
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease;
+}
+
+.tab-item:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.tabs-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent) transparent;
+}
+
+.tabs-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tabs-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent);
+}
+
+.tabs-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+

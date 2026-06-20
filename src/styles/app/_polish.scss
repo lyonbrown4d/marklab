@@ -1,0 +1,60 @@
+/* Shell and graph polish: keep chrome quiet and content-led. */
+.app-titlebar {
+  border-bottom-color: color-mix(in srgb, hsl(var(--border)) 70%, transparent);
+  background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)) 12%);
+}
+
+.chrome-button {
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+}
+
+.chrome-button:hover,
+.chrome-button:focus-visible {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
+.command-trigger {
+  border-color: color-mix(in srgb, hsl(var(--border)) 72%, transparent);
+  background: color-mix(in srgb, hsl(var(--card)) 76%, transparent);
+  box-shadow: none;
+}
+
+.command-trigger:hover,
+.command-trigger:focus-visible {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 44%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--primary)) 8%);
+}
+
+.activity-rail-button {
+  background: transparent;
+  box-shadow: none;
+}
+
+.activity-rail-button:hover,
+.activity-rail-button[data-active='true'] {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--foreground)) 7%, transparent);
+}
+
+.activity-rail-button[data-active='true']::before {
+  opacity: 1;
+}
+
+.graph-node-shell[data-graph-node-kind='external'] {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 36%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 90%, hsl(var(--primary)) 10%);
+}
+
+.graph-node-shell[data-graph-node-kind='missing'] {
+  border-color: color-mix(in srgb, hsl(var(--destructive)) 34%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--destructive)) 8%);
+}
+
+.graph-node-shell[data-graph-node-selected='true'],
+.graph-node-shell--selected,
+.react-flow__node.selected .graph-node-shell {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 64%, hsl(var(--border)));
+  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
+}

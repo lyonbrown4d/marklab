@@ -1,0 +1,279 @@
+.settings-dialog-surface {
+  width: min(960px, calc(100vw - 32px));
+  height: min(740px, calc(100vh - 32px));
+  max-height: calc(100vh - 32px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow:
+    0 16px 40px -30px color-mix(in srgb, hsl(var(--foreground)) 34%, transparent),
+    0 0 0 1px color-mix(in srgb, hsl(var(--card)) 72%, transparent);
+}
+
+.settings-dialog-header {
+  background: hsl(var(--card));
+  border-bottom-color: color-mix(in srgb, hsl(var(--border)) 72%, transparent);
+}
+
+.settings-dialog-title {
+  letter-spacing: 0.01em;
+}
+
+.settings-dialog-description {
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 86%, transparent);
+}
+
+.settings-dialog-body {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  background: hsl(var(--card));
+}
+
+.settings-dialog-panel-shell {
+  background: hsl(var(--card));
+}
+
+.settings-dialog-panel {
+  min-height: 100%;
+}
+
+.settings-scroll-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 28%, transparent)
+    color-mix(in srgb, hsl(var(--muted)) 38%, transparent);
+}
+
+.settings-scroll-viewport::-webkit-scrollbar {
+  width: 0.625rem;
+}
+
+.settings-scroll-viewport::-webkit-scrollbar-track {
+  background: color-mix(in srgb, hsl(var(--muted)) 30%, transparent);
+}
+
+.settings-scroll-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
+  border: 0.1875rem solid hsl(var(--card));
+  border-radius: 999px;
+}
+
+.settings-dialog-tab-trigger svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-theme-check {
+  color: hsl(var(--primary));
+}
+
+.settings-dialog-tabs {
+  gap: 0.25rem;
+  background: color-mix(in srgb, hsl(var(--muted)) 32%, transparent);
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger {
+  position: relative;
+  cursor: pointer;
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 88%, transparent);
+  border: 1px solid transparent;
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease;
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger::before {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  width: 0.1875rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background-color var(--motion-duration-fast) ease;
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active'] {
+  background: color-mix(in srgb, hsl(var(--card)) 78%, hsl(var(--accent)) 22%);
+  color: hsl(var(--foreground));
+  border-color: color-mix(in srgb, hsl(var(--border)) 84%, transparent);
+  box-shadow: none;
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']::before {
+  background: hsl(var(--primary));
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger:hover {
+  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
+  color: hsl(var(--foreground));
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 40%, transparent);
+}
+
+.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']:hover {
+  background: color-mix(in srgb, hsl(var(--card)) 74%, hsl(var(--accent)) 26%);
+}
+
+.activity-rail-button {
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.activity-rail-button::before {
+  content: '';
+  position: absolute;
+  left: -0.375rem;
+  top: 50%;
+  width: 2px;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity var(--motion-duration-fast) ease;
+}
+
+.settings-theme-list {
+  margin-top: 0.5rem;
+}
+
+.settings-theme-item {
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  background: hsl(var(--background));
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.settings-theme-item:hover {
+  border-color: color-mix(in srgb, hsl(var(--border)) 56%, hsl(var(--foreground)) 44%);
+  box-shadow: 0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+}
+
+.settings-theme-item-trigger {
+  cursor: pointer;
+  color: inherit;
+}
+
+.settings-theme-item-trigger:hover,
+.settings-theme-item-trigger:focus-visible {
+  color: hsl(var(--foreground));
+}
+
+.settings-theme-item-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 26%, transparent);
+}
+
+.settings-shortcuts-search {
+  position: relative;
+}
+
+.settings-shortcuts-search-icon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.settings-shortcuts-search-input {
+  padding-right: 2.25rem;
+}
+
+.settings-shortcuts-search-clear {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.settings-shortcuts-toolbar {
+  align-items: center;
+}
+
+.settings-shortcut-category {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-shortcut-category-title {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 90%, transparent);
+}
+
+.settings-shortcut-list {
+  overflow: hidden;
+  border: none;
+  background: transparent;
+}
+
+.settings-shortcut-list .settings-shortcut-row {
+  background: hsl(var(--card));
+  border-top: 0;
+  border-radius: var(--radius);
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease;
+}
+
+.settings-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-shortcut-list .settings-shortcut-row:hover {
+  background: color-mix(in srgb, hsl(var(--accent)) 20%, hsl(var(--card)) 80%);
+}
+
+.settings-shortcut-list .settings-shortcut-row:focus-within {
+  background: color-mix(in srgb, hsl(var(--accent)) 24%, hsl(var(--card)) 76%);
+}
+
+.settings-shortcut-conflict {
+  color: hsl(var(--destructive));
+}
+
+@media (max-width: 640px) {
+  .settings-dialog-surface {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+  }
+
+  .settings-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .settings-dialog-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .settings-dialog-tab-trigger {
+    flex: 0 0 auto;
+  }
+
+}
+
