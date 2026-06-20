@@ -7,6 +7,7 @@ import {
   registerAssetProtocolPrivileges,
 } from '@electron/main/assetProtocol.js'
 import { installContentSecurityPolicy } from '@electron/main/contentSecurityPolicy.js'
+import { installElectronE2eRuntimeFlags } from '@electron/main/e2eRuntime.js'
 import {
   createSingleInstancePayload,
   getLaunchInfo,
@@ -43,6 +44,7 @@ const managedMainWindows = new WeakSet<BrowserWindow>()
 const windowsAllowedToClose = new WeakSet<BrowserWindow>()
 const windowsFlushingBeforeClose = new WeakSet<BrowserWindow>()
 
+installElectronE2eRuntimeFlags()
 registerAssetProtocolPrivileges()
 
 const getContainer = (): ElectronContainer => {
