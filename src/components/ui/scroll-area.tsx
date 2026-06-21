@@ -40,7 +40,7 @@ const shouldSkipSmoothWheel = (event: React.WheelEvent<HTMLDivElement>) => {
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   ScrollAreaProps
->(({ className, children, viewportClassName, smoothWheel = true, ...props }, ref) => {
+>(({ className, children, viewportClassName, smoothWheel = false, ...props }, ref) => {
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const smoothWheelEnabled = smoothWheel && motionSmoothScrolling
   const viewportRef = React.useRef<HTMLDivElement | null>(null)

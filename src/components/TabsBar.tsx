@@ -52,14 +52,14 @@ const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
 }
 
 const renderTabIcon = (tab: WorkspaceTab) => {
-  if (tab.kind === 'workspace-graph') return <GitGraph className="h-3.5 w-3.5" />
-  if (tab.kind === 'git-diff') return <GitGraph className="h-3.5 w-3.5" />
-  if (tab.view === 'source') return <Code2 className="h-3.5 w-3.5" />
-  if (tab.view === 'graph') return <GitGraph className="h-3.5 w-3.5" />
+  if (tab.kind === 'workspace-graph') return <GitGraph className="size-3.5" />
+  if (tab.kind === 'git-diff') return <GitGraph className="size-3.5" />
+  if (tab.view === 'source') return <Code2 className="size-3.5" />
+  if (tab.view === 'graph') return <GitGraph className="size-3.5" />
   if (tab.view === 'preview') {
-    return <DocumentAdapterIconView path={tab.path} fallback={Eye} className="h-3.5 w-3.5" />
+    return <DocumentAdapterIconView path={tab.path} fallback={Eye} className="size-3.5" />
   }
-  return <FileText className="h-3.5 w-3.5" />
+  return <FileText className="size-3.5" />
 }
 
 type WorkspaceTabButtonProps = {
@@ -143,28 +143,28 @@ const WorkspaceTabButton = memo(
         {isDirty && (
           <span
             aria-label={dirtyLabel}
-            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+            className="size-1.5 rounded-full bg-amber-500"
             title={dirtyLabel}
           />
         )}
         {hasError && (
           <span
             aria-label={errorLabel}
-            className="h-1.5 w-1.5 rounded-full bg-destructive"
+            className="size-1.5 rounded-full bg-destructive"
             title={errorMessage ?? errorLabel}
           />
         )}
         <span
           role="button"
           tabIndex={0}
-          className={`ml-0.5 rounded p-0.5 transition-all duration-150 hover:bg-muted ${
+          className={`ml-0.5 rounded p-0.5 transition-opacity duration-150 hover:bg-muted ${
             isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
           onClick={closeTab}
           onKeyDown={handleCloseKeyDown}
           aria-label={closeLabel}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="size-3.5" />
         </span>
       </div>
     )
@@ -320,14 +320,14 @@ const TabsBarComponent = ({
                 <Button
                   variant={viewMode === 'wysiwyg' ? 'secondary' : 'ghost'}
                   size="icon"
-                  className="h-6 w-6 rounded"
+                  className="size-6 rounded"
                   aria-label={t('editor.modeWysiwyg')}
                   disabled={!fileTabActive}
                   onFocus={preloadWysiwygEditor}
                   onMouseEnter={preloadWysiwygEditor}
                   onClick={() => onChangeView('wysiwyg')}
                 >
-                  <PenLine className="h-3.5 w-3.5" />
+                  <PenLine data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.modeWysiwyg')}</TooltipContent>
@@ -337,14 +337,14 @@ const TabsBarComponent = ({
                 <Button
                   variant={viewMode === 'source' ? 'secondary' : 'ghost'}
                   size="icon"
-                  className="h-6 w-6 rounded"
+                  className="size-6 rounded"
                   aria-label={t('editor.modeSource')}
                   disabled={!fileTabActive}
                   onFocus={preloadSourceEditor}
                   onMouseEnter={preloadSourceEditor}
                   onClick={() => onChangeView('source')}
                 >
-                  <Code2 className="h-3.5 w-3.5" />
+                  <Code2 data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.modeSource')}</TooltipContent>
@@ -354,14 +354,14 @@ const TabsBarComponent = ({
                 <Button
                   variant={viewMode === 'graph' ? 'secondary' : 'ghost'}
                   size="icon"
-                  className="h-6 w-6 rounded"
+                  className="size-6 rounded"
                   aria-label={t('tabs.workspaceGraph')}
                   disabled={!fileTabActive}
                   onFocus={preloadGraphView}
                   onMouseEnter={preloadGraphView}
                   onClick={() => onChangeView('graph')}
                 >
-                  <GitGraph className="h-3.5 w-3.5" />
+                  <GitGraph data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('tabs.workspaceGraph')}</TooltipContent>

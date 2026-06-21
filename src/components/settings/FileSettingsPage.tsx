@@ -1,7 +1,4 @@
 import { useState, type ElementType } from 'react'
-import { Controller, useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Code2, FileText, GitGraph } from 'lucide-react'
 import { normalizeDrawioEmbedUrl } from '@/logic/drawioEmbed'
 import { useI18n } from '@/i18n/useI18n'
@@ -36,14 +33,6 @@ const drawioEditorModes = [
   { value: 'system', labelKey: 'settings.drawioModeSystem' },
 ] as const
 
-const fileSettingsSchema = z.object({
-  defaultFileView: z.enum(['edit', 'source', 'graph']),
-  drawioEditorMode: z.enum(['remote', 'system']),
-  markdownAssetImportStrategy: z.enum(['copy-to-document-assets', 'preserve-path']),
-})
-
-type FileSettingsValues = z.infer<typeof fileSettingsSchema>
-
 const FileSettingsPage = () => {
   const { t } = useI18n()
   const defaultFileView = usePreferencesStore((state) => state.defaultFileView)
@@ -62,15 +51,6 @@ const FileSettingsPage = () => {
   const setDrawioEmbedUrl = useDrawioSettingsStore((state) => state.setDrawioEmbedUrl)
   const resetDrawioEmbedUrl = useDrawioSettingsStore((state) => state.resetDrawioEmbedUrl)
   const [drawioUrlError, setDrawioUrlError] = useState<string | null>(null)
-  const form = useForm<FileSettingsValues>({
-    mode: 'onChange',
-    resolver: zodResolver(fileSettingsSchema),
-    values: {
-      defaultFileView: safeDefaultFileView,
-      drawioEditorMode,
-      markdownAssetImportStrategy,
-    },
-  })
   const commitDrawioUrl = (value: string) => {
     try {
       const normalized = normalizeDrawioEmbedUrl(value)
@@ -93,30 +73,19 @@ const FileSettingsPage = () => {
         description={t('settings.defaultFileViewDescription')}
       >
         <SettingsChoiceGrid columns={3}>
-          <Controller
-            control={form.control}
-            name="defaultFileView"
-            render={({ field }) => (
-              <>
-                {fileViews.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <SettingsChoiceButton
-                      key={item.value}
-                      selected={field.value === item.value}
-                      onClick={() => {
-                        field.onChange(item.value)
-                        setDefaultFileView(item.value)
-                      }}
-                    >
-                      <Icon data-icon="inline-start" />
-                      <span className="truncate">{t(item.labelKey)}</span>
-                    </SettingsChoiceButton>
-                  )
-                })}
-              </>
-            )}
-          />
+          {fileViews.map((item) => {
+            const Icon = item.icon
+            return (
+              <SettingsChoiceButton
+                key={item.value}
+                selected={safeDefaultFileView === item.value}
+                onClick={() => setDefaultFileView(item.value)}
+              >
+                <Icon data-icon="inline-start" />
+                <span className="truncate">{t(item.labelKey)}</span>
+              </SettingsChoiceButton>
+            )
+          })}
         </SettingsChoiceGrid>
       </SettingsSection>
 
@@ -125,51 +94,29 @@ const FileSettingsPage = () => {
         description={t('settings.assetStrategyDescription')}
       >
         <SettingsChoiceGrid columns={2}>
-          <Controller
-            control={form.control}
-            name="markdownAssetImportStrategy"
-            render={({ field }) => (
-              <>
-                {assetImportStrategies.map((item) => (
-                  <SettingsChoiceButton
-                    key={item.value}
-                    selected={field.value === item.value}
-                    onClick={() => {
-                      field.onChange(item.value)
-                      setMarkdownAssetImportStrategy(item.value)
-                    }}
-                  >
-                    <span className="truncate">{t(item.labelKey)}</span>
-                  </SettingsChoiceButton>
-                ))}
-              </>
-            )}
-          />
+          {assetImportStrategies.map((item) => (
+            <SettingsChoiceButton
+              key={item.value}
+              selected={markdownAssetImportStrategy === item.value}
+              onClick={() => setMarkdownAssetImportStrategy(item.value)}
+            >
+              <span className="truncate">{t(item.labelKey)}</span>
+            </SettingsChoiceButton>
+          ))}
         </SettingsChoiceGrid>
       </SettingsSection>
 
       <SettingsSection title={t('settings.drawio')} description={t('settings.drawioDescription')}>
         <SettingsChoiceGrid columns={2}>
-          <Controller
-            control={form.control}
-            name="drawioEditorMode"
-            render={({ field }) => (
-              <>
-                {drawioEditorModes.map((item) => (
-                  <SettingsChoiceButton
-                    key={item.value}
-                    selected={field.value === item.value}
-                    onClick={() => {
-                      field.onChange(item.value)
-                      setDrawioEditorMode(item.value)
-                    }}
-                  >
-                    <span className="truncate">{t(item.labelKey)}</span>
-                  </SettingsChoiceButton>
-                ))}
-              </>
-            )}
-          />
+          {drawioEditorModes.map((item) => (
+            <SettingsChoiceButton
+              key={item.value}
+              selected={drawioEditorMode === item.value}
+              onClick={() => setDrawioEditorMode(item.value)}
+            >
+              <span className="truncate">{t(item.labelKey)}</span>
+            </SettingsChoiceButton>
+          ))}
         </SettingsChoiceGrid>
 
         <SettingsField

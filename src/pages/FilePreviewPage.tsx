@@ -2,9 +2,6 @@ import { lazy, Suspense, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Loader2, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
-import MarkdownPdfPreview from '@/components/milkdown/MarkdownPdfPreview'
-import DocxPreviewSurface from '@/components/previews/DocxPreviewSurface'
-import DrawioEditorSurface from '@/components/previews/DrawioEditorSurface'
 import { Button } from '@/components/ui/button'
 import { getPreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
@@ -15,7 +12,21 @@ import { useI18n } from '@/i18n/useI18n'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
+const MarkdownPdfPreview = lazy(() => import('@/components/milkdown/MarkdownPdfPreview'))
+const DocxPreviewSurface = lazy(() => import('@/components/previews/DocxPreviewSurface'))
+const DrawioEditorSurface = lazy(() => import('@/components/previews/DrawioEditorSurface'))
 const ExcalidrawEditorSurface = lazy(() => import('@/components/previews/ExcalidrawEditorSurface'))
+
+type PreviewLoadingFallbackProps = {
+  label: string
+}
+
+const PreviewLoadingFallback = ({ label }: PreviewLoadingFallbackProps) => (
+  <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+    <Loader2 className="size-4 animate-spin" />
+    {label}
+  </div>
+)
 
 const FilePreviewPage = () => {
   const params = useParams()
@@ -101,22 +112,19 @@ const FilePreviewPage = () => {
             {t('preview.failed')}
           </div>
         ) : previewKind === 'docx' ? (
-          <DocxPreviewSurface src={previewSrc} title={title} />
+          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+            <DocxPreviewSurface src={previewSrc} title={title} />
+          </Suspense>
         ) : previewKind === 'drawio' ? (
-          <DrawioEditorSurface
-            path={requestedPath}
-            readonly={metadataQuery.data?.readonly ?? false}
-            title={title}
-          />
+          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+            <DrawioEditorSurface
+              path={requestedPath}
+              readonly={metadataQuery.data?.readonly ?? false}
+              title={title}
+            />
+          </Suspense>
         ) : previewKind === 'excalidraw' ? (
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                {t('preview.loading')}
-              </div>
-            }
-          >
+          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
             <ExcalidrawEditorSurface
               key={requestedPath}
               path={requestedPath}
@@ -125,16 +133,18 @@ const FilePreviewPage = () => {
             />
           </Suspense>
         ) : previewKind === 'pdf' ? (
-          <div className="crepe h-full">
-            <div className="milkdown h-full rounded-xl border border-border bg-background p-3">
-              <MarkdownPdfPreview
-                documentPath={null}
-                href={requestedPath}
-                resolvePdfSrc={resolvePreviewPdfSrc}
-                title={title}
-              />
+          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+            <div className="crepe h-full">
+              <div className="milkdown h-full rounded-xl border border-border bg-background p-3">
+                <MarkdownPdfPreview
+                  documentPath={null}
+                  href={requestedPath}
+                  resolvePdfSrc={resolvePreviewPdfSrc}
+                  title={title}
+                />
+              </div>
             </div>
-          </div>
+          </Suspense>
         ) : previewKind === 'image' ? (
           <div className="flex min-h-full items-center justify-center">
             <img

@@ -101,43 +101,43 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="settings-dialog-surface max-w-none gap-0 overflow-hidden rounded-md p-0">
-        <DialogHeader className="settings-dialog-header tab-strip border-b border-border/80 px-5 py-4">
-          <DialogTitle className="settings-dialog-title flex items-center gap-2 text-base">
-            <SlidersHorizontal className="h-4 w-4 text-primary" />
+      <DialogContent className="grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-md border border-border bg-card p-0 text-card-foreground shadow-[0_16px_40px_-30px_hsl(var(--foreground)/0.34)] sm:h-[min(740px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(960px,calc(100vw-2rem))]">
+        <DialogHeader className="border-b border-border/80 bg-card px-5 py-4">
+          <DialogTitle className="flex items-center gap-2 text-base tracking-[0.01em]">
+            <SlidersHorizontal className="size-4 text-primary" />
             {t('settings.title')}
           </DialogTitle>
-          <DialogDescription className="settings-dialog-description">
+          <DialogDescription className="text-muted-foreground">
             {t('settings.description')}
           </DialogDescription>
         </DialogHeader>
         <Tabs
           value={section}
           onValueChange={onSectionChange}
-          className="settings-dialog-body h-full min-h-0 overflow-hidden"
+          className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-card sm:grid-cols-[176px_minmax(0,1fr)] sm:grid-rows-1"
         >
-          <TabsList className="settings-dialog-tabs flex h-full flex-col items-stretch justify-start rounded-none border-r border-border p-2">
+          <TabsList className="flex h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-muted/30 p-2 sm:h-full sm:flex-col sm:border-b-0 sm:border-r">
             {settingsRoutes.map((routeConfig) => {
               const Icon = routeConfig.icon
               return (
                 <TabsTrigger
                   key={routeConfig.value}
                   value={routeConfig.value}
-                  className="settings-dialog-tab-trigger justify-start gap-2 rounded-md"
+                  className="relative flex-none cursor-pointer justify-start gap-2 rounded-md border border-transparent text-muted-foreground transition-[background-color,color,border-color,box-shadow] before:absolute before:left-1 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-transparent hover:bg-accent/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-[state=active]:border-border/80 data-[state=active]:bg-background/80 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-primary [&_svg]:size-4 [&_svg]:shrink-0"
                 >
-                  <Icon className="shrink-0" aria-hidden="true" />
+                  <Icon aria-hidden="true" />
                   <span className="truncate">{t(routeConfig.labelKey)}</span>
                 </TabsTrigger>
               )
             })}
           </TabsList>
-          <div className="settings-dialog-panel-shell h-full min-h-0 min-w-0 overflow-hidden">
+          <div className="h-full min-h-0 min-w-0 overflow-hidden bg-card">
             <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
               <div
                 key={section}
-                className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden p-0"
+                className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-0 [scrollbar-gutter:stable] [scrollbar-width:thin]"
               >
-                <div className="settings-dialog-panel mx-auto w-full max-w-3xl p-5">
+                <div className="mx-auto min-h-full w-full max-w-3xl p-5">
                   {activeRoute.render()}
                 </div>
               </div>

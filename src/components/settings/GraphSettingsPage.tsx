@@ -1,6 +1,3 @@
-import { Controller, useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Map } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import type { GraphContentMode } from '@/store/appTypes'
@@ -19,27 +16,12 @@ const graphContentModes: Array<{ value: GraphContentMode; labelKey: string }> = 
   { value: 'full', labelKey: 'settings.graphContentFull' },
 ]
 
-const graphSettingsSchema = z.object({
-  graphMiniMapEnabled: z.boolean(),
-  graphContentMode: z.enum(['none', 'summary', 'full']),
-})
-
-type GraphSettingsValues = z.infer<typeof graphSettingsSchema>
-
 const GraphSettingsPage = () => {
   const { t } = useI18n()
   const graphMiniMapEnabled = usePreferencesStore((state) => state.graphMiniMapEnabled)
   const setGraphMiniMapEnabled = usePreferencesStore((state) => state.setGraphMiniMapEnabled)
   const graphContentMode = usePreferencesStore((state) => state.graphContentMode)
   const setGraphContentMode = usePreferencesStore((state) => state.setGraphContentMode)
-  const form = useForm<GraphSettingsValues>({
-    mode: 'onChange',
-    resolver: zodResolver(graphSettingsSchema),
-    values: {
-      graphMiniMapEnabled,
-      graphContentMode,
-    },
-  })
 
   return (
     <SettingsPageStack>
@@ -48,20 +30,11 @@ const GraphSettingsPage = () => {
         description={t('settings.graphMiniMapDescription')}
         icon={Map}
       >
-        <Controller
-          control={form.control}
-          name="graphMiniMapEnabled"
-          render={({ field }) => (
-            <SettingsSwitchRow
-              title={t('settings.graphMiniMap')}
-              description={t('settings.graphMiniMapDescription')}
-              checked={field.value}
-              onCheckedChange={(checked) => {
-                field.onChange(checked)
-                setGraphMiniMapEnabled(checked)
-              }}
-            />
-          )}
+        <SettingsSwitchRow
+          title={t('settings.graphMiniMap')}
+          description={t('settings.graphMiniMapDescription')}
+          checked={graphMiniMapEnabled}
+          onCheckedChange={setGraphMiniMapEnabled}
         />
       </SettingsSection>
       <SettingsSection
@@ -70,27 +43,16 @@ const GraphSettingsPage = () => {
         icon={Map}
       >
         <SettingsChoiceGrid columns={3}>
-          <Controller
-            control={form.control}
-            name="graphContentMode"
-            render={({ field }) => (
-              <>
-                {graphContentModes.map((item) => (
-                  <SettingsChoiceButton
-                    key={item.value}
-                    selected={field.value === item.value}
-                    className="justify-center"
-                    onClick={() => {
-                      field.onChange(item.value)
-                      setGraphContentMode(item.value)
-                    }}
-                  >
-                    {t(item.labelKey)}
-                  </SettingsChoiceButton>
-                ))}
-              </>
-            )}
-          />
+          {graphContentModes.map((item) => (
+            <SettingsChoiceButton
+              key={item.value}
+              selected={graphContentMode === item.value}
+              className="justify-center"
+              onClick={() => setGraphContentMode(item.value)}
+            >
+              {t(item.labelKey)}
+            </SettingsChoiceButton>
+          ))}
         </SettingsChoiceGrid>
       </SettingsSection>
     </SettingsPageStack>

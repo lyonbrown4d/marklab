@@ -6,6 +6,7 @@ import TerminalSessionPane, {
 } from '@/components/terminal/TerminalSessionPane'
 import { shellName } from '@/components/terminal/terminalTheme'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
 import type { ThemeMode } from '@/store/appTypes'
@@ -41,12 +42,12 @@ const createTerminalTab = (index: number): TerminalTab => {
 
 const TerminalStatusIcon = ({ status }: { status: TerminalStatus }) => {
   if (status === 'connecting') {
-    return <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+    return <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
   }
   if (status === 'error') {
-    return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+    return <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
   }
-  return <TerminalIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+  return <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
 }
 
 const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
@@ -128,7 +129,9 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
 
   return (
     <TooltipProvider>
-      <section
+      <Tabs
+        value={activeTabKey}
+        onValueChange={setActiveTabKey}
         aria-hidden={!visible}
         className={cn(
           'terminal-panel flex shrink-0 flex-col overflow-hidden border-t border-border/80',
@@ -136,68 +139,59 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
         )}
       >
         <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/70 px-2">
-          <TerminalIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div
-            role="tablist"
+          <TerminalIcon className="size-4 shrink-0 text-muted-foreground" />
+          <TabsList
             aria-label={t('terminal.title')}
-            className="terminal-tab-strip flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+            className="terminal-tab-strip h-7 min-w-0 flex-1 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 text-xs text-muted-foreground"
           >
             {tabs.map((tab) => {
-              const active = tab.key === activeTabKey
               const title = tab.session
                 ? shellName(tab.session.shell)
                 : t('terminal.tab', { index: String(tab.index) })
 
               return (
-                <div
+                <TabsTrigger
                   key={tab.key}
-                  className={cn(
-                    'flex h-7 min-w-28 max-w-52 shrink-0 items-center overflow-hidden rounded-md border text-xs transition-[background-color,border-color,color]',
-                    active
-                      ? 'border-border/90 bg-background text-foreground shadow-sm'
-                      : 'border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/70 hover:text-foreground',
-                  )}
+                  value={tab.key}
+                  asChild
+                  className="group h-7 min-w-28 max-w-52 shrink-0 justify-start gap-0 overflow-hidden rounded-md border px-0 py-0 text-xs font-normal transition-colors data-[state=active]:border-border/90 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:border-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none data-[state=inactive]:hover:border-border/60 data-[state=inactive]:hover:bg-muted/70 data-[state=inactive]:hover:text-foreground"
                 >
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left"
-                    onClick={() => setActiveTabKey(tab.key)}
-                  >
-                    <TerminalStatusIcon status={tab.status} />
-                    <span className="truncate">{title}</span>
-                  </button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={t('terminal.closeTab')}
-                        className="mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          closeTerminalTab(tab.key)
-                        }}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('terminal.closeTab')}</TooltipContent>
-                  </Tooltip>
-                </div>
+                  <div title={title}>
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left">
+                      <TerminalStatusIcon status={tab.status} />
+                      <span className="truncate">{title}</span>
+                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t('terminal.closeTab')}
+                          className="mr-1 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            closeTerminalTab(tab.key)
+                          }}
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('terminal.closeTab')}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TabsTrigger>
               )
             })}
-          </div>
+          </TabsList>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="size-7 shrink-0"
                 onClick={addTerminalTab}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus data-icon="inline-start" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('terminal.new')}</TooltipContent>
@@ -212,10 +206,10 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="size-7"
                   onClick={restartActiveTerminal}
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('terminal.restart')}</TooltipContent>
@@ -226,10 +220,10 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="size-7"
                   onClick={onClose}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('terminal.close')}</TooltipContent>
@@ -251,7 +245,7 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
             />
           ))}
         </div>
-      </section>
+      </Tabs>
     </TooltipProvider>
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLatest, useUnmount } from 'ahooks'
 import { produce } from 'immer'
 import { fsApi, fsBufferStatusSchema } from '@/services/fsApi'
@@ -6,51 +6,30 @@ import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
 import { toast } from 'sonner'
+import { useEditorBufferState, type SaveState } from '@/app/useEditorBufferState'
+
+export type { SaveState } from '@/app/useEditorBufferState'
 
 const BUFFER_SYNC_DEBOUNCE_MS = 800
 const BUFFER_ERROR_TOAST_ID_PREFIX = 'editor-buffer-error'
-const EMPTY_FILE_CONTENTS: Record<string, string> = {}
-const EMPTY_DIRTY_PATHS: Record<string, true> = {}
-const EMPTY_SAVE_STATES: Record<string, SaveState> = {}
-
-export type SaveState = {
-  status: 'saved' | 'saving' | 'unsaved' | 'error'
-  message?: string
-}
 
 type UseEditorBufferArgs = {
   activePath: string | null
   workspaceKey: string
 }
 
-type WorkspaceContents = Record<string, Record<string, string>>
-type WorkspaceDirtyPaths = Record<string, Record<string, true>>
-type WorkspaceLoadingPaths = Record<string, Record<string, true>>
-type WorkspaceSaveStates = Record<string, Record<string, SaveState>>
-
 export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArgs) => {
   const { t } = useI18n()
-  const [workspaceFileContents, setWorkspaceFileContents] = useState<WorkspaceContents>({})
-  const [workspaceDirtyPaths, setWorkspaceDirtyPaths] = useState<WorkspaceDirtyPaths>({})
-  const [workspaceLoadingPaths, setWorkspaceLoadingPaths] = useState<WorkspaceLoadingPaths>({})
-  const [workspaceSaveStates, setWorkspaceSaveStates] = useState<WorkspaceSaveStates>({})
-
-  const fileContents = useMemo(
-    () => workspaceFileContents[workspaceKey] ?? EMPTY_FILE_CONTENTS,
-    [workspaceFileContents, workspaceKey],
-  )
-  const dirtyPaths = useMemo(
-    () => workspaceDirtyPaths[workspaceKey] ?? EMPTY_DIRTY_PATHS,
-    [workspaceDirtyPaths, workspaceKey],
-  )
-  const loadingPaths = useMemo(
-    () => workspaceLoadingPaths[workspaceKey] ?? EMPTY_DIRTY_PATHS,
-    [workspaceLoadingPaths, workspaceKey],
-  )
-  const saveStates = useMemo(
-    () => workspaceSaveStates[workspaceKey] ?? EMPTY_SAVE_STATES,
-    [workspaceSaveStates, workspaceKey],
-  )
+  const {
+    dirtyPaths,
+    fileContents,
+    loadingPaths,
+    saveStates,
+    setPathLoading,
+    setPathSaveState,
+    setWorkspaceDirtyPaths,
+    setWorkspaceFileContents,
+  } = useEditorBufferState(workspaceKey)
   const editorValue = useMemo(
     () => (activePath ? (fileContents[activePath] ?? '') : ''),
     [activePath, fileContents],
@@ -67,17 +46,6 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
   const revisionContentRef = useRef<Record<string, Record<number, string>>>({})
   const loadToken = useRef(0)
 
-  const setPathSaveState = useCallback((workspace: string, path: string, next: SaveState) => {
-    setWorkspaceSaveStates((prev) =>
-      produce(prev, (draft) => {
-        const currentWorkspaceStates = draft[workspace] ?? (draft[workspace] = {})
-        const current = currentWorkspaceStates[path]
-        if (current?.status === next.status && current.message === next.message) return
-        currentWorkspaceStates[path] = next
-      }),
-    )
-  }, [])
-
   const markPathClean = useCallback(
     (workspace: string, path: string, content: string) => {
       syncedContentsRef.current[path] = content
@@ -90,7 +58,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       )
       setPathSaveState(workspace, path, { status: 'saved' })
     },
-    [setPathSaveState],
+    [setPathSaveState, setWorkspaceDirtyPaths],
   )
 
   const markPathDirty = useCallback(
@@ -103,25 +71,8 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       )
       setPathSaveState(workspace, path, nextState)
     },
-    [setPathSaveState],
+    [setPathSaveState, setWorkspaceDirtyPaths],
   )
-
-  const setPathLoading = useCallback((workspace: string, path: string, loading: boolean) => {
-    setWorkspaceLoadingPaths((prev) =>
-      produce(prev, (draft) => {
-        if (loading) {
-          const currentWorkspaceLoading = draft[workspace] ?? (draft[workspace] = {})
-          currentWorkspaceLoading[path] = true
-          return
-        }
-
-        const currentWorkspaceLoading = draft[workspace]
-        if (!currentWorkspaceLoading?.[path]) return
-        delete currentWorkspaceLoading[path]
-        if (Object.keys(currentWorkspaceLoading).length === 0) delete draft[workspace]
-      }),
-    )
-  }, [])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
@@ -196,8 +147,18 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       })
       .finally(() => {
         setPathLoading(requestWorkspace, activePath, false)
-    })
-  }, [activePath, dirtyPathsRef, fileContentsRef, setPathLoading, setPathSaveState, workspaceKey, t])
+      })
+  }, [
+    activePath,
+    dirtyPathsRef,
+    fileContentsRef,
+    setPathLoading,
+    setPathSaveState,
+    setWorkspaceDirtyPaths,
+    setWorkspaceFileContents,
+    workspaceKey,
+    t,
+  ])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
@@ -367,6 +328,8 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       markPathClean,
       markPathDirty,
       setPathSaveState,
+      setWorkspaceDirtyPaths,
+      setWorkspaceFileContents,
       workspaceKeyRef,
       t,
     ],
