@@ -23,7 +23,7 @@ type AppMenuBarProps = {
 
 const AppMenuBar = ({ groups, onAction }: AppMenuBarProps) => {
   return (
-    <Menubar className="menu-bar-surface ml-2 hidden h-7 items-center gap-0.5 p-0 lg:flex">
+    <Menubar className="menu-bar-surface ml-1 hidden h-7 items-center gap-0.5 p-0 2xl:flex">
       {groups.map((group) => (
         <MenubarMenu key={group.label}>
           <MenubarTrigger className="h-7 rounded-md px-2 text-xs font-normal text-muted-foreground hover:cursor-pointer hover:bg-accent/75 hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground">

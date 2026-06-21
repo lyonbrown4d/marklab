@@ -96,35 +96,37 @@ const Titlebar = ({
 
   return (
     <header
-      className={`app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5 ${isMacDesktop ? 'pl-[68px]' : ''}`}
+      className={`app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5 ${isMacDesktop ? 'pl-[76px]' : ''}`}
       onMouseDown={handleTitlebarMouseDown}
     >
       <TooltipProvider>
-        <TitlebarNavigation
-          showInlineMenu={showInlineMenu}
-          menuGroups={menuGroups}
-          onMenuAction={onMenuAction}
-          onToggleSidebar={onToggleSidebar}
-        />
-        <TitlebarCommandCenter
-          activePath={activePath}
-          activeTab={activeTab}
-          dirtyPaths={dirtyPaths}
-          saveStates={saveStates}
-          silentSave={silentSave}
-          commandPaletteShortcut={commandPaletteShortcut}
-          onOpenSearch={onOpenSearch}
-        />
-        <TitlebarActions
-          theme={theme}
-          setTheme={setTheme}
-          onMenuAction={onMenuAction}
-          onOpenSearch={onOpenSearch}
-          onOpenSettings={onOpenSettings}
-          onSelectProject={onSelectProject}
-          onSelectSingleFile={onSelectSingleFile}
-          onToggleRightSidebar={onToggleRightSidebar}
-        />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <TitlebarNavigation
+            showInlineMenu={showInlineMenu}
+            menuGroups={menuGroups}
+            onMenuAction={onMenuAction}
+            onToggleSidebar={onToggleSidebar}
+          />
+          <TitlebarCommandCenter
+            activePath={activePath}
+            activeTab={activeTab}
+            dirtyPaths={dirtyPaths}
+            saveStates={saveStates}
+            silentSave={silentSave}
+            commandPaletteShortcut={commandPaletteShortcut}
+            onOpenSearch={onOpenSearch}
+          />
+          <TitlebarActions
+            theme={theme}
+            setTheme={setTheme}
+            onMenuAction={onMenuAction}
+            onOpenSearch={onOpenSearch}
+            onOpenSettings={onOpenSettings}
+            onSelectProject={onSelectProject}
+            onSelectSingleFile={onSelectSingleFile}
+            onToggleRightSidebar={onToggleRightSidebar}
+          />
+        </div>
       </TooltipProvider>
       <TitlebarCommandDialog
         open={commandOpen}

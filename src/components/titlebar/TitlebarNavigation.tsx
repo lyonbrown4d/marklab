@@ -1,10 +1,20 @@
 import { PanelLeft } from 'lucide-react'
+
 import AppLogo from '@/components/AppLogo'
 import AppMenuBar from '@/components/AppMenuBar'
-import { Button } from '@/components/ui/button'
+import { TitlebarIconButton } from '@/components/titlebar/TitlebarIconButton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useI18n } from '@/i18n/useI18n'
-import type { TitlebarMenuGroup } from '@/components/titlebar/titlebarTypes'
+
+type TitlebarMenuItem = {
+  id: string
+  label: string
+  disabled?: boolean
+}
+
+type TitlebarMenuGroup = {
+  label: string
+  items: TitlebarMenuItem[]
+}
 
 type TitlebarNavigationProps = {
   showInlineMenu: boolean
@@ -19,29 +29,25 @@ export const TitlebarNavigation = ({
   onMenuAction,
   onToggleSidebar,
 }: TitlebarNavigationProps) => {
-  const { t } = useI18n()
-
   return (
-    <div className="flex min-w-0 items-center gap-1">
+    <div className="flex min-w-0 shrink-0 items-center gap-1">
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleSidebar}
-            aria-label={t('actions.toggleSidebar')}
-            className="chrome-button h-8 w-8 rounded-md"
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
+          <TitlebarIconButton aria-label="Toggle sidebar" onClick={onToggleSidebar}>
+            <PanelLeft data-icon="icon" />
+          </TitlebarIconButton>
         </TooltipTrigger>
-        <TooltipContent>{t('actions.toggleSidebar')}</TooltipContent>
+        <TooltipContent side="bottom">Toggle sidebar</TooltipContent>
       </Tooltip>
-      <div className="flex min-w-0 items-center gap-2 px-1 leading-none">
-        <AppLogo className="h-6 w-6" />
-        <div className="truncate text-sm font-semibold tracking-[0.01em]">{t('app.name')}</div>
+
+      <div className="flex min-w-0 items-center gap-2 px-1">
+        <AppLogo className="size-6 shrink-0" />
+        <span className="hidden max-w-28 truncate text-sm font-semibold tracking-[-0.01em] text-foreground sm:block">
+          MarkLab
+        </span>
       </div>
-      {showInlineMenu && <AppMenuBar groups={menuGroups} onAction={onMenuAction} />}
+
+      {showInlineMenu ? <AppMenuBar groups={menuGroups} onAction={onMenuAction} /> : null}
     </div>
   )
 }

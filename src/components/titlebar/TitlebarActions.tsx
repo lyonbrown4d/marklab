@@ -1,7 +1,7 @@
-import { FileText, FolderOpen, PanelRight, Search, Settings2 } from 'lucide-react'
-import TitlebarLanguageMenu from '@/components/TitlebarLanguageMenu'
-import TitlebarThemeMenu from '@/components/TitlebarThemeMenu'
-import { Button } from '@/components/ui/button'
+import { PanelRight, Search, Settings2 } from 'lucide-react'
+
+import { TitlebarIconButton } from '@/components/titlebar/TitlebarIconButton'
+import { TitlebarMoreMenu } from '@/components/titlebar/TitlebarMoreMenu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
 import type { ThemeMode } from '@/store/appTypes'
@@ -30,83 +30,45 @@ export const TitlebarActions = ({
   const { t } = useI18n()
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex shrink-0 items-center gap-0.5">
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="chrome-button h-8 w-8 rounded-md"
-            onClick={onSelectProject}
-            aria-label={t('actions.openProject')}
-          >
-            <FolderOpen className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('actions.openProject')}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="chrome-button h-8 w-8 rounded-md"
-            onClick={onSelectSingleFile}
-            aria-label={t('actions.openFile')}
-          >
-            <FileText className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('actions.openFile')}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="chrome-button h-8 w-8 rounded-md md:hidden"
+          <TitlebarIconButton
+            aria-label={t('sidebar.search')}
+            className="md:hidden"
             onClick={onOpenSearch}
-            aria-label={t('sidebar.searchAction')}
           >
-            <Search className="h-4 w-4" />
-          </Button>
+            <Search data-icon="icon" />
+          </TitlebarIconButton>
         </TooltipTrigger>
-        <TooltipContent>{t('sidebar.searchAction')}</TooltipContent>
+        <TooltipContent side="bottom">{t('sidebar.search')}</TooltipContent>
       </Tooltip>
-      <TitlebarThemeMenu
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <TitlebarIconButton aria-label={t('actions.settings')} onClick={onOpenSettings}>
+            <Settings2 data-icon="icon" />
+          </TitlebarIconButton>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t('actions.settings')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <TitlebarIconButton aria-label="Toggle inspector" onClick={onToggleRightSidebar}>
+            <PanelRight data-icon="icon" />
+          </TitlebarIconButton>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Toggle inspector</TooltipContent>
+      </Tooltip>
+
+      <TitlebarMoreMenu
         theme={theme}
         setTheme={setTheme}
-        onAbout={() => onMenuAction('help.about')}
+        onAbout={() => onMenuAction('about')}
+        onSelectProject={onSelectProject}
+        onSelectSingleFile={onSelectSingleFile}
       />
-      <TitlebarLanguageMenu />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="chrome-button h-8 w-8 rounded-md"
-            onClick={onOpenSettings}
-            aria-label={t('menu.settings')}
-          >
-            <Settings2 className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('menu.settings')}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="chrome-button h-8 w-8 rounded-md"
-            onClick={onToggleRightSidebar}
-            aria-label={t('actions.toggleRightSidebar')}
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('actions.toggleRightSidebar')}</TooltipContent>
-      </Tooltip>
     </div>
   )
 }
