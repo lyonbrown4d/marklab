@@ -24,6 +24,7 @@ describe('fileTypes', () => {
     expect(isMarkdownFilePath('notes/today.md')).toBe(true)
     expect(isDocxFilePath('docs/spec.docx')).toBe(true)
     expect(isDrawioFilePath('diagrams/flow.drawio')).toBe(true)
+    expect(isDrawioFilePath('diagrams/flow.dio')).toBe(true)
     expect(isPdfFilePath('docs/spec.pdf')).toBe(true)
     expect(isImageFilePath('assets/diagram.svg')).toBe(true)
     expect(isAudioFilePath('media/theme.flac')).toBe(true)

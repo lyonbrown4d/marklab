@@ -1,3 +1,4 @@
+import { documentAdapterForMarkdownEmbedPath } from '@/logic/documentAdapters'
 import { fsApi } from '@/services/fsApi'
 import { convertAssetFileSrc } from '@/runtime/assets'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -18,9 +19,8 @@ const targetSuffix = (target: string) => {
   return target.trim().slice(cleanPath.length)
 }
 
-export const isMarkdownPdfTarget = (target: string) => {
-  return /\.pdf$/i.test(cleanTargetPath(target))
-}
+export const isMarkdownPdfTarget = (target: string) =>
+  documentAdapterForMarkdownEmbedPath(cleanTargetPath(target))?.kind === 'pdf'
 
 const isExternalPdfTarget = (target: string) => {
   return localProtocolPattern.test(target.trim())

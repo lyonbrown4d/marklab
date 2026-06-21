@@ -3,6 +3,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
+import { assetMediaTypeForExtension } from '@electron/services/mediaTypes.js'
 
 const ASSET_PROTOCOL = 'marklab-asset'
 
@@ -105,31 +106,7 @@ const inferContentType = (
   if (requestDestination === 'script' && extension === '.ts') {
     return 'application/octet-stream'
   }
-  if (extension === '.aac') return 'audio/aac'
-  if (extension === '.apng') return 'image/apng'
-  if (extension === '.avif') return 'image/avif'
-  if (extension === '.bmp') return 'image/bmp'
-  if (extension === '.docx') {
-    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  }
-  if (extension === '.flac') return 'audio/flac'
-  if (extension === '.gif') return 'image/gif'
-  if (extension === '.ico') return 'image/x-icon'
-  if (extension === '.jpeg' || extension === '.jpg') return 'image/jpeg'
-  if (extension === '.m4a') return 'audio/mp4'
-  if (extension === '.m4v') return 'video/mp4'
-  if (extension === '.mov') return 'video/quicktime'
-  if (extension === '.mp3') return 'audio/mpeg'
-  if (extension === '.mp4') return 'video/mp4'
-  if (extension === '.oga' || extension === '.ogg' || extension === '.opus') return 'audio/ogg'
-  if (extension === '.ogv') return 'video/ogg'
-  if (extension === '.pdf') return 'application/pdf'
-  if (extension === '.png') return 'image/png'
-  if (extension === '.svg') return 'image/svg+xml'
-  if (extension === '.wav') return 'audio/wav'
-  if (extension === '.webm') return 'video/webm'
-  if (extension === '.webp') return 'image/webp'
-  return responseContentType(responseHeaders)
+  return assetMediaTypeForExtension(extension) ?? responseContentType(responseHeaders)
 }
 
 const responseContentType = (headers: Headers | undefined): string | null => {

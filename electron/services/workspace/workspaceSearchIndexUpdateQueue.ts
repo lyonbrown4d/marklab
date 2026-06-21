@@ -1,4 +1,4 @@
-import { isMarkdownPath } from '@electron/services/workspace/path.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
 
@@ -71,7 +71,7 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
       this.queueChange(changedPath, 'remove-prefix')
       return true
     }
-    if (!isMarkdownPath(changedPath)) return false
+    if (!isSearchIndexablePath(changedPath)) return false
     if (event === 'unlink') {
       this.queueChange(changedPath, 'remove-file')
       return true

@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import { isMarkdownPath } from '@electron/services/workspace/path.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import { WorkspaceNativeSearchBackend } from '@electron/services/workspace/workspaceNativeSearchBackend.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 
@@ -36,12 +36,12 @@ export class WorkspaceSearchIndex {
   }
 
   async rebuild(documents: WorkspaceSearchDocument[]): Promise<void> {
-    const indexable = documents.filter((document) => isMarkdownPath(document.path))
+    const indexable = documents.filter((document) => isSearchIndexablePath(document.path))
     this.requireNativeOperation(this.nativeBackend.rebuild(indexable))
   }
 
   async upsertDocument(document: WorkspaceSearchDocument): Promise<void> {
-    if (!isMarkdownPath(document.path)) return
+    if (!isSearchIndexablePath(document.path)) return
     this.requireNativeOperation(this.nativeBackend.upsertDocument(document))
   }
 

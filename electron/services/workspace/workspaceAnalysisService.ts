@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
 
-import { isMarkdownPath } from '@electron/services/workspace/path.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
   buildOutlineGraph,
@@ -192,7 +192,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   protected override onBuffersFlushed(relativePaths: string[]): void {
-    const markdownPaths = relativePaths.filter((value) => isMarkdownPath(value))
+    const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
 
     void this.runSearchIndexTask(
@@ -268,7 +268,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private indexChangeAffectsSearch(pathValue: string | null, event?: WatchEventName): boolean {
     if (!pathValue || !event) return true
     if (event === 'addDir') return false
-    return event === 'unlinkDir' || isMarkdownPath(pathValue)
+    return event === 'unlinkDir' || isSearchIndexablePath(pathValue)
   }
 
   private resetSearchIndexState(): void {

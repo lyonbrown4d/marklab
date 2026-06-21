@@ -104,11 +104,11 @@ would add too much weight.
    SVG/PNG variants, then evaluate pure `.drawio` rendering and editor embed
    only after local-first and security boundaries are clear.
 
-6. [ ] Whiteboard document adapters
+6. [x] Whiteboard document adapters
 
-   Evaluate Excalidraw/tldraw-style files as optional canvas document adapters.
-   Treat this as a separate product surface from Markdown editing and avoid
-   introducing license or bundle-size risk without a clear user workflow.
+   Add an Excalidraw file adapter as a separate preview/edit surface from
+   Markdown editing. Keep the editor lazy-loaded so the Markdown-first path does
+   not pay the whiteboard bundle cost.
 
 7. [ ] Office spreadsheet and presentation triage
 
@@ -116,7 +116,7 @@ would add too much weight.
    open actions first. High-fidelity in-app preview should remain deferred until
    there is a proven need and a controlled dependency choice.
 
-8. [ ] Document adapter registry
+8. [x] Document adapter registry
 
    Introduce a small explicit adapter registry for file capabilities such as
    preview, edit, text extraction, thumbnail support, and external-open fallback.

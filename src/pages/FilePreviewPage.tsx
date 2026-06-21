@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { lazy, Suspense, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Loader2, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
@@ -14,6 +14,8 @@ import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+
+const ExcalidrawEditorSurface = lazy(() => import('@/components/previews/ExcalidrawEditorSurface'))
 
 const FilePreviewPage = () => {
   const params = useParams()
@@ -106,6 +108,22 @@ const FilePreviewPage = () => {
             readonly={metadataQuery.data?.readonly ?? false}
             title={title}
           />
+        ) : previewKind === 'excalidraw' ? (
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                {t('preview.loading')}
+              </div>
+            }
+          >
+            <ExcalidrawEditorSurface
+              key={requestedPath}
+              path={requestedPath}
+              readonly={metadataQuery.data?.readonly ?? false}
+              title={title}
+            />
+          </Suspense>
         ) : previewKind === 'pdf' ? (
           <div className="crepe h-full">
             <div className="milkdown h-full rounded-xl border border-border bg-background p-3">

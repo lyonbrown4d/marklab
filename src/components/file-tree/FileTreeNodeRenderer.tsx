@@ -1,15 +1,7 @@
 import type React from 'react'
 import type { NodeRendererProps } from 'react-arborist'
-import {
-  ChevronRight,
-  FileImage,
-  FileText,
-  Folder,
-  FolderOpen,
-  FolderX,
-  Music,
-  Video,
-} from 'lucide-react'
+import { ChevronRight, Folder, FolderOpen, FolderX } from 'lucide-react'
+import { DocumentAdapterIconView } from '@/components/documentAdapterIcons'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { FileTreeContextMenu } from '@/components/file-tree/FileTreeContextMenu'
@@ -48,7 +40,7 @@ export const FileTreeNodeRenderer = ({
   const item = node.data
   const isFolder = item.type === 'folder'
   const isActive = item.type === 'file' && item.path === activePath
-  const previewKind = item.type === 'file' ? getPreviewFileKind(item.name) : null
+  const previewKind = item.type === 'file' ? getPreviewFileKind(item.path) : null
   const isImageFile = previewKind === 'image'
   const hasChildren = isFolder && (item.children?.length ?? 0) > 0
 
@@ -129,15 +121,10 @@ export const FileTreeNodeRenderer = ({
             ) : (
               <>
                 <span className="w-3.5" />
-                {previewKind === 'image' ? (
-                  <FileImage className="size-4 text-muted-foreground" />
-                ) : previewKind === 'audio' ? (
-                  <Music className="size-4 text-muted-foreground" />
-                ) : previewKind === 'video' ? (
-                  <Video className="size-4 text-muted-foreground" />
-                ) : (
-                  <FileText className="size-4 text-muted-foreground" />
-                )}
+                <DocumentAdapterIconView
+                  path={item.path}
+                  className="size-4 text-muted-foreground"
+                />
               </>
             )}
             {node.isEditing ? (

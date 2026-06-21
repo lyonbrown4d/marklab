@@ -1,4 +1,5 @@
 import type { FsEntry } from '@electron/services/workspace/types.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 
 export type WorkspaceDocument = {
   path: string
@@ -20,7 +21,9 @@ export const loadWorkspaceDocuments = async ({
   replaceContent,
   replacePath,
 }: LoadWorkspaceDocumentsOptions): Promise<WorkspaceDocument[]> => {
-  const files = entries.filter((entry) => entry.kind === 'file')
+  const files = entries.filter(
+    (entry) => entry.kind === 'file' && isSearchIndexablePath(entry.path),
+  )
   const documents = new Array<WorkspaceDocument>(files.length)
 
   for (let batchStart = 0; batchStart < files.length; batchStart += batchSize) {

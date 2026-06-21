@@ -8,7 +8,8 @@ import {
   type MouseEvent,
   type WheelEvent,
 } from 'react'
-import { Code2, Eye, FileImage, FileText, GitGraph, Music, PenLine, Video, X } from 'lucide-react'
+import { Code2, Eye, FileText, GitGraph, PenLine, X } from 'lucide-react'
+import { DocumentAdapterIconView } from '@/components/documentAdapterIcons'
 import { Button } from '@/components/ui/button'
 import { createFileLabel } from '@/logic/paths'
 import { useI18n } from '@/i18n/useI18n'
@@ -16,7 +17,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
-import { getPreviewFileKind } from '@/logic/fileTypes'
 import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 
 type TabLabelText = {
@@ -57,13 +57,7 @@ const renderTabIcon = (tab: WorkspaceTab) => {
   if (tab.view === 'source') return <Code2 className="h-3.5 w-3.5" />
   if (tab.view === 'graph') return <GitGraph className="h-3.5 w-3.5" />
   if (tab.view === 'preview') {
-    const kind = getPreviewFileKind(tab.path)
-    if (kind === 'image') return <FileImage className="h-3.5 w-3.5" />
-    if (kind === 'audio') return <Music className="h-3.5 w-3.5" />
-    if (kind === 'video') return <Video className="h-3.5 w-3.5" />
-    if (kind === 'docx') return <FileText className="h-3.5 w-3.5" />
-    if (kind === 'drawio') return <FileText className="h-3.5 w-3.5" />
-    return <Eye className="h-3.5 w-3.5" />
+    return <DocumentAdapterIconView path={tab.path} fallback={Eye} className="h-3.5 w-3.5" />
   }
   return <FileText className="h-3.5 w-3.5" />
 }

@@ -1,4 +1,5 @@
-import { isAudioFilePath, isVideoFilePath, type PreviewFileKind } from '@/logic/fileTypes'
+import { documentAdapterForMarkdownEmbedPath } from '@/logic/documentAdapters'
+import type { PreviewFileKind } from '@/logic/fileTypes'
 import { convertAssetFileSrc } from '@/runtime/assets'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
@@ -23,9 +24,8 @@ export const markdownMediaKindForTarget = (
   target: string,
 ): Extract<PreviewFileKind, 'audio' | 'video'> | null => {
   const cleanPath = cleanTargetPath(target)
-  if (isAudioFilePath(cleanPath)) return 'audio'
-  if (isVideoFilePath(cleanPath)) return 'video'
-  return null
+  const adapter = documentAdapterForMarkdownEmbedPath(cleanPath)
+  return adapter?.kind === 'audio' || adapter?.kind === 'video' ? adapter.kind : null
 }
 
 export const isMarkdownMediaTarget = (target: string) => markdownMediaKindForTarget(target) !== null

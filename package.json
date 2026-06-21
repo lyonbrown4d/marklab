@@ -150,6 +150,7 @@
   "dependencies": {
     "@codemirror/language": "^6.12.3",
     "@dagrejs/dagre": "^3.0.0",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@hookform/resolvers": "^5.4.0",
     "@milkdown/core": "^7.21.2",
     "@milkdown/crepe": "^7.21.2",

@@ -1,5 +1,9 @@
 import type { ClipboardEvent, DragEvent } from 'react'
 import { MARKLAB_FILE_TREE_ITEM_MIME, readFileTreeDragPayload } from '@/logic/fileDragPayload'
+import {
+  documentAdapterExtensionsForKind,
+  documentAdapterForMarkdownEmbedPath,
+} from '@/logic/documentAdapters'
 import { extractHeadings } from '@/logic/paths'
 import { rememberResolvedMarkdownImageSource } from '@/components/milkdown/markdownImageSource'
 import { fsApi } from '@/services/fsApi'
@@ -21,6 +25,8 @@ type ImportMarkdownAssetOptions = {
   insertImage: (src: string, alt?: string) => boolean
   replaceImageSource: (from: string, to: string) => boolean
 }
+
+const markdownImageDialogExtensions = [...documentAdapterExtensionsForKind('image')]
 
 export type MarkdownImageImportSource =
   | {
@@ -154,7 +160,7 @@ export const pickMarkdownImageSource = async (): Promise<MarkdownImageImportSour
       filters: [
         {
           name: 'Images',
-          extensions: ['apng', 'avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'],
+          extensions: markdownImageDialogExtensions,
         },
       ],
     })
@@ -304,7 +310,7 @@ const isImageImportSource = (source: MarkdownImageImportSource) => {
 }
 
 const isImagePath = (path: string) => {
-  return /\.(apng|avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(path.split(/[?#]/)[0] ?? path)
+  return documentAdapterForMarkdownEmbedPath(path.split(/[?#]/)[0] ?? path)?.kind === 'image'
 }
 
 const cleanAltText = (fileName: string) => {

@@ -1,20 +1,7 @@
 import path from 'node:path'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
 import type { FsStateData } from '@electron/services/workspace/types.js'
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
-const imageExtensions = new Set([
-  '.apng',
-  '.avif',
-  '.bmp',
-  '.gif',
-  '.ico',
-  '.jpeg',
-  '.jpg',
-  '.png',
-  '.svg',
-  '.webp',
-])
-const audioExtensions = new Set(['.aac', '.flac', '.m4a', '.mp3', '.oga', '.ogg', '.opus', '.wav'])
-const videoExtensions = new Set(['.m4v', '.mov', '.mp4', '.ogv', '.webm'])
 export const normalizeRelativePath = (value: string): string => {
   return value.replace(/\\/g, '/')
 }
@@ -73,38 +60,33 @@ export const isMarkdownPath = (value: string): boolean => {
   const ext = path.extname(value).toLowerCase()
   return ext === '.md' || ext === '.markdown'
 }
+export const isSearchIndexablePath = (value: string): boolean => isMarkdownPath(value)
 export const isCalendarPath = (value: string): boolean => {
   return path.extname(value).toLowerCase() === '.ics'
 }
 export const isPdfPath = (value: string): boolean => {
-  return path.extname(value).toLowerCase() === '.pdf'
+  return workspaceDocumentAdapterForPath(value)?.kind === 'pdf'
 }
 export const isDocxPath = (value: string): boolean => {
-  return path.extname(value).toLowerCase() === '.docx'
+  return workspaceDocumentAdapterForPath(value)?.kind === 'docx'
 }
 export const isDrawioPath = (value: string): boolean => {
-  const ext = path.extname(value).toLowerCase()
-  return ext === '.drawio' || ext === '.dio'
+  return workspaceDocumentAdapterForPath(value)?.kind === 'drawio'
 }
 export const isImagePath = (value: string): boolean => {
-  return imageExtensions.has(path.extname(value).toLowerCase())
+  return workspaceDocumentAdapterForPath(value)?.kind === 'image'
 }
 export const isAudioPath = (value: string): boolean => {
-  return audioExtensions.has(path.extname(value).toLowerCase())
+  return workspaceDocumentAdapterForPath(value)?.kind === 'audio'
 }
 export const isVideoPath = (value: string): boolean => {
-  return videoExtensions.has(path.extname(value).toLowerCase())
+  return workspaceDocumentAdapterForPath(value)?.kind === 'video'
 }
 export const isWorkspaceDocumentPath = (value: string): boolean => {
   return (
     isMarkdownPath(value) ||
     isCalendarPath(value) ||
-    isDocxPath(value) ||
-    isDrawioPath(value) ||
-    isPdfPath(value) ||
-    isImagePath(value) ||
-    isAudioPath(value) ||
-    isVideoPath(value)
+    Boolean(workspaceDocumentAdapterForPath(value))
   )
 }
 export const isExternalTarget = (target: string): boolean => {

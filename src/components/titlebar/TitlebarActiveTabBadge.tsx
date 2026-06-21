@@ -1,9 +1,9 @@
-import { Code2, Eye, FileImage, FileText, GitGraph, Music, Video } from 'lucide-react'
+import { Code2, Eye, FileText, GitGraph } from 'lucide-react'
 import { useMemo } from 'react'
 import type { SaveState } from '@/app/useEditorBuffer'
+import { DocumentAdapterIconView } from '@/components/documentAdapterIcons'
 import { useI18n } from '@/i18n/useI18n'
 import { createFileLabel } from '@/logic/paths'
-import { getPreviewFileKind } from '@/logic/fileTypes'
 import type { WorkspaceTab } from '@/store/appTypes'
 import type { TabLabelText } from '@/components/titlebar/titlebarTypes'
 
@@ -45,13 +45,7 @@ const renderActiveTabIcon = (tab: WorkspaceTab | null) => {
   if (tab.view === 'source') return <Code2 className="h-3.5 w-3.5" />
   if (tab.view === 'graph') return <GitGraph className="h-3.5 w-3.5" />
   if (tab.view === 'preview') {
-    const kind = getPreviewFileKind(tab.path)
-    if (kind === 'image') return <FileImage className="h-3.5 w-3.5" />
-    if (kind === 'audio') return <Music className="h-3.5 w-3.5" />
-    if (kind === 'video') return <Video className="h-3.5 w-3.5" />
-    if (kind === 'docx') return <FileText className="h-3.5 w-3.5" />
-    if (kind === 'drawio') return <FileText className="h-3.5 w-3.5" />
-    return <Eye className="h-3.5 w-3.5" />
+    return <DocumentAdapterIconView path={tab.path} fallback={Eye} className="h-3.5 w-3.5" />
   }
   return <FileText className="h-3.5 w-3.5" />
 }
