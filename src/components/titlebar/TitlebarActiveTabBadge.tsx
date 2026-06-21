@@ -50,6 +50,7 @@ const renderActiveTabIcon = (tab: WorkspaceTab | null) => {
     if (kind === 'audio') return <Music className="h-3.5 w-3.5" />
     if (kind === 'video') return <Video className="h-3.5 w-3.5" />
     if (kind === 'docx') return <FileText className="h-3.5 w-3.5" />
+    if (kind === 'drawio') return <FileText className="h-3.5 w-3.5" />
     return <Eye className="h-3.5 w-3.5" />
   }
   return <FileText className="h-3.5 w-3.5" />

@@ -98,7 +98,7 @@ would add too much weight.
    document layout and a separate lightweight text extraction path for search.
    Do not attempt full DOCX editing in the first iteration.
 
-5. [ ] Diagram previews
+5. [x] Diagram previews
 
    Support drawio-style diagram assets first as previews. Start with embedded
    SVG/PNG variants, then evaluate pure `.drawio` rendering and editor embed

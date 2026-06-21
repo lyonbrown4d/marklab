@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   isAudioPath,
   isDocxPath,
+  isDrawioPath,
   isImagePath,
   isMarkdownPath,
   isPdfPath,
@@ -175,6 +176,7 @@ const walkWorkspace = async (
           options.knownPaths &&
           (isImagePath(dirent.name) ||
             isDocxPath(dirent.name) ||
+            isDrawioPath(dirent.name) ||
             isPdfPath(dirent.name) ||
             isAudioPath(dirent.name) ||
             isVideoPath(dirent.name))

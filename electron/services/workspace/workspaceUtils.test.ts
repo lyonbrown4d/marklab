@@ -38,6 +38,7 @@ describe('listWorkspaceEntries', () => {
     )
     await fs.writeFile(path.join(root, 'notes', 'clip.mp3'), '')
     await fs.writeFile(path.join(root, 'notes', 'document.docx'), '')
+    await fs.writeFile(path.join(root, 'notes', 'flow.drawio'), '<mxfile></mxfile>')
     await fs.writeFile(path.join(root, 'notes', 'image.png'), '')
     await fs.writeFile(path.join(root, 'notes', 'video.webm'), '')
 
@@ -48,6 +49,7 @@ describe('listWorkspaceEntries', () => {
       { kind: 'file', name: 'calendar.ics', path: 'notes/calendar.ics' },
       { kind: 'file', name: 'clip.mp3', path: 'notes/clip.mp3' },
       { kind: 'file', name: 'document.docx', path: 'notes/document.docx' },
+      { kind: 'file', name: 'flow.drawio', path: 'notes/flow.drawio' },
       { kind: 'file', name: 'image.png', path: 'notes/image.png' },
       { kind: 'file', name: 'plan.md', path: 'notes/plan.md' },
       { kind: 'file', name: 'video.webm', path: 'notes/video.webm' },

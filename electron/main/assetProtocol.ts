@@ -17,6 +17,7 @@ export const registerAssetProtocolPrivileges = (): void => {
     {
       scheme: ASSET_PROTOCOL,
       privileges: {
+        corsEnabled: true,
         standard: true,
         secure: true,
         supportFetchAPI: true,
@@ -31,6 +32,9 @@ export const registerAssetProtocol = (getNativeIpc: () => NativeIpcRegistration 
   assetProtocolRegistered = true
 
   protocol.handle(ASSET_PROTOCOL, async (request) => {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: createCorsHeaders(), status: 204 })
+    }
     const assetPath = assetPathFromRequest(request.url)
     if (!assetPath) return new Response('Invalid asset URL', { status: 400 })
     if (!isAllowedAssetPath(assetPath, getNativeIpc())) {
@@ -69,14 +73,12 @@ const normalizeAssetResponse = (
   assetPath: string,
   headers: Headers | undefined,
 ): Response => {
-  const contentType = inferContentType(assetPath, headers)
-  if (!contentType) return response
-
-  const currentContentType = response.headers.get('content-type')
-  if (currentContentType && currentContentType.toLowerCase() === contentType) return response
-
-  const nextHeaders = new Headers(response.headers)
-  nextHeaders.set('content-type', contentType)
+  const contentType = inferContentType(assetPath, headers, response.headers)
+  const nextHeaders = createCorsHeaders()
+  nextHeaders.set('accept-ranges', 'bytes')
+  const contentLength = response.headers.get('content-length')
+  if (contentLength) nextHeaders.set('content-length', contentLength)
+  if (contentType) nextHeaders.set('content-type', contentType)
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -84,13 +86,55 @@ const normalizeAssetResponse = (
   })
 }
 
-const inferContentType = (assetPath: string, headers: Headers | undefined): string | null => {
+const createCorsHeaders = (): Headers => {
+  const headers = new Headers()
+  headers.set('access-control-allow-origin', '*')
+  headers.set('access-control-allow-methods', 'GET, HEAD, OPTIONS')
+  headers.set('access-control-allow-headers', 'range, content-type')
+  headers.set('access-control-expose-headers', 'accept-ranges, content-length, content-range')
+  return headers
+}
+
+const inferContentType = (
+  assetPath: string,
+  headers: Headers | undefined,
+  responseHeaders: Headers,
+): string | null => {
   const requestDestination = fetchRequestDestination(headers)
   const extension = path.extname(assetPath).toLowerCase()
   if (requestDestination === 'script' && extension === '.ts') {
     return 'application/octet-stream'
   }
-  return null
+  if (extension === '.aac') return 'audio/aac'
+  if (extension === '.apng') return 'image/apng'
+  if (extension === '.avif') return 'image/avif'
+  if (extension === '.bmp') return 'image/bmp'
+  if (extension === '.docx') {
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  }
+  if (extension === '.flac') return 'audio/flac'
+  if (extension === '.gif') return 'image/gif'
+  if (extension === '.ico') return 'image/x-icon'
+  if (extension === '.jpeg' || extension === '.jpg') return 'image/jpeg'
+  if (extension === '.m4a') return 'audio/mp4'
+  if (extension === '.m4v') return 'video/mp4'
+  if (extension === '.mov') return 'video/quicktime'
+  if (extension === '.mp3') return 'audio/mpeg'
+  if (extension === '.mp4') return 'video/mp4'
+  if (extension === '.oga' || extension === '.ogg' || extension === '.opus') return 'audio/ogg'
+  if (extension === '.ogv') return 'video/ogg'
+  if (extension === '.pdf') return 'application/pdf'
+  if (extension === '.png') return 'image/png'
+  if (extension === '.svg') return 'image/svg+xml'
+  if (extension === '.wav') return 'audio/wav'
+  if (extension === '.webm') return 'video/webm'
+  if (extension === '.webp') return 'image/webp'
+  return responseContentType(responseHeaders)
+}
+
+const responseContentType = (headers: Headers | undefined): string | null => {
+  const value = headers?.get('content-type')
+  return value && value.includes('/') ? value : 'application/octet-stream'
 }
 
 const fetchRequestDestination = (headers: Headers | undefined): string | null => {

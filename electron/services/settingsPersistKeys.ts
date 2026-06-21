@@ -1,9 +1,12 @@
 import type { RendererPersistKey } from '@electron/types.js'
 
 export const rendererPersistKeys = new Set<RendererPersistKey>([
+  'marklab.drawio',
   'marklab.preferences',
   'marklab.workspace',
 ])
+
+export const drawioStateKeys = new Set(['drawioEditorMode', 'drawioEmbedUrl'])
 
 export const preferenceStateKeys = new Set([
   'customThemeId',
@@ -28,6 +31,11 @@ export const preferenceStateKeys = new Set([
   'lightTheme',
   'darkTheme',
 ])
+
+export const rendererSettingsStateKeys: Partial<Record<RendererPersistKey, Set<string>>> = {
+  'marklab.drawio': drawioStateKeys,
+  'marklab.preferences': preferenceStateKeys,
+}
 
 export const workspaceSessionStateKeys = new Set(['activeTabId', 'rootKind', 'rootPath', 'tabs'])
 

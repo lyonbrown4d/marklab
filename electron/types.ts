@@ -53,7 +53,7 @@ export type PersistedWindowState = {
   y?: number
 }
 
-export type RendererPersistKey = 'marklab.preferences' | 'marklab.workspace'
+export type RendererPersistKey = 'marklab.drawio' | 'marklab.preferences' | 'marklab.workspace'
 
 export type SettingsPersistResult = {
   ok: boolean

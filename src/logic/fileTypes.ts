@@ -1,6 +1,6 @@
 import type { FileViewKind } from '@/store/appTypes'
 
-export type PreviewFileKind = 'audio' | 'docx' | 'image' | 'pdf' | 'video'
+export type PreviewFileKind = 'audio' | 'docx' | 'drawio' | 'image' | 'pdf' | 'video'
 
 export const MARKDOWN_FILE_EXTENSIONS = ['md', 'markdown'] as const
 export const IMAGE_FILE_EXTENSIONS = [
@@ -28,7 +28,9 @@ export const AUDIO_FILE_EXTENSIONS = [
 export const VIDEO_FILE_EXTENSIONS = ['m4v', 'mov', 'mp4', 'ogv', 'webm'] as const
 export const MARKLAB_DOCUMENT_EXTENSIONS = [
   ...MARKDOWN_FILE_EXTENSIONS,
+  'dio',
   'docx',
+  'drawio',
   'pdf',
   ...IMAGE_FILE_EXTENSIONS,
   ...AUDIO_FILE_EXTENSIONS,
@@ -56,6 +58,9 @@ export const isPdfFilePath = (value: string): boolean => fileExtension(value) ==
 
 export const isDocxFilePath = (value: string): boolean => fileExtension(value) === 'docx'
 
+export const isDrawioFilePath = (value: string): boolean =>
+  fileExtension(value) === 'drawio' || fileExtension(value) === 'dio'
+
 export const isImageFilePath = (value: string): boolean =>
   IMAGE_EXTENSIONS.has(fileExtension(value))
 
@@ -67,6 +72,7 @@ export const isVideoFilePath = (value: string): boolean =>
 
 export const getPreviewFileKind = (value: string): PreviewFileKind | null => {
   if (isDocxFilePath(value)) return 'docx'
+  if (isDrawioFilePath(value)) return 'drawio'
   if (isPdfFilePath(value)) return 'pdf'
   if (isImageFilePath(value)) return 'image'
   if (isAudioFilePath(value)) return 'audio'

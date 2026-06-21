@@ -8,6 +8,11 @@ export const installContentSecurityPolicy = (): void => {
   const contentSecurityPolicy = createContentSecurityPolicy()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (!shouldApplyMarklabCsp(details.url)) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
+
     const responseHeaders = { ...details.responseHeaders }
     for (const headerName of Object.keys(responseHeaders)) {
       if (headerName.toLowerCase() === 'content-security-policy') {
@@ -53,6 +58,19 @@ const createContentSecurityPolicy = (): string => {
     `font-src ${fontSources.join(' ')}`,
     `connect-src ${connectSources.join(' ')}`,
     "media-src 'self' data: blob: file: marklab-asset:",
+    "frame-src 'self' https:",
+    "child-src 'self' https:",
     "worker-src 'self' blob:",
   ].join('; ')
+}
+
+const shouldApplyMarklabCsp = (value: string): boolean => {
+  try {
+    const url = new URL(value)
+    if (url.protocol === 'file:' || url.protocol === 'marklab-asset:') return true
+    if (url.protocol !== 'http:') return false
+    return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  } catch {
+    return false
+  }
 }

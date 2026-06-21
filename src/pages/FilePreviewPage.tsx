@@ -4,6 +4,7 @@ import { ExternalLink, FileImage, FileText, Loader2, Music, Video } from 'lucide
 import { useParams } from 'react-router-dom'
 import MarkdownPdfPreview from '@/components/milkdown/MarkdownPdfPreview'
 import DocxPreviewSurface from '@/components/previews/DocxPreviewSurface'
+import DrawioEditorSurface from '@/components/previews/DrawioEditorSurface'
 import { Button } from '@/components/ui/button'
 import { getPreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
@@ -99,6 +100,12 @@ const FilePreviewPage = () => {
           </div>
         ) : previewKind === 'docx' ? (
           <DocxPreviewSurface src={previewSrc} title={title} />
+        ) : previewKind === 'drawio' ? (
+          <DrawioEditorSurface
+            path={requestedPath}
+            readonly={metadataQuery.data?.readonly ?? false}
+            title={title}
+          />
         ) : previewKind === 'pdf' ? (
           <div className="crepe h-full">
             <div className="milkdown h-full rounded-xl border border-border bg-background p-3">

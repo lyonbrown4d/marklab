@@ -82,6 +82,10 @@ export const isPdfPath = (value: string): boolean => {
 export const isDocxPath = (value: string): boolean => {
   return path.extname(value).toLowerCase() === '.docx'
 }
+export const isDrawioPath = (value: string): boolean => {
+  const ext = path.extname(value).toLowerCase()
+  return ext === '.drawio' || ext === '.dio'
+}
 export const isImagePath = (value: string): boolean => {
   return imageExtensions.has(path.extname(value).toLowerCase())
 }
@@ -96,6 +100,7 @@ export const isWorkspaceDocumentPath = (value: string): boolean => {
     isMarkdownPath(value) ||
     isCalendarPath(value) ||
     isDocxPath(value) ||
+    isDrawioPath(value) ||
     isPdfPath(value) ||
     isImagePath(value) ||
     isAudioPath(value) ||

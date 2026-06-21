@@ -4,6 +4,7 @@ import {
   fileViewForOpenPath,
   getPreviewFileKind,
   isDocxFilePath,
+  isDrawioFilePath,
   isImageFilePath,
   isMarkdownFilePath,
   isPdfFilePath,
@@ -22,11 +23,13 @@ describe('fileTypes', () => {
   it('classifies markdown, pdf, and browser-previewable images', () => {
     expect(isMarkdownFilePath('notes/today.md')).toBe(true)
     expect(isDocxFilePath('docs/spec.docx')).toBe(true)
+    expect(isDrawioFilePath('diagrams/flow.drawio')).toBe(true)
     expect(isPdfFilePath('docs/spec.pdf')).toBe(true)
     expect(isImageFilePath('assets/diagram.svg')).toBe(true)
     expect(isAudioFilePath('media/theme.flac')).toBe(true)
     expect(isVideoFilePath('media/demo.webm')).toBe(true)
     expect(getPreviewFileKind('docs/spec.docx')).toBe('docx')
+    expect(getPreviewFileKind('diagrams/flow.drawio')).toBe('drawio')
     expect(getPreviewFileKind('assets/diagram.svg')).toBe('image')
     expect(getPreviewFileKind('docs/spec.pdf')).toBe('pdf')
     expect(getPreviewFileKind('media/theme.flac')).toBe('audio')
@@ -35,6 +38,7 @@ describe('fileTypes', () => {
 
   it('opens pdf and images in preview tabs while keeping text files in the preferred view', () => {
     expect(fileViewForOpenPath('docs/spec.docx', 'source')).toBe('preview')
+    expect(fileViewForOpenPath('diagrams/flow.drawio', 'source')).toBe('preview')
     expect(fileViewForOpenPath('docs/spec.pdf', 'source')).toBe('preview')
     expect(fileViewForOpenPath('assets/cover.png', 'graph')).toBe('preview')
     expect(fileViewForOpenPath('media/theme.mp3', 'source')).toBe('preview')

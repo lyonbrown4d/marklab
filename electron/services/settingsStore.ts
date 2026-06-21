@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
-  preferenceStateKeys,
+  rendererSettingsStateKeys,
   rendererPersistKeys,
   workspaceRecentProjectsStateKeys,
   workspaceSessionStateKeys,
@@ -193,10 +193,11 @@ const removeSessionPersistValue = (sessionKey?: string | null): void => {
 }
 
 const readSettingsPersistValue = (key: RendererPersistKey): PersistedRendererValue | null => {
-  if (key !== 'marklab.preferences') return null
+  const keys = rendererSettingsStateKeys[key]
+  if (!keys) return null
   const value = normalizePersistedRendererValue(getStore().get('rendererPersist')?.[key])
   if (!value) return null
-  return rendererPersistValue(pickState(value.state ?? {}, preferenceStateKeys), value.version)
+  return rendererPersistValue(pickState(value.state ?? {}, keys), value.version)
 }
 
 const mergeRendererPersistValues = (
@@ -219,7 +220,7 @@ const readCombinedRendererPersistValue = (
   key: RendererPersistKey,
   sessionKey?: string | null,
 ): PersistedRendererValue | null => {
-  if (key === 'marklab.preferences') return readSettingsPersistValue(key)
+  if (rendererSettingsStateKeys[key]) return readSettingsPersistValue(key)
   return mergeRendererPersistValues([
     readSessionPersistValue(sessionKey),
     readRendererPersistFile(recentProjectsPath()),
@@ -237,13 +238,14 @@ const writeRendererPersistValue = (
     return
   }
 
-  if (key === 'marklab.preferences') {
+  const settingsKeys = rendererSettingsStateKeys[key]
+  if (settingsKeys) {
     const store = getStore()
     const rendererPersist = store.get('rendererPersist') ?? {}
     store.set('rendererPersist', {
       ...rendererPersist,
       [key]: rendererPersistValue(
-        pickState(normalized.state ?? {}, preferenceStateKeys),
+        pickState(normalized.state ?? {}, settingsKeys),
         normalized.version,
       ),
     })
@@ -290,7 +292,7 @@ export const setRendererPersistValue = (
 
 export const removeRendererPersistValue = (key: string, sessionKey?: string | null): void => {
   assertRendererPersistKey(key)
-  if (key === 'marklab.preferences') {
+  if (rendererSettingsStateKeys[key]) {
     const rendererPersist = { ...(getStore().get('rendererPersist') ?? {}) }
     delete rendererPersist[key]
     getStore().set('rendererPersist', rendererPersist)
