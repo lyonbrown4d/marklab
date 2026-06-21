@@ -6,6 +6,7 @@ import {
   GIT_DIFF_ROUTE_PATTERN,
   GRAPH_FILE_ROUTE_PATTERN,
   GRAPH_WORKSPACE_ROUTE_PATTERN,
+  PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
@@ -24,6 +25,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   const gitDiffMatch = useMatch(GIT_DIFF_ROUTE_PATTERN)
   const sourceMatch = useMatch(SOURCE_ROUTE_PATTERN)
   const graphFileMatch = useMatch(GRAPH_FILE_ROUTE_PATTERN)
+  const previewMatch = useMatch(PREVIEW_ROUTE_PATTERN)
   const graphWorkspaceMatch = useMatch(GRAPH_WORKSPACE_ROUTE_PATTERN)
 
   const routeSegment = params['*']
@@ -32,17 +34,25 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   const editPath = editMatch?.params['*'] || null
   const sourcePath = sourceMatch?.params['*'] || null
   const graphFilePath = graphFileMatch?.params['*'] || null
-  const routePath = editPath ?? routeSegment ?? null
-  const routeFilePath = editPath ?? sourcePath ?? graphFilePath
+  const previewPath = previewMatch?.params['*'] || null
+  const routePath = editPath ?? previewPath ?? routeSegment ?? null
+  const routeFilePath = editPath ?? sourcePath ?? graphFilePath ?? previewPath
   const routeFileView: FileViewKind | null = sourceMatch
     ? 'source'
     : graphFileMatch
       ? 'graph'
-      : editMatch
-        ? 'edit'
-        : null
+      : previewMatch
+        ? 'preview'
+        : editMatch
+          ? 'edit'
+          : null
   const internalRouteActive = Boolean(
-    gitDiffMatch || editMatch || sourceMatch || graphFileMatch || graphWorkspaceMatch,
+    gitDiffMatch ||
+    editMatch ||
+    sourceMatch ||
+    graphFileMatch ||
+    previewMatch ||
+    graphWorkspaceMatch,
   )
   const isRouteFile = useMemo(
     () =>
@@ -62,19 +72,24 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     ? 'source'
     : graphFileMatch || graphWorkspaceMatch
       ? 'graph'
-      : currentFilePath
-        ? activeTab?.kind === 'file' && activeTab.view === 'source'
-          ? 'source'
-          : activeTab?.kind === 'file' && activeTab.view === 'graph'
-            ? 'graph'
-            : (tabViewModes[currentFilePath] ?? 'wysiwyg')
-        : 'wysiwyg'
+      : previewMatch
+        ? 'preview'
+        : currentFilePath
+          ? activeTab?.kind === 'file' && activeTab.view === 'source'
+            ? 'source'
+            : activeTab?.kind === 'file' && activeTab.view === 'graph'
+              ? 'graph'
+              : activeTab?.kind === 'file' && activeTab.view === 'preview'
+                ? 'preview'
+                : (tabViewModes[currentFilePath] ?? 'wysiwyg')
+          : 'wysiwyg'
 
   return {
     editMatch,
     gitDiffMatch,
     sourceMatch,
     graphFileMatch,
+    previewMatch,
     graphWorkspaceMatch,
     gitDiffSection,
     gitDiffPath,

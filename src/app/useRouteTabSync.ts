@@ -22,6 +22,7 @@ type UseRouteTabSyncArgs = {
   gitDiffMatch: unknown
   sourceMatch: unknown
   graphFileMatch: unknown
+  previewMatch: unknown
   graphWorkspaceMatch: unknown
   gitDiffSection: string | undefined
   gitDiffPath: string | null
@@ -45,6 +46,7 @@ export const useRouteTabSync = ({
   gitDiffMatch,
   sourceMatch,
   graphFileMatch,
+  previewMatch,
   graphWorkspaceMatch,
   gitDiffSection,
   gitDiffPath,
@@ -64,7 +66,16 @@ export const useRouteTabSync = ({
   useEffect(() => {
     if (!enabled) return
     if (locationPathname !== '/') return
-    if (gitDiffMatch || sourceMatch || graphFileMatch || graphWorkspaceMatch || isRouteFile) return
+    if (
+      gitDiffMatch ||
+      sourceMatch ||
+      graphFileMatch ||
+      previewMatch ||
+      graphWorkspaceMatch ||
+      isRouteFile
+    ) {
+      return
+    }
     if (lastHandledRouteRef.current !== locationPathname) {
       lastHandledRouteRef.current = locationPathname
       onRouteHandled()
@@ -79,6 +90,7 @@ export const useRouteTabSync = ({
     gitDiffMatch,
     graphFileMatch,
     graphWorkspaceMatch,
+    previewMatch,
     inspectedPathRef,
     isRouteFile,
     lastHandledRouteRef,
@@ -123,7 +135,7 @@ export const useRouteTabSync = ({
 
   useEffect(() => {
     if (!enabled) return
-    if (!sourceMatch && !graphFileMatch && !graphWorkspaceMatch) return
+    if (!sourceMatch && !graphFileMatch && !previewMatch && !graphWorkspaceMatch) return
     if (lastHandledRouteRef.current === locationPathname) return
     lastHandledRouteRef.current = locationPathname
     onRouteHandled()
@@ -152,6 +164,7 @@ export const useRouteTabSync = ({
     enabled,
     graphFileMatch,
     graphWorkspaceMatch,
+    previewMatch,
     inspectedPathRef,
     lastHandledRouteRef,
     locationPathname,

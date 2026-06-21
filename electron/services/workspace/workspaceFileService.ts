@@ -2,7 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
-import { isMarkdownPath, workspaceRootForAssets } from '@electron/services/workspace/path.js'
+import {
+  isWorkspaceDocumentPath,
+  workspaceRootForAssets,
+} from '@electron/services/workspace/path.js'
 import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   FsBufferStatus,
@@ -75,7 +78,9 @@ export class WorkspaceFileService extends WorkspaceBase {
     const filePath = stringArg(value, 'path')
     const stat = await fs.promises.stat(filePath).catch(() => null)
     if (!stat?.isFile()) throw new Error('Selected path is not a file')
-    if (!isMarkdownPath(filePath)) throw new Error('Selected file is not a Markdown file')
+    if (!isWorkspaceDocumentPath(filePath)) {
+      throw new Error('Selected file is not supported by this workspace')
+    }
 
     const resolved = path.resolve(filePath)
     this.state = {

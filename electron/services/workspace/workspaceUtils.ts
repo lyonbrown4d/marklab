@@ -2,7 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import {
+  isAudioPath,
+  isDocxPath,
+  isImagePath,
   isMarkdownPath,
+  isPdfPath,
+  isVideoPath,
   isWorkspaceDocumentPath,
   normalizeRelativePath,
   toWorkspaceRelative,
@@ -165,6 +170,16 @@ const walkWorkspace = async (
       } else if (dirent.isFile() && isWorkspaceDocumentPath(dirent.name)) {
         if (options.entries) {
           entries.push({ path: relativePath, name: dirent.name, kind: 'file' as const })
+        }
+        if (
+          options.knownPaths &&
+          (isImagePath(dirent.name) ||
+            isDocxPath(dirent.name) ||
+            isPdfPath(dirent.name) ||
+            isAudioPath(dirent.name) ||
+            isVideoPath(dirent.name))
+        ) {
+          assetPaths.push(relativePath)
         }
       } else if (dirent.isFile() && options.knownPaths) {
         assetPaths.push(relativePath)

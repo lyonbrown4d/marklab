@@ -34,6 +34,7 @@ import {
 } from '@/components/file-tree/fileTreeActions'
 import type { SidebarFileTreeActions } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
+import { isPreviewableFilePath } from '@/logic/fileTypes'
 
 type IconComponent = ComponentType<{ className?: string }>
 
@@ -142,6 +143,7 @@ export const FileTreeContextMenu = ({
 }: FileTreeContextMenuProps) => {
   const item = node.data
   const isFolder = item.type === 'folder'
+  const textViewsAvailable = !isFolder && !isPreviewableFilePath(item.path)
   const hasChildren = isFolder && (item.children?.length ?? 0) > 0
   const HeaderIcon = isFolder
     ? hasChildren
@@ -204,12 +206,16 @@ export const FileTreeContextMenu = ({
           >
             {labels.open}
           </MenuItem>
-          <MenuItem icon={Code2} onSelect={() => onOpenFileView(item.path, 'source')}>
-            {labels.openSource}
-          </MenuItem>
-          <MenuItem icon={ScanSearch} onSelect={() => onOpenFileView(item.path, 'graph')}>
-            {labels.openGraph}
-          </MenuItem>
+          {textViewsAvailable ? (
+            <>
+              <MenuItem icon={Code2} onSelect={() => onOpenFileView(item.path, 'source')}>
+                {labels.openSource}
+              </MenuItem>
+              <MenuItem icon={ScanSearch} onSelect={() => onOpenFileView(item.path, 'graph')}>
+                {labels.openGraph}
+              </MenuItem>
+            </>
+          ) : null}
         </>
       ) : null}
 

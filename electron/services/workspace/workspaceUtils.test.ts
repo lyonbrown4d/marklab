@@ -36,14 +36,21 @@ describe('listWorkspaceEntries', () => {
       path.join(root, 'notes', 'calendar.ics'),
       'BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n',
     )
+    await fs.writeFile(path.join(root, 'notes', 'clip.mp3'), '')
+    await fs.writeFile(path.join(root, 'notes', 'document.docx'), '')
     await fs.writeFile(path.join(root, 'notes', 'image.png'), '')
+    await fs.writeFile(path.join(root, 'notes', 'video.webm'), '')
 
     const entries = await listWorkspaceEntries(createWorkspaceState(root))
 
     expect(entries).toEqual([
       { kind: 'folder', name: 'notes', path: 'notes' },
       { kind: 'file', name: 'calendar.ics', path: 'notes/calendar.ics' },
+      { kind: 'file', name: 'clip.mp3', path: 'notes/clip.mp3' },
+      { kind: 'file', name: 'document.docx', path: 'notes/document.docx' },
+      { kind: 'file', name: 'image.png', path: 'notes/image.png' },
       { kind: 'file', name: 'plan.md', path: 'notes/plan.md' },
+      { kind: 'file', name: 'video.webm', path: 'notes/video.webm' },
     ])
   })
 })

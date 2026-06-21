@@ -1,7 +1,7 @@
 import type { Locale } from '@/i18n/resources'
 
-export type ViewMode = 'wysiwyg' | 'source' | 'graph'
-export type FileViewKind = 'edit' | 'source' | 'graph'
+export type ViewMode = 'wysiwyg' | 'source' | 'graph' | 'preview'
+export type FileViewKind = 'edit' | 'source' | 'graph' | 'preview'
 export type ThemeColorMode = 'light' | 'dark'
 export type ThemeModePreference = 'system' | ThemeColorMode
 export type LightThemeMode = 'paper' | 'ivory' | 'sepia' | 'github' | 'solarized' | 'mist'

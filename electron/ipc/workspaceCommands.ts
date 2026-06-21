@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
+import { LinkPreviewService } from '@electron/services/linkPreview/service.js'
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
 import { isMarkdownPath, normalizeRelativePath } from '@electron/services/workspace/path.js'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
@@ -41,6 +42,7 @@ const createWorkspaceCommandHandlers = (
   exportService: ExportService,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
+  const linkPreviewService = new LinkPreviewService()
 
   return {
     fs_get_root_info: (_payload, event) => workspaceForEvent(event).rootInfo(),
@@ -75,6 +77,7 @@ const createWorkspaceCommandHandlers = (
       workspaceForEvent(event).importMarkdownAssetBase64(payload),
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
+    fs_fetch_link_preview: (payload) => linkPreviewService.fetch(payload),
     markdown_language_get_completions: (payload, event) =>
       markdownLanguageService.getCompletions(workspaceForEvent(event), payload),
     markdown_language_get_diagnostics: (payload, event) =>

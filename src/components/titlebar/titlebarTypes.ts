@@ -6,6 +6,7 @@ export type TabLabelText = {
   workspaceGraph: string
   source: string
   graph: string
+  preview: string
   diff: string
 }
 

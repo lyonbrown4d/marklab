@@ -170,6 +170,16 @@ export const fsMarkdownAssetResolveResultSchema = z.object({
   exists: z.boolean(),
 })
 
+export const fsLinkPreviewMetadataSchema = z.object({
+  url: z.string(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  image: z.string().nullable(),
+  favicon: z.string().nullable(),
+  canonical: z.string().nullable(),
+  site_name: z.string().nullable(),
+})
+
 export type FsRootKind = z.infer<typeof fsRootInfoSchema>['kind']
 export type FsEntry = z.infer<typeof fsEntrySchema>
 export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
@@ -200,6 +210,7 @@ export type FsGraph = z.infer<typeof fsGraphSchema>
 export type MarkdownAssetImportStrategy = z.infer<typeof markdownAssetImportStrategySchema>
 export type FsMarkdownAssetImportResult = z.infer<typeof fsMarkdownAssetImportResultSchema>
 export type FsMarkdownAssetResolveResult = z.infer<typeof fsMarkdownAssetResolveResultSchema>
+export type FsLinkPreviewMetadata = z.infer<typeof fsLinkPreviewMetadataSchema>
 
 export const fsApi = {
   async getSnapshot() {
@@ -324,5 +335,9 @@ export const fsApi = {
       target,
     })
     return fsMarkdownAssetResolveResultSchema.parse(result)
+  },
+  async fetchLinkPreview(url: string) {
+    const result = await invoke<unknown>('fs_fetch_link_preview', { url })
+    return fsLinkPreviewMetadataSchema.parse(result)
   },
 }

@@ -2,7 +2,7 @@ import uniqBy from 'lodash-es/uniqBy'
 import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
-const FILE_VIEWS = new Set<string>(['edit', 'source', 'graph'])
+const FILE_VIEWS = new Set<string>(['edit', 'source', 'graph', 'preview'])
 
 export const fileViewTabId = (path: string, view: FileViewKind) => `file:${view}:${path}`
 export const fileTabId = (path: string) => fileViewTabId(path, 'edit')
@@ -79,7 +79,8 @@ export const normalizeWorkspaceTabId = (value: unknown, tabs: WorkspaceTab[]) =>
     value.startsWith('file:') &&
     !value.startsWith('file:edit:') &&
     !value.startsWith('file:source:') &&
-    !value.startsWith('file:graph:')
+    !value.startsWith('file:graph:') &&
+    !value.startsWith('file:preview:')
       ? `file:edit:${value.slice('file:'.length)}`
       : value
   return tabs.some((tab) => getWorkspaceTabId(tab) === normalizedLegacyId)

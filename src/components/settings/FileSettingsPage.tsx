@@ -13,7 +13,9 @@ import {
   SettingsSection,
 } from '@/components/settings/SettingsRow'
 
-const fileViews: Array<{ value: FileViewKind; labelKey: string; icon: ElementType }> = [
+type DefaultFileViewKind = Exclude<FileViewKind, 'preview'>
+
+const fileViews: Array<{ value: DefaultFileViewKind; labelKey: string; icon: ElementType }> = [
   { value: 'edit', labelKey: 'editor.modeWysiwyg', icon: FileText },
   { value: 'source', labelKey: 'editor.modeSource', icon: Code2 },
   { value: 'graph', labelKey: 'tabs.graph', icon: GitGraph },
@@ -34,6 +36,8 @@ type FileSettingsValues = z.infer<typeof fileSettingsSchema>
 const FileSettingsPage = () => {
   const { t } = useI18n()
   const defaultFileView = usePreferencesStore((state) => state.defaultFileView)
+  const safeDefaultFileView: DefaultFileViewKind =
+    defaultFileView === 'preview' ? 'edit' : defaultFileView
   const setDefaultFileView = usePreferencesStore((state) => state.setDefaultFileView)
   const markdownAssetImportStrategy = usePreferencesStore(
     (state) => state.markdownAssetImportStrategy,
@@ -45,7 +49,7 @@ const FileSettingsPage = () => {
     mode: 'onChange',
     resolver: zodResolver(fileSettingsSchema),
     values: {
-      defaultFileView,
+      defaultFileView: safeDefaultFileView,
       markdownAssetImportStrategy,
     },
   })

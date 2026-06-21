@@ -8,7 +8,7 @@ import {
   type MouseEvent,
   type WheelEvent,
 } from 'react'
-import { Code2, FileText, GitGraph, PenLine, X } from 'lucide-react'
+import { Code2, Eye, FileImage, FileText, GitGraph, Music, PenLine, Video, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createFileLabel } from '@/logic/paths'
 import { useI18n } from '@/i18n/useI18n'
@@ -16,12 +16,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
+import { getPreviewFileKind } from '@/logic/fileTypes'
 import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 
 type TabLabelText = {
   workspaceGraph: string
   source: string
   graph: string
+  preview: string
   diff: string
 }
 
@@ -43,6 +45,7 @@ const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
   if (tab.kind === 'file') {
     if (tab.view === 'source') return `${label} · ${labels.source}`
     if (tab.view === 'graph') return `${label} · ${labels.graph}`
+    if (tab.view === 'preview') return `${label} · ${labels.preview}`
     return label
   }
   return `${label} · ${labels.diff}`
@@ -53,6 +56,14 @@ const renderTabIcon = (tab: WorkspaceTab) => {
   if (tab.kind === 'git-diff') return <GitGraph className="h-3.5 w-3.5" />
   if (tab.view === 'source') return <Code2 className="h-3.5 w-3.5" />
   if (tab.view === 'graph') return <GitGraph className="h-3.5 w-3.5" />
+  if (tab.view === 'preview') {
+    const kind = getPreviewFileKind(tab.path)
+    if (kind === 'image') return <FileImage className="h-3.5 w-3.5" />
+    if (kind === 'audio') return <Music className="h-3.5 w-3.5" />
+    if (kind === 'video') return <Video className="h-3.5 w-3.5" />
+    if (kind === 'docx') return <FileText className="h-3.5 w-3.5" />
+    return <Eye className="h-3.5 w-3.5" />
+  }
   return <FileText className="h-3.5 w-3.5" />
 }
 
@@ -194,12 +205,13 @@ const TabsBarComponent = ({
   const tabsViewportRef = useRef<HTMLDivElement | null>(null)
   const compact = tabs.length >= 8
   const activeTab = tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? null
-  const fileTabActive = activeTab?.kind === 'file'
+  const fileTabActive = activeTab?.kind === 'file' && activeTab.view !== 'preview'
   const tabLabels = useMemo(
     () => ({
       workspaceGraph: t('tabs.workspaceGraph'),
       source: t('editor.modeSource'),
       graph: t('tabs.graph'),
+      preview: t('editor.modePreview'),
       diff: t('scm.diffTitle'),
     }),
     [t],

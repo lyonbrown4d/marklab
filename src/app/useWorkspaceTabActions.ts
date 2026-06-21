@@ -1,21 +1,21 @@
-import { startTransition, useCallback, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import {
-  createFileTab,
   createGitDiffTab,
   createWorkspaceGraphTab,
-  fileViewTabId,
-  fileTabId,
   getWorkspaceTabId,
   gitDiffTabId,
   workspaceGraphTabId,
 } from '@/logic/tabs'
+import { fileViewForOpenPath, isPreviewableFilePath } from '@/logic/fileTypes'
+import {
+  navigateIfNeeded,
+  navigateToTab,
+  openFileView,
+  type LatestRef,
+} from '@/app/workspaceTabNavigation'
 import type { FileViewKind, GitDiffSection, ViewMode, WorkspaceTab } from '@/store/appTypes'
-
-type LatestRef<T> = {
-  readonly current: T
-}
 
 type UseWorkspaceTabActionsArgs = {
   activeTabIdRef: LatestRef<string | null>
@@ -49,8 +49,15 @@ export const useWorkspaceTabActions = ({
       const tab = tabsRef.current.find((item) => getWorkspaceTabId(item) === activeTabIdRef.current)
       const path = currentFilePathRef.current ?? (tab?.kind === 'file' ? tab.path : null)
       if (!path && mode !== 'graph') return
+      if (path && isPreviewableFilePath(path) && mode !== 'preview') return
       const fileView: FileViewKind =
-        mode === 'source' ? 'source' : mode === 'graph' && path ? 'graph' : 'edit'
+        mode === 'source'
+          ? 'source'
+          : mode === 'graph' && path
+            ? 'graph'
+            : mode === 'preview'
+              ? 'preview'
+              : 'edit'
 
       if (path) {
         setTabViewModes((prev) => (prev[path] === mode ? prev : { ...prev, [path]: mode }))
@@ -117,7 +124,7 @@ export const useWorkspaceTabActions = ({
 
   const onOpenFile = useCallback(
     (relativePath: string) => {
-      onOpenFileView(relativePath, defaultFileView)
+      onOpenFileView(relativePath, fileViewForOpenPath(relativePath, defaultFileView))
     },
     [defaultFileView, onOpenFileView],
   )
@@ -251,67 +258,5 @@ export const useWorkspaceTabActions = ({
     onOpenTab,
     onCloseTab,
     onCloseActiveTab,
-  }
-}
-
-const navigateIfNeeded = (
-  currentPathname: string,
-  nextRoute: string,
-  navigate: NavigateFunction,
-) => {
-  if (currentPathname === nextRoute) return
-  startTransition(() => {
-    navigate(nextRoute)
-  })
-}
-
-const navigateToTab = (
-  tab: WorkspaceTab | null,
-  currentPathname: string,
-  navigate: NavigateFunction,
-) => {
-  if (tab?.kind === 'file') {
-    navigateIfNeeded(currentPathname, pathToFileViewRoute(tab.path, tab.view), navigate)
-    return
-  }
-  if (tab?.kind === 'workspace-graph') {
-    navigateIfNeeded(currentPathname, pathToWorkspaceGraphRoute(), navigate)
-    return
-  }
-  if (tab?.kind === 'git-diff') {
-    navigateIfNeeded(currentPathname, pathToGitDiffRoute(tab.section, tab.path), navigate)
-    return
-  }
-  navigateIfNeeded(currentPathname, '/', navigate)
-}
-
-const openFileView = ({
-  path,
-  view,
-  inspectedPathRef,
-  tabsRef,
-  setTabs,
-  setActiveTabId,
-  setInspectedPath,
-}: {
-  path: string
-  view: FileViewKind
-  inspectedPathRef: LatestRef<string | null>
-  tabsRef: LatestRef<WorkspaceTab[]>
-  setTabs: (tabs: WorkspaceTab[]) => void
-  setActiveTabId: (id: string | null) => void
-  setInspectedPath: (path: string | null) => void
-}) => {
-  const currentTabs = tabsRef.current
-  const id = view === 'edit' ? fileTabId(path) : fileViewTabId(path, view)
-  const nextTabs = currentTabs.some((tab) => getWorkspaceTabId(tab) === id)
-    ? currentTabs
-    : [...currentTabs, createFileTab(path, view)]
-  if (nextTabs !== currentTabs) {
-    setTabs(nextTabs)
-  }
-  setActiveTabId(id)
-  if (inspectedPathRef.current !== path) {
-    setInspectedPath(path)
   }
 }

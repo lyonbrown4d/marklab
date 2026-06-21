@@ -9,6 +9,12 @@ import { fsApi, type FsSnapshot } from '@/services/fsApi'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
+import {
+  MARKLAB_DOCUMENT_EXTENSIONS,
+  fileViewForOpenPath,
+  isMarkdownFilePath,
+  isPreviewableFilePath,
+} from '@/logic/fileTypes'
 import { toast } from 'sonner'
 
 type UseProjectLoaderArgs = {
@@ -53,8 +59,6 @@ const toEntryIdentity = (entry: FileEntry) => [entry.path, entry.kind]
 const fetchSnapshot = async () => {
   return fsApi.getSnapshot()
 }
-
-const isMarkdownFilePath = (path: string) => /\.(md|markdown)$/i.test(path)
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
@@ -122,14 +126,23 @@ export const useProjectLoader = ({
           const seedTabs = options?.tabs ?? tabsRef.current
           const seedActiveTabId =
             options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
-          const nextTabs = seedTabs.filter((tab) => {
-            if (tab.kind === 'workspace-graph') return true
-            return available.has(tab.path)
+          const nextTabs = seedTabs.flatMap((tab) => {
+            if (tab.kind === 'workspace-graph') return [tab]
+            if (!available.has(tab.path)) return []
+            if (tab.kind === 'file') {
+              return [createFileTab(tab.path, fileViewForOpenPath(tab.path, tab.view))]
+            }
+            return [tab]
           })
           const finalTabs =
             nextTabs.length > 0
               ? nextTabs
-              : [createFileTab(defaultPath, defaultFileViewRef.current)]
+              : [
+                  createFileTab(
+                    defaultPath,
+                    fileViewForOpenPath(defaultPath, defaultFileViewRef.current),
+                  ),
+                ]
           if (!areTabListsEqual(tabsRef.current, finalTabs)) {
             setTabs(finalTabs)
           }
@@ -140,7 +153,7 @@ export const useProjectLoader = ({
           const nextActiveTab =
             currentActiveTab ??
             finalTabs[0] ??
-            createFileTab(defaultPath, defaultFileViewRef.current)
+            createFileTab(defaultPath, fileViewForOpenPath(defaultPath, defaultFileViewRef.current))
           const nextActiveTabId = getWorkspaceTabId(nextActiveTab)
           if (nextActiveTabId !== currentActiveTabId) {
             setActiveTabId(nextActiveTabId)
@@ -180,7 +193,7 @@ export const useProjectLoader = ({
     async (path: string) => {
       try {
         await runInDesktop(async () => {
-          const preferSingleFile = isMarkdownFilePath(path)
+          const preferSingleFile = isMarkdownFilePath(path) || isPreviewableFilePath(path)
           if (preferSingleFile) {
             try {
               await fsApi.setSingleFile(path)
@@ -240,7 +253,12 @@ export const useProjectLoader = ({
           directory: false,
           multiple: false,
           title: t('dialog.selectFileTitle'),
-          filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }],
+          filters: [
+            {
+              name: 'Marklab documents',
+              extensions: MARKLAB_DOCUMENT_EXTENSIONS,
+            },
+          ],
         })
         if (typeof selected === 'string') {
           await openFolder(selected)

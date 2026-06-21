@@ -523,6 +523,143 @@
   background: color-mix(in srgb, hsl(var(--destructive)) 8%, hsl(var(--card)));
 }
 
+.crepe .milkdown .marklab-pdf-preview {
+  margin: 0.875rem 0 1.1rem;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, hsl(var(--card)) 96%, hsl(var(--background)));
+  box-shadow: 0 12px 28px color-mix(in srgb, hsl(var(--foreground)) 7%, transparent);
+}
+
+.crepe .milkdown .marklab-pdf-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.65rem 0.75rem;
+}
+
+.crepe .milkdown .marklab-pdf-preview__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.crepe .milkdown .marklab-pdf-preview__badge {
+  flex: none;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.crepe .milkdown .marklab-pdf-preview__title {
+  min-width: 0;
+  overflow: hidden;
+  color: hsl(var(--foreground));
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crepe .milkdown .marklab-pdf-preview__expand {
+  flex: none;
+}
+
+.crepe .milkdown .marklab-pdf-preview__body {
+  position: relative;
+  min-height: 420px;
+  background: hsl(var(--muted));
+}
+
+.crepe .milkdown .marklab-pdf-preview__status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+.marklab-pdf-viewer {
+  display: grid;
+  height: min(62vh, 620px);
+  min-height: 420px;
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.marklab-pdf-viewer--modal {
+  height: 100%;
+}
+
+.marklab-pdf-viewer__thumbs {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  overflow: auto;
+  border-right: 1px solid hsl(var(--border));
+  background: color-mix(in srgb, hsl(var(--muted)) 82%, hsl(var(--background)));
+  padding: 0.65rem;
+}
+
+.marklab-pdf-viewer__thumb {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  padding: 0.35rem;
+}
+
+.marklab-pdf-viewer__thumb:hover,
+.marklab-pdf-viewer__thumb[data-active='true'] {
+  border-color: hsl(var(--primary));
+  background: color-mix(in srgb, hsl(var(--primary)) 10%, hsl(var(--background)));
+  color: hsl(var(--foreground));
+}
+
+.marklab-pdf-viewer__thumb .react-pdf__Page {
+  overflow: hidden;
+  border-radius: 0.3rem;
+  box-shadow: 0 4px 12px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+}
+
+.marklab-pdf-viewer__thumb span {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.marklab-pdf-viewer__document {
+  min-width: 0;
+  overflow: auto;
+  padding: 0.8rem;
+}
+
+.marklab-pdf-viewer__document .react-pdf__Document {
+  display: flex;
+  justify-content: center;
+}
+
+.marklab-pdf-viewer__document .react-pdf__Page {
+  box-shadow: 0 10px 30px color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
+}
+
+.marklab-pdf-viewer canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
 @media (max-width: 720px) {
   .crepe .milkdown .ProseMirror {
     padding: 2rem 1.25rem 4rem;

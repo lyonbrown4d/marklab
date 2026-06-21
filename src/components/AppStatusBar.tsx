@@ -46,6 +46,7 @@ const viewLabelKeys: Record<ViewMode, string> = {
   wysiwyg: 'editor.modeWysiwyg',
   source: 'editor.modeSource',
   graph: 'tabs.graph',
+  preview: 'editor.modePreview',
 }
 
 const basename = (path: string) => {

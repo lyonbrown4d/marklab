@@ -13,6 +13,7 @@ import { useEditorRoutes } from '@/app/useEditorRoutes'
 import { useRouteTabSync } from '@/app/useRouteTabSync'
 import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
 import { useWorkspaceRestore } from '@/app/useWorkspaceRestore'
+import { isTextFileViewPath } from '@/logic/fileTypes'
 
 export const useAppLayoutState = () => {
   const {
@@ -60,6 +61,7 @@ export const useAppLayoutState = () => {
     gitDiffMatch,
     sourceMatch,
     graphFileMatch,
+    previewMatch,
     graphWorkspaceMatch,
     gitDiffSection,
     gitDiffPath,
@@ -101,9 +103,11 @@ export const useAppLayoutState = () => {
   })
   const workspaceKey = `${rootKind}:${rootPath}`
   const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
+  const editorBufferPath =
+    currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null
   const { fileContents, editorValue, dirtyPaths, loadingPaths, saveStates, onEditorChange } =
     useEditorBuffer({
-      activePath: currentFilePath,
+      activePath: editorBufferPath,
       workspaceKey,
     })
 
@@ -154,6 +158,7 @@ export const useAppLayoutState = () => {
     gitDiffMatch,
     sourceMatch,
     graphFileMatch,
+    previewMatch,
     graphWorkspaceMatch,
     gitDiffSection,
     gitDiffPath,

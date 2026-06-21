@@ -1,6 +1,15 @@
 import type React from 'react'
 import type { NodeRendererProps } from 'react-arborist'
-import { ChevronRight, FileText, Folder, FolderOpen, FolderX } from 'lucide-react'
+import {
+  ChevronRight,
+  FileImage,
+  FileText,
+  Folder,
+  FolderOpen,
+  FolderX,
+  Music,
+  Video,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { FileTreeContextMenu } from '@/components/file-tree/FileTreeContextMenu'
@@ -9,6 +18,7 @@ import type { SidebarFileTreeActions } from '@/components/file-tree/types'
 import { cn } from '@/lib/utils'
 import { createFileTreeDragPayload, MARKLAB_FILE_TREE_ITEM_MIME } from '@/logic/fileDragPayload'
 import type { FileTreeNode } from '@/logic/fileTree'
+import { getPreviewFileKind } from '@/logic/fileTypes'
 
 type FileTreeNodeRendererProps = NodeRendererProps<FileTreeNode> &
   Omit<
@@ -21,8 +31,6 @@ type FileTreeNodeRendererProps = NodeRendererProps<FileTreeNode> &
     ) => void
     onRequestDelete: (node: NodeRendererProps<FileTreeNode>['node']) => void
   }
-
-const imageFilePattern = /\.(apng|avif|bmp|gif|jpe?g|png|svg|webp)$/i
 
 export const FileTreeNodeRenderer = ({
   activePath,
@@ -40,7 +48,8 @@ export const FileTreeNodeRenderer = ({
   const item = node.data
   const isFolder = item.type === 'folder'
   const isActive = item.type === 'file' && item.path === activePath
-  const isImageFile = item.type === 'file' && imageFilePattern.test(item.name)
+  const previewKind = item.type === 'file' ? getPreviewFileKind(item.name) : null
+  const isImageFile = previewKind === 'image'
   const hasChildren = isFolder && (item.children?.length ?? 0) > 0
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -120,7 +129,15 @@ export const FileTreeNodeRenderer = ({
             ) : (
               <>
                 <span className="w-3.5" />
-                <FileText className="size-4 text-muted-foreground" />
+                {previewKind === 'image' ? (
+                  <FileImage className="size-4 text-muted-foreground" />
+                ) : previewKind === 'audio' ? (
+                  <Music className="size-4 text-muted-foreground" />
+                ) : previewKind === 'video' ? (
+                  <Video className="size-4 text-muted-foreground" />
+                ) : (
+                  <FileText className="size-4 text-muted-foreground" />
+                )}
               </>
             )}
             {node.isEditing ? (

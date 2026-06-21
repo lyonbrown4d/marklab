@@ -1,8 +1,9 @@
-import { Code2, FileText, GitGraph } from 'lucide-react'
+import { Code2, Eye, FileImage, FileText, GitGraph, Music, Video } from 'lucide-react'
 import { useMemo } from 'react'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { useI18n } from '@/i18n/useI18n'
 import { createFileLabel } from '@/logic/paths'
+import { getPreviewFileKind } from '@/logic/fileTypes'
 import type { WorkspaceTab } from '@/store/appTypes'
 import type { TabLabelText } from '@/components/titlebar/titlebarTypes'
 
@@ -21,6 +22,7 @@ const getActiveTabLabel = (tab: WorkspaceTab | null, labels: TabLabelText) => {
   if (tab.kind === 'git-diff') return `${label} · ${labels.diff}`
   if (tab.view === 'source') return `${label} · ${labels.source}`
   if (tab.view === 'graph') return `${label} · ${labels.graph}`
+  if (tab.view === 'preview') return `${label} · ${labels.preview}`
   return label
 }
 
@@ -42,6 +44,14 @@ const renderActiveTabIcon = (tab: WorkspaceTab | null) => {
   }
   if (tab.view === 'source') return <Code2 className="h-3.5 w-3.5" />
   if (tab.view === 'graph') return <GitGraph className="h-3.5 w-3.5" />
+  if (tab.view === 'preview') {
+    const kind = getPreviewFileKind(tab.path)
+    if (kind === 'image') return <FileImage className="h-3.5 w-3.5" />
+    if (kind === 'audio') return <Music className="h-3.5 w-3.5" />
+    if (kind === 'video') return <Video className="h-3.5 w-3.5" />
+    if (kind === 'docx') return <FileText className="h-3.5 w-3.5" />
+    return <Eye className="h-3.5 w-3.5" />
+  }
   return <FileText className="h-3.5 w-3.5" />
 }
 
@@ -58,6 +68,7 @@ export const TitlebarActiveTabBadge = ({
       workspaceGraph: t('tabs.workspaceGraph'),
       source: t('editor.modeSource'),
       graph: t('tabs.graph'),
+      preview: t('editor.modePreview'),
       diff: t('scm.diffTitle'),
     }),
     [t],

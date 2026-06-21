@@ -8,6 +8,7 @@ export const FILE_ROUTE_PATTERN = '/files/edit/*'
 export const GIT_DIFF_ROUTE_PATTERN = '/_diff/:section/*'
 export const SOURCE_ROUTE_PATTERN = '/files/source/*'
 export const GRAPH_FILE_ROUTE_PATTERN = '/files/graph/*'
+export const PREVIEW_ROUTE_PATTERN = '/files/preview/*'
 export const GRAPH_WORKSPACE_ROUTE_PATTERN = '/workspace/graph'
 export const SIDEBAR_ACTIVITY_PARAM = 'sidebar'
 export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'projects'
@@ -15,6 +16,7 @@ export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'proje
 export const fileViewToRoutePattern = (view: FileViewKind) => {
   if (view === 'source') return SOURCE_ROUTE_PATTERN
   if (view === 'graph') return GRAPH_FILE_ROUTE_PATTERN
+  if (view === 'preview') return PREVIEW_ROUTE_PATTERN
   return FILE_ROUTE_PATTERN
 }
 
