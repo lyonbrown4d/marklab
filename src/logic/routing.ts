@@ -9,6 +9,7 @@ export const GIT_DIFF_ROUTE_PATTERN = '/_diff/:section/*'
 export const SOURCE_ROUTE_PATTERN = '/files/source/*'
 export const GRAPH_FILE_ROUTE_PATTERN = '/files/graph/*'
 export const PREVIEW_ROUTE_PATTERN = '/files/preview/*'
+export const ALL_PAGES_ROUTE_PATTERN = '/workspace/pages'
 export const GRAPH_WORKSPACE_ROUTE_PATTERN = '/workspace/graph'
 export const SIDEBAR_ACTIVITY_PARAM = 'sidebar'
 export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'projects'
@@ -43,6 +44,12 @@ export const pathToGraphFileRoute = (path: string) => {
 }
 
 export const pathToWorkspaceGraphRoute = () => generatePath(GRAPH_WORKSPACE_ROUTE_PATTERN)
+
+export const pathToAllPagesRoute = (collectionId?: string) => {
+  const route = generatePath(ALL_PAGES_ROUTE_PATTERN)
+  if (!collectionId || collectionId === 'all') return route
+  return `${route}?collection=${encodeURIComponent(collectionId)}`
+}
 
 export const isGitDiffSection = (value: string | null | undefined): value is GitDiffSection =>
   Boolean(value && GIT_DIFF_SECTIONS.has(value))

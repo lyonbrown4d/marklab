@@ -2,6 +2,8 @@ import type { Edge, Node } from '@xyflow/react'
 import { graphlib, layout as dagreLayout } from '@dagrejs/dagre'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
+import type { PreviewFileKind } from '@/logic/fileTypes'
+import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
@@ -19,6 +21,9 @@ export type GraphNodeData = Record<string, unknown> & {
   contentStartLine?: number
   contentEndLine?: number
   contentMode?: GraphContentMode
+  previewKind?: PreviewFileKind
+  sourcePath?: string
+  target?: string
   editable?: boolean
   onUpdateTitle?: (nodeId: string, title: string) => void
   onUpdateContent?: (nodeId: string, content: string, contentBlocks?: MarkdownBlock[]) => void
@@ -50,7 +55,7 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
     const label = createFileLabel(file.path)
     fileNodes.set(file.path, {
       id: `file:${file.path}`,
-      data: { label },
+      data: { label, path: file.path },
       position: { x: 0, y: 0 },
     })
   })
@@ -67,7 +72,14 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
       headingNodes.set(headingId, {
         id: headingId,
         type: 'heading',
-        data: { label: heading.text, subtitle: `H${heading.level}` },
+        data: {
+          label: heading.text,
+          subtitle: `H${heading.level}`,
+          path: file.path,
+          line: heading.line,
+          level: heading.level,
+          slug: heading.slug,
+        },
         position: { x: 0, y: 0 },
       })
       while (
@@ -137,7 +149,7 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
         missingNodes.set(targetPath, {
           id: `missing:${targetPath}`,
           type: 'missing',
-          data: { label: createFileLabel(targetPath), subtitle: targetPath },
+          data: { label: createFileLabel(targetPath), subtitle: targetPath, path: targetPath },
           position: { x: 0, y: 0 },
         })
       }
@@ -161,7 +173,10 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
   }
 
   applyGraphLayout(nodes, edges)
-  return { nodes, edges, layoutKey: createGraphLayoutKey('index', nodes, edges) }
+  return appendPreviewNodesFromWorkspaceIndex(
+    { nodes, edges, layoutKey: createGraphLayoutKey('index', nodes, edges) },
+    index,
+  )
 }
 
 export const buildGraphFromRustGraph = (
@@ -286,6 +301,9 @@ const getNodeSize = (node: Node<GraphNodeData>) => {
       return { width: 240, height: 124 }
     }
     return { width: HEADING_NODE_WIDTH, height: HEADING_NODE_HEIGHT }
+  }
+  if (node.type === 'preview' || node.id.startsWith('preview:')) {
+    return { width: 320, height: 118 }
   }
   return { width: DEFAULT_NODE_WIDTH, height: DEFAULT_NODE_HEIGHT }
 }

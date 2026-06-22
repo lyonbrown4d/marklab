@@ -5,11 +5,13 @@ import type { GraphNodeData } from '@/logic/graph'
 import { resolveHeadingSectionCommit } from '@/logic/markdownBlockCommits'
 import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic/markdownBlocks'
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
+import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import { cn } from '@/lib/utils'
 
 type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
+type PreviewGraphNode = Node<GraphNodeData, 'preview'>
 
 const graphHandleClass = 'graph-node-handle'
 
@@ -103,6 +105,32 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <MarkdownBlockSurface blocks={blocks} onCommitBlock={commitBlock} />
       <div className="mt-1 px-1 text-xs text-muted-foreground">{data.subtitle}</div>
+    </div>
+  )
+})
+
+export const PreviewNode = memo(({ data, selected }: NodeProps<PreviewGraphNode>) => {
+  const target = data.target ?? data.path
+  if (!target) return null
+
+  return (
+    <div
+      className={cn(
+        'graph-node-shell graph-node-shell--preview w-[320px] rounded-md p-2',
+        selected && 'graph-node-shell--selected',
+      )}
+      data-graph-node-selected={selected}
+      data-graph-node-kind="preview"
+      aria-label={data.label}
+    >
+      <Handle type="target" position={Position.Left} className={graphHandleClass} />
+      <Handle type="source" position={Position.Right} className={graphHandleClass} />
+      <EmbeddedFilePreview
+        className="border-0 shadow-none"
+        documentPath={null}
+        target={target}
+        title={data.label}
+      />
     </div>
   )
 })

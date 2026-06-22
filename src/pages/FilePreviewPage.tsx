@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Loader2, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { getPreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
 import { convertAssetFileSrc } from '@/runtime/assets'
@@ -11,22 +12,6 @@ import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
-
-const MarkdownPdfPreview = lazy(() => import('@/components/milkdown/MarkdownPdfPreview'))
-const DocxPreviewSurface = lazy(() => import('@/components/previews/DocxPreviewSurface'))
-const DrawioEditorSurface = lazy(() => import('@/components/previews/DrawioEditorSurface'))
-const ExcalidrawEditorSurface = lazy(() => import('@/components/previews/ExcalidrawEditorSurface'))
-
-type PreviewLoadingFallbackProps = {
-  label: string
-}
-
-const PreviewLoadingFallback = ({ label }: PreviewLoadingFallbackProps) => (
-  <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-    <Loader2 className="size-4 animate-spin" />
-    {label}
-  </div>
-)
 
 const FilePreviewPage = () => {
   const params = useParams()
@@ -47,11 +32,6 @@ const FilePreviewPage = () => {
     const absolutePath = metadataQuery.data?.absolute_path
     return absolutePath ? convertAssetFileSrc(absolutePath) : null
   }, [metadataQuery.data?.absolute_path])
-  const resolvePreviewPdfSrc = useCallback(async () => {
-    if (!previewSrc) throw new Error('Preview source is not ready')
-    return previewSrc
-  }, [previewSrc])
-
   const openInSystem = useCallback(() => {
     if (!requestedPath) return
     void fsApi.openPathInSystem(requestedPath)
@@ -111,72 +91,14 @@ const FilePreviewPage = () => {
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t('preview.failed')}
           </div>
-        ) : previewKind === 'docx' ? (
-          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-            <DocxPreviewSurface src={previewSrc} title={title} />
-          </Suspense>
-        ) : previewKind === 'drawio' ? (
-          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-            <DrawioEditorSurface
-              path={requestedPath}
-              readonly={metadataQuery.data?.readonly ?? false}
-              title={title}
-            />
-          </Suspense>
-        ) : previewKind === 'excalidraw' ? (
-          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-            <ExcalidrawEditorSurface
-              key={requestedPath}
-              path={requestedPath}
-              readonly={metadataQuery.data?.readonly ?? false}
-              title={title}
-            />
-          </Suspense>
-        ) : previewKind === 'pdf' ? (
-          <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-            <div className="crepe h-full">
-              <div className="milkdown h-full rounded-xl border border-border bg-background p-3">
-                <MarkdownPdfPreview
-                  documentPath={null}
-                  href={requestedPath}
-                  resolvePdfSrc={resolvePreviewPdfSrc}
-                  title={title}
-                />
-              </div>
-            </div>
-          </Suspense>
-        ) : previewKind === 'image' ? (
-          <div className="flex min-h-full items-center justify-center">
-            <img
-              src={previewSrc}
-              alt={t('preview.imageAlt', { name: title })}
-              className="max-h-[calc(100vh-9rem)] max-w-full rounded-xl border border-border bg-card object-contain shadow-sm"
-              draggable={false}
-            />
-          </div>
-        ) : previewKind === 'video' ? (
-          <div className="flex min-h-full items-center justify-center">
-            <video
-              className="max-h-[calc(100vh-9rem)] max-w-full rounded-xl border border-border bg-black shadow-sm"
-              controls
-              preload="metadata"
-              src={previewSrc}
-            >
-              {t('preview.videoUnsupported')}
-            </video>
-          </div>
         ) : (
-          <div className="flex min-h-full items-center justify-center">
-            <div className="w-full max-w-2xl rounded-xl border border-border bg-card p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                <Music className="size-4 text-muted-foreground" />
-                {title}
-              </div>
-              <audio className="w-full" controls preload="metadata" src={previewSrc}>
-                {t('preview.audioUnsupported')}
-              </audio>
-            </div>
-          </div>
+          <FilePreviewSurface
+            kind={previewKind}
+            path={requestedPath}
+            readonly={metadataQuery.data?.readonly ?? false}
+            src={previewSrc}
+            title={title}
+          />
         )}
       </main>
     </div>

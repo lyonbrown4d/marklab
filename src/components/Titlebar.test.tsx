@@ -60,6 +60,7 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   onOpenHeading: vi.fn(),
   onOpenSearchResult: vi.fn(),
   onOpenWorkspaceGraph: vi.fn(),
+  onOpenAllPages: vi.fn(),
   onCloseActiveTab: vi.fn(),
   onOpenTerminal: vi.fn(),
   onRebuildSearchIndex: vi.fn(),
@@ -117,5 +118,23 @@ describe('Titlebar command palette', () => {
     await userEvent.click(await screen.findByRole('option', { name: /Indexed Detail/i }))
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'indexed-detail')
+  })
+
+  it('opens the all pages route from the command palette', async () => {
+    const onOpenAllPages = vi.fn()
+    renderTitlebar(createProps({ commandOpen: true, onOpenAllPages }))
+
+    await userEvent.click(await screen.findByRole('option', { name: /Open All Pages/i }))
+
+    expect(onOpenAllPages).toHaveBeenCalledWith()
+  })
+
+  it('opens markdown collections from the command palette', async () => {
+    const onOpenAllPages = vi.fn()
+    renderTitlebar(createProps({ commandOpen: true, onOpenAllPages }))
+
+    await userEvent.click(await screen.findByRole('option', { name: /^All pages/i }))
+
+    expect(onOpenAllPages).toHaveBeenCalledWith('all')
   })
 })

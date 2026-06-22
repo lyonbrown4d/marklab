@@ -149,6 +149,7 @@ const AppLayout = () => {
         onOpenHeading={openHeading}
         onOpenSearchResult={handleOpenSearchResult}
         onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
+        onOpenAllPages={state.onOpenAllPages}
         onCloseActiveTab={state.onCloseActiveTab}
         onOpenTerminal={openTerminalArea}
         onRebuildSearchIndex={handleRebuildSearchIndex}

@@ -4,13 +4,10 @@ import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view'
 import type { ReactNodeViewUserOptions } from '@prosemirror-adapter/react'
 import { createMarkdownImageNodeView } from '@/components/milkdown/imageNodeView'
-import { resolveMarkdownMediaSource } from '@/components/milkdown/markdownMediaSource'
-import { resolveMarkdownPdfSource } from '@/components/milkdown/markdownPdfSource'
 import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
-import { mediaPreviewPlugin } from '@/components/milkdown/mediaPreviewPlugin'
-import { pdfPreviewPlugin } from '@/components/milkdown/pdfPreviewPlugin'
+import { embeddedPreviewPlugin } from '@/components/milkdown/embeddedPreviewPlugin'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 
 export type NodeViewFactory = (options: ReactNodeViewUserOptions) => NodeViewConstructor
@@ -50,16 +47,8 @@ export const configureMarkdownCrepe = (
       }),
     )
     .use(
-      pdfPreviewPlugin({
+      embeddedPreviewPlugin({
         getDocumentPath: getImageDocumentPath,
-        resolvePdfSrc: resolveMarkdownPdfSource,
-        subscribeDocumentPath: subscribeImageDocumentPath,
-      }),
-    )
-    .use(
-      mediaPreviewPlugin({
-        getDocumentPath: getImageDocumentPath,
-        resolveMediaSrc: resolveMarkdownMediaSource,
         subscribeDocumentPath: subscribeImageDocumentPath,
       }),
     )

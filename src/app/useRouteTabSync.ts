@@ -24,6 +24,7 @@ type UseRouteTabSyncArgs = {
   graphFileMatch: unknown
   previewMatch: unknown
   graphWorkspaceMatch: unknown
+  allPagesMatch: unknown
   gitDiffSection: string | undefined
   gitDiffPath: string | null
   routeFileView: FileViewKind | null
@@ -48,6 +49,7 @@ export const useRouteTabSync = ({
   graphFileMatch,
   previewMatch,
   graphWorkspaceMatch,
+  allPagesMatch,
   gitDiffSection,
   gitDiffPath,
   routeFileView,
@@ -65,7 +67,7 @@ export const useRouteTabSync = ({
 }: UseRouteTabSyncArgs) => {
   useEffect(() => {
     if (!enabled) return
-    if (locationPathname !== '/') return
+    if (locationPathname !== '/' && !allPagesMatch) return
     if (
       gitDiffMatch ||
       sourceMatch ||
@@ -86,6 +88,7 @@ export const useRouteTabSync = ({
     setInspectedPath(null)
   }, [
     activeTabId,
+    allPagesMatch,
     enabled,
     gitDiffMatch,
     graphFileMatch,

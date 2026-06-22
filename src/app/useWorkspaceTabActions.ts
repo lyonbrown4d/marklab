@@ -1,6 +1,11 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
-import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
+import {
+  pathToAllPagesRoute,
+  pathToFileViewRoute,
+  pathToGitDiffRoute,
+  pathToWorkspaceGraphRoute,
+} from '@/logic/routing'
 import {
   createGitDiffTab,
   createWorkspaceGraphTab,
@@ -172,6 +177,15 @@ export const useWorkspaceTabActions = ({
     navigateIfNeeded(locationPathnameRef.current, pathToWorkspaceGraphRoute(), navigate)
   }, [locationPathnameRef, navigate, setActiveTabId, setTabs, tabsRef])
 
+  const onOpenAllPages = useCallback(
+    (collectionId?: string) => {
+      setActiveTabId(null)
+      setInspectedPath(null)
+      navigateIfNeeded(locationPathnameRef.current, pathToAllPagesRoute(collectionId), navigate)
+    },
+    [locationPathnameRef, navigate, setActiveTabId, setInspectedPath],
+  )
+
   const onCloseTab = useCallback(
     (tabId: string) => {
       const currentTabs = tabsRef.current
@@ -255,6 +269,7 @@ export const useWorkspaceTabActions = ({
     onOpenFileView,
     onOpenGitDiff,
     onOpenWorkspaceGraph,
+    onOpenAllPages,
     onOpenTab,
     onCloseTab,
     onCloseActiveTab,

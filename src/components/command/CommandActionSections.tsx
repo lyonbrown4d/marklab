@@ -11,11 +11,9 @@ import {
   PanelLeft,
   PanelRight,
   PenLine,
-  RefreshCw,
   Search,
   Settings2,
   Sun,
-  Terminal,
   X,
 } from 'lucide-react'
 import { useMemo } from 'react'
@@ -25,6 +23,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
+import CommandWorkspaceSection from '@/components/command/CommandWorkspaceSection'
 import { useI18n } from '@/i18n/useI18n'
 import {
   formatShortcutList,
@@ -35,10 +34,12 @@ import {
 import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
 import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 import { cn } from '@/lib/utils'
+import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type CommandActionSectionsProps = {
   canCreateWorkspaceEntries: boolean
+  collections: MarkdownCollectionSummary[]
   searchIndexRebuilding: boolean
   onCommandPaletteAction: () => void
   onAction: (id: string) => void
@@ -85,6 +86,7 @@ const CurrentItemCheck = () => {
 
 const CommandActionSections = ({
   canCreateWorkspaceEntries,
+  collections,
   searchIndexRebuilding,
   onCommandPaletteAction,
   onAction,
@@ -157,29 +159,11 @@ const CommandActionSections = ({
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
-      <CommandGroup heading={t('menu.workspace')}>
-        <CommandItem
-          onFocus={preloadGraphView}
-          onMouseEnter={preloadGraphView}
-          onSelect={() => onAction('workspace.open_graph')}
-        >
-          <GitGraph className="h-4 w-4" />
-          {t('actions.openWorkspaceGraph')}
-        </CommandItem>
-        <CommandItem onSelect={() => onAction('terminal.open')}>
-          <Terminal className="h-4 w-4" />
-          {t('actions.openTerminal')}
-        </CommandItem>
-        <CommandItem
-          disabled={searchIndexRebuilding}
-          onSelect={() => onAction('workspace.rebuild_search_index')}
-        >
-          <RefreshCw className="h-4 w-4" />
-          {searchIndexRebuilding
-            ? t('actions.rebuildingSearchIndex')
-            : t('actions.rebuildSearchIndex')}
-        </CommandItem>
-      </CommandGroup>
+      <CommandWorkspaceSection
+        collections={collections}
+        searchIndexRebuilding={searchIndexRebuilding}
+        onAction={onAction}
+      />
       <CommandSeparator />
       <CommandGroup heading={t('menu.view')}>
         <CommandItem

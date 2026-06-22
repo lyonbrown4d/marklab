@@ -49,6 +49,7 @@ export type TitlebarProps = {
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
   onOpenWorkspaceGraph: () => void
+  onOpenAllPages: (collectionId?: string) => void
   onCloseActiveTab: () => void
   onOpenTerminal: () => void
   onRebuildSearchIndex: () => void

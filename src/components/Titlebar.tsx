@@ -26,6 +26,7 @@ const Titlebar = ({
   onOpenHeading,
   onOpenSearchResult,
   onOpenWorkspaceGraph,
+  onOpenAllPages,
   onCloseActiveTab,
   onOpenTerminal,
   onRebuildSearchIndex,
@@ -47,6 +48,7 @@ const Titlebar = ({
     menuGroups,
     commandFiles,
     commandHeadings,
+    commandCollections,
     workspaceKnowledgeSummary,
     commandPaletteShortcut,
     onMenuAction,
@@ -69,6 +71,7 @@ const Titlebar = ({
     onToggleRightSidebar,
     onOpenSettings,
     onOpenWorkspaceGraph,
+    onOpenAllPages,
     onOpenTerminal,
     onRebuildSearchIndex,
     onOpenFile,
@@ -133,6 +136,7 @@ const Titlebar = ({
         onOpenChange={onCommandOpenChange}
         files={commandFiles}
         headings={commandHeadings}
+        collections={commandCollections}
         onOpenFile={onCommandOpenFile}
         onOpenHeading={onCommandOpenHeading}
         onOpenSearchResult={onCommandOpenSearchResult}

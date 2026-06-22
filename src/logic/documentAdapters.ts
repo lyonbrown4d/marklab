@@ -6,7 +6,7 @@ export type DocumentAdapterKind =
   | 'image'
   | 'pdf'
   | 'video'
-export type DocumentAdapterMarkdownEmbedKind = 'image' | 'media' | 'pdf'
+export type DocumentAdapterMarkdownEmbedKind = 'document' | 'image' | 'media' | 'pdf'
 
 export type DocumentAdapterIcon = 'audio' | 'document' | 'image' | 'pdf' | 'video'
 
@@ -83,7 +83,7 @@ export const documentAdapters = [
     capabilities: {
       edit: false,
       externalOpenFallback: true,
-      markdownEmbed: false,
+      markdownEmbed: true,
       preview: true,
       textExtraction: true,
       thumbnail: false,
@@ -96,7 +96,7 @@ export const documentAdapters = [
     capabilities: {
       edit: true,
       externalOpenFallback: true,
-      markdownEmbed: false,
+      markdownEmbed: true,
       preview: true,
       textExtraction: false,
       thumbnail: false,
@@ -109,7 +109,7 @@ export const documentAdapters = [
     capabilities: {
       edit: true,
       externalOpenFallback: true,
-      markdownEmbed: false,
+      markdownEmbed: true,
       preview: true,
       textExtraction: false,
       thumbnail: false,
@@ -152,6 +152,10 @@ export const documentAdapterMarkdownEmbedKind = (
 
   if (adapter.kind === 'audio' || adapter.kind === 'video') {
     return 'media'
+  }
+
+  if (adapter.kind === 'docx' || adapter.kind === 'drawio' || adapter.kind === 'excalidraw') {
+    return 'document'
   }
 
   return null

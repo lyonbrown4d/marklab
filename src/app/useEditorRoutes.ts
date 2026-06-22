@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useMatch, useParams } from 'react-router-dom'
 import type { FileViewKind, ViewMode } from '@/store/appTypes'
 import {
+  ALL_PAGES_ROUTE_PATTERN,
   FILE_ROUTE_PATTERN,
   GIT_DIFF_ROUTE_PATTERN,
   GRAPH_FILE_ROUTE_PATTERN,
@@ -27,6 +28,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   const graphFileMatch = useMatch(GRAPH_FILE_ROUTE_PATTERN)
   const previewMatch = useMatch(PREVIEW_ROUTE_PATTERN)
   const graphWorkspaceMatch = useMatch(GRAPH_WORKSPACE_ROUTE_PATTERN)
+  const allPagesMatch = useMatch(ALL_PAGES_ROUTE_PATTERN)
 
   const routeSegment = params['*']
   const gitDiffSection = gitDiffMatch?.params.section
@@ -52,7 +54,8 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     sourceMatch ||
     graphFileMatch ||
     previewMatch ||
-    graphWorkspaceMatch,
+    graphWorkspaceMatch ||
+    allPagesMatch,
   )
   const isRouteFile = useMemo(
     () =>
@@ -62,10 +65,12 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   )
   const activeFilePath = activeTab?.kind === 'file' ? activeTab.path : null
   const currentFilePath =
-    !internalRouteActive || graphWorkspaceMatch ? null : (routeFilePath ?? activeFilePath)
+    !internalRouteActive || graphWorkspaceMatch || allPagesMatch
+      ? null
+      : (routeFilePath ?? activeFilePath)
   const activeResourcePath = !internalRouteActive
     ? null
-    : graphWorkspaceMatch
+    : graphWorkspaceMatch || allPagesMatch
       ? getWorkspaceTabPath(activeTab)
       : (routeFilePath ?? getWorkspaceTabPath(activeTab))
   const viewMode: ViewMode = sourceMatch
@@ -91,6 +96,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     graphFileMatch,
     previewMatch,
     graphWorkspaceMatch,
+    allPagesMatch,
     gitDiffSection,
     gitDiffPath,
     routeFileView,

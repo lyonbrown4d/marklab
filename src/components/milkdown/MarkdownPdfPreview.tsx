@@ -46,7 +46,7 @@ const useMeasuredWidth = (fallback: number) => {
   return [elementRef, width] as const
 }
 
-const PdfViewerSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
+export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   const [numPages, setNumPages] = useState(0)
   const [pageNumber, setPageNumber] = useState(1)
   const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680)
@@ -154,7 +154,7 @@ const MarkdownPdfPreview = ({
 
       <div className="marklab-pdf-preview__body">
         {fileUrl ? (
-          <PdfViewerSurface fileUrl={fileUrl} mode="inline" />
+          <PdfPreviewSurface fileUrl={fileUrl} mode="inline" />
         ) : (
           <div className="marklab-pdf-preview__status">
             {failed ? 'PDF 预览不可用' : '正在加载 PDF 预览...'}
@@ -169,7 +169,7 @@ const MarkdownPdfPreview = ({
           </DialogHeader>
           <div className="min-h-0 flex-1">
             {fileUrl ? (
-              <PdfViewerSurface fileUrl={fileUrl} mode="modal" />
+              <PdfPreviewSurface fileUrl={fileUrl} mode="modal" />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 {failed ? 'PDF 预览不可用' : '正在加载 PDF 预览...'}

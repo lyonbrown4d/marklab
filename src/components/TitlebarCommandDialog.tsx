@@ -17,6 +17,7 @@ import CommandSearchResults, {
 import { parseCommandSearchScope } from '@/components/command/commandSearchScope'
 import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
 import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
+import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 
 type TitlebarCommandDialogProps = {
   open: boolean
@@ -32,6 +33,7 @@ type TitlebarCommandDialogProps = {
   indexedFileCount: number
   searchIndexRebuilding: boolean
   knowledgeSummary: WorkspaceKnowledgeSummary
+  collections: MarkdownCollectionSummary[]
 }
 
 const TitlebarCommandDialog = ({
@@ -48,6 +50,7 @@ const TitlebarCommandDialog = ({
   indexedFileCount,
   searchIndexRebuilding,
   knowledgeSummary,
+  collections,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
@@ -141,6 +144,7 @@ const TitlebarCommandDialog = ({
         />
         <CommandActionSections
           canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+          collections={collections}
           searchIndexRebuilding={searchIndexRebuilding}
           onCommandPaletteAction={handleCommandPaletteAction}
           onAction={onAction}

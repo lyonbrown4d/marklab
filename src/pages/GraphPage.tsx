@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
-import { GitGraph } from 'lucide-react'
 import {
   Background,
   Controls,
@@ -14,40 +13,34 @@ import type { Edge, Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/rea
 import type { GraphContentMode } from '@/store/appTypes'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { mergeGraphNodePositions } from '@/logic/graphViewState'
-import { ExternalNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
+import { ExternalNode, HeadingNode, MissingNode, PreviewNode } from '@/components/GraphNodes'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
 import type { GraphHotkeyAction } from '@/pages/graphKeyboardActions'
+import {
+  buildGraphNodeDetails,
+  createDefaultGraphFilters,
+  filterGraphElements,
+  getGraphFilterStats,
+  getGraphNodeOpenPath,
+  hasActiveGraphFilters,
+} from '@/logic/graphViewModel'
+import { graphFeedbackKeyByAction } from '@/pages/graph/graphFeedback'
+import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
+import { GraphHoverPreview } from '@/pages/graph/GraphHoverPreview'
+import { GraphInspector } from '@/pages/graph/GraphInspector'
+import { GraphToolbar } from '@/pages/graph/GraphToolbar'
+import { getMiniMapNodeColor } from '@/pages/graph/graphMiniMap'
+import { useGraphHoverPreview } from '@/pages/graph/useGraphHoverPreview'
 
-const nodeTypes: NodeTypes = { external: ExternalNode, missing: MissingNode, heading: HeadingNode }
+const nodeTypes: NodeTypes = {
+  external: ExternalNode,
+  heading: HeadingNode,
+  missing: MissingNode,
+  preview: PreviewNode,
+}
 const fitViewOptions = { padding: 0.22 }
 const proOptions = { hideAttribution: true }
-
-const getMiniMapNodeColor = (node: Node) =>
-  node.type === 'heading'
-    ? 'hsl(var(--primary))'
-    : node.type === 'missing'
-      ? 'hsl(var(--destructive))'
-      : node.type === 'external'
-        ? '#f59e0b'
-        : 'hsl(var(--muted-foreground))'
-
-const graphFeedbackKeyByAction: Partial<Record<GraphHotkeyAction, string>> = {
-  'add-child': 'graph.feedback.addChild',
-  'add-sibling': 'graph.feedback.addSibling',
-  'add-sibling-before': 'graph.feedback.addSiblingBefore',
-  'clear-selection': 'graph.feedback.clearSelection',
-  delete: 'graph.feedback.delete',
-  'edit-title': 'graph.feedback.editTitle',
-  collapse: 'graph.feedback.collapse',
-  'collapse-subtree': 'graph.feedback.collapseSubtree',
-  expand: 'graph.feedback.expand',
-  'expand-subtree': 'graph.feedback.expandSubtree',
-  'fit-view': 'graph.feedback.fitView',
-  'focus-selection': 'graph.feedback.focusSelection',
-  'zoom-in': 'graph.feedback.zoomIn',
-  'zoom-out': 'graph.feedback.zoomOut',
-}
 
 type GraphPageProps = {
   graph: GraphData
@@ -80,7 +73,9 @@ const GraphPageComponent = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const [selectedHeadingId, setSelectedHeadingId] = useState<string | null>(null)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [graphFeedback, setGraphFeedback] = useState<string | null>(null)
+  const [graphFilters, setGraphFilters] = useState(createDefaultGraphFilters)
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<
     Node<GraphNodeData>,
     Edge
@@ -132,17 +127,16 @@ const GraphPageComponent = ({
     setEdges(graph.edges)
   }, [graph.edges, setEdges])
 
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node<GraphNodeData>) => {
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node<GraphNodeData>) => {
+    setSelectedNodeId((current) => (current === node.id ? current : node.id))
+  }, [])
+
+  const handleNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: Node<GraphNodeData>) => {
+      event.preventDefault()
       if (editable && node.type === 'heading') return
-      if (node.id.startsWith('file:')) {
-        onOpenFile(node.id.replace('file:', ''))
-        return
-      }
-      const path = typeof node.data?.path === 'string' ? node.data.path : null
-      if (path) {
-        onOpenFile(path)
-      }
+      const path = getGraphNodeOpenPath(node)
+      if (path) onOpenFile(path)
     },
     [editable, onOpenFile],
   )
@@ -151,13 +145,16 @@ const GraphPageComponent = ({
     ({ nodes: selectedNodes }: OnSelectionChangeParams<Node<GraphNodeData>>) => {
       const heading = selectedNodes.find((node) => node.type === 'heading')
       const nextHeadingId = heading?.id ?? null
+      const nextNodeId = selectedNodes[0]?.id ?? null
       setSelectedHeadingId((current) => (current === nextHeadingId ? current : nextHeadingId))
+      setSelectedNodeId((current) => (current === nextNodeId ? current : nextNodeId))
     },
     [],
   )
 
   const clearSelection = useCallback(() => {
     setSelectedHeadingId((current) => (current === null ? current : null))
+    setSelectedNodeId((current) => (current === null ? current : null))
     setNodes((currentNodes) =>
       currentNodes.some((node) => node.selected)
         ? currentNodes.map((node) => (node.selected ? { ...node, selected: false } : node))
@@ -184,6 +181,7 @@ const GraphPageComponent = ({
     (nodeId: string | null) => {
       const nextId = nodeId?.startsWith('heading:') ? nodeId : null
       setSelectedHeadingId((current) => (current === nextId ? current : nextId))
+      setSelectedNodeId((current) => (current === nextId ? current : nextId))
       setNodes((currentNodes) =>
         currentNodes.some((node) => node.selected !== Boolean(nextId && node.id === nextId))
           ? currentNodes.map((node) => {
@@ -212,6 +210,23 @@ const GraphPageComponent = ({
     selectHeading,
   })
 
+  const filteredGraph = useMemo(
+    () => filterGraphElements(visibleNodes, visibleEdges, graphFilters),
+    [graphFilters, visibleEdges, visibleNodes],
+  )
+  const filterStats = useMemo(() => getGraphFilterStats(visibleNodes), [visibleNodes])
+  const selectedNodeDetails = useMemo(
+    () => buildGraphNodeDetails(nodes, edges, selectedNodeId),
+    [edges, nodes, selectedNodeId],
+  )
+  const graphHasActiveFilters = useMemo(() => hasActiveGraphFilters(graphFilters), [graphFilters])
+  const { clearHoverPreview, hoverNodeDetails, hoverPreview, updateHoverPreview } =
+    useGraphHoverPreview({
+      edges,
+      nodes,
+      shellRef: graphShellRef,
+    })
+
   return (
     <div
       ref={graphShellRef}
@@ -219,25 +234,28 @@ const GraphPageComponent = ({
       tabIndex={0}
       onMouseDown={handleGraphMouseDown}
     >
-      <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-border bg-card/95 px-2.5 py-1.5 text-xs text-muted-foreground shadow-sm">
-        <GitGraph className="h-3.5 w-3.5 text-primary" />
-        <span>
-          {visibleNodes.length} {t('graph.nodes')}
-        </span>
-        <span className="h-3 w-px bg-border" />
-        <span>
-          {visibleEdges.length} {t('graph.edges')}
-        </span>
-      </div>
+      <GraphToolbar
+        edgeCount={filteredGraph.edges.length}
+        filters={graphFilters}
+        hasActiveFilters={graphHasActiveFilters}
+        nodeCount={filteredGraph.nodes.length}
+        onFiltersChange={setGraphFilters}
+        stats={filterStats}
+        t={t}
+        totalEdgeCount={visibleEdges.length}
+        totalNodeCount={visibleNodes.length}
+      />
       {graphFeedback && (
         <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border border-border bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-sm">
           {graphFeedback}
         </div>
       )}
+      <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />
+      <GraphHoverPreview details={hoverNodeDetails} position={hoverPreview} t={t} />
       <ReactFlow<Node<GraphNodeData>, Edge>
         className="h-full w-full"
-        nodes={visibleNodes}
-        edges={visibleEdges}
+        nodes={filteredGraph.nodes}
+        edges={filteredGraph.edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -258,6 +276,10 @@ const GraphPageComponent = ({
         minZoom={0.15}
         maxZoom={2.2}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeMouseEnter={updateHoverPreview}
+        onNodeMouseMove={updateHoverPreview}
+        onNodeMouseLeave={clearHoverPreview}
         fitView
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}
@@ -268,18 +290,15 @@ const GraphPageComponent = ({
           <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}
       </ReactFlow>
-      {visibleNodes.length === 0 && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
-          <div className="max-w-sm rounded-md border border-border bg-card/95 p-5 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted">
-              <GitGraph className="h-5 w-5 text-primary" />
-            </div>
-            <div className="text-sm font-semibold">{t('graph.emptyTitle')}</div>
-            <div className="mt-1 text-xs leading-5 text-muted-foreground">
-              {t('graph.emptyDescription')}
-            </div>
-          </div>
-        </div>
+      {filteredGraph.nodes.length === 0 && (
+        <GraphEmptyState
+          title={graphHasActiveFilters ? t('graph.filteredEmptyTitle') : t('graph.emptyTitle')}
+          description={
+            graphHasActiveFilters
+              ? t('graph.filteredEmptyDescription')
+              : t('graph.emptyDescription')
+          }
+        />
       )}
     </div>
   )

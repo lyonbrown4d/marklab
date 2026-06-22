@@ -16,10 +16,10 @@ describe('document adapter markdown embed helpers', () => {
     expect(documentAdapterForMarkdownEmbedPath('brief.pdf#page=2')?.kind).toBe('pdf')
   })
 
-  it('keeps non-embeddable document adapters out of markdown embed checks', () => {
-    expect(documentAdapterForMarkdownEmbedPath('notes.docx')).toBeNull()
-    expect(documentAdapterForMarkdownEmbedPath('flow.drawio')).toBeNull()
-    expect(documentAdapterForMarkdownEmbedPath('sketch.excalidraw')).toBeNull()
+  it('supports document adapters as markdown embedded document cards', () => {
+    expect(documentAdapterForMarkdownEmbedPath('notes.docx')?.kind).toBe('docx')
+    expect(documentAdapterForMarkdownEmbedPath('flow.drawio')?.kind).toBe('drawio')
+    expect(documentAdapterForMarkdownEmbedPath('sketch.excalidraw')?.kind).toBe('excalidraw')
   })
 
   it('exposes adapter-specific extensions for picker filters', () => {
@@ -31,6 +31,6 @@ describe('document adapter markdown embed helpers', () => {
     expect(documentAdapterMarkdownEmbedKindForPath('photo.png')).toBe('image')
     expect(documentAdapterMarkdownEmbedKindForPath('brief.pdf')).toBe('pdf')
     expect(documentAdapterMarkdownEmbedKindForPath('clip.mp4')).toBe('media')
-    expect(documentAdapterMarkdownEmbedKind(documentAdapterForPath('flow.drawio'))).toBeNull()
+    expect(documentAdapterMarkdownEmbedKind(documentAdapterForPath('flow.drawio'))).toBe('document')
   })
 })

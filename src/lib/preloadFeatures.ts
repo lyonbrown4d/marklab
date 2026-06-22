@@ -1,6 +1,7 @@
 let sourceEditorPreload: Promise<unknown> | null = null
 let wysiwygEditorPreload: Promise<unknown> | null = null
 let graphViewPreload: Promise<unknown> | null = null
+let allPagesPreload: Promise<unknown> | null = null
 
 const resetOnFailure = <T>(promise: Promise<T>, reset: () => void) => {
   return promise.catch((error: unknown) => {
@@ -47,4 +48,11 @@ export const preloadGraphView = () => {
       graphViewPreload = null
     },
   )
+}
+
+export const preloadAllPagesView = () => {
+  if (typeof window === 'undefined') return
+  allPagesPreload ??= resetOnFailure(import('@/pages/AllPagesPage'), () => {
+    allPagesPreload = null
+  })
 }

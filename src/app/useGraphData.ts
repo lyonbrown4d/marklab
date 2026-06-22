@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { buildGraphFromRustGraph, type GraphData } from '@/logic/graph'
+import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { GraphContentMode } from '@/store/appTypes'
@@ -19,7 +20,10 @@ export const useGraphData = (
   const workspaceIndexKey = useMemo(() => {
     if (!workspaceIndex) return ''
     return workspaceIndex.files
-      .map((file) => `${file.path}:${file.headings.length}:${file.links.length}`)
+      .map(
+        (file) =>
+          `${file.path}:${file.headings.length}:${file.links.length}:${file.assets?.length ?? 0}`,
+      )
       .join('\n')
   }, [workspaceIndex])
 
@@ -44,18 +48,34 @@ export const useGraphData = (
 
     if (mode === 'file') {
       return outlineQuery.data
-        ? buildGraphFromRustGraph(outlineQuery.data, graphContentMode)
+        ? appendPreviewNodesFromWorkspaceIndex(
+            buildGraphFromRustGraph(outlineQuery.data, graphContentMode),
+            workspaceIndex,
+            activePath,
+          )
         : EMPTY_GRAPH
     }
 
     if (mode === 'workspace' && hasWorkspaceIndex) {
       if (workspaceGraphQuery.data) {
-        return buildGraphFromRustGraph(workspaceGraphQuery.data, graphContentMode)
+        return appendPreviewNodesFromWorkspaceIndex(
+          buildGraphFromRustGraph(workspaceGraphQuery.data, graphContentMode),
+          workspaceIndex,
+        )
       }
     }
 
     return EMPTY_GRAPH
-  }, [contentMode, enabled, hasWorkspaceIndex, mode, outlineQuery.data, workspaceGraphQuery.data])
+  }, [
+    activePath,
+    contentMode,
+    enabled,
+    hasWorkspaceIndex,
+    mode,
+    outlineQuery.data,
+    workspaceGraphQuery.data,
+    workspaceIndex,
+  ])
 
   const loading =
     mode === 'file'

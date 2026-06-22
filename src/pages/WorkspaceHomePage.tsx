@@ -1,4 +1,13 @@
-import { FileText, FolderOpen, Hash, Link2, Network, Search, TriangleAlert } from 'lucide-react'
+import {
+  FileText,
+  FolderOpen,
+  Hash,
+  Layers3,
+  Link2,
+  Network,
+  Search,
+  TriangleAlert,
+} from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLogo from '@/components/AppLogo'
@@ -6,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useI18n } from '@/i18n/useI18n'
-import { pathToWorkspaceGraphRoute } from '@/logic/routing'
+import { pathToAllPagesRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { appApi } from '@/services/appApi'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
@@ -177,6 +186,14 @@ const WorkspaceHomePage = () => {
                 <Button
                   variant="secondary"
                   className="rounded-md"
+                  onClick={() => navigate(pathToAllPagesRoute())}
+                >
+                  <Layers3 data-icon="inline-start" />
+                  {t('workspaceHome.allPages')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="rounded-md"
                   onClick={() => navigate(pathToWorkspaceGraphRoute())}
                 >
                   <Network data-icon="inline-start" />
@@ -218,6 +235,9 @@ const WorkspaceHomePage = () => {
             </QuickButton>
             <QuickButton icon={<Network />} onClick={() => navigate(pathToWorkspaceGraphRoute())}>
               {t('workspaceHome.exploreGraph')}
+            </QuickButton>
+            <QuickButton icon={<Layers3 />} onClick={() => navigate(pathToAllPagesRoute())}>
+              {t('workspaceHome.browseAllPages')}
             </QuickButton>
             <QuickButton
               disabled={!firstDocument}
