@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, FolderOpen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import type { GraphNodeDetails } from '@/logic/graphViewModel'
 
 type GraphInspectorProps = {
@@ -55,6 +56,18 @@ export const GraphInspector = ({ details, onOpenPath, t }: GraphInspectorProps) 
           <FolderOpen data-icon="inline-start" />
           {t('graph.openNode')}
         </Button>
+      ) : null}
+
+      {details.kind === 'preview' && details.path ? (
+        <>
+          <Separator className="my-3" />
+          <EmbeddedFilePreview
+            className="border-border/70 shadow-none"
+            documentPath={null}
+            target={details.path}
+            title={details.label}
+          />
+        </>
       ) : null}
 
       {details.content ? (

@@ -45,6 +45,7 @@ describe('embeddedPreviewSource', () => {
     await expect(
       resolveEmbeddedPreviewTarget('notes/current.md', '../docs/brief.docx'),
     ).resolves.toEqual({
+      external: false,
       kind: 'docx',
       path: 'docs/brief.docx',
       readonly: false,
@@ -63,10 +64,27 @@ describe('embeddedPreviewSource', () => {
     })
 
     await expect(resolveEmbeddedPreviewTarget(null, 'docs/brief.pdf#page=2')).resolves.toEqual({
+      external: false,
       kind: 'pdf',
       path: 'docs/brief.pdf',
       readonly: true,
       src: 'asset://D:/vault/docs/brief.pdf#page=2',
+    })
+  })
+
+  it('keeps external preview targets loadable without filesystem resolution', async () => {
+    await expect(
+      resolveEmbeddedPreviewTarget('notes/current.md', 'https://site.test/brief.pdf'),
+    ).resolves.toEqual({
+      external: true,
+      kind: 'pdf',
+      path: null,
+      readonly: true,
+      src: 'https://site.test/brief.pdf',
+    })
+    expect(resolveMarkdownAsset).not.toHaveBeenCalledWith({
+      documentPath: 'notes/current.md',
+      target: 'https://site.test/brief.pdf',
     })
   })
 })

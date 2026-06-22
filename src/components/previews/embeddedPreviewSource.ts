@@ -5,6 +5,7 @@ import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 
 export type EmbeddedPreviewResolvedTarget = {
+  external: boolean
   kind: PreviewFileKind
   path: string | null
   readonly: boolean
@@ -44,6 +45,7 @@ export const resolveEmbeddedPreviewTarget = async (
 
   if (isExternalTarget(trimmed) || !isDesktopRuntime()) {
     const resolved = {
+      external: true,
       kind,
       path: null,
       readonly: true,
@@ -56,6 +58,7 @@ export const resolveEmbeddedPreviewTarget = async (
   if (!documentPath) {
     const metadata = await fsApi.getPathMetadata(cleanEmbeddedPreviewTarget(trimmed))
     const resolved = {
+      external: false,
       kind,
       path: metadata.path,
       readonly: metadata.readonly,
@@ -71,6 +74,7 @@ export const resolveEmbeddedPreviewTarget = async (
   })
   if (asset.is_external || !asset.exists || !asset.absolute_path) {
     const unresolved = {
+      external: true,
       kind,
       path: null,
       readonly: true,
@@ -81,6 +85,7 @@ export const resolveEmbeddedPreviewTarget = async (
   }
 
   const resolved = {
+    external: false,
     kind,
     path: asset.relative_path ?? cleanEmbeddedPreviewTarget(trimmed),
     readonly: false,
