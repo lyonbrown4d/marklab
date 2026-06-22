@@ -3,7 +3,8 @@ import type { FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel, normalizePath, resolveRelativePath } from '@/logic/paths'
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
-const WORKSPACE_DOCUMENT_EXTENSIONS = /\.(md|markdown|ics)$/i
+const WORKSPACE_LINK_TARGET_EXTENSIONS =
+  /\.(md|markdown|ics|pdf|drawio|excalidraw|docx?|pptx?|xlsx?|csv|tsv|png|jpe?g|gif|webp|svg|avif|bmp|mp3|wav|ogg|m4a|mp4|webm|mov)$/i
 
 export const fileCompletions = ({
   activePath,
@@ -46,11 +47,14 @@ const workspaceDocumentPaths = (
   workspaceIndex: FsWorkspaceIndex | null | undefined,
   mode: 'markdown' | 'wiki',
 ) => {
-  const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_DOCUMENT_EXTENSIONS
+  const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_LINK_TARGET_EXTENSIONS
   const paths = workspaceIndex
     ? [
         ...workspaceIndex.files.map((file) => file.path),
         ...(workspaceIndex.paths ?? []).filter((path) => extensionPattern.test(path)),
+        ...(mode === 'markdown'
+          ? (workspaceIndex.asset_paths ?? []).filter((path) => extensionPattern.test(path))
+          : []),
       ]
     : files.filter((file) => file.kind === 'file').map((file) => file.path)
 

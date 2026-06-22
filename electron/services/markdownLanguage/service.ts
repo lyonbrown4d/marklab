@@ -3,14 +3,17 @@ import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/
 import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
+import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols.js'
 import { getMarkdownHover } from '@electron/services/markdownLanguage/hover.js'
 import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames.js'
 import { getMarkdownReferences } from '@electron/services/markdownLanguage/references.js'
 import type {
   CompletionRequest,
   DiagnosticsRequest,
+  DocumentSymbolsRequest,
   MarkdownLanguageCodeAction,
   MarkdownLanguageDefinition,
+  MarkdownLanguageDocumentSymbol,
   MarkdownLanguageHover,
   MarkdownLanguageCompletionItem,
   MarkdownLanguageReference,
@@ -45,6 +48,14 @@ export class EmbeddedMarkdownLanguageService {
       path: request.path,
       content: request.content,
     })
+  }
+
+  getDocumentSymbols(
+    _workspace: WorkspaceService,
+    value: unknown,
+  ): MarkdownLanguageDocumentSymbol[] {
+    const request = documentSymbolsRequest(value)
+    return getMarkdownDocumentSymbols(request)
   }
 
   async getDefinition(
@@ -149,6 +160,14 @@ const diagnosticsRequest = (value: unknown): DiagnosticsRequest => {
   const payload = objectArg(value)
   return {
     path: stringArg(payload, 'path'),
+    content: stringArg(payload, 'content'),
+  }
+}
+
+const documentSymbolsRequest = (value: unknown): DocumentSymbolsRequest => {
+  const payload = objectArg(value)
+  return {
+    path: nullableStringArg(payload, 'path'),
     content: stringArg(payload, 'content'),
   }
 }

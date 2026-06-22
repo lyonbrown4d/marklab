@@ -136,6 +136,7 @@ const AppLayout = () => {
       <Titlebar
         activePath={state.activePath}
         activeTab={state.activeTab}
+        tabs={state.tabs}
         dirtyPaths={state.dirtyPaths}
         saveStates={state.saveStates}
         silentSave={state.silentSave}

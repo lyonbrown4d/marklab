@@ -13,6 +13,7 @@ import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 const Titlebar = ({
   activePath,
   activeTab,
+  tabs,
   dirtyPaths,
   saveStates,
   silentSave,
@@ -48,6 +49,7 @@ const Titlebar = ({
     menuGroups,
     commandFiles,
     commandHeadings,
+    commandRecentFiles,
     commandCollections,
     workspaceKnowledgeSummary,
     commandPaletteShortcut,
@@ -59,6 +61,7 @@ const Titlebar = ({
     onCommandOpenSearchResult,
   } = useTitlebarCommandModel({
     files,
+    tabs,
     workspaceIndex,
     onCommandOpenChange,
     onChangeView,
@@ -135,6 +138,7 @@ const Titlebar = ({
         open={commandOpen}
         onOpenChange={onCommandOpenChange}
         files={commandFiles}
+        recentFiles={commandRecentFiles}
         headings={commandHeadings}
         collections={commandCollections}
         onOpenFile={onCommandOpenFile}

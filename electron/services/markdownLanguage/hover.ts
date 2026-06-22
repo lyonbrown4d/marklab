@@ -1,4 +1,5 @@
 import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { isExternalTarget } from '@electron/services/workspace/path.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
 import type {
   CompletionRequest,
@@ -6,6 +7,14 @@ import type {
 } from '@electron/services/markdownLanguage/types.js'
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
+import {
+  normalizeWorkspacePath,
+  resolveRelativeWorkspacePath,
+  splitLinkTarget,
+  stripQuery,
+  unwrapLinkDestination,
+} from '@electron/services/workspace/markdown/utils.js'
+import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text.js'
 import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
 export const getMarkdownHover = async (
@@ -40,14 +49,25 @@ const getBrokenLinkHover = (
 ): MarkdownLanguageHover | null => {
   if (!request.path) return null
 
+  const knownPaths = workspaceKnownPaths(index)
   const link = linkAtRequestPosition(request)
-  if (!link || link.is_external) return null
+  if (!link) return rawLocalFileHover(request, knownPaths)
+  if (link.is_external) return null
 
   const filesByPath = new Map(index.files.map((file) => [file.path, file]))
   const targetPath = resolveIndexedLinkPath(link, filesByPath, index.files)
   const targetFile = targetPath ? filesByPath.get(targetPath) : null
 
   if (!targetFile) {
+    if (targetPath && knownPaths.has(normalizeWorkspacePath(targetPath))) {
+      return {
+        path: targetPath,
+        line: link.line,
+        heading: null,
+        markdown: localFileHoverMarkdown(targetPath),
+      }
+    }
+
     return {
       path: targetPath ?? link.target,
       line: link.line,
@@ -87,6 +107,50 @@ const linkAtRequestPosition = (request: CompletionRequest): FsMarkdownLink | nul
   )
 }
 
+const rawLocalFileHover = (
+  request: CompletionRequest,
+  knownPaths: Set<string>,
+): MarkdownLanguageHover | null => {
+  if (!request.path) return null
+
+  const target = rawMarkdownLinkTargetAtRequestPosition(request)
+  if (!target) return null
+
+  const unwrapped = unwrapLinkDestination(target.trim())
+  if (isExternalTarget(unwrapped)) return null
+
+  const { pathPart } = splitLinkTarget(unwrapped)
+  const localPath = decodeURIComponentSafe(stripQuery(pathPart.trim()))
+  if (!localPath) return null
+
+  const targetPath = resolveRelativeWorkspacePath(request.path, localPath)
+  if (!knownPaths.has(normalizeWorkspacePath(targetPath))) return null
+
+  return {
+    path: targetPath,
+    line: request.line,
+    heading: null,
+    markdown: localFileHoverMarkdown(targetPath),
+  }
+}
+
+const rawMarkdownLinkTargetAtRequestPosition = (request: CompletionRequest): string | null => {
+  const lineText = request.content.split(/\r?\n/)[request.line - 1] ?? ''
+  const cursorIndex = Math.max(0, request.column - 1)
+  const linkPattern = /\[[^\]]*\]\(([^)]*)\)/g
+  let match = linkPattern.exec(lineText)
+
+  while (match) {
+    const target = match[1] ?? ''
+    const targetStart = match.index + match[0].indexOf(target)
+    const targetEnd = targetStart + target.length
+    if (cursorIndex >= targetStart && cursorIndex <= targetEnd) return target
+    match = linkPattern.exec(lineText)
+  }
+
+  return null
+}
+
 const isCursorOnLinkTarget = (lineText: string, column: number, link: FsMarkdownLink) => {
   const indexedTargetStart = lineText.indexOf(link.target, Math.max(0, link.column - 1))
   const targetStart = indexedTargetStart >= 0 ? indexedTargetStart : lineText.indexOf(link.target)
@@ -119,6 +183,15 @@ const missingFileHoverMarkdown = (target: string) =>
     'Quick fix: create the missing Markdown file from the lightbulb menu.',
   ].join('\n')
 
+const localFileHoverMarkdown = (target: string) =>
+  [
+    '### Local file',
+    '',
+    `\`${target}\``,
+    '',
+    'This workspace file can be opened as a preview.',
+  ].join('\n')
+
 const missingHeadingHoverMarkdown = (anchor: string, path: string) =>
   [
     '### Missing heading anchor',
@@ -127,3 +200,9 @@ const missingHeadingHoverMarkdown = (anchor: string, path: string) =>
     '',
     'Quick fix: remove the missing anchor from the lightbulb menu.',
   ].join('\n')
+
+const workspaceKnownPaths = (index: FsWorkspaceIndex): Set<string> => {
+  const paths = [...(index.paths ?? []), ...(index.asset_paths ?? [])]
+  for (const file of index.files) paths.push(file.path)
+  return new Set(paths.map(normalizeWorkspacePath))
+}

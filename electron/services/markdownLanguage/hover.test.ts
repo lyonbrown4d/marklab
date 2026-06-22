@@ -82,4 +82,29 @@ describe('getMarkdownHover', () => {
     })
     expect(hover?.markdown).toContain('### Draft')
   })
+
+  it('returns a local file hover for existing non-markdown workspace links', async () => {
+    const hover = await getMarkdownHover(
+      {
+        path: 'notes/current.md',
+        content: 'See [Spec](../docs/spec.pdf)',
+        line: 1,
+        column: 18,
+      },
+      () =>
+        Promise.resolve({
+          ...workspaceIndex,
+          paths: ['notes/current.md', 'docs/spec.pdf'],
+          asset_paths: ['docs/spec.pdf'],
+        }),
+    )
+
+    expect(hover).toMatchObject({
+      path: 'docs/spec.pdf',
+      line: 1,
+      heading: null,
+    })
+    expect(hover?.markdown).toContain('### Local file')
+    expect(hover?.markdown).toContain('docs/spec.pdf')
+  })
 })

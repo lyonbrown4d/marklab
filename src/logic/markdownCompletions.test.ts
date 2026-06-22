@@ -8,6 +8,7 @@ const files: FileEntry[] = [
   { path: 'notes/target.md', kind: 'file' },
   { path: 'notes/calendar.ics', kind: 'file' },
   { path: 'daily/today.md', kind: 'file' },
+  { path: 'docs/spec.pdf', kind: 'file' },
   { path: 'assets/logo.png', kind: 'file' },
 ]
 
@@ -51,8 +52,10 @@ const workspaceIndex = {
     'notes/calendar.ics',
     'daily',
     'daily/today.md',
+    'docs/spec.pdf',
     'assets/logo.png',
   ],
+  asset_paths: ['docs/spec.pdf', 'assets/logo.png'],
 } satisfies FsWorkspaceIndex
 
 describe('markdown completions', () => {
@@ -95,6 +98,20 @@ describe('markdown completions', () => {
         detail: 'daily/today.md',
         replacementStartColumn: 14,
       },
+      {
+        label: 'spec.pdf',
+        kind: 'file',
+        insertText: '../docs/spec.pdf',
+        detail: 'docs/spec.pdf',
+        replacementStartColumn: 14,
+      },
+      {
+        label: 'logo.png',
+        kind: 'file',
+        insertText: '../assets/logo.png',
+        detail: 'assets/logo.png',
+        replacementStartColumn: 14,
+      },
     ])
   })
 
@@ -116,6 +133,28 @@ describe('markdown completions', () => {
         insertText: 'calendar.ics',
         detail: 'notes/calendar.ics',
         replacementStartColumn: 16,
+      },
+    ])
+  })
+
+  it('suggests previewable local files from the workspace path snapshot', () => {
+    expect(
+      getMarkdownCompletions({
+        activePath: 'notes/current.md',
+        content: 'See [Spec](spe',
+        line: 1,
+        column: 15,
+        files,
+        fileContents,
+        workspaceIndex,
+      }),
+    ).toEqual([
+      {
+        label: 'spec.pdf',
+        kind: 'file',
+        insertText: '../docs/spec.pdf',
+        detail: 'docs/spec.pdf',
+        replacementStartColumn: 12,
       },
     ])
   })

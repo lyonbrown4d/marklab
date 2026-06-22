@@ -12,6 +12,12 @@ type CompletionProviderMock = {
   }>
 }
 
+type DocumentSymbolProviderMock = {
+  provideDocumentSymbols: (model: {
+    getValue: () => string
+  }) => Promise<Array<Record<string, unknown>>>
+}
+
 const monacoEditor = vi.hoisted(() => ({
   setPosition: vi.fn(),
   setSelection: vi.fn(),
@@ -60,7 +66,11 @@ const monaco = vi.hoisted(() => ({
       Reference: 2,
       Keyword: 3,
     },
+    SymbolKind: {
+      String: 1,
+    },
     registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    registerDocumentSymbolProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerReferenceProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerHoverProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerRenameProvider: vi.fn(() => ({ dispose: vi.fn() })),
@@ -80,6 +90,7 @@ vi.mock('@/services/markdownLanguageApi', () => ({
   markdownLanguageApi: {
     getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
+    getDocumentSymbols: vi.fn(() => Promise.resolve([])),
     getDefinition: vi.fn(() => Promise.resolve(null)),
     getReferences: vi.fn(() => Promise.resolve([])),
     getCodeActions: vi.fn(() => Promise.resolve([])),
@@ -123,6 +134,7 @@ beforeEach(() => {
   monacoEditor.focus.mockClear()
   monacoEditor.createDecorationsCollection.mockClear()
   monaco.languages.registerCompletionItemProvider.mockClear()
+  monaco.languages.registerDocumentSymbolProvider.mockClear()
   monacoEditor.onDidChangeModelContent?.mockClear()
   monaco.editor.setModelMarkers.mockClear()
 })
@@ -222,6 +234,36 @@ describe('MarkdownSourceEditor', () => {
         }),
       ]),
     )
+  })
+
+  it('registers markdown document symbols for the source outline', async () => {
+    render(
+      <MarkdownSourceEditor
+        activePath="notes/current.md"
+        value="# Project\n\n## Plan"
+        files={[{ path: 'notes/current.md', kind: 'file' }]}
+        fileContents={{}}
+        onChange={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(monaco.languages.registerDocumentSymbolProvider).toHaveBeenCalled()
+    })
+
+    const providerCall = monaco.languages.registerDocumentSymbolProvider.mock
+      .calls[0] as unknown as [string, DocumentSymbolProviderMock] | undefined
+    expect(providerCall?.[0]).toBe('markdown')
+
+    const symbols = await providerCall?.[1].provideDocumentSymbols({
+      getValue: () => '# Project\n\n## Plan',
+    })
+
+    expect(symbols?.[0]).toMatchObject({
+      name: 'Project',
+      detail: 'H1',
+      children: [expect.objectContaining({ name: 'Plan', detail: 'H2' })],
+    })
   })
 
   it('focuses the requested source position for the active file', async () => {

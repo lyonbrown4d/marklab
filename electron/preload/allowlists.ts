@@ -35,6 +35,7 @@ const allowedCommandNames = [
   'fs_fetch_link_preview',
   'markdown_language_get_completions',
   'markdown_language_get_diagnostics',
+  'markdown_language_get_document_symbols',
   'markdown_language_get_definition',
   'markdown_language_get_references',
   'markdown_language_rename_references',

@@ -46,7 +46,8 @@ const LANGUAGE_ALIASES: Record<string, string[]> = {
 }
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
-const WORKSPACE_DOCUMENT_EXTENSIONS = /\.(md|markdown|ics)$/i
+const WORKSPACE_LINK_TARGET_EXTENSIONS =
+  /\.(md|markdown|ics|pdf|drawio|excalidraw|docx?|pptx?|xlsx?|csv|tsv|png|jpe?g|gif|webp|svg|avif|bmp|mp3|wav|ogg|m4a|mp4|webm|mov)$/i
 
 export const createMarkdownCompletions = async (
   request: CompletionRequest,
@@ -247,10 +248,13 @@ const fileCompletions = ({
 }
 
 const workspaceDocumentPaths = (workspaceIndex: FsWorkspaceIndex, mode: 'markdown' | 'wiki') => {
-  const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_DOCUMENT_EXTENSIONS
+  const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_LINK_TARGET_EXTENSIONS
   const paths = [
     ...workspaceIndex.files.map((file) => file.path),
     ...(workspaceIndex.paths ?? []).filter((path) => extensionPattern.test(path)),
+    ...(mode === 'markdown'
+      ? (workspaceIndex.asset_paths ?? []).filter((path) => extensionPattern.test(path))
+      : []),
   ]
 
   return Array.from(new Set(paths)).filter((path) => extensionPattern.test(path))

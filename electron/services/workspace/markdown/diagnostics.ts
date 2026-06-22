@@ -27,7 +27,10 @@ export const diagnosticsForFile = (
 
     const targetFile = filesByPath.get(targetPath)
     if (!targetFile) {
-      const casingMatch = findPathIgnoringCase(filesByPath.keys(), targetPath)
+      const normalizedTarget = normalizeWorkspacePath(targetPath)
+      if (knownPaths?.has(normalizedTarget)) continue
+
+      const casingMatch = findPathIgnoringCase(knownPaths ?? filesByPath.keys(), targetPath)
       if (casingMatch) {
         diagnostics.push(
           markdownDiagnostic(

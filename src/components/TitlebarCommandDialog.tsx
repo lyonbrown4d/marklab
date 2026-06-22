@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandRecentFilesSection from '@/components/command/CommandRecentFilesSection'
 import CommandSearchOverview from '@/components/command/CommandSearchOverview'
 import CommandSearchHistory from '@/components/command/CommandSearchHistory'
 import CommandSearchResults, {
@@ -23,6 +24,7 @@ type TitlebarCommandDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   files: CommandFile[]
+  recentFiles: CommandFile[]
   headings: CommandHeading[]
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
@@ -40,6 +42,7 @@ const TitlebarCommandDialog = ({
   open,
   onOpenChange,
   files,
+  recentFiles,
   headings,
   onOpenFile,
   onOpenHeading,
@@ -78,6 +81,16 @@ const TitlebarCommandDialog = ({
     trimmedQuery.length > 0
       ? t('command.noResultsFor', { query: trimmedQuery })
       : t('command.noResults')
+  const emptyDescription =
+    trimmedQuery.length === 0
+      ? t('command.searchHint')
+      : parsedSearch.scope === 'files'
+        ? t('command.empty.files')
+        : parsedSearch.scope === 'headings'
+          ? t('command.empty.headings')
+          : parsedSearch.scope === 'text'
+            ? t('command.empty.text')
+            : t('command.empty.all')
   const handleOpenFile = useCallback(
     (path: string) => {
       rememberSearch(deferredTrimmedQuery)
@@ -118,7 +131,7 @@ const TitlebarCommandDialog = ({
           <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" />
             <p className="text-sm text-foreground">{emptyQueryLabel}</p>
-            <p className="text-xs text-muted-foreground">{t('command.searchHint')}</p>
+            <p className="text-xs text-muted-foreground">{emptyDescription}</p>
           </div>
         </CommandEmpty>
         <CommandSearchHistory
@@ -126,6 +139,11 @@ const TitlebarCommandDialog = ({
           searches={searches}
           onSelectSearch={setQuery}
           onClearSearches={clearSearchHistory}
+        />
+        <CommandRecentFilesSection
+          files={recentFiles}
+          query={deferredTrimmedQuery}
+          onOpenFile={handleOpenFile}
         />
         <CommandSearchResults
           query={deferredQuery}

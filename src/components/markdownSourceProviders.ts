@@ -6,6 +6,7 @@ import {
   type MarkdownSourceCompletionContext,
 } from '@/components/markdownSourceCompletion'
 import { registerMarkdownDefinitionClick } from '@/components/markdownSourceDefinition'
+import { registerMarkdownDocumentSymbolProvider } from '@/components/markdownSourceDocumentSymbols'
 import { registerMarkdownHoverProvider } from '@/components/markdownSourceHover'
 import { registerMarkdownLinkDecorations } from '@/components/markdownSourceLinkDecorations'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
@@ -29,6 +30,7 @@ export const registerMarkdownSourceProviders = ({
 }): Disposable => {
   const disposables: Disposable[] = [
     registerMarkdownCompletionProvider(monaco, getContext),
+    registerMarkdownDocumentSymbolProvider(monaco, getContext),
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),
     registerMarkdownDefinitionClick({ editor, getContext, onOpenFileView }),
     registerMarkdownReferenceProvider(monaco, getContext),

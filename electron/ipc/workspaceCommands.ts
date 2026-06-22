@@ -82,6 +82,8 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getCompletions(workspaceForEvent(event), payload),
     markdown_language_get_diagnostics: (payload, event) =>
       markdownLanguageService.getDiagnostics(workspaceForEvent(event), payload),
+    markdown_language_get_document_symbols: (payload, event) =>
+      markdownLanguageService.getDocumentSymbols(workspaceForEvent(event), payload),
     markdown_language_get_definition: (payload, event) =>
       markdownLanguageService.getDefinition(workspaceForEvent(event), payload),
     markdown_language_get_references: (payload, event) =>

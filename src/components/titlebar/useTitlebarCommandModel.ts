@@ -17,6 +17,7 @@ import { useTitlebarCommandActions } from '@/components/titlebar/useTitlebarComm
 type UseTitlebarCommandModelArgs = Pick<
   TitlebarProps,
   | 'files'
+  | 'tabs'
   | 'workspaceIndex'
   | 'onCommandOpenChange'
   | 'onChangeView'
@@ -42,6 +43,7 @@ type UseTitlebarCommandModelArgs = Pick<
 
 export const useTitlebarCommandModel = ({
   files,
+  tabs,
   workspaceIndex,
   onCommandOpenChange,
   onChangeView,
@@ -122,9 +124,10 @@ export const useTitlebarCommandModel = ({
   )
 
   const commandFiles = useMemo(() => {
+    const fileTreePaths = files.filter((file) => file.kind === 'file').map((file) => file.path)
     const paths = workspaceIndex
-      ? workspaceIndex.files.map((file) => file.path)
-      : files.filter((file) => file.kind === 'file').map((file) => file.path)
+      ? Array.from(new Set([...workspaceIndex.files.map((file) => file.path), ...fileTreePaths]))
+      : fileTreePaths
 
     return paths.map((path) => ({
       path,
@@ -144,6 +147,15 @@ export const useTitlebarCommandModel = ({
       })),
     )
   }, [workspaceIndex])
+
+  const commandRecentFiles = useMemo(() => {
+    const seen = new Set<string>()
+    return [...tabs].reverse().flatMap((tab) => {
+      if (tab.kind !== 'file' || seen.has(tab.path)) return []
+      seen.add(tab.path)
+      return [{ path: tab.path, label: createFileLabel(tab.path) }]
+    })
+  }, [tabs])
 
   const workspaceKnowledgeSummary = useMemo(
     () => buildWorkspaceKnowledgeSummary(workspaceIndex),
@@ -197,6 +209,7 @@ export const useTitlebarCommandModel = ({
     menuGroups,
     commandFiles,
     commandHeadings,
+    commandRecentFiles,
     workspaceKnowledgeSummary,
     commandCollections,
     commandPaletteShortcut,

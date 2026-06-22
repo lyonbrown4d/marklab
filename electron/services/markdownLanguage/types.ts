@@ -1,4 +1,4 @@
-import type { CompletionItemKind } from 'vscode-languageserver-types'
+import type { CompletionItemKind, SymbolKind } from 'vscode-languageserver-types'
 
 export type MarkdownLanguageCompletionKind = 'file' | 'heading' | 'language'
 
@@ -26,6 +26,21 @@ export type RenameRequest = CompletionRequest & {
 export type DiagnosticsRequest = {
   path: string
   content: string
+}
+
+export type DocumentSymbolsRequest = {
+  path: string | null
+  content: string
+}
+
+export type MarkdownLanguageDocumentSymbol = {
+  name: string
+  level: number
+  line: number
+  column: number
+  endColumn: number
+  lspKind: SymbolKind
+  children: MarkdownLanguageDocumentSymbol[]
 }
 
 export type MarkdownLanguageDefinition = {

@@ -36,6 +36,7 @@ export type TitlebarCommandHeading = {
 export type TitlebarProps = {
   activePath: string | null
   activeTab: WorkspaceTab | null
+  tabs: WorkspaceTab[]
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
   silentSave: boolean

@@ -47,6 +47,7 @@ const workspaceIndex = {
 const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => ({
   activePath: 'notes/target.md',
   activeTab: { kind: 'file', path: 'notes/target.md', view: 'edit' },
+  tabs: [],
   dirtyPaths: {},
   saveStates: {},
   silentSave: true,
@@ -118,6 +119,56 @@ describe('Titlebar command palette', () => {
     await userEvent.click(await screen.findByRole('option', { name: /Indexed Detail/i }))
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'indexed-detail')
+  })
+
+  it('opens recently active files from the command palette', async () => {
+    const onOpenFile = vi.fn()
+    renderTitlebar(
+      createProps({
+        commandOpen: true,
+        files: [{ path: 'notes/target.md', kind: 'file' }],
+        tabs: [
+          { kind: 'file', path: 'notes/target.md', view: 'edit' },
+          { kind: 'file', path: 'docs/spec.pdf', view: 'preview' },
+        ],
+        onOpenFile,
+      }),
+    )
+
+    await userEvent.click(await screen.findByRole('option', { name: /spec\.pdf/i }))
+
+    expect(onOpenFile).toHaveBeenCalledWith('docs/spec.pdf')
+  })
+
+  it('finds workspace commands by english aliases in localized UI', async () => {
+    const onOpenWorkspaceGraph = vi.fn()
+    usePreferencesStore.setState({ locale: 'zh-CN' })
+    await i18n.changeLanguage('zh-CN')
+    renderTitlebar(createProps({ commandOpen: true, onOpenWorkspaceGraph }))
+
+    await userEvent.type(screen.getByRole('combobox'), 'workspace graph')
+    await userEvent.click(await screen.findByRole('option', { name: /打开工作区图谱/i }))
+
+    expect(onOpenWorkspaceGraph).toHaveBeenCalled()
+  })
+
+  it('keeps previewable file tree entries discoverable when the workspace index is ready', async () => {
+    const onOpenFile = vi.fn()
+    renderTitlebar(
+      createProps({
+        files: [
+          { path: 'notes/target.md', kind: 'file' },
+          { path: 'docs/spec.pdf', kind: 'file' },
+        ],
+        commandOpen: true,
+        onOpenFile,
+      }),
+    )
+
+    await userEvent.type(screen.getByRole('combobox'), 'spec')
+    await userEvent.click(await screen.findByText('docs/spec.pdf'))
+
+    expect(onOpenFile).toHaveBeenCalledWith('docs/spec.pdf')
   })
 
   it('opens the all pages route from the command palette', async () => {

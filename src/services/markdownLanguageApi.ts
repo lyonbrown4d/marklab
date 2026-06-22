@@ -22,6 +22,29 @@ const markdownLanguageDefinitionSchema = z
   })
   .nullable()
 
+type MarkdownLanguageDocumentSymbolWire = {
+  name: string
+  level: number
+  line: number
+  column: number
+  endColumn: number
+  lspKind: number
+  children: MarkdownLanguageDocumentSymbolWire[]
+}
+
+const markdownLanguageDocumentSymbolSchema: z.ZodType<MarkdownLanguageDocumentSymbolWire> = z.lazy(
+  () =>
+    z.object({
+      name: z.string(),
+      level: z.number(),
+      line: z.number(),
+      column: z.number(),
+      endColumn: z.number(),
+      lspKind: z.number(),
+      children: z.array(markdownLanguageDocumentSymbolSchema),
+    }),
+)
+
 const markdownLanguageReferenceSchema = z.object({
   path: z.string(),
   line: z.number(),
@@ -74,6 +97,7 @@ const markdownLanguageHoverSchema = z
 
 export type MarkdownLanguageCompletionItem = z.infer<typeof markdownLanguageCompletionItemSchema>
 export type MarkdownLanguageDefinition = z.infer<typeof markdownLanguageDefinitionSchema>
+export type MarkdownLanguageDocumentSymbol = z.infer<typeof markdownLanguageDocumentSymbolSchema>
 export type MarkdownLanguageReference = z.infer<typeof markdownLanguageReferenceSchema>
 export type MarkdownLanguageTextEdit = z.infer<typeof markdownLanguageTextEditSchema>
 export type MarkdownLanguageRenameResult = z.infer<typeof markdownLanguageRenameResultSchema>
@@ -104,6 +128,14 @@ export const markdownLanguageApi = {
   async getDiagnostics({ path, content }: { path: string; content: string }) {
     const result = await invoke<unknown>('markdown_language_get_diagnostics', { path, content })
     return z.array(fsMarkdownDiagnosticSchema).parse(result)
+  },
+
+  async getDocumentSymbols({ path, content }: { path: string | null; content: string }) {
+    const result = await invoke<unknown>('markdown_language_get_document_symbols', {
+      path,
+      content,
+    })
+    return z.array(markdownLanguageDocumentSymbolSchema).parse(result)
   },
 
   async getDefinition({

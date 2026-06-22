@@ -22,6 +22,7 @@ const CommandWorkspaceSection = ({
       <CommandItem
         onFocus={preloadAllPagesView}
         onMouseEnter={preloadAllPagesView}
+        value="all pages workspace pages collections database"
         onSelect={() => onAction('workspace.open_pages')}
       >
         <Layers3 className="h-4 w-4" />
@@ -30,6 +31,7 @@ const CommandWorkspaceSection = ({
       <CommandItem
         onFocus={preloadGraphView}
         onMouseEnter={preloadGraphView}
+        value="workspace graph knowledge graph mindmap react flow"
         onSelect={() => onAction('workspace.open_graph')}
       >
         <GitGraph className="h-4 w-4" />
@@ -40,6 +42,7 @@ const CommandWorkspaceSection = ({
           key={collection.id}
           onFocus={preloadAllPagesView}
           onMouseEnter={preloadAllPagesView}
+          value={`collection ${collection.id} ${t(collection.labelKey)}`}
           onSelect={() => onAction(`collection.open:${collection.id}`)}
         >
           <Layers3 className="h-4 w-4" />
@@ -47,12 +50,13 @@ const CommandWorkspaceSection = ({
           <CommandShortcut>{collection.count}</CommandShortcut>
         </CommandItem>
       ))}
-      <CommandItem onSelect={() => onAction('terminal.open')}>
+      <CommandItem value="terminal shell command line" onSelect={() => onAction('terminal.open')}>
         <Terminal className="h-4 w-4" />
         {t('actions.openTerminal')}
       </CommandItem>
       <CommandItem
         disabled={searchIndexRebuilding}
+        value="rebuild search index full text refresh"
         onSelect={() => onAction('workspace.rebuild_search_index')}
       >
         <RefreshCw className="h-4 w-4" />
