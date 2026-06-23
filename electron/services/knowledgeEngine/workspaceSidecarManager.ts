@@ -1,8 +1,16 @@
-import type { KnowledgeEngineStatus } from '@electron/services/knowledgeEngine/types.js'
+import type {
+  KnowledgeEngineBinaryResolution,
+  KnowledgeEngineStatus,
+} from '@electron/services/knowledgeEngine/types.js'
 import {
   createWorkspaceSidecarIdentity,
   type WorkspaceSidecarIdentity,
 } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
+import {
+  createWorkspaceSidecarSpawnPlan,
+  redactWorkspaceSidecarSpawnPlan,
+  type WorkspaceSidecarSpawnPlan,
+} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
 import type { Logger } from '@electron/services/logger.js'
 
 export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'error'
@@ -11,6 +19,7 @@ export type WorkspaceSidecarRuntime = {
   workspaceId: string
   indexPath: string
   identity: WorkspaceSidecarIdentity
+  spawnPlan?: WorkspaceSidecarSpawnPlan
   state: WorkspaceSidecarRuntimeState
   openedAt: number
   lastActivityAt: number
@@ -22,6 +31,7 @@ export type WorkspaceSidecarRuntimeSummary = Omit<WorkspaceSidecarRuntime, 'iden
     WorkspaceSidecarIdentity,
     'canonicalRoot' | 'engineDataDir' | 'workspaceInstanceId'
   >
+  spawnPlan?: ReturnType<typeof redactWorkspaceSidecarSpawnPlan>
 }
 
 export type WorkspaceSidecarTransport = {
@@ -32,6 +42,7 @@ export type WorkspaceSidecarTransport = {
 
 type WorkspaceSidecarManagerOptions = {
   appDataDir: string
+  resolveBinary?: () => KnowledgeEngineBinaryResolution | null
   logger: Logger
   transport: WorkspaceSidecarTransport
 }
@@ -49,6 +60,7 @@ export class WorkspaceSidecarManager {
         engineDataDir: runtime.identity.engineDataDir,
         workspaceInstanceId: runtime.identity.workspaceInstanceId,
       },
+      spawnPlan: runtime.spawnPlan ? redactWorkspaceSidecarSpawnPlan(runtime.spawnPlan) : undefined,
     }))
   }
 
@@ -69,10 +81,12 @@ export class WorkspaceSidecarManager {
       workspaceId,
       indexPath,
     })
+    const spawnPlan = this.createSpawnPlan(identity)
     this.runtimes.set(workspaceId, {
       workspaceId,
       indexPath,
       identity,
+      spawnPlan,
       state: 'opening',
       openedAt: now,
       lastActivityAt: now,
@@ -85,6 +99,7 @@ export class WorkspaceSidecarManager {
         workspaceId,
         indexPath,
         identity,
+        spawnPlan,
         state: 'ready',
         openedAt: now,
         lastActivityAt: Date.now(),
@@ -95,6 +110,7 @@ export class WorkspaceSidecarManager {
         workspaceId,
         indexPath,
         identity,
+        spawnPlan,
         state: 'error',
         openedAt: now,
         lastActivityAt: Date.now(),
@@ -145,5 +161,17 @@ export class WorkspaceSidecarManager {
 
   clear(): void {
     this.runtimes.clear()
+  }
+
+  private createSpawnPlan(
+    identity: WorkspaceSidecarIdentity,
+  ): WorkspaceSidecarSpawnPlan | undefined {
+    const binary = this.options.resolveBinary?.()
+    if (!binary?.exists) return undefined
+
+    return createWorkspaceSidecarSpawnPlan({
+      binary,
+      identity,
+    })
   }
 }

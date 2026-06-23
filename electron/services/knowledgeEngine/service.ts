@@ -27,6 +27,7 @@ export class KnowledgeEngineService {
     this.sidecars = new WorkspaceSidecarManager({
       appDataDir: this.options.app.getPath('userData'),
       logger: this.options.logger,
+      resolveBinary: () => resolveKnowledgeEngineBinary(this.options.app),
       transport: {
         getStatus: () => this.getStatus(),
         initialize: () => this.initialize(),

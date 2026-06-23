@@ -27,6 +27,28 @@ describe('WorkspaceSidecarManager', () => {
     expect(JSON.stringify(manager.listActive())).not.toContain('GRPC_SESSION_TOKEN')
   })
 
+  it('attaches a redacted spawn plan when a knowledge engine binary is available', async () => {
+    const { manager } = createManager({
+      resolveBinary: () => ({
+        binaryPath: 'engine.exe',
+        exists: true,
+        source: 'dev-resource',
+      }),
+    })
+
+    await manager.open('workspace-a', 'index-a')
+
+    expect(manager.listActive()[0]?.spawnPlan).toMatchObject({
+      command: 'engine.exe',
+      args: [],
+      env: {
+        GRPC_SESSION_TOKEN: '<redacted>',
+      },
+      windowsHide: true,
+    })
+    expect(JSON.stringify(manager.listActive())).not.toContain('sessionToken')
+  })
+
   it('routes workspace requests with the workspace id attached', async () => {
     const { manager, transport } = createManager()
     await manager.open('workspace-a', 'index-a')
@@ -71,7 +93,11 @@ describe('WorkspaceSidecarManager', () => {
   })
 })
 
-const createManager = () => {
+type CreateManagerOptions = {
+  resolveBinary?: ConstructorParameters<typeof WorkspaceSidecarManager>[0]['resolveBinary']
+}
+
+const createManager = (options: CreateManagerOptions = {}) => {
   const transport: WorkspaceSidecarTransport = {
     getStatus: vi.fn(() => ({ state: 'ready', binaryPath: 'engine' }) as const),
     initialize: vi.fn(async () => ({ ok: true })),
@@ -82,7 +108,12 @@ const createManager = () => {
   } as unknown as Logger
 
   return {
-    manager: new WorkspaceSidecarManager({ appDataDir: 'app-data', logger, transport }),
+    manager: new WorkspaceSidecarManager({
+      appDataDir: 'app-data',
+      logger,
+      resolveBinary: options.resolveBinary,
+      transport,
+    }),
     transport,
   }
 }

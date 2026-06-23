@@ -136,6 +136,16 @@ Responsibilities now owned by the manager boundary:
 The next migration step is to turn each runtime entry into a real sidecar process handle with its
 own environment, session token, readiness state, and transport channel.
 
+### Workspace sidecar spawn plan
+
+Electron main now has a sidecar spawn plan helper that merges the current process environment with
+the per-workspace identity environment. Diagnostic output redacts `GRPC_SESSION_TOKEN`. This is still
+not used to launch one process per workspace yet; it defines the safe process boundary and testable
+environment contract before replacing the shared JSON-RPC transport.
+
+The workspace runtime summary now includes this redacted spawn plan, so diagnostics can validate the
+future per-workspace process contract without exposing the session token.
+
 ### Workspace sidecar identity model
 
 The manager now creates a per-workspace identity plan before opening a runtime. It computes a stable
