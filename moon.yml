@@ -1,0 +1,259 @@
+tasks:
+  web-dev:
+    command: pnpm exec vite
+    options:
+      cache: false
+      persistent: true
+
+  proto-lint:
+    command: pnpm exec buf lint
+    inputs:
+      - buf.yaml
+      - proto/**/*
+    options:
+      cache: false
+
+  proto-gen:
+    command: pnpm exec buf generate
+    inputs:
+      - buf.gen.yaml
+      - buf.yaml
+      - proto/**/*
+    outputs:
+      - electron/generated/knowledge-engine/**/*
+
+  typecheck:
+    command: pnpm exec tsc -b
+    deps:
+      - ~:proto-gen
+    inputs:
+      - tsconfig*.json
+      - src/**/*
+      - electron/**/*
+      - vite.config.ts
+      - package.json
+      - pnpm-lock.yaml
+    options:
+      cache: false
+
+  test:
+    command: pnpm exec vitest run
+    deps:
+      - ~:proto-gen
+    inputs:
+      - src/**/*
+      - electron/**/*
+      - vite.config.ts
+      - package.json
+      - pnpm-lock.yaml
+    options:
+      cache: false
+
+  test-ui:
+    command: pnpm exec playwright test
+    options:
+      cache: false
+
+  test-electron:
+    command: pnpm exec playwright test --config playwright.electron.config.ts
+    options:
+      cache: false
+
+  test-knowledge-integration:
+    command: node scripts/run-knowledge-engine-integration.mjs
+    inputs:
+      - scripts/run-knowledge-engine-integration.mjs
+      - scripts/build-knowledge-engine.mjs
+      - knowledge-engine/**/*
+      - proto/**/*
+      - electron/**/*
+      - package.json
+      - pnpm-lock.yaml
+      - Cargo.toml
+      - Cargo.lock
+    options:
+      cache: false
+
+  lint:
+    command: pnpm exec eslint .
+    inputs:
+      - src/**/*
+      - electron/**/*
+      - scripts/**/*
+      - eslint.config.js
+      - package.json
+      - pnpm-lock.yaml
+    options:
+      cache: false
+
+  lint-fix:
+    command: pnpm exec eslint . --fix
+    options:
+      cache: false
+
+  cargo-fmt:
+    command: cargo fmt --all --check
+    inputs:
+      - Cargo.toml
+      - Cargo.lock
+      - knowledge-engine/**/*
+    options:
+      cache: false
+
+  cargo-check:
+    command: cargo check --workspace
+    inputs:
+      - Cargo.toml
+      - Cargo.lock
+      - knowledge-engine/**/*
+    options:
+      cache: false
+
+  cargo-test:
+    command: cargo test --workspace
+    inputs:
+      - Cargo.toml
+      - Cargo.lock
+      - knowledge-engine/**/*
+    options:
+      cache: false
+
+  knowledge-build:
+    command: node scripts/build-knowledge-engine.mjs
+    inputs:
+      - scripts/build-knowledge-engine.mjs
+      - Cargo.toml
+      - Cargo.lock
+      - knowledge-engine/**/*
+    outputs:
+      - resources/engine/**/*
+
+  knowledge-build-force:
+    command: node scripts/build-knowledge-engine.mjs --force
+    options:
+      cache: false
+
+  native-rebuild:
+    command: node scripts/rebuild-node-pty.mjs
+    inputs:
+      - scripts/rebuild-node-pty.mjs
+      - package.json
+      - pnpm-lock.yaml
+    options:
+      cache: false
+
+  icons-generate:
+    command: node scripts/generate-app-icons.mjs
+    inputs:
+      - scripts/generate-app-icons.mjs
+      - src/assets/**/*
+    outputs:
+      - build/**/*
+
+  prepare:
+    deps:
+      - ~:proto-gen
+      - ~:knowledge-build
+      - ~:native-rebuild
+      - ~:icons-generate
+    options:
+      cache: false
+
+  electron-dev:
+    command: pnpm exec vite --mode electron
+    deps:
+      - ~:prepare
+    options:
+      cache: false
+      persistent: true
+
+  electron-build:
+    command: pnpm exec vite build --mode electron
+    deps:
+      - ~:prepare
+    inputs:
+      - src/**/*
+      - electron/**/*
+      - vite.config.ts
+      - package.json
+      - pnpm-lock.yaml
+    outputs:
+      - dist/**/*
+      - dist-electron/**/*
+
+  web-build:
+    command: pnpm exec vite build
+    deps:
+      - ~:typecheck
+    inputs:
+      - src/**/*
+      - vite.config.ts
+      - package.json
+      - pnpm-lock.yaml
+    outputs:
+      - dist/**/*
+
+  build:
+    deps:
+      - ~:typecheck
+      - ~:electron-build
+    options:
+      cache: false
+      runDepsInParallel: false
+
+  package:
+    command: pnpm exec electron-builder --dir --publish never
+    deps:
+      - ~:build
+    outputs:
+      - release/**/*
+    options:
+      cache: false
+
+  dist:
+    command: pnpm exec electron-builder --publish never
+    deps:
+      - ~:build
+    outputs:
+      - release/**/*
+    options:
+      cache: false
+
+  dist-win:
+    command: pnpm exec electron-builder --win --publish never
+    deps:
+      - ~:build
+    outputs:
+      - release/**/*
+    options:
+      cache: false
+
+  dist-mac:
+    command: pnpm exec electron-builder --mac --publish never
+    deps:
+      - ~:build
+    outputs:
+      - release/**/*
+    options:
+      cache: false
+
+  dist-linux:
+    command: pnpm exec electron-builder --linux --publish never
+    deps:
+      - ~:build
+    outputs:
+      - release/**/*
+    options:
+      cache: false
+
+  check:
+    deps:
+      - ~:lint
+      - ~:typecheck
+      - ~:test
+      - ~:cargo-fmt
+      - ~:cargo-check
+      - ~:cargo-test
+    options:
+      cache: false
+      runDepsInParallel: false

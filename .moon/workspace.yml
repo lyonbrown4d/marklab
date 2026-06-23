@@ -1,0 +1,6 @@
+projects:
+  desktop: .
+
+vcs:
+  defaultBranch: 'main'
+  provider: 'github'

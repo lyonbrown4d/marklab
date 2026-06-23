@@ -1,0 +1,48 @@
+[tools]
+node = "24.15.0"
+pnpm = "10.26.0"
+rust = "1.96.0"
+just = "1"
+
+[env]
+MISE_NODE_COREPACK = "true"
+
+[tasks.dev]
+description = "Run the Electron desktop development workflow."
+run = "pnpm exec moon run desktop:electron-dev"
+
+[tasks.web-dev]
+description = "Run the renderer-only Vite development server."
+run = "pnpm exec moon run desktop:web-dev"
+
+[tasks.build]
+description = "Build the Electron desktop application."
+run = "pnpm exec moon run desktop:build"
+
+[tasks.web-build]
+description = "Build the renderer bundle."
+run = "pnpm exec moon run desktop:web-build"
+
+[tasks.package]
+description = "Create an unpacked Electron package."
+run = "pnpm exec moon run desktop:package"
+
+[tasks.dist]
+description = "Create distributable Electron artifacts."
+run = "pnpm exec moon run desktop:dist"
+
+[tasks.check]
+description = "Run lint, typecheck, JS tests, and Rust checks."
+run = "pnpm exec moon run desktop:check"
+
+[tasks.typecheck]
+description = "Run TypeScript type checking."
+run = "pnpm exec moon run desktop:typecheck"
+
+[tasks.test]
+description = "Run unit tests."
+run = "pnpm exec moon run desktop:test"
+
+[tasks.knowledge-test]
+description = "Run the knowledge sidecar integration test."
+run = "pnpm exec moon run desktop:test-knowledge-integration"

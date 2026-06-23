@@ -1,0 +1,19 @@
+[
+  {
+    "command": "pnpm",
+    "args": ["buf", "exec", "generate"],
+    "deps": {},
+    "env": {},
+    "inputs": {
+      ".moon/workspace.yml": "6ac30f80efd8571d2d8cddd38f998fd9d14501d9",
+      "buf.gen.yaml": "1d16ec47e0c0a5fc64e1fcd8e0d1ace31c52e0e7",
+      "buf.yaml": "e06201ffb3cc6ae1fb4de6606ad6c55234c13776"
+    },
+    "inputEnv": {},
+    "outputs": [{ "glob": "electron/generated/knowledge-engine/**/*" }],
+    "projectDeps": [],
+    "target": "desktop:proto-gen",
+    "toolchains": ["system"],
+    "version": "3"
+  }
+]

@@ -317,6 +317,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.5.0(jiti@2.7.0))
+      '@moonrepo/cli':
+        specifier: ^2.3.4
+        version: 2.3.4
       '@playwright/test':
         specifier: ^1.61.0
         version: 1.61.0
@@ -1391,6 +1394,31 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@moonrepo/cli@2.3.4':
+    resolution: {integrity: sha512-ctkyiMAS/4LbgBhz2c2YJc+7agK0nzzCy3trDL5EvZiO5HnPWrYPJ/1/03B3upNGoK6p0BM88lCu43htS75wxA==}
+    hasBin: true
+
+  '@moonrepo/core-linux-arm64-gnu@2.3.4':
+    resolution: {integrity: sha512-X9iFwCuUikgM6nIHmPe3+TTon/FSmv8u6/HLmuGFr1MJnMLAGlc5oY8Q0KW+32lvepaHe5s0FA8opTjOzmDz4w==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@moonrepo/core-macos-arm64@2.3.4':
+    resolution: {integrity: sha512-0oUCtt4U2UeRwm4TmQdUWo07t5e7jI89rDW3WF8JEMgckcb64AkrVZJ3EoyTIpv/iPu7i3WLEAUh5/6EcHQF7A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@moonrepo/core-macos-x64@2.3.4':
+    resolution: {integrity: sha512-SmzM7GvnWLPwtLxwWYBsPFVyryQyZRctni24r1rqTlDHetNF/h4FH9hUSESOcUoly+Kt8kWhS5EwENXs36ufWw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@moonrepo/core-windows-x64-msvc@2.3.4':
+    resolution: {integrity: sha512-B9VD4V1rxNufSmWGDTmH4i4zrI5zNksbEA9oqxZcCFzdt/CvdVYn+RGaC+VibTXTzmp3B3wTeRLoFTPBZbOv/Q==}
+    cpu: [x64]
+    os: [win32]
 
   '@napi-rs/wasm-runtime@1.1.5':
     resolution: {integrity: sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q==}
@@ -9783,6 +9811,27 @@ snapshots:
       monaco-editor: 0.55.1
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
+
+  '@moonrepo/cli@2.3.4':
+    dependencies:
+      detect-libc: 2.1.2
+    optionalDependencies:
+      '@moonrepo/core-linux-arm64-gnu': 2.3.4
+      '@moonrepo/core-macos-arm64': 2.3.4
+      '@moonrepo/core-macos-x64': 2.3.4
+      '@moonrepo/core-windows-x64-msvc': 2.3.4
+
+  '@moonrepo/core-linux-arm64-gnu@2.3.4':
+    optional: true
+
+  '@moonrepo/core-macos-arm64@2.3.4':
+    optional: true
+
+  '@moonrepo/core-macos-x64@2.3.4':
+    optional: true
+
+  '@moonrepo/core-windows-x64-msvc@2.3.4':
+    optional: true
 
   '@napi-rs/wasm-runtime@1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
