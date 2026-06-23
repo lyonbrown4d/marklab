@@ -53,6 +53,7 @@
     "lint": "eslint . --fix",
     "typecheck": "pnpm knowledge:proto:gen && tsc -b",
     "test": "pnpm knowledge:proto:gen && vitest run",
+    "test:knowledge:integration": "node scripts/run-knowledge-engine-integration.mjs",
     "test:ui": "vitest run src/**/*.integration.test.ts src/**/*.integration.test.tsx",
     "test:electron": "pnpm test:electron:build && node -e \"setTimeout(() => process.exit(0), 3000)\" && pnpm test:electron:run",
     "test:electron:build": "pnpm icons:generate && pnpm exec vite build --mode electron",

@@ -81,27 +81,19 @@ export class KnowledgeEngineGrpcClient {
     }
 
     const credentials = ChannelCredentials.createInsecure()
-    this.control = new ControlClientConstructor(options.address, credentials, options.clientOptions)
+    const clientOptions = {
+      'grpc.enable_http_proxy': 0,
+      ...options.clientOptions,
+    }
+    this.control = new ControlClientConstructor(options.address, credentials, clientOptions)
     this.documentSession = new DocumentSessionClientConstructor(
       options.address,
       credentials,
-      options.clientOptions,
+      clientOptions,
     )
-    this.markdown = new MarkdownClientConstructor(
-      options.address,
-      credentials,
-      options.clientOptions,
-    )
-    this.workspace = new WorkspaceClientConstructor(
-      options.address,
-      credentials,
-      options.clientOptions,
-    )
-    this.searchClient = new SearchClientConstructor(
-      options.address,
-      credentials,
-      options.clientOptions,
-    )
+    this.markdown = new MarkdownClientConstructor(options.address, credentials, clientOptions)
+    this.workspace = new WorkspaceClientConstructor(options.address, credentials, clientOptions)
+    this.searchClient = new SearchClientConstructor(options.address, credentials, clientOptions)
   }
 
   getCapabilities(workspaceInstanceId: string) {

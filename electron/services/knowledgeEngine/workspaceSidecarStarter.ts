@@ -7,6 +7,7 @@ import type { StartedWorkspaceSidecar } from '@electron/services/knowledgeEngine
 import type { Logger } from '@electron/services/logger.js'
 
 const SIDECAR_READY_TIMEOUT_MS = 5000
+const GRPC_READY_RETRY_DELAY_MS = 50
 
 export const startGrpcSidecar = async (
   plan: WorkspaceSidecarSpawnPlan,
@@ -29,6 +30,15 @@ export const startGrpcSidecar = async (
     address,
     sessionToken: identity.sessionToken,
   })
+  try {
+    await waitForGrpcReady(client, identity.workspaceInstanceId)
+  } catch (error) {
+    client.close()
+    if (!child.killed) {
+      child.kill()
+    }
+    throw error
+  }
 
   return { address, child, client }
 }
@@ -98,3 +108,27 @@ const parseReadyAddress = (line: string, workspaceInstanceId: string): string | 
 
   return value.address
 }
+
+const waitForGrpcReady = async (
+  client: KnowledgeEngineGrpcClient,
+  workspaceInstanceId: string,
+): Promise<void> => {
+  const deadline = Date.now() + SIDECAR_READY_TIMEOUT_MS
+  let lastError: unknown
+
+  while (Date.now() < deadline) {
+    try {
+      await client.getCapabilities(workspaceInstanceId)
+      return
+    } catch (error) {
+      lastError = error
+      await delay(GRPC_READY_RETRY_DELAY_MS)
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Knowledge sidecar gRPC server did not become ready in time.')
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
