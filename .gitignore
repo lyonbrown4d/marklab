@@ -155,3 +155,5 @@ Temporary Items
 resources/icons/
 resources/engine/
 electron/generated/knowledge-engine/
+# Moon cache artifacts
+.moon/cache
