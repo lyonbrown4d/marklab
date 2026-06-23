@@ -119,7 +119,7 @@ tasks:
       cache: false
 
   knowledge-build:
-    command: node scripts/build-knowledge-engine.mjs
+    command: node scripts/build-knowledge-engine.mjs --profile release
     inputs:
       - scripts/build-knowledge-engine.mjs
       - Cargo.toml
@@ -127,9 +127,23 @@ tasks:
       - knowledge-engine/**/*
     outputs:
       - resources/engine/**/*
+    options:
+      cache: false
+
+  knowledge-build-dev:
+    command: node scripts/build-knowledge-engine.mjs --profile debug
+    inputs:
+      - scripts/build-knowledge-engine.mjs
+      - Cargo.toml
+      - Cargo.lock
+      - knowledge-engine/**/*
+    outputs:
+      - resources/engine/**/*
+    options:
+      cache: false
 
   knowledge-build-force:
-    command: node scripts/build-knowledge-engine.mjs --force
+    command: node scripts/build-knowledge-engine.mjs --profile release --force
     options:
       cache: false
 
@@ -159,10 +173,19 @@ tasks:
     options:
       cache: false
 
+  prepare-dev:
+    deps:
+      - ~:proto-gen
+      - ~:knowledge-build-dev
+      - ~:native-rebuild
+      - ~:icons-generate
+    options:
+      cache: false
+
   electron-dev:
     command: pnpm exec vite --mode electron
     deps:
-      - ~:prepare
+      - ~:prepare-dev
     options:
       cache: false
       persistent: true

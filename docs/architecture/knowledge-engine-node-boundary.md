@@ -14,7 +14,7 @@ Rust `knowledge-engine` owns:
 
 Electron main owns:
 
-- sidecar process startup, shutdown, and JSON-RPC routing
+- sidecar process startup, shutdown, and gRPC routing
 - workspace root validation and filesystem access
 - document loading, buffer flushing, watcher events, and snapshot events
 - typed renderer IPC commands

@@ -25,23 +25,25 @@
     }
   },
   "scripts": {
-    "dev": "moon run desktop:web-dev",
-    "build": "moon run desktop:web-build",
+    "dev": "moon run desktop:electron-dev",
+    "dev:web": "moon run desktop:web-dev",
+    "build": "moon run desktop:build",
+    "build:web": "moon run desktop:web-build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
     "build:compressed": "pnpm typecheck && vite build --mode compressed",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "icons:generate": "node scripts/generate-app-icons.mjs",
-    "knowledge:build": "node scripts/build-knowledge-engine.mjs",
-    "knowledge:build:force": "node scripts/build-knowledge-engine.mjs --force",
+    "knowledge:build": "node scripts/build-knowledge-engine.mjs --profile release",
+    "knowledge:build:dev": "node scripts/build-knowledge-engine.mjs --profile debug",
+    "knowledge:build:force": "node scripts/build-knowledge-engine.mjs --profile release --force",
     "knowledge:proto:lint": "buf lint",
     "knowledge:proto:gen": "buf generate",
     "desktop:prepare": "moon run desktop:prepare",
+    "desktop:prepare:dev": "moon run desktop:prepare-dev",
     "build:electron": "moon run desktop:electron-build",
-    "preelectron:dev": "pnpm desktop:prepare",
     "electron:dev": "moon run desktop:electron-dev",
     "native:rebuild": "node scripts/rebuild-node-pty.mjs",
     "electron:build": "moon run desktop:electron-build",
-    "preelectron:build": "pnpm desktop:prepare",
     "electron:start": "pnpm electron:build && electron .",
     "dev:desktop": "moon run desktop:electron-dev",
     "build:desktop": "moon run desktop:build",
@@ -91,10 +93,18 @@
       "dist/**/*",
       "dist-electron/**/*",
       "resources/icons/**/*",
-      "resources/engine/**/*",
       "!node_modules/**/*",
       "node_modules/node-pty/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/engine",
+        "to": "engine",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "npmRebuild": false,
     "nodeGypRebuild": false,

@@ -43,9 +43,37 @@ fn include_document_path(path: &str, include_paths: &[String]) -> bool {
     return true;
   }
 
+  let normalized_path = normalize_search_path(path);
+
   include_paths
     .iter()
-    .any(|include| path.starts_with(include))
+    .map(|include| normalize_search_path(include))
+    .any(|include| include.is_empty() || path_matches_include(&normalized_path, &include))
+}
+
+fn normalize_search_path(path: &str) -> String {
+  let mut normalized = path.trim().replace('\\', "/");
+
+  while normalized.starts_with("./") {
+    normalized.drain(..2);
+  }
+
+  while normalized.ends_with('/') {
+    normalized.pop();
+  }
+
+  normalized
+}
+
+fn path_matches_include(path: &str, include: &str) -> bool {
+  if include == "." {
+    return true;
+  }
+
+  path == include
+    || path
+      .strip_prefix(include)
+      .is_some_and(|remaining| remaining.starts_with('/'))
 }
 
 fn sort_search_results(results: &mut [SearchHit], order: SearchOrder) {
@@ -231,5 +259,108 @@ impl SearchHit {
         "snippet_highlights": self.snippet_highlights,
         "score": self.score,
     })
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn document(path: &str, content: &str) -> SearchDocument {
+    SearchDocument {
+      path: path.to_string(),
+      title: String::new(),
+      content: content.to_string(),
+    }
+  }
+
+  fn result_paths(result: &SearchResultSet<Value>) -> Vec<String> {
+    result
+      .results
+      .iter()
+      .map(|value| {
+        value
+          .get("path")
+          .and_then(Value::as_str)
+          .expect("search result path")
+          .to_string()
+      })
+      .collect()
+  }
+
+  #[test]
+  fn include_paths_match_workspace_path_segments() {
+    let documents = vec![
+      document("notes/project.md", "alpha"),
+      document("notes/deep/project.md", "alpha"),
+      document("notes-old/project.md", "alpha"),
+      document("archive/project.md", "alpha"),
+    ];
+    let mut query = SearchQuery::new("alpha", 10);
+    query.include_paths = vec!["notes\\".to_string()];
+    query.order = SearchOrder::Path;
+
+    let result = search_documents(&documents, &query);
+
+    assert_eq!(result.total_hits, 2);
+    assert_eq!(
+      result_paths(&result),
+      vec!["notes/deep/project.md", "notes/project.md"]
+    );
+  }
+
+  #[test]
+  fn include_paths_match_exact_files_without_prefix_leakage() {
+    let documents = vec![
+      document("notes/project.md", "alpha"),
+      document("notes/project.md.bak", "alpha"),
+      document("notes/project-plan.md", "alpha"),
+    ];
+    let mut query = SearchQuery::new("alpha", 10);
+    query.include_paths = vec!["./notes/project.md".to_string()];
+    query.order = SearchOrder::Path;
+
+    let result = search_documents(&documents, &query);
+
+    assert_eq!(result.total_hits, 1);
+    assert_eq!(result_paths(&result), vec!["notes/project.md"]);
+  }
+
+  #[test]
+  fn offset_is_applied_after_requested_order() {
+    let documents = vec![
+      document("notes/bravo.md", "alpha"),
+      document("notes/alpha.md", "alpha"),
+      document("notes/charlie.md", "alpha"),
+    ];
+    let mut query = SearchQuery::new("alpha", 2);
+    query.offset = 1;
+    query.order = SearchOrder::Path;
+
+    let result = search_documents(&documents, &query);
+
+    assert_eq!(result.total_hits, 3);
+    assert_eq!(
+      result_paths(&result),
+      vec!["notes/bravo.md", "notes/charlie.md"]
+    );
+  }
+
+  #[test]
+  fn title_order_uses_path_as_stable_tiebreaker() {
+    let documents = vec![
+      document("zeta/readme.md", "alpha"),
+      document("alpha/readme.md", "alpha"),
+      document("notes/beta.md", "alpha"),
+    ];
+    let mut query = SearchQuery::new("alpha", 10);
+    query.order = SearchOrder::Title;
+
+    let result = search_documents(&documents, &query);
+
+    assert_eq!(
+      result_paths(&result),
+      vec!["notes/beta.md", "alpha/readme.md", "zeta/readme.md"]
+    );
   }
 }

@@ -1,6 +1,9 @@
-import { FileText, ListTree } from 'lucide-react'
+import { Copy, FileText, ListTree } from 'lucide-react'
+import { useState, type MouseEvent } from 'react'
 import { CommandItem } from '@/components/ui/command'
 import SearchResultPreview from '@/components/SearchResultPreview'
+import { useI18n } from '@/i18n/useI18n'
+import { writeClipboardText } from '@/runtime/clipboard'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { CommandFile, CommandHeading } from '@/components/command/CommandSearchResults'
 
@@ -57,6 +60,58 @@ export const toFullTextRows = (results: FsSearchResult[]): CommandResultRow[] =>
     result,
   }))
 
+const escapeMarkdownLinkLabel = (label: string) => label.replace(/\\/g, '\\\\').replace(/]/g, '\\]')
+
+const createMarkdownLink = (label: string, path: string, slug?: string) => {
+  const target = slug ? `${path}#${slug}` : path
+  return `[${escapeMarkdownLinkLabel(label)}](<${target.replace(/>/g, '%3E')}>)`
+}
+
+const stopCommandItemSelection = (event: MouseEvent<HTMLButtonElement>) => {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const CopyMarkdownLinkAction = ({
+  label,
+  markdownLink,
+}: {
+  label: string
+  markdownLink: string
+}) => {
+  const { t } = useI18n()
+  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const buttonText =
+    status === 'copied'
+      ? t('context.copied')
+      : status === 'error'
+        ? t('context.actionFailed')
+        : t('edit.copy')
+
+  const handleCopy = (event: MouseEvent<HTMLButtonElement>) => {
+    stopCommandItemSelection(event)
+    void writeClipboardText(markdownLink)
+      .then(() => setStatus('copied'))
+      .catch((error) => {
+        console.error('copy markdown link failed', error)
+        setStatus('error')
+      })
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={`${t('context.copyMarkdownLink')} ${label}`}
+      className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md border border-border/80 bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      onMouseDown={stopCommandItemSelection}
+      onClick={handleCopy}
+    >
+      <Copy className="size-3" />
+      <span>{buttonText}</span>
+    </button>
+  )
+}
+
 const FileResultRow = ({
   file,
   kind,
@@ -71,12 +126,16 @@ const FileResultRow = ({
     onSelect={() => onOpenFile(file.path)}
   >
     <FileText className="h-4 w-4" />
-    <span className="min-w-0">
+    <span className="min-w-0 flex-1">
       <span className="block truncate">{kind === 'title-file' ? file.label : file.path}</span>
       <span className="block truncate text-[11px] text-muted-foreground">
         {kind === 'title-file' ? file.path : file.label}
       </span>
     </span>
+    <CopyMarkdownLinkAction
+      label={file.path}
+      markdownLink={createMarkdownLink(file.label, file.path)}
+    />
   </CommandItem>
 )
 
@@ -99,7 +158,7 @@ export const CommandResultRowItem = ({
         onSelect={() => onOpenHeading(heading.path, heading.slug)}
       >
         <ListTree className="h-4 w-4" />
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block truncate">
             {'#'.repeat(Math.min(heading.level, 6))} {heading.text}
           </span>
@@ -107,6 +166,10 @@ export const CommandResultRowItem = ({
             {heading.label}#{heading.slug}
           </span>
         </span>
+        <CopyMarkdownLinkAction
+          label={`${heading.path}#${heading.slug}`}
+          markdownLink={createMarkdownLink(heading.text, heading.path, heading.slug)}
+        />
       </CommandItem>
     )
   }
@@ -117,6 +180,10 @@ export const CommandResultRowItem = ({
       onSelect={() => onOpenSearchResult(row.result)}
     >
       <SearchResultPreview result={row.result} compact />
+      <CopyMarkdownLinkAction
+        label={row.result.path}
+        markdownLink={createMarkdownLink(row.result.title, row.result.path)}
+      />
     </CommandItem>
   )
 }

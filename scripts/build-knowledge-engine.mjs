@@ -1,18 +1,59 @@
 import { existsSync } from 'node:fs'
-import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const readOption = (args, name) => {
+  const inlineArg = args.find((arg) => arg.startsWith(`${name}=`))
+  if (inlineArg) {
+    const value = inlineArg.slice(name.length + 1)
+    if (!value) throw new Error(`Missing value for ${name}`)
+    return value
+  }
+
+  const optionIndex = args.indexOf(name)
+  if (optionIndex === -1) {
+    return null
+  }
+
+  const value = args[optionIndex + 1]
+  if (!value || value.startsWith('--')) throw new Error(`Missing value for ${name}`)
+  return value
+}
+
+const getProfile = (args) => {
+  if (args.includes('--debug')) {
+    return 'debug'
+  }
+
+  if (args.includes('--release')) {
+    return 'release'
+  }
+
+  const profile = readOption(args, '--profile') ?? 'release'
+  if (profile !== 'debug' && profile !== 'release') {
+    throw new Error(`Unsupported knowledge engine profile: ${profile}`)
+  }
+
+  return profile
+}
+
+const scriptPath = fileURLToPath(import.meta.url)
+const rootDir = path.resolve(path.dirname(scriptPath), '..')
 const engineDir = path.join(rootDir, 'knowledge-engine')
 const manifestPath = path.join(rootDir, 'Cargo.toml')
+const lockfilePath = path.join(rootDir, 'Cargo.lock')
 const binaryName = process.platform === 'win32' ? 'knowledge-engine.exe' : 'knowledge-engine'
 const platformDir = `${process.platform}-${process.arch}`
-const cargoBinaryPath = path.join(rootDir, 'target', 'release', binaryName)
+const args = process.argv.slice(2)
+const force = args.includes('--force')
+const profile = getProfile(args)
+const cargoProfileDir = profile === 'release' ? 'release' : 'debug'
+const cargoBinaryPath = path.join(rootDir, 'target', cargoProfileDir, binaryName)
 const outputDir = path.join(rootDir, 'resources', 'engine', platformDir)
 const outputBinaryPath = path.join(outputDir, binaryName)
-const force = process.argv.includes('--force')
+const outputManifestPath = path.join(outputDir, 'manifest.json')
 
 const main = async () => {
   if (!existsSync(manifestPath)) {
@@ -20,35 +61,44 @@ const main = async () => {
   }
 
   if (!force && (await isOutputFresh())) {
-    console.log(`[knowledge-engine] up to date: ${outputBinaryPath}`)
+    console.log(`[knowledge-engine] up to date (${profile}): ${outputBinaryPath}`)
     return
   }
 
-  await run('cargo', [
-    'build',
-    '--manifest-path',
-    manifestPath,
-    '--bin',
-    'knowledge-engine',
-    '--release',
-  ])
+  const cargoArgs = ['build', '--manifest-path', manifestPath, '--bin', 'knowledge-engine']
+
+  if (profile === 'release') {
+    cargoArgs.push('--release')
+  }
+
+  await run('cargo', cargoArgs)
   await mkdir(outputDir, { recursive: true })
   await copyFile(cargoBinaryPath, outputBinaryPath)
-  console.log(`[knowledge-engine] built: ${outputBinaryPath}`)
+  await writeBuildManifest()
+  console.log(`[knowledge-engine] built (${profile}): ${outputBinaryPath}`)
 }
 
 const isOutputFresh = async () => {
-  if (!existsSync(outputBinaryPath)) {
+  if (!existsSync(outputBinaryPath) || !existsSync(outputManifestPath)) {
     return false
   }
 
-  const [output, manifest, newestEngineSourceMtime] = await Promise.all([
+  const buildManifest = await readBuildManifest()
+  if (
+    buildManifest?.profile !== profile ||
+    buildManifest?.platformDir !== platformDir ||
+    buildManifest?.binaryName !== binaryName
+  ) {
+    return false
+  }
+
+  const [output, newestInputMtime, newestEngineSourceMtime] = await Promise.all([
     stat(outputBinaryPath),
-    stat(manifestPath),
+    getNewestInputMtime(),
     getNewestSourceMtime(engineDir),
   ])
 
-  return output.mtimeMs >= Math.max(manifest.mtimeMs, newestEngineSourceMtime)
+  return output.mtimeMs >= Math.max(newestInputMtime, newestEngineSourceMtime)
 }
 
 const getNewestSourceMtime = async (directory) => {
@@ -62,13 +112,46 @@ const getNewestSourceMtime = async (directory) => {
       continue
     }
 
-    if (entry.name.endsWith('.rs') || entry.name === 'Cargo.toml') {
+    if (
+      entry.name.endsWith('.rs') ||
+      entry.name.endsWith('.proto') ||
+      entry.name === 'Cargo.toml'
+    ) {
       const current = await stat(entryPath)
       newest = Math.max(newest, current.mtimeMs)
     }
   }
 
   return newest
+}
+
+const getNewestInputMtime = async () => {
+  const inputPaths = [scriptPath, manifestPath, lockfilePath].filter((inputPath) =>
+    existsSync(inputPath),
+  )
+  const stats = await Promise.all(inputPaths.map((inputPath) => stat(inputPath)))
+
+  return Math.max(...stats.map((inputStat) => inputStat.mtimeMs))
+}
+
+const readBuildManifest = async () => {
+  try {
+    return JSON.parse(await readFile(outputManifestPath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+const writeBuildManifest = async () => {
+  const buildManifest = {
+    profile,
+    platformDir,
+    binaryName,
+    cargoBinaryPath: path.relative(rootDir, cargoBinaryPath),
+    builtAt: new Date().toISOString(),
+  }
+
+  await writeFile(outputManifestPath, `${JSON.stringify(buildManifest, null, 2)}\n`)
 }
 
 const run = (command, args) =>

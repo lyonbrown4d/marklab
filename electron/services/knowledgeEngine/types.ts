@@ -10,7 +10,7 @@ export type KnowledgeEngineStatus = {
 export type KnowledgeEngineBinaryResolution = {
   binaryPath: string
   exists: boolean
-  source: 'override' | 'packaged' | 'dev-resource' | 'cargo-target'
+  source: 'override' | 'packaged' | 'dev-resource' | 'cargo-target-debug' | 'cargo-target-release'
 }
 
 export type KnowledgeEngineInitializeResult = {

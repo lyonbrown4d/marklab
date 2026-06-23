@@ -21,39 +21,53 @@ export const resolveKnowledgeEngineBinary = (app: App): KnowledgeEngineBinaryRes
   const candidates: KnowledgeEngineBinaryResolution[] = []
 
   if (overridePath) {
-    candidates.push({
-      binaryPath: overridePath,
-      exists: existsSync(overridePath),
-      source: 'override',
-    })
+    const overrideCandidate = createCandidate(overridePath, 'override')
+    if (!overrideCandidate.exists) {
+      return overrideCandidate
+    }
+
+    candidates.push(overrideCandidate)
   }
 
-  const resourcesPath = getElectronResourcesPath(app)
-  candidates.push({
-    binaryPath: path.join(resourcesPath, 'engine', platformDir, binaryName),
-    exists: existsSync(path.join(resourcesPath, 'engine', platformDir, binaryName)),
-    source: 'packaged',
-  })
+  if (app.isPackaged) {
+    candidates.push(
+      createCandidate(
+        path.join(getPackagedResourcesPath(), 'engine', platformDir, binaryName),
+        'packaged',
+      ),
+    )
+  }
 
-  candidates.push({
-    binaryPath: path.join(projectRoot, 'resources', 'engine', platformDir, binaryName),
-    exists: existsSync(path.join(projectRoot, 'resources', 'engine', platformDir, binaryName)),
-    source: 'dev-resource',
-  })
-
-  candidates.push({
-    binaryPath: path.join(projectRoot, 'target', 'release', binaryName),
-    exists: existsSync(path.join(projectRoot, 'target', 'release', binaryName)),
-    source: 'cargo-target',
-  })
+  candidates.push(
+    createCandidate(
+      path.join(projectRoot, 'resources', 'engine', platformDir, binaryName),
+      'dev-resource',
+    ),
+  )
+  candidates.push(
+    createCandidate(path.join(projectRoot, 'target', 'debug', binaryName), 'cargo-target-debug'),
+  )
+  candidates.push(
+    createCandidate(
+      path.join(projectRoot, 'target', 'release', binaryName),
+      'cargo-target-release',
+    ),
+  )
 
   return candidates.find((candidate) => candidate.exists) ?? candidates[0] ?? null
 }
 
-const getElectronResourcesPath = (app: App) => {
+const createCandidate = (
+  binaryPath: string,
+  source: KnowledgeEngineBinaryResolution['source'],
+): KnowledgeEngineBinaryResolution => ({
+  binaryPath,
+  exists: existsSync(binaryPath),
+  source,
+})
+
+const getPackagedResourcesPath = () => {
   const processWithResources = process as typeof process & { resourcesPath?: string }
 
-  return app.isPackaged && processWithResources.resourcesPath
-    ? processWithResources.resourcesPath
-    : path.join(projectRoot, 'resources')
+  return processWithResources.resourcesPath ?? path.join(projectRoot, 'resources')
 }

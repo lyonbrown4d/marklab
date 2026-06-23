@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
 import i18n from '@/i18n/setup'
+import { writeClipboardText } from '@/runtime/clipboard'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 vi.mock('@/runtime/window', () => ({
@@ -24,7 +25,14 @@ vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => false,
 }))
 
+vi.mock('@/runtime/clipboard', () => ({
+  readClipboardImagePng: vi.fn(),
+  readClipboardText: vi.fn(),
+  writeClipboardText: vi.fn(),
+}))
+
 type TitlebarProps = ComponentProps<typeof Titlebar>
+const writeClipboardTextMock = vi.mocked(writeClipboardText)
 
 const workspaceIndex = {
   files: [
@@ -97,6 +105,8 @@ const renderTitlebar = (props: TitlebarProps) => {
 
 beforeEach(async () => {
   localStorage.clear()
+  writeClipboardTextMock.mockReset()
+  writeClipboardTextMock.mockResolvedValue(undefined)
   usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
@@ -119,6 +129,37 @@ describe('Titlebar command palette', () => {
     await userEvent.click(await screen.findByRole('option', { name: /Indexed Detail/i }))
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'indexed-detail')
+  })
+
+  it('copies a markdown link for file results without opening the file', async () => {
+    const onOpenFile = vi.fn()
+    renderTitlebar(createProps({ commandOpen: true, onOpenFile }))
+
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: /Copy Markdown Link notes\/target\.md/i,
+      }),
+    )
+
+    expect(writeClipboardTextMock).toHaveBeenCalledWith('[target](<notes/target.md>)')
+    expect(onOpenFile).not.toHaveBeenCalled()
+  })
+
+  it('copies a markdown link with an anchor for heading results', async () => {
+    const onOpenHeading = vi.fn()
+    renderTitlebar(createProps({ commandOpen: true, onOpenHeading }))
+
+    await userEvent.type(screen.getByRole('combobox'), 'indexed')
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: /Copy Markdown Link notes\/target\.md#indexed-detail/i,
+      }),
+    )
+
+    expect(writeClipboardTextMock).toHaveBeenCalledWith(
+      '[Indexed Detail](<notes/target.md#indexed-detail>)',
+    )
+    expect(onOpenHeading).not.toHaveBeenCalled()
   })
 
   it('opens recently active files from the command palette', async () => {

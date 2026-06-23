@@ -8,13 +8,12 @@ supervised by the Electron main process.
 The first implementation is intentionally small:
 
 - root Cargo workspace with sidecar crates in `knowledge-engine/`
-- stdio JSON-RPC transport
-- `initialize`, `knowledge/health`, and `shutdown`
+- workspace-scoped gRPC transport
+- token-authenticated Control, Workspace, Search, DocumentSession, and Markdown gRPC services
 - Electron main-process supervisor
 - dev/build script that produces `resources/engine/<platform>-<arch>/knowledge-engine`
 
-The sidecar is required in development. `pnpm electron:dev` runs
-`pnpm knowledge:build` before starting Vite/Electron.
+The sidecar is required in development. `pnpm dev` and `pnpm electron:dev` run the debug-profile knowledge-engine build before starting Vite/Electron. Release packaging still runs the release-profile build.
 
 ## Runtime contract
 
@@ -24,7 +23,7 @@ Electron main owns:
 
 - process lifecycle
 - binary resolution
-- JSON-RPC request routing
+- gRPC request routing
 - workspace open/close lifecycle and sidecar handle release
 - shutdown cleanup
 
@@ -62,32 +61,27 @@ This follows the technical design direction that editor state, Markdown extracti
 search metadata, and graph metadata should converge inside the Rust engine instead
 of remaining split across renderer and Node services.
 
-Current sidecar JSON-RPC methods:
+Current sidecar gRPC services:
 
-- `markdown/extract`: stateless heading and link extraction for a supplied document.
-- `markdown/didOpen`: stores an opened Markdown snapshot in the Rust overlay.
-- `markdown/didChange`: replaces the opened Markdown snapshot and recomputes symbols/links.
-- `markdown/didClose`: removes the opened Markdown snapshot from the overlay.
-- `markdown/documentSymbols`: returns heading symbols from the opened snapshot.
-- `markdown/links`: returns Markdown and wiki links from the opened snapshot.
+- `DocumentSessionService.Sync`: opens, changes, resyncs, and closes Markdown overlay documents.
+- `MarkdownService.GetDocumentSymbols`: returns heading symbols from the opened snapshot.
+- `MarkdownService.GetLinks`: returns Markdown and wiki links from the opened snapshot.
+- `WorkspaceService`: opens indexes and applies rebuild/upsert/remove operations.
+- `SearchService.Search`: returns persisted full-text search results.
 
 The implementation is intentionally small for this phase. The next step from the
 technical design is to replace the line-oriented extractor internals with a proper
 parser/rope stack, likely `ropey` for document text and either tree-sitter Markdown
 or a maintained Markdown parser for richer incremental syntax features. The public
-JSON-RPC shape should remain stable while the parser internals improve.
+gRPC service shapes should remain stable while the parser internals improve.
 
 ## Workspace sidecar gRPC scaffold
 
-The workspace sidecar roadmap now has a first gRPC/protobuf scaffold without switching the
-runtime path away from the existing JSON-RPC sidecar. The proto source of truth lives in
+The workspace sidecar roadmap has moved to the gRPC/protobuf runtime path. The proto source of truth lives in
 `knowledge-engine/proto`, Rust generated bindings are compiled by the `marklab-knowledge-grpc-api`
 crate, and Node generation is wired through Buf plus `ts-proto`.
 
-This phase intentionally keeps the current Electron main process on the stable JSON-RPC bridge.
-The next migration step is to introduce a `WorkspaceSidecarManager` that can own one sidecar per
-workspace, then route either JSON-RPC or gRPC behind the same Electron service boundary while the
-transport is migrated.
+Electron main now routes workspace search and Markdown overlay operations through `WorkspaceSidecarManager`, which owns one gRPC sidecar process per workspace runtime.
 
 ### Rust dependency scaffold notes
 
@@ -122,26 +116,20 @@ constructor-driven and explicit.
 
 ### WorkspaceSidecarManager scaffold
 
-Electron main now has a `WorkspaceSidecarManager` boundary for workspace runtime routing. The current
-implementation deliberately keeps the existing shared JSON-RPC sidecar transport so the app runtime
-is not switched in the same step as the architecture refactor.
+Electron main now has a `WorkspaceSidecarManager` boundary for workspace runtime routing. The current implementation uses workspace-scoped gRPC sidecar runtimes.
 
 Responsibilities now owned by the manager boundary:
 
 - workspace open/close lifecycle tracking;
 - workspace request routing with explicit `workspaceId` attachment;
 - active runtime listing for diagnostics;
-- a stable seam for replacing shared JSON-RPC with one child process / gRPC channel per workspace.
+- a stable boundary for one child process and gRPC channel per workspace.
 
-The next migration step is to turn each runtime entry into a real sidecar process handle with its
-own environment, session token, readiness state, and transport channel.
+Each runtime entry now owns its sidecar process handle, environment, session token, readiness state, and transport channel.
 
 ### Workspace sidecar spawn plan
 
-Electron main now has a sidecar spawn plan helper that merges the current process environment with
-the per-workspace identity environment. Diagnostic output redacts `GRPC_SESSION_TOKEN`. This is still
-not used to launch one process per workspace yet; it defines the safe process boundary and testable
-environment contract before replacing the shared JSON-RPC transport.
+Electron main has a sidecar spawn plan helper that merges the current process environment with the per-workspace identity environment. Diagnostic output redacts `GRPC_SESSION_TOKEN`. The plan is used to launch one process per workspace and defines the safe process boundary plus testable environment contract.
 
 The workspace runtime summary now includes this redacted spawn plan, so diagnostics can validate the
 future per-workspace process contract without exposing the session token.
@@ -153,6 +141,5 @@ The manager now creates a per-workspace identity plan before opening a runtime. 
 the workspace key and index path. Runtime diagnostics intentionally omit the session token and full
 environment payload.
 
-Current transport still uses the shared JSON-RPC sidecar. The identity model is ready for the next
-step where each runtime entry becomes an actual child process with these environment variables:
+Current transport uses a workspace-scoped gRPC sidecar. Each runtime entry launches an actual child process with these environment variables:
 `WORKSPACE_ROOT`, `WORKSPACE_INSTANCE_ID`, `ENGINE_DATA_DIR`, and `GRPC_SESSION_TOKEN`.
