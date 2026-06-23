@@ -1,34 +1,69 @@
 use serde_json::{json, Value};
 
-use crate::types::SearchDocument;
+use crate::types::{SearchDocument, SearchOrder, SearchQuery, SearchResultSet};
 
 pub(crate) fn search_documents<'a>(
   documents: impl IntoIterator<Item = &'a SearchDocument>,
-  query: &str,
-  limit: usize,
-) -> Vec<Value> {
-  let terms = query_terms(query);
+  query: &SearchQuery,
+) -> SearchResultSet<Value> {
+  let terms = query_terms(&query.query);
   if terms.is_empty() {
-    return Vec::new();
+    return SearchResultSet {
+      results: Vec::new(),
+      total_hits: 0,
+    };
   }
+
+  let limit = query.limit.clamp(1, 100);
+  let offset = query.offset;
 
   let mut results: Vec<SearchHit> = documents
     .into_iter()
+    .filter(|document| include_document_path(document.path.as_str(), &query.include_paths))
     .filter_map(|document| search_document(document, &terms))
     .collect();
 
-  results.sort_by(|left, right| {
-    right
-      .score
-      .cmp(&left.score)
-      .then_with(|| left.path.cmp(&right.path))
-  });
-
-  results
+  sort_search_results(&mut results, query.order);
+  let total_hits = results.len();
+  let selected = results
     .into_iter()
-    .take(limit.clamp(1, 100))
+    .skip(offset)
+    .take(limit)
     .map(SearchHit::to_json)
-    .collect()
+    .collect();
+
+  SearchResultSet {
+    results: selected,
+    total_hits,
+  }
+}
+
+fn include_document_path(path: &str, include_paths: &[String]) -> bool {
+  if include_paths.is_empty() {
+    return true;
+  }
+
+  include_paths.iter().any((|include| path.starts_with(include)))
+}
+
+fn sort_search_results(results: &mut [SearchHit], order: SearchOrder) {
+  results.sort_by(|left, right| match order {
+    SearchOrder::Path => left.path.cmp(&right.path).then_with(|| {
+      right.score.cmp(&left.score).then_with(|| left.title.cmp(&right.title))
+    }),
+    SearchOrder::Title => left.title.cmp(&right.title).then_with(|| {
+      right.score.cmp(&left.score).then_with(|| left.path.cmp(&right.path))
+    }),
+    SearchOrder::PathThenScore => {
+      left.path.cmp(&right.path).then_with(|| right.score.cmp(&left.score))
+    }
+    SearchOrder::Score => {
+      right
+        .score
+        .cmp(&left.score)
+        .then_with(|| left.path.cmp(&right.path))
+    }
+  })
 }
 
 fn search_document(document: &SearchDocument, terms: &[String]) -> Option<SearchHit> {

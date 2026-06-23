@@ -1,11 +1,12 @@
 use marklab_knowledge_engine_core::{
-  WorkspaceMarkdownLink, WorkspaceMarkdownSymbol, WorkspaceSearchHighlight, WorkspaceSearchResult,
+  SearchOrder, SearchQuery, SearchResultSet, WorkspaceMarkdownLink, WorkspaceMarkdownSymbol,
+  WorkspaceSearchHighlight, WorkspaceSearchResult,
 };
 use marklab_knowledge_grpc_api::v1::{
   markdown_service_server::MarkdownService, search_service_server::SearchService,
   GetDocumentSymbolsRequest, GetDocumentSymbolsResponse, GetLinksRequest, GetLinksResponse,
-  MarkdownDocumentSymbol, MarkdownLink, Position, Range, SearchHighlight, SearchRequest,
-  SearchResponse, SearchResult,
+  MarkdownDocumentSymbol, MarkdownLink, Position, Range, SearchDiagnostics, SearchHighlight,
+  SearchRequest, SearchResponse, SearchResult,
 };
 use tonic::{Request, Response, Status};
 
@@ -56,17 +57,45 @@ impl SearchService for KnowledgeGrpcService {
     request: Request<SearchRequest>,
   ) -> Result<Response<Self::SearchStream>, Status> {
     let request = request.into_inner();
-    let limit = search_limit(request.limit);
-    let results = self
+    let started_at = std::time::Instant::now();
+    let include_total_hits = request.include_total_hits;
+    let include_diagnostics = request.include_diagnostics;
+    let query = SearchQuery {
+      query: request.query,
+      limit: search_limit(request.limit),
+      offset: request.offset as usize,
+      include_paths: request.include_paths,
+      order: search_order_from_proto(request.order),
+      include_total_hits,
+    };
+
+    let result = self
       .lock_engine()?
-      .search(&request.query, limit)
-      .map_err(|error| Status::internal(format!("workspace search failed: {error}")))?
-      .into_iter()
-      .map(search_result_to_proto)
-      .collect();
+      .search_with_query(&query)
+      .map_err(|error| Status::internal(format!("workspace search failed: {error}")))?;
+    let diagnostics = if include_diagnostics {
+      Some(search_diagnostics(
+        include_total_hits,
+        &result,
+        &query,
+        started_at.elapsed().as_millis() as u64,
+      ))
+    } else {
+      None
+    };
     let response = SearchResponse {
-      results,
+      results: result
+        .results
+        .into_iter()
+        .map(search_result_to_proto)
+        .collect(),
       done: true,
+      total_hits: if include_total_hits {
+        saturating_u32(result.total_hits)
+      } else {
+        0
+      },
+      diagnostics,
     };
 
     Ok(Response::new(
@@ -136,6 +165,34 @@ fn search_limit(limit: u32) -> usize {
     DEFAULT_SEARCH_LIMIT
   } else {
     (limit as usize).min(MAX_SEARCH_LIMIT)
+  }
+}
+
+fn search_order_from_proto(order: i32) -> SearchOrder {
+  match order {
+    1 => SearchOrder::Path,
+    2 => SearchOrder::Title,
+    3 => SearchOrder::PathThenScore,
+    _ => SearchOrder::Score,
+  }
+}
+
+fn search_diagnostics(
+  include_total_hits: bool,
+  result: &SearchResultSet<WorkspaceSearchResult>,
+  query: &SearchQuery,
+  elapsed_ms: u64,
+) -> SearchDiagnostics {
+  SearchDiagnostics {
+    elapsed_ms,
+    returned_hits: saturating_u32(result.results.len()),
+    total_hits: if include_total_hits {
+      saturating_u32(result.total_hits)
+    } else {
+      0
+    },
+    offset: saturating_u32(query.offset),
+    limit: saturating_u32(query.limit),
   }
 }
 

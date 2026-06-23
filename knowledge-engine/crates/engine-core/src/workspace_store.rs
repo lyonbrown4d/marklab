@@ -17,7 +17,7 @@ use crate::outbox::{
   append_in_tx, initialize_outbox_tables, mark_applied_in_tx, OutboxEvent, OutboxEventKind,
 };
 use crate::search_text::search_documents;
-use crate::types::SearchDocument;
+use crate::types::{SearchDocument, SearchOrder, SearchQuery, SearchResultSet};
 
 const SEARCH_WRITER_MEMORY_BYTES: usize = 15_000_000;
 const MAX_MANUAL_SCAN_DOCS: usize = 50_000;
@@ -118,9 +118,9 @@ impl WorkspaceStore {
     Ok(count)
   }
 
-  pub(crate) fn search(&self, query: &str, limit: usize) -> Result<Vec<serde_json::Value>, String> {
+  pub(crate) fn search(&self, query: &SearchQuery) -> Result<SearchResultSet<serde_json::Value>, String> {
     let metadata = list_documents_in_db(&self.database)?;
-    self.search.search(query, limit, &metadata)
+    self.search.search(query, &metadata)
   }
 
   fn mark_applied(&self, event: OutboxEvent) -> Result<(), String> {
@@ -237,10 +237,9 @@ impl TantivyWorkspaceIndex {
 
   fn search(
     &self,
-    query: &str,
-    limit: usize,
+    query: &SearchQuery,
     metadata: &[DocumentMetadata],
-  ) -> Result<Vec<serde_json::Value>, String> {
+  ) -> Result<SearchResultSet<serde_json::Value>, String> {
     let titles = metadata
       .iter()
       .map(|metadata| (metadata.path.as_str(), metadata.title.as_str()))
@@ -251,7 +250,11 @@ impl TantivyWorkspaceIndex {
         document.title = (*title).to_string();
       }
     }
-    Ok(search_documents(documents.iter(), query, limit))
+
+    Ok(search_documents(
+      documents.iter(),
+      query,
+    ))
   }
 
   fn all_documents(&self) -> Result<Vec<SearchDocument>, String> {

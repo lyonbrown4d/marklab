@@ -23,12 +23,18 @@ import type {
   OpenWorkspaceResponse,
   RebuildIndexRequest,
   RebuildIndexResponse,
+  RemoveDocumentRequest,
+  RemoveDocumentResponse,
+  RemovePathPrefixRequest,
+  RemovePathPrefixResponse,
   SearchRequest,
   SearchResponse,
   ShutdownRequest,
   ShutdownResponse,
   SyncRequest,
   SyncResponse,
+  UpsertDocumentRequest,
+  UpsertDocumentResponse,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
 
 type RecordedCall = {
@@ -37,14 +43,19 @@ type RecordedCall = {
 }
 
 type CallKey =
+  | 'closeWorkspace'
   | 'getCapabilities'
   | 'getDocumentSymbols'
   | 'getLinks'
+  | 'hasDocuments'
   | 'openWorkspace'
   | 'rebuildIndex'
+  | 'removeDocument'
+  | 'removePathPrefix'
   | 'search'
   | 'shutdown'
   | 'sync'
+  | 'upsertDocument'
 
 export type ClientFixture = {
   calls: Partial<Record<CallKey, RecordedCall>>
@@ -128,6 +139,7 @@ export const createClientFixture = (): ClientFixture => {
               const stream = new EventEmitter() as ClientReadableStream<SearchResponse>
               queueMicrotask(() => {
                 stream.emit('data', {
+                  done: true,
                   results: [
                     {
                       column: 0,
@@ -140,6 +152,7 @@ export const createClientFixture = (): ClientFixture => {
                       title: 'Alpha',
                     },
                   ],
+                  totalHits: 1,
                 })
                 stream.emit('end')
               })
@@ -150,10 +163,10 @@ export const createClientFixture = (): ClientFixture => {
             close: close.workspace,
             closeWorkspace: unary<CloseWorkspaceRequest, CloseWorkspaceResponse>(
               calls,
-              'openWorkspace',
+              'closeWorkspace',
               {} as CloseWorkspaceResponse,
             ),
-            hasDocuments: unary(calls, 'openWorkspace', { hasDocuments: true }),
+            hasDocuments: unary(calls, 'hasDocuments', { hasDocuments: true }),
             openWorkspace: unary<OpenWorkspaceRequest, OpenWorkspaceResponse>(
               calls,
               'openWorkspace',
@@ -164,9 +177,21 @@ export const createClientFixture = (): ClientFixture => {
               'rebuildIndex',
               {} as RebuildIndexResponse,
             ),
-            removeDocument: unary(calls, 'openWorkspace', {}),
-            removePathPrefix: unary(calls, 'openWorkspace', {}),
-            upsertDocument: unary(calls, 'openWorkspace', {}),
+            removeDocument: unary<RemoveDocumentRequest, RemoveDocumentResponse>(
+              calls,
+              'removeDocument',
+              {} as RemoveDocumentResponse,
+            ),
+            removePathPrefix: unary<RemovePathPrefixRequest, RemovePathPrefixResponse>(
+              calls,
+              'removePathPrefix',
+              {} as RemovePathPrefixResponse,
+            ),
+            upsertDocument: unary<UpsertDocumentRequest, UpsertDocumentResponse>(
+              calls,
+              'upsertDocument',
+              {} as UpsertDocumentResponse,
+            ),
           },
         } as unknown as NonNullable<
           ConstructorParameters<typeof KnowledgeEngineGrpcClient>[0]['clients']

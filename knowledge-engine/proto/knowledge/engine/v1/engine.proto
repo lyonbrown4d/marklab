@@ -224,13 +224,34 @@ message MarkdownLink {
 message SearchRequest {
   string query = 1;
   uint32 limit = 2;
+  repeated string include_paths = 3;
+  uint32 offset = 4;
+  SearchOrder order = 5;
+  bool include_total_hits = 6;
+  bool include_diagnostics = 7;
 }
 
 message SearchResponse {
   repeated SearchResult results = 1;
   bool done = 2;
+  uint32 total_hits = 3;
+  SearchDiagnostics diagnostics = 4;
 }
 
+message SearchDiagnostics {
+  uint64 elapsed_ms = 1;
+  uint32 returned_hits = 2;
+  uint32 total_hits = 3;
+  uint32 offset = 4;
+  uint32 limit = 5;
+}
+
+enum SearchOrder {
+  SEARCH_ORDER_SCORE = 0;
+  SEARCH_ORDER_PATH = 1;
+  SEARCH_ORDER_TITLE = 2;
+  SEARCH_ORDER_PATH_THEN_SCORE = 3;
+}
 message SearchResult {
   string document_id = 1;
   string path = 2;
@@ -262,3 +283,4 @@ message Position {
   uint32 line = 1;
   uint32 character = 2;
 }
+

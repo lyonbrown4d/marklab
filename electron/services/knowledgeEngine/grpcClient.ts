@@ -1,25 +1,24 @@
-import {
-  ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type Metadata,
-  Metadata as GrpcMetadata,
-} from '@grpc/grpc-js'
+import { ChannelCredentials, Client, type Metadata, Metadata as GrpcMetadata } from '@grpc/grpc-js'
 
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import type {
-  ApplyDocumentChange,
-  CloseDocument,
-  MarkdownDocumentSymbol,
-  MarkdownLink,
-  OpenDocument,
-  ResyncDocument,
+  SearchRequest,
   SearchResponse,
   SyncRequest,
   SyncResponse,
-  TextEdit,
   WorkspaceDocument,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
+import type {
+  KnowledgeCloseDocumentInput,
+  KnowledgeDocumentChangeInput,
+  KnowledgeDocumentVersion,
+  KnowledgeMarkdownDocumentSymbol,
+  KnowledgeMarkdownLink,
+  KnowledgeOpenDocumentInput,
+  KnowledgeResyncDocumentInput,
+  KnowledgeSyncResponse,
+  KnowledgeEngineGrpcClientOptions,
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
 import {
   ControlClientConstructor,
   DocumentSessionClientConstructor,
@@ -28,41 +27,35 @@ import {
   WorkspaceClientConstructor,
   type ControlClient,
   type DocumentSessionClient,
-  type KnowledgeEngineGrpcClients,
   type MarkdownClient,
   type SearchClient,
   type UnaryCall,
   type WorkspaceClient,
 } from '@electron/services/knowledgeEngine/grpcWire.js'
-
-type KnowledgeEngineGrpcClientOptions = {
-  address: string
-  sessionToken: string
-  clientOptions?: Partial<ClientOptions>
-  clients?: KnowledgeEngineGrpcClients
-}
-
-type KnowledgeDocumentVersion = number | string
-
-export type KnowledgeOpenDocumentInput = Omit<OpenDocument, 'version'> & {
-  version: KnowledgeDocumentVersion
-}
-
-export type KnowledgeDocumentChangeInput = Omit<ApplyDocumentChange, 'baseVersion' | 'version'> & {
-  baseVersion: KnowledgeDocumentVersion
-  version: KnowledgeDocumentVersion
-}
-
-export type KnowledgeResyncDocumentInput = Omit<ResyncDocument, 'version'> & {
-  version: KnowledgeDocumentVersion
-}
-
-export type KnowledgeCloseDocumentInput = CloseDocument
-export type KnowledgeMarkdownDocumentSymbol = MarkdownDocumentSymbol
-export type KnowledgeMarkdownLink = MarkdownLink
-export type KnowledgeSyncResponse = SyncResponse
-export type KnowledgeTextEdit = TextEdit
-
+import {
+  knowledgeSearchOrderToProto,
+  searchLimitValue,
+  searchResultToFsResult,
+  type KnowledgeSearchOptions,
+  type KnowledgeSearchResultSet,
+} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+export type {
+  KnowledgeSearchOptions,
+  KnowledgeSearchOrder,
+  KnowledgeSearchDiagnostics,
+  KnowledgeSearchResultSet,
+} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+export type {
+  KnowledgeCloseDocumentInput,
+  KnowledgeDocumentChangeInput,
+  KnowledgeDocumentVersion,
+  KnowledgeMarkdownDocumentSymbol,
+  KnowledgeMarkdownLink,
+  KnowledgeOpenDocumentInput,
+  KnowledgeResyncDocumentInput,
+  KnowledgeSyncResponse,
+  KnowledgeEngineGrpcClientOptions,
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
 export class KnowledgeEngineGrpcClient {
   private readonly control: ControlClient
   private readonly documentSession: DocumentSessionClient
@@ -193,15 +186,50 @@ export class KnowledgeEngineGrpcClient {
   }
 
   search(query: string, limit: number): Promise<FsSearchResult[]> {
-    const stream = this.searchClient.search({ query, limit }, this.metadata())
-    const results: FsSearchResult[] = []
+    return this.searchWithOptions(query, { limit }).then((result) => result.results)
+  }
+
+  searchWithOptions(
+    query: string,
+    options: KnowledgeSearchOptions = {},
+  ): Promise<KnowledgeSearchResultSet> {
+    const request: SearchRequest = {
+      query,
+      limit: searchLimitValue(options.limit),
+      includePaths: options.includePaths ?? [],
+      offset: Math.max(0, options.offset ?? 0),
+      order: knowledgeSearchOrderToProto(options.order),
+      includeTotalHits: options.includeTotalHits ?? false,
+      includeDiagnostics: options.includeDiagnostics ?? false,
+    }
+
+    const stream = this.searchClient.search(request, this.metadata())
+    const resultSet: KnowledgeSearchResultSet = {
+      results: [],
+      totalHits: 0,
+      diagnostics: undefined,
+    }
 
     return new Promise((resolve, reject) => {
       stream.on('data', (response: SearchResponse) => {
-        results.push(...response.results.map(searchResultToFsResult))
+        if (response.results?.length) {
+          resultSet.results.push(...response.results.map(searchResultToFsResult))
+        }
+        if (typeof response.totalHits === 'number') {
+          resultSet.totalHits = response.totalHits
+        }
+        if (response.diagnostics) {
+          resultSet.diagnostics = {
+            elapsedMs: Number(response.diagnostics.elapsedMs),
+            returnedHits: response.diagnostics.returnedHits,
+            totalHits: response.diagnostics.totalHits,
+            offset: response.diagnostics.offset,
+            limit: response.diagnostics.limit,
+          }
+        }
       })
       stream.once('error', reject)
-      stream.once('end', () => resolve(results))
+      stream.once('end', () => resolve(resultSet))
     })
   }
 
@@ -269,17 +297,3 @@ export class KnowledgeEngineGrpcClient {
 }
 
 const versionToProto = (version: KnowledgeDocumentVersion): string => String(version)
-
-const searchResultToFsResult = (result: SearchResponse['results'][number]): FsSearchResult => ({
-  column: Math.max(result.column, 1),
-  end_column: Math.max(result.endColumn, 1),
-  line: Math.max(result.line, 1),
-  path: result.path,
-  score: result.score,
-  snippet: result.snippet,
-  snippet_highlights: result.snippetHighlights.map((highlight) => ({
-    end: highlight.end,
-    start: highlight.start,
-  })),
-  title: result.title || result.path,
-})

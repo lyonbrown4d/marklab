@@ -37,13 +37,15 @@ describe('WorkspaceSidecarManager', () => {
 
     await manager.open('workspace-a', 'index-a')
 
-    expect(manager.listActive()[0]?.spawnPlan).toMatchObject({
-      command: 'engine.exe',
-      args: [],
-      env: {
-        GRPC_SESSION_TOKEN: '<redacted>',
+    expect(manager.listActive()[0]).toMatchObject({
+      spawnPlan: {
+        command: 'engine.exe',
+        args: [],
+        env: {
+          GRPC_SESSION_TOKEN: '<redacted>',
+        },
+        windowsHide: true,
       },
-      windowsHide: true,
     })
     expect(JSON.stringify(manager.listActive())).not.toContain('sessionToken')
   })
@@ -55,6 +57,37 @@ describe('WorkspaceSidecarManager', () => {
     await manager.search('workspace-a', 'alpha', 10)
 
     expect(client.search).toHaveBeenCalledWith('alpha', 10)
+  })
+
+  it('routes search requests with options to the workspace grpc client', async () => {
+    const { client, manager } = createManager()
+    await manager.open('workspace-a', 'index-a')
+
+    const result = await manager.searchWithOptions('workspace-a', 'alpha', {
+      limit: 5,
+      includeTotalHits: true,
+    })
+
+    expect(client.searchWithOptions).toHaveBeenCalledWith('alpha', {
+      limit: 5,
+      includeTotalHits: true,
+    })
+    expect(result).toEqual({
+      diagnostics: undefined,
+      results: [
+        {
+          column: 1,
+          end_column: 7,
+          line: 3,
+          path: 'alpha.md',
+          score: 0.75,
+          snippet: 'Alpha body',
+          snippet_highlights: [{ end: 5, start: 0 }],
+          title: 'Alpha',
+        },
+      ],
+      totalHits: 1,
+    })
   })
 
   it('routes document index requests to the workspace grpc client', async () => {
@@ -222,6 +255,21 @@ const createClient = (): WorkspaceSidecarClient => ({
     acknowledged: { documentId: 'alpha.md', version: '2' },
   })),
   search: vi.fn(async () => []),
+  searchWithOptions: vi.fn(async () => ({
+    results: [
+      {
+        column: 1,
+        end_column: 7,
+        line: 3,
+        path: 'alpha.md',
+        score: 0.75,
+        snippet: 'Alpha body',
+        snippet_highlights: [{ end: 5, start: 0 }],
+        title: 'Alpha',
+      },
+    ],
+    totalHits: 1,
+  })),
   shutdown: vi.fn(async () => undefined),
   upsertDocument: vi.fn(async () => undefined),
 })

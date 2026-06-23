@@ -98,7 +98,7 @@ describe('KnowledgeEngineGrpcClient', () => {
 
     const results = await client.search('alpha', 5)
 
-    expect(fixture.calls.search?.request).toEqual({ limit: 5, query: 'alpha' })
+    expect(fixture.calls.search?.request).toMatchObject({ limit: 5, query: 'alpha' })
     expect(fixture.calls.search?.metadata.get('x-marklab-session-token')).toEqual([
       'session-token-a',
     ])

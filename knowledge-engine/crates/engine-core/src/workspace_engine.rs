@@ -7,7 +7,7 @@ use crate::markdown_documents::{
   MarkdownDocumentRange, MarkdownDocumentStore,
 };
 use crate::markdown_extract::MarkdownLink;
-use crate::types::SearchDocument;
+use crate::types::{SearchDocument, SearchQuery, SearchResultSet};
 use crate::workspace_store::WorkspaceStore;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -90,11 +90,26 @@ impl WorkspaceEngine {
 
   pub fn search(&self, query: &str, limit: usize) -> Result<Vec<WorkspaceSearchResult>, String> {
     self
-      .workspace
-      .search(query, limit)?
+      .search_with_query(&SearchQuery::new(query, limit))
+      .map(|set| set.results)
+  }
+
+  pub fn search_with_query(
+    &self,
+    query: &SearchQuery,
+  ) -> Result<SearchResultSet<WorkspaceSearchResult>, String> {
+    let response = self.workspace.search(query)?;
+
+    let results = response
+      .results
       .into_iter()
       .map(search_result_from_value)
-      .collect()
+      .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(SearchResultSet {
+      results,
+      total_hits: response.total_hits,
+    })
   }
 
   pub fn document_count(&self) -> Result<usize, String> {
