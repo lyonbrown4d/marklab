@@ -19,10 +19,7 @@
       "electron-winstaller",
       "esbuild",
       "msgpackr-extract"
-    ],
-    "patchedDependencies": {
-      "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"
-    }
+    ]
   },
   "scripts": {
     "dev": "moon run desktop:electron-dev",
@@ -42,7 +39,6 @@
     "desktop:prepare:dev": "moon run desktop:prepare-dev",
     "build:electron": "moon run desktop:electron-build",
     "electron:dev": "moon run desktop:electron-dev",
-    "native:rebuild": "node scripts/rebuild-node-pty.mjs",
     "electron:build": "moon run desktop:electron-build",
     "electron:start": "pnpm electron:build && electron .",
     "dev:desktop": "moon run desktop:electron-dev",
@@ -83,7 +79,7 @@
     "productName": "Marklab",
     "asar": true,
     "asarUnpack": [
-      "node_modules/node-pty/**/*"
+      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
@@ -94,7 +90,7 @@
       "dist-electron/**/*",
       "resources/icons/**/*",
       "!node_modules/**/*",
-      "node_modules/node-pty/**/*",
+      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
       "package.json"
     ],
     "extraResources": [
@@ -169,6 +165,7 @@
     "@dagrejs/dagre": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.1",
     "@grpc/grpc-js": "^1.14.4",
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@hookform/resolvers": "^5.4.0",
     "@milkdown/core": "^7.21.2",
     "@milkdown/crepe": "^7.21.2",
@@ -231,7 +228,6 @@
     "mermaid": "^11.15.0",
     "mitt": "3.0.1",
     "monaco-editor": "^0.55.1",
-    "node-pty": "^1.1.0",
     "pdfjs-dist": "4.8.69",
     "react": "^19.2.7",
     "react-arborist": "^3.10.5",

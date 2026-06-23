@@ -1,29 +1,21 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
-import type { IPty } from 'node-pty'
+import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type {
   TerminalExitEvent,
   TerminalOutputEvent,
   TerminalSessionInfo,
 } from '@electron/services/terminal/types.js'
-type NodePtyModule = typeof import('node-pty')
+type NodePtyModule = typeof import('@homebridge/node-pty-prebuilt-multiarch')
 type CwdProvider = (webContents?: Electron.WebContents) => string
-type TerminalSession =
-  | {
-      kind: 'pty'
-      process: IPty
-      webContents: Electron.WebContents
-    }
-  | {
-      kind: 'fallback'
-      process: ChildProcessWithoutNullStreams
-      webContents: Electron.WebContents
-    }
+type TerminalSession = {
+  process: IPty
+  webContents: Electron.WebContents
+}
 const require = createRequire(import.meta.url)
 const MIN_ROWS = 8
 const MAX_ROWS = 200
@@ -32,7 +24,7 @@ const MAX_COLS = 400
 export class TerminalService {
   private readonly sessions = new Map<string, TerminalSession>()
   private nextId = 1
-  private ptyModule: NodePtyModule | null | undefined
+  private ptyModule: NodePtyModule | undefined
   constructor(
     private readonly defaultCwd: string | CwdProvider = os.homedir(),
     private readonly logger: Logger = noopLogger,
@@ -51,95 +43,53 @@ export class TerminalService {
     const shell = defaultShell()
     const size = normalizedSize(rows, cols)
     const pty = this.loadPty()
-    if (pty) {
-      try {
-        const terminal = pty.spawn(shell, [], {
-          cols: size.cols,
-          rows: size.rows,
-          cwd,
-          env: {
-            ...process.env,
-            TERM: process.env.TERM || 'xterm-256color',
-            COLORTERM: process.env.COLORTERM || 'truecolor',
-          },
-          name: 'xterm-256color',
-        })
-        terminal.onData((data) => {
-          this.emitOutput(webContents, { id, data })
-        })
-        terminal.onExit(({ exitCode, signal }) => {
-          this.sessions.delete(id)
-          this.logger.info('terminal session exited', { exitCode, id, kind: 'pty', signal })
-          this.emitExit(webContents, {
-            id,
-            exit_code: typeof exitCode === 'number' ? exitCode : null,
-            signal: signal === undefined || signal === null ? null : String(signal),
-          })
-        })
-        this.sessions.set(id, { kind: 'pty', process: terminal, webContents })
-        this.logger.info('terminal session created', { cwd, id, kind: 'pty', shell })
-        return { id, shell, cwd }
-      } catch (error) {
-        this.ptyModule = null
-        this.logger.warn('pty backend failed to spawn; falling back to child process', { error })
-      }
-    }
-    const child = spawn(shell, [], {
-      cwd,
-      env: process.env,
-      shell: false,
-      windowsHide: true,
-    })
-    child.stdout.on('data', (data: Buffer) => {
-      this.emitOutput(webContents, { id, data: data.toString('utf8') })
-    })
-    child.stderr.on('data', (data: Buffer) => {
-      this.emitOutput(webContents, { id, data: data.toString('utf8') })
-    })
-    child.on('exit', (code, signal) => {
-      this.sessions.delete(id)
-      this.logger.info('terminal session exited', {
-        exitCode: code,
-        id,
-        kind: 'fallback',
-        signal,
+    try {
+      const terminal = pty.spawn(shell, [], {
+        cols: size.cols,
+        rows: size.rows,
+        cwd,
+        env: {
+          ...process.env,
+          TERM: process.env.TERM || 'xterm-256color',
+          COLORTERM: process.env.COLORTERM || 'truecolor',
+        },
+        name: 'xterm-256color',
       })
-      this.emitExit(webContents, { id, exit_code: code, signal })
-    })
-    this.sessions.set(id, { kind: 'fallback', process: child, webContents })
-    this.logger.warn('terminal session using fallback backend', { cwd, id, shell })
-    this.emitOutput(webContents, {
-      id,
-      data: '\r\n[marklab] PTY backend is unavailable; terminal is running without resize/full-screen parity.\r\n',
-    })
+      terminal.onData((data) => {
+        this.emitOutput(webContents, { id, data })
+      })
+      terminal.onExit(({ exitCode, signal }) => {
+        this.sessions.delete(id)
+        this.logger.info('terminal session exited', { exitCode, id, signal })
+        this.emitExit(webContents, {
+          id,
+          exit_code: typeof exitCode === 'number' ? exitCode : null,
+          signal: signal === undefined || signal === null ? null : String(signal),
+        })
+      })
+      this.sessions.set(id, { process: terminal, webContents })
+      this.logger.info('terminal session created', { cwd, id, shell })
+    } catch (error) {
+      throw new Error(`Failed to start PTY terminal: ${formatError(error)}`, { cause: error })
+    }
     return { id, shell, cwd }
   }
   write(id: unknown, data: unknown): void {
     const session = this.requireSession(id)
     if (typeof data !== 'string') throw new Error('Terminal input must be a string')
-    if (session.kind === 'pty') {
-      session.process.write(data)
-      return
-    }
-    session.process.stdin.write(data)
+    session.process.write(data)
   }
   resize(id: unknown, rows: unknown, cols: unknown): void {
     const session = this.requireSession(id)
     const size = normalizedSize(rows, cols)
-    if (session.kind === 'pty') {
-      session.process.resize(size.cols, size.rows)
-    }
+    session.process.resize(size.cols, size.rows)
   }
   close(id: unknown): void {
     const sessionId = validateSessionId(id)
     const session = this.sessions.get(sessionId)
     if (!session) return
     this.sessions.delete(sessionId)
-    this.logger.info('terminal session closed', { id: sessionId, kind: session.kind })
-    if (session.kind === 'pty') {
-      session.process.kill()
-      return
-    }
+    this.logger.info('terminal session closed', { id: sessionId })
     session.process.kill()
   }
   dispose(): void {
@@ -153,13 +103,15 @@ export class TerminalService {
     if (!session) throw new Error(`Terminal session not found: ${sessionId}`)
     return session
   }
-  private loadPty(): NodePtyModule | null {
+  private loadPty(): NodePtyModule {
     if (this.ptyModule !== undefined) return this.ptyModule
     try {
-      this.ptyModule = require('node-pty') as NodePtyModule
-    } catch {
-      this.ptyModule = null
-      this.logger.warn('pty backend unavailable')
+      this.ptyModule = require('@homebridge/node-pty-prebuilt-multiarch') as NodePtyModule
+    } catch (error) {
+      throw new Error(
+        `PTY backend is unavailable. Reinstall dependencies or run pnpm install: ${formatError(error)}`,
+        { cause: error },
+      )
     }
     return this.ptyModule
   }
@@ -183,6 +135,9 @@ const normalizedSize = (rows: unknown, cols: unknown) => {
 const clampInteger = (value: unknown, min: number, max: number, fallback: number): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
   return Math.trunc(value < min ? min : value > max ? max : value)
+}
+const formatError = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error)
 }
 const resolveCwd = (
   defaultCwd: string | CwdProvider,

@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  node-pty@1.1.0:
-    hash: bd06c73b5c15f8b1a5ebd09402ed0859f4faac8364b121ebd3c6b7650385d211
-    path: patches/node-pty@1.1.0.patch
-
 importers:
 
   .:
@@ -28,6 +23,9 @@ importers:
       '@grpc/grpc-js':
         specifier: ^1.14.4
         version: 1.14.4
+      '@homebridge/node-pty-prebuilt-multiarch':
+        specifier: ^0.13.1
+        version: 0.13.1
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
@@ -214,9 +212,6 @@ importers:
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
-      node-pty:
-        specifier: ^1.1.0
-        version: 1.1.0(patch_hash=bd06c73b5c15f8b1a5ebd09402ed0859f4faac8364b121ebd3c6b7650385d211)
       pdfjs-dist:
         specifier: 4.8.69
         version: 4.8.69
@@ -1155,6 +1150,10 @@ packages:
     resolution: {integrity: sha512-wtF6h+DY6M3YaDBPAmvuuA6jV8Sif9MjtOI5euKFWRgCDl5PeDpPsHR9u2l6St5ceY8AZgoNDww5+HvEsXFsGg==}
     engines: {node: '>=6'}
     hasBin: true
+
+  '@homebridge/node-pty-prebuilt-multiarch@0.13.1':
+    resolution: {integrity: sha512-ccQ60nMcbEGrQh0U9E6x0ajW9qJNeazpcM/9CH6J8leyNtJgb+gu24WTBAfBUVeO486ZhscnaxLEITI2HXwhow==}
+    engines: {node: '>=18.0.0 <25.0.0'}
 
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
@@ -6539,9 +6538,6 @@ packages:
   node-mock-http@1.0.4:
     resolution: {integrity: sha512-8DY+kFsDkNXy1sJglUfuODx1/opAGJGyrTuFqEoN90oRc2Vk0ZbD4K2qmKXBBEhZQzdKHIVfEJpDU8Ak2NJEvQ==}
 
-  node-pty@1.1.0:
-    resolution: {integrity: sha512-20JqtutY6JPXTUnL0ij1uad7Qe1baT46lyolh2sSENDd4sTzKZ4nmAFkeAARDKwmlLjPx6XKRlwRUxwjOy+lUg==}
-
   node-releases@2.0.47:
     resolution: {integrity: sha512-Uzmd6LXpouKo8EUK68IjH4+E01w/hXyV3R3g/geCJo+rXLNfh1xucB+LOzYEOQPSiUK3h/xZf0cQGcSsmyL2Og==}
     engines: {node: '>=18'}
@@ -9286,6 +9282,11 @@ snapshots:
       long: 5.3.2
       protobufjs: 7.6.4
       yargs: 17.7.2
+
+  '@homebridge/node-pty-prebuilt-multiarch@0.13.1':
+    dependencies:
+      node-addon-api: 7.1.1
+      prebuild-install: 7.1.3
 
   '@hono/node-server@1.19.14(hono@4.12.26)':
     dependencies:
@@ -12327,7 +12328,6 @@ snapshots:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
-    optional: true
 
   bluebird@3.7.2: {}
 
@@ -12383,7 +12383,6 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
-    optional: true
 
   builder-util-runtime@9.7.0:
     dependencies:
@@ -12504,8 +12503,7 @@ snapshots:
     dependencies:
       readdirp: 5.0.0
 
-  chownr@1.1.4:
-    optional: true
+  chownr@1.1.4: {}
 
   chownr@3.0.0: {}
 
@@ -12620,7 +12618,7 @@ snapshots:
       json-schema-typed: 7.0.3
       onetime: 5.1.2
       pkg-up: 3.1.0
-      semver: 7.8.4
+      semver: 7.8.5
 
   conf@15.1.0:
     dependencies:
@@ -12941,8 +12939,7 @@ snapshots:
 
   dedent@1.7.2: {}
 
-  deep-extend@0.6.0:
-    optional: true
+  deep-extend@0.6.0: {}
 
   deep-is@0.1.4: {}
 
@@ -13435,8 +13432,7 @@ snapshots:
       strip-final-newline: 4.0.0
       yoctocolors: 2.1.2
 
-  expand-template@2.0.3:
-    optional: true
+  expand-template@2.0.3: {}
 
   expect-type@1.3.0: {}
 
@@ -13582,8 +13578,7 @@ snapshots:
 
   fresh@2.0.0: {}
 
-  fs-constants@1.0.0:
-    optional: true
+  fs-constants@1.0.0: {}
 
   fs-extra@10.1.0:
     dependencies:
@@ -13678,8 +13673,7 @@ snapshots:
       resolve-pkg-maps: 1.0.0
     optional: true
 
-  github-from-package@0.0.0:
-    optional: true
+  github-from-package@0.0.0: {}
 
   github-slugger@2.0.0: {}
 
@@ -13898,8 +13892,7 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  ieee754@1.2.1:
-    optional: true
+  ieee754@1.2.1: {}
 
   ignore@5.3.2: {}
 
@@ -13942,8 +13935,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ini@1.3.8:
-    optional: true
+  ini@1.3.8: {}
 
   inline-style-parser@0.2.7: {}
 
@@ -14833,8 +14825,7 @@ snapshots:
 
   mitt@3.0.1: {}
 
-  mkdirp-classic@0.5.3:
-    optional: true
+  mkdirp-classic@0.5.3: {}
 
   mkdirp@0.5.6:
     dependencies:
@@ -14871,8 +14862,7 @@ snapshots:
 
   nanoid@5.1.11: {}
 
-  napi-build-utils@2.0.0:
-    optional: true
+  napi-build-utils@2.0.0: {}
 
   natural-compare@1.4.0: {}
 
@@ -14881,7 +14871,6 @@ snapshots:
   node-abi@3.92.0:
     dependencies:
       semver: 7.8.5
-    optional: true
 
   node-abi@4.31.0:
     dependencies:
@@ -14922,10 +14911,6 @@ snapshots:
   node-int64@0.4.0: {}
 
   node-mock-http@1.0.4: {}
-
-  node-pty@1.1.0(patch_hash=bd06c73b5c15f8b1a5ebd09402ed0859f4faac8364b121ebd3c6b7650385d211):
-    dependencies:
-      node-addon-api: 7.1.1
 
   node-releases@2.0.47: {}
 
@@ -15352,7 +15337,6 @@ snapshots:
       simple-get: 4.0.1
       tar-fs: 2.1.4
       tunnel-agent: 0.6.0
-    optional: true
 
   prelude-ls@1.2.1: {}
 
@@ -15553,7 +15537,6 @@ snapshots:
       ini: 1.3.8
       minimist: 1.2.8
       strip-json-comments: 2.0.1
-    optional: true
 
   react-arborist@3.10.5(@types/node@25.9.3)(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
@@ -15798,7 +15781,6 @@ snapshots:
       inherits: 2.0.4
       string_decoder: 1.1.1
       util-deprecate: 1.0.2
-    optional: true
 
   readdirp@3.6.0:
     dependencies:
@@ -16207,15 +16189,13 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-concat@1.0.1:
-    optional: true
+  simple-concat@1.0.1: {}
 
   simple-get@4.0.1:
     dependencies:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
-    optional: true
 
   simple-git@3.36.0:
     dependencies:
@@ -16334,8 +16314,7 @@ snapshots:
     dependencies:
       min-indent: 1.0.1
 
-  strip-json-comments@2.0.1:
-    optional: true
+  strip-json-comments@2.0.1: {}
 
   stubborn-fs@2.0.0:
     dependencies:
@@ -16387,7 +16366,6 @@ snapshots:
       mkdirp-classic: 0.5.3
       pump: 3.0.4
       tar-stream: 2.2.0
-    optional: true
 
   tar-mini@0.2.0: {}
 
@@ -16398,7 +16376,6 @@ snapshots:
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
-    optional: true
 
   tar@7.5.16:
     dependencies:
@@ -16516,7 +16493,6 @@ snapshots:
   tunnel-agent@0.6.0:
     dependencies:
       safe-buffer: 5.1.2
-    optional: true
 
   tunnel-rat@0.1.2(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7):
     dependencies:

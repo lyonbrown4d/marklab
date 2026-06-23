@@ -147,28 +147,18 @@ tasks:
     options:
       cache: false
 
-  native-rebuild:
-    command: node scripts/rebuild-node-pty.mjs
-    inputs:
-      - scripts/rebuild-node-pty.mjs
-      - package.json
-      - pnpm-lock.yaml
-    options:
-      cache: false
-
   icons-generate:
     command: node scripts/generate-app-icons.mjs
     inputs:
       - scripts/generate-app-icons.mjs
       - src/assets/**/*
     outputs:
-      - build/**/*
+      - resources/icons/**/*
 
   prepare:
     deps:
       - ~:proto-gen
       - ~:knowledge-build
-      - ~:native-rebuild
       - ~:icons-generate
     options:
       cache: false
@@ -177,7 +167,6 @@ tasks:
     deps:
       - ~:proto-gen
       - ~:knowledge-build-dev
-      - ~:native-rebuild
       - ~:icons-generate
     options:
       cache: false
