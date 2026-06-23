@@ -3,6 +3,8 @@ import type * as Electron from 'electron'
 
 import { ExportService } from '@electron/services/export/exportService.js'
 import { GitService } from '@electron/services/git/service.js'
+import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import { KnowledgeEngineWorkspaceSearchBackend } from '@electron/services/knowledgeEngine/workspaceSearchBackend.js'
 import { createElectronLogger, type Logger } from '@electron/services/logger.js'
 import {
   configureSettingsStoreLogger,
@@ -29,6 +31,7 @@ export type ElectronRuntimeDependencies = {
 export type ElectronCradle = ElectronRuntimeDependencies & {
   exportService: ExportService
   gitService: GitService
+  knowledgeEngineService: KnowledgeEngineService
   logger: Logger
   terminalService: TerminalService
   workspaceRegistry: WindowWorkspaceRegistry
@@ -59,8 +62,9 @@ export const createElectronContainer = (
     onRendererReady: asValue(dependencies.onRendererReady ?? (() => undefined)),
     shell: asValue(dependencies.shell),
     logger: asValue(logger),
-    workspaceSearchIndexFactory: asFunction(() => {
-      return () => new WorkspaceSearchIndex()
+    workspaceSearchIndexFactory: asFunction(({ knowledgeEngineService }) => {
+      return () =>
+        new WorkspaceSearchIndex(new KnowledgeEngineWorkspaceSearchBackend(knowledgeEngineService))
     }).singleton(),
     workspaceRegistry: asFunction(({ app, logger, shell, workspaceSearchIndexFactory }) => {
       return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
@@ -73,6 +77,9 @@ export const createElectronContainer = (
     }).singleton(),
     gitService: asFunction(({ logger }) => {
       return new GitService(logger.child('git'))
+    }).singleton(),
+    knowledgeEngineService: asFunction(({ app, logger }) => {
+      return new KnowledgeEngineService({ app, logger: logger.child('knowledge-engine') })
     }).singleton(),
     terminalService: asFunction(({ app, logger, workspaceRegistry }) => {
       return new TerminalService(

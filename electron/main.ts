@@ -102,6 +102,12 @@ const bootstrap = async (): Promise<void> => {
   const logger = container.cradle.logger
   logger.info('bootstrap started')
 
+  const knowledgeEngine = await container.cradle.knowledgeEngineService.initialize()
+  if (!knowledgeEngine.ok) {
+    logger.error('knowledge engine startup failed', knowledgeEngine)
+    throw new Error(knowledgeEngine.error ?? 'Knowledge engine startup failed')
+  }
+
   installContentSecurityPolicy()
   registerAssetProtocol(() => nativeIpc)
   legacyShellIpc.register()
@@ -152,5 +158,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', (event) => {
+  container?.cradle.knowledgeEngineService.dispose()
   windowLifecycle.handleBeforeQuit(event, () => app.quit())
 })

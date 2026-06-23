@@ -30,12 +30,12 @@
     "build:compressed": "pnpm typecheck && vite build --mode compressed",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "icons:generate": "node scripts/generate-app-icons.mjs",
-    "native:search:build": "node scripts/build-native-search.mjs",
-    "native:search:build:force": "node scripts/build-native-search.mjs --force",
-    "desktop:prepare": "pnpm native:search:build && pnpm native:rebuild && pnpm icons:generate",
+    "knowledge:build": "node scripts/build-knowledge-engine.mjs",
+    "knowledge:build:force": "node scripts/build-knowledge-engine.mjs --force",
+    "desktop:prepare": "pnpm knowledge:build && pnpm native:rebuild && pnpm icons:generate",
     "build:electron": "pnpm electron:build",
     "preelectron:dev": "pnpm desktop:prepare",
-    "electron:dev": "vite --mode electron",
+    "electron:dev": "pnpm knowledge:build && vite --mode electron",
     "native:rebuild": "node scripts/rebuild-node-pty.mjs",
     "electron:build": "vite build --mode electron",
     "preelectron:build": "pnpm desktop:prepare",
@@ -74,7 +74,6 @@
     "productName": "Marklab",
     "asar": true,
     "asarUnpack": [
-      "native/search/**/*.node",
       "node_modules/node-pty/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
@@ -85,7 +84,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "resources/icons/**/*",
-      "native/search/**/*.node",
+      "resources/engine/**/*",
       "!node_modules/**/*",
       "node_modules/node-pty/**/*",
       "package.json"

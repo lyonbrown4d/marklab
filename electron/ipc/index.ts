@@ -24,6 +24,7 @@ import {
 } from '@electron/ipc/workspaceCommands.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
 import type { GitService } from '@electron/services/git/service.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
 import { getPlatformInfo } from '@electron/services/platform.js'
@@ -38,6 +39,7 @@ export type NativeIpcDependencies = {
   getLaunchInfo: () => import('@electron/types.js').AppLaunchInfo
   exportService: ExportService
   gitService: GitService
+  knowledgeEngineService: KnowledgeEngineService
   logger: Logger
   onRendererReady?: () => void
   shell: Electron.Shell
@@ -88,6 +90,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
       commands,
       gitTerminal,
       menu,
+      dependencies.knowledgeEngineService.commandHandlers,
       dependencies.windowCommandHandlers,
       dependencies.onRendererReady,
     ),
@@ -100,12 +103,14 @@ const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,
   gitTerminal: GitTerminalIpcBridge,
   menu: MenuDispatchBridge,
+  knowledgeEngineCommandHandlers: NativeCommandHandlers,
   windowCommandHandlers: NativeCommandHandlers = {},
   onRendererReady?: () => void,
 ): NativeCommandHandlers => {
   return {
     ...commands.commandHandlers,
     ...gitTerminal.commandHandlers,
+    ...knowledgeEngineCommandHandlers,
     ...windowCommandHandlers,
     'app-ready': () => {
       onRendererReady?.()

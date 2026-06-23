@@ -58,9 +58,7 @@ fabric.properties
 debug/
 target/
 Cargo.lock
-!native/search/Cargo.lock
-native/search/*.node
-native/search/npm/
+!Cargo.lock
 **/*.rs.bk
 *.pdb
 *~
@@ -155,3 +153,4 @@ Temporary Items
 
 # Generated app icon assets
 resources/icons/
+resources/engine/

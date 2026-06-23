@@ -1,0 +1,13 @@
+[package]
+name = "marklab-knowledge-rpc-server"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+marklab-knowledge-engine-core = { path = "../engine-core" }
+marklab-knowledge-protocol = { path = "../protocol" }
+
+[lib]
+path = "src/lib.rs"
+

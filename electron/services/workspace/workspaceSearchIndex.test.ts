@@ -4,14 +4,19 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
+import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import {
+  WorkspaceSearchIndex,
+  type WorkspaceSearchIndexBackend,
+} from '@electron/services/workspace/workspaceSearchIndex.js'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 
 const tempDirs: string[] = []
 
 const createIndex = async (): Promise<WorkspaceSearchIndex> => {
   const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
   tempDirs.push(dir)
-  const index = new WorkspaceSearchIndex()
+  const index = new WorkspaceSearchIndex(new FakeSearchBackend())
   await index.open(path.join(dir, 'search'))
   return index
 }
@@ -44,7 +49,7 @@ describe('WorkspaceSearchIndex', () => {
       {
         path: 'notes/markdown-search.md',
         title: 'markdown-search',
-        content: 'markdown native search',
+        content: 'markdown sidecar search',
       },
     ])
 
@@ -54,10 +59,11 @@ describe('WorkspaceSearchIndex', () => {
     expect(results[0]?.path).toBe('notes/markdown-search.md')
   })
 
-  it('keeps native indexes isolated per workspace key', async () => {
+  it('keeps sidecar workspace indexes isolated per workspace key', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
     tempDirs.push(dir)
-    const first = new WorkspaceSearchIndex()
+    const backend = new FakeSearchBackend()
+    const first = new WorkspaceSearchIndex(backend)
     await first.open(path.join(dir, 'first'))
     await first.rebuild([
       {
@@ -68,7 +74,7 @@ describe('WorkspaceSearchIndex', () => {
     ])
     await first.close()
 
-    const second = new WorkspaceSearchIndex()
+    const second = new WorkspaceSearchIndex(backend)
     await second.open(path.join(dir, 'second'))
     const hasDocuments = await second.hasDocuments()
     await second.close()
@@ -130,3 +136,89 @@ describe('WorkspaceSearchIndex', () => {
     })
   })
 })
+
+class FakeSearchBackend implements WorkspaceSearchIndexBackend {
+  private readonly documentsByWorkspace = new Map<string, WorkspaceSearchDocument[]>()
+
+  async open(workspaceId: string): Promise<void> {
+    if (!this.documentsByWorkspace.has(workspaceId)) {
+      this.documentsByWorkspace.set(workspaceId, [])
+    }
+  }
+
+  async close(): Promise<void> {
+    return undefined
+  }
+
+  async hasDocuments(workspaceId: string): Promise<boolean> {
+    return Boolean(this.documentsByWorkspace.get(workspaceId)?.length)
+  }
+
+  async rebuild(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
+    this.documentsByWorkspace.set(workspaceId, documents)
+  }
+
+  async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
+    const documents = this.documentsByWorkspace.get(workspaceId) ?? []
+    const next = documents.filter((item) => item.path !== document.path)
+    next.push(document)
+    this.documentsByWorkspace.set(workspaceId, next)
+  }
+
+  async removeDocument(workspaceId: string, pathValue: string): Promise<void> {
+    const documents = this.documentsByWorkspace.get(workspaceId) ?? []
+    this.documentsByWorkspace.set(
+      workspaceId,
+      documents.filter((document) => document.path !== pathValue),
+    )
+  }
+
+  async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
+    const documents = this.documentsByWorkspace.get(workspaceId) ?? []
+    this.documentsByWorkspace.set(
+      workspaceId,
+      documents.filter((document) => !document.path.startsWith(prefix)),
+    )
+  }
+
+  async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
+    const terms = foldText(query).split(/\s+/).filter(Boolean)
+    const documents = this.documentsByWorkspace.get(workspaceId) ?? []
+
+    return documents.flatMap((document) => searchDocument(document, terms)).slice(0, limit)
+  }
+}
+
+const searchDocument = (document: WorkspaceSearchDocument, terms: string[]): FsSearchResult[] => {
+  const title = path.basename(document.path, path.extname(document.path))
+  const haystack = foldText(`${title}\n${document.path}\n${document.content}`)
+  if (!terms.every((term) => haystack.includes(term))) return []
+
+  const snippet = foldText(title).includes(terms[0] ?? '')
+    ? title
+    : (document.content
+        .split(/\r?\n/)
+        .find((line) => terms.some((term) => foldText(line).includes(term))) ?? title)
+
+  return [
+    {
+      path: document.path,
+      title,
+      line: 1,
+      column: 1,
+      end_column: 1,
+      snippet,
+      snippet_highlights: terms.flatMap((term) => {
+        const start = foldText(snippet).indexOf(term)
+        return start >= 0 ? [{ start, end: start + term.length }] : []
+      }),
+      score: terms.length,
+    },
+  ]
+}
+
+const foldText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()

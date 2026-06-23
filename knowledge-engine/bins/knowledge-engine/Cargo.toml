@@ -1,0 +1,13 @@
+[package]
+name = "knowledge-engine"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+marklab-knowledge-rpc-server = { path = "../../crates/rpc-server" }
+
+[[bin]]
+name = "knowledge-engine"
+path = "src/main.rs"
+
