@@ -1,15 +1,15 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import type { App } from 'electron'
 
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import { resolveKnowledgeEngineBinary } from '@electron/services/knowledgeEngine/binaryPath.js'
-import { KnowledgeEngineRpcClient } from '@electron/services/knowledgeEngine/rpcClient.js'
 import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
 } from '@electron/services/knowledgeEngine/types.js'
 import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
 import type { Logger } from '@electron/services/logger.js'
+import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 
 type KnowledgeEngineServiceOptions = {
   app: App
@@ -17,10 +17,6 @@ type KnowledgeEngineServiceOptions = {
 }
 
 export class KnowledgeEngineService {
-  private child: ChildProcessWithoutNullStreams | null = null
-  private client: KnowledgeEngineRpcClient | null = null
-  private state: KnowledgeEngineStatus['state'] = 'stopped'
-  private lastError: string | undefined
   private readonly sidecars: WorkspaceSidecarManager
 
   constructor(private readonly options: KnowledgeEngineServiceOptions) {
@@ -28,11 +24,6 @@ export class KnowledgeEngineService {
       appDataDir: this.options.app.getPath('userData'),
       logger: this.options.logger,
       resolveBinary: () => resolveKnowledgeEngineBinary(this.options.app),
-      transport: {
-        getStatus: () => this.getStatus(),
-        initialize: () => this.initialize(),
-        request: (method, params) => this.request(method, params),
-      },
     })
   }
 
@@ -47,56 +38,47 @@ export class KnowledgeEngineService {
 
   getStatus(): KnowledgeEngineStatus {
     const binary = resolveKnowledgeEngineBinary(this.options.app)
-    const activeState = binary?.exists ? this.state : 'missing'
+    if (!binary?.exists) {
+      return {
+        binaryPath: binary?.binaryPath ?? null,
+        lastError: 'Knowledge engine binary not found. Run pnpm knowledge:build first.',
+        state: 'missing',
+      }
+    }
+
+    const runtimes = this.sidecars.listActive()
+    const activeRuntime = runtimes.find((runtime) => runtime.state === 'ready') ?? runtimes[0]
+    const state: KnowledgeEngineStatus['state'] = activeRuntime
+      ? activeRuntime.state === 'opening'
+        ? 'starting'
+        : activeRuntime.state === 'closing'
+          ? 'stopped'
+          : activeRuntime.state
+      : 'stopped'
 
     return {
-      state: activeState,
-      binaryPath: binary?.binaryPath ?? null,
-      ...(this.child?.pid ? { pid: this.child.pid } : {}),
-      ...(this.lastError ? { lastError: this.lastError } : {}),
+      binaryPath: binary.binaryPath,
+      state,
+      ...(activeRuntime?.pid ? { pid: activeRuntime.pid } : {}),
+      ...(activeRuntime?.lastError ? { lastError: activeRuntime.lastError } : {}),
     }
   }
 
   async initialize(): Promise<KnowledgeEngineInitializeResult> {
-    const startStatus = this.start()
-    if (startStatus.state === 'missing' || startStatus.state === 'error') {
-      return {
-        ok: false,
-        status: startStatus,
-        error: startStatus.lastError ?? 'Knowledge engine binary is not available.',
-      }
-    }
-
-    try {
-      const response = await this.client?.request('initialize')
-      this.state = 'ready'
-
-      return {
-        ok: true,
-        status: this.getStatus(),
-        response,
-      }
-    } catch (error) {
-      this.state = 'error'
-      this.lastError = error instanceof Error ? error.message : String(error)
-      return {
-        ok: false,
-        status: this.getStatus(),
-        error: this.lastError,
-      }
-    }
-  }
-
-  async request(method: string, params?: unknown): Promise<unknown> {
-    const status = this.start()
+    const status = this.getStatus()
     if (status.state === 'missing' || status.state === 'error') {
-      throw new Error(status.lastError ?? 'Knowledge engine is not available.')
-    }
-    if (!this.client) {
-      throw new Error('Knowledge engine transport is not available.')
+      return {
+        error: status.lastError ?? 'Knowledge engine binary is not available.',
+        ok: false,
+        status,
+      }
     }
 
-    return this.client.request(method, params)
+    return {
+      ok: true,
+      response: { mode: 'workspace-sidecar-grpc' },
+      status,
+    }
   }
 
   async openWorkspace(workspaceId: string, indexPath: string): Promise<void> {
@@ -107,66 +89,36 @@ export class KnowledgeEngineService {
     await this.sidecars.close(workspaceId)
   }
 
-  async requestWorkspace(
-    workspaceId: string,
-    method: string,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.sidecars.request(workspaceId, method, params)
+  async hasDocuments(workspaceId: string): Promise<boolean> {
+    return this.sidecars.hasDocuments(workspaceId)
+  }
+
+  async rebuildIndex(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
+    await this.sidecars.rebuildIndex(workspaceId, documents)
+  }
+
+  async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
+    await this.sidecars.upsertDocument(workspaceId, document)
+  }
+
+  async removeDocument(workspaceId: string, path: string): Promise<void> {
+    await this.sidecars.removeDocument(workspaceId, path)
+  }
+
+  async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
+    await this.sidecars.removePathPrefix(workspaceId, prefix)
+  }
+
+  async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
+    return this.sidecars.search(workspaceId, query, limit)
   }
 
   stop(): KnowledgeEngineStatus {
     this.sidecars.clear()
-    this.client?.dispose()
-    this.client = null
-
-    if (this.child && !this.child.killed) {
-      this.child.kill()
-    }
-
-    this.child = null
-    this.state = 'stopped'
     return this.getStatus()
   }
 
   dispose() {
     this.stop()
-  }
-
-  private start(): KnowledgeEngineStatus {
-    if (this.child && !this.child.killed && this.client) {
-      return this.getStatus()
-    }
-
-    const binary = resolveKnowledgeEngineBinary(this.options.app)
-    if (!binary?.exists) {
-      this.state = 'missing'
-      this.lastError = 'Knowledge engine binary not found. Run pnpm knowledge:build first.'
-      return this.getStatus()
-    }
-
-    try {
-      this.state = 'starting'
-      this.child = spawn(binary.binaryPath, [], {
-        stdio: 'pipe',
-        windowsHide: true,
-      })
-      this.client = new KnowledgeEngineRpcClient(this.child, this.options.logger)
-      this.child.once('exit', (code, signal) => {
-        this.state = 'exited'
-        this.child = null
-        this.client = null
-        this.options.logger.info(
-          `[knowledge-engine] exited code=${code ?? 'null'} signal=${signal ?? 'null'}`,
-        )
-      })
-      this.state = 'ready'
-      this.lastError = undefined
-    } catch (error) {
-      this.state = 'error'
-      this.lastError = error instanceof Error ? error.message : String(error)
-    }
-
-    return this.getStatus()
   }
 }

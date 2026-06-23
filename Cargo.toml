@@ -4,7 +4,6 @@ members = [
   "knowledge-engine/crates/engine-core",
   "knowledge-engine/crates/grpc-api",
   "knowledge-engine/crates/protocol",
-  "knowledge-engine/crates/rpc-server",
 ]
 resolver = "2"
 

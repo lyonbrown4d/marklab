@@ -16,6 +16,16 @@ service MarkdownService {
   rpc GetLinks(GetLinksRequest) returns (GetLinksResponse);
 }
 
+service WorkspaceService {
+  rpc OpenWorkspace(OpenWorkspaceRequest) returns (OpenWorkspaceResponse);
+  rpc CloseWorkspace(CloseWorkspaceRequest) returns (CloseWorkspaceResponse);
+  rpc HasDocuments(HasDocumentsRequest) returns (HasDocumentsResponse);
+  rpc RebuildIndex(RebuildIndexRequest) returns (RebuildIndexResponse);
+  rpc UpsertDocument(UpsertDocumentRequest) returns (UpsertDocumentResponse);
+  rpc RemoveDocument(RemoveDocumentRequest) returns (RemoveDocumentResponse);
+  rpc RemovePathPrefix(RemovePathPrefixRequest) returns (RemovePathPrefixResponse);
+}
+
 service SearchService {
   rpc Search(SearchRequest) returns (stream SearchResponse);
 }
@@ -43,6 +53,65 @@ message ShutdownRequest {
 
 message ShutdownResponse {
   bool accepted = 1;
+}
+
+message OpenWorkspaceRequest {
+  string index_path = 1;
+}
+
+message OpenWorkspaceResponse {
+  bool ok = 1;
+  uint64 documents = 2;
+}
+
+message CloseWorkspaceRequest {}
+
+message CloseWorkspaceResponse {
+  bool ok = 1;
+}
+
+message HasDocumentsRequest {}
+
+message HasDocumentsResponse {
+  bool has_documents = 1;
+}
+
+message RebuildIndexRequest {
+  repeated WorkspaceDocument documents = 1;
+}
+
+message RebuildIndexResponse {
+  uint64 documents = 1;
+}
+
+message UpsertDocumentRequest {
+  WorkspaceDocument document = 1;
+}
+
+message UpsertDocumentResponse {
+  uint64 documents = 1;
+}
+
+message RemoveDocumentRequest {
+  string path = 1;
+}
+
+message RemoveDocumentResponse {
+  uint64 documents = 1;
+}
+
+message RemovePathPrefixRequest {
+  string prefix = 1;
+}
+
+message RemovePathPrefixResponse {
+  uint64 documents = 1;
+}
+
+message WorkspaceDocument {
+  string path = 1;
+  string title = 2;
+  string content = 3;
 }
 
 message SyncRequest {
@@ -155,7 +224,6 @@ message MarkdownLink {
 message SearchRequest {
   string query = 1;
   uint32 limit = 2;
-  uint64 workspace_generation = 3;
 }
 
 message SearchResponse {
@@ -167,8 +235,17 @@ message SearchResult {
   string document_id = 1;
   string path = 2;
   string title = 3;
-  string excerpt = 4;
-  float score = 5;
+  uint32 line = 4;
+  uint32 column = 5;
+  uint32 end_column = 6;
+  string snippet = 7;
+  repeated SearchHighlight snippet_highlights = 8;
+  float score = 9;
+}
+
+message SearchHighlight {
+  uint32 start = 1;
+  uint32 end = 2;
 }
 
 message TextEdit {
