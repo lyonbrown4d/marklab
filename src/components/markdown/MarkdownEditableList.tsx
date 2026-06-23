@@ -66,7 +66,7 @@ const MarkdownEditableList = ({
       <ListTag
         ref={setElementRef}
         className={cn(
-          'm-0 space-y-1 rounded-sm pl-5 outline-none focus:bg-background focus:ring-1 focus:ring-ring',
+          'm-0 flex flex-col gap-1 rounded-sm pl-5 outline-none focus:bg-transparent',
           ordered ? 'list-decimal' : 'list-disc',
         )}
         tabIndex={editable ? 0 : undefined}

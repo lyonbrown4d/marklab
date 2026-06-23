@@ -59,14 +59,14 @@ export const createMarkdownBlockNodeViews = (nodeViewFactory: NodeViewFactory) =
     nodeViewFactory({
       component: MilkdownBulletListNodeView,
       as: 'div',
-      contentAs: () => createContentElement('ul', 'm-0 list-disc space-y-1 pl-5'),
+      contentAs: () => createContentElement('ul', 'm-0 flex list-disc flex-col gap-1 pl-5'),
     }),
   ),
   $view(orderedListSchema.node, () =>
     nodeViewFactory({
       component: MilkdownOrderedListNodeView,
       as: 'div',
-      contentAs: () => createContentElement('ol', 'm-0 list-decimal space-y-1 pl-5'),
+      contentAs: () => createContentElement('ol', 'm-0 flex list-decimal flex-col gap-1 pl-5'),
     }),
   ),
   $view(hrSchema.node, () =>

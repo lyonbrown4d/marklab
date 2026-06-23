@@ -1,8 +1,10 @@
 import { ExternalLink, FileText, ImageIcon, Maximize2, Music, Video } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Spinner } from '@/components/ui/spinner'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import {
   embeddedPreviewKindForTarget,
@@ -68,6 +70,9 @@ export const EmbeddedFilePreview = ({
   const resolved = resolvedState.key === key ? resolvedState.target : null
   const failed = resolvedState.key === key ? resolvedState.failed : false
   const shouldResolve = visible || resolveRequested || expanded
+  const stopEditorChromeEvent = useCallback((event: SyntheticEvent) => {
+    event.stopPropagation()
+  }, [])
   const status = useMemo(() => {
     if (failed) return t('preview.inlineFailed')
     if (!shouldResolve) return t('preview.inlinePending')
@@ -126,6 +131,10 @@ export const EmbeddedFilePreview = ({
 
   if (!kind) return null
 
+  const requestResolve = () => {
+    setResolveRequested(true)
+  }
+
   const openTab = () => {
     if (!resolved?.path) return
     navigate(pathToFileViewRoute(resolved.path, 'preview'))
@@ -137,7 +146,7 @@ export const EmbeddedFilePreview = ({
   }
 
   const openEmbeddedPreview = () => {
-    setResolveRequested(true)
+    requestResolve()
     setExpanded(true)
   }
 
@@ -145,26 +154,40 @@ export const EmbeddedFilePreview = ({
     <article
       ref={cardRef}
       className={cn(
-        'embedded-preview-card rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm transition-colors hover:border-primary/30 hover:bg-card/95',
+        'embedded-preview-card rounded-lg border border-border/80 bg-background/85 p-3 text-foreground shadow-sm transition-colors [contain-intrinsic-size:0_128px] [content-visibility:auto] hover:border-primary/35 hover:bg-card/85',
         className,
       )}
       contentEditable={false}
+      data-marklab-editor-chrome="embedded-preview"
+      onClick={stopEditorChromeEvent}
+      onDoubleClick={stopEditorChromeEvent}
+      onPointerDown={stopEditorChromeEvent}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <div className="rounded-lg bg-secondary p-2 text-secondary-foreground ring-1 ring-border/60">
-          <Icon className="size-4" aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-foreground ring-1 ring-border/60">
-              {t(previewKindLabelKey(kind))}
-            </span>
-            <span className="truncate text-sm font-medium">{displayTitle}</span>
+        <button
+          type="button"
+          className="embedded-preview-trigger flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-md text-left transition-colors"
+          aria-label={`${t('preview.openEmbedded')}: ${displayTitle}`}
+          disabled={failed}
+          onClick={openEmbeddedPreview}
+          onFocus={requestResolve}
+          onPointerEnter={requestResolve}
+        >
+          <div className="rounded-md bg-secondary p-2 text-secondary-foreground ring-1 ring-border/60">
+            <Icon className="size-4" aria-hidden="true" />
           </div>
-          <div className="mt-1 truncate text-xs text-muted-foreground" title={status}>
-            {status}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge variant="secondary" className="shrink-0">
+                {t(previewKindLabelKey(kind))}
+              </Badge>
+              <span className="truncate text-sm font-medium">{displayTitle}</span>
+            </div>
+            <div className="mt-1 truncate text-xs text-muted-foreground" title={status}>
+              {status}
+            </div>
           </div>
-        </div>
+        </button>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
           {resolved?.path ? (
             <Button
@@ -174,7 +197,7 @@ export const EmbeddedFilePreview = ({
               className="h-7 px-2"
               onClick={openInSystem}
             >
-              <ExternalLink className="size-3.5" />
+              <ExternalLink data-icon="inline-start" />
               {t('preview.openInSystem')}
             </Button>
           ) : null}
@@ -197,7 +220,7 @@ export const EmbeddedFilePreview = ({
             disabled={failed}
             onClick={openEmbeddedPreview}
           >
-            <Maximize2 className="size-3.5" />
+            <Maximize2 data-icon="inline-start" />
             {t('preview.openEmbedded')}
           </Button>
         </div>
@@ -218,8 +241,9 @@ export const EmbeddedFilePreview = ({
                 title={displayTitle}
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                {failed ? null : <Spinner />}
+                <span>{failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}</span>
               </div>
             )}
           </div>

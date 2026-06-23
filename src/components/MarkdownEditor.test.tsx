@@ -73,6 +73,7 @@ vi.mock('@/components/milkdown/useMarkdownCrepeController', () => ({
     rootRef: { current: null },
     runShortcutAction: controllerMock.runShortcutAction,
     scrollAreaRef: { current: null },
+    status: { phase: 'ready' },
   })),
 }))
 
@@ -86,6 +87,9 @@ vi.mock('@/i18n/useI18n', () => ({
       ({
         'editor.dropImages': 'Drop to insert images',
         'editor.emptyHint': 'Type / for blocks, or paste images directly',
+        'editor.importingImages': 'Importing images...',
+        'editor.loadFailed': 'Editor failed to load',
+        'editor.loading': 'Loading editor...',
       })[key] ?? key,
   }),
 }))
@@ -219,6 +223,7 @@ describe('MarkdownEditor shell', () => {
       'data-empty-hint',
       'Type / for blocks, or paste images directly',
     )
+    expect(editorRoot).toHaveAttribute('data-import-hint', 'Importing images...')
   })
 
   it('does not mark non-empty documents as empty', () => {
@@ -232,7 +237,10 @@ describe('MarkdownEditor shell', () => {
 
     renderEditor('# Heading')
 
-    expect(screen.getByTestId('markdown-editor-shell')).toHaveClass('is-image-drop-target')
+    const shell = screen.getByTestId('markdown-editor-shell')
+
+    expect(shell).toHaveClass('is-image-drop-target')
+    expect(shell).toHaveAttribute('data-drop-active', 'image')
   })
 
   it('registers editor shortcuts and forwards triggered actions to the controller', () => {

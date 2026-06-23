@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useRef, type PointerEvent } from 'react'
-import {
-  configureMarkdownCrepe,
-  type NodeViewFactory,
-} from '@/components/milkdown/configureMarkdownCrepe'
-import { createMarkdownCrepe } from '@/components/milkdown/createMarkdownCrepe'
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
+import { type NodeViewFactory } from '@/components/milkdown/configureMarkdownCrepe'
+import type { MarkdownCrepeInstance } from '@/components/milkdown/createMarkdownCrepe'
 import {
   containsActiveElement,
   isEditorChromeTarget,
@@ -33,7 +30,11 @@ import {
 import { runMarkdownEditorShortcut } from '@/components/milkdown/editorShortcuts'
 import { resolveMarkdownImageSource } from '@/components/milkdown/markdownImageSource'
 import { useFocusHeadingEvent } from '@/components/milkdown/useFocusHeadingEvent'
-import type { MarkdownEditorProps } from '@/components/milkdown/markdownEditorTypes'
+import { loadMarkdownCrepeRuntime } from '@/components/milkdown/markdownCrepeRuntime'
+import type {
+  MarkdownEditorProps,
+  MarkdownEditorStatus,
+} from '@/components/milkdown/markdownEditorTypes'
 import type { ShortcutActionId } from '@/logic/shortcuts'
 import type { MarkdownAssetImportStrategy } from '@/store/appTypes'
 
@@ -105,7 +106,8 @@ export const useMarkdownCrepeController = ({
 }: UseMarkdownCrepeControllerOptions) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement | null>(null)
-  const crepeRef = useRef<ReturnType<typeof createMarkdownCrepe> | null>(null)
+  const crepeRef = useRef<MarkdownCrepeInstance | null>(null)
+  const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
   const latestValue = useRef(value)
   const onChangeRef = useRef(onChange)
   const activePathRef = useRef(activePath)
@@ -261,49 +263,59 @@ export const useMarkdownCrepeController = ({
     const valueAtSchedule = latestValue.current
 
     let destroyed = false
-    let crepe: ReturnType<typeof createMarkdownCrepe> | null = null
+    let crepe: MarkdownCrepeInstance | null = null
     let initialViewportFrame: number | null = null
+    setStatus({ phase: 'loading' })
 
     const cancelCreate = scheduleMarkdownEditorCreate(valueAtSchedule, () => {
       if (destroyed) return
-      const initialValueAtCreate = latestValue.current
-      const initialPathAtCreate = activePathRef.current
+      void loadMarkdownCrepeRuntime()
+        .then(({ configureMarkdownCrepe, createMarkdownCrepe }) => {
+          if (destroyed) return null
+          const initialValueAtCreate = latestValue.current
+          const initialPathAtCreate = activePathRef.current
 
-      crepe = createMarkdownCrepe({
-        root,
-        initialValue: initialValueAtCreate,
-        darkMode,
-        onSlashImageImport: pickAndImportImage,
-        onSlashCalendarFileCreate: createCalendarFileLink,
-        placeholder,
-        slashLabels,
-      })
+          crepe = createMarkdownCrepe({
+            root,
+            initialValue: initialValueAtCreate,
+            darkMode,
+            onSlashImageImport: pickAndImportImage,
+            onSlashCalendarFileCreate: createCalendarFileLink,
+            placeholder,
+            slashLabels,
+          })
 
-      configureMarkdownCrepe(crepe, {
-        getImageDocumentPath,
-        nodeViewFactory,
-        onMarkdownUpdated: (markdown) => {
-          const nextMarkdown = normalizeMarkdownLineBreaks(markdown)
-          if (applyingExternalValueRef.current) {
-            latestValue.current = nextMarkdown
-            return
-          }
-          if (nextMarkdown === latestValue.current) return
-          latestValue.current = nextMarkdown
-          localEchoRef.current = {
-            path: activePathRef.current,
-            value: nextMarkdown,
-          }
-          onChangeRef.current(nextMarkdown)
-        },
-        resolveImageSrc,
-        subscribeImageDocumentPath,
-      })
+          configureMarkdownCrepe(crepe, {
+            getImageDocumentPath,
+            nodeViewFactory,
+            onMarkdownUpdated: (markdown) => {
+              const nextMarkdown = normalizeMarkdownLineBreaks(markdown)
+              if (applyingExternalValueRef.current) {
+                latestValue.current = nextMarkdown
+                return
+              }
+              if (nextMarkdown === latestValue.current) return
+              latestValue.current = nextMarkdown
+              localEchoRef.current = {
+                path: activePathRef.current,
+                value: nextMarkdown,
+              }
+              onChangeRef.current(nextMarkdown)
+            },
+            resolveImageSrc,
+            subscribeImageDocumentPath,
+          })
 
-      void Promise.resolve(crepe.create())
-        .then(() => {
-          if (destroyed || !crepe) return
+          return Promise.resolve(crepe.create()).then(() => ({
+            initialPathAtCreate,
+            initialValueAtCreate,
+          }))
+        })
+        .then((initialState) => {
+          if (destroyed || !crepe || !initialState) return
+          const { initialPathAtCreate, initialValueAtCreate } = initialState
           crepeRef.current = crepe
+          setStatus({ phase: 'ready' })
           if (
             latestValue.current !== initialValueAtCreate ||
             activePathRef.current !== initialPathAtCreate
@@ -325,8 +337,10 @@ export const useMarkdownCrepeController = ({
             }
           }
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           if (destroyed) return
+          const message = error instanceof Error ? error.message : String(error)
+          setStatus({ phase: 'error', message })
           console.error('Failed to initialize Milkdown', error)
         })
     })
@@ -462,5 +476,6 @@ export const useMarkdownCrepeController = ({
     rootRef,
     runShortcutAction,
     scrollAreaRef,
+    status,
   }
 }

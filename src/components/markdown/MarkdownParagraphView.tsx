@@ -35,7 +35,7 @@ const MarkdownParagraphView = ({
 
   return (
     <MarkdownEditableText
-      className={`nodrag whitespace-pre-wrap rounded-sm bg-muted/55 leading-5 outline-none focus:bg-background focus:ring-1 focus:ring-ring ${sizeClass}`}
+      className={`nodrag whitespace-pre-wrap rounded-sm bg-transparent leading-5 outline-none focus:bg-transparent ${sizeClass}`}
       editable={editable}
       value={text}
       onCommit={onCommit}

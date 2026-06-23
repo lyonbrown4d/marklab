@@ -1,3 +1,11 @@
+.crepe {
+  --editor-block-drop-indicator-line: color-mix(
+    in srgb,
+    hsl(var(--primary)) 86%,
+    hsl(var(--foreground))
+  );
+}
+
 .crepe .milkdown {
   --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 5%, transparent);
   --editor-control-active: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
@@ -5,8 +13,10 @@
   --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 58%, transparent);
   --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 58%, transparent);
   --editor-control-focus-ring: color-mix(in srgb, hsl(var(--ring)) 46%, transparent);
+  --editor-block-drop-indicator-gutter-offset: -38px;
   --editor-block-rail: color-mix(in srgb, hsl(var(--foreground)) 34%, transparent);
   --editor-block-rail-active: color-mix(in srgb, hsl(var(--primary)) 78%, hsl(var(--foreground)));
+  --editor-block-rail-offset: -0.375rem;
   --editor-block-handle-icon-add: color-mix(in srgb, hsl(var(--primary)) 78%, hsl(var(--foreground)));
   --editor-block-handle-icon-add-hover: hsl(var(--primary));
   --editor-block-handle-icon-drag: color-mix(in srgb, hsl(var(--foreground)) 70%, transparent);
@@ -33,7 +43,7 @@
   content: '';
   position: absolute;
   inset-block: 0.32rem;
-  left: -0.62rem;
+  left: var(--editor-block-rail-offset);
   width: 2px;
   border-radius: 999px;
   background: var(--editor-block-rail);
@@ -251,6 +261,68 @@
   pointer-events: none;
 }
 
+.crepe .milkdown .milkdown-drag-line,
+.crepe .milkdown .milkdown-block-drop-line {
+  opacity: 0;
+}
+
+.crepe.is-js-drop-indicator .milkdown .milkdown-drag-line,
+.crepe.is-js-drop-indicator .milkdown .milkdown-block-drop-line {
+  background: transparent;
+  box-shadow: none;
+  display: none !important;
+  opacity: 0 !important;
+}
+
+.crepe.is-js-drop-indicator .milkdown .ProseMirror-dropcursor,
+.crepe.is-js-drop-indicator .milkdown .milkdown-dropcursor,
+.crepe.is-js-drop-indicator .milkdown .milkdown-drop-cursor {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+.crepe .marklab-editor-drop-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 95;
+  display: block;
+  width: var(--editor-drop-indicator-width, 0);
+  height: 2px;
+  border-radius: 999px;
+  background: var(--editor-block-drop-indicator-line);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, hsl(var(--background)) 76%, transparent),
+    0 0 0 4px color-mix(in srgb, hsl(var(--primary)) 14%, transparent),
+    0 0 16px color-mix(in srgb, hsl(var(--primary)) 38%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(
+      var(--editor-drop-indicator-x, 0),
+      var(--editor-drop-indicator-y, 0),
+      0
+    )
+    translateY(-50%);
+  transition: opacity 80ms ease;
+}
+
+.crepe .marklab-editor-drop-indicator[data-visible='true'] {
+  opacity: 1;
+}
+
+.crepe .marklab-editor-drop-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: inherit;
+  box-shadow: inherit;
+  transform: translate3d(-50%, -50%, 0);
+}
+
 .crepe .milkdown .milkdown-toolbar,
 .crepe .milkdown .milkdown-link-preview > .link-preview,
 .crepe .milkdown .milkdown-link-edit > .link-edit,
@@ -390,6 +462,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .crepe .milkdown .marklab-md-block::before,
+  .crepe .marklab-editor-drop-indicator,
   .crepe .milkdown .milkdown-block-handle,
   .crepe .milkdown .milkdown-block-handle .operation-item,
   .crepe .milkdown .milkdown-block-handle .operation-item::before,
@@ -402,4 +475,28 @@
     animation: none;
     transition: none;
   }
+}
+
+/* Stronger block affordance.
+   Keep this visual-only so it never competes with Milkdown handle hit targets. */
+.crepe .milkdown .ProseMirror .marklab-md-block {
+  position: relative;
+}
+
+.crepe .milkdown .milkdown-block-handle,
+.crepe .milkdown [data-milkdown-block-handle] {
+  isolation: isolate;
+}
+
+.crepe .milkdown .milkdown-block-handle[data-show='true'],
+.crepe .milkdown [data-milkdown-block-handle][data-show='true'] {
+  opacity: 1;
+}
+
+.crepe .milkdown .operation-item,
+.crepe .milkdown [data-milkdown-block-handle] button {
+  transition:
+    color 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease;
 }

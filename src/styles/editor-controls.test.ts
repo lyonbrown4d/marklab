@@ -20,6 +20,15 @@ describe('editor interaction styles', () => {
     )
   })
 
+  it('pauses focus-mode dimming and animated caret while block dragging', () => {
+    expect(editorStyles).toMatch(
+      /\.crepe\[data-editor-dragging='true'\]\.is-focus-editor \.milkdown \.marklab-md-block\s*{[\s\S]*?opacity: 1;/,
+    )
+    expect(editorStyles).toMatch(
+      /\.crepe\[data-editor-dragging='true'\] \.marklab-animated-caret\s*{[\s\S]*?display: none;/,
+    )
+  })
+
   it('keeps block handles independent from theme-specific class overrides', () => {
     expect(controlStyles).not.toContain('.dark .crepe .milkdown')
     expect(controlStyles).toMatch(
@@ -31,5 +40,33 @@ describe('editor interaction styles', () => {
     expect(controlStyles).toMatch(
       /\.milkdown-block-handle \.operation-item \+ \.operation-item::before\s*{[\s\S]*?left: -1px;/,
     )
+  })
+
+  it('uses a JS positioned block drop indicator instead of block pseudo-elements', () => {
+    expect(controlStyles).not.toContain('left: -1.15rem')
+    expect(controlStyles).not.toContain("data-drop-position='before'")
+    expect(controlStyles).toContain('--editor-block-drop-indicator-gutter-offset: -38px')
+    expect(controlStyles).toMatch(
+      /\.marklab-editor-drop-indicator\s*{[\s\S]*?position: fixed;[\s\S]*?transform: translate3d\(/,
+    )
+  })
+
+  it('hides Milkdown native block drag lines when the JS indicator is enabled', () => {
+    expect(controlStyles).toMatch(
+      /\.is-js-drop-indicator \.milkdown \.milkdown-drag-line,[\s\S]*?\.is-js-drop-indicator \.milkdown \.milkdown-block-drop-line\s*{[\s\S]*?display: none !important;[\s\S]*?opacity: 0 !important;/,
+    )
+    expect(controlStyles).toMatch(
+      /\.is-js-drop-indicator \.milkdown \.ProseMirror-dropcursor,[\s\S]*?\.is-js-drop-indicator \.milkdown \.milkdown-drop-cursor\s*{[\s\S]*?display: none !important;/,
+    )
+    expect(controlStyles).not.toContain('right: 0 !important')
+    expect(controlStyles).not.toContain('width: auto !important')
+  })
+
+  it('keeps the existing block hover rail as the only before pseudo-element alignment source', () => {
+    expect(controlStyles).toContain('--editor-block-rail-offset: -0.375rem')
+    expect(controlStyles).toMatch(
+      /\.marklab-md-block::before\s*{[\s\S]*?left: var\(--editor-block-rail-offset\);/,
+    )
+    expect(controlStyles).not.toContain('.ProseMirror .marklab-md-block::before')
   })
 })

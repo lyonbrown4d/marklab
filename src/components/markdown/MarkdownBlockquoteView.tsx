@@ -25,7 +25,7 @@ const MarkdownBlockquoteView = ({
         data-selected={selected ? 'true' : 'false'}
       >
         <MarkdownEditableText
-          className="whitespace-pre-wrap py-1 text-xs leading-5 text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+          className="whitespace-pre-wrap py-1 text-xs leading-5 text-muted-foreground outline-none focus:bg-transparent"
           editable={editable}
           value={text}
           onCommit={onCommit}
@@ -39,7 +39,7 @@ const MarkdownBlockquoteView = ({
       className={`marklab-md-block my-3 rounded-sm border-l-2 border-primary/50 pl-3 ${selectedClass}`}
       data-selected={selected ? 'true' : 'false'}
     >
-      <div ref={contentRef} className="space-y-1 py-1 text-muted-foreground" />
+      <div ref={contentRef} className="flex flex-col gap-1 py-1 text-muted-foreground" />
     </div>
   )
 }

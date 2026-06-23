@@ -16,7 +16,7 @@ const MarkdownBlockSurface = ({ blocks, onCommitBlock }: MarkdownBlockSurfacePro
 
   return (
     <div
-      className={interactive ? 'nodrag nopan space-y-1.5' : 'space-y-1.5'}
+      className={interactive ? 'nodrag nopan flex flex-col gap-1.5' : 'flex flex-col gap-1.5'}
       onClick={(event) => {
         if (!interactive) return
         event.stopPropagation()

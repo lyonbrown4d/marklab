@@ -13,3 +13,8 @@ export type MarkdownEditorHandle = {
   focus: () => void
   getMarkdown: () => string
 }
+
+export type MarkdownEditorStatus =
+  | { phase: 'loading' }
+  | { phase: 'ready' }
+  | { phase: 'error'; message: string }

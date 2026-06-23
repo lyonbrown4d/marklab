@@ -5,6 +5,8 @@ import {
   type SlashCommandLabels,
 } from '@/components/milkdown/slashMenuConfig'
 
+export type MarkdownCrepeInstance = Crepe
+
 type CreateMarkdownCrepeOptions = {
   root: HTMLElement
   initialValue: string

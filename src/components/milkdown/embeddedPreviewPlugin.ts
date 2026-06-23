@@ -18,6 +18,11 @@ type EmbeddedLinkPreview = {
   title: string
 }
 
+type TextLikeNode = {
+  marks?: readonly { attrs: Record<string, unknown>; type: unknown }[]
+  text?: string | null
+}
+
 const embeddedPreviewPluginKey = new PluginKey<DecorationSet>('marklab-embedded-preview')
 const widgetRoots = new WeakMap<HTMLElement, Root>()
 
@@ -27,6 +32,56 @@ const linkTitle = (href: string, title: string) => {
 }
 
 const readMarkAttr = (value: unknown) => (typeof value === 'string' ? value : '')
+
+export const markdownEmbeddedLinksInText = (text: string): EmbeddedLinkPreview[] => {
+  const links: EmbeddedLinkPreview[] = []
+  const seen = new Set<string>()
+  const pattern = /\[([^\]\n]+)\]\(([^)\s]+(?:\s+['"][^'"]*['"])?[^)]*)\)/g
+  let match = pattern.exec(text)
+
+  while (match) {
+    const rawHref = (match[2] ?? '').trim()
+    const href = rawHref.replace(/\s+(['"]).*\1$/, '').trim()
+    if (embeddedPreviewKindForTarget(href) && !seen.has(href)) {
+      seen.add(href)
+      links.push({
+        href,
+        title: linkTitle(href, match[1] ?? ''),
+      })
+    }
+    match = pattern.exec(text)
+  }
+
+  return links
+}
+
+export const embeddedLinksInTextNode = (
+  child: TextLikeNode,
+  linkType: unknown,
+  seen: Set<string>,
+): EmbeddedLinkPreview[] => {
+  const links: EmbeddedLinkPreview[] = []
+
+  for (const mark of child.marks ?? []) {
+    if (mark.type !== linkType) continue
+    const href = readMarkAttr(mark.attrs.href)
+    if (!embeddedPreviewKindForTarget(href) || seen.has(href)) continue
+
+    seen.add(href)
+    links.push({
+      href,
+      title: linkTitle(href, readMarkAttr(mark.attrs.title)),
+    })
+  }
+
+  for (const link of markdownEmbeddedLinksInText(child.text ?? '')) {
+    if (seen.has(link.href)) continue
+    seen.add(link.href)
+    links.push(link)
+  }
+
+  return links
+}
 
 const embeddedLinksInNode = (
   node: ProseMirrorNode,
@@ -38,17 +93,7 @@ const embeddedLinksInNode = (
   node.descendants((child) => {
     if (!child.isText) return true
 
-    for (const mark of child.marks) {
-      if (mark.type !== linkType) continue
-      const href = readMarkAttr(mark.attrs.href)
-      if (!embeddedPreviewKindForTarget(href) || seen.has(href)) continue
-
-      seen.add(href)
-      links.push({
-        href,
-        title: linkTitle(href, readMarkAttr(mark.attrs.title)),
-      })
-    }
+    links.push(...embeddedLinksInTextNode(child, linkType, seen))
 
     return true
   })

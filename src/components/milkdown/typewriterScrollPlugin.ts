@@ -29,6 +29,10 @@ const getEditorViewport = (view: EditorView) => {
   return view.dom.closest('.crepe')?.querySelector<HTMLElement>('.editor-scroll-viewport') ?? null
 }
 
+export const isEditorDragging = (view: EditorView) => {
+  return view.dom.closest<HTMLElement>('.crepe')?.dataset.editorDragging === 'true'
+}
+
 const createTypewriterScrollView = (initialView: EditorView) => {
   let view = initialView
   let animationFrame: number | null = null
@@ -36,7 +40,14 @@ const createTypewriterScrollView = (initialView: EditorView) => {
 
   const scrollToSelection = () => {
     animationFrame = null
-    if (!isTypewriterEnabled() || !view.hasFocus() || !view.state.selection.empty) return
+    if (
+      !isTypewriterEnabled() ||
+      !view.hasFocus() ||
+      !view.state.selection.empty ||
+      isEditorDragging(view)
+    ) {
+      return
+    }
 
     const viewport = getEditorViewport(view)
     if (!viewport) return
