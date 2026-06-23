@@ -27,10 +27,12 @@ pub struct OutboxEvent {
   pub applied_ms: Option<u64>,
 }
 
+#[allow(dead_code)]
 pub struct Outbox {
   database: Database,
 }
 
+#[allow(dead_code)]
 impl Outbox {
   pub fn open(path: impl Into<PathBuf>) -> Result<Self, String> {
     let path = path.into();

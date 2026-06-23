@@ -43,26 +43,33 @@ fn include_document_path(path: &str, include_paths: &[String]) -> bool {
     return true;
   }
 
-  include_paths.iter().any((|include| path.starts_with(include)))
+  include_paths
+    .iter()
+    .any(|include| path.starts_with(include))
 }
 
 fn sort_search_results(results: &mut [SearchHit], order: SearchOrder) {
   results.sort_by(|left, right| match order {
     SearchOrder::Path => left.path.cmp(&right.path).then_with(|| {
-      right.score.cmp(&left.score).then_with(|| left.title.cmp(&right.title))
+      right
+        .score
+        .cmp(&left.score)
+        .then_with(|| left.title.cmp(&right.title))
     }),
     SearchOrder::Title => left.title.cmp(&right.title).then_with(|| {
-      right.score.cmp(&left.score).then_with(|| left.path.cmp(&right.path))
-    }),
-    SearchOrder::PathThenScore => {
-      left.path.cmp(&right.path).then_with(|| right.score.cmp(&left.score))
-    }
-    SearchOrder::Score => {
       right
         .score
         .cmp(&left.score)
         .then_with(|| left.path.cmp(&right.path))
-    }
+    }),
+    SearchOrder::PathThenScore => left
+      .path
+      .cmp(&right.path)
+      .then_with(|| right.score.cmp(&left.score)),
+    SearchOrder::Score => right
+      .score
+      .cmp(&left.score)
+      .then_with(|| left.path.cmp(&right.path)),
   })
 }
 

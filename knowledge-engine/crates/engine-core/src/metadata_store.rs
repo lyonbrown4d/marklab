@@ -17,10 +17,12 @@ pub struct DocumentMetadata {
   pub indexed_revision: u64,
 }
 
+#[allow(dead_code)]
 pub struct MetadataStore {
   database: Database,
 }
 
+#[allow(dead_code)]
 impl MetadataStore {
   pub fn open(path: impl Into<PathBuf>) -> Result<Self, String> {
     let path = path.into();
