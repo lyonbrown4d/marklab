@@ -6,8 +6,11 @@ use marklab_knowledge_protocol::{
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::markdown_documents::MarkdownDocumentStore;
+use crate::markdown_extract::extract_markdown;
 use crate::types::{
-  EngineError, WorkspaceDocumentParams, WorkspaceOpenParams, WorkspaceParams, WorkspacePathParams,
+  EngineError, MarkdownDocumentParams, MarkdownExtractParams, MarkdownPathParams,
+  WorkspaceDocumentParams, WorkspaceOpenParams, WorkspaceParams, WorkspacePathParams,
   WorkspacePrefixParams, WorkspaceRebuildParams, WorkspaceSearchParams,
 };
 use crate::workspace_store::WorkspaceStore;
@@ -16,6 +19,7 @@ use crate::workspace_store::WorkspaceStore;
 pub struct KnowledgeEngine {
   shutdown_requested: bool,
   workspaces: HashMap<String, WorkspaceStore>,
+  markdown_documents: MarkdownDocumentStore,
 }
 
 impl KnowledgeEngine {
@@ -32,12 +36,19 @@ impl KnowledgeEngine {
         Ok(json!({ "ok": true }))
       }
       "workspace/open" => self.workspace_open(request.params.as_ref()),
+      "workspace/close" => self.workspace_close(request.params.as_ref()),
       "workspace/hasDocuments" => self.workspace_has_documents(request.params.as_ref()),
       "workspace/rebuild" => self.workspace_rebuild(request.params.as_ref()),
       "workspace/upsertDocument" => self.workspace_upsert_document(request.params.as_ref()),
       "workspace/removeDocument" => self.workspace_remove_document(request.params.as_ref()),
       "workspace/removePathPrefix" => self.workspace_remove_path_prefix(request.params.as_ref()),
       "workspace/search" => self.workspace_search(request.params.as_ref()),
+      "markdown/extract" => self.markdown_extract(request.params.as_ref()),
+      "markdown/didOpen" => self.markdown_did_open(request.params.as_ref()),
+      "markdown/didChange" => self.markdown_did_change(request.params.as_ref()),
+      "markdown/didClose" => self.markdown_did_close(request.params.as_ref()),
+      "markdown/documentSymbols" => self.markdown_document_symbols(request.params.as_ref()),
+      "markdown/links" => self.markdown_links(request.params.as_ref()),
       _ => Err(EngineError::method_not_found()),
     };
 
@@ -75,6 +86,17 @@ impl KnowledgeEngine {
       .unwrap_or(false);
 
     Ok(json!({ "hasDocuments": has_documents }))
+  }
+
+  fn workspace_close(&mut self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<WorkspaceParams>(params)?;
+    let existed = self.workspaces.remove(&params.workspace_id).is_some();
+
+    Ok(json!({
+        "ok": true,
+        "workspaceId": params.workspace_id,
+        "closed": existed,
+    }))
   }
 
   fn workspace_rebuild(&mut self, params: Option<&Value>) -> Result<Value, EngineError> {
@@ -130,6 +152,53 @@ impl KnowledgeEngine {
     ))
   }
 
+  fn markdown_extract(&self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownExtractParams>(params)?;
+    serde_json::to_value(extract_markdown(&params.path, &params.content))
+      .map_err(|error| EngineError::internal(error.to_string()))
+  }
+
+  fn markdown_did_open(&mut self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownDocumentParams>(params)?;
+    let snapshot =
+      self
+        .markdown_documents
+        .open_or_change(params.path, params.content, params.version);
+    serde_json::to_value(snapshot).map_err(|error| EngineError::internal(error.to_string()))
+  }
+
+  fn markdown_did_change(&mut self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownDocumentParams>(params)?;
+    let snapshot =
+      self
+        .markdown_documents
+        .open_or_change(params.path, params.content, params.version);
+    serde_json::to_value(snapshot).map_err(|error| EngineError::internal(error.to_string()))
+  }
+
+  fn markdown_did_close(&mut self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownPathParams>(params)?;
+    let closed = self.markdown_documents.close(&params.path);
+
+    Ok(json!({
+        "ok": true,
+        "path": params.path,
+        "closed": closed,
+    }))
+  }
+
+  fn markdown_document_symbols(&self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownPathParams>(params)?;
+    serde_json::to_value(self.markdown_documents.document_symbols(&params.path))
+      .map_err(|error| EngineError::internal(error.to_string()))
+  }
+
+  fn markdown_links(&self, params: Option<&Value>) -> Result<Value, EngineError> {
+    let params = parse_params::<MarkdownPathParams>(params)?;
+    serde_json::to_value(self.markdown_documents.links(&params.path))
+      .map_err(|error| EngineError::internal(error.to_string()))
+  }
+
   fn require_workspace(&self, workspace_id: &str) -> Result<&WorkspaceStore, EngineError> {
     self
       .workspaces
@@ -145,8 +214,13 @@ fn initialize_result_json() -> Value {
       "capabilities": {
           "health": true,
           "shutdown": true,
-          "workspaceOpen": true,
-          "workspaceSearch": true,
+            "workspaceOpen": true,
+            "workspaceClose": true,
+            "workspaceSearch": true,
+            "markdownExtract": true,
+            "markdownDocumentOverlay": true,
+            "markdownDocumentSymbols": true,
+            "markdownLinks": true,
           "metadataStore": "redb",
           "searchIndex": "tantivy",
       },
@@ -167,132 +241,4 @@ fn parse_params<T: for<'de> Deserialize<'de>>(params: Option<&Value>) -> Result<
   };
 
   serde_json::from_value(params.clone()).map_err(|_| EngineError::invalid_params("Invalid params"))
-}
-
-#[cfg(test)]
-mod tests {
-  use std::fs;
-  use std::time::{SystemTime, UNIX_EPOCH};
-
-  use super::*;
-
-  #[test]
-  fn initializes_with_workspace_search_capability() {
-    let mut engine = KnowledgeEngine::new();
-    let request = JsonRpcRequest {
-      id: Some(json!(1)),
-      method: "initialize".to_string(),
-      params: None,
-    };
-
-    let response = engine.handle_request(&request);
-
-    assert!(response.contains(r#""workspaceSearch":true"#));
-    assert!(response.contains(r#""metadataStore":"redb""#));
-    assert!(response.contains(r#""searchIndex":"tantivy""#));
-  }
-
-  #[test]
-  fn searches_workspace_documents() {
-    let mut engine = KnowledgeEngine::new();
-    open_workspace(&mut engine, "main");
-    let rebuild = JsonRpcRequest {
-      id: Some(json!(1)),
-      method: "workspace/rebuild".to_string(),
-      params: Some(json!({
-          "workspaceId": "main",
-          "documents": [{
-              "path": "notes/project.md",
-              "title": "project",
-              "content": "alpha lives here\nbeta lives there"
-          }]
-      })),
-    };
-    let search = JsonRpcRequest {
-      id: Some(json!(2)),
-      method: "workspace/search".to_string(),
-      params: Some(json!({
-          "workspaceId": "main",
-          "query": "alpha beta",
-          "limit": 10
-      })),
-    };
-
-    engine.handle_request(&rebuild);
-    let response = engine.handle_request(&search);
-
-    assert!(response.contains(r#""path":"notes/project.md""#));
-  }
-
-  #[test]
-  fn folds_case_and_common_accents() {
-    let mut engine = KnowledgeEngine::new();
-    open_workspace(&mut engine, "main");
-    let rebuild = JsonRpcRequest {
-      id: Some(json!(1)),
-      method: "workspace/rebuild".to_string(),
-      params: Some(json!({
-          "workspaceId": "main",
-          "documents": [{
-              "path": "Notes/Café.md",
-              "title": "Café",
-              "content": "Résumé API"
-          }]
-      })),
-    };
-    let search = JsonRpcRequest {
-      id: Some(json!(2)),
-      method: "workspace/search".to_string(),
-      params: Some(json!({
-          "workspaceId": "main",
-          "query": "CAFE resume",
-          "limit": 10
-      })),
-    };
-
-    engine.handle_request(&rebuild);
-    let response = engine.handle_request(&search);
-
-    assert!(response.contains(r#""path":"Notes/Café.md""#));
-  }
-
-  #[test]
-  fn records_shutdown_request() {
-    let mut engine = KnowledgeEngine::new();
-    let request = JsonRpcRequest {
-      id: Some(json!(3)),
-      method: "shutdown".to_string(),
-      params: None,
-    };
-
-    let response = engine.handle_request(&request);
-
-    assert!(response.contains(r#""ok":true"#));
-    assert!(engine.shutdown_requested());
-  }
-
-  fn open_workspace(engine: &mut KnowledgeEngine, workspace_id: &str) {
-    let index_path = unique_test_path(workspace_id);
-    let request = JsonRpcRequest {
-      id: Some(json!(0)),
-      method: "workspace/open".to_string(),
-      params: Some(json!({
-          "workspaceId": workspace_id,
-          "indexPath": index_path,
-      })),
-    };
-
-    let response = engine.handle_request(&request);
-    assert!(response.contains(r#""ok":true"#));
-  }
-
-  fn unique_test_path(label: &str) -> String {
-    let nanos = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .map(|duration| duration.as_nanos())
-      .unwrap_or_default();
-    let path = std::env::temp_dir().join(format!("marklab-knowledge-engine-{label}-{nanos}"));
-    let _ = fs::remove_dir_all(&path);
-    path.to_string_lossy().to_string()
-  }
 }

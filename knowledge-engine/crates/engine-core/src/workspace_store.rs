@@ -1,22 +1,29 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use redb::{Database, ReadableDatabase, TableDefinition};
+use redb::Database;
 use tantivy::collector::TopDocs;
 use tantivy::query::AllQuery;
 use tantivy::schema::{Field, Schema, Value, STORED, STRING, TEXT};
 use tantivy::{doc, Index, IndexReader, IndexWriter, TantivyDocument, Term};
 
+use crate::metadata_store::{
+  get_document_in_db, initialize_metadata_tables, list_documents_in_db, remove_document_in_tx,
+  remove_path_prefix_in_tx, upsert_document_in_tx, DocumentMetadata,
+};
+use crate::outbox::{
+  append_in_tx, initialize_outbox_tables, mark_applied_in_tx, OutboxEvent, OutboxEventKind,
+};
 use crate::search_text::search_documents;
 use crate::types::SearchDocument;
 
-const METADATA_TABLE: TableDefinition<&str, u64> = TableDefinition::new("metadata");
-const DOCUMENT_COUNT_KEY: &str = "document_count";
 const SEARCH_WRITER_MEMORY_BYTES: usize = 15_000_000;
 const MAX_MANUAL_SCAN_DOCS: usize = 50_000;
 
 pub(crate) struct WorkspaceStore {
-  metadata: Database,
+  database: Database,
   search: TantivyWorkspaceIndex,
 }
 
@@ -24,15 +31,17 @@ impl WorkspaceStore {
   pub(crate) fn open(index_path: impl Into<PathBuf>) -> Result<Self, String> {
     let index_path = index_path.into();
     fs::create_dir_all(&index_path).map_err(to_message)?;
-    let metadata = Database::create(index_path.join("metadata.redb")).map_err(to_message)?;
-    initialize_metadata(&metadata)?;
+    let metadata_path = index_path.join("metadata.redb");
+    let database = Database::create(&metadata_path).map_err(to_message)?;
+    initialize_metadata_tables(&database)?;
+    initialize_outbox_tables(&database)?;
     let search = TantivyWorkspaceIndex::open(index_path.join("tantivy"))?;
 
-    Ok(Self { metadata, search })
+    Ok(Self { database, search })
   }
 
   pub(crate) fn document_count(&self) -> Result<usize, String> {
-    read_document_count(&self.metadata)
+    Ok(list_documents_in_db(&self.database)?.len())
   }
 
   pub(crate) fn has_documents(&self) -> Result<bool, String> {
@@ -40,63 +49,98 @@ impl WorkspaceStore {
   }
 
   pub(crate) fn rebuild(&self, documents: &[SearchDocument]) -> Result<usize, String> {
+    let write = self.database.begin_write().map_err(to_message)?;
+    let event = append_in_tx(&write, OutboxEventKind::Rebuild, current_time_ms())?;
+    remove_path_prefix_in_tx(&write, "")?;
+    for (index, document) in documents.iter().enumerate() {
+      upsert_document_in_tx(&write, &metadata_for_document(document, (index + 1) as u64))?;
+    }
+    write.commit().map_err(to_message)?;
+
     self.search.rebuild(documents)?;
-    let count = self.search.document_count()?;
-    write_document_count(&self.metadata, count)?;
+    self.mark_applied(event)?;
+    let count = self.document_count()?;
     Ok(count)
   }
 
   pub(crate) fn upsert_document(&self, document: &SearchDocument) -> Result<usize, String> {
+    let revision = self.next_revision(&document.path)?;
+    let write = self.database.begin_write().map_err(to_message)?;
+    let event = append_in_tx(
+      &write,
+      OutboxEventKind::Upsert {
+        path: document.path.clone(),
+      },
+      current_time_ms(),
+    )?;
+    upsert_document_in_tx(&write, &metadata_for_document(document, revision))?;
+    write.commit().map_err(to_message)?;
+
     self.search.upsert_document(document)?;
-    let count = self.search.document_count()?;
-    write_document_count(&self.metadata, count)?;
+    self.mark_applied(event)?;
+    let count = self.document_count()?;
     Ok(count)
   }
 
   pub(crate) fn remove_document(&self, path: &str) -> Result<usize, String> {
+    let write = self.database.begin_write().map_err(to_message)?;
+    let event = append_in_tx(
+      &write,
+      OutboxEventKind::Remove {
+        path: path.to_string(),
+      },
+      current_time_ms(),
+    )?;
+    remove_document_in_tx(&write, path)?;
+    write.commit().map_err(to_message)?;
+
     self.search.remove_document(path)?;
-    let count = self.search.document_count()?;
-    write_document_count(&self.metadata, count)?;
+    self.mark_applied(event)?;
+    let count = self.document_count()?;
     Ok(count)
   }
 
   pub(crate) fn remove_path_prefix(&self, prefix: &str) -> Result<usize, String> {
+    let write = self.database.begin_write().map_err(to_message)?;
+    let event = append_in_tx(
+      &write,
+      OutboxEventKind::RemovePrefix {
+        prefix: prefix.to_string(),
+      },
+      current_time_ms(),
+    )?;
+    remove_path_prefix_in_tx(&write, prefix)?;
+    write.commit().map_err(to_message)?;
+
     self.search.remove_path_prefix(prefix)?;
-    let count = self.search.document_count()?;
-    write_document_count(&self.metadata, count)?;
+    self.mark_applied(event)?;
+    let count = self.document_count()?;
     Ok(count)
   }
 
   pub(crate) fn search(&self, query: &str, limit: usize) -> Result<Vec<serde_json::Value>, String> {
-    self.search.search(query, limit)
+    let metadata = list_documents_in_db(&self.database)?;
+    self.search.search(query, limit, &metadata)
   }
-}
 
-fn initialize_metadata(database: &Database) -> Result<(), String> {
-  let write = database.begin_write().map_err(to_message)?;
-  {
-    let _table = write.open_table(METADATA_TABLE).map_err(to_message)?;
+  fn mark_applied(&self, event: OutboxEvent) -> Result<(), String> {
+    let write = self.database.begin_write().map_err(to_message)?;
+    let marked = mark_applied_in_tx(&write, event.id, current_time_ms())?;
+    write.commit().map_err(to_message)?;
+    if marked {
+      Ok(())
+    } else {
+      Err(format!("Outbox event {} was not found", event.id))
+    }
   }
-  write.commit().map_err(to_message)
-}
 
-fn read_document_count(database: &Database) -> Result<usize, String> {
-  let read = database.begin_read().map_err(to_message)?;
-  let table = read.open_table(METADATA_TABLE).map_err(to_message)?;
-  let value = table.get(DOCUMENT_COUNT_KEY).map_err(to_message)?;
-
-  Ok(value.map(|count| count.value() as usize).unwrap_or(0))
-}
-
-fn write_document_count(database: &Database, count: usize) -> Result<(), String> {
-  let write = database.begin_write().map_err(to_message)?;
-  {
-    let mut table = write.open_table(METADATA_TABLE).map_err(to_message)?;
-    table
-      .insert(DOCUMENT_COUNT_KEY, count as u64)
-      .map_err(to_message)?;
+  fn next_revision(&self, path: &str) -> Result<u64, String> {
+    Ok(
+      get_document_in_db(&self.database, path)?
+        .map(|metadata| metadata.indexed_revision.saturating_add(1))
+        .unwrap_or(1),
+    )
   }
-  write.commit().map_err(to_message)
 }
 
 struct TantivyWorkspaceIndex {
@@ -191,14 +235,23 @@ impl TantivyWorkspaceIndex {
     self.reader.reload().map_err(to_message)
   }
 
-  fn search(&self, query: &str, limit: usize) -> Result<Vec<serde_json::Value>, String> {
-    let documents = self.all_documents()?;
+  fn search(
+    &self,
+    query: &str,
+    limit: usize,
+    metadata: &[DocumentMetadata],
+  ) -> Result<Vec<serde_json::Value>, String> {
+    let titles = metadata
+      .iter()
+      .map(|metadata| (metadata.path.as_str(), metadata.title.as_str()))
+      .collect::<HashMap<_, _>>();
+    let mut documents = self.all_documents()?;
+    for document in &mut documents {
+      if let Some(title) = titles.get(document.path.as_str()) {
+        document.title = (*title).to_string();
+      }
+    }
     Ok(search_documents(documents.iter(), query, limit))
-  }
-
-  fn document_count(&self) -> Result<usize, String> {
-    self.reader.reload().map_err(to_message)?;
-    Ok(self.reader.searcher().num_docs() as usize)
   }
 
   fn all_documents(&self) -> Result<Vec<SearchDocument>, String> {
@@ -253,6 +306,37 @@ fn field_text(document: &TantivyDocument, field: Field) -> Option<String> {
     .get_first(field)
     .and_then(|value| value.as_str())
     .map(ToOwned::to_owned)
+}
+
+fn metadata_for_document(document: &SearchDocument, indexed_revision: u64) -> DocumentMetadata {
+  DocumentMetadata {
+    path: document.path.clone(),
+    title: document.title.clone(),
+    content_hash: content_hash(document),
+    modified_ms: None,
+    indexed_revision,
+  }
+}
+
+fn content_hash(document: &SearchDocument) -> String {
+  let mut hash = 0xcbf29ce484222325_u64;
+  for byte in document
+    .path
+    .bytes()
+    .chain(document.title.bytes())
+    .chain(document.content.bytes())
+  {
+    hash ^= u64::from(byte);
+    hash = hash.wrapping_mul(0x100000001b3);
+  }
+  format!("{hash:016x}")
+}
+
+fn current_time_ms() -> u64 {
+  SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
+    .unwrap_or_default()
 }
 
 fn to_message(error: impl std::fmt::Display) -> String {

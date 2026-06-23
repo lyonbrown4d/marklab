@@ -9,7 +9,7 @@ const MAX_SEARCH_LIMIT = 100
 export type { WorkspaceSearchDocument }
 
 export type WorkspaceSearchIndexBackend = {
-  close: () => Promise<void>
+  close: (workspaceId: string) => Promise<void>
   hasDocuments: (workspaceId: string) => Promise<boolean>
   open: (workspaceId: string, indexPath: string) => Promise<void>
   rebuild: (workspaceId: string, documents: WorkspaceSearchDocument[]) => Promise<void>
@@ -36,7 +36,10 @@ export class WorkspaceSearchIndex {
   }
 
   async close(): Promise<void> {
-    await this.backend.close()
+    const workspaceId = this.workspaceId
+    if (workspaceId) {
+      await this.backend.close(workspaceId)
+    }
     this.indexPath = null
     this.workspaceId = null
   }

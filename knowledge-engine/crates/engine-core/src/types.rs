@@ -50,6 +50,27 @@ pub(crate) struct WorkspaceSearchParams {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MarkdownExtractParams {
+  pub(crate) path: String,
+  pub(crate) content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MarkdownDocumentParams {
+  pub(crate) path: String,
+  pub(crate) content: String,
+  pub(crate) version: Option<u64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MarkdownPathParams {
+  pub(crate) path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SearchDocument {
   pub(crate) path: String,
   pub(crate) title: String,

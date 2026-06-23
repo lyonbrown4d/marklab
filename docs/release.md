@@ -31,8 +31,9 @@ Marklab-${version}-${os}-${arch}.${ext}
 
 ## Native Modules
 
-The persisted search index uses Electron's built-in `node:sqlite` runtime.
-There is no app-owned SQLite native dependency to rebuild during packaging.
+The persisted knowledge/search index is owned by the Rust knowledge-engine
+sidecar. The sidecar binary is built by `pnpm knowledge:build` and copied into
+`resources/engine/<platform>-<arch>/` before desktop development and packaging.
 
 `electron-builder` has `npmRebuild` disabled because a full native rebuild also
 tries to compile `@homebridge/node-pty-prebuilt-multiarch`, which is intended to

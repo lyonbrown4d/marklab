@@ -21,8 +21,8 @@ export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchInd
     await this.knowledgeEngine.request('workspace/open', { workspaceId, indexPath })
   }
 
-  async close(): Promise<void> {
-    return undefined
+  async close(workspaceId: string): Promise<void> {
+    await this.knowledgeEngine.request('workspace/close', { workspaceId })
   }
 
   async hasDocuments(workspaceId: string): Promise<boolean> {
