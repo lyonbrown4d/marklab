@@ -1,0 +1,21 @@
+[package]
+name = "marklab-knowledge-grpc-api"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+prost.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tonic.workspace = true
+tonic-health.workspace = true
+tonic-prost.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored.workspace = true
+tonic-prost-build.workspace = true
+
+[lib]
+path = "src/lib.rs"

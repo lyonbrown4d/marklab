@@ -2,6 +2,7 @@
 members = [
   "knowledge-engine/bins/knowledge-engine",
   "knowledge-engine/crates/engine-core",
+  "knowledge-engine/crates/grpc-api",
   "knowledge-engine/crates/protocol",
   "knowledge-engine/crates/rpc-server",
 ]
@@ -12,3 +13,24 @@ edition = "2021"
 license = "MIT"
 version = "0.1.0"
 
+[workspace.dependencies]
+fluxdi = { version = "1.2.2", default-features = false, features = ["debug", "thread-safe", "async-factory", "lifecycle", "tracing"] }
+prost = "0.14"
+protoc-bin-vendored = "3"
+pulldown-cmark = "0.13"
+ropey = "1.6"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "signal", "fs"] }
+tokio-stream = "0.1"
+tokio-util = "0.7"
+tonic = "0.14"
+tonic-health = "0.14"
+tonic-prost = "0.14"
+tonic-prost-build = "0.14"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tree-sitter = "0.26"
+tree-sitter-md = "0.5"
+unicode-normalization = "0.1"
+unicode-segmentation = "1"

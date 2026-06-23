@@ -1,6 +1,7 @@
 mod engine;
 mod markdown_documents;
 mod markdown_extract;
+mod markdown_syntax;
 pub mod metadata_store;
 pub mod outbox;
 mod search_text;

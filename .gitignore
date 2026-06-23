@@ -154,3 +154,4 @@ Temporary Items
 # Generated app icon assets
 resources/icons/
 resources/engine/
+electron/generated/knowledge-engine/

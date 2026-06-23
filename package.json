@@ -12,6 +12,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@bufbuild/buf",
       "@homebridge/node-pty-prebuilt-multiarch",
       "@parcel/watcher",
       "electron",
@@ -32,6 +33,8 @@
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "knowledge:build": "node scripts/build-knowledge-engine.mjs",
     "knowledge:build:force": "node scripts/build-knowledge-engine.mjs --force",
+    "knowledge:proto:lint": "buf lint",
+    "knowledge:proto:gen": "buf generate",
     "desktop:prepare": "pnpm knowledge:build && pnpm native:rebuild && pnpm icons:generate",
     "build:electron": "pnpm electron:build",
     "preelectron:dev": "pnpm desktop:prepare",
@@ -147,9 +150,11 @@
     }
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
     "@codemirror/language": "^6.12.3",
     "@dagrejs/dagre": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.1",
+    "@grpc/grpc-js": "^1.14.4",
     "@hookform/resolvers": "^5.4.0",
     "@milkdown/core": "^7.21.2",
     "@milkdown/crepe": "^7.21.2",
@@ -245,6 +250,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
+    "@bufbuild/buf": "^1.71.0",
     "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.0",
@@ -281,6 +287,7 @@
     "sass": "^1.101.0",
     "shadcn": "^4.11.0",
     "tailwindcss": "^4.3.1",
+    "ts-proto": "^2.11.8",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.61.1",
     "unplugin-turbo-console": "^2.3.2",

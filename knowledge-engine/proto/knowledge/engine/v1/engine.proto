@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+package knowledge.engine.v1;
+
+service ControlService {
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+service DocumentSessionService {
+  rpc Sync(stream SyncRequest) returns (stream SyncResponse);
+}
+
+service MarkdownService {
+  rpc GetDocumentSymbols(GetDocumentSymbolsRequest) returns (GetDocumentSymbolsResponse);
+  rpc GetLinks(GetLinksRequest) returns (GetLinksResponse);
+}
+
+service SearchService {
+  rpc Search(SearchRequest) returns (stream SearchResponse);
+}
+
+message GetCapabilitiesRequest {
+  string workspace_instance_id = 1;
+}
+
+message GetCapabilitiesResponse {
+  string protocol_version = 1;
+  string engine_version = 2;
+  repeated string capabilities = 3;
+  StorageCapabilities storage = 4;
+}
+
+message StorageCapabilities {
+  string metadata_store = 1;
+  string search_index = 2;
+  bool blob_store = 3;
+}
+
+message ShutdownRequest {
+  string reason = 1;
+}
+
+message ShutdownResponse {
+  bool accepted = 1;
+}
+
+message SyncRequest {
+  string workspace_instance_id = 1;
+  oneof event {
+    OpenDocument open = 2;
+    ApplyDocumentChange change = 3;
+    CloseDocument close = 4;
+    ResyncDocument resync = 5;
+  }
+}
+
+message SyncResponse {
+  oneof event {
+    DocumentAcknowledged acknowledged = 1;
+    DiagnosticsChanged diagnostics = 2;
+    ResyncRequired resync_required = 3;
+  }
+}
+
+message OpenDocument {
+  string document_id = 1;
+  string uri = 2;
+  uint64 version = 3;
+  string content = 4;
+}
+
+message ApplyDocumentChange {
+  string document_id = 1;
+  uint64 base_version = 2;
+  uint64 version = 3;
+  repeated TextEdit changes = 4;
+}
+
+message CloseDocument {
+  string document_id = 1;
+}
+
+message ResyncDocument {
+  string document_id = 1;
+  uint64 version = 2;
+  string content = 3;
+}
+
+message DocumentAcknowledged {
+  string document_id = 1;
+  uint64 version = 2;
+}
+
+message DiagnosticsChanged {
+  string document_id = 1;
+  uint64 version = 2;
+  repeated Diagnostic diagnostics = 3;
+}
+
+message ResyncRequired {
+  string document_id = 1;
+  string reason = 2;
+}
+
+message Diagnostic {
+  Range range = 1;
+  string rule_id = 2;
+  string message = 3;
+  DiagnosticSeverity severity = 4;
+}
+
+enum DiagnosticSeverity {
+  DIAGNOSTIC_SEVERITY_UNSPECIFIED = 0;
+  DIAGNOSTIC_SEVERITY_ERROR = 1;
+  DIAGNOSTIC_SEVERITY_WARNING = 2;
+  DIAGNOSTIC_SEVERITY_INFORMATION = 3;
+  DIAGNOSTIC_SEVERITY_HINT = 4;
+}
+
+message GetDocumentSymbolsRequest {
+  string document_id = 1;
+  uint64 document_version = 2;
+}
+
+message GetDocumentSymbolsResponse {
+  repeated MarkdownDocumentSymbol symbols = 1;
+}
+
+message MarkdownDocumentSymbol {
+  string name = 1;
+  uint32 kind = 2;
+  uint32 level = 3;
+  string slug = 4;
+  Range range = 5;
+}
+
+message GetLinksRequest {
+  string document_id = 1;
+  uint64 document_version = 2;
+}
+
+message GetLinksResponse {
+  repeated MarkdownLink links = 1;
+}
+
+message MarkdownLink {
+  string source_document_id = 1;
+  string text = 2;
+  string target = 3;
+  Range range = 4;
+  bool is_external = 5;
+}
+
+message SearchRequest {
+  string query = 1;
+  uint32 limit = 2;
+  uint64 workspace_generation = 3;
+}
+
+message SearchResponse {
+  repeated SearchResult results = 1;
+  bool done = 2;
+}
+
+message SearchResult {
+  string document_id = 1;
+  string path = 2;
+  string title = 3;
+  string excerpt = 4;
+  float score = 5;
+}
+
+message TextEdit {
+  Range range = 1;
+  string text = 2;
+}
+
+message Range {
+  Position start = 1;
+  Position end = 2;
+}
+
+message Position {
+  uint32 line = 1;
+  uint32 character = 2;
+}

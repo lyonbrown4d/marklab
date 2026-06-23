@@ -7,7 +7,7 @@ version.workspace = true
 [dependencies]
 marklab-knowledge-engine-core = { path = "../engine-core" }
 marklab-knowledge-protocol = { path = "../protocol" }
+tracing.workspace = true
 
 [lib]
 path = "src/lib.rs"
-

@@ -7,6 +7,7 @@ pub fn run_stdio() -> io::Result<()> {
   let stdin = io::stdin();
   let mut stdout = io::stdout();
   let mut engine = KnowledgeEngine::new();
+  tracing::info!("knowledge engine stdio server started");
 
   for line in stdin.lock().lines() {
     let line = line?;
@@ -15,10 +16,12 @@ pub fn run_stdio() -> io::Result<()> {
     stdout.flush()?;
 
     if engine.shutdown_requested() {
+      tracing::info!("knowledge engine shutdown requested");
       break;
     }
   }
 
+  tracing::info!("knowledge engine stdio server stopped");
   Ok(())
 }
 

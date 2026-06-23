@@ -76,3 +76,46 @@ technical design is to replace the line-oriented extractor internals with a prop
 parser/rope stack, likely `ropey` for document text and either tree-sitter Markdown
 or a maintained Markdown parser for richer incremental syntax features. The public
 JSON-RPC shape should remain stable while the parser internals improve.
+
+## Workspace sidecar gRPC scaffold
+
+The workspace sidecar roadmap now has a first gRPC/protobuf scaffold without switching the
+runtime path away from the existing JSON-RPC sidecar. The proto source of truth lives in
+`knowledge-engine/proto`, Rust generated bindings are compiled by the `marklab-knowledge-grpc-api`
+crate, and Node generation is wired through Buf plus `ts-proto`.
+
+This phase intentionally keeps the current Electron main process on the stable JSON-RPC bridge.
+The next migration step is to introduce a `WorkspaceSidecarManager` that can own one sidecar per
+workspace, then route either JSON-RPC or gRPC behind the same Electron service boundary while the
+transport is migrated.
+
+### Rust dependency scaffold notes
+
+The gRPC/protobuf scaffold now has explicit Rust dependencies for `tokio`, `tonic`, `prost`,
+`tonic-health`, and `tokio-util`. The Markdown syntax scaffold now uses `ropey`,
+`pulldown-cmark`, `unicode-normalization`, and `unicode-segmentation` in the default build.
+
+`tree-sitter` and `tree-sitter-md` are present as the optional `tree-sitter-markdown` feature.
+They are intentionally not enabled by default yet because the Windows MSVC build requires a valid
+C compiler environment. Enabling that feature should be paired with a toolchain preflight script
+instead of relying on machine-specific compiler paths.
+
+### FluxDI composition boundary
+
+`fluxdi` is now part of the Rust workspace as the `app-composition` boundary. The initial crate is
+intentionally thin: it owns the workspace composition configuration and re-exports FluxDI for the
+future composition root, while `engine-core` remains free of DI dependencies.
+
+The next step is to move sidecar startup wiring into this composition crate, then register storage,
+Markdown language services, gRPC adapters, and job services there. Domain crates should continue to
+receive explicit dependencies and must not resolve services from the injector at runtime.
+
+### FluxDI placement update
+
+FluxDI is intentionally used from the `knowledge-engine` binary composition module instead of a
+standalone composition crate. This keeps dependency injection at the process composition root and
+prevents DI APIs from leaking into `engine-core`, `grpc-api`, or `rpc-server`.
+
+The binary currently creates a lightweight workspace composition root from sidecar environment
+variables. Future startup wiring should register concrete services there while domain crates remain
+constructor-driven and explicit.

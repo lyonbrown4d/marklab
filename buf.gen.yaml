@@ -1,0 +1,10 @@
+version: v2
+plugins:
+  - local: protoc-gen-ts_proto
+    out: electron/generated/knowledge-engine
+    opt:
+      - env=node
+      - outputServices=none
+      - esModuleInterop=true
+      - forceLong=string
+      - useExactTypes=false
