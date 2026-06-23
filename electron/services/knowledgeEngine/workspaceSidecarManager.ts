@@ -1,4 +1,8 @@
 import type { KnowledgeEngineStatus } from '@electron/services/knowledgeEngine/types.js'
+import {
+  createWorkspaceSidecarIdentity,
+  type WorkspaceSidecarIdentity,
+} from '@electron/services/knowledgeEngine/workspaceIdentity.js'
 import type { Logger } from '@electron/services/logger.js'
 
 export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'error'
@@ -6,10 +10,18 @@ export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'er
 export type WorkspaceSidecarRuntime = {
   workspaceId: string
   indexPath: string
+  identity: WorkspaceSidecarIdentity
   state: WorkspaceSidecarRuntimeState
   openedAt: number
   lastActivityAt: number
   lastError?: string
+}
+
+export type WorkspaceSidecarRuntimeSummary = Omit<WorkspaceSidecarRuntime, 'identity'> & {
+  identity: Pick<
+    WorkspaceSidecarIdentity,
+    'canonicalRoot' | 'engineDataDir' | 'workspaceInstanceId'
+  >
 }
 
 export type WorkspaceSidecarTransport = {
@@ -19,6 +31,7 @@ export type WorkspaceSidecarTransport = {
 }
 
 type WorkspaceSidecarManagerOptions = {
+  appDataDir: string
   logger: Logger
   transport: WorkspaceSidecarTransport
 }
@@ -28,8 +41,15 @@ export class WorkspaceSidecarManager {
 
   constructor(private readonly options: WorkspaceSidecarManagerOptions) {}
 
-  listActive(): WorkspaceSidecarRuntime[] {
-    return [...this.runtimes.values()].map((runtime) => ({ ...runtime }))
+  listActive(): WorkspaceSidecarRuntimeSummary[] {
+    return [...this.runtimes.values()].map((runtime) => ({
+      ...runtime,
+      identity: {
+        canonicalRoot: runtime.identity.canonicalRoot,
+        engineDataDir: runtime.identity.engineDataDir,
+        workspaceInstanceId: runtime.identity.workspaceInstanceId,
+      },
+    }))
   }
 
   async open(workspaceId: string, indexPath: string): Promise<void> {
@@ -44,9 +64,15 @@ export class WorkspaceSidecarManager {
     }
 
     const now = Date.now()
+    const identity = createWorkspaceSidecarIdentity({
+      appDataDir: this.options.appDataDir,
+      workspaceId,
+      indexPath,
+    })
     this.runtimes.set(workspaceId, {
       workspaceId,
       indexPath,
+      identity,
       state: 'opening',
       openedAt: now,
       lastActivityAt: now,
@@ -58,6 +84,7 @@ export class WorkspaceSidecarManager {
       this.runtimes.set(workspaceId, {
         workspaceId,
         indexPath,
+        identity,
         state: 'ready',
         openedAt: now,
         lastActivityAt: Date.now(),
@@ -67,6 +94,7 @@ export class WorkspaceSidecarManager {
       this.runtimes.set(workspaceId, {
         workspaceId,
         indexPath,
+        identity,
         state: 'error',
         openedAt: now,
         lastActivityAt: Date.now(),

@@ -135,3 +135,14 @@ Responsibilities now owned by the manager boundary:
 
 The next migration step is to turn each runtime entry into a real sidecar process handle with its
 own environment, session token, readiness state, and transport channel.
+
+### Workspace sidecar identity model
+
+The manager now creates a per-workspace identity plan before opening a runtime. It computes a stable
+`workspaceInstanceId`, canonical workspace root, engine data directory, and session token based on
+the workspace key and index path. Runtime diagnostics intentionally omit the session token and full
+environment payload.
+
+Current transport still uses the shared JSON-RPC sidecar. The identity model is ready for the next
+step where each runtime entry becomes an actual child process with these environment variables:
+`WORKSPACE_ROOT`, `WORKSPACE_INSTANCE_ID`, `ENGINE_DATA_DIR`, and `GRPC_SESSION_TOKEN`.

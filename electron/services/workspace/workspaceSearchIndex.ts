@@ -25,12 +25,12 @@ export class WorkspaceSearchIndex {
 
   constructor(private readonly backend: WorkspaceSearchIndexBackend = createUnavailableBackend()) {}
 
-  async open(indexPath: string): Promise<void> {
+  async open(indexPath: string, workspaceId = indexPath): Promise<void> {
     const normalizedPath = path.resolve(indexPath)
-    if (normalizedPath === this.indexPath && this.workspaceId) return
+    if (normalizedPath === this.indexPath && workspaceId === this.workspaceId) return
 
     await this.close()
-    this.workspaceId = normalizedPath
+    this.workspaceId = workspaceId
     await this.backend.open(this.workspaceId, normalizedPath)
     this.indexPath = normalizedPath
   }

@@ -25,6 +25,7 @@ export class KnowledgeEngineService {
 
   constructor(private readonly options: KnowledgeEngineServiceOptions) {
     this.sidecars = new WorkspaceSidecarManager({
+      appDataDir: this.options.app.getPath('userData'),
       logger: this.options.logger,
       transport: {
         getStatus: () => this.getStatus(),

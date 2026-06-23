@@ -216,7 +216,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private async openWorkspaceSearchIndex(): Promise<void> {
     const workspaceSearchKey = this.getWorkspaceSearchKey()
     const indexPath = this.getWorkspaceSearchIndexPath()
-    await this.workspaceSearchIndex.open(indexPath)
+    await this.workspaceSearchIndex.open(indexPath, workspaceSearchKey)
 
     if (this.activeWorkspaceSearchKey !== workspaceSearchKey) {
       this.activeWorkspaceSearchKey = workspaceSearchKey

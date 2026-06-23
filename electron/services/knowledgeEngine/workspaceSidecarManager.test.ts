@@ -24,6 +24,7 @@ describe('WorkspaceSidecarManager', () => {
         state: 'ready',
       },
     ])
+    expect(JSON.stringify(manager.listActive())).not.toContain('GRPC_SESSION_TOKEN')
   })
 
   it('routes workspace requests with the workspace id attached', async () => {
@@ -81,7 +82,7 @@ const createManager = () => {
   } as unknown as Logger
 
   return {
-    manager: new WorkspaceSidecarManager({ logger, transport }),
+    manager: new WorkspaceSidecarManager({ appDataDir: 'app-data', logger, transport }),
     transport,
   }
 }
