@@ -18,37 +18,43 @@ export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchInd
   constructor(private readonly knowledgeEngine: KnowledgeEngineService) {}
 
   async open(workspaceId: string, indexPath: string): Promise<void> {
-    await this.knowledgeEngine.request('workspace/open', { workspaceId, indexPath })
+    await this.knowledgeEngine.openWorkspace(workspaceId, indexPath)
   }
 
   async close(workspaceId: string): Promise<void> {
-    await this.knowledgeEngine.request('workspace/close', { workspaceId })
+    await this.knowledgeEngine.closeWorkspace(workspaceId)
   }
 
   async hasDocuments(workspaceId: string): Promise<boolean> {
-    const result = await this.knowledgeEngine.request('workspace/hasDocuments', { workspaceId })
+    const result = await this.knowledgeEngine.requestWorkspace(
+      workspaceId,
+      'workspace/hasDocuments',
+    )
     return Boolean(readObject(result).hasDocuments)
   }
 
   async rebuild(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
-    await this.knowledgeEngine.request('workspace/rebuild', { workspaceId, documents })
+    await this.knowledgeEngine.requestWorkspace(workspaceId, 'workspace/rebuild', { documents })
   }
 
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
-    await this.knowledgeEngine.request('workspace/upsertDocument', { workspaceId, document })
+    await this.knowledgeEngine.requestWorkspace(workspaceId, 'workspace/upsertDocument', {
+      document,
+    })
   }
 
   async removeDocument(workspaceId: string, path: string): Promise<void> {
-    await this.knowledgeEngine.request('workspace/removeDocument', { workspaceId, path })
+    await this.knowledgeEngine.requestWorkspace(workspaceId, 'workspace/removeDocument', { path })
   }
 
   async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
-    await this.knowledgeEngine.request('workspace/removePathPrefix', { workspaceId, prefix })
+    await this.knowledgeEngine.requestWorkspace(workspaceId, 'workspace/removePathPrefix', {
+      prefix,
+    })
   }
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
-    const result = await this.knowledgeEngine.request('workspace/search', {
-      workspaceId,
+    const result = await this.knowledgeEngine.requestWorkspace(workspaceId, 'workspace/search', {
       query,
       limit,
     })

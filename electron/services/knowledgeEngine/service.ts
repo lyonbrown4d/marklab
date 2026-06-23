@@ -8,6 +8,7 @@ import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
 } from '@electron/services/knowledgeEngine/types.js'
+import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
 import type { Logger } from '@electron/services/logger.js'
 
 type KnowledgeEngineServiceOptions = {
@@ -20,14 +21,25 @@ export class KnowledgeEngineService {
   private client: KnowledgeEngineRpcClient | null = null
   private state: KnowledgeEngineStatus['state'] = 'stopped'
   private lastError: string | undefined
+  private readonly sidecars: WorkspaceSidecarManager
 
-  constructor(private readonly options: KnowledgeEngineServiceOptions) {}
+  constructor(private readonly options: KnowledgeEngineServiceOptions) {
+    this.sidecars = new WorkspaceSidecarManager({
+      logger: this.options.logger,
+      transport: {
+        getStatus: () => this.getStatus(),
+        initialize: () => this.initialize(),
+        request: (method, params) => this.request(method, params),
+      },
+    })
+  }
 
   get commandHandlers(): NativeCommandHandlers {
     return {
       'knowledge.engine.status': () => this.getStatus(),
       'knowledge.engine.initialize': () => this.initialize(),
       'knowledge.engine.stop': () => this.stop(),
+      'knowledge.engine.workspaces': () => this.sidecars.listActive(),
     }
   }
 
@@ -85,7 +97,24 @@ export class KnowledgeEngineService {
     return this.client.request(method, params)
   }
 
+  async openWorkspace(workspaceId: string, indexPath: string): Promise<void> {
+    await this.sidecars.open(workspaceId, indexPath)
+  }
+
+  async closeWorkspace(workspaceId: string): Promise<void> {
+    await this.sidecars.close(workspaceId)
+  }
+
+  async requestWorkspace(
+    workspaceId: string,
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.sidecars.request(workspaceId, method, params)
+  }
+
   stop(): KnowledgeEngineStatus {
+    this.sidecars.clear()
     this.client?.dispose()
     this.client = null
 

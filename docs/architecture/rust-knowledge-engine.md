@@ -119,3 +119,19 @@ prevents DI APIs from leaking into `engine-core`, `grpc-api`, or `rpc-server`.
 The binary currently creates a lightweight workspace composition root from sidecar environment
 variables. Future startup wiring should register concrete services there while domain crates remain
 constructor-driven and explicit.
+
+### WorkspaceSidecarManager scaffold
+
+Electron main now has a `WorkspaceSidecarManager` boundary for workspace runtime routing. The current
+implementation deliberately keeps the existing shared JSON-RPC sidecar transport so the app runtime
+is not switched in the same step as the architecture refactor.
+
+Responsibilities now owned by the manager boundary:
+
+- workspace open/close lifecycle tracking;
+- workspace request routing with explicit `workspaceId` attachment;
+- active runtime listing for diagnostics;
+- a stable seam for replacing shared JSON-RPC with one child process / gRPC channel per workspace.
+
+The next migration step is to turn each runtime entry into a real sidecar process handle with its
+own environment, session token, readiness state, and transport channel.
