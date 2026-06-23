@@ -115,6 +115,10 @@ export type RuntimeCommandPayload = {
   args?: unknown
 }
 
+export type SystemThemePayload = {
+  colorMode: 'light' | 'dark'
+}
+
 export type RuntimeEventPayload<T = unknown> = {
   event: string
   id: number

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import { createElectronContainer, type ElectronContainer } from '@electron/container.js'
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 import {
@@ -73,6 +73,18 @@ const handleRendererReady = (): void => {
 }
 
 const runtimeEvents = createRuntimeEventQueue(() => windows?.main ?? null)
+
+const currentSystemThemePayload = () =>
+  ({
+    colorMode: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
+  }) as const
+
+nativeTheme.on('updated', () => {
+  runtimeEvents.queueOrSendRuntimeEvent({
+    eventName: 'system-theme-changed',
+    payload: currentSystemThemePayload(),
+  })
+})
 
 const windowLifecycle = createWindowLifecycle({
   getContainer,

@@ -1,12 +1,9 @@
 import { SearchX } from 'lucide-react'
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useDebounce } from 'ahooks'
 import AppCommandDialog from '@/components/AppCommandDialog'
 import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
-import { fsApi, type FsSearchResult } from '@/services/fsApi'
-import { isDesktopRuntime } from '@/runtime/environment'
+import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
 import CommandRecentFilesSection from '@/components/command/CommandRecentFilesSection'
 import CommandSearchOverview from '@/components/command/CommandSearchOverview'
@@ -17,6 +14,7 @@ import CommandSearchResults, {
 } from '@/components/command/CommandSearchResults'
 import { parseCommandSearchScope } from '@/components/command/commandSearchScope'
 import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
+import { useCommandFullTextSearchStream } from '@/components/command/useCommandFullTextSearchStream'
 import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 
@@ -65,18 +63,14 @@ const TitlebarCommandDialog = ({
   )
   const trimmedQuery = parsedSearch.query
   const deferredTrimmedQuery = deferredParsedSearch.query
-  const debouncedQuery = useDebounce(deferredTrimmedQuery, { wait: 160 })
-  const canSearchFullText =
-    deferredParsedSearch.scope === 'all' || deferredParsedSearch.scope === 'text'
   const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
-  const fullTextSearch = useQuery({
-    queryKey: ['command-workspace-search', debouncedQuery],
-    queryFn: () => fsApi.searchWorkspace(debouncedQuery, 8),
-    enabled: open && canSearchFullText && isDesktopRuntime() && debouncedQuery.length >= 2,
-    placeholderData: keepPreviousData,
-    staleTime: 5_000,
+  const fullTextSearch = useCommandFullTextSearchStream({
+    limit: 8,
+    open,
+    query: deferredTrimmedQuery,
+    scope: deferredParsedSearch.scope,
   })
-  const fullTextResults = debouncedQuery === deferredTrimmedQuery ? (fullTextSearch.data ?? []) : []
+  const fullTextResults = fullTextSearch.fullTextResults
   const emptyQueryLabel =
     trimmedQuery.length > 0
       ? t('command.noResultsFor', { query: trimmedQuery })
@@ -151,8 +145,8 @@ const TitlebarCommandDialog = ({
           files={files}
           headings={headings}
           fullTextResults={fullTextResults}
-          fullTextFetching={fullTextSearch.isFetching}
-          fullTextError={fullTextSearch.isError}
+          fullTextFetching={fullTextSearch.fullTextFetching}
+          fullTextError={fullTextSearch.fullTextError}
           workspaceIndexed={workspaceIndexed}
           indexedFileCount={indexedFileCount}
           searchIndexRebuilding={searchIndexRebuilding}

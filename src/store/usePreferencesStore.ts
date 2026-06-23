@@ -31,6 +31,7 @@ export type PreferencesState = {
   themeMode: ThemeModePreference
   lightTheme: LightThemeMode
   darkTheme: DarkThemeMode
+  autoSystemThemeSync: boolean
   customThemeId: string | null
   locale: AppLocale
   sidebarCollapsed: boolean
@@ -53,6 +54,7 @@ export type PreferencesState = {
   syncSystemTheme: (mode: ThemeColorMode) => void
   setLightTheme: (theme: LightThemeMode) => void
   setDarkTheme: (theme: DarkThemeMode) => void
+  setAutoSystemThemeSync: (enabled: boolean) => void
   setCustomThemeId: (themeId: string | null) => void
   setLocale: (locale: AppLocale) => void
   setSilentSave: (silent: boolean) => void
@@ -75,6 +77,7 @@ export type PreferencesState = {
 
 type PreferencesPersistedState = Pick<
   PreferencesState,
+  | 'autoSystemThemeSync'
   | 'customThemeId'
   | 'defaultFileView'
   | 'graphContentMode'
@@ -105,6 +108,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       themeMode: 'system',
       lightTheme: 'paper',
       darkTheme: 'ink',
+      autoSystemThemeSync: true,
       customThemeId: null,
       locale: getInitialLocale(),
       sidebarCollapsed: false,
@@ -171,6 +175,10 @@ export const usePreferencesStore = create<PreferencesState>()(
             ? state
             : { darkTheme, theme }
         }),
+      setAutoSystemThemeSync: (autoSystemThemeSync) =>
+        set((state) =>
+          state.autoSystemThemeSync === autoSystemThemeSync ? state : { autoSystemThemeSync },
+        ),
       setCustomThemeId: (customThemeId) =>
         set((state) => (state.customThemeId === customThemeId ? state : { customThemeId })),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
@@ -264,6 +272,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         themeMode: state.themeMode,
         lightTheme: state.lightTheme,
         darkTheme: state.darkTheme,
+        autoSystemThemeSync: state.autoSystemThemeSync,
         customThemeId: state.customThemeId,
         locale: state.locale,
         sidebarCollapsed: state.sidebarCollapsed,

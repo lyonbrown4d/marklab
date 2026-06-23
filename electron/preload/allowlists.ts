@@ -68,6 +68,7 @@ const allowedEventNames = [
   'deep-link',
   'app-ready',
   'workspace-session-seed',
+  'system-theme-changed',
 ] as const
 
 export const allowedCommands: ReadonlySet<string> = new Set(allowedCommandNames)

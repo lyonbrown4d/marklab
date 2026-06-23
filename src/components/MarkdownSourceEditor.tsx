@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ReplaySubject, catchError, debounceTime, from, map, of, switchMap } from 'rxjs'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -25,6 +26,21 @@ type MarkdownSourceEditorProps = {
 }
 
 const SOURCE_DIAGNOSTICS_MAX_CHARS = 500_000
+const SOURCE_DIAGNOSTICS_DEBOUNCE_MS = 120
+
+type MarkdownSourceDiagnostics = Array<
+  FsMarkdownDiagnostic | ReturnType<typeof getMarkdownSourceDiagnostics>[number]
+>
+
+type MarkdownSourceDiagnosticsRequest = {
+  content: string
+  context: {
+    activePath: string | null
+    files: FileEntry[]
+    fileContents: Record<string, string>
+    workspaceIndex?: FsWorkspaceIndex | null
+  }
+}
 
 const MarkdownSourceEditor = ({
   activePath,
@@ -49,8 +65,7 @@ const MarkdownSourceEditor = ({
     monaco: typeof import('monaco-editor')
   } | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const diagnosticsTimerRef = useRef<number | null>(null)
-  const diagnosticsRequestRef = useRef(0)
+  const diagnosticsRequestStreamRef = useRef(new ReplaySubject<MarkdownSourceDiagnosticsRequest>(1))
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const searchHighlightTimerRef = useRef<number | null>(null)
   const completionContextRef = useRef({ activePath, files, fileContents, workspaceIndex })
@@ -115,48 +130,44 @@ const MarkdownSourceEditor = ({
     [],
   )
 
-  const refreshDiagnostics = useCallback(() => {
+  useEffect(() => {
+    const subscription = diagnosticsRequestStreamRef.current
+      .pipe(
+        debounceTime(SOURCE_DIAGNOSTICS_DEBOUNCE_MS),
+        switchMap(({ content, context }) => {
+          if (content.length > SOURCE_DIAGNOSTICS_MAX_CHARS)
+            return of<MarkdownSourceDiagnostics>([])
+
+          if (isDesktopRuntime() && context.activePath) {
+            return from(
+              markdownLanguageApi.getDiagnostics({ path: context.activePath, content }),
+            ).pipe(
+              map((diagnostics) => diagnostics as MarkdownSourceDiagnostics),
+              catchError(() => of(getMarkdownSourceDiagnostics({ ...context, content }))),
+            )
+          }
+
+          return of(getMarkdownSourceDiagnostics({ ...context, content }))
+        }),
+      )
+      .subscribe((diagnostics) => {
+        applyDiagnostics(diagnostics)
+      })
+
+    return () => subscription.unsubscribe()
+  }, [applyDiagnostics])
+
+  const scheduleDiagnostics = useCallback(() => {
     const host = diagnosticHostRef.current
     const editor = host?.editor
     const model = editor?.getModel()
     if (!host || !model) return
 
-    const content = model.getValue()
-    const context = completionContextRef.current
-    const requestId = diagnosticsRequestRef.current + 1
-    diagnosticsRequestRef.current = requestId
-
-    if (content.length > SOURCE_DIAGNOSTICS_MAX_CHARS) {
-      applyDiagnostics([])
-      return
-    }
-
-    if (isDesktopRuntime() && context.activePath) {
-      void markdownLanguageApi
-        .getDiagnostics({ path: context.activePath, content })
-        .then((diagnostics) => {
-          if (diagnosticsRequestRef.current !== requestId) return
-          applyDiagnostics(diagnostics)
-        })
-        .catch(() => {
-          if (diagnosticsRequestRef.current !== requestId) return
-          applyDiagnostics(getMarkdownSourceDiagnostics({ ...context, content }))
-        })
-      return
-    }
-
-    applyDiagnostics(getMarkdownSourceDiagnostics({ ...context, content }))
-  }, [applyDiagnostics])
-
-  const scheduleDiagnostics = useCallback(() => {
-    if (diagnosticsTimerRef.current !== null) {
-      window.clearTimeout(diagnosticsTimerRef.current)
-    }
-    diagnosticsTimerRef.current = window.setTimeout(() => {
-      diagnosticsTimerRef.current = null
-      refreshDiagnostics()
-    }, 120)
-  }, [refreshDiagnostics])
+    diagnosticsRequestStreamRef.current.next({
+      content: model.getValue(),
+      context: completionContextRef.current,
+    })
+  }, [])
 
   useEffect(() => {
     scheduleDiagnostics()
@@ -175,17 +186,13 @@ const MarkdownSourceEditor = ({
       scheduleDiagnostics,
     })
 
-    refreshDiagnostics()
+    scheduleDiagnostics()
   }
 
   useEffect(() => {
     return () => {
       providersDisposableRef.current?.dispose()
       providersDisposableRef.current = null
-      if (diagnosticsTimerRef.current !== null) {
-        window.clearTimeout(diagnosticsTimerRef.current)
-        diagnosticsTimerRef.current = null
-      }
       if (searchHighlightTimerRef.current !== null) {
         window.clearTimeout(searchHighlightTimerRef.current)
         searchHighlightTimerRef.current = null

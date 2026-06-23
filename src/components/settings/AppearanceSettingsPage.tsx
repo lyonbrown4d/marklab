@@ -5,6 +5,7 @@ import {
   SettingsFieldGroup,
   SettingsPageStack,
   SettingsSection,
+  SettingsSwitchField,
   SettingsSubsection,
 } from '@/components/settings/SettingsRow'
 import CustomThemesSettingsSection from '@/components/settings/CustomThemesSettingsSection'
@@ -21,9 +22,11 @@ const locales: Array<{ value: Locale; labelKey: string }> = [
 const AppearanceSettingsPage = () => {
   const { t, locale, setLocale } = useI18n()
   const themeMode = usePreferencesStore((state) => state.themeMode)
+  const autoSystemThemeSync = usePreferencesStore((state) => state.autoSystemThemeSync)
   const lightTheme = usePreferencesStore((state) => state.lightTheme)
   const darkTheme = usePreferencesStore((state) => state.darkTheme)
   const setThemeMode = usePreferencesStore((state) => state.setThemeMode)
+  const setAutoSystemThemeSync = usePreferencesStore((state) => state.setAutoSystemThemeSync)
   const setLightTheme = usePreferencesStore((state) => state.setLightTheme)
   const setDarkTheme = usePreferencesStore((state) => state.setDarkTheme)
 
@@ -47,6 +50,13 @@ const AppearanceSettingsPage = () => {
               </SettingsChoiceButton>
             ))}
           </SettingsChoiceGrid>
+
+          <SettingsSwitchField
+            title={t('settings.autoSystemThemeSync')}
+            description={t('settings.autoSystemThemeSyncDescription')}
+            checked={autoSystemThemeSync}
+            onCheckedChange={setAutoSystemThemeSync}
+          />
 
           <SettingsSubsection title={t('settings.lightTheme')}>
             <SettingsChoiceGrid columns={2}>

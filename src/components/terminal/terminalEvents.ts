@@ -1,11 +1,7 @@
 import mitt from 'mitt'
-import {
-  terminalExitEventSchema,
-  terminalOutputEventSchema,
-  type TerminalExitEvent,
-  type TerminalOutputEvent,
-} from '@/services/terminalApi'
-import { listen, type RuntimeUnlistenFn } from '@/runtime/events'
+import { Subscription } from 'rxjs'
+import { type TerminalExitEvent, type TerminalOutputEvent } from '@/services/terminalApi'
+import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalEventStreams'
 import { isDesktopRuntime } from '@/runtime/environment'
 
 type TerminalEventHandlers = {
@@ -24,9 +20,7 @@ const terminalEvents = mitt<TerminalEventBus>()
 const sessionSubscriberCounts = new Map<string, number>()
 const pendingOutputEvents = new Map<string, TerminalOutputEvent[]>()
 
-let listenerPromise: Promise<void> | null = null
-let outputUnlisten: RuntimeUnlistenFn | null = null
-let exitUnlisten: RuntimeUnlistenFn | null = null
+let listenerSubscription: Subscription | null = null
 
 const updateSubscriberCount = (sessionId: string, delta: 1 | -1) => {
   const nextCount = Math.max(0, (sessionSubscriberCounts.get(sessionId) ?? 0) + delta)
@@ -55,26 +49,27 @@ const dispatchExit = (event: TerminalExitEvent) => {
 }
 
 const ensureTerminalEventListeners = () => {
-  if (!isDesktopRuntime() || listenerPromise) return
+  if (!isDesktopRuntime() || listenerSubscription) return
 
-  listenerPromise = Promise.resolve()
-    .then(async () => {
-      outputUnlisten = await listen<unknown>('terminal-output', (event) => {
-        const payload = terminalOutputEventSchema.safeParse(event.payload)
-        if (payload.success) dispatchOutput(payload.data)
-      })
-      exitUnlisten = await listen<unknown>('terminal-exit', (event) => {
-        const payload = terminalExitEventSchema.safeParse(event.payload)
-        if (payload.success) dispatchExit(payload.data)
-      })
-    })
-    .catch(() => {
-      listenerPromise = null
-      outputUnlisten?.()
-      exitUnlisten?.()
-      outputUnlisten = null
-      exitUnlisten = null
-    })
+  listenerSubscription = new Subscription()
+  listenerSubscription.add(
+    terminalOutputEvents$.subscribe({
+      error: () => {
+        listenerSubscription?.unsubscribe()
+        listenerSubscription = null
+      },
+      next: dispatchOutput,
+    }),
+  )
+  listenerSubscription.add(
+    terminalExitEvents$.subscribe({
+      error: () => {
+        listenerSubscription?.unsubscribe()
+        listenerSubscription = null
+      },
+      next: dispatchExit,
+    }),
+  )
 }
 
 export const primeTerminalEventListeners = () => {

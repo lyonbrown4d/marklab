@@ -398,6 +398,9 @@ export const resources = {
       'shortcuts.clearSearch': '清空搜索',
       'settings.themeDescription': '选择内置主题，或导入自定义 CSS 主题。',
       'settings.themePreset': '主题预设',
+      'settings.autoSystemThemeSync': '自动响应系统主题',
+      'settings.autoSystemThemeSyncDescription':
+        '当主题模式为“跟随系统”时，系统明暗切换会实时同步到当前主题。',
       'settings.lightTheme': '明亮模式主题',
       'settings.darkTheme': '暗黑模式主题',
       'settings.customThemes': '自定义 CSS 主题',
@@ -1106,6 +1109,9 @@ export const resources = {
       'shortcuts.clearSearch': 'Clear search',
       'settings.themeDescription': 'Choose a built-in theme, or import a custom CSS theme.',
       'settings.themePreset': 'Theme Presets',
+      'settings.autoSystemThemeSync': 'Sync system theme automatically',
+      'settings.autoSystemThemeSyncDescription':
+        'When theme mode follows the system, OS light and dark changes update the active theme in real time.',
       'settings.lightTheme': 'Light Mode Theme',
       'settings.darkTheme': 'Dark Mode Theme',
       'settings.customThemes': 'Custom CSS themes',

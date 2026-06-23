@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+.native-build/
+dist/
+dist-electron/
+release/
+coverage/
+playwright-report/
+test-results/
+target/
+resources/icons/
+resources/engine/
+electron/generated/knowledge-engine/

@@ -160,6 +160,7 @@ tasks:
       - ~:proto-gen
       - ~:knowledge-build
       - ~:icons-generate
+    inputs: []
     options:
       cache: false
 
@@ -168,11 +169,17 @@ tasks:
       - ~:proto-gen
       - ~:knowledge-build-dev
       - ~:icons-generate
+    inputs: []
     options:
       cache: false
 
   electron-dev:
-    command: pnpm exec vite --mode electron
+    command: node scripts/run-electron-dev.mjs
+    inputs:
+      - scripts/run-electron-dev.mjs
+      - vite.config.ts
+      - package.json
+      - pnpm-lock.yaml
     deps:
       - ~:prepare-dev
     options:
@@ -209,6 +216,7 @@ tasks:
     deps:
       - ~:typecheck
       - ~:electron-build
+    inputs: []
     options:
       cache: false
       runDepsInParallel: false
@@ -217,6 +225,13 @@ tasks:
     command: pnpm exec electron-builder --dir --publish never
     deps:
       - ~:build
+    inputs:
+      - package.json
+      - pnpm-lock.yaml
+      - dist/**/*
+      - dist-electron/**/*
+      - resources/icons/**/*
+      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -226,6 +241,13 @@ tasks:
     command: pnpm exec electron-builder --publish never
     deps:
       - ~:build
+    inputs:
+      - package.json
+      - pnpm-lock.yaml
+      - dist/**/*
+      - dist-electron/**/*
+      - resources/icons/**/*
+      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -235,6 +257,13 @@ tasks:
     command: pnpm exec electron-builder --win --publish never
     deps:
       - ~:build
+    inputs:
+      - package.json
+      - pnpm-lock.yaml
+      - dist/**/*
+      - dist-electron/**/*
+      - resources/icons/**/*
+      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -244,6 +273,13 @@ tasks:
     command: pnpm exec electron-builder --mac --publish never
     deps:
       - ~:build
+    inputs:
+      - package.json
+      - pnpm-lock.yaml
+      - dist/**/*
+      - dist-electron/**/*
+      - resources/icons/**/*
+      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -253,6 +289,13 @@ tasks:
     command: pnpm exec electron-builder --linux --publish never
     deps:
       - ~:build
+    inputs:
+      - package.json
+      - pnpm-lock.yaml
+      - dist/**/*
+      - dist-electron/**/*
+      - resources/icons/**/*
+      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -266,6 +309,7 @@ tasks:
       - ~:cargo-fmt
       - ~:cargo-check
       - ~:cargo-test
+    inputs: []
     options:
       cache: false
       runDepsInParallel: false

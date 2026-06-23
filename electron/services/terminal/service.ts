@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
 import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
+import { Subject, bufferTime, filter, map, type Subscription } from 'rxjs'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type {
   TerminalExitEvent,
@@ -15,12 +16,15 @@ type CwdProvider = (webContents?: Electron.WebContents) => string
 type TerminalSession = {
   process: IPty
   webContents: Electron.WebContents
+  output: Subject<string>
+  outputSubscription: Subscription
 }
 const require = createRequire(import.meta.url)
 const MIN_ROWS = 8
 const MAX_ROWS = 200
 const MIN_COLS = 20
 const MAX_COLS = 400
+const OUTPUT_BUFFER_MS = 12
 export class TerminalService {
   private readonly sessions = new Map<string, TerminalSession>()
   private nextId = 1
@@ -55,11 +59,21 @@ export class TerminalService {
         },
         name: 'xterm-256color',
       })
+      const output = new Subject<string>()
+      const outputSubscription = output
+        .pipe(
+          bufferTime(OUTPUT_BUFFER_MS),
+          filter((chunks) => chunks.length > 0),
+          map((chunks) => chunks.join('')),
+        )
+        .subscribe((data) => {
+          this.emitOutput(webContents, { id, data })
+        })
       terminal.onData((data) => {
-        this.emitOutput(webContents, { id, data })
+        output.next(data)
       })
       terminal.onExit(({ exitCode, signal }) => {
-        this.sessions.delete(id)
+        this.removeSession(id)
         this.logger.info('terminal session exited', { exitCode, id, signal })
         this.emitExit(webContents, {
           id,
@@ -67,7 +81,7 @@ export class TerminalService {
           signal: signal === undefined || signal === null ? null : String(signal),
         })
       })
-      this.sessions.set(id, { process: terminal, webContents })
+      this.sessions.set(id, { process: terminal, webContents, output, outputSubscription })
       this.logger.info('terminal session created', { cwd, id, shell })
     } catch (error) {
       throw new Error(`Failed to start PTY terminal: ${formatError(error)}`, { cause: error })
@@ -86,9 +100,8 @@ export class TerminalService {
   }
   close(id: unknown): void {
     const sessionId = validateSessionId(id)
-    const session = this.sessions.get(sessionId)
+    const session = this.removeSession(sessionId)
     if (!session) return
-    this.sessions.delete(sessionId)
     this.logger.info('terminal session closed', { id: sessionId })
     session.process.kill()
   }
@@ -114,6 +127,17 @@ export class TerminalService {
       )
     }
     return this.ptyModule
+  }
+  private removeSession(id: string): TerminalSession | undefined {
+    const session = this.sessions.get(id)
+    if (!session) return undefined
+    this.sessions.delete(id)
+    try {
+      session.output.complete()
+    } finally {
+      session.outputSubscription.unsubscribe()
+    }
+    return session
   }
   private emitOutput(webContents: Electron.WebContents, payload: TerminalOutputEvent): void {
     if (!webContents.isDestroyed()) webContents.send('terminal-output', payload)

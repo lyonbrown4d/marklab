@@ -94,6 +94,17 @@
     filter var(--motion-duration-slow) var(--motion-ease-emphasized);
 }
 
+:root[data-motion-panels='true'] .motion-panel {
+  transition:
+    opacity var(--motion-duration-base) ease,
+    transform var(--motion-duration-slow) var(--motion-ease-emphasized),
+    filter var(--motion-duration-slow) var(--motion-ease-emphasized),
+    background-color var(--motion-duration-base) var(--motion-ease-standard),
+    color var(--motion-duration-base) var(--motion-ease-standard),
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+
 .motion-panel-left,
 .motion-panel-right,
 .motion-terminal-shell {
@@ -118,9 +129,10 @@
 
 .motion-panel-surface {
   transition:
-    background-color var(--motion-duration-base) ease,
-    border-color var(--motion-duration-base) ease,
-    box-shadow var(--motion-duration-base) ease;
+    background-color var(--motion-duration-base) var(--motion-ease-standard),
+    color var(--motion-duration-base) var(--motion-ease-standard),
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
 }
 
 .motion-view {
@@ -131,6 +143,20 @@
 .motion-view-stack {
   min-height: 0;
   contain: layout;
+}
+
+:root[data-motion-panels='true'] .motion-panel-surface,
+:root[data-motion-panels='true'] .motion-view,
+:root[data-motion-panels='true'] .motion-view-stack,
+:root[data-motion-panels='true'] .motion-scroll-viewport,
+:root[data-motion-panels='true'] .settings-scroll-viewport,
+:root[data-motion-panels='true'] .layout-rail,
+:root[data-motion-panels='true'] [data-slot='dialog-content'] {
+  transition:
+    background-color var(--motion-duration-base) var(--motion-ease-standard),
+    color var(--motion-duration-base) var(--motion-ease-standard),
+    border-color var(--motion-duration-base) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
 }
 
 .is-panel-layout-animating > [data-panel] {
@@ -180,6 +206,9 @@
   .motion-panel-surface,
   .motion-view,
   .motion-view-stack,
+  .motion-scroll-viewport,
+  .settings-scroll-viewport,
+  [data-slot='dialog-content'],
   .layout-rail {
     animation: none;
     transition: none;

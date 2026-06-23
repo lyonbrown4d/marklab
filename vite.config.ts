@@ -57,6 +57,7 @@ const electronMainEntry = {
   ),
 }
 const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
+const DEFAULT_DEV_SERVER_PORT = 5173
 
 const resolveKatexFontsDir = (): string | null => {
   const hoistedFontsDir = path.resolve(__dirname, 'node_modules/katex/dist/fonts')
@@ -84,6 +85,13 @@ const copyKatexFontsPlugin = () => ({
   },
 })
 
+const parseDevServerPort = (value: string | undefined): number | null => {
+  if (!value) return null
+  const port = Number(value)
+  if (!Number.isInteger(port) || port < 0 || port > 65535) return null
+  return port
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
@@ -99,11 +107,15 @@ export default defineConfig(({ command, mode }) => {
     isEnabled(process.env.MARKLAB_REPORT_COMPRESSED_SIZE)
   const shouldUseReactCompiler =
     isBuild && (mode === 'compiler' || isEnabled(process.env.MARKLAB_REACT_COMPILER))
+  const devServerPort = isServe
+    ? (parseDevServerPort(process.env.MARKLAB_DEV_SERVER_PORT ?? process.env.VITE_PORT) ??
+      DEFAULT_DEV_SERVER_PORT)
+    : DEFAULT_DEV_SERVER_PORT
 
   return {
     server: {
-      port: 5173,
-      strictPort: true, // fail if port is taken so Electron loads the expected dev server
+      port: devServerPort,
+      strictPort: false,
       warmup: {
         clientFiles: devWarmupClientFiles,
       },
