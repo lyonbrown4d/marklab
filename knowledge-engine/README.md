@@ -1,21 +1,21 @@
 # Marklab Knowledge Engine
 
-This directory contains the Rust sidecar crates that will eventually own durable
-knowledge metadata, full-text indexing, embedded Markdown language features,
-and incremental graph projections.
+This directory contains the Rust sidecar crates that own durable knowledge
+metadata, full-text indexing, embedded Markdown language features, and
+incremental graph projections.
 
 The Cargo workspace is rooted at the repository `Cargo.toml`.
 
 Current phase:
 
-- stdio JSON-RPC skeleton
-- `initialize`, `knowledge/health`, and `shutdown` methods
-- no database or index dependency yet
+- workspace-scoped gRPC sidecar
+- token-authenticated Control, Workspace, Search, DocumentSession, and Markdown services
+- redb-backed metadata storage
+- Tantivy-backed full-text search
+- in-memory Markdown overlay for document symbols and links
 
 Planned next layers:
 
-- redb-backed metadata store
-- Tantivy-backed full-text index
 - transactional outbox between metadata and search
-- embedded Markdown LSP services
-- Electron lifecycle supervision
+- deeper embedded Markdown LSP services
+- sidecar integration tests against the packaged binary

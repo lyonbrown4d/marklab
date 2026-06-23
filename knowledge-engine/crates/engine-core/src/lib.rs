@@ -1,4 +1,3 @@
-mod engine;
 mod markdown_documents;
 mod markdown_extract;
 mod markdown_syntax;
@@ -7,13 +6,13 @@ pub mod outbox;
 mod search_text;
 mod types;
 mod workspace_engine;
+#[cfg(test)]
+mod workspace_engine_tests;
 mod workspace_store;
 
-pub use engine::KnowledgeEngine;
+pub use types::SearchDocument;
 pub use workspace_engine::{
-  WorkspaceEngine, WorkspaceMarkdownLink, WorkspaceMarkdownSymbol, WorkspaceSearchHighlight,
-  WorkspaceSearchResult,
+  WorkspaceDocumentChange, WorkspaceDocumentEdit, WorkspaceDocumentPosition,
+  WorkspaceDocumentRange, WorkspaceEngine, WorkspaceMarkdownLink, WorkspaceMarkdownSymbol,
+  WorkspaceSearchHighlight, WorkspaceSearchResult,
 };
-
-#[cfg(test)]
-mod engine_tests;

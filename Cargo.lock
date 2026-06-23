@@ -658,7 +658,6 @@ version = "0.1.0"
 dependencies = [
  "marklab-knowledge-engine-core",
  "marklab-knowledge-grpc-api",
- "marklab-knowledge-protocol",
  "serde_json",
  "tokio",
  "tokio-stream",
@@ -716,7 +715,6 @@ checksum = "7ef0d4ed8669f8f8826eb00dc878084aa8f253506c4fd5e8f58f5bce72ddb97e"
 name = "marklab-knowledge-engine-core"
 version = "0.1.0"
 dependencies = [
- "marklab-knowledge-protocol",
  "pulldown-cmark",
  "redb",
  "ropey",
@@ -742,14 +740,6 @@ dependencies = [
  "tonic-health",
  "tonic-prost",
  "tonic-prost-build",
-]
-
-[[package]]
-name = "marklab-knowledge-protocol"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]

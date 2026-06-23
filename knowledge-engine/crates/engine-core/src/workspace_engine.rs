@@ -2,8 +2,12 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::markdown_documents::MarkdownDocumentStore;
+use crate::markdown_documents::{
+  MarkdownDocumentChangeError, MarkdownDocumentEdit, MarkdownDocumentPosition,
+  MarkdownDocumentRange, MarkdownDocumentStore,
+};
 use crate::markdown_extract::MarkdownLink;
+use crate::types::SearchDocument;
 use crate::workspace_store::WorkspaceStore;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +49,32 @@ pub struct WorkspaceMarkdownLink {
   pub is_external: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceDocumentPosition {
+  pub line: usize,
+  pub character: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceDocumentRange {
+  pub start: WorkspaceDocumentPosition,
+  pub end: WorkspaceDocumentPosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceDocumentEdit {
+  pub range: WorkspaceDocumentRange,
+  pub text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceDocumentChange {
+  pub document_id: String,
+  pub base_version: u64,
+  pub version: u64,
+  pub edits: Vec<WorkspaceDocumentEdit>,
+}
+
 pub struct WorkspaceEngine {
   workspace: WorkspaceStore,
   markdown_documents: MarkdownDocumentStore,
@@ -67,10 +97,55 @@ impl WorkspaceEngine {
       .collect()
   }
 
+  pub fn document_count(&self) -> Result<usize, String> {
+    self.workspace.document_count()
+  }
+
+  pub fn has_documents(&self) -> Result<bool, String> {
+    self.workspace.has_documents()
+  }
+
+  pub fn rebuild(&self, documents: &[SearchDocument]) -> Result<usize, String> {
+    self.workspace.rebuild(documents)
+  }
+
+  pub fn upsert_document(&self, document: &SearchDocument) -> Result<usize, String> {
+    self.workspace.upsert_document(document)
+  }
+
+  pub fn remove_document(&self, path: &str) -> Result<usize, String> {
+    self.workspace.remove_document(path)
+  }
+
+  pub fn remove_path_prefix(&self, prefix: &str) -> Result<usize, String> {
+    self.workspace.remove_path_prefix(prefix)
+  }
+
   pub fn open_markdown_document(&mut self, document_id: String, content: String, version: u64) {
     self
       .markdown_documents
-      .open_or_change(document_id, content, Some(version));
+      .open_or_replace(document_id, content, Some(version));
+  }
+
+  pub fn change_markdown_document(
+    &mut self,
+    change: WorkspaceDocumentChange,
+  ) -> Result<(), String> {
+    let edits = change
+      .edits
+      .into_iter()
+      .map(markdown_edit_from)
+      .collect::<Vec<_>>();
+    self
+      .markdown_documents
+      .apply_changes(
+        &change.document_id,
+        change.base_version,
+        change.version,
+        &edits,
+      )
+      .map(|_| ())
+      .map_err(markdown_change_error_message)
   }
 
   pub fn close_markdown_document(&mut self, document_id: &str) -> bool {
@@ -173,5 +248,29 @@ fn markdown_link_from(link: MarkdownLink) -> WorkspaceMarkdownLink {
     line: link.line,
     column: link.column,
     is_external: link.is_external,
+  }
+}
+
+fn markdown_edit_from(edit: WorkspaceDocumentEdit) -> MarkdownDocumentEdit {
+  MarkdownDocumentEdit {
+    range: MarkdownDocumentRange {
+      start: MarkdownDocumentPosition {
+        line: edit.range.start.line,
+        character: edit.range.start.character,
+      },
+      end: MarkdownDocumentPosition {
+        line: edit.range.end.line,
+        character: edit.range.end.character,
+      },
+    },
+    text: edit.text,
+  }
+}
+
+fn markdown_change_error_message(error: MarkdownDocumentChangeError) -> String {
+  match error {
+    MarkdownDocumentChangeError::DocumentNotOpen => "document is not open".to_string(),
+    MarkdownDocumentChangeError::InvalidRange => "document change range is invalid".to_string(),
+    MarkdownDocumentChangeError::VersionMismatch => "document version does not match".to_string(),
   }
 }

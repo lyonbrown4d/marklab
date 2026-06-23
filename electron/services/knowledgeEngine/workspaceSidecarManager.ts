@@ -1,6 +1,14 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 
-import { KnowledgeEngineGrpcClient } from '@electron/services/knowledgeEngine/grpcClient.js'
+import type {
+  KnowledgeCloseDocumentInput,
+  KnowledgeDocumentChangeInput,
+  KnowledgeMarkdownDocumentSymbol,
+  KnowledgeMarkdownLink,
+  KnowledgeOpenDocumentInput,
+  KnowledgeResyncDocumentInput,
+  KnowledgeSyncResponse,
+} from '@electron/services/knowledgeEngine/grpcClient.js'
 import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowledgeEngine/types.js'
 import {
   createWorkspaceSidecarIdentity,
@@ -11,23 +19,46 @@ import {
   redactWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
+import { startGrpcSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarStarter.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 
-const SIDECAR_READY_TIMEOUT_MS = 5000
-
 export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'error'
 
 export type WorkspaceSidecarClient = {
+  changeMarkdownDocument: (
+    workspaceInstanceId: string,
+    change: KnowledgeDocumentChangeInput,
+  ) => Promise<KnowledgeSyncResponse>
   close: () => void
+  closeMarkdownDocument: (
+    workspaceInstanceId: string,
+    document: KnowledgeCloseDocumentInput,
+  ) => Promise<KnowledgeSyncResponse>
   closeWorkspace: () => Promise<void>
+  getMarkdownDocumentSymbols: (
+    documentId: string,
+    documentVersion: number | string,
+  ) => Promise<KnowledgeMarkdownDocumentSymbol[]>
+  getMarkdownLinks: (
+    documentId: string,
+    documentVersion: number | string,
+  ) => Promise<KnowledgeMarkdownLink[]>
   getCapabilities: (workspaceInstanceId: string) => Promise<unknown>
   hasDocuments: () => Promise<boolean>
+  openMarkdownDocument: (
+    workspaceInstanceId: string,
+    document: KnowledgeOpenDocumentInput,
+  ) => Promise<KnowledgeSyncResponse>
   openWorkspace: (indexPath: string) => Promise<void>
   rebuildIndex: (documents: WorkspaceSearchDocument[]) => Promise<void>
   removeDocument: (path: string) => Promise<void>
   removePathPrefix: (prefix: string) => Promise<void>
+  resyncMarkdownDocument: (
+    workspaceInstanceId: string,
+    document: KnowledgeResyncDocumentInput,
+  ) => Promise<KnowledgeSyncResponse>
   search: (query: string, limit: number) => Promise<FsSearchResult[]>
   shutdown: (reason: string) => Promise<void>
   upsertDocument: (document: WorkspaceSearchDocument) => Promise<void>
@@ -164,13 +195,13 @@ export class WorkspaceSidecarManager {
 
     try {
       await runtime.client?.closeWorkspace()
-      await runtime.client?.shutdown('workspace closed').catch(() => undefined)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.options.logger.warn(
         `[knowledge-engine] Failed to close workspace ${workspaceId}: ${message}`,
       )
     } finally {
+      await runtime.client?.shutdown('workspace closed').catch(() => undefined)
       runtime.client?.close()
       if (runtime.child && !runtime.child.killed) {
         runtime.child.kill()
@@ -197,6 +228,57 @@ export class WorkspaceSidecarManager {
 
   async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
     await this.requireReady(workspaceId).client.removePathPrefix(prefix)
+  }
+
+  async openMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeOpenDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    const runtime = this.requireReady(workspaceId)
+    return runtime.client.openMarkdownDocument(runtime.identity.workspaceInstanceId, document)
+  }
+
+  async changeMarkdownDocument(
+    workspaceId: string,
+    change: KnowledgeDocumentChangeInput,
+  ): Promise<KnowledgeSyncResponse> {
+    const runtime = this.requireReady(workspaceId)
+    return runtime.client.changeMarkdownDocument(runtime.identity.workspaceInstanceId, change)
+  }
+
+  async resyncMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeResyncDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    const runtime = this.requireReady(workspaceId)
+    return runtime.client.resyncMarkdownDocument(runtime.identity.workspaceInstanceId, document)
+  }
+
+  async closeMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeCloseDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    const runtime = this.requireReady(workspaceId)
+    return runtime.client.closeMarkdownDocument(runtime.identity.workspaceInstanceId, document)
+  }
+
+  async getMarkdownDocumentSymbols(
+    workspaceId: string,
+    documentId: string,
+    documentVersion: number | string,
+  ): Promise<KnowledgeMarkdownDocumentSymbol[]> {
+    return this.requireReady(workspaceId).client.getMarkdownDocumentSymbols(
+      documentId,
+      documentVersion,
+    )
+  }
+
+  async getMarkdownLinks(
+    workspaceId: string,
+    documentId: string,
+    documentVersion: number | string,
+  ): Promise<KnowledgeMarkdownLink[]> {
+    return this.requireReady(workspaceId).client.getMarkdownLinks(documentId, documentVersion)
   }
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
@@ -249,95 +331,4 @@ export class WorkspaceSidecarManager {
       ? this.options.startSidecar(plan, identity)
       : startGrpcSidecar(plan, identity, this.options.logger)
   }
-}
-
-const startGrpcSidecar = async (
-  plan: WorkspaceSidecarSpawnPlan,
-  identity: WorkspaceSidecarIdentity,
-  logger: Logger,
-): Promise<StartedWorkspaceSidecar> => {
-  const child = spawn(plan.command, plan.args, {
-    env: plan.env,
-    stdio: 'pipe',
-    windowsHide: plan.windowsHide,
-  })
-  child.stderr.setEncoding('utf8')
-  child.stderr.on('data', (chunk: string) => {
-    const message = chunk.trim()
-    if (message) logger.warn(`[knowledge-engine] ${message}`)
-  })
-
-  const address = await waitForReady(child, identity.workspaceInstanceId)
-  const client = new KnowledgeEngineGrpcClient({
-    address,
-    sessionToken: identity.sessionToken,
-  })
-
-  return { address, child, client }
-}
-
-const waitForReady = (
-  child: ChildProcessWithoutNullStreams,
-  workspaceInstanceId: string,
-): Promise<string> =>
-  new Promise((resolve, reject) => {
-    let buffer = ''
-    const timeout = setTimeout(() => {
-      cleanup()
-      reject(new Error('Knowledge sidecar did not become ready in time.'))
-    }, SIDECAR_READY_TIMEOUT_MS)
-
-    const cleanup = () => {
-      clearTimeout(timeout)
-      child.stdout.off('data', onData)
-      child.off('error', onError)
-      child.off('exit', onExit)
-    }
-
-    const onError = (error: Error) => {
-      cleanup()
-      reject(error)
-    }
-
-    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
-      cleanup()
-      reject(new Error(`Knowledge sidecar exited before ready: code=${code} signal=${signal}`))
-    }
-
-    const onData = (chunk: Buffer | string) => {
-      buffer += chunk.toString()
-      let newlineIndex = buffer.indexOf('\n')
-      while (newlineIndex >= 0) {
-        const line = buffer.slice(0, newlineIndex).trim()
-        buffer = buffer.slice(newlineIndex + 1)
-        const address = parseReadyAddress(line, workspaceInstanceId)
-        if (address) {
-          cleanup()
-          resolve(address)
-          return
-        }
-        newlineIndex = buffer.indexOf('\n')
-      }
-    }
-
-    child.stdout.setEncoding('utf8')
-    child.stdout.on('data', onData)
-    child.once('error', onError)
-    child.once('exit', onExit)
-  })
-
-const parseReadyAddress = (line: string, workspaceInstanceId: string): string | null => {
-  if (!line) return null
-
-  const value = JSON.parse(line) as Record<string, unknown>
-  if (
-    value.type !== 'READY' ||
-    value.protocol !== 'grpc' ||
-    value.workspaceInstanceId !== workspaceInstanceId ||
-    typeof value.address !== 'string'
-  ) {
-    return null
-  }
-
-  return value.address
 }

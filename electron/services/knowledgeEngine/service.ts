@@ -3,6 +3,15 @@ import type { App } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import { resolveKnowledgeEngineBinary } from '@electron/services/knowledgeEngine/binaryPath.js'
 import type {
+  KnowledgeCloseDocumentInput,
+  KnowledgeDocumentChangeInput,
+  KnowledgeMarkdownDocumentSymbol,
+  KnowledgeMarkdownLink,
+  KnowledgeOpenDocumentInput,
+  KnowledgeResyncDocumentInput,
+  KnowledgeSyncResponse,
+} from '@electron/services/knowledgeEngine/grpcClient.js'
+import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
 } from '@electron/services/knowledgeEngine/types.js'
@@ -107,6 +116,50 @@ export class KnowledgeEngineService {
 
   async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
     await this.sidecars.removePathPrefix(workspaceId, prefix)
+  }
+
+  async openMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeOpenDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.sidecars.openMarkdownDocument(workspaceId, document)
+  }
+
+  async changeMarkdownDocument(
+    workspaceId: string,
+    change: KnowledgeDocumentChangeInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.sidecars.changeMarkdownDocument(workspaceId, change)
+  }
+
+  async resyncMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeResyncDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.sidecars.resyncMarkdownDocument(workspaceId, document)
+  }
+
+  async closeMarkdownDocument(
+    workspaceId: string,
+    document: KnowledgeCloseDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.sidecars.closeMarkdownDocument(workspaceId, document)
+  }
+
+  async getMarkdownDocumentSymbols(
+    workspaceId: string,
+    documentId: string,
+    documentVersion: number | string,
+  ): Promise<KnowledgeMarkdownDocumentSymbol[]> {
+    return this.sidecars.getMarkdownDocumentSymbols(workspaceId, documentId, documentVersion)
+  }
+
+  async getMarkdownLinks(
+    workspaceId: string,
+    documentId: string,
+    documentVersion: number | string,
+  ): Promise<KnowledgeMarkdownLink[]> {
+    return this.sidecars.getMarkdownLinks(workspaceId, documentId, documentVersion)
   }
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {

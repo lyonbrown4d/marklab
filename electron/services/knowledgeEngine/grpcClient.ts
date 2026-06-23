@@ -1,91 +1,97 @@
-import { Buffer } from 'node:buffer'
-
 import {
   ChannelCredentials,
   Client,
   type ClientOptions,
-  type ClientReadableStream,
-  type ClientUnaryCall,
   type Metadata,
-  makeGenericClientConstructor,
   Metadata as GrpcMetadata,
-  type ServiceError,
 } from '@grpc/grpc-js'
 
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import {
-  CloseWorkspaceRequest,
-  CloseWorkspaceResponse,
-  GetCapabilitiesRequest,
-  GetCapabilitiesResponse,
-  HasDocumentsRequest,
-  HasDocumentsResponse,
-  OpenWorkspaceRequest,
-  OpenWorkspaceResponse,
-  RebuildIndexRequest,
-  RebuildIndexResponse,
-  RemoveDocumentRequest,
-  RemoveDocumentResponse,
-  RemovePathPrefixRequest,
-  RemovePathPrefixResponse,
-  SearchRequest,
+import type {
+  ApplyDocumentChange,
+  CloseDocument,
+  MarkdownDocumentSymbol,
+  MarkdownLink,
+  OpenDocument,
+  ResyncDocument,
   SearchResponse,
-  ShutdownRequest,
-  ShutdownResponse,
-  UpsertDocumentRequest,
-  UpsertDocumentResponse,
-  type WorkspaceDocument,
+  SyncRequest,
+  SyncResponse,
+  TextEdit,
+  WorkspaceDocument,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
-
-type MessageCodec<T> = {
-  decode: (input: Uint8Array) => T
-  encode: (message: T) => { finish: () => Uint8Array }
-}
-
-type UnaryCall<Request, Response> = (
-  request: Request,
-  metadata: Metadata,
-  callback: (error: ServiceError | null, response: Response) => void,
-) => ClientUnaryCall
-
-type ServerStreamingCall<Request, Response> = (
-  request: Request,
-  metadata: Metadata,
-) => ClientReadableStream<Response>
-
-type ControlClient = Client & {
-  getCapabilities: UnaryCall<GetCapabilitiesRequest, GetCapabilitiesResponse>
-  shutdown: UnaryCall<ShutdownRequest, ShutdownResponse>
-}
-
-type WorkspaceClient = Client & {
-  closeWorkspace: UnaryCall<CloseWorkspaceRequest, CloseWorkspaceResponse>
-  hasDocuments: UnaryCall<HasDocumentsRequest, HasDocumentsResponse>
-  openWorkspace: UnaryCall<OpenWorkspaceRequest, OpenWorkspaceResponse>
-  rebuildIndex: UnaryCall<RebuildIndexRequest, RebuildIndexResponse>
-  removeDocument: UnaryCall<RemoveDocumentRequest, RemoveDocumentResponse>
-  removePathPrefix: UnaryCall<RemovePathPrefixRequest, RemovePathPrefixResponse>
-  upsertDocument: UnaryCall<UpsertDocumentRequest, UpsertDocumentResponse>
-}
-
-type SearchClient = Client & {
-  search: ServerStreamingCall<SearchRequest, SearchResponse>
-}
+import {
+  ControlClientConstructor,
+  DocumentSessionClientConstructor,
+  MarkdownClientConstructor,
+  SearchClientConstructor,
+  WorkspaceClientConstructor,
+  type ControlClient,
+  type DocumentSessionClient,
+  type KnowledgeEngineGrpcClients,
+  type MarkdownClient,
+  type SearchClient,
+  type UnaryCall,
+  type WorkspaceClient,
+} from '@electron/services/knowledgeEngine/grpcWire.js'
 
 type KnowledgeEngineGrpcClientOptions = {
   address: string
   sessionToken: string
   clientOptions?: Partial<ClientOptions>
+  clients?: KnowledgeEngineGrpcClients
 }
+
+type KnowledgeDocumentVersion = number | string
+
+export type KnowledgeOpenDocumentInput = Omit<OpenDocument, 'version'> & {
+  version: KnowledgeDocumentVersion
+}
+
+export type KnowledgeDocumentChangeInput = Omit<ApplyDocumentChange, 'baseVersion' | 'version'> & {
+  baseVersion: KnowledgeDocumentVersion
+  version: KnowledgeDocumentVersion
+}
+
+export type KnowledgeResyncDocumentInput = Omit<ResyncDocument, 'version'> & {
+  version: KnowledgeDocumentVersion
+}
+
+export type KnowledgeCloseDocumentInput = CloseDocument
+export type KnowledgeMarkdownDocumentSymbol = MarkdownDocumentSymbol
+export type KnowledgeMarkdownLink = MarkdownLink
+export type KnowledgeSyncResponse = SyncResponse
+export type KnowledgeTextEdit = TextEdit
 
 export class KnowledgeEngineGrpcClient {
   private readonly control: ControlClient
+  private readonly documentSession: DocumentSessionClient
+  private readonly markdown: MarkdownClient
   private readonly workspace: WorkspaceClient
   private readonly searchClient: SearchClient
 
   constructor(private readonly options: KnowledgeEngineGrpcClientOptions) {
+    if (options.clients) {
+      this.control = options.clients.control
+      this.documentSession = options.clients.documentSession
+      this.markdown = options.clients.markdown
+      this.workspace = options.clients.workspace
+      this.searchClient = options.clients.searchClient
+      return
+    }
+
     const credentials = ChannelCredentials.createInsecure()
     this.control = new ControlClientConstructor(options.address, credentials, options.clientOptions)
+    this.documentSession = new DocumentSessionClientConstructor(
+      options.address,
+      credentials,
+      options.clientOptions,
+    )
+    this.markdown = new MarkdownClientConstructor(
+      options.address,
+      credentials,
+      options.clientOptions,
+    )
     this.workspace = new WorkspaceClientConstructor(
       options.address,
       credentials,
@@ -131,6 +137,69 @@ export class KnowledgeEngineGrpcClient {
     await this.unary(this.workspace, this.workspace.removePathPrefix, { prefix })
   }
 
+  openMarkdownDocument(
+    workspaceInstanceId: string,
+    document: KnowledgeOpenDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.syncOnce({
+      open: { ...document, version: versionToProto(document.version) },
+      workspaceInstanceId,
+    })
+  }
+
+  changeMarkdownDocument(
+    workspaceInstanceId: string,
+    change: KnowledgeDocumentChangeInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.syncOnce({
+      change: {
+        ...change,
+        baseVersion: versionToProto(change.baseVersion),
+        version: versionToProto(change.version),
+      },
+      workspaceInstanceId,
+    })
+  }
+
+  closeMarkdownDocument(
+    workspaceInstanceId: string,
+    document: KnowledgeCloseDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.syncOnce({ close: document, workspaceInstanceId })
+  }
+
+  resyncMarkdownDocument(
+    workspaceInstanceId: string,
+    document: KnowledgeResyncDocumentInput,
+  ): Promise<KnowledgeSyncResponse> {
+    return this.syncOnce({
+      resync: { ...document, version: versionToProto(document.version) },
+      workspaceInstanceId,
+    })
+  }
+
+  async getMarkdownDocumentSymbols(
+    documentId: string,
+    documentVersion: KnowledgeDocumentVersion,
+  ): Promise<KnowledgeMarkdownDocumentSymbol[]> {
+    const response = await this.unary(this.markdown, this.markdown.getDocumentSymbols, {
+      documentId,
+      documentVersion: versionToProto(documentVersion),
+    })
+    return response.symbols
+  }
+
+  async getMarkdownLinks(
+    documentId: string,
+    documentVersion: KnowledgeDocumentVersion,
+  ): Promise<KnowledgeMarkdownLink[]> {
+    const response = await this.unary(this.markdown, this.markdown.getLinks, {
+      documentId,
+      documentVersion: versionToProto(documentVersion),
+    })
+    return response.links
+  }
+
   search(query: string, limit: number): Promise<FsSearchResult[]> {
     const stream = this.searchClient.search({ query, limit }, this.metadata())
     const results: FsSearchResult[] = []
@@ -150,6 +219,8 @@ export class KnowledgeEngineGrpcClient {
 
   close(): void {
     this.control.close()
+    this.documentSession.close()
+    this.markdown.close()
     this.workspace.close()
     this.searchClient.close()
   }
@@ -171,6 +242,33 @@ export class KnowledgeEngineGrpcClient {
     })
   }
 
+  private syncOnce(request: SyncRequest): Promise<SyncResponse> {
+    const stream = this.documentSession.sync(this.metadata())
+
+    return new Promise((resolve, reject) => {
+      let settled = false
+
+      const resolveOnce = (response: SyncResponse) => {
+        if (settled) return
+        settled = true
+        resolve(response)
+      }
+      const rejectOnce = (error: Error) => {
+        if (settled) return
+        settled = true
+        reject(error)
+      }
+
+      stream.once('data', resolveOnce)
+      stream.once('error', rejectOnce)
+      stream.once('end', () => {
+        rejectOnce(new Error('Knowledge document sync ended without a response.'))
+      })
+      stream.write(request)
+      stream.end()
+    })
+  }
+
   private metadata(): Metadata {
     const metadata = new GrpcMetadata()
     metadata.set('x-marklab-session-token', this.options.sessionToken)
@@ -178,126 +276,7 @@ export class KnowledgeEngineGrpcClient {
   }
 }
 
-const serialize =
-  <T>(codec: MessageCodec<T>) =>
-  (value: T): Buffer => {
-    const bytes = codec.encode(value).finish()
-    const fromBytes = Buffer.from as unknown as (value: Uint8Array) => Buffer
-    return fromBytes(bytes)
-  }
-
-const deserialize =
-  <T>(codec: MessageCodec<T>) =>
-  (value: Buffer): T =>
-    codec.decode(new Uint8Array(value))
-
-const unaryDefinition = <Request, Response>(
-  path: string,
-  requestCodec: MessageCodec<Request>,
-  responseCodec: MessageCodec<Response>,
-) => ({
-  path,
-  requestDeserialize: deserialize(requestCodec),
-  requestSerialize: serialize(requestCodec),
-  requestStream: false,
-  responseDeserialize: deserialize(responseCodec),
-  responseSerialize: serialize(responseCodec),
-  responseStream: false,
-})
-
-const serverStreamDefinition = <Request, Response>(
-  path: string,
-  requestCodec: MessageCodec<Request>,
-  responseCodec: MessageCodec<Response>,
-) => ({
-  path,
-  requestDeserialize: deserialize(requestCodec),
-  requestSerialize: serialize(requestCodec),
-  requestStream: false,
-  responseDeserialize: deserialize(responseCodec),
-  responseSerialize: serialize(responseCodec),
-  responseStream: true,
-})
-
-const ControlClientConstructor = makeGenericClientConstructor(
-  {
-    getCapabilities: unaryDefinition(
-      '/knowledge.engine.v1.ControlService/GetCapabilities',
-      GetCapabilitiesRequest,
-      GetCapabilitiesResponse,
-    ),
-    shutdown: unaryDefinition(
-      '/knowledge.engine.v1.ControlService/Shutdown',
-      ShutdownRequest,
-      ShutdownResponse,
-    ),
-  },
-  'knowledge.engine.v1.ControlService',
-) as unknown as new (
-  address: string,
-  credentials: ChannelCredentials,
-  options?: Partial<ClientOptions>,
-) => ControlClient
-
-const WorkspaceClientConstructor = makeGenericClientConstructor(
-  {
-    closeWorkspace: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/CloseWorkspace',
-      CloseWorkspaceRequest,
-      CloseWorkspaceResponse,
-    ),
-    hasDocuments: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/HasDocuments',
-      HasDocumentsRequest,
-      HasDocumentsResponse,
-    ),
-    openWorkspace: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/OpenWorkspace',
-      OpenWorkspaceRequest,
-      OpenWorkspaceResponse,
-    ),
-    rebuildIndex: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/RebuildIndex',
-      RebuildIndexRequest,
-      RebuildIndexResponse,
-    ),
-    removeDocument: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/RemoveDocument',
-      RemoveDocumentRequest,
-      RemoveDocumentResponse,
-    ),
-    removePathPrefix: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/RemovePathPrefix',
-      RemovePathPrefixRequest,
-      RemovePathPrefixResponse,
-    ),
-    upsertDocument: unaryDefinition(
-      '/knowledge.engine.v1.WorkspaceService/UpsertDocument',
-      UpsertDocumentRequest,
-      UpsertDocumentResponse,
-    ),
-  },
-  'knowledge.engine.v1.WorkspaceService',
-) as unknown as new (
-  address: string,
-  credentials: ChannelCredentials,
-  options?: Partial<ClientOptions>,
-) => WorkspaceClient
-
-const SearchClientConstructor = makeGenericClientConstructor(
-  {
-    search: serverStreamDefinition(
-      '/knowledge.engine.v1.SearchService/Search',
-      SearchRequest,
-      SearchResponse,
-    ),
-  },
-  'knowledge.engine.v1.SearchService',
-) as unknown as new (
-  address: string,
-  credentials: ChannelCredentials,
-  options?: Partial<ClientOptions>,
-) => SearchClient
+const versionToProto = (version: KnowledgeDocumentVersion): string => String(version)
 
 const searchResultToFsResult = (result: SearchResponse['results'][number]): FsSearchResult => ({
   column: Math.max(result.column, 1),

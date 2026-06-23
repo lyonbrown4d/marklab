@@ -57,6 +57,52 @@ describe('WorkspaceSidecarManager', () => {
     expect(client.search).toHaveBeenCalledWith('alpha', 10)
   })
 
+  it('routes document index requests to the workspace grpc client', async () => {
+    const { client, manager } = createManager()
+    const documents = [{ content: '# Alpha', path: 'alpha.md', title: 'Alpha' }]
+    await manager.open('workspace-a', 'index-a')
+
+    await expect(manager.hasDocuments('workspace-a')).resolves.toBe(false)
+    await manager.rebuildIndex('workspace-a', documents)
+
+    expect(client.hasDocuments).toHaveBeenCalledTimes(1)
+    expect(client.rebuildIndex).toHaveBeenCalledWith(documents)
+  })
+
+  it('routes markdown overlay requests with the workspace instance id', async () => {
+    const { client, manager } = createManager()
+    await manager.open('workspace-a', 'index-a')
+
+    await manager.openMarkdownDocument('workspace-a', {
+      content: '# Alpha',
+      documentId: 'alpha.md',
+      uri: 'file:///workspace/alpha.md',
+      version: 1,
+    })
+    await manager.changeMarkdownDocument('workspace-a', {
+      baseVersion: 1,
+      changes: [],
+      documentId: 'alpha.md',
+      version: 2,
+    })
+    await manager.getMarkdownDocumentSymbols('workspace-a', 'alpha.md', 2)
+
+    const workspaceInstanceId = manager.listActive()[0]?.identity.workspaceInstanceId
+    expect(client.openMarkdownDocument).toHaveBeenCalledWith(workspaceInstanceId, {
+      content: '# Alpha',
+      documentId: 'alpha.md',
+      uri: 'file:///workspace/alpha.md',
+      version: 1,
+    })
+    expect(client.changeMarkdownDocument).toHaveBeenCalledWith(workspaceInstanceId, {
+      baseVersion: 1,
+      changes: [],
+      documentId: 'alpha.md',
+      version: 2,
+    })
+    expect(client.getMarkdownDocumentSymbols).toHaveBeenCalledWith('alpha.md', 2)
+  })
+
   it('does not reopen an already ready workspace with the same index path', async () => {
     const { client, manager, startSidecar } = createManager()
 
@@ -74,6 +120,19 @@ describe('WorkspaceSidecarManager', () => {
     await manager.close('workspace-a')
 
     expect(client.closeWorkspace).toHaveBeenCalledTimes(1)
+    expect(client.shutdown).toHaveBeenCalledWith('workspace closed')
+    expect(client.close).toHaveBeenCalledTimes(1)
+    expect(child.kill).toHaveBeenCalledTimes(1)
+    expect(manager.listActive()).toEqual([])
+  })
+
+  it('still shuts down and closes local resources when closeWorkspace fails', async () => {
+    const { child, client, manager } = createManager()
+    vi.mocked(client.closeWorkspace).mockRejectedValueOnce(new Error('close failed'))
+    await manager.open('workspace-a', 'index-a')
+
+    await manager.close('workspace-a')
+
     expect(client.shutdown).toHaveBeenCalledWith('workspace closed')
     expect(client.close).toHaveBeenCalledTimes(1)
     expect(child.kill).toHaveBeenCalledTimes(1)
@@ -140,14 +199,28 @@ const createManager = (options: CreateManagerOptions = {}) => {
 }
 
 const createClient = (): WorkspaceSidecarClient => ({
+  changeMarkdownDocument: vi.fn(async () => ({
+    acknowledged: { documentId: 'alpha.md', version: '2' },
+  })),
   close: vi.fn(),
+  closeMarkdownDocument: vi.fn(async () => ({
+    acknowledged: { documentId: 'alpha.md', version: '0' },
+  })),
   closeWorkspace: vi.fn(async () => undefined),
   getCapabilities: vi.fn(async () => ({})),
+  getMarkdownDocumentSymbols: vi.fn(async () => []),
+  getMarkdownLinks: vi.fn(async () => []),
   hasDocuments: vi.fn(async () => false),
+  openMarkdownDocument: vi.fn(async () => ({
+    acknowledged: { documentId: 'alpha.md', version: '1' },
+  })),
   openWorkspace: vi.fn(async () => undefined),
   rebuildIndex: vi.fn(async () => undefined),
   removeDocument: vi.fn(async () => undefined),
   removePathPrefix: vi.fn(async () => undefined),
+  resyncMarkdownDocument: vi.fn(async () => ({
+    acknowledged: { documentId: 'alpha.md', version: '2' },
+  })),
   search: vi.fn(async () => []),
   shutdown: vi.fn(async () => undefined),
   upsertDocument: vi.fn(async () => undefined),

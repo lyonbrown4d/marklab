@@ -2,29 +2,25 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use marklab_knowledge_engine_core::{
-  WorkspaceEngine, WorkspaceMarkdownLink, WorkspaceMarkdownSymbol, WorkspaceSearchHighlight,
-  WorkspaceSearchResult,
+  WorkspaceDocumentChange, WorkspaceDocumentEdit, WorkspaceDocumentPosition,
+  WorkspaceDocumentRange, WorkspaceEngine,
 };
 use marklab_knowledge_grpc_api::v1::{
   control_service_server::ControlService, document_session_service_server::DocumentSessionService,
-  markdown_service_server::MarkdownService, search_service_server::SearchService, sync_request,
-  sync_response, DocumentAcknowledged, GetCapabilitiesRequest, GetCapabilitiesResponse,
-  GetDocumentSymbolsRequest, GetDocumentSymbolsResponse, GetLinksRequest, GetLinksResponse,
-  MarkdownDocumentSymbol, MarkdownLink, Position, Range, SearchHighlight, SearchRequest,
-  SearchResponse, SearchResult, ShutdownRequest, ShutdownResponse, StorageCapabilities,
-  SyncRequest, SyncResponse,
+  sync_request, sync_response, DocumentAcknowledged, GetCapabilitiesRequest,
+  GetCapabilitiesResponse, ShutdownRequest, ShutdownResponse, StorageCapabilities, SyncRequest,
+  SyncResponse, TextEdit,
 };
-use marklab_knowledge_protocol::{ENGINE_VERSION, PROTOCOL_VERSION};
 use tokio::sync::{mpsc, oneshot};
 use tokio_stream::{wrappers::ReceiverStream, Stream};
 use tonic::{Request, Response, Status};
 
-type SharedEngine = Arc<Mutex<WorkspaceEngine>>;
+pub(crate) type SharedEngine = Arc<Mutex<WorkspaceEngine>>;
 type SharedShutdown = Arc<Mutex<Option<oneshot::Sender<()>>>>;
-type GrpcStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
+pub(crate) type GrpcStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
 
-const DEFAULT_SEARCH_LIMIT: usize = 20;
-const MAX_SEARCH_LIMIT: usize = 100;
+const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
+const PROTOCOL_VERSION: &str = "0.1";
 
 #[derive(Clone)]
 pub(crate) struct KnowledgeGrpcService {
@@ -46,7 +42,7 @@ impl KnowledgeGrpcService {
     }
   }
 
-  fn lock_engine(&self) -> Result<MutexGuard<'_, WorkspaceEngine>, Status> {
+  pub(crate) fn lock_engine(&self) -> Result<MutexGuard<'_, WorkspaceEngine>, Status> {
     self
       .engine
       .lock()
@@ -84,19 +80,14 @@ impl tonic::service::Interceptor for SessionTokenInterceptor {
   fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
     let metadata = request.metadata();
     let session_token_matches = metadata
-      .get("x-grpc-session-token")
+      .get("x-marklab-session-token")
       .and_then(|value| value.to_str().ok())
-      .is_some_and(|value| value == self.token.as_str());
-    let authorization_matches = metadata
-      .get("authorization")
-      .and_then(|value| value.to_str().ok())
-      .and_then(|value| value.strip_prefix("Bearer "))
       .is_some_and(|value| value == self.token.as_str());
 
-    if session_token_matches || authorization_matches {
+    if session_token_matches {
       Ok(request)
     } else {
-      Err(Status::unauthenticated("invalid gRPC session token"))
+      Err(Status::unauthenticated("unauthenticated"))
     }
   }
 }
@@ -153,6 +144,7 @@ impl DocumentSessionService for KnowledgeGrpcService {
   ) -> Result<Response<Self::SyncStream>, Status> {
     let mut inbound = request.into_inner();
     let engine = self.engine.clone();
+    let workspace_instance_id = self.workspace_instance_id.clone();
     let (sender, receiver) = mpsc::channel(16);
 
     tokio::spawn(async move {
@@ -167,7 +159,11 @@ impl DocumentSessionService for KnowledgeGrpcService {
         };
 
         if sender
-          .send(handle_sync_request(&engine, request))
+          .send(handle_sync_request(
+            &engine,
+            workspace_instance_id.as_str(),
+            request,
+          ))
           .await
           .is_err()
         {
@@ -182,71 +178,17 @@ impl DocumentSessionService for KnowledgeGrpcService {
   }
 }
 
-#[tonic::async_trait]
-impl MarkdownService for KnowledgeGrpcService {
-  async fn get_document_symbols(
-    &self,
-    request: Request<GetDocumentSymbolsRequest>,
-  ) -> Result<Response<GetDocumentSymbolsResponse>, Status> {
-    let request = request.into_inner();
-    let symbols = self
-      .lock_engine()?
-      .document_symbols(&request.document_id)
-      .into_iter()
-      .map(markdown_symbol_to_proto)
-      .collect();
-
-    Ok(Response::new(GetDocumentSymbolsResponse { symbols }))
-  }
-
-  async fn get_links(
-    &self,
-    request: Request<GetLinksRequest>,
-  ) -> Result<Response<GetLinksResponse>, Status> {
-    let request = request.into_inner();
-    let links = self
-      .lock_engine()?
-      .links(&request.document_id)
-      .into_iter()
-      .map(markdown_link_to_proto)
-      .collect();
-
-    Ok(Response::new(GetLinksResponse { links }))
-  }
-}
-
-#[tonic::async_trait]
-impl SearchService for KnowledgeGrpcService {
-  type SearchStream = GrpcStream<SearchResponse>;
-
-  async fn search(
-    &self,
-    request: Request<SearchRequest>,
-  ) -> Result<Response<Self::SearchStream>, Status> {
-    let request = request.into_inner();
-    let limit = search_limit(request.limit);
-    let results = self
-      .lock_engine()?
-      .search(&request.query, limit)
-      .map_err(|error| Status::internal(format!("workspace search failed: {error}")))?
-      .into_iter()
-      .map(search_result_to_proto)
-      .collect();
-    let response = SearchResponse {
-      results,
-      done: true,
-    };
-
-    Ok(Response::new(
-      Box::pin(tokio_stream::iter(std::iter::once(Ok(response)))) as Self::SearchStream,
-    ))
-  }
-}
-
 fn handle_sync_request(
   engine: &SharedEngine,
+  workspace_instance_id: &str,
   request: SyncRequest,
 ) -> Result<SyncResponse, Status> {
+  if request.workspace_instance_id != workspace_instance_id {
+    return Err(Status::failed_precondition(
+      "workspace instance id does not match this sidecar",
+    ));
+  }
+
   match request.event {
     Some(sync_request::Event::Open(open)) => {
       engine
@@ -255,10 +197,18 @@ fn handle_sync_request(
         .open_markdown_document(open.document_id.clone(), open.content, open.version);
       Ok(acknowledged(open.document_id, open.version))
     }
-    Some(sync_request::Event::Change(change)) => Ok(resync_required(
-      change.document_id,
-      "incremental document changes are not implemented",
-    )),
+    Some(sync_request::Event::Change(change)) => {
+      let document_id = change.document_id.clone();
+      let version = change.version;
+      match engine
+        .lock()
+        .map_err(|_| Status::internal("knowledge engine state lock poisoned"))?
+        .change_markdown_document(workspace_change_from_proto(change))
+      {
+        Ok(()) => Ok(acknowledged(document_id, version)),
+        Err(error) => Ok(resync_required(document_id, &error)),
+      }
+    }
     Some(sync_request::Event::Close(close)) => {
       engine
         .lock()
@@ -297,70 +247,85 @@ fn resync_required(document_id: String, reason: &str) -> SyncResponse {
   }
 }
 
-fn markdown_symbol_to_proto(symbol: WorkspaceMarkdownSymbol) -> MarkdownDocumentSymbol {
-  MarkdownDocumentSymbol {
-    name: symbol.name,
-    kind: symbol.kind,
-    level: symbol.level,
-    slug: symbol.slug,
-    range: Some(point_range(symbol.line, symbol.column)),
-  }
-}
-
-fn markdown_link_to_proto(link: WorkspaceMarkdownLink) -> MarkdownLink {
-  MarkdownLink {
-    source_document_id: link.source_document_id,
-    text: link.text,
-    target: link.target,
-    range: Some(point_range(link.line, link.column)),
-    is_external: link.is_external,
-  }
-}
-
-fn search_result_to_proto(result: WorkspaceSearchResult) -> SearchResult {
-  SearchResult {
-    document_id: result.document_id,
-    path: result.path,
-    title: result.title,
-    line: result.line,
-    column: result.column,
-    end_column: result.end_column,
-    snippet: result.snippet,
-    snippet_highlights: result
-      .snippet_highlights
+fn workspace_change_from_proto(
+  change: marklab_knowledge_grpc_api::v1::ApplyDocumentChange,
+) -> WorkspaceDocumentChange {
+  WorkspaceDocumentChange {
+    document_id: change.document_id,
+    base_version: change.base_version,
+    version: change.version,
+    edits: change
+      .changes
       .into_iter()
-      .map(search_highlight_to_proto)
+      .filter_map(workspace_edit_from_proto)
       .collect(),
-    score: result.score,
   }
 }
 
-fn search_highlight_to_proto(highlight: WorkspaceSearchHighlight) -> SearchHighlight {
-  SearchHighlight {
-    start: highlight.start,
-    end: highlight.end,
-  }
+fn workspace_edit_from_proto(edit: TextEdit) -> Option<WorkspaceDocumentEdit> {
+  let range = edit.range?;
+  let start = range.start?;
+  let end = range.end?;
+  Some(WorkspaceDocumentEdit {
+    range: WorkspaceDocumentRange {
+      start: WorkspaceDocumentPosition {
+        line: start.line as usize,
+        character: start.character as usize,
+      },
+      end: WorkspaceDocumentPosition {
+        line: end.line as usize,
+        character: end.character as usize,
+      },
+    },
+    text: edit.text,
+  })
 }
 
-fn point_range(line: usize, column: usize) -> Range {
-  let line = saturating_u32(line.saturating_sub(1));
-  let character = saturating_u32(column.saturating_sub(1));
-  let position = Position { line, character };
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use tonic::metadata::MetadataValue;
+  use tonic::service::Interceptor;
 
-  Range {
-    start: Some(position.clone()),
-    end: Some(position),
+  #[test]
+  fn interceptor_accepts_marklab_session_token_metadata() {
+    let mut interceptor = SessionTokenInterceptor::new("secret".to_string());
+    let mut request = Request::new(());
+    request.metadata_mut().insert(
+      "x-marklab-session-token",
+      MetadataValue::try_from("secret").expect("metadata value should be valid"),
+    );
+
+    assert!(interceptor.call(request).is_ok());
   }
-}
 
-fn search_limit(limit: u32) -> usize {
-  if limit == 0 {
-    DEFAULT_SEARCH_LIMIT
-  } else {
-    (limit as usize).min(MAX_SEARCH_LIMIT)
+  #[test]
+  fn interceptor_rejects_missing_session_token() {
+    let mut interceptor = SessionTokenInterceptor::new("secret".to_string());
+
+    let status = interceptor
+      .call(Request::new(()))
+      .expect_err("missing token should be rejected");
+
+    assert_eq!(status.code(), tonic::Code::Unauthenticated);
+    assert_eq!(status.message(), "unauthenticated");
   }
-}
 
-fn saturating_u32(value: usize) -> u32 {
-  value.min(u32::MAX as usize) as u32
+  #[test]
+  fn interceptor_rejects_authorization_fallback() {
+    let mut interceptor = SessionTokenInterceptor::new("secret".to_string());
+    let mut request = Request::new(());
+    request.metadata_mut().insert(
+      "authorization",
+      MetadataValue::try_from("Bearer secret").expect("metadata value should be valid"),
+    );
+
+    assert_eq!(
+      interceptor
+        .call(request)
+        .expect_err("authorization fallback should be rejected")
+        .code(),
+      tonic::Code::Unauthenticated
+    );
+  }
 }

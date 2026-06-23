@@ -1,5 +1,7 @@
 mod composition;
+mod grpc_query_services;
 mod grpc_services;
+mod grpc_workspace;
 
 use std::error::Error;
 use std::io::Write;
@@ -12,6 +14,7 @@ use marklab_knowledge_grpc_api::v1::{
   control_service_server::ControlServiceServer,
   document_session_service_server::DocumentSessionServiceServer,
   markdown_service_server::MarkdownServiceServer, search_service_server::SearchServiceServer,
+  workspace_service_server::WorkspaceServiceServer,
 };
 use serde_json::json;
 use tokio::sync::oneshot;
@@ -65,6 +68,10 @@ async fn run() -> SidecarResult<()> {
       interceptor.clone(),
     ))
     .add_service(MarkdownServiceServer::with_interceptor(
+      service.clone(),
+      interceptor.clone(),
+    ))
+    .add_service(WorkspaceServiceServer::with_interceptor(
       service.clone(),
       interceptor.clone(),
     ))

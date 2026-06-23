@@ -3,7 +3,6 @@ members = [
   "knowledge-engine/bins/knowledge-engine",
   "knowledge-engine/crates/engine-core",
   "knowledge-engine/crates/grpc-api",
-  "knowledge-engine/crates/protocol",
 ]
 resolver = "2"
 
