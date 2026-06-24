@@ -1,4 +1,6 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { type ChildProcessWithoutNullStreams } from 'node:child_process'
+
+import { execa } from 'execa'
 
 import { KnowledgeEngineGrpcClient } from '@electron/services/knowledgeEngine/grpcClient.js'
 import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
@@ -14,17 +16,23 @@ export const startGrpcSidecar = async (
   identity: WorkspaceSidecarIdentity,
   logger: Logger,
 ): Promise<StartedWorkspaceSidecar> => {
-  const child = spawn(plan.command, plan.args, {
+  const child = execa(plan.command, plan.args, {
     env: plan.env,
-    stdio: 'pipe',
+    stdin: 'ignore',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    buffer: false,
     windowsHide: plan.windowsHide,
-  })
-  child.stderr.setEncoding('utf8')
-  child.stderr.on('data', (chunk: string) => {
-    const message = chunk.trim()
+    reject: false,
+  }) as unknown as ChildProcessWithoutNullStreams
+
+  child.stderr?.setEncoding('utf8')
+  child.stderr?.on('data', (chunk) => {
+    const message = chunk.toString().trim()
     if (message) logger.warn(`[knowledge-engine] ${message}`)
   })
 
+  child.stdout?.setEncoding('utf8')
   const address = await waitForReady(child, identity.workspaceInstanceId)
   const client = new KnowledgeEngineGrpcClient({
     address,
@@ -87,7 +95,6 @@ const waitForReady = (
       }
     }
 
-    child.stdout.setEncoding('utf8')
     child.stdout.on('data', onData)
     child.once('error', onError)
     child.once('exit', onExit)
