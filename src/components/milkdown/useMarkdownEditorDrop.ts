@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import { onRuntimeWebviewFileDrop } from '@/runtime/webview'
 
 type UseMarkdownEditorDropOptions = {
+  enabled?: boolean
   immersiveFocusMode: boolean
   immersiveTypewriterMode: boolean
   immersiveZenMode: boolean
@@ -36,6 +37,7 @@ type UseMarkdownEditorDropOptions = {
 }
 
 export const useMarkdownEditorDrop = ({
+  enabled = true,
   immersiveFocusMode,
   immersiveTypewriterMode,
   immersiveZenMode,
@@ -47,10 +49,10 @@ export const useMarkdownEditorDrop = ({
   statusPhase,
 }: UseMarkdownEditorDropOptions) => {
   const [imageImportCount, setImageImportCount] = useState(0)
-  const importingImages = imageImportCount > 0
+  const importingImages = enabled && imageImportCount > 0
   const importImageSourcesWithFeedback = useCallback(
     async (sources: MarkdownImageImportSource[]) => {
-      if (sources.length === 0) return false
+      if (!enabled || sources.length === 0) return false
       setImageImportCount((count) => count + 1)
 
       try {
@@ -59,26 +61,29 @@ export const useMarkdownEditorDrop = ({
         setImageImportCount((count) => Math.max(0, count - 1))
       }
     },
-    [importImageSources],
+    [enabled, importImageSources],
   )
   const importDroppedImageSources = useCallback(
     async (event: DragEvent<HTMLDivElement>) => {
+      if (!enabled) return
       placeSelectionAtClientPoint(event.clientX, event.clientY)
       await importImageSourcesWithFeedback(imagePathSourcesFromDropEvent(event))
     },
-    [importImageSourcesWithFeedback, placeSelectionAtClientPoint],
+    [enabled, importImageSourcesWithFeedback, placeSelectionAtClientPoint],
   )
   const importDroppedFiles = useCallback(
     async (files: File[], event: unknown) => {
+      if (!enabled) return
       if (hasDropPoint(event)) {
         placeSelectionAtClientPoint(event.clientX, event.clientY)
       }
       await importImageSourcesWithFeedback(imageSourcesFromFiles(files))
     },
-    [importImageSourcesWithFeedback, placeSelectionAtClientPoint],
+    [enabled, importImageSourcesWithFeedback, placeSelectionAtClientPoint],
   )
   const { getRootProps, isDragAccept } = useDropzone({
     accept: { 'image/*': [] },
+    disabled: !enabled,
     multiple: true,
     noClick: true,
     noKeyboard: true,
@@ -93,6 +98,7 @@ export const useMarkdownEditorDrop = ({
   }, [importImageSourcesWithFeedback])
   const handlePasteCapture = useCallback(
     (event: ClipboardEvent<HTMLDivElement>) => {
+      if (!enabled) return
       const sources = imageSourcesFromPasteEvent(event)
       if (sources.length > 0) {
         event.preventDefault()
@@ -106,24 +112,29 @@ export const useMarkdownEditorDrop = ({
       event.stopPropagation()
       void importNativeClipboardImage()
     },
-    [importImageSourcesWithFeedback, importNativeClipboardImage],
+    [enabled, importImageSourcesWithFeedback, importNativeClipboardImage],
   )
   const handleDropCapture = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
+      if (!enabled) return
       const sources = imagePathSourcesFromDropEvent(event)
       if (sources.length === 0) return
       event.preventDefault()
       event.stopPropagation()
       void importDroppedImageSources(event)
     },
-    [importDroppedImageSources],
+    [enabled, importDroppedImageSources],
   )
-  const handleDragOverCapture = useCallback((event: DragEvent<HTMLDivElement>) => {
-    if (!hasImageDataTransfer(event.dataTransfer)) return
-    event.preventDefault()
-  }, [])
+  const handleDragOverCapture = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!enabled || !hasImageDataTransfer(event.dataTransfer)) return
+      event.preventDefault()
+    },
+    [enabled],
+  )
 
   useRuntimeImageDrop({
+    enabled,
     shellRef,
     importImageSources: importImageSourcesWithFeedback,
     placeSelectionAtClientPoint,
@@ -131,21 +142,21 @@ export const useMarkdownEditorDrop = ({
 
   const dropzoneRootProps = getRootProps({
     className: cn(
-      'crepe relative flex h-full flex-1 flex-col is-js-drop-indicator',
-      isDragAccept && 'is-image-drop-target',
-      isEditorEmpty && 'is-empty-editor',
-      importingImages && 'is-image-importing',
-      statusPhase === 'loading' && 'is-editor-loading',
-      statusPhase === 'error' && 'is-editor-error',
-      motionSmoothScrolling && 'is-smooth-editor',
-      immersiveZenMode && 'is-zen-editor',
-      immersiveFocusMode && 'is-focus-editor',
-      immersiveTypewriterMode && 'is-typewriter-editor',
+      'crepe relative flex h-full flex-1 flex-col',
+      enabled && isDragAccept && 'is-image-drop-target',
+      enabled && isEditorEmpty && 'is-empty-editor',
+      enabled && importingImages && 'is-image-importing',
+      enabled && statusPhase === 'loading' && 'is-editor-loading',
+      enabled && statusPhase === 'error' && 'is-editor-error',
+      enabled && motionSmoothScrolling && 'is-smooth-editor',
+      enabled && immersiveZenMode && 'is-zen-editor',
+      enabled && immersiveFocusMode && 'is-focus-editor',
+      enabled && immersiveTypewriterMode && 'is-typewriter-editor',
     ),
-    onDragOverCapture: handleDragOverCapture,
-    onDropCapture: handleDropCapture,
-    onPasteCapture: handlePasteCapture,
-    'data-drop-active': isDragAccept ? 'image' : undefined,
+    onDragOverCapture: enabled ? handleDragOverCapture : undefined,
+    onDropCapture: enabled ? handleDropCapture : undefined,
+    onPasteCapture: enabled ? handlePasteCapture : undefined,
+    'data-drop-active': enabled && isDragAccept ? 'image' : undefined,
     'data-import-active': importingImages ? 'image' : undefined,
   }) as HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }
 
@@ -164,15 +175,19 @@ export const useMarkdownEditorDrop = ({
 }
 
 const useRuntimeImageDrop = ({
+  enabled,
   importImageSources,
   placeSelectionAtClientPoint,
   shellRef,
 }: {
+  enabled: boolean
   importImageSources: (sources: MarkdownImageImportSource[]) => Promise<boolean>
   placeSelectionAtClientPoint: (clientX: number, clientY: number) => boolean
   shellRef: RefObject<HTMLDivElement | null>
 }) => {
   useEffect(() => {
+    if (!enabled) return undefined
+
     let disposed = false
     let unlisten: (() => void) | undefined
 
@@ -209,7 +224,7 @@ const useRuntimeImageDrop = ({
       disposed = true
       unlisten?.()
     }
-  }, [importImageSources, placeSelectionAtClientPoint, shellRef])
+  }, [enabled, importImageSources, placeSelectionAtClientPoint, shellRef])
 }
 
 const hasDropPoint = (event: unknown): event is { clientX: number; clientY: number } => {

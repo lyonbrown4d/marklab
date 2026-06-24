@@ -54,6 +54,7 @@ export const AppWorkspacePanels = ({
 }: AppWorkspacePanelsProps) => {
   const sidebarCollapsed = state.sidebarCollapsed || immersiveZenMode
   const rightSidebarCollapsed = state.rightSidebarCollapsed || immersiveZenMode
+  const shouldAnimateRouteCache = state.viewMode !== 'wysiwyg'
 
   return (
     <ResizableGroup
@@ -130,8 +131,8 @@ export const AppWorkspacePanels = ({
           <div className="min-h-0 flex-1 overflow-hidden">
             <KeepAlive
               activeCacheKey={routeCacheKey}
-              cacheNodeClassName="motion-view h-full"
-              containerClassName="motion-view-stack h-full"
+              cacheNodeClassName={cn('h-full', shouldAnimateRouteCache && 'motion-view')}
+              containerClassName={cn('h-full', shouldAnimateRouteCache && 'motion-view-stack')}
               max={routeCacheMax}
             >
               {outlet}

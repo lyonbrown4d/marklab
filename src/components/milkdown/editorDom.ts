@@ -17,6 +17,8 @@ const EDITOR_CHROME_SELECTOR = [
   '.marklab-editor-drop-indicator',
 ].join(', ')
 
+const EDITOR_SCROLL_VIEWPORT_SELECTOR = '.editor-scroll-viewport, .milkdown'
+
 export const containsActiveElement = (root: HTMLElement | null) => {
   return Boolean(root && document.activeElement && root.contains(document.activeElement))
 }
@@ -26,6 +28,8 @@ export const isEditorChromeTarget = (target: HTMLElement) => {
 }
 
 export const scrollEditorViewportToTop = (scrollArea: HTMLElement | null) => {
-  const viewport = scrollArea?.querySelector<HTMLElement>('.editor-scroll-viewport')
+  const viewport = scrollArea?.matches(EDITOR_SCROLL_VIEWPORT_SELECTOR)
+    ? scrollArea
+    : scrollArea?.querySelector<HTMLElement>(EDITOR_SCROLL_VIEWPORT_SELECTOR)
   viewport?.scrollTo({ top: 0 })
 }

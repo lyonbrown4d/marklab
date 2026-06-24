@@ -1,0 +1,8 @@
+.crepe .milkdown {
+  --editor-control-hover: color-mix(in srgb, hsl(var(--foreground)) 5%, transparent);
+  --editor-control-active: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  --editor-control-panel: color-mix(in srgb, hsl(var(--popover)) 94%, transparent);
+  --editor-control-panel-line: color-mix(in srgb, hsl(var(--border)) 58%, transparent);
+  --editor-control-muted: color-mix(in srgb, hsl(var(--foreground)) 58%, transparent);
+  --editor-control-focus-ring: color-mix(in srgb, hsl(var(--ring)) 46%, transparent);
+}

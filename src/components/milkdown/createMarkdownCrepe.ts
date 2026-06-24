@@ -1,9 +1,6 @@
 import { Crepe } from '@milkdown/crepe'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
-import {
-  createSlashMenuConfig,
-  type SlashCommandLabels,
-} from '@/components/milkdown/slashMenuConfig'
+import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 
 export type MarkdownCrepeInstance = Crepe
 
@@ -17,22 +14,10 @@ type CreateMarkdownCrepeOptions = {
   slashLabels: SlashCommandLabels
 }
 
-export const createMarkdownCrepe = ({
-  root,
-  initialValue,
-  darkMode,
-  onSlashImageImport,
-  onSlashCalendarFileCreate,
-  placeholder,
-  slashLabels,
-}: CreateMarkdownCrepeOptions) =>
+export const createMarkdownCrepe = ({ root, initialValue, darkMode }: CreateMarkdownCrepeOptions) =>
   new Crepe({
     root,
     defaultValue: initialValue,
-    features: {
-      [Crepe.Feature.BlockEdit]: true,
-      [Crepe.Feature.Placeholder]: true,
-    },
     featureConfigs: {
       [Crepe.Feature.CodeMirror]: {
         theme: darkMode ? undefined : eclipse,
@@ -40,14 +25,5 @@ export const createMarkdownCrepe = ({
       [Crepe.Feature.LinkTooltip]: {
         onCopyLink: () => {},
       },
-      [Crepe.Feature.Placeholder]: {
-        text: placeholder,
-        mode: 'block',
-      },
-      [Crepe.Feature.BlockEdit]: createSlashMenuConfig(
-        slashLabels,
-        onSlashImageImport,
-        onSlashCalendarFileCreate,
-      ),
     },
   })

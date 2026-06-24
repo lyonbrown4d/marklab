@@ -8,6 +8,7 @@ import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { embeddedPreviewPlugin } from '@/components/milkdown/embeddedPreviewPlugin'
+import { enableMarklabEditorEnhancements } from '@/components/milkdown/markdownEditorMode'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 
 export type NodeViewFactory = (options: ReactNodeViewUserOptions) => NodeViewConstructor
@@ -35,26 +36,31 @@ export const configureMarkdownCrepe = (
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
         onMarkdownUpdated(markdown)
       })
-
-      ctx.update(codeBlockConfig.key, configureMermaidPreview)
     })
     .use(listener)
-    .use(
-      createMarkdownImageNodeView(nodeViewFactory, {
-        getDocumentPath: getImageDocumentPath,
-        resolveImageSrc,
-        subscribeDocumentPath: subscribeImageDocumentPath,
-      }),
-    )
-    .use(
-      embeddedPreviewPlugin({
-        getDocumentPath: getImageDocumentPath,
-        subscribeDocumentPath: subscribeImageDocumentPath,
-      }),
-    )
-    .use(pasteLinkOnSelection)
-    .use(animatedCursor)
-    .use(typewriterScroll)
+
+  if (enableMarklabEditorEnhancements) {
+    crepe.editor
+      .config((ctx) => {
+        ctx.update(codeBlockConfig.key, configureMermaidPreview)
+      })
+      .use(
+        createMarkdownImageNodeView(nodeViewFactory, {
+          getDocumentPath: getImageDocumentPath,
+          resolveImageSrc,
+          subscribeDocumentPath: subscribeImageDocumentPath,
+        }),
+      )
+      .use(
+        embeddedPreviewPlugin({
+          getDocumentPath: getImageDocumentPath,
+          subscribeDocumentPath: subscribeImageDocumentPath,
+        }),
+      )
+      .use(pasteLinkOnSelection)
+      .use(animatedCursor)
+      .use(typewriterScroll)
+  }
 
   return crepe
 }

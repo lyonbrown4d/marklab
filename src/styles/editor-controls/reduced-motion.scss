@@ -1,0 +1,11 @@
+@media (prefers-reduced-motion: reduce) {
+  .crepe .milkdown .milkdown-toolbar .toolbar-item,
+  .crepe .milkdown .milkdown-link-preview > .link-preview > .button,
+  .crepe .milkdown .milkdown-link-preview > .link-preview > .link-icon,
+  .crepe .milkdown .milkdown-link-edit > .link-edit > .button,
+  .crepe .milkdown .milkdown-slash-menu .tab-group li,
+  .crepe .milkdown .milkdown-slash-menu .menu-groups .menu-group li {
+    animation: none;
+    transition: none;
+  }
+}

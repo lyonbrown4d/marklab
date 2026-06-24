@@ -10,9 +10,9 @@ import { useI18n } from '@/i18n/useI18n'
 import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
-import { cn } from '@/lib/utils'
+
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
-const LARGE_MARKDOWN_VIEW_FADE_LIMIT = 30000
+
 type WysiwygEditorPageProps = {
   activePath: string | null
   value: string
@@ -109,7 +109,7 @@ const WysiwygEditorPage = ({
   const activePathRef = useLatest(activePath)
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
-  const shouldAnimateView = value.length <= LARGE_MARKDOWN_VIEW_FADE_LIMIT
+
   const slashLabels = useMemo<SlashCommandLabels>(
     () => ({
       textGroup: t('slash.textGroup'),
@@ -205,21 +205,19 @@ const WysiwygEditorPage = ({
   }, [activePathRef, valueRef])
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="editor-stage min-h-0 flex-1 overflow-hidden">
-        <div className="editor-paper relative h-full w-full overflow-hidden">
-          <div className={cn('h-full', shouldAnimateView && 'motion-view')}>
-            <Suspense fallback={<EditorPaneFallback />}>
-              <MarkdownEditor
-                ref={editorRef}
-                activePath={activePath}
-                value={value}
-                onChange={onChange}
-                placeholder={t('editor.placeholder')}
-                slashLabels={slashLabels}
-                onCalendarFileCreate={onCalendarFileCreate}
-              />
-            </Suspense>
-          </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="h-full">
+          <Suspense fallback={<EditorPaneFallback />}>
+            <MarkdownEditor
+              ref={editorRef}
+              activePath={activePath}
+              value={value}
+              onChange={onChange}
+              placeholder={t('editor.placeholder')}
+              slashLabels={slashLabels}
+              onCalendarFileCreate={onCalendarFileCreate}
+            />
+          </Suspense>
         </div>
       </div>
       {showStatusBar && activePath && (

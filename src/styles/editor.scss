@@ -60,6 +60,16 @@
   scroll-behavior: smooth;
 }
 
+.crepe[data-editor-dragging='true'] .editor-scroll-viewport {
+  overflow-anchor: none;
+  scroll-behavior: auto;
+}
+
+.crepe[data-editor-dragging='true'] .milkdown .ProseMirror,
+.crepe .milkdown .ProseMirror.ProseMirror-hideselection {
+  overflow-anchor: none;
+}
+
 .crepe.is-image-drop-target .milkdown {
   background:
     radial-gradient(
