@@ -1,3 +1,4 @@
+import type { BlockEditFeatureConfig } from '@milkdown/crepe/feature/block-edit'
 import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import type { Ctx } from '@milkdown/kit/ctx'
 import {
@@ -106,6 +107,12 @@ type CustomSlashCommand = {
     onImageImport: () => Promise<boolean>,
     onCalendarFileCreate: () => Promise<string | null>,
   ) => void
+}
+
+type MarkdownPlaygroundSlashConfigOptions = {
+  labels: SlashCommandLabels
+  onCalendarFileCreate: () => Promise<string | null>
+  onImageImport: () => Promise<boolean>
 }
 
 const markdownTemplates: Record<string, string> = {
@@ -254,6 +261,13 @@ const createNativeSlashItems = (labels: SlashCommandLabels, group: SlashCommandG
       ]),
   )
 }
+
+export const createMarkdownPlaygroundSlashConfig = ({
+  labels,
+  onCalendarFileCreate,
+  onImageImport,
+}: MarkdownPlaygroundSlashConfigOptions): BlockEditFeatureConfig =>
+  createSlashMenuConfig(labels, onImageImport, onCalendarFileCreate)
 
 export const slashLabel = (label: string, aliases?: readonly string[]) => {
   if (!aliases?.length) return label

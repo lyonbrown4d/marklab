@@ -124,6 +124,7 @@ const createMediaPreviewWidget = (
   { getDocumentPath, resolveMediaSrc }: MediaPreviewPluginOptions,
 ) => {
   const host = document.createElement('div')
+  host.contentEditable = 'false'
   const root = createRoot(host)
   widgetRoots.set(host, root)
   root.render(
@@ -156,6 +157,7 @@ const buildMediaPreviewDecorations = (
             widgetRoots.get(node as HTMLElement)?.unmount()
             widgetRoots.delete(node as HTMLElement)
           },
+          ignoreSelection: true,
           key: `${pos}:${index}:${link.href}`,
           side: 1,
         }),

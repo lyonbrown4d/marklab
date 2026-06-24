@@ -26,14 +26,30 @@ const isSmoothScrollEnabled = () => {
 }
 
 const getEditorViewport = (view: EditorView) => {
-  return view.dom.closest('.crepe')?.querySelector<HTMLElement>('.editor-scroll-viewport') ?? null
+  return (
+    view.dom.closest('.crepe')?.querySelector<HTMLElement>('.editor-scroll-viewport') ??
+    view.dom.closest<HTMLElement>('.milkdown') ??
+    null
+  )
 }
 
 export const isEditorDragging = (view: EditorView) => {
   return view.dom.closest<HTMLElement>('.crepe')?.dataset.editorDragging === 'true'
 }
 
-const createTypewriterScrollView = (initialView: EditorView) => {
+export const isProseMirrorDragging = (view: EditorView) => {
+  return Boolean((view as EditorView & { dragging?: unknown }).dragging)
+}
+
+export const hasHiddenSelection = (view: EditorView) => {
+  return view.dom.classList.contains('ProseMirror-hideselection')
+}
+
+export const isTypewriterScrollLocked = (view: EditorView) => {
+  return isEditorDragging(view) || isProseMirrorDragging(view) || hasHiddenSelection(view)
+}
+
+export const createTypewriterScrollView = (initialView: EditorView) => {
   let view = initialView
   let animationFrame: number | null = null
   let lastHead = view.state.selection.head
@@ -44,7 +60,7 @@ const createTypewriterScrollView = (initialView: EditorView) => {
       !isTypewriterEnabled() ||
       !view.hasFocus() ||
       !view.state.selection.empty ||
-      isEditorDragging(view)
+      isTypewriterScrollLocked(view)
     ) {
       return
     }

@@ -9,6 +9,8 @@ describe('editor playground baseline styles', () => {
   const mainSource = readSource('../main.tsx')
   const appWorkspacePanelsSource = readSource('../app/AppWorkspacePanels.tsx')
   const markdownEditorSource = readSource('../components/MarkdownEditor.tsx')
+  const markdownSafePluginsSource = readSource('../components/milkdown/markdownSafePlugins.ts')
+  const animatedCursorSource = readSource('../components/milkdown/animatedCursorPlugin.ts')
   const playgroundControllerSource = readSource(
     '../components/milkdown/useMarkdownPlaygroundController.ts',
   )
@@ -33,16 +35,39 @@ describe('editor playground baseline styles', () => {
     expect(appWorkspacePanelsSource).toContain("shouldAnimateRouteCache && 'motion-view-stack'")
   })
 
-  it('moves the fixed Milkdown drop cursor into the viewport coordinate root', () => {
+  it('moves fixed Milkdown overlays into the viewport coordinate root', () => {
     expect(playgroundControllerSource).toContain('relocateFixedDropIndicatorToViewportRoot')
     expect(playgroundControllerSource).toContain('document.body.appendChild(indicator)')
+    expect(playgroundControllerSource).toContain('.use(animatedCursor)')
     expect(playgroundControllerSource).toContain(
       "indicator.dataset.marklabPlaygroundOverlay = 'drop-cursor'",
     )
+    expect(animatedCursorSource).toContain('document.body.appendChild(caret)')
+    expect(animatedCursorSource).toContain(
+      "caret.dataset.marklabPlaygroundOverlay = 'animated-cursor'",
+    )
+    expect(animatedCursorSource).toContain("view.dom.closest<HTMLElement>('.milkdown')")
     expect(playgroundStyles).toContain(
       "body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overlay='drop-cursor']",
     )
+    expect(playgroundStyles).toContain(
+      "body > .marklab-animated-caret[data-marklab-playground-overlay='animated-cursor']",
+    )
     expect(playgroundStyles).not.toContain('.milkdown .crepe-drop-cursor')
+  })
+
+  it('restores safe Markdown playground features without restoring legacy drag chrome', () => {
+    expect(playgroundControllerSource).toContain('createMarkdownPlaygroundSlashConfig')
+    expect(playgroundControllerSource).toContain('[Crepe.Feature.BlockEdit]')
+    expect(playgroundControllerSource).toContain('[Crepe.Feature.Placeholder]')
+    expect(playgroundControllerSource).toContain('configureMermaidPreview')
+    expect(playgroundControllerSource).toContain('createMarkdownSafePlugins')
+    expect(playgroundControllerSource).toContain('.use(typewriterScroll)')
+    expect(playgroundControllerSource).not.toContain('embeddedPreviewPlugin')
+    expect(markdownSafePluginsSource).toContain('embeddedPreviewPlugin')
+    expect(markdownSafePluginsSource).not.toContain('pdfPreviewPlugin')
+    expect(markdownSafePluginsSource).not.toContain('mediaPreviewPlugin')
+    expect(playgroundControllerSource).not.toContain('createMarkdownImageNodeView')
   })
 
   it('scopes local playground overrides to the active editor root', () => {
@@ -52,13 +77,17 @@ describe('editor playground baseline styles', () => {
     expect(playgroundStyles).not.toMatch(/(^|\n)\.milkdown \*/)
   })
 
-  it('copies the official single-column crepe layout and color tokens', () => {
+  it('maps Crepe colors to MarkLab theme tokens without changing playground layout', () => {
     expect(playgroundStyles).toContain('.crepe-playground > .milkdown > .ProseMirror')
-    expect(playgroundStyles).toContain('--crepe-color-background: #fdfcff;')
-    expect(playgroundStyles).toContain('--crepe-color-primary: #37618e;')
-    expect(playgroundStyles).toContain('--crepe-color-background: #1b1c1d;')
+    expect(playgroundStyles).toContain('--crepe-color-background: hsl(var(--background));')
+    expect(playgroundStyles).toContain('--crepe-color-on-background: hsl(var(--foreground));')
+    expect(playgroundStyles).toContain('--crepe-color-primary: hsl(var(--primary));')
+    expect(playgroundStyles).toContain('--crepe-color-hover: color-mix(in srgb, hsl(var(--accent))')
     expect(playgroundStyles).toContain('overflow-y: scroll;')
     expect(playgroundStyles).toContain('padding: 60px 120px !important;')
+    expect(playgroundStyles).not.toContain('#fdfcff')
+    expect(playgroundStyles).not.toContain('#37618e')
+    expect(playgroundStyles).not.toContain('.dark .crepe-playground .milkdown')
   })
 
   it('does not include right-panel or doc-page playground styles in the single-column baseline', () => {
@@ -73,7 +102,6 @@ describe('editor playground baseline styles', () => {
     expect(playgroundStyles).not.toContain('ProseMirror-hideselection')
     expect(playgroundStyles).not.toContain('milkdown-block-handle')
     expect(playgroundStyles).not.toContain('data-editor-dragging')
-    expect(playgroundStyles).not.toContain('hsl(var(--primary))')
   })
 
   it('keeps the legacy custom editor styles available but inactive', () => {

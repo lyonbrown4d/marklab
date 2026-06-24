@@ -1,5 +1,4 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 
@@ -31,11 +30,9 @@ type IntersectionObserverCallback = ConstructorParameters<typeof IntersectionObs
 
 const renderPreview = ({ onPointerDown }: { onPointerDown?: () => void } = {}) =>
   render(
-    <MemoryRouter>
-      <div onPointerDown={onPointerDown}>
-        <EmbeddedFilePreview documentPath="notes/current.md" target="./brief.pdf" title="Brief" />
-      </div>
-    </MemoryRouter>,
+    <div onPointerDown={onPointerDown}>
+      <EmbeddedFilePreview documentPath="notes/current.md" target="./brief.pdf" title="Brief" />
+    </div>,
   )
 
 describe('EmbeddedFilePreview', () => {
@@ -107,6 +104,26 @@ describe('EmbeddedFilePreview', () => {
 
     expect(resolveEmbeddedPreviewTarget).toHaveBeenCalledWith('notes/current.md', './brief.pdf')
     expect(await screen.findByTestId('file-preview-surface')).toBeInTheDocument()
+  })
+
+  it('opens the independent preview tab without router context', async () => {
+    resolveEmbeddedPreviewTarget.mockResolvedValue({
+      external: false,
+      kind: 'pdf',
+      path: 'docs/brief.pdf',
+      readonly: false,
+      src: 'asset://docs/brief.pdf',
+    })
+    window.location.hash = '#/'
+
+    renderPreview()
+
+    fireEvent.pointerEnter(screen.getByRole('button', { name: 'preview.openEmbedded: Brief' }))
+    const openInTab = await screen.findByText('preview.openInTab')
+    fireEvent.click(openInTab.closest('button') ?? openInTab)
+
+    expect(window.location.hash).toContain('/files/preview/')
+    expect(window.location.hash).toContain('brief.pdf')
   })
 
   it('keeps pointer interaction inside the preview widget boundary', () => {

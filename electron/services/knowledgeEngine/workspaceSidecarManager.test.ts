@@ -40,7 +40,14 @@ describe('WorkspaceSidecarManager', () => {
     expect(manager.listActive()[0]).toMatchObject({
       spawnPlan: {
         command: 'engine.exe',
-        args: [],
+        args: [
+          '--workspace-instance-id',
+          expect.any(String),
+          '--workspace-root',
+          expect.stringContaining('index-a'),
+          '--engine-data-dir',
+          expect.stringContaining('app-data'),
+        ],
         env: {
           GRPC_SESSION_TOKEN: '<redacted>',
         },

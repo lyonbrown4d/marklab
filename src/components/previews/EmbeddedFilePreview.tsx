@@ -1,6 +1,5 @@
 import { ExternalLink, FileText, ImageIcon, Maximize2, Music, Video } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -46,6 +45,10 @@ const sourceKey = (documentPath: string | null, target: string) =>
 
 const previewKindLabelKey = (kind: PreviewFileKind) => `preview.kind.${kind}`
 
+const navigateToPreviewTab = (path: string) => {
+  window.location.hash = pathToFileViewRoute(path, 'preview')
+}
+
 export const EmbeddedFilePreview = ({
   className,
   documentPath,
@@ -53,7 +56,6 @@ export const EmbeddedFilePreview = ({
   title,
 }: EmbeddedFilePreviewProps) => {
   const { t } = useI18n()
-  const navigate = useNavigate()
   const cardRef = useRef<HTMLElement | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [visible, setVisible] = useState(false)
@@ -137,7 +139,7 @@ export const EmbeddedFilePreview = ({
 
   const openTab = () => {
     if (!resolved?.path) return
-    navigate(pathToFileViewRoute(resolved.path, 'preview'))
+    navigateToPreviewTab(resolved.path)
   }
 
   const openInSystem = () => {

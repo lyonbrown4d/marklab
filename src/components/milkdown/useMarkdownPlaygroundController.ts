@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
+import { codeBlockConfig } from '@milkdown/kit/component/code-block'
 import { editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { Slice } from '@milkdown/kit/prose/model'
 import { Selection } from '@milkdown/kit/prose/state'
 import { getMarkdown } from '@milkdown/kit/utils'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
+import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
+import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
+import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
+import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
+import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 import type {
   MarkdownEditorProps,
   MarkdownEditorStatus,
@@ -76,8 +82,12 @@ const replaceMarkdownLikePlayground = (crepe: Crepe, markdown: string) => {
 }
 
 export const useMarkdownPlaygroundController = ({
+  activePath,
   darkMode,
   onChange,
+  onCalendarFileCreate,
+  placeholder,
+  slashLabels,
   value,
 }: UseMarkdownPlaygroundControllerOptions) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -85,6 +95,8 @@ export const useMarkdownPlaygroundController = ({
   const crepeRef = useRef<Crepe | null>(null)
   const latestValueRef = useRef(value)
   const onChangeRef = useRef(onChange)
+  const activePathRef = useRef(activePath)
+  const activePathListenersRef = useRef(new Set<() => void>())
   const applyingExternalValueRef = useRef(false)
   const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
 
@@ -95,6 +107,27 @@ export const useMarkdownPlaygroundController = ({
   useLayoutEffect(() => {
     latestValueRef.current = value
   }, [value])
+
+  useEffect(() => {
+    activePathRef.current = activePath
+    activePathListenersRef.current.forEach((listener) => listener())
+  }, [activePath])
+
+  const getDocumentPath = useCallback(() => activePathRef.current, [])
+
+  const subscribeDocumentPath = useCallback((listener: () => void) => {
+    activePathListenersRef.current.add(listener)
+    return () => {
+      activePathListenersRef.current.delete(listener)
+    }
+  }, [])
+
+  const runSlashImageImport = useCallback(async () => false, [])
+
+  const runSlashCalendarFileCreate = useCallback(async () => {
+    if (!onCalendarFileCreate) return null
+    return onCalendarFileCreate()
+  }, [onCalendarFileCreate])
 
   useLayoutEffect(() => {
     const root = rootRef.current
@@ -118,22 +151,41 @@ export const useMarkdownPlaygroundController = ({
       root,
       defaultValue: latestValueRef.current,
       featureConfigs: {
+        [Crepe.Feature.BlockEdit]: createMarkdownPlaygroundSlashConfig({
+          labels: slashLabels,
+          onCalendarFileCreate: runSlashCalendarFileCreate,
+          onImageImport: runSlashImageImport,
+        }),
         [Crepe.Feature.CodeMirror]: {
           theme: darkMode ? undefined : eclipse,
         },
         [Crepe.Feature.LinkTooltip]: {
           onCopyLink: () => {},
         },
+        [Crepe.Feature.Placeholder]: {
+          mode: 'block',
+          text: placeholder,
+        },
       },
     })
 
     crepe.editor
       .config((ctx) => {
+        ctx.update(codeBlockConfig.key, configureMermaidPreview)
         ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
           updateMarkdown(markdown)
         })
       })
       .use(listener)
+
+    createMarkdownSafePlugins({
+      getDocumentPath,
+      subscribeDocumentPath,
+    }).forEach((plugin) => {
+      crepe?.editor.use(plugin)
+    })
+
+    crepe.editor.use(animatedCursor).use(typewriterScroll)
 
     crepe
       .create()
@@ -166,7 +218,15 @@ export const useMarkdownPlaygroundController = ({
         // Crepe can be half-initialized during React dev teardown.
       }
     }
-  }, [darkMode])
+  }, [
+    darkMode,
+    getDocumentPath,
+    placeholder,
+    runSlashCalendarFileCreate,
+    runSlashImageImport,
+    slashLabels,
+    subscribeDocumentPath,
+  ])
 
   useEffect(() => {
     const crepe = crepeRef.current

@@ -15,7 +15,9 @@ const isAnimatedCursorEnabled = () => {
   return !prefersReducedMotion() && document.documentElement.dataset.motionCursor !== 'false'
 }
 
-const getCaretParent = (view: EditorView) => view.dom.parentElement ?? view.dom
+const getScrollHost = (view: EditorView) =>
+  view.dom.closest<HTMLElement>('.milkdown') ??
+  view.dom.closest<HTMLElement>('.editor-scroll-viewport')
 
 const createAnimatedCursorView = (initialView: EditorView) => {
   if (prefersReducedMotion()) {
@@ -27,12 +29,12 @@ const createAnimatedCursorView = (initialView: EditorView) => {
 
   let view = initialView
   let animationFrame: number | null = null
-  const caretParent = getCaretParent(view)
-  const scrollHost = view.dom.closest<HTMLElement>('.editor-scroll-viewport')
+  const scrollHost = getScrollHost(view)
   const caret = document.createElement('span')
   caret.className = 'marklab-animated-caret'
+  caret.dataset.marklabPlaygroundOverlay = 'animated-cursor'
   caret.setAttribute('aria-hidden', 'true')
-  caretParent.appendChild(caret)
+  document.body.appendChild(caret)
 
   const setVisible = (visible: boolean) => {
     caret.classList.toggle('is-visible', visible)
@@ -49,10 +51,9 @@ const createAnimatedCursorView = (initialView: EditorView) => {
 
     try {
       const caretRect = view.coordsAtPos(selection.head)
-      const parentRect = caretParent.getBoundingClientRect()
       const caretHeight = Math.max(14, caretRect.bottom - caretRect.top)
-      const caretX = caretRect.left - parentRect.left - CURSOR_WIDTH / 2
-      const caretY = caretRect.top - parentRect.top
+      const caretX = caretRect.left - CURSOR_WIDTH / 2
+      const caretY = caretRect.top
 
       caret.style.setProperty('--marklab-caret-x', `${caretX}px`)
       caret.style.setProperty('--marklab-caret-y', `${caretY}px`)
