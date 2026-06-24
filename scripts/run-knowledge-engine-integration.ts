@@ -34,9 +34,17 @@ const run = (args, options = {}) =>
 
 await run(['knowledge:proto:gen'])
 await run(['knowledge:build'])
-await run(['exec', 'vitest', 'run', 'electron/services/knowledgeEngine/workspaceSidecar.integration.test.ts'], {
-  env: {
-    ...process.env,
-    MARKLAB_RUN_KNOWLEDGE_INTEGRATION: '1',
+await run(
+  [
+    'exec',
+    'vitest',
+    'run',
+    'electron/services/knowledgeEngine/workspaceSidecar.integration.test.ts',
+  ],
+  {
+    env: {
+      ...process.env,
+      MARKLAB_RUN_KNOWLEDGE_INTEGRATION: '1',
+    },
   },
-})
+)

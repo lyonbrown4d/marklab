@@ -23,13 +23,14 @@ tasks:
       - electron/generated/knowledge-engine/**/*
 
   typecheck:
-    command: pnpm exec tsc -b
+    command: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
     deps:
       - ~:proto-gen
     inputs:
       - tsconfig*.json
       - src/**/*
       - electron/**/*
+      - scripts/**/*
       - vite.config.ts
       - package.json
       - pnpm-lock.yaml
@@ -60,13 +61,14 @@ tasks:
       cache: false
 
   test-knowledge-integration:
-    command: node scripts/run-knowledge-engine-integration.mjs
+    command: node --experimental-strip-types scripts/run-knowledge-engine-integration.ts
     inputs:
-      - scripts/run-knowledge-engine-integration.mjs
-      - scripts/build-knowledge-engine.mjs
+      - scripts/run-knowledge-engine-integration.ts
+      - scripts/build-knowledge-engine.ts
       - knowledge-engine/**/*
       - proto/**/*
       - electron/**/*
+      - scripts/**/*
       - package.json
       - pnpm-lock.yaml
       - Cargo.toml
@@ -119,9 +121,9 @@ tasks:
       cache: false
 
   knowledge-build:
-    command: node scripts/build-knowledge-engine.mjs --profile release
+    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release
     inputs:
-      - scripts/build-knowledge-engine.mjs
+      - scripts/build-knowledge-engine.ts
       - Cargo.toml
       - Cargo.lock
       - knowledge-engine/**/*
@@ -131,9 +133,9 @@ tasks:
       cache: false
 
   knowledge-build-dev:
-    command: node scripts/build-knowledge-engine.mjs --profile debug
+    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile debug
     inputs:
-      - scripts/build-knowledge-engine.mjs
+      - scripts/build-knowledge-engine.ts
       - Cargo.toml
       - Cargo.lock
       - knowledge-engine/**/*
@@ -143,14 +145,14 @@ tasks:
       cache: false
 
   knowledge-build-force:
-    command: node scripts/build-knowledge-engine.mjs --profile release --force
+    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release --force
     options:
       cache: false
 
   icons-generate:
-    command: node scripts/generate-app-icons.mjs
+    command: node --experimental-strip-types scripts/generate-app-icons.ts
     inputs:
-      - scripts/generate-app-icons.mjs
+      - scripts/generate-app-icons.ts
       - src/assets/**/*
     outputs:
       - resources/icons/**/*
@@ -174,9 +176,9 @@ tasks:
       cache: false
 
   electron-dev:
-    command: node scripts/run-electron-dev.mjs
+    command: node --experimental-strip-types scripts/run-electron-dev.ts
     inputs:
-      - scripts/run-electron-dev.mjs
+      - scripts/run-electron-dev.ts
       - vite.config.ts
       - package.json
       - pnpm-lock.yaml

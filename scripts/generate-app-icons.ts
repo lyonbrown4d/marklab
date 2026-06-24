@@ -20,9 +20,7 @@ const resolveSourceSvg = () => {
 
   const sourceSvg = candidates.find(existsSync)
   if (!sourceSvg) {
-    throw new Error(
-      `Cannot find a source svg: ${candidates.join(', ')}`,
-    )
+    throw new Error(`Cannot find a source svg: ${candidates.join(', ')}`)
   }
   return sourceSvg
 }

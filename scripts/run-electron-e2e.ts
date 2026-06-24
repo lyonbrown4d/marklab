@@ -14,10 +14,14 @@ for (const key of Object.keys(env)) {
   }
 }
 
-const result = spawnSync(process.execPath, [playwrightCli, 'test', '-c', 'playwright.electron.config.ts'], {
-  cwd: repoRoot,
-  env,
-  stdio: 'inherit',
-})
+const result = spawnSync(
+  process.execPath,
+  [playwrightCli, 'test', '-c', 'playwright.electron.config.ts'],
+  {
+    cwd: repoRoot,
+    env,
+    stdio: 'inherit',
+  },
+)
 
 process.exit(result.status ?? 1)
