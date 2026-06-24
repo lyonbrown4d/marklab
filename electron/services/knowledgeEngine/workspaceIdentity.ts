@@ -7,7 +7,6 @@ export type WorkspaceSidecarIdentity = {
   canonicalRoot: string
   engineDataDir: string
   sessionToken: string
-  env: NodeJS.ProcessEnv
 }
 
 export type CreateWorkspaceSidecarIdentityOptions = {
@@ -32,12 +31,6 @@ export const createWorkspaceSidecarIdentity = (
     canonicalRoot,
     engineDataDir,
     sessionToken,
-    env: {
-      ENGINE_DATA_DIR: engineDataDir,
-      GRPC_SESSION_TOKEN: sessionToken,
-      WORKSPACE_INSTANCE_ID: workspaceInstanceId,
-      WORKSPACE_ROOT: canonicalRoot,
-    },
   }
 }
 

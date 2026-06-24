@@ -23,12 +23,6 @@ describe('createWorkspaceSidecarIdentity', () => {
     expect(first.sessionToken).toBe('token-a')
     expect(first.canonicalRoot).toBe(path.resolve('relative/index'))
     expect(first.engineDataDir).toBe(path.join('app-data', 'workspaces', first.workspaceInstanceId))
-    expect(first.env).toMatchObject({
-      ENGINE_DATA_DIR: first.engineDataDir,
-      GRPC_SESSION_TOKEN: 'token-a',
-      WORKSPACE_INSTANCE_ID: first.workspaceInstanceId,
-      WORKSPACE_ROOT: first.canonicalRoot,
-    })
   })
 
   it('uses different ids for different workspace keys', () => {

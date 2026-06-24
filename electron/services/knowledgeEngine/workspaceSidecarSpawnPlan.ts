@@ -19,10 +19,17 @@ export const createWorkspaceSidecarSpawnPlan = (
   options: CreateWorkspaceSidecarSpawnPlanOptions,
 ): WorkspaceSidecarSpawnPlan => ({
   command: options.binary.binaryPath,
-  args: [],
+  args: [
+    '--workspace-instance-id',
+    options.identity.workspaceInstanceId,
+    '--workspace-root',
+    options.identity.canonicalRoot,
+    '--engine-data-dir',
+    options.identity.engineDataDir,
+  ],
   env: {
     ...(options.processEnv ?? process.env),
-    ...options.identity.env,
+    GRPC_SESSION_TOKEN: options.identity.sessionToken,
   },
   windowsHide: true,
 })
@@ -32,10 +39,7 @@ export const redactWorkspaceSidecarSpawnPlan = (plan: WorkspaceSidecarSpawnPlan)
   args: plan.args,
   cwd: plan.cwd,
   env: {
-    ENGINE_DATA_DIR: plan.env.ENGINE_DATA_DIR,
     GRPC_SESSION_TOKEN: plan.env.GRPC_SESSION_TOKEN ? '<redacted>' : undefined,
-    WORKSPACE_INSTANCE_ID: plan.env.WORKSPACE_INSTANCE_ID,
-    WORKSPACE_ROOT: plan.env.WORKSPACE_ROOT,
   },
   windowsHide: plan.windowsHide,
 })
