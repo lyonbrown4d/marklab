@@ -147,12 +147,13 @@ export default defineConfig(({ command, mode }) => {
               },
               build: {
                 assetsInlineLimit: 0,
-                rollupOptions: {
+                rolldownOptions: {
                   external: electronMainExternal,
                   output: {
                     entryFileNames: '[name].js',
                     chunkFileNames: 'chunks/[name]-[hash].js',
                     banner: electronMainRequireBanner,
+                    codeSplitting: true,
                     manualChunks: electronMainManualChunks,
                   },
                 },
@@ -238,6 +239,7 @@ export default defineConfig(({ command, mode }) => {
       setupFiles: './src/test/setup.ts',
     },
     build: {
+      chunkSizeWarningLimit: isElectron ? 7000 : 500,
       reportCompressedSize: shouldReportCompressedSize,
       rollupOptions: {
         output: {

@@ -98,7 +98,8 @@
         "from": "resources/engine",
         "to": "engine",
         "filter": [
-          "**/*"
+          "**/*",
+          "!**/.DS_Store"
         ]
       }
     ],
@@ -164,6 +165,7 @@
     "@codemirror/language": "^6.12.3",
     "@dagrejs/dagre": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.1",
+    "@fontsource/jetbrains-mono": "5.2.8",
     "@grpc/grpc-js": "^1.14.4",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@hookform/resolvers": "^5.4.0",

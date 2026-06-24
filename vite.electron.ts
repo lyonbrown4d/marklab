@@ -22,10 +22,51 @@ export const electronMainManualChunks = (id: string) => {
     return 'main-markdown-language'
   }
   if (!isNodeModule(normalizedId)) return undefined
+  if (normalizedId.includes('awilix')) return 'main-di'
+  if (
+    includesAny(normalizedId, [
+      'fast-glob',
+      'micromatch',
+      'picomatch',
+      'braces',
+      'glob-parent',
+      'is-glob',
+      'is-extglob',
+      'to-regex-range',
+      'fill-range',
+      '@nodelib/',
+      'merge2',
+      'queue-microtask',
+      'run-parallel',
+      'reusify',
+      'fastq',
+    ])
+  ) {
+    return 'main-glob'
+  }
   if (includesAny(normalizedId, ['@grpc/grpc-js', '@grpc/proto-loader', '@bufbuild/protobuf'])) {
     return 'main-grpc'
   }
   if (normalizedId.includes('rxjs')) return 'main-rxjs'
+  if (
+    includesAny(normalizedId, [
+      'rehype-stringify',
+      'remark-rehype',
+      'hast-util-',
+      'mdast-util-to-hast',
+      'property-information',
+      'stringify-entities',
+      'character-entities-legacy',
+      'comma-separated-tokens',
+      'space-separated-tokens',
+      'trim-lines',
+      'unist-util-position',
+      'micromark-util-sanitize-uri',
+      '@ungap/structured-clone',
+    ])
+  ) {
+    return 'main-markdown-html'
+  }
   if (
     includesAny(normalizedId, [
       'vscode-markdown-languageservice',
@@ -44,6 +85,20 @@ export const electronMainManualChunks = (id: string) => {
   }
   if (includesAny(normalizedId, ['electron-log', 'electron-store', 'electron-updater'])) {
     return 'main-electron-runtime'
+  }
+  if (includesAny(normalizedId, ['simple-git', 'diff', '@kwsites/'])) return 'main-git'
+  if (normalizedId.includes('chokidar')) return 'main-watcher'
+  if (
+    includesAny(normalizedId, [
+      'axios',
+      'proxy-from-env',
+      'agent-base',
+      'delayed-stream',
+      'follow-redirects',
+      'form-data',
+    ])
+  ) {
+    return 'main-http'
   }
   if (normalizedId.includes('lodash-es')) return 'main-lodash'
 

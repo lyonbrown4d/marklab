@@ -6,8 +6,8 @@ import {
   type ExportTaskPayload,
   type TerminalEventEntry,
 } from '@/components/status-center/statusCenterModel'
-import { terminalExitEventSchema, terminalOutputEventSchema } from '@/services/terminalApi'
 import { listen } from '@/runtime/events'
+import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalEventStreams'
 
 export const useStatusCenterEvents = (desktopRuntime: boolean) => {
   const [exportTasks, setExportTasks] = useState<Record<string, ExportTaskEntry>>({})
@@ -46,10 +46,6 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
   useEffect(() => {
     if (!desktopRuntime) return
 
-    let disposed = false
-    let outputUnlisten: (() => void) | undefined
-    let exitUnlisten: (() => void) | undefined
-
     const pushTerminalEvent = (entry: TerminalEventEntry) => {
       setTerminalEvents((current) =>
         [
@@ -59,50 +55,37 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
       )
     }
 
-    void listen<unknown>('terminal-output', (event) => {
-      const parsed = terminalOutputEventSchema.safeParse(event.payload)
-      if (!parsed.success) return
+    const outputSubscription = terminalOutputEvents$.subscribe({
+      error: () => undefined,
+      next: (event) => {
+        const now = Date.now()
+        if (now - lastTerminalOutputAtRef.current < 1_000) return
+        lastTerminalOutputAtRef.current = now
 
-      const now = Date.now()
-      if (now - lastTerminalOutputAtRef.current < 1_000) return
-      lastTerminalOutputAtRef.current = now
-
-      pushTerminalEvent({
-        id: parsed.data.id,
-        status: 'running',
-        message: summarizeTerminalOutput(parsed.data),
-        updatedAt: now,
-      })
-    }).then((nextUnlisten) => {
-      if (disposed) {
-        nextUnlisten()
-        return
-      }
-      outputUnlisten = nextUnlisten
+        pushTerminalEvent({
+          id: event.id,
+          status: 'running',
+          message: summarizeTerminalOutput(event),
+          updatedAt: now,
+        })
+      },
     })
 
-    void listen<unknown>('terminal-exit', (event) => {
-      const parsed = terminalExitEventSchema.safeParse(event.payload)
-      if (!parsed.success) return
-
-      pushTerminalEvent({
-        id: parsed.data.id,
-        status: 'exited',
-        message: summarizeTerminalExit(parsed.data),
-        updatedAt: Date.now(),
-      })
-    }).then((nextUnlisten) => {
-      if (disposed) {
-        nextUnlisten()
-        return
-      }
-      exitUnlisten = nextUnlisten
+    const exitSubscription = terminalExitEvents$.subscribe({
+      error: () => undefined,
+      next: (event) => {
+        pushTerminalEvent({
+          id: event.id,
+          status: 'exited',
+          message: summarizeTerminalExit(event),
+          updatedAt: Date.now(),
+        })
+      },
     })
 
     return () => {
-      disposed = true
-      outputUnlisten?.()
-      exitUnlisten?.()
+      outputSubscription.unsubscribe()
+      exitSubscription.unsubscribe()
     }
   }, [desktopRuntime])
 
