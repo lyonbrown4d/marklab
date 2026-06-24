@@ -1,10 +1,20 @@
+import { execa } from 'execa'
 import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const readOption = (args, name) => {
+type KnowledgeEngineProfile = 'debug' | 'release'
+
+type BuildManifest = {
+  profile: KnowledgeEngineProfile
+  platformDir: string
+  binaryName: string
+  cargoBinaryPath: string
+  builtAt: string
+}
+
+const readOption = (args: string[], name: string): string | null => {
   const inlineArg = args.find((arg) => arg.startsWith(`${name}=`))
   if (inlineArg) {
     const value = inlineArg.slice(name.length + 1)
@@ -22,7 +32,7 @@ const readOption = (args, name) => {
   return value
 }
 
-const getProfile = (args) => {
+const getProfile = (args: string[]): KnowledgeEngineProfile => {
   if (args.includes('--debug')) {
     return 'debug'
   }
@@ -55,7 +65,7 @@ const outputDir = path.join(rootDir, 'resources', 'engine', platformDir)
 const outputBinaryPath = path.join(outputDir, binaryName)
 const outputManifestPath = path.join(outputDir, 'manifest.json')
 
-const main = async () => {
+const main = async (): Promise<void> => {
   if (!existsSync(manifestPath)) {
     throw new Error(`Knowledge engine manifest not found: ${manifestPath}`)
   }
@@ -78,7 +88,7 @@ const main = async () => {
   console.log(`[knowledge-engine] built (${profile}): ${outputBinaryPath}`)
 }
 
-const isOutputFresh = async () => {
+const isOutputFresh = async (): Promise<boolean> => {
   if (!existsSync(outputBinaryPath) || !existsSync(outputManifestPath)) {
     return false
   }
@@ -101,7 +111,7 @@ const isOutputFresh = async () => {
   return output.mtimeMs >= Math.max(newestInputMtime, newestEngineSourceMtime)
 }
 
-const getNewestSourceMtime = async (directory) => {
+const getNewestSourceMtime = async (directory: string): Promise<number> => {
   const entries = await readdir(directory, { withFileTypes: true })
   let newest = 0
 
@@ -125,7 +135,7 @@ const getNewestSourceMtime = async (directory) => {
   return newest
 }
 
-const getNewestInputMtime = async () => {
+const getNewestInputMtime = async (): Promise<number> => {
   const inputPaths = [scriptPath, manifestPath, lockfilePath].filter((inputPath) =>
     existsSync(inputPath),
   )
@@ -134,16 +144,16 @@ const getNewestInputMtime = async () => {
   return Math.max(...stats.map((inputStat) => inputStat.mtimeMs))
 }
 
-const readBuildManifest = async () => {
+const readBuildManifest = async (): Promise<BuildManifest | null> => {
   try {
-    return JSON.parse(await readFile(outputManifestPath, 'utf8'))
+    return JSON.parse(await readFile(outputManifestPath, 'utf8')) as BuildManifest
   } catch {
     return null
   }
 }
 
-const writeBuildManifest = async () => {
-  const buildManifest = {
+const writeBuildManifest = async (): Promise<void> => {
+  const buildManifest: BuildManifest = {
     profile,
     platformDir,
     binaryName,
@@ -154,25 +164,13 @@ const writeBuildManifest = async () => {
   await writeFile(outputManifestPath, `${JSON.stringify(buildManifest, null, 2)}\n`)
 }
 
-const run = (command, args) =>
-  new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: rootDir,
-      shell: false,
-      stdio: 'inherit',
-      windowsHide: true,
-    })
-
-    child.once('error', reject)
-    child.once('exit', (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(`${command} ${args.join(' ')} exited with ${code}`))
-    })
-  })
+const run = (command: string, args: string[]): Promise<void> =>
+  execa(command, args, {
+    cwd: rootDir,
+    shell: false,
+    stdio: 'inherit',
+    windowsHide: true,
+  }).then(() => undefined)
 
 main().catch((error) => {
   console.error(error)

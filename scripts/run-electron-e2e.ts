@@ -1,5 +1,5 @@
-import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { execa } from 'execa'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -14,14 +14,22 @@ for (const key of Object.keys(env)) {
   }
 }
 
-const result = spawnSync(
-  process.execPath,
-  [playwrightCli, 'test', '-c', 'playwright.electron.config.ts'],
-  {
-    cwd: repoRoot,
-    env,
-    stdio: 'inherit',
-  },
-)
+const run = async (): Promise<void> => {
+  const result = await execa(
+    process.execPath,
+    [playwrightCli, 'test', '-c', 'playwright.electron.config.ts'],
+    {
+      cwd: repoRoot,
+      env,
+      stdio: 'inherit',
+      reject: false,
+    },
+  )
 
-process.exit(result.status ?? 1)
+  process.exit(result.exitCode ?? 1)
+}
+
+run().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

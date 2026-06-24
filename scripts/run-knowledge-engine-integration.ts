@@ -1,36 +1,21 @@
-import { spawn } from 'node:child_process'
+import { execa } from 'execa'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const createPnpmCommand = (args) =>
-  process.platform === 'win32'
-    ? {
-        args: ['/d', '/s', '/c', 'pnpm', ...args],
-        command: process.env.ComSpec ?? 'cmd.exe',
-      }
-    : {
-        args,
-        command: 'pnpm',
-      }
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-const run = (args, options = {}) =>
-  new Promise((resolve, reject) => {
-    const command = createPnpmCommand(args)
-    const child = spawn(command.command, command.args, {
-      env: options.env ?? process.env,
-      shell: false,
-      stdio: 'inherit',
-      windowsHide: true,
-    })
+type RunOptions = {
+  env?: NodeJS.ProcessEnv
+}
 
-    child.once('error', reject)
-    child.once('exit', (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(`pnpm ${args.join(' ')} exited with ${code}`))
-    })
-  })
+const run = (args: string[], options: RunOptions = {}): Promise<void> =>
+  execa('pnpm', args, {
+    cwd: repoRoot,
+    env: options.env,
+    shell: false,
+    stdio: 'inherit',
+    windowsHide: true,
+  }).then(() => undefined)
 
 await run(['knowledge:proto:gen'])
 await run(['knowledge:build'])
