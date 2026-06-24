@@ -15,7 +15,7 @@ import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
 } from '@electron/services/knowledgeEngine/types.js'
-import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
+import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
@@ -26,22 +26,16 @@ type KnowledgeEngineServiceOptions = {
 }
 
 export class KnowledgeEngineService {
-  private readonly sidecars: WorkspaceSidecarManager
+  private sidecars: WorkspaceSidecarManager | null = null
 
-  constructor(private readonly options: KnowledgeEngineServiceOptions) {
-    this.sidecars = new WorkspaceSidecarManager({
-      appDataDir: this.options.app.getPath('userData'),
-      logger: this.options.logger,
-      resolveBinary: () => resolveKnowledgeEngineBinary(this.options.app),
-    })
-  }
+  constructor(private readonly options: KnowledgeEngineServiceOptions) {}
 
   get commandHandlers(): NativeCommandHandlers {
     return {
       'knowledge.engine.status': () => this.getStatus(),
       'knowledge.engine.initialize': () => this.initialize(),
       'knowledge.engine.stop': () => this.stop(),
-      'knowledge.engine.workspaces': () => this.sidecars.listActive(),
+      'knowledge.engine.workspaces': async () => (await this.getSidecars()).listActive(),
     }
   }
 
@@ -55,7 +49,7 @@ export class KnowledgeEngineService {
       }
     }
 
-    const runtimes = this.sidecars.listActive()
+    const runtimes = this.sidecars?.listActive() ?? []
     const activeRuntime = runtimes.find((runtime) => runtime.state === 'ready') ?? runtimes[0]
     const state: KnowledgeEngineStatus['state'] = activeRuntime
       ? activeRuntime.state === 'opening'
@@ -91,59 +85,59 @@ export class KnowledgeEngineService {
   }
 
   async openWorkspace(workspaceId: string, indexPath: string): Promise<void> {
-    await this.sidecars.open(workspaceId, indexPath)
+    await (await this.getSidecars()).open(workspaceId, indexPath)
   }
 
   async closeWorkspace(workspaceId: string): Promise<void> {
-    await this.sidecars.close(workspaceId)
+    await (await this.getSidecars()).close(workspaceId)
   }
 
   async hasDocuments(workspaceId: string): Promise<boolean> {
-    return this.sidecars.hasDocuments(workspaceId)
+    return (await this.getSidecars()).hasDocuments(workspaceId)
   }
 
   async rebuildIndex(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
-    await this.sidecars.rebuildIndex(workspaceId, documents)
+    await (await this.getSidecars()).rebuildIndex(workspaceId, documents)
   }
 
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
-    await this.sidecars.upsertDocument(workspaceId, document)
+    await (await this.getSidecars()).upsertDocument(workspaceId, document)
   }
 
   async removeDocument(workspaceId: string, path: string): Promise<void> {
-    await this.sidecars.removeDocument(workspaceId, path)
+    await (await this.getSidecars()).removeDocument(workspaceId, path)
   }
 
   async removePathPrefix(workspaceId: string, prefix: string): Promise<void> {
-    await this.sidecars.removePathPrefix(workspaceId, prefix)
+    await (await this.getSidecars()).removePathPrefix(workspaceId, prefix)
   }
 
   async openMarkdownDocument(
     workspaceId: string,
     document: KnowledgeOpenDocumentInput,
   ): Promise<KnowledgeSyncResponse> {
-    return this.sidecars.openMarkdownDocument(workspaceId, document)
+    return (await this.getSidecars()).openMarkdownDocument(workspaceId, document)
   }
 
   async changeMarkdownDocument(
     workspaceId: string,
     change: KnowledgeDocumentChangeInput,
   ): Promise<KnowledgeSyncResponse> {
-    return this.sidecars.changeMarkdownDocument(workspaceId, change)
+    return (await this.getSidecars()).changeMarkdownDocument(workspaceId, change)
   }
 
   async resyncMarkdownDocument(
     workspaceId: string,
     document: KnowledgeResyncDocumentInput,
   ): Promise<KnowledgeSyncResponse> {
-    return this.sidecars.resyncMarkdownDocument(workspaceId, document)
+    return (await this.getSidecars()).resyncMarkdownDocument(workspaceId, document)
   }
 
   async closeMarkdownDocument(
     workspaceId: string,
     document: KnowledgeCloseDocumentInput,
   ): Promise<KnowledgeSyncResponse> {
-    return this.sidecars.closeMarkdownDocument(workspaceId, document)
+    return (await this.getSidecars()).closeMarkdownDocument(workspaceId, document)
   }
 
   async getMarkdownDocumentSymbols(
@@ -151,7 +145,11 @@ export class KnowledgeEngineService {
     documentId: string,
     documentVersion: number | string,
   ): Promise<KnowledgeMarkdownDocumentSymbol[]> {
-    return this.sidecars.getMarkdownDocumentSymbols(workspaceId, documentId, documentVersion)
+    return (await this.getSidecars()).getMarkdownDocumentSymbols(
+      workspaceId,
+      documentId,
+      documentVersion,
+    )
   }
 
   async getMarkdownLinks(
@@ -159,19 +157,32 @@ export class KnowledgeEngineService {
     documentId: string,
     documentVersion: number | string,
   ): Promise<KnowledgeMarkdownLink[]> {
-    return this.sidecars.getMarkdownLinks(workspaceId, documentId, documentVersion)
+    return (await this.getSidecars()).getMarkdownLinks(workspaceId, documentId, documentVersion)
   }
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
-    return this.sidecars.search(workspaceId, query, limit)
+    return (await this.getSidecars()).search(workspaceId, query, limit)
   }
 
   stop(): KnowledgeEngineStatus {
-    this.sidecars.clear()
+    this.sidecars?.clear()
     return this.getStatus()
   }
 
   dispose() {
     this.stop()
+  }
+
+  private async getSidecars(): Promise<WorkspaceSidecarManager> {
+    if (this.sidecars) return this.sidecars
+
+    const { WorkspaceSidecarManager } =
+      await import('@electron/services/knowledgeEngine/workspaceSidecarManager.js')
+    this.sidecars = new WorkspaceSidecarManager({
+      appDataDir: this.options.app.getPath('userData'),
+      logger: this.options.logger,
+      resolveBinary: () => resolveKnowledgeEngineBinary(this.options.app),
+    })
+    return this.sidecars
   }
 }

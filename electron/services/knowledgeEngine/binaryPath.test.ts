@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { App } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -19,9 +18,10 @@ vi.mock('node:fs', () => {
 })
 
 const existsSyncMock = vi.mocked(existsSync)
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+const projectRoot = path.resolve(process.cwd())
 const processWithResources = process as typeof process & { resourcesPath?: string }
 const originalKnowledgeEnginePath = process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH
+const originalProjectRoot = process.env.MARKLAB_PROJECT_ROOT
 const originalResourcesPath = processWithResources.resourcesPath
 
 describe('knowledge engine binary path helpers', () => {
@@ -32,6 +32,12 @@ describe('knowledge engine binary path helpers', () => {
       delete process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH
     } else {
       process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH = originalKnowledgeEnginePath
+    }
+
+    if (originalProjectRoot === undefined) {
+      delete process.env.MARKLAB_PROJECT_ROOT
+    } else {
+      process.env.MARKLAB_PROJECT_ROOT = originalProjectRoot
     }
 
     if (originalResourcesPath === undefined) {
@@ -109,6 +115,46 @@ describe('knowledge engine binary path helpers', () => {
     })
   })
 
+  it('uses MARKLAB_PROJECT_ROOT before app path candidates in dev', () => {
+    const projectRootOverride = path.join(projectRoot, 'custom-root')
+    const binaryPath = path.join(
+      projectRootOverride,
+      'resources',
+      'engine',
+      getKnowledgeEnginePlatformDir(),
+      getKnowledgeEngineBinaryName(),
+    )
+    process.env.MARKLAB_PROJECT_ROOT = projectRootOverride
+    mockExistingPaths(binaryPath)
+
+    expect(
+      resolveKnowledgeEngineBinary(createApp(false, path.join(projectRoot, 'dist-electron'))),
+    ).toMatchObject({
+      binaryPath,
+      exists: true,
+      source: 'dev-resource',
+    })
+  })
+
+  it('falls back to cwd resources when app path points at dist-electron', () => {
+    const binaryPath = path.join(
+      projectRoot,
+      'resources',
+      'engine',
+      getKnowledgeEnginePlatformDir(),
+      getKnowledgeEngineBinaryName(),
+    )
+    mockExistingPaths(binaryPath)
+
+    expect(
+      resolveKnowledgeEngineBinary(createApp(false, path.join(projectRoot, 'dist-electron'))),
+    ).toMatchObject({
+      binaryPath,
+      exists: true,
+      source: 'dev-resource',
+    })
+  })
+
   it('falls back to the debug cargo target before the release cargo target', () => {
     const binaryName = getKnowledgeEngineBinaryName()
     const debugTargetPath = path.join(projectRoot, 'target', 'debug', binaryName)
@@ -135,7 +181,11 @@ describe('knowledge engine binary path helpers', () => {
   })
 })
 
-const createApp = (isPackaged = false): App => ({ isPackaged }) as App
+const createApp = (isPackaged = false, appPath = projectRoot): App =>
+  ({
+    getAppPath: () => appPath,
+    isPackaged,
+  }) as App
 
 const mockExistingPaths = (...paths: string[]) => {
   const normalizedPaths = new Set(paths.map((pathValue) => path.normalize(pathValue)))

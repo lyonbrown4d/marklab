@@ -1,13 +1,19 @@
 import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
-import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { constants as zlibConstants } from 'node:zlib'
 import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import { compression, defineAlgorithm } from 'vite-plugin-compression2'
 import { visualizer } from 'rollup-plugin-visualizer'
+// eslint-disable-next-line no-restricted-imports -- Vite config helpers live at repository root before app aliases are available.
+import {
+  electronMainExternal,
+  electronMainManualChunks,
+  electronMainRequireBanner,
+} from './vite.electron'
 
 const isNodeModule = (id: string) => id.includes('/node_modules/')
 
@@ -21,13 +27,6 @@ const alias = {
   '@': path.resolve(__dirname, 'src'),
   '@electron': path.resolve(__dirname, 'electron'),
 }
-
-const electronMainRequireBanner = [
-  "import { createRequire as __marklabCreateRequire } from 'node:module';",
-  'const require = __marklabCreateRequire(import.meta.url);',
-].join('\n')
-
-const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch']
 
 const devOptimizeDepsInclude = [
   'react',
@@ -57,6 +56,7 @@ const electronMainEntry = {
   ),
 }
 const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
+const distElectronDir = path.resolve(__dirname, 'dist-electron')
 const DEFAULT_DEV_SERVER_PORT = 5173
 
 const resolveKatexFontsDir = (): string | null => {
@@ -82,6 +82,13 @@ const copyKatexFontsPlugin = () => ({
     if (!source) return
     mkdirSync(distKatexFontsDir, { recursive: true })
     cpSync(source, distKatexFontsDir, { recursive: true })
+  },
+})
+
+const cleanElectronDistPlugin = () => ({
+  name: 'clean-electron-dist',
+  buildStart() {
+    rmSync(distElectronDir, { force: true, recursive: true })
   },
 })
 
@@ -124,6 +131,7 @@ export default defineConfig(({ command, mode }) => {
       include: devOptimizeDepsInclude,
     },
     plugins: [
+      isBuild && isElectron && cleanElectronDistPlugin(),
       react(),
       shouldUseReactCompiler &&
         babel({
@@ -143,7 +151,9 @@ export default defineConfig(({ command, mode }) => {
                   external: electronMainExternal,
                   output: {
                     entryFileNames: '[name].js',
+                    chunkFileNames: 'chunks/[name]-[hash].js',
                     banner: electronMainRequireBanner,
+                    manualChunks: electronMainManualChunks,
                   },
                 },
               },
