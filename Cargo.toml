@@ -23,7 +23,7 @@ figment2 = { version = "0.11.5", default-features = false, features = ["env"] }
 fluxdi = { version = "1.2.2", default-features = false, features = ["debug", "thread-safe", "async-factory", "lifecycle", "tracing"] }
 prost = "0.14"
 protoc-bin-vendored = "3"
-pulldown-cmark = "0.13"
+pulldown-cmark = "0.13.4"
 ropey = "1.6"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
@@ -36,7 +36,7 @@ tonic-prost = "0.14"
 tonic-prost-build = "0.14"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-tree-sitter = "0.26"
-tree-sitter-md = "0.5"
+tree-sitter = "0.26.9"
+tree-sitter-md = "0.5.3"
 unicode-normalization = "0.1"
 unicode-segmentation = "1"
