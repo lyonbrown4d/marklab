@@ -1,4 +1,5 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
@@ -12,6 +13,7 @@ type WorkspaceBinding = {
 
 type WindowWorkspaceRegistryOptions = {
   onSessionDisposed?: (sessionKey: string) => void
+  knowledgeEngineService?: KnowledgeEngineService
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
 }
 
@@ -49,6 +51,7 @@ export class WindowWorkspaceRegistry {
       this.shell,
       this.logger.child(`window-${window.id}`),
       this.options.workspaceSearchIndexFactory,
+      this.options.knowledgeEngineService,
     )
     const disposeBufferStatus = workspace.onBufferStatus((status) => {
       if (!window.isDestroyed()) window.webContents.send('fs-buffer-status', status)

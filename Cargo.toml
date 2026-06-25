@@ -3,6 +3,7 @@ members = [
   "knowledge-engine/bins/knowledge-engine",
   "knowledge-engine/crates/engine-core",
   "knowledge-engine/crates/grpc-api",
+  "knowledge-engine/crates/workspace-vfs",
 ]
 resolver = "2"
 
@@ -21,6 +22,9 @@ strip = "symbols"
 clap = { version = "4.5", features = ["derive"] }
 figment2 = { version = "0.11.5", default-features = false, features = ["env"] }
 fluxdi = { version = "1.2.2", default-features = false, features = ["debug", "thread-safe", "async-factory", "lifecycle", "tracing"] }
+camino = "1"
+ignore = "0.4"
+path-clean = "1"
 prost = "0.14"
 protoc-bin-vendored = "3"
 pulldown-cmark = "0.13.4"
@@ -36,6 +40,7 @@ tonic-prost = "0.14"
 tonic-prost-build = "0.14"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+thiserror = "2"
 tree-sitter = "0.26.9"
 tree-sitter-md = "0.5.3"
 unicode-normalization = "0.1"

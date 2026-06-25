@@ -80,6 +80,45 @@ pub struct WorkspaceEngine {
   markdown_documents: MarkdownDocumentStore,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceStatusSnapshot {
+  pub health: WorkspaceHealthSnapshot,
+  pub index: WorkspaceIndexStatus,
+  pub storage: WorkspaceStorageStats,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceHealthSnapshot {
+  pub ok: bool,
+  pub state: String,
+  pub metadata_documents: usize,
+  pub searchable_documents: usize,
+  pub pending_outbox_events: usize,
+  pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceIndexStatus {
+  pub search_index: String,
+  pub ready: bool,
+  pub metadata_documents: usize,
+  pub searchable_documents: usize,
+  pub pending_outbox_events: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceStorageStats {
+  pub metadata_store: String,
+  pub search_index: String,
+  pub metadata_bytes: u64,
+  pub search_index_bytes: u64,
+  pub total_bytes: u64,
+  pub metadata_documents: usize,
+  pub pending_outbox_events: usize,
+  pub blob_store: bool,
+  pub blob_bytes: u64,
+}
+
 impl WorkspaceEngine {
   pub fn open(index_path: impl Into<PathBuf>) -> Result<Self, String> {
     Ok(Self {
@@ -190,6 +229,55 @@ impl WorkspaceEngine {
       .into_iter()
       .map(markdown_link_from)
       .collect()
+  }
+
+  pub fn workspace_status(&self) -> Result<WorkspaceStatusSnapshot, String> {
+    let status = self.workspace.status()?;
+    let mut warnings = Vec::new();
+    if status.pending_outbox_events > 0 {
+      warnings.push(format!(
+        "{} pending search index outbox event(s)",
+        status.pending_outbox_events
+      ));
+    }
+    if status.searchable_documents < status.metadata_documents {
+      warnings.push("search index has fewer documents than metadata store".to_string());
+    }
+    let ready = status.pending_outbox_events == 0;
+
+    Ok(WorkspaceStatusSnapshot {
+      health: WorkspaceHealthSnapshot {
+        ok: warnings.is_empty(),
+        state: if warnings.is_empty() {
+          "ready"
+        } else {
+          "degraded"
+        }
+        .to_string(),
+        metadata_documents: status.metadata_documents,
+        searchable_documents: status.searchable_documents,
+        pending_outbox_events: status.pending_outbox_events,
+        warnings,
+      },
+      index: WorkspaceIndexStatus {
+        search_index: "tantivy".to_string(),
+        ready,
+        metadata_documents: status.metadata_documents,
+        searchable_documents: status.searchable_documents,
+        pending_outbox_events: status.pending_outbox_events,
+      },
+      storage: WorkspaceStorageStats {
+        metadata_store: "redb".to_string(),
+        search_index: "tantivy".to_string(),
+        metadata_bytes: status.metadata_bytes,
+        search_index_bytes: status.search_index_bytes,
+        total_bytes: status.total_bytes,
+        metadata_documents: status.metadata_documents,
+        pending_outbox_events: status.pending_outbox_events,
+        blob_store: false,
+        blob_bytes: 0,
+      },
+    })
   }
 }
 

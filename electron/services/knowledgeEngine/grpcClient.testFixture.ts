@@ -19,6 +19,12 @@ import type {
   GetDocumentSymbolsResponse,
   GetLinksRequest,
   GetLinksResponse,
+  GetWorkspaceFileSnapshotRequest,
+  GetWorkspaceFileSnapshotResponse,
+  GetWorkspacePathMetadataRequest,
+  GetWorkspacePathMetadataResponse,
+  ListWorkspaceEntriesRequest,
+  ListWorkspaceEntriesResponse,
   OpenWorkspaceRequest,
   OpenWorkspaceResponse,
   RebuildIndexRequest,
@@ -27,6 +33,8 @@ import type {
   RemoveDocumentResponse,
   RemovePathPrefixRequest,
   RemovePathPrefixResponse,
+  ReadWorkspaceFileRequest,
+  ReadWorkspaceFileResponse,
   SearchRequest,
   SearchResponse,
   ShutdownRequest,
@@ -47,10 +55,14 @@ type CallKey =
   | 'getCapabilities'
   | 'getDocumentSymbols'
   | 'getLinks'
+  | 'getPathMetadata'
+  | 'getSnapshot'
   | 'hasDocuments'
+  | 'listEntries'
   | 'openWorkspace'
   | 'rebuildIndex'
   | 'removeDocument'
+  | 'readFile'
   | 'removePathPrefix'
   | 'search'
   | 'shutdown'
@@ -65,6 +77,7 @@ export type ClientFixture = {
     markdown: ReturnType<typeof vi.fn>
     searchClient: ReturnType<typeof vi.fn>
     workspace: ReturnType<typeof vi.fn>
+    workspaceVfs: ReturnType<typeof vi.fn>
   }
   createClient: () => KnowledgeEngineGrpcClient
 }
@@ -77,6 +90,7 @@ export const createClientFixture = (): ClientFixture => {
     markdown: vi.fn(),
     searchClient: vi.fn(),
     workspace: vi.fn(),
+    workspaceVfs: vi.fn(),
   }
 
   return {
@@ -158,6 +172,35 @@ export const createClientFixture = (): ClientFixture => {
               })
               return stream
             },
+          },
+          workspaceVfs: {
+            close: close.workspaceVfs,
+            getPathMetadata: unary<
+              GetWorkspacePathMetadataRequest,
+              GetWorkspacePathMetadataResponse
+            >(calls, 'getPathMetadata', {
+              absolutePath: 'D:/workspace/alpha.md',
+              kind: 1,
+              modifiedMs: 100,
+              path: 'alpha.md',
+              readonly: false,
+              sizeBytes: '7',
+            }),
+            getSnapshot: unary<GetWorkspaceFileSnapshotRequest, GetWorkspaceFileSnapshotResponse>(
+              calls,
+              'getSnapshot',
+              { entries: [{ kind: 1, name: 'alpha.md', path: 'alpha.md' }] },
+            ),
+            listEntries: unary<ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse>(
+              calls,
+              'listEntries',
+              { entries: [{ kind: 1, name: 'alpha.md', path: 'alpha.md' }] },
+            ),
+            readFile: unary<ReadWorkspaceFileRequest, ReadWorkspaceFileResponse>(
+              calls,
+              'readFile',
+              { content: '# Alpha' },
+            ),
           },
           workspace: {
             close: close.workspace,

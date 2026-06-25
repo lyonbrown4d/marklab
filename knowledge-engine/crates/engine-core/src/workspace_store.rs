@@ -14,7 +14,8 @@ use crate::metadata_store::{
   remove_path_prefix_in_tx, upsert_document_in_tx, DocumentMetadata,
 };
 use crate::outbox::{
-  append_in_tx, initialize_outbox_tables, mark_applied_in_tx, OutboxEvent, OutboxEventKind,
+  append_in_tx, initialize_outbox_tables, mark_applied_in_tx, pending_outbox_count_in_db,
+  OutboxEvent, OutboxEventKind,
 };
 use crate::search_text::search_documents;
 use crate::types::{SearchDocument, SearchQuery, SearchResultSet};
@@ -25,6 +26,18 @@ const MAX_MANUAL_SCAN_DOCS: usize = 50_000;
 pub(crate) struct WorkspaceStore {
   database: Database,
   search: TantivyWorkspaceIndex,
+  index_path: PathBuf,
+  metadata_path: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WorkspaceStoreStatus {
+  pub metadata_documents: usize,
+  pub searchable_documents: usize,
+  pub pending_outbox_events: usize,
+  pub metadata_bytes: u64,
+  pub search_index_bytes: u64,
+  pub total_bytes: u64,
 }
 
 impl WorkspaceStore {
@@ -37,7 +50,12 @@ impl WorkspaceStore {
     initialize_outbox_tables(&database)?;
     let search = TantivyWorkspaceIndex::open(index_path.join("tantivy"))?;
 
-    Ok(Self { database, search })
+    Ok(Self {
+      database,
+      search,
+      index_path,
+      metadata_path,
+    })
   }
 
   pub(crate) fn document_count(&self) -> Result<usize, String> {
@@ -126,6 +144,23 @@ impl WorkspaceStore {
     self.search.search(query, &metadata)
   }
 
+  pub(crate) fn status(&self) -> Result<WorkspaceStoreStatus, String> {
+    let metadata_documents = list_documents_in_db(&self.database)?.len();
+    let searchable_documents = self.search.document_count()?;
+    let pending_outbox_events = pending_outbox_count_in_db(&self.database)?;
+    let metadata_bytes = file_size(&self.metadata_path)?;
+    let search_index_bytes = path_size(self.search.index_path())?;
+
+    Ok(WorkspaceStoreStatus {
+      metadata_documents,
+      searchable_documents,
+      pending_outbox_events,
+      metadata_bytes,
+      search_index_bytes,
+      total_bytes: path_size(&self.index_path)?,
+    })
+  }
+
   fn mark_applied(&self, event: OutboxEvent) -> Result<(), String> {
     let write = self.database.begin_write().map_err(to_message)?;
     let marked = mark_applied_in_tx(&write, event.id, current_time_ms())?;
@@ -150,6 +185,7 @@ struct TantivyWorkspaceIndex {
   index: Index,
   reader: IndexReader,
   fields: SearchFields,
+  index_path: PathBuf,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -176,6 +212,7 @@ impl TantivyWorkspaceIndex {
       index,
       reader,
       fields,
+      index_path: index_path.to_path_buf(),
     })
   }
 
@@ -255,6 +292,14 @@ impl TantivyWorkspaceIndex {
     }
 
     Ok(search_documents(documents.iter(), query))
+  }
+
+  fn document_count(&self) -> Result<usize, String> {
+    Ok(self.all_documents()?.len())
+  }
+
+  fn index_path(&self) -> &Path {
+    &self.index_path
   }
 
   fn all_documents(&self) -> Result<Vec<SearchDocument>, String> {
@@ -340,6 +385,34 @@ fn current_time_ms() -> u64 {
     .duration_since(UNIX_EPOCH)
     .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
     .unwrap_or_default()
+}
+
+fn file_size(path: &Path) -> Result<u64, String> {
+  match fs::metadata(path) {
+    Ok(metadata) => Ok(metadata.len()),
+    Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(0),
+    Err(error) => Err(to_message(error)),
+  }
+}
+
+fn path_size(path: &Path) -> Result<u64, String> {
+  let metadata = match fs::metadata(path) {
+    Ok(metadata) => metadata,
+    Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+    Err(error) => return Err(to_message(error)),
+  };
+
+  if metadata.is_file() {
+    return Ok(metadata.len());
+  }
+
+  let mut bytes = 0_u64;
+  for entry in fs::read_dir(path).map_err(to_message)? {
+    let entry = entry.map_err(to_message)?;
+    bytes = bytes.saturating_add(path_size(&entry.path())?);
+  }
+
+  Ok(bytes)
 }
 
 fn to_message(error: impl std::fmt::Display) -> String {

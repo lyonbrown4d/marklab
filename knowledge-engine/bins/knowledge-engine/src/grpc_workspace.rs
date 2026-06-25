@@ -1,10 +1,11 @@
-use marklab_knowledge_engine_core::{SearchDocument, WorkspaceEngine};
+use marklab_knowledge_engine_core::{SearchDocument, WorkspaceEngine, WorkspaceStatusSnapshot};
 use marklab_knowledge_grpc_api::v1::{
   workspace_service_server::WorkspaceService, CloseWorkspaceRequest, CloseWorkspaceResponse,
-  HasDocumentsRequest, HasDocumentsResponse, OpenWorkspaceRequest, OpenWorkspaceResponse,
-  RebuildIndexRequest, RebuildIndexResponse, RemoveDocumentRequest, RemoveDocumentResponse,
-  RemovePathPrefixRequest, RemovePathPrefixResponse, UpsertDocumentRequest, UpsertDocumentResponse,
-  WorkspaceDocument,
+  GetWorkspaceStatusRequest, GetWorkspaceStatusResponse, HasDocumentsRequest, HasDocumentsResponse,
+  OpenWorkspaceRequest, OpenWorkspaceResponse, RebuildIndexRequest, RebuildIndexResponse,
+  RemoveDocumentRequest, RemoveDocumentResponse, RemovePathPrefixRequest, RemovePathPrefixResponse,
+  UpsertDocumentRequest, UpsertDocumentResponse, WorkspaceDocument, WorkspaceHealthStatus,
+  WorkspaceIndexStatus, WorkspaceStorageStats,
 };
 use tonic::{Request, Response, Status};
 
@@ -35,6 +36,18 @@ impl WorkspaceService for KnowledgeGrpcService {
     _request: Request<CloseWorkspaceRequest>,
   ) -> Result<Response<CloseWorkspaceResponse>, Status> {
     Ok(Response::new(CloseWorkspaceResponse { ok: true }))
+  }
+
+  async fn get_workspace_status(
+    &self,
+    _request: Request<GetWorkspaceStatusRequest>,
+  ) -> Result<Response<GetWorkspaceStatusResponse>, Status> {
+    let status = self
+      .lock_engine()?
+      .workspace_status()
+      .map_err(|error| Status::internal(format!("workspace status failed: {error}")))?;
+
+    Ok(Response::new(workspace_status_to_proto(status)))
   }
 
   async fn has_documents(
@@ -112,6 +125,37 @@ impl WorkspaceService for KnowledgeGrpcService {
     Ok(Response::new(RemovePathPrefixResponse {
       documents: saturating_u64(count),
     }))
+  }
+}
+
+fn workspace_status_to_proto(status: WorkspaceStatusSnapshot) -> GetWorkspaceStatusResponse {
+  GetWorkspaceStatusResponse {
+    health: Some(WorkspaceHealthStatus {
+      ok: status.health.ok,
+      state: status.health.state,
+      metadata_documents: saturating_u64(status.health.metadata_documents),
+      searchable_documents: saturating_u64(status.health.searchable_documents),
+      pending_outbox_events: saturating_u64(status.health.pending_outbox_events),
+      warnings: status.health.warnings,
+    }),
+    index: Some(WorkspaceIndexStatus {
+      search_index: status.index.search_index,
+      ready: status.index.ready,
+      metadata_documents: saturating_u64(status.index.metadata_documents),
+      searchable_documents: saturating_u64(status.index.searchable_documents),
+      pending_outbox_events: saturating_u64(status.index.pending_outbox_events),
+    }),
+    storage: Some(WorkspaceStorageStats {
+      metadata_store: status.storage.metadata_store,
+      search_index: status.storage.search_index,
+      metadata_bytes: status.storage.metadata_bytes,
+      search_index_bytes: status.storage.search_index_bytes,
+      total_bytes: status.storage.total_bytes,
+      metadata_documents: saturating_u64(status.storage.metadata_documents),
+      pending_outbox_events: saturating_u64(status.storage.pending_outbox_events),
+      blob_store: status.storage.blob_store,
+      blob_bytes: status.storage.blob_bytes,
+    }),
   }
 }
 

@@ -10,13 +10,19 @@ import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
   KnowledgeSyncResponse,
+  KnowledgeWorkspaceStatus,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 import {
   redactWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
 import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowledgeEngine/types.js'
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type {
+  FsEntry,
+  FsPathMetadata,
+  FsSearchResult,
+  FsSnapshot,
+} from '@electron/services/workspace/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
@@ -43,7 +49,11 @@ export type WorkspaceSidecarClient = {
     documentVersion: number | string,
   ) => Promise<KnowledgeMarkdownLink[]>
   getCapabilities: (workspaceInstanceId: string) => Promise<unknown>
+  getWorkspaceStatus: () => Promise<KnowledgeWorkspaceStatus>
+  getWorkspaceFileSnapshot: (root: FsSnapshot['root']) => Promise<FsSnapshot>
+  getWorkspacePathMetadata: (path: string) => Promise<FsPathMetadata>
   hasDocuments: () => Promise<boolean>
+  listWorkspaceEntries: () => Promise<FsEntry[]>
   openMarkdownDocument: (
     workspaceInstanceId: string,
     document: KnowledgeOpenDocumentInput,
@@ -56,6 +66,7 @@ export type WorkspaceSidecarClient = {
     workspaceInstanceId: string,
     document: KnowledgeResyncDocumentInput,
   ) => Promise<KnowledgeSyncResponse>
+  readWorkspaceFile: (path: string) => Promise<string>
   search: (query: string, limit: number) => Promise<FsSearchResult[]>
   searchWithOptions: (
     query: string,

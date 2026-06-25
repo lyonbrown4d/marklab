@@ -14,6 +14,7 @@ pub use types::SearchDocument;
 pub use types::{SearchOrder, SearchQuery, SearchResultSet};
 pub use workspace_engine::{
   WorkspaceDocumentChange, WorkspaceDocumentEdit, WorkspaceDocumentPosition,
-  WorkspaceDocumentRange, WorkspaceEngine, WorkspaceMarkdownLink, WorkspaceMarkdownSymbol,
-  WorkspaceSearchHighlight, WorkspaceSearchResult,
+  WorkspaceDocumentRange, WorkspaceEngine, WorkspaceHealthSnapshot, WorkspaceIndexStatus,
+  WorkspaceMarkdownLink, WorkspaceMarkdownSymbol, WorkspaceSearchHighlight, WorkspaceSearchResult,
+  WorkspaceStatusSnapshot, WorkspaceStorageStats,
 };

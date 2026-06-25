@@ -2,6 +2,7 @@ import type { ClientOptions } from '@grpc/grpc-js'
 import type {
   ApplyDocumentChange,
   CloseDocument,
+  GetWorkspaceStatusResponse,
   MarkdownDocumentSymbol,
   MarkdownLink,
   OpenDocument,
@@ -9,6 +10,7 @@ import type {
   SyncResponse,
   TextEdit,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
+import type { FsEntry, FsPathMetadata, FsSnapshot } from '@electron/services/workspace/types.js'
 import type { KnowledgeEngineGrpcClients } from '@electron/services/knowledgeEngine/grpcWire.js'
 
 export type KnowledgeDocumentVersion = number | string
@@ -31,6 +33,10 @@ export type KnowledgeMarkdownDocumentSymbol = MarkdownDocumentSymbol
 export type KnowledgeMarkdownLink = MarkdownLink
 export type KnowledgeSyncResponse = SyncResponse
 export type KnowledgeTextEdit = TextEdit
+export type KnowledgeWorkspaceStatus = GetWorkspaceStatusResponse
+export type KnowledgeWorkspaceFileEntry = FsEntry
+export type KnowledgeWorkspaceFileSnapshot = FsSnapshot
+export type KnowledgeWorkspacePathMetadata = FsPathMetadata
 
 export type KnowledgeEngineGrpcClientOptions = {
   address: string

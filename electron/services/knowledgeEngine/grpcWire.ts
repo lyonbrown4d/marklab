@@ -21,8 +21,16 @@ import {
   GetDocumentSymbolsResponse,
   GetLinksRequest,
   GetLinksResponse,
+  GetWorkspaceStatusRequest,
+  GetWorkspaceStatusResponse,
+  GetWorkspaceFileSnapshotRequest,
+  GetWorkspaceFileSnapshotResponse,
+  GetWorkspacePathMetadataRequest,
+  GetWorkspacePathMetadataResponse,
   HasDocumentsRequest,
   HasDocumentsResponse,
+  ListWorkspaceEntriesRequest,
+  ListWorkspaceEntriesResponse,
   OpenWorkspaceRequest,
   OpenWorkspaceResponse,
   RebuildIndexRequest,
@@ -31,6 +39,8 @@ import {
   RemoveDocumentResponse,
   RemovePathPrefixRequest,
   RemovePathPrefixResponse,
+  ReadWorkspaceFileRequest,
+  ReadWorkspaceFileResponse,
   SearchRequest,
   SearchResponse,
   ShutdownRequest,
@@ -75,8 +85,16 @@ export type MarkdownClient = Client & {
   getLinks: UnaryCall<GetLinksRequest, GetLinksResponse>
 }
 
+export type WorkspaceVfsClient = Client & {
+  getSnapshot: UnaryCall<GetWorkspaceFileSnapshotRequest, GetWorkspaceFileSnapshotResponse>
+  getPathMetadata: UnaryCall<GetWorkspacePathMetadataRequest, GetWorkspacePathMetadataResponse>
+  listEntries: UnaryCall<ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse>
+  readFile: UnaryCall<ReadWorkspaceFileRequest, ReadWorkspaceFileResponse>
+}
+
 export type WorkspaceClient = Client & {
   closeWorkspace: UnaryCall<CloseWorkspaceRequest, CloseWorkspaceResponse>
+  getWorkspaceStatus: UnaryCall<GetWorkspaceStatusRequest, GetWorkspaceStatusResponse>
   hasDocuments: UnaryCall<HasDocumentsRequest, HasDocumentsResponse>
   openWorkspace: UnaryCall<OpenWorkspaceRequest, OpenWorkspaceResponse>
   rebuildIndex: UnaryCall<RebuildIndexRequest, RebuildIndexResponse>
@@ -95,6 +113,7 @@ export type KnowledgeEngineGrpcClients = {
   markdown: MarkdownClient
   searchClient: SearchClient
   workspace: WorkspaceClient
+  workspaceVfs: WorkspaceVfsClient
 }
 
 const serialize =
@@ -207,12 +226,47 @@ export const MarkdownClientConstructor = makeGenericClientConstructor(
   options?: Partial<ClientOptions>,
 ) => MarkdownClient
 
+export const WorkspaceVfsClientConstructor = makeGenericClientConstructor(
+  {
+    getSnapshot: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/GetSnapshot',
+      GetWorkspaceFileSnapshotRequest,
+      GetWorkspaceFileSnapshotResponse,
+    ),
+    getPathMetadata: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/GetPathMetadata',
+      GetWorkspacePathMetadataRequest,
+      GetWorkspacePathMetadataResponse,
+    ),
+    listEntries: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/ListEntries',
+      ListWorkspaceEntriesRequest,
+      ListWorkspaceEntriesResponse,
+    ),
+    readFile: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/ReadFile',
+      ReadWorkspaceFileRequest,
+      ReadWorkspaceFileResponse,
+    ),
+  },
+  'knowledge.engine.v1.WorkspaceVfsService',
+) as unknown as new (
+  address: string,
+  credentials: ChannelCredentials,
+  options?: Partial<ClientOptions>,
+) => WorkspaceVfsClient
+
 export const WorkspaceClientConstructor = makeGenericClientConstructor(
   {
     closeWorkspace: unaryDefinition(
       '/knowledge.engine.v1.WorkspaceService/CloseWorkspace',
       CloseWorkspaceRequest,
       CloseWorkspaceResponse,
+    ),
+    getWorkspaceStatus: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceService/GetWorkspaceStatus',
+      GetWorkspaceStatusRequest,
+      GetWorkspaceStatusResponse,
     ),
     hasDocuments: unaryDefinition(
       '/knowledge.engine.v1.WorkspaceService/HasDocuments',

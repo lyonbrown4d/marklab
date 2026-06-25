@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { App, Shell } from 'electron'
 
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
   buildOutlineGraph,
@@ -40,8 +41,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     shell: Shell,
     logger: Logger = noopLogger,
     workspaceSearchIndexFactory: WorkspaceSearchIndexFactory = () => new WorkspaceSearchIndex(),
+    knowledgeEngineService?: KnowledgeEngineService,
   ) {
-    super(app, shell, logger)
+    super(app, shell, logger, knowledgeEngineService)
     this.workspaceSearchIndex = workspaceSearchIndexFactory()
   }
 

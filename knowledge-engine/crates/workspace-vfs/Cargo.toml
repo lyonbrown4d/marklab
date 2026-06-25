@@ -1,0 +1,13 @@
+[package]
+name = "marklab-knowledge-workspace-vfs"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+camino.workspace = true
+ignore.workspace = true
+path-clean.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+

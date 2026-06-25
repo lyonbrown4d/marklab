@@ -10,6 +10,7 @@ figment2.workspace = true
 fluxdi.workspace = true
 marklab-knowledge-engine-core = { path = "../../crates/engine-core" }
 marklab-knowledge-grpc-api = { path = "../../crates/grpc-api" }
+marklab-knowledge-workspace-vfs = { path = "../../crates/workspace-vfs" }
 serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["net"] }

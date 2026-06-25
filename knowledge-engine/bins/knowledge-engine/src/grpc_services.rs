@@ -11,6 +11,7 @@ use marklab_knowledge_grpc_api::v1::{
   GetCapabilitiesResponse, ShutdownRequest, ShutdownResponse, StorageCapabilities, SyncRequest,
   SyncResponse, TextEdit,
 };
+use marklab_knowledge_workspace_vfs::WorkspaceVfs;
 use tokio::sync::{mpsc, oneshot};
 use tokio_stream::{wrappers::ReceiverStream, Stream};
 use tonic::{Request, Response, Status};
@@ -25,6 +26,7 @@ const PROTOCOL_VERSION: &str = "0.1";
 #[derive(Clone)]
 pub(crate) struct KnowledgeGrpcService {
   engine: SharedEngine,
+  vfs: Arc<WorkspaceVfs>,
   workspace_instance_id: Arc<String>,
   shutdown: SharedShutdown,
 }
@@ -32,14 +34,20 @@ pub(crate) struct KnowledgeGrpcService {
 impl KnowledgeGrpcService {
   pub(crate) fn new(
     engine: WorkspaceEngine,
+    vfs: WorkspaceVfs,
     workspace_instance_id: String,
     shutdown: oneshot::Sender<()>,
   ) -> Self {
     Self {
       engine: Arc::new(Mutex::new(engine)),
+      vfs: Arc::new(vfs),
       workspace_instance_id: Arc::new(workspace_instance_id),
       shutdown: Arc::new(Mutex::new(Some(shutdown))),
     }
+  }
+
+  pub(crate) fn vfs(&self) -> Arc<WorkspaceVfs> {
+    self.vfs.clone()
   }
 
   pub(crate) fn lock_engine(&self) -> Result<MutexGuard<'_, WorkspaceEngine>, Status> {
@@ -115,6 +123,10 @@ impl ControlService for KnowledgeGrpcService {
         "document-session".to_string(),
         "markdown".to_string(),
         "search".to_string(),
+        "workspace".to_string(),
+        "workspace-status".to_string(),
+        "workspace-vfs".to_string(),
+        "workspace-vfs-readonly".to_string(),
       ],
       storage: Some(StorageCapabilities {
         metadata_store: "redb".to_string(),

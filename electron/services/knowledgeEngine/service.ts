@@ -10,6 +10,7 @@ import type {
   KnowledgeOpenDocumentInput,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
+  KnowledgeWorkspaceStatus,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 import type {
   KnowledgeEngineInitializeResult,
@@ -17,7 +18,12 @@ import type {
 } from '@electron/services/knowledgeEngine/types.js'
 import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
 import type { Logger } from '@electron/services/logger.js'
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type {
+  FsEntry,
+  FsPathMetadata,
+  FsSearchResult,
+  FsSnapshot,
+} from '@electron/services/workspace/types.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 
 type KnowledgeEngineServiceOptions = {
@@ -35,6 +41,8 @@ export class KnowledgeEngineService {
       'knowledge.engine.status': () => this.getStatus(),
       'knowledge.engine.initialize': () => this.initialize(),
       'knowledge.engine.stop': () => this.stop(),
+      'knowledge.engine.workspaceStatus': async (payload) =>
+        this.getWorkspaceStatus(workspaceStatusWorkspaceId(payload)),
       'knowledge.engine.workspaces': async () => (await this.getSidecars()).listActive(),
     }
   }
@@ -94,6 +102,46 @@ export class KnowledgeEngineService {
 
   async hasDocuments(workspaceId: string): Promise<boolean> {
     return (await this.getSidecars()).hasDocuments(workspaceId)
+  }
+
+  async getWorkspaceStatus(workspaceId: string): Promise<KnowledgeWorkspaceStatus> {
+    return (await this.getSidecars()).getWorkspaceStatus(workspaceId)
+  }
+
+  async getWorkspaceFileSnapshot(
+    workspaceId: string,
+    workspaceRoot: string,
+    root: FsSnapshot['root'],
+  ): Promise<FsSnapshot> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.getWorkspaceFileSnapshot(workspaceId, root)
+  }
+
+  async listWorkspaceEntries(workspaceId: string, workspaceRoot: string): Promise<FsEntry[]> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.listWorkspaceEntries(workspaceId)
+  }
+
+  async readWorkspaceFile(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+  ): Promise<string> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.readWorkspaceFile(workspaceId, path)
+  }
+
+  async getWorkspacePathMetadata(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+  ): Promise<FsPathMetadata> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.getWorkspacePathMetadata(workspaceId, path)
   }
 
   async rebuildIndex(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
@@ -185,4 +233,17 @@ export class KnowledgeEngineService {
     })
     return this.sidecars
   }
+}
+
+const workspaceStatusWorkspaceId = (payload: unknown): string => {
+  if (!payload || typeof payload !== 'object' || !('workspaceId' in payload)) {
+    throw new Error('workspaceId is required')
+  }
+
+  const workspaceId = (payload as { workspaceId: unknown }).workspaceId
+  if (typeof workspaceId !== 'string' || workspaceId.length === 0) {
+    throw new Error('workspaceId is required')
+  }
+
+  return workspaceId
 }

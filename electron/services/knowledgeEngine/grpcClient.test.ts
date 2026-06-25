@@ -18,6 +18,7 @@ describe('KnowledgeEngineGrpcClient', () => {
     expect(fixture.close.documentSession).toHaveBeenCalledTimes(1)
     expect(fixture.close.markdown).toHaveBeenCalledTimes(1)
     expect(fixture.close.workspace).toHaveBeenCalledTimes(1)
+    expect(fixture.close.workspaceVfs).toHaveBeenCalledTimes(1)
     expect(fixture.close.searchClient).toHaveBeenCalledTimes(1)
   })
 

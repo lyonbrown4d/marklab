@@ -18,7 +18,9 @@ use marklab_knowledge_grpc_api::v1::{
   document_session_service_server::DocumentSessionServiceServer,
   markdown_service_server::MarkdownServiceServer, search_service_server::SearchServiceServer,
   workspace_service_server::WorkspaceServiceServer,
+  workspace_vfs_service_server::WorkspaceVfsServiceServer,
 };
+use marklab_knowledge_workspace_vfs::WorkspaceVfs;
 use serde_json::json;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::TcpListenerStream;
@@ -178,12 +180,16 @@ impl KnowledgeGrpcServer {
 
     let workspace_engine =
       WorkspaceEngine::open(config.engine_data_dir.clone()).map_err(std::io::Error::other)?;
+    let workspace_vfs = WorkspaceVfs::open(config.workspace_root.clone())
+      .await
+      .map_err(std::io::Error::other)?;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
     let incoming = TcpListenerStream::new(listener);
     let (shutdown_sender, shutdown_receiver) = oneshot::channel();
     let service = KnowledgeGrpcService::new(
       workspace_engine,
+      workspace_vfs,
       config.workspace_instance_id.clone(),
       shutdown_sender,
     );
@@ -206,6 +212,10 @@ impl KnowledgeGrpcServer {
         interceptor.clone(),
       ))
       .add_service(WorkspaceServiceServer::with_interceptor(
+        service.clone(),
+        interceptor.clone(),
+      ))
+      .add_service(WorkspaceVfsServiceServer::with_interceptor(
         service.clone(),
         interceptor.clone(),
       ))

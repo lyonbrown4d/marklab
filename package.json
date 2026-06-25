@@ -34,7 +34,7 @@
     "knowledge:build:dev": "node --experimental-strip-types scripts/build-knowledge-engine.ts --profile debug",
     "knowledge:build:force": "node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release --force",
     "knowledge:proto:lint": "buf lint",
-    "knowledge:proto:gen": "buf generate",
+    "knowledge:proto:gen": "buf generate knowledge-engine/proto",
     "desktop:prepare": "moon run desktop:prepare",
     "desktop:prepare:dev": "moon run desktop:prepare-dev",
     "build:electron": "moon run desktop:electron-build",

@@ -1,12 +1,14 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
 import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import {
   isWorkspaceDocumentPath,
   workspaceRootForAssets,
 } from '@electron/services/workspace/path.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsEntry, FsSnapshot, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   FsBufferStatus,
   FsPathMetadata,
@@ -21,8 +23,25 @@ import {
 } from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceFileService extends WorkspaceBase {
-  async snapshot() {
-    return { root: this.rootInfo(), entries: await this.listEntries() }
+  constructor(
+    app: ConstructorParameters<typeof WorkspaceBase>[0],
+    shell: ConstructorParameters<typeof WorkspaceBase>[1],
+    logger: ConstructorParameters<typeof WorkspaceBase>[2],
+    private readonly knowledgeEngineService?: KnowledgeEngineService,
+  ) {
+    super(app, shell, logger)
+  }
+
+  async snapshot(): Promise<FsSnapshot> {
+    const sidecarSnapshot = await this.trySidecarSnapshot()
+    if (sidecarSnapshot) return sidecarSnapshot
+    return { root: this.rootInfo(), entries: await super.listEntries() }
+  }
+
+  protected override async listEntries(): Promise<FsEntry[]> {
+    const sidecarSnapshot = await this.trySidecarSnapshot()
+    if (sidecarSnapshot) return sidecarSnapshot.entries
+    return super.listEntries()
   }
 
   terminalCwd(): string {
@@ -105,6 +124,8 @@ export class WorkspaceFileService extends WorkspaceBase {
     const absolutePath = this.resolve(relativePath)
     const cached = this.buffers.readCached(relativePath)
     if (cached != null) return cached
+    const sidecarContent = await this.trySidecarReadFile(relativePath)
+    if (sidecarContent != null) return sidecarContent
     return fs.promises.readFile(absolutePath, 'utf8')
   }
 
@@ -206,6 +227,8 @@ export class WorkspaceFileService extends WorkspaceBase {
   async pathMetadata(value: unknown): Promise<FsPathMetadata> {
     const relativePath = stringArg(value, 'path')
     const absolutePath = this.resolve(relativePath)
+    const sidecarMetadata = await this.trySidecarPathMetadata(relativePath)
+    if (sidecarMetadata) return sidecarMetadata
     const stat = await fs.promises.stat(absolutePath)
     return {
       path: relativePath,
@@ -223,6 +246,70 @@ export class WorkspaceFileService extends WorkspaceBase {
     if (error) this.logger.warn('open path in system failed', { path: metadata.path, error })
     if (error) throw new Error(`Failed to open path: ${error}`)
     this.logger.info('path opened in system', { path: metadata.path })
+  }
+
+  private async trySidecarSnapshot(): Promise<FsSnapshot | null> {
+    const runtime = this.sidecarRuntime()
+    if (!runtime) return null
+    try {
+      return (
+        (await this.knowledgeEngineService?.getWorkspaceFileSnapshot(
+          runtime.workspaceId,
+          runtime.workspaceRoot,
+          this.rootInfo(),
+        )) ?? null
+      )
+    } catch (error) {
+      this.logger.warn('workspace vfs snapshot failed; falling back to node filesystem', { error })
+      return null
+    }
+  }
+
+  private async trySidecarReadFile(relativePath: string): Promise<string | null> {
+    const runtime = this.sidecarRuntime()
+    if (!runtime) return null
+    try {
+      return (
+        (await this.knowledgeEngineService?.readWorkspaceFile(
+          runtime.workspaceId,
+          runtime.workspaceRoot,
+          relativePath,
+        )) ?? null
+      )
+    } catch (error) {
+      this.logger.warn('workspace vfs read failed; falling back to node filesystem', {
+        error,
+        path: relativePath,
+      })
+      return null
+    }
+  }
+
+  private async trySidecarPathMetadata(relativePath: string): Promise<FsPathMetadata | null> {
+    const runtime = this.sidecarRuntime()
+    if (!runtime) return null
+    try {
+      return (
+        (await this.knowledgeEngineService?.getWorkspacePathMetadata(
+          runtime.workspaceId,
+          runtime.workspaceRoot,
+          relativePath,
+        )) ?? null
+      )
+    } catch (error) {
+      this.logger.warn('workspace vfs metadata failed; falling back to node filesystem', {
+        error,
+        path: relativePath,
+      })
+      return null
+    }
+  }
+
+  private sidecarRuntime(): { workspaceId: string; workspaceRoot: string } | null {
+    if (!this.knowledgeEngineService || this.state.rootKind === 'single') return null
+    const raw = `${this.state.rootKind}|${this.state.rootPath}|${this.state.singleFile ?? ''}`
+    const workspaceId = `vfs:${createHash('sha256').update(raw).digest('hex')}`
+    return { workspaceId, workspaceRoot: this.state.rootPath }
   }
 
   private async getWorkspaceIndexForRename(): Promise<FsWorkspaceIndex | null> {

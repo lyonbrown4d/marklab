@@ -6,19 +6,19 @@ tasks:
       persistent: true
 
   proto-lint:
-    command: pnpm exec buf lint
+    command: pnpm exec buf lint knowledge-engine/proto
     inputs:
       - buf.yaml
-      - proto/**/*
+      - knowledge-engine/proto/**/*
     options:
       cache: false
 
   proto-gen:
-    command: pnpm exec buf generate
+    command: pnpm exec buf generate knowledge-engine/proto
     inputs:
       - buf.gen.yaml
       - buf.yaml
-      - proto/**/*
+      - knowledge-engine/proto/**/*
     outputs:
       - electron/generated/knowledge-engine/**/*
 
@@ -66,7 +66,7 @@ tasks:
       - scripts/run-knowledge-engine-integration.ts
       - scripts/build-knowledge-engine.ts
       - knowledge-engine/**/*
-      - proto/**/*
+      - knowledge-engine/proto/**/*
       - electron/**/*
       - scripts/**/*
       - package.json

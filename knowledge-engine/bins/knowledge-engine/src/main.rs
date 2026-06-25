@@ -2,6 +2,7 @@ mod composition;
 mod grpc_query_services;
 mod grpc_services;
 mod grpc_workspace;
+mod grpc_workspace_vfs;
 
 use std::error::Error;
 

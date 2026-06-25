@@ -126,6 +126,22 @@ pub(crate) fn initialize_outbox_tables(database: &Database) -> Result<(), String
   initialize(database)
 }
 
+pub(crate) fn pending_outbox_count_in_db(database: &Database) -> Result<usize, String> {
+  let read = database.begin_read().map_err(to_message)?;
+  let table = read.open_table(OUTBOX_TABLE).map_err(to_message)?;
+  let mut count = 0_usize;
+
+  for entry in table.iter().map_err(to_message)? {
+    let (_id, payload) = entry.map_err(to_message)?;
+    let event = serde_json::from_str::<OutboxEvent>(payload.value()).map_err(to_message)?;
+    if event.applied_ms.is_none() {
+      count = count.saturating_add(1);
+    }
+  }
+
+  Ok(count)
+}
+
 pub(crate) fn append_in_tx(
   write: &WriteTransaction,
   kind: OutboxEventKind,

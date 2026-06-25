@@ -16,9 +16,17 @@ service MarkdownService {
   rpc GetLinks(GetLinksRequest) returns (GetLinksResponse);
 }
 
+service WorkspaceVfsService {
+  rpc GetSnapshot(GetWorkspaceFileSnapshotRequest) returns (GetWorkspaceFileSnapshotResponse);
+  rpc ListEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse);
+  rpc ReadFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
+  rpc GetPathMetadata(GetWorkspacePathMetadataRequest) returns (GetWorkspacePathMetadataResponse);
+}
+
 service WorkspaceService {
   rpc OpenWorkspace(OpenWorkspaceRequest) returns (OpenWorkspaceResponse);
   rpc CloseWorkspace(CloseWorkspaceRequest) returns (CloseWorkspaceResponse);
+  rpc GetWorkspaceStatus(GetWorkspaceStatusRequest) returns (GetWorkspaceStatusResponse);
   rpc HasDocuments(HasDocumentsRequest) returns (HasDocumentsResponse);
   rpc RebuildIndex(RebuildIndexRequest) returns (RebuildIndexResponse);
   rpc UpsertDocument(UpsertDocumentRequest) returns (UpsertDocumentResponse);
@@ -68,6 +76,88 @@ message CloseWorkspaceRequest {}
 
 message CloseWorkspaceResponse {
   bool ok = 1;
+}
+
+message GetWorkspaceStatusRequest {}
+
+message GetWorkspaceStatusResponse {
+  WorkspaceHealthStatus health = 1;
+  WorkspaceIndexStatus index = 2;
+  WorkspaceStorageStats storage = 3;
+}
+
+message WorkspaceHealthStatus {
+  bool ok = 1;
+  string state = 2;
+  uint64 metadata_documents = 3;
+  uint64 searchable_documents = 4;
+  uint64 pending_outbox_events = 5;
+  repeated string warnings = 6;
+}
+
+message WorkspaceIndexStatus {
+  string search_index = 1;
+  bool ready = 2;
+  uint64 metadata_documents = 3;
+  uint64 searchable_documents = 4;
+  uint64 pending_outbox_events = 5;
+}
+
+message WorkspaceStorageStats {
+  string metadata_store = 1;
+  string search_index = 2;
+  uint64 metadata_bytes = 3;
+  uint64 search_index_bytes = 4;
+  uint64 total_bytes = 5;
+  uint64 metadata_documents = 6;
+  uint64 pending_outbox_events = 7;
+  bool blob_store = 8;
+  uint64 blob_bytes = 9;
+}
+
+message GetWorkspaceFileSnapshotRequest {}
+
+message GetWorkspaceFileSnapshotResponse {
+  repeated WorkspaceFileEntry entries = 1;
+}
+
+message ListWorkspaceEntriesRequest {}
+
+message ListWorkspaceEntriesResponse {
+  repeated WorkspaceFileEntry entries = 1;
+}
+
+message WorkspaceFileEntry {
+  string path = 1;
+  string name = 2;
+  WorkspaceFileEntryKind kind = 3;
+}
+
+enum WorkspaceFileEntryKind {
+  WORKSPACE_FILE_ENTRY_KIND_UNSPECIFIED = 0;
+  WORKSPACE_FILE_ENTRY_KIND_FILE = 1;
+  WORKSPACE_FILE_ENTRY_KIND_FOLDER = 2;
+}
+
+message ReadWorkspaceFileRequest {
+  string path = 1;
+}
+
+message ReadWorkspaceFileResponse {
+  string content = 1;
+}
+
+message GetWorkspacePathMetadataRequest {
+  string path = 1;
+}
+
+message GetWorkspacePathMetadataResponse {
+  string path = 1;
+  string absolute_path = 2;
+  WorkspaceFileEntryKind kind = 3;
+  uint64 size_bytes = 4;
+  optional double modified_ms = 5;
+  bool readonly = 6;
 }
 
 message HasDocumentsRequest {}

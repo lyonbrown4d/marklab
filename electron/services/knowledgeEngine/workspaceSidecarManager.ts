@@ -19,7 +19,12 @@ import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
 } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type {
+  FsEntry,
+  FsPathMetadata,
+  FsSearchResult,
+  FsSnapshot,
+} from '@electron/services/workspace/types.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 import {
   KnowledgeCloseDocumentInput,
@@ -29,6 +34,7 @@ import {
   KnowledgeOpenDocumentInput,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
+  KnowledgeWorkspaceStatus,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 
 export type {
@@ -61,7 +67,11 @@ export class WorkspaceSidecarManager {
     }))
   }
 
-  async open(workspaceId: string, indexPath: string): Promise<void> {
+  async open(
+    workspaceId: string,
+    indexPath: string,
+    options: { openWorkspace?: boolean } = {},
+  ): Promise<void> {
     const existing = this.runtimes.get(workspaceId)
     if (existing?.indexPath === indexPath && existing.state === 'ready') {
       existing.lastActivityAt = Date.now()
@@ -93,7 +103,9 @@ export class WorkspaceSidecarManager {
     try {
       const started = await this.startSidecar(spawnPlan, identity)
       await started.client.getCapabilities(identity.workspaceInstanceId)
-      await started.client.openWorkspace(indexPath)
+      if (options.openWorkspace ?? true) {
+        await started.client.openWorkspace(indexPath)
+      }
       this.runtimes.set(workspaceId, {
         ...openingRuntime,
         address: started.address,
@@ -143,6 +155,29 @@ export class WorkspaceSidecarManager {
 
   async hasDocuments(workspaceId: string): Promise<boolean> {
     return this.requireReady(workspaceId).client.hasDocuments()
+  }
+
+  async getWorkspaceStatus(workspaceId: string): Promise<KnowledgeWorkspaceStatus> {
+    return this.requireReady(workspaceId).client.getWorkspaceStatus()
+  }
+
+  async getWorkspaceFileSnapshot(
+    workspaceId: string,
+    root: FsSnapshot['root'],
+  ): Promise<FsSnapshot> {
+    return this.requireReady(workspaceId).client.getWorkspaceFileSnapshot(root)
+  }
+
+  async listWorkspaceEntries(workspaceId: string): Promise<FsEntry[]> {
+    return this.requireReady(workspaceId).client.listWorkspaceEntries()
+  }
+
+  async readWorkspaceFile(workspaceId: string, path: string): Promise<string> {
+    return this.requireReady(workspaceId).client.readWorkspaceFile(path)
+  }
+
+  async getWorkspacePathMetadata(workspaceId: string, path: string): Promise<FsPathMetadata> {
+    return this.requireReady(workspaceId).client.getWorkspacePathMetadata(path)
   }
 
   async rebuildIndex(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {

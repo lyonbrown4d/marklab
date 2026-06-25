@@ -66,12 +66,15 @@ export const createElectronContainer = (
       return () =>
         new WorkspaceSearchIndex(new KnowledgeEngineWorkspaceSearchBackend(knowledgeEngineService))
     }).singleton(),
-    workspaceRegistry: asFunction(({ app, logger, shell, workspaceSearchIndexFactory }) => {
-      return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
-        onSessionDisposed: removeRendererSession,
-        workspaceSearchIndexFactory,
-      })
-    }).singleton(),
+    workspaceRegistry: asFunction(
+      ({ app, knowledgeEngineService, logger, shell, workspaceSearchIndexFactory }) => {
+        return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
+          knowledgeEngineService,
+          onSessionDisposed: removeRendererSession,
+          workspaceSearchIndexFactory,
+        })
+      },
+    ).singleton(),
     exportService: asFunction(({ BrowserWindow, logger, shell }) => {
       return new ExportService(shell, BrowserWindow, logger.child('export'))
     }).singleton(),
