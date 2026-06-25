@@ -76,6 +76,7 @@ export const useMarkdownPlaygroundController = ({
   const crepeRef = useRef<Crepe | null>(null)
   const latestValueRef = useRef(value)
   const onChangeRef = useRef(onChange)
+  const onCalendarFileCreateRef = useRef(onCalendarFileCreate)
   const activePathRef = useRef(activePath)
   const activePathListenersRef = useRef(new Set<() => void>())
   const applyingExternalValueRef = useRef(false)
@@ -84,6 +85,10 @@ export const useMarkdownPlaygroundController = ({
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
+
+  useLayoutEffect(() => {
+    onCalendarFileCreateRef.current = onCalendarFileCreate
+  }, [onCalendarFileCreate])
 
   useLayoutEffect(() => {
     latestValueRef.current = value
@@ -106,9 +111,10 @@ export const useMarkdownPlaygroundController = ({
   const runSlashImageImport = useCallback(async () => false, [])
 
   const runSlashCalendarFileCreate = useCallback(async () => {
-    if (!onCalendarFileCreate) return null
-    return onCalendarFileCreate()
-  }, [onCalendarFileCreate])
+    const createCalendarFile = onCalendarFileCreateRef.current
+    if (!createCalendarFile) return null
+    return createCalendarFile()
+  }, [])
 
   useLayoutEffect(() => {
     const root = rootRef.current

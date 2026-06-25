@@ -25,6 +25,13 @@ type TextLikeNode = {
 
 const embeddedPreviewPluginKey = new PluginKey<DecorationSet>('marklab-embedded-preview')
 const widgetRoots = new WeakMap<HTMLElement, Root>()
+const embeddedLinksCache = new WeakMap<
+  ProseMirrorNode,
+  {
+    linkType: ReturnType<typeof linkSchema.type>
+    links: readonly EmbeddedLinkPreview[]
+  }
+>()
 
 const linkTitle = (href: string, title: string) => {
   if (title.trim()) return title.trim()
@@ -33,7 +40,28 @@ const linkTitle = (href: string, title: string) => {
 
 const readMarkAttr = (value: unknown) => (typeof value === 'string' ? value : '')
 
+const embeddedPreviewWidgetKeyBase = (
+  link: EmbeddedLinkPreview,
+  index: number,
+  documentPath: string | null,
+) => `${documentPath ?? ''}\u0000${index}\u0000${link.href}\u0000${link.title}`
+
+const nextEmbeddedPreviewWidgetKey = (
+  keyCounts: Map<string, number>,
+  link: EmbeddedLinkPreview,
+  index: number,
+  documentPath: string | null,
+) => {
+  const baseKey = embeddedPreviewWidgetKeyBase(link, index, documentPath)
+  const count = keyCounts.get(baseKey) ?? 0
+  keyCounts.set(baseKey, count + 1)
+
+  return `${baseKey}\u0000${count}`
+}
+
 export const markdownEmbeddedLinksInText = (text: string): EmbeddedLinkPreview[] => {
+  if (!text.includes('](')) return []
+
   const links: EmbeddedLinkPreview[] = []
   const seen = new Set<string>()
   const pattern = /\[([^\]\n]+)\]\(([^)\s]+(?:\s+['"][^'"]*['"])?[^)]*)\)/g
@@ -61,6 +89,7 @@ export const embeddedLinksInTextNode = (
   seen: Set<string>,
 ): EmbeddedLinkPreview[] => {
   const links: EmbeddedLinkPreview[] = []
+  const text = child.text ?? ''
 
   for (const mark of child.marks ?? []) {
     if (mark.type !== linkType) continue
@@ -74,10 +103,12 @@ export const embeddedLinksInTextNode = (
     })
   }
 
-  for (const link of markdownEmbeddedLinksInText(child.text ?? '')) {
-    if (seen.has(link.href)) continue
-    seen.add(link.href)
-    links.push(link)
+  if (text.includes('](')) {
+    for (const link of markdownEmbeddedLinksInText(text)) {
+      if (seen.has(link.href)) continue
+      seen.add(link.href)
+      links.push(link)
+    }
   }
 
   return links
@@ -87,6 +118,9 @@ const embeddedLinksInNode = (
   node: ProseMirrorNode,
   linkType: ReturnType<typeof linkSchema.type>,
 ) => {
+  const cached = embeddedLinksCache.get(node)
+  if (cached?.linkType === linkType) return cached.links
+
   const links: EmbeddedLinkPreview[] = []
   const seen = new Set<string>()
 
@@ -98,20 +132,19 @@ const embeddedLinksInNode = (
     return true
   })
 
+  embeddedLinksCache.set(node, { linkType, links })
+
   return links
 }
 
-const createEmbeddedPreviewWidget = (
-  link: EmbeddedLinkPreview,
-  { getDocumentPath }: EmbeddedPreviewPluginOptions,
-) => {
+const createEmbeddedPreviewWidget = (link: EmbeddedLinkPreview, documentPath: string | null) => {
   const host = document.createElement('div')
   host.contentEditable = 'false'
   const root = createRoot(host)
   widgetRoots.set(host, root)
   root.render(
     createElement(EmbeddedFilePreview, {
-      documentPath: getDocumentPath(),
+      documentPath,
       target: link.href,
       title: link.title,
     }),
@@ -125,6 +158,8 @@ const buildEmbeddedPreviewDecorations = (
   options: EmbeddedPreviewPluginOptions,
 ) => {
   const decorations: Decoration[] = []
+  const documentPath = options.getDocumentPath()
+  const widgetKeyCounts = new Map<string, number>()
 
   state.doc.descendants((node, pos) => {
     if (!node.isTextblock) return true
@@ -132,15 +167,19 @@ const buildEmbeddedPreviewDecorations = (
     const links = embeddedLinksInNode(node, linkType)
     links.forEach((link, index) => {
       decorations.push(
-        Decoration.widget(pos + node.nodeSize, () => createEmbeddedPreviewWidget(link, options), {
-          destroy: (node) => {
-            widgetRoots.get(node as HTMLElement)?.unmount()
-            widgetRoots.delete(node as HTMLElement)
+        Decoration.widget(
+          pos + node.nodeSize,
+          () => createEmbeddedPreviewWidget(link, documentPath),
+          {
+            destroy: (node) => {
+              widgetRoots.get(node as HTMLElement)?.unmount()
+              widgetRoots.delete(node as HTMLElement)
+            },
+            ignoreSelection: true,
+            key: nextEmbeddedPreviewWidgetKey(widgetKeyCounts, link, index, documentPath),
+            side: 1,
           },
-          ignoreSelection: true,
-          key: `${pos}:${index}:${link.href}`,
-          side: 1,
-        }),
+        ),
       )
     })
 
@@ -152,9 +191,14 @@ const buildEmbeddedPreviewDecorations = (
 
 const createEmbeddedPreviewPluginView = (
   view: EditorView,
-  { subscribeDocumentPath }: EmbeddedPreviewPluginOptions,
+  { getDocumentPath, subscribeDocumentPath }: EmbeddedPreviewPluginOptions,
 ) => {
+  let documentPath = getDocumentPath()
   const unsubscribe = subscribeDocumentPath(() => {
+    const nextDocumentPath = getDocumentPath()
+    if (nextDocumentPath === documentPath) return
+
+    documentPath = nextDocumentPath
     view.dispatch(view.state.tr.setMeta(embeddedPreviewPluginKey, { refresh: true }))
   })
 

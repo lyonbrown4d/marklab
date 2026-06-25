@@ -12,43 +12,8 @@ import {
   markdownEditorSlashCommands,
   type SlashCommandGroupId,
 } from '@/components/milkdown/editorCommandCatalog'
-
-const imageIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M19 5v14H5V5h14Zm0-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm-4.86 8.86-3 3.87L9 13.14 6 17h12l-3.86-5.14Z" />
-  </svg>
-`
-
-const codeIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="m8.7 16.7-4-4a1 1 0 0 1 0-1.4l4-4 1.4 1.4L6.8 12l3.3 3.3-1.4 1.4Zm6.6 0-1.4-1.4 3.3-3.3-3.3-3.3 1.4-1.4 4 4a1 1 0 0 1 0 1.4l-4 4Z" />
-  </svg>
-`
-
-const calloutIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm1 13h-2v-2h2v2Zm0-4h-2V7h2v5Z" />
-  </svg>
-`
-
-const diagramIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M7 3h4v4H7V3Zm6 0h4v4h-4V3ZM7 17h4v4H7v-4Zm6 0h4v4h-4v-4ZM9 8h2v3h2V8h2v3h3v2h-3v3h-2v-3h-2v3H9v-3H6v-2h3V8Z" />
-  </svg>
-`
-
-const linkIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M3.9 12a5 5 0 0 1 5-5h3v2h-3a3 3 0 1 0 0 6h3v2h-3a5 5 0 0 1-5-5Zm6-1h4v2h-4v-2Zm2-4h3a5 5 0 0 1 0 10h-3v-2h3a3 3 0 1 0 0-6h-3V7Z" />
-  </svg>
-`
-
-const calendarIcon = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" />
-    <path d="M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
-  </svg>
-`
+import { slashMenuIcons } from '@/components/milkdown/slashMenuIcons'
+import { markdownTemplates } from '@/components/milkdown/slashMenuTemplates'
 
 export type SlashCommandLabels = {
   textGroup: string
@@ -115,28 +80,6 @@ type MarkdownPlaygroundSlashConfigOptions = {
   onImageImport: () => Promise<boolean>
 }
 
-const markdownTemplates: Record<string, string> = {
-  mermaid: '```mermaid\ngraph TD\n  A --> B\n```\n',
-  'code-typescript': '```typescript\n\n```\n',
-  'code-javascript': '```javascript\n\n```\n',
-  'code-json': '```json\n{\n  \n}\n```\n',
-  'code-bash': '```bash\n\n```\n',
-  'code-html': '```html\n\n```\n',
-  'callout-note': '> [!NOTE]\n> \n',
-  'callout-tip': '> [!TIP]\n> \n',
-  'callout-important': '> [!IMPORTANT]\n> \n',
-  'callout-warning': '> [!WARNING]\n> \n',
-  'callout-caution': '> [!CAUTION]\n> \n',
-  footnote: 'Text[^1]\n\n[^1]: Footnote\n',
-  frontmatter: '---\ntitle: Untitled\ntags: []\n---\n\n',
-  details: '<details>\n<summary>Title</summary>\n\nContent\n\n</details>\n',
-  toc: '## Contents\n\n- [Section](#section)\n',
-  bold: '**Bold**\n',
-  italic: '*Italic*\n',
-  'inline-code': '`code`\n',
-  strike: '~~Strikethrough~~\n',
-}
-
 const templateSlashCommand = (key: string, icon: string): CustomSlashCommand => ({
   icon,
   onRun: (ctx) => insertMarkdownTemplate(ctx, markdownTemplates[key] ?? ''),
@@ -144,14 +87,14 @@ const templateSlashCommand = (key: string, icon: string): CustomSlashCommand => 
 
 const customSlashCommands: Record<string, CustomSlashCommand> = {
   'image-import': {
-    icon: imageIcon,
+    icon: slashMenuIcons.image,
     onRun: (ctx, _labels, onImageImport) => {
       clearSlashText(ctx)
       void onImageImport()
     },
   },
   'image-url': {
-    icon: imageIcon,
+    icon: slashMenuIcons.image,
     onRun: (ctx, labels) => {
       const src = window.prompt(labels.imageUrlPrompt)?.trim()
       if (!src) return
@@ -162,7 +105,7 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
     },
   },
   'calendar-file': {
-    icon: calendarIcon,
+    icon: slashMenuIcons.calendar,
     onRun: (ctx, _labels, _onImageImport, onCalendarFileCreate) => {
       void onCalendarFileCreate().then((markdown) => {
         if (markdown) {
@@ -172,7 +115,7 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
     },
   },
   link: {
-    icon: linkIcon,
+    icon: slashMenuIcons.link,
     onRun: (ctx, labels) => {
       const href = window.prompt(labels.linkUrlPrompt)?.trim()
       if (!href) return
@@ -180,29 +123,29 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
       insertMarkdownTemplate(ctx, `[${escapeLinkText(text)}](${escapeLinkHref(href)})\n`)
     },
   },
-  bold: templateSlashCommand('bold', calloutIcon),
-  italic: templateSlashCommand('italic', calloutIcon),
-  'inline-code': templateSlashCommand('inline-code', codeIcon),
-  strike: templateSlashCommand('strike', calloutIcon),
+  bold: templateSlashCommand('bold', slashMenuIcons.callout),
+  italic: templateSlashCommand('italic', slashMenuIcons.callout),
+  'inline-code': templateSlashCommand('inline-code', slashMenuIcons.code),
+  strike: templateSlashCommand('strike', slashMenuIcons.callout),
   'clear-format': {
-    icon: calloutIcon,
+    icon: slashMenuIcons.callout,
     onRun: (ctx) => clearCurrentFormat(ctx),
   },
-  mermaid: templateSlashCommand('mermaid', diagramIcon),
-  'code-typescript': templateSlashCommand('code-typescript', codeIcon),
-  'code-javascript': templateSlashCommand('code-javascript', codeIcon),
-  'code-json': templateSlashCommand('code-json', codeIcon),
-  'code-bash': templateSlashCommand('code-bash', codeIcon),
-  'code-html': templateSlashCommand('code-html', codeIcon),
-  'callout-note': templateSlashCommand('callout-note', calloutIcon),
-  'callout-tip': templateSlashCommand('callout-tip', calloutIcon),
-  'callout-important': templateSlashCommand('callout-important', calloutIcon),
-  'callout-warning': templateSlashCommand('callout-warning', calloutIcon),
-  'callout-caution': templateSlashCommand('callout-caution', calloutIcon),
-  footnote: templateSlashCommand('footnote', calloutIcon),
-  frontmatter: templateSlashCommand('frontmatter', calloutIcon),
-  details: templateSlashCommand('details', calloutIcon),
-  toc: templateSlashCommand('toc', calloutIcon),
+  mermaid: templateSlashCommand('mermaid', slashMenuIcons.diagram),
+  'code-typescript': templateSlashCommand('code-typescript', slashMenuIcons.code),
+  'code-javascript': templateSlashCommand('code-javascript', slashMenuIcons.code),
+  'code-json': templateSlashCommand('code-json', slashMenuIcons.code),
+  'code-bash': templateSlashCommand('code-bash', slashMenuIcons.code),
+  'code-html': templateSlashCommand('code-html', slashMenuIcons.code),
+  'callout-note': templateSlashCommand('callout-note', slashMenuIcons.callout),
+  'callout-tip': templateSlashCommand('callout-tip', slashMenuIcons.callout),
+  'callout-important': templateSlashCommand('callout-important', slashMenuIcons.callout),
+  'callout-warning': templateSlashCommand('callout-warning', slashMenuIcons.callout),
+  'callout-caution': templateSlashCommand('callout-caution', slashMenuIcons.callout),
+  footnote: templateSlashCommand('footnote', slashMenuIcons.callout),
+  frontmatter: templateSlashCommand('frontmatter', slashMenuIcons.callout),
+  details: templateSlashCommand('details', slashMenuIcons.callout),
+  toc: templateSlashCommand('toc', slashMenuIcons.callout),
 }
 
 export const createSlashMenuConfig = (

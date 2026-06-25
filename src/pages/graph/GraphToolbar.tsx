@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { GraphFilterKind, GraphFilterState, GraphFilterStats } from '@/logic/graphViewModel'
 
 type GraphToolbarProps = {
@@ -48,12 +48,21 @@ export const GraphToolbar = ({
     onFiltersChange({ ...filters, query })
   }
 
-  const toggleKind = (kind: GraphFilterKind) => {
+  const selectedKinds = filterItems
+    .filter((item) => filters.kinds[item.kind])
+    .map((item) => item.kind)
+
+  const updateKinds = (kinds: string[]) => {
+    const enabledKinds = new Set(kinds)
+
     onFiltersChange({
       ...filters,
       kinds: {
-        ...filters.kinds,
-        [kind]: !filters.kinds[kind],
+        external: enabledKinds.has('external'),
+        file: enabledKinds.has('file'),
+        heading: enabledKinds.has('heading'),
+        missing: enabledKinds.has('missing'),
+        preview: enabledKinds.has('preview'),
       },
     })
   }
@@ -99,32 +108,34 @@ export const GraphToolbar = ({
           </Button>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <ToggleGroup
+        type="multiple"
+        value={selectedKinds}
+        variant="outline"
+        size="sm"
+        className="flex flex-wrap items-center justify-start gap-1"
+        aria-label="Graph node kind filters"
+        onValueChange={updateKinds}
+      >
         {filterItems.map((item) => {
           const Icon = item.icon
-          const enabled = filters.kinds[item.kind]
 
           return (
-            <Button
+            <ToggleGroupItem
               key={item.kind}
-              type="button"
-              variant={enabled ? 'secondary' : 'ghost'}
-              size="sm"
-              className={cn(
-                'h-7 rounded-md px-2 text-xs transition-colors',
-                !enabled && 'text-muted-foreground',
-              )}
-              onClick={() => toggleKind(item.kind)}
+              value={item.kind}
+              className="h-7 gap-1 border-transparent px-2 text-xs data-[state=off]:text-muted-foreground data-[state=on]:border-border data-[state=on]:bg-secondary data-[state=on]:text-secondary-foreground"
+              aria-label={t(item.labelKey)}
             >
               <Icon data-icon="inline-start" />
               {t(item.labelKey)}
-              <Badge variant="outline" className="ml-1 h-4 rounded px-1 text-[10px] font-normal">
+              <Badge variant="outline" className="h-4 rounded px-1 text-[10px] font-normal">
                 {stats[item.kind]}
               </Badge>
-            </Button>
+            </ToggleGroupItem>
           )
         })}
-      </div>
+      </ToggleGroup>
     </div>
   )
 }
