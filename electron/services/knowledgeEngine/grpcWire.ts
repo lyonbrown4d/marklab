@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Buffer } from 'node:buffer'
 
 import {
@@ -14,6 +15,9 @@ import {
 
 import {
   CloseWorkspaceRequest,
+  CreateWorkspaceDirectoryRequest,
+  CreateWorkspaceFileRequest,
+  DeleteWorkspacePathRequest,
   CloseWorkspaceResponse,
   GetCapabilitiesRequest,
   GetCapabilitiesResponse,
@@ -40,6 +44,7 @@ import {
   RemovePathPrefixRequest,
   RemovePathPrefixResponse,
   ReadWorkspaceFileRequest,
+  RenameWorkspacePathRequest,
   ReadWorkspaceFileResponse,
   SearchRequest,
   SearchResponse,
@@ -49,6 +54,7 @@ import {
   SyncResponse,
   UpsertDocumentRequest,
   UpsertDocumentResponse,
+  WorkspacePathMutationResponse,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
 
 type MessageCodec<T> = {
@@ -86,12 +92,15 @@ export type MarkdownClient = Client & {
 }
 
 export type WorkspaceVfsClient = Client & {
+  createDirectory: UnaryCall<CreateWorkspaceDirectoryRequest, WorkspacePathMutationResponse>
+  createFile: UnaryCall<CreateWorkspaceFileRequest, WorkspacePathMutationResponse>
+  deletePath: UnaryCall<DeleteWorkspacePathRequest, WorkspacePathMutationResponse>
   getSnapshot: UnaryCall<GetWorkspaceFileSnapshotRequest, GetWorkspaceFileSnapshotResponse>
   getPathMetadata: UnaryCall<GetWorkspacePathMetadataRequest, GetWorkspacePathMetadataResponse>
   listEntries: UnaryCall<ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse>
   readFile: UnaryCall<ReadWorkspaceFileRequest, ReadWorkspaceFileResponse>
+  renamePath: UnaryCall<RenameWorkspacePathRequest, WorkspacePathMutationResponse>
 }
-
 export type WorkspaceClient = Client & {
   closeWorkspace: UnaryCall<CloseWorkspaceRequest, CloseWorkspaceResponse>
   getWorkspaceStatus: UnaryCall<GetWorkspaceStatusRequest, GetWorkspaceStatusResponse>
@@ -228,6 +237,21 @@ export const MarkdownClientConstructor = makeGenericClientConstructor(
 
 export const WorkspaceVfsClientConstructor = makeGenericClientConstructor(
   {
+    createDirectory: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/CreateDirectory',
+      CreateWorkspaceDirectoryRequest,
+      WorkspacePathMutationResponse,
+    ),
+    createFile: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/CreateFile',
+      CreateWorkspaceFileRequest,
+      WorkspacePathMutationResponse,
+    ),
+    deletePath: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/DeletePath',
+      DeleteWorkspacePathRequest,
+      WorkspacePathMutationResponse,
+    ),
     getSnapshot: unaryDefinition(
       '/knowledge.engine.v1.WorkspaceVfsService/GetSnapshot',
       GetWorkspaceFileSnapshotRequest,
@@ -247,6 +271,11 @@ export const WorkspaceVfsClientConstructor = makeGenericClientConstructor(
       '/knowledge.engine.v1.WorkspaceVfsService/ReadFile',
       ReadWorkspaceFileRequest,
       ReadWorkspaceFileResponse,
+    ),
+    renamePath: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/RenamePath',
+      RenameWorkspacePathRequest,
+      WorkspacePathMutationResponse,
     ),
   },
   'knowledge.engine.v1.WorkspaceVfsService',

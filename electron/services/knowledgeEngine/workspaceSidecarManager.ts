@@ -35,6 +35,7 @@ import {
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
   KnowledgeWorkspaceStatus,
+  KnowledgeWorkspacePathMutation,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 
 export type {
@@ -174,6 +175,35 @@ export class WorkspaceSidecarManager {
 
   async readWorkspaceFile(workspaceId: string, path: string): Promise<string> {
     return this.requireReady(workspaceId).client.readWorkspaceFile(path)
+  }
+
+  async createWorkspaceFile(
+    workspaceId: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    return this.requireReady(workspaceId).client.createWorkspaceFile(path)
+  }
+
+  async createWorkspaceDirectory(
+    workspaceId: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    return this.requireReady(workspaceId).client.createWorkspaceDirectory(path)
+  }
+
+  async renameWorkspacePath(
+    workspaceId: string,
+    from: string,
+    to: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    return this.requireReady(workspaceId).client.renameWorkspacePath(from, to)
+  }
+
+  async deleteWorkspacePath(
+    workspaceId: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    return this.requireReady(workspaceId).client.deleteWorkspacePath(path)
   }
 
   async getWorkspacePathMetadata(workspaceId: string, path: string): Promise<FsPathMetadata> {

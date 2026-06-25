@@ -11,6 +11,7 @@ import type {
   KnowledgeSearchResultSet,
   KnowledgeSyncResponse,
   KnowledgeWorkspaceStatus,
+  KnowledgeWorkspacePathMutation,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 import {
   redactWorkspaceSidecarSpawnPlan,
@@ -40,6 +41,10 @@ export type WorkspaceSidecarClient = {
     document: KnowledgeCloseDocumentInput,
   ) => Promise<KnowledgeSyncResponse>
   closeWorkspace: () => Promise<void>
+  createWorkspaceFile: (path: string) => Promise<KnowledgeWorkspacePathMutation>
+  createWorkspaceDirectory: (path: string) => Promise<KnowledgeWorkspacePathMutation>
+  renameWorkspacePath: (from: string, to: string) => Promise<KnowledgeWorkspacePathMutation>
+  deleteWorkspacePath: (path: string) => Promise<KnowledgeWorkspacePathMutation>
   getMarkdownDocumentSymbols: (
     documentId: string,
     documentVersion: number | string,

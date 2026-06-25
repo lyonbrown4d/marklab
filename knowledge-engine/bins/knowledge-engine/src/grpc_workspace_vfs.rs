@@ -1,10 +1,12 @@
 use marklab_knowledge_grpc_api::v1::{
-  workspace_vfs_service_server::WorkspaceVfsService, GetWorkspaceFileSnapshotRequest,
+  workspace_vfs_service_server::WorkspaceVfsService, CreateWorkspaceDirectoryRequest,
+  CreateWorkspaceFileRequest, DeleteWorkspacePathRequest, GetWorkspaceFileSnapshotRequest,
   GetWorkspaceFileSnapshotResponse, GetWorkspacePathMetadataRequest,
   GetWorkspacePathMetadataResponse, ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse,
-  ReadWorkspaceFileRequest, ReadWorkspaceFileResponse, WorkspaceFileEntry, WorkspaceFileEntryKind,
+  ReadWorkspaceFileRequest, ReadWorkspaceFileResponse, RenameWorkspacePathRequest,
+  WorkspaceFileEntry, WorkspaceFileEntryKind, WorkspacePathMutationResponse,
 };
-use marklab_knowledge_workspace_vfs::{VfsEntry, VfsEntryKind, VfsError, VfsMetadata};
+use marklab_knowledge_workspace_vfs::{VfsEntry, VfsEntryKind, VfsError, VfsMetadata, VfsMutation};
 use tonic::{Request, Response, Status};
 
 use crate::grpc_services::KnowledgeGrpcService;
@@ -46,6 +48,59 @@ impl WorkspaceVfsService for KnowledgeGrpcService {
     Ok(Response::new(ReadWorkspaceFileResponse { content }))
   }
 
+  async fn create_file(
+    &self,
+    request: Request<CreateWorkspaceFileRequest>,
+  ) -> Result<Response<WorkspacePathMutationResponse>, Status> {
+    let mutation = self
+      .vfs()
+      .create_file(&request.into_inner().path)
+      .await
+      .map_err(status_from_vfs_error)?;
+
+    Ok(Response::new(mutation_to_proto(mutation)))
+  }
+
+  async fn create_directory(
+    &self,
+    request: Request<CreateWorkspaceDirectoryRequest>,
+  ) -> Result<Response<WorkspacePathMutationResponse>, Status> {
+    let mutation = self
+      .vfs()
+      .create_dir(&request.into_inner().path)
+      .await
+      .map_err(status_from_vfs_error)?;
+
+    Ok(Response::new(mutation_to_proto(mutation)))
+  }
+
+  async fn rename_path(
+    &self,
+    request: Request<RenameWorkspacePathRequest>,
+  ) -> Result<Response<WorkspacePathMutationResponse>, Status> {
+    let request = request.into_inner();
+    let mutation = self
+      .vfs()
+      .rename_path(&request.from, &request.to)
+      .await
+      .map_err(status_from_vfs_error)?;
+
+    Ok(Response::new(mutation_to_proto(mutation)))
+  }
+
+  async fn delete_path(
+    &self,
+    request: Request<DeleteWorkspacePathRequest>,
+  ) -> Result<Response<WorkspacePathMutationResponse>, Status> {
+    let mutation = self
+      .vfs()
+      .delete_path(&request.into_inner().path)
+      .await
+      .map_err(status_from_vfs_error)?;
+
+    Ok(Response::new(mutation_to_proto(mutation)))
+  }
+
   async fn get_path_metadata(
     &self,
     request: Request<GetWorkspacePathMetadataRequest>,
@@ -79,6 +134,14 @@ fn metadata_to_proto(metadata: VfsMetadata) -> GetWorkspacePathMetadataResponse 
   }
 }
 
+fn mutation_to_proto(mutation: VfsMutation) -> WorkspacePathMutationResponse {
+  WorkspacePathMutationResponse {
+    ok: true,
+    kind: entry_kind_to_proto(mutation.kind) as i32,
+    changed: mutation.changed,
+  }
+}
+
 fn entry_kind_to_proto(kind: VfsEntryKind) -> WorkspaceFileEntryKind {
   match kind {
     VfsEntryKind::File => WorkspaceFileEntryKind::File,
@@ -100,6 +163,9 @@ fn status_from_vfs_error(error: VfsError) -> Status {
     VfsError::Path { .. }
     | VfsError::Metadata { .. }
     | VfsError::ReadFile { .. }
+    | VfsError::CreatePath { .. }
+    | VfsError::RenamePath { .. }
+    | VfsError::DeletePath { .. }
     | VfsError::Walk { .. }
     | VfsError::TaskJoin { .. } => Status::internal(error.to_string()),
   }

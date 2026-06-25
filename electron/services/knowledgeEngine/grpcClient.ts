@@ -13,14 +13,11 @@ import type {
   KnowledgeMarkdownLink,
   KnowledgeOpenDocumentInput,
   KnowledgeWorkspaceStatus,
+  KnowledgeWorkspacePathMutation,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
   KnowledgeEngineGrpcClientOptions,
 } from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
-import {
-  workspaceFileEntryKindToFsKind,
-  workspaceFileEntryToFsEntry,
-} from '@electron/services/knowledgeEngine/knowledgeFileMapping.js'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
@@ -33,7 +30,16 @@ import {
   resyncMarkdownDocumentSync,
 } from '@electron/services/knowledgeEngine/grpcMarkdownSync.js'
 import { runSearchWithOptions } from '@electron/services/knowledgeEngine/grpcSearchStream.js'
-
+import {
+  createWorkspaceDirectory,
+  createWorkspaceFile,
+  deleteWorkspacePath,
+  getWorkspaceFileSnapshot,
+  getWorkspacePathMetadata,
+  listWorkspaceEntries,
+  readWorkspaceFile,
+  renameWorkspacePath,
+} from '@electron/services/knowledgeEngine/grpcWorkspaceVfsClient.js'
 import {
   createKnowledgeEngineGrpcClients,
   type KnowledgeEngineGrpcClients,
@@ -52,6 +58,7 @@ export type {
   KnowledgeMarkdownLink,
   KnowledgeOpenDocumentInput,
   KnowledgeWorkspaceStatus,
+  KnowledgeWorkspacePathMutation,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
   KnowledgeEngineGrpcClientOptions,
@@ -109,53 +116,37 @@ export class KnowledgeEngineGrpcClient {
     )
   }
 
-  async getWorkspaceFileSnapshot(root: FsSnapshot['root']): Promise<FsSnapshot> {
-    const response = await invokeUnary(
-      this.options.sessionToken,
-      this.clients.workspaceVfs,
-      this.clients.workspaceVfs.getSnapshot,
-      {},
-    )
-    return { root, entries: response.entries.map(workspaceFileEntryToFsEntry) }
+  getWorkspaceFileSnapshot(root: FsSnapshot['root']): Promise<FsSnapshot> {
+    return getWorkspaceFileSnapshot(this.options.sessionToken, this.clients.workspaceVfs, root)
   }
 
-  async listWorkspaceEntries(): Promise<FsEntry[]> {
-    const response = await invokeUnary(
-      this.options.sessionToken,
-      this.clients.workspaceVfs,
-      this.clients.workspaceVfs.listEntries,
-      {},
-    )
-    return response.entries.map(workspaceFileEntryToFsEntry)
+  listWorkspaceEntries(): Promise<FsEntry[]> {
+    return listWorkspaceEntries(this.options.sessionToken, this.clients.workspaceVfs)
   }
 
-  async readWorkspaceFile(path: string): Promise<string> {
-    const response = await invokeUnary(
-      this.options.sessionToken,
-      this.clients.workspaceVfs,
-      this.clients.workspaceVfs.readFile,
-      { path },
-    )
-    return response.content
+  readWorkspaceFile(path: string): Promise<string> {
+    return readWorkspaceFile(this.options.sessionToken, this.clients.workspaceVfs, path)
   }
 
-  async getWorkspacePathMetadata(path: string): Promise<FsPathMetadata> {
-    const response = await invokeUnary(
-      this.options.sessionToken,
-      this.clients.workspaceVfs,
-      this.clients.workspaceVfs.getPathMetadata,
-      { path },
-    )
-    return {
-      absolute_path: response.absolutePath,
-      kind: workspaceFileEntryKindToFsKind(response.kind),
-      modified_ms: response.modifiedMs,
-      path: response.path,
-      readonly: response.readonly,
-      size_bytes: Number(response.sizeBytes),
-    }
+  createWorkspaceFile(path: string): Promise<KnowledgeWorkspacePathMutation> {
+    return createWorkspaceFile(this.options.sessionToken, this.clients.workspaceVfs, path)
   }
 
+  createWorkspaceDirectory(path: string): Promise<KnowledgeWorkspacePathMutation> {
+    return createWorkspaceDirectory(this.options.sessionToken, this.clients.workspaceVfs, path)
+  }
+
+  renameWorkspacePath(from: string, to: string): Promise<KnowledgeWorkspacePathMutation> {
+    return renameWorkspacePath(this.options.sessionToken, this.clients.workspaceVfs, from, to)
+  }
+
+  deleteWorkspacePath(path: string): Promise<KnowledgeWorkspacePathMutation> {
+    return deleteWorkspacePath(this.options.sessionToken, this.clients.workspaceVfs, path)
+  }
+
+  getWorkspacePathMetadata(path: string): Promise<FsPathMetadata> {
+    return getWorkspacePathMetadata(this.options.sessionToken, this.clients.workspaceVfs, path)
+  }
   async rebuildIndex(documents: WorkspaceDocument[]): Promise<void> {
     await invokeUnary(
       this.options.sessionToken,

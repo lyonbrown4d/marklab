@@ -11,6 +11,7 @@ import type {
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
   KnowledgeWorkspaceStatus,
+  KnowledgeWorkspacePathMutation,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
 import type {
   KnowledgeEngineInitializeResult,
@@ -132,6 +133,47 @@ export class KnowledgeEngineService {
     const sidecars = await this.getSidecars()
     await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
     return sidecars.readWorkspaceFile(workspaceId, path)
+  }
+
+  async createWorkspaceFile(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.createWorkspaceFile(workspaceId, path)
+  }
+
+  async createWorkspaceDirectory(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.createWorkspaceDirectory(workspaceId, path)
+  }
+
+  async renameWorkspacePath(
+    workspaceId: string,
+    workspaceRoot: string,
+    from: string,
+    to: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.renameWorkspacePath(workspaceId, from, to)
+  }
+
+  async deleteWorkspacePath(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.deleteWorkspacePath(workspaceId, path)
   }
 
   async getWorkspacePathMetadata(

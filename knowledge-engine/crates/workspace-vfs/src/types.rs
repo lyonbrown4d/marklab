@@ -19,6 +19,12 @@ pub struct VfsSnapshot {
   pub entries: Vec<VfsEntry>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VfsMutation {
+  pub kind: VfsEntryKind,
+  pub changed: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct VfsMetadata {
   pub path: String,
@@ -55,6 +61,12 @@ pub enum VfsError {
   Path { source: io::Error },
   #[error("Workspace metadata read failed")]
   Metadata { source: io::Error },
+  #[error("Workspace path create failed")]
+  CreatePath { source: io::Error },
+  #[error("Workspace path rename failed")]
+  RenamePath { source: io::Error },
+  #[error("Workspace path delete failed")]
+  DeletePath { source: io::Error },
   #[error("Workspace file read failed")]
   ReadFile { source: io::Error },
 }

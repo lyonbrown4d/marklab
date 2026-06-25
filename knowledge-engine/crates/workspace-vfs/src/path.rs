@@ -45,6 +45,29 @@ impl WorkspacePathResolver {
     Ok(path)
   }
 
+  pub(crate) async fn resolve_mutation_path(
+    &self,
+    relative_path: &str,
+  ) -> Result<PathBuf, VfsError> {
+    self.validate_relative_path(relative_path)?;
+    let candidate = self.root.join(Path::new(relative_path)).clean();
+    if !is_path_inside_or_equal(&self.root, &candidate) {
+      return Err(VfsError::EscapesWorkspace);
+    }
+
+    if let Some(parent) = candidate.parent() {
+      let ancestor = nearest_existing_ancestor(parent).await?;
+      let canonical_parent = fs::canonicalize(ancestor)
+        .await
+        .map_err(|source| VfsError::Path { source })?;
+      if !is_path_inside_or_equal(&self.root, &canonical_parent) {
+        return Err(VfsError::EscapesWorkspace);
+      }
+    }
+
+    Ok(candidate)
+  }
+
   pub(crate) fn relative_path(&self, path: &Path) -> Result<String, VfsError> {
     path
       .strip_prefix(&self.root)
@@ -79,6 +102,26 @@ impl WorkspacePathResolver {
     }
     Ok(())
   }
+}
+
+async fn nearest_existing_ancestor(path: &Path) -> Result<PathBuf, VfsError> {
+  let mut current = Some(path);
+  while let Some(candidate) = current {
+    match fs::metadata(candidate).await {
+      Ok(_) => return Ok(candidate.to_path_buf()),
+      Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
+        current = candidate.parent();
+      }
+      Err(source) => return Err(VfsError::Path { source }),
+    }
+  }
+
+  Err(VfsError::Path {
+    source: std::io::Error::new(
+      std::io::ErrorKind::NotFound,
+      "no existing workspace ancestor found",
+    ),
+  })
 }
 
 fn normalize_path(path: &Path) -> String {

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { EventEmitter } from 'node:events'
 
 import {
@@ -19,6 +20,9 @@ import type {
   GetDocumentSymbolsResponse,
   GetLinksRequest,
   GetLinksResponse,
+  CreateWorkspaceDirectoryRequest,
+  CreateWorkspaceFileRequest,
+  DeleteWorkspacePathRequest,
   GetWorkspaceFileSnapshotRequest,
   GetWorkspaceFileSnapshotResponse,
   GetWorkspacePathMetadataRequest,
@@ -34,6 +38,7 @@ import type {
   RemovePathPrefixRequest,
   RemovePathPrefixResponse,
   ReadWorkspaceFileRequest,
+  RenameWorkspacePathRequest,
   ReadWorkspaceFileResponse,
   SearchRequest,
   SearchResponse,
@@ -43,6 +48,7 @@ import type {
   SyncResponse,
   UpsertDocumentRequest,
   UpsertDocumentResponse,
+  WorkspacePathMutationResponse,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
 
 type RecordedCall = {
@@ -52,6 +58,9 @@ type RecordedCall = {
 
 type CallKey =
   | 'closeWorkspace'
+  | 'createDirectory'
+  | 'createFile'
+  | 'deletePath'
   | 'getCapabilities'
   | 'getDocumentSymbols'
   | 'getLinks'
@@ -63,6 +72,7 @@ type CallKey =
   | 'rebuildIndex'
   | 'removeDocument'
   | 'readFile'
+  | 'renamePath'
   | 'removePathPrefix'
   | 'search'
   | 'shutdown'
@@ -175,6 +185,21 @@ export const createClientFixture = (): ClientFixture => {
           },
           workspaceVfs: {
             close: close.workspaceVfs,
+            createDirectory: unary<CreateWorkspaceDirectoryRequest, WorkspacePathMutationResponse>(
+              calls,
+              'createDirectory',
+              { changed: true, kind: 1, ok: true },
+            ),
+            createFile: unary<CreateWorkspaceFileRequest, WorkspacePathMutationResponse>(
+              calls,
+              'createFile',
+              { changed: true, kind: 1, ok: true },
+            ),
+            deletePath: unary<DeleteWorkspacePathRequest, WorkspacePathMutationResponse>(
+              calls,
+              'deletePath',
+              { changed: true, kind: 1, ok: true },
+            ),
             getPathMetadata: unary<
               GetWorkspacePathMetadataRequest,
               GetWorkspacePathMetadataResponse
@@ -200,6 +225,11 @@ export const createClientFixture = (): ClientFixture => {
               calls,
               'readFile',
               { content: '# Alpha' },
+            ),
+            renamePath: unary<RenameWorkspacePathRequest, WorkspacePathMutationResponse>(
+              calls,
+              'renamePath',
+              { changed: true, kind: 1, ok: true },
             ),
           },
           workspace: {

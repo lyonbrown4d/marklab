@@ -55,6 +55,9 @@ const createClient = (): WorkspaceSidecarClient => ({
     acknowledged: { documentId: 'alpha.md', version: '0' },
   })),
   closeWorkspace: vi.fn(async () => undefined),
+  createWorkspaceDirectory: vi.fn(async () => ({ changed: true, kind: 'folder' as const })),
+  createWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
+  deleteWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
   getCapabilities: vi.fn(async () => ({})),
   getWorkspaceFileSnapshot: vi.fn(async () => ({
     entries: [{ kind: 'file' as const, name: 'alpha.md', path: 'alpha.md' }],
@@ -113,6 +116,7 @@ const createClient = (): WorkspaceSidecarClient => ({
     acknowledged: { documentId: 'alpha.md', version: '2' },
   })),
   readWorkspaceFile: vi.fn(async () => '# Alpha'),
+  renameWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
   search: vi.fn(async () => []),
   searchWithOptions: vi.fn(async () => ({
     results: [

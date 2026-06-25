@@ -37,6 +37,10 @@ export type KnowledgeWorkspaceStatus = GetWorkspaceStatusResponse
 export type KnowledgeWorkspaceFileEntry = FsEntry
 export type KnowledgeWorkspaceFileSnapshot = FsSnapshot
 export type KnowledgeWorkspacePathMetadata = FsPathMetadata
+export type KnowledgeWorkspacePathMutation = {
+  kind: FsEntry['kind']
+  changed: boolean
+}
 
 export type KnowledgeEngineGrpcClientOptions = {
   address: string

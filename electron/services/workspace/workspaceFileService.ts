@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -8,13 +7,22 @@ import {
   isWorkspaceDocumentPath,
   workspaceRootForAssets,
 } from '@electron/services/workspace/path.js'
-import type { FsEntry, FsSnapshot, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import type {
   FsBufferStatus,
+  FsEntry,
   FsPathMetadata,
   FsRootInfo,
+  FsSnapshot,
+  FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
+import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
+import {
+  trySidecarPathMetadata,
+  trySidecarPathMutation,
+  trySidecarReadFile,
+  trySidecarSnapshot,
+} from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import {
   ensureDefaultFile,
   isPathInsideOrEqual,
@@ -33,13 +41,23 @@ export class WorkspaceFileService extends WorkspaceBase {
   }
 
   async snapshot(): Promise<FsSnapshot> {
-    const sidecarSnapshot = await this.trySidecarSnapshot()
+    const sidecarSnapshot = await trySidecarSnapshot({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      root: this.rootInfo(),
+      state: this.state,
+    })
     if (sidecarSnapshot) return sidecarSnapshot
     return { root: this.rootInfo(), entries: await super.listEntries() }
   }
 
   protected override async listEntries(): Promise<FsEntry[]> {
-    const sidecarSnapshot = await this.trySidecarSnapshot()
+    const sidecarSnapshot = await trySidecarSnapshot({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      root: this.rootInfo(),
+      state: this.state,
+    })
     if (sidecarSnapshot) return sidecarSnapshot.entries
     return super.listEntries()
   }
@@ -124,7 +142,12 @@ export class WorkspaceFileService extends WorkspaceBase {
     const absolutePath = this.resolve(relativePath)
     const cached = this.buffers.readCached(relativePath)
     if (cached != null) return cached
-    const sidecarContent = await this.trySidecarReadFile(relativePath)
+    const sidecarContent = await trySidecarReadFile({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      path: relativePath,
+      state: this.state,
+    })
     if (sidecarContent != null) return sidecarContent
     return fs.promises.readFile(absolutePath, 'utf8')
   }
@@ -153,6 +176,22 @@ export class WorkspaceFileService extends WorkspaceBase {
   async createFile(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
     const relativePath = stringArg(value, 'path')
+    const sidecarMutation = await trySidecarPathMutation({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      mutate: (service, runtime) =>
+        service.createWorkspaceFile(runtime.workspaceId, runtime.workspaceRoot, relativePath),
+      path: relativePath,
+      state: this.state,
+    })
+    if (sidecarMutation) {
+      if (sidecarMutation.changed) this.buffers.setCleanFile(relativePath, '')
+      else this.buffers.delete(relativePath)
+      this.scheduleSnapshotChanged({ restartWatcher: true })
+      this.logger.info('file created', { path: relativePath })
+      return
+    }
+
     const absolutePath = this.resolve(relativePath)
     await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
     if (!(await pathExists(absolutePath))) {
@@ -164,23 +203,41 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('file created', { path: relativePath })
   }
-
   async createDir(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
-    const absolutePath = this.resolve(stringArg(value, 'path'))
-    await fs.promises.mkdir(absolutePath, { recursive: true })
+    const relativePath = stringArg(value, 'path')
+    const sidecarMutation = await trySidecarPathMutation({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      mutate: (service, runtime) =>
+        service.createWorkspaceDirectory(runtime.workspaceId, runtime.workspaceRoot, relativePath),
+      path: relativePath,
+      state: this.state,
+    })
+    if (!sidecarMutation) {
+      await fs.promises.mkdir(this.resolve(relativePath), { recursive: true })
+    }
     this.scheduleSnapshotChanged({ restartWatcher: true })
-    this.logger.info('folder created', { path: stringArg(value, 'path') })
+    this.logger.info('folder created', { path: relativePath })
   }
-
   async renamePath(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
     const from = stringArg(value, 'from')
     const to = stringArg(value, 'to')
-    const target = this.resolve(to)
     const workspaceIndex = await this.getWorkspaceIndexForRename()
-    await fs.promises.mkdir(path.dirname(target), { recursive: true })
-    await fs.promises.rename(this.resolve(from), target)
+    const sidecarMutation = await trySidecarPathMutation({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      mutate: (service, runtime) =>
+        service.renameWorkspacePath(runtime.workspaceId, runtime.workspaceRoot, from, to),
+      path: from,
+      state: this.state,
+    })
+    if (!sidecarMutation) {
+      const target = this.resolve(to)
+      await fs.promises.mkdir(path.dirname(target), { recursive: true })
+      await fs.promises.rename(this.resolve(from), target)
+    }
     this.buffers.rename(from, to)
     if (workspaceIndex) {
       const rewrite = await rewriteMarkdownFileReferencesForRename({
@@ -201,7 +258,6 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path renamed', { from, to })
   }
-
   async movePath(value: unknown): Promise<void> {
     await this.renamePath(value)
   }
@@ -209,25 +265,29 @@ export class WorkspaceFileService extends WorkspaceBase {
   async deletePath(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
     const relativePath = stringArg(value, 'path')
-    const absolutePath = this.resolve(relativePath)
-    const stat = await fs.promises.stat(absolutePath)
-    if (stat.isDirectory()) {
-      await fs.promises.rm(absolutePath, { recursive: true, force: false })
-    } else {
-      await fs.promises.unlink(absolutePath)
-    }
+    const sidecarMutation = await trySidecarPathMutation({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      mutate: (service, runtime) =>
+        service.deleteWorkspacePath(runtime.workspaceId, runtime.workspaceRoot, relativePath),
+      path: relativePath,
+      state: this.state,
+    })
+    const kind =
+      sidecarMutation?.kind ?? (await deleteWorkspacePathWithNode(this.resolve(relativePath)))
     this.buffers.deleteUnder(relativePath)
     this.scheduleSnapshotChanged({ restartWatcher: true })
-    this.logger.info('path deleted', {
-      path: relativePath,
-      kind: stat.isDirectory() ? 'folder' : 'file',
-    })
+    this.logger.info('path deleted', { path: relativePath, kind })
   }
-
   async pathMetadata(value: unknown): Promise<FsPathMetadata> {
     const relativePath = stringArg(value, 'path')
     const absolutePath = this.resolve(relativePath)
-    const sidecarMetadata = await this.trySidecarPathMetadata(relativePath)
+    const sidecarMetadata = await trySidecarPathMetadata({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      path: relativePath,
+      state: this.state,
+    })
     if (sidecarMetadata) return sidecarMetadata
     const stat = await fs.promises.stat(absolutePath)
     return {
@@ -246,70 +306,6 @@ export class WorkspaceFileService extends WorkspaceBase {
     if (error) this.logger.warn('open path in system failed', { path: metadata.path, error })
     if (error) throw new Error(`Failed to open path: ${error}`)
     this.logger.info('path opened in system', { path: metadata.path })
-  }
-
-  private async trySidecarSnapshot(): Promise<FsSnapshot | null> {
-    const runtime = this.sidecarRuntime()
-    if (!runtime) return null
-    try {
-      return (
-        (await this.knowledgeEngineService?.getWorkspaceFileSnapshot(
-          runtime.workspaceId,
-          runtime.workspaceRoot,
-          this.rootInfo(),
-        )) ?? null
-      )
-    } catch (error) {
-      this.logger.warn('workspace vfs snapshot failed; falling back to node filesystem', { error })
-      return null
-    }
-  }
-
-  private async trySidecarReadFile(relativePath: string): Promise<string | null> {
-    const runtime = this.sidecarRuntime()
-    if (!runtime) return null
-    try {
-      return (
-        (await this.knowledgeEngineService?.readWorkspaceFile(
-          runtime.workspaceId,
-          runtime.workspaceRoot,
-          relativePath,
-        )) ?? null
-      )
-    } catch (error) {
-      this.logger.warn('workspace vfs read failed; falling back to node filesystem', {
-        error,
-        path: relativePath,
-      })
-      return null
-    }
-  }
-
-  private async trySidecarPathMetadata(relativePath: string): Promise<FsPathMetadata | null> {
-    const runtime = this.sidecarRuntime()
-    if (!runtime) return null
-    try {
-      return (
-        (await this.knowledgeEngineService?.getWorkspacePathMetadata(
-          runtime.workspaceId,
-          runtime.workspaceRoot,
-          relativePath,
-        )) ?? null
-      )
-    } catch (error) {
-      this.logger.warn('workspace vfs metadata failed; falling back to node filesystem', {
-        error,
-        path: relativePath,
-      })
-      return null
-    }
-  }
-
-  private sidecarRuntime(): { workspaceId: string; workspaceRoot: string } | null {
-    if (!this.knowledgeEngineService || this.state.rootKind === 'single') return null
-    const raw = `${this.state.rootKind}|${this.state.rootPath}|${this.state.singleFile ?? ''}`
-    const workspaceId = `vfs:${createHash('sha256').update(raw).digest('hex')}`
-    return { workspaceId, workspaceRoot: this.state.rootPath }
   }
 
   private async getWorkspaceIndexForRename(): Promise<FsWorkspaceIndex | null> {

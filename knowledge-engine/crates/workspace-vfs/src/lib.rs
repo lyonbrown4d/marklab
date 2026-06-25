@@ -8,7 +8,7 @@ use tokio::{fs, task};
 mod path;
 mod types;
 
-pub use types::{VfsEntry, VfsEntryKind, VfsError, VfsMetadata, VfsSnapshot};
+pub use types::{VfsEntry, VfsEntryKind, VfsError, VfsMetadata, VfsMutation, VfsSnapshot};
 
 #[derive(Debug, Clone)]
 pub struct WorkspaceVfs {
@@ -60,6 +60,98 @@ impl WorkspaceVfs {
     fs::read_to_string(path)
       .await
       .map_err(|source| VfsError::ReadFile { source })
+  }
+
+  pub async fn create_file(&self, relative_path: &str) -> Result<VfsMutation, VfsError> {
+    let path = self.resolver.resolve_mutation_path(relative_path).await?;
+    match fs::metadata(&path).await {
+      Ok(_) => {
+        return Ok(VfsMutation {
+          kind: VfsEntryKind::File,
+          changed: false,
+        });
+      }
+      Err(source) if source.kind() == std::io::ErrorKind::NotFound => {}
+      Err(source) => return Err(VfsError::Metadata { source }),
+    }
+
+    if let Some(parent) = path.parent() {
+      fs::create_dir_all(parent)
+        .await
+        .map_err(|source| VfsError::CreatePath { source })?;
+    }
+    fs::write(path, "")
+      .await
+      .map_err(|source| VfsError::CreatePath { source })?;
+
+    Ok(VfsMutation {
+      kind: VfsEntryKind::File,
+      changed: true,
+    })
+  }
+
+  pub async fn create_dir(&self, relative_path: &str) -> Result<VfsMutation, VfsError> {
+    let path = self.resolver.resolve_mutation_path(relative_path).await?;
+    let changed = matches!(
+      fs::metadata(&path).await,
+      Err(source) if source.kind() == std::io::ErrorKind::NotFound
+    );
+    fs::create_dir_all(path)
+      .await
+      .map_err(|source| VfsError::CreatePath { source })?;
+
+    Ok(VfsMutation {
+      kind: VfsEntryKind::Folder,
+      changed,
+    })
+  }
+
+  pub async fn rename_path(&self, from: &str, to: &str) -> Result<VfsMutation, VfsError> {
+    let source = self.resolver.resolve_existing_path(from).await?;
+    let target = self.resolver.resolve_mutation_path(to).await?;
+    if let Some(parent) = target.parent() {
+      fs::create_dir_all(parent)
+        .await
+        .map_err(|source| VfsError::CreatePath { source })?;
+    }
+    fs::rename(source, &target)
+      .await
+      .map_err(|source| VfsError::RenamePath { source })?;
+    let metadata = fs::metadata(&target)
+      .await
+      .map_err(|source| VfsError::Metadata { source })?;
+
+    Ok(VfsMutation {
+      kind: if metadata.is_dir() {
+        VfsEntryKind::Folder
+      } else {
+        VfsEntryKind::File
+      },
+      changed: true,
+    })
+  }
+
+  pub async fn delete_path(&self, relative_path: &str) -> Result<VfsMutation, VfsError> {
+    let path = self.resolver.resolve_existing_path(relative_path).await?;
+    let metadata = fs::metadata(&path)
+      .await
+      .map_err(|source| VfsError::Metadata { source })?;
+    let kind = if metadata.is_dir() {
+      fs::remove_dir_all(path)
+        .await
+        .map_err(|source| VfsError::DeletePath { source })?;
+      VfsEntryKind::Folder
+    } else {
+      fs::remove_file(path)
+        .await
+        .map_err(|source| VfsError::DeletePath { source })?;
+      VfsEntryKind::File
+    };
+
+    Ok(VfsMutation {
+      kind,
+      changed: true,
+    })
   }
 
   pub async fn metadata(&self, relative_path: &str) -> Result<VfsMetadata, VfsError> {
