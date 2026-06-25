@@ -1,8 +1,4 @@
-import type {
-  FsMarkdownDiagnostic,
-  FsSearchResult,
-  FsWorkspaceIndex,
-} from '@electron/services/workspace/types.js'
+import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 
 export type MarkdownDocument = {
   path: string
@@ -20,13 +16,6 @@ export type WorkspaceBuildIndexTask = {
   knownPaths: WorkspaceKnownPaths
 }
 
-export type WorkspaceSearchTask = {
-  type: 'search-documents'
-  documents: MarkdownDocument[]
-  query: string
-  limit: number
-}
-
 export type WorkspaceAnalyzeTask = {
   type: 'markdown-diagnostics'
   documents: MarkdownDocument[]
@@ -34,19 +23,12 @@ export type WorkspaceAnalyzeTask = {
   path: string
 }
 
-export type WorkspaceAnalysisTask =
-  | WorkspaceBuildIndexTask
-  | WorkspaceSearchTask
-  | WorkspaceAnalyzeTask
+export type WorkspaceAnalysisTask = WorkspaceBuildIndexTask | WorkspaceAnalyzeTask
 
 export type WorkspaceBuildIndexResult = FsWorkspaceIndex
-export type WorkspaceSearchResult = FsSearchResult[]
 export type WorkspaceAnalyzeResult = FsMarkdownDiagnostic[]
 
-export type WorkspaceAnalysisResult =
-  | WorkspaceAnalyzeResult
-  | WorkspaceBuildIndexResult
-  | WorkspaceSearchResult
+export type WorkspaceAnalysisResult = WorkspaceAnalyzeResult | WorkspaceBuildIndexResult
 
 export type WorkspaceAnalysisWorkerRequest = {
   id: number

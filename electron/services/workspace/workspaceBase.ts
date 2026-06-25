@@ -28,7 +28,7 @@ import {
 import {
   initializeWorkspaceBackgroundTasks,
   runSearchIndexTask as runSearchIndexTaskWithStatus,
-  runWorkerTask as runWorkerTaskWithFallback,
+  runWorkerTask as runWorkerTaskRequired,
   type SearchIndexTaskState,
 } from '@electron/services/workspace/workspaceTaskUtils.js'
 import {
@@ -201,13 +201,8 @@ export class WorkspaceBase {
     }
   }
 
-  protected runSearchIndexTask<T>(
-    work: () => Promise<T>,
-    fallback: (() => Promise<T> | T) | null = null,
-    taskName = 'search-index',
-  ): Promise<T> {
+  protected runSearchIndexTask<T>(work: () => Promise<T>, taskName = 'search-index'): Promise<T> {
     return runSearchIndexTaskWithStatus({
-      fallback,
       getStatus: () => this.tasks.get('search-index')?.status,
       logger: this.logger,
       setTask: (id, label, status, message) => this.setTask(id, label, status, message),
@@ -217,12 +212,8 @@ export class WorkspaceBase {
     })
   }
 
-  protected runWorkerTask<T>(
-    task: () => Promise<T>,
-    fallback: () => Promise<T> | T,
-    taskName: string,
-  ): Promise<T> {
-    return runWorkerTaskWithFallback(task, fallback, taskName, this.logger)
+  protected runWorkerTask<T>(task: () => Promise<T>, taskName: string): Promise<T> {
+    return runWorkerTaskRequired(task, taskName, this.logger)
   }
 
   protected writeBufferedFile(args: Parameters<WorkspaceBufferWriteFile>[0]): Promise<void> {

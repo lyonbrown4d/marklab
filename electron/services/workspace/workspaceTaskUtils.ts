@@ -20,7 +20,6 @@ export const initializeWorkspaceBackgroundTasks = (setTask: SetTask): void => {
 }
 
 type RunSearchIndexTaskOptions<T> = {
-  fallback?: (() => Promise<T> | T) | null
   getStatus: () => BackgroundTaskStatus['status'] | null | undefined
   logger: Logger
   setTask: SetTask
@@ -30,7 +29,6 @@ type RunSearchIndexTaskOptions<T> = {
 }
 
 export const runSearchIndexTask = <T>({
-  fallback = null,
   getStatus,
   logger,
   setTask,
@@ -45,23 +43,11 @@ export const runSearchIndexTask = <T>({
 
   return Promise.resolve()
     .then(work)
-    .catch(async (taskError: unknown) => {
-      if (!fallback) {
-        failed = true
-        setTask('search-index', 'Search index', 'error', errorMessage(taskError))
-        logger.error('search index task failed', { task: taskName, error: taskError })
-        throw taskError
-      }
-
-      logger.warn('search index task failed; using fallback', { task: taskName, error: taskError })
-      try {
-        return await fallback()
-      } catch (fallbackError) {
-        failed = true
-        setTask('search-index', 'Search index', 'error', errorMessage(fallbackError))
-        logger.error('search index fallback failed', { task: taskName, error: fallbackError })
-        throw fallbackError
-      }
+    .catch((taskError: unknown) => {
+      failed = true
+      setTask('search-index', 'Search index', 'error', errorMessage(taskError))
+      logger.error('search index task failed', { task: taskName, error: taskError })
+      throw taskError
     })
     .finally(() => {
       state.runs -= 1
@@ -74,17 +60,16 @@ export const runSearchIndexTask = <T>({
 
 export const runWorkerTask = <T>(
   task: () => Promise<T>,
-  fallback: () => Promise<T> | T,
   taskName: string,
   logger: Logger,
 ): Promise<T> => {
   return Promise.resolve()
     .then(task)
     .catch((error: unknown) => {
-      logger.warn('workspace analysis worker failed; using main-thread fallback', {
+      logger.error('workspace analysis worker failed', {
         error,
         task: taskName,
       })
-      return fallback()
+      throw error
     })
 }

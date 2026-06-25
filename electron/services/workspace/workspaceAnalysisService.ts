@@ -5,16 +5,12 @@ import type { App, Shell } from 'electron'
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
-import {
-  diagnosticsForFile,
-  parseMarkdownDocument,
-  searchDocuments,
-} from '@electron/services/workspace/markdown.js'
 import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
 import type {
   FsGraph,
   FsMarkdownDiagnostic,
   FsRootInfo,
+  FsSearchResult,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
@@ -60,9 +56,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
       loadDocuments: (paths) => this.loadDocuments(paths),
       logger: this.logger.child('search-index-updates'),
-      markNeedsRebuild: () => {
-        this.needsSearchIndexRebuild = true
-      },
       openIndex: () => this.openWorkspaceSearchIndex(),
       rebuildAll: async () => {
         await this.buildSearchIndexFromWorkspace()
@@ -70,7 +63,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       },
       removeDocument: (pathValue) => this.workspaceSearchIndex.removeDocument(pathValue),
       removePathPrefix: (pathValue) => this.workspaceSearchIndex.removePathPrefix(pathValue),
-      runTask: (work, fallback, taskName) => this.runSearchIndexTask(work, fallback, taskName),
+      runTask: (work, taskName) => this.runSearchIndexTask(work, taskName),
       upsertDocument: (document) => this.workspaceSearchIndex.upsertDocument(document),
     })
   private activeWorkspaceSearchKey = ''
@@ -94,7 +87,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
             documents,
             knownPaths,
           }),
-        async () => this.buildWorkspaceIndexFromDocuments(documents, knownPaths),
         'workspace-index',
       )
     })
@@ -145,32 +137,23 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
           knownPaths,
           path: pathValue,
         }),
-      async () =>
-        diagnosticsForFile(this.buildWorkspaceIndexFromDocuments(documents, knownPaths), pathValue),
       'markdown-diagnostics',
     )
   }
 
-  async searchWorkspace(value: unknown): Promise<ReturnType<typeof searchDocuments>> {
+  async searchWorkspace(value: unknown): Promise<FsSearchResult[]> {
     const query = stringArg(value, 'query')
     const limitValue = value && typeof value === 'object' && 'limit' in value ? value.limit : 20
     const limit = typeof limitValue === 'number' && Number.isFinite(limitValue) ? limitValue : 20
 
-    return this.runSearchIndexTask(
-      async () => {
-        await this.openWorkspaceSearchIndex()
-        await this.searchIndexUpdateQueue.flushPending()
-        await this.rebuildSearchIndexIfNeeded()
+    return this.runSearchIndexTask(async () => {
+      await this.openWorkspaceSearchIndex()
+      await this.searchIndexUpdateQueue.flushPending()
+      await this.rebuildSearchIndexIfNeeded()
 
-        const indexedResult = await this.workspaceSearchIndex.search(query, limit)
-        return indexedResult
-      },
-      async () => {
-        const documents = await this.workspaceDocuments()
-        return searchDocuments(documents, query, limit)
-      },
-      'search-documents',
-    )
+      const indexedResult = await this.workspaceSearchIndex.search(query, limit)
+      return indexedResult
+    }, 'search-documents')
   }
 
   async rebuildSearchIndex(): Promise<void> {
@@ -212,19 +195,13 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
 
-    void this.runSearchIndexTask(
-      async () => {
-        await this.openWorkspaceSearchIndex()
-        const documents = await this.loadDocuments(markdownPaths)
-        for (const document of documents) {
-          await this.workspaceSearchIndex.upsertDocument(document)
-        }
-      },
-      async () => {
-        this.needsSearchIndexRebuild = true
-      },
-      'search-index',
-    ).catch((error) => {
+    void this.runSearchIndexTask(async () => {
+      await this.openWorkspaceSearchIndex()
+      const documents = await this.loadDocuments(markdownPaths)
+      for (const document of documents) {
+        await this.workspaceSearchIndex.upsertDocument(document)
+      }
+    }, 'search-index').catch((error) => {
       this.logger.warn('search index update from flush failed; scheduling full rebuild', { error })
       this.needsSearchIndexRebuild = true
     })
@@ -269,17 +246,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private getWorkspaceSearchKey(): string {
     const raw = `${this.state.rootKind}|${this.state.rootPath}|${this.state.singleFile ?? ''}`
     return createHash('sha256').update(raw).digest('hex')
-  }
-
-  private buildWorkspaceIndexFromDocuments(
-    documents: Array<{ path: string; content: string }>,
-    knownPaths: { paths: string[]; assetPaths: string[] },
-  ): FsWorkspaceIndex {
-    return {
-      files: documents.map((document) => parseMarkdownDocument(document.path, document.content)),
-      paths: knownPaths.paths,
-      asset_paths: knownPaths.assetPaths,
-    }
   }
 
   private indexChangeAffectsSearch(pathValue: string | null, event?: WatchEventName): boolean {

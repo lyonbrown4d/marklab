@@ -14,16 +14,11 @@ type WorkspaceSearchIndexUpdateQueueOptions<TDocument> = {
   delayMs: number
   loadDocuments: (paths: string[]) => Promise<TDocument[]>
   logger: Logger
-  markNeedsRebuild: () => void
   openIndex: () => Promise<void>
   rebuildAll: () => Promise<void>
   removeDocument: (path: string) => Promise<void>
   removePathPrefix: (path: string) => Promise<void>
-  runTask: <T>(
-    work: () => Promise<T>,
-    fallback: (() => Promise<T> | T) | null,
-    taskName: string,
-  ) => Promise<T>
+  runTask: <T>(work: () => Promise<T>, taskName: string) => Promise<T>
   upsertDocument: (document: TDocument) => Promise<void>
 }
 
@@ -119,20 +114,14 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
     this.rebuildScheduled = false
     this.changes.clear()
 
-    await this.options.runTask(
-      async () => {
-        await this.options.openIndex()
-        if (shouldRebuild) {
-          await this.options.rebuildAll()
-          return
-        }
-        await this.applyChanges(changes)
-      },
-      async () => {
-        this.options.markNeedsRebuild()
-      },
-      'search-index',
-    )
+    await this.options.runTask(async () => {
+      await this.options.openIndex()
+      if (shouldRebuild) {
+        await this.options.rebuildAll()
+        return
+      }
+      await this.applyChanges(changes)
+    }, 'search-index')
   }
 
   private async applyChanges(changes: SearchIndexChange[]): Promise<void> {

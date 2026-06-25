@@ -5,11 +5,6 @@ import type { FsIndexedMarkdownFile } from '@electron/services/workspace/types.j
 
 export { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
 export {
-  buildOutlineGraph,
-  buildWorkspaceGraph,
-} from '@electron/services/workspace/markdown/graph.js'
-export { searchDocuments } from '@electron/services/workspace/markdown/search.js'
-export {
   fileLabel,
   normalizeMarkdownTarget,
   targetIsMarkdown,

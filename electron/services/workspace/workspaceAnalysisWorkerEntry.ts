@@ -2,7 +2,6 @@ import { parentPort } from 'node:worker_threads'
 
 import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import { searchDocuments } from '@electron/services/workspace/markdown/search.js'
 import type {
   WorkspaceAnalysisResult,
   WorkspaceAnalysisTask,
@@ -22,18 +21,6 @@ const runWorkspaceBuildIndex = ({
     paths: knownPaths.paths,
     asset_paths: knownPaths.assetPaths,
   }
-}
-
-const runWorkspaceSearch = ({
-  documents,
-  query,
-  limit,
-}: {
-  documents: { path: string; content: string }[]
-  query: string
-  limit: number
-}): WorkspaceAnalysisResult => {
-  return searchDocuments(documents, query, limit)
 }
 
 const runWorkspaceAnalyze = ({
@@ -57,8 +44,6 @@ const runWorkspaceTask = (task: WorkspaceAnalysisTask): WorkspaceAnalysisResult 
   switch (task.type) {
     case 'workspace-index':
       return runWorkspaceBuildIndex(task)
-    case 'search-documents':
-      return runWorkspaceSearch(task)
     case 'markdown-diagnostics':
       return runWorkspaceAnalyze(task)
   }

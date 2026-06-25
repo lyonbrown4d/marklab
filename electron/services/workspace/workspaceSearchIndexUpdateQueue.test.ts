@@ -20,18 +20,13 @@ const createLogger = (): Logger => {
 const createQueue = () => {
   const loadDocuments = vi.fn(async (paths: string[]) => paths.map((path) => ({ path })))
   const logger = createLogger()
-  const markNeedsRebuild = vi.fn()
   const openIndex = vi.fn(async () => undefined)
   const rebuildAll = vi.fn(async () => undefined)
   const removeDocument = vi.fn(async () => undefined)
   const removePathPrefix = vi.fn(async () => undefined)
   const runTaskSpy = vi.fn()
-  const runTask = async <T>(
-    work: () => Promise<T>,
-    fallback: (() => Promise<T> | T) | null,
-    taskName: string,
-  ): Promise<T> => {
-    runTaskSpy(work, fallback, taskName)
+  const runTask = async <T>(work: () => Promise<T>, taskName: string): Promise<T> => {
+    runTaskSpy(work, taskName)
     return work()
   }
   const upsertDocument = vi.fn(async () => undefined)
@@ -39,7 +34,6 @@ const createQueue = () => {
     delayMs: 100,
     loadDocuments,
     logger,
-    markNeedsRebuild,
     openIndex,
     rebuildAll,
     removeDocument,
@@ -51,7 +45,6 @@ const createQueue = () => {
   return {
     loadDocuments,
     logger,
-    markNeedsRebuild,
     openIndex,
     queue,
     rebuildAll,
