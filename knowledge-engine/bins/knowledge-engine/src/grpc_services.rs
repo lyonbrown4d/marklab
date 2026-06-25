@@ -122,6 +122,8 @@ impl ControlService for KnowledgeGrpcService {
         "control".to_string(),
         "document-session".to_string(),
         "markdown".to_string(),
+        "markdown-outline-graph".to_string(),
+        "markdown-workspace-graph".to_string(),
         "search".to_string(),
         "workspace".to_string(),
         "workspace-status".to_string(),

@@ -10,7 +10,12 @@ import type {
   SyncResponse,
   TextEdit,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
-import type { FsEntry, FsPathMetadata, FsSnapshot } from '@electron/services/workspace/types.js'
+import type {
+  FsEntry,
+  FsGraph,
+  FsPathMetadata,
+  FsSnapshot,
+} from '@electron/services/workspace/types.js'
 import type { KnowledgeEngineGrpcClients } from '@electron/services/knowledgeEngine/grpcWire.js'
 
 export type KnowledgeDocumentVersion = number | string
@@ -36,6 +41,7 @@ export type KnowledgeTextEdit = TextEdit
 export type KnowledgeWorkspaceStatus = GetWorkspaceStatusResponse
 export type KnowledgeWorkspaceFileEntry = FsEntry
 export type KnowledgeWorkspaceFileSnapshot = FsSnapshot
+export type KnowledgeWorkspaceGraph = FsGraph
 export type KnowledgeWorkspacePathMetadata = FsPathMetadata
 export type KnowledgeWorkspacePathMutation = {
   kind: FsEntry['kind']

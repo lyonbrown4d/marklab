@@ -1,9 +1,5 @@
 import { parentPort } from 'node:worker_threads'
 
-import {
-  buildOutlineGraph,
-  buildWorkspaceGraph,
-} from '@electron/services/workspace/markdown/graph.js'
 import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
 import { searchDocuments } from '@electron/services/workspace/markdown/search.js'
@@ -57,31 +53,6 @@ const runWorkspaceAnalyze = ({
   return diagnosticsForFile(index, path)
 }
 
-const runWorkspaceGraph = ({
-  documents,
-  knownPaths,
-}: {
-  documents: { path: string; content: string }[]
-  knownPaths: { paths: string[]; assetPaths: string[] }
-}): WorkspaceAnalysisResult => {
-  const index = {
-    files: documents.map((document) => parseMarkdownDocument(document.path, document.content)),
-    paths: knownPaths.paths,
-    asset_paths: knownPaths.assetPaths,
-  }
-  return buildWorkspaceGraph(index)
-}
-
-const runWorkspaceOutlineGraph = ({
-  path,
-  content,
-}: {
-  path: string
-  content: string
-}): WorkspaceAnalysisResult => {
-  return buildOutlineGraph(path, content)
-}
-
 const runWorkspaceTask = (task: WorkspaceAnalysisTask): WorkspaceAnalysisResult => {
   switch (task.type) {
     case 'workspace-index':
@@ -90,10 +61,6 @@ const runWorkspaceTask = (task: WorkspaceAnalysisTask): WorkspaceAnalysisResult 
       return runWorkspaceSearch(task)
     case 'markdown-diagnostics':
       return runWorkspaceAnalyze(task)
-    case 'workspace-graph':
-      return runWorkspaceGraph(task)
-    case 'outline-graph':
-      return runWorkspaceOutlineGraph(task)
   }
 }
 

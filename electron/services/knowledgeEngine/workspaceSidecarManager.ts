@@ -1,19 +1,10 @@
 import type {
-  StartedWorkspaceSidecar,
   WorkspaceSidecarClient,
   WorkspaceSidecarManagerOptions,
   WorkspaceSidecarRuntime,
   WorkspaceSidecarRuntimeSummary,
 } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
-import {
-  createWorkspaceSidecarIdentity,
-  type WorkspaceSidecarIdentity,
-} from '@electron/services/knowledgeEngine/workspaceIdentity.js'
-import {
-  createWorkspaceSidecarSpawnPlan,
-  type WorkspaceSidecarSpawnPlan,
-} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
-import { startGrpcSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarStarter.js'
+import { openWorkspaceSidecarRuntime } from '@electron/services/knowledgeEngine/workspaceSidecarOpen.js'
 import { summarizeWorkspaceSidecarRuntimes } from '@electron/services/knowledgeEngine/workspaceSidecarRuntimeSummary.js'
 import type {
   KnowledgeSearchOptions,
@@ -34,6 +25,7 @@ import {
   KnowledgeOpenDocumentInput,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
+  KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
 } from '@electron/services/knowledgeEngine/grpcClient.js'
@@ -58,58 +50,14 @@ export class WorkspaceSidecarManager {
     indexPath: string,
     options: { openWorkspace?: boolean } = {},
   ): Promise<void> {
-    const existing = this.runtimes.get(workspaceId)
-    if (existing?.indexPath === indexPath && existing.state === 'ready') {
-      existing.lastActivityAt = Date.now()
-      return
-    }
-
-    if (existing) {
-      await this.close(workspaceId)
-    }
-
-    const now = Date.now()
-    const identity = createWorkspaceSidecarIdentity({
-      appDataDir: this.options.appDataDir,
+    await openWorkspaceSidecarRuntime({
       workspaceId,
       indexPath,
+      openWorkspace: options.openWorkspace,
+      runtimes: this.runtimes,
+      options: this.options,
+      close: (id) => this.close(id),
     })
-    const spawnPlan = this.createSpawnPlan(identity)
-    const openingRuntime: WorkspaceSidecarRuntime = {
-      workspaceId,
-      indexPath,
-      identity,
-      spawnPlan,
-      state: 'opening',
-      openedAt: now,
-      lastActivityAt: now,
-    }
-    this.runtimes.set(workspaceId, openingRuntime)
-
-    try {
-      const started = await this.startSidecar(spawnPlan, identity)
-      await started.client.getCapabilities(identity.workspaceInstanceId)
-      if (options.openWorkspace ?? true) {
-        await started.client.openWorkspace(indexPath)
-      }
-      this.runtimes.set(workspaceId, {
-        ...openingRuntime,
-        address: started.address,
-        child: started.child,
-        client: started.client,
-        lastActivityAt: Date.now(),
-        state: 'ready',
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      this.runtimes.set(workspaceId, {
-        ...openingRuntime,
-        lastActivityAt: Date.now(),
-        lastError: message,
-        state: 'error',
-      })
-      throw error
-    }
   }
 
   async close(workspaceId: string): Promise<void> {
@@ -269,6 +217,22 @@ export class WorkspaceSidecarManager {
     return this.requireReady(workspaceId).client.getMarkdownLinks(documentId, documentVersion)
   }
 
+  async buildWorkspaceGraph(
+    workspaceId: string,
+    documents: Array<{ path: string; title?: string; content: string }>,
+    knownPaths: { paths: string[]; assetPaths: string[] },
+  ): Promise<KnowledgeWorkspaceGraph> {
+    return this.requireReady(workspaceId).client.buildWorkspaceGraph(documents, knownPaths)
+  }
+
+  async buildOutlineGraph(
+    workspaceId: string,
+    path: string,
+    content: string,
+  ): Promise<KnowledgeWorkspaceGraph> {
+    return this.requireReady(workspaceId).client.buildOutlineGraph(path, content)
+  }
+
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return this.requireReady(workspaceId).client.search(query, limit)
   }
@@ -305,26 +269,5 @@ export class WorkspaceSidecarManager {
 
     runtime.lastActivityAt = Date.now()
     return runtime as WorkspaceSidecarRuntime & { client: WorkspaceSidecarClient }
-  }
-
-  private createSpawnPlan(identity: WorkspaceSidecarIdentity): WorkspaceSidecarSpawnPlan {
-    const binary = this.options.resolveBinary()
-    if (!binary?.exists) {
-      throw new Error('Knowledge engine binary not found. Run pnpm knowledge:build first.')
-    }
-
-    return createWorkspaceSidecarSpawnPlan({
-      binary,
-      identity,
-    })
-  }
-
-  private startSidecar(
-    plan: WorkspaceSidecarSpawnPlan,
-    identity: WorkspaceSidecarIdentity,
-  ): Promise<StartedWorkspaceSidecar> {
-    return this.options.startSidecar
-      ? this.options.startSidecar(plan, identity)
-      : startGrpcSidecar(plan, identity, this.options.logger)
   }
 }

@@ -164,7 +164,7 @@ fn entry_kind_to_proto(kind: VfsEntryKind) -> WorkspaceFileEntryKind {
   }
 }
 
-fn status_from_vfs_error(error: VfsError) -> Status {
+pub(crate) fn status_from_vfs_error(error: VfsError) -> Status {
   match error {
     VfsError::EmptyPath
     | VfsError::InvalidCharacters

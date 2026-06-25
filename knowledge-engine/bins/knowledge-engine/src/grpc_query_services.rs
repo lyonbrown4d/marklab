@@ -153,7 +153,6 @@ fn point_range(line: usize, column: usize) -> Range {
   let line = saturating_u32(line.saturating_sub(1));
   let character = saturating_u32(column.saturating_sub(1));
   let position = Position { line, character };
-
   Range {
     start: Some(position.clone()),
     end: Some(position),

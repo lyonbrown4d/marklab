@@ -7,6 +7,10 @@ use crate::markdown_documents::{
   MarkdownDocumentRange, MarkdownDocumentStore,
 };
 use crate::markdown_extract::MarkdownLink;
+use crate::markdown_graph::{
+  build_outline_graph, build_workspace_graph, WorkspaceGraph, WorkspaceGraphDocument,
+  WorkspaceGraphKnownPaths,
+};
 use crate::types::{SearchDocument, SearchQuery, SearchResultSet};
 use crate::workspace_store::WorkspaceStore;
 
@@ -174,7 +178,17 @@ impl WorkspaceEngine {
   pub fn remove_path_prefix(&self, prefix: &str) -> Result<usize, String> {
     self.workspace.remove_path_prefix(prefix)
   }
+  pub fn workspace_graph(
+    &self,
+    documents: &[WorkspaceGraphDocument],
+    known_paths: WorkspaceGraphKnownPaths,
+  ) -> WorkspaceGraph {
+    build_workspace_graph(documents, known_paths)
+  }
 
+  pub fn outline_graph(&self, path: &str, content: &str) -> WorkspaceGraph {
+    build_outline_graph(path, content)
+  }
   pub fn open_markdown_document(&mut self, document_id: String, content: String, version: u64) {
     self
       .markdown_documents

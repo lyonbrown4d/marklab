@@ -1,5 +1,7 @@
+export type { KnowledgeWorkspaceGraph } from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
 import type {
   FsEntry,
+  FsGraph,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
@@ -30,6 +32,12 @@ import {
   resyncMarkdownDocumentSync,
 } from '@electron/services/knowledgeEngine/grpcMarkdownSync.js'
 import { runSearchWithOptions } from '@electron/services/knowledgeEngine/grpcSearchStream.js'
+import {
+  buildOutlineGraph,
+  buildWorkspaceGraph,
+  type KnowledgeGraphDocument,
+  type KnowledgeGraphKnownPaths,
+} from '@electron/services/knowledgeEngine/grpcWorkspaceGraphClient.js'
 import {
   createWorkspaceDirectory,
   createWorkspaceFile,
@@ -151,6 +159,21 @@ export class KnowledgeEngineGrpcClient {
 
   getWorkspacePathMetadata(path: string): Promise<FsPathMetadata> {
     return getWorkspacePathMetadata(this.options.sessionToken, this.clients.workspaceVfs, path)
+  }
+  buildWorkspaceGraph(
+    documents: KnowledgeGraphDocument[],
+    knownPaths: KnowledgeGraphKnownPaths,
+  ): Promise<FsGraph> {
+    return buildWorkspaceGraph(
+      this.options.sessionToken,
+      this.clients.workspace,
+      documents,
+      knownPaths,
+    )
+  }
+
+  buildOutlineGraph(path: string, content: string): Promise<FsGraph> {
+    return buildOutlineGraph(this.options.sessionToken, this.clients.workspace, path, content)
   }
   async rebuildIndex(documents: WorkspaceDocument[]): Promise<void> {
     await invokeUnary(

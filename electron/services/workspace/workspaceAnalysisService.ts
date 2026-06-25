@@ -6,8 +6,6 @@ import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import {
-  buildOutlineGraph,
-  buildWorkspaceGraph,
   diagnosticsForFile,
   parseMarkdownDocument,
   searchDocuments,
@@ -22,6 +20,10 @@ import type {
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
+import {
+  trySidecarOutlineGraph,
+  trySidecarWorkspaceGraph,
+} from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient.js'
 import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
 
@@ -41,9 +43,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     shell: Shell,
     logger: Logger = noopLogger,
     workspaceSearchIndexFactory: WorkspaceSearchIndexFactory = () => new WorkspaceSearchIndex(),
-    knowledgeEngineService?: KnowledgeEngineService,
+    private readonly analysisKnowledgeEngineService?: KnowledgeEngineService,
   ) {
-    super(app, shell, logger, knowledgeEngineService)
+    super(app, shell, logger, analysisKnowledgeEngineService)
     this.workspaceSearchIndex = workspaceSearchIndexFactory()
   }
 
@@ -97,31 +99,25 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   async workspaceGraph(): Promise<FsGraph> {
     const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
-    return this.runWorkerTask(
-      () =>
-        this.analysisWorker.run({
-          type: 'workspace-graph',
-          documents,
-          knownPaths,
-        }),
-      async () => buildWorkspaceGraph(this.buildWorkspaceIndexFromDocuments(documents, knownPaths)),
-      'workspace-graph',
-    )
+    return trySidecarWorkspaceGraph({
+      documents,
+      knowledgeEngineService: this.analysisKnowledgeEngineService,
+      knownPaths,
+      logger: this.logger,
+      state: this.state,
+    })
   }
 
   async outlineGraph(value: unknown): Promise<FsGraph> {
     const relativePath = stringArg(value, 'path')
     const content = await this.readFile({ path: relativePath })
-    return this.runWorkerTask(
-      () =>
-        this.analysisWorker.run({
-          type: 'outline-graph',
-          path: relativePath,
-          content,
-        }),
-      async () => buildOutlineGraph(relativePath, content),
-      'outline-graph',
-    )
+    return trySidecarOutlineGraph({
+      content,
+      knowledgeEngineService: this.analysisKnowledgeEngineService,
+      logger: this.logger,
+      path: relativePath,
+      state: this.state,
+    })
   }
 
   async analyzeMarkdownBuffer(value: unknown): Promise<FsMarkdownDiagnostic[]> {

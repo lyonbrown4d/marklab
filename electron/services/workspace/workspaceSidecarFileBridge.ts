@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import type { KnowledgeWorkspacePathMutation } from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+import { fileLabel } from '@electron/services/workspace/markdown.js'
 import type { Logger } from '@electron/services/logger.js'
 import type {
+  FsGraph,
   FsPathMetadata,
   FsRootInfo,
   FsSnapshot,
@@ -20,6 +22,20 @@ type SidecarBridgeOptions = {
 
 type SidecarPathOptions = SidecarBridgeOptions & { path: string }
 
+type WorkspaceSidecarGraphService = KnowledgeEngineService & {
+  buildWorkspaceGraph?: (
+    workspaceId: string,
+    workspaceRoot: string,
+    documents: Array<{ path: string; title?: string; content: string }>,
+    knownPaths: { paths: string[]; assetPaths: string[] },
+  ) => Promise<FsGraph>
+  buildOutlineGraph?: (
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+    content: string,
+  ) => Promise<FsGraph>
+}
 type WorkspaceSidecarWriteService = KnowledgeEngineService & {
   writeWorkspaceFile?: (
     workspaceId: string,
@@ -111,6 +127,59 @@ export const trySidecarPathMetadata = async (
   }
 }
 
+export const trySidecarWorkspaceGraph = async (
+  options: SidecarBridgeOptions & {
+    documents: Array<{ path: string; content: string }>
+    knownPaths: { paths: string[]; assetPaths: string[] }
+  },
+): Promise<FsGraph> => {
+  const runtime = requireSidecarRuntime(options, 'workspace graph')
+  const buildWorkspaceGraph = (
+    options.knowledgeEngineService as WorkspaceSidecarGraphService | undefined
+  )?.buildWorkspaceGraph
+  if (typeof buildWorkspaceGraph !== 'function') {
+    throw new Error('Knowledge sidecar workspace graph bridge is not available')
+  }
+  try {
+    return await buildWorkspaceGraph.call(
+      options.knowledgeEngineService,
+      runtime.workspaceId,
+      runtime.workspaceRoot,
+      options.documents.map((document) => ({ ...document, title: fileLabel(document.path) })),
+      options.knownPaths,
+    )
+  } catch (error) {
+    options.logger.error('workspace graph sidecar failed', { error })
+    throw error
+  }
+}
+
+export const trySidecarOutlineGraph = async (
+  options: SidecarPathOptions & { content: string },
+): Promise<FsGraph> => {
+  const runtime = requireSidecarRuntime(options, 'outline graph')
+  const buildOutlineGraph = (
+    options.knowledgeEngineService as WorkspaceSidecarGraphService | undefined
+  )?.buildOutlineGraph
+  if (typeof buildOutlineGraph !== 'function') {
+    throw new Error('Knowledge sidecar outline graph bridge is not available')
+  }
+  try {
+    return await buildOutlineGraph.call(
+      options.knowledgeEngineService,
+      runtime.workspaceId,
+      runtime.workspaceRoot,
+      options.path,
+      options.content,
+    )
+  } catch (error) {
+    options.logger.error('outline graph sidecar failed', {
+      error,
+      path: options.path,
+    })
+    throw error
+  }
+}
 export const trySidecarPathMutation = async (
   options: SidecarPathOptions & {
     mutate: (
@@ -132,6 +201,14 @@ export const trySidecarPathMutation = async (
   }
 }
 
+const requireSidecarRuntime = (
+  options: SidecarBridgeOptions,
+  capability: string,
+): WorkspaceSidecarRuntime => {
+  const runtime = sidecarRuntime(options)
+  if (runtime) return runtime
+  throw new Error(`Knowledge sidecar is required for ${capability}`)
+}
 const sidecarRuntime = (options: SidecarBridgeOptions): WorkspaceSidecarRuntime | null => {
   if (!options.knowledgeEngineService || options.state.rootKind === 'single') return null
   const raw = `${options.state.rootKind}|${options.state.rootPath}|${options.state.singleFile ?? ''}`

@@ -70,6 +70,30 @@ Validation:
 - Keep large graph rendering incremental and avoid eager workspace-wide React
   rerenders.
 
+Sidecar migration contract:
+
+- Markdown parsing, workspace graph derivation, outline graph derivation,
+  diagnostics, and search are pure projections from document content plus known
+  workspace paths, so they can move behind the existing worker/sidecar boundary.
+- The sidecar should output a stable canonical Markdown graph snapshot: files,
+  headings, links, anchors, source ranges, content blocks, and semantic edge
+  kinds such as `contains`, `links_to`, and `references_heading`.
+- The sidecar must not output ReactFlow-specific layout, viewport, curve,
+  selection, hover, or animation data; those are renderer responsibilities.
+- Electron main should keep ownership of workspace root state, filesystem reads,
+  dirty-buffer merging, known path collection, path validation, and DTO
+  conversion between sidecar contracts and renderer-facing IPC contracts.
+- Electron main may use worker threads or child processes for expensive buffer
+  assembly and DTO conversion, but it should not grow a duplicate Markdown
+  parser once sidecar parity is reached.
+- Regression coverage should preserve heading-link graph semantics, outline
+  hierarchy, heading content ranges, parsed outline content blocks, dirty-buffer
+  outline input, sidecar document/known-path handoff, and no-fallback behavior on
+  sidecar graph failures.
+- Cleanup should avoid duplicate parser implementations in the renderer; keep
+  `workspaceAnalysisService` as an orchestration layer and remove TypeScript
+  parser code only after sidecar parity tests pass.
+
 ### 2. All Pages
 
 Goal: provide a Notion-like all-pages surface while keeping Markdown files as the

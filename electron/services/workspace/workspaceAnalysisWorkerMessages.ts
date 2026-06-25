@@ -1,5 +1,4 @@
 import type {
-  FsGraph,
   FsMarkdownDiagnostic,
   FsSearchResult,
   FsWorkspaceIndex,
@@ -35,34 +34,18 @@ export type WorkspaceAnalyzeTask = {
   path: string
 }
 
-export type WorkspaceGraphTask = {
-  type: 'workspace-graph'
-  documents: MarkdownDocument[]
-  knownPaths: WorkspaceKnownPaths
-}
-
-export type WorkspaceOutlineGraphTask = {
-  type: 'outline-graph'
-  path: string
-  content: string
-}
-
 export type WorkspaceAnalysisTask =
   | WorkspaceBuildIndexTask
   | WorkspaceSearchTask
   | WorkspaceAnalyzeTask
-  | WorkspaceGraphTask
-  | WorkspaceOutlineGraphTask
 
 export type WorkspaceBuildIndexResult = FsWorkspaceIndex
 export type WorkspaceSearchResult = FsSearchResult[]
 export type WorkspaceAnalyzeResult = FsMarkdownDiagnostic[]
-export type WorkspaceGraphResult = FsGraph
 
 export type WorkspaceAnalysisResult =
   | WorkspaceAnalyzeResult
   | WorkspaceBuildIndexResult
-  | WorkspaceGraphResult
   | WorkspaceSearchResult
 
 export type WorkspaceAnalysisWorkerRequest = {

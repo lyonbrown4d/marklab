@@ -37,6 +37,8 @@ service WorkspaceService {
   rpc UpsertDocument(UpsertDocumentRequest) returns (UpsertDocumentResponse);
   rpc RemoveDocument(RemoveDocumentRequest) returns (RemoveDocumentResponse);
   rpc RemovePathPrefix(RemovePathPrefixRequest) returns (RemovePathPrefixResponse);
+  rpc BuildWorkspaceGraph(BuildWorkspaceGraphRequest) returns (WorkspaceGraph);
+  rpc BuildOutlineGraph(BuildOutlineGraphRequest) returns (WorkspaceGraph);
 }
 
 service SearchService {
@@ -235,6 +237,89 @@ message WorkspaceDocument {
   string path = 1;
   string title = 2;
   string content = 3;
+}
+
+message WorkspaceKnownPaths {
+  repeated string paths = 1;
+  repeated string asset_paths = 2;
+}
+
+message BuildWorkspaceGraphRequest {
+  repeated WorkspaceDocument documents = 1;
+  WorkspaceKnownPaths known_paths = 2;
+}
+
+message BuildOutlineGraphRequest {
+  string path = 1;
+  string content = 2;
+}
+
+message WorkspaceGraph {
+  WorkspaceGraphMode mode = 1;
+  repeated WorkspaceGraphNode nodes = 2;
+  repeated WorkspaceGraphEdge edges = 3;
+}
+
+enum WorkspaceGraphMode {
+  WORKSPACE_GRAPH_MODE_UNSPECIFIED = 0;
+  WORKSPACE_GRAPH_MODE_MINDMAP = 1;
+  WORKSPACE_GRAPH_MODE_OUTLINE = 2;
+}
+
+message WorkspaceGraphNode {
+  string id = 1;
+  WorkspaceGraphNodeKind kind = 2;
+  string label = 3;
+  optional string path = 4;
+  optional uint32 line = 5;
+  optional uint32 level = 6;
+  optional string slug = 7;
+  optional string content = 8;
+  repeated WorkspaceGraphBlock content_blocks = 9;
+  optional uint32 content_start_line = 10;
+  optional uint32 content_end_line = 11;
+}
+
+enum WorkspaceGraphNodeKind {
+  WORKSPACE_GRAPH_NODE_KIND_UNSPECIFIED = 0;
+  WORKSPACE_GRAPH_NODE_KIND_FILE = 1;
+  WORKSPACE_GRAPH_NODE_KIND_HEADING = 2;
+  WORKSPACE_GRAPH_NODE_KIND_MISSING = 3;
+  WORKSPACE_GRAPH_NODE_KIND_EXTERNAL = 4;
+}
+
+message WorkspaceGraphEdge {
+  string id = 1;
+  string source = 2;
+  string target = 3;
+  WorkspaceGraphEdgeKind kind = 4;
+}
+
+enum WorkspaceGraphEdgeKind {
+  WORKSPACE_GRAPH_EDGE_KIND_UNSPECIFIED = 0;
+  WORKSPACE_GRAPH_EDGE_KIND_CONTAINS = 1;
+  WORKSPACE_GRAPH_EDGE_KIND_LINKS_TO = 2;
+  WORKSPACE_GRAPH_EDGE_KIND_REFERENCES_HEADING = 3;
+}
+
+message WorkspaceGraphBlock {
+  string id = 1;
+  WorkspaceGraphBlockKind kind = 2;
+  optional string text = 3;
+  optional uint32 level = 4;
+  optional string language = 5;
+  optional bool ordered = 6;
+  repeated string items = 7;
+}
+
+enum WorkspaceGraphBlockKind {
+  WORKSPACE_GRAPH_BLOCK_KIND_UNSPECIFIED = 0;
+  WORKSPACE_GRAPH_BLOCK_KIND_PARAGRAPH = 1;
+  WORKSPACE_GRAPH_BLOCK_KIND_BLOCKQUOTE = 2;
+  WORKSPACE_GRAPH_BLOCK_KIND_CODE = 3;
+  WORKSPACE_GRAPH_BLOCK_KIND_LIST = 4;
+  WORKSPACE_GRAPH_BLOCK_KIND_DIVIDER = 5;
+  WORKSPACE_GRAPH_BLOCK_KIND_TABLE = 6;
 }
 
 message SyncRequest {

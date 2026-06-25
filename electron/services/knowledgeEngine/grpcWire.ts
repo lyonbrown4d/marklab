@@ -14,6 +14,8 @@ import {
 } from '@grpc/grpc-js'
 
 import {
+  BuildOutlineGraphRequest,
+  BuildWorkspaceGraphRequest,
   CloseWorkspaceRequest,
   CreateWorkspaceDirectoryRequest,
   CreateWorkspaceFileRequest,
@@ -24,6 +26,7 @@ import {
   GetDocumentSymbolsRequest,
   GetDocumentSymbolsResponse,
   GetLinksRequest,
+  WorkspaceGraph,
   GetLinksResponse,
   GetWorkspaceStatusRequest,
   GetWorkspaceStatusResponse,
@@ -104,6 +107,8 @@ export type WorkspaceVfsClient = Client & {
   writeFile: UnaryCall<WriteWorkspaceFileRequest, WorkspacePathMutationResponse>
 }
 export type WorkspaceClient = Client & {
+  buildOutlineGraph: UnaryCall<BuildOutlineGraphRequest, WorkspaceGraph>
+  buildWorkspaceGraph: UnaryCall<BuildWorkspaceGraphRequest, WorkspaceGraph>
   closeWorkspace: UnaryCall<CloseWorkspaceRequest, CloseWorkspaceResponse>
   getWorkspaceStatus: UnaryCall<GetWorkspaceStatusRequest, GetWorkspaceStatusResponse>
   hasDocuments: UnaryCall<HasDocumentsRequest, HasDocumentsResponse>
@@ -289,6 +294,16 @@ export const WorkspaceVfsClientConstructor = makeGenericClientConstructor(
 
 export const WorkspaceClientConstructor = makeGenericClientConstructor(
   {
+    buildOutlineGraph: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceService/BuildOutlineGraph',
+      BuildOutlineGraphRequest,
+      WorkspaceGraph,
+    ),
+    buildWorkspaceGraph: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceService/BuildWorkspaceGraph',
+      BuildWorkspaceGraphRequest,
+      WorkspaceGraph,
+    ),
     closeWorkspace: unaryDefinition(
       '/knowledge.engine.v1.WorkspaceService/CloseWorkspace',
       CloseWorkspaceRequest,
