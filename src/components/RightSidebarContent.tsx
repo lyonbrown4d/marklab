@@ -7,6 +7,10 @@ import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRai
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
 import { RightSidebarKnowledgePanel } from '@/components/RightSidebarKnowledgePanel'
 import { RightSidebarPropertiesPanel } from '@/components/RightSidebarPropertiesPanel'
+import {
+  RightSidebarOutlinePanel,
+  type SidebarHeading,
+} from '@/components/RightSidebarOutlinePanel'
 import { RightSidebarProblemsPanel } from '@/components/RightSidebarProblemsPanel'
 import { RightSidebarSummary } from '@/components/RightSidebarSummary'
 import { useI18n } from '@/i18n/useI18n'
@@ -35,12 +39,6 @@ const inspectorTabs = [
 ] as const
 
 type InspectorTabValue = (typeof inspectorTabs)[number]['value']
-
-type SidebarHeading = {
-  level: number
-  text: string
-  slug: string
-}
 
 export type SidebarBacklink = BacklinkReference
 
@@ -178,38 +176,14 @@ export const RightSidebarContent = ({
                 )
               })}
             </TabsList>
-          </TooltipProvider>
-
+          </TooltipProvider>{' '}
           <TabsContent value="outline" className="m-0 min-h-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full" viewportClassName="p-1">
-              {outline.length === 0 ? (
-                <InspectorEmptyState
-                  icon={<ListTree className="size-4" aria-hidden="true" />}
-                  title={t('inspector.noOutline')}
-                  description={targetLabel}
-                />
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {outline.map((heading) => (
-                    <Button
-                      key={`${heading.slug}-${heading.level}`}
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-full justify-start rounded-md px-2 text-xs transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
-                      style={{ paddingLeft: 6 + (heading.level - 1) * 12 }}
-                      onClick={() => onOpenHeading(heading.slug)}
-                    >
-                      <Badge variant="secondary" className="mr-2 rounded px-1 py-0 text-[10px]">
-                        H{heading.level}
-                      </Badge>
-                      <span className="truncate">{heading.text}</span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+            <RightSidebarOutlinePanel
+              outline={outline}
+              targetLabel={targetLabel}
+              onOpenHeading={onOpenHeading}
+            />
           </TabsContent>
-
           <TabsContent value="backlinks" className="m-0 min-h-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full" viewportClassName="p-1">
               {backlinks.length === 0 ? (
@@ -265,7 +239,6 @@ export const RightSidebarContent = ({
               )}
             </ScrollArea>
           </TabsContent>
-
           <TabsContent value="knowledge" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarKnowledgePanel
               targetPath={targetPath}
@@ -276,7 +249,6 @@ export const RightSidebarContent = ({
               onOpenMissing={onOpenMissingLink}
             />
           </TabsContent>
-
           <TabsContent value="problems" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarProblemsPanel
               targetPath={targetPath}
@@ -287,11 +259,9 @@ export const RightSidebarContent = ({
               onOpenProblem={onOpenProblem}
             />
           </TabsContent>
-
           <TabsContent value="assets" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarAssetsPanel report={assetReport} />
           </TabsContent>
-
           <TabsContent value="properties" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarPropertiesPanel
               outlineCount={outline.length}

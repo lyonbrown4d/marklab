@@ -23,6 +23,30 @@ const workspaceIndex = {
           line: 1,
           column: 1,
         },
+        {
+          path: 'notes/target.md',
+          level: 2,
+          text: 'Another Topic',
+          slug: 'another-topic',
+          line: 3,
+          column: 1,
+        },
+        {
+          path: 'notes/target.md',
+          level: 2,
+          text: 'Reference Notes',
+          slug: 'reference-notes',
+          line: 5,
+          column: 1,
+        },
+        {
+          path: 'notes/target.md',
+          level: 2,
+          text: 'Missing Heading',
+          slug: 'missing-heading',
+          line: 7,
+          column: 1,
+        },
       ],
       links: [],
       assets: [],
@@ -46,6 +70,12 @@ const firstActionOfKind = <Kind extends MarkdownLanguageCodeAction['kind']>(
   kind: Kind,
 ) => actions.find((action) => action.kind === kind)
 
+const replaceTextActions = (actions: MarkdownLanguageCodeAction[]) =>
+  actions.filter(
+    (action): action is Extract<MarkdownLanguageCodeAction, { kind: 'replace-text' }> =>
+      action.kind === 'replace-text',
+  )
+
 describe('getMarkdownCodeActions', () => {
   it('offers to create a missing markdown file', async () => {
     const actions = await getActions('See [Missing](missing.md)', 18)
@@ -59,8 +89,8 @@ describe('getMarkdownCodeActions', () => {
   })
 
   it('offers to remove a missing heading anchor', async () => {
-    const actions = await getActions('See [Missing](target.md#missing-heading)', 18)
-    const action = firstActionOfKind(actions, 'replace-text')
+    const actions = await getActions('See [Missing](target.md#missing-headding)', 18)
+    const action = replaceTextActions(actions).find((item) => item.edit.newText === '')
 
     expect(action).toMatchObject({
       kind: 'replace-text',
@@ -69,8 +99,30 @@ describe('getMarkdownCodeActions', () => {
         line: 1,
         newText: '',
       },
+    })
+  })
+
+  it('offers closest heading anchor replacements for a missing heading anchor', async () => {
+    const actions = await getActions('See [Missing](target.md#missing-headding)', 18)
+    const replacements = replaceTextActions(actions).filter((action) => action.edit.newText !== '')
+
+    expect(replacements.map((action) => action.edit.newText)).toEqual([
+      '#missing-heading',
+      '#known-heading',
+      '#another-topic',
+    ])
+    expect(replacements[0]).toMatchObject({
+      title: 'Replace missing heading anchor "#missing-headding" with "#missing-heading"',
       isPreferred: true,
     })
+  })
+
+  it('limits missing heading anchor replacements to three headings', async () => {
+    const actions = await getActions('See [Missing](target.md#missing-headding)', 18)
+    const replacements = replaceTextActions(actions).filter((action) => action.edit.newText !== '')
+
+    expect(replacements).toHaveLength(3)
+    expect(replacements.map((action) => action.edit.newText)).not.toContain('#reference-notes')
   })
 
   it('does not offer quick fixes for a resolved heading link', async () => {

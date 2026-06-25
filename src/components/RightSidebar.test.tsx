@@ -113,6 +113,47 @@ describe('RightSidebar', () => {
     }
   })
 
+  it('filters outline headings by text or slug and keeps heading navigation', async () => {
+    const events: FocusHeadingRequest[] = []
+    const unsubscribe = onFocusHeadingRequest((request) => events.push(request))
+
+    try {
+      renderRightSidebar(
+        createProps({
+          editorValue: '# Target\n## Details\n## Release Notes\n',
+          fileContents: {
+            'target.md': '# Target\n## Details\n## Release Notes\n',
+            'source.md': 'intro\nSee [Target](target.md) here\n',
+          },
+        }),
+      )
+
+      const filterInput = await screen.findByRole('textbox', {
+        name: /filter headings or slugs/i,
+      })
+
+      await userEvent.type(filterInput, 'release-notes')
+
+      expect(screen.getByText('Release Notes')).toBeInTheDocument()
+      expect(screen.queryByText('Details')).not.toBeInTheDocument()
+
+      const headingButton = screen.getByText('Release Notes').closest('button')
+      expect(headingButton).toBeInTheDocument()
+      fireEvent.click(headingButton!)
+
+      await waitFor(() => {
+        expect(events).toEqual([{ path: 'target.md', slug: 'release-notes' }])
+      })
+
+      await userEvent.clear(filterInput)
+      await userEvent.type(filterInput, 'missing-slug')
+
+      expect(await screen.findByText('No matching headings')).toBeInTheDocument()
+    } finally {
+      unsubscribe()
+    }
+  })
+
   it('keeps inspector tabs accessible while switching sections', async () => {
     renderRightSidebar(createProps())
 

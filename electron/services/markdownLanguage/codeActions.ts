@@ -6,6 +6,10 @@ import type {
 } from '@electron/services/markdownLanguage/types.js'
 import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 
+type IndexedHeading = FsWorkspaceIndex['files'][number]['headings'][number]
+
+const MAX_HEADING_REPLACEMENT_ACTIONS = 3
+
 export const getMarkdownCodeActions = async (
   request: CompletionRequest,
   workspaceIndex: () => Promise<FsWorkspaceIndex>,
@@ -41,13 +45,30 @@ export const getMarkdownCodeActions = async (
       targetFile &&
       !targetFile.headings.some((heading) => heading.slug === link.target_heading_slug)
     ) {
-      const edit = removeAnchorEdit(request.path, lineText, link)
+      const edit = anchorEdit(request.path, lineText, link, '')
       if (edit) {
+        const replacements = closestHeadingAnchorReplacements(
+          link.target_heading_slug,
+          targetFile.headings,
+        )
+
+        actions.push(
+          ...replacements.map((heading, index) => ({
+            title: `Replace missing heading anchor "#${link.target_anchor}" with "#${heading.slug}"`,
+            kind: 'replace-text' as const,
+            edit: {
+              ...edit,
+              newText: `#${heading.slug}`,
+            },
+            isPreferred: index === 0,
+          })),
+        )
+
         actions.push({
           title: `Remove missing heading anchor "#${link.target_anchor}"`,
           kind: 'replace-text',
           edit,
-          isPreferred: true,
+          isPreferred: replacements.length === 0,
         })
       }
     }
@@ -66,7 +87,7 @@ const isCursorOnLinkTarget = (lineText: string, column: number, link: FsMarkdown
   return character >= fallbackStart && character <= fallbackStart + link.target.length
 }
 
-const removeAnchorEdit = (path: string, lineText: string, link: FsMarkdownLink) => {
+const anchorEdit = (path: string, lineText: string, link: FsMarkdownLink, newText: string) => {
   const hashIndex = link.target.indexOf('#')
   if (hashIndex < 0) return null
 
@@ -80,6 +101,74 @@ const removeAnchorEdit = (path: string, lineText: string, link: FsMarkdownLink) 
     line: link.line,
     startColumn: fallbackStart + hashIndex + 1,
     endColumn: fallbackStart + link.target.length + 1,
-    newText: '',
+    newText,
   }
+}
+
+const closestHeadingAnchorReplacements = (
+  targetHeadingSlug: string,
+  headings: IndexedHeading[],
+) => {
+  const seenSlugs = new Set<string>()
+
+  return headings
+    .filter((heading) => {
+      if (!heading.slug || seenSlugs.has(heading.slug)) return false
+
+      seenSlugs.add(heading.slug)
+      return true
+    })
+    .map((heading, index) => ({
+      heading,
+      index,
+      score: headingMatchScore(targetHeadingSlug, heading),
+    }))
+    .sort((left, right) => left.score - right.score || left.index - right.index)
+    .slice(0, MAX_HEADING_REPLACEMENT_ACTIONS)
+    .map(({ heading }) => heading)
+}
+
+const headingMatchScore = (targetHeadingSlug: string, heading: IndexedHeading) => {
+  const target = comparableHeadingText(targetHeadingSlug)
+  const headingSlug = comparableHeadingText(heading.slug)
+  const headingText = comparableHeadingText(heading.text)
+
+  return Math.min(
+    normalizedEditDistance(target, headingSlug),
+    normalizedEditDistance(target, headingText),
+  )
+}
+
+const comparableHeadingText = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+
+const normalizedEditDistance = (left: string, right: string) => {
+  if (left === right) return 0
+  if (!left || !right) return Math.max(left.length, right.length)
+
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+  const current = Array.from({ length: right.length + 1 }, () => 0)
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    current[0] = leftIndex
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const cost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1
+
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + cost,
+      )
+    }
+
+    for (let index = 0; index < previous.length; index += 1) {
+      previous[index] = current[index]
+    }
+  }
+
+  return previous[right.length] / Math.max(left.length, right.length)
 }

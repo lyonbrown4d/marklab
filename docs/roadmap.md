@@ -46,7 +46,35 @@ Validation:
 - Any reintroduced editor customization must prove it does not offset block
   handles, slash menu placement, drag handles, or drop indicators.
 
-### 1. Graph View V2
+### 1. Markdown Editor Navigation V1
+
+Goal: make the editor feel like a knowledge workspace while keeping Markdown as
+plain files.
+
+Scope:
+
+- Upgrade the right inspector from a passive outline into a searchable document
+  navigator for headings, backlinks, outgoing references, missing references,
+  problems, assets, and file properties.
+- Keep backlinks and mentions derived from the workspace index; do not introduce
+  a proprietary note relationship store.
+- Add smart link quick fixes for missing files and missing heading anchors,
+  including replacing a broken anchor with an existing heading anchor when the
+  target file exists.
+- Keep editor navigation actions source-compatible: clicking outline,
+  backlinks, mentions, or problems should jump to the file and source position
+  without requiring a custom block model.
+- Use sidecar/workspace-index data for cross-file information and only parse the
+  active dirty buffer locally when needed for immediate editing feedback.
+
+Validation:
+
+- Unit tests for backlink, outgoing, missing-link, and heading navigator data.
+- UI tests for filtering and opening navigator entries.
+- LSP tests for missing-file and missing-anchor quick fixes.
+- Avoid mounting extra expensive editor plugins just to power the inspector.
+
+### 2. Graph View V2
 
 Goal: make the graph useful for navigation, diagnosis, and knowledge discovery,
 not just visualization.
@@ -94,7 +122,7 @@ Sidecar migration contract:
   `workspaceAnalysisService` as an orchestration layer and remove TypeScript
   parser code only after sidecar parity tests pass.
 
-### 2. All Pages
+### 3. All Pages
 
 Goal: provide a Notion-like all-pages surface while keeping Markdown files as the
 underlying data.
@@ -114,7 +142,7 @@ Validation:
 - UI tests for filtering, sorting, and opening a page.
 - Ensure metadata can be rebuilt from file content and workspace index.
 
-### 3. Markdown Collections
+### 4. Markdown Collections
 
 Goal: provide a Markdown-first alternative to databases.
 
@@ -136,7 +164,7 @@ Validation:
 
 ## Mid Term
 
-### 4. Collection Views
+### 5. Collection Views
 
 Goal: let the same Markdown collection switch between useful views without
 creating a proprietary database.
@@ -156,7 +184,7 @@ Validation:
 - UI tests for switching views and preserving filters.
 - Keep unsupported files visible as files, not invalid database rows.
 
-### 5. Command Center V2
+### 6. Command Center V2
 
 Goal: make the titlebar command center the fastest path to content and actions.
 
@@ -175,7 +203,7 @@ Validation:
 - UI tests for keyboard navigation and action execution.
 - Performance checks for large result sets.
 
-### 6. Templates
+### 7. Templates
 
 Goal: speed up common Markdown creation flows without changing the file format.
 
