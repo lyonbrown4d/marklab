@@ -63,20 +63,32 @@ export const RightSidebarKnowledgePanel = ({
 
         <KnowledgeSection
           title={t('inspector.outgoingLinks')}
+          summary={t('inspector.knowledge.outgoingSummary', {
+            count: knowledge.outgoingCount,
+            items: knowledge.outgoing.length,
+          })}
           empty={t('inspector.noOutgoingLinks')}
           items={knowledge.outgoing}
+          referenceCount={knowledge.outgoingCount}
           onOpen={onOpenFile}
         />
         <KnowledgeSection
           title={t('inspector.backlinks')}
+          summary={t('inspector.knowledge.incomingSummary', {
+            count: knowledge.incomingCount,
+            items: knowledge.incoming.length,
+          })}
           empty={t('inspector.noBacklinks')}
           items={knowledge.incoming}
+          referenceCount={knowledge.incomingCount}
           onOpenReference={onOpenReference}
         />
         <MissingLinksSection
           title={t('inspector.missingLinks')}
+          summary={t('inspector.knowledge.missingSummary', { count: knowledge.missingCount })}
           empty={t('inspector.noMissingLinks')}
           items={knowledge.missing}
+          referenceCount={knowledge.missingCount}
           onOpen={onOpenMissing}
         />
       </div>
@@ -93,90 +105,156 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
 
 const KnowledgeSection = ({
   title,
+  summary,
   empty,
   items,
+  referenceCount,
   onOpen,
   onOpenReference,
 }: {
   title: string
+  summary: string
   empty: string
   items: KnowledgeLinkReference[]
+  referenceCount: number
   onOpen?: (path: string) => void
   onOpenReference?: (item: KnowledgeLinkReference) => void
-}) => (
-  <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
-    <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-      <Network className="size-3.5" />
-      {title}
-    </div>
-    {items.length === 0 ? (
-      <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
-    ) : (
-      <div className="flex flex-col gap-1">
-        {items.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            size="sm"
-            className="h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
-            onClick={() => (onOpenReference ? onOpenReference(item) : onOpen?.(item.path))}
-          >
-            <FileText className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium">{item.label}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{item.path}</span>
-            </span>
-            <Badge variant="secondary" className="shrink-0 rounded px-1 py-0 text-[10px]">
-              {item.count}
-            </Badge>
-          </Button>
-        ))}
+}) => {
+  const { t } = useI18n()
+
+  return (
+    <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
+      <div className="mb-1.5 flex items-start justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <Network className="size-3.5" />
+            {title}
+          </div>
+          <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{summary}</div>
+        </div>
+        <Badge variant="secondary" className="shrink-0 rounded px-1.5 py-0 text-[10px]">
+          {t('inspector.referenceCount', { count: referenceCount })}
+        </Badge>
       </div>
-    )}
-  </section>
-)
+      {items.length === 0 ? (
+        <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {items.map((item) => {
+            const context = item.firstContext || item.firstText || t('inspector.noContext')
+
+            return (
+              <Button
+                key={item.path}
+                variant="ghost"
+                size="sm"
+                className="h-auto min-h-14 w-full items-start justify-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
+                onClick={() => (onOpenReference ? onOpenReference(item) : onOpen?.(item.path))}
+              >
+                <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-xs font-medium">{item.label}</span>
+                    <Badge variant="secondary" className="shrink-0 rounded px-1 py-0 text-[10px]">
+                      {t('inspector.referenceCount', { count: item.count })}
+                    </Badge>
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {item.path}
+                  </span>
+                  <span className="block whitespace-normal text-[11px] leading-snug text-muted-foreground">
+                    {t('inspector.firstContext')}: {context}
+                  </span>
+                  <span className="block text-[10px] font-medium text-muted-foreground">
+                    {t('inspector.position', {
+                      line: item.firstLine,
+                      column: item.firstColumn,
+                    })}
+                  </span>
+                </span>
+              </Button>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
 
 const MissingLinksSection = ({
   title,
+  summary,
   empty,
   items,
+  referenceCount,
   onOpen,
 }: {
   title: string
+  summary: string
   empty: string
   items: KnowledgeMissingReference[]
+  referenceCount: number
   onOpen: (item: KnowledgeMissingReference) => void
-}) => (
-  <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
-    <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-      <CircleAlert className="size-3.5" />
-      {title}
-    </div>
-    {items.length === 0 ? (
-      <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
-    ) : (
-      <div className="flex flex-col gap-1">
-        {items.map((item, index) => (
-          <Button
-            key={`${item.target}-${item.line}-${index}`}
-            variant="ghost"
-            size="sm"
-            className="h-auto min-h-10 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
-            onClick={() => onOpen(item)}
-          >
-            <Link2 className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium">{item.text}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">
-                {item.target}
-              </span>
-            </span>
-            <Badge variant="secondary" className="shrink-0 rounded px-1 py-0 text-[10px]">
-              L{item.line}
-            </Badge>
-          </Button>
-        ))}
+}) => {
+  const { t } = useI18n()
+
+  return (
+    <section className="rounded-md border border-sidebar-border bg-background/45 p-1.5">
+      <div className="mb-1.5 flex items-start justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <CircleAlert className="size-3.5" />
+            {title}
+          </div>
+          <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{summary}</div>
+        </div>
+        <Badge variant="secondary" className="shrink-0 rounded px-1.5 py-0 text-[10px]">
+          {t('inspector.referenceCount', { count: referenceCount })}
+        </Badge>
       </div>
-    )}
-  </section>
-)
+      {items.length === 0 ? (
+        <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {items.map((item, index) => {
+            const missingType = t(
+              item.linkType === 'wiki'
+                ? 'inspector.missingType.wiki'
+                : 'inspector.missingType.markdown',
+            )
+            const context = item.context || t('inspector.noContext')
+
+            return (
+              <Button
+                key={`${item.target}-${item.line}-${item.column}-${index}`}
+                variant="ghost"
+                size="sm"
+                className="h-auto min-h-14 w-full items-start justify-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
+                onClick={() => onOpen(item)}
+              >
+                <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="block truncate text-xs font-medium">{item.text}</span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Badge variant="outline" className="shrink-0 rounded px-1 py-0 text-[10px]">
+                      {missingType}
+                    </Badge>
+                    <span className="truncate">
+                      {t('inspector.missingTarget')}: {item.target}
+                    </span>
+                  </span>
+                  <span className="block whitespace-normal text-[11px] leading-snug text-muted-foreground">
+                    {t('inspector.firstContext')}: {context}
+                  </span>
+                  <span className="block text-[10px] font-medium text-muted-foreground">
+                    {t('inspector.position', { line: item.line, column: item.column })}
+                  </span>
+                </span>
+              </Button>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}

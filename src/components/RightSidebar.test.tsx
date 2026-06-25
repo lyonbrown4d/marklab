@@ -40,14 +40,14 @@ const workspaceIndex = {
       links: [
         {
           source_path: 'source.md',
-          text: 'Target',
-          target: 'target.md',
+          text: 'Indexed Detail',
+          target: 'target.md#indexed-detail',
           link_type: 'markdown',
           target_path: 'target.md',
-          target_anchor: null,
-          target_heading_slug: null,
+          target_anchor: 'indexed-detail',
+          target_heading_slug: 'indexed-detail',
           is_external: false,
-          context: 'See [Target](target.md) from index',
+          context: 'See [Indexed Detail](target.md#indexed-detail) from index',
           line: 3,
           column: 5,
         },
@@ -236,8 +236,24 @@ describe('RightSidebar', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /backlinks/i }))
 
-    expect(await screen.findByText('source')).toBeInTheDocument()
-    expect(screen.getByText('See [Target](target.md) from index')).toBeInTheDocument()
+    expect(await screen.findByText('Anchor references')).toBeInTheDocument()
+    expect(screen.getByText('source')).toBeInTheDocument()
+    expect(
+      screen.getByText('See [Indexed Detail](target.md#indexed-detail) from index'),
+    ).toBeInTheDocument()
+
+    const filterInput = screen.getByRole('textbox', {
+      name: /filter backlinks/i,
+    })
+
+    await userEvent.type(filterInput, 'indexed-detail')
+
+    expect(screen.getByText('#indexed-detail')).toBeInTheDocument()
+
+    await userEvent.clear(filterInput)
+    await userEvent.type(filterInput, 'missing-anchor')
+
+    expect(await screen.findByText('No matching backlinks')).toBeInTheDocument()
   })
 
   it('lists markdown link problems and switches to source on click', async () => {

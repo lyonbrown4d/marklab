@@ -1,10 +1,9 @@
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRail'
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
+import { RightSidebarBacklinksPanel } from '@/components/RightSidebarBacklinksPanel'
 import { RightSidebarKnowledgePanel } from '@/components/RightSidebarKnowledgePanel'
 import { RightSidebarPropertiesPanel } from '@/components/RightSidebarPropertiesPanel'
 import {
@@ -23,7 +22,6 @@ import type {
   KnowledgeMissingReference,
 } from '@/logic/knowledge'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
-import { createFileLabel } from '@/logic/paths'
 import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/appTypes'
 import { Badge } from '@/components/ui/badge'
@@ -185,59 +183,11 @@ export const RightSidebarContent = ({
             />
           </TabsContent>
           <TabsContent value="backlinks" className="m-0 min-h-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full" viewportClassName="p-1">
-              {backlinks.length === 0 ? (
-                <InspectorEmptyState
-                  icon={<Link2 className="size-4" aria-hidden="true" />}
-                  title={t('inspector.noBacklinks')}
-                  description={targetLabel}
-                />
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {backlinks.map((backlink, index) => (
-                    <Button
-                      key={`${backlink.sourcePath}-${index}`}
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto min-h-11 w-full items-start justify-start rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
-                      onClick={() => onOpenBacklink(backlink)}
-                    >
-                      <FileText
-                        data-icon="inline-start"
-                        className="shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium">
-                          {createFileLabel(backlink.sourcePath)}
-                        </span>
-                        <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                          <span className="truncate text-[11px] text-muted-foreground">
-                            {backlink.text}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="shrink-0 rounded px-1 py-0 text-[10px]"
-                          >
-                            L{backlink.line}:{backlink.column}
-                          </Badge>
-                        </span>
-                        {backlink.targetAnchor && (
-                          <span className="block truncate text-[10px] text-muted-foreground/70">
-                            #{backlink.targetAnchor}
-                          </span>
-                        )}
-                        {backlink.context && (
-                          <span className="mt-0.5 block whitespace-normal text-[11px] leading-4 text-muted-foreground/80">
-                            {backlink.context}
-                          </span>
-                        )}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+            <RightSidebarBacklinksPanel
+              backlinks={backlinks}
+              targetLabel={targetLabel}
+              onOpenBacklink={onOpenBacklink}
+            />
           </TabsContent>
           <TabsContent value="knowledge" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarKnowledgePanel
