@@ -1,7 +1,9 @@
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import { diagnosticsForFile } from '@electron/services/workspace/markdown.js'
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions.js'
 import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
 import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
 import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols.js'
 import { getMarkdownHover } from '@electron/services/markdownLanguage/hover.js'
@@ -44,10 +46,16 @@ export class EmbeddedMarkdownLanguageService {
     value: unknown,
   ): Promise<FsMarkdownDiagnostic[]> {
     const request = diagnosticsRequest(value)
-    return workspace.analyzeMarkdownBuffer({
-      path: request.path,
-      content: request.content,
-    })
+    const context = createMarkdownRequestContext(
+      {
+        path: request.path,
+        content: request.content,
+        line: 1,
+        column: 1,
+      },
+      await this.workspaceIndex(workspace),
+    )
+    return diagnosticsForFile(context.index, request.path)
   }
 
   getDocumentSymbols(

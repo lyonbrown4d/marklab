@@ -8,6 +8,7 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { Logger } from '@electron/services/logger.js'
 import type { FsGraph } from '@electron/services/workspace/types.js'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
+import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
 
 const tempRoots: string[] = []
 
@@ -15,6 +16,25 @@ afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
   )
+})
+
+describe('WorkspaceGraphCache', () => {
+  it('keys workspace graphs by document path, content hash, and known paths', () => {
+    const cache = new WorkspaceGraphCache()
+    const graph = createGraph('mindmap')
+    const documents = [{ path: 'alpha.md', content: '# Alpha' }]
+    const knownPaths = { paths: ['alpha.md'], assetPaths: [] }
+
+    cache.setWorkspaceGraph(documents, knownPaths, graph)
+
+    expect(cache.getWorkspaceGraph(documents, { paths: ['alpha.md'], assetPaths: [] })).toBe(graph)
+    expect(
+      cache.getWorkspaceGraph([{ path: 'alpha.md', content: '# Changed' }], knownPaths),
+    ).toBeUndefined()
+    expect(
+      cache.getWorkspaceGraph(documents, { paths: ['alpha.md', 'beta.md'], assetPaths: [] }),
+    ).toBeUndefined()
+  })
 })
 
 describe('WorkspaceAnalysisService sidecar graph', () => {
@@ -64,6 +84,27 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
     }
   })
 
+  it('reuses cached workspace graphs until document content changes', async () => {
+    const firstGraph = createGraph('mindmap')
+    const secondGraph = createGraph('mindmap')
+    const service = createKnowledgeServiceMock()
+    service.buildWorkspaceGraph.mockResolvedValueOnce(firstGraph).mockResolvedValueOnce(secondGraph)
+    const { workspace } = await createWorkspace(service, [{ path: 'alpha.md', content: '# Alpha' }])
+
+    try {
+      await expect(workspace.workspaceGraph()).resolves.toBe(firstGraph)
+      await expect(workspace.workspaceGraph()).resolves.toBe(firstGraph)
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(1)
+
+      workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
+
+      await expect(workspace.workspaceGraph()).resolves.toBe(secondGraph)
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2)
+    } finally {
+      workspace.dispose()
+    }
+  })
+
   it('propagates sidecar workspace graph failures instead of falling back', async () => {
     const service = createKnowledgeServiceMock()
     service.buildWorkspaceGraph.mockRejectedValueOnce(new Error('sidecar graph failed'))
@@ -82,6 +123,29 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
         expect.objectContaining({ error: expect.any(Error) }),
       )
       expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(1)
+    } finally {
+      workspace.dispose()
+    }
+  })
+
+  it('reuses cached outline graphs until active content changes', async () => {
+    const firstGraph = createGraph('outline')
+    const secondGraph = createGraph('outline')
+    const service = createKnowledgeServiceMock()
+    service.buildOutlineGraph.mockResolvedValueOnce(firstGraph).mockResolvedValueOnce(secondGraph)
+    const { workspace } = await createWorkspace(service, [
+      { path: 'alpha.md', content: '# Persisted Alpha' },
+    ])
+
+    try {
+      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(firstGraph)
+      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(firstGraph)
+      expect(service.buildOutlineGraph).toHaveBeenCalledTimes(1)
+
+      workspace.updateBuffer({ path: 'alpha.md', content: '# Dirty Alpha' })
+
+      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(secondGraph)
+      expect(service.buildOutlineGraph).toHaveBeenCalledTimes(2)
     } finally {
       workspace.dispose()
     }

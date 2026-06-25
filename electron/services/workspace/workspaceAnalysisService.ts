@@ -20,6 +20,7 @@ import type {
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
+import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
 import {
   trySidecarOutlineGraph,
   trySidecarWorkspaceGraph,
@@ -53,6 +54,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.logger.child('analysis-worker'),
   )
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
+  private readonly graphCache = new WorkspaceGraphCache()
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<SearchDocumentToIndex>({
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
@@ -76,6 +78,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   override dispose(): void {
     this.searchIndexUpdateQueue.dispose()
+    this.graphCache.clear()
     void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
     super.dispose()
@@ -99,25 +102,35 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   async workspaceGraph(): Promise<FsGraph> {
     const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
-    return trySidecarWorkspaceGraph({
+    const cachedGraph = this.graphCache.getWorkspaceGraph(documents, knownPaths)
+    if (cachedGraph) return cachedGraph
+
+    const graph = await trySidecarWorkspaceGraph({
       documents,
       knowledgeEngineService: this.analysisKnowledgeEngineService,
       knownPaths,
       logger: this.logger,
       state: this.state,
     })
+    this.graphCache.setWorkspaceGraph(documents, knownPaths, graph)
+    return graph
   }
 
   async outlineGraph(value: unknown): Promise<FsGraph> {
     const relativePath = stringArg(value, 'path')
     const content = await this.readFile({ path: relativePath })
-    return trySidecarOutlineGraph({
+    const cachedGraph = this.graphCache.getOutlineGraph(relativePath, content)
+    if (cachedGraph) return cachedGraph
+
+    const graph = await trySidecarOutlineGraph({
       content,
       knowledgeEngineService: this.analysisKnowledgeEngineService,
       logger: this.logger,
       path: relativePath,
       state: this.state,
     })
+    this.graphCache.setOutlineGraph(relativePath, content, graph)
+    return graph
   }
 
   async analyzeMarkdownBuffer(value: unknown): Promise<FsMarkdownDiagnostic[]> {
@@ -170,16 +183,19 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   override async setRoot(value: unknown): Promise<FsRootInfo> {
     const result = await super.setRoot(value)
     this.resetSearchIndexState()
+    this.graphCache.clear()
     return result
   }
 
   override async setSingleFile(value: unknown): Promise<FsRootInfo> {
     const result = await super.setSingleFile(value)
     this.resetSearchIndexState()
+    this.graphCache.clear()
     return result
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
+    this.graphCache.clear()
     if (!this.indexChangeAffectsSearch(_changedPath, event)) return
     if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
       this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
@@ -190,6 +206,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   protected override onBuffersFlushed(relativePaths: string[]): void {
+    if (relativePaths.length > 0) {
+      this.graphCache.clear()
+    }
     const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
 

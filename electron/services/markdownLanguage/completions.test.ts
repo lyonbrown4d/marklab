@@ -16,16 +16,19 @@ const workspaceIndex = {
   asset_paths: ['assets/logo.png', 'docs/spec.pdf'],
 } satisfies FsWorkspaceIndex
 
-const completeAtEnd = (content: string, index: FsWorkspaceIndex = workspaceIndex) =>
-  createMarkdownCompletions(
+const completeAtEnd = (content: string, index: FsWorkspaceIndex = workspaceIndex) => {
+  const lines = content.split(/\r?\n/)
+  const lastLine = lines[lines.length - 1] ?? ''
+  return createMarkdownCompletions(
     {
       path: 'notes/current.md',
       content,
-      line: 1,
-      column: content.length + 1,
+      line: lines.length,
+      column: lastLine.length + 1,
     },
     async () => index,
   )
+}
 
 describe('createMarkdownCompletions', () => {
   it('suggests calendar files from workspace paths for markdown links', async () => {
@@ -145,6 +148,58 @@ describe('createMarkdownCompletions', () => {
         label: 'Installation Guide',
         insertText: 'installation-guide',
         detail: 'notes/target.md#installation-guide',
+      }),
+    )
+  })
+  it('suggests heading anchors from current unsaved content', async () => {
+    const completions = await completeAtEnd('# Current\n## Draft Heading\nSee [Draft](#dra')
+
+    expect(completions[0]).toEqual(
+      expect.objectContaining({
+        label: 'Draft Heading',
+        insertText: 'draft-heading',
+        detail: 'notes/current.md#draft-heading',
+        replacementStartColumn: 14,
+      }),
+    )
+  })
+
+  it('suggests heading anchors for wiki links from the workspace index', async () => {
+    const completions = await completeAtEnd('See [[target#inst guid', {
+      files: [
+        {
+          path: 'notes/current.md',
+          headings: [],
+          links: [],
+          assets: [],
+        },
+        {
+          path: 'notes/target.md',
+          headings: [
+            {
+              path: 'notes/target.md',
+              level: 2,
+              text: 'Installation Guide',
+              slug: 'installation-guide',
+              line: 4,
+              column: 1,
+            },
+          ],
+          links: [],
+          assets: [],
+        },
+      ],
+      paths: ['notes/current.md', 'notes/target.md'],
+      asset_paths: [],
+    })
+
+    expect(completions[0]).toEqual(
+      expect.objectContaining({
+        label: 'Installation Guide',
+        kind: 'heading',
+        insertText: 'installation-guide',
+        detail: 'notes/target.md#installation-guide',
+        replacementStartColumn: 14,
       }),
     )
   })

@@ -1,22 +1,22 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { CompletionItemKind } from 'vscode-languageserver-types'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import {
   createFileLabel,
   createRelativeLinkTarget,
-  resolveLinkedFilePath,
 } from '@electron/services/markdownLanguage/linkTargets.js'
 import {
   fileCompletionSortText,
-  headingCompletionSortText,
   rankFileCompletionPaths,
-  rankHeadingCompletionItems,
 } from '@electron/services/markdownLanguage/completionRanking.js'
 import type {
   CompletionRequest,
   MarkdownLanguageCompletionItem,
 } from '@electron/services/markdownLanguage/types.js'
+import {
+  getHeadingCompletions,
+  getWikiHeadingCompletions,
+} from '@electron/services/markdownLanguage/headingCompletions.js'
 
 const LANGUAGE_COMPLETIONS = [
   'bash',
@@ -64,6 +64,17 @@ export const createMarkdownCompletions = async (
   const index = await workspaceIndex()
   const wikiContext = getWikiLinkContext(prefix)
   if (wikiContext) {
+    const hashIndex = wikiContext.query.indexOf('#')
+    if (hashIndex >= 0) {
+      return getWikiHeadingCompletions({
+        request,
+        workspaceIndex: index,
+        target: wikiContext.query,
+        hashIndex,
+        replacementStartColumn: wikiContext.replacementStartColumn,
+      })
+    }
+
     return fileCompletions({
       activePath: request.path,
       workspaceIndex: index,
@@ -93,43 +104,6 @@ export const createMarkdownCompletions = async (
     query: markdownLinkContext.target,
     replacementStartColumn: markdownLinkContext.replacementStartColumn,
     mode: 'markdown',
-  })
-}
-
-const getHeadingCompletions = ({
-  request,
-  workspaceIndex,
-  target,
-  hashIndex,
-  replacementStartColumn,
-}: {
-  request: CompletionRequest
-  workspaceIndex: FsWorkspaceIndex
-  target: string
-  hashIndex: number
-  replacementStartColumn: number
-}) => {
-  const targetBeforeHash = target.slice(0, hashIndex)
-  const query = target.slice(hashIndex + 1)
-  const targetPath = targetBeforeHash.trim()
-    ? resolveLinkedFilePath(request.path, targetBeforeHash, workspaceIndex)
-    : request.path
-  const anchorReplacementStartColumn = replacementStartColumn + hashIndex + 1
-
-  if (targetPath === request.path) {
-    return headingCompletionsFromFile({
-      file: parseMarkdownDocument(request.path ?? '', request.content),
-      query,
-      detailPath: request.path ?? undefined,
-      replacementStartColumn: anchorReplacementStartColumn,
-    })
-  }
-
-  return headingCompletionsFromFile({
-    file: workspaceIndex.files.find((file) => file.path === targetPath),
-    query,
-    detailPath: targetPath ?? undefined,
-    replacementStartColumn: anchorReplacementStartColumn,
   })
 }
 
@@ -245,27 +219,4 @@ const workspaceDocumentPaths = (workspaceIndex: FsWorkspaceIndex, mode: 'markdow
   ]
 
   return Array.from(new Set(paths)).filter((path) => extensionPattern.test(path))
-}
-
-const headingCompletionsFromFile = ({
-  file,
-  query,
-  detailPath,
-  replacementStartColumn,
-}: {
-  file?: FsIndexedMarkdownFile
-  query: string
-  detailPath?: string
-  replacementStartColumn: number
-}): MarkdownLanguageCompletionItem[] => {
-  if (!file) return []
-  return rankHeadingCompletionItems(file.headings, query).map((heading) => ({
-    label: heading.text,
-    kind: 'heading',
-    insertText: heading.slug,
-    detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
-    replacementStartColumn,
-    lspKind: CompletionItemKind.Reference,
-    sortText: headingCompletionSortText(heading.text, heading.slug, query),
-  }))
 }

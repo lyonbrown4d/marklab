@@ -11,10 +11,11 @@ pub(crate) fn parse_graph_link_target(
   link: &MarkdownLink,
   known_files: &[String],
 ) -> ParsedGraphTarget {
-  let target = unwrap_link_destination(link.target.trim());
+  let target = unwrap_link_destination(markdown_link_destination(link.target.trim()));
   let (path_part, anchor_part) = split_link_target(target);
-  let heading_slug = anchor_part.map(heading_anchor_slug);
-  let local_path = strip_query(path_part.trim());
+  let heading_slug = anchor_part.and_then(heading_anchor_slug);
+  let local_path = decode_uri_component(strip_query(path_part.trim()).trim());
+  let local_path = local_path.trim();
   let candidate = if local_path.is_empty() {
     normalize_workspace_path(&link.source_path)
   } else {
@@ -97,6 +98,27 @@ fn strip_query(target: &str) -> &str {
   target.split('?').next().unwrap_or(target)
 }
 
+fn markdown_link_destination(target: &str) -> &str {
+  let trimmed = target.trim();
+  if let Some(rest) = trimmed.strip_prefix('<') {
+    if let Some(end) = rest.find('>') {
+      return &trimmed[..end + 2];
+    }
+  }
+
+  for (index, value) in trimmed.char_indices() {
+    if value.is_whitespace() && starts_markdown_title(trimmed[index..].trim_start()) {
+      return &trimmed[..index];
+    }
+  }
+
+  trimmed
+}
+
+fn starts_markdown_title(value: &str) -> bool {
+  value.starts_with('"') || value.starts_with('\'') || value.starts_with('(')
+}
+
 fn unwrap_link_destination(target: &str) -> &str {
   target
     .strip_prefix('<')
@@ -104,8 +126,42 @@ fn unwrap_link_destination(target: &str) -> &str {
     .unwrap_or(target)
 }
 
-fn heading_anchor_slug(value: &str) -> String {
-  slugify(value.trim())
+fn heading_anchor_slug(value: &str) -> Option<String> {
+  let decoded = decode_uri_component(value);
+  let trimmed = decoded.trim();
+  (!trimmed.is_empty()).then(|| slugify(trimmed))
+}
+
+fn decode_uri_component(value: &str) -> String {
+  let bytes = value.as_bytes();
+  let mut decoded = Vec::with_capacity(bytes.len());
+  let mut index = 0;
+
+  while index < bytes.len() {
+    if bytes[index] == b'%' {
+      let high = bytes.get(index + 1).and_then(|value| hex_value(*value));
+      let low = bytes.get(index + 2).and_then(|value| hex_value(*value));
+      if let (Some(high), Some(low)) = (high, low) {
+        decoded.push((high << 4) | low);
+        index += 3;
+        continue;
+      }
+    }
+
+    decoded.push(bytes[index]);
+    index += 1;
+  }
+
+  String::from_utf8_lossy(&decoded).to_string()
+}
+
+fn hex_value(value: u8) -> Option<u8> {
+  match value {
+    b'0'..=b'9' => Some(value - b'0'),
+    b'a'..=b'f' => Some(value - b'a' + 10),
+    b'A'..=b'F' => Some(value - b'A' + 10),
+    _ => None,
+  }
 }
 
 fn slugify(text: &str) -> String {
