@@ -5,13 +5,13 @@ import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services
 import {
   createFileLabel,
   createRelativeLinkTarget,
-  normalizeHeadingAnchor,
   resolveLinkedFilePath,
 } from '@electron/services/markdownLanguage/linkTargets.js'
 import {
-  compareFileCompletionPaths,
   fileCompletionSortText,
   headingCompletionSortText,
+  rankFileCompletionPaths,
+  rankHeadingCompletionItems,
 } from '@electron/services/markdownLanguage/completionRanking.js'
 import type {
   CompletionRequest,
@@ -216,35 +216,22 @@ const fileCompletions = ({
   replacementStartColumn: number
   mode: 'markdown' | 'wiki'
 }): MarkdownLanguageCompletionItem[] => {
-  const normalizedQuery = query.toLowerCase()
-  return workspaceDocumentPaths(workspaceIndex, mode)
-    .filter((path) => {
-      const label = createFileLabel(path)
-      return (
-        path.toLowerCase().includes(normalizedQuery) ||
-        label.toLowerCase().includes(normalizedQuery)
-      )
-    })
-    .sort((left, right) =>
-      compareFileCompletionPaths({
-        activePath,
-        query: normalizedQuery,
-        left,
-        right,
-      }),
-    )
-    .map((path) => {
-      const label = createFileLabel(path)
-      return {
-        label,
-        kind: 'file',
-        insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
-        detail: path,
-        replacementStartColumn,
-        lspKind: CompletionItemKind.File,
-        sortText: fileCompletionSortText({ activePath, query: normalizedQuery, path, label }),
-      }
-    })
+  return rankFileCompletionPaths({
+    activePath,
+    query,
+    paths: workspaceDocumentPaths(workspaceIndex, mode),
+  }).map((path) => {
+    const label = createFileLabel(path)
+    return {
+      label,
+      kind: 'file',
+      insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
+      detail: path,
+      replacementStartColumn,
+      lspKind: CompletionItemKind.File,
+      sortText: fileCompletionSortText({ activePath, query, path, label }),
+    }
+  })
 }
 
 const workspaceDocumentPaths = (workspaceIndex: FsWorkspaceIndex, mode: 'markdown' | 'wiki') => {
@@ -272,22 +259,13 @@ const headingCompletionsFromFile = ({
   replacementStartColumn: number
 }): MarkdownLanguageCompletionItem[] => {
   if (!file) return []
-  const normalizedQuery = normalizeHeadingAnchor(query)
-  const lowerQuery = query.toLowerCase()
-  return file.headings
-    .filter((heading) => {
-      if (!query) return true
-      return (
-        heading.slug.includes(normalizedQuery) || heading.text.toLowerCase().includes(lowerQuery)
-      )
-    })
-    .map((heading) => ({
-      label: heading.text,
-      kind: 'heading',
-      insertText: heading.slug,
-      detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
-      replacementStartColumn,
-      lspKind: CompletionItemKind.Reference,
-      sortText: headingCompletionSortText(heading.text, heading.slug, query),
-    }))
+  return rankHeadingCompletionItems(file.headings, query).map((heading) => ({
+    label: heading.text,
+    kind: 'heading',
+    insertText: heading.slug,
+    detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
+    replacementStartColumn,
+    lspKind: CompletionItemKind.Reference,
+    sortText: headingCompletionSortText(heading.text, heading.slug, query),
+  }))
 }

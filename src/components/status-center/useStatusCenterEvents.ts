@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { map, merge, throttleTime } from 'rxjs'
 import {
   summarizeTerminalExit,
   summarizeTerminalOutput,
@@ -12,7 +13,6 @@ import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalE
 export const useStatusCenterEvents = (desktopRuntime: boolean) => {
   const [exportTasks, setExportTasks] = useState<Record<string, ExportTaskEntry>>({})
   const [terminalEvents, setTerminalEvents] = useState<TerminalEventEntry[]>([])
-  const lastTerminalOutputAtRef = useRef(0)
 
   useEffect(() => {
     if (!desktopRuntime) return
@@ -55,37 +55,31 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
       )
     }
 
-    const outputSubscription = terminalOutputEvents$.subscribe({
-      error: () => undefined,
-      next: (event) => {
-        const now = Date.now()
-        if (now - lastTerminalOutputAtRef.current < 1_000) return
-        lastTerminalOutputAtRef.current = now
-
-        pushTerminalEvent({
+    const subscription = merge(
+      terminalOutputEvents$.pipe(
+        throttleTime(1_000, undefined, { leading: true, trailing: false }),
+        map((event) => ({
           id: event.id,
-          status: 'running',
+          status: 'running' as const,
           message: summarizeTerminalOutput(event),
-          updatedAt: now,
-        })
-      },
-    })
-
-    const exitSubscription = terminalExitEvents$.subscribe({
-      error: () => undefined,
-      next: (event) => {
-        pushTerminalEvent({
+          updatedAt: Date.now(),
+        })),
+      ),
+      terminalExitEvents$.pipe(
+        map((event) => ({
           id: event.id,
-          status: 'exited',
+          status: 'exited' as const,
           message: summarizeTerminalExit(event),
           updatedAt: Date.now(),
-        })
-      },
+        })),
+      ),
+    ).subscribe({
+      error: () => undefined,
+      next: pushTerminalEvent,
     })
 
     return () => {
-      outputSubscription.unsubscribe()
-      exitSubscription.unsubscribe()
+      subscription.unsubscribe()
     }
   }, [desktopRuntime])
 

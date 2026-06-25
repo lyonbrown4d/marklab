@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type ExcalidrawDocumentData = {
   type: string
   version: number
@@ -21,16 +23,15 @@ export const EMPTY_EXCALIDRAW_DOCUMENT: ExcalidrawDocumentData = {
   files: {},
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+const recordSchema = z.record(z.string(), z.unknown())
 
-const normalizeExcalidrawDocument = (value: Record<string, unknown>): ExcalidrawDocumentData => ({
-  type: typeof value.type === 'string' ? value.type : EMPTY_EXCALIDRAW_DOCUMENT.type,
-  version: typeof value.version === 'number' ? value.version : EMPTY_EXCALIDRAW_DOCUMENT.version,
-  source: typeof value.source === 'string' ? value.source : EMPTY_EXCALIDRAW_DOCUMENT.source,
-  elements: Array.isArray(value.elements) ? value.elements : [],
-  appState: isRecord(value.appState) ? value.appState : {},
-  files: isRecord(value.files) ? value.files : {},
+const excalidrawDocumentSchema = z.object({
+  type: z.string().catch(EMPTY_EXCALIDRAW_DOCUMENT.type),
+  version: z.number().catch(EMPTY_EXCALIDRAW_DOCUMENT.version),
+  source: z.string().catch(EMPTY_EXCALIDRAW_DOCUMENT.source),
+  elements: z.array(z.unknown()).catch([]),
+  appState: recordSchema.catch({}),
+  files: recordSchema.catch({}),
 })
 
 export const parseExcalidrawDocument = (content: string): LoadedExcalidrawDocument => {
@@ -44,13 +45,14 @@ export const parseExcalidrawDocument = (content: string): LoadedExcalidrawDocume
   }
 
   const parsed: unknown = JSON.parse(trimmed)
+  const result = excalidrawDocumentSchema.safeParse(parsed)
 
-  if (!isRecord(parsed)) {
+  if (!result.success) {
     throw new Error('Invalid Excalidraw document')
   }
 
   return {
     content: trimmed,
-    initialData: normalizeExcalidrawDocument(parsed),
+    initialData: result.data,
   }
 }

@@ -9,19 +9,17 @@ import {
   workspaceRecentProjectsStateKeys,
   workspaceSessionStateKeys,
 } from '@electron/services/settingsPersistKeys.js'
+import {
+  normalizePersistedRendererValue,
+  normalizeSessionFile,
+  normalizeWindowState,
+  type PersistedRendererValue,
+  type PersistedSessionFile,
+} from '@electron/services/settingsStoreSchemas.js'
 import type { PersistedWindowState, RendererPersistKey } from '@electron/types.js'
 
 type SettingsSchema = {
   rendererPersist?: Partial<Record<RendererPersistKey, unknown>>
-}
-
-export type PersistedRendererValue = {
-  state?: Record<string, unknown>
-  version?: number
-}
-
-type PersistedSessionFile = {
-  sessions: Record<string, PersistedRendererValue>
 }
 
 const SETTINGS_STORE_NAME = 'settings'
@@ -53,45 +51,6 @@ const assertWorkspacePersistKey = (key: RendererPersistKey): void => {
     throw new Error(`Unsupported workspace session persist key: ${key}`)
   }
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
-}
-
-const normalizePersistedRendererValue = (value: unknown): PersistedRendererValue | null => {
-  if (!isRecord(value)) return null
-  const state = isRecord(value.state) ? value.state : {}
-  const rawVersion = value.version
-  const version =
-    typeof rawVersion === 'number' && Number.isFinite(rawVersion)
-      ? Math.trunc(rawVersion)
-      : undefined
-  return {
-    state,
-    ...(version !== undefined ? { version } : {}),
-  }
-}
-
-const normalizedNumber = (value: unknown): number | null => {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : null
-}
-
-const normalizeWindowState = (value: unknown): PersistedWindowState | null => {
-  if (!isRecord(value)) return null
-  const width = normalizedNumber(value.width)
-  const height = normalizedNumber(value.height)
-  if (width === null || height === null) return null
-  const x = normalizedNumber(value.x)
-  const y = normalizedNumber(value.y)
-  return {
-    width,
-    height,
-    ...(x !== null ? { x } : {}),
-    ...(y !== null ? { y } : {}),
-    isMaximized: value.isMaximized === true,
-  }
-}
-
 const userDataPath = (...segments: string[]): string => {
   return path.join(app.getPath('userData'), ...segments)
 }
@@ -157,16 +116,6 @@ const rendererPersistValue = (
 
 const readRendererPersistFile = (filePath: string): PersistedRendererValue | null => {
   return readJsonFile(filePath, normalizePersistedRendererValue)
-}
-
-const normalizeSessionFile = (value: unknown): PersistedSessionFile | null => {
-  if (!isRecord(value) || !isRecord(value.sessions)) return { sessions: {} }
-  const sessions: Record<string, PersistedRendererValue> = {}
-  for (const [sessionKey, sessionValue] of Object.entries(value.sessions)) {
-    const normalized = normalizePersistedRendererValue(sessionValue)
-    if (normalized) sessions[sessionKey] = normalized
-  }
-  return { sessions }
 }
 
 const readSessionFile = (): PersistedSessionFile => {

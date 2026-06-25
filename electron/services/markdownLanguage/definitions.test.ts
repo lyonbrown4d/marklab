@@ -40,9 +40,35 @@ const getDefinition = (content: string, column: number) =>
     () => Promise.resolve(workspaceIndex),
   )
 
+const columnInside = (content: string, needle: string) => content.indexOf(needle) + 1
+
 describe('getMarkdownDefinition', () => {
   it('returns the target heading for a resolvable markdown link', async () => {
     const definition = await getDefinition('See [Known](target.md#known-heading)', 18)
+
+    expect(definition).toMatchObject({
+      path: 'notes/target.md',
+      line: 1,
+      column: 1,
+      headingSlug: 'known-heading',
+    })
+  })
+
+  it('uses AST link URLs for markdown links with titles', async () => {
+    const content = 'See [Known](target.md#known-heading "Target")'
+    const definition = await getDefinition(content, columnInside(content, 'Target'))
+
+    expect(definition).toMatchObject({
+      path: 'notes/target.md',
+      line: 1,
+      column: 1,
+      headingSlug: 'known-heading',
+    })
+  })
+
+  it('supports wiki links with display aliases', async () => {
+    const content = 'See [[target#known-heading|Known]]'
+    const definition = await getDefinition(content, columnInside(content, 'Known'))
 
     expect(definition).toMatchObject({
       path: 'notes/target.md',

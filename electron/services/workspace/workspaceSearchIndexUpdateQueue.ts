@@ -1,6 +1,7 @@
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
+import { Subject, type Subscription, switchMap, takeUntil, timer } from 'rxjs'
 
 type SearchIndexChangeKind = 'remove-file' | 'remove-prefix' | 'upsert'
 
@@ -28,21 +29,37 @@ type WorkspaceSearchIndexUpdateQueueOptions<TDocument> = {
 
 export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   private readonly changes = new Map<string, SearchIndexChangeKind>()
+  private readonly flushCancelRequests = new Subject<void>()
+  private readonly flushRequests = new Subject<void>()
+  private readonly flushSubscription: Subscription
   private rebuildScheduled = false
-  private timer: ReturnType<typeof setTimeout> | null = null
+  private disposed = false
 
-  constructor(private readonly options: WorkspaceSearchIndexUpdateQueueOptions<TDocument>) {}
+  constructor(private readonly options: WorkspaceSearchIndexUpdateQueueOptions<TDocument>) {
+    this.flushSubscription = this.flushRequests
+      .pipe(switchMap(() => timer(this.options.delayMs).pipe(takeUntil(this.flushCancelRequests))))
+      .subscribe({
+        next: () => {
+          void this.flush().catch((error) => {
+            this.options.logger.warn('search index update queue failed', { error })
+          })
+        },
+      })
+  }
 
   clear(): void {
     this.changes.clear()
     this.rebuildScheduled = false
-    if (!this.timer) return
-    clearTimeout(this.timer)
-    this.timer = null
+    this.flushCancelRequests.next()
   }
 
   dispose(): void {
+    if (this.disposed) return
     this.clear()
+    this.disposed = true
+    this.flushSubscription.unsubscribe()
+    this.flushRequests.complete()
+    this.flushCancelRequests.complete()
   }
 
   scheduleFullRebuild(): void {
@@ -53,10 +70,7 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
 
   async flushPending(): Promise<void> {
     if (!this.rebuildScheduled && this.changes.size === 0) return
-    if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
-    }
+    this.flushCancelRequests.next()
     await this.flush()
   }
 
@@ -95,13 +109,8 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   private scheduleFlush(): void {
-    if (this.timer) clearTimeout(this.timer)
-    this.timer = setTimeout(() => {
-      this.timer = null
-      void this.flush().catch((error) => {
-        this.options.logger.warn('search index update queue failed', { error })
-      })
-    }, this.options.delayMs)
+    if (this.disposed) return
+    this.flushRequests.next()
   }
 
   private async flush(): Promise<void> {

@@ -1,5 +1,4 @@
-import mitt from 'mitt'
-import { Subscription } from 'rxjs'
+import { filter, Subject, Subscription } from 'rxjs'
 import { type TerminalExitEvent, type TerminalOutputEvent } from '@/services/terminalApi'
 import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalEventStreams'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -11,12 +10,8 @@ type TerminalEventHandlers = {
 
 const MAX_PENDING_OUTPUT_CHUNKS = 128
 
-type TerminalEventBus = {
-  exit: TerminalExitEvent
-  output: TerminalOutputEvent
-}
-
-const terminalEvents = mitt<TerminalEventBus>()
+const terminalExitSubject = new Subject<TerminalExitEvent>()
+const terminalOutputSubject = new Subject<TerminalOutputEvent>()
 const sessionSubscriberCounts = new Map<string, number>()
 const pendingOutputEvents = new Map<string, TerminalOutputEvent[]>()
 
@@ -40,12 +35,12 @@ const dispatchOutput = (event: TerminalOutputEvent) => {
     return
   }
 
-  terminalEvents.emit('output', event)
+  terminalOutputSubject.next(event)
 }
 
 const dispatchExit = (event: TerminalExitEvent) => {
   pendingOutputEvents.delete(event.id)
-  terminalEvents.emit('exit', event)
+  terminalExitSubject.next(event)
 }
 
 const ensureTerminalEventListeners = () => {
@@ -83,15 +78,17 @@ export const subscribeTerminalSessionEvents = (
   ensureTerminalEventListeners()
   updateSubscriberCount(sessionId, 1)
 
-  const handleOutput = (event: TerminalOutputEvent) => {
-    if (event.id === sessionId) handlers.onOutput(event)
-  }
-  const handleExit = (event: TerminalExitEvent) => {
-    if (event.id === sessionId) handlers.onExit(event)
-  }
-
-  terminalEvents.on('output', handleOutput)
-  terminalEvents.on('exit', handleExit)
+  const subscription = new Subscription()
+  subscription.add(
+    terminalOutputSubject.pipe(filter((event) => event.id === sessionId)).subscribe({
+      next: handlers.onOutput,
+    }),
+  )
+  subscription.add(
+    terminalExitSubject.pipe(filter((event) => event.id === sessionId)).subscribe({
+      next: handlers.onExit,
+    }),
+  )
 
   const pending = pendingOutputEvents.get(sessionId)
   if (pending) {
@@ -100,8 +97,7 @@ export const subscribeTerminalSessionEvents = (
   }
 
   return () => {
-    terminalEvents.off('output', handleOutput)
-    terminalEvents.off('exit', handleExit)
+    subscription.unsubscribe()
     updateSubscriberCount(sessionId, -1)
   }
 }

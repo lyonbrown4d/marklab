@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { z } from 'zod'
 import fs from 'node:fs'
 import path from 'node:path'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
@@ -16,6 +17,14 @@ type UserThemeMeta = UserThemeInfo & {
   sourceName: string
 }
 
+const userThemeMetaSchema = z.object({
+  createdAt: z.preprocess((value) => {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0
+  }, z.number()),
+  id: z.string(),
+  name: z.string().trim().min(1),
+  sourceName: z.string().optional().default(''),
+})
 export const configureUserThemeStoreLogger = (nextLogger: Logger): void => {
   logger = nextLogger
 }
@@ -66,13 +75,14 @@ const sanitizeThemeCss = (css: string): string => {
 const readThemeMeta = (id: string): UserThemeInfo | null => {
   try {
     assertThemeId(id)
-    const raw = JSON.parse(fs.readFileSync(themeMetaPath(id), 'utf8')) as Partial<UserThemeMeta>
-    if (typeof raw.id !== 'string' || raw.id !== id) return null
-    if (typeof raw.name !== 'string' || !raw.name.trim()) return null
+    const result = userThemeMetaSchema.safeParse(
+      JSON.parse(fs.readFileSync(themeMetaPath(id), 'utf8')),
+    )
+    if (!result.success || result.data.id !== id) return null
     return {
+      createdAt: result.data.createdAt,
       id,
-      name: raw.name,
-      createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : 0,
+      name: result.data.name,
     }
   } catch (error) {
     logger.warn('unable to read user theme metadata', { error, id })

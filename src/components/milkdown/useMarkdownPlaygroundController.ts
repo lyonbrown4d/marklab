@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
+import throttle from 'lodash-es/throttle'
 import { codeBlockConfig } from '@milkdown/kit/component/code-block'
 import { editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
@@ -29,27 +30,7 @@ const createThrottledMarkdownUpdate = (
   callback: (markdown: string) => void,
   delay: number,
 ): ThrottledMarkdownUpdate => {
-  let timer: number | null = null
-  let latestMarkdown = ''
-
-  const flush = () => {
-    timer = null
-    callback(latestMarkdown)
-  }
-
-  const throttled = ((markdown: string) => {
-    latestMarkdown = markdown
-    if (timer !== null) return
-    timer = window.setTimeout(flush, delay)
-  }) as ThrottledMarkdownUpdate
-
-  throttled.cancel = () => {
-    if (timer === null) return
-    window.clearTimeout(timer)
-    timer = null
-  }
-
-  return throttled
+  return throttle(callback, delay, { leading: false, trailing: true }) as ThrottledMarkdownUpdate
 }
 
 const relocateFixedDropIndicatorToViewportRoot = (root: HTMLElement) => {

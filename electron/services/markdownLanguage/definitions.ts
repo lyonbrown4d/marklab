@@ -1,5 +1,12 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import {
+  hasChildren,
+  isLinkNode,
+  isTextNode,
+  parseMarkdownAst,
+  type MarkdownNode,
+} from '@electron/services/workspace/markdown/ast.js'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
 import {
   createFileLabel,
@@ -21,20 +28,15 @@ type LinkTarget =
       target: string
     }
 
+const WIKI_LINK_PATTERN = /!?\[\[([^\]\n]+?)]]/g
+
 export const getMarkdownDefinition = async (
   request: CompletionRequest,
   workspaceIndex: () => Promise<FsWorkspaceIndex>,
 ): Promise<MarkdownLanguageDefinition | null> => {
   if (!request.path) return null
 
-  const document = TextDocument.create(
-    `marklab-markdown://${encodeURIComponent(request.path)}`,
-    'markdown',
-    0,
-    request.content,
-  )
-  const lineText = getLineText(document, request.line)
-  const target = getLinkTargetAtColumn(lineText, request.column)
+  const target = getLinkTargetAtColumn(request.content, request.line, request.column)
   if (!target) return null
 
   const index = await workspaceIndex()
@@ -67,47 +69,93 @@ export const getMarkdownDefinition = async (
   }
 }
 
-const getLineText = (document: TextDocument, line: number) => {
-  const zeroBasedLine = Math.max(0, Math.min(document.lineCount - 1, line - 1))
-  const startOffset = document.offsetAt({ line: zeroBasedLine, character: 0 })
-  const endOffset = document.offsetAt({
-    line: zeroBasedLine,
-    character: Number.MAX_SAFE_INTEGER,
+const getLinkTargetAtColumn = (
+  content: string,
+  line: number,
+  column: number,
+): LinkTarget | null => {
+  const document = TextDocument.create('marklab-markdown://definition.md', 'markdown', 0, content)
+  const offset = document.offsetAt({
+    line: Math.max(0, Math.min(document.lineCount - 1, line - 1)),
+    character: Math.max(0, column - 1),
   })
-  return document.getText().slice(startOffset, endOffset)
+  const tree = parseMarkdownAst(content)
+  return getMarkdownLinkTarget(tree, offset) ?? getWikiLinkTarget(tree, offset, false)
 }
 
-const getLinkTargetAtColumn = (lineText: string, column: number): LinkTarget | null => {
-  const character = Math.max(0, column - 1)
-  return getMarkdownLinkTarget(lineText, character) ?? getWikiLinkTarget(lineText, character)
-}
+const getMarkdownLinkTarget = (node: MarkdownNode, offset: number): LinkTarget | null => {
+  if (isLinkNode(node) && node.url.trim() && nodeContainsOffset(node, offset)) {
+    return { kind: 'markdown', target: node.url }
+  }
 
-const getMarkdownLinkTarget = (lineText: string, character: number): LinkTarget | null => {
-  const markdownLinkPattern = /\[[^\]]*]\(([^)]*)\)/g
-  for (const match of lineText.matchAll(markdownLinkPattern)) {
-    const matchStart = match.index ?? 0
-    const target = match[1] ?? ''
-    const targetStart = matchStart + match[0].lastIndexOf('(') + 1
-    const targetEnd = targetStart + target.length
-    if (character >= matchStart && character <= targetEnd) {
-      return { kind: 'markdown', target }
-    }
+  if (!hasChildren(node)) return null
+  for (const child of node.children) {
+    const target = getMarkdownLinkTarget(child, offset)
+    if (target) return target
   }
   return null
 }
 
-const getWikiLinkTarget = (lineText: string, character: number): LinkTarget | null => {
-  const wikiLinkPattern = /\[\[([^\]]+)]]/g
-  for (const match of lineText.matchAll(wikiLinkPattern)) {
-    const matchStart = match.index ?? 0
-    const target = match[1] ?? ''
-    const targetStart = matchStart + 2
-    const targetEnd = targetStart + target.length
-    if (character >= matchStart && character <= targetEnd) {
-      return { kind: 'wiki', target }
-    }
+const getWikiLinkTarget = (
+  node: MarkdownNode,
+  offset: number,
+  excluded: boolean,
+): LinkTarget | null => {
+  const nextExcluded = excluded || excludesWikiTargets(node)
+
+  if (!nextExcluded && isTextNode(node)) {
+    const target = getWikiTargetInTextNode(node, offset)
+    if (target) return target
+  }
+
+  if (!hasChildren(node)) return null
+  for (const child of node.children) {
+    const target = getWikiLinkTarget(child, offset, nextExcluded)
+    if (target) return target
   }
   return null
+}
+
+const getWikiTargetInTextNode = (
+  node: MarkdownNode & { value: string },
+  offset: number,
+): LinkTarget | null => {
+  const startOffset = node.position?.start.offset
+  if (typeof startOffset !== 'number') return null
+
+  WIKI_LINK_PATTERN.lastIndex = 0
+  for (const match of node.value.matchAll(WIKI_LINK_PATTERN)) {
+    const matchStart = startOffset + (match.index ?? 0)
+    const matchEnd = matchStart + (match[0]?.length ?? 0)
+    if (offset < matchStart || offset > matchEnd) continue
+
+    const raw = (match[1] ?? '').trim()
+    const separator = raw.indexOf('|')
+    const target = (separator >= 0 ? raw.slice(0, separator) : raw).trim()
+    if (!target) return null
+    return { kind: 'wiki', target }
+  }
+
+  return null
+}
+
+const nodeContainsOffset = (node: MarkdownNode, offset: number): boolean => {
+  const start = node.position?.start.offset
+  const end = node.position?.end.offset
+  return typeof start === 'number' && typeof end === 'number' && offset >= start && offset <= end
+}
+
+const excludesWikiTargets = (node: MarkdownNode): boolean => {
+  return [
+    'definition',
+    'html',
+    'inlineCode',
+    'code',
+    'link',
+    'linkReference',
+    'image',
+    'imageReference',
+  ].includes(node.type)
 }
 
 const resolveTarget = ({

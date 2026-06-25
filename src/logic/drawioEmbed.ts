@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export const DEFAULT_DRAWIO_EMBED_URL = 'https://embed.diagrams.net/?embed=1&proto=json'
 
 export type DrawioEditorMode = 'remote' | 'system'
@@ -74,19 +76,33 @@ export const serializeDrawioMessage = (
   message: DrawioLoadMessage | DrawioSaveRequestMessage | DrawioStatusMessage,
 ): string => JSON.stringify(message)
 
-export const parseDrawioFrameMessage = (data: unknown): DrawioFrameMessage | null => {
-  const value = typeof data === 'string' ? safeParseJson(data) : data
-  if (!value || typeof value !== 'object' || !('event' in value)) return null
-  const event = (value as Record<string, unknown>).event
-  if (typeof event !== 'string' || event.trim() === '') return null
+const drawioFrameMessageSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return value
 
-  const xml = (value as Record<string, unknown>).xml
-  const message = (value as Record<string, unknown>).message
-  return {
-    event,
-    message: typeof message === 'string' ? message : undefined,
-    xml: typeof xml === 'string' ? xml : undefined,
-  }
+    try {
+      return JSON.parse(value)
+    } catch {
+      return null
+    }
+  },
+  z.object({
+    event: z.string().refine((value) => value.trim() !== ''),
+    message: z.preprocess(
+      (value) => (typeof value === 'string' ? value : undefined),
+      z.string().optional(),
+    ),
+    xml: z.preprocess(
+      (value) => (typeof value === 'string' ? value : undefined),
+      z.string().optional(),
+    ),
+  }),
+)
+
+export const parseDrawioFrameMessage = (data: unknown): DrawioFrameMessage | null => {
+  const result = drawioFrameMessageSchema.safeParse(data)
+  if (!result.success) return null
+  return result.data
 }
 
 export const createDrawioLoadMessage = ({
@@ -117,11 +133,3 @@ export const createDrawioSaveRequestMessage = (): DrawioSaveRequestMessage => ({
   action: 'export',
   format: 'xml',
 })
-
-const safeParseJson = (value: string): unknown => {
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
-}
