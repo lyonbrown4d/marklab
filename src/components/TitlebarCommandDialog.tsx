@@ -9,6 +9,7 @@ import CommandNavigationSection, {
   type CommandNavigationBacklink,
   type CommandNavigationHeading,
   type CommandNavigationMissingLink,
+  type CommandNavigationOutgoingLink,
 } from '@/components/command/CommandNavigationSection'
 import CommandRecentFilesSection from '@/components/command/CommandRecentFilesSection'
 import CommandSearchOverview from '@/components/command/CommandSearchOverview'
@@ -31,11 +32,13 @@ type TitlebarCommandDialogProps = {
   recentFiles: CommandFile[]
   headings: CommandHeading[]
   navigationHeadings: CommandNavigationHeading[]
+  navigationOutgoingLinks: CommandNavigationOutgoingLink[]
   navigationBacklinks: CommandNavigationBacklink[]
   navigationMissingLinks: CommandNavigationMissingLink[]
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
+  onOpenNavigationOutgoingLink: (link: CommandNavigationOutgoingLink) => void
   onOpenNavigationBacklink: (backlink: CommandNavigationBacklink) => void
   onOpenNavigationMissingLink: (missingLink: CommandNavigationMissingLink) => void
   onAction: (id: string) => void
@@ -55,11 +58,13 @@ const TitlebarCommandDialog = ({
   recentFiles,
   headings,
   navigationHeadings,
+  navigationOutgoingLinks,
   navigationBacklinks,
   navigationMissingLinks,
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
+  onOpenNavigationOutgoingLink,
   onOpenNavigationBacklink,
   onOpenNavigationMissingLink,
   onAction,
@@ -159,9 +164,11 @@ const TitlebarCommandDialog = ({
         <CommandNavigationSection
           activePath={activePath}
           headings={navigationHeadings}
+          outgoingLinks={navigationOutgoingLinks}
           backlinks={navigationBacklinks}
           missingLinks={navigationMissingLinks}
           onOpenHeading={handleOpenHeading}
+          onOpenOutgoingLink={onOpenNavigationOutgoingLink}
           onOpenBacklink={onOpenNavigationBacklink}
           onOpenMissingLink={onOpenNavigationMissingLink}
         />

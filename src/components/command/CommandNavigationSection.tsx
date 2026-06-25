@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText, Link2, ListTree } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, FileText, Link2, ListTree } from 'lucide-react'
 import {
   CommandGroup,
   CommandItem,
@@ -13,6 +13,19 @@ export type CommandNavigationHeading = {
   slug: string
   text: string
   level: number
+}
+
+export type CommandNavigationOutgoingLink = {
+  sourcePath: string
+  targetPath: string
+  targetAnchor?: string | null
+  targetHeadingSlug?: string | null
+  target: string
+  text: string
+  context: string
+  line: number
+  column: number
+  linkType: 'markdown' | 'wiki'
 }
 
 export type CommandNavigationBacklink = {
@@ -37,9 +50,11 @@ export type CommandNavigationMissingLink = {
 type CommandNavigationSectionProps = {
   activePath: string | null
   headings: CommandNavigationHeading[]
+  outgoingLinks: CommandNavigationOutgoingLink[]
   backlinks: CommandNavigationBacklink[]
   missingLinks: CommandNavigationMissingLink[]
   onOpenHeading: (path: string, slug: string) => void
+  onOpenOutgoingLink: (link: CommandNavigationOutgoingLink) => void
   onOpenBacklink: (backlink: CommandNavigationBacklink) => void
   onOpenMissingLink: (missingLink: CommandNavigationMissingLink) => void
 }
@@ -49,9 +64,11 @@ const MAX_NAVIGATION_ITEMS = 6
 export const CommandNavigationSection = ({
   activePath,
   headings,
+  outgoingLinks,
   backlinks,
   missingLinks,
   onOpenHeading,
+  onOpenOutgoingLink,
   onOpenBacklink,
   onOpenMissingLink,
 }: CommandNavigationSectionProps) => {
@@ -59,11 +76,13 @@ export const CommandNavigationSection = ({
   if (!activePath) return null
 
   const visibleHeadings = headings.slice(0, MAX_NAVIGATION_ITEMS)
+  const visibleOutgoingLinks = outgoingLinks.slice(0, MAX_NAVIGATION_ITEMS)
   const visibleBacklinks = backlinks.slice(0, MAX_NAVIGATION_ITEMS)
   const visibleMissingLinks = missingLinks.slice(0, MAX_NAVIGATION_ITEMS)
 
   if (
     visibleHeadings.length === 0 &&
+    visibleOutgoingLinks.length === 0 &&
     visibleBacklinks.length === 0 &&
     visibleMissingLinks.length === 0
   ) {
@@ -86,6 +105,32 @@ export const CommandNavigationSection = ({
             </CommandItem>
           ))}
           <HiddenCount count={headings.length - visibleHeadings.length} />
+        </CommandGroup>
+      )}
+      {visibleOutgoingLinks.length > 0 && (
+        <CommandGroup heading={t('command.navigation.outgoingLinks')}>
+          {visibleOutgoingLinks.map((link, index) => (
+            <CommandItem
+              key={`${link.sourcePath}:${link.line}:${link.column}:${index}`}
+              value={`outgoing link reference ${link.targetPath} ${link.target} ${link.text} ${link.context} ${link.targetHeadingSlug ?? link.targetAnchor ?? ''}`}
+              onSelect={() => onOpenOutgoingLink(link)}
+            >
+              <ArrowUpRight className="h-4 w-4" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {link.text || createFileLabel(link.targetPath)}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {createFileLabel(link.targetPath)}
+                  {link.targetHeadingSlug ? `#${link.targetHeadingSlug}` : ''}
+                </span>
+              </span>
+              <CommandShortcut>
+                L{link.line}:C{link.column}
+              </CommandShortcut>
+            </CommandItem>
+          ))}
+          <HiddenCount count={outgoingLinks.length - visibleOutgoingLinks.length} />
         </CommandGroup>
       )}
       {visibleBacklinks.length > 0 && (

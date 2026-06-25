@@ -48,6 +48,19 @@ const workspaceIndex = {
       links: [
         {
           source_path: 'notes/target.md',
+          text: 'Resolved Topic',
+          target: 'resolved.md#done',
+          link_type: 'markdown',
+          target_path: 'notes/resolved.md',
+          target_anchor: 'done',
+          target_heading_slug: 'done',
+          is_external: false,
+          context: 'Read [Resolved Topic](resolved.md#done)',
+          line: 6,
+          column: 3,
+        },
+        {
+          source_path: 'notes/target.md',
           text: 'Missing Note',
           target: 'missing.md',
           link_type: 'markdown',
@@ -60,6 +73,19 @@ const workspaceIndex = {
           column: 5,
         },
       ],
+    },
+    {
+      path: 'notes/resolved.md',
+      headings: [
+        {
+          path: 'notes/resolved.md',
+          level: 2,
+          text: 'Done',
+          slug: 'done',
+          line: 2,
+        },
+      ],
+      links: [],
     },
     {
       path: 'notes/source.md',
@@ -108,6 +134,7 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   files: [
     { path: 'notes/target.md', kind: 'file' },
     { path: 'notes/source.md', kind: 'file' },
+    { path: 'notes/resolved.md', kind: 'file' },
   ],
   workspaceIndex,
   canCreateWorkspaceEntries: true,
@@ -147,6 +174,16 @@ describe('Titlebar command navigation', () => {
     await userEvent.click(headingOptions[0])
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'current-topic')
+  })
+
+  it('opens outgoing references at target headings when available', async () => {
+    const onOpenHeading = vi.fn()
+    renderTitlebar(createProps({ onOpenHeading }))
+
+    await userEvent.type(screen.getByRole('combobox'), 'resolved topic')
+    await userEvent.click(await screen.findByRole('option', { name: /Resolved Topic/i }))
+
+    expect(onOpenHeading).toHaveBeenCalledWith('notes/resolved.md', 'done')
   })
 
   it('opens backlink sources as positioned search results', async () => {

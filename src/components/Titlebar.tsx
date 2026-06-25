@@ -54,6 +54,7 @@ const Titlebar = ({
     commandFiles,
     commandHeadings,
     commandNavigationHeadings,
+    commandNavigationOutgoingLinks,
     commandNavigationBacklinks,
     commandNavigationMissingLinks,
     commandRecentFiles,
@@ -150,12 +151,20 @@ const Titlebar = ({
         recentFiles={commandRecentFiles}
         headings={commandHeadings}
         navigationHeadings={commandNavigationHeadings}
+        navigationOutgoingLinks={commandNavigationOutgoingLinks}
         navigationBacklinks={commandNavigationBacklinks}
         navigationMissingLinks={commandNavigationMissingLinks}
         collections={commandCollections}
         onOpenFile={onCommandOpenFile}
         onOpenHeading={onCommandOpenHeading}
         onOpenSearchResult={onCommandOpenSearchResult}
+        onOpenNavigationOutgoingLink={(link) => {
+          if (link.targetHeadingSlug) {
+            onCommandOpenHeading(link.targetPath, link.targetHeadingSlug)
+            return
+          }
+          onCommandOpenFile(link.targetPath)
+        }}
         onOpenNavigationBacklink={(backlink) =>
           onCommandOpenSearchResult(navigationBacklinkToSearchResult(backlink))
         }

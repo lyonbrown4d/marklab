@@ -218,6 +218,7 @@ export const useTitlebarCommandModel = ({
     commandFiles,
     commandHeadings,
     commandNavigationHeadings: commandNavigation.headings,
+    commandNavigationOutgoingLinks: commandNavigation.outgoingLinks,
     commandNavigationBacklinks: commandNavigation.backlinks,
     commandNavigationMissingLinks: commandNavigation.missingLinks,
     commandRecentFiles,
