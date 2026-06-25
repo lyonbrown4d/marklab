@@ -17,7 +17,10 @@ import type {
   FsSnapshot,
   FsStateData,
 } from '@electron/services/workspace/types.js'
-import { WorkspaceBufferStore } from '@electron/services/workspace/workspaceBuffers.js'
+import {
+  type WorkspaceBufferWriteFile,
+  WorkspaceBufferStore,
+} from '@electron/services/workspace/workspaceBuffers.js'
 import {
   loadWorkspaceDocuments,
   type WorkspaceDocument,
@@ -83,6 +86,7 @@ export class WorkspaceBase {
       logger: this.logger.child('buffers'),
       resolvePath: (relativePath) => this.resolve(relativePath),
       markOwnWrite: (absolutePath) => this.watcher.markOwnWrite(absolutePath),
+      writeFile: (args) => this.writeBufferedFile(args),
       onBuffersFlushed: (relativePaths) => this.onBuffersFlushed(relativePaths),
       scheduleSnapshotChanged: () => this.scheduleSnapshotChanged(),
       setTask: (id, label, status, message) => this.setTask(id, label, status, message),
@@ -219,6 +223,10 @@ export class WorkspaceBase {
     taskName: string,
   ): Promise<T> {
     return runWorkerTaskWithFallback(task, fallback, taskName, this.logger)
+  }
+
+  protected writeBufferedFile(args: Parameters<WorkspaceBufferWriteFile>[0]): Promise<void> {
+    return args.writeWithNode()
   }
 
   protected onBuffersFlushed(relativePaths: string[]): void {

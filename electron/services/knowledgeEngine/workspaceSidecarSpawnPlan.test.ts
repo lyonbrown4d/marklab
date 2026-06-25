@@ -8,14 +8,10 @@ import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowled
 import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
 
 describe('createWorkspaceSidecarSpawnPlan', () => {
-  it('passes workspace settings as args and the session token as env', () => {
+  it('passes workspace settings and the session token as cli args', () => {
     const plan = createWorkspaceSidecarSpawnPlan({
       binary: binary('engine.exe'),
       identity: identity(),
-      processEnv: {
-        PATH: 'system-path',
-        WORKSPACE_ROOT: 'old-root',
-      },
     })
 
     expect(plan).toMatchObject({
@@ -27,12 +23,11 @@ describe('createWorkspaceSidecarSpawnPlan', () => {
         'root-a',
         '--engine-data-dir',
         'data-a',
+        '--grpc-session-token',
+        'token-a',
       ],
       windowsHide: true,
     })
-    expect(plan.env.PATH).toBe('system-path')
-    expect(plan.env.WORKSPACE_ROOT).toBe('old-root')
-    expect(plan.env.GRPC_SESSION_TOKEN).toBe('token-a')
   })
 
   it('redacts the session token from diagnostic output', () => {
@@ -40,11 +35,10 @@ describe('createWorkspaceSidecarSpawnPlan', () => {
       createWorkspaceSidecarSpawnPlan({
         binary: binary('engine.exe'),
         identity: identity(),
-        processEnv: {},
       }),
     )
 
-    expect(redacted.env.GRPC_SESSION_TOKEN).toBe('<redacted>')
+    expect(redacted.env).toEqual({})
     expect(JSON.stringify(redacted)).not.toContain('token-a')
     expect(redacted.args).toEqual([
       '--workspace-instance-id',
@@ -53,6 +47,8 @@ describe('createWorkspaceSidecarSpawnPlan', () => {
       'root-a',
       '--engine-data-dir',
       'data-a',
+      '--grpc-session-token',
+      '<redacted>',
     ])
   })
 })

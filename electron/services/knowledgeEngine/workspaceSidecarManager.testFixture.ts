@@ -135,6 +135,7 @@ const createClient = (): WorkspaceSidecarClient => ({
   })),
   shutdown: vi.fn(async () => undefined),
   upsertDocument: vi.fn(async () => undefined),
+  writeWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
 })
 
 const createChild = (): ChildProcessWithoutNullStreams => {

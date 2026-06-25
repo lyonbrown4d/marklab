@@ -5,6 +5,7 @@ use marklab_knowledge_grpc_api::v1::{
   GetWorkspacePathMetadataResponse, ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse,
   ReadWorkspaceFileRequest, ReadWorkspaceFileResponse, RenameWorkspacePathRequest,
   WorkspaceFileEntry, WorkspaceFileEntryKind, WorkspacePathMutationResponse,
+  WriteWorkspaceFileRequest,
 };
 use marklab_knowledge_workspace_vfs::{VfsEntry, VfsEntryKind, VfsError, VfsMetadata, VfsMutation};
 use tonic::{Request, Response, Status};
@@ -46,6 +47,20 @@ impl WorkspaceVfsService for KnowledgeGrpcService {
       .map_err(status_from_vfs_error)?;
 
     Ok(Response::new(ReadWorkspaceFileResponse { content }))
+  }
+
+  async fn write_file(
+    &self,
+    request: Request<WriteWorkspaceFileRequest>,
+  ) -> Result<Response<WorkspacePathMutationResponse>, Status> {
+    let request = request.into_inner();
+    let mutation = self
+      .vfs()
+      .write_file(&request.path, &request.content)
+      .await
+      .map_err(status_from_vfs_error)?;
+
+    Ok(Response::new(mutation_to_proto(mutation)))
   }
 
   async fn create_file(
@@ -163,6 +178,7 @@ fn status_from_vfs_error(error: VfsError) -> Status {
     VfsError::Path { .. }
     | VfsError::Metadata { .. }
     | VfsError::ReadFile { .. }
+    | VfsError::WriteFile { .. }
     | VfsError::CreatePath { .. }
     | VfsError::RenamePath { .. }
     | VfsError::DeletePath { .. }

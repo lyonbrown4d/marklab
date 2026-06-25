@@ -5,14 +5,12 @@ export type WorkspaceSidecarSpawnPlan = {
   command: string
   args: string[]
   cwd?: string
-  env: NodeJS.ProcessEnv
   windowsHide: true
 }
 
 export type CreateWorkspaceSidecarSpawnPlanOptions = {
   binary: KnowledgeEngineBinaryResolution
   identity: WorkspaceSidecarIdentity
-  processEnv?: NodeJS.ProcessEnv
 }
 
 export const createWorkspaceSidecarSpawnPlan = (
@@ -26,20 +24,19 @@ export const createWorkspaceSidecarSpawnPlan = (
     options.identity.canonicalRoot,
     '--engine-data-dir',
     options.identity.engineDataDir,
+    '--grpc-session-token',
+    options.identity.sessionToken,
   ],
-  env: {
-    ...(options.processEnv ?? process.env),
-    GRPC_SESSION_TOKEN: options.identity.sessionToken,
-  },
   windowsHide: true,
 })
 
 export const redactWorkspaceSidecarSpawnPlan = (plan: WorkspaceSidecarSpawnPlan) => ({
   command: plan.command,
-  args: plan.args,
+  args: redactSpawnPlanArgs(plan.args),
   cwd: plan.cwd,
-  env: {
-    GRPC_SESSION_TOKEN: plan.env.GRPC_SESSION_TOKEN ? '<redacted>' : undefined,
-  },
+  env: {},
   windowsHide: plan.windowsHide,
 })
+
+const redactSpawnPlanArgs = (args: string[]): string[] =>
+  args.map((arg, index) => (args[index - 1] === '--grpc-session-token' ? '<redacted>' : arg))

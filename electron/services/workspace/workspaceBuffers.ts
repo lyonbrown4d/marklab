@@ -12,10 +12,18 @@ type BufferRecord = {
 
 type BufferStatusListener = (status: FsBufferStatus) => void
 
+export type WorkspaceBufferWriteFile = (args: {
+  relativePath: string
+  absolutePath: string
+  content: string
+  writeWithNode: () => Promise<void>
+}) => Promise<void>
+
 type WorkspaceBufferStoreOptions = {
   logger?: Logger
   resolvePath: (relativePath: string) => string
   markOwnWrite: (absolutePath: string) => void
+  writeFile?: WorkspaceBufferWriteFile
   scheduleSnapshotChanged: () => void
   onBuffersFlushed?: (relativePaths: string[]) => void
   setTask: (
@@ -170,8 +178,7 @@ export class WorkspaceBufferStore {
     try {
       for (const [relativePath, record] of dirty) {
         const absolutePath = this.options.resolvePath(relativePath)
-        await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
-        await this.writeBufferFile(absolutePath, record.content)
+        await this.writeBufferFile(relativePath, absolutePath, record.content)
 
         const current = this.buffers.get(relativePath)
         if (current !== record || current.revision !== record.revision) continue
@@ -196,7 +203,20 @@ export class WorkspaceBufferStore {
     }
   }
 
-  private async writeBufferFile(absolutePath: string, content: string): Promise<void> {
+  private async writeBufferFile(
+    relativePath: string,
+    absolutePath: string,
+    content: string,
+  ): Promise<void> {
+    const writeWithNode = () => this.writeBufferFileWithNode(absolutePath, content)
+    if (this.options.writeFile) {
+      await this.options.writeFile({ relativePath, absolutePath, content, writeWithNode })
+      return
+    }
+    await writeWithNode()
+  }
+
+  private async writeBufferFileWithNode(absolutePath: string, content: string): Promise<void> {
     const existing = await fs.promises.readFile(absolutePath, 'utf8').catch(() => null)
     if (existing === content) return
 
@@ -204,6 +224,7 @@ export class WorkspaceBufferStore {
     this.options.markOwnWrite(absolutePath)
     this.options.markOwnWrite(tempPath)
     try {
+      await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
       await fs.promises.writeFile(tempPath, content)
       await fs.promises.rename(tempPath, absolutePath)
     } catch (error) {

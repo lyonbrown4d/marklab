@@ -117,6 +117,20 @@ describe('KnowledgeEngineGrpcClient', () => {
     ])
   })
 
+  it('writes workspace file content through workspace vfs service', async () => {
+    const fixture = createClientFixture()
+    const client = fixture.createClient()
+
+    await expect(client.writeWorkspaceFile('alpha.md', '# Alpha')).resolves.toEqual({
+      changed: true,
+      kind: 'file',
+    })
+
+    expect(fixture.calls.writeFile?.request).toEqual({ content: '# Alpha', path: 'alpha.md' })
+    expect(fixture.calls.writeFile?.metadata.get('x-marklab-session-token')).toEqual([
+      'session-token-a',
+    ])
+  })
   it('sends shutdown with a typed reason', async () => {
     const fixture = createClientFixture()
     const client = fixture.createClient()

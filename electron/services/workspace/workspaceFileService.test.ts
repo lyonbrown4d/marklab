@@ -53,16 +53,56 @@ describe('WorkspaceFileService sidecar mutations', () => {
     workspace.dispose()
   })
 
-  it('falls back to node filesystem when a sidecar mutation fails', async () => {
+  it('routes buffer flush writes to the knowledge sidecar when available', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+
+    workspace.updateBuffer({ path: 'notes/a.md', content: '# A' })
+
+    await expect(workspace.flushBuffers()).resolves.toBe(1)
+
+    expect(service.writeWorkspaceFile).toHaveBeenCalledWith(
+      expect.stringMatching(/^vfs:/),
+      root,
+      'notes/a.md',
+      '# A',
+    )
+    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(false)
+    expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({ dirty: false })
+
+    workspace.dispose()
+  })
+
+  it('propagates sidecar write failures instead of falling back to node filesystem', async () => {
+    const service = createKnowledgeServiceMock()
+    service.writeWorkspaceFile.mockRejectedValueOnce(new Error('sidecar unavailable'))
+    const { logger, root, workspace } = await createWorkspace(service)
+
+    workspace.updateBuffer({ path: 'notes/a.md', content: '# A' })
+
+    await expect(workspace.flushBuffers()).rejects.toThrow('sidecar unavailable')
+
+    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(false)
+    expect(logger.error).toHaveBeenCalledWith(
+      'workspace vfs write failed',
+      expect.objectContaining({ path: 'notes/a.md' }),
+    )
+
+    workspace.dispose()
+  })
+
+  it('propagates sidecar mutation failures instead of falling back to node filesystem', async () => {
     const service = createKnowledgeServiceMock()
     service.createWorkspaceFile.mockRejectedValueOnce(new Error('sidecar unavailable'))
     const { logger, root, workspace } = await createWorkspace(service)
 
-    await workspace.createFile({ path: 'notes/a.md' })
+    await expect(workspace.createFile({ path: 'notes/a.md' })).rejects.toThrow(
+      'sidecar unavailable',
+    )
 
-    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(true)
-    expect(logger.warn).toHaveBeenCalledWith(
-      'workspace vfs mutation failed; falling back to node filesystem',
+    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(false)
+    expect(logger.error).toHaveBeenCalledWith(
+      'workspace vfs mutation failed',
       expect.objectContaining({ path: 'notes/a.md' }),
     )
 
@@ -90,20 +130,28 @@ const createKnowledgeServiceMock = () =>
     createWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
     deleteWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
     renameWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
+    writeWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
   }) as unknown as KnowledgeEngineService & {
     createWorkspaceDirectory: ReturnType<typeof vi.fn>
     createWorkspaceFile: ReturnType<typeof vi.fn>
     deleteWorkspacePath: ReturnType<typeof vi.fn>
     renameWorkspacePath: ReturnType<typeof vi.fn>
+    writeWorkspaceFile: ReturnType<typeof vi.fn>
   }
 
-const createLogger = (): Logger & { warn: ReturnType<typeof vi.fn> } => {
+const createLogger = (): Logger & {
+  error: ReturnType<typeof vi.fn>
+  warn: ReturnType<typeof vi.fn>
+} => {
   const logger = {
     child: vi.fn(() => logger),
     error: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
-  } as unknown as Logger & { warn: ReturnType<typeof vi.fn> }
+  } as unknown as Logger & {
+    error: ReturnType<typeof vi.fn>
+    warn: ReturnType<typeof vi.fn>
+  }
   return logger
 }
 

@@ -20,6 +20,15 @@ type SidecarBridgeOptions = {
 
 type SidecarPathOptions = SidecarBridgeOptions & { path: string }
 
+type WorkspaceSidecarWriteService = KnowledgeEngineService & {
+  writeWorkspaceFile?: (
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+    content: string,
+  ) => Promise<unknown>
+}
+
 export const trySidecarSnapshot = async (
   options: SidecarBridgeOptions & { root: FsRootInfo },
 ): Promise<FsSnapshot | null> => {
@@ -32,8 +41,8 @@ export const trySidecarSnapshot = async (
       options.root,
     )
   } catch (error) {
-    options.logger.warn('workspace vfs snapshot failed; falling back to node filesystem', { error })
-    return null
+    options.logger.error('workspace vfs snapshot failed', { error })
+    throw error
   }
 }
 
@@ -47,11 +56,38 @@ export const trySidecarReadFile = async (options: SidecarPathOptions): Promise<s
       options.path,
     )
   } catch (error) {
-    options.logger.warn('workspace vfs read failed; falling back to node filesystem', {
+    options.logger.error('workspace vfs read failed', {
       error,
       path: options.path,
     })
-    return null
+    throw error
+  }
+}
+
+export const trySidecarWriteFile = async (
+  options: SidecarPathOptions & { content: string; beforeWrite?: () => void },
+): Promise<boolean> => {
+  const runtime = sidecarRuntime(options)
+  const writeWorkspaceFile = (
+    options.knowledgeEngineService as WorkspaceSidecarWriteService | undefined
+  )?.writeWorkspaceFile
+  if (!runtime || typeof writeWorkspaceFile !== 'function') return false
+  try {
+    options.beforeWrite?.()
+    await writeWorkspaceFile.call(
+      options.knowledgeEngineService,
+      runtime.workspaceId,
+      runtime.workspaceRoot,
+      options.path,
+      options.content,
+    )
+    return true
+  } catch (error) {
+    options.logger.error('workspace vfs write failed', {
+      error,
+      path: options.path,
+    })
+    throw error
   }
 }
 
@@ -67,11 +103,11 @@ export const trySidecarPathMetadata = async (
       options.path,
     )
   } catch (error) {
-    options.logger.warn('workspace vfs metadata failed; falling back to node filesystem', {
+    options.logger.error('workspace vfs metadata failed', {
       error,
       path: options.path,
     })
-    return null
+    throw error
   }
 }
 
@@ -88,11 +124,11 @@ export const trySidecarPathMutation = async (
   try {
     return await options.mutate(options.knowledgeEngineService!, runtime)
   } catch (error) {
-    options.logger.warn('workspace vfs mutation failed; falling back to node filesystem', {
+    options.logger.error('workspace vfs mutation failed', {
       error,
       path: options.path,
     })
-    return null
+    throw error
   }
 }
 

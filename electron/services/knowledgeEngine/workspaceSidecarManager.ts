@@ -11,10 +11,10 @@ import {
 } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
 import {
   createWorkspaceSidecarSpawnPlan,
-  redactWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
 import { startGrpcSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarStarter.js'
+import { summarizeWorkspaceSidecarRuntimes } from '@electron/services/knowledgeEngine/workspaceSidecarRuntimeSummary.js'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
@@ -50,22 +50,7 @@ export class WorkspaceSidecarManager {
   constructor(private readonly options: WorkspaceSidecarManagerOptions) {}
 
   listActive(): WorkspaceSidecarRuntimeSummary[] {
-    return [...this.runtimes.values()].map((runtime) => ({
-      address: runtime.address,
-      identity: {
-        canonicalRoot: runtime.identity.canonicalRoot,
-        engineDataDir: runtime.identity.engineDataDir,
-        workspaceInstanceId: runtime.identity.workspaceInstanceId,
-      },
-      indexPath: runtime.indexPath,
-      lastActivityAt: runtime.lastActivityAt,
-      lastError: runtime.lastError,
-      openedAt: runtime.openedAt,
-      pid: runtime.child?.pid,
-      spawnPlan: redactWorkspaceSidecarSpawnPlan(runtime.spawnPlan),
-      state: runtime.state,
-      workspaceId: runtime.workspaceId,
-    }))
+    return summarizeWorkspaceSidecarRuntimes(this.runtimes.values())
   }
 
   async open(
@@ -177,6 +162,13 @@ export class WorkspaceSidecarManager {
     return this.requireReady(workspaceId).client.readWorkspaceFile(path)
   }
 
+  async writeWorkspaceFile(
+    workspaceId: string,
+    path: string,
+    content: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    return this.requireReady(workspaceId).client.writeWorkspaceFile(path, content)
+  }
   async createWorkspaceFile(
     workspaceId: string,
     path: string,

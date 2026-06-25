@@ -48,6 +48,7 @@ import type {
   SyncResponse,
   UpsertDocumentRequest,
   UpsertDocumentResponse,
+  WriteWorkspaceFileRequest,
   WorkspacePathMutationResponse,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
 
@@ -78,6 +79,7 @@ type CallKey =
   | 'shutdown'
   | 'sync'
   | 'upsertDocument'
+  | 'writeFile'
 
 export type ClientFixture = {
   calls: Partial<Record<CallKey, RecordedCall>>
@@ -229,6 +231,11 @@ export const createClientFixture = (): ClientFixture => {
             renamePath: unary<RenameWorkspacePathRequest, WorkspacePathMutationResponse>(
               calls,
               'renamePath',
+              { changed: true, kind: 1, ok: true },
+            ),
+            writeFile: unary<WriteWorkspaceFileRequest, WorkspacePathMutationResponse>(
+              calls,
+              'writeFile',
               { changed: true, kind: 1, ok: true },
             ),
           },

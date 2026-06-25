@@ -1,7 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import {
   isWorkspaceDocumentPath,
@@ -16,12 +15,16 @@ import type {
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
+import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences.js'
+import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers.js'
 import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
+import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata.js'
 import {
   trySidecarPathMetadata,
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
+  trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import {
   ensureDefaultFile,
@@ -167,6 +170,21 @@ export class WorkspaceFileService extends WorkspaceBase {
     return this.buffers.flush()
   }
 
+  protected override async writeBufferedFile(
+    args: Parameters<WorkspaceBufferWriteFile>[0],
+  ): Promise<void> {
+    const sidecarWritten = await trySidecarWriteFile({
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      path: args.relativePath,
+      state: this.state,
+      content: args.content,
+      beforeWrite: () => this.watcher.markOwnWrite(args.absolutePath),
+    })
+    if (sidecarWritten) return
+    await args.writeWithNode()
+  }
+
   getBufferStatus(value: unknown): FsBufferStatus | null {
     const relativePath = stringArg(value, 'path')
     this.resolve(relativePath)
@@ -240,20 +258,13 @@ export class WorkspaceFileService extends WorkspaceBase {
     }
     this.buffers.rename(from, to)
     if (workspaceIndex) {
-      const rewrite = await rewriteMarkdownFileReferencesForRename({
+      await rewriteWorkspaceReferencesForRename({
         host: this,
+        logger: this.logger,
         workspaceIndex,
-        fromPath: from,
-        toPath: to,
+        from,
+        to,
       })
-      if (rewrite.appliedEdits > 0) {
-        this.logger.info('markdown rename references updated', {
-          from,
-          to,
-          appliedEdits: rewrite.appliedEdits,
-          touchedFiles: rewrite.touchedFiles.length,
-        })
-      }
     }
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path renamed', { from, to })
@@ -289,15 +300,7 @@ export class WorkspaceFileService extends WorkspaceBase {
       state: this.state,
     })
     if (sidecarMetadata) return sidecarMetadata
-    const stat = await fs.promises.stat(absolutePath)
-    return {
-      path: relativePath,
-      absolute_path: absolutePath,
-      kind: stat.isDirectory() ? 'folder' : 'file',
-      size_bytes: stat.size,
-      modified_ms: stat.mtimeMs,
-      readonly: (stat.mode & 0o200) === 0,
-    }
+    return readNodePathMetadata(relativePath, absolutePath)
   }
 
   async openPathInSystem(value: unknown): Promise<void> {

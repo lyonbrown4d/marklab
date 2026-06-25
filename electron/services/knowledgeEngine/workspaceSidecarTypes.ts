@@ -72,6 +72,7 @@ export type WorkspaceSidecarClient = {
     document: KnowledgeResyncDocumentInput,
   ) => Promise<KnowledgeSyncResponse>
   readWorkspaceFile: (path: string) => Promise<string>
+  writeWorkspaceFile: (path: string, content: string) => Promise<KnowledgeWorkspacePathMutation>
   search: (query: string, limit: number) => Promise<FsSearchResult[]>
   searchWithOptions: (
     query: string,

@@ -33,6 +33,18 @@ export const readWorkspaceFile = async (
   return response.content
 }
 
+export const writeWorkspaceFile = async (
+  sessionToken: string,
+  workspaceVfs: WorkspaceVfsClient,
+  path: string,
+  content: string,
+): Promise<KnowledgeWorkspacePathMutation> => {
+  const response = await invokeUnary(sessionToken, workspaceVfs, workspaceVfs.writeFile, {
+    content,
+    path,
+  })
+  return { kind: workspaceFileEntryKindToFsKind(response.kind), changed: response.changed }
+}
 export const createWorkspaceFile = async (
   sessionToken: string,
   workspaceVfs: WorkspaceVfsClient,

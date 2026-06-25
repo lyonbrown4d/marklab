@@ -20,6 +20,7 @@ service WorkspaceVfsService {
   rpc GetSnapshot(GetWorkspaceFileSnapshotRequest) returns (GetWorkspaceFileSnapshotResponse);
   rpc ListEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse);
   rpc ReadFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
+  rpc WriteFile(WriteWorkspaceFileRequest) returns (WorkspacePathMutationResponse);
   rpc CreateFile(CreateWorkspaceFileRequest) returns (WorkspacePathMutationResponse);
   rpc CreateDirectory(CreateWorkspaceDirectoryRequest) returns (WorkspacePathMutationResponse);
   rpc RenamePath(RenameWorkspacePathRequest) returns (WorkspacePathMutationResponse);
@@ -149,6 +150,11 @@ message ReadWorkspaceFileRequest {
 
 message ReadWorkspaceFileResponse {
   string content = 1;
+}
+
+message WriteWorkspaceFileRequest {
+  string path = 1;
+  string content = 2;
 }
 
 message CreateWorkspaceFileRequest {

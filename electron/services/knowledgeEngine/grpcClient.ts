@@ -39,6 +39,7 @@ import {
   listWorkspaceEntries,
   readWorkspaceFile,
   renameWorkspacePath,
+  writeWorkspaceFile,
 } from '@electron/services/knowledgeEngine/grpcWorkspaceVfsClient.js'
 import {
   createKnowledgeEngineGrpcClients,
@@ -126,6 +127,10 @@ export class KnowledgeEngineGrpcClient {
 
   readWorkspaceFile(path: string): Promise<string> {
     return readWorkspaceFile(this.options.sessionToken, this.clients.workspaceVfs, path)
+  }
+
+  writeWorkspaceFile(path: string, content: string): Promise<KnowledgeWorkspacePathMutation> {
+    return writeWorkspaceFile(this.options.sessionToken, this.clients.workspaceVfs, path, content)
   }
 
   createWorkspaceFile(path: string): Promise<KnowledgeWorkspacePathMutation> {

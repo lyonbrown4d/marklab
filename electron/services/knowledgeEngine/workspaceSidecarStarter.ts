@@ -10,6 +10,7 @@ import type { Logger } from '@electron/services/logger.js'
 
 const SIDECAR_READY_TIMEOUT_MS = 5000
 const GRPC_READY_RETRY_DELAY_MS = 50
+const SIDECAR_OUTPUT_TAIL_LIMIT = 4000
 
 export const startGrpcSidecar = async (
   plan: WorkspaceSidecarSpawnPlan,
@@ -17,7 +18,7 @@ export const startGrpcSidecar = async (
   logger: Logger,
 ): Promise<StartedWorkspaceSidecar> => {
   const child = execa(plan.command, plan.args, {
-    env: plan.env,
+    cwd: plan.cwd,
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -26,14 +27,17 @@ export const startGrpcSidecar = async (
     reject: false,
   }) as unknown as ChildProcessWithoutNullStreams
 
+  let stderrTail = ''
   child.stderr?.setEncoding('utf8')
   child.stderr?.on('data', (chunk) => {
-    const message = chunk.toString().trim()
+    const text = chunk.toString()
+    stderrTail = appendOutputTail(stderrTail, text)
+    const message = text.trim()
     if (message) logger.warn(`[knowledge-engine] ${message}`)
   })
 
   child.stdout?.setEncoding('utf8')
-  const address = await waitForReady(child, identity.workspaceInstanceId)
+  const address = await waitForReady(child, identity.workspaceInstanceId, () => stderrTail)
   const client = new KnowledgeEngineGrpcClient({
     address,
     sessionToken: identity.sessionToken,
@@ -54,12 +58,20 @@ export const startGrpcSidecar = async (
 const waitForReady = (
   child: ChildProcessWithoutNullStreams,
   workspaceInstanceId: string,
+  stderrTail: () => string,
 ): Promise<string> =>
   new Promise((resolve, reject) => {
     let buffer = ''
     const timeout = setTimeout(() => {
       cleanup()
-      reject(new Error('Knowledge sidecar did not become ready in time.'))
+      reject(
+        new Error(
+          sidecarReadyFailureMessage(
+            'Knowledge sidecar did not become ready in time.',
+            stderrTail(),
+          ),
+        ),
+      )
     }, SIDECAR_READY_TIMEOUT_MS)
 
     const cleanup = () => {
@@ -76,7 +88,14 @@ const waitForReady = (
 
     const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
       cleanup()
-      reject(new Error(`Knowledge sidecar exited before ready: code=${code} signal=${signal}`))
+      reject(
+        new Error(
+          sidecarReadyFailureMessage(
+            `Knowledge sidecar exited before ready: code=${code} signal=${signal}`,
+            stderrTail(),
+          ),
+        ),
+      )
     }
 
     const onData = (chunk: Buffer | string) => {
@@ -103,7 +122,13 @@ const waitForReady = (
 const parseReadyAddress = (line: string, workspaceInstanceId: string): string | null => {
   if (!line) return null
 
-  const value = JSON.parse(line) as Record<string, unknown>
+  let value: Record<string, unknown>
+  try {
+    value = JSON.parse(line) as Record<string, unknown>
+  } catch {
+    return null
+  }
+
   if (
     value.type !== 'READY' ||
     value.protocol !== 'grpc' ||
@@ -136,6 +161,14 @@ const waitForGrpcReady = async (
   throw lastError instanceof Error
     ? lastError
     : new Error('Knowledge sidecar gRPC server did not become ready in time.')
+}
+
+const appendOutputTail = (current: string, next: string): string =>
+  `${current}${next}`.slice(-SIDECAR_OUTPUT_TAIL_LIMIT)
+
+const sidecarReadyFailureMessage = (message: string, stderr: string): string => {
+  const detail = stderr.trim()
+  return detail ? `${message}\nLast stderr:\n${detail}` : message
 }
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))

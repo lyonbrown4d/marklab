@@ -39,10 +39,10 @@ describe('WorkspaceSidecarManager', () => {
           expect.stringContaining('index-a'),
           '--engine-data-dir',
           expect.stringContaining('app-data'),
+          '--grpc-session-token',
+          '<redacted>',
         ],
-        env: {
-          GRPC_SESSION_TOKEN: '<redacted>',
-        },
+        env: {},
         windowsHide: true,
       },
     })
@@ -101,6 +101,19 @@ describe('WorkspaceSidecarManager', () => {
     expect(client.rebuildIndex).toHaveBeenCalledWith(documents)
   })
 
+  it('routes workspace vfs write requests to the workspace grpc client', async () => {
+    const { client, manager } = createManager()
+    await manager.open('workspace-a', 'index-a')
+
+    await expect(manager.writeWorkspaceFile('workspace-a', 'alpha.md', '# Alpha')).resolves.toEqual(
+      {
+        changed: true,
+        kind: 'file',
+      },
+    )
+
+    expect(client.writeWorkspaceFile).toHaveBeenCalledWith('alpha.md', '# Alpha')
+  })
   it('routes markdown overlay requests with the workspace instance id', async () => {
     const { client, manager } = createManager()
     await manager.open('workspace-a', 'index-a')

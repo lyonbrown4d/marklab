@@ -54,6 +54,7 @@ import {
   SyncResponse,
   UpsertDocumentRequest,
   UpsertDocumentResponse,
+  WriteWorkspaceFileRequest,
   WorkspacePathMutationResponse,
 } from '@electron/generated/knowledge-engine/knowledge/engine/v1/engine.js'
 
@@ -100,6 +101,7 @@ export type WorkspaceVfsClient = Client & {
   listEntries: UnaryCall<ListWorkspaceEntriesRequest, ListWorkspaceEntriesResponse>
   readFile: UnaryCall<ReadWorkspaceFileRequest, ReadWorkspaceFileResponse>
   renamePath: UnaryCall<RenameWorkspacePathRequest, WorkspacePathMutationResponse>
+  writeFile: UnaryCall<WriteWorkspaceFileRequest, WorkspacePathMutationResponse>
 }
 export type WorkspaceClient = Client & {
   closeWorkspace: UnaryCall<CloseWorkspaceRequest, CloseWorkspaceResponse>

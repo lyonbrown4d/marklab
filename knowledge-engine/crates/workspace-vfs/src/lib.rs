@@ -62,6 +62,43 @@ impl WorkspaceVfs {
       .map_err(|source| VfsError::ReadFile { source })
   }
 
+  pub async fn write_file(
+    &self,
+    relative_path: &str,
+    content: &str,
+  ) -> Result<VfsMutation, VfsError> {
+    let path = self.resolver.resolve_mutation_path(relative_path).await?;
+    match fs::metadata(&path).await {
+      Ok(metadata) if metadata.is_dir() => return Err(VfsError::NotFile),
+      Ok(_) => {
+        let existing = fs::read(&path)
+          .await
+          .map_err(|source| VfsError::ReadFile { source })?;
+        if existing == content.as_bytes() {
+          return Ok(VfsMutation {
+            kind: VfsEntryKind::File,
+            changed: false,
+          });
+        }
+      }
+      Err(source) if source.kind() == std::io::ErrorKind::NotFound => {}
+      Err(source) => return Err(VfsError::Metadata { source }),
+    }
+
+    if let Some(parent) = path.parent() {
+      fs::create_dir_all(parent)
+        .await
+        .map_err(|source| VfsError::CreatePath { source })?;
+    }
+    fs::write(path, content)
+      .await
+      .map_err(|source| VfsError::WriteFile { source })?;
+
+    Ok(VfsMutation {
+      kind: VfsEntryKind::File,
+      changed: true,
+    })
+  }
   pub async fn create_file(&self, relative_path: &str) -> Result<VfsMutation, VfsError> {
     let path = self.resolver.resolve_mutation_path(relative_path).await?;
     match fs::metadata(&path).await {
@@ -320,6 +357,78 @@ mod tests {
       .expect("read file");
 
     assert_eq!(content, "# A");
+  }
+
+  #[tokio::test]
+  async fn writes_new_file_inside_workspace() {
+    let root = unique_test_dir("write-new");
+    let mutation = WorkspaceVfs::open(&root)
+      .await
+      .expect("open vfs")
+      .write_file("notes/a.md", "# A")
+      .await
+      .expect("write file");
+
+    assert_eq!(
+      mutation,
+      VfsMutation {
+        kind: VfsEntryKind::File,
+        changed: true
+      }
+    );
+    assert_eq!(
+      fs::read_to_string(root.join("notes").join("a.md")).expect("read written file"),
+      "# A"
+    );
+  }
+
+  #[tokio::test]
+  async fn writing_same_content_is_unchanged() {
+    let root = unique_test_dir("write-same");
+    fs::write(root.join("a.md"), "# A").expect("write markdown");
+
+    let mutation = WorkspaceVfs::open(&root)
+      .await
+      .expect("open vfs")
+      .write_file("a.md", "# A")
+      .await
+      .expect("write file");
+
+    assert_eq!(
+      mutation,
+      VfsMutation {
+        kind: VfsEntryKind::File,
+        changed: false
+      }
+    );
+  }
+
+  #[tokio::test]
+  async fn write_rejects_parent_paths() {
+    let root = unique_test_dir("write-parent");
+    let error = WorkspaceVfs::open(&root)
+      .await
+      .expect("open vfs")
+      .write_file("../secret.md", "# Secret")
+      .await
+      .expect_err("parent path should be rejected");
+
+    assert!(matches!(error, VfsError::ParentPath));
+  }
+
+  #[tokio::test]
+  async fn write_rejects_directory_path() {
+    let root = unique_test_dir("write-dir");
+    fs::create_dir_all(root.join("notes")).expect("create notes dir");
+
+    let error = WorkspaceVfs::open(&root)
+      .await
+      .expect("open vfs")
+      .write_file("notes", "# Notes")
+      .await
+      .expect_err("directory path should be rejected");
+
+    assert!(matches!(error, VfsError::NotFile));
   }
 
   #[tokio::test]

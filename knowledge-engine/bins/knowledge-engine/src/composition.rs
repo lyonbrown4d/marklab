@@ -82,6 +82,8 @@ struct WorkspaceSidecarArgs {
   workspace_root: Option<PathBuf>,
   #[arg(long)]
   engine_data_dir: Option<PathBuf>,
+  #[arg(long)]
+  grpc_session_token: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -96,13 +98,23 @@ struct PartialWorkspaceCompositionConfig {
   grpc_session_token: Option<String>,
 }
 
+impl PartialWorkspaceCompositionConfig {
+  fn empty() -> Self {
+    Self {
+      workspace_instance_id: None,
+      workspace_root: None,
+      engine_data_dir: None,
+      grpc_session_token: None,
+    }
+  }
+}
 impl From<WorkspaceSidecarArgs> for PartialWorkspaceCompositionConfig {
   fn from(args: WorkspaceSidecarArgs) -> Self {
     Self {
       workspace_instance_id: args.workspace_instance_id,
       workspace_root: args.workspace_root,
       engine_data_dir: args.engine_data_dir,
-      grpc_session_token: None,
+      grpc_session_token: args.grpc_session_token,
     }
   }
 }
@@ -115,7 +127,16 @@ fn load_config_from<T: FigmentProvider>(
   args: WorkspaceSidecarArgs,
   source: T,
 ) -> io::Result<WorkspaceCompositionConfig> {
+  load_config_from_parts(args, source, PartialWorkspaceCompositionConfig::empty())
+}
+
+fn load_config_from_parts<T: FigmentProvider>(
+  args: WorkspaceSidecarArgs,
+  source: T,
+  env_config: PartialWorkspaceCompositionConfig,
+) -> io::Result<WorkspaceCompositionConfig> {
   Figment::from(source)
+    .merge(Serialized::defaults(env_config))
     .merge(Serialized::defaults(
       PartialWorkspaceCompositionConfig::from(args),
     ))
@@ -127,7 +148,7 @@ fn filtered_env() -> Env {
   Env::raw().ignore_empty(true).filter(|key| {
     matches!(
       key.as_str(),
-      "workspace_instance_id" | "workspace_root" | "engine_data_dir" | "grpc_session_token"
+      "workspace_instance_id" | "workspace_root" | "engine_data_dir"
     )
   })
 }
@@ -264,6 +285,7 @@ mod tests {
           workspace_instance_id: Some("workspace-a".to_string()),
           workspace_root: Some(PathBuf::from("/workspace")),
           engine_data_dir: Some(PathBuf::from("/data")),
+          grpc_session_token: None,
         },
         Serialized::defaults(PartialWorkspaceCompositionConfig {
           workspace_instance_id: Some("env-workspace".to_string()),
@@ -279,5 +301,26 @@ mod tests {
     assert_eq!(root.config().workspace_root, PathBuf::from("/workspace"));
     assert_eq!(root.config().engine_data_dir, PathBuf::from("/data"));
     assert_eq!(root.config().grpc_session_token, "token");
+  }
+
+  #[test]
+  fn reads_grpc_session_token_from_cli_args() {
+    let config = load_config_from(
+      WorkspaceSidecarArgs {
+        workspace_instance_id: Some("workspace-a".to_string()),
+        workspace_root: Some(PathBuf::from("/workspace")),
+        engine_data_dir: Some(PathBuf::from("/data")),
+        grpc_session_token: Some("cli-token".to_string()),
+      },
+      Serialized::defaults(PartialWorkspaceCompositionConfig {
+        workspace_instance_id: None,
+        workspace_root: None,
+        engine_data_dir: None,
+        grpc_session_token: Some("env-token".to_string()),
+      }),
+    )
+    .expect("config should include cli token");
+
+    assert_eq!(config.grpc_session_token, "cli-token");
   }
 }

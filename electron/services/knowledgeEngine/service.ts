@@ -135,6 +135,16 @@ export class KnowledgeEngineService {
     return sidecars.readWorkspaceFile(workspaceId, path)
   }
 
+  async writeWorkspaceFile(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+    content: string,
+  ): Promise<KnowledgeWorkspacePathMutation> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return sidecars.writeWorkspaceFile(workspaceId, path, content)
+  }
   async createWorkspaceFile(
     workspaceId: string,
     workspaceRoot: string,

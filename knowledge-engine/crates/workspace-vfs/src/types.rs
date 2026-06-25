@@ -69,4 +69,6 @@ pub enum VfsError {
   DeletePath { source: io::Error },
   #[error("Workspace file read failed")]
   ReadFile { source: io::Error },
+  #[error("Workspace file write failed")]
+  WriteFile { source: io::Error },
 }
