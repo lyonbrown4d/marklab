@@ -1,3 +1,5 @@
+import pLimit from 'p-limit'
+
 import type { FsEntry } from '@electron/services/workspace/types.js'
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 
@@ -24,24 +26,17 @@ export const loadWorkspaceDocuments = async ({
   const files = entries.filter(
     (entry) => entry.kind === 'file' && isSearchIndexablePath(entry.path),
   )
-  const documents = new Array<WorkspaceDocument>(files.length)
+  const limit = pLimit(batchSize)
 
-  for (let batchStart = 0; batchStart < files.length; batchStart += batchSize) {
-    const batch = files.slice(batchStart, batchStart + batchSize)
-    const loaded = await Promise.all(
-      batch.map(async (entry) => ({
+  return Promise.all(
+    files.map((entry) =>
+      limit(async () => ({
         path: entry.path,
         content:
           entry.path === replacePath && replaceContent != null
             ? replaceContent
             : await readFile(entry.path),
       })),
-    )
-
-    for (let index = 0; index < loaded.length; index += 1) {
-      documents[batchStart + index] = loaded[index]!
-    }
-  }
-
-  return documents
+    ),
+  )
 }

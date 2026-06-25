@@ -1,6 +1,7 @@
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::markdown_graph::{WorkspaceGraphDocument, WorkspaceGraphKnownPaths};
 use crate::types::SearchDocument;
 use crate::workspace_engine::{
   WorkspaceDocumentChange, WorkspaceDocumentEdit, WorkspaceDocumentPosition,
@@ -72,6 +73,32 @@ fn change_overlay_updates_symbols() {
   );
 }
 
+#[test]
+fn graph_methods_reuse_results_without_stale_content() {
+  let engine = open_test_engine("graph-cache");
+  let documents = vec![
+    graph_document("notes/current.md", "# Current\nSee [Guide](../refs/guide.md)."),
+    graph_document("refs/guide.md", "# Guide"),
+  ];
+  let known_paths = WorkspaceGraphKnownPaths {
+    paths: vec!["notes/current.md".to_string(), "refs/guide.md".to_string()],
+    asset_paths: Vec::new(),
+  };
+
+  let first_workspace_graph = engine.workspace_graph(&documents, known_paths.clone());
+  let second_workspace_graph = engine.workspace_graph(&documents, known_paths);
+
+  assert_eq!(first_workspace_graph, second_workspace_graph);
+
+  let outline_content = "# Project\n\n## Plan\nBody";
+  let first_outline_graph = engine.outline_graph("notes/project.md", outline_content);
+  let second_outline_graph = engine.outline_graph("notes/project.md", outline_content);
+  let changed_outline_graph = engine.outline_graph("notes/project.md", "# Project\n\n## Done");
+
+  assert_eq!(first_outline_graph, second_outline_graph);
+  assert_ne!(first_outline_graph, changed_outline_graph);
+}
+
 fn open_test_engine(label: &str) -> WorkspaceEngine {
   WorkspaceEngine::open(unique_test_path(label)).expect("workspace engine should open")
 }
@@ -84,4 +111,12 @@ fn unique_test_path(label: &str) -> String {
   let path = std::env::temp_dir().join(format!("marklab-workspace-engine-{label}-{nanos}"));
   let _ = fs::remove_dir_all(&path);
   path.to_string_lossy().to_string()
+}
+
+fn graph_document(path: &str, content: &str) -> WorkspaceGraphDocument {
+  WorkspaceGraphDocument {
+    path: path.to_string(),
+    title: path.to_string(),
+    content: content.to_string(),
+  }
 }

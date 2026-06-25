@@ -1,5 +1,8 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
+use moka::sync::Cache;
 use serde_json::Value;
 
 use crate::markdown_documents::{
@@ -13,6 +16,9 @@ use crate::markdown_graph::{
 };
 use crate::types::{SearchDocument, SearchQuery, SearchResultSet};
 use crate::workspace_store::WorkspaceStore;
+
+const WORKSPACE_GRAPH_CACHE_CAPACITY: u64 = 16;
+const OUTLINE_GRAPH_CACHE_CAPACITY: u64 = 128;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceSearchResult {
@@ -82,6 +88,30 @@ pub struct WorkspaceDocumentChange {
 pub struct WorkspaceEngine {
   workspace: WorkspaceStore,
   markdown_documents: MarkdownDocumentStore,
+  workspace_graph_cache: Cache<WorkspaceGraphCacheKey, WorkspaceGraph>,
+  outline_graph_cache: Cache<OutlineGraphCacheKey, WorkspaceGraph>,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct WorkspaceGraphCacheKey {
+  documents: Vec<WorkspaceGraphDocumentCacheKey>,
+  known_paths: Vec<String>,
+  asset_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct WorkspaceGraphDocumentCacheKey {
+  path: String,
+  title: String,
+  content_len: usize,
+  content_hash: u64,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct OutlineGraphCacheKey {
+  path: String,
+  content_len: usize,
+  content_hash: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,6 +158,12 @@ impl WorkspaceEngine {
     Ok(Self {
       workspace: WorkspaceStore::open(index_path)?,
       markdown_documents: MarkdownDocumentStore::default(),
+      workspace_graph_cache: Cache::builder()
+        .max_capacity(WORKSPACE_GRAPH_CACHE_CAPACITY)
+        .build(),
+      outline_graph_cache: Cache::builder()
+        .max_capacity(OUTLINE_GRAPH_CACHE_CAPACITY)
+        .build(),
     })
   }
 
@@ -178,17 +214,33 @@ impl WorkspaceEngine {
   pub fn remove_path_prefix(&self, prefix: &str) -> Result<usize, String> {
     self.workspace.remove_path_prefix(prefix)
   }
+
   pub fn workspace_graph(
     &self,
     documents: &[WorkspaceGraphDocument],
     known_paths: WorkspaceGraphKnownPaths,
   ) -> WorkspaceGraph {
-    build_workspace_graph(documents, known_paths)
+    let key = workspace_graph_cache_key(documents, &known_paths);
+    if let Some(graph) = self.workspace_graph_cache.get(&key) {
+      return graph;
+    }
+
+    let graph = build_workspace_graph(documents, known_paths);
+    self.workspace_graph_cache.insert(key, graph.clone());
+    graph
   }
 
   pub fn outline_graph(&self, path: &str, content: &str) -> WorkspaceGraph {
-    build_outline_graph(path, content)
+    let key = outline_graph_cache_key(path, content);
+    if let Some(graph) = self.outline_graph_cache.get(&key) {
+      return graph;
+    }
+
+    let graph = build_outline_graph(path, content);
+    self.outline_graph_cache.insert(key, graph.clone());
+    graph
   }
+
   pub fn open_markdown_document(&mut self, document_id: String, content: String, version: u64) {
     self
       .markdown_documents
@@ -293,6 +345,46 @@ impl WorkspaceEngine {
       },
     })
   }
+}
+
+fn workspace_graph_cache_key(
+  documents: &[WorkspaceGraphDocument],
+  known_paths: &WorkspaceGraphKnownPaths,
+) -> WorkspaceGraphCacheKey {
+  WorkspaceGraphCacheKey {
+    documents: documents
+      .iter()
+      .map(|document| WorkspaceGraphDocumentCacheKey {
+        path: document.path.clone(),
+        title: document.title.clone(),
+        content_len: document.content.len(),
+        content_hash: hash_text(&document.content),
+      })
+      .collect(),
+    known_paths: sorted_unique_paths(&known_paths.paths),
+    asset_paths: sorted_unique_paths(&known_paths.asset_paths),
+  }
+}
+
+fn outline_graph_cache_key(path: &str, content: &str) -> OutlineGraphCacheKey {
+  OutlineGraphCacheKey {
+    path: path.to_string(),
+    content_len: content.len(),
+    content_hash: hash_text(content),
+  }
+}
+
+fn sorted_unique_paths(paths: &[String]) -> Vec<String> {
+  let mut sorted = paths.to_vec();
+  sorted.sort();
+  sorted.dedup();
+  sorted
+}
+
+fn hash_text(value: &str) -> u64 {
+  let mut hasher = DefaultHasher::new();
+  value.hash(&mut hasher);
+  hasher.finish()
 }
 
 fn search_result_from_value(value: Value) -> Result<WorkspaceSearchResult, String> {

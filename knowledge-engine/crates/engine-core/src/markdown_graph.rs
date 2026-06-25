@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use rayon::prelude::*;
+
 use crate::markdown_blocks::{parse_markdown_blocks, MarkdownGraphBlock};
 use crate::markdown_extract::{
   extract_markdown, MarkdownExtraction, MarkdownHeading, MarkdownLink,
@@ -204,8 +206,8 @@ pub fn build_outline_graph(file_path: &str, content: &str) -> WorkspaceGraph {
 }
 
 fn indexed_files<'a>(documents: &'a [WorkspaceGraphDocument]) -> Vec<IndexedMarkdownFile<'a>> {
-  documents
-    .iter()
+  let mut files = documents
+    .par_iter()
     .map(|document| {
       let path = normalize_workspace_path(&document.path);
       IndexedMarkdownFile {
@@ -214,7 +216,9 @@ fn indexed_files<'a>(documents: &'a [WorkspaceGraphDocument]) -> Vec<IndexedMark
         path,
       }
     })
-    .collect()
+    .collect::<Vec<_>>();
+  files.sort_by(|left, right| left.path.cmp(&right.path));
+  files
 }
 
 fn heading_nodes(files: &[IndexedMarkdownFile<'_>]) -> HashMap<String, WorkspaceGraphNode> {
@@ -597,6 +601,44 @@ mod tests {
       WorkspaceGraphEdgeKind::ReferencesHeading,
     ));
     assert!(!graph.nodes.iter().any(|node| node.id == "missing:../refs/guide.md"));
+  }
+
+  #[test]
+  fn workspace_graph_is_deterministic_when_document_input_order_changes() {
+    let documents = vec![
+      graph_document(
+        "zeta.md",
+        "# Zeta\n[Alpha](alpha.md).",
+      ),
+      graph_document(
+        "alpha.md",
+        "# Intro\n[Self](#Intro).\n[External](https://example.com).",
+      ),
+    ];
+    let mut reversed_documents = documents.clone();
+    reversed_documents.reverse();
+    let known_paths = WorkspaceGraphKnownPaths {
+      paths: vec!["zeta.md".to_string(), "alpha.md".to_string()],
+      asset_paths: Vec::new(),
+    };
+
+    let graph = build_workspace_graph(&documents, known_paths.clone());
+    let reversed_graph = build_workspace_graph(&reversed_documents, known_paths);
+
+    assert_eq!(graph, reversed_graph);
+    assert_eq!(
+      graph
+        .nodes
+        .iter()
+        .map(|node| node.id.as_str())
+        .collect::<Vec<_>>(),
+      vec![
+        "file:alpha.md",
+        "file:zeta.md",
+        "heading:alpha.md:intro",
+        "ext:https://example.com",
+      ]
+    );
   }
 
   #[test]

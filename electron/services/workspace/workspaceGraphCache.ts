@@ -1,4 +1,5 @@
 import { createHash, type Hash } from 'node:crypto'
+import { LRUCache } from 'lru-cache'
 
 import type { FsGraph } from '@electron/services/workspace/types.js'
 
@@ -12,13 +13,18 @@ type WorkspaceGraphKnownPaths = {
   assetPaths: string[]
 }
 
+type GraphCache = LRUCache<string, FsGraph>
+
 const DEFAULT_MAX_CACHE_ENTRIES = 8
 
 export class WorkspaceGraphCache {
-  constructor(private readonly maxEntries = DEFAULT_MAX_CACHE_ENTRIES) {}
+  private readonly workspaceGraphs: GraphCache
+  private readonly outlineGraphs: GraphCache
 
-  private readonly workspaceGraphs = new Map<string, FsGraph>()
-  private readonly outlineGraphs = new Map<string, FsGraph>()
+  constructor(private readonly maxEntries = DEFAULT_MAX_CACHE_ENTRIES) {
+    this.workspaceGraphs = createGraphCache(maxEntries)
+    this.outlineGraphs = createGraphCache(maxEntries)
+  }
 
   getWorkspaceGraph(
     documents: WorkspaceGraphDocument[],
@@ -77,28 +83,19 @@ export class WorkspaceGraphCache {
     return hash.digest('hex')
   }
 
-  private getGraph(cache: Map<string, FsGraph>, key: string): FsGraph | undefined {
-    const graph = cache.get(key)
-    if (!graph) return undefined
-
-    cache.delete(key)
-    cache.set(key, graph)
-    return graph
+  private getGraph(cache: GraphCache, key: string): FsGraph | undefined {
+    return cache.get(key)
   }
 
-  private setGraph(cache: Map<string, FsGraph>, key: string, graph: FsGraph): void {
+  private setGraph(cache: GraphCache, key: string, graph: FsGraph): void {
     if (this.maxEntries <= 0) return
 
-    cache.delete(key)
     cache.set(key, graph)
-
-    while (cache.size > this.maxEntries) {
-      const oldestKey = cache.keys().next().value
-      if (typeof oldestKey !== 'string') return
-      cache.delete(oldestKey)
-    }
   }
 }
+
+const createGraphCache = (maxEntries: number): GraphCache =>
+  new LRUCache<string, FsGraph>({ max: Math.max(1, Math.floor(maxEntries)) })
 
 const appendKnownPaths = (hash: Hash, label: string, paths: string[]): void => {
   appendPart(hash, label)

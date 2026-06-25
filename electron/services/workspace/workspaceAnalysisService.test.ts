@@ -35,6 +35,26 @@ describe('WorkspaceGraphCache', () => {
       cache.getWorkspaceGraph(documents, { paths: ['alpha.md', 'beta.md'], assetPaths: [] }),
     ).toBeUndefined()
   })
+
+  it('evicts the least recently used workspace graph when the cache is full', () => {
+    const cache = new WorkspaceGraphCache(2)
+    const firstGraph = createGraph('mindmap')
+    const secondGraph = createGraph('mindmap')
+    const thirdGraph = createGraph('mindmap')
+    const firstDocuments = [{ path: 'first.md', content: '# First' }]
+    const secondDocuments = [{ path: 'second.md', content: '# Second' }]
+    const thirdDocuments = [{ path: 'third.md', content: '# Third' }]
+
+    cache.setWorkspaceGraph(firstDocuments, createKnownPaths('first.md'), firstGraph)
+    cache.setWorkspaceGraph(secondDocuments, createKnownPaths('second.md'), secondGraph)
+    expect(cache.getWorkspaceGraph(firstDocuments, createKnownPaths('first.md'))).toBe(firstGraph)
+
+    cache.setWorkspaceGraph(thirdDocuments, createKnownPaths('third.md'), thirdGraph)
+
+    expect(cache.getWorkspaceGraph(secondDocuments, createKnownPaths('second.md'))).toBeUndefined()
+    expect(cache.getWorkspaceGraph(firstDocuments, createKnownPaths('first.md'))).toBe(firstGraph)
+    expect(cache.getWorkspaceGraph(thirdDocuments, createKnownPaths('third.md'))).toBe(thirdGraph)
+  })
 })
 
 describe('WorkspaceAnalysisService sidecar graph', () => {
@@ -233,6 +253,11 @@ const createGraph = (mode: FsGraph['mode']): FsGraph => ({
   edges: [],
   mode,
   nodes: [{ id: 'file:alpha.md', kind: 'file', label: 'alpha.md', path: 'alpha.md' }],
+})
+
+const createKnownPaths = (pathValue: string): { paths: string[]; assetPaths: string[] } => ({
+  paths: [pathValue],
+  assetPaths: [],
 })
 
 const createLogger = (): Logger & { error: ReturnType<typeof vi.fn> } => {

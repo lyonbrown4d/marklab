@@ -23,11 +23,14 @@ clap = { version = "4.5", features = ["derive"] }
 figment2 = { version = "0.11.5", default-features = false, features = ["env"] }
 fluxdi = { version = "1.2.2", default-features = false, features = ["debug", "thread-safe", "async-factory", "lifecycle", "tracing"] }
 camino = "1"
+dashmap = "6.2.1"
 ignore = "0.4"
+moka = { version = "0.12.15", features = ["sync"] }
 path-clean = "1"
 prost = "0.14"
 protoc-bin-vendored = "3"
 pulldown-cmark = "0.13.4"
+rayon = "1.12.0"
 ropey = "1.6"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
