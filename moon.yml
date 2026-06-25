@@ -23,7 +23,7 @@ tasks:
       - electron/generated/knowledge-engine/**/*
 
   typecheck:
-    command: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
+    script: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
     deps:
       - ~:proto-gen
     inputs:
@@ -82,7 +82,7 @@ tasks:
       - src/**/*
       - electron/**/*
       - scripts/**/*
-      - eslint.config.js
+      - eslint.config.ts
       - package.json
       - pnpm-lock.yaml
     options:

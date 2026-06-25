@@ -8,10 +8,6 @@ const RANDOM_DEV_SERVER_PORT = 0 as const
 
 const require = createRequire(import.meta.url)
 
-type EnvVariableMap = Record<string, string>
-
-type ChildEnv = NodeJS.ProcessEnv & EnvVariableMap
-
 const parsePort = (value: string | undefined): number | null => {
   if (!value) return null
   const port = Number(value)
@@ -36,11 +32,10 @@ const resolveViteCliPath = (): string => {
 }
 
 const createChildEnv = (port: number): NodeJS.ProcessEnv => {
-  const childEnv: ChildEnv = { ...process.env }
-  for (const [key, value] of Object.entries(childEnv)) {
-    if (!key || !value || value.includes('\u0000')) {
-      delete childEnv[key]
-    }
+  const childEnv: NodeJS.ProcessEnv = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key || value === undefined || value.includes('\u0000')) continue
+    childEnv[key] = value
   }
 
   childEnv.MARKLAB_DEV_SERVER_PORT = String(port)

@@ -12,7 +12,7 @@ const maxLinesOptions = {
   skipComments: true,
 }
 
-const legacyOversizedFiles = [
+const legacyOversizedFiles: string[] = [
   'src/app/AppLayout.tsx',
   'src/app/useEditorBuffer.ts',
   'src/components/TabsBar.tsx',

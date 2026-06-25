@@ -22,5 +22,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.ts",
+    "playwright.electron.config.ts",
+    "eslint.config.ts"
+  ]
 }

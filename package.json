@@ -296,6 +296,7 @@
     "get-port": "^7.2.0",
     "globals": "^17.7.0",
     "husky": "^9.1.7",
+    "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
     "lint-staged": "17.0.8",
     "png2icons": "^2.0.1",
