@@ -13,9 +13,11 @@ import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandActions } from '@/components/titlebar/useTitlebarCommandActions'
+import { buildTitlebarCommandNavigationModel } from '@/components/titlebar/titlebarCommandNavigation'
 
 type UseTitlebarCommandModelArgs = Pick<
   TitlebarProps,
+  | 'activePath'
   | 'files'
   | 'tabs'
   | 'workspaceIndex'
@@ -42,6 +44,7 @@ type UseTitlebarCommandModelArgs = Pick<
 }
 
 export const useTitlebarCommandModel = ({
+  activePath,
   files,
   tabs,
   workspaceIndex,
@@ -148,6 +151,11 @@ export const useTitlebarCommandModel = ({
     )
   }, [workspaceIndex])
 
+  const commandNavigation = useMemo(
+    () => buildTitlebarCommandNavigationModel(activePath, workspaceIndex),
+    [activePath, workspaceIndex],
+  )
+
   const commandRecentFiles = useMemo(() => {
     const seen = new Set<string>()
     return [...tabs].reverse().flatMap((tab) => {
@@ -209,6 +217,9 @@ export const useTitlebarCommandModel = ({
     menuGroups,
     commandFiles,
     commandHeadings,
+    commandNavigationHeadings: commandNavigation.headings,
+    commandNavigationBacklinks: commandNavigation.backlinks,
+    commandNavigationMissingLinks: commandNavigation.missingLinks,
     commandRecentFiles,
     workspaceKnowledgeSummary,
     commandCollections,

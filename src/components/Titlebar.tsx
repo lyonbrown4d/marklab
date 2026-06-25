@@ -8,6 +8,10 @@ import { TitlebarCommandCenter } from '@/components/titlebar/TitlebarCommandCent
 import { TitlebarNavigation } from '@/components/titlebar/TitlebarNavigation'
 import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandModel } from '@/components/titlebar/useTitlebarCommandModel'
+import {
+  navigationBacklinkToSearchResult,
+  navigationMissingLinkToSearchResult,
+} from '@/components/titlebar/titlebarCommandNavigation'
 import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 
 const Titlebar = ({
@@ -49,6 +53,9 @@ const Titlebar = ({
     menuGroups,
     commandFiles,
     commandHeadings,
+    commandNavigationHeadings,
+    commandNavigationBacklinks,
+    commandNavigationMissingLinks,
     commandRecentFiles,
     commandCollections,
     workspaceKnowledgeSummary,
@@ -60,6 +67,7 @@ const Titlebar = ({
     onCommandOpenHeading,
     onCommandOpenSearchResult,
   } = useTitlebarCommandModel({
+    activePath,
     files,
     tabs,
     workspaceIndex,
@@ -137,13 +145,23 @@ const Titlebar = ({
       <TitlebarCommandDialog
         open={commandOpen}
         onOpenChange={onCommandOpenChange}
+        activePath={activePath}
         files={commandFiles}
         recentFiles={commandRecentFiles}
         headings={commandHeadings}
+        navigationHeadings={commandNavigationHeadings}
+        navigationBacklinks={commandNavigationBacklinks}
+        navigationMissingLinks={commandNavigationMissingLinks}
         collections={commandCollections}
         onOpenFile={onCommandOpenFile}
         onOpenHeading={onCommandOpenHeading}
         onOpenSearchResult={onCommandOpenSearchResult}
+        onOpenNavigationBacklink={(backlink) =>
+          onCommandOpenSearchResult(navigationBacklinkToSearchResult(backlink))
+        }
+        onOpenNavigationMissingLink={(missingLink) =>
+          onCommandOpenSearchResult(navigationMissingLinkToSearchResult(missingLink))
+        }
         onAction={onCommandAction}
         canCreateWorkspaceEntries={canCreateWorkspaceEntries}
         workspaceIndexed={Boolean(workspaceIndex)}

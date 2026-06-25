@@ -126,7 +126,8 @@ describe('Titlebar command palette', () => {
     renderTitlebar(createProps({ commandOpen: true, onOpenHeading }))
 
     await userEvent.type(screen.getByRole('combobox'), 'indexed')
-    await userEvent.click(await screen.findByRole('option', { name: /Indexed Detail/i }))
+    const indexedOptions = await screen.findAllByRole('option', { name: /Indexed Detail/i })
+    await userEvent.click(indexedOptions[0])
 
     expect(onOpenHeading).toHaveBeenCalledWith('notes/target.md', 'indexed-detail')
   })

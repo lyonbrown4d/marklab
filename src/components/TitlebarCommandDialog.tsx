@@ -5,6 +5,11 @@ import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command
 import { useI18n } from '@/i18n/useI18n'
 import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandNavigationSection, {
+  type CommandNavigationBacklink,
+  type CommandNavigationHeading,
+  type CommandNavigationMissingLink,
+} from '@/components/command/CommandNavigationSection'
 import CommandRecentFilesSection from '@/components/command/CommandRecentFilesSection'
 import CommandSearchOverview from '@/components/command/CommandSearchOverview'
 import CommandSearchHistory from '@/components/command/CommandSearchHistory'
@@ -21,12 +26,18 @@ import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 type TitlebarCommandDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  activePath: string | null
   files: CommandFile[]
   recentFiles: CommandFile[]
   headings: CommandHeading[]
+  navigationHeadings: CommandNavigationHeading[]
+  navigationBacklinks: CommandNavigationBacklink[]
+  navigationMissingLinks: CommandNavigationMissingLink[]
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
+  onOpenNavigationBacklink: (backlink: CommandNavigationBacklink) => void
+  onOpenNavigationMissingLink: (missingLink: CommandNavigationMissingLink) => void
   onAction: (id: string) => void
   canCreateWorkspaceEntries: boolean
   workspaceIndexed: boolean
@@ -39,12 +50,18 @@ type TitlebarCommandDialogProps = {
 const TitlebarCommandDialog = ({
   open,
   onOpenChange,
+  activePath,
   files,
   recentFiles,
   headings,
+  navigationHeadings,
+  navigationBacklinks,
+  navigationMissingLinks,
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
+  onOpenNavigationBacklink,
+  onOpenNavigationMissingLink,
   onAction,
   canCreateWorkspaceEntries,
   workspaceIndexed,
@@ -138,6 +155,15 @@ const TitlebarCommandDialog = ({
           files={recentFiles}
           query={deferredTrimmedQuery}
           onOpenFile={handleOpenFile}
+        />
+        <CommandNavigationSection
+          activePath={activePath}
+          headings={navigationHeadings}
+          backlinks={navigationBacklinks}
+          missingLinks={navigationMissingLinks}
+          onOpenHeading={handleOpenHeading}
+          onOpenBacklink={onOpenNavigationBacklink}
+          onOpenMissingLink={onOpenNavigationMissingLink}
         />
         <CommandSearchResults
           query={deferredQuery}
