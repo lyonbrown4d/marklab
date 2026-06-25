@@ -83,6 +83,28 @@ describe('WorkspaceFileService sidecar mutations', () => {
     workspace.dispose()
   })
 
+  it('creates files with initial content through the knowledge sidecar', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+
+    await workspace.createFile({ path: 'notes/a.md', content: '# A\n' })
+
+    expect(service.createWorkspaceFile).toHaveBeenCalledWith(
+      expect.stringMatching(/^vfs:/),
+      root,
+      'notes/a.md',
+    )
+    expect(service.writeWorkspaceFile).toHaveBeenCalledWith(
+      expect.stringMatching(/^vfs:/),
+      root,
+      'notes/a.md',
+      '# A\n',
+    )
+    expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({ dirty: false })
+
+    workspace.dispose()
+  })
+
   it('routes buffer flush writes to the knowledge sidecar when available', async () => {
     const service = createKnowledgeServiceMock()
     const { root, workspace } = await createWorkspace(service)

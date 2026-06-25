@@ -35,6 +35,7 @@ export const getMarkdownCodeActions = async (
         title: `Create missing Markdown file "${targetPath ?? link.target_path}"`,
         kind: 'create-file',
         path: targetPath ?? link.target_path,
+        content: missingFileInitialContent(link),
         isPreferred: true,
       })
     }
@@ -75,6 +76,14 @@ export const getMarkdownCodeActions = async (
   }
 
   return actions
+}
+
+const missingFileInitialContent = (link: FsMarkdownLink): string | undefined => {
+  if (!link.target_anchor) return undefined
+  const headingText = link.target_anchor.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!headingText) return undefined
+  return `# ${headingText}
+`
 }
 
 const isCursorOnLinkTarget = (lineText: string, column: number, link: FsMarkdownLink) => {

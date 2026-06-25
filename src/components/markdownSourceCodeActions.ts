@@ -19,9 +19,9 @@ export const registerMarkdownCodeActionProvider = ({
   getContext: () => MarkdownSourceCompletionContext
   onOpenFileView?: (path: string, view: FileViewKind) => void
 }) => {
-  const createFileCommandId = editor.addCommand(0, (_accessor, path: string) => {
+  const createFileCommandId = editor.addCommand(0, (_accessor, path: string, content?: string) => {
     void fsApi
-      .createFile(path)
+      .createFile(path, content)
       .then(() => onOpenFileView?.(path, 'source'))
       .catch(() => undefined)
   })
@@ -56,7 +56,11 @@ export const registerMarkdownCodeActionProvider = ({
                 kind: 'quickfix',
                 isPreferred: action.isPreferred,
                 command: createFileCommandId
-                  ? { id: createFileCommandId, title: action.title, arguments: [action.path] }
+                  ? {
+                      id: createFileCommandId,
+                      title: action.title,
+                      arguments: [action.path, action.content],
+                    }
                   : undefined,
               }
             : {

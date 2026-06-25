@@ -21,17 +21,14 @@ import {
 } from '@electron/services/workspace/workspaceAssetAccess.js'
 import { readWorkspaceFileServiceAssetBytes } from '@electron/services/workspace/workspaceFileServiceAssetBytes.js'
 import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata.js'
+import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile.js'
 import {
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import {
-  ensureDefaultFile,
-  pathExists,
-  stringArg,
-} from '@electron/services/workspace/workspaceUtils.js'
+import { ensureDefaultFile, stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceFileService extends WorkspaceBase {
   constructor(
@@ -187,33 +184,16 @@ export class WorkspaceFileService extends WorkspaceBase {
 
   async createFile(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
-    const relativePath = stringArg(value, 'path')
-    const sidecarMutation = await trySidecarPathMutation({
+    await createWorkspaceFileEntry({
+      deleteBuffer: (relativePath) => this.buffers.delete(relativePath),
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
-      mutate: (service, runtime) =>
-        service.createWorkspaceFile(runtime.workspaceId, runtime.workspaceRoot, relativePath),
-      path: relativePath,
+      resolveRelativePath: (relativePath) => this.resolve(relativePath),
+      scheduleSnapshotChanged: (options) => this.scheduleSnapshotChanged(options),
+      setCleanFile: (relativePath, content) => this.buffers.setCleanFile(relativePath, content),
       state: this.state,
+      value,
     })
-    if (sidecarMutation) {
-      if (sidecarMutation.changed) this.buffers.setCleanFile(relativePath, '')
-      else this.buffers.delete(relativePath)
-      this.scheduleSnapshotChanged({ restartWatcher: true })
-      this.logger.info('file created', { path: relativePath })
-      return
-    }
-
-    const absolutePath = this.resolve(relativePath)
-    await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
-    if (!(await pathExists(absolutePath))) {
-      await fs.promises.writeFile(absolutePath, '')
-      this.buffers.setCleanFile(relativePath, '')
-    } else {
-      this.buffers.delete(relativePath)
-    }
-    this.scheduleSnapshotChanged({ restartWatcher: true })
-    this.logger.info('file created', { path: relativePath })
   }
   async createDir(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()

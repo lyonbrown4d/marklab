@@ -279,6 +279,11 @@ export const WorkspaceVfsClientConstructor = makeGenericClientConstructor(
       ReadWorkspaceFileRequest,
       ReadWorkspaceFileResponse,
     ),
+    writeFile: unaryDefinition(
+      '/knowledge.engine.v1.WorkspaceVfsService/WriteFile',
+      WriteWorkspaceFileRequest,
+      WorkspacePathMutationResponse,
+    ),
     renamePath: unaryDefinition(
       '/knowledge.engine.v1.WorkspaceVfsService/RenamePath',
       RenameWorkspacePathRequest,

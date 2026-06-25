@@ -1,8 +1,20 @@
+import { ChannelCredentials } from '@grpc/grpc-js'
 import { describe, expect, it } from 'vitest'
 
+import { WorkspaceVfsClientConstructor } from '@electron/services/knowledgeEngine/grpcWire.js'
 import { createClientFixture } from '@electron/services/knowledgeEngine/grpcClient.testFixture.js'
 
 describe('KnowledgeEngineGrpcClient', () => {
+  it('exposes workspace vfs writeFile on the runtime client', () => {
+    const client = new WorkspaceVfsClientConstructor(
+      '127.0.0.1:1',
+      ChannelCredentials.createInsecure(),
+    )
+
+    expect(typeof client.writeFile).toBe('function')
+    client.close()
+  })
+
   it('opens a workspace with session token metadata', async () => {
     const fixture = createClientFixture()
     const client = fixture.createClient()

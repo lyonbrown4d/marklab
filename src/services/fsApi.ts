@@ -285,8 +285,8 @@ export const fsApi = {
     const result = await invoke<unknown>('fs_get_background_tasks')
     return z.array(backgroundTaskStatusSchema).parse(result)
   },
-  createFile(path: string) {
-    return invoke('fs_create_file', { path })
+  createFile(path: string, content?: string) {
+    return invoke('fs_create_file', { path, content })
   },
   createDir(path: string) {
     return invoke('fs_create_dir', { path })

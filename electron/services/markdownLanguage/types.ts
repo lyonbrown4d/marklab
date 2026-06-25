@@ -82,6 +82,7 @@ export type MarkdownLanguageCodeAction =
       title: string
       kind: 'create-file'
       path: string
+      content?: string
       isPreferred?: boolean
     }
   | {

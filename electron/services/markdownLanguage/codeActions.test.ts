@@ -88,6 +88,30 @@ describe('getMarkdownCodeActions', () => {
     })
   })
 
+  it('creates initial heading content for a missing file with an anchor', async () => {
+    const actions = await getActions('See [Missing](missing.md#draft-plan)', 18)
+    const action = firstActionOfKind(actions, 'create-file')
+
+    expect(action).toMatchObject({
+      kind: 'create-file',
+      path: 'notes/missing.md',
+      content: '# draft plan\n',
+      isPreferred: true,
+    })
+  })
+
+  it('offers to create a missing wiki note', async () => {
+    const actions = await getActions('See [[Missing Note#Draft Plan]]', 10)
+    const action = firstActionOfKind(actions, 'create-file')
+
+    expect(action).toMatchObject({
+      kind: 'create-file',
+      path: 'Missing Note.md',
+      content: '# Draft Plan\n',
+      isPreferred: true,
+    })
+  })
+
   it('offers to remove a missing heading anchor', async () => {
     const actions = await getActions('See [Missing](target.md#missing-headding)', 18)
     const action = replaceTextActions(actions).find((item) => item.edit.newText === '')

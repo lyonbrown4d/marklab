@@ -76,6 +76,7 @@ const markdownLanguageCodeActionSchema = z.discriminatedUnion('kind', [
     title: z.string(),
     kind: z.literal('create-file'),
     path: z.string(),
+    content: z.string().optional(),
     isPreferred: z.boolean().optional(),
   }),
   z.object({
