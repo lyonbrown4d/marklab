@@ -17,6 +17,36 @@ afterEach(async () => {
   )
 })
 
+describe('WorkspaceFileService asset bytes', () => {
+  it('reads preview asset bytes after validating the workspace boundary', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+    const assetPath = path.join(root, 'brief.pdf')
+    await fs.writeFile(assetPath, new Uint8Array([37, 80, 68, 70]))
+
+    const result = await workspace.readAssetBytes({ path: assetPath })
+
+    expect(new TextDecoder().decode(result.bytes)).toBe('%PDF')
+    expect(result).toMatchObject({
+      media_type: 'application/pdf',
+      size_bytes: 4,
+    })
+
+    workspace.dispose()
+  })
+
+  it('rejects preview asset reads outside the workspace boundary', async () => {
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(service)
+
+    await expect(workspace.readAssetBytes({ path: path.resolve('outside.pdf') })).rejects.toThrow(
+      'Asset path is not allowed',
+    )
+
+    workspace.dispose()
+  })
+})
+
 describe('WorkspaceFileService sidecar mutations', () => {
   it('routes structural mutations to the knowledge sidecar when available', async () => {
     const service = createKnowledgeServiceMock()

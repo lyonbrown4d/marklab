@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 import { assetMediaTypeForExtension } from '@electron/services/mediaTypes.js'
+import { isNativePathInsideOrEqual } from '@electron/services/nativePath.js'
 
 const ASSET_PROTOCOL = 'marklab-asset'
 
@@ -139,11 +140,4 @@ const safeAppPath = (name: Parameters<typeof app.getPath>[0]): string | null => 
   }
 }
 
-const isPathInsideOrEqual = (root: string, assetPath: string): boolean => {
-  const relative = path.relative(path.resolve(root), path.resolve(assetPath)).replace(/\\/g, '/')
-  return (
-    relative === '' ||
-    relative === '.' ||
-    (!relative.startsWith('../') && relative !== '..' && !path.isAbsolute(relative))
-  )
-}
+const isPathInsideOrEqual = isNativePathInsideOrEqual

@@ -2,10 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import {
-  isWorkspaceDocumentPath,
-  workspaceRootForAssets,
-} from '@electron/services/workspace/path.js'
+import { isWorkspaceDocumentPath } from '@electron/services/workspace/path.js'
 import type {
   FsBufferStatus,
   FsEntry,
@@ -18,9 +15,13 @@ import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
 import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences.js'
 import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers.js'
 import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
-import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata.js'
 import {
-  trySidecarPathMetadata,
+  workspaceTerminalCwd,
+  isWorkspaceAssetPathAllowed,
+} from '@electron/services/workspace/workspaceAssetAccess.js'
+import { readWorkspaceFileServiceAssetBytes } from '@electron/services/workspace/workspaceFileServiceAssetBytes.js'
+import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata.js'
+import {
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
@@ -28,7 +29,6 @@ import {
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import {
   ensureDefaultFile,
-  isPathInsideOrEqual,
   pathExists,
   stringArg,
 } from '@electron/services/workspace/workspaceUtils.js'
@@ -66,18 +66,12 @@ export class WorkspaceFileService extends WorkspaceBase {
   }
 
   terminalCwd(): string {
-    if (this.state.rootKind === 'single' && this.state.singleFile) {
-      return path.dirname(this.state.singleFile)
-    }
-    return this.state.rootPath
+    return workspaceTerminalCwd(this.state)
   }
 
   isAssetPathAllowed(value: string): boolean {
-    if (typeof value !== 'string' || !value || value.includes('\0')) return false
-    const resolved = path.resolve(value)
-    return isPathInsideOrEqual(workspaceRootForAssets(this.state), resolved)
+    return isWorkspaceAssetPathAllowed(this.state, value)
   }
-
   async setRoot(value: unknown): Promise<FsRootInfo> {
     const rootPath = typeof value === 'object' && value && 'path' in value ? value.path : value
     if (rootPath != null && typeof rootPath !== 'string') {
@@ -290,17 +284,25 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path deleted', { path: relativePath, kind })
   }
-  async pathMetadata(value: unknown): Promise<FsPathMetadata> {
+  pathMetadata(value: unknown): Promise<FsPathMetadata> {
     const relativePath = stringArg(value, 'path')
-    const absolutePath = this.resolve(relativePath)
-    const sidecarMetadata = await trySidecarPathMetadata({
+    return readWorkspacePathMetadata({
+      absolutePath: this.resolve(relativePath),
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
       path: relativePath,
       state: this.state,
     })
-    if (sidecarMetadata) return sidecarMetadata
-    return readNodePathMetadata(relativePath, absolutePath)
+  }
+
+  readAssetBytes(value: unknown) {
+    return readWorkspaceFileServiceAssetBytes(
+      {
+        isAssetPathAllowed: (path) => this.isAssetPathAllowed(path),
+        resolveRelativePath: (path) => this.resolve(path),
+      },
+      value,
+    )
   }
 
   async openPathInSystem(value: unknown): Promise<void> {

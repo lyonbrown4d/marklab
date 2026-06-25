@@ -52,6 +52,7 @@ const createWorkspaceCommandHandlers = (
     fs_set_single_file: (payload, event) => workspaceForEvent(event).setSingleFile(payload),
     fs_open_file: (payload, event) => workspaceForEvent(event).openFile(payload),
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
+    fs_read_asset_bytes: (payload, event) => workspaceForEvent(event).readAssetBytes(payload),
     fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
     fs_get_outline_graph: (payload, event) => workspaceForEvent(event).outlineGraph(payload),

@@ -7,6 +7,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { fetchPdfObjectUrl } from '@/components/milkdown/pdfObjectUrlSource'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -20,6 +21,55 @@ type MarkdownPdfPreviewProps = {
 type PdfViewerSurfaceProps = {
   fileUrl: string
   mode: 'inline' | 'modal'
+}
+
+type PdfObjectUrlState = {
+  failed: boolean
+  key: string
+  objectUrl: string | null
+}
+
+const isAbortError = (error: unknown) => {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+const usePdfObjectUrl = (fileUrl: string) => {
+  const [state, setState] = useState<PdfObjectUrlState>({
+    failed: false,
+    key: '',
+    objectUrl: null,
+  })
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    void fetchPdfObjectUrl(fileUrl, controller.signal)
+      .then((objectUrl) => {
+        setState({ failed: false, key: fileUrl, objectUrl })
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return
+        setState({ failed: true, key: fileUrl, objectUrl: null })
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [fileUrl])
+
+  useEffect(() => {
+    const objectUrl = state.objectUrl
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [state.objectUrl])
+
+  const current = state.key === fileUrl ? state : { failed: false, key: fileUrl, objectUrl: null }
+  return {
+    failed: current.failed,
+    loading: !current.failed && !current.objectUrl,
+    objectUrl: current.objectUrl,
+  }
 }
 
 const useMeasuredWidth = (fallback: number) => {
@@ -47,15 +97,47 @@ const useMeasuredWidth = (fallback: number) => {
 }
 
 export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
-  const [numPages, setNumPages] = useState(0)
-  const [pageNumber, setPageNumber] = useState(1)
+  const { failed, loading, objectUrl } = usePdfObjectUrl(fileUrl)
+  const [pageState, setPageState] = useState({ key: '', numPages: 0, pageNumber: 1 })
   const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680)
   const pageWidth = Math.max(240, Math.min(documentWidth - 24, mode === 'modal' ? 960 : 720))
+  const currentPageState =
+    pageState.key === objectUrl ? pageState : { key: objectUrl ?? '', numPages: 0, pageNumber: 1 }
+  const { numPages, pageNumber } = currentPageState
   const pages = Array.from({ length: numPages }, (_, index) => index + 1)
-  const handleLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
-    setNumPages(nextNumPages)
-    setPageNumber((current) => Math.min(Math.max(1, current), nextNumPages))
-  }, [])
+  const handleLoadSuccess = useCallback(
+    ({ numPages: nextNumPages }: { numPages: number }) => {
+      const key = objectUrl ?? ''
+      setPageState((current) => {
+        const currentPageNumber = current.key === key ? current.pageNumber : 1
+        return {
+          key,
+          numPages: nextNumPages,
+          pageNumber: Math.min(Math.max(1, currentPageNumber), nextNumPages),
+        }
+      })
+    },
+    [objectUrl],
+  )
+  const selectPage = useCallback(
+    (page: number) => {
+      const key = objectUrl ?? ''
+      setPageState((current) => (current.key === key ? { ...current, pageNumber: page } : current))
+    },
+    [objectUrl],
+  )
+
+  if (loading || failed || !objectUrl) {
+    return (
+      <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
+        <div className="marklab-pdf-viewer__document" ref={documentRef}>
+          <div className="marklab-pdf-preview__status">
+            {failed ? 'PDF 预览不可用' : '正在读取 PDF...'}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
@@ -65,10 +147,10 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
             key={page}
             className="marklab-pdf-viewer__thumb"
             data-active={page === pageNumber}
-            onClick={() => setPageNumber(page)}
+            onClick={() => selectPage(page)}
             type="button"
           >
-            <Document file={fileUrl} loading={null} error={null}>
+            <Document file={objectUrl} loading={null} error={null}>
               <Page
                 pageNumber={page}
                 renderAnnotationLayer={false}
@@ -82,7 +164,7 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
       </div>
       <div className="marklab-pdf-viewer__document" ref={documentRef}>
         <Document
-          file={fileUrl}
+          file={objectUrl}
           loading={<div className="marklab-pdf-preview__status">正在读取 PDF...</div>}
           error={<div className="marklab-pdf-preview__status">PDF 预览不可用</div>}
           onLoadSuccess={handleLoadSuccess}
@@ -147,7 +229,7 @@ const MarkdownPdfPreview = ({
           variant="secondary"
           onClick={() => setExpanded(true)}
         >
-          <Maximize2 className="h-3.5 w-3.5" />
+          <Maximize2 data-icon="inline-start" />
           放大查看
         </Button>
       </div>

@@ -1,6 +1,7 @@
 import type { FsEntry, FsPathMetadata, FsSnapshot } from '@electron/services/workspace/types.js'
 import type { WorkspaceVfsClient } from '@electron/services/knowledgeEngine/grpcWire.js'
 import type { KnowledgeWorkspacePathMutation } from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+import { stripWindowsNamespacePath } from '@electron/services/workspace/workspaceUtils.js'
 import { invokeUnary } from '@electron/services/knowledgeEngine/grpcClientRuntime.js'
 import {
   workspaceFileEntryKindToFsKind,
@@ -96,7 +97,7 @@ export const getWorkspacePathMetadata = async (
     path,
   })
   return {
-    absolute_path: response.absolutePath,
+    absolute_path: stripWindowsNamespacePath(response.absolutePath),
     kind: workspaceFileEntryKindToFsKind(response.kind),
     modified_ms: response.modifiedMs,
     path: response.path,

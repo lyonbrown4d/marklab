@@ -4,7 +4,11 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { FsStateData } from '@electron/services/workspace/types.js'
-import { listWorkspaceEntries } from '@electron/services/workspace/workspaceUtils.js'
+import {
+  isPathInsideOrEqual,
+  listWorkspaceEntries,
+  stripWindowsNamespacePath,
+} from '@electron/services/workspace/workspaceUtils.js'
 
 const tempRoots: string[] = []
 
@@ -54,5 +58,22 @@ describe('listWorkspaceEntries', () => {
       { kind: 'file', name: 'plan.md', path: 'notes/plan.md' },
       { kind: 'file', name: 'video.webm', path: 'notes/video.webm' },
     ])
+  })
+})
+
+describe('Windows namespace path helpers', () => {
+  it('strips local and UNC namespace prefixes', () => {
+    expect(stripWindowsNamespacePath(String.raw`\\?\C:\vault\brief.pdf`)).toBe(
+      String.raw`C:\vault\brief.pdf`,
+    )
+    expect(stripWindowsNamespacePath(String.raw`\\?\UNC\server\share\brief.pdf`)).toBe(
+      String.raw`\\server\share\brief.pdf`,
+    )
+  })
+
+  it('keeps namespaced workspace assets allowed on Windows', () => {
+    if (process.platform !== 'win32') return
+
+    expect(isPathInsideOrEqual(String.raw`C:\vault`, String.raw`\\?\C:\vault\brief.pdf`)).toBe(true)
   })
 })

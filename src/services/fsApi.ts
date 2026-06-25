@@ -17,6 +17,15 @@ export const fsSnapshotSchema = z.object({
   entries: z.array(fsEntrySchema),
 })
 
+const arrayBufferSchema = z
+  .custom<ArrayBuffer | ArrayBufferView>(
+    (value) => value instanceof ArrayBuffer || ArrayBuffer.isView(value),
+  )
+  .transform((value) => {
+    if (value instanceof ArrayBuffer) return value
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)
+  })
+
 export const fsPathMetadataSchema = z.object({
   path: z.string(),
   absolute_path: z.string(),
@@ -24,6 +33,12 @@ export const fsPathMetadataSchema = z.object({
   size_bytes: z.number(),
   modified_ms: z.number().optional(),
   readonly: z.boolean(),
+})
+
+export const fsAssetBytesSchema = z.object({
+  bytes: arrayBufferSchema,
+  media_type: z.string().nullable().optional(),
+  size_bytes: z.number(),
 })
 
 export const fsBufferStatusSchema = z.object({
@@ -185,6 +200,7 @@ export type FsEntry = z.infer<typeof fsEntrySchema>
 export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
 export type FsSnapshot = z.infer<typeof fsSnapshotSchema>
 export type FsPathMetadata = z.infer<typeof fsPathMetadataSchema>
+export type FsAssetBytes = z.infer<typeof fsAssetBytesSchema>
 export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
 export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
 export type FsMarkdownHeading = z.infer<typeof fsMarkdownHeadingSchema>
@@ -287,6 +303,10 @@ export const fsApi = {
   async getPathMetadata(path: string) {
     const result = await invoke<unknown>('fs_get_path_metadata', { path })
     return fsPathMetadataSchema.parse(result)
+  },
+  async readAssetBytes(path: string) {
+    const result = await invoke<unknown>('fs_read_asset_bytes', { path })
+    return fsAssetBytesSchema.parse(result)
   },
   openPathInSystem(path: string) {
     return invoke<void>('fs_open_path_in_system', { path })

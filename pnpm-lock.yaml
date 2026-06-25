@@ -218,6 +218,9 @@ importers:
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
+      pathe:
+        specifier: ^2.0.3
+        version: 2.0.3
       pdfjs-dist:
         specifier: 6.0.227
         version: 6.0.227

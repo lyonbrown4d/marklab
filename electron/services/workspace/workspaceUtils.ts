@@ -1,5 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  isNativePathInsideOrEqual,
+  normalizeNativePath,
+  stripWindowsNamespacePath,
+} from '@electron/services/nativePath.js'
 
 import {
   isAudioPath,
@@ -66,19 +71,14 @@ export const hasHiddenPathSegment = (value: string): boolean => {
     .some((segment) => segment.startsWith('.'))
 }
 
-export const isPathInsideOrEqual = (root: string, absolutePath: string): boolean => {
-  const relative = normalizeRelativePath(
-    path.relative(path.resolve(root), path.resolve(absolutePath)),
-  )
-  return (
-    relative === '' ||
-    relative === '.' ||
-    (!relative.startsWith('../') && relative !== '..' && !path.isAbsolute(relative))
-  )
-}
+export { stripWindowsNamespacePath }
+
+export const resolveNativePath = normalizeNativePath
+
+export const isPathInsideOrEqual = isNativePathInsideOrEqual
 
 export const normalizeAbsolutePath = (value: string): string => {
-  const resolved = path.resolve(value)
+  const resolved = normalizeNativePath(value)
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
+import { fetchPreviewAssetBlob } from '@/components/previews/localAssetSource'
 
 type DocxPreviewSurfaceProps = {
   src: string
@@ -37,10 +38,15 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
     style.replaceChildren()
 
     void (async () => {
-      const [{ renderAsync }, response] = await Promise.all([import('docx-preview'), fetch(src)])
-      if (!response.ok) throw new Error(`Failed to fetch DOCX: ${response.status}`)
+      const [{ renderAsync }, blob] = await Promise.all([
+        import('docx-preview'),
+        fetchPreviewAssetBlob(
+          src,
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ),
+      ])
 
-      const data = await response.arrayBuffer()
+      const data = await blob.arrayBuffer()
       if (cancelled) return
 
       await renderAsync(data, body, style, {

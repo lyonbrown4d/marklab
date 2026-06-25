@@ -11,6 +11,7 @@ const allowedCommandNames = [
   'fs_set_single_file',
   'fs_open_file',
   'fs_read_file',
+  'fs_read_asset_bytes',
   'fs_get_workspace_index',
   'fs_get_workspace_graph',
   'fs_get_outline_graph',
