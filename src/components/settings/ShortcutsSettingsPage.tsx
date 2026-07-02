@@ -109,9 +109,13 @@ const ShortcutsSettingsPage = () => {
         bodyClassName="gap-4"
       >
         <div className="settings-shortcuts-search relative">
-          <Search className="settings-shortcuts-search-icon h-4 w-4 text-muted-foreground" />
+          <Search
+            className="settings-shortcuts-search-icon h-4 w-4 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             value={keyword}
+            aria-label={t('shortcuts.searchPlaceholder')}
             onChange={(event) => setKeyword(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -141,6 +145,7 @@ const ShortcutsSettingsPage = () => {
             </div>
           </div>
           <SettingsActionButton
+            type="button"
             variant="outline"
             size="sm"
             className="settings-shortcuts-reset h-8 shrink-0 rounded-md"
