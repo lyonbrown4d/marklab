@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useId, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, AlertTriangle, Clock, FileText, Loader2, Terminal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,8 @@ type StatusCenterProps = {
 
 const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: StatusCenterProps) => {
   const { t } = useI18n()
+  const titleId = useId()
+  const statusCenterTitle = t('statusCenter.title')
   const desktopRuntime = isDesktopRuntime()
   const [open, setOpen] = useState(false)
   const { exportTasks, terminalEvents } = useStatusCenterEvents(desktopRuntime)
@@ -73,6 +75,7 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
       : activeCount > 0
         ? t('statusCenter.activeCount', { count: activeCount })
         : t('statusCenter.ready')
+  const triggerLabel = `${statusCenterTitle} - ${buttonLabel}`
   const activeSaveState = activePath ? saveStates[activePath] : undefined
   const activeBuffer = activeBufferQuery.data
 
@@ -84,24 +87,32 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
           variant={open || issueCount > 0 ? 'secondary' : 'ghost'}
           size="sm"
           className="h-6 gap-1.5 rounded px-2 text-[11px] font-normal text-muted-foreground"
-          aria-label={t('statusCenter.title')}
-          title={t('statusCenter.title')}
+          aria-label={triggerLabel}
+          title={triggerLabel}
         >
           {issueCount > 0 ? (
-            <AlertTriangle className="size-3.5 text-destructive" />
+            <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
           ) : activeCount > 0 ? (
-            <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+            <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
           ) : (
-            <Activity className="size-3.5" />
+            <Activity aria-hidden="true" className="size-3.5" />
           )}
           <span className="hidden sm:inline">{buttonLabel}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" side="top" className="w-[380px] p-0">
+      <PopoverContent
+        align="end"
+        side="top"
+        className="w-[380px] p-0"
+        aria-labelledby={titleId}
+        role="dialog"
+      >
         <div className="border-b border-border/80 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">{t('statusCenter.title')}</h2>
+              <h2 className="text-sm font-semibold text-foreground" id={titleId}>
+                {statusCenterTitle}
+              </h2>
               <p className="text-xs text-muted-foreground">
                 {desktopRuntime
                   ? t('statusCenter.summary', { active: activeCount, issues: issueCount })
@@ -209,7 +220,7 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
                   meta={terminalEvents[0] ? formatTime(terminalEvents[0].updatedAt) : undefined}
                 >
                   <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <Terminal className="size-3.5 shrink-0" />
+                    <Terminal aria-hidden="true" className="size-3.5 shrink-0" />
                     <span className="truncate">
                       {terminalEvents[0]?.message ??
                         (terminalOpen
@@ -236,9 +247,9 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
                     >
                       <span className="inline-flex min-w-0 items-center gap-1.5">
                         {task.status === 'started' ? (
-                          <Clock className="size-3.5 shrink-0" />
+                          <Clock aria-hidden="true" className="size-3.5 shrink-0" />
                         ) : (
-                          <FileText className="size-3.5 shrink-0" />
+                          <FileText aria-hidden="true" className="size-3.5 shrink-0" />
                         )}
                         <span className="truncate">
                           {formatExportLabel(task, (key, options) => t(key, options))}
