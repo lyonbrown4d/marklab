@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WindowControls from '@/components/WindowControls'
 
@@ -18,6 +18,7 @@ vi.mock('@/i18n/useI18n', () => ({
         'actions.maximize': 'Maximize',
         'actions.minimize': 'Minimize',
         'actions.restore': 'Restore',
+        'actions.windowControls': 'Window controls',
       }
 
       return labels[key] ?? key
@@ -53,9 +54,10 @@ describe('WindowControls', () => {
       />,
     )
 
-    const minimizeButton = screen.getByRole('button', { name: 'Minimize' })
-    const maximizeButton = screen.getByRole('button', { name: 'Maximize' })
-    const closeButton = screen.getByRole('button', { name: 'Close' })
+    const group = screen.getByRole('group', { name: 'Window controls' })
+    const minimizeButton = within(group).getByRole('button', { name: 'Minimize' })
+    const maximizeButton = within(group).getByRole('button', { name: 'Maximize' })
+    const closeButton = within(group).getByRole('button', { name: 'Close' })
 
     expect(minimizeButton).toHaveAttribute('type', 'button')
     expect(maximizeButton).toHaveAttribute('title', 'Maximize')
@@ -93,6 +95,28 @@ describe('WindowControls', () => {
       expect(windowHandle.unmaximize).toHaveBeenCalledTimes(1)
       expect(setIsMaximized).toHaveBeenCalledWith(false)
     })
+  })
+
+  it('uses hidden SVG icons for linux caption controls instead of exposed text glyphs', () => {
+    render(
+      <WindowControls
+        platform="linux"
+        isWindows={false}
+        isMaximized={false}
+        setIsMaximized={vi.fn()}
+        getAppWindow={vi.fn()}
+      />,
+    )
+
+    const group = screen.getByRole('group', { name: 'Window controls' })
+    const minimizeButton = within(group).getByRole('button', { name: 'Minimize' })
+    const maximizeButton = within(group).getByRole('button', { name: 'Maximize' })
+    const closeButton = within(group).getByRole('button', { name: 'Close' })
+
+    expect(minimizeButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(maximizeButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(closeButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(group).not.toHaveTextContent('-□×')
   })
 
   it('does not render caption controls outside the desktop runtime', () => {
