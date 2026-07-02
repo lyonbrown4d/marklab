@@ -26,6 +26,9 @@ const WindowControls = ({
   getAppWindow,
 }: WindowControlsProps) => {
   const { t } = useI18n()
+  const minimizeLabel = t('actions.minimize')
+  const maximizeRestoreLabel = isMaximized ? t('actions.restore') : t('actions.maximize')
+  const closeLabel = t('actions.close')
 
   if ((platform !== 'windows' && platform !== 'linux') || !isDesktopRuntime()) {
     return null
@@ -35,6 +38,7 @@ const WindowControls = ({
     <div className="window-controls flex items-center">
       <Separator orientation="vertical" className="mr-1 h-6" />
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className={`win-caption-btn ${isWindows ? 'is-windows' : 'h-8 w-8'}`}
@@ -44,7 +48,8 @@ const WindowControls = ({
             void windowHandle.minimize()
           }
         }}
-        aria-label={t('actions.minimize')}
+        aria-label={minimizeLabel}
+        title={minimizeLabel}
       >
         {isWindows ? (
           <span className="win-caption-glyph" aria-hidden>
@@ -55,6 +60,7 @@ const WindowControls = ({
         )}
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className={`win-caption-btn ${isWindows ? 'is-windows' : 'h-8 w-8'}`}
@@ -69,7 +75,8 @@ const WindowControls = ({
           }
           setIsMaximized(next)
         }}
-        aria-label={isMaximized ? t('actions.restore') : t('actions.maximize')}
+        aria-label={maximizeRestoreLabel}
+        title={maximizeRestoreLabel}
       >
         {isWindows ? (
           <span className="win-caption-glyph" aria-hidden>
@@ -80,6 +87,7 @@ const WindowControls = ({
         )}
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className={`win-caption-btn win-caption-close ${isWindows ? 'is-windows' : 'h-8 w-8 hover:bg-destructive hover:text-destructive-foreground'}`}
@@ -89,7 +97,8 @@ const WindowControls = ({
             void windowHandle.close()
           }
         }}
-        aria-label={t('actions.close')}
+        aria-label={closeLabel}
+        title={closeLabel}
       >
         {isWindows ? (
           <span className="win-caption-glyph" aria-hidden>

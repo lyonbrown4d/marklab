@@ -34,7 +34,6 @@ const ExportStatusOverlay = () => {
     let unlisten: (() => void) | undefined
     let disposed = false
 
-    if (disposed) return
     void listen<ExportTaskPayload>('export-task', (event) => {
       const task = event.payload
       const format = getFormatLabel(task.format)
@@ -47,7 +46,11 @@ const ExportStatusOverlay = () => {
         toast.loading(t('export.running', { format }), {
           id: task.id,
           description,
-          icon: <Spinner className="size-4" />,
+          icon: (
+            <span aria-hidden="true">
+              <Spinner className="size-4" />
+            </span>
+          ),
         })
         return
       }

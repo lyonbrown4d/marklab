@@ -150,6 +150,7 @@ const AppStatusBar = ({
                 variant="ghost"
                 size="sm"
                 className="h-6 max-w-[220px] gap-1.5 rounded px-2 text-[11px] font-normal text-muted-foreground"
+                aria-label={t('statusBar.openScm')}
                 onClick={openScmPanel}
               >
                 {gitStatusQuery.isFetching ? (
@@ -175,6 +176,7 @@ const AppStatusBar = ({
                 variant={terminalOpen ? 'secondary' : 'ghost'}
                 size="icon"
                 className="h-6 w-6 rounded"
+                aria-label={t('statusBar.toggleTerminal')}
                 aria-pressed={terminalOpen}
                 onClick={onToggleTerminal}
               >

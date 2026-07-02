@@ -13,12 +13,23 @@ type CommandSearchStatusProps = {
   searchIndexRebuilding: boolean
 }
 
+type StatusTone = keyof typeof statusToneClassName
+
 const statusClassName = 'mx-2 mt-2 flex items-start gap-2 rounded-md border px-2 py-1.5 text-xs'
 
 const statusToneClassName = {
   muted: 'border-border bg-muted/35 text-muted-foreground',
   info: 'border-primary/20 bg-primary/5 text-foreground',
   danger: 'border-destructive/30 bg-destructive/10 text-destructive',
+}
+
+const statusAriaByTone: Record<
+  StatusTone,
+  { live: 'polite' | 'assertive'; role: 'status' | 'alert' }
+> = {
+  muted: { live: 'polite', role: 'status' },
+  info: { live: 'polite', role: 'status' },
+  danger: { live: 'assertive', role: 'alert' },
 }
 
 const StatusNotice = ({
@@ -28,13 +39,24 @@ const StatusNotice = ({
 }: {
   children: ReactNode
   icon: ReactNode
-  tone?: keyof typeof statusToneClassName
-}) => (
-  <div className={cn(statusClassName, statusToneClassName[tone])}>
-    {icon}
-    <span>{children}</span>
-  </div>
-)
+  tone?: StatusTone
+}) => {
+  const aria = statusAriaByTone[tone]
+
+  return (
+    <div
+      aria-atomic="true"
+      aria-live={aria.live}
+      className={cn(statusClassName, statusToneClassName[tone])}
+      role={aria.role}
+    >
+      <span aria-hidden="true" className="shrink-0">
+        {icon}
+      </span>
+      <span>{children}</span>
+    </div>
+  )
+}
 
 const CommandSearchStatus = ({
   query,

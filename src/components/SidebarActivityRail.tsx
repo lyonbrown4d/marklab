@@ -47,6 +47,7 @@ const ActivityButton = ({
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           className={cn(
@@ -55,6 +56,7 @@ const ActivityButton = ({
             'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
             active && 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm',
           )}
+          aria-current={active ? 'page' : undefined}
           aria-label={label}
           data-active={active ? 'true' : 'false'}
           onClick={onClick}

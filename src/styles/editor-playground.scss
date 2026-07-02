@@ -16,7 +16,10 @@
   caret-color: transparent;
 }
 
-:root[data-motion-cursor='false'] .crepe-playground .milkdown .ProseMirror.marklab-animated-cursor-host {
+:root[data-motion-cursor='false']
+  .crepe-playground
+  .milkdown
+  .ProseMirror.marklab-animated-cursor-host {
   caret-color: hsl(var(--foreground));
 }
 
@@ -49,7 +52,9 @@ body > .marklab-animated-caret.is-visible[data-marklab-playground-overlay='anima
   opacity: 1;
 }
 
-:root[data-motion-cursor='false'] body > .marklab-animated-caret[data-marklab-playground-overlay='animated-cursor'] {
+:root[data-motion-cursor='false']
+  body
+  > .marklab-animated-caret[data-marklab-playground-overlay='animated-cursor'] {
   display: none;
 }
 
