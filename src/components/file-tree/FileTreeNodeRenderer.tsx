@@ -128,7 +128,7 @@ export const FileTreeNodeRenderer = ({
               </>
             )}
             {node.isEditing ? (
-              <InlineRenameField node={node} />
+              <InlineRenameField label={`${labels.rename} ${item.name}`} node={node} />
             ) : (
               <span className="ml-1 truncate text-left">{item.name}</span>
             )}
