@@ -13,17 +13,21 @@ import type { Locale } from '@/i18n/resources'
 
 const TitlebarLanguageMenu = () => {
   const { t, locale, setLocale } = useI18n()
+  const languageLabel = locale === 'zh-CN' ? t('language.zh') : t('language.en')
+  const triggerLabel = `${t('menu.language')} - ${languageLabel}`
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          type="button"
           variant="ghost"
           size="icon"
-          className="chrome-button h-8 w-8 rounded-md"
-          aria-label={t('menu.language')}
+          className="chrome-button size-8 rounded-md"
+          aria-label={triggerLabel}
+          title={triggerLabel}
         >
-          <Languages className="h-4 w-4" />
+          <Languages aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">

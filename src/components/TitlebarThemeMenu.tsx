@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -24,17 +25,27 @@ const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps)
   const { t } = useI18n()
   const themeMode = usePreferencesStore((state) => state.themeMode)
   const setThemeMode = usePreferencesStore((state) => state.setThemeMode)
+  const themeModeLabels: Record<ThemeModePreference, string> = {
+    system: t('themeMode.system'),
+    light: t('themeMode.light'),
+    dark: t('themeMode.dark'),
+  }
+  const themePreset = builtInThemes.find((item) => item.value === theme)
+  const themePresetLabel = themePreset ? t(themePreset.labelKey) : t('settings.themePreset')
+  const triggerLabel = `${t('menu.theme')} - ${themeModeLabels[themeMode]}, ${themePresetLabel}`
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          type="button"
           variant="ghost"
           size="icon"
-          className="chrome-button h-8 w-8 rounded-md"
-          aria-label={t('menu.theme')}
+          className="chrome-button size-8 rounded-md"
+          aria-label={triggerLabel}
+          title={triggerLabel}
         >
-          <Palette className="h-4 w-4" />
+          <Palette aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
@@ -62,10 +73,10 @@ const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps)
           ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onAbout}>
-          <CircleHelp className="mr-2 h-3.5 w-3.5" />
-          {t('actions.about')}
-        </Button>
+        <DropdownMenuItem onSelect={onAbout}>
+          <CircleHelp aria-hidden="true" />
+          <span>{t('actions.about')}</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
