@@ -46,10 +46,13 @@ describe('GitCommitDialog integration', () => {
     const user = userEvent.setup()
     const handlers = renderDialog()
 
+    const messageInput = screen.getByRole('textbox', { name: 'Commit message' })
     const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+
+    expect(messageInput).toHaveAccessibleDescription('Describe the change')
     expect(commitButton).toBeDisabled()
 
-    await user.type(screen.getByLabelText('Commit message'), 'Add UI integration tests')
+    await user.type(messageInput, 'Add UI integration tests')
     await user.click(commitButton)
 
     expect(handlers.onMessageChange).toHaveBeenLastCalledWith('Add UI integration tests')
@@ -63,8 +66,12 @@ describe('GitCommitDialog integration', () => {
       message: 'Try commit',
     })
 
-    expect(screen.getByText('Resolve merge conflicts before committing.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Stage and commit all changes' })).toBeDisabled()
+    const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+    const disabledReason = screen.getByText('Resolve merge conflicts before committing.')
+
+    expect(disabledReason.closest('[role="alert"]')).toBeInTheDocument()
+    expect(commitButton).toBeDisabled()
+    expect(commitButton).toHaveAccessibleDescription('Resolve merge conflicts before committing.')
     expect(handlers.onCommit).not.toHaveBeenCalled()
   })
 
@@ -74,7 +81,26 @@ describe('GitCommitDialog integration', () => {
       message: 'Try commit',
     })
 
-    expect(screen.getByText('Git author identity is missing.')).toBeInTheDocument()
+    const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+    const error = screen.getByText('Git author identity is missing.')
+
+    expect(error.closest('[role="alert"]')).toBeInTheDocument()
+    expect(commitButton).toHaveAccessibleDescription('Git author identity is missing.')
     expect(handlers.onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('marks the dialog busy and keeps the loading icon decorative while committing', () => {
+    renderDialog({
+      canCommit: false,
+      isCommitting: true,
+      message: 'Commit in progress',
+    })
+
+    expect(screen.getByRole('dialog', { name: 'Commit all changes' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Committing' })).toBeDisabled()
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
 })
