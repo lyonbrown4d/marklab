@@ -52,14 +52,28 @@ const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
 }
 
 const renderTabIcon = (tab: WorkspaceTab) => {
-  if (tab.kind === 'workspace-graph') return <GitGraph className="size-3.5" />
-  if (tab.kind === 'git-diff') return <GitGraph className="size-3.5" />
-  if (tab.view === 'source') return <Code2 className="size-3.5" />
-  if (tab.view === 'graph') return <GitGraph className="size-3.5" />
-  if (tab.view === 'preview') {
-    return <DocumentAdapterIconView path={tab.path} fallback={Eye} className="size-3.5" />
+  const iconClassName = 'size-3.5 shrink-0'
+
+  if (tab.kind === 'workspace-graph') {
+    return <GitGraph aria-hidden="true" className={iconClassName} />
   }
-  return <FileText className="size-3.5" />
+  if (tab.kind === 'git-diff') {
+    return <GitGraph aria-hidden="true" className={iconClassName} />
+  }
+  if (tab.view === 'source') {
+    return <Code2 aria-hidden="true" className={iconClassName} />
+  }
+  if (tab.view === 'graph') {
+    return <GitGraph aria-hidden="true" className={iconClassName} />
+  }
+  if (tab.view === 'preview') {
+    return (
+      <span aria-hidden="true" className="inline-flex shrink-0">
+        <DocumentAdapterIconView path={tab.path} fallback={Eye} className={iconClassName} />
+      </span>
+    )
+  }
+  return <FileText aria-hidden="true" className={iconClassName} />
 }
 
 type WorkspaceTabButtonProps = {
@@ -70,6 +84,7 @@ type WorkspaceTabButtonProps = {
   isDirty: boolean
   hasError: boolean
   label: string
+  tabAriaLabel: string
   closeLabel: string
   dirtyLabel: string
   errorLabel: string
@@ -87,6 +102,7 @@ const WorkspaceTabButton = memo(
     isDirty,
     hasError,
     label,
+    tabAriaLabel,
     closeLabel,
     dirtyLabel,
     errorLabel,
@@ -128,6 +144,7 @@ const WorkspaceTabButton = memo(
       <div
         role="tab"
         tabIndex={0}
+        aria-label={tabAriaLabel}
         aria-selected={isActive}
         data-state={isActive ? 'active' : 'inactive'}
         data-tab-id={id}
@@ -157,14 +174,15 @@ const WorkspaceTabButton = memo(
         <span
           role="button"
           tabIndex={0}
-          className={`ml-0.5 rounded p-0.5 transition-opacity duration-150 hover:bg-muted ${
-            isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          className={`ml-0.5 rounded p-0.5 opacity-70 outline-none transition-opacity duration-150 hover:bg-muted hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100 ${
+            isActive ? 'opacity-100 md:opacity-100' : ''
           }`}
           onClick={closeTab}
           onKeyDown={handleCloseKeyDown}
           aria-label={closeLabel}
+          title={closeLabel}
         >
-          <X className="size-3.5" />
+          <X aria-hidden="true" className="size-3.5" />
         </span>
       </div>
     )
@@ -177,6 +195,7 @@ const WorkspaceTabButton = memo(
     prev.isDirty === next.isDirty &&
     prev.hasError === next.hasError &&
     prev.label === next.label &&
+    prev.tabAriaLabel === next.tabAriaLabel &&
     prev.closeLabel === next.closeLabel &&
     prev.dirtyLabel === next.dirtyLabel &&
     prev.errorLabel === next.errorLabel &&
@@ -213,7 +232,7 @@ const TabsBarComponent = ({
   )
   const dirtyLabel = t('save.unsaved')
   const errorLabel = t('save.error')
-  const closeLabel = t('actions.closeTab')
+  const baseCloseLabel = t('actions.closeTab')
 
   const handleTabsWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget
@@ -290,6 +309,15 @@ const TabsBarComponent = ({
               const isDirty = tab.kind === 'file' && !silentSave && Boolean(dirtyPaths[tab.path])
               const hasError = saveState?.status === 'error'
               const isActive = id === activeTabId
+              const tabAriaLabel = [
+                label,
+                isDirty ? dirtyLabel : null,
+                hasError ? errorLabel : null,
+              ]
+                .filter(Boolean)
+                .join(' - ')
+              const closeLabel = `${baseCloseLabel}: ${label}`
+
               return (
                 <WorkspaceTabButton
                   key={id}
@@ -300,6 +328,7 @@ const TabsBarComponent = ({
                   isDirty={isDirty}
                   hasError={hasError}
                   label={label}
+                  tabAriaLabel={tabAriaLabel}
                   closeLabel={closeLabel}
                   dirtyLabel={dirtyLabel}
                   errorLabel={errorLabel}
@@ -318,16 +347,18 @@ const TabsBarComponent = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  type="button"
                   variant={viewMode === 'wysiwyg' ? 'secondary' : 'ghost'}
                   size="icon"
                   className="size-6 rounded"
                   aria-label={t('editor.modeWysiwyg')}
+                  aria-pressed={viewMode === 'wysiwyg'}
                   disabled={!fileTabActive}
                   onFocus={preloadWysiwygEditor}
                   onMouseEnter={preloadWysiwygEditor}
                   onClick={() => onChangeView('wysiwyg')}
                 >
-                  <PenLine data-icon="inline-start" />
+                  <PenLine aria-hidden="true" data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.modeWysiwyg')}</TooltipContent>
@@ -335,16 +366,18 @@ const TabsBarComponent = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  type="button"
                   variant={viewMode === 'source' ? 'secondary' : 'ghost'}
                   size="icon"
                   className="size-6 rounded"
                   aria-label={t('editor.modeSource')}
+                  aria-pressed={viewMode === 'source'}
                   disabled={!fileTabActive}
                   onFocus={preloadSourceEditor}
                   onMouseEnter={preloadSourceEditor}
                   onClick={() => onChangeView('source')}
                 >
-                  <Code2 data-icon="inline-start" />
+                  <Code2 aria-hidden="true" data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.modeSource')}</TooltipContent>
@@ -352,19 +385,21 @@ const TabsBarComponent = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  type="button"
                   variant={viewMode === 'graph' ? 'secondary' : 'ghost'}
                   size="icon"
                   className="size-6 rounded"
-                  aria-label={t('tabs.workspaceGraph')}
+                  aria-label={tabLabels.graph}
+                  aria-pressed={viewMode === 'graph'}
                   disabled={!fileTabActive}
                   onFocus={preloadGraphView}
                   onMouseEnter={preloadGraphView}
                   onClick={() => onChangeView('graph')}
                 >
-                  <GitGraph data-icon="inline-start" />
+                  <GitGraph aria-hidden="true" data-icon="inline-start" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t('tabs.workspaceGraph')}</TooltipContent>
+              <TooltipContent>{tabLabels.graph}</TooltipContent>
             </Tooltip>
           </div>
         </TooltipProvider>
