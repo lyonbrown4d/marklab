@@ -46,6 +46,14 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
     enabled: Boolean(rootPath && request.path),
   })
 
+  const diffTitle = `${t('scm.diffTitle')}: ${request.path}`
+  const diffRange = diffQuery.data
+    ? t('scm.diffRange', {
+        original: diffQuery.data.original_label,
+        modified: diffQuery.data.modified_label,
+      })
+    : t('scm.diffTitle')
+
   const openFile = useCallback(() => {
     onOpenFile(request.path)
   }, [onOpenFile, request.path])
@@ -74,53 +82,58 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <section aria-label={diffTitle} className="flex h-full flex-col overflow-hidden">
       <div className="tab-strip flex h-10 items-center justify-between gap-3 border-b border-border/80 px-3">
         <div className="flex min-w-0 items-center gap-2 text-xs">
-          <FileText className="size-4 shrink-0 text-muted-foreground" />
+          <FileText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate font-medium">{request.path}</span>
-          <span className="shrink-0 text-muted-foreground">
-            {diffQuery.data
-              ? t('scm.diffRange', {
-                  original: diffQuery.data.original_label,
-                  modified: diffQuery.data.modified_label,
-                })
-              : t('scm.diffTitle')}
-          </span>
+          <span className="shrink-0 text-muted-foreground">{diffRange}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <AppButton
+            type="button"
             variant="ghost"
             size="sm"
             className="h-7 rounded-md px-2 text-xs"
+            aria-label={`${t('scm.openFile')}: ${request.path}`}
+            title={`${t('scm.openFile')}: ${request.path}`}
             onClick={openFile}
           >
             {t('scm.openFile')}
           </AppButton>
           <AppButton
+            type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-md"
-            onClick={onClose}
+            className="size-7 rounded-md"
             aria-label={t('scm.closeDiff')}
+            title={t('scm.closeDiff')}
+            onClick={onClose}
           >
-            <X className="size-4" />
+            <X aria-hidden="true" />
           </AppButton>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         {diffQuery.isLoading ? (
-          <div className="flex h-full flex-col gap-3 p-6">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={diffTitle}
+            className="flex h-full flex-col gap-3 p-6"
+          >
+            <Skeleton aria-hidden="true" className="h-5 w-48" />
+            <Skeleton aria-hidden="true" className="h-4 w-2/3" />
+            <Skeleton aria-hidden="true" className="h-4 w-1/2" />
           </div>
         ) : diffQuery.isError ? (
           <div className="flex h-full items-center justify-center p-6">
             <AppAlert
+              role="alert"
               tone="destructive"
+              title={t('scm.diffTitle')}
               className="max-w-lg"
-              icon={<AlertTriangle className="size-4" />}
+              icon={<AlertTriangle aria-hidden="true" />}
             >
               {String(diffQuery.error)}
             </AppAlert>
@@ -128,46 +141,54 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
         ) : monacoLoadError ? (
           <div className="flex h-full items-center justify-center p-6">
             <AppAlert
+              role="alert"
               tone="destructive"
+              title={t('scm.diffTitle')}
               className="max-w-lg"
-              icon={<AlertTriangle className="size-4" />}
+              icon={<AlertTriangle aria-hidden="true" />}
             >
               {t('scm.diffEditorLoadFailed', { error: editorLoadError })}
             </AppAlert>
           </div>
         ) : !monacoReady ? (
-          <div className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
-            <Spinner className="size-4" />
+          <div
+            role="status"
+            aria-busy="true"
+            className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
+          >
+            <Spinner aria-hidden="true" role="presentation" />
             <span>{t('editor.loadingDocument')}</span>
           </div>
         ) : (
-          <DiffEditor
-            height="100%"
-            language={languageForPath(request.path)}
-            theme={darkMode ? 'vs-dark' : 'vs'}
-            original={diffQuery.data?.original_content ?? ''}
-            modified={diffQuery.data?.modified_content ?? ''}
-            originalModelPath={`git://${rootPath}/HEAD/${request.path}`}
-            modifiedModelPath={`git://${rootPath}/worktree/${request.path}`}
-            options={{
-              readOnly: true,
-              renderSideBySide: true,
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 13,
-              lineNumbers: 'on',
-              automaticLayout: true,
-              smoothScrolling: motionSmoothScrolling,
-              cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
-              cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
-              cursorWidth: 2,
-              renderWhitespace: 'selection',
-              originalEditable: false,
-            }}
-          />
+          <div role="region" aria-label={diffTitle} className="h-full">
+            <DiffEditor
+              height="100%"
+              language={languageForPath(request.path)}
+              theme={darkMode ? 'vs-dark' : 'vs'}
+              original={diffQuery.data?.original_content ?? ''}
+              modified={diffQuery.data?.modified_content ?? ''}
+              originalModelPath={`git://${rootPath}/HEAD/${request.path}`}
+              modifiedModelPath={`git://${rootPath}/worktree/${request.path}`}
+              options={{
+                readOnly: true,
+                renderSideBySide: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 13,
+                lineNumbers: 'on',
+                automaticLayout: true,
+                smoothScrolling: motionSmoothScrolling,
+                cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
+                cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
+                cursorWidth: 2,
+                renderWhitespace: 'selection',
+                originalEditable: false,
+              }}
+            />
+          </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }
 
