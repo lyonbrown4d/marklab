@@ -141,7 +141,10 @@ const AppStatusBar = ({
 
   return (
     <TooltipProvider>
-      <footer className="app-status-bar flex h-7 shrink-0 items-center justify-between gap-2 border-t border-border/80 px-2 text-[11px] text-muted-foreground">
+      <footer
+        aria-label={t('statusBar.label')}
+        className="app-status-bar flex h-7 shrink-0 items-center justify-between gap-2 border-t border-border/80 px-2 text-[11px] text-muted-foreground"
+      >
         <div className="flex min-w-0 items-center gap-1.5">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -154,11 +157,11 @@ const AppStatusBar = ({
                 onClick={openScmPanel}
               >
                 {gitStatusQuery.isFetching ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
                 ) : gitConflictCount > 0 || gitStatusQuery.isError ? (
-                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                  <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 text-destructive" />
                 ) : (
-                  <GitBranch className="h-3.5 w-3.5" />
+                  <GitBranch aria-hidden="true" className="h-3.5 w-3.5" />
                 )}
                 <span className="truncate">
                   {gitStatusQuery.data?.repo.is_repository
@@ -180,22 +183,26 @@ const AppStatusBar = ({
                 aria-pressed={terminalOpen}
                 onClick={onToggleTerminal}
               >
-                <Terminal className="h-3.5 w-3.5" />
+                <Terminal aria-hidden="true" className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('statusBar.toggleTerminal')}</TooltipContent>
           </Tooltip>
           <div className="hidden h-3.5 w-px bg-border/80 sm:block" />
           <div className="hidden min-w-0 items-center gap-1.5 px-1 sm:flex">
-            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+            <FolderOpen aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{workspaceLabel}</span>
           </div>
           {restoreStatusMessage ? (
             <div className="inline-flex min-w-0 items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="inline-flex min-w-0 items-center gap-1.5 text-amber-600">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  <div
+                    className="inline-flex min-w-0 items-center gap-1.5 text-amber-600"
+                    role="status"
+                    title={restoreStatusMessage}
+                  >
+                    <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                     <span className="max-w-[180px] truncate">{restoreStatusMessage}</span>
                   </div>
                 </TooltipTrigger>
@@ -210,20 +217,20 @@ const AppStatusBar = ({
                 disabled={restoreStatusBusy}
               >
                 {restoreStatusBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
                 )}
                 {t('app.restoreRetry')}
               </Button>
             </div>
           ) : null}
           <div className="hidden items-center gap-1.5 px-1 md:flex">
-            <FileText className="h-3.5 w-3.5" />
+            <FileText aria-hidden="true" className="h-3.5 w-3.5" />
             <span>{t('statusBar.files', { count: String(markdownFileCount) })}</span>
           </div>
         </div>
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2" aria-live="polite">
           {dirtyCount > 0 && (
             <span className="hidden shrink-0 text-amber-600 md:inline">
               {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
@@ -237,15 +244,18 @@ const AppStatusBar = ({
           )}
           {assetSyncPending > 0 && (
             <span className="hidden shrink-0 items-center gap-1.5 text-sky-600 sm:inline-flex">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
               {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
             </span>
           )}
           {assetSyncPending === 0 && assetSyncFailed > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="hidden shrink-0 items-center gap-1.5 text-destructive sm:inline-flex">
-                  <AlertTriangle className="h-3.5 w-3.5" />
+                <span
+                  className="hidden shrink-0 items-center gap-1.5 text-destructive sm:inline-flex"
+                  title={assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
+                >
+                  <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />
                   {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
                 </span>
               </TooltipTrigger>
@@ -257,7 +267,7 @@ const AppStatusBar = ({
           <span className="hidden shrink-0 sm:inline">{t(viewLabelKeys[viewMode])}</span>
           <div className="hidden h-3.5 w-px bg-border/80 md:block" />
           <span className="hidden shrink-0 items-center gap-1.5 md:inline-flex">
-            <PanelsTopLeft className="h-3.5 w-3.5" />
+            <PanelsTopLeft aria-hidden="true" className="h-3.5 w-3.5" />
             {t('statusBar.tabs', { count: String(tabs.length) })}
           </span>
           <div className="h-3.5 w-px bg-border/80" />
@@ -268,9 +278,14 @@ const AppStatusBar = ({
             terminalOpen={terminalOpen}
           />
           <div className="h-3.5 w-px bg-border/80" />
-          <span className="min-w-0 max-w-[320px] truncate">{activeLabel}</span>
+          <span className="min-w-0 max-w-[320px] truncate" title={activeLabel}>
+            {activeLabel}
+          </span>
           {activeSaveState?.status === 'saved' && (
-            <CheckCircle2 className="hidden h-3.5 w-3.5 shrink-0 text-emerald-600 sm:block" />
+            <CheckCircle2
+              aria-hidden="true"
+              className="hidden h-3.5 w-3.5 shrink-0 text-emerald-600 sm:block"
+            />
           )}
         </div>
       </footer>

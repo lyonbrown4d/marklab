@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -61,13 +61,34 @@ describe('AppStatusBar', () => {
     const onToggleTerminal = vi.fn()
     renderStatusBar(createProps({ onToggleTerminal }))
 
-    expect(screen.getByRole('button', { name: 'Open Source Control' })).toBeInTheDocument()
+    const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
 
-    const terminalButton = screen.getByRole('button', { name: 'Toggle Terminal' })
+    expect(
+      within(statusBar).getByRole('button', { name: 'Open Source Control' }),
+    ).toBeInTheDocument()
+
+    const terminalButton = within(statusBar).getByRole('button', { name: 'Toggle Terminal' })
     expect(terminalButton).toHaveAttribute('aria-pressed', 'false')
+    expect(terminalButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     fireEvent.click(terminalButton)
 
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces status changes while keeping truncated active resources inspectable', () => {
+    renderStatusBar(
+      createProps({
+        dirtyPaths: { 'README.md': true },
+        saveStates: { 'README.md': { status: 'saving' } },
+      }),
+    )
+
+    const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
+    const liveRegion = statusBar.querySelector('[aria-live="polite"]')
+
+    expect(liveRegion).toHaveTextContent('1 unsaved files')
+    expect(liveRegion).toHaveTextContent('Saving')
+    expect(within(statusBar).getByText('README.md')).toHaveAttribute('title', 'README.md')
   })
 })
