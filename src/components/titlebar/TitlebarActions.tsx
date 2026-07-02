@@ -28,38 +28,37 @@ export const TitlebarActions = ({
   onToggleRightSidebar,
 }: TitlebarActionsProps) => {
   const { t } = useI18n()
+  const searchLabel = t('sidebar.searchAction')
+  const settingsLabel = t('menu.settings')
+  const toggleInspectorLabel = t('actions.toggleRightSidebar')
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
       <Tooltip>
         <TooltipTrigger asChild>
-          <TitlebarIconButton
-            aria-label={t('sidebar.search')}
-            className="md:hidden"
-            onClick={onOpenSearch}
-          >
-            <Search data-icon="icon" />
+          <TitlebarIconButton aria-label={searchLabel} className="md:hidden" onClick={onOpenSearch}>
+            <Search aria-hidden="true" data-icon="icon" />
           </TitlebarIconButton>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{t('sidebar.search')}</TooltipContent>
+        <TooltipContent side="bottom">{searchLabel}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <TitlebarIconButton aria-label={t('actions.settings')} onClick={onOpenSettings}>
-            <Settings2 data-icon="icon" />
+          <TitlebarIconButton aria-label={settingsLabel} onClick={onOpenSettings}>
+            <Settings2 aria-hidden="true" data-icon="icon" />
           </TitlebarIconButton>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{t('actions.settings')}</TooltipContent>
+        <TooltipContent side="bottom">{settingsLabel}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <TitlebarIconButton aria-label="Toggle inspector" onClick={onToggleRightSidebar}>
-            <PanelRight data-icon="icon" />
+          <TitlebarIconButton aria-label={toggleInspectorLabel} onClick={onToggleRightSidebar}>
+            <PanelRight aria-hidden="true" data-icon="icon" />
           </TitlebarIconButton>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Toggle inspector</TooltipContent>
+        <TooltipContent side="bottom">{toggleInspectorLabel}</TooltipContent>
       </Tooltip>
 
       <TitlebarMoreMenu

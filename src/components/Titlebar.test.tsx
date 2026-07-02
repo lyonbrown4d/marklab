@@ -230,4 +230,53 @@ describe('Titlebar command palette', () => {
 
     expect(onOpenAllPages).toHaveBeenCalledWith('all')
   })
+  it('labels chrome controls and dispatches titlebar actions', async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+
+    renderTitlebar(props)
+
+    await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }))
+    await user.click(screen.getByRole('button', { name: 'Toggle right sidebar' }))
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByRole('button', { name: 'More' }))
+
+    expect(props.onToggleSidebar).toHaveBeenCalledTimes(1)
+    expect(props.onToggleRightSidebar).toHaveBeenCalledTimes(1)
+    expect(props.onOpenSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('localizes chrome-only controls', async () => {
+    usePreferencesStore.setState({ locale: 'zh-CN' })
+    await i18n.changeLanguage('zh-CN')
+
+    renderTitlebar(createProps())
+
+    expect(screen.getByRole('button', { name: '切换侧边栏' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换右侧栏' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '更多' })).toBeInTheDocument()
+  })
+
+  it('announces active file save state from the command center', () => {
+    renderTitlebar(
+      createProps({
+        dirtyPaths: { 'notes/target.md': true },
+        silentSave: false,
+      }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Search files... - target.md' })).toBeInTheDocument()
+  })
+
+  it('hides routine dirty state from the command center during silent save', () => {
+    renderTitlebar(
+      createProps({
+        dirtyPaths: { 'notes/target.md': true },
+        silentSave: true,
+      }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Search files... - target.md' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('target.md - Unsaved')).not.toBeInTheDocument()
+  })
 })

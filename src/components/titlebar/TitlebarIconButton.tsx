@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils'
 type TitlebarIconButtonProps = ComponentPropsWithoutRef<typeof Button>
 
 export const TitlebarIconButton = forwardRef<ElementRef<typeof Button>, TitlebarIconButtonProps>(
-  ({ className, variant = 'ghost', size = 'icon', ...props }, ref) => {
+  ({ className, variant = 'ghost', size = 'icon', type = 'button', ...props }, ref) => {
     return (
       <Button
         ref={ref}
+        type={type}
         variant={variant}
         size={size}
         className={cn(

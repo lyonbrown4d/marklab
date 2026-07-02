@@ -48,6 +48,7 @@ export const TitlebarCommandCenter = ({
   activeTab,
   dirtyPaths,
   saveStates,
+  silentSave,
   commandPaletteShortcut,
   onOpenSearch,
 }: TitlebarCommandCenterProps) => {
@@ -55,13 +56,17 @@ export const TitlebarCommandCenter = ({
   const tabPath = getStringField(activeTab, ['path', 'filePath', 'id']) ?? activePath
   const tabTitle =
     getStringField(activeTab, ['title', 'label', 'name']) ?? (tabPath ? getFileName(tabPath) : null)
-  const isDirty = tabPath ? Boolean(dirtyPaths[tabPath]) : false
+  const isDirty = tabPath ? !silentSave && Boolean(dirtyPaths[tabPath]) : false
   const hasError = tabPath ? isErrorSaveState(saveStates[tabPath]) : false
+  const searchLabel = t('sidebar.search')
+  const commandLabel = tabTitle ? `${searchLabel} - ${tabTitle}` : searchLabel
 
   return (
     <div className="mx-1 hidden min-w-0 flex-1 items-center justify-center md:flex">
       <Button
+        type="button"
         variant="outline"
+        aria-label={commandLabel}
         className="command-trigger group h-8 min-w-0 max-w-2xl flex-1 justify-start rounded-lg border-border/70 bg-muted/35 px-2.5 text-left text-xs font-normal text-muted-foreground shadow-none transition-colors hover:bg-muted/65 hover:text-foreground"
         onClick={onOpenSearch}
       >
@@ -78,10 +83,8 @@ export const TitlebarCommandCenter = ({
               <span className="hidden h-4 w-px shrink-0 bg-border/80 lg:block" />
             </>
           ) : null}
-          <Search data-icon="inline-start" />
-          <span className="hidden truncate text-muted-foreground lg:inline">
-            {t('sidebar.search')}
-          </span>
+          <Search aria-hidden="true" data-icon="inline-start" />
+          <span className="hidden truncate text-muted-foreground lg:inline">{searchLabel}</span>
           <KbdGroup className="ml-auto hidden shrink-0 sm:flex">
             <Kbd>{commandPaletteShortcut}</Kbd>
           </KbdGroup>

@@ -43,18 +43,18 @@ export const TitlebarMoreMenu = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <TitlebarIconButton aria-label="More">
-          <MoreHorizontal data-icon="icon" />
+        <TitlebarIconButton aria-label={t('actions.more')}>
+          <MoreHorizontal aria-hidden="true" data-icon="icon" />
         </TitlebarIconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuItem onSelect={onSelectProject}>
-            <FolderOpen />
+            <FolderOpen aria-hidden="true" />
             {t('actions.openProject')}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onSelectSingleFile}>
-            <FileText />
+            <FileText aria-hidden="true" />
             {t('actions.openFile')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -62,7 +62,7 @@ export const TitlebarMoreMenu = ({
         <DropdownMenuGroup>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
-              <Palette />
+              <Palette aria-hidden="true" />
               {t('menu.theme')}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-56">
@@ -95,7 +95,7 @@ export const TitlebarMoreMenu = ({
           </DropdownMenuSub>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
-              <Languages />
+              <Languages aria-hidden="true" />
               {t('menu.language')}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-40">
@@ -112,7 +112,7 @@ export const TitlebarMoreMenu = ({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onSelect={onAbout}>
-            <CircleHelp />
+            <CircleHelp aria-hidden="true" />
             {t('actions.about')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
