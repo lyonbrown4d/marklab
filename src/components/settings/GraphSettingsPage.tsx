@@ -42,7 +42,7 @@ const GraphSettingsPage = () => {
         description={t('settings.graphContentModeDescription')}
         icon={Map}
       >
-        <SettingsChoiceGrid columns={3}>
+        <SettingsChoiceGrid columns={3} aria-label={t('settings.graphContentMode')}>
           {graphContentModes.map((item) => (
             <SettingsChoiceButton
               key={item.value}

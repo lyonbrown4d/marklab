@@ -93,6 +93,7 @@ export const SettingsChoiceButton = ({
   unselectedVariant = 'outline',
   className,
   type = 'button',
+  tabIndex,
   ...props
 }: SettingsChoiceButtonProps) => {
   const isDisabled = props.disabled === true
@@ -102,13 +103,14 @@ export const SettingsChoiceButton = ({
       type={type}
       role="radio"
       variant={selected ? selectedVariant : unselectedVariant}
+      tabIndex={tabIndex ?? (selected ? 0 : -1)}
       data-selected={selected ? 'true' : 'false'}
       aria-checked={selected}
       className={cn(
-        'h-9 justify-start rounded-md border border-border/70 text-foreground shadow-none transition-[background-color,border-color,color,box-shadow]',
+        'min-h-10 justify-start rounded-md border border-border/70 text-foreground shadow-none transition-[background-color,border-color,color,box-shadow]',
         'hover:border-primary/40 hover:bg-accent hover:text-accent-foreground',
-        'focus-visible:ring-2 focus-visible:ring-ring/40',
-        'data-[selected=true]:border-primary/50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground',
+        'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1',
+        'data-[selected=true]:border-primary/55 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground',
         isDisabled && 'opacity-[0.55]',
         className,
       )}

@@ -39,7 +39,7 @@ const AppearanceSettingsPage = () => {
         surface={false}
       >
         <SettingsFieldGroup className="gap-4">
-          <SettingsChoiceGrid columns={2}>
+          <SettingsChoiceGrid columns={2} aria-label={t('menu.theme')}>
             {(['system', 'light', 'dark'] as const).map((mode) => (
               <SettingsChoiceButton
                 key={mode}
@@ -59,7 +59,7 @@ const AppearanceSettingsPage = () => {
           />
 
           <SettingsSubsection title={t('settings.lightTheme')}>
-            <SettingsChoiceGrid columns={2}>
+            <SettingsChoiceGrid columns={2} aria-label={t('settings.lightTheme')}>
               {lightThemes.map((item) => (
                 <SettingsChoiceButton
                   key={item.value}
@@ -78,7 +78,7 @@ const AppearanceSettingsPage = () => {
           </SettingsSubsection>
 
           <SettingsSubsection title={t('settings.darkTheme')}>
-            <SettingsChoiceGrid columns={2}>
+            <SettingsChoiceGrid columns={2} aria-label={t('settings.darkTheme')}>
               {darkThemes.map((item) => (
                 <SettingsChoiceButton
                   key={item.value}
@@ -106,7 +106,7 @@ const AppearanceSettingsPage = () => {
         icon={Languages}
         surface={false}
       >
-        <SettingsChoiceGrid columns={2}>
+        <SettingsChoiceGrid columns={2} aria-label={t('menu.language')}>
           {locales.map((item) => (
             <SettingsChoiceButton
               key={item.value}

@@ -72,7 +72,7 @@ const FileSettingsPage = () => {
         title={t('settings.defaultFileView')}
         description={t('settings.defaultFileViewDescription')}
       >
-        <SettingsChoiceGrid columns={3}>
+        <SettingsChoiceGrid columns={3} aria-label={t('settings.defaultFileView')}>
           {fileViews.map((item) => {
             const Icon = item.icon
             return (
@@ -93,7 +93,7 @@ const FileSettingsPage = () => {
         title={t('settings.assetStrategy')}
         description={t('settings.assetStrategyDescription')}
       >
-        <SettingsChoiceGrid columns={2}>
+        <SettingsChoiceGrid columns={2} aria-label={t('settings.assetStrategy')}>
           {assetImportStrategies.map((item) => (
             <SettingsChoiceButton
               key={item.value}
@@ -107,7 +107,7 @@ const FileSettingsPage = () => {
       </SettingsSection>
 
       <SettingsSection title={t('settings.drawio')} description={t('settings.drawioDescription')}>
-        <SettingsChoiceGrid columns={2}>
+        <SettingsChoiceGrid columns={2} aria-label={t('settings.drawio')}>
           {drawioEditorModes.map((item) => (
             <SettingsChoiceButton
               key={item.value}
