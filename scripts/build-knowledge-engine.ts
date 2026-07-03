@@ -6,11 +6,23 @@ import { fileURLToPath } from 'node:url'
 
 type KnowledgeEngineProfile = 'debug' | 'release'
 
+type BuildBinaryTarget = {
+  cargoBin: string
+  binaryName: string
+  cargoBinaryPath: string
+  outputBinaryPath: string
+}
+
+type BuildManifestBinary = {
+  cargoBin: string
+  binaryName: string
+  cargoBinaryPath: string
+}
+
 type BuildManifest = {
   profile: KnowledgeEngineProfile
   platformDir: string
-  binaryName: string
-  cargoBinaryPath: string
+  binaries: BuildManifestBinary[]
   builtAt: string
 }
 
@@ -49,21 +61,30 @@ const getProfile = (args: string[]): KnowledgeEngineProfile => {
   return profile
 }
 
+const getExecutableName = (name: string) => (process.platform === 'win32' ? `${name}.exe` : name)
+
 const scriptPath = fileURLToPath(import.meta.url)
 const rootDir = path.resolve(path.dirname(scriptPath), '..')
 const engineDir = path.join(rootDir, 'knowledge-engine')
 const manifestPath = path.join(rootDir, 'Cargo.toml')
 const lockfilePath = path.join(rootDir, 'Cargo.lock')
-const binaryName = process.platform === 'win32' ? 'knowledge-engine.exe' : 'knowledge-engine'
 const platformDir = `${process.platform}-${process.arch}`
 const args = process.argv.slice(2)
 const force = args.includes('--force')
 const profile = getProfile(args)
 const cargoProfileDir = profile === 'release' ? 'release' : 'debug'
-const cargoBinaryPath = path.join(rootDir, 'target', cargoProfileDir, binaryName)
 const outputDir = path.join(rootDir, 'resources', 'engine', platformDir)
-const outputBinaryPath = path.join(outputDir, binaryName)
 const outputManifestPath = path.join(outputDir, 'manifest.json')
+const binaryTargets = ['knowledge-engine', 'marklab-mcp'].map((cargoBin): BuildBinaryTarget => {
+  const binaryName = getExecutableName(cargoBin)
+
+  return {
+    cargoBin,
+    binaryName,
+    cargoBinaryPath: path.join(rootDir, 'target', cargoProfileDir, binaryName),
+    outputBinaryPath: path.join(outputDir, binaryName),
+  }
+})
 
 const main = async (): Promise<void> => {
   if (!existsSync(manifestPath)) {
@@ -71,11 +92,14 @@ const main = async (): Promise<void> => {
   }
 
   if (!force && (await isOutputFresh())) {
-    console.log(`[knowledge-engine] up to date (${profile}): ${outputBinaryPath}`)
+    console.log(`[knowledge-engine] up to date (${profile}): ${outputDir}`)
     return
   }
 
-  const cargoArgs = ['build', '--manifest-path', manifestPath, '--bin', 'knowledge-engine']
+  const cargoArgs = ['build', '--manifest-path', manifestPath]
+  for (const target of binaryTargets) {
+    cargoArgs.push('--bin', target.cargoBin)
+  }
 
   if (profile === 'release') {
     cargoArgs.push('--release')
@@ -83,13 +107,19 @@ const main = async (): Promise<void> => {
 
   await run('cargo', cargoArgs)
   await mkdir(outputDir, { recursive: true })
-  await copyFile(cargoBinaryPath, outputBinaryPath)
+  await Promise.all(
+    binaryTargets.map((target) => copyFile(target.cargoBinaryPath, target.outputBinaryPath)),
+  )
   await writeBuildManifest()
-  console.log(`[knowledge-engine] built (${profile}): ${outputBinaryPath}`)
+  console.log(`[knowledge-engine] built (${profile}): ${outputDir}`)
 }
 
 const isOutputFresh = async (): Promise<boolean> => {
-  if (!existsSync(outputBinaryPath) || !existsSync(outputManifestPath)) {
+  if (!binaryTargets.every((target) => existsSync(target.outputBinaryPath))) {
+    return false
+  }
+
+  if (!existsSync(outputManifestPath)) {
     return false
   }
 
@@ -97,18 +127,31 @@ const isOutputFresh = async (): Promise<boolean> => {
   if (
     buildManifest?.profile !== profile ||
     buildManifest?.platformDir !== platformDir ||
-    buildManifest?.binaryName !== binaryName
+    !hasExpectedBinaries(buildManifest)
   ) {
     return false
   }
 
-  const [output, newestInputMtime, newestEngineSourceMtime] = await Promise.all([
-    stat(outputBinaryPath),
+  const [outputStats, newestInputMtime, newestEngineSourceMtime] = await Promise.all([
+    Promise.all(binaryTargets.map((target) => stat(target.outputBinaryPath))),
     getNewestInputMtime(),
     getNewestSourceMtime(engineDir),
   ])
+  const oldestOutputMtime = Math.min(...outputStats.map((output) => output.mtimeMs))
 
-  return output.mtimeMs >= Math.max(newestInputMtime, newestEngineSourceMtime)
+  return oldestOutputMtime >= Math.max(newestInputMtime, newestEngineSourceMtime)
+}
+
+const hasExpectedBinaries = (buildManifest: BuildManifest): boolean => {
+  if (!Array.isArray(buildManifest.binaries)) return false
+
+  const manifestBinaries = new Set(
+    buildManifest.binaries.map((binary) => `${binary.cargoBin}:${binary.binaryName}`),
+  )
+
+  return binaryTargets.every((target) =>
+    manifestBinaries.has(`${target.cargoBin}:${target.binaryName}`),
+  )
 }
 
 const getNewestSourceMtime = async (directory: string): Promise<number> => {
@@ -156,8 +199,11 @@ const writeBuildManifest = async (): Promise<void> => {
   const buildManifest: BuildManifest = {
     profile,
     platformDir,
-    binaryName,
-    cargoBinaryPath: path.relative(rootDir, cargoBinaryPath),
+    binaries: binaryTargets.map((target) => ({
+      cargoBin: target.cargoBin,
+      binaryName: target.binaryName,
+      cargoBinaryPath: path.relative(rootDir, target.cargoBinaryPath),
+    })),
     builtAt: new Date().toISOString(),
   }
 

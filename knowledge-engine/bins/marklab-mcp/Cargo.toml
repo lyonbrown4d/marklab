@@ -1,0 +1,18 @@
+[package]
+name = "marklab-mcp"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+clap.workspace = true
+marklab-knowledge-engine-core = { path = "../../crates/engine-core" }
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[[bin]]
+name = "marklab-mcp"
+path = "src/main.rs"
+

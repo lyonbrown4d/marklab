@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "knowledge-engine/bins/knowledge-engine",
+  "knowledge-engine/bins/marklab-mcp",
   "knowledge-engine/crates/engine-core",
   "knowledge-engine/crates/grpc-api",
   "knowledge-engine/crates/workspace-vfs",
@@ -48,3 +49,4 @@ tree-sitter = "0.26.9"
 tree-sitter-md = "0.5.3"
 unicode-normalization = "0.1"
 unicode-segmentation = "1"
+

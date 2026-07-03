@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getKnowledgeEngineBinaryName,
   getKnowledgeEnginePlatformDir,
+  getMarklabMcpBinaryName,
   resolveKnowledgeEngineBinary,
+  resolveMarklabMcpBinary,
 } from '@electron/services/knowledgeEngine/binaryPath.js'
 
 vi.mock('node:fs', () => {
@@ -21,24 +23,16 @@ const existsSyncMock = vi.mocked(existsSync)
 const projectRoot = path.resolve(process.cwd())
 const processWithResources = process as typeof process & { resourcesPath?: string }
 const originalKnowledgeEnginePath = process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH
+const originalMcpPath = process.env.MARKLAB_MCP_PATH
 const originalProjectRoot = process.env.MARKLAB_PROJECT_ROOT
 const originalResourcesPath = processWithResources.resourcesPath
 
 describe('knowledge engine binary path helpers', () => {
   afterEach(() => {
     existsSyncMock.mockReset()
-
-    if (originalKnowledgeEnginePath === undefined) {
-      delete process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH
-    } else {
-      process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH = originalKnowledgeEnginePath
-    }
-
-    if (originalProjectRoot === undefined) {
-      delete process.env.MARKLAB_PROJECT_ROOT
-    } else {
-      process.env.MARKLAB_PROJECT_ROOT = originalProjectRoot
-    }
+    restoreEnv('MARKLAB_KNOWLEDGE_ENGINE_PATH', originalKnowledgeEnginePath)
+    restoreEnv('MARKLAB_MCP_PATH', originalMcpPath)
+    restoreEnv('MARKLAB_PROJECT_ROOT', originalProjectRoot)
 
     if (originalResourcesPath === undefined) {
       Reflect.deleteProperty(processWithResources, 'resourcesPath')
@@ -53,6 +47,7 @@ describe('knowledge engine binary path helpers', () => {
 
   it('uses a Windows executable suffix only on Windows', () => {
     expect(getKnowledgeEngineBinaryName().endsWith('.exe')).toBe(process.platform === 'win32')
+    expect(getMarklabMcpBinaryName().endsWith('.exe')).toBe(process.platform === 'win32')
   })
 
   it('uses an existing environment override before packaged or local candidates', () => {
@@ -179,6 +174,35 @@ describe('knowledge engine binary path helpers', () => {
       source: 'cargo-target-release',
     })
   })
+
+  it('resolves the MarkLab MCP sidecar from the same packaged engine resource directory', () => {
+    processWithResources.resourcesPath = path.join(projectRoot, 'packaged-resources')
+    const binaryPath = path.join(
+      processWithResources.resourcesPath,
+      'engine',
+      getKnowledgeEnginePlatformDir(),
+      getMarklabMcpBinaryName(),
+    )
+    mockExistingPaths(binaryPath)
+
+    expect(resolveMarklabMcpBinary(createApp(true))).toMatchObject({
+      binaryPath,
+      exists: true,
+      source: 'packaged',
+    })
+  })
+
+  it('uses a dedicated MCP environment override', () => {
+    const overridePath = path.join(projectRoot, 'custom-mcp', getMarklabMcpBinaryName())
+    process.env.MARKLAB_MCP_PATH = overridePath
+    mockExistingPaths(overridePath)
+
+    expect(resolveMarklabMcpBinary(createApp(true))).toMatchObject({
+      binaryPath: overridePath,
+      exists: true,
+      source: 'override',
+    })
+  })
 })
 
 const createApp = (isPackaged = false, appPath = projectRoot): App =>
@@ -193,4 +217,12 @@ const mockExistingPaths = (...paths: string[]) => {
   existsSyncMock.mockImplementation((pathValue) =>
     normalizedPaths.has(path.normalize(String(pathValue))),
   )
+}
+
+const restoreEnv = (name: string, value: string | undefined) => {
+  if (value === undefined) {
+    delete process.env[name]
+  } else {
+    process.env[name] = value
+  }
 }

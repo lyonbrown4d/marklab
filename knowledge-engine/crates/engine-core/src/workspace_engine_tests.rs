@@ -77,7 +77,10 @@ fn change_overlay_updates_symbols() {
 fn graph_methods_reuse_results_without_stale_content() {
   let engine = open_test_engine("graph-cache");
   let documents = vec![
-    graph_document("notes/current.md", "# Current\nSee [Guide](../refs/guide.md)."),
+    graph_document(
+      "notes/current.md",
+      "# Current\nSee [Guide](../refs/guide.md).",
+    ),
     graph_document("refs/guide.md", "# Guide"),
   ];
   let known_paths = WorkspaceGraphKnownPaths {

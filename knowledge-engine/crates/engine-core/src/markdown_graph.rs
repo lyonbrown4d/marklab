@@ -600,16 +600,16 @@ mod tests {
       "heading:notes/current.md:current",
       WorkspaceGraphEdgeKind::ReferencesHeading,
     ));
-    assert!(!graph.nodes.iter().any(|node| node.id == "missing:../refs/guide.md"));
+    assert!(!graph
+      .nodes
+      .iter()
+      .any(|node| node.id == "missing:../refs/guide.md"));
   }
 
   #[test]
   fn workspace_graph_is_deterministic_when_document_input_order_changes() {
     let documents = vec![
-      graph_document(
-        "zeta.md",
-        "# Zeta\n[Alpha](alpha.md).",
-      ),
+      graph_document("zeta.md", "# Zeta\n[Alpha](alpha.md)."),
       graph_document(
         "alpha.md",
         "# Intro\n[Self](#Intro).\n[External](https://example.com).",
@@ -662,7 +662,10 @@ mod tests {
     let graph = build_workspace_graph(
       &documents,
       WorkspaceGraphKnownPaths {
-        paths: vec!["notes/current.md".to_string(), "notes/target.md".to_string()],
+        paths: vec![
+          "notes/current.md".to_string(),
+          "notes/target.md".to_string(),
+        ],
         asset_paths: vec!["assets/spec.pdf".to_string()],
       },
     );

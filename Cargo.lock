@@ -1013,6 +1013,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "marklab-mcp"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "marklab-knowledge-engine-core",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

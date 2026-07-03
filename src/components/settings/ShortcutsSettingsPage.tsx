@@ -110,7 +110,7 @@ const ShortcutsSettingsPage = () => {
       >
         <div className="settings-shortcuts-search relative">
           <Search
-            className="settings-shortcuts-search-icon h-4 w-4 text-muted-foreground"
+            className="settings-shortcuts-search-icon size-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -130,7 +130,7 @@ const ShortcutsSettingsPage = () => {
             <SettingsIconButton
               type="button"
               variant="ghost"
-              className="settings-shortcuts-search-clear h-7 w-7 rounded-md"
+              className="settings-shortcuts-search-clear size-7 rounded-md"
               aria-label={t('shortcuts.clearSearch')}
               onClick={() => setKeyword('')}
             >

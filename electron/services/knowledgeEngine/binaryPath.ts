@@ -4,16 +4,35 @@ import type { App } from 'electron'
 
 import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowledgeEngine/types.js'
 
-export const getKnowledgeEngineBinaryName = () =>
-  process.platform === 'win32' ? 'knowledge-engine.exe' : 'knowledge-engine'
+type ResolveEngineBinaryOptions = {
+  binaryName: string
+  overrideEnv: string
+}
+
+export const getKnowledgeEngineBinaryName = () => getEngineExecutableName('knowledge-engine')
+
+export const getMarklabMcpBinaryName = () => getEngineExecutableName('marklab-mcp')
 
 export const getKnowledgeEnginePlatformDir = () => `${process.platform}-${process.arch}`
 
-export const resolveKnowledgeEngineBinary = (app: App): KnowledgeEngineBinaryResolution | null => {
-  const binaryName = getKnowledgeEngineBinaryName()
-  const platformDir = getKnowledgeEnginePlatformDir()
-  const overridePath = process.env.MARKLAB_KNOWLEDGE_ENGINE_PATH
+export const resolveKnowledgeEngineBinary = (app: App): KnowledgeEngineBinaryResolution | null =>
+  resolveEngineResourceBinary(app, {
+    binaryName: getKnowledgeEngineBinaryName(),
+    overrideEnv: 'MARKLAB_KNOWLEDGE_ENGINE_PATH',
+  })
 
+export const resolveMarklabMcpBinary = (app: App): KnowledgeEngineBinaryResolution | null =>
+  resolveEngineResourceBinary(app, {
+    binaryName: getMarklabMcpBinaryName(),
+    overrideEnv: 'MARKLAB_MCP_PATH',
+  })
+
+const resolveEngineResourceBinary = (
+  app: App,
+  options: ResolveEngineBinaryOptions,
+): KnowledgeEngineBinaryResolution | null => {
+  const platformDir = getKnowledgeEnginePlatformDir()
+  const overridePath = process.env[options.overrideEnv]
   const candidates: KnowledgeEngineBinaryResolution[] = []
 
   if (overridePath) {
@@ -28,7 +47,7 @@ export const resolveKnowledgeEngineBinary = (app: App): KnowledgeEngineBinaryRes
   if (app.isPackaged) {
     candidates.push(
       createCandidate(
-        path.join(getPackagedResourcesPath(), 'engine', platformDir, binaryName),
+        path.join(getPackagedResourcesPath(), 'engine', platformDir, options.binaryName),
         'packaged',
       ),
     )
@@ -37,20 +56,26 @@ export const resolveKnowledgeEngineBinary = (app: App): KnowledgeEngineBinaryRes
   for (const root of getDevProjectRootCandidates(app)) {
     candidates.push(
       createCandidate(
-        path.join(root, 'resources', 'engine', platformDir, binaryName),
+        path.join(root, 'resources', 'engine', platformDir, options.binaryName),
         'dev-resource',
       ),
     )
     candidates.push(
-      createCandidate(path.join(root, 'target', 'debug', binaryName), 'cargo-target-debug'),
+      createCandidate(path.join(root, 'target', 'debug', options.binaryName), 'cargo-target-debug'),
     )
     candidates.push(
-      createCandidate(path.join(root, 'target', 'release', binaryName), 'cargo-target-release'),
+      createCandidate(
+        path.join(root, 'target', 'release', options.binaryName),
+        'cargo-target-release',
+      ),
     )
   }
 
   return candidates.find((candidate) => candidate.exists) ?? candidates[0] ?? null
 }
+
+const getEngineExecutableName = (name: string) =>
+  process.platform === 'win32' ? `${name}.exe` : name
 
 const createCandidate = (
   binaryPath: string,
