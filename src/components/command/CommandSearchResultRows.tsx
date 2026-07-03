@@ -1,5 +1,5 @@
 import { Copy, FileText, ListTree } from 'lucide-react'
-import { useState, type MouseEvent } from 'react'
+import { memo, useCallback, useState, type MouseEvent } from 'react'
 import { CommandItem } from '@/components/ui/command'
 import SearchResultPreview from '@/components/SearchResultPreview'
 import { useI18n } from '@/i18n/useI18n'
@@ -72,74 +72,79 @@ const stopCommandItemSelection = (event: MouseEvent<HTMLButtonElement>) => {
   event.stopPropagation()
 }
 
-const CopyMarkdownLinkAction = ({
-  label,
-  markdownLink,
-}: {
-  label: string
-  markdownLink: string
-}) => {
-  const { t } = useI18n()
-  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
-  const buttonText =
-    status === 'copied'
-      ? t('context.copied')
-      : status === 'error'
-        ? t('context.actionFailed')
-        : t('edit.copy')
+const CopyMarkdownLinkAction = memo(
+  ({ label, markdownLink }: { label: string; markdownLink: string }) => {
+    const { t } = useI18n()
+    const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+    const buttonText =
+      status === 'copied'
+        ? t('context.copied')
+        : status === 'error'
+          ? t('context.actionFailed')
+          : t('edit.copy')
 
-  const handleCopy = (event: MouseEvent<HTMLButtonElement>) => {
-    stopCommandItemSelection(event)
-    void writeClipboardText(markdownLink)
-      .then(() => setStatus('copied'))
-      .catch((error) => {
-        console.error('copy markdown link failed', error)
-        setStatus('error')
-      })
-  }
+    const handleCopy = useCallback(
+      (event: MouseEvent<HTMLButtonElement>) => {
+        stopCommandItemSelection(event)
+        void writeClipboardText(markdownLink)
+          .then(() => setStatus('copied'))
+          .catch((error) => {
+            console.error('copy markdown link failed', error)
+            setStatus('error')
+          })
+      },
+      [markdownLink],
+    )
 
-  return (
-    <button
-      type="button"
-      aria-label={`${t('context.copyMarkdownLink')} ${label}`}
-      className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md border border-border/80 bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      onMouseDown={stopCommandItemSelection}
-      onClick={handleCopy}
-    >
-      <Copy className="size-3" />
-      <span>{buttonText}</span>
-    </button>
-  )
-}
-
-const FileResultRow = ({
-  file,
-  kind,
-  onOpenFile,
-}: {
-  file: CommandFile
-  kind: 'title-file' | 'path-file'
-  onOpenFile: (path: string) => void
-}) => (
-  <CommandItem
-    value={kind === 'title-file' ? `${file.label} ${file.path}` : `${file.path} ${file.label}`}
-    onSelect={() => onOpenFile(file.path)}
-  >
-    <FileText className="size-4" />
-    <span className="min-w-0 flex-1">
-      <span className="block truncate">{kind === 'title-file' ? file.label : file.path}</span>
-      <span className="block truncate text-[11px] text-muted-foreground">
-        {kind === 'title-file' ? file.path : file.label}
-      </span>
-    </span>
-    <CopyMarkdownLinkAction
-      label={file.path}
-      markdownLink={createMarkdownLink(file.label, file.path)}
-    />
-  </CommandItem>
+    return (
+      <button
+        type="button"
+        aria-label={`${t('context.copyMarkdownLink')} ${label}`}
+        className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-md border border-border/80 bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm transition-colors duration-200 hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        onMouseDown={stopCommandItemSelection}
+        onClick={handleCopy}
+      >
+        <Copy className="size-3 shrink-0" />
+        <span aria-live="polite">{buttonText}</span>
+      </button>
+    )
+  },
 )
 
-export const CommandResultRowItem = ({
+CopyMarkdownLinkAction.displayName = 'CopyMarkdownLinkAction'
+
+const FileResultRow = memo(
+  ({
+    file,
+    kind,
+    onOpenFile,
+  }: {
+    file: CommandFile
+    kind: 'title-file' | 'path-file'
+    onOpenFile: (path: string) => void
+  }) => (
+    <CommandItem
+      value={kind === 'title-file' ? `${file.label} ${file.path}` : `${file.path} ${file.label}`}
+      onSelect={() => onOpenFile(file.path)}
+    >
+      <FileText className="size-4" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{kind === 'title-file' ? file.label : file.path}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">
+          {kind === 'title-file' ? file.path : file.label}
+        </span>
+      </span>
+      <CopyMarkdownLinkAction
+        label={file.path}
+        markdownLink={createMarkdownLink(file.label, file.path)}
+      />
+    </CommandItem>
+  ),
+)
+
+FileResultRow.displayName = 'FileResultRow'
+
+const CommandResultRowItemComponent = ({
   row,
   onOpenFile,
   onOpenHeading,
@@ -187,3 +192,7 @@ export const CommandResultRowItem = ({
     </CommandItem>
   )
 }
+
+export const CommandResultRowItem = memo(CommandResultRowItemComponent)
+
+CommandResultRowItem.displayName = 'CommandResultRowItem'

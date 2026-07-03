@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js'
-import { Fragment, useMemo } from 'react'
+import { Fragment, useDeferredValue, useMemo } from 'react'
 import { CommandGroup, CommandSeparator } from '@/components/ui/command'
 import CommandSearchStatus from '@/components/command/CommandSearchStatus'
 import { useI18n } from '@/i18n/useI18n'
@@ -117,7 +117,11 @@ const groupFileSearchResults = (
 const renderMoreHint = (count: number, label: string) => {
   if (count <= 0) return null
 
-  return <div className="px-2 py-1.5 text-[11px] text-muted-foreground">{label}</div>
+  return (
+    <div className="mx-2 mb-1 rounded-md bg-muted/45 px-2 py-1.5 text-[11px] text-muted-foreground">
+      {label}
+    </div>
+  )
 }
 
 const CommandSearchResults = ({
@@ -137,7 +141,9 @@ const CommandSearchResults = ({
 }: CommandSearchResultsProps) => {
   const { t } = useI18n()
   const trimmedQuery = query.trim().replace(/^[@#?]\s*/, '')
+  const deferredTrimmedQuery = useDeferredValue(trimmedQuery)
   const hasQuery = trimmedQuery.length > 0
+  const hasDeferredQuery = deferredTrimmedQuery.length > 0
   const showFiles = scope === 'all' || scope === 'files'
   const showHeadings = scope === 'all' || scope === 'headings'
   const showFullText = scope === 'all' || scope === 'text'
@@ -152,15 +158,25 @@ const CommandSearchResults = ({
       }
     }
 
-    const { titleMatches, pathMatches } = groupFileSearchResults(fileFuse.search(trimmedQuery))
-    const headingMatches = headingFuse.search(trimmedQuery).map((result) => result.item)
+    if (!hasDeferredQuery) {
+      return {
+        titleMatches: [],
+        pathMatches: [],
+        headingMatches: [],
+      }
+    }
+
+    const { titleMatches, pathMatches } = groupFileSearchResults(
+      fileFuse.search(deferredTrimmedQuery),
+    )
+    const headingMatches = headingFuse.search(deferredTrimmedQuery).map((result) => result.item)
 
     return {
       titleMatches,
       pathMatches,
       headingMatches,
     }
-  }, [fileFuse, files, hasQuery, headingFuse, trimmedQuery])
+  }, [deferredTrimmedQuery, fileFuse, files, hasDeferredQuery, hasQuery, headingFuse])
 
   const resultSections = useMemo<CommandResultSection[]>(() => {
     const sections: CommandResultSection[] = []
@@ -224,28 +240,32 @@ const CommandSearchResults = ({
         indexedFileCount={indexedFileCount}
         searchIndexRebuilding={searchIndexRebuilding}
       />
-      {resultSections.map((section) => (
-        <Fragment key={section.id}>
-          <CommandGroup heading={section.heading}>
-            {section.rows.map((row) => (
-              <CommandResultRowItem
-                key={row.id}
-                row={row}
-                onOpenFile={onOpenFile}
-                onOpenHeading={onOpenHeading}
-                onOpenSearchResult={onOpenSearchResult}
-              />
-            ))}
-            {renderMoreHint(
-              getHiddenCount(section.totalCount, section.rows.length),
-              t('command.search.moreHidden', {
-                count: getHiddenCount(section.totalCount, section.rows.length),
-              }),
-            )}
-          </CommandGroup>
-          <CommandSeparator />
-        </Fragment>
-      ))}
+      {resultSections.map((section) => {
+        const hiddenCount = getHiddenCount(section.totalCount, section.rows.length)
+
+        return (
+          <Fragment key={section.id}>
+            <CommandGroup heading={section.heading}>
+              {section.rows.map((row) => (
+                <CommandResultRowItem
+                  key={row.id}
+                  row={row}
+                  onOpenFile={onOpenFile}
+                  onOpenHeading={onOpenHeading}
+                  onOpenSearchResult={onOpenSearchResult}
+                />
+              ))}
+              {renderMoreHint(
+                hiddenCount,
+                t('command.search.moreHidden', {
+                  count: hiddenCount,
+                }),
+              )}
+            </CommandGroup>
+            <CommandSeparator />
+          </Fragment>
+        )
+      })}
     </>
   )
 }

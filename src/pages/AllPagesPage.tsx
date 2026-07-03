@@ -1,5 +1,5 @@
 import { FileText, Filter, ListFilter, Search } from 'lucide-react'
-import { useMemo } from 'react'
+import { useCallback, useDeferredValue, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +57,14 @@ const AllPagesPage = () => {
     [searchParams],
   )
   const { filters, viewMode } = routeState
+  const deferredQuery = useDeferredValue(filters.query)
+  const deferredFilters = useMemo<AllPagesFilters>(
+    () => ({
+      ...filters,
+      query: deferredQuery,
+    }),
+    [deferredQuery, filters],
+  )
   const hasActiveFilters = hasAllPagesActiveFilters(routeState)
   const activeCollectionId = routeState.collectionId
   const allRows = useMemo(() => buildAllPagesRows(files, workspaceIndex), [files, workspaceIndex])
@@ -64,7 +72,10 @@ const AllPagesPage = () => {
     () => summarizeMarkdownCollections(allRows, builtInMarkdownCollections),
     [allRows],
   )
-  const baseModel = useMemo(() => buildAllPagesModelFromRows(allRows, filters), [allRows, filters])
+  const baseModel = useMemo(
+    () => buildAllPagesModelFromRows(allRows, deferredFilters),
+    [allRows, deferredFilters],
+  )
   const activeCollection = useMemo(
     () =>
       builtInMarkdownCollections.find((collection) => collection.id === activeCollectionId) ??
@@ -86,21 +97,29 @@ const AllPagesPage = () => {
     [model.rows],
   )
 
-  const updateRouteState = (patch: AllPagesRouteStatePatch) => {
-    setSearchParams(updateAllPagesRouteState(searchParams, collectionIds, patch), { replace: true })
-  }
-  const updateFilter = <Key extends keyof AllPagesFilters>(
-    key: Key,
-    value: AllPagesFilters[Key],
-  ) => {
-    updateRouteState({ filters: { [key]: value } as Partial<AllPagesFilters> })
-  }
-  const selectCollection = (collectionId: string) => {
-    updateRouteState({ collectionId })
-  }
-  const clearFilters = () => {
+  const updateRouteState = useCallback(
+    (patch: AllPagesRouteStatePatch) => {
+      setSearchParams(updateAllPagesRouteState(searchParams, collectionIds, patch), {
+        replace: true,
+      })
+    },
+    [searchParams, setSearchParams],
+  )
+  const updateFilter = useCallback(
+    <Key extends keyof AllPagesFilters>(key: Key, value: AllPagesFilters[Key]) => {
+      updateRouteState({ filters: { [key]: value } as Partial<AllPagesFilters> })
+    },
+    [updateRouteState],
+  )
+  const selectCollection = useCallback(
+    (collectionId: string) => {
+      updateRouteState({ collectionId })
+    },
+    [updateRouteState],
+  )
+  const clearFilters = useCallback(() => {
     setSearchParams(resetAllPagesRouteFilters(searchParams, collectionIds), { replace: true })
-  }
+  }, [searchParams, setSearchParams])
 
   return (
     <div className="h-full overflow-hidden bg-background text-foreground">

@@ -129,6 +129,20 @@ describe('CommandSearchResultRows', () => {
     await waitFor(() => expect(screen.getByText('Copied')).toBeTruthy())
   })
 
+  it('escapes markdown link labels and angle brackets in copied links', () => {
+    clipboard.writeClipboardText.mockResolvedValueOnce(undefined)
+    renderRow({
+      file: { label: 'Guide ] Windows\\Path', path: 'docs/Guide>.md' },
+      id: 'title-file:docs/Guide>.md',
+      kind: 'title-file',
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy markdown link docs/Guide>.md' }))
+
+    expect(clipboard.writeClipboardText).toHaveBeenCalledWith(
+      '[Guide \\] Windows\\\\Path](<docs/Guide%3E.md>)',
+    )
+  })
   it('opens a heading row and copies a markdown link with the heading slug', () => {
     clipboard.writeClipboardText.mockResolvedValueOnce(undefined)
     const callbacks = renderRow({
