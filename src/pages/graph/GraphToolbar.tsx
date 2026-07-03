@@ -1,3 +1,4 @@
+import { memo, useCallback, useMemo } from 'react'
 import { FileText, Globe2, Heading2, Paperclip, RotateCcw, Search, Unlink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -5,7 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import type { GraphFilterKind, GraphFilterState, GraphFilterStats } from '@/logic/graphViewModel'
+import {
+  createDefaultGraphFilters,
+  type GraphFilterKind,
+  type GraphFilterState,
+  type GraphFilterStats,
+} from '@/logic/graphViewModel'
 
 type GraphToolbarProps = {
   edgeCount: number
@@ -33,7 +39,7 @@ const filterItems: FilterItem[] = [
   { icon: Unlink, kind: 'missing', labelKey: 'graph.filterMissing' },
 ]
 
-export const GraphToolbar = ({
+const GraphToolbarComponent = ({
   edgeCount,
   filters,
   hasActiveFilters,
@@ -44,28 +50,39 @@ export const GraphToolbar = ({
   totalEdgeCount,
   totalNodeCount,
 }: GraphToolbarProps) => {
-  const updateQuery = (query: string) => {
-    onFiltersChange({ ...filters, query })
-  }
+  const updateQuery = useCallback(
+    (query: string) => {
+      onFiltersChange({ ...filters, query })
+    },
+    [filters, onFiltersChange],
+  )
 
-  const selectedKinds = filterItems
-    .filter((item) => filters.kinds[item.kind])
-    .map((item) => item.kind)
+  const selectedKinds = useMemo(
+    () => filterItems.filter((item) => filters.kinds[item.kind]).map((item) => item.kind),
+    [filters.kinds],
+  )
 
-  const updateKinds = (kinds: string[]) => {
-    const enabledKinds = new Set(kinds)
+  const updateKinds = useCallback(
+    (kinds: string[]) => {
+      const enabledKinds = new Set(kinds)
 
-    onFiltersChange({
-      ...filters,
-      kinds: {
-        external: enabledKinds.has('external'),
-        file: enabledKinds.has('file'),
-        heading: enabledKinds.has('heading'),
-        missing: enabledKinds.has('missing'),
-        preview: enabledKinds.has('preview'),
-      },
-    })
-  }
+      onFiltersChange({
+        ...filters,
+        kinds: {
+          external: enabledKinds.has('external'),
+          file: enabledKinds.has('file'),
+          heading: enabledKinds.has('heading'),
+          missing: enabledKinds.has('missing'),
+          preview: enabledKinds.has('preview'),
+        },
+      })
+    },
+    [filters, onFiltersChange],
+  )
+
+  const resetFilters = useCallback(() => {
+    onFiltersChange(createDefaultGraphFilters())
+  }, [onFiltersChange])
 
   return (
     <div className="pointer-events-auto absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs text-muted-foreground shadow-sm backdrop-blur md:max-w-[720px]">
@@ -90,18 +107,7 @@ export const GraphToolbar = ({
             variant="ghost"
             size="sm"
             className="h-7 rounded-md px-2 text-xs"
-            onClick={() =>
-              onFiltersChange({
-                query: '',
-                kinds: {
-                  external: true,
-                  file: true,
-                  heading: true,
-                  missing: true,
-                  preview: true,
-                },
-              })
-            }
+            onClick={resetFilters}
           >
             <RotateCcw data-icon="inline-start" />
             {t('graph.resetFilters')}
@@ -139,3 +145,6 @@ export const GraphToolbar = ({
     </div>
   )
 }
+
+export const GraphToolbar = memo(GraphToolbarComponent)
+GraphToolbar.displayName = 'GraphToolbar'

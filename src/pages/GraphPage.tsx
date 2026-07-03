@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
 import {
   Background,
@@ -80,6 +80,7 @@ const GraphPageComponent = ({
     Node<GraphNodeData>,
     Edge
   > | null>(null)
+  const deferredGraphFilters = useDeferredValue(graphFilters)
   const graphShellRef = useRef<HTMLDivElement | null>(null)
   const layoutKeyRef = useRef(graph.layoutKey)
   const onUpdateHeadingTitleRef = useLatest(onUpdateHeadingTitle)
@@ -211,8 +212,8 @@ const GraphPageComponent = ({
   })
 
   const filteredGraph = useMemo(
-    () => filterGraphElements(visibleNodes, visibleEdges, graphFilters),
-    [graphFilters, visibleEdges, visibleNodes],
+    () => filterGraphElements(visibleNodes, visibleEdges, deferredGraphFilters),
+    [deferredGraphFilters, visibleEdges, visibleNodes],
   )
   const filterStats = useMemo(() => getGraphFilterStats(visibleNodes), [visibleNodes])
   const selectedNodeDetails = useMemo(
@@ -220,6 +221,10 @@ const GraphPageComponent = ({
     [edges, nodes, selectedNodeId],
   )
   const graphHasActiveFilters = useMemo(() => hasActiveGraphFilters(graphFilters), [graphFilters])
+  const filteredGraphHasActiveFilters = useMemo(
+    () => hasActiveGraphFilters(deferredGraphFilters),
+    [deferredGraphFilters],
+  )
   const { clearHoverPreview, hoverNodeDetails, hoverPreview, updateHoverPreview } =
     useGraphHoverPreview({
       edges,
@@ -292,9 +297,11 @@ const GraphPageComponent = ({
       </ReactFlow>
       {filteredGraph.nodes.length === 0 && (
         <GraphEmptyState
-          title={graphHasActiveFilters ? t('graph.filteredEmptyTitle') : t('graph.emptyTitle')}
+          title={
+            filteredGraphHasActiveFilters ? t('graph.filteredEmptyTitle') : t('graph.emptyTitle')
+          }
           description={
-            graphHasActiveFilters
+            filteredGraphHasActiveFilters
               ? t('graph.filteredEmptyDescription')
               : t('graph.emptyDescription')
           }

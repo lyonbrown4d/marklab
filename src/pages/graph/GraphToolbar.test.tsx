@@ -77,4 +77,25 @@ describe('GraphToolbar', () => {
       query: 'diagram',
     })
   })
+
+  it('resets active graph filters to the default state', () => {
+    const activeFilters: GraphFilterState = {
+      query: 'diagram',
+      kinds: {
+        external: false,
+        file: true,
+        heading: true,
+        missing: false,
+        preview: true,
+      },
+    }
+    const { onFiltersChange } = renderToolbar({
+      filters: activeFilters,
+      hasActiveFilters: true,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+
+    expect(onFiltersChange).toHaveBeenCalledWith(filters)
+  })
 })
