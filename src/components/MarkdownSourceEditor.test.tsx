@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
+import { configureMonaco } from '@/lib/monaco'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 
 type CompletionProviderMock = {
@@ -21,7 +22,6 @@ type DocumentSymbolProviderMock = {
 const monacoEditor = vi.hoisted(() => ({
   setPosition: vi.fn(),
   setSelection: vi.fn(),
-  revealLineInCenter: vi.fn(),
   revealRangeInCenter: vi.fn(),
   focus: vi.fn(),
   createDecorationsCollection: vi.fn(() => ({
@@ -83,7 +83,18 @@ const monaco = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/monaco', () => ({
-  configureMonaco: vi.fn(() => Promise.resolve()),
+  configureMonaco: vi.fn(),
+}))
+
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string, values?: Record<string, string>) =>
+      key === 'editor.sourceLoadFailed'
+        ? `Failed to load source editor: ${values?.error ?? ''}`
+        : key === 'editor.sourceLoading'
+          ? 'Loading source editor...'
+          : key,
+  }),
 }))
 
 vi.mock('@/services/markdownLanguageApi', () => ({
@@ -127,15 +138,17 @@ vi.mock('@monaco-editor/react', () => ({
 }))
 
 beforeEach(() => {
+  vi.mocked(configureMonaco).mockReset()
+  vi.mocked(configureMonaco).mockResolvedValue(
+    monaco as unknown as Awaited<ReturnType<typeof configureMonaco>>,
+  )
   monacoEditor.setPosition.mockClear()
   monacoEditor.setSelection.mockClear()
-  monacoEditor.revealLineInCenter.mockClear()
   monacoEditor.revealRangeInCenter.mockClear()
   monacoEditor.focus.mockClear()
   monacoEditor.createDecorationsCollection.mockClear()
   monaco.languages.registerCompletionItemProvider.mockClear()
   monaco.languages.registerDocumentSymbolProvider.mockClear()
-  monacoEditor.onDidChangeModelContent?.mockClear()
   monaco.editor.setModelMarkers.mockClear()
 })
 

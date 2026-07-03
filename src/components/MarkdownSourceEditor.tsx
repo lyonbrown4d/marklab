@@ -14,6 +14,7 @@ import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
+import { useI18n } from '@/i18n/useI18n'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -51,6 +52,7 @@ const MarkdownSourceEditor = ({
   onChange,
   onOpenFileView,
 }: MarkdownSourceEditorProps) => {
+  const { t } = useI18n()
   const darkMode = useDarkMode()
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
@@ -263,7 +265,7 @@ const MarkdownSourceEditor = ({
     >
       {monacoLoadError ? (
         <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
-          Failed to load source editor: {editorLoadError}
+          {t('editor.sourceLoadFailed', { error: editorLoadError })}
         </div>
       ) : monacoReady ? (
         <Editor
@@ -298,8 +300,11 @@ const MarkdownSourceEditor = ({
           }}
         />
       ) : (
-        <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-          Loading source editor...
+        <div
+          className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground"
+          role="status"
+        >
+          {t('editor.sourceLoading')}
         </div>
       )}
     </div>

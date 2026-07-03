@@ -157,11 +157,11 @@ const AppStatusBar = ({
                 onClick={openScmPanel}
               >
                 {gitStatusQuery.isFetching ? (
-                  <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
                 ) : gitConflictCount > 0 || gitStatusQuery.isError ? (
-                  <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 text-destructive" />
+                  <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
                 ) : (
-                  <GitBranch aria-hidden="true" className="h-3.5 w-3.5" />
+                  <GitBranch aria-hidden="true" className="size-3.5" />
                 )}
                 <span className="truncate">
                   {gitStatusQuery.data?.repo.is_repository
@@ -178,19 +178,19 @@ const AppStatusBar = ({
                 type="button"
                 variant={terminalOpen ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-6 w-6 rounded"
+                className="size-6 rounded"
                 aria-label={t('statusBar.toggleTerminal')}
                 aria-pressed={terminalOpen}
                 onClick={onToggleTerminal}
               >
-                <Terminal aria-hidden="true" className="h-3.5 w-3.5" />
+                <Terminal aria-hidden="true" className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('statusBar.toggleTerminal')}</TooltipContent>
           </Tooltip>
           <div className="hidden h-3.5 w-px bg-border/80 sm:block" />
           <div className="hidden min-w-0 items-center gap-1.5 px-1 sm:flex">
-            <FolderOpen aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+            <FolderOpen aria-hidden="true" className="size-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{workspaceLabel}</span>
           </div>
           {restoreStatusMessage ? (
@@ -202,7 +202,7 @@ const AppStatusBar = ({
                     role="status"
                     title={restoreStatusMessage}
                   >
-                    <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
                     <span className="max-w-[180px] truncate">{restoreStatusMessage}</span>
                   </div>
                 </TooltipTrigger>
@@ -217,16 +217,16 @@ const AppStatusBar = ({
                 disabled={restoreStatusBusy}
               >
                 {restoreStatusBusy ? (
-                  <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
                 ) : (
-                  <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
+                  <RotateCcw aria-hidden="true" className="size-3.5" />
                 )}
                 {t('app.restoreRetry')}
               </Button>
             </div>
           ) : null}
           <div className="hidden items-center gap-1.5 px-1 md:flex">
-            <FileText aria-hidden="true" className="h-3.5 w-3.5" />
+            <FileText aria-hidden="true" className="size-3.5" />
             <span>{t('statusBar.files', { count: String(markdownFileCount) })}</span>
           </div>
         </div>
@@ -244,7 +244,7 @@ const AppStatusBar = ({
           )}
           {assetSyncPending > 0 && (
             <span className="hidden shrink-0 items-center gap-1.5 text-sky-600 sm:inline-flex">
-              <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
               {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
             </span>
           )}
@@ -255,7 +255,7 @@ const AppStatusBar = ({
                   className="hidden shrink-0 items-center gap-1.5 text-destructive sm:inline-flex"
                   title={assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
                 >
-                  <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />
+                  <AlertTriangle aria-hidden="true" className="size-3.5" />
                   {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
                 </span>
               </TooltipTrigger>
@@ -267,7 +267,7 @@ const AppStatusBar = ({
           <span className="hidden shrink-0 sm:inline">{t(viewLabelKeys[viewMode])}</span>
           <div className="hidden h-3.5 w-px bg-border/80 md:block" />
           <span className="hidden shrink-0 items-center gap-1.5 md:inline-flex">
-            <PanelsTopLeft aria-hidden="true" className="h-3.5 w-3.5" />
+            <PanelsTopLeft aria-hidden="true" className="size-3.5" />
             {t('statusBar.tabs', { count: String(tabs.length) })}
           </span>
           <div className="h-3.5 w-px bg-border/80" />
@@ -284,7 +284,7 @@ const AppStatusBar = ({
           {activeSaveState?.status === 'saved' && (
             <CheckCircle2
               aria-hidden="true"
-              className="hidden h-3.5 w-3.5 shrink-0 text-emerald-600 sm:block"
+              className="hidden size-3.5 shrink-0 text-emerald-600 sm:block"
             />
           )}
         </div>

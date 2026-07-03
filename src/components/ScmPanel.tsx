@@ -153,6 +153,53 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
     return nextGroups.filter((group) => group.changes.length > 0)
   }, [statusQuery.data, t])
 
+  if (rootKind === 'single') {
+    const singleFileLabel = t('scm.singleFileTitle')
+
+    if (collapsed) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-md"
+                aria-label={singleFileLabel}
+                title={singleFileLabel}
+                disabled
+              >
+                <GitBranch aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{singleFileLabel}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    }
+
+    return (
+      <SidebarGroup
+        aria-label={t('scm.title')}
+        role="region"
+        className="sidebar-section rounded-md p-1"
+      >
+        <SidebarGroupLabel className="sidebar-section-header flex h-7 items-center justify-between px-2 text-[11px] uppercase">
+          <span>{t('scm.title')}</span>
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <div className="flex flex-col gap-2 px-2 pb-2 text-xs">
+            <div className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/30 p-2">
+              <div className="font-medium text-sidebar-foreground">{singleFileLabel}</div>
+              <div className="mt-1 text-muted-foreground">{t('scm.singleFileHelp')}</div>
+            </div>
+          </div>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    )
+  }
+
   if (!enabled) return null
 
   const totalChanges = countChangedFiles(statusQuery.data)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { map, merge, throttleTime } from 'rxjs'
 import {
   summarizeTerminalExit,
@@ -8,11 +8,18 @@ import {
   type TerminalEventEntry,
 } from '@/components/status-center/statusCenterModel'
 import { listen } from '@/runtime/events'
+import { useI18n } from '@/i18n/useI18n'
 import { terminalExitEvents$, terminalOutputEvents$ } from '@/services/terminalEventStreams'
 
 export const useStatusCenterEvents = (desktopRuntime: boolean) => {
+  const { t } = useI18n()
+  const translateRef = useRef(t)
   const [exportTasks, setExportTasks] = useState<Record<string, ExportTaskEntry>>({})
   const [terminalEvents, setTerminalEvents] = useState<TerminalEventEntry[]>([])
+
+  useEffect(() => {
+    translateRef.current = t
+  }, [t])
 
   useEffect(() => {
     if (!desktopRuntime) return
@@ -61,7 +68,9 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
         map((event) => ({
           id: event.id,
           status: 'running' as const,
-          message: summarizeTerminalOutput(event),
+          message: summarizeTerminalOutput(event, (key, options) =>
+            translateRef.current(key, options),
+          ),
           updatedAt: Date.now(),
         })),
       ),
@@ -69,7 +78,9 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
         map((event) => ({
           id: event.id,
           status: 'exited' as const,
-          message: summarizeTerminalExit(event),
+          message: summarizeTerminalExit(event, (key, options) =>
+            translateRef.current(key, options),
+          ),
           updatedAt: Date.now(),
         })),
       ),

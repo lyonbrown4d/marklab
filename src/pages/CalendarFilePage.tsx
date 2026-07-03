@@ -56,8 +56,8 @@ const CalendarFilePage = memo(
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <CalendarDays className="h-5 w-5" />
+                <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <CalendarDays className="size-5" />
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold">
@@ -68,7 +68,7 @@ const CalendarFilePage = memo(
               </div>
               {onOpenSource && (
                 <Button variant="outline" size="sm" onClick={onOpenSource}>
-                  <Code2 className="h-4 w-4" />
+                  <Code2 data-icon="inline-start" />
                   {t('calendar.openSource')}
                 </Button>
               )}
@@ -106,7 +106,7 @@ const CalendarFilePage = memo(
                     {t('calendar.noEvents')}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     {selectedEvents.map((event, index) => (
                       <div
                         key={event.uid ?? `${event.summary}-${index}`}
@@ -116,13 +116,13 @@ const CalendarFilePage = memo(
                         <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                           {event.start && (
                             <span className="inline-flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
+                              <Clock className="size-3.5" />
                               {formatEventTime(event.start, event.allDay, t('calendar.allDay'))}
                             </span>
                           )}
                           {event.location && (
                             <span className="inline-flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
+                              <MapPin className="size-3.5" />
                               {event.location}
                             </span>
                           )}

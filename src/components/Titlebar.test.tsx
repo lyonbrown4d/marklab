@@ -230,6 +230,30 @@ describe('Titlebar command palette', () => {
 
     expect(onOpenAllPages).toHaveBeenCalledWith('all')
   })
+
+  it('explains single-file command limits while keeping file switching available', async () => {
+    renderTitlebar(
+      createProps({
+        canCreateWorkspaceEntries: false,
+        commandOpen: true,
+      }),
+    )
+
+    expect(
+      screen.getByText('Project file creation is unavailable in single-file mode.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Project graph, collections, and indexing commands are available after opening a folder.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /^New file$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Open Workspace Graph/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Open All Pages/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Open file/i })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Terminal/i })).toBeInTheDocument()
+  })
+
   it('labels chrome controls and dispatches titlebar actions', async () => {
     const user = userEvent.setup()
     const props = createProps()

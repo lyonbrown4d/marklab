@@ -4,6 +4,7 @@ import type {
   FileEntry,
   FileViewKind,
   GraphContentMode,
+  RootKind,
   ThemeMode,
   ViewMode,
   WorkspaceTab,
@@ -28,6 +29,7 @@ export type LayoutContext = {
   currentView: ViewMode
   activeTab: WorkspaceTab | null
   rootPath: string
+  rootKind: RootKind
   recentProjects: string[]
   showEditorStatusBar: boolean
   graphMiniMapEnabled: boolean

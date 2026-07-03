@@ -35,7 +35,7 @@ const SidebarProjectsPanel = ({
               className="h-8 w-full justify-start rounded-md px-2 text-sidebar-foreground/85 hover:bg-sidebar-accent"
               onClick={onUseInternalRoot}
             >
-              <FolderOpen className="h-4 w-4 text-primary" />
+              <FolderOpen className="size-4 text-primary" />
               <span className="truncate text-xs">{t('sidebar.localWorkspace')}</span>
             </Button>
           </SidebarMenuItem>
@@ -54,7 +54,7 @@ const SidebarProjectsPanel = ({
                 className="h-8 w-full justify-start rounded-md px-2 text-sidebar-foreground/85 hover:bg-sidebar-accent"
                 onClick={() => onOpenProject(path)}
               >
-                <FolderOpen className="h-4 w-4 text-primary" />
+                <FolderOpen className="size-4 text-primary" />
                 <span className="truncate text-xs">{path}</span>
               </Button>
             </SidebarMenuItem>

@@ -27,6 +27,7 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'onOpenSearchResult'
   | 'onOpenAllPages'
   | 'setTheme'
+  | 'canCreateWorkspaceEntries'
 >
 
 export const useTitlebarCommandActions = ({
@@ -48,6 +49,7 @@ export const useTitlebarCommandActions = ({
   onOpenSearchResult,
   onOpenAllPages,
   setTheme,
+  canCreateWorkspaceEntries,
 }: UseTitlebarCommandActionsArgs) => {
   const onMenuAction = useCallback((id: string) => {
     if (!isDesktopRuntime()) return
@@ -88,11 +90,11 @@ export const useTitlebarCommandActions = ({
         return
       }
       if (id === 'file.new') {
-        onCreateFile()
+        if (canCreateWorkspaceEntries) onCreateFile()
         return
       }
       if (id === 'file.new_folder') {
-        onCreateFolder()
+        if (canCreateWorkspaceEntries) onCreateFolder()
         return
       }
       if (id === 'window.open_current_workspace_in_new_window') {
@@ -154,6 +156,7 @@ export const useTitlebarCommandActions = ({
       }
     },
     [
+      canCreateWorkspaceEntries,
       onChangeView,
       onCloseActiveTab,
       onCreateFile,

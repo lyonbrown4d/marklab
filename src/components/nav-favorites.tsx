@@ -16,6 +16,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { useI18n } from '@/i18n/useI18n'
 
 export const NavFavorites = ({
   favorites,
@@ -26,11 +27,12 @@ export const NavFavorites = ({
     emoji: string
   }[]
 }) => {
+  const { t } = useI18n()
   const { isMobile } = useSidebar()
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Favorites</SidebarGroupLabel>
+      <SidebarGroupLabel>{t('nav.favorites')}</SidebarGroupLabel>
       <SidebarMenu>
         {favorites.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -44,7 +46,7 @@ export const NavFavorites = ({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuAction showOnHover>
                   <MoreHorizontal />
-                  <span className="sr-only">More</span>
+                  <span className="sr-only">{t('nav.favoriteMore')}</span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -54,21 +56,21 @@ export const NavFavorites = ({
               >
                 <DropdownMenuItem>
                   <StarOff className="text-muted-foreground" />
-                  <span>Remove from Favorites</span>
+                  <span>{t('nav.favoriteRemove')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <Link className="text-muted-foreground" />
-                  <span>Copy Link</span>
+                  <span>{t('nav.favoriteCopyLink')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <ArrowUpRight className="text-muted-foreground" />
-                  <span>Open in New Tab</span>
+                  <span>{t('nav.favoriteOpenInNewTab')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <Trash2 className="text-muted-foreground" />
-                  <span>Delete</span>
+                  <span>{t('nav.favoriteDelete')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -77,7 +79,7 @@ export const NavFavorites = ({
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <MoreHorizontal />
-            <span>More</span>
+            <span>{t('nav.favoriteMore')}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

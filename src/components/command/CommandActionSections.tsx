@@ -59,47 +59,54 @@ const CommandActionSections = ({
     <>
       <CommandGroup>
         <CommandItem value="command palette quick open search" onSelect={onCommandPaletteAction}>
-          <Search className="h-4 w-4" />
+          <Search className="size-4" />
           <span className="truncate">{t('shortcuts.commandPalette')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.commandPalette]} />
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading={t('menu.file')}>
-        <CommandItem
-          value="new file create note markdown"
-          disabled={!canCreateWorkspaceEntries}
-          onSelect={() => onAction('file.new')}
-        >
-          <FilePlus2 className="h-4 w-4" />
-          <span className="truncate">{t('sidebar.newFile')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.newFile]} />
-        </CommandItem>
-        <CommandItem
-          value="new folder create directory"
-          disabled={!canCreateWorkspaceEntries}
-          onSelect={() => onAction('file.new_folder')}
-        >
-          <FolderPlus className="h-4 w-4" />
-          {t('sidebar.newFolder')}
-        </CommandItem>
+        {canCreateWorkspaceEntries ? (
+          <>
+            <CommandItem
+              value="new file create note markdown"
+              onSelect={() => onAction('file.new')}
+            >
+              <FilePlus2 className="size-4" />
+              <span className="truncate">{t('sidebar.newFile')}</span>
+              <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.newFile]} />
+            </CommandItem>
+            <CommandItem
+              value="new folder create directory"
+              onSelect={() => onAction('file.new_folder')}
+            >
+              <FolderPlus className="size-4" />
+              {t('sidebar.newFolder')}
+            </CommandItem>
+          </>
+        ) : (
+          <CommandItem value="single file mode create unavailable" disabled>
+            <FileText className="size-4" />
+            <span className="truncate">{t('command.singleFileCreateUnavailable')}</span>
+          </CommandItem>
+        )}
         <CommandItem
           value="new window open current workspace"
           onSelect={() => onAction('window.open_current_workspace_in_new_window')}
         >
-          <PanelRight className="h-4 w-4" />
+          <PanelRight className="size-4" />
           {t('actions.newWindow')}
         </CommandItem>
         <CommandItem
           value="open project folder workspace"
           onSelect={() => onAction('file.open_project')}
         >
-          <FolderOpen className="h-4 w-4" />
+          <FolderOpen className="size-4" />
           <span className="truncate">{t('actions.openProject')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.openProject]} />
         </CommandItem>
         <CommandItem value="open file select file" onSelect={() => onAction('file.open_file')}>
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           <span className="truncate">{t('actions.openFile')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.openFile]} />
         </CommandItem>
@@ -107,30 +114,31 @@ const CommandActionSections = ({
           value="search files focus file search"
           onSelect={() => onAction('view.focus_file_search')}
         >
-          <Search className="h-4 w-4" />
+          <Search className="size-4" />
           {t('sidebar.searchAction')}
         </CommandItem>
         <CommandItem value="close tab close active file" onSelect={() => onAction('tab.close')}>
-          <X className="h-4 w-4" />
+          <X className="size-4" />
           <span className="truncate">{t('actions.closeTab')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.closeTab]} />
         </CommandItem>
         <CommandItem value="export pdf" onSelect={() => onAction('file.export_pdf')}>
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           {t('actions.exportPdf')}
         </CommandItem>
         <CommandItem value="export docx word" onSelect={() => onAction('file.export_docx')}>
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           {t('actions.exportDocx')}
         </CommandItem>
         <CommandItem value="export html" onSelect={() => onAction('file.export_html')}>
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           {t('actions.exportHtml')}
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
       <CommandWorkspaceSection
         collections={collections}
+        projectWorkspace={canCreateWorkspaceEntries}
         searchIndexRebuilding={searchIndexRebuilding}
         onAction={onAction}
       />
@@ -142,7 +150,7 @@ const CommandActionSections = ({
           value="wysiwyg editor rich text visual editor"
           onSelect={() => onAction('view.wysiwyg')}
         >
-          <PenLine className="h-4 w-4" />
+          <PenLine className="size-4" />
           <span className="truncate">{t('editor.modeWysiwyg')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewWysiwyg]} />
         </CommandItem>
@@ -152,7 +160,7 @@ const CommandActionSections = ({
           value="source editor markdown source code"
           onSelect={() => onAction('view.source')}
         >
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           <span className="truncate">{t('editor.modeSource')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewSource]} />
         </CommandItem>
@@ -162,7 +170,7 @@ const CommandActionSections = ({
           value="graph view mindmap react flow workspace graph"
           onSelect={() => onAction('view.graph')}
         >
-          <GitGraph className="h-4 w-4" />
+          <GitGraph className="size-4" />
           <span className="truncate">{t('tabs.graph')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewGraph]} />
         </CommandItem>
@@ -170,7 +178,7 @@ const CommandActionSections = ({
           value="toggle left sidebar explorer"
           onSelect={() => onAction('view.toggle_sidebar')}
         >
-          <PanelLeft className="h-4 w-4" />
+          <PanelLeft className="size-4" />
           <span className="truncate">{t('actions.toggleSidebar')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleSidebar]} />
         </CommandItem>
@@ -178,7 +186,7 @@ const CommandActionSections = ({
           value="toggle right sidebar inspector details"
           onSelect={() => onAction('view.toggle_right_sidebar')}
         >
-          <PanelRight className="h-4 w-4" />
+          <PanelRight className="size-4" />
           <span className="truncate">{t('actions.toggleRightSidebar')}</span>
           <CommandActionShortcut
             label={shortcutLabels[commandActionShortcutIds.toggleRightSidebar]}
@@ -191,7 +199,7 @@ const CommandActionSections = ({
           value="settings preferences options"
           onSelect={() => onAction('settings.open')}
         >
-          <Settings2 className="h-4 w-4" />
+          <Settings2 className="size-4" />
           <span className="truncate">{t('menu.settings')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.settings]} />
         </CommandItem>
@@ -204,7 +212,7 @@ const CommandActionSections = ({
           value="theme mode system follow system"
           onSelect={() => onAction(themeModeActionId('system'))}
         >
-          <Monitor className="h-4 w-4" />
+          <Monitor className="size-4" />
           <span className="truncate">{t('themeMode.system')}</span>
           {themeMode === 'system' && <CurrentItemCheck />}
         </CommandItem>
@@ -214,7 +222,7 @@ const CommandActionSections = ({
           value="theme mode light"
           onSelect={() => onAction(themeModeActionId('light'))}
         >
-          <Sun className="h-4 w-4" />
+          <Sun className="size-4" />
           <span className="truncate">{t('themeMode.light')}</span>
           {themeMode === 'light' && <CurrentItemCheck />}
         </CommandItem>
@@ -224,7 +232,7 @@ const CommandActionSections = ({
           value="theme mode dark"
           onSelect={() => onAction(themeModeActionId('dark'))}
         >
-          <Moon className="h-4 w-4" />
+          <Moon className="size-4" />
           <span className="truncate">{t('themeMode.dark')}</span>
           {themeMode === 'dark' && <CurrentItemCheck />}
         </CommandItem>
@@ -257,7 +265,7 @@ const CommandActionSections = ({
       <CommandSeparator />
       <CommandGroup heading={t('menu.help')}>
         <CommandItem value="help about version" onSelect={() => onAction('help.about')}>
-          <CircleHelp className="h-4 w-4" />
+          <CircleHelp className="size-4" />
           {t('actions.about')}
         </CommandItem>
       </CommandGroup>

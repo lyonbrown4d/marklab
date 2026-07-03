@@ -152,7 +152,7 @@ const KnowledgeSection = ({
                 onClick={() => (onOpenReference ? onOpenReference(item) : onOpen?.(item.path))}
               >
                 <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 space-y-1">
+                <span className="min-w-0 flex flex-1 flex-col gap-1">
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-xs font-medium">{item.label}</span>
                     <Badge variant="secondary" className="shrink-0 rounded px-1 py-0 text-[10px]">
@@ -233,7 +233,7 @@ const MissingLinksSection = ({
                 onClick={() => onOpen(item)}
               >
                 <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 space-y-1">
+                <span className="min-w-0 flex flex-1 flex-col gap-1">
                   <span className="block truncate text-xs font-medium">{item.text}</span>
                   <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
                     <Badge variant="outline" className="shrink-0 rounded px-1 py-0 text-[10px]">

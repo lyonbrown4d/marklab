@@ -136,7 +136,8 @@ describe('ExportStatusOverlay', () => {
     )
 
     const options = toastSuccessMock.mock.calls[0]?.[1]
-    const action = options?.action as ToastAction | undefined
+    const action = options?.action as (ToastAction & { label?: string }) | undefined
+    expect(action?.label).toBe('export.openFile')
     action?.onClick?.()
 
     expect(openExportedFileMock).toHaveBeenCalledWith('/tmp/report.pdf')
@@ -158,7 +159,7 @@ describe('ExportStatusOverlay', () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       'export.failed:HTML',
       expect.objectContaining({
-        description: 'Permission denied',
+        description: 'report.html - Permission denied',
         id: 'export-3',
       }),
     )

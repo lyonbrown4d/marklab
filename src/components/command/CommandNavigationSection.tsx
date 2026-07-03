@@ -99,7 +99,7 @@ export const CommandNavigationSection = ({
               value={`current heading ${heading.text} ${heading.slug} ${heading.path}`}
               onSelect={() => onOpenHeading(heading.path, heading.slug)}
             >
-              <ListTree className="h-4 w-4" />
+              <ListTree className="size-4" />
               <span className="min-w-0 flex-1 truncate">{heading.text}</span>
               <CommandShortcut>H{heading.level}</CommandShortcut>
             </CommandItem>
@@ -115,7 +115,7 @@ export const CommandNavigationSection = ({
               value={`outgoing link reference ${link.targetPath} ${link.target} ${link.text} ${link.context} ${link.targetHeadingSlug ?? link.targetAnchor ?? ''}`}
               onSelect={() => onOpenOutgoingLink(link)}
             >
-              <ArrowUpRight className="h-4 w-4" />
+              <ArrowUpRight className="size-4" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate">
                   {link.text || createFileLabel(link.targetPath)}
@@ -141,7 +141,7 @@ export const CommandNavigationSection = ({
               value={`backlink mention reference ${backlink.sourcePath} ${backlink.text} ${backlink.context} ${backlink.targetAnchor ?? ''}`}
               onSelect={() => onOpenBacklink(backlink)}
             >
-              <Link2 className="h-4 w-4" />
+              <Link2 className="size-4" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{createFileLabel(backlink.sourcePath)}</span>
                 <span className="block truncate text-xs text-muted-foreground">
@@ -165,9 +165,9 @@ export const CommandNavigationSection = ({
               onSelect={() => onOpenMissingLink(link)}
             >
               {link.linkType === 'wiki' ? (
-                <FileText className="h-4 w-4" />
+                <FileText className="size-4" />
               ) : (
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle className="size-4" />
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{link.text || link.target}</span>

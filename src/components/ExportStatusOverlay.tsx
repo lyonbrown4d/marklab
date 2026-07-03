@@ -25,6 +25,12 @@ const getFormatLabel = (format: string) => {
   return format.toUpperCase()
 }
 
+const getToastDescription = (task: ExportTaskPayload) => {
+  const outputName = getOutputName(task.output_path)
+  if (task.status !== 'failed' || !task.message) return outputName
+  return `${outputName} - ${task.message}`
+}
+
 const ExportStatusOverlay = () => {
   const { t } = useI18n()
 
@@ -37,10 +43,7 @@ const ExportStatusOverlay = () => {
     void listen<ExportTaskPayload>('export-task', (event) => {
       const task = event.payload
       const format = getFormatLabel(task.format)
-      const description =
-        task.status === 'failed'
-          ? task.message || getOutputName(task.output_path)
-          : getOutputName(task.output_path)
+      const description = getToastDescription(task)
 
       if (task.status === 'started') {
         toast.loading(t('export.running', { format }), {

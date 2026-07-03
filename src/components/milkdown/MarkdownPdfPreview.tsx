@@ -8,6 +8,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fetchPdfObjectUrl } from '@/components/milkdown/pdfObjectUrlSource'
+import { useI18n } from '@/i18n/useI18n'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -97,6 +98,7 @@ const useMeasuredWidth = (fallback: number) => {
 }
 
 export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
+  const { t } = useI18n()
   const { failed, loading, objectUrl } = usePdfObjectUrl(fileUrl)
   const [pageState, setPageState] = useState({ key: '', numPages: 0, pageNumber: 1 })
   const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680)
@@ -132,7 +134,7 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
       <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
         <div className="marklab-pdf-viewer__document" ref={documentRef}>
           <div className="marklab-pdf-preview__status">
-            {failed ? 'PDF 预览不可用' : '正在读取 PDF...'}
+            {failed ? t('preview.pdfFailed') : t('preview.pdfReading')}
           </div>
         </div>
       </div>
@@ -141,7 +143,7 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
 
   return (
     <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
-      <div className="marklab-pdf-viewer__thumbs" aria-label="PDF pages">
+      <nav className="marklab-pdf-viewer__thumbs" aria-label={t('preview.pdfPages')}>
         {pages.map((page) => (
           <button
             key={page}
@@ -161,12 +163,12 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
             <span>{page}</span>
           </button>
         ))}
-      </div>
+      </nav>
       <div className="marklab-pdf-viewer__document" ref={documentRef}>
         <Document
           file={objectUrl}
-          loading={<div className="marklab-pdf-preview__status">正在读取 PDF...</div>}
-          error={<div className="marklab-pdf-preview__status">PDF 预览不可用</div>}
+          loading={<div className="marklab-pdf-preview__status">{t('preview.pdfReading')}</div>}
+          error={<div className="marklab-pdf-preview__status">{t('preview.pdfFailed')}</div>}
           onLoadSuccess={handleLoadSuccess}
         >
           <Page pageNumber={pageNumber} width={pageWidth} />
@@ -182,6 +184,7 @@ const MarkdownPdfPreview = ({
   resolvePdfSrc,
   title,
 }: MarkdownPdfPreviewProps) => {
+  const { t } = useI18n()
   const sourceKey = `${documentPath ?? ''}\u0000${href}`
   const [resolvedSource, setResolvedSource] = useState<{
     failed: boolean
@@ -230,7 +233,7 @@ const MarkdownPdfPreview = ({
           onClick={() => setExpanded(true)}
         >
           <Maximize2 data-icon="inline-start" />
-          放大查看
+          {t('preview.pdfExpand')}
         </Button>
       </div>
 
@@ -239,7 +242,7 @@ const MarkdownPdfPreview = ({
           <PdfPreviewSurface fileUrl={fileUrl} mode="inline" />
         ) : (
           <div className="marklab-pdf-preview__status">
-            {failed ? 'PDF 预览不可用' : '正在加载 PDF 预览...'}
+            {failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
           </div>
         )}
       </div>
@@ -254,7 +257,7 @@ const MarkdownPdfPreview = ({
               <PdfPreviewSurface fileUrl={fileUrl} mode="modal" />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {failed ? 'PDF 预览不可用' : '正在加载 PDF 预览...'}
+                {failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
               </div>
             )}
           </div>

@@ -80,6 +80,8 @@ describe('RightSidebarKnowledgePanel', () => {
       screen.getByText('First context: Jump to [missing heading](#lost-heading)'),
     ).toBeInTheDocument()
     expect(screen.getByText('L9:C3')).toBeInTheDocument()
+    expect(document.querySelectorAll('.space-y-1')).toHaveLength(0)
+    expect(document.querySelectorAll('.min-w-0.flex.flex-1.flex-col.gap-1')).toHaveLength(3)
 
     const missingButton = screen.getByText('missing heading').closest('button')
     expect(missingButton).toBeInTheDocument()

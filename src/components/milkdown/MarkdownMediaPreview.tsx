@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useI18n } from '@/i18n/useI18n'
 
 export type MarkdownMediaPreviewKind = 'audio' | 'video'
 
@@ -15,26 +16,24 @@ type MediaLoadSnapshot = {
   state: MediaLoadState
 }
 
-const mediaLabels: Record<MarkdownMediaPreviewKind, string> = {
-  audio: '音频',
-  video: '视频',
-}
-
 const mediaBadges: Record<MarkdownMediaPreviewKind, string> = {
   audio: 'AUDIO',
   video: 'VIDEO',
 }
 
-const statusText = (kind: MarkdownMediaPreviewKind, state: MediaLoadState) => {
-  const label = mediaLabels[kind]
+type Translate = (key: string, options?: Record<string, unknown>) => string
 
-  if (state === 'error') return `${label}预览不可用`
-  if (state === 'loading') return `正在加载${label}预览...`
+const statusText = (kind: MarkdownMediaPreviewKind, state: MediaLoadState, t: Translate) => {
+  const label = t(`preview.kind.${kind}`)
 
-  return `${label}预览已就绪`
+  if (state === 'error') return t('preview.mediaFailed', { kind: label })
+  if (state === 'loading') return t('preview.mediaLoading', { kind: label })
+
+  return t('preview.mediaReady', { kind: label })
 }
 
 export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPreviewProps) => {
+  const { t } = useI18n()
   const statusId = useId()
   const displayTitle = title.trim() || href
   const [loadSnapshot, setLoadSnapshot] = useState<MediaLoadSnapshot>(() => ({
@@ -89,7 +88,7 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
             />
             {visibleStatus ? (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-background/90 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
-                {statusText(kind, loadState)}
+                {statusText(kind, loadState, t)}
               </div>
             ) : null}
           </div>
@@ -107,7 +106,7 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
             />
             {visibleStatus ? (
               <div className="mt-2 text-xs text-muted-foreground">
-                {statusText(kind, loadState)}
+                {statusText(kind, loadState, t)}
               </div>
             ) : null}
           </div>
@@ -115,7 +114,7 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
       </div>
 
       <div className="sr-only" id={statusId} role="status">
-        {statusText(kind, loadState)}
+        {statusText(kind, loadState, t)}
       </div>
     </article>
   )

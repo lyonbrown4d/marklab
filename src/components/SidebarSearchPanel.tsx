@@ -13,7 +13,7 @@ const SidebarSearchPanel = ({ onOpenSearchResult }: SidebarSearchPanelProps) => 
   return (
     <SidebarGroup className="sidebar-section flex min-h-0 flex-1 flex-col rounded-md p-1">
       <SidebarGroupLabel className="sidebar-section-header flex h-8 items-center gap-2 px-2 text-[11px] uppercase">
-        <Search className="h-3.5 w-3.5" />
+        <Search className="size-3.5" />
         <span>{t('sidebar.searchAction')}</span>
       </SidebarGroupLabel>
       <SidebarGroupContent className="flex min-h-0 flex-1 flex-col gap-2">

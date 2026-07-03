@@ -26,26 +26,6 @@ export type TerminalEventEntry = {
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
-export const TEXT = {
-  activeBuffer: 'Active buffer',
-  backgroundTasks: 'Background tasks',
-  checkingBuffer: 'Checking buffer...',
-  dirty: 'dirty',
-  exportAndTerminal: 'Export and terminal',
-  noActiveFile: 'No active file',
-  noBackgroundTasks: 'No background tasks',
-  noEvents: 'No recent events',
-  noSaveActivity: 'No pending file saves',
-  ready: 'Ready',
-  saved: 'saved',
-  saveQueue: 'Save queue',
-  statusCenter: 'Status Center',
-  synced: 'synced',
-  terminalClosed: 'Terminal panel closed',
-  terminalOpen: 'Terminal panel open',
-  unavailable: 'Desktop runtime unavailable',
-}
-
 export const basename = (path: string) => {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
@@ -68,7 +48,7 @@ export const formatExportLabel = (task: ExportTaskEntry, t?: Translate) => {
 
   if (task.status === 'started') return `Exporting ${format}`
   if (task.status === 'finished') return `Exported ${format}`
-  return `Export ${format} failed`
+  return `Failed to export ${format}`
 }
 
 export const getTaskToneClass = (status: BackgroundTaskStatus['status']) => {
@@ -84,12 +64,25 @@ export const getSaveToneClass = (status: SaveState['status']) => {
   return 'bg-emerald-500'
 }
 
-export const summarizeTerminalOutput = (event: TerminalOutputEvent) => {
+export const summarizeTerminalOutput = (event: TerminalOutputEvent, t?: Translate) => {
   const text = event.data.replace(/\s+/g, ' ').trim()
+  if (t) {
+    return text
+      ? t('statusCenter.terminalOutput', { text: text.slice(0, 80) })
+      : t('statusCenter.terminalOutputReceived')
+  }
   return text ? `Terminal output: ${text.slice(0, 80)}` : 'Terminal output received'
 }
 
-export const summarizeTerminalExit = (event: TerminalExitEvent) => {
+export const summarizeTerminalExit = (event: TerminalExitEvent, t?: Translate) => {
+  if (t) {
+    if (event.exit_code != null) {
+      return t('statusCenter.terminalExitedCode', { code: event.exit_code })
+    }
+    if (event.signal) return t('statusCenter.terminalExitedSignal', { signal: event.signal })
+    return t('statusCenter.terminalExited')
+  }
+
   if (event.exit_code != null) return `Terminal exited with code ${event.exit_code}`
   if (event.signal) return `Terminal exited by ${event.signal}`
   return 'Terminal exited'

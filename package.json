@@ -53,7 +53,7 @@
     "typecheck:scripts": "pnpm exec tsc -p tsconfig.scripts.json",
     "test": "moon run desktop:test",
     "test:knowledge:integration": "moon run desktop:test-knowledge-integration",
-    "test:ui": "vitest run src/**/*.integration.test.ts src/**/*.integration.test.tsx",
+    "test:ui": "vitest run .integration.test.",
     "test:electron": "pnpm test:electron:build && node -e \"setTimeout(() => process.exit(0), 3000)\" && pnpm test:electron:run",
     "test:electron:build": "pnpm icons:generate && pnpm exec vite build --mode electron",
     "test:electron:run": "node --experimental-strip-types scripts/run-electron-e2e.ts",

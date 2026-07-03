@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useI18n } from '@/i18n/useI18n'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi, type FsSearchResult } from '@/services/fsApi'
@@ -31,6 +32,7 @@ const getErrorMessage = (error: unknown) => (error instanceof Error ? error.mess
 
 export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsOptions) => {
   const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
+  const { t } = useI18n()
   const { createFile, createFolder, files, onOpenFile, onOpenFileView, onOpenGitDiff, rootKind } =
     state
 
@@ -50,44 +52,44 @@ export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsO
 
   const handleCreateFile = useCallback(() => {
     if (rootKind === 'single') {
-      toast.info('New files are unavailable for single-file workspaces.')
+      toast.info(t('workspaceActions.singleFileCreateFileUnavailable'))
       return
     }
     const nextPath = createUntitledPath(files)
     void createFile(nextPath)
       .then(() => {
-        toast.success('Created file')
+        toast.success(t('workspaceActions.createFileSuccess'))
         onOpenFile(nextPath)
       })
       .catch((error) => {
-        toast.error('Failed to create file', {
+        toast.error(t('workspaceActions.createFileFailed'), {
           description: getErrorMessage(error),
         })
       })
-  }, [createFile, files, onOpenFile, rootKind])
+  }, [createFile, files, onOpenFile, rootKind, t])
 
   const handleCreateFolder = useCallback(() => {
     if (rootKind === 'single') {
-      toast.info('New folders are unavailable for single-file workspaces.')
+      toast.info(t('workspaceActions.singleFileCreateFolderUnavailable'))
       return
     }
     const nextPath = window.prompt('New folder name', 'folder')?.trim()
     if (!nextPath) return
     void createFolder(nextPath)
       .then(() => {
-        toast.success('Created folder')
+        toast.success(t('workspaceActions.createFolderSuccess'))
       })
       .catch((error) => {
-        toast.error('Failed to create folder', {
+        toast.error(t('workspaceActions.createFolderFailed'), {
           description: getErrorMessage(error),
         })
       })
-  }, [createFolder, rootKind])
+  }, [createFolder, rootKind, t])
 
   const handleRebuildSearchIndex = useCallback(() => {
     if (searchIndexRebuilding || !isDesktopRuntime()) return
     const toastId = 'search-index-rebuild'
-    toast.loading('Rebuilding search index...', {
+    toast.loading(t('workspaceActions.searchIndexRebuilding'), {
       id: toastId,
     })
     setSearchIndexRebuilding(true)
@@ -98,12 +100,12 @@ export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsO
     })()
     void rebuildPromise
       .then(() => {
-        toast.success('Search index rebuilt', {
+        toast.success(t('workspaceActions.searchIndexRebuilt'), {
           id: toastId,
         })
       })
       .catch((error) => {
-        toast.error('Failed to rebuild search index', {
+        toast.error(t('workspaceActions.searchIndexRebuildFailed'), {
           id: toastId,
           description: getErrorMessage(error),
         })
@@ -111,7 +113,7 @@ export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsO
       .finally(() => {
         setSearchIndexRebuilding(false)
       })
-  }, [queryClient, searchIndexRebuilding])
+  }, [queryClient, searchIndexRebuilding, t])
 
   const handleOpenGitDiff = useCallback(
     (request: GitDiffRequest) => {

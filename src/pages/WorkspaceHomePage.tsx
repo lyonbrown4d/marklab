@@ -10,9 +10,6 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AppLogo from '@/components/AppLogo'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useI18n } from '@/i18n/useI18n'
 import { pathToAllPagesRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
@@ -21,6 +18,7 @@ import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import WorkspaceHomeHero from '@/pages/WorkspaceHomeHero'
 import { EmptyBlock, ListButton, Panel, QuickButton } from '@/pages/workspaceHomeUi'
 
 type Metrics = {
@@ -105,11 +103,16 @@ const openProjectPicker = () => {
   void appApi.menuDispatch('file.open_project')
 }
 
+const openFilePicker = () => {
+  void appApi.menuDispatch('file.open_file')
+}
+
 const WorkspaceHomePage = () => {
   const navigate = useNavigate()
   const { t } = useI18n()
-  const { files, workspaceIndex, rootPath, recentProjects, onOpenFile, onOpenProject } =
+  const { files, workspaceIndex, rootPath, rootKind, recentProjects, onOpenFile, onOpenProject } =
     useLayoutContext()
+  const singleFileMode = rootKind === 'single'
   const metrics = useMemo(() => getMetrics(files, workspaceIndex), [files, workspaceIndex])
   const documents = useMemo(() => getDocuments(files, workspaceIndex), [files, workspaceIndex])
   const firstDocument = documents[0]?.path
@@ -118,11 +121,15 @@ const WorkspaceHomePage = () => {
   const indexCaption = metrics.indexReady
     ? t('workspaceHome.indexedMarkdownFiles', { count: count(metrics.indexedFiles) })
     : t('workspaceHome.indexPending')
+  const openAllPages = () => navigate(pathToAllPagesRoute())
+  const openWorkspaceGraph = () => navigate(pathToWorkspaceGraphRoute())
   const stats = [
     {
       label: t('workspaceHome.files'),
       value: count(metrics.files),
-      caption: t('workspaceHome.foldersTracked', { count: count(metrics.folders) }),
+      caption: singleFileMode
+        ? t('workspaceHome.singleFileCaption')
+        : t('workspaceHome.foldersTracked', { count: count(metrics.folders) }),
       icon: <FileText className="size-5 text-muted-foreground" />,
     },
     {
@@ -148,65 +155,19 @@ const WorkspaceHomePage = () => {
   return (
     <div className="h-full overflow-auto bg-background p-4 text-foreground md:p-6">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-        <Card className="gap-0 py-0">
-          <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="min-w-0 max-w-2xl">
-                <div className="flex items-center gap-3">
-                  <AppLogo className="h-11 w-11" />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
-                        {t('workspaceHome.eyebrow')}
-                      </div>
-                      <Badge variant={metrics.indexReady ? 'secondary' : 'outline'}>
-                        {metrics.indexReady
-                          ? t('workspaceHome.indexReady')
-                          : t('workspaceHome.indexing')}
-                      </Badge>
-                    </div>
-                    <h1 className="mt-1 truncate text-3xl font-semibold tracking-tight md:text-4xl">
-                      {workspaceName}
-                    </h1>
-                  </div>
-                </div>
-                <p className="mt-5 text-sm leading-6 text-muted-foreground">
-                  {t('workspaceHome.description')}
-                </p>
-                <div className="mt-4 rounded-lg border border-border/80 bg-muted/30 p-4 text-xs leading-5 text-muted-foreground">
-                  <span className="block font-medium text-foreground">{workspaceName}</span>
-                  <span className="break-all">{workspacePath}</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button className="rounded-md" onClick={() => requestFileSearchFocus()}>
-                  <Search data-icon="inline-start" />
-                  {t('workspaceHome.searchWorkspace')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="rounded-md"
-                  onClick={() => navigate(pathToAllPagesRoute())}
-                >
-                  <Layers3 data-icon="inline-start" />
-                  {t('workspaceHome.allPages')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="rounded-md"
-                  onClick={() => navigate(pathToWorkspaceGraphRoute())}
-                >
-                  <Network data-icon="inline-start" />
-                  {t('workspaceHome.workspaceGraph')}
-                </Button>
-                <Button variant="ghost" className="rounded-md" onClick={openProjectPicker}>
-                  <FolderOpen data-icon="inline-start" />
-                  {t('actions.openProject')}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <WorkspaceHomeHero
+          firstDocument={firstDocument}
+          indexReady={metrics.indexReady}
+          singleFileMode={singleFileMode}
+          workspaceName={workspaceName}
+          workspacePath={workspacePath}
+          onOpenAllPages={openAllPages}
+          onOpenFile={onOpenFile}
+          onOpenFilePicker={openFilePicker}
+          onOpenProjectPicker={openProjectPicker}
+          onOpenWorkspaceGraph={openWorkspaceGraph}
+          onSearch={requestFileSearchFocus}
+        />
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
@@ -228,26 +189,52 @@ const WorkspaceHomePage = () => {
         <section className="grid min-h-[320px] gap-5 lg:grid-cols-[0.85fr_1fr_0.85fr]">
           <Panel
             title={t('workspaceHome.quickEntries')}
-            subtitle={t('workspaceHome.quickSubtitle')}
+            subtitle={
+              singleFileMode
+                ? t('workspaceHome.singleQuickSubtitle')
+                : t('workspaceHome.quickSubtitle')
+            }
           >
-            <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
-              {t('workspaceHome.findFileOrNote')}
-            </QuickButton>
-            <QuickButton icon={<Network />} onClick={() => navigate(pathToWorkspaceGraphRoute())}>
-              {t('workspaceHome.exploreGraph')}
-            </QuickButton>
-            <QuickButton icon={<Layers3 />} onClick={() => navigate(pathToAllPagesRoute())}>
-              {t('workspaceHome.browseAllPages')}
-            </QuickButton>
-            <QuickButton
-              disabled={!firstDocument}
-              icon={<FileText />}
-              onClick={() => firstDocument && onOpenFile(firstDocument)}
-            >
-              {firstDocument
-                ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
-                : t('workspaceHome.noDocumentYet')}
-            </QuickButton>
+            {singleFileMode ? (
+              <>
+                <QuickButton
+                  disabled={!firstDocument}
+                  icon={<FileText />}
+                  onClick={() => firstDocument && onOpenFile(firstDocument)}
+                >
+                  {firstDocument
+                    ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
+                    : t('workspaceHome.noDocumentYet')}
+                </QuickButton>
+                <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
+                  {t('workspaceHome.showInSidebar')}
+                </QuickButton>
+                <QuickButton icon={<FolderOpen />} onClick={openFilePicker}>
+                  {t('workspaceHome.openAnotherFile')}
+                </QuickButton>
+              </>
+            ) : (
+              <>
+                <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
+                  {t('workspaceHome.findFileOrNote')}
+                </QuickButton>
+                <QuickButton icon={<Network />} onClick={openWorkspaceGraph}>
+                  {t('workspaceHome.exploreGraph')}
+                </QuickButton>
+                <QuickButton icon={<Layers3 />} onClick={openAllPages}>
+                  {t('workspaceHome.browseAllPages')}
+                </QuickButton>
+                <QuickButton
+                  disabled={!firstDocument}
+                  icon={<FileText />}
+                  onClick={() => firstDocument && onOpenFile(firstDocument)}
+                >
+                  {firstDocument
+                    ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
+                    : t('workspaceHome.noDocumentYet')}
+                </QuickButton>
+              </>
+            )}
           </Panel>
 
           <Panel title={t('workspaceHome.documents')} subtitle={indexCaption}>

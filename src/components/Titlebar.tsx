@@ -72,6 +72,7 @@ const Titlebar = ({
     files,
     tabs,
     workspaceIndex,
+    canCreateWorkspaceEntries,
     onCommandOpenChange,
     onChangeView,
     onSelectProject,

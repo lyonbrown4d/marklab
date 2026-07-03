@@ -39,6 +39,7 @@ type UseTitlebarCommandModelArgs = Pick<
   | 'onOpenSearchResult'
   | 'onOpenAllPages'
   | 'setTheme'
+  | 'canCreateWorkspaceEntries'
 > & {
   platform: AppPlatform
 }
@@ -66,6 +67,7 @@ export const useTitlebarCommandModel = ({
   onOpenSearchResult,
   onOpenAllPages,
   setTheme,
+  canCreateWorkspaceEntries,
   platform,
 }: UseTitlebarCommandModelArgs) => {
   const { t } = useI18n()
@@ -76,7 +78,7 @@ export const useTitlebarCommandModel = ({
       {
         label: t('menu.file'),
         items: [
-          { id: 'file.new', label: t('sidebar.newFile') },
+          ...(canCreateWorkspaceEntries ? [{ id: 'file.new', label: t('sidebar.newFile') }] : []),
           { id: 'window.open_current_workspace_in_new_window', label: t('actions.newWindow') },
           { id: 'file.open_project', label: t('actions.openProject') },
           { id: 'file.open_file', label: t('actions.openFile') },
@@ -123,7 +125,7 @@ export const useTitlebarCommandModel = ({
         items: [{ id: 'help.about', label: t('actions.about') }],
       },
     ],
-    [t],
+    [canCreateWorkspaceEntries, t],
   )
 
   const commandFiles = useMemo(() => {
@@ -211,6 +213,7 @@ export const useTitlebarCommandModel = ({
     onOpenSearchResult,
     onOpenAllPages,
     setTheme,
+    canCreateWorkspaceEntries,
   })
 
   return {

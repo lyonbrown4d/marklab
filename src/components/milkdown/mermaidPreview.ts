@@ -1,6 +1,7 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language'
 import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
 import escape from 'lodash-es/escape'
+import i18n from '@/i18n/setup'
 
 const MERMAID_ALIASES = new Set(['mermaid', 'mmd'])
 let mermaidRenderSequence = 0
@@ -57,7 +58,7 @@ const getErrorMessage = (error: unknown) => {
 const createMermaidPlaceholder = () => {
   const placeholder = document.createElement('div')
   placeholder.className = 'milkdown-mermaid-preview'
-  placeholder.textContent = 'Loading diagram...'
+  placeholder.textContent = i18n.t('preview.mermaidLoading')
   return placeholder
 }
 

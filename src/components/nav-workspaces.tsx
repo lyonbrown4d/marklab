@@ -13,6 +13,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
+import { useI18n } from '@/i18n/useI18n'
 
 export const NavWorkspaces = ({
   workspaces,
@@ -26,9 +27,11 @@ export const NavWorkspaces = ({
     }[]
   }[]
 }) => {
+  const { t } = useI18n()
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Workspaces</SidebarGroupLabel>
+      <SidebarGroupLabel>{t('nav.workspaces')}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {workspaces.map((workspace) => (
@@ -45,11 +48,17 @@ export const NavWorkspaces = ({
                     className="left-2 bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:rotate-90"
                     showOnHover
                   >
-                    <ChevronRight />
+                    <ChevronRight aria-hidden="true" />
+                    <span className="sr-only">
+                      {t('nav.workspaceToggle', { name: workspace.name })}
+                    </span>
                   </SidebarMenuAction>
                 </CollapsibleTrigger>
                 <SidebarMenuAction showOnHover>
-                  <Plus />
+                  <Plus aria-hidden="true" />
+                  <span className="sr-only">
+                    {t('nav.workspaceAddPage', { name: workspace.name })}
+                  </span>
                 </SidebarMenuAction>
                 <CollapsibleContent>
                   <SidebarMenuSub>
@@ -71,7 +80,7 @@ export const NavWorkspaces = ({
           <SidebarMenuItem>
             <SidebarMenuButton className="text-sidebar-foreground/70">
               <MoreHorizontal />
-              <span>More</span>
+              <span>{t('nav.workspaceMore')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

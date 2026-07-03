@@ -145,7 +145,7 @@ const TitlebarCommandDialog = ({
       <CommandList>
         <CommandEmpty>
           <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
-            <SearchX className="h-5 w-5 text-muted-foreground" />
+            <SearchX className="size-5 text-muted-foreground" />
             <p className="text-sm text-foreground">{emptyQueryLabel}</p>
             <p className="text-xs text-muted-foreground">{emptyDescription}</p>
           </div>

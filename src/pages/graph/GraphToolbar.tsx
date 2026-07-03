@@ -114,7 +114,7 @@ export const GraphToolbar = ({
         variant="outline"
         size="sm"
         className="flex flex-wrap items-center justify-start gap-1"
-        aria-label="Graph node kind filters"
+        aria-label={t('graph.filterGroup')}
         onValueChange={updateKinds}
       >
         {filterItems.map((item) => {

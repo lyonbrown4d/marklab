@@ -84,6 +84,20 @@ describe('ScmPanel', () => {
     await i18n.changeLanguage('en-US')
   })
 
+  it('shows a single-file source-control empty state without querying Git', () => {
+    renderPanel({ rootKind: 'single', rootPath: 'D:/notes/README.md' })
+
+    expect(screen.getByRole('region', { name: 'Source Control' })).toBeInTheDocument()
+    expect(screen.getByText('Source control is unavailable for a single file')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Open a project folder to initialize Git, inspect changes, and commit files.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Refresh Git status' })).not.toBeInTheDocument()
+    expect(gitApi.getStatus).not.toHaveBeenCalled()
+  })
+
   it('names the collapsed source-control action with the current change count', async () => {
     const user = userEvent.setup()
     vi.mocked(gitApi.getStatus).mockResolvedValue(

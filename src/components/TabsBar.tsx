@@ -298,7 +298,7 @@ const TabsBarComponent = ({
         >
           <div
             role="tablist"
-            aria-label="Open files"
+            aria-label={t('tabs.openFiles')}
             className="inline-flex h-8 w-max min-w-full justify-start"
             onKeyDown={handleTabListKeyDown}
           >

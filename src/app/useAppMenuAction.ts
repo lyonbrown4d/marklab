@@ -6,6 +6,7 @@ import type { useAppLayoutState } from '@/app/useAppLayoutState'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { themeFromActionId, themeModeFromActionId } from '@/logic/themes'
 import { toast } from 'sonner'
+import { useI18n } from '@/i18n/useI18n'
 import { executeFocusedEditCommand } from '@/app/focusedEditCommand'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -16,6 +17,7 @@ type UseAppMenuActionArgs = {
 }
 
 export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
+  const { t } = useI18n()
   const setImmersiveZenMode = usePreferencesStore((state) => state.setImmersiveZenMode)
   const setImmersiveFocusMode = usePreferencesStore((state) => state.setImmersiveFocusMode)
   const setImmersiveTypewriterMode = usePreferencesStore(
@@ -70,7 +72,7 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
             activePath,
           })
         })().catch((err) => {
-          toast.error('Export failed', {
+          toast.error(t('appMenu.exportFailed'), {
             description: String(err),
           })
         })
@@ -103,7 +105,7 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       }
       if (id === 'help.about') {
         toast('marklab', {
-          description: 'A desktop Markdown workspace with graph navigation.',
+          description: t('appMenu.aboutDescription'),
         })
       }
     },
@@ -113,6 +115,7 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       setImmersiveTypewriterMode,
       setImmersiveZenMode,
       stateRef,
+      t,
     ],
   )
 }

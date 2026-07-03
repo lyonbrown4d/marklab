@@ -13,6 +13,22 @@ vi.mock('@/runtime/events', () => ({
   listen: runtimeMocks.listen,
 }))
 
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const labels: Record<string, string> = {
+        'statusCenter.terminalExited': 'Terminal exited',
+        'statusCenter.terminalExitedCode': `Terminal exited with code ${options?.code ?? ''}`,
+        'statusCenter.terminalExitedSignal': `Terminal exited by ${options?.signal ?? ''}`,
+        'statusCenter.terminalOutput': `Terminal output: ${options?.text ?? ''}`,
+        'statusCenter.terminalOutputReceived': 'Terminal output received',
+      }
+
+      return labels[key] ?? key
+    },
+  }),
+}))
+
 vi.mock('@/services/terminalEventStreams', async () => {
   const { Subject } = await vi.importActual<typeof import('rxjs')>('rxjs')
 

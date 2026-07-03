@@ -61,7 +61,15 @@ const SidebarExplorerPanel = ({
   const [rootCreateKind, setRootCreateKind] = useState<RootCreateKind | null>(null)
   const filterInputRef = useRef<HTMLInputElement | null>(null)
   const readonlyTree = rootKind === 'single'
-  const hasVisibleFiles = useMemo(() => filterTree(fileTree, filter).length > 0, [fileTree, filter])
+  const visibleTree = useMemo(() => filterTree(fileTree, filter), [fileTree, filter])
+  const hasVisibleFiles = visibleTree.length > 0
+  const emptyMessage = readonlyTree
+    ? fileTree.length > 0
+      ? t('sidebar.noSearchResults')
+      : t('sidebar.singleFileEmpty')
+    : filter.trim().length > 0
+      ? t('sidebar.noSearchResults')
+      : t('sidebar.noProjectLoaded')
   const labels = useMemo(
     () => ({
       open: t('context.open'),
@@ -122,7 +130,7 @@ const SidebarExplorerPanel = ({
                 {t('sidebar.files')}
               </div>
               <div className="mt-0.5 text-[11px] font-normal normal-case tracking-normal text-muted-foreground">
-                {readonlyTree ? t('sidebar.localWorkspace') : t('sidebar.recentProjects')}
+                {readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.recentProjects')}
               </div>
             </div>
           </div>
@@ -149,6 +157,11 @@ const SidebarExplorerPanel = ({
           </TooltipProvider>
         </SidebarGroupLabel>
         <SidebarGroupContent className="flex min-h-0 flex-1 flex-col gap-2">
+          {readonlyTree && (
+            <div className="rounded-md border border-sidebar-border/70 bg-background/50 px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+              {t('sidebar.singleFileReadonlyHint')}
+            </div>
+          )}
           <div className="relative">
             <Search
               aria-hidden="true"
@@ -159,6 +172,7 @@ const SidebarExplorerPanel = ({
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
               placeholder={t('sidebar.search')}
+              aria-label={t('sidebar.search')}
               className="h-8 rounded-md border-sidebar-border bg-background/70 pl-7 text-xs shadow-sm transition-colors focus-visible:border-ring"
             />
           </div>
@@ -166,7 +180,7 @@ const SidebarExplorerPanel = ({
           <div className="min-h-0 flex-1 overflow-hidden pr-1">
             {!hasVisibleFiles ? (
               <div className="rounded-md border border-dashed border-sidebar-border/70 bg-background/40 px-2 py-3 text-xs text-muted-foreground">
-                {t('sidebar.noProjectLoaded')}
+                {emptyMessage}
               </div>
             ) : (
               <SidebarFileTree

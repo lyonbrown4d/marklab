@@ -51,7 +51,7 @@ export const RightSidebarPropertiesPanel = ({
       {!displayMetadata ? (
         <div className="text-xs text-muted-foreground">{t('inspector.none')}</div>
       ) : (
-        <div className="space-y-2 text-xs">
+        <div className="flex flex-col gap-2 text-xs">
           <div className="grid grid-cols-2 gap-2">
             <PropertyCell label={t('status.lines')} value={documentStats.lines} />
             <PropertyCell label={t('status.words')} value={documentStats.words} />

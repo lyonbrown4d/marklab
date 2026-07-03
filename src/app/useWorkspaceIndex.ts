@@ -5,9 +5,11 @@ import type { FileEntry } from '@/store/appTypes'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { toast } from 'sonner'
+import { useI18n } from '@/i18n/useI18n'
 
 export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const desktopAvailable = isDesktopRuntime()
   const entriesKey = useMemo(
     () => entries.map((entry) => `${entry.kind}:${entry.path}`).join('\n'),
@@ -29,7 +31,7 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
       const parsed = fsBufferStatusSchema.safeParse(event.payload)
       if (!parsed.success) return
       void queryClient.invalidateQueries({ queryKey: ['workspace-index'] }).catch((error) => {
-        toast.error('Failed to refresh workspace index', {
+        toast.error(t('workspaceIndex.refreshFailed'), {
           description: String(error),
         })
       })
@@ -45,7 +47,7 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
       cancelled = true
       unlisten?.()
     }
-  }, [enabled, queryClient, desktopAvailable])
+  }, [enabled, queryClient, desktopAvailable, t])
 
   return query.data ?? null
 }

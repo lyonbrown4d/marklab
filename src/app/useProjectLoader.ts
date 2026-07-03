@@ -219,12 +219,12 @@ export const useProjectLoader = ({
           await loadWorkspace({ preserveCurrentRoute: false })
         })
       } catch (error) {
-        toast.error('Failed to open path', {
+        toast.error(t('projectLoader.openPathFailed'), {
           description: `${path}\n${errorMessage(error)}`,
         })
       }
     },
-    [loadWorkspace, touchRecentProject],
+    [loadWorkspace, t, touchRecentProject],
   )
 
   const onSelectFolder = useCallback(async () => {
@@ -240,7 +240,7 @@ export const useProjectLoader = ({
         }
       })
     } catch (error) {
-      toast.error('Failed to select folder', {
+      toast.error(t('projectLoader.selectFolderFailed'), {
         description: errorMessage(error),
       })
     }
@@ -265,7 +265,7 @@ export const useProjectLoader = ({
         }
       })
     } catch (error) {
-      toast.error('Failed to select file', {
+      toast.error(t('projectLoader.selectFileFailed'), {
         description: errorMessage(error),
       })
     }
@@ -278,11 +278,11 @@ export const useProjectLoader = ({
         await loadWorkspace({ preserveCurrentRoute: false })
       })
     } catch (error) {
-      toast.error('Failed to open local workspace', {
+      toast.error(t('projectLoader.openLocalWorkspaceFailed'), {
         description: errorMessage(error),
       })
     }
-  }, [loadWorkspace])
+  }, [loadWorkspace, t])
 
   const createFile = useCallback(async (path: string) => {
     await runInDesktop(async () => {

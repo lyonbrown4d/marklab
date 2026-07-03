@@ -38,7 +38,7 @@ const CommandRecentFilesSection = ({
           value={`recent open file ${file.label} ${file.path}`}
           onSelect={() => onOpenFile(file.path)}
         >
-          <FileClock className="h-4 w-4" />
+          <FileClock className="size-4" />
           <span className="min-w-0">
             <span className="block truncate">{file.label}</span>
             <span className="block truncate text-[11px] text-muted-foreground">{file.path}</span>

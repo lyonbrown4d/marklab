@@ -30,7 +30,7 @@ const CustomThemesSettingsSection = () => {
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          toast.error('Failed to load custom themes', {
+          toast.error(t('settings.customThemesLoadFailed'), {
             description: String(error),
           })
         }
@@ -38,7 +38,7 @@ const CustomThemesSettingsSection = () => {
     return () => {
       cancelled = true
     }
-  }, [customThemesSupported])
+  }, [customThemesSupported, t])
 
   const refreshCustomThemes = async () => {
     if (!customThemesSupported) return
@@ -54,11 +54,25 @@ const CustomThemesSettingsSection = () => {
       const nextTheme = await userThemeApi.importCss(path)
       setCustomThemeId(nextTheme.id)
       await refreshCustomThemes()
-      toast.success('Custom theme imported', {
+      toast.success(t('settings.customThemeImported'), {
         description: nextTheme.name,
       })
     } catch (error) {
-      toast.error('Failed to import custom theme', {
+      toast.error(t('settings.customThemeImportFailed'), {
+        description: String(error),
+      })
+    } finally {
+      setThemeBusy(false)
+    }
+  }
+
+  const openCustomThemesFolder = async () => {
+    if (!customThemesSupported || themeBusy) return
+    setThemeBusy(true)
+    try {
+      await userThemeApi.openFolder()
+    } catch (error) {
+      toast.error(t('settings.openThemesFolderFailed'), {
         description: String(error),
       })
     } finally {
@@ -73,9 +87,9 @@ const CustomThemesSettingsSection = () => {
       await userThemeApi.remove(themeId)
       if (customThemeId === themeId) setCustomThemeId(null)
       await refreshCustomThemes()
-      toast.success('Custom theme removed')
+      toast.success(t('settings.customThemeRemoved'))
     } catch (error) {
-      toast.error('Failed to remove custom theme', {
+      toast.error(t('settings.customThemeRemoveFailed'), {
         description: String(error),
       })
     } finally {
@@ -105,7 +119,7 @@ const CustomThemesSettingsSection = () => {
           size="sm"
           variant="outline"
           disabled={!customThemesSupported || themeBusy}
-          onClick={() => void userThemeApi.openFolder()}
+          onClick={() => void openCustomThemesFolder()}
         >
           <FolderOpen data-icon="inline-start" />
           {t('settings.openThemesFolder')}
@@ -121,32 +135,39 @@ const CustomThemesSettingsSection = () => {
       </div>
       {customThemesSupported && customThemes.length > 0 ? (
         <div className="settings-theme-list flex flex-col gap-2">
-          {customThemes.map((item) => (
-            <div
-              key={item.id}
-              className="settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5"
-            >
-              <button
-                type="button"
-                className="settings-theme-item-trigger min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left text-sm"
-                onClick={() => setCustomThemeId(item.id)}
+          {customThemes.map((item) => {
+            const removeLabel = t('settings.removeCustomTheme', { name: item.name })
+            return (
+              <div
+                key={item.id}
+                className="settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5"
               >
-                <span className="block truncate font-medium">{item.name}</span>
-                <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
-              </button>
-              {customThemeId === item.id && <Check className="settings-theme-check" />}
-              <SettingsIconButton
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                disabled={themeBusy}
-                onClick={() => void removeCustomTheme(item.id)}
-              >
-                <Trash2 />
-              </SettingsIconButton>
-            </div>
-          ))}
+                <button
+                  type="button"
+                  className="settings-theme-item-trigger min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left text-sm"
+                  onClick={() => setCustomThemeId(item.id)}
+                >
+                  <span className="block truncate font-medium">{item.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
+                </button>
+                {customThemeId === item.id && (
+                  <Check className="settings-theme-check" aria-hidden="true" />
+                )}
+                <SettingsIconButton
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  disabled={themeBusy}
+                  aria-label={removeLabel}
+                  title={removeLabel}
+                  onClick={() => void removeCustomTheme(item.id)}
+                >
+                  <Trash2 />
+                </SettingsIconButton>
+              </div>
+            )
+          })}
         </div>
       ) : (
         <SettingsEmptyState className="px-3 py-4 text-left">

@@ -1,10 +1,10 @@
 import type { editor as MonacoEditor } from 'monaco-editor'
+import i18n from '@/i18n/setup'
 
 type MonacoModule = typeof import('monaco-editor')
 type Disposable = { dispose: () => void }
 
 const LINK_DECORATION_MAX_CHARS = 500_000
-const LINK_TARGET_HINT = 'Ctrl/Cmd click to open. Hover for preview. F2 on headings to rename.'
 
 export const registerMarkdownLinkDecorations = (
   monaco: MonacoModule,
@@ -30,7 +30,7 @@ export const registerMarkdownLinkDecorations = (
         range: new monaco.Range(range.line, range.startColumn, range.line, range.endColumn),
         options: {
           inlineClassName: 'marklab-source-link-target',
-          hoverMessage: { value: LINK_TARGET_HINT },
+          hoverMessage: { value: i18n.t('editor.sourceLinkHint') },
         },
       })),
     )

@@ -53,7 +53,7 @@ const SearchResultPreview = ({ result, compact = false }: SearchResultPreviewPro
   const Icon = compact ? Search : FileSearch
   return (
     <>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-medium">{result.title}</span>
         <span className="block truncate text-[11px] text-muted-foreground">

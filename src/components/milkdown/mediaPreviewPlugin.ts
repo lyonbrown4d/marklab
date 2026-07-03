@@ -9,6 +9,7 @@ import MarkdownMediaPreview, {
   type MarkdownMediaPreviewKind,
 } from '@/components/milkdown/MarkdownMediaPreview'
 import { markdownMediaKindForTarget } from '@/components/milkdown/markdownMediaSource'
+import { useI18n } from '@/i18n/useI18n'
 
 type MediaPreviewPluginOptions = {
   getDocumentPath: () => string | null
@@ -44,6 +45,7 @@ const ResolvedMediaPreview = ({
   resolveMediaSrc,
   title,
 }: ResolvedMediaPreviewProps) => {
+  const { t } = useI18n()
   const sourceKey = `${documentPath ?? ''}\u0000${href}`
   const [resolvedSource, setResolvedSource] = useState<{
     failed: boolean
@@ -85,7 +87,7 @@ const ResolvedMediaPreview = ({
           'rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground shadow-sm',
         contentEditable: false,
       },
-      failed ? '媒体预览不可用' : '正在加载媒体预览...',
+      failed ? t('preview.inlineFailed') : t('preview.inlineLoading'),
     )
   }
 

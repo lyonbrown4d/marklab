@@ -37,6 +37,12 @@ beforeEach(async () => {
 })
 
 describe('TabsBar', () => {
+  it('labels the open files tablist from i18n', () => {
+    renderTabsBar()
+
+    expect(screen.getByRole('tablist', { name: 'Open files' })).toBeInTheDocument()
+  })
+
   it('shows a compact unsaved indicator when visible save state is enabled', () => {
     renderTabsBar({
       silentSave: false,

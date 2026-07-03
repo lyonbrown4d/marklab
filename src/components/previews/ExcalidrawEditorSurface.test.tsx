@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ExcalidrawEditorSurface from '@/components/previews/ExcalidrawEditorSurface'
 
@@ -12,6 +12,23 @@ vi.mock('@/services/fsApi', () => ({
     readFile: vi.fn(),
     updateBuffer: vi.fn(),
   },
+}))
+
+const messages: Record<string, string> = {
+  'preview.excalidrawLoading': 'Loading whiteboard...',
+  'preview.excalidrawOpenFailedTitle': 'Unable to open whiteboard',
+  'preview.excalidrawOpenFallback': 'Unable to open Excalidraw document',
+  'preview.excalidrawReadOnly': 'Read only',
+  'preview.excalidrawSaved': 'Saved',
+  'preview.excalidrawSave': 'Save',
+  'preview.excalidrawSaveFailedFallback': 'Unable to save Excalidraw document',
+  'preview.excalidrawUnsaved': 'Unsaved changes',
+}
+
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => messages[key] ?? key,
+  }),
 }))
 
 vi.mock('@excalidraw/excalidraw', async () => {
@@ -58,6 +75,20 @@ const renderSurface = () => {
 }
 
 describe('ExcalidrawEditorSurface', () => {
+  beforeEach(() => {
+    vi.mocked(fsApi.flushBuffers).mockReset()
+    vi.mocked(fsApi.readFile).mockReset()
+    vi.mocked(fsApi.updateBuffer).mockReset()
+  })
+
+  it('uses localized loading status while opening a scene', () => {
+    vi.mocked(fsApi.readFile).mockReturnValue(new Promise(() => {}))
+
+    renderSurface()
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading whiteboard...')
+  })
+
   it('loads a scene and persists explicit saves', async () => {
     vi.mocked(fsApi.readFile).mockResolvedValue('{"type":"excalidraw","version":2,"elements":[]}')
     vi.mocked(fsApi.updateBuffer).mockResolvedValue({
@@ -70,7 +101,9 @@ describe('ExcalidrawEditorSurface', () => {
     renderSurface()
 
     fireEvent.click(await screen.findByTestId('excalidraw-editor'))
-    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(fsApi.updateBuffer).toHaveBeenCalledWith(

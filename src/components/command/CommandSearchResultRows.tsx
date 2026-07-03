@@ -125,7 +125,7 @@ const FileResultRow = ({
     value={kind === 'title-file' ? `${file.label} ${file.path}` : `${file.path} ${file.label}`}
     onSelect={() => onOpenFile(file.path)}
   >
-    <FileText className="h-4 w-4" />
+    <FileText className="size-4" />
     <span className="min-w-0 flex-1">
       <span className="block truncate">{kind === 'title-file' ? file.label : file.path}</span>
       <span className="block truncate text-[11px] text-muted-foreground">
@@ -157,7 +157,7 @@ export const CommandResultRowItem = ({
         value={`${heading.text} ${heading.slug} ${heading.path}`}
         onSelect={() => onOpenHeading(heading.path, heading.slug)}
       >
-        <ListTree className="h-4 w-4" />
+        <ListTree className="size-4" />
         <span className="min-w-0 flex-1">
           <span className="block truncate">
             {'#'.repeat(Math.min(heading.level, 6))} {heading.text}

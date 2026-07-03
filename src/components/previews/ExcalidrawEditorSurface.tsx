@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
 import { fsApi } from '@/services/fsApi'
+import { useI18n } from '@/i18n/useI18n'
 
 import { parseExcalidrawDocument } from '@/components/previews/excalidrawDocument'
 
@@ -18,14 +19,15 @@ type ExcalidrawEditorSurfaceProps = {
 type ExcalidrawChangeHandler = NonNullable<ComponentProps<typeof Excalidraw>['onChange']>
 type ExcalidrawInitialData = ComponentProps<typeof Excalidraw>['initialData']
 
-const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'Unable to open Excalidraw document'
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback
 
 const ExcalidrawEditorSurface = ({
   path,
   readonly = false,
   title,
 }: ExcalidrawEditorSurfaceProps) => {
+  const { t } = useI18n()
   const latestContentRef = useRef<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,17 +60,20 @@ const ExcalidrawEditorSurface = ({
       await fsApi.flushBuffers()
       setDirty(false)
     } catch (error) {
-      setSaveError(errorMessage(error))
+      setSaveError(errorMessage(error, t('preview.excalidrawSaveFailedFallback')))
     } finally {
       setSaving(false)
     }
-  }, [documentQuery.data?.content, path, readonly])
+  }, [documentQuery.data?.content, path, readonly, t])
 
   if (documentQuery.isLoading) {
     return (
-      <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading whiteboard...
+      <div
+        className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
+        role="status"
+      >
+        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+        {t('preview.excalidrawLoading')}
       </div>
     )
   }
@@ -77,8 +82,10 @@ const ExcalidrawEditorSurface = ({
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="max-w-md rounded-lg border bg-card p-4 text-sm text-card-foreground shadow-sm">
-          <div className="font-medium">Unable to open whiteboard</div>
-          <div className="mt-2 text-muted-foreground">{errorMessage(documentQuery.error)}</div>
+          <div className="font-medium">{t('preview.excalidrawOpenFailedTitle')}</div>
+          <div className="mt-2 text-muted-foreground">
+            {errorMessage(documentQuery.error, t('preview.excalidrawOpenFallback'))}
+          </div>
         </div>
       </div>
     )
@@ -90,12 +97,20 @@ const ExcalidrawEditorSurface = ({
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-foreground">{title}</div>
           <div className="text-xs text-muted-foreground">
-            {readonly ? 'Read only' : dirty ? 'Unsaved changes' : 'Saved'}
+            {readonly
+              ? t('preview.excalidrawReadOnly')
+              : dirty
+                ? t('preview.excalidrawUnsaved')
+                : t('preview.excalidrawSaved')}
           </div>
         </div>
         <Button size="sm" onClick={handleSave} disabled={readonly || !dirty || saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save
+          {saving ? (
+            <Loader2 className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Save data-icon="inline-start" />
+          )}
+          {t('preview.excalidrawSave')}
         </Button>
       </div>
       {saveError && (
