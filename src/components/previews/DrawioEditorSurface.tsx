@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Save, ShieldAlert } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import {
   createDrawioLoadMessage,
   createDrawioSaveRequestMessage,
@@ -15,7 +15,9 @@ import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
 import AppAlert from '@/components/AppAlert'
 import AppEmptyState from '@/components/AppEmptyState'
-import { Badge } from '@/components/ui/badge'
+import DrawioEditorToolbar, {
+  type DrawioEditorSaveState,
+} from '@/components/previews/DrawioEditorToolbar'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -25,8 +27,6 @@ type DrawioEditorSurfaceProps = {
   title: string
 }
 
-type SaveState = 'clean' | 'dirty' | 'error' | 'saving'
-
 const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps) => {
   const { t } = useI18n()
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
@@ -35,7 +35,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
   const drawioEmbedUrl = useDrawioSettingsStore((state) => state.drawioEmbedUrl)
   const embedUrl = useMemo(() => resolveDrawioEmbedUrl(drawioEmbedUrl), [drawioEmbedUrl])
   const [frameReady, setFrameReady] = useState(false)
-  const [saveState, setSaveState] = useState<SaveState>('clean')
+  const [saveState, setSaveState] = useState<DrawioEditorSaveState>('clean')
   const [message, setMessage] = useState<string | null>(null)
   const remoteEnabled = drawioEditorMode === 'remote' && embedUrl.ok
 
@@ -178,52 +178,30 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
   const loadingLabel = documentQuery.isLoading
     ? t('preview.drawioLoadingDocument')
     : t('preview.drawioLoadingEditor')
+  const toolbarMessage =
+    message ??
+    (documentQuery.isLoading || !frameReady
+      ? t('preview.drawioLoadingEditor')
+      : t('preview.drawioSaved'))
 
   return (
     <div className="flex h-full min-h-[32rem] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border/80 bg-background/80 px-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{t('preview.drawioEditorDescription')}</div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {message ??
-              (documentQuery.isLoading || !frameReady
-                ? t('preview.drawioLoadingEditor')
-                : t('preview.drawioSaved'))}
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {readonly ? (
-            <Badge variant="outline" className="gap-1 rounded-md font-normal">
-              <ShieldAlert data-icon="inline-start" />
-              {t('preview.drawioReadOnly')}
-            </Badge>
-          ) : (
-            <Badge
-              variant="secondary"
-              className="rounded-md font-normal"
-              data-save-state={saveState}
-            >
-              {saveState === 'dirty'
-                ? t('preview.drawioUnsaved')
-                : saveState === 'saving'
-                  ? t('preview.drawioSaving')
-                  : saveState === 'error'
-                    ? t('preview.failed')
-                    : t('preview.drawioSaved')}
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1.5"
-            disabled={readonly || !frameReady || documentQuery.isLoading}
-            onClick={() => postToFrame(createDrawioSaveRequestMessage())}
-          >
-            <Save data-icon="inline-start" />
-            {t('preview.drawioSave')}
-          </Button>
-        </div>
-      </div>
+      <DrawioEditorToolbar
+        description={t('preview.drawioEditorDescription')}
+        disabled={readonly || !frameReady || documentQuery.isLoading}
+        message={toolbarMessage}
+        onSave={() => postToFrame(createDrawioSaveRequestMessage())}
+        readonly={readonly}
+        readOnlyLabel={t('preview.drawioReadOnly')}
+        saveLabel={t('preview.drawioSave')}
+        saveState={saveState}
+        saveStateLabels={{
+          clean: t('preview.drawioSaved'),
+          dirty: t('preview.drawioUnsaved'),
+          error: t('preview.failed'),
+          saving: t('preview.drawioSaving'),
+        }}
+      />
 
       {documentQuery.isError ? (
         <DrawioInlineError message={t('preview.failed')} />
