@@ -17,7 +17,7 @@ the React editor and typed runtime boundary explicit.
 - React 19 + Vite + TypeScript
 - Electron desktop runtime
 - vite-plugin-electron for Electron main/preload integration
-- Lexical, Monaco, CodeMirror 6
+- Milkdown, Monaco
 - React Flow, Zustand, Radix UI, Tailwind CSS
 
 ## Development
@@ -42,6 +42,11 @@ pnpm build:desktop
 ## Electron Migration
 
 See [docs/electron-migration.md](docs/electron-migration.md).
+
+## Quality Gates
+
+See [docs/quality-gates.md](docs/quality-gates.md) for the change impact checklist, ownership
+boundaries, and desktop smoke checks used to prevent cross-boundary regressions.
 
 ## Build
 
