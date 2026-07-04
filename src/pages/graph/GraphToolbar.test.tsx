@@ -98,4 +98,25 @@ describe('GraphToolbar', () => {
 
     expect(onFiltersChange).toHaveBeenCalledWith(filters)
   })
+
+  it('announces filter counts and pressed state for graph filter chips', () => {
+    renderToolbar({
+      filters: {
+        ...filters,
+        kinds: {
+          ...filters.kinds,
+          heading: false,
+        },
+      },
+    })
+
+    expect(screen.getByRole('button', { name: 'Files (4)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Headings (6)' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
 })

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { cn } from '@/lib/utils'
 import {
   createDefaultGraphFilters,
   type GraphFilterKind,
@@ -85,7 +86,7 @@ const GraphToolbarComponent = ({
   }, [onFiltersChange])
 
   return (
-    <div className="pointer-events-auto absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs text-muted-foreground shadow-sm backdrop-blur md:max-w-[720px]">
+    <div className="graph-toolbar pointer-events-auto absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs text-muted-foreground shadow-sm backdrop-blur md:max-w-[720px]">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 md:w-60 md:flex-none">
           <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -125,18 +126,29 @@ const GraphToolbarComponent = ({
       >
         {filterItems.map((item) => {
           const Icon = item.icon
+          const count = stats[item.kind]
+          const isSelected = filters.kinds[item.kind]
+          const label = t(item.labelKey)
 
           return (
             <ToggleGroupItem
               key={item.kind}
               value={item.kind}
-              className="h-7 gap-1 border-transparent px-2 text-xs data-[state=off]:text-muted-foreground data-[state=on]:border-border data-[state=on]:bg-secondary data-[state=on]:text-secondary-foreground"
-              aria-label={t(item.labelKey)}
+              className={cn(
+                'graph-toolbar__filter h-7 min-w-0 gap-1 border-transparent px-2 text-xs data-[state=off]:text-muted-foreground data-[state=on]:border-border data-[state=on]:bg-secondary data-[state=on]:text-secondary-foreground',
+                count === 0 && 'graph-toolbar__filter--empty',
+              )}
+              aria-label={`${label} (${count})`}
+              aria-pressed={isSelected}
+              data-selected={isSelected ? 'true' : 'false'}
             >
-              <Icon data-icon="inline-start" />
-              {t(item.labelKey)}
-              <Badge variant="outline" className="h-4 rounded px-1 text-[10px] font-normal">
-                {stats[item.kind]}
+              <Icon aria-hidden="true" data-icon="inline-start" />
+              <span className="truncate">{label}</span>
+              <Badge
+                variant="outline"
+                className="graph-toolbar__filter-count h-4 rounded px-1 text-[10px] font-normal"
+              >
+                {count}
               </Badge>
             </ToggleGroupItem>
           )

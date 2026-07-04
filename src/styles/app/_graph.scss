@@ -143,6 +143,82 @@
   stroke-width: 2.15;
 }
 
+.graph-toolbar {
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
+}
+
+.graph-toolbar:focus-within {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 34%, hsl(var(--border)));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 12%, transparent),
+    0 10px 22px -18px color-mix(in srgb, hsl(var(--foreground)) 38%, transparent);
+}
+
+.graph-toolbar__filter {
+  position: relative;
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
+}
+
+.graph-toolbar__filter::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
+}
+
+.graph-toolbar__filter:hover,
+.graph-toolbar__filter:focus-visible {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.graph-toolbar__filter[data-state='on'],
+.graph-toolbar__filter[data-selected='true'] {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 20%, transparent),
+    0 6px 14px -14px color-mix(in srgb, hsl(var(--primary)) 48%, transparent);
+}
+
+.graph-toolbar__filter[data-state='on']::before,
+.graph-toolbar__filter[data-selected='true']::before {
+  opacity: 0.86;
+  transform: scale(1);
+}
+
+.graph-toolbar__filter-count {
+  background: hsl(var(--background) / 62%);
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease;
+}
+
+.graph-toolbar__filter[data-state='on'] .graph-toolbar__filter-count,
+.graph-toolbar__filter[data-selected='true'] .graph-toolbar__filter-count {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 24%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--primary)) 10%, hsl(var(--background)));
+  color: hsl(var(--foreground));
+}
+
+.graph-toolbar__filter--empty:not([data-state='on']):not([data-selected='true']) {
+  opacity: 0.72;
+}
+
 .react-flow__controls {
   overflow: hidden;
   border: 1px solid hsl(var(--border));
@@ -191,4 +267,17 @@
 
 .react-flow__controls-button svg {
   fill: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-toolbar,
+  .graph-toolbar__filter,
+  .graph-toolbar__filter::before {
+    transition: none;
+  }
+
+  .graph-toolbar__filter:hover,
+  .graph-toolbar__filter:focus-visible {
+    transform: none;
+  }
 }
