@@ -17,6 +17,10 @@
   --graph-node-accent: hsl(var(--primary));
 }
 
+.graph-node-shell--file {
+  --graph-node-accent: hsl(var(--primary));
+}
+
 .graph-node-shell--external {
   --graph-node-accent: hsl(45 93% 47%);
 }

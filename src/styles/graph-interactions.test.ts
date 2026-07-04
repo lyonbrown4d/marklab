@@ -17,4 +17,9 @@ describe('graph interaction styles', () => {
     expect(hoverRule).not.toContain('transform:')
     expect(hoverRule).not.toContain('translateY(-1px)')
   })
+
+  it('themes file graph nodes through the shared graph node shell', () => {
+    expect(graphStyles).toContain('.graph-node-shell--file')
+    expect(graphStyles).toContain('--graph-node-accent: hsl(var(--primary));')
+  })
 })

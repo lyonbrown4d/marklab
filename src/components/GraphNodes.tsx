@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
+type FileGraphNode = Node<GraphNodeData, 'file'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
 type PreviewGraphNode = Node<GraphNodeData, 'preview'>
@@ -37,6 +38,32 @@ export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNod
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <div className="truncate text-sm font-semibold">{data.label}</div>
+      {data.subtitle ? (
+        <Badge
+          variant="outline"
+          className="max-w-full self-start truncate px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+        >
+          {data.subtitle}
+        </Badge>
+      ) : null}
+    </div>
+  )
+})
+
+export const FileNode = memo(({ data, selected }: NodeProps<FileGraphNode>) => {
+  return (
+    <div
+      className={cn(
+        'graph-node-shell graph-node-shell--file flex w-[200px] cursor-pointer flex-col gap-1 rounded-md px-3 py-2',
+        selected && 'graph-node-shell--selected',
+      )}
+      data-graph-node-selected={selected}
+      data-graph-node-kind="file"
+      {...getGraphNodeA11yProps(data.label, selected)}
+    >
+      <Handle type="target" position={Position.Left} className={graphHandleClass} />
+      <Handle type="source" position={Position.Right} className={graphHandleClass} />
+      <div className="truncate text-sm font-semibold text-foreground">{data.label}</div>
       {data.subtitle ? (
         <Badge
           variant="outline"

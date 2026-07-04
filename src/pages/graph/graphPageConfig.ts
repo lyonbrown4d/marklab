@@ -1,5 +1,11 @@
 import type { Edge, Node, NodeTypes, ReactFlowInstance } from '@xyflow/react'
-import { ExternalNode, HeadingNode, MissingNode, PreviewNode } from '@/components/GraphNodes'
+import {
+  ExternalNode,
+  FileNode,
+  HeadingNode,
+  MissingNode,
+  PreviewNode,
+} from '@/components/GraphNodes'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
 
@@ -21,6 +27,7 @@ export type GraphFlowInstance = ReactFlowInstance<Node<GraphNodeData>, Edge> | n
 
 export const nodeTypes: NodeTypes = {
   external: ExternalNode,
+  file: FileNode,
   heading: HeadingNode,
   missing: MissingNode,
   preview: PreviewNode,

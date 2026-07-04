@@ -2,7 +2,7 @@ import { ReactFlowProvider } from '@xyflow/react'
 import { render, screen } from '@testing-library/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { ExternalNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
+import { ExternalNode, FileNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
 
 vi.mock('@/components/MarkdownBlockSurface', () => ({
   default: ({ blocks }: { blocks: Array<{ id: string }> }) => (
@@ -15,6 +15,9 @@ const renderGraphNode = (node: ReactNode) => render(<ReactFlowProvider>{node}</R
 const externalNodeProps = (props: Partial<ComponentProps<typeof ExternalNode>>) =>
   props as ComponentProps<typeof ExternalNode>
 
+const fileNodeProps = (props: Partial<ComponentProps<typeof FileNode>>) =>
+  props as ComponentProps<typeof FileNode>
+
 const missingNodeProps = (props: Partial<ComponentProps<typeof MissingNode>>) =>
   props as ComponentProps<typeof MissingNode>
 
@@ -22,6 +25,27 @@ const headingNodeProps = (props: Partial<ComponentProps<typeof HeadingNode>>) =>
   props as ComponentProps<typeof HeadingNode>
 
 describe('GraphNodes', () => {
+  it('renders file graph nodes with the themed shell instead of React Flow defaults', () => {
+    renderGraphNode(
+      <FileNode
+        {...fileNodeProps({
+          data: {
+            label: 'current.md',
+            subtitle: 'notes/current.md',
+            path: 'notes/current.md',
+          },
+          selected: true,
+        })}
+      />,
+    )
+
+    const node = screen.getByRole('group', { name: 'current.md' })
+    expect(node).toHaveAttribute('data-graph-node-kind', 'file')
+    expect(node).toHaveAttribute('aria-current', 'true')
+    expect(node).toHaveClass('w-[200px]', 'graph-node-shell--file', 'graph-node-shell--selected')
+    expect(screen.getByText('notes/current.md')).toHaveClass('truncate', 'text-muted-foreground')
+  })
+
   it('renders external graph nodes with stable layout, metadata, and selected state', () => {
     renderGraphNode(
       <ExternalNode

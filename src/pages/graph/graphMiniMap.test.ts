@@ -17,6 +17,7 @@ describe('graphMiniMap', () => {
   })
 
   it('uses semantic theme tokens for minimap node colors', () => {
+    expect(getMiniMapNodeColor(node('file'))).toBe('hsl(var(--primary))')
     expect(getMiniMapNodeColor(node('heading'))).toBe('hsl(var(--primary))')
     expect(getMiniMapNodeColor(node('missing'))).toBe('hsl(var(--destructive))')
     expect(getMiniMapNodeColor(node('external'))).toBe('hsl(var(--status-warning))')

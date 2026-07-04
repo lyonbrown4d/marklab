@@ -40,6 +40,14 @@ describe('buildGraphFromWorkspaceIndex', () => {
     expect(graph.nodes.map((node) => node.id)).toEqual(
       expect.arrayContaining(['file:notes/current.md', 'heading:notes/target.md:details']),
     )
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'file:notes/current.md',
+          type: 'file',
+        }),
+      ]),
+    )
     expect(graph.edges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -85,6 +93,10 @@ describe('buildGraphFromWorkspaceIndex', () => {
 
     expect(graph.nodes).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          id: 'file:notes/current.md',
+          type: 'file',
+        }),
         expect.objectContaining({
           id: 'heading:notes/current.md:intro',
           type: 'heading',

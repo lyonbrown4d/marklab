@@ -55,6 +55,7 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
     const label = createFileLabel(file.path)
     fileNodes.set(file.path, {
       id: `file:${file.path}`,
+      type: 'file',
       data: { label, path: file.path },
       position: { x: 0, y: 0 },
     })
@@ -186,7 +187,7 @@ export const buildGraphFromRustGraph = (
   const includeContent = contentMode !== 'none'
   const nodes: Node<GraphNodeData>[] = graph.nodes.map((node) => ({
     id: node.id,
-    type: node.kind === 'file' ? undefined : node.kind,
+    type: node.kind,
     data: {
       label: node.label,
       subtitle:
@@ -273,8 +274,7 @@ const applyDagreLayout = (
 
   nodes.forEach((node) => {
     const layoutNode = graph.node(node.id) as
-      | ({ x: number; y: number } & ReturnType<typeof getNodeSize>)
-      | undefined
+      ({ x: number; y: number } & ReturnType<typeof getNodeSize>) | undefined
     const size = getNodeSize(node)
     node.position = layoutNode
       ? {
