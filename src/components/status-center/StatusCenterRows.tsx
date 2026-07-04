@@ -1,4 +1,6 @@
 import { useId, type ReactNode } from 'react'
+import { CircleMinus } from 'lucide-react'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
 
 type SectionProps = {
@@ -23,12 +25,21 @@ export const Section = ({ children, title }: SectionProps) => {
 }
 
 export const EmptyState = ({ label }: { label: string }) => (
-  <div
-    className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs leading-5 text-muted-foreground"
+  <Empty
+    className="min-h-10 flex-none items-stretch gap-0 rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-left md:p-2"
     role="note"
   >
-    {label}
-  </div>
+    <EmptyHeader className="max-w-none flex-row items-center justify-start gap-2 text-left">
+      <EmptyMedia
+        aria-hidden="true"
+        className="mb-0 size-6 rounded-md text-muted-foreground [&_svg:not([class*='size-'])]:size-3.5"
+        variant="icon"
+      >
+        <CircleMinus />
+      </EmptyMedia>
+      <EmptyDescription className="truncate text-xs leading-5">{label}</EmptyDescription>
+    </EmptyHeader>
+  </Empty>
 )
 
 type StatusRowProps = {

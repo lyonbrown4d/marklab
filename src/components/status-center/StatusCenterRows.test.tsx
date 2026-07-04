@@ -23,8 +23,13 @@ describe('StatusCenterRows', () => {
   })
 
   it('renders empty states as notes instead of color-only rows', () => {
-    render(<EmptyState label="No background tasks" />)
+    const { container } = render(<EmptyState label="No background tasks" />)
 
     expect(screen.getByRole('note')).toHaveTextContent('No background tasks')
+    expect(container.querySelector('[data-slot="empty"]')).toHaveAttribute('role', 'note')
+    expect(container.querySelector('[data-slot="empty-icon"]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
   })
 })
