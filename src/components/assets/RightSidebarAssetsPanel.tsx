@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ImageOff } from 'lucide-react'
+import AppAlert from '@/components/AppAlert'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -93,9 +94,9 @@ export const RightSidebarAssetsPanel = ({ report }: RightSidebarAssetsPanelProps
         </div>
 
         {error && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
+          <AppAlert tone="destructive" className="px-2 py-1.5 text-[11px]">
             {error}
-          </div>
+          </AppAlert>
         )}
 
         {!report.indexed ? (
