@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/i18n/useI18n'
+import AppAlert from '@/components/AppAlert'
 import { fetchPreviewAssetBlob } from '@/components/previews/localAssetSource'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 
@@ -89,13 +90,15 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
         </div>
       ) : null}
       {failed ? (
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/90 p-6 text-center text-sm text-muted-foreground">
-          <div>
-            <div>{t('preview.docxFailed')}</div>
-            {renderState.message ? (
-              <div className="mt-2 max-w-md break-words text-xs">{renderState.message}</div>
-            ) : null}
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/90 p-6">
+          <AppAlert
+            tone="destructive"
+            title={t('preview.docxFailed')}
+            className="max-w-md"
+            descriptionClassName="break-words text-xs"
+          >
+            {renderState.message}
+          </AppAlert>
         </div>
       ) : null}
     </div>
