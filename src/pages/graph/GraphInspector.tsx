@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import type { GraphNodeDetails } from '@/logic/graphViewModel'
 
@@ -63,52 +64,56 @@ export const GraphInspector = ({ details, onOpenPath, t }: GraphInspectorProps) 
           </div>
         </CardHeader>
 
-        <CardContent className="min-h-0 overflow-hidden p-3 pt-0">
-          <div className="flex flex-col gap-2 text-xs">
-            {details.path ? <Property label={t('graph.path')} value={details.path} /> : null}
-            {details.url ? <Property label={t('graph.url')} value={details.url} /> : null}
-            {details.level ? (
-              <Property label={t('graph.level')} value={`H${details.level}`} />
+        <CardContent className="min-h-0 flex-1 p-0">
+          <ScrollArea className="h-full" viewportClassName="p-3 pt-0">
+            <div className="flex flex-col gap-2 text-xs">
+              {details.path ? <Property label={t('graph.path')} value={details.path} /> : null}
+              {details.url ? <Property label={t('graph.url')} value={details.url} /> : null}
+              {details.level ? (
+                <Property label={t('graph.level')} value={`H${details.level}`} />
+              ) : null}
+              {details.line ? (
+                <Property label={t('graph.line')} value={`L${details.line}`} />
+              ) : null}
+            </div>
+
+            {details.kind === 'preview' && details.path ? (
+              <>
+                <Separator className="my-3" />
+                <EmbeddedFilePreview
+                  className="border-border/70 shadow-none"
+                  documentPath={null}
+                  target={details.path}
+                  title={details.label}
+                />
+              </>
             ) : null}
-            {details.line ? <Property label={t('graph.line')} value={`L${details.line}`} /> : null}
-          </div>
 
-          {details.kind === 'preview' && details.path ? (
-            <>
-              <Separator className="my-3" />
-              <EmbeddedFilePreview
-                className="border-border/70 shadow-none"
-                documentPath={null}
-                target={details.path}
-                title={details.label}
+            {details.content ? (
+              <>
+                <Separator className="my-3" />
+                <div className="line-clamp-4 text-xs leading-5 text-muted-foreground">
+                  {details.content}
+                </div>
+              </>
+            ) : null}
+
+            <Separator className="my-3" />
+            <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden">
+              <ConnectionList
+                icon="incoming"
+                label={t('graph.incoming')}
+                emptyLabel={t('graph.noConnections')}
+                details={details}
               />
-            </>
-          ) : null}
-
-          {details.content ? (
-            <>
-              <Separator className="my-3" />
-              <div className="line-clamp-4 text-xs leading-5 text-muted-foreground">
-                {details.content}
-              </div>
-            </>
-          ) : null}
-
-          <Separator className="my-3" />
-          <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden">
-            <ConnectionList
-              icon="incoming"
-              label={t('graph.incoming')}
-              emptyLabel={t('graph.noConnections')}
-              details={details}
-            />
-            <ConnectionList
-              icon="outgoing"
-              label={t('graph.outgoing')}
-              emptyLabel={t('graph.noConnections')}
-              details={details}
-            />
-          </div>
+              <ConnectionList
+                icon="outgoing"
+                label={t('graph.outgoing')}
+                emptyLabel={t('graph.noConnections')}
+                details={details}
+              />
+            </div>
+          </ScrollArea>
         </CardContent>
 
         {details.openPath ? (
@@ -175,25 +180,27 @@ const ConnectionList = ({ details, emptyLabel, icon, label }: ConnectionListProp
           {emptyLabel}
         </div>
       ) : (
-        <div className="flex max-h-40 flex-col gap-1 overflow-hidden">
+        <ul className="flex max-h-40 flex-col gap-1 overflow-hidden" aria-label={label}>
           {visibleConnections.map((connection) => (
-            <div
+            <li
               key={connection.edge.id}
               className="truncate rounded-md bg-muted/45 px-2 py-1.5 text-xs text-foreground/85"
               title={connection.node.data.label}
             >
               {connection.node.data.label}
-            </div>
+            </li>
           ))}
           {hiddenConnectionCount > 0 ? (
-            <Badge
-              variant="secondary"
-              className="h-6 justify-center rounded-md px-2 text-[11px] font-normal"
-            >
-              +{hiddenConnectionCount}
-            </Badge>
+            <li>
+              <Badge
+                variant="secondary"
+                className="h-6 w-full justify-center rounded-md px-2 text-[11px] font-normal"
+              >
+                +{hiddenConnectionCount}
+              </Badge>
+            </li>
           ) : null}
-        </div>
+        </ul>
       )}
     </div>
   )

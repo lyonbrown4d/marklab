@@ -96,9 +96,28 @@ describe('GraphInspector', () => {
       />,
     )
 
-    expect(screen.getByText('Source 1')).toBeInTheDocument()
+    expect(screen.getByText('Source 1').closest('li')).toBeInTheDocument()
     expect(screen.queryByText('Source 5')).not.toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'graph.incoming' })).toBeInTheDocument()
     expect(screen.getByLabelText('graph.incoming: 6')).toBeInTheDocument()
     expect(screen.getByText('+2')).toBeInTheDocument()
+  })
+
+  it('keeps selected node details in a scrollable inspector body', () => {
+    const { container } = render(
+      <GraphInspector
+        details={{
+          ...previewDetails,
+          content: 'A long preview summary that should stay inside the inspector body.',
+        }}
+        onOpenPath={vi.fn()}
+        t={t}
+      />,
+    )
+
+    expect(container.querySelector('.motion-scroll-viewport')).toBeInTheDocument()
+    expect(
+      screen.getByText('A long preview summary that should stay inside the inspector body.'),
+    ).toBeInTheDocument()
   })
 })
