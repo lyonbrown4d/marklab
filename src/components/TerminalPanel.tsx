@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Loader2, Plus, RotateCcw, Terminal as TerminalIcon, X } from 'lucide-react'
+import { AlertTriangle, Plus, RotateCcw, Terminal as TerminalIcon, X } from 'lucide-react'
 import TerminalSessionPane, {
   type TerminalRuntimeState,
   type TerminalStatus,
 } from '@/components/terminal/TerminalSessionPane'
 import { shellName } from '@/components/terminal/terminalTheme'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
@@ -42,7 +43,13 @@ const createTerminalTab = (index: number): TerminalTab => {
 
 const TerminalStatusIcon = ({ status }: { status: TerminalStatus }) => {
   if (status === 'connecting') {
-    return <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+    return (
+      <Spinner
+        aria-hidden="true"
+        role="presentation"
+        className="size-3.5 shrink-0 text-muted-foreground"
+      />
+    )
   }
   if (status === 'error') {
     return <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
