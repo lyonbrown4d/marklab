@@ -2,11 +2,17 @@ import type { Crepe } from '@milkdown/crepe'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view'
 import type { ReactNodeViewUserOptions } from '@prosemirror-adapter/react'
+import { createMarkdownBlockNodeViews } from '@/components/milkdown/blockNodeViews'
+import { createMarkdownHeadingNodeView } from '@/components/milkdown/headingNodeView'
 import { createMarkdownImageNodeView } from '@/components/milkdown/imageNodeView'
+import { createMarkdownParagraphNodeView } from '@/components/milkdown/paragraphNodeView'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { embeddedPreviewPlugin } from '@/components/milkdown/embeddedPreviewPlugin'
-import { enableMarklabEditorEnhancements } from '@/components/milkdown/markdownEditorMode'
+import {
+  enableMarklabEditorEnhancements,
+  enableMarklabEditorSharedBlockViews,
+} from '@/components/milkdown/markdownEditorMode'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 
 export type NodeViewFactory = (options: ReactNodeViewUserOptions) => NodeViewConstructor
@@ -36,6 +42,18 @@ export const configureMarkdownCrepe = (
       })
     })
     .use(listener)
+
+  if (enableMarklabEditorSharedBlockViews) {
+    const sharedNodeViews = [
+      createMarkdownHeadingNodeView(nodeViewFactory),
+      createMarkdownParagraphNodeView(nodeViewFactory),
+      ...createMarkdownBlockNodeViews(nodeViewFactory),
+    ]
+
+    sharedNodeViews.forEach((nodeView) => {
+      crepe.editor.use(nodeView)
+    })
+  }
 
   if (enableMarklabEditorEnhancements) {
     crepe.editor

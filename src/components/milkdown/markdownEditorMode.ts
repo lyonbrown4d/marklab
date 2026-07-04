@@ -1,5 +1,6 @@
 export const markdownEditorMode = 'playground' as const
 
+export const enableMarklabEditorSharedBlockViews = true
 export const enableMarklabEditorEnhancements = false
 export const enableMarklabEditorImageDrop = false
 export const enableMarklabEditorOuterShortcuts = false
