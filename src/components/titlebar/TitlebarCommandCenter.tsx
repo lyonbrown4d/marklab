@@ -3,6 +3,7 @@ import { Search } from 'lucide-react'
 import { TitlebarActiveTabBadge } from '@/components/titlebar/TitlebarActiveTabBadge'
 import { Button } from '@/components/ui/button'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
+import { Separator } from '@/components/ui/separator'
 import { useI18n } from '@/i18n/useI18n'
 
 type TitlebarTabRecord = Record<string, unknown>
@@ -80,7 +81,7 @@ export const TitlebarCommandCenter = ({
                 unsavedLabel={t('tabs.unsaved')}
                 errorLabel={t('tabs.error')}
               />
-              <span className="hidden h-4 w-px shrink-0 bg-border/80 lg:block" />
+              <Separator orientation="vertical" className="hidden h-4 bg-border/80 lg:block" />
             </>
           ) : null}
           <Search aria-hidden="true" data-icon="inline-start" />
