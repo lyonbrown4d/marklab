@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { detectPlatform, useHotkeyRecorder } from '@tanstack/react-hotkeys'
+import AppAlert from '@/components/AppAlert'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { formatShortcutList, type ShortcutActionId, type ShortcutBindings } from '@/logic/shortcuts'
@@ -59,10 +60,13 @@ const ShortcutRecorderRow = ({
           : t('shortcuts.default')}
       </span>
       {hasConflict && (
-        <span className="settings-shortcut-conflict flex items-start gap-1.5" role="alert">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-          <span>{conflictDescription}</span>
-        </span>
+        <AppAlert
+          tone="destructive"
+          className="settings-shortcut-conflict px-2 py-1.5 text-xs"
+          icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
+        >
+          {conflictDescription}
+        </AppAlert>
       )}
     </span>
   )

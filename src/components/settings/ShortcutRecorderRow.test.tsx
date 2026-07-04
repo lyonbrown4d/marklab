@@ -111,7 +111,10 @@ describe('ShortcutRecorderRow', () => {
       overrides: {} as ShortcutBindings,
     })
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Conflicts with Toggle Terminal')
+    const conflict = screen.getByRole('alert')
+
+    expect(conflict).toHaveTextContent('Conflicts with Toggle Terminal')
+    expect(conflict).toHaveClass('settings-shortcut-conflict', 'text-destructive')
     expect(
       screen.getByRole('button', { name: 'Open Command Palette, Clear shortcut' }),
     ).toBeDisabled()
