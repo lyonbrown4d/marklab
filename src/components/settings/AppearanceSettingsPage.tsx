@@ -12,6 +12,7 @@ import CustomThemesSettingsSection from '@/components/settings/CustomThemesSetti
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
 import { darkThemes, lightThemes } from '@/logic/themes'
+import { cn } from '@/lib/utils'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const locales: Array<{ value: Locale; labelKey: string }> = [
@@ -128,7 +129,9 @@ export default AppearanceSettingsPage
 
 const ThemePreview = ({ swatchClass }: { swatchClass: string }) => {
   return (
-    <span className={`theme-swatch ${swatchClass} block h-9 w-12 shrink-0 overflow-hidden rounded`}>
+    <span
+      className={cn('theme-swatch block h-9 w-12 shrink-0 overflow-hidden rounded', swatchClass)}
+    >
       <span className="theme-swatch-preview relative block h-full w-full">
         <span className="absolute inset-y-0 left-0 w-4 bg-[var(--swatch-rail)]" />
         <span className="absolute left-5 top-2 h-1.5 w-5 rounded-full bg-[var(--swatch-accent)]" />

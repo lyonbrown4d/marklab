@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Button } from '@/components/ui/button'
 import { InspectorEmptyState, ProblemGroupHeader } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import { CheckCircle2, CircleAlert, CircleX, FileText } from 'lucide-react'
 
@@ -16,7 +17,7 @@ type RightSidebarProblemsPanelProps = {
 }
 
 const problemClasses = (severity: MarkdownSourceDiagnostic['severity']) => {
-  return severity === 'error' ? 'text-destructive' : 'text-amber-500'
+  return severity === 'error' ? 'text-destructive' : 'text-status-warning'
 }
 
 type ProblemListItem =
@@ -101,7 +102,7 @@ export const RightSidebarProblemsPanel = ({
         />
       ) : problems.length === 0 ? (
         <InspectorEmptyState
-          icon={<CheckCircle2 className="size-4 text-emerald-500" />}
+          icon={<CheckCircle2 className="size-4 text-status-success" />}
           title={t('inspector.noProblems')}
           description={targetLabel}
         />
@@ -151,7 +152,7 @@ type ProblemRowProps = {
 
 const ProblemRow = ({ problem, onOpenProblem }: ProblemRowProps) => {
   const { t } = useI18n()
-  const iconClassName = `size-4 shrink-0 ${problemClasses(problem.severity)}`
+  const iconClassName = cn('size-4 shrink-0', problemClasses(problem.severity))
 
   return (
     <Button

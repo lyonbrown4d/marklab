@@ -10,7 +10,7 @@ type PanelProps = {
 }
 
 export const Panel = ({ title, subtitle, children }: PanelProps) => (
-  <Card className="gap-3 py-5">
+  <Card className="gap-3 border-border/70 bg-card/80 py-5 shadow-none">
     <CardHeader className="px-5">
       <CardTitle className="text-sm">{title}</CardTitle>
       <CardDescription className="text-xs">{subtitle}</CardDescription>
@@ -29,7 +29,7 @@ type QuickButtonProps = {
 export const QuickButton = ({ children, disabled, icon, onClick }: QuickButtonProps) => (
   <Button
     variant="secondary"
-    className="h-auto min-h-12 cursor-pointer justify-start rounded-lg p-4 text-left"
+    className="h-auto min-h-12 cursor-pointer justify-start rounded-md p-4 text-left transition-colors duration-150"
     disabled={disabled}
     onClick={onClick}
   >
@@ -47,7 +47,7 @@ type ListButtonProps = {
 export const ListButton = ({ children, onClick }: ListButtonProps) => (
   <Button
     variant="ghost"
-    className="h-auto min-h-11 cursor-pointer justify-start rounded-lg px-3 py-2 text-left"
+    className="h-auto min-h-11 cursor-pointer justify-start rounded-md px-3 py-2 text-left transition-colors duration-150"
     onClick={onClick}
   >
     {children}
@@ -55,7 +55,7 @@ export const ListButton = ({ children, onClick }: ListButtonProps) => (
 )
 
 export const EmptyBlock = ({ children }: { children: ReactNode }) => (
-  <div className="flex min-h-24 items-center rounded-lg border border-dashed border-border/80 bg-muted/20 px-4 py-3 text-sm leading-6 text-muted-foreground">
+  <div className="flex min-h-24 items-center rounded-md border border-dashed border-border/80 bg-muted/20 px-4 py-3 text-sm leading-6 text-muted-foreground">
     {children}
   </div>
 )

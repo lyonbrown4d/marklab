@@ -14,7 +14,7 @@ export const TitlebarIconButton = forwardRef<ElementRef<typeof Button>, Titlebar
         variant={variant}
         size={size}
         className={cn(
-          'chrome-button size-8 rounded-md text-muted-foreground hover:text-foreground',
+          'chrome-button size-8 rounded-md text-muted-foreground hover:bg-muted/70 hover:text-foreground active:bg-muted',
           className,
         )}
         {...props}

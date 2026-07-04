@@ -12,6 +12,7 @@ import {
   navigationMissingLinkToSearchResult,
 } from '@/components/titlebar/titlebarCommandNavigation'
 import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
+import { cn } from '@/lib/utils'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 
@@ -114,7 +115,10 @@ const Titlebar = ({
 
   return (
     <header
-      className={`app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5 ${isMacDesktop ? 'pl-[76px]' : ''}`}
+      className={cn(
+        'app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5',
+        isMacDesktop && 'pl-[76px]',
+      )}
       onMouseDown={handleTitlebarMouseDown}
     >
       <TooltipProvider>

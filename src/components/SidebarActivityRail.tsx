@@ -51,10 +51,11 @@ const ActivityButton = ({
           variant="ghost"
           size="icon"
           className={cn(
-            'relative size-9 rounded-lg text-sidebar-foreground/65 transition-colors',
+            'relative size-9 rounded-lg text-sidebar-foreground/65 transition-colors duration-150',
             'hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
             'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
-            active && 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm',
+            active &&
+              'bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-sidebar-border/80',
           )}
           aria-current={active ? 'page' : undefined}
           aria-label={label}
@@ -70,7 +71,7 @@ const ActivityButton = ({
           />
           <Icon aria-hidden="true" />
           {badge ? (
-            <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-3.5 min-w-3.5 rounded-full px-1 text-[9px] leading-none shadow-sm">
+            <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-3.5 min-w-3.5 rounded-full px-1 text-[9px] leading-none shadow-sm shadow-background/40">
               {badge > 99 ? '99' : badge}
             </Badge>
           ) : null}
@@ -123,7 +124,7 @@ const SidebarActivityRail = ({
 
   return (
     <TooltipProvider delayDuration={180}>
-      <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-sidebar-border/80 bg-sidebar/95 py-1.5">
+      <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-sidebar-border/80 bg-sidebar py-1.5">
         <ActivityButton
           active={false}
           icon={Home}

@@ -30,11 +30,11 @@ export const RightSidebarSummary = ({
 
   return (
     <section
-      className="sticky top-1 shrink-0 rounded-lg border border-sidebar-border/70 bg-sidebar/95 p-2 shadow-sm backdrop-blur"
+      className="sticky top-1 shrink-0 rounded-lg border border-sidebar-border/80 bg-sidebar/90 p-2"
       aria-label={t('inspector.title')}
     >
       <div className="flex min-w-0 items-start gap-2">
-        <div className="grid size-8 shrink-0 place-items-center rounded-md border border-sidebar-border bg-background/75 text-primary">
+        <div className="grid size-8 shrink-0 place-items-center rounded-md border border-sidebar-border bg-background/70 text-primary">
           <FileText className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -46,7 +46,7 @@ export const RightSidebarSummary = ({
             {targetPath ?? t('editor.empty')}
           </div>
         </div>
-        <Badge variant="secondary" className="rounded px-2 py-0.5 text-[10px]">
+        <Badge variant="secondary" className="rounded px-2 py-0.5 text-[10px] font-medium">
           {viewMode === 'graph'
             ? t('tabs.workspaceGraph')
             : activePath

@@ -28,7 +28,7 @@ const AppEmptyState = ({
 }: AppEmptyStateProps) => (
   <Empty
     className={cn(
-      'border border-dashed border-border/80 bg-muted/20',
+      'rounded-lg border border-dashed border-border/80 bg-muted/20',
       compact ? 'min-h-20 gap-3 p-4 md:p-4' : 'min-h-48',
       className,
     )}

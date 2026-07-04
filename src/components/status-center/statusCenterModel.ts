@@ -52,16 +52,16 @@ export const formatExportLabel = (task: ExportTaskEntry, t?: Translate) => {
 }
 
 export const getTaskToneClass = (status: BackgroundTaskStatus['status']) => {
-  if (status === 'running') return 'bg-sky-500'
+  if (status === 'running') return 'bg-status-info'
   if (status === 'error') return 'bg-destructive'
   return 'bg-muted-foreground/45'
 }
 
 export const getSaveToneClass = (status: SaveState['status']) => {
-  if (status === 'saving') return 'bg-sky-500'
+  if (status === 'saving') return 'bg-status-info'
   if (status === 'error') return 'bg-destructive'
-  if (status === 'unsaved') return 'bg-amber-500'
-  return 'bg-emerald-500'
+  if (status === 'unsaved') return 'bg-status-warning'
+  return 'bg-status-success'
 }
 
 export const summarizeTerminalOutput = (event: TerminalOutputEvent, t?: Translate) => {

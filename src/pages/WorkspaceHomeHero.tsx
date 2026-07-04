@@ -35,9 +35,9 @@ const WorkspaceHomeHero = ({
   const { t } = useI18n()
 
   return (
-    <Card className="gap-0 overflow-hidden py-0">
+    <Card className="gap-0 overflow-hidden border-border/80 bg-card/90 py-0 shadow-none">
       <CardContent className="relative p-6 md:p-8">
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-primary/10 to-transparent md:block" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-24 border-l border-primary/10 bg-primary/5 md:block" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 max-w-2xl">
             <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ const WorkspaceHomeHero = ({
                 ? t('workspaceHome.singleDescription')
                 : t('workspaceHome.description')}
             </p>
-            <div className="mt-4 rounded-lg border border-border/80 bg-muted/30 p-4 text-xs leading-5 text-muted-foreground">
+            <div className="mt-4 rounded-md border border-border/80 bg-muted/30 p-4 text-xs leading-5 text-muted-foreground">
               <span className="block font-medium text-foreground">{workspaceName}</span>
               <span className="break-all">{workspacePath}</span>
             </div>

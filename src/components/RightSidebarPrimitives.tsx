@@ -20,7 +20,7 @@ export const InspectorMetric = ({
   )
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-sidebar-accent/50">
+    <div className="flex min-w-0 items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 transition-colors duration-150 hover:border-sidebar-border/60 hover:bg-sidebar-accent/45">
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">{label}</span>
       <span className={cn('shrink-0 text-xs font-semibold tabular-nums', toneClass)}>{value}</span>
@@ -38,8 +38,8 @@ export const InspectorEmptyState = ({
   description: string
 }) => {
   return (
-    <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-sidebar-border/80 bg-sidebar/35 px-4 text-center">
-      <div className="mb-2 rounded-md border border-sidebar-border bg-background/75 p-2 text-muted-foreground">
+    <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-sidebar-border/80 bg-sidebar/40 px-4 text-center">
+      <div className="mb-2 rounded-md border border-sidebar-border bg-background/70 p-2 text-muted-foreground">
         {icon}
       </div>
       <div className="text-xs font-medium">{title}</div>

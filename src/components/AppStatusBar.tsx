@@ -198,7 +198,7 @@ const AppStatusBar = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="inline-flex min-w-0 items-center gap-1.5 text-amber-600"
+                    className="inline-flex min-w-0 items-center gap-1.5 text-status-warning"
                     role="status"
                     title={restoreStatusMessage}
                   >
@@ -232,18 +232,18 @@ const AppStatusBar = ({
         </div>
         <div className="flex min-w-0 items-center justify-end gap-2" aria-live="polite">
           {dirtyCount > 0 && (
-            <span className="hidden shrink-0 text-amber-600 md:inline">
+            <span className="hidden shrink-0 text-status-warning md:inline">
               {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
             </span>
           )}
           {activeSaveState?.status === 'saving' && (
-            <span className="hidden shrink-0 text-sky-600 sm:inline">{t('save.saving')}</span>
+            <span className="hidden shrink-0 text-status-info sm:inline">{t('save.saving')}</span>
           )}
           {activeSaveState?.status === 'error' && (
             <span className="hidden shrink-0 text-destructive sm:inline">{t('save.error')}</span>
           )}
           {assetSyncPending > 0 && (
-            <span className="hidden shrink-0 items-center gap-1.5 text-sky-600 sm:inline-flex">
+            <span className="hidden shrink-0 items-center gap-1.5 text-status-info sm:inline-flex">
               <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
               {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
             </span>
@@ -284,7 +284,7 @@ const AppStatusBar = ({
           {activeSaveState?.status === 'saved' && (
             <CheckCircle2
               aria-hidden="true"
-              className="hidden size-3.5 shrink-0 text-emerald-600 sm:block"
+              className="hidden size-3.5 shrink-0 text-status-success sm:block"
             />
           )}
         </div>

@@ -161,7 +161,7 @@ const WorkspaceTabButton = memo(
         {isDirty && (
           <span
             aria-label={dirtyLabel}
-            className="size-1.5 rounded-full bg-amber-500"
+            className="size-1.5 rounded-full bg-status-warning"
             title={dirtyLabel}
           />
         )}

@@ -171,10 +171,10 @@ const WorkspaceHomePage = () => {
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.label} className="gap-0 py-0">
+            <Card key={stat.label} className="gap-0 border-border/70 bg-card/80 py-0 shadow-none">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="rounded-lg bg-muted p-2">{stat.icon}</div>
+                  <div className="rounded-md bg-muted p-2">{stat.icon}</div>
                   <div className="text-right text-xs uppercase tracking-[0.16em] text-muted-foreground">
                     {stat.label}
                   </div>
