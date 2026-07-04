@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/i18n/useI18n'
 
 export type MarkdownMediaPreviewKind = 'audio' | 'video'
@@ -62,9 +63,9 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-foreground">
+            <Badge variant="secondary" className="shrink-0 rounded px-2 py-0.5 text-[10px]">
               {mediaBadges[kind]}
-            </span>
+            </Badge>
             <span className="truncate text-sm font-medium">{displayTitle}</span>
           </div>
           <div className="mt-1 truncate text-xs text-muted-foreground" title={href}>

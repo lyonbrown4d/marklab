@@ -27,6 +27,7 @@ describe('MarkdownMediaPreview', () => {
       <MarkdownMediaPreview href="audio/missing.mp3" kind="audio" src="" title="Missing audio" />,
     )
 
+    expect(screen.getByText('AUDIO')).toHaveClass('bg-secondary', 'text-secondary-foreground')
     expect(screen.getAllByText('Audio preview is unavailable').length).toBeGreaterThan(0)
     expect(screen.getByRole('status')).toHaveTextContent('Audio preview is unavailable')
   })
