@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FilePlus2, Files, FolderPlus, Search } from 'lucide-react'
+import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,11 +64,12 @@ const SidebarExplorerPanel = ({
   const readonlyTree = rootKind === 'single'
   const visibleTree = useMemo(() => filterTree(fileTree, filter), [fileTree, filter])
   const hasVisibleFiles = visibleTree.length > 0
+  const hasFilter = filter.trim().length > 0
   const emptyMessage = readonlyTree
     ? fileTree.length > 0
       ? t('sidebar.noSearchResults')
       : t('sidebar.singleFileEmpty')
-    : filter.trim().length > 0
+    : hasFilter
       ? t('sidebar.noSearchResults')
       : t('sidebar.noProjectLoaded')
   const labels = useMemo(
@@ -100,6 +102,7 @@ const SidebarExplorerPanel = ({
   const rootCreateTitle = rootCreateKind === 'file' ? labels.newFile : labels.newFolder
   const rootCreateDescription =
     rootCreateKind === 'file' ? labels.newFilePrompt : labels.newFolderPrompt
+  const emptyIcon = hasFilter ? <Search /> : <Files />
 
   const handleRootCreate = (path: string) => {
     if (rootCreateKind === 'file') {
@@ -179,9 +182,16 @@ const SidebarExplorerPanel = ({
           <Separator className="bg-sidebar-border/70" />
           <div className="min-h-0 flex-1 overflow-hidden pr-1">
             {!hasVisibleFiles ? (
-              <div className="rounded-md border border-dashed border-sidebar-border/70 bg-background/40 px-2 py-3 text-xs text-muted-foreground">
-                {emptyMessage}
-              </div>
+              <AppEmptyState
+                compact
+                className="min-h-28 flex-none border-sidebar-border/70 bg-background/40 px-3 py-4 md:p-4"
+                icon={emptyIcon}
+                mediaClassName="mb-0 size-8 border border-sidebar-border bg-background/80 text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
+                role="status"
+                title={emptyMessage}
+                titleClassName="text-[11px] font-normal text-muted-foreground"
+                titleLevel={3}
+              />
             ) : (
               <SidebarFileTree
                 nodes={fileTree}

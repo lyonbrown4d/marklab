@@ -106,7 +106,18 @@ describe('SidebarExplorerPanel', () => {
       target: { value: 'missing' },
     })
 
-    expect(screen.getByText('No matching files.')).toBeInTheDocument()
+    const empty = screen.getByRole('status')
+    expect(empty).toHaveTextContent('No matching files.')
+    expect(empty.querySelector('[data-slot="empty-icon"]')).toBeInTheDocument()
     expect(screen.queryByText('No project loaded.')).not.toBeInTheDocument()
+  })
+
+  it('uses a shared empty state when no project file tree is loaded', () => {
+    render(<SidebarExplorerPanel {...createProps({ fileCount: 0, fileTree: [] })} />)
+
+    const empty = screen.getByRole('status')
+    expect(empty).toHaveTextContent('No project loaded.')
+    expect(empty).toHaveAttribute('data-slot', 'empty')
+    expect(screen.queryByTestId('file-tree')).not.toBeInTheDocument()
   })
 })
