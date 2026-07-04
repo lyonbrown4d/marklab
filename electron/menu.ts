@@ -94,6 +94,17 @@ const actionItem = (
     click: () => sendMenuAction(window, id, dispatch),
   }
 }
+
+const editRoleItem = (
+  label: string,
+  role: NonNullable<MenuItemConstructorOptions['role']>,
+  accelerator?: string,
+): MenuItemConstructorOptions => ({
+  label,
+  role,
+  accelerator,
+})
+
 export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActionDispatcher) => {
   installedMenu = { dispatch, mainWindow }
   const labels = getNativeMenuLabels(getCurrentMenuLocale())
@@ -141,20 +152,18 @@ export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActi
   const editMenu: MenuItemConstructorOptions = {
     label: labels.edit.label,
     submenu: [
-      actionItem(mainWindow, 'edit.undo', labels.edit.undo, 'CmdOrCtrl+Z', dispatch),
-      actionItem(
-        mainWindow,
-        'edit.redo',
+      editRoleItem(labels.edit.undo, 'undo', 'CmdOrCtrl+Z'),
+      editRoleItem(
         labels.edit.redo,
+        'redo',
         process.platform === 'darwin' ? 'Shift+Cmd+Z' : 'Ctrl+Y',
-        dispatch,
       ),
       { type: 'separator' },
-      actionItem(mainWindow, 'edit.cut', labels.edit.cut, 'CmdOrCtrl+X', dispatch),
-      actionItem(mainWindow, 'edit.copy', labels.edit.copy, 'CmdOrCtrl+C', dispatch),
-      actionItem(mainWindow, 'edit.paste', labels.edit.paste, 'CmdOrCtrl+V', dispatch),
+      editRoleItem(labels.edit.cut, 'cut', 'CmdOrCtrl+X'),
+      editRoleItem(labels.edit.copy, 'copy', 'CmdOrCtrl+C'),
+      editRoleItem(labels.edit.paste, 'paste', 'CmdOrCtrl+V'),
       { type: 'separator' },
-      actionItem(mainWindow, 'edit.select_all', labels.edit.selectAll, 'CmdOrCtrl+A', dispatch),
+      editRoleItem(labels.edit.selectAll, 'selectAll', 'CmdOrCtrl+A'),
     ],
   }
   const viewMenu: MenuItemConstructorOptions = {

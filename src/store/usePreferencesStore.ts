@@ -7,6 +7,7 @@ import {
   type ShortcutBindings,
 } from '@/logic/shortcuts'
 import { isDarkThemeMode } from '@/logic/themes'
+import { areStringArraysEqual, type PreferencesPersistedState } from '@/store/preferencesPersist'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 import type {
@@ -38,6 +39,7 @@ export type PreferencesState = {
   rightSidebarCollapsed: boolean
   silentSave: boolean
   showEditorStatusBar: boolean
+  sourceCodeMiniMapEnabled: boolean
   defaultFileView: FileViewKind
   graphMiniMapEnabled: boolean
   graphContentMode: GraphContentMode
@@ -59,6 +61,7 @@ export type PreferencesState = {
   setLocale: (locale: AppLocale) => void
   setSilentSave: (silent: boolean) => void
   setShowEditorStatusBar: (show: boolean) => void
+  setSourceCodeMiniMapEnabled: (enabled: boolean) => void
   setDefaultFileView: (view: FileViewKind) => void
   setGraphMiniMapEnabled: (enabled: boolean) => void
   setGraphContentMode: (mode: GraphContentMode) => void
@@ -75,32 +78,6 @@ export type PreferencesState = {
   toggleRightSidebar: () => void
 }
 
-type PreferencesPersistedState = Pick<
-  PreferencesState,
-  | 'autoSystemThemeSync'
-  | 'customThemeId'
-  | 'defaultFileView'
-  | 'graphContentMode'
-  | 'graphMiniMapEnabled'
-  | 'immersiveFocusMode'
-  | 'immersiveTypewriterMode'
-  | 'immersiveZenMode'
-  | 'locale'
-  | 'markdownAssetImportStrategy'
-  | 'motionAnimatedCursor'
-  | 'motionAnimatedPanels'
-  | 'motionSmoothScrolling'
-  | 'rightSidebarCollapsed'
-  | 'shortcutOverrides'
-  | 'showEditorStatusBar'
-  | 'sidebarCollapsed'
-  | 'silentSave'
-  | 'theme'
-  | 'themeMode'
-  | 'lightTheme'
-  | 'darkTheme'
->
-
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({
@@ -115,6 +92,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       rightSidebarCollapsed: false,
       silentSave: true,
       showEditorStatusBar: true,
+      sourceCodeMiniMapEnabled: true,
       defaultFileView: 'edit',
       graphMiniMapEnabled: true,
       graphContentMode: 'summary',
@@ -187,6 +165,12 @@ export const usePreferencesStore = create<PreferencesState>()(
       setShowEditorStatusBar: (showEditorStatusBar) =>
         set((state) =>
           state.showEditorStatusBar === showEditorStatusBar ? state : { showEditorStatusBar },
+        ),
+      setSourceCodeMiniMapEnabled: (sourceCodeMiniMapEnabled) =>
+        set((state) =>
+          state.sourceCodeMiniMapEnabled === sourceCodeMiniMapEnabled
+            ? state
+            : { sourceCodeMiniMapEnabled },
         ),
       setDefaultFileView: (defaultFileView) =>
         set((state) => (state.defaultFileView === defaultFileView ? state : { defaultFileView })),
@@ -279,6 +263,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         rightSidebarCollapsed: state.rightSidebarCollapsed,
         silentSave: state.silentSave,
         showEditorStatusBar: state.showEditorStatusBar,
+        sourceCodeMiniMapEnabled: state.sourceCodeMiniMapEnabled,
         defaultFileView: state.defaultFileView,
         graphMiniMapEnabled: state.graphMiniMapEnabled,
         graphContentMode: state.graphContentMode,
@@ -294,8 +279,3 @@ export const usePreferencesStore = create<PreferencesState>()(
     },
   ),
 )
-
-const areStringArraysEqual = (left: string[], right: string[]) => {
-  if (left.length !== right.length) return false
-  return left.every((value, index) => value === right[index])
-}

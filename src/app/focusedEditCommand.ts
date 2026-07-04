@@ -1,10 +1,7 @@
+import { executeFocusedCodeEditorCommand, isCodeEditorElement } from '@/lib/focusedCodeEditor'
+
 type FocusedEditAction =
-  | 'edit.undo'
-  | 'edit.redo'
-  | 'edit.cut'
-  | 'edit.copy'
-  | 'edit.paste'
-  | 'edit.select_all'
+  'edit.undo' | 'edit.redo' | 'edit.cut' | 'edit.copy' | 'edit.paste' | 'edit.select_all'
 
 const editCommandByAction: Record<FocusedEditAction, string> = {
   'edit.undo': 'undo',
@@ -21,8 +18,14 @@ export const executeFocusedEditCommand = (
 ) => {
   if (!doc || !isFocusedEditAction(action)) return false
 
+  if (isCodeEditorElement(doc.activeElement)) {
+    return executeFocusedCodeEditorCommand(action)
+  }
+
   const target = findFocusedEditableTarget(doc)
-  if (!target) return false
+  if (!target) {
+    return isDocumentShellFocus(doc.activeElement) ? executeFocusedCodeEditorCommand(action) : false
+  }
 
   if (action === 'edit.select_all') {
     return selectEditableTarget(target, doc)
@@ -52,6 +55,12 @@ const isElement = (element: Element | null): element is HTMLElement => {
   if (!element) return false
   const view = element.ownerDocument.defaultView
   return view ? element instanceof view.HTMLElement : element instanceof HTMLElement
+}
+
+const isDocumentShellFocus = (element: Element | null) => {
+  if (!element) return true
+  const tagName = element.tagName.toLowerCase()
+  return tagName === 'body' || tagName === 'html'
 }
 
 const isEditableTarget = (element: HTMLElement) => {

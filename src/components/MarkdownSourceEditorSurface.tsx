@@ -14,6 +14,7 @@ type MarkdownSourceEditorSurfaceProps = {
   monacoReady: boolean
   motionAnimatedCursor: boolean
   motionSmoothScrolling: boolean
+  sourceCodeMiniMapEnabled: boolean
   loadingLabel: string
   value: string
   onChange: (value: string) => void
@@ -30,6 +31,7 @@ export const MarkdownSourceEditorSurface = ({
   monacoReady,
   motionAnimatedCursor,
   motionSmoothScrolling,
+  sourceCodeMiniMapEnabled,
   loadingLabel,
   value,
   onChange,
@@ -64,7 +66,7 @@ export const MarkdownSourceEditorSurface = ({
         onChange={(next) => onChange(next ?? '')}
         onMount={onMount}
         options={{
-          minimap: { enabled: false },
+          minimap: { enabled: sourceCodeMiniMapEnabled },
           wordWrap: 'on',
           tabSize: 2,
           scrollBeyondLastLine: false,

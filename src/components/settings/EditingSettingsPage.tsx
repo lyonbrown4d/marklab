@@ -14,12 +14,30 @@ const EditingSettingsPage = () => {
   const setMotionSmoothScrolling = usePreferencesStore((state) => state.setMotionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
   const setMotionAnimatedCursor = usePreferencesStore((state) => state.setMotionAnimatedCursor)
+  const sourceCodeMiniMapEnabled = usePreferencesStore((state) => state.sourceCodeMiniMapEnabled)
+  const setSourceCodeMiniMapEnabled = usePreferencesStore(
+    (state) => state.setSourceCodeMiniMapEnabled,
+  )
   const motionAnimatedPanels = usePreferencesStore((state) => state.motionAnimatedPanels)
   const setMotionAnimatedPanels = usePreferencesStore((state) => state.setMotionAnimatedPanels)
 
   return (
     <SettingsPageStack>
       <ImmersiveSettingsSection />
+
+      <SettingsSection
+        title={t('settings.sourceCode')}
+        description={t('settings.sourceCodeDescription')}
+      >
+        <SettingsFieldGroup>
+          <SettingsSwitchRow
+            title={t('settings.sourceCodeMiniMap')}
+            description={t('settings.sourceCodeMiniMapDescription')}
+            checked={sourceCodeMiniMapEnabled}
+            onCheckedChange={setSourceCodeMiniMapEnabled}
+          />
+        </SettingsFieldGroup>
+      </SettingsSection>
 
       <SettingsSection title={t('settings.motion')} description={t('settings.motionDescription')}>
         <SettingsFieldGroup>

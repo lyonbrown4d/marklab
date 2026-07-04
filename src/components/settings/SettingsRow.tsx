@@ -162,7 +162,12 @@ export const SettingsSwitchField = ({
       disabled={disabled}
       className={className}
       control={
-        <SettingsSwitch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
+        <SettingsSwitch
+          aria-label={typeof title === 'string' ? title : undefined}
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={onCheckedChange}
+        />
       }
     />
   )

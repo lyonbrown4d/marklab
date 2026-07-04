@@ -1,8 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
 import { configureMonaco } from '@/lib/monaco'
-import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 
 type CompletionProviderMock = {
   provideCompletionItems: (
@@ -277,55 +276,5 @@ describe('MarkdownSourceEditor', () => {
       detail: 'H1',
       children: [expect.objectContaining({ name: 'Plan', detail: 'H2' })],
     })
-  })
-
-  it('focuses the requested source position for the active file', async () => {
-    render(
-      <MarkdownSourceEditor
-        activePath="source.md"
-        value="a\nb\nc"
-        files={[]}
-        fileContents={{}}
-        onChange={vi.fn()}
-      />,
-    )
-
-    await screen.findByLabelText('markdown source')
-
-    requestFocusSourcePosition({ path: 'source.md', line: 3, column: 2, endColumn: 4 })
-
-    expect(monacoEditor.setPosition).toHaveBeenCalledWith({ lineNumber: 3, column: 2 })
-    expect(monacoEditor.setSelection).toHaveBeenCalledWith({
-      startLineNumber: 3,
-      startColumn: 2,
-      endLineNumber: 3,
-      endColumn: 4,
-    })
-    expect(monacoEditor.revealRangeInCenter).toHaveBeenCalledWith({
-      startLineNumber: 3,
-      startColumn: 2,
-      endLineNumber: 3,
-      endColumn: 4,
-    })
-    expect(monacoEditor.createDecorationsCollection).toHaveBeenCalled()
-    expect(monacoEditor.focus).toHaveBeenCalled()
-  })
-
-  it('ignores source focus requests for other files', async () => {
-    render(
-      <MarkdownSourceEditor
-        activePath="source.md"
-        value="a\nb\nc"
-        files={[]}
-        fileContents={{}}
-        onChange={vi.fn()}
-      />,
-    )
-
-    await screen.findByLabelText('markdown source')
-
-    requestFocusSourcePosition({ path: 'other.md', line: 1, column: 1 })
-
-    expect(monacoEditor.setPosition).not.toHaveBeenCalled()
   })
 })

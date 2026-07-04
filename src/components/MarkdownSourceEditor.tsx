@@ -16,6 +16,7 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
 import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
 import { useI18n } from '@/i18n/useI18n'
+import { clearFocusedCodeEditor, setFocusedCodeEditor } from '@/lib/focusedCodeEditor'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -57,6 +58,7 @@ const MarkdownSourceEditor = ({
   const darkMode = useDarkMode()
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
+  const sourceCodeMiniMapEnabled = usePreferencesStore((state) => state.sourceCodeMiniMapEnabled)
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
@@ -178,6 +180,7 @@ const MarkdownSourceEditor = ({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    setFocusedCodeEditor(editor)
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
     providersDisposableRef.current?.dispose()
@@ -207,6 +210,9 @@ const MarkdownSourceEditor = ({
       const model = host?.editor.getModel()
       if (host && model) {
         host.monaco.editor.setModelMarkers(model, MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER, [])
+      }
+      if (host) {
+        clearFocusedCodeEditor(host.editor)
       }
       diagnosticHostRef.current = null
     }
@@ -267,6 +273,7 @@ const MarkdownSourceEditor = ({
       monacoReady={monacoReady}
       motionAnimatedCursor={motionAnimatedCursor}
       motionSmoothScrolling={motionSmoothScrolling}
+      sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
       value={value}
       onChange={onChange}
       onMount={handleMount}
