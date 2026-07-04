@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, FileImage, FileText, Loader2, Music, Video } from 'lucide-react'
+import { ExternalLink, FileImage, FileText, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
+import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { getPreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
 import { convertAssetFileSrc } from '@/runtime/assets'
@@ -76,17 +77,14 @@ const FilePreviewPage = () => {
           </div>
         </div>
         <Button variant="outline" size="sm" className="h-7 shrink-0 gap-1.5" onClick={openInSystem}>
-          <ExternalLink className="size-3.5" />
+          <ExternalLink data-icon="inline-start" />
           {t('preview.openInSystem')}
         </Button>
       </header>
 
       <main className="min-h-0 flex-1 overflow-auto p-4">
         {metadataQuery.isLoading ? (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            {t('preview.loading')}
-          </div>
+          <PreviewLoadingFallback label={t('preview.loading')} />
         ) : metadataQuery.isError || !previewSrc ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t('preview.failed')}
