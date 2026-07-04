@@ -1,5 +1,5 @@
 import { useI18n } from '@/i18n/useI18n'
-import { memo, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { createFileLabel } from '@/logic/paths'
 import type { FileEntry, FileViewKind, ViewMode } from '@/store/appTypes'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
@@ -11,7 +11,11 @@ import {
 } from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
-import { RightSidebarContent, type SidebarBacklink } from '@/components/RightSidebarContent'
+import {
+  RightSidebarCollapsed,
+  RightSidebarContent,
+  type SidebarBacklink,
+} from '@/components/RightSidebarContent'
 import { useRightSidebarData } from '@/components/useRightSidebarData'
 
 type RightSidebarProps = {
@@ -29,8 +33,24 @@ type RightSidebarProps = {
   viewMode: ViewMode
 }
 
-const RightSidebarComponent = ({
-  collapsed,
+const RightSidebarComponent = ({ collapsed, tabs, totalFiles, ...props }: RightSidebarProps) => {
+  return (
+    <aside
+      className="layout-rail workspace-rail flex h-full w-full flex-col border-l border-sidebar-border/80"
+      data-collapsed={collapsed ? 'true' : 'false'}
+    >
+      {collapsed ? (
+        <RightSidebarCollapsed tabs={tabs} totalFiles={totalFiles} />
+      ) : (
+        <RightSidebarExpanded {...props} />
+      )}
+    </aside>
+  )
+}
+
+type RightSidebarExpandedProps = Omit<RightSidebarProps, 'collapsed' | 'tabs' | 'totalFiles'>
+
+const RightSidebarExpanded = ({
   activePath,
   inspectedPath,
   editorValue,
@@ -40,7 +60,7 @@ const RightSidebarComponent = ({
   workspaceIndex,
   onOpenFileView,
   viewMode,
-}: RightSidebarProps) => {
+}: RightSidebarExpandedProps) => {
   const { t } = useI18n()
   const [pendingHeading, setPendingHeading] = useState<FocusHeadingRequest | null>(null)
   const [pendingSourcePosition, setPendingSourcePosition] =
@@ -58,7 +78,7 @@ const RightSidebarComponent = ({
     assetReport,
     knowledge,
   } = useRightSidebarData({
-    collapsed,
+    collapsed: false,
     activePath,
     targetPath,
     editorValue,
@@ -69,53 +89,71 @@ const RightSidebarComponent = ({
   })
   const targetLabel = targetPath ? createFileLabel(targetPath) : t('inspector.none')
 
-  const handleOpenHeading = (slug: string) => {
-    if (!targetPath) return
-    setPendingHeading({ path: targetPath, slug })
-    onOpenFileView(targetPath, 'edit')
-  }
+  const handleOpenHeading = useCallback(
+    (slug: string) => {
+      if (!targetPath) return
+      setPendingHeading({ path: targetPath, slug })
+      onOpenFileView(targetPath, 'edit')
+    },
+    [onOpenFileView, targetPath],
+  )
 
-  const handleOpenBacklink = (backlink: SidebarBacklink) => {
-    setPendingSourcePosition({
-      path: backlink.sourcePath,
-      line: backlink.line,
-      column: backlink.column,
-    })
-    onOpenFileView(backlink.sourcePath, 'source')
-  }
+  const handleOpenBacklink = useCallback(
+    (backlink: SidebarBacklink) => {
+      setPendingSourcePosition({
+        path: backlink.sourcePath,
+        line: backlink.line,
+        column: backlink.column,
+      })
+      onOpenFileView(backlink.sourcePath, 'source')
+    },
+    [onOpenFileView],
+  )
 
-  const handleOpenKnowledgeFile = (path: string) => {
-    onOpenFileView(path, 'edit')
-  }
+  const handleOpenKnowledgeFile = useCallback(
+    (path: string) => {
+      onOpenFileView(path, 'edit')
+    },
+    [onOpenFileView],
+  )
 
-  const handleOpenKnowledgeReference = (reference: KnowledgeLinkReference) => {
-    setPendingSourcePosition({
-      path: reference.path,
-      line: reference.firstLine,
-      column: reference.firstColumn,
-    })
-    onOpenFileView(reference.path, 'source')
-  }
+  const handleOpenKnowledgeReference = useCallback(
+    (reference: KnowledgeLinkReference) => {
+      setPendingSourcePosition({
+        path: reference.path,
+        line: reference.firstLine,
+        column: reference.firstColumn,
+      })
+      onOpenFileView(reference.path, 'source')
+    },
+    [onOpenFileView],
+  )
 
-  const handleOpenMissingLink = (reference: KnowledgeMissingReference) => {
-    if (!targetPath) return
-    setPendingSourcePosition({
-      path: targetPath,
-      line: reference.line,
-      column: reference.column,
-    })
-    onOpenFileView(targetPath, 'source')
-  }
+  const handleOpenMissingLink = useCallback(
+    (reference: KnowledgeMissingReference) => {
+      if (!targetPath) return
+      setPendingSourcePosition({
+        path: targetPath,
+        line: reference.line,
+        column: reference.column,
+      })
+      onOpenFileView(targetPath, 'source')
+    },
+    [onOpenFileView, targetPath],
+  )
 
-  const handleOpenProblem = (problem: MarkdownSourceDiagnostic) => {
-    if (!targetPath) return
-    setPendingSourcePosition({
-      path: targetPath,
-      line: problem.line,
-      column: problem.startColumn,
-    })
-    onOpenFileView(targetPath, 'source')
-  }
+  const handleOpenProblem = useCallback(
+    (problem: MarkdownSourceDiagnostic) => {
+      if (!targetPath) return
+      setPendingSourcePosition({
+        path: targetPath,
+        line: problem.line,
+        column: problem.startColumn,
+      })
+      onOpenFileView(targetPath, 'source')
+    },
+    [onOpenFileView, targetPath],
+  )
 
   useEffect(() => {
     if (!pendingHeading) return
@@ -152,35 +190,28 @@ const RightSidebarComponent = ({
   }, [activePath, pendingSourcePosition, viewMode])
 
   return (
-    <aside
-      className="layout-rail workspace-rail flex h-full w-full flex-col border-l border-sidebar-border/80"
-      data-collapsed={collapsed ? 'true' : 'false'}
-    >
-      {!collapsed ? (
-        <RightSidebarContent
-          activePath={activePath}
-          targetPath={targetPath}
-          targetLabel={targetLabel}
-          viewMode={viewMode}
-          outline={outline}
-          backlinks={backlinks}
-          problems={problems}
-          errorProblems={errorProblems}
-          warningProblems={warningProblems}
-          knowledge={knowledge}
-          documentStats={documentStats}
-          displayMetadata={displayMetadata}
-          loadingMetadata={loadingMetadata}
-          assetReport={assetReport}
-          onOpenHeading={handleOpenHeading}
-          onOpenBacklink={handleOpenBacklink}
-          onOpenKnowledgeFile={handleOpenKnowledgeFile}
-          onOpenKnowledgeReference={handleOpenKnowledgeReference}
-          onOpenMissingLink={handleOpenMissingLink}
-          onOpenProblem={handleOpenProblem}
-        />
-      ) : null}
-    </aside>
+    <RightSidebarContent
+      activePath={activePath}
+      targetPath={targetPath}
+      targetLabel={targetLabel}
+      viewMode={viewMode}
+      outline={outline}
+      backlinks={backlinks}
+      problems={problems}
+      errorProblems={errorProblems}
+      warningProblems={warningProblems}
+      knowledge={knowledge}
+      documentStats={documentStats}
+      displayMetadata={displayMetadata}
+      loadingMetadata={loadingMetadata}
+      assetReport={assetReport}
+      onOpenHeading={handleOpenHeading}
+      onOpenBacklink={handleOpenBacklink}
+      onOpenKnowledgeFile={handleOpenKnowledgeFile}
+      onOpenKnowledgeReference={handleOpenKnowledgeReference}
+      onOpenMissingLink={handleOpenMissingLink}
+      onOpenProblem={handleOpenProblem}
+    />
   )
 }
 

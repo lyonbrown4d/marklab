@@ -1,5 +1,4 @@
-import { memo, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
-import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
+import { lazy, memo, Suspense, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import WindowControls from '@/components/WindowControls'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { isDesktopRuntime } from '@/runtime/window'
@@ -13,6 +12,8 @@ import {
   navigationMissingLinkToSearchResult,
 } from '@/components/titlebar/titlebarCommandNavigation'
 import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
+
+const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 
 const Titlebar = ({
   activePath,
@@ -92,6 +93,7 @@ const Titlebar = ({
     onOpenSearchResult,
     setTheme,
     platform,
+    commandOpen,
   })
 
   const handleTitlebarMouseDown = useCallback(
@@ -144,41 +146,45 @@ const Titlebar = ({
           />
         </div>
       </TooltipProvider>
-      <TitlebarCommandDialog
-        open={commandOpen}
-        onOpenChange={onCommandOpenChange}
-        activePath={activePath}
-        files={commandFiles}
-        recentFiles={commandRecentFiles}
-        headings={commandHeadings}
-        navigationHeadings={commandNavigationHeadings}
-        navigationOutgoingLinks={commandNavigationOutgoingLinks}
-        navigationBacklinks={commandNavigationBacklinks}
-        navigationMissingLinks={commandNavigationMissingLinks}
-        collections={commandCollections}
-        onOpenFile={onCommandOpenFile}
-        onOpenHeading={onCommandOpenHeading}
-        onOpenSearchResult={onCommandOpenSearchResult}
-        onOpenNavigationOutgoingLink={(link) => {
-          if (link.targetHeadingSlug) {
-            onCommandOpenHeading(link.targetPath, link.targetHeadingSlug)
-            return
-          }
-          onCommandOpenFile(link.targetPath)
-        }}
-        onOpenNavigationBacklink={(backlink) =>
-          onCommandOpenSearchResult(navigationBacklinkToSearchResult(backlink))
-        }
-        onOpenNavigationMissingLink={(missingLink) =>
-          onCommandOpenSearchResult(navigationMissingLinkToSearchResult(missingLink))
-        }
-        onAction={onCommandAction}
-        canCreateWorkspaceEntries={canCreateWorkspaceEntries}
-        workspaceIndexed={Boolean(workspaceIndex)}
-        indexedFileCount={workspaceIndex?.files.length ?? 0}
-        searchIndexRebuilding={searchIndexRebuilding}
-        knowledgeSummary={workspaceKnowledgeSummary}
-      />
+      {commandOpen && (
+        <Suspense fallback={null}>
+          <TitlebarCommandDialog
+            open={commandOpen}
+            onOpenChange={onCommandOpenChange}
+            activePath={activePath}
+            files={commandFiles}
+            recentFiles={commandRecentFiles}
+            headings={commandHeadings}
+            navigationHeadings={commandNavigationHeadings}
+            navigationOutgoingLinks={commandNavigationOutgoingLinks}
+            navigationBacklinks={commandNavigationBacklinks}
+            navigationMissingLinks={commandNavigationMissingLinks}
+            collections={commandCollections}
+            onOpenFile={onCommandOpenFile}
+            onOpenHeading={onCommandOpenHeading}
+            onOpenSearchResult={onCommandOpenSearchResult}
+            onOpenNavigationOutgoingLink={(link) => {
+              if (link.targetHeadingSlug) {
+                onCommandOpenHeading(link.targetPath, link.targetHeadingSlug)
+                return
+              }
+              onCommandOpenFile(link.targetPath)
+            }}
+            onOpenNavigationBacklink={(backlink) =>
+              onCommandOpenSearchResult(navigationBacklinkToSearchResult(backlink))
+            }
+            onOpenNavigationMissingLink={(missingLink) =>
+              onCommandOpenSearchResult(navigationMissingLinkToSearchResult(missingLink))
+            }
+            onAction={onCommandAction}
+            canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+            workspaceIndexed={Boolean(workspaceIndex)}
+            indexedFileCount={workspaceIndex?.files.length ?? 0}
+            searchIndexRebuilding={searchIndexRebuilding}
+            knowledgeSummary={workspaceKnowledgeSummary}
+          />
+        </Suspense>
+      )}
       <WindowControls
         platform={platform}
         isWindows={isWindows}

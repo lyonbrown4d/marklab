@@ -41,6 +41,7 @@ type UseTitlebarCommandModelArgs = Pick<
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
 > & {
+  commandOpen: boolean
   platform: AppPlatform
 }
 
@@ -68,6 +69,7 @@ export const useTitlebarCommandModel = ({
   onOpenAllPages,
   setTheme,
   canCreateWorkspaceEntries,
+  commandOpen,
   platform,
 }: UseTitlebarCommandModelArgs) => {
   const { t } = useI18n()
@@ -129,6 +131,7 @@ export const useTitlebarCommandModel = ({
   )
 
   const commandFiles = useMemo(() => {
+    if (!commandOpen) return []
     const fileTreePaths = files.filter((file) => file.kind === 'file').map((file) => file.path)
     const paths = workspaceIndex
       ? Array.from(new Set([...workspaceIndex.files.map((file) => file.path), ...fileTreePaths]))
@@ -138,9 +141,10 @@ export const useTitlebarCommandModel = ({
       path,
       label: createFileLabel(path),
     }))
-  }, [files, workspaceIndex])
+  }, [commandOpen, files, workspaceIndex])
 
   const commandHeadings = useMemo(() => {
+    if (!commandOpen) return []
     if (!workspaceIndex) return []
     return workspaceIndex.files.flatMap((file) =>
       file.headings.map((heading) => ({
@@ -151,33 +155,44 @@ export const useTitlebarCommandModel = ({
         label: createFileLabel(file.path),
       })),
     )
-  }, [workspaceIndex])
+  }, [commandOpen, workspaceIndex])
 
   const commandNavigation = useMemo(
-    () => buildTitlebarCommandNavigationModel(activePath, workspaceIndex),
-    [activePath, workspaceIndex],
+    () =>
+      commandOpen
+        ? buildTitlebarCommandNavigationModel(activePath, workspaceIndex)
+        : {
+            headings: [],
+            outgoingLinks: [],
+            backlinks: [],
+            missingLinks: [],
+          },
+    [activePath, commandOpen, workspaceIndex],
   )
 
   const commandRecentFiles = useMemo(() => {
+    if (!commandOpen) return []
     const seen = new Set<string>()
     return [...tabs].reverse().flatMap((tab) => {
       if (tab.kind !== 'file' || seen.has(tab.path)) return []
       seen.add(tab.path)
       return [{ path: tab.path, label: createFileLabel(tab.path) }]
     })
-  }, [tabs])
+  }, [commandOpen, tabs])
 
   const workspaceKnowledgeSummary = useMemo(
-    () => buildWorkspaceKnowledgeSummary(workspaceIndex),
-    [workspaceIndex],
+    () => buildWorkspaceKnowledgeSummary(commandOpen ? workspaceIndex : null),
+    [commandOpen, workspaceIndex],
   )
   const commandCollections = useMemo(
     () =>
-      summarizeMarkdownCollections(
-        buildAllPagesRows(files, workspaceIndex),
-        builtInMarkdownCollections,
-      ),
-    [files, workspaceIndex],
+      commandOpen
+        ? summarizeMarkdownCollections(
+            buildAllPagesRows(files, workspaceIndex),
+            builtInMarkdownCollections,
+          )
+        : [],
+    [commandOpen, files, workspaceIndex],
   )
 
   const commandPaletteShortcut = useMemo(() => {

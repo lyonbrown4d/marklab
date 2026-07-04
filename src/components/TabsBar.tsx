@@ -18,6 +18,7 @@ import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
+import { cn } from '@/lib/utils'
 
 type TabLabelText = {
   workspaceGraph: string
@@ -154,7 +155,7 @@ const WorkspaceTabButton = memo(
         onKeyDown={handleTabKeyDown}
       >
         {renderTabIcon(tab)}
-        <span className={`${compact ? 'max-w-[86px]' : 'max-w-[160px]'} truncate`}>
+        <span className={cn('truncate', compact ? 'max-w-[86px]' : 'max-w-[160px]')}>
           {compact && label.length > 12 ? `${label.slice(0, 11)}…` : label}
         </span>
         {isDirty && (
@@ -174,9 +175,10 @@ const WorkspaceTabButton = memo(
         <span
           role="button"
           tabIndex={0}
-          className={`ml-0.5 rounded p-0.5 opacity-70 outline-none transition-opacity duration-150 hover:bg-muted hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100 ${
-            isActive ? 'opacity-100 md:opacity-100' : ''
-          }`}
+          className={cn(
+            'ml-0.5 rounded p-0.5 opacity-70 outline-none transition-opacity duration-150 hover:bg-muted hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100',
+            isActive && 'opacity-100 md:opacity-100',
+          )}
           onClick={closeTab}
           onKeyDown={handleCloseKeyDown}
           aria-label={closeLabel}

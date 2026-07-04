@@ -1,5 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
-import SettingsDialog from '@/components/SettingsDialog'
+import { lazy, Suspense, useCallback, useRef, useState } from 'react'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar from '@/components/Titlebar'
@@ -20,6 +19,8 @@ import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 
 export type { LayoutContext } from '@/app/AppLayoutContext'
+
+const SettingsDialog = lazy(() => import('@/components/SettingsDialog'))
 
 const AppLayout = () => {
   const state = useAppLayoutState()
@@ -167,7 +168,11 @@ const AppLayout = () => {
         onCommandOpenChange={setCommandOpen}
         onOpenSettings={openSettings}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        </Suspense>
+      )}
       <AppShellPanels
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}
