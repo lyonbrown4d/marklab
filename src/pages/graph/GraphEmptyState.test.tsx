@@ -17,7 +17,10 @@ describe('GraphEmptyState', () => {
     ).toBeInTheDocument()
 
     const overlay = container.firstElementChild
-    expect(overlay).toHaveClass('pointer-events-none', 'absolute', 'inset-0')
+    expect(overlay).toHaveAttribute('role', 'status')
+    expect(overlay).toHaveAttribute('aria-live', 'polite')
+    expect(overlay).toHaveAttribute('aria-atomic', 'true')
+    expect(overlay).toHaveClass('graph-empty-state', 'pointer-events-none', 'absolute', 'inset-0')
 
     const empty = container.querySelector('[data-slot="empty"]')
     expect(empty).toHaveClass('flex-none', 'max-w-sm', 'bg-card/95', 'shadow-sm')
