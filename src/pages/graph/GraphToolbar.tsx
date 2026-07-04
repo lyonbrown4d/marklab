@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, type KeyboardEvent } from 'react'
-import { FileText, Globe2, Heading2, Paperclip, RotateCcw, Search, Unlink } from 'lucide-react'
+import { FileText, Globe2, Heading2, Paperclip, RotateCcw, Search, Unlink, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +57,10 @@ const GraphToolbarComponent = ({
     },
     [filters, onFiltersChange],
   )
+  const clearQuery = useCallback(() => {
+    updateQuery('')
+  }, [updateQuery])
+  const hasQuery = filters.query.length > 0
 
   const handleQueryKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
@@ -101,16 +105,30 @@ const GraphToolbarComponent = ({
   return (
     <div className="graph-toolbar pointer-events-auto absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs text-muted-foreground shadow-sm backdrop-blur md:max-w-[720px]">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1 md:w-60 md:flex-none">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label={t('graph.searchPlaceholder')}
-            className="h-7 rounded-md pl-7 text-xs"
-            value={filters.query}
-            placeholder={t('graph.searchPlaceholder')}
-            onChange={(event) => updateQuery(event.target.value)}
-            onKeyDown={handleQueryKeyDown}
-          />
+        <div className="flex min-w-56 flex-1 items-center gap-1 md:w-72 md:flex-none">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label={t('graph.searchPlaceholder')}
+              className="h-7 rounded-md pl-7 text-xs"
+              value={filters.query}
+              placeholder={t('graph.searchPlaceholder')}
+              onChange={(event) => updateQuery(event.target.value)}
+              onKeyDown={handleQueryKeyDown}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-md"
+            aria-label={t('graph.clearSearch')}
+            title={t('graph.clearSearch')}
+            disabled={!hasQuery}
+            onClick={clearQuery}
+          >
+            <X aria-hidden="true" />
+          </Button>
         </div>
         <Badge
           variant="secondary"

@@ -636,6 +636,7 @@
   "graph.edges": "连接",
   "graph.visible": "显示",
   "graph.searchPlaceholder": "筛选图谱...",
+  "graph.clearSearch": "清除图谱搜索",
   "graph.filterGroup": "图谱节点类型筛选",
   "graph.filterFiles": "文件",
   "graph.filterHeadings": "标题",

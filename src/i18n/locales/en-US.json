@@ -636,6 +636,7 @@
   "graph.edges": "edges",
   "graph.visible": "Visible",
   "graph.searchPlaceholder": "Filter graph...",
+  "graph.clearSearch": "Clear graph search",
   "graph.filterGroup": "Graph node kind filters",
   "graph.filterFiles": "Files",
   "graph.filterHeadings": "Headings",

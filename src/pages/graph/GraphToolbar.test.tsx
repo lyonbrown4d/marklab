@@ -13,6 +13,7 @@ const messages: Record<string, string> = {
   'graph.filterMissing': 'Missing',
   'graph.filterPreview': 'Previews',
   'graph.nodes': 'nodes',
+  'graph.clearSearch': 'Clear search',
   'graph.resetFilters': 'Reset',
   'graph.searchPlaceholder': 'Filter graph...',
   'graph.visible': 'Visible',
@@ -109,6 +110,37 @@ describe('GraphToolbar', () => {
       query: '',
     })
     expect(onShellKeyDown).not.toHaveBeenCalled()
+  })
+
+  it('offers a stable clear-search button for mouse and keyboard users', () => {
+    const activeFilters: GraphFilterState = {
+      ...filters,
+      query: 'diagram',
+    }
+    const { onFiltersChange } = renderToolbar({
+      filters: activeFilters,
+      hasActiveFilters: true,
+    })
+
+    const clearButton = screen.getByRole('button', { name: 'Clear search' })
+    expect(clearButton).toBeEnabled()
+    expect(clearButton).toHaveClass('h-7', 'w-7')
+
+    fireEvent.click(clearButton)
+
+    expect(onFiltersChange).toHaveBeenCalledWith({
+      ...activeFilters,
+      query: '',
+    })
+  })
+
+  it('keeps clear-search control space reserved when search is empty', () => {
+    renderToolbar()
+
+    const clearButton = screen.getByRole('button', { name: 'Clear search' })
+
+    expect(clearButton).toBeDisabled()
+    expect(clearButton).toHaveClass('h-7', 'w-7')
   })
 
   it('announces visible graph counts as a live toolbar status', () => {
