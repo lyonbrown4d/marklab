@@ -235,6 +235,9 @@
 }
 
 .graph-hover-preview {
+  translate: var(--graph-hover-preview-x) var(--graph-hover-preview-y);
+  scale: 1;
+  transform-origin: left top;
   animation: graph-hover-preview-in var(--motion-duration-fast) ease both;
 }
 
@@ -250,10 +253,12 @@
 @keyframes graph-hover-preview-in {
   from {
     opacity: 0;
+    scale: 0.98;
   }
 
   to {
     opacity: 1;
+    scale: 1;
   }
 }
 
@@ -338,6 +343,10 @@
   .graph-toolbar__filter::before {
     animation: none;
     transition: none;
+  }
+
+  .graph-hover-preview {
+    scale: 1;
   }
 
   .graph-toolbar__filter:hover,

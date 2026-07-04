@@ -66,7 +66,10 @@ describe('GraphHoverPreview', () => {
 
     const preview = screen.getByText('Intro').closest('[aria-hidden="true"]')
 
-    expect(preview).toHaveStyle({ transform: 'translate(34px, 44px)' })
+    expect(preview).toHaveStyle({
+      '--graph-hover-preview-x': '34px',
+      '--graph-hover-preview-y': '44px',
+    })
     expect(screen.getByText('docs/brief.md')).toBeInTheDocument()
     expect(
       screen.getByText('A short preview of the selected Markdown heading.'),

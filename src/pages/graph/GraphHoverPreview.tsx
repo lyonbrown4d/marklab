@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -9,14 +11,24 @@ type GraphHoverPreviewProps = {
   t: (key: string) => string
 }
 
+type GraphHoverPreviewStyle = CSSProperties & {
+  '--graph-hover-preview-x': string
+  '--graph-hover-preview-y': string
+}
+
 export const GraphHoverPreview = ({ details, position, t }: GraphHoverPreviewProps) => {
   if (!details || !position) return null
+
+  const previewStyle: GraphHoverPreviewStyle = {
+    '--graph-hover-preview-x': `${position.x + 14}px`,
+    '--graph-hover-preview-y': `${position.y + 14}px`,
+  }
 
   return (
     <Card
       aria-hidden="true"
       className="graph-hover-preview pointer-events-none absolute left-0 top-0 z-20 hidden w-64 rounded-lg border-border bg-popover/95 p-0 text-xs text-popover-foreground shadow-md backdrop-blur md:block"
-      style={{ transform: `translate(${position.x + 14}px, ${position.y + 14}px)` }}
+      style={previewStyle}
     >
       <CardHeader className="p-3">
         <div className="flex min-w-0 items-start justify-between gap-2">
