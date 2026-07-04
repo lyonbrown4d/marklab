@@ -223,6 +223,11 @@
   animation: graph-hover-preview-in var(--motion-duration-fast) ease both;
 }
 
+.graph-feedback-toast {
+  translate: -50% 0;
+  animation: graph-feedback-toast-in var(--motion-duration-fast) var(--motion-ease-standard) both;
+}
+
 @keyframes graph-hover-preview-in {
   from {
     opacity: 0;
@@ -230,6 +235,18 @@
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes graph-feedback-toast-in {
+  from {
+    opacity: 0;
+    translate: -50% 2px;
+  }
+
+  to {
+    opacity: 1;
+    translate: -50% 0;
   }
 }
 
@@ -285,6 +302,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .graph-toolbar,
+  .graph-feedback-toast,
   .graph-hover-preview,
   .graph-toolbar__filter,
   .graph-toolbar__filter::before {

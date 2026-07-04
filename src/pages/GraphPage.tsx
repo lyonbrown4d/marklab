@@ -27,6 +27,7 @@ import {
 } from '@/logic/graphViewModel'
 import { graphFeedbackKeyByAction } from '@/pages/graph/graphFeedback'
 import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
+import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
 import { GraphHoverPreview } from '@/pages/graph/GraphHoverPreview'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
@@ -250,11 +251,7 @@ const GraphPageComponent = ({
         totalEdgeCount={visibleEdges.length}
         totalNodeCount={visibleNodes.length}
       />
-      {graphFeedback && (
-        <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-md border border-border bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-sm">
-          {graphFeedback}
-        </div>
-      )}
+      {graphFeedback ? <GraphFeedbackToast message={graphFeedback} /> : null}
       <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />
       <GraphHoverPreview details={hoverNodeDetails} position={hoverPreview} t={t} />
       <ReactFlow<Node<GraphNodeData>, Edge>
