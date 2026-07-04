@@ -5,15 +5,12 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
-  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react'
-import type { Edge, Node, NodeTypes, OnSelectionChangeParams } from '@xyflow/react'
-import type { GraphContentMode } from '@/store/appTypes'
-import type { GraphData, GraphNodeData } from '@/logic/graph'
+import type { Edge, Node, OnSelectionChangeParams } from '@xyflow/react'
+import type { GraphNodeData } from '@/logic/graph'
 import { mergeGraphNodePositions } from '@/logic/graphViewState'
-import { ExternalNode, HeadingNode, MissingNode, PreviewNode } from '@/components/GraphNodes'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
 import type { GraphHotkeyAction } from '@/pages/graphKeyboardActions'
@@ -28,36 +25,16 @@ import {
 import { graphFeedbackKeyByAction } from '@/pages/graph/graphFeedback'
 import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
 import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
-import { GraphHoverPreview } from '@/pages/graph/GraphHoverPreview'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
-import { useGraphHoverPreview } from '@/pages/graph/useGraphHoverPreview'
-
-const nodeTypes: NodeTypes = {
-  external: ExternalNode,
-  heading: HeadingNode,
-  missing: MissingNode,
-  preview: PreviewNode,
-}
-const fitViewOptions = { padding: 0.22 }
-const proOptions = { hideAttribution: true }
-
-type GraphPageProps = {
-  graph: GraphData
-  onOpenFile: (path: string) => void
-  showMiniMap: boolean
-  contentMode: GraphContentMode
-  editable: boolean
-  onAddChildHeading: (nodeId: string) => string | null
-  onAddSiblingHeading: (nodeId: string) => string | null
-  onAddSiblingHeadingBefore: (nodeId: string) => string | null
-  onDeleteHeading: (nodeId: string) => string | null
-  onUpdateHeadingTitle: (nodeId: string, title: string) => void
-  onUpdateHeadingContent: NonNullable<GraphNodeData['onUpdateContent']>
-}
-
-type GraphFlowInstance = ReactFlowInstance<Node<GraphNodeData>, Edge> | null
+import {
+  fitViewOptions,
+  nodeTypes,
+  proOptions,
+  type GraphFlowInstance,
+  type GraphPageProps,
+} from '@/pages/graph/graphPageConfig'
 
 const GraphPageComponent = ({
   graph,
@@ -228,12 +205,6 @@ const GraphPageComponent = ({
   const resetGraphFilters = useCallback(() => {
     setGraphFilters(createDefaultGraphFilters())
   }, [])
-  const { clearHoverPreview, hoverNodeDetails, hoverPreview, updateHoverPreview } =
-    useGraphHoverPreview({
-      edges,
-      nodes,
-      shellRef: graphShellRef,
-    })
 
   return (
     <div
@@ -257,7 +228,6 @@ const GraphPageComponent = ({
       />
       {graphFeedback ? <GraphFeedbackToast message={graphFeedback} /> : null}
       <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />
-      <GraphHoverPreview details={hoverNodeDetails} position={hoverPreview} t={t} />
       <ReactFlow<Node<GraphNodeData>, Edge>
         className="h-full w-full"
         nodes={filteredGraph.nodes}
@@ -283,9 +253,6 @@ const GraphPageComponent = ({
         maxZoom={2.2}
         onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
-        onNodeMouseEnter={updateHoverPreview}
-        onNodeMouseMove={updateHoverPreview}
-        onNodeMouseLeave={clearHoverPreview}
         fitView
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}

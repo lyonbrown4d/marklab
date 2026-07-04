@@ -10,7 +10,6 @@
   transition:
     border-color var(--motion-duration-fast) ease,
     box-shadow var(--motion-duration-fast) ease,
-    transform var(--motion-duration-fast) ease,
     background-color var(--motion-duration-fast) ease;
 }
 
@@ -49,7 +48,6 @@
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--graph-node-accent) 18%, transparent),
     0 5px 14px -10px color-mix(in srgb, var(--graph-node-accent) 42%, transparent);
-  transform: translateY(-1px);
 }
 
 .graph-node-shell[data-graph-node-selected='true'],
