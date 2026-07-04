@@ -15,6 +15,7 @@ import { useAppDocumentSync } from '@/app/useAppDocumentSync'
 import { useAppLayoutActions } from '@/app/useAppLayoutActions'
 import { useAppLayoutOutlet } from '@/app/useAppLayoutOutlet'
 import { useAppMenuEventSync } from '@/app/useAppMenuEventSync'
+import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 
@@ -111,6 +112,7 @@ const AppLayout = () => {
     onToggleSidebar: state.toggleSidebar,
   })
   useAppMenuEventSync(handleMenuAction)
+  useNativeMenuLocaleSync()
 
   const workspacePanels = (
     <AppWorkspacePanels

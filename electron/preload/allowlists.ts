@@ -2,6 +2,7 @@ const allowedCommandNames = [
   'app-ready',
   'app_get_platform',
   'menu_dispatch',
+  'menu_set_locale',
   'open_current_workspace_in_new_window',
   'open_path_in_new_window',
   'fs_get_root_info',

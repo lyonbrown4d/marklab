@@ -18,6 +18,7 @@ const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
 const appIcon = createWindowIcon(projectRoot)
+let didInstallDevelopmentDockIcon = false
 export type MarklabWindows = {
   splash: BrowserWindow
   main: BrowserWindow
@@ -35,6 +36,13 @@ const isDevMode = () => {
   return !app.isPackaged
 }
 const isMacOS = () => process.platform === 'darwin'
+const installDevelopmentDockIcon = (): void => {
+  if (!isDevMode() || !isMacOS() || didInstallDevelopmentDockIcon) return
+  if (!appIcon || appIcon.isEmpty()) return
+  if (!app.dock) return
+  app.dock.setIcon(appIcon)
+  didInstallDevelopmentDockIcon = true
+}
 const getRendererUrl = (page = '') => {
   if (isDevMode()) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? DEV_SERVER_URL
@@ -184,6 +192,7 @@ const persistWindowState = (window: BrowserWindow, logger: Logger): void => {
   window.on('close', saveNow)
 }
 export const createSplashWindow = () => {
+  installDevelopmentDockIcon()
   const splash = new BrowserWindow({
     width: 420,
     height: 280,
@@ -216,6 +225,7 @@ export const createSplashWindow = () => {
   return splash
 }
 export const createMainWindow = (logger: Logger = noopLogger) => {
+  installDevelopmentDockIcon()
   const restored = restoredWindowBounds(logger)
   const main = new BrowserWindow({
     ...restored.bounds,

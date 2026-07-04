@@ -4,6 +4,7 @@ import {
   getPlatform,
   openCurrentWorkspaceInNewWindow,
   openPathInNewWindow,
+  setNativeMenuLocale,
 } from '@/runtime/app'
 
 export type AppPlatform = 'windows' | 'linux' | 'macos' | 'unknown'
@@ -15,6 +16,7 @@ export const appApi = {
   getLaunchInfo,
   openCurrentWorkspaceInNewWindow,
   openPathInNewWindow,
+  setNativeMenuLocale,
   menuDispatch(id: string) {
     return dispatchMenuAction(id)
   },

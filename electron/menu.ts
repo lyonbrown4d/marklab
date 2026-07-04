@@ -1,4 +1,11 @@
 import { Menu, type BrowserWindow, type MenuItemConstructorOptions, app } from 'electron'
+import {
+  getNativeMenuLabels,
+  normalizeNativeMenuLocale,
+  type NativeMenuLocale,
+} from '@electron/menuLocalization.js'
+import { getRendererPersistValue } from '@electron/services/settingsStore.js'
+
 export const MENU_ACTION_IDS = [
   'file.new',
   'file.open_project',
@@ -38,6 +45,29 @@ export const MENU_ACTION_IDS = [
 ] as const
 export type MenuActionId = (typeof MENU_ACTION_IDS)[number]
 export type MenuActionDispatcher = (id: MenuActionId) => void
+
+let installedMenu: { dispatch?: MenuActionDispatcher; mainWindow: BrowserWindow } | null = null
+let configuredMenuLocale: NativeMenuLocale | null = null
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value && typeof value === 'object')
+}
+
+const readPersistedMenuLocale = (): string | null => {
+  try {
+    const value = getRendererPersistValue('marklab.preferences')
+    if (!isRecord(value) || !isRecord(value.state)) return null
+    return typeof value.state.locale === 'string' ? value.state.locale : null
+  } catch {
+    return null
+  }
+}
+
+const getCurrentMenuLocale = (): NativeMenuLocale => {
+  configuredMenuLocale ??= normalizeNativeMenuLocale(readPersistedMenuLocale() ?? app.getLocale())
+  return configuredMenuLocale
+}
+
 const sendMenuAction = (
   window: BrowserWindow | null,
   id: MenuActionId,
@@ -64,120 +94,135 @@ const actionItem = (
     click: () => sendMenuAction(window, id, dispatch),
   }
 }
-const themeItems: Array<{ id: MenuActionId; label: string }> = [
-  { id: 'theme-mode.system', label: 'Follow System' },
-  { id: 'theme-mode.light', label: 'Light Mode' },
-  { id: 'theme-mode.dark', label: 'Dark Mode' },
-  { id: 'theme.paper', label: 'Paper' },
-  { id: 'theme.ivory', label: 'Ivory' },
-  { id: 'theme.sepia', label: 'Sepia' },
-  { id: 'theme.github', label: 'GitHub' },
-  { id: 'theme.solarized', label: 'Solarized' },
-  { id: 'theme.mist', label: 'Mist' },
-  { id: 'theme.ink', label: 'Ink' },
-  { id: 'theme.graphite', label: 'Graphite' },
-  { id: 'theme.nord', label: 'Nord' },
-  { id: 'theme.obsidian', label: 'Obsidian' },
-]
 export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActionDispatcher) => {
+  installedMenu = { dispatch, mainWindow }
+  const labels = getNativeMenuLabels(getCurrentMenuLocale())
+  const appName = app.name
+  const themeItems: Array<{ id: MenuActionId; label: string }> = [
+    { id: 'theme-mode.system', label: labels.theme.system },
+    { id: 'theme-mode.light', label: labels.theme.light },
+    { id: 'theme-mode.dark', label: labels.theme.dark },
+    { id: 'theme.paper', label: labels.theme.paper },
+    { id: 'theme.ivory', label: labels.theme.ivory },
+    { id: 'theme.sepia', label: labels.theme.sepia },
+    { id: 'theme.github', label: labels.theme.github },
+    { id: 'theme.solarized', label: labels.theme.solarized },
+    { id: 'theme.mist', label: labels.theme.mist },
+    { id: 'theme.ink', label: labels.theme.ink },
+    { id: 'theme.graphite', label: labels.theme.graphite },
+    { id: 'theme.nord', label: labels.theme.nord },
+    { id: 'theme.obsidian', label: labels.theme.obsidian },
+  ]
   const fileMenu: MenuItemConstructorOptions = {
-    label: 'File',
+    label: labels.file.label,
     submenu: [
       actionItem(
         mainWindow,
         'window.open_current_workspace_in_new_window',
-        'New Window',
+        labels.file.newWindow,
         'CmdOrCtrl+Shift+N',
         dispatch,
       ),
       { type: 'separator' },
-      actionItem(mainWindow, 'file.open_project', 'Open Folder...', 'CmdOrCtrl+O', dispatch),
-      actionItem(mainWindow, 'file.open_file', 'Open File...', 'CmdOrCtrl+Shift+O', dispatch),
+      actionItem(mainWindow, 'file.open_project', labels.file.openProject, 'CmdOrCtrl+O', dispatch),
+      actionItem(mainWindow, 'file.open_file', labels.file.openFile, 'CmdOrCtrl+Shift+O', dispatch),
       { type: 'separator' },
-      actionItem(mainWindow, 'file.new', 'New File', 'CmdOrCtrl+N', dispatch),
+      actionItem(mainWindow, 'file.new', labels.file.newFile, 'CmdOrCtrl+N', dispatch),
       { type: 'separator' },
-      actionItem(mainWindow, 'file.export_pdf', 'Export to PDF...', undefined, dispatch),
-      actionItem(mainWindow, 'file.export_docx', 'Export to Word...', undefined, dispatch),
-      actionItem(mainWindow, 'file.export_html', 'Export to HTML...', undefined, dispatch),
+      actionItem(mainWindow, 'file.export_pdf', labels.file.exportPdf, undefined, dispatch),
+      actionItem(mainWindow, 'file.export_docx', labels.file.exportDocx, undefined, dispatch),
+      actionItem(mainWindow, 'file.export_html', labels.file.exportHtml, undefined, dispatch),
       { type: 'separator' },
-      process.platform === 'darwin' ? { role: 'close' } : { role: 'quit' },
+      process.platform === 'darwin'
+        ? { label: labels.file.closeWindow, role: 'close' }
+        : { label: labels.app.quit(appName), role: 'quit' },
     ],
   }
   const editMenu: MenuItemConstructorOptions = {
-    label: 'Edit',
+    label: labels.edit.label,
     submenu: [
-      actionItem(mainWindow, 'edit.undo', 'Undo', 'CmdOrCtrl+Z', dispatch),
+      actionItem(mainWindow, 'edit.undo', labels.edit.undo, 'CmdOrCtrl+Z', dispatch),
       actionItem(
         mainWindow,
         'edit.redo',
-        'Redo',
+        labels.edit.redo,
         process.platform === 'darwin' ? 'Shift+Cmd+Z' : 'Ctrl+Y',
         dispatch,
       ),
       { type: 'separator' },
-      actionItem(mainWindow, 'edit.cut', 'Cut', 'CmdOrCtrl+X', dispatch),
-      actionItem(mainWindow, 'edit.copy', 'Copy', 'CmdOrCtrl+C', dispatch),
-      actionItem(mainWindow, 'edit.paste', 'Paste', 'CmdOrCtrl+V', dispatch),
+      actionItem(mainWindow, 'edit.cut', labels.edit.cut, 'CmdOrCtrl+X', dispatch),
+      actionItem(mainWindow, 'edit.copy', labels.edit.copy, 'CmdOrCtrl+C', dispatch),
+      actionItem(mainWindow, 'edit.paste', labels.edit.paste, 'CmdOrCtrl+V', dispatch),
       { type: 'separator' },
-      actionItem(mainWindow, 'edit.select_all', 'Select All', 'CmdOrCtrl+A', dispatch),
+      actionItem(mainWindow, 'edit.select_all', labels.edit.selectAll, 'CmdOrCtrl+A', dispatch),
     ],
   }
   const viewMenu: MenuItemConstructorOptions = {
-    label: 'View',
+    label: labels.view.label,
     submenu: [
-      actionItem(mainWindow, 'view.wysiwyg', 'WYSIWYG', undefined, dispatch),
-      actionItem(mainWindow, 'view.source', 'Source', undefined, dispatch),
-      actionItem(mainWindow, 'view.graph', 'Graph', undefined, dispatch),
+      actionItem(mainWindow, 'view.wysiwyg', labels.view.wysiwyg, undefined, dispatch),
+      actionItem(mainWindow, 'view.source', labels.view.source, undefined, dispatch),
+      actionItem(mainWindow, 'view.graph', labels.view.graph, undefined, dispatch),
       { type: 'separator' },
-      actionItem(mainWindow, 'view.toggle_sidebar', 'Toggle Sidebar', undefined, dispatch),
+      actionItem(mainWindow, 'view.toggle_sidebar', labels.view.sidebar, undefined, dispatch),
       actionItem(
         mainWindow,
         'view.toggle_right_sidebar',
-        'Toggle Right Sidebar',
+        labels.view.rightSidebar,
         undefined,
         dispatch,
       ),
       { type: 'separator' },
-      actionItem(mainWindow, 'view.toggle_zen_mode', 'Toggle Zen Mode', undefined, dispatch),
-      actionItem(mainWindow, 'view.toggle_focus_mode', 'Toggle Focus Mode', undefined, dispatch),
+      actionItem(mainWindow, 'view.toggle_zen_mode', labels.view.zenMode, undefined, dispatch),
+      actionItem(mainWindow, 'view.toggle_focus_mode', labels.view.focusMode, undefined, dispatch),
       actionItem(
         mainWindow,
         'view.toggle_typewriter_mode',
-        'Toggle Typewriter Mode',
+        labels.view.typewriterMode,
         undefined,
         dispatch,
       ),
       { type: 'separator' },
-      { role: 'reload' },
-      { role: 'toggleDevTools' },
+      { label: labels.view.reload, role: 'reload' },
+      { label: labels.view.devTools, role: 'toggleDevTools' },
     ],
   }
   const themeMenu: MenuItemConstructorOptions = {
-    label: 'Theme',
+    label: labels.theme.label,
     submenu: themeItems.map((item) =>
       actionItem(mainWindow, item.id, item.label, undefined, dispatch),
     ),
   }
   const helpMenu: MenuItemConstructorOptions = {
-    label: 'Help',
-    submenu: [actionItem(mainWindow, 'help.about', 'About marklab', undefined, dispatch)],
+    label: labels.help.label,
+    submenu: [
+      actionItem(mainWindow, 'help.about', labels.help.about(appName), undefined, dispatch),
+    ],
   }
   const template: MenuItemConstructorOptions[] = [fileMenu, editMenu, viewMenu, themeMenu, helpMenu]
   if (process.platform === 'darwin') {
     template.unshift({
-      label: app.name,
+      label: appName,
       submenu: [
-        { role: 'about' },
+        actionItem(mainWindow, 'help.about', labels.app.about(appName), undefined, dispatch),
         { type: 'separator' },
-        { role: 'services' },
+        { label: labels.app.services, role: 'services' },
         { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
+        { label: labels.app.hide(appName), role: 'hide' },
+        { label: labels.app.hideOthers, role: 'hideOthers' },
+        { label: labels.app.showAll, role: 'unhide' },
         { type: 'separator' },
-        { role: 'quit' },
+        { label: labels.app.quit(appName), role: 'quit' },
       ],
     })
   }
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+export const setNativeMenuLocale = (locale: string): { locale: NativeMenuLocale; ok: boolean } => {
+  configuredMenuLocale = normalizeNativeMenuLocale(locale)
+  if (installedMenu && !installedMenu.mainWindow.isDestroyed()) {
+    installNativeMenu(installedMenu.mainWindow, installedMenu.dispatch)
+  }
+  return { locale: configuredMenuLocale, ok: true }
 }

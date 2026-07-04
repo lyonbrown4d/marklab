@@ -28,6 +28,7 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { Logger } from '@electron/services/logger.js'
 import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
 import { getPlatformInfo } from '@electron/services/platform.js'
+import { setNativeMenuLocale } from '@electron/menu.js'
 import type { TerminalService } from '@electron/services/terminal/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 export type NativeIpcDependencies = {
@@ -122,6 +123,7 @@ const createRuntimeCommandHandlers = (
       menu.dispatchToFocusedWindow(id)
       return { ok: true }
     },
+    menu_set_locale: (payload) => setNativeMenuLocale(menuLocale(payload)),
   }
 }
 const menuActionId = (payload: unknown): string => {
@@ -130,4 +132,13 @@ const menuActionId = (payload: unknown): string => {
     throw new Error('menu_dispatch requires an id string')
   }
   return id
+}
+
+const menuLocale = (payload: unknown): string => {
+  const locale =
+    payload && typeof payload === 'object' ? (payload as Record<string, unknown>).locale : null
+  if (typeof locale !== 'string' || !locale.trim()) {
+    throw new Error('menu_set_locale requires a locale string')
+  }
+  return locale
 }

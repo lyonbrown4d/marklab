@@ -32,6 +32,11 @@ export const dispatchMenuAction = async (id: string) => {
   requestMenuAction(id)
   return { ok: true }
 }
+export const setNativeMenuLocale = async (locale: string) => {
+  const electron = getElectronRuntime()
+  if (!electron?.commands?.invoke) return { locale, ok: true }
+  return invoke<{ locale: string; ok: boolean }>('menu_set_locale', { locale })
+}
 export const signalAppReady = async () => {
   const electron = getElectronRuntime()
   if (electron) {
