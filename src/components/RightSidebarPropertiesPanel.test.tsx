@@ -75,7 +75,9 @@ describe('RightSidebarPropertiesPanel', () => {
     expect(screen.getByLabelText('Properties panel')).toHaveAttribute('data-viewport-class', 'p-2')
     expect(screen.getByText('Properties')).toBeInTheDocument()
     expect(screen.getByText('Loading')).toBeInTheDocument()
-    expect(screen.getByText('No metadata')).toBeInTheDocument()
+    const empty = screen.getByRole('note')
+    expect(empty).toHaveTextContent('No metadata')
+    expect(empty).toHaveAttribute('data-slot', 'empty')
   })
 
   it('renders metadata details with gap-based vertical spacing', () => {

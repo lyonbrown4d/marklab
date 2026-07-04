@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import AppEmptyState from '@/components/AppEmptyState'
 import { PropertyCell } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import type { FsPathMetadata } from '@/services/fsApi'
@@ -49,7 +50,14 @@ export const RightSidebarPropertiesPanel = ({
         )}
       </div>
       {!displayMetadata ? (
-        <div className="text-xs text-muted-foreground">{t('inspector.none')}</div>
+        <AppEmptyState
+          compact
+          className="min-h-24 flex-none border-sidebar-border/70 bg-muted/20 px-3 py-4 md:p-4"
+          role="note"
+          title={t('inspector.none')}
+          titleClassName="text-[11px] font-normal text-muted-foreground"
+          titleLevel={3}
+        />
       ) : (
         <div className="flex flex-col gap-2 text-xs">
           <div className="grid grid-cols-2 gap-2">
