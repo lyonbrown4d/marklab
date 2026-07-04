@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { FileText, Music } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import type { PreviewFileKind } from '@/logic/fileTypes'
+import AppEmptyState from '@/components/AppEmptyState'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 
 const DocxPreviewSurface = lazy(() => import('@/components/previews/DocxPreviewSurface'))
@@ -111,9 +112,15 @@ const FilePreviewSurface = ({
   }
 
   return (
-    <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-      <FileText className="size-4" />
-      {t('preview.unsupportedTitle')}
+    <div className="flex h-full items-center justify-center p-4">
+      <AppEmptyState
+        compact
+        className="w-full max-w-md"
+        icon={<FileText />}
+        role="note"
+        title={t('preview.unsupportedTitle')}
+        titleLevel={3}
+      />
     </div>
   )
 }
