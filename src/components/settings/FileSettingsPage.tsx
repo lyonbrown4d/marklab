@@ -124,7 +124,7 @@ const FileSettingsPage = () => {
           description={drawioUrlError ? drawioUrlError : t('settings.drawioEmbedUrlDescription')}
           disabled={drawioEditorMode !== 'remote'}
           control={
-            <div className="flex w-[min(28rem,42vw)] items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-[min(28rem,42vw)] sm:flex-row sm:items-center">
               <Input
                 key={drawioEmbedUrl}
                 defaultValue={drawioEmbedUrl}
@@ -139,7 +139,7 @@ const FileSettingsPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 shrink-0"
+                className="h-8 w-full shrink-0 sm:w-auto"
                 disabled={drawioEditorMode !== 'remote'}
                 onClick={resetDrawioUrl}
               >
