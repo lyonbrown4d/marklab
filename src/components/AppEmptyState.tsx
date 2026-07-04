@@ -16,6 +16,7 @@ type AppEmptyStateProps = {
   description?: ReactNode
   icon?: ReactNode
   title: ReactNode
+  titleLevel?: 1 | 2 | 3 | 4 | 5 | 6
 }
 
 const AppEmptyState = ({
@@ -25,6 +26,7 @@ const AppEmptyState = ({
   description,
   icon,
   title,
+  titleLevel = 2,
 }: AppEmptyStateProps) => (
   <Empty
     className={cn(
@@ -35,7 +37,13 @@ const AppEmptyState = ({
   >
     <EmptyHeader>
       {icon && <EmptyMedia variant="icon">{icon}</EmptyMedia>}
-      <EmptyTitle className={compact ? 'text-sm' : undefined}>{title}</EmptyTitle>
+      <EmptyTitle
+        aria-level={titleLevel}
+        className={compact ? 'text-sm' : undefined}
+        role="heading"
+      >
+        {title}
+      </EmptyTitle>
       {description && (
         <EmptyDescription className={compact ? 'text-xs leading-5' : undefined}>
           {description}
