@@ -629,6 +629,7 @@
   "statusCenter.noEvents": "暂无最近事件",
   "graph.emptyTitle": "暂无图谱数据",
   "graph.emptyDescription": "打开或创建带有 Markdown 链接的文件后，工作区图谱会在这里生成。",
+  "graph.canvasLabel": "图谱编辑画布",
   "graph.filteredEmptyTitle": "没有匹配节点",
   "graph.filteredEmptyDescription": "调整搜索或筛选条件后再查看图谱。",
   "graph.nodes": "节点",

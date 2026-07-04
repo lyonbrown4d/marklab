@@ -629,6 +629,7 @@
   "statusCenter.noEvents": "No recent events",
   "graph.emptyTitle": "No graph data",
   "graph.emptyDescription": "Open or create Markdown files with links and the workspace graph will appear here.",
+  "graph.canvasLabel": "Graph editor canvas",
   "graph.filteredEmptyTitle": "No matching nodes",
   "graph.filteredEmptyDescription": "Adjust search or filters to bring graph nodes back.",
   "graph.nodes": "nodes",

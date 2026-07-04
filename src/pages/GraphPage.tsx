@@ -57,6 +57,8 @@ type GraphPageProps = {
   onUpdateHeadingContent: NonNullable<GraphNodeData['onUpdateContent']>
 }
 
+type GraphFlowInstance = ReactFlowInstance<Node<GraphNodeData>, Edge> | null
+
 const GraphPageComponent = ({
   graph,
   onOpenFile,
@@ -77,10 +79,7 @@ const GraphPageComponent = ({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [graphFeedback, setGraphFeedback] = useState<string | null>(null)
   const [graphFilters, setGraphFilters] = useState(createDefaultGraphFilters)
-  const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<
-    Node<GraphNodeData>,
-    Edge
-  > | null>(null)
+  const [flowInstance, setFlowInstance] = useState<GraphFlowInstance>(null)
   const deferredGraphFilters = useDeferredValue(graphFilters)
   const graphShellRef = useRef<HTMLDivElement | null>(null)
   const layoutKeyRef = useRef(graph.layoutKey)
@@ -239,7 +238,9 @@ const GraphPageComponent = ({
   return (
     <div
       ref={graphShellRef}
+      aria-label={t('graph.canvasLabel')}
       className="relative h-full bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+      role="region"
       tabIndex={0}
       onMouseDown={handleGraphMouseDown}
     >
