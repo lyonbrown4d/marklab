@@ -1018,6 +1018,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "figment2",
+ "fluxdi",
  "marklab-knowledge-engine-core",
  "serde",
  "serde_json",

@@ -16,7 +16,7 @@ const INVALID_PARAMS: i32 = -32602;
 const INTERNAL_ERROR: i32 = -32603;
 
 pub(crate) fn serve(
-  tools: McpContextTools,
+  tools: &McpContextTools,
   reader: impl BufRead,
   mut writer: impl Write,
 ) -> io::Result<()> {

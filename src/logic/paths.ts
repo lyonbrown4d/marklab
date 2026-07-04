@@ -1,25 +1,19 @@
+import { basename, dirname, join, normalize } from 'pathe'
+
 export const normalizePath = (value: string) => {
-  const parts = value.split('/').filter(Boolean)
-  const stack: string[] = []
-  for (const part of parts) {
-    if (part === '.') continue
-    if (part === '..') {
-      stack.pop()
-      continue
-    }
-    stack.push(part)
-  }
-  return stack.join('/')
+  const normalized = normalize(value.replace(/\\/g, '/'))
+    .replace(/^\/+/, '')
+    .replace(/^(\.\.\/)+/, '')
+
+  return normalized === '.' || normalized === '..' ? '' : normalized
 }
 
 export const resolveRelativePath = (base: string, target: string) => {
-  const [pathPart] = target.split('#')
+  const { path: pathPart } = splitLinkTarget(target)
   if (pathPart.startsWith('/')) {
-    return normalizePath(pathPart.slice(1))
+    return normalizePath(pathPart)
   }
-  const baseDir = base.split('/').slice(0, -1).join('/')
-  const joined = baseDir ? `${baseDir}/${pathPart}` : pathPart
-  return normalizePath(joined)
+  return normalizePath(join(dirname(base), pathPart))
 }
 
 export const splitLinkTarget = (target: string) => {
@@ -44,8 +38,7 @@ export const normalizeHeadingAnchor = (anchor: string) => {
 }
 
 export const createFileLabel = (relativePath: string) => {
-  const base = relativePath.split('/').pop() ?? relativePath
-  return base.replace(/\.(md|markdown|ics)$/i, '')
+  return basename(relativePath).replace(/\.(md|markdown|ics)$/i, '')
 }
 
 export const slugify = (label: string) => {

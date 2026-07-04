@@ -1,3 +1,4 @@
+import { dirname, relative } from 'pathe'
 import type { FileEntry } from '@/store/appTypes'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel, normalizePath, resolveRelativePath } from '@/logic/paths'
@@ -63,23 +64,7 @@ const workspaceDocumentPaths = (
 
 const createRelativeLinkTarget = (activePath: string | null, targetPath: string) => {
   if (!activePath) return targetPath
-  const fromDir = activePath.split('/').slice(0, -1)
-  const targetParts = targetPath.split('/')
-  const targetFile = targetParts[targetParts.length - 1] ?? targetPath
-  const targetDir = targetParts.slice(0, -1)
-
-  let commonLength = 0
-  while (
-    commonLength < fromDir.length &&
-    commonLength < targetDir.length &&
-    fromDir[commonLength] === targetDir[commonLength]
-  ) {
-    commonLength += 1
-  }
-
-  const up = new Array(fromDir.length - commonLength).fill('..')
-  const down = targetDir.slice(commonLength)
-  return [...up, ...down, targetFile].join('/') || targetPath
+  return relative(dirname(activePath), targetPath) || targetPath
 }
 
 export const resolveLinkedFilePath = (

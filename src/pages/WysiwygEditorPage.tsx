@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLatest } from 'ahooks'
+import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
@@ -30,10 +31,6 @@ const INITIAL_ICS_CONTENT = [
   'END:VCALENDAR',
   '',
 ].join('\r\n')
-
-const dirname = (path: string) => path.split('/').slice(0, -1).join('/')
-
-const basename = (path: string) => path.split('/').pop() ?? path
 
 const stripCalendarExtension = (path: string) => basename(path).replace(/\.ics$/i, '')
 
@@ -72,23 +69,13 @@ const nextCalendarPath = (activePath: string, files: FileEntry[]) => {
 }
 
 const relativeLinkTarget = (fromPath: string, targetPath: string) => {
-  const fromParts = dirname(fromPath).split('/').filter(Boolean)
-  const targetParts = targetPath.split('/').filter(Boolean)
-  let shared = 0
+  const target = relative(dirname(fromPath), targetPath)
 
-  while (fromParts[shared] && fromParts[shared] === targetParts[shared]) {
-    shared += 1
+  if (!target.includes('/') && !target.startsWith('.')) {
+    return `./${target}`
   }
 
-  const upParts = fromParts.slice(shared).map(() => '..')
-  const downParts = targetParts.slice(shared)
-  const relative = [...upParts, ...downParts].join('/')
-
-  if (!relative.includes('/') && !relative.startsWith('.')) {
-    return `./${relative}`
-  }
-
-  return relative
+  return target
 }
 
 const markdownLinkForCalendar = (activePath: string, calendarPath: string) => {

@@ -11,6 +11,7 @@ use figment2::{
   providers::{Env, Serialized},
   Figment, Provider as FigmentProvider,
 };
+use fluxdi::{Error as FluxError, ErrorKind as FluxErrorKind, Injector, Module, Provider, Shared};
 
 const DEFAULT_SEARCH_LIMIT: usize = 10;
 
@@ -75,17 +76,8 @@ fn main() {
 }
 
 fn run() -> McpSidecarResult<()> {
-  let args = load_config()?;
-  let config = McpContextConfig::new(
-    args.workspace_root,
-    args.engine_data_dir,
-    args.default_search_limit,
-  );
-  let tools = McpContextTools::open(config)?;
-  let stdin = io::stdin();
-  let stdout = io::stdout();
-
-  protocol::serve(tools, stdin.lock(), stdout.lock())?;
+  let root = McpCompositionRoot::from_config(load_config()?)?;
+  root.serve_stdio()?;
   Ok(())
 }
 
@@ -109,6 +101,89 @@ fn filtered_env() -> Env {
   ])
 }
 
+struct McpCompositionRoot {
+  injector: Injector,
+}
+
+impl McpCompositionRoot {
+  fn from_config(config: McpRuntimeConfig) -> Result<Self, FluxError> {
+    let injector = Injector::root();
+    let module = McpModule { config };
+
+    module.configure(&injector)?;
+
+    Ok(Self { injector })
+  }
+
+  fn serve_stdio(&self) -> McpSidecarResult<()> {
+    let server = self.injector.try_resolve::<McpStdioServer>()?;
+    server.serve()?;
+    Ok(())
+  }
+
+  #[cfg(test)]
+  fn runtime_config(&self) -> Result<Shared<McpRuntimeConfig>, FluxError> {
+    self.injector.try_resolve::<McpRuntimeConfig>()
+  }
+}
+
+struct McpModule {
+  config: McpRuntimeConfig,
+}
+
+impl Module for McpModule {
+  fn configure(&self, injector: &Injector) -> Result<(), FluxError> {
+    let runtime_config = self.config.clone();
+    let context_config = McpContextConfig::new(
+      runtime_config.workspace_root.clone(),
+      runtime_config.engine_data_dir.clone(),
+      runtime_config.default_search_limit,
+    );
+    let tools = Shared::new(McpContextTools::open(context_config.clone()).map_err(module_error)?);
+    let tools_for_server = tools.clone();
+
+    injector.try_provide::<McpRuntimeConfig>(Provider::root(move |_| {
+      Shared::new(runtime_config.clone())
+    }))?;
+    injector.try_provide::<McpContextConfig>(Provider::root(move |_| {
+      Shared::new(context_config.clone())
+    }))?;
+    injector.try_provide::<McpContextTools>(Provider::root(move |_| tools.clone()))?;
+    injector.try_provide::<McpStdioServer>(Provider::root(move |_| {
+      Shared::new(McpStdioServer::new(tools_for_server.clone()))
+    }))?;
+
+    Ok(())
+  }
+}
+
+struct McpStdioServer {
+  tools: Shared<McpContextTools>,
+}
+
+impl McpStdioServer {
+  fn new(tools: Shared<McpContextTools>) -> Self {
+    Self { tools }
+  }
+
+  fn serve(&self) -> io::Result<()> {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+
+    protocol::serve(self.tools.as_ref(), stdin.lock(), stdout.lock())
+  }
+}
+
+fn module_error(error: impl ToString) -> FluxError {
+  FluxError::new(
+    FluxErrorKind::ModuleLifecycleFailed,
+    format!(
+      "marklab mcp module configuration failed: {}",
+      error.to_string()
+    ),
+  )
+}
+
 fn init_tracing() {
   let filter = tracing_subscriber::EnvFilter::try_from_default_env()
     .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
@@ -124,6 +199,8 @@ fn init_tracing() {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::fs;
+  use std::time::{SystemTime, UNIX_EPOCH};
 
   #[test]
   fn merges_mcp_config_from_env_and_cli() {
@@ -182,5 +259,35 @@ mod tests {
     .expect_err("workspace root should be required");
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+  }
+
+  #[test]
+  fn builds_mcp_composition_root_with_runtime_config() {
+    let workspace_root = unique_test_path("composition-workspace");
+    let engine_data_dir = unique_test_path("composition-engine");
+    fs::create_dir_all(&workspace_root).expect("create workspace root");
+
+    let root = McpCompositionRoot::from_config(McpRuntimeConfig {
+      workspace_root: workspace_root.clone(),
+      engine_data_dir: engine_data_dir.clone(),
+      default_search_limit: 12,
+    })
+    .expect("composition root should build");
+    let config = root
+      .runtime_config()
+      .expect("runtime config should be registered");
+
+    assert_eq!(config.workspace_root, workspace_root);
+    assert_eq!(config.engine_data_dir, engine_data_dir);
+    assert_eq!(config.default_search_limit, 12);
+  }
+
+  fn unique_test_path(label: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("system time after unix epoch")
+      .as_nanos();
+
+    std::env::temp_dir().join(format!("marklab-mcp-main-{label}-{nanos}"))
   }
 }

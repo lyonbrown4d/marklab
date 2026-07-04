@@ -115,6 +115,26 @@ describe('markdown completions', () => {
     ])
   })
 
+  it('suggests links from root workspace files without custom path math', () => {
+    expect(
+      getMarkdownCompletions({
+        activePath: 'README.md',
+        content: 'See [Target](',
+        line: 1,
+        column: 14,
+        files,
+        fileContents,
+      }).map((item) => item.insertText),
+    ).toEqual([
+      'notes/current.md',
+      'notes/target.md',
+      'notes/calendar.ics',
+      'daily/today.md',
+      'docs/spec.pdf',
+      'assets/logo.png',
+    ])
+  })
+
   it('suggests calendar file links from the workspace path snapshot', () => {
     expect(
       getMarkdownCompletions({

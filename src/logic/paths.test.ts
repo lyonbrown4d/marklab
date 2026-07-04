@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { extractHeadings, extractLinks, normalizeHeadingAnchor } from '@/logic/paths'
+import {
+  extractHeadings,
+  extractLinks,
+  normalizeHeadingAnchor,
+  normalizePath,
+  resolveRelativePath,
+} from '@/logic/paths'
 
 describe('markdown path parsing', () => {
+  it('normalizes portable workspace paths without allowing parent traversal', () => {
+    expect(normalizePath('/docs//draft.md')).toBe('docs/draft.md')
+    expect(normalizePath('docs\\draft.md')).toBe('docs/draft.md')
+    expect(normalizePath('docs/../draft.md')).toBe('draft.md')
+    expect(normalizePath('../../outside.md')).toBe('outside.md')
+  })
+
+  it('resolves markdown link paths relative to the active document', () => {
+    expect(resolveRelativePath('notes/current.md', './target.md#details')).toBe('notes/target.md')
+    expect(resolveRelativePath('notes/current.md', '../daily/today.md')).toBe('daily/today.md')
+    expect(resolveRelativePath('notes/current.md', '/docs/spec.pdf')).toBe('docs/spec.pdf')
+    expect(resolveRelativePath('notes/current.md', '#local-heading')).toBe('notes')
+  })
+
   it('extracts stable heading slugs including unicode and duplicates', () => {
     expect(extractHeadings('# 项目 目标\n## 项目 目标\n### API & UI')).toEqual([
       { level: 1, text: '项目 目标', slug: '项目-目标' },
