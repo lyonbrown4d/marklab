@@ -10,6 +10,7 @@ import {
 import { useI18n } from '@/i18n/useI18n'
 import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const CustomThemesSettingsSection = () => {
@@ -128,6 +129,7 @@ const CustomThemesSettingsSection = () => {
           type="button"
           size="sm"
           variant={customThemeId ? 'outline' : 'secondary'}
+          aria-pressed={!customThemeId}
           onClick={() => setCustomThemeId(null)}
         >
           {t('settings.useBuiltInTheme')}
@@ -137,22 +139,27 @@ const CustomThemesSettingsSection = () => {
         <div className="settings-theme-list flex flex-col gap-2">
           {customThemes.map((item) => {
             const removeLabel = t('settings.removeCustomTheme', { name: item.name })
+            const selected = customThemeId === item.id
             return (
               <div
                 key={item.id}
-                className="settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5"
+                data-selected={selected ? 'true' : 'false'}
+                className={cn(
+                  'settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5',
+                  selected && 'settings-theme-item-selected',
+                )}
               >
                 <button
                   type="button"
                   className="settings-theme-item-trigger min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left text-sm"
+                  aria-label={item.name}
+                  aria-pressed={selected}
                   onClick={() => setCustomThemeId(item.id)}
                 >
                   <span className="block truncate font-medium">{item.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
                 </button>
-                {customThemeId === item.id && (
-                  <Check className="settings-theme-check" aria-hidden="true" />
-                )}
+                {selected && <Check className="settings-theme-check" aria-hidden="true" />}
                 <SettingsIconButton
                   type="button"
                   size="icon"

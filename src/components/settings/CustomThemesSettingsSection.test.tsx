@@ -130,4 +130,15 @@ describe('CustomThemesSettingsSection', () => {
       })
     })
   })
+
+  it('exposes selected custom themes as pressed choices', async () => {
+    preferencesMock.state.customThemeId = 'ocean'
+    vi.mocked(userThemeApi.list).mockResolvedValue([{ id: 'ocean', name: 'Ocean' } as never])
+
+    render(<CustomThemesSettingsSection />)
+
+    const selectedTheme = await screen.findByRole('button', { name: 'Ocean' })
+    expect(selectedTheme).toHaveAttribute('aria-pressed', 'true')
+    expect(selectedTheme.closest('.settings-theme-item')).toHaveAttribute('data-selected', 'true')
+  })
 })

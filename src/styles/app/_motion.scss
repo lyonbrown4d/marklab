@@ -6,6 +6,8 @@
   .command-trigger,
   .activity-rail-button,
   .activity-rail-button::before,
+  .settings-theme-item,
+  .settings-theme-check,
   .resize-handle,
   .resize-handle::after,
   .tab-item,
@@ -24,6 +26,11 @@
   .graph-node-shell:hover,
   .graph-node-shell:focus-visible,
   .react-flow__node:focus-visible .graph-node-shell {
+    transform: none;
+  }
+
+  .settings-theme-item:hover,
+  .settings-theme-item:active {
     transform: none;
   }
 
