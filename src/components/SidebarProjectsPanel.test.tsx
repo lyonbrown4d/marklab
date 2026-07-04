@@ -54,6 +54,8 @@ describe('SidebarProjectsPanel', () => {
       />,
     )
 
-    expect(screen.getByText('No recent projects')).toBeInTheDocument()
+    const empty = screen.getByRole('note')
+    expect(empty).toHaveTextContent('No recent projects')
+    expect(empty.querySelector('[data-slot="empty-icon"]')).toBeInTheDocument()
   })
 })
