@@ -17,6 +17,21 @@ type FullTextSearchPanelProps = {
   onOpenResult: (result: FsSearchResult) => void
 }
 
+const SEARCH_LOADING_SKELETONS = ['h-12 w-full', 'h-12 w-11/12', 'h-12 w-full'] as const
+
+const FullTextSearchLoading = ({ label }: { label: string }) => (
+  <div aria-busy="true" aria-label={label} className="flex flex-col gap-2 p-1" role="status">
+    {SEARCH_LOADING_SKELETONS.map((className, index) => (
+      <Skeleton
+        key={`${className}:${index}`}
+        aria-hidden="true"
+        className={className}
+        data-slot="full-text-search-skeleton"
+      />
+    ))}
+  </div>
+)
+
 const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) => {
   const { t } = useI18n()
   const debouncedQuery = useDebounce(query.trim(), { wait: 180 })
@@ -45,7 +60,7 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
       <div className="flex h-6 items-center justify-between px-1 text-[11px] uppercase text-muted-foreground">
         <span>{t('search.fullText')}</span>
         {searchQuery.isFetching ? (
-          <Spinner className="size-3.5" />
+          <Spinner aria-hidden="true" className="size-3.5" role="presentation" />
         ) : searchQuery.data?.length ? (
           <Badge variant="outline" className="h-5 rounded px-1.5 py-0 text-[10px]">
             {searchQuery.data.length}
@@ -54,11 +69,7 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
       </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="h-full pr-1">
         {searchQuery.isFetching && !searchQuery.data?.length ? (
-          <div className="flex flex-col gap-2 p-1">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-11/12" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+          <FullTextSearchLoading label={t('search.searching')} />
         ) : searchQuery.data?.length ? (
           <div className="flex flex-col gap-1">
             {searchQuery.data.map((result) => (
