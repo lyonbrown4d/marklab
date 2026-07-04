@@ -77,7 +77,7 @@ const ShortcutRecorderRow = ({
       )}
       control={
         <div
-          className="flex min-w-0 items-center justify-end gap-1.5"
+          className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 sm:justify-end"
           data-marklab-shortcut-recorder="true"
         >
           <SettingsActionButton

@@ -127,10 +127,10 @@ export const SettingsField = ({
 }: SettingsRowProps) => {
   return (
     <Field
-      orientation="horizontal"
+      orientation="vertical"
       data-disabled={disabled ? 'true' : undefined}
       className={cn(
-        'items-start justify-between rounded-md border border-border/70 bg-background/60 p-3 data-[disabled=true]:opacity-60',
+        'items-start justify-between rounded-md border border-border/70 bg-background/60 p-3 data-[disabled=true]:opacity-60 sm:flex-row sm:[&>*]:w-auto',
         className,
       )}
     >
@@ -138,7 +138,9 @@ export const SettingsField = ({
         <FieldTitle>{title}</FieldTitle>
         <FieldDescription className="text-xs leading-5">{description}</FieldDescription>
       </FieldContent>
-      <div className="shrink-0 pt-0.5">{control}</div>
+      <div className="flex w-full shrink-0 justify-start pt-0.5 sm:w-auto sm:justify-end">
+        {control}
+      </div>
     </Field>
   )
 }
