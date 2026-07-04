@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'
 import type { MarkdownAssetReference, MarkdownAssetReport } from '@/logic/assets'
 
@@ -79,6 +79,10 @@ const report: MarkdownAssetReport = {
 }
 
 describe('RightSidebarAssetsPanel', () => {
+  beforeEach(() => {
+    copyTextMock.mockReset()
+  })
+
   it('renders action failures with the shared alert surface', async () => {
     const user = userEvent.setup()
     copyTextMock.mockRejectedValueOnce(new Error('Clipboard unavailable'))
@@ -91,5 +95,21 @@ describe('RightSidebarAssetsPanel', () => {
 
     expect(alert).toHaveTextContent('Clipboard unavailable')
     expect(alert).toHaveClass('text-destructive')
+  })
+
+  it('uses the button label as the only loading announcement for pending asset actions', async () => {
+    const user = userEvent.setup()
+    copyTextMock.mockReturnValue(new Promise(() => undefined))
+
+    const { container } = render(<RightSidebarAssetsPanel report={report} />)
+
+    await user.click(screen.getByRole('button', { name: 'Copy path' }))
+
+    const loadingButton = await screen.findByRole('button', { name: 'Working' })
+
+    expect(loadingButton).toBeDisabled()
+    expect(loadingButton.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(container.querySelector('svg[role="presentation"]')).not.toBeNull()
   })
 })

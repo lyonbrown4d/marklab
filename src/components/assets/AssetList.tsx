@@ -207,7 +207,7 @@ const AssetActionButton = ({
     disabled={disabled || loading}
     onClick={onClick}
   >
-    {loading ? <Spinner data-icon="inline-start" /> : icon}
+    {loading ? <Spinner aria-hidden="true" data-icon="inline-start" role="presentation" /> : icon}
     {loading ? loadingLabel : label}
   </Button>
 )
