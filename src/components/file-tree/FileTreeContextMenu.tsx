@@ -23,7 +23,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
 } from '@/components/ui/context-menu'
+import { Kbd } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
 import {
   copyAbsolutePath,
@@ -59,9 +61,9 @@ const shortcut = {
 }
 
 const MenuShortcut = ({ children }: { children: ReactNode }) => (
-  <span className="ml-3 rounded border border-border/80 bg-muted/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground transition-colors group-data-[active=true]/file-tree-menu:border-accent-foreground/20 group-data-[active=true]/file-tree-menu:bg-accent-foreground/10 group-data-[active=true]/file-tree-menu:text-accent-foreground group-data-[highlighted]/file-tree-menu:border-accent-foreground/20 group-data-[highlighted]/file-tree-menu:bg-accent-foreground/10 group-data-[highlighted]/file-tree-menu:text-accent-foreground">
-    {children}
-  </span>
+  <ContextMenuShortcut className="ml-3 tracking-normal">
+    <Kbd className="h-4 min-w-4 px-1 text-[10px]">{children}</Kbd>
+  </ContextMenuShortcut>
 )
 
 const MenuItem = ({
