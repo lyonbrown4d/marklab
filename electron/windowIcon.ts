@@ -1,45 +1,8 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { nativeImage } from 'electron'
+import fs from 'node:fs'
+import { resolveWindowIconPaths, type WindowIconProjectRoots } from '@electron/windowIconPaths.js'
 
-const WINDOW_ICON_CANDIDATES: Record<string, string[]> = {
-  win32: [
-    path.join('resources', 'icons', 'marklab.ico'),
-    path.join('resources', 'icons', 'marklab.png'),
-    path.join('public', 'marklab-dark.svg'),
-    path.join('public', 'marklab.svg'),
-  ],
-  darwin: [
-    path.join('resources', 'icons', 'marklab.png'),
-    path.join('resources', 'icons', 'marklab.icns'),
-    path.join('public', 'marklab-dark.svg'),
-    path.join('public', 'marklab.svg'),
-  ],
-  linux: [
-    path.join('resources', 'icons', 'marklab.png'),
-    path.join('public', 'marklab-dark.svg'),
-    path.join('public', 'marklab.svg'),
-  ],
-}
-
-const FALLBACK_ICON_CANDIDATES = [
-  path.join('public', 'marklab-dark.svg'),
-  path.join('public', 'marklab.svg'),
-]
-
-const resolveWindowIconPath = (projectRoot: string): string | null => {
-  const candidates = WINDOW_ICON_CANDIDATES[process.platform] ?? []
-  for (const relativePath of [...candidates, ...FALLBACK_ICON_CANDIDATES]) {
-    const candidate = path.join(projectRoot, relativePath)
-    if (fs.existsSync(candidate)) return candidate
-  }
-  return null
-}
-
-export const createWindowIcon = (projectRoot: string) => {
-  const iconPath = resolveWindowIconPath(projectRoot)
-  if (!iconPath) return undefined
-
+const createNativeImageFromPath = (iconPath: string): Electron.NativeImage | null => {
   try {
     if (iconPath.endsWith('.svg')) {
       const source = fs.readFileSync(iconPath, 'utf8')
@@ -49,6 +12,14 @@ export const createWindowIcon = (projectRoot: string) => {
     }
     return nativeImage.createFromPath(iconPath)
   } catch {
-    return undefined
+    return null
   }
+}
+
+export const createWindowIcon = (projectRoots: WindowIconProjectRoots) => {
+  for (const iconPath of resolveWindowIconPaths(projectRoots)) {
+    const image = createNativeImageFromPath(iconPath)
+    if (image && !image.isEmpty()) return image
+  }
+  return undefined
 }

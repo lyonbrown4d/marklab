@@ -1,8 +1,10 @@
 import { BrowserWindow, app, screen } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { MARKLAB_APP_NAME } from '@electron/appIdentity.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { getWindowState, setWindowState } from '@electron/services/settingsStore.js'
+import { resolveElectronProjectRoots } from '@electron/windowIconPaths.js'
 import { createWindowIcon } from '@electron/windowIcon.js'
 import type { PersistedWindowState } from '@electron/types.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
@@ -17,7 +19,7 @@ const WINDOW_STATE_SAVE_DELAY_MS = 250
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
-const appIcon = createWindowIcon(projectRoot)
+const appIcon = createWindowIcon(resolveElectronProjectRoots(electronDir))
 let didInstallDevelopmentDockIcon = false
 export type MarklabWindows = {
   splash: BrowserWindow
@@ -196,7 +198,7 @@ export const createSplashWindow = () => {
   const splash = new BrowserWindow({
     width: 420,
     height: 280,
-    title: 'marklab',
+    title: MARKLAB_APP_NAME,
     icon: appIcon,
     resizable: false,
     fullscreen: false,
@@ -231,7 +233,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     ...restored.bounds,
     minWidth: MAIN_WINDOW_MIN_WIDTH,
     minHeight: MAIN_WINDOW_MIN_HEIGHT,
-    title: 'marklab',
+    title: MARKLAB_APP_NAME,
     icon: appIcon,
     resizable: true,
     fullscreen: false,

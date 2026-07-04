@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import { createElectronContainer, type ElectronContainer } from '@electron/container.js'
+import { configureAppIdentity } from '@electron/appIdentity.js'
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 import {
   registerAssetProtocol,
@@ -28,6 +29,7 @@ let nativeIpc: NativeIpcRegistration | null = null
 let container: ElectronContainer | null = null
 
 installElectronE2eRuntimeFlags()
+configureAppIdentity(app)
 registerAssetProtocolPrivileges()
 
 const clearFallbackTimer = (): void => {
