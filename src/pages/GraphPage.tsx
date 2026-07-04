@@ -226,6 +226,9 @@ const GraphPageComponent = ({
     () => hasActiveGraphFilters(deferredGraphFilters),
     [deferredGraphFilters],
   )
+  const resetGraphFilters = useCallback(() => {
+    setGraphFilters(createDefaultGraphFilters())
+  }, [])
   const { clearHoverPreview, hoverNodeDetails, hoverPreview, updateHoverPreview } =
     useGraphHoverPreview({
       edges,
@@ -302,6 +305,8 @@ const GraphPageComponent = ({
               ? t('graph.filteredEmptyDescription')
               : t('graph.emptyDescription')
           }
+          actionLabel={filteredGraphHasActiveFilters ? t('graph.resetFilters') : undefined}
+          onAction={filteredGraphHasActiveFilters ? resetGraphFilters : undefined}
         />
       )}
     </div>

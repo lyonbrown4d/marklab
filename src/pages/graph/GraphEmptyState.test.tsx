@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
 
 describe('GraphEmptyState', () => {
@@ -31,5 +31,25 @@ describe('GraphEmptyState', () => {
     const icon = container.querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
     expect(icon).toHaveClass('size-5')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('offers an inline action for recoverable filtered empty states', () => {
+    const onAction = vi.fn()
+    render(
+      <GraphEmptyState
+        title="No matching nodes"
+        description="Adjust search or filters to bring graph nodes back."
+        actionLabel="Reset"
+        onAction={onAction}
+      />,
+    )
+
+    const action = screen.getByRole('button', { name: 'Reset' })
+    expect(action).toHaveClass('pointer-events-auto', 'h-8')
+
+    fireEvent.click(action)
+
+    expect(onAction).toHaveBeenCalledTimes(1)
   })
 })

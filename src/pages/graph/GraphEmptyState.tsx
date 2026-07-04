@@ -1,12 +1,20 @@
 import { GitGraph } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 
 type GraphEmptyStateProps = {
+  actionLabel?: string
   description: string
+  onAction?: () => void
   title: string
 }
 
-export const GraphEmptyState = ({ description, title }: GraphEmptyStateProps) => (
+export const GraphEmptyState = ({
+  actionLabel,
+  description,
+  onAction,
+  title,
+}: GraphEmptyStateProps) => (
   <div
     aria-atomic="true"
     aria-live="polite"
@@ -21,6 +29,17 @@ export const GraphEmptyState = ({ description, title }: GraphEmptyStateProps) =>
         <EmptyTitle className="text-sm font-semibold">{title}</EmptyTitle>
         <EmptyDescription className="text-xs leading-5">{description}</EmptyDescription>
       </EmptyHeader>
+      {onAction && actionLabel ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="pointer-events-auto h-8 rounded-md px-3 text-xs"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </Button>
+      ) : null}
     </Empty>
   </div>
 )
