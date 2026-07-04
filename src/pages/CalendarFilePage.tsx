@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react'
 import { CalendarDays, Clock, Code2, MapPin } from 'lucide-react'
 
 import AppEmptyState from '@/components/AppEmptyState'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { dateKey, parseIcsCalendar } from '@/logic/ics'
@@ -97,9 +98,9 @@ const CalendarFilePage = memo(
                       {selectedDate?.toLocaleDateString()}
                     </div>
                   </div>
-                  <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                  <Badge variant="secondary" className="shrink-0">
                     {t('calendar.eventCount', { count: selectedEvents.length })}
-                  </div>
+                  </Badge>
                 </div>
 
                 {selectedEvents.length === 0 ? (

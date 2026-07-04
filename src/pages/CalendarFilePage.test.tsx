@@ -98,7 +98,7 @@ describe('CalendarFilePage', () => {
     expect(screen.getByText('All day')).toBeInTheDocument()
     expect(screen.getByText('Studio')).toBeInTheDocument()
     expect(screen.getByText('Prepare roadmap notes')).toBeInTheDocument()
-    expect(screen.getByText('1 events')).toBeInTheDocument()
+    expect(screen.getByText('1 events')).toHaveClass('bg-secondary', 'text-secondary-foreground')
     expect(screen.getByText('Calendar view')).toBeInTheDocument()
     expect(screen.getByText('2 events total')).toBeInTheDocument()
 
