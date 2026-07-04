@@ -17,6 +17,9 @@ type RightSidebarPropertiesPanelProps = {
   loadingMetadata: boolean
 }
 
+const SUMMARY_SKELETON_COUNT = 4
+const FILE_SKELETON_COUNT = 4
+
 const formatBytes = (size: number) => {
   if (!Number.isFinite(size) || size <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB']
@@ -29,22 +32,20 @@ const formatBytes = (size: number) => {
   return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
+const MetadataSkeletonBlock = ({ count }: { count: number }) => (
+  <div className="grid grid-cols-2 gap-2">
+    {Array.from({ length: count }, (_, index) => (
+      <Skeleton key={index} aria-hidden="true" className="h-12" data-slot="metadata-skeleton" />
+    ))}
+  </div>
+)
+
 const MetadataSkeleton = ({ label }: { label: string }) => (
   <div aria-busy="true" aria-label={label} className="flex flex-col gap-2" role="status">
-    <div className="grid grid-cols-2 gap-2">
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-      <Skeleton aria-hidden="true" className="h-12" />
-    </div>
-    <Skeleton aria-hidden="true" className="h-11" />
-    <Skeleton aria-hidden="true" className="h-11" />
+    <MetadataSkeletonBlock count={SUMMARY_SKELETON_COUNT} />
+    <MetadataSkeletonBlock count={FILE_SKELETON_COUNT} />
+    <Skeleton aria-hidden="true" className="h-11" data-slot="metadata-skeleton" />
+    <Skeleton aria-hidden="true" className="h-11" data-slot="metadata-skeleton" />
   </div>
 )
 

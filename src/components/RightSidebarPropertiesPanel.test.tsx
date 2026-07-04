@@ -78,7 +78,11 @@ describe('RightSidebarPropertiesPanel', () => {
     expect(screen.getByText('Properties')).toBeInTheDocument()
     expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute('aria-busy', 'true')
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(10)
+    const skeletons = container.querySelectorAll('[data-slot="metadata-skeleton"]')
+    expect(skeletons).toHaveLength(10)
+    skeletons.forEach((skeleton) => {
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true')
+    })
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
