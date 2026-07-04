@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { Separator } from '@/components/ui/separator'
 
 type MarkdownDividerViewProps = {
   selected?: boolean
@@ -10,7 +11,7 @@ const MarkdownDividerView = ({ selected = false }: MarkdownDividerViewProps) => 
       className={`marklab-md-block my-5 rounded-sm px-1 py-2`}
       data-selected={selected ? 'true' : 'false'}
     >
-      <div className="h-px bg-border" />
+      <Separator />
     </div>
   )
 }
