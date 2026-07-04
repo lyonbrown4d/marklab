@@ -84,4 +84,24 @@ describe('SettingsDialog', () => {
     expect(generalTab).not.toHaveAttribute('aria-current')
     expect(screen.getByText('Appearance settings panel')).toBeInTheDocument()
   })
+
+  it('keeps the active settings tab in view when sections change', async () => {
+    const scrollIntoView = vi
+      .spyOn(window.HTMLElement.prototype, 'scrollIntoView')
+      .mockImplementation(() => undefined)
+
+    try {
+      const user = userEvent.setup()
+      renderSettingsDialog()
+
+      await user.click(screen.getByRole('tab', { name: 'Shortcuts' }))
+
+      expect(scrollIntoView).toHaveBeenLastCalledWith({
+        block: 'nearest',
+        inline: 'nearest',
+      })
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
 })

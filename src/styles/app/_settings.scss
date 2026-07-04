@@ -75,6 +75,12 @@
 .settings-dialog-tabs {
   gap: 0.25rem;
   background: color-mix(in srgb, hsl(var(--muted)) 32%, transparent);
+  scroll-padding-inline: 0.5rem;
+  scrollbar-width: none;
+}
+
+.settings-dialog-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger {
@@ -86,6 +92,7 @@
     background-color var(--motion-duration-fast) ease,
     color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease;
+  scroll-snap-align: start;
 }
 
 .settings-dialog-tabs .settings-dialog-tab-trigger::before {
@@ -124,6 +131,25 @@
 
 .settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']:hover {
   background: color-mix(in srgb, hsl(var(--card)) 74%, hsl(var(--accent)) 26%);
+}
+
+@media (max-width: 639.98px) {
+  .settings-dialog-tabs {
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 0.75rem,
+      #000 calc(100% - 0.75rem),
+      transparent 100%
+    );
+  }
+}
+
+@media (min-width: 640px) {
+  .settings-dialog-tabs {
+    overflow-x: hidden;
+  }
 }
 
 .activity-rail-button {

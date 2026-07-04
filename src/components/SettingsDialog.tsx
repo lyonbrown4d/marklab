@@ -7,7 +7,7 @@ import {
   Save,
   SlidersHorizontal,
 } from 'lucide-react'
-import { type ReactElement, useCallback, useMemo, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,7 @@ const settingsRoutes = [
 const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { t } = useI18n()
   const [route, setRoute] = useState(settingsRoutes[0]?.value ?? 'general')
+  const tabsListRef = useRef<HTMLDivElement | null>(null)
   const section = useMemo(() => {
     return (
       settingsRoutes.find((entry) => entry.value === route)?.value ??
@@ -98,6 +99,15 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const onSectionChange = useCallback((nextRoute: string) => {
     setRoute(nextRoute)
   }, [])
+
+  useEffect(() => {
+    const activeTab = tabsListRef.current?.querySelector<HTMLElement>(
+      `[data-settings-route="${section}"]`,
+    )
+    if (typeof activeTab?.scrollIntoView === 'function') {
+      activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
+  }, [section])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,8 +127,9 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
           className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-card sm:grid-cols-[176px_minmax(0,1fr)] sm:grid-rows-1"
         >
           <TabsList
+            ref={tabsListRef}
             aria-label={t('settings.title')}
-            className="flex h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-muted/30 p-2 sm:h-full sm:flex-col sm:border-b-0 sm:border-r"
+            className="settings-dialog-tabs flex h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-muted/30 p-2 sm:h-full sm:flex-col sm:border-b-0 sm:border-r"
           >
             {settingsRoutes.map((routeConfig) => {
               const Icon = routeConfig.icon
@@ -129,8 +140,9 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   key={routeConfig.value}
                   value={routeConfig.value}
                   aria-current={isActive ? 'page' : undefined}
+                  data-settings-route={routeConfig.value}
                   title={label}
-                  className="relative flex-none cursor-pointer justify-start gap-2 rounded-md border border-transparent text-muted-foreground transition-[background-color,color,border-color,box-shadow] before:absolute before:left-1 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-transparent hover:bg-accent/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-[state=active]:border-border/80 data-[state=active]:bg-background/80 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-primary [&_svg]:size-4 [&_svg]:shrink-0"
+                  className="settings-dialog-tab-trigger relative flex-none cursor-pointer justify-start gap-2 rounded-md border border-transparent text-muted-foreground transition-[background-color,color,border-color,box-shadow] before:absolute before:left-1 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-transparent hover:bg-accent/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-[state=active]:border-border/80 data-[state=active]:bg-background/80 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-primary [&_svg]:size-4 [&_svg]:shrink-0"
                 >
                   <Icon aria-hidden="true" />
                   <span className="truncate">{label}</span>
