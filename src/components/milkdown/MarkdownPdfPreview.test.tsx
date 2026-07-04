@@ -67,6 +67,7 @@ describe('MarkdownPdfPreview', () => {
     )
 
     expect(screen.getByRole('button', { name: 'Expand view' })).toBeInTheDocument()
+    expect(screen.getByText('PDF')).toHaveClass('bg-secondary', 'text-secondary-foreground')
     expect(screen.getByText('Loading PDF preview...')).toBeInTheDocument()
 
     await waitFor(() => {

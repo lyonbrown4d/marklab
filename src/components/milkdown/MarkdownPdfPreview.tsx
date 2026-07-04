@@ -5,6 +5,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fetchPdfObjectUrl } from '@/components/milkdown/pdfObjectUrlSource'
@@ -223,7 +224,9 @@ const MarkdownPdfPreview = ({
     <div className="marklab-pdf-preview" contentEditable={false}>
       <div className="marklab-pdf-preview__header">
         <div className="marklab-pdf-preview__meta">
-          <span className="marklab-pdf-preview__badge">PDF</span>
+          <Badge variant="secondary" className="shrink-0 rounded px-2 py-0.5 text-[10px]">
+            PDF
+          </Badge>
           <span className="marklab-pdf-preview__title">{title}</span>
         </div>
         <Button
