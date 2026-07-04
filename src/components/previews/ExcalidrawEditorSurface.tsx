@@ -4,6 +4,7 @@ import { Save } from 'lucide-react'
 import { useCallback, useRef, useState, type ComponentProps } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
+import AppAlert from '@/components/AppAlert'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { fsApi } from '@/services/fsApi'
@@ -84,12 +85,13 @@ const ExcalidrawEditorSurface = ({
   if (documentQuery.isError || !documentQuery.data) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <div className="max-w-md rounded-lg border bg-card p-4 text-sm text-card-foreground shadow-sm">
-          <div className="font-medium">{t('preview.excalidrawOpenFailedTitle')}</div>
-          <div className="mt-2 text-muted-foreground">
-            {errorMessage(documentQuery.error, t('preview.excalidrawOpenFallback'))}
-          </div>
-        </div>
+        <AppAlert
+          tone="destructive"
+          title={t('preview.excalidrawOpenFailedTitle')}
+          className="max-w-md"
+        >
+          {errorMessage(documentQuery.error, t('preview.excalidrawOpenFallback'))}
+        </AppAlert>
       </div>
     )
   }
@@ -117,9 +119,12 @@ const ExcalidrawEditorSurface = ({
         </Button>
       </div>
       {saveError && (
-        <div className="border-b bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <AppAlert
+          tone="destructive"
+          className="rounded-none border-x-0 border-t-0 px-3 py-2 text-xs"
+        >
           {saveError}
-        </div>
+        </AppAlert>
       )}
       <div className="min-h-0 flex-1">
         <Excalidraw

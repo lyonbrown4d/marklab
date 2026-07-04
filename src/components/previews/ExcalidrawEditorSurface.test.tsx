@@ -117,4 +117,18 @@ describe('ExcalidrawEditorSurface', () => {
     })
     expect(fsApi.flushBuffers).toHaveBeenCalled()
   })
+
+  it('uses an alert when an explicit save fails', async () => {
+    vi.mocked(fsApi.readFile).mockResolvedValue('{"type":"excalidraw","version":2,"elements":[]}')
+    vi.mocked(fsApi.updateBuffer).mockRejectedValue(new Error('Disk is full'))
+
+    renderSurface()
+
+    fireEvent.click(await screen.findByTestId('excalidraw-editor'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Disk is full')
+    expect(alert).toHaveClass('bg-destructive/10')
+  })
 })
