@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import AppEmptyState from '@/components/AppEmptyState'
 import { GitChangeRow } from '@/components/GitChangeRow'
 import { GitCommitDialog } from '@/components/GitCommitDialog'
 import { GitInitDialog } from '@/components/GitInitDialog'
@@ -189,12 +190,17 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
           <span>{t('scm.title')}</span>
         </SidebarGroupLabel>
         <SidebarGroupContent>
-          <div className="flex flex-col gap-2 px-2 pb-2 text-xs">
-            <div className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/30 p-2">
-              <div className="font-medium text-sidebar-foreground">{singleFileLabel}</div>
-              <div className="mt-1 text-muted-foreground">{t('scm.singleFileHelp')}</div>
-            </div>
-          </div>
+          <AppEmptyState
+            compact
+            className="mx-2 mb-2 min-h-32 flex-none border-sidebar-border/80 bg-sidebar/40 px-4 py-5"
+            description={t('scm.singleFileHelp')}
+            descriptionClassName="max-w-[13rem] text-[11px] leading-4"
+            icon={<GitBranch aria-hidden="true" />}
+            mediaClassName="mb-1 border border-sidebar-border bg-background/70 text-muted-foreground"
+            title={singleFileLabel}
+            titleClassName="text-xs"
+            titleLevel={3}
+          />
         </SidebarGroupContent>
       </SidebarGroup>
     )
@@ -378,15 +384,18 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
                 </div>
               )}
               {groups.length === 0 ? (
-                <div
+                <AppEmptyState
+                  compact
+                  className="mx-2 min-h-28 flex-none border-sidebar-border/80 bg-sidebar/30 px-4 py-4"
+                  description={t('scm.clean')}
+                  descriptionClassName="max-w-[13rem] text-[11px] leading-4"
+                  icon={<GitCommitHorizontal aria-hidden="true" />}
+                  mediaClassName="mb-1 border border-sidebar-border bg-background/70 text-muted-foreground"
                   role="status"
-                  className="mx-2 rounded-md border border-sidebar-border/70 p-2 text-xs"
-                >
-                  <div className="font-medium text-sidebar-foreground">
-                    {t('scm.noChangesTitle')}
-                  </div>
-                  <div className="mt-1 text-muted-foreground">{t('scm.clean')}</div>
-                </div>
+                  title={t('scm.noChangesTitle')}
+                  titleClassName="text-xs"
+                  titleLevel={3}
+                />
               ) : (
                 <SidebarMenu className="flex flex-col gap-2">
                   {groups.map((group) => {

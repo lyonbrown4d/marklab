@@ -1,7 +1,8 @@
 import { useId } from 'react'
-import { Plus } from 'lucide-react'
+import { GitBranch, Plus } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
 import AppButton from '@/components/AppButton'
+import AppEmptyState from '@/components/AppEmptyState'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -21,11 +22,18 @@ export const GitRepositoryEmptyState = ({
   const errorMessage = initError ? String(initError) : ''
 
   return (
-    <div className="flex flex-col gap-2 px-2 pb-2 text-xs" aria-busy={isInitializing}>
-      <div className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/30 p-2">
-        <div className="font-medium text-sidebar-foreground">{t('scm.notRepositoryTitle')}</div>
-        <div className="mt-1 text-muted-foreground">{t('scm.notRepositoryHelp')}</div>
-      </div>
+    <div className="flex flex-col gap-2 px-2 pb-2" aria-busy={isInitializing}>
+      <AppEmptyState
+        compact
+        className="min-h-36 flex-none border-sidebar-border/80 bg-sidebar/40 px-4 py-5"
+        description={t('scm.notRepositoryHelp')}
+        descriptionClassName="max-w-[13rem] text-[11px] leading-4"
+        icon={<GitBranch aria-hidden="true" />}
+        mediaClassName="mb-1 border border-sidebar-border bg-background/70 text-muted-foreground"
+        title={t('scm.notRepositoryTitle')}
+        titleClassName="text-xs"
+        titleLevel={3}
+      />
       <AppButton
         type="button"
         variant="secondary"

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { AriaRole, ReactNode } from 'react'
 import {
   Empty,
   EmptyContent,
@@ -17,6 +17,7 @@ type AppEmptyStateProps = {
   descriptionClassName?: string
   icon?: ReactNode
   mediaClassName?: string
+  role?: AriaRole
   title: ReactNode
   titleClassName?: string
   titleLevel?: 1 | 2 | 3 | 4 | 5 | 6
@@ -30,6 +31,7 @@ const AppEmptyState = ({
   descriptionClassName,
   icon,
   mediaClassName,
+  role,
   title,
   titleClassName,
   titleLevel = 2,
@@ -40,6 +42,7 @@ const AppEmptyState = ({
       compact ? 'min-h-20 gap-3 p-4 md:p-4' : 'min-h-48',
       className,
     )}
+    role={role}
   >
     <EmptyHeader>
       {icon ? (

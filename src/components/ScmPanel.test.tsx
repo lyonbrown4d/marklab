@@ -88,6 +88,7 @@ describe('ScmPanel', () => {
     renderPanel({ rootKind: 'single', rootPath: 'D:/notes/README.md' })
 
     expect(screen.getByRole('region', { name: 'Source Control' })).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="empty"]')).toBeInTheDocument()
     expect(screen.getByText('Source control is unavailable for a single file')).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -159,6 +160,18 @@ describe('ScmPanel', () => {
       'Refresh Git status',
     )
     expect(screen.getByRole('group', { name: 'Changes' })).toBeInTheDocument()
+  })
+
+  it('renders a shadcn empty state when the repository is clean', async () => {
+    vi.mocked(gitApi.getStatus).mockResolvedValue(createSnapshot())
+
+    renderPanel()
+
+    expect(await screen.findByText('Working tree clean')).toBeInTheDocument()
+    expect(screen.getByText('No pending changes')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="empty"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="empty"]')).toHaveAttribute('role', 'status')
+    expect(document.querySelector('[data-slot="empty-icon"]')).toBeInTheDocument()
   })
 
   it('ties conflict commit blocking text to the disabled commit action', async () => {

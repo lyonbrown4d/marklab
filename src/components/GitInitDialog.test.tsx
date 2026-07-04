@@ -87,6 +87,8 @@ describe('GitRepositoryEmptyState', () => {
 
     expect(screen.getByText('No Git repository')).toBeInTheDocument()
     expect(screen.getByText('Create a repository before using source control.')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="empty"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="empty-icon"]')).toBeInTheDocument()
 
     const initButton = screen.getByRole('button', { name: 'Initialize repository' })
     expect(initButton).toHaveAttribute('type', 'button')
