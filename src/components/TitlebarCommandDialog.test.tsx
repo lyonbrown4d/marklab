@@ -27,6 +27,9 @@ const messages: Record<string, string> = {
   'command.empty.text': 'No matching text.',
   'command.noResults': 'No command results',
   'command.searchHint': 'Type to search files, headings, and text.',
+  'command.search.scopeFiles': 'files',
+  'command.search.scopeHeadings': 'headings',
+  'command.search.scopeText': 'text',
   'sidebar.search': 'Search workspace',
 }
 
@@ -243,7 +246,21 @@ describe('TitlebarCommandDialog', () => {
       'Search workspace',
     )
     expect(screen.getByRole('status').querySelector('.size-5')).not.toBeNull()
+    expect(screen.getByRole('button', { name: '@ files' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '# headings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '? text' })).toBeInTheDocument()
     expect(screen.getByLabelText('Search overview')).toHaveTextContent('|2|1|1')
+  })
+
+  it('lets empty-state suggestions switch command search scopes', async () => {
+    renderDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: '@ files' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Command input' })).toHaveValue('@ ')
+      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', 'files')
+    })
   })
 
   it('updates query-dependent empty copy and propagates query to command sections', async () => {

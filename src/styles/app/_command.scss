@@ -18,3 +18,12 @@
   background: color-mix(in srgb, hsl(var(--popover)) 94%, hsl(var(--background)));
   border-color: hsl(var(--border));
 }
+
+.command-empty-scope-button {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.command-empty-scope-marker {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+}
