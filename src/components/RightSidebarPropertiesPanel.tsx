@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import AppEmptyState from '@/components/AppEmptyState'
 import { PropertyCell } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
@@ -28,6 +29,25 @@ const formatBytes = (size: number) => {
   return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
+const MetadataSkeleton = ({ label }: { label: string }) => (
+  <div aria-busy="true" aria-label={label} className="flex flex-col gap-2" role="status">
+    <div className="grid grid-cols-2 gap-2">
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+      <Skeleton aria-hidden="true" className="h-12" />
+    </div>
+    <Skeleton aria-hidden="true" className="h-11" />
+    <Skeleton aria-hidden="true" className="h-11" />
+  </div>
+)
+
 export const RightSidebarPropertiesPanel = ({
   outlineCount,
   backlinksCount,
@@ -49,7 +69,9 @@ export const RightSidebarPropertiesPanel = ({
           </Badge>
         )}
       </div>
-      {!displayMetadata ? (
+      {loadingMetadata && !displayMetadata ? (
+        <MetadataSkeleton label={t('inspector.loading')} />
+      ) : !displayMetadata ? (
         <AppEmptyState
           compact
           className="min-h-24 flex-none border-sidebar-border/70 bg-muted/20 px-3 py-4 md:p-4"

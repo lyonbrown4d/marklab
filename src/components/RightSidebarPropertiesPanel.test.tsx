@@ -68,13 +68,25 @@ const baseProps = {
 }
 
 describe('RightSidebarPropertiesPanel', () => {
-  it('renders loading and empty metadata states', () => {
-    render(<RightSidebarPropertiesPanel {...baseProps} displayMetadata={null} loadingMetadata />)
+  it('renders a busy skeleton while metadata is loading', () => {
+    const { container } = render(
+      <RightSidebarPropertiesPanel {...baseProps} displayMetadata={null} loadingMetadata />,
+    )
 
     expect(screen.getByLabelText('Properties panel')).toHaveClass('h-full')
     expect(screen.getByLabelText('Properties panel')).toHaveAttribute('data-viewport-class', 'p-2')
     expect(screen.getByText('Properties')).toBeInTheDocument()
     expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(10)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  it('renders an empty state after metadata finishes loading with no result', () => {
+    render(
+      <RightSidebarPropertiesPanel {...baseProps} displayMetadata={null} loadingMetadata={false} />,
+    )
+
     const empty = screen.getByRole('note')
     expect(empty).toHaveTextContent('No metadata')
     expect(empty).toHaveAttribute('data-slot', 'empty')
