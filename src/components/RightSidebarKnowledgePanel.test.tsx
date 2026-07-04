@@ -89,4 +89,36 @@ describe('RightSidebarKnowledgePanel', () => {
 
     expect(onOpenMissing).toHaveBeenCalledWith(missingReference)
   })
+
+  it('renders shared empty states for empty knowledge sections', () => {
+    const knowledge: KnowledgeInsights = {
+      incoming: [],
+      outgoing: [],
+      missing: [],
+      incomingCount: 0,
+      outgoingCount: 0,
+      missingCount: 0,
+      orphan: true,
+    }
+
+    render(
+      <RightSidebarKnowledgePanel
+        targetPath="target.md"
+        targetLabel="target"
+        knowledge={knowledge}
+        onOpenFile={vi.fn()}
+        onOpenReference={vi.fn()}
+        onOpenMissing={vi.fn()}
+      />,
+    )
+
+    const notes = screen.getAllByRole('note')
+    expect(notes).toHaveLength(3)
+    expect(notes.map((note) => note.textContent)).toEqual([
+      'No outgoing links',
+      'No backlinks',
+      'No missing links',
+    ])
+    expect(notes.every((note) => note.getAttribute('data-slot') === 'empty')).toBe(true)
+  })
 })

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import AppEmptyState from '@/components/AppEmptyState'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import type {
@@ -103,6 +104,17 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
   </div>
 )
 
+const SectionEmptyState = ({ label }: { label: string }) => (
+  <AppEmptyState
+    compact
+    className="min-h-14 flex-none rounded-md border-sidebar-border/70 bg-muted/20 px-3 py-3 md:p-3"
+    role="note"
+    title={label}
+    titleClassName="text-[11px] font-normal text-muted-foreground"
+    titleLevel={4}
+  />
+)
+
 const KnowledgeSection = ({
   title,
   summary,
@@ -137,7 +149,7 @@ const KnowledgeSection = ({
         </Badge>
       </div>
       {items.length === 0 ? (
-        <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
+        <SectionEmptyState label={empty} />
       ) : (
         <div className="flex flex-col gap-1">
           {items.map((item) => {
@@ -151,7 +163,7 @@ const KnowledgeSection = ({
                 className="h-auto min-h-14 w-full items-start justify-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
                 onClick={() => (onOpenReference ? onOpenReference(item) : onOpen?.(item.path))}
               >
-                <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <FileText className="mt-0.5 text-muted-foreground" data-icon="inline-start" />
                 <span className="min-w-0 flex flex-1 flex-col gap-1">
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-xs font-medium">{item.label}</span>
@@ -213,7 +225,7 @@ const MissingLinksSection = ({
         </Badge>
       </div>
       {items.length === 0 ? (
-        <div className="px-1 py-2 text-xs text-muted-foreground">{empty}</div>
+        <SectionEmptyState label={empty} />
       ) : (
         <div className="flex flex-col gap-1">
           {items.map((item, index) => {
@@ -232,7 +244,7 @@ const MissingLinksSection = ({
                 className="h-auto min-h-14 w-full items-start justify-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
                 onClick={() => onOpen(item)}
               >
-                <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <Link2 className="mt-0.5 text-muted-foreground" data-icon="inline-start" />
                 <span className="min-w-0 flex flex-1 flex-col gap-1">
                   <span className="block truncate text-xs font-medium">{item.text}</span>
                   <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
