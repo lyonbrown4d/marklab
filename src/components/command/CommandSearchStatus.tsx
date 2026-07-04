@@ -1,5 +1,6 @@
 import { AlertCircle, Database, Search } from 'lucide-react'
 import type { ReactNode } from 'react'
+import AppAlert from '@/components/AppAlert'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -15,12 +16,10 @@ type CommandSearchStatusProps = {
 
 type StatusTone = keyof typeof statusToneClassName
 
-const statusClassName = 'mx-2 mt-2 flex items-start gap-2 rounded-md border px-2 py-1.5 text-xs'
-
 const statusToneClassName = {
-  muted: 'border-border bg-muted/35 text-muted-foreground',
-  info: 'border-primary/20 bg-primary/5 text-foreground',
-  danger: 'border-destructive/30 bg-destructive/10 text-destructive',
+  muted: 'bg-muted/35 text-muted-foreground',
+  info: 'border-primary/20 bg-primary/5',
+  danger: '',
 }
 
 const statusAriaByTone: Record<
@@ -44,17 +43,17 @@ const StatusNotice = ({
   const aria = statusAriaByTone[tone]
 
   return (
-    <div
+    <AppAlert
       aria-atomic="true"
       aria-live={aria.live}
-      className={cn(statusClassName, statusToneClassName[tone])}
+      className={cn('mx-2 mt-2 px-2 py-1.5', statusToneClassName[tone])}
+      descriptionClassName="text-xs"
+      icon={icon}
       role={aria.role}
+      tone={tone === 'danger' ? 'destructive' : 'default'}
     >
-      <span aria-hidden="true" className="shrink-0">
-        {icon}
-      </span>
-      <span>{children}</span>
-    </div>
+      {children}
+    </AppAlert>
   )
 }
 
@@ -71,7 +70,10 @@ const CommandSearchStatus = ({
 
   if (searchIndexRebuilding) {
     return (
-      <StatusNotice icon={<Spinner className="mt-0.5 size-3.5 shrink-0" />} tone="info">
+      <StatusNotice
+        icon={<Spinner aria-hidden="true" className="size-3.5" role="presentation" />}
+        tone="info"
+      >
         {t('command.search.status.rebuilding')}
       </StatusNotice>
     )
@@ -79,7 +81,7 @@ const CommandSearchStatus = ({
 
   if (!workspaceIndexed) {
     return (
-      <StatusNotice icon={<Database className="mt-0.5 size-3.5 shrink-0" />}>
+      <StatusNotice icon={<Database aria-hidden="true" className="size-3.5" />}>
         {t('command.search.status.warming')}
       </StatusNotice>
     )
@@ -87,7 +89,7 @@ const CommandSearchStatus = ({
 
   if (fullTextError) {
     return (
-      <StatusNotice icon={<AlertCircle className="mt-0.5 size-3.5 shrink-0" />} tone="danger">
+      <StatusNotice icon={<AlertCircle aria-hidden="true" className="size-3.5" />} tone="danger">
         {t('command.search.status.fullTextError')}
       </StatusNotice>
     )
@@ -95,7 +97,7 @@ const CommandSearchStatus = ({
 
   if (fullTextFetching) {
     return (
-      <StatusNotice icon={<Spinner className="mt-0.5 size-3.5 shrink-0" />}>
+      <StatusNotice icon={<Spinner aria-hidden="true" className="size-3.5" role="presentation" />}>
         {t('command.search.status.searching')}
       </StatusNotice>
     )
@@ -103,7 +105,7 @@ const CommandSearchStatus = ({
 
   if (trimmedQuery.length > 0 && trimmedQuery.length < 2) {
     return (
-      <StatusNotice icon={<Search className="mt-0.5 size-3.5 shrink-0" />}>
+      <StatusNotice icon={<Search aria-hidden="true" className="size-3.5" />}>
         {t('command.search.status.minQuery')}
       </StatusNotice>
     )
@@ -111,7 +113,7 @@ const CommandSearchStatus = ({
 
   if (!trimmedQuery) {
     return (
-      <StatusNotice icon={<Database className="mt-0.5 size-3.5 shrink-0" />}>
+      <StatusNotice icon={<Database aria-hidden="true" className="size-3.5" />}>
         {t('command.search.status.ready', { count: indexedFileCount })}
       </StatusNotice>
     )

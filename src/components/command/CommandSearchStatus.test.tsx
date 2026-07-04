@@ -35,6 +35,8 @@ describe('CommandSearchStatus', () => {
     expect(status).toHaveAttribute('aria-live', 'polite')
     expect(status).toHaveAttribute('aria-atomic', 'true')
     expect(status).toHaveTextContent('command.search.status.rebuilding')
+    expect(status).toHaveClass('bg-primary/5')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
   it('announces full-text search failures assertively', () => {
@@ -44,6 +46,17 @@ describe('CommandSearchStatus', () => {
 
     expect(alert).toHaveAttribute('aria-live', 'assertive')
     expect(alert).toHaveTextContent('command.search.status.fullTextError')
+    expect(alert).toHaveClass('bg-destructive/10')
+  })
+
+  it('keeps the search spinner decorative inside the live region', () => {
+    render(<CommandSearchStatus {...createProps({ fullTextFetching: true })} />)
+
+    const status = screen.getByRole('status')
+
+    expect(status).toHaveTextContent('command.search.status.searching')
+    expect(status.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
   it('does not render a live region for a valid settled query', () => {

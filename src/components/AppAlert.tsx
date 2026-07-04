@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 
 type AppAlertProps = ComponentProps<typeof Alert> & {
   children?: ReactNode
+  descriptionClassName?: string
   icon?: ReactNode
   title?: ReactNode
   tone?: 'default' | 'destructive'
@@ -17,6 +18,7 @@ const appAlertToneClassName = {
 const AppAlert = ({
   children,
   className,
+  descriptionClassName,
   icon,
   title,
   tone = 'default',
@@ -29,7 +31,7 @@ const AppAlert = ({
   >
     {icon}
     {title && <AlertTitle>{title}</AlertTitle>}
-    {children && <AlertDescription>{children}</AlertDescription>}
+    {children && <AlertDescription className={descriptionClassName}>{children}</AlertDescription>}
   </Alert>
 )
 
