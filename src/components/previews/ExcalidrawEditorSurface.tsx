@@ -1,10 +1,11 @@
 import { Excalidraw, serializeAsJSON } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
-import { Loader2, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useCallback, useRef, useState, type ComponentProps } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -69,11 +70,13 @@ const ExcalidrawEditorSurface = ({
   if (documentQuery.isLoading) {
     return (
       <div
+        aria-busy="true"
+        aria-label={t('preview.excalidrawLoading')}
         className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
         role="status"
       >
-        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-        {t('preview.excalidrawLoading')}
+        <Spinner aria-hidden="true" role="presentation" />
+        <span>{t('preview.excalidrawLoading')}</span>
       </div>
     )
   }
@@ -106,7 +109,7 @@ const ExcalidrawEditorSurface = ({
         </div>
         <Button size="sm" onClick={handleSave} disabled={readonly || !dirty || saving}>
           {saving ? (
-            <Loader2 className="animate-spin" data-icon="inline-start" />
+            <Spinner aria-hidden="true" data-icon="inline-start" role="presentation" />
           ) : (
             <Save data-icon="inline-start" />
           )}

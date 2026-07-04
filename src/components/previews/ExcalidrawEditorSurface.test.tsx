@@ -86,7 +86,11 @@ describe('ExcalidrawEditorSurface', () => {
 
     renderSurface()
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading whiteboard...')
+    const status = screen.getByRole('status', { name: 'Loading whiteboard...' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status).toHaveTextContent('Loading whiteboard...')
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('loads a scene and persists explicit saves', async () => {
