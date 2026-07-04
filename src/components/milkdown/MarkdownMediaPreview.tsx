@@ -1,6 +1,8 @@
 import { useId, useState } from 'react'
+import AppAlert from '@/components/AppAlert'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
 
 export type MarkdownMediaPreviewKind = 'audio' | 'video'
 
@@ -31,6 +33,45 @@ const statusText = (kind: MarkdownMediaPreviewKind, state: MediaLoadState, t: Tr
   if (state === 'loading') return t('preview.mediaLoading', { kind: label })
 
   return t('preview.mediaReady', { kind: label })
+}
+
+const MediaStatusNotice = ({
+  className,
+  id,
+  kind,
+  state,
+  t,
+}: {
+  className?: string
+  id: string
+  kind: MarkdownMediaPreviewKind
+  state: MediaLoadState
+  t: Translate
+}) => {
+  const label = statusText(kind, state, t)
+
+  if (state === 'error') {
+    return (
+      <AppAlert
+        id={id}
+        tone="destructive"
+        className={cn('px-2 py-1.5 text-xs', className)}
+        descriptionClassName="text-xs"
+      >
+        {label}
+      </AppAlert>
+    )
+  }
+
+  return (
+    <div
+      id={id}
+      className={cn('bg-background/90 text-xs text-muted-foreground', className)}
+      role="status"
+    >
+      {label}
+    </div>
+  )
 }
 
 export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPreviewProps) => {
@@ -88,9 +129,13 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
               src={src}
             />
             {visibleStatus ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-background/90 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
-                {statusText(kind, loadState, t)}
-              </div>
+              <MediaStatusNotice
+                id={statusId}
+                kind={kind}
+                state={loadState}
+                t={t}
+                className="pointer-events-none absolute inset-x-0 bottom-0 rounded-none border-x-0 border-b-0 px-3 py-2 backdrop-blur"
+              />
             ) : null}
           </div>
         ) : (
@@ -106,17 +151,23 @@ export const MarkdownMediaPreview = ({ href, kind, src, title }: MarkdownMediaPr
               src={src}
             />
             {visibleStatus ? (
-              <div className="mt-2 text-xs text-muted-foreground">
-                {statusText(kind, loadState, t)}
-              </div>
+              <MediaStatusNotice
+                id={statusId}
+                kind={kind}
+                state={loadState}
+                t={t}
+                className="mt-2"
+              />
             ) : null}
           </div>
         )}
       </div>
 
-      <div className="sr-only" id={statusId} role="status">
-        {statusText(kind, loadState, t)}
-      </div>
+      {visibleStatus ? null : (
+        <div className="sr-only" id={statusId} role="status">
+          {statusText(kind, loadState, t)}
+        </div>
+      )}
     </article>
   )
 }

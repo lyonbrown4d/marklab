@@ -28,7 +28,23 @@ describe('MarkdownMediaPreview', () => {
     )
 
     expect(screen.getByText('AUDIO')).toHaveClass('bg-secondary', 'text-secondary-foreground')
-    expect(screen.getAllByText('Audio preview is unavailable').length).toBeGreaterThan(0)
-    expect(screen.getByRole('status')).toHaveTextContent('Audio preview is unavailable')
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Audio preview is unavailable')
+    expect(alert).toHaveClass('bg-destructive/10')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps loading media status polite while metadata is pending', () => {
+    render(
+      <MarkdownMediaPreview
+        href="video/intro.mp4"
+        kind="video"
+        src="asset://video/intro.mp4"
+        title="Intro"
+      />,
+    )
+
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Loading Video preview...')
   })
 })
