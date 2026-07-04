@@ -243,8 +243,13 @@ export const EmbeddedFilePreview = ({
                 title={displayTitle}
               />
             ) : (
-              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                {failed ? null : <Spinner />}
+              <div
+                aria-busy={!failed}
+                aria-label={failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}
+                className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
+                role="status"
+              >
+                {failed ? null : <Spinner aria-hidden="true" role="presentation" />}
                 <span>{failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}</span>
               </div>
             )}

@@ -28,6 +28,17 @@ vi.mock('@/services/fsApi', () => ({
 
 type IntersectionObserverCallback = ConstructorParameters<typeof IntersectionObserver>[0]
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve
+    reject = nextReject
+  })
+
+  return { promise, reject, resolve }
+}
+
 const renderPreview = ({ onPointerDown }: { onPointerDown?: () => void } = {}) =>
   render(
     <div onPointerDown={onPointerDown}>
@@ -104,6 +115,21 @@ describe('EmbeddedFilePreview', () => {
 
     expect(resolveEmbeddedPreviewTarget).toHaveBeenCalledWith('notes/current.md', './brief.pdf')
     expect(await screen.findByTestId('file-preview-surface')).toBeInTheDocument()
+  })
+
+  it('announces modal loading once while the embedded target resolves', () => {
+    const deferred = createDeferred<Awaited<ReturnType<typeof resolveEmbeddedPreviewTarget>>>()
+    resolveEmbeddedPreviewTarget.mockReturnValue(deferred.promise)
+
+    renderPreview()
+
+    fireEvent.click(screen.getByRole('button', { name: 'preview.openEmbedded: Brief' }))
+
+    const status = screen.getByRole('status', { name: 'preview.inlineLoading' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status).toHaveTextContent('preview.inlineLoading')
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('opens the independent preview tab without router context', async () => {
