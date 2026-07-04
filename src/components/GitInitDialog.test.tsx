@@ -68,7 +68,10 @@ describe('GitInitDialog', () => {
       />,
     )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('git init failed')
+    const alert = screen.getByRole('alert')
+
+    expect(alert).toHaveTextContent('git init failed')
+    expect(alert).toHaveClass('text-destructive')
   })
 })
 

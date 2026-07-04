@@ -1,4 +1,5 @@
 import { GitBranchPlus } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -37,13 +38,9 @@ export const GitInitDialog = ({
           <DialogDescription>{t('scm.initConfirm')}</DialogDescription>
         </DialogHeader>
         {errorMessage ? (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          >
-            {errorMessage}
-          </div>
+          <Alert variant="destructive" aria-live="assertive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
         ) : null}
         {isInitializing ? (
           <span className="sr-only" role="status">
