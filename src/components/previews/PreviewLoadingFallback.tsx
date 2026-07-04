@@ -1,12 +1,17 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 type PreviewLoadingFallbackProps = {
   label: string
 }
 
 export const PreviewLoadingFallback = ({ label }: PreviewLoadingFallbackProps) => (
-  <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-    <Loader2 className="size-4 animate-spin" />
-    {label}
+  <div
+    aria-busy="true"
+    aria-label={label}
+    className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
+    role="status"
+  >
+    <Spinner aria-hidden="true" role="presentation" />
+    <span>{label}</span>
   </div>
 )
