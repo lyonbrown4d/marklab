@@ -78,6 +78,22 @@ describe('GraphToolbar', () => {
     })
   })
 
+  it('announces visible graph counts as a live toolbar status', () => {
+    renderToolbar({
+      hasActiveFilters: true,
+      nodeCount: 7,
+      edgeCount: 3,
+    })
+
+    const status = screen.getByRole('status', {
+      name: 'Visible: 7/14 nodes, 3/10 edges',
+    })
+    expect(status).toHaveAttribute('aria-live', 'polite')
+    expect(status).toHaveAttribute('aria-atomic', 'true')
+    expect(status).toHaveAttribute('data-active', 'true')
+    expect(status).toHaveClass('graph-toolbar__status')
+  })
+
   it('resets active graph filters to the default state', () => {
     const activeFilters: GraphFilterState = {
       query: 'diagram',

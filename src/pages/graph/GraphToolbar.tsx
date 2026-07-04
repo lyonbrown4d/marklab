@@ -84,6 +84,9 @@ const GraphToolbarComponent = ({
   const resetFilters = useCallback(() => {
     onFiltersChange(createDefaultGraphFilters())
   }, [onFiltersChange])
+  const statusLabel = `${t('graph.visible')}: ${nodeCount}/${totalNodeCount} ${t(
+    'graph.nodes',
+  )}, ${edgeCount}/${totalEdgeCount} ${t('graph.edges')}`
 
   return (
     <div className="graph-toolbar pointer-events-auto absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs text-muted-foreground shadow-sm backdrop-blur md:max-w-[720px]">
@@ -98,7 +101,15 @@ const GraphToolbarComponent = ({
             onChange={(event) => updateQuery(event.target.value)}
           />
         </div>
-        <Badge variant="secondary" className="h-7 rounded-md px-2 font-normal">
+        <Badge
+          variant="secondary"
+          aria-atomic="true"
+          aria-label={statusLabel}
+          aria-live="polite"
+          className="graph-toolbar__status h-7 rounded-md border border-transparent px-2 font-normal"
+          data-active={hasActiveFilters ? 'true' : 'false'}
+          role="status"
+        >
           {t('graph.visible')}: {nodeCount}/{totalNodeCount} {t('graph.nodes')} · {edgeCount}/
           {totalEdgeCount} {t('graph.edges')}
         </Badge>
