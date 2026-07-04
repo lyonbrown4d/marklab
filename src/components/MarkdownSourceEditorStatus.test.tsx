@@ -45,7 +45,10 @@ describe('MarkdownSourceEditor status states', () => {
 
     render(<MarkdownSourceEditor {...props} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading source editor...')
+    const status = screen.getByRole('status', { name: 'Loading source editor...' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status).toHaveTextContent('Loading source editor...')
+    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('uses a localized source editor failure state', async () => {
@@ -53,8 +56,7 @@ describe('MarkdownSourceEditor status states', () => {
 
     render(<MarkdownSourceEditor {...props} />)
 
-    expect(
-      await screen.findByText('Failed to load source editor: network unavailable'),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Failed to load source editor: network unavailable')
   })
 })

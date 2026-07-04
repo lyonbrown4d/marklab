@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReplaySubject, catchError, debounceTime, from, map, of, switchMap } from 'rxjs'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import type { OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import {
@@ -14,6 +14,7 @@ import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
+import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
 import { useI18n } from '@/i18n/useI18n'
 
 type MarkdownSourceEditorProps = {
@@ -253,61 +254,23 @@ const MarkdownSourceEditor = ({
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
 
   return (
-    <div
-      className={[
-        'markdown-source-editor h-full overflow-hidden',
-        immersiveZenMode ? 'is-zen-editor' : '',
-        immersiveFocusMode ? 'is-focus-editor' : '',
-        immersiveTypewriterMode ? 'is-typewriter-editor' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {monacoLoadError ? (
-        <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
-          {t('editor.sourceLoadFailed', { error: editorLoadError })}
-        </div>
-      ) : monacoReady ? (
-        <Editor
-          height="100%"
-          language="markdown"
-          theme={darkMode ? 'vs-dark' : 'vs'}
-          path={activePath ?? 'marklab-empty.md'}
-          value={value}
-          onChange={(next) => onChange(next ?? '')}
-          onMount={handleMount}
-          options={{
-            minimap: { enabled: false },
-            wordWrap: 'on',
-            tabSize: 2,
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            lineNumbers: 'on',
-            renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
-            smoothScrolling: motionSmoothScrolling,
-            cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
-            cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
-            cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
-            cursorSurroundingLinesStyle: 'all',
-            cursorWidth: 2,
-            renderWhitespace: 'selection',
-            automaticLayout: true,
-            lineNumbersMinChars: 3,
-            padding: {
-              top: immersiveTypewriterMode ? 120 : 24,
-              bottom: immersiveTypewriterMode ? 180 : 24,
-            },
-          }}
-        />
-      ) : (
-        <div
-          className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground"
-          role="status"
-        >
-          {t('editor.sourceLoading')}
-        </div>
-      )}
-    </div>
+    <MarkdownSourceEditorSurface
+      activePath={activePath}
+      darkMode={darkMode}
+      errorMessage={
+        monacoLoadError ? t('editor.sourceLoadFailed', { error: editorLoadError }) : null
+      }
+      immersiveFocusMode={immersiveFocusMode}
+      immersiveTypewriterMode={immersiveTypewriterMode}
+      immersiveZenMode={immersiveZenMode}
+      loadingLabel={t('editor.sourceLoading')}
+      monacoReady={monacoReady}
+      motionAnimatedCursor={motionAnimatedCursor}
+      motionSmoothScrolling={motionSmoothScrolling}
+      value={value}
+      onChange={onChange}
+      onMount={handleMount}
+    />
   )
 }
 
