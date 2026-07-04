@@ -1,5 +1,6 @@
 import { Crepe } from '@milkdown/crepe'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
+import { mermaidCodeBlockConfig } from '@/components/milkdown/mermaidPreview'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 
 export type MarkdownCrepeInstance = Crepe
@@ -21,6 +22,7 @@ export const createMarkdownCrepe = ({ root, initialValue, darkMode }: CreateMark
     featureConfigs: {
       [Crepe.Feature.CodeMirror]: {
         theme: darkMode ? undefined : eclipse,
+        ...mermaidCodeBlockConfig,
       },
       [Crepe.Feature.LinkTooltip]: {
         onCopyLink: () => {},

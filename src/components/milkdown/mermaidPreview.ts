@@ -1,4 +1,5 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language'
+import { languages as codemirrorLanguages } from '@codemirror/language-data'
 import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
 import escape from 'lodash-es/escape'
 import i18n from '@/i18n/setup'
@@ -87,43 +88,59 @@ const observeMermaidPreview = (target: HTMLElement, render: () => void) => {
   observer.observe(target)
 }
 
+type RenderPreview = CodeBlockConfig['renderPreview']
+
+const renderMermaidPreview = (
+  fallback: RenderPreview,
+  language: string,
+  content: string,
+  applyPreview: Parameters<RenderPreview>[2],
+) => {
+  if (!isMermaidLanguage(language)) {
+    return fallback(language, content, applyPreview)
+  }
+
+  const source = content.trim()
+  if (!source) return null
+
+  const placeholder = createMermaidPlaceholder()
+  applyPreview(placeholder)
+
+  const currentRender = ++mermaidRenderSequence
+  observeMermaidPreview(placeholder, () => {
+    void loadMermaid()
+      .then((mermaid) => {
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'strict',
+          theme: resolveMermaidTheme(),
+        })
+        return mermaid.render(`marklab-mermaid-${currentRender}`, source)
+      })
+      .then((result) => {
+        if (currentRender !== mermaidRenderSequence) return
+        const preview = document.createElement('div')
+        preview.className = 'milkdown-mermaid-preview'
+        preview.innerHTML = result.svg
+        applyPreview(preview)
+      })
+      .catch((error) => {
+        if (currentRender !== mermaidRenderSequence) return
+        const message = escape(getErrorMessage(error))
+        applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
+      })
+  })
+}
+
 export const configureMermaidPreview = (prev: CodeBlockConfig): CodeBlockConfig => ({
   ...prev,
   languages: ensureMermaidLanguage(prev.languages),
-  renderPreview: (language, content, applyPreview) => {
-    if (!isMermaidLanguage(language)) {
-      return prev.renderPreview(language, content, applyPreview)
-    }
-
-    const source = content.trim()
-    if (!source) return null
-
-    const placeholder = createMermaidPlaceholder()
-    applyPreview(placeholder)
-
-    const currentRender = ++mermaidRenderSequence
-    observeMermaidPreview(placeholder, () => {
-      void loadMermaid()
-        .then((mermaid) => {
-          mermaid.initialize({
-            startOnLoad: false,
-            securityLevel: 'strict',
-            theme: resolveMermaidTheme(),
-          })
-          return mermaid.render(`marklab-mermaid-${currentRender}`, source)
-        })
-        .then((result) => {
-          if (currentRender !== mermaidRenderSequence) return
-          const preview = document.createElement('div')
-          preview.className = 'milkdown-mermaid-preview'
-          preview.innerHTML = result.svg
-          applyPreview(preview)
-        })
-        .catch((error) => {
-          if (currentRender !== mermaidRenderSequence) return
-          const message = escape(getErrorMessage(error))
-          applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
-        })
-    })
-  },
+  renderPreview: (language, content, applyPreview) =>
+    renderMermaidPreview(prev.renderPreview, language, content, applyPreview),
 })
+
+export const mermaidCodeBlockConfig = {
+  languages: ensureMermaidLanguage(codemirrorLanguages),
+  renderPreview: (language, content, applyPreview) =>
+    renderMermaidPreview(() => null, language, content, applyPreview),
+} satisfies Partial<CodeBlockConfig>

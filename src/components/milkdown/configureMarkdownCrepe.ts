@@ -1,10 +1,8 @@
 import type { Crepe } from '@milkdown/crepe'
-import { codeBlockConfig } from '@milkdown/kit/component/code-block'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view'
 import type { ReactNodeViewUserOptions } from '@prosemirror-adapter/react'
 import { createMarkdownImageNodeView } from '@/components/milkdown/imageNodeView'
-import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { embeddedPreviewPlugin } from '@/components/milkdown/embeddedPreviewPlugin'
@@ -41,9 +39,6 @@ export const configureMarkdownCrepe = (
 
   if (enableMarklabEditorEnhancements) {
     crepe.editor
-      .config((ctx) => {
-        ctx.update(codeBlockConfig.key, configureMermaidPreview)
-      })
       .use(
         createMarkdownImageNodeView(nodeViewFactory, {
           getDocumentPath: getImageDocumentPath,

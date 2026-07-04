@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
 import throttle from 'lodash-es/throttle'
-import { codeBlockConfig } from '@milkdown/kit/component/code-block'
 import { editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { Slice } from '@milkdown/kit/prose/model'
@@ -10,7 +9,7 @@ import { getMarkdown } from '@milkdown/kit/utils'
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
-import { configureMermaidPreview } from '@/components/milkdown/mermaidPreview'
+import { mermaidCodeBlockConfig } from '@/components/milkdown/mermaidPreview'
 import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 import type {
@@ -145,6 +144,7 @@ export const useMarkdownPlaygroundController = ({
         }),
         [Crepe.Feature.CodeMirror]: {
           theme: darkMode ? undefined : eclipse,
+          ...mermaidCodeBlockConfig,
         },
         [Crepe.Feature.LinkTooltip]: {
           onCopyLink: () => {},
@@ -158,7 +158,6 @@ export const useMarkdownPlaygroundController = ({
 
     crepe.editor
       .config((ctx) => {
-        ctx.update(codeBlockConfig.key, configureMermaidPreview)
         ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
           updateMarkdown(markdown)
         })
