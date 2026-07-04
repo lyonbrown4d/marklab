@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import { fetchPreviewAssetBlob } from '@/components/previews/localAssetSource'
+import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 
 type DocxPreviewSurfaceProps = {
   src: string
@@ -84,9 +84,8 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
         className="marklab-docx-preview min-h-[320px] overflow-auto"
       />
       {loading ? (
-        <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-background/80 text-sm text-muted-foreground backdrop-blur-sm">
-          <Loader2 className="size-4 animate-spin" />
-          {t('preview.docxLoading')}
+        <div className="absolute inset-0 rounded-xl bg-background/80 backdrop-blur-sm">
+          <PreviewLoadingFallback label={t('preview.docxLoading')} />
         </div>
       ) : null}
       {failed ? (
