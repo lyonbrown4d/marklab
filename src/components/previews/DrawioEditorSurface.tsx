@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Loader2, Save, ShieldAlert } from 'lucide-react'
+import { ExternalLink, Save, ShieldAlert } from 'lucide-react'
 import {
   createDrawioLoadMessage,
   createDrawioSaveRequestMessage,
@@ -14,6 +14,7 @@ import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 
 type DrawioEditorSurfaceProps = {
   path: string
@@ -171,6 +172,10 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
     )
   }
 
+  const loadingLabel = documentQuery.isLoading
+    ? t('preview.drawioLoadingDocument')
+    : t('preview.drawioLoadingEditor')
+
   return (
     <div className="flex h-full min-h-[32rem] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border/80 bg-background/80 px-3">
@@ -210,7 +215,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
             disabled={readonly || !frameReady || documentQuery.isLoading}
             onClick={() => postToFrame(createDrawioSaveRequestMessage())}
           >
-            <Save className="size-3.5" />
+            <Save data-icon="inline-start" />
             {t('preview.drawioSave')}
           </Button>
         </div>
@@ -221,11 +226,14 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
       ) : (
         <div className="relative min-h-0 flex-1 bg-background">
           {(documentQuery.isLoading || !frameReady) && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-sm">
-              <Loader2 className="size-4 animate-spin" />
-              {documentQuery.isLoading
-                ? t('preview.drawioLoadingDocument')
-                : t('preview.drawioLoadingEditor')}
+            <div
+              aria-busy="true"
+              aria-label={loadingLabel}
+              className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-sm"
+              role="status"
+            >
+              <Spinner aria-hidden="true" role="presentation" />
+              {loadingLabel}
             </div>
           )}
           <iframe
@@ -264,7 +272,7 @@ const DrawioMessageCard = ({
       <div className="text-sm font-semibold">{title}</div>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
       <Button variant="outline" size="sm" className="mt-4 h-8 gap-1.5" onClick={onAction}>
-        <ExternalLink className="size-3.5" />
+        <ExternalLink data-icon="inline-start" />
         {actionLabel}
       </Button>
     </div>

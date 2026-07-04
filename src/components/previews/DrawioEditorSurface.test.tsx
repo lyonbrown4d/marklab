@@ -74,6 +74,19 @@ describe('DrawioEditorSurface', () => {
     expect(postMessage.mock.calls[0]?.[0]).toContain('<mxfile />')
   })
 
+  it('announces the loading overlay without a duplicate spinner status', () => {
+    vi.mocked(fsApi.readFile).mockReturnValue(new Promise<string>(() => undefined))
+
+    renderSurface()
+
+    const loadingStatus = screen.getByRole('status', {
+      name: /Reading diagram file|正在读取图表文件/,
+    })
+    expect(loadingStatus).toHaveAttribute('aria-busy', 'true')
+    expect(loadingStatus.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
   it('flushes workspace buffers when the iframe sends exported xml', async () => {
     renderSurface()
     const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
