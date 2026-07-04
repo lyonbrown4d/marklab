@@ -15,7 +15,7 @@ vi.mock('@/services/fsApi', () => ({
   },
 }))
 
-const renderSurface = () => {
+const renderSurface = ({ readonly = false }: { readonly?: boolean } = {}) => {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -23,7 +23,7 @@ const renderSurface = () => {
   })
   return render(
     <QueryClientProvider client={client}>
-      <DrawioEditorSurface path="diagrams/flow.drawio" readonly={false} title="flow.drawio" />
+      <DrawioEditorSurface path="diagrams/flow.drawio" readonly={readonly} title="flow.drawio" />
     </QueryClientProvider>,
   )
 }
@@ -85,6 +85,27 @@ describe('DrawioEditorSurface', () => {
     expect(loadingStatus).toHaveAttribute('aria-busy', 'true')
     expect(loadingStatus.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
     expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
+  it('uses badges for save and read-only editor states', () => {
+    const { container, rerender } = renderSurface()
+
+    const saveBadge = container.querySelector('[data-save-state="clean"]')
+    expect(saveBadge).toHaveTextContent(/Saved|已保存/)
+
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    })
+    rerender(
+      <QueryClientProvider client={client}>
+        <DrawioEditorSurface path="diagrams/flow.drawio" readonly title="flow.drawio" />
+      </QueryClientProvider>,
+    )
+
+    const readOnlyBadge = screen.getByText(/Read-only|只读/).closest('div')
+    expect(readOnlyBadge?.querySelector('[data-icon="inline-start"]')).not.toBeNull()
   })
 
   it('flushes workspace buffers when the iframe sends exported xml', async () => {

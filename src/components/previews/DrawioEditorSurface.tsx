@@ -13,6 +13,7 @@ import { drawioDocumentApi } from '@/services/drawioDocumentApi'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -190,13 +191,14 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {readonly ? (
-            <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground">
-              <ShieldAlert className="size-3" />
+            <Badge variant="outline" className="gap-1 rounded-md font-normal">
+              <ShieldAlert data-icon="inline-start" />
               {t('preview.drawioReadOnly')}
-            </span>
+            </Badge>
           ) : (
-            <span
-              className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground"
+            <Badge
+              variant="secondary"
+              className="rounded-md font-normal"
               data-save-state={saveState}
             >
               {saveState === 'dirty'
@@ -206,7 +208,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
                   : saveState === 'error'
                     ? t('preview.failed')
                     : t('preview.drawioSaved')}
-            </span>
+            </Badge>
           )}
           <Button
             variant="outline"
