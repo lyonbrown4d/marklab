@@ -88,6 +88,29 @@ describe('StatusCenter', () => {
     expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('uses the shared spinner when background activity is running', () => {
+    statusCenterMock.events = {
+      exportTasks: {
+        running: {
+          id: 'running',
+          format: 'pdf',
+          output_path: 'D:/notes/report.pdf',
+          status: 'started',
+          updatedAt: 103,
+        },
+      },
+      terminalEvents: [],
+    }
+
+    renderStatusCenter()
+
+    const trigger = screen.getByRole('button', { name: 'Status Center - 1 active' })
+    const spinner = trigger.querySelector('svg[role="presentation"]')
+
+    expect(spinner).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+  })
+
   it('opens a labelled status dialog with named sections', () => {
     renderStatusCenter()
 

@@ -1,11 +1,12 @@
 import { memo, useId, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, AlertTriangle, Clock, FileText, Loader2, Terminal } from 'lucide-react'
+import { Activity, AlertTriangle, Clock, FileText, Terminal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { Section, EmptyState, StatusRow } from '@/components/status-center/StatusCenterRows'
 import {
   basename,
@@ -93,7 +94,7 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
           {issueCount > 0 ? (
             <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
           ) : activeCount > 0 ? (
-            <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
+            <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
           ) : (
             <Activity aria-hidden="true" className="size-3.5" />
           )}
