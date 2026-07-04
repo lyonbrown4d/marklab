@@ -6,13 +6,13 @@ import {
   FileText,
   FolderOpen,
   GitBranch,
-  Loader2,
   PanelsTopLeft,
   RotateCcw,
   Terminal,
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import StatusCenter from '@/components/StatusCenter'
 import { createFileLabel } from '@/logic/paths'
@@ -157,7 +157,12 @@ const AppStatusBar = ({
                 onClick={openScmPanel}
               >
                 {gitStatusQuery.isFetching ? (
-                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                  <Spinner
+                    aria-hidden="true"
+                    role="presentation"
+                    data-icon="inline-start"
+                    className="size-3.5"
+                  />
                 ) : gitConflictCount > 0 || gitStatusQuery.isError ? (
                   <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
                 ) : (
@@ -217,7 +222,12 @@ const AppStatusBar = ({
                 disabled={restoreStatusBusy}
               >
                 {restoreStatusBusy ? (
-                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                  <Spinner
+                    aria-hidden="true"
+                    role="presentation"
+                    data-icon="inline-start"
+                    className="size-3.5"
+                  />
                 ) : (
                   <RotateCcw aria-hidden="true" className="size-3.5" />
                 )}
@@ -244,7 +254,7 @@ const AppStatusBar = ({
           )}
           {assetSyncPending > 0 && (
             <span className="hidden shrink-0 items-center gap-1.5 text-status-info sm:inline-flex">
-              <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+              <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
               {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
             </span>
           )}

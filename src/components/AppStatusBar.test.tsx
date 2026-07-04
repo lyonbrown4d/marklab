@@ -91,4 +91,21 @@ describe('AppStatusBar', () => {
     expect(liveRegion).toHaveTextContent('Saving')
     expect(within(statusBar).getByText('README.md')).toHaveAttribute('title', 'README.md')
   })
+
+  it('uses the shared spinner for busy restore actions without renaming the button', () => {
+    renderStatusBar(
+      createProps({
+        restoreStatusBusy: true,
+        restoreStatusMessage: 'Could not restore workspace session',
+      }),
+    )
+
+    const restoreButton = screen.getByRole('button', { name: 'Retry restore' })
+    const spinner = restoreButton.querySelector('svg[role="presentation"]')
+
+    expect(restoreButton).toBeDisabled()
+    expect(spinner).toHaveAttribute('aria-hidden', 'true')
+    expect(spinner).toHaveAttribute('data-icon', 'inline-start')
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+  })
 })
