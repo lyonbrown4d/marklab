@@ -20,6 +20,10 @@ describe('GraphEmptyState', () => {
     expect(overlay).toHaveAttribute('role', 'status')
     expect(overlay).toHaveAttribute('aria-live', 'polite')
     expect(overlay).toHaveAttribute('aria-atomic', 'true')
+    expect(overlay).toHaveAccessibleName('No graph results')
+    expect(overlay).toHaveAccessibleDescription(
+      'Create links between documents to populate this graph.',
+    )
     expect(overlay).toHaveClass('graph-empty-state', 'pointer-events-none', 'absolute', 'inset-0')
 
     const empty = container.querySelector('[data-slot="empty"]')
@@ -44,6 +48,12 @@ describe('GraphEmptyState', () => {
         onAction={onAction}
       />,
     )
+
+    const region = screen.getByRole('region', { name: 'No matching nodes' })
+    expect(region).toHaveAccessibleDescription(
+      'Adjust search or filters to bring graph nodes back.',
+    )
+    expect(region).toHaveAttribute('aria-live', 'polite')
 
     const action = screen.getByRole('button', { name: 'Reset' })
     expect(action).toHaveClass('pointer-events-auto', 'h-8')
