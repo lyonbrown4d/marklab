@@ -13,6 +13,7 @@ import { drawioDocumentApi } from '@/services/drawioDocumentApi'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
+import AppAlert from '@/components/AppAlert'
 import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -289,8 +290,10 @@ const DrawioMessageCard = ({
 )
 
 const DrawioInlineError = ({ message }: { message: string }) => (
-  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-    {message}
+  <div className="flex h-full items-center justify-center p-4">
+    <AppAlert tone="destructive" className="max-w-md">
+      {message}
+    </AppAlert>
   </div>
 )
 

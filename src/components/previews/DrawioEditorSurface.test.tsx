@@ -125,6 +125,16 @@ describe('DrawioEditorSurface', () => {
     expect(fsApi.openPathInSystem).toHaveBeenCalledWith('diagrams/flow.drawio')
   })
 
+  it('uses an alert when the remote drawio document fails to load', async () => {
+    vi.mocked(fsApi.readFile).mockRejectedValue(new Error('diagram unreadable'))
+
+    renderSurface()
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Failed|失败/)
+    expect(alert).toHaveClass('bg-destructive/10')
+  })
+
   it('flushes workspace buffers when the iframe sends exported xml', async () => {
     renderSurface()
     const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
