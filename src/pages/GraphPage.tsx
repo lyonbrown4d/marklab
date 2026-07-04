@@ -31,7 +31,7 @@ import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
 import { GraphHoverPreview } from '@/pages/graph/GraphHoverPreview'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
-import { getMiniMapNodeColor } from '@/pages/graph/graphMiniMap'
+import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
 import { useGraphHoverPreview } from '@/pages/graph/useGraphHoverPreview'
 
 const nodeTypes: NodeTypes = {
@@ -288,7 +288,7 @@ const GraphPageComponent = ({
       >
         <Background gap={16} size={1} />
         <Controls />
-        {showMiniMap && (
+        {shouldRenderGraphMiniMap(showMiniMap, filteredGraph.nodes.length) && (
           <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}
       </ReactFlow>
