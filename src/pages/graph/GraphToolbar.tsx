@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, type KeyboardEvent } from 'react'
 import { FileText, Globe2, Heading2, Paperclip, RotateCcw, Search, Unlink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -58,6 +58,16 @@ const GraphToolbarComponent = ({
     [filters, onFiltersChange],
   )
 
+  const handleQueryKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Escape' || filters.query.length === 0) return
+      event.preventDefault()
+      event.stopPropagation()
+      updateQuery('')
+    },
+    [filters.query.length, updateQuery],
+  )
+
   const selectedKinds = useMemo(
     () => filterItems.filter((item) => filters.kinds[item.kind]).map((item) => item.kind),
     [filters.kinds],
@@ -99,6 +109,7 @@ const GraphToolbarComponent = ({
             value={filters.query}
             placeholder={t('graph.searchPlaceholder')}
             onChange={(event) => updateQuery(event.target.value)}
+            onKeyDown={handleQueryKeyDown}
           />
         </div>
         <Badge

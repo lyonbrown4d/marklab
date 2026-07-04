@@ -78,6 +78,39 @@ describe('GraphToolbar', () => {
     })
   })
 
+  it('clears the graph search with Escape without bubbling to graph shortcuts', () => {
+    const activeFilters: GraphFilterState = {
+      ...filters,
+      query: 'diagram',
+    }
+    const onFiltersChange = vi.fn()
+    const onShellKeyDown = vi.fn()
+    render(
+      <div onKeyDown={onShellKeyDown}>
+        <GraphToolbar
+          edgeCount={8}
+          filters={activeFilters}
+          hasActiveFilters
+          nodeCount={12}
+          onFiltersChange={onFiltersChange}
+          stats={stats}
+          t={(key) => messages[key] ?? key}
+          totalEdgeCount={10}
+          totalNodeCount={14}
+        />
+      </div>,
+    )
+    const searchInput = screen.getByRole('textbox', { name: 'Filter graph...' })
+
+    fireEvent.keyDown(searchInput, { key: 'Escape' })
+
+    expect(onFiltersChange).toHaveBeenCalledWith({
+      ...activeFilters,
+      query: '',
+    })
+    expect(onShellKeyDown).not.toHaveBeenCalled()
+  })
+
   it('announces visible graph counts as a live toolbar status', () => {
     renderToolbar({
       hasActiveFilters: true,
