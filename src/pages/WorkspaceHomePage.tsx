@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
 import { useI18n } from '@/i18n/useI18n'
 import { pathToAllPagesRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { appApi } from '@/services/appApi'
@@ -19,7 +18,13 @@ import type { FileEntry } from '@/store/appTypes'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import WorkspaceHomeHero from '@/pages/WorkspaceHomeHero'
-import { EmptyBlock, ListButton, Panel, QuickButton } from '@/pages/workspaceHomeUi'
+import {
+  EmptyBlock,
+  ListButton,
+  Panel,
+  QuickButton,
+  WorkspaceMetricCard,
+} from '@/pages/workspaceHomeUi'
 
 type Metrics = {
   files: number
@@ -130,25 +135,30 @@ const WorkspaceHomePage = () => {
       caption: singleFileMode
         ? t('workspaceHome.singleFileCaption')
         : t('workspaceHome.foldersTracked', { count: count(metrics.folders) }),
-      icon: <FileText className="size-5 text-muted-foreground" />,
+      icon: FileText,
+      loading: false,
     },
     {
       label: t('workspaceHome.titles'),
-      value: metrics.indexReady ? count(metrics.headings) : '...',
+      value: metrics.indexReady ? count(metrics.headings) : null,
       caption: indexCaption,
-      icon: <Hash className="size-5 text-muted-foreground" />,
+      icon: Hash,
+      loading: !metrics.indexReady,
     },
     {
       label: t('workspaceHome.links'),
-      value: metrics.indexReady ? count(metrics.links) : '...',
+      value: metrics.indexReady ? count(metrics.links) : null,
       caption: t('workspaceHome.linksCaption'),
-      icon: <Link2 className="size-5 text-muted-foreground" />,
+      icon: Link2,
+      loading: !metrics.indexReady,
     },
     {
       label: t('workspaceHome.issues'),
-      value: metrics.indexReady ? count(metrics.issues) : '...',
+      value: metrics.indexReady ? count(metrics.issues) : null,
       caption: t('workspaceHome.issuesCaption'),
-      icon: <TriangleAlert className="size-5 text-destructive" />,
+      icon: TriangleAlert,
+      loading: !metrics.indexReady,
+      tone: 'danger' as const,
     },
   ]
 
@@ -171,18 +181,16 @@ const WorkspaceHomePage = () => {
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.label} className="gap-0 border-border/70 bg-card/80 py-0 shadow-none">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="rounded-md bg-muted p-2">{stat.icon}</div>
-                  <div className="text-right text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {stat.label}
-                  </div>
-                </div>
-                <div className="mt-4 text-3xl font-semibold tracking-tight">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{stat.caption}</div>
-              </CardContent>
-            </Card>
+            <WorkspaceMetricCard
+              key={stat.label}
+              caption={stat.caption}
+              icon={stat.icon}
+              label={stat.label}
+              loading={stat.loading}
+              loadingLabel={indexCaption}
+              tone={stat.tone}
+              value={stat.value}
+            />
           ))}
         </section>
 
@@ -199,34 +207,34 @@ const WorkspaceHomePage = () => {
               <>
                 <QuickButton
                   disabled={!firstDocument}
-                  icon={<FileText />}
+                  icon={FileText}
                   onClick={() => firstDocument && onOpenFile(firstDocument)}
                 >
                   {firstDocument
                     ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
                     : t('workspaceHome.noDocumentYet')}
                 </QuickButton>
-                <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
+                <QuickButton icon={Search} onClick={requestFileSearchFocus}>
                   {t('workspaceHome.showInSidebar')}
                 </QuickButton>
-                <QuickButton icon={<FolderOpen />} onClick={openFilePicker}>
+                <QuickButton icon={FolderOpen} onClick={openFilePicker}>
                   {t('workspaceHome.openAnotherFile')}
                 </QuickButton>
               </>
             ) : (
               <>
-                <QuickButton icon={<Search />} onClick={requestFileSearchFocus}>
+                <QuickButton icon={Search} onClick={requestFileSearchFocus}>
                   {t('workspaceHome.findFileOrNote')}
                 </QuickButton>
-                <QuickButton icon={<Network />} onClick={openWorkspaceGraph}>
+                <QuickButton icon={Network} onClick={openWorkspaceGraph}>
                   {t('workspaceHome.exploreGraph')}
                 </QuickButton>
-                <QuickButton icon={<Layers3 />} onClick={openAllPages}>
+                <QuickButton icon={Layers3} onClick={openAllPages}>
                   {t('workspaceHome.browseAllPages')}
                 </QuickButton>
                 <QuickButton
                   disabled={!firstDocument}
-                  icon={<FileText />}
+                  icon={FileText}
                   onClick={() => firstDocument && onOpenFile(firstDocument)}
                 >
                   {firstDocument
@@ -240,23 +248,23 @@ const WorkspaceHomePage = () => {
           <Panel title={t('workspaceHome.documents')} subtitle={indexCaption}>
             {documents.length > 0 ? (
               documents.map((document) => (
-                <ListButton key={document.path} onClick={() => onOpenFile(document.path)}>
-                  <FileText className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{document.path}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {document.headings === null
-                        ? t('workspaceHome.waitingForIndex')
-                        : t('workspaceHome.documentStats', {
-                            headings: count(document.headings),
-                            links: count(document.links ?? 0),
-                          })}
-                    </span>
-                  </span>
-                </ListButton>
+                <ListButton
+                  key={document.path}
+                  description={
+                    document.headings === null
+                      ? t('workspaceHome.waitingForIndex')
+                      : t('workspaceHome.documentStats', {
+                          headings: count(document.headings),
+                          links: count(document.links ?? 0),
+                        })
+                  }
+                  icon={FileText}
+                  title={document.path}
+                  onClick={() => onOpenFile(document.path)}
+                />
               ))
             ) : (
-              <EmptyBlock>{t('workspaceHome.noFiles')}</EmptyBlock>
+              <EmptyBlock icon={FileText}>{t('workspaceHome.noFiles')}</EmptyBlock>
             )}
           </Panel>
 
@@ -265,17 +273,19 @@ const WorkspaceHomePage = () => {
             subtitle={t('workspaceHome.recentSubtitle')}
           >
             {recentProjects.length > 0 ? (
-              recentProjects.slice(0, 4).map((project) => (
-                <ListButton key={project} onClick={() => onOpenProject(project)}>
-                  <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">{pathName(project)}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{project}</span>
-                  </span>
-                </ListButton>
-              ))
+              recentProjects
+                .slice(0, 4)
+                .map((project) => (
+                  <ListButton
+                    key={project}
+                    description={project}
+                    icon={FolderOpen}
+                    title={pathName(project)}
+                    onClick={() => onOpenProject(project)}
+                  />
+                ))
             ) : (
-              <EmptyBlock>{t('workspaceHome.noRecentProjects')}</EmptyBlock>
+              <EmptyBlock icon={FolderOpen}>{t('workspaceHome.noRecentProjects')}</EmptyBlock>
             )}
           </Panel>
         </section>
