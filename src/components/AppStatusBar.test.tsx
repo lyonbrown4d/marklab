@@ -108,4 +108,14 @@ describe('AppStatusBar', () => {
     expect(spinner).toHaveAttribute('data-icon', 'inline-start')
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
+
+  it('uses decorative shared separators for compact status groups', () => {
+    renderStatusBar(createProps())
+
+    const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
+    const separators = statusBar.querySelectorAll('[data-orientation="vertical"]')
+
+    expect(separators).toHaveLength(4)
+    expect(within(statusBar).queryByRole('separator')).not.toBeInTheDocument()
+  })
 })

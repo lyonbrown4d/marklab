@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import StatusCenter from '@/components/StatusCenter'
@@ -193,7 +194,7 @@ const AppStatusBar = ({
             </TooltipTrigger>
             <TooltipContent>{t('statusBar.toggleTerminal')}</TooltipContent>
           </Tooltip>
-          <div className="hidden h-3.5 w-px bg-border/80 sm:block" />
+          <Separator orientation="vertical" className="hidden h-3.5 bg-border/80 sm:block" />
           <div className="hidden min-w-0 items-center gap-1.5 px-1 sm:flex">
             <FolderOpen aria-hidden="true" className="size-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{workspaceLabel}</span>
@@ -275,19 +276,19 @@ const AppStatusBar = ({
             </Tooltip>
           )}
           <span className="hidden shrink-0 sm:inline">{t(viewLabelKeys[viewMode])}</span>
-          <div className="hidden h-3.5 w-px bg-border/80 md:block" />
+          <Separator orientation="vertical" className="hidden h-3.5 bg-border/80 md:block" />
           <span className="hidden shrink-0 items-center gap-1.5 md:inline-flex">
             <PanelsTopLeft aria-hidden="true" className="size-3.5" />
             {t('statusBar.tabs', { count: String(tabs.length) })}
           </span>
-          <div className="h-3.5 w-px bg-border/80" />
+          <Separator orientation="vertical" className="h-3.5 bg-border/80" />
           <StatusCenter
             activePath={activePath}
             dirtyPaths={dirtyPaths}
             saveStates={saveStates}
             terminalOpen={terminalOpen}
           />
-          <div className="h-3.5 w-px bg-border/80" />
+          <Separator orientation="vertical" className="h-3.5 bg-border/80" />
           <span className="min-w-0 max-w-[320px] truncate" title={activeLabel}>
             {activeLabel}
           </span>
