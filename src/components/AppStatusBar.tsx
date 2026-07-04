@@ -1,21 +1,9 @@
 import { memo, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
-  FolderOpen,
-  GitBranch,
-  PanelsTopLeft,
-  RotateCcw,
-  Terminal,
-} from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Spinner } from '@/components/ui/spinner'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import StatusCenter from '@/components/StatusCenter'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
+import { AppStatusBarRight } from '@/components/AppStatusBarRight'
 import { createFileLabel } from '@/logic/paths'
 import { SIDEBAR_ACTIVITY_PARAM } from '@/logic/routing'
 import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic/gitStatus'
@@ -41,13 +29,6 @@ type AppStatusBarProps = {
   onRestoreSession: () => void
   restoreStatusMessage: string | null
   restoreStatusBusy: boolean
-}
-
-const viewLabelKeys: Record<ViewMode, string> = {
-  wysiwyg: 'editor.modeWysiwyg',
-  source: 'editor.modeSource',
-  graph: 'tabs.graph',
-  preview: 'editor.modePreview',
 }
 
 const basename = (path: string) => {
@@ -146,159 +127,35 @@ const AppStatusBar = ({
         aria-label={t('statusBar.label')}
         className="app-status-bar flex h-7 shrink-0 items-center justify-between gap-2 border-t border-border/80 px-2 text-[11px] text-muted-foreground"
       >
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 max-w-[220px] gap-1.5 rounded px-2 text-[11px] font-normal text-muted-foreground"
-                aria-label={t('statusBar.openScm')}
-                onClick={openScmPanel}
-              >
-                {gitStatusQuery.isFetching ? (
-                  <Spinner
-                    aria-hidden="true"
-                    role="presentation"
-                    data-icon="inline-start"
-                    className="size-3.5"
-                  />
-                ) : gitConflictCount > 0 || gitStatusQuery.isError ? (
-                  <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
-                ) : (
-                  <GitBranch aria-hidden="true" className="size-3.5" />
-                )}
-                <span className="truncate">
-                  {gitStatusQuery.data?.repo.is_repository
-                    ? `${gitBranch} · ${gitLabel}`
-                    : gitLabel}
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('statusBar.openScm')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant={terminalOpen ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-6 rounded"
-                aria-label={t('statusBar.toggleTerminal')}
-                aria-pressed={terminalOpen}
-                onClick={onToggleTerminal}
-              >
-                <Terminal aria-hidden="true" className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('statusBar.toggleTerminal')}</TooltipContent>
-          </Tooltip>
-          <Separator orientation="vertical" className="hidden h-3.5 bg-border/80 sm:block" />
-          <div className="hidden min-w-0 items-center gap-1.5 px-1 sm:flex">
-            <FolderOpen aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="max-w-[240px] truncate">{workspaceLabel}</span>
-          </div>
-          {restoreStatusMessage ? (
-            <div className="inline-flex min-w-0 items-center gap-1.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className="inline-flex min-w-0 items-center gap-1.5 text-status-warning"
-                    role="status"
-                    title={restoreStatusMessage}
-                  >
-                    <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
-                    <span className="max-w-[180px] truncate">{restoreStatusMessage}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{restoreStatusMessage}</TooltipContent>
-              </Tooltip>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-6 gap-1.5 px-2"
-                onClick={onRestoreSession}
-                disabled={restoreStatusBusy}
-              >
-                {restoreStatusBusy ? (
-                  <Spinner
-                    aria-hidden="true"
-                    role="presentation"
-                    data-icon="inline-start"
-                    className="size-3.5"
-                  />
-                ) : (
-                  <RotateCcw aria-hidden="true" className="size-3.5" />
-                )}
-                {t('app.restoreRetry')}
-              </Button>
-            </div>
-          ) : null}
-          <div className="hidden items-center gap-1.5 px-1 md:flex">
-            <FileText aria-hidden="true" className="size-3.5" />
-            <span>{t('statusBar.files', { count: String(markdownFileCount) })}</span>
-          </div>
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-2" aria-live="polite">
-          {dirtyCount > 0 && (
-            <span className="hidden shrink-0 text-status-warning md:inline">
-              {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
-            </span>
-          )}
-          {activeSaveState?.status === 'saving' && (
-            <span className="hidden shrink-0 text-status-info sm:inline">{t('save.saving')}</span>
-          )}
-          {activeSaveState?.status === 'error' && (
-            <span className="hidden shrink-0 text-destructive sm:inline">{t('save.error')}</span>
-          )}
-          {assetSyncPending > 0 && (
-            <span className="hidden shrink-0 items-center gap-1.5 text-status-info sm:inline-flex">
-              <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
-              {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
-            </span>
-          )}
-          {assetSyncPending === 0 && assetSyncFailed > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="hidden shrink-0 items-center gap-1.5 text-destructive sm:inline-flex"
-                  title={assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
-                >
-                  <AlertTriangle aria-hidden="true" className="size-3.5" />
-                  {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <span className="hidden shrink-0 sm:inline">{t(viewLabelKeys[viewMode])}</span>
-          <Separator orientation="vertical" className="hidden h-3.5 bg-border/80 md:block" />
-          <span className="hidden shrink-0 items-center gap-1.5 md:inline-flex">
-            <PanelsTopLeft aria-hidden="true" className="size-3.5" />
-            {t('statusBar.tabs', { count: String(tabs.length) })}
-          </span>
-          <Separator orientation="vertical" className="h-3.5 bg-border/80" />
-          <StatusCenter
-            activePath={activePath}
-            dirtyPaths={dirtyPaths}
-            saveStates={saveStates}
-            terminalOpen={terminalOpen}
-          />
-          <Separator orientation="vertical" className="h-3.5 bg-border/80" />
-          <span className="min-w-0 max-w-[320px] truncate" title={activeLabel}>
-            {activeLabel}
-          </span>
-          {activeSaveState?.status === 'saved' && (
-            <CheckCircle2
-              aria-hidden="true"
-              className="hidden size-3.5 shrink-0 text-status-success sm:block"
-            />
-          )}
-        </div>
+        <AppStatusBarLeft
+          gitBranch={gitBranch}
+          gitHasProblem={gitConflictCount > 0 || gitStatusQuery.isError}
+          gitIsFetching={gitStatusQuery.isFetching}
+          gitIsRepository={Boolean(gitStatusQuery.data?.repo.is_repository)}
+          gitLabel={gitLabel}
+          markdownFileCount={markdownFileCount}
+          restoreStatusBusy={restoreStatusBusy}
+          restoreStatusMessage={restoreStatusMessage}
+          terminalOpen={terminalOpen}
+          workspaceLabel={workspaceLabel}
+          onOpenScmPanel={openScmPanel}
+          onRestoreSession={onRestoreSession}
+          onToggleTerminal={onToggleTerminal}
+        />
+        <AppStatusBarRight
+          activeLabel={activeLabel}
+          activePath={activePath}
+          activeSaveState={activeSaveState}
+          assetSyncFailed={assetSyncFailed}
+          assetSyncLastError={assetSyncLastError}
+          assetSyncPending={assetSyncPending}
+          dirtyCount={dirtyCount}
+          dirtyPaths={dirtyPaths}
+          saveStates={saveStates}
+          tabsCount={tabs.length}
+          terminalOpen={terminalOpen}
+          viewMode={viewMode}
+        />
       </footer>
     </TooltipProvider>
   )
