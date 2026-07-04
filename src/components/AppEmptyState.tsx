@@ -14,8 +14,11 @@ type AppEmptyStateProps = {
   className?: string
   compact?: boolean
   description?: ReactNode
+  descriptionClassName?: string
   icon?: ReactNode
+  mediaClassName?: string
   title: ReactNode
+  titleClassName?: string
   titleLevel?: 1 | 2 | 3 | 4 | 5 | 6
 }
 
@@ -24,8 +27,11 @@ const AppEmptyState = ({
   className,
   compact = false,
   description,
+  descriptionClassName,
   icon,
+  mediaClassName,
   title,
+  titleClassName,
   titleLevel = 2,
 }: AppEmptyStateProps) => (
   <Empty
@@ -36,19 +42,23 @@ const AppEmptyState = ({
     )}
   >
     <EmptyHeader>
-      {icon && <EmptyMedia variant="icon">{icon}</EmptyMedia>}
+      {icon ? (
+        <EmptyMedia className={mediaClassName} variant="icon">
+          {icon}
+        </EmptyMedia>
+      ) : null}
       <EmptyTitle
         aria-level={titleLevel}
-        className={compact ? 'text-sm' : undefined}
+        className={cn(compact && 'text-sm', titleClassName)}
         role="heading"
       >
         {title}
       </EmptyTitle>
-      {description && (
-        <EmptyDescription className={compact ? 'text-xs leading-5' : undefined}>
+      {description ? (
+        <EmptyDescription className={cn(compact && 'text-xs leading-5', descriptionClassName)}>
           {description}
         </EmptyDescription>
-      )}
+      ) : null}
     </EmptyHeader>
     {action && <EmptyContent>{action}</EmptyContent>}
   </Empty>

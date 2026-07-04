@@ -21,7 +21,7 @@ const ReactQueryDevtools = import.meta.env.DEV
     })
   : null
 
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN === 'true') {
   void import('react-scan')
     .then(({ scan }) => {
       void scan({ enabled: true })

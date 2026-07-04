@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -38,15 +39,17 @@ export const InspectorEmptyState = ({
   description: string
 }) => {
   return (
-    <div className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-sidebar-border/80 bg-sidebar/40 px-4 text-center">
-      <div className="mb-2 rounded-md border border-sidebar-border bg-background/70 p-2 text-muted-foreground">
-        {icon}
-      </div>
-      <div className="text-xs font-medium">{title}</div>
-      <div className="mt-1 max-w-[13rem] truncate text-[11px] leading-4 text-muted-foreground">
-        {description}
-      </div>
-    </div>
+    <AppEmptyState
+      compact
+      className="min-h-32 flex-none border-sidebar-border/80 bg-sidebar/40 px-4 py-5"
+      description={description}
+      descriptionClassName="max-w-[13rem] text-[11px] leading-4"
+      icon={icon}
+      mediaClassName="mb-1 border border-sidebar-border bg-background/70 text-muted-foreground"
+      title={title}
+      titleClassName="text-xs"
+      titleLevel={3}
+    />
   )
 }
 
