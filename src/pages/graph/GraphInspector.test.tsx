@@ -67,11 +67,16 @@ describe('GraphInspector', () => {
     render(<GraphInspector details={previewDetails} onOpenPath={vi.fn()} t={t} />)
 
     const embeddedPreview = screen.getByTestId('embedded-preview')
+    const connectionEmptyStates = screen.getAllByRole('note')
 
     expect(screen.getByRole('complementary', { name: 'brief.pdf' })).toBeInTheDocument()
     expect(embeddedPreview).toHaveAttribute('data-target', 'docs/brief.pdf')
     expect(embeddedPreview).toHaveTextContent('brief.pdf')
     expect(screen.getByText('graph.kind.preview')).toBeInTheDocument()
+    expect(connectionEmptyStates).toHaveLength(2)
+    expect(
+      connectionEmptyStates.every((state) => state.getAttribute('data-slot') === 'empty'),
+    ).toBe(true)
   })
 
   it('opens the selected graph node path from the inspector action', () => {

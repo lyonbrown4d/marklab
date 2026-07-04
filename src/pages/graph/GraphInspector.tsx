@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import AppEmptyState from '@/components/AppEmptyState'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import type { GraphNodeDetails } from '@/logic/graphViewModel'
 
@@ -176,9 +177,7 @@ const ConnectionList = ({ details, emptyLabel, icon, label }: ConnectionListProp
         </Badge>
       </div>
       {connections.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border px-2 py-3 text-center text-[11px] text-muted-foreground">
-          {emptyLabel}
-        </div>
+        <GraphConnectionEmptyState label={emptyLabel} />
       ) : (
         <ul className="flex max-h-40 flex-col gap-1 overflow-hidden" aria-label={label}>
           {visibleConnections.map((connection) => (
@@ -205,3 +204,18 @@ const ConnectionList = ({ details, emptyLabel, icon, label }: ConnectionListProp
     </div>
   )
 }
+
+type GraphConnectionEmptyStateProps = {
+  label: string
+}
+
+const GraphConnectionEmptyState = ({ label }: GraphConnectionEmptyStateProps) => (
+  <AppEmptyState
+    className="min-h-16 rounded-md border-border/70 bg-muted/15 px-2 py-3 md:p-3"
+    compact
+    role="note"
+    title={label}
+    titleClassName="text-[11px] font-normal text-muted-foreground"
+    titleLevel={4}
+  />
+)
