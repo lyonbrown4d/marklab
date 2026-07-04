@@ -725,6 +725,7 @@
 }
 
 .marklab-pdf-viewer__document {
+  position: relative;
   min-width: 0;
   overflow: auto;
   padding: 0.8rem;

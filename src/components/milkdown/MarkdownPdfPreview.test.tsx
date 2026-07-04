@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import MarkdownPdfPreview, { PdfPreviewSurface } from '@/components/milkdown/MarkdownPdfPreview'
 
@@ -68,10 +68,13 @@ describe('MarkdownPdfPreview', () => {
 
     expect(screen.getByRole('button', { name: 'Expand view' })).toBeInTheDocument()
     expect(screen.getByText('PDF')).toHaveClass('bg-secondary', 'text-secondary-foreground')
-    expect(screen.getByText('Loading PDF preview...')).toBeInTheDocument()
+    const status = screen.getByRole('status', { name: 'Loading PDF preview...' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status).toHaveTextContent('Loading PDF preview...')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
 
-    await waitFor(() => {
-      expect(screen.getByText('PDF preview is unavailable')).toBeInTheDocument()
-    })
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('PDF preview is unavailable')
+    expect(alert).toHaveClass('bg-destructive/10')
   })
 })

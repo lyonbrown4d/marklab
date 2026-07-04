@@ -5,6 +5,8 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
+import AppAlert from '@/components/AppAlert'
+import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -30,6 +32,16 @@ type PdfObjectUrlState = {
   key: string
   objectUrl: string | null
 }
+
+const PdfPreviewStatus = ({ failed, label }: { failed: boolean; label: string }) => (
+  <div className="marklab-pdf-preview__status p-4">
+    {failed ? (
+      <AppAlert tone="destructive" title={label} className="max-w-md" />
+    ) : (
+      <PreviewLoadingFallback label={label} />
+    )}
+  </div>
+)
 
 const isAbortError = (error: unknown) => {
   return error instanceof Error && error.name === 'AbortError'
@@ -134,9 +146,10 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
     return (
       <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
         <div className="marklab-pdf-viewer__document" ref={documentRef}>
-          <div className="marklab-pdf-preview__status">
-            {failed ? t('preview.pdfFailed') : t('preview.pdfReading')}
-          </div>
+          <PdfPreviewStatus
+            failed={failed}
+            label={failed ? t('preview.pdfFailed') : t('preview.pdfReading')}
+          />
         </div>
       </div>
     )
@@ -168,8 +181,8 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
       <div className="marklab-pdf-viewer__document" ref={documentRef}>
         <Document
           file={objectUrl}
-          loading={<div className="marklab-pdf-preview__status">{t('preview.pdfReading')}</div>}
-          error={<div className="marklab-pdf-preview__status">{t('preview.pdfFailed')}</div>}
+          loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
+          error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
           onLoadSuccess={handleLoadSuccess}
         >
           <Page pageNumber={pageNumber} width={pageWidth} />
@@ -244,9 +257,10 @@ const MarkdownPdfPreview = ({
         {fileUrl ? (
           <PdfPreviewSurface fileUrl={fileUrl} mode="inline" />
         ) : (
-          <div className="marklab-pdf-preview__status">
-            {failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
-          </div>
+          <PdfPreviewStatus
+            failed={failed}
+            label={failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
+          />
         )}
       </div>
 
@@ -259,8 +273,11 @@ const MarkdownPdfPreview = ({
             {fileUrl ? (
               <PdfPreviewSurface fileUrl={fileUrl} mode="modal" />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
+              <div className="relative h-full">
+                <PdfPreviewStatus
+                  failed={failed}
+                  label={failed ? t('preview.pdfFailed') : t('preview.pdfLoading')}
+                />
               </div>
             )}
           </div>
