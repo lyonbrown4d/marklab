@@ -30,6 +30,13 @@ use crate::grpc_services::{KnowledgeGrpcService, SessionTokenInterceptor};
 
 type SidecarResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
+const CONFIG_ENV_KEYS: &[&str] = &[
+  "workspace_instance_id",
+  "workspace_root",
+  "engine_data_dir",
+  "grpc_session_token",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub(crate) struct WorkspaceCompositionConfig {
   pub(crate) workspace_instance_id: String,
@@ -99,7 +106,7 @@ struct PartialWorkspaceCompositionConfig {
 }
 
 impl PartialWorkspaceCompositionConfig {
-  fn empty() -> Self {
+  fn defaults() -> Self {
     Self {
       workspace_instance_id: None,
       workspace_root: None,
@@ -127,30 +134,19 @@ fn load_config_from<T: FigmentProvider>(
   args: WorkspaceSidecarArgs,
   source: T,
 ) -> io::Result<WorkspaceCompositionConfig> {
-  load_config_from_parts(args, source, PartialWorkspaceCompositionConfig::empty())
-}
-
-fn load_config_from_parts<T: FigmentProvider>(
-  args: WorkspaceSidecarArgs,
-  source: T,
-  env_config: PartialWorkspaceCompositionConfig,
-) -> io::Result<WorkspaceCompositionConfig> {
-  Figment::from(source)
-    .merge(Serialized::defaults(env_config))
-    .merge(Serialized::defaults(
-      PartialWorkspaceCompositionConfig::from(args),
-    ))
-    .extract::<WorkspaceCompositionConfig>()
-    .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error.to_string()))
+  Figment::from(Serialized::defaults(
+    PartialWorkspaceCompositionConfig::defaults(),
+  ))
+  .merge(source)
+  .merge(Serialized::defaults(
+    PartialWorkspaceCompositionConfig::from(args),
+  ))
+  .extract::<WorkspaceCompositionConfig>()
+  .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error.to_string()))
 }
 
 fn filtered_env() -> Env {
-  Env::raw().ignore_empty(true).filter(|key| {
-    matches!(
-      key.as_str(),
-      "workspace_instance_id" | "workspace_root" | "engine_data_dir"
-    )
-  })
+  Env::raw().ignore_empty(true).only(CONFIG_ENV_KEYS)
 }
 
 struct KnowledgeEngineModule {
