@@ -6,6 +6,7 @@ import { resolveHeadingSectionCommit } from '@/logic/markdownBlockCommits'
 import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic/markdownBlocks'
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
@@ -15,21 +16,35 @@ type PreviewGraphNode = Node<GraphNodeData, 'preview'>
 
 const graphHandleClass = 'graph-node-handle'
 
+const getGraphNodeA11yProps = (label: string, selected: boolean) => ({
+  'aria-current': selected ? (true as const) : undefined,
+  'aria-label': label,
+  'aria-roledescription': 'graph node',
+  role: 'group' as const,
+})
+
 export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNode>) => {
   return (
     <div
       className={cn(
-        'graph-node-shell graph-node-shell--external cursor-pointer rounded-md px-3 py-2',
+        'graph-node-shell graph-node-shell--external flex w-[190px] cursor-pointer flex-col gap-1 rounded-md px-3 py-2',
         selected && 'graph-node-shell--selected',
       )}
       data-graph-node-selected={selected}
       data-graph-node-kind="external"
-      aria-label={data.label}
+      {...getGraphNodeA11yProps(data.label, selected)}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
-      <div className="text-sm font-semibold">{data.label}</div>
-      <div className="text-xs text-muted-foreground">{data.subtitle}</div>
+      <div className="truncate text-sm font-semibold">{data.label}</div>
+      {data.subtitle ? (
+        <Badge
+          variant="outline"
+          className="max-w-full self-start truncate px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+        >
+          {data.subtitle}
+        </Badge>
+      ) : null}
     </div>
   )
 })
@@ -38,17 +53,24 @@ export const MissingNode = memo(({ data, selected }: NodeProps<MissingGraphNode>
   return (
     <div
       className={cn(
-        'graph-node-shell graph-node-shell--missing cursor-pointer rounded-md px-3 py-2',
+        'graph-node-shell graph-node-shell--missing flex w-[190px] cursor-pointer flex-col gap-1 rounded-md px-3 py-2',
         selected && 'graph-node-shell--selected',
       )}
       data-graph-node-selected={selected}
       data-graph-node-kind="missing"
-      aria-label={data.label}
+      {...getGraphNodeA11yProps(data.label, selected)}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
-      <div className="text-sm font-semibold">{data.label}</div>
-      <div className="text-xs text-muted-foreground">{data.subtitle}</div>
+      <div className="truncate text-sm font-semibold">{data.label}</div>
+      {data.subtitle ? (
+        <Badge
+          variant="outline"
+          className="max-w-full self-start truncate px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+        >
+          {data.subtitle}
+        </Badge>
+      ) : null}
     </div>
   )
 })
@@ -69,6 +91,12 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
       }),
     [data.content, data.contentBlocks, data.contentMode, data.editable, data.label, data.level, id],
   )
+  const headingWidthClass =
+    data.contentMode === 'full'
+      ? 'w-[260px]'
+      : data.contentMode === 'summary' && data.content
+        ? 'w-[240px]'
+        : 'w-[180px]'
 
   const commitBlock = useCallback(
     (commit: MarkdownBlockCommit) => {
@@ -93,18 +121,26 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
   return (
     <div
       className={cn(
-        'graph-node-shell graph-node-shell--heading w-[260px] rounded-md px-3 py-2',
+        'graph-node-shell graph-node-shell--heading rounded-md px-3 py-2',
+        headingWidthClass,
         selected && 'graph-node-shell--selected',
       )}
       data-graph-node-selected={selected}
       data-graph-node-id={id}
       data-graph-node-kind="heading"
-      aria-label={data.label}
+      {...getGraphNodeA11yProps(data.label, selected)}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
       <MarkdownBlockSurface blocks={blocks} onCommitBlock={commitBlock} />
-      <div className="mt-1 px-1 text-xs text-muted-foreground">{data.subtitle}</div>
+      {data.subtitle ? (
+        <Badge
+          variant="outline"
+          className="mt-1 max-w-full self-start truncate px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+        >
+          {data.subtitle}
+        </Badge>
+      ) : null}
     </div>
   )
 })
@@ -121,7 +157,7 @@ export const PreviewNode = memo(({ data, selected }: NodeProps<PreviewGraphNode>
       )}
       data-graph-node-selected={selected}
       data-graph-node-kind="preview"
-      aria-label={data.label}
+      {...getGraphNodeA11yProps(data.label, selected)}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
