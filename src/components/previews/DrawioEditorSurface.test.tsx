@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DrawioEditorSurface from '@/components/previews/DrawioEditorSurface'
 import { DEFAULT_DRAWIO_EMBED_URL } from '@/logic/drawioEmbed'
@@ -106,6 +106,23 @@ describe('DrawioEditorSurface', () => {
 
     const readOnlyBadge = screen.getByText(/Read-only|只读/).closest('div')
     expect(readOnlyBadge?.querySelector('[data-icon="inline-start"]')).not.toBeNull()
+  })
+
+  it('uses a shared empty state when opening drawio files in the system app', () => {
+    useDrawioSettingsStore.setState({
+      drawioEditorMode: 'system',
+      drawioEmbedUrl: DEFAULT_DRAWIO_EMBED_URL,
+    })
+
+    const { container } = renderSurface()
+
+    const emptyState = screen.getByRole('note')
+    expect(emptyState).toHaveAttribute('data-slot', 'empty')
+    expect(container.querySelector('[data-slot="empty-icon"]')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Open in system|使用系统应用打开/ }))
+
+    expect(fsApi.openPathInSystem).toHaveBeenCalledWith('diagrams/flow.drawio')
   })
 
   it('flushes workspace buffers when the iframe sends exported xml', async () => {

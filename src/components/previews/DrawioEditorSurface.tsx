@@ -13,6 +13,7 @@ import { drawioDocumentApi } from '@/services/drawioDocumentApi'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
+import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -270,14 +271,20 @@ const DrawioMessageCard = ({
   title: string
 }) => (
   <div className="flex min-h-full items-center justify-center p-4">
-    <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
-      <div className="text-sm font-semibold">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
-      <Button variant="outline" size="sm" className="mt-4 h-8 gap-1.5" onClick={onAction}>
-        <ExternalLink data-icon="inline-start" />
-        {actionLabel}
-      </Button>
-    </div>
+    <AppEmptyState
+      action={
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onAction}>
+          <ExternalLink data-icon="inline-start" />
+          {actionLabel}
+        </Button>
+      }
+      className="w-full max-w-lg border-solid bg-card text-card-foreground shadow-sm"
+      description={description}
+      icon={<ExternalLink />}
+      role="note"
+      title={title}
+      titleClassName="text-sm"
+    />
   </div>
 )
 
