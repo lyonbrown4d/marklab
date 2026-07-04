@@ -6,7 +6,9 @@ version.workspace = true
 
 [dependencies]
 clap.workspace = true
+figment2.workspace = true
 marklab-knowledge-engine-core = { path = "../../crates/engine-core" }
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -15,4 +17,3 @@ tracing-subscriber.workspace = true
 [[bin]]
 name = "marklab-mcp"
 path = "src/main.rs"
-
