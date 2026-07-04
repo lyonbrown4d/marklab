@@ -132,6 +132,19 @@ describe('EmbeddedFilePreview', () => {
     expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('announces modal resolve failures as an alert', async () => {
+    resolveEmbeddedPreviewTarget.mockRejectedValue(new Error('Unable to resolve embedded target'))
+
+    renderPreview()
+
+    fireEvent.click(screen.getByRole('button', { name: 'preview.openEmbedded: Brief' }))
+
+    const alert = await screen.findByRole('alert', { name: 'preview.inlineFailed' })
+    expect(alert).toHaveTextContent('preview.inlineFailed')
+    expect(alert).toHaveClass('bg-destructive/10')
+    expect(screen.queryByRole('status', { name: 'preview.inlineFailed' })).not.toBeInTheDocument()
+  })
+
   it('opens the independent preview tab without router context', async () => {
     resolveEmbeddedPreviewTarget.mockResolvedValue({
       external: false,

@@ -1,10 +1,11 @@
 import { ExternalLink, FileText, ImageIcon, Maximize2, Music, Video } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
+import AppAlert from '@/components/AppAlert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Spinner } from '@/components/ui/spinner'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
+import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import {
   embeddedPreviewKindForTarget,
   resolveEmbeddedPreviewTarget,
@@ -47,6 +48,33 @@ const previewKindLabelKey = (kind: PreviewFileKind) => `preview.kind.${kind}`
 
 const navigateToPreviewTab = (path: string) => {
   window.location.hash = pathToFileViewRoute(path, 'preview')
+}
+
+const EmbeddedPreviewDialogFallback = ({
+  failed,
+  failedLabel,
+  loadingLabel,
+}: {
+  failed: boolean
+  failedLabel: string
+  loadingLabel: string
+}) => {
+  if (failed) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <AppAlert
+          aria-label={failedLabel}
+          className="w-full max-w-md"
+          descriptionClassName="text-sm"
+          tone="destructive"
+        >
+          {failedLabel}
+        </AppAlert>
+      </div>
+    )
+  }
+
+  return <PreviewLoadingFallback label={loadingLabel} />
 }
 
 export const EmbeddedFilePreview = ({
@@ -243,15 +271,11 @@ export const EmbeddedFilePreview = ({
                 title={displayTitle}
               />
             ) : (
-              <div
-                aria-busy={!failed}
-                aria-label={failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}
-                className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
-                role="status"
-              >
-                {failed ? null : <Spinner aria-hidden="true" role="presentation" />}
-                <span>{failed ? t('preview.inlineFailed') : t('preview.inlineLoading')}</span>
-              </div>
+              <EmbeddedPreviewDialogFallback
+                failed={failed}
+                failedLabel={t('preview.inlineFailed')}
+                loadingLabel={t('preview.inlineLoading')}
+              />
             )}
           </div>
         </DialogContent>
