@@ -131,7 +131,10 @@ describe('CalendarFilePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Select empty day' }))
 
-    expect(screen.getByText('No events on this day')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('data-slot', 'empty')
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'No events on this day' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('0 events')).toBeInTheDocument()
     expect(screen.queryByText('Calendar view')).not.toBeInTheDocument()
   })

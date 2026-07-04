@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import { CalendarDays, Clock, Code2, MapPin } from 'lucide-react'
 
+import AppEmptyState from '@/components/AppEmptyState'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { dateKey, parseIcsCalendar } from '@/logic/ics'
@@ -102,9 +103,14 @@ const CalendarFilePage = memo(
                 </div>
 
                 {selectedEvents.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
-                    {t('calendar.noEvents')}
-                  </div>
+                  <AppEmptyState
+                    className="min-h-[220px] rounded-md border-border/80 bg-muted/15"
+                    compact
+                    role="status"
+                    title={t('calendar.noEvents')}
+                    titleClassName="font-normal text-muted-foreground"
+                    titleLevel={3}
+                  />
                 ) : (
                   <div className="flex flex-col gap-2">
                     {selectedEvents.map((event, index) => (
