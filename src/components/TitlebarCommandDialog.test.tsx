@@ -245,7 +245,7 @@ describe('TitlebarCommandDialog', () => {
       'placeholder',
       'Search workspace',
     )
-    expect(screen.getByRole('status').querySelector('.size-5')).not.toBeNull()
+    expect(screen.getByRole('status').querySelector('[data-slot="empty-icon"]')).not.toBeNull()
     expect(screen.getByRole('button', { name: '@ files' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '# headings' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '? text' })).toBeInTheDocument()

@@ -1,11 +1,10 @@
-import { SearchX } from 'lucide-react'
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import AppCommandDialog from '@/components/AppCommandDialog'
-import { Button } from '@/components/ui/button'
 import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
 import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandEmptyState from '@/components/command/CommandEmptyState'
 import CommandNavigationSection, {
   type CommandNavigationBacklink,
   type CommandNavigationHeading,
@@ -153,29 +152,12 @@ const TitlebarCommandDialog = ({
       />
       <CommandList>
         <CommandEmpty>
-          <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
-            <SearchX className="size-5 text-muted-foreground" />
-            <div className="flex flex-col gap-1">
-              <p className="text-sm text-foreground">{emptyQueryLabel}</p>
-              <p className="text-xs text-muted-foreground">{emptyDescription}</p>
-            </div>
-            <div className="mt-1 flex flex-wrap justify-center gap-1.5">
-              {emptyScopeSuggestions.map((suggestion) => (
-                <Button
-                  key={suggestion.marker}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  aria-label={`${suggestion.marker} ${suggestion.label}`}
-                  className="command-empty-scope-button h-7 rounded px-2"
-                  onClick={() => setQuery(suggestion.value)}
-                >
-                  <span className="command-empty-scope-marker">{suggestion.marker}</span>
-                  <span>{suggestion.label}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
+          <CommandEmptyState
+            title={emptyQueryLabel}
+            description={emptyDescription}
+            suggestions={emptyScopeSuggestions}
+            onSelectScope={setQuery}
+          />
         </CommandEmpty>
         <CommandSearchHistory
           query={query}
