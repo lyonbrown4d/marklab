@@ -58,6 +58,7 @@ const electronMainEntry = {
 const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
 const distElectronDir = path.resolve(__dirname, 'dist-electron')
 const DEFAULT_DEV_SERVER_PORT = 5173
+const DEFAULT_DEV_SERVER_HOST = '127.0.0.1'
 
 const resolveKatexFontsDir = (): string | null => {
   const hoistedFontsDir = path.resolve(__dirname, 'node_modules/katex/dist/fonts')
@@ -121,6 +122,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     server: {
+      host: process.env.MARKLAB_DEV_SERVER_HOST ?? DEFAULT_DEV_SERVER_HOST,
       port: devServerPort,
       strictPort: false,
       warmup: {

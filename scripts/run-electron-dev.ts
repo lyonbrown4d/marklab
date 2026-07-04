@@ -5,6 +5,7 @@ import getPort from 'get-port'
 
 const DEFAULT_DEV_SERVER_PORT = 5173
 const RANDOM_DEV_SERVER_PORT = 0 as const
+const DEV_SERVER_HOST = '127.0.0.1'
 
 const require = createRequire(import.meta.url)
 
@@ -18,10 +19,11 @@ const parsePort = (value: string | undefined): number | null => {
 const resolveDevServerPort = async (): Promise<number> => {
   const configuredPort = parsePort(process.env.MARKLAB_DEV_SERVER_PORT ?? process.env.VITE_PORT)
   if (configuredPort !== null) {
-    return getPort({ port: configuredPort })
+    return getPort({ host: DEV_SERVER_HOST, port: configuredPort })
   }
 
   return getPort({
+    host: DEV_SERVER_HOST,
     port: [DEFAULT_DEV_SERVER_PORT, RANDOM_DEV_SERVER_PORT],
   })
 }
@@ -39,6 +41,7 @@ const createChildEnv = (port: number): NodeJS.ProcessEnv => {
   }
 
   childEnv.MARKLAB_DEV_SERVER_PORT = String(port)
+  childEnv.MARKLAB_DEV_SERVER_HOST = DEV_SERVER_HOST
   return childEnv
 }
 
