@@ -101,6 +101,7 @@ describe('graph optimistic patches', () => {
     const updated = next.nodes.find((node) => node.id === 'heading:notes/current.md:intro')
     expect(updated?.data.content).toBe('```ts\nconst value = 2\n```')
     expect(updated?.data.contentBlocks).toEqual(nextBlocks)
+    expect(next.layoutKey).not.toBe(graph.layoutKey)
   })
 
   it('keeps later heading line ranges aligned when content line counts change', () => {
@@ -145,6 +146,7 @@ describe('graph optimistic patches', () => {
     expect(inserted?.data.level).toBe(2)
     expect(shifted?.data.line).toBe(4)
     expect(next.edges.some((edge) => edge.target === inserted?.id)).toBe(true)
+    expect(next.layoutKey).not.toBe(graph.layoutKey)
   })
 
   it('optimistically deletes a heading subtree and shifts later line metadata', () => {
@@ -169,5 +171,6 @@ describe('graph optimistic patches', () => {
       1,
     )
     expect(next.edges.some((edge) => edge.target === 'heading:notes/current.md:intro')).toBe(false)
+    expect(next.layoutKey).not.toBe(withChild.layoutKey)
   })
 })

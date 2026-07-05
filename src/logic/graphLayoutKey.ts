@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
+import { createGraphNodeLayoutSignature } from '@/logic/graphLayout'
 
 type LayoutHash = {
   low: number
@@ -16,7 +17,9 @@ export const createGraphLayoutKey = (
   nodes: Node<GraphNodeData>[],
   edges: Edge[],
 ) => {
-  const nodeKey = createCollectionHash(nodes, (node) => hashLayoutParts(node.id))
+  const nodeKey = createCollectionHash(nodes, (node) =>
+    hashLayoutParts(createGraphNodeLayoutSignature(node)),
+  )
   const edgeKey = createCollectionHash(edges, (edge) => hashLayoutParts(edge.source, edge.target))
 
   return `${scope}:n${nodeKey}:e${edgeKey}`

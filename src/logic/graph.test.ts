@@ -274,4 +274,28 @@ describe('buildGraphFromWorkspaceIndex', () => {
     expect(edgeLayoutKey).not.toBe(baseLayoutKey)
     expect(modeLayoutKey).not.toBe(baseLayoutKey)
   })
+
+  it('changes the layout key when heading content changes node layout size', () => {
+    const baseGraph = {
+      mode: 'outline',
+      nodes: [
+        {
+          id: 'heading:notes/current.md:intro',
+          kind: 'heading',
+          label: 'Intro',
+          path: 'notes/current.md',
+          level: 1,
+          slug: 'intro',
+          content: 'One paragraph',
+          content_blocks: [{ id: 'p', kind: 'paragraph' as const, text: 'One paragraph' }],
+        },
+      ],
+      edges: [],
+    } satisfies FsGraph
+
+    const compactLayoutKey = buildGraphFromRustGraph(baseGraph, 'none').layoutKey
+    const fullLayoutKey = buildGraphFromRustGraph(baseGraph, 'full').layoutKey
+
+    expect(fullLayoutKey).not.toBe(compactLayoutKey)
+  })
 })

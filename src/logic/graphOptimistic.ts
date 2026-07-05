@@ -1,4 +1,5 @@
 import type { GraphData } from '@/logic/graph'
+import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 import type { MarkdownBlock } from '@/logic/markdownBlocks'
 
 type PatchGraphHeadingInsertedArgs = {
@@ -67,18 +68,21 @@ export const patchGraphHeadingInserted = (
       },
     })
 
+  const edges = [
+    ...graph.edges,
+    {
+      id: `${parentId}->${nodeId}-${graph.edges.length}`,
+      source: parentId,
+      target: nodeId,
+      type: 'smoothstep',
+    },
+  ]
+
   return {
     ...graph,
     nodes,
-    edges: [
-      ...graph.edges,
-      {
-        id: `${parentId}->${nodeId}-${graph.edges.length}`,
-        source: parentId,
-        target: nodeId,
-        type: 'smoothstep',
-      },
-    ],
+    edges,
+    layoutKey: optimisticLayoutKey(graph, nodes, edges),
   }
 }
 
@@ -114,7 +118,7 @@ export const patchGraphHeadingDeleted = (
     (edge) => !deletedIds.has(edge.source) && !deletedIds.has(edge.target),
   )
 
-  return { ...graph, nodes, edges }
+  return { ...graph, nodes, edges, layoutKey: optimisticLayoutKey(graph, nodes, edges) }
 }
 
 export const patchGraphHeadingContent = (
@@ -169,7 +173,18 @@ export const patchGraphHeadingContent = (
     }
   })
 
-  return changed ? { ...graph, nodes } : graph
+  return changed
+    ? { ...graph, nodes, layoutKey: optimisticLayoutKey(graph, nodes, graph.edges) }
+    : graph
+}
+
+const optimisticLayoutKey = (
+  graph: GraphData,
+  nodes: GraphData['nodes'],
+  edges: GraphData['edges'],
+) => {
+  const scope = graph.layoutKey?.split(':')[0] ?? 'optimistic'
+  return createGraphLayoutKey(`${scope}:optimistic`, nodes, edges)
 }
 
 const countMarkdownLines = (content: string) => {

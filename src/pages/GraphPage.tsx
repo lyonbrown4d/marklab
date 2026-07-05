@@ -10,9 +10,9 @@ import {
 } from '@xyflow/react'
 import type { Edge, Node, OnSelectionChangeParams } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
-import { mergeGraphNodePositions } from '@/logic/graphViewState'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
+import { useGraphAutoLayout } from '@/pages/useGraphAutoLayout'
 import type { GraphHotkeyAction } from '@/pages/graphKeyboardActions'
 import {
   buildGraphNodeDetails,
@@ -59,7 +59,6 @@ const GraphPageComponent = ({
   const [flowInstance, setFlowInstance] = useState<GraphFlowInstance>(null)
   const deferredGraphFilters = useDeferredValue(graphFilters)
   const graphShellRef = useRef<HTMLDivElement | null>(null)
-  const layoutKeyRef = useRef(graph.layoutKey)
   const onUpdateHeadingTitleRef = useLatest(onUpdateHeadingTitle)
   const onUpdateHeadingContentRef = useLatest(onUpdateHeadingContent)
 
@@ -77,29 +76,15 @@ const GraphPageComponent = ({
     [onUpdateHeadingContentRef],
   )
 
-  useEffect(() => {
-    const preservePositions = layoutKeyRef.current === graph.layoutKey
-    const nextNodes = graph.nodes.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        contentMode,
-        editable: editable && node.type === 'heading',
-        onUpdateTitle: handleUpdateHeadingTitle,
-        onUpdateContent: handleUpdateHeadingContent,
-      },
-    }))
-    setNodes((currentNodes) => mergeGraphNodePositions(nextNodes, currentNodes, preservePositions))
-    layoutKeyRef.current = graph.layoutKey
-  }, [
+  useGraphAutoLayout({
     contentMode,
     editable,
-    graph.layoutKey,
-    graph.nodes,
-    handleUpdateHeadingContent,
-    handleUpdateHeadingTitle,
+    flowInstance,
+    graph,
+    onUpdateHeadingContent: handleUpdateHeadingContent,
+    onUpdateHeadingTitle: handleUpdateHeadingTitle,
     setNodes,
-  ])
+  })
 
   useEffect(() => {
     setEdges(graph.edges)
