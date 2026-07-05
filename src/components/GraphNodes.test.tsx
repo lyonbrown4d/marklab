@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ExternalNode, FileNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
+import { FULL_HEADING_NODE_MAX_HEIGHT } from '@/logic/graphLayout'
 
 vi.mock('@/components/MarkdownBlockSurface', () => ({
   default: ({ blocks }: { blocks: Array<{ id: string }> }) => (
@@ -142,6 +143,11 @@ describe('GraphNodes', () => {
       </ReactFlowProvider>,
     )
 
-    expect(screen.getByRole('group', { name: 'Intro' })).toHaveClass('w-[260px]')
+    const fullNode = screen.getByRole('group', { name: 'Intro' })
+    expect(fullNode).toHaveClass('w-[260px]')
+    expect(fullNode).toHaveStyle({
+      maxHeight: `${FULL_HEADING_NODE_MAX_HEIGHT}px`,
+      overflowY: 'auto',
+    })
   })
 })

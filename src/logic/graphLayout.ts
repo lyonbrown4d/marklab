@@ -9,6 +9,7 @@ const HEADING_NODE_WIDTH = 180
 const HEADING_NODE_HEIGHT = 56
 const FILE_NODE_WIDTH = 200
 const FILE_NODE_HEIGHT = 54
+export const FULL_HEADING_NODE_MAX_HEIGHT = 360
 
 const elk = new ELK()
 
@@ -109,5 +110,5 @@ const estimateHeadingNodeHeight = (node: Node<GraphNodeData>) => {
     return height + 44
   }, 52)
 
-  return Math.min(260, Math.max(130, blockHeight))
+  return Math.min(FULL_HEADING_NODE_MAX_HEIGHT, Math.max(130, blockHeight))
 }

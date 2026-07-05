@@ -2,6 +2,7 @@ import type { Node, NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { memo, useCallback, useMemo } from 'react'
 import type { GraphNodeData } from '@/logic/graph'
+import { FULL_HEADING_NODE_MAX_HEIGHT } from '@/logic/graphLayout'
 import { resolveHeadingSectionCommit } from '@/logic/markdownBlockCommits'
 import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic/markdownBlocks'
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
@@ -152,6 +153,14 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
         headingWidthClass,
         selected && 'graph-node-shell--selected',
       )}
+      style={
+        data.contentMode === 'full'
+          ? {
+              maxHeight: FULL_HEADING_NODE_MAX_HEIGHT,
+              overflowY: 'auto',
+            }
+          : undefined
+      }
       data-graph-node-selected={selected}
       data-graph-node-id={id}
       data-graph-node-kind="heading"
