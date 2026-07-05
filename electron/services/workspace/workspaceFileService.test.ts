@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import fsSync from 'node:fs'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
+import watcher from '@parcel/watcher'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -191,6 +192,27 @@ describe('WorkspaceFileService background tasks', () => {
   })
 })
 
+describe('WorkspaceFileService root switching', () => {
+  it('does not restart the watcher when setting the same external root', async () => {
+    const service = createKnowledgeServiceMock()
+    const { logger, root, workspace } = await createWorkspace(service)
+    await settleWatcherTasks()
+    const subscribe = vi.mocked(watcher.subscribe)
+    const subscribeCalls = subscribe.mock.calls.length
+    logger.info.mockClear()
+
+    await expect(workspace.setRoot({ path: root })).resolves.toEqual({
+      kind: 'external',
+      path: root,
+    })
+
+    expect(subscribe).toHaveBeenCalledTimes(subscribeCalls)
+    expect(logger.info).not.toHaveBeenCalledWith('workspace root changed', expect.anything())
+
+    workspace.dispose()
+  })
+})
+
 const createWorkspace = async (service: KnowledgeEngineService) => {
   const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-sidecar-'))
   tempRoots.push(tempRoot)
@@ -227,6 +249,7 @@ const createKnowledgeServiceMock = () =>
 
 const createLogger = (): Logger & {
   error: ReturnType<typeof vi.fn>
+  info: ReturnType<typeof vi.fn>
   warn: ReturnType<typeof vi.fn>
 } => {
   const logger = {
@@ -236,6 +259,7 @@ const createLogger = (): Logger & {
     warn: vi.fn(),
   } as unknown as Logger & {
     error: ReturnType<typeof vi.fn>
+    info: ReturnType<typeof vi.fn>
     warn: ReturnType<typeof vi.fn>
   }
   return logger

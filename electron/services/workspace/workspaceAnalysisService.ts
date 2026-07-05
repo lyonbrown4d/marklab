@@ -164,14 +164,18 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   override async setRoot(value: unknown): Promise<FsRootInfo> {
+    const previousWorkspaceSearchKey = this.getWorkspaceSearchKey()
     const result = await super.setRoot(value)
+    if (this.getWorkspaceSearchKey() === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
     this.graphCache.clear()
     return result
   }
 
   override async setSingleFile(value: unknown): Promise<FsRootInfo> {
+    const previousWorkspaceSearchKey = this.getWorkspaceSearchKey()
     const result = await super.setSingleFile(value)
+    if (this.getWorkspaceSearchKey() === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
     this.graphCache.clear()
     return result

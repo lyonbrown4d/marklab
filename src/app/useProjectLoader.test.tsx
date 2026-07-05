@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useProjectLoader } from '@/app/useProjectLoader'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
+import { fsApi } from '@/services/fsApi'
 
 const messages: Record<string, string> = {
   'projectLoader.openPathFailed': 'Failed to open path',
@@ -22,6 +23,13 @@ vi.mock('@/runtime/dialog', () => ({
 
 vi.mock('@/runtime/environment', () => ({
   runInDesktop: vi.fn(),
+}))
+
+vi.mock('@/services/fsApi', () => ({
+  fsApi: {
+    getSnapshot: vi.fn(),
+    setRoot: vi.fn(),
+  },
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -55,6 +63,10 @@ describe('useProjectLoader', () => {
     vi.mocked(openDialog).mockReset()
     vi.mocked(runInDesktop).mockReset()
     vi.mocked(runInDesktop).mockImplementation((callback) => Promise.resolve(callback()))
+    vi.mocked(fsApi.getSnapshot).mockResolvedValue({
+      entries: [{ kind: 'file', path: 'Untitled.md' }],
+      root: { kind: 'internal', path: '/app-data/workspace' },
+    })
   })
 
   it('shows localized feedback when opening a desktop path fails', async () => {
@@ -80,6 +92,49 @@ describe('useProjectLoader', () => {
 
     expect(toast.error).toHaveBeenCalledWith('Failed to select folder', {
       description: 'dialog unavailable',
+    })
+  })
+
+  it('navigates home without resetting the watcher when already using the internal workspace', async () => {
+    const navigate = vi.fn()
+    const { result } = renderHook(() =>
+      useProjectLoader(
+        createProps({
+          locationPathname: '/files/edit/notes.md',
+          navigate,
+          rootKind: 'internal',
+          rootPath: '/app-data/workspace',
+        }) as never,
+      ),
+    )
+
+    await act(async () => {
+      await result.current.onUseInternalRoot()
+    })
+
+    expect(fsApi.setRoot).not.toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith('/', { replace: false })
+  })
+
+  it('coalesces repeated internal workspace switches while the IPC call is pending', async () => {
+    let resolveSetRoot: (value: { kind: 'internal'; path: string }) => void = () => undefined
+    vi.mocked(fsApi.setRoot).mockReturnValue(
+      new Promise((resolve) => {
+        resolveSetRoot = resolve
+      }),
+    )
+    const { result } = renderHook(() => useProjectLoader(createProps() as never))
+
+    const firstSwitch = result.current.onUseInternalRoot()
+    await act(async () => {
+      await result.current.onUseInternalRoot()
+    })
+
+    expect(fsApi.setRoot).toHaveBeenCalledTimes(1)
+
+    resolveSetRoot({ kind: 'internal', path: '/app-data/workspace' })
+    await act(async () => {
+      await firstSwitch
     })
   })
 })

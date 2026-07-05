@@ -1,11 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import type { NavigateFunction } from 'react-router-dom'
-import isEqual from 'lodash-es/isEqual'
 import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
 import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
-import { fsApi, type FsSnapshot } from '@/services/fsApi'
+import { fsApi } from '@/services/fsApi'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
@@ -16,6 +15,14 @@ import {
   isPreviewableFilePath,
 } from '@/logic/fileTypes'
 import { toast } from 'sonner'
+import {
+  areWorkspaceEntriesEqual,
+  areWorkspaceTabListsEqual,
+  fetchWorkspaceSnapshot,
+  isWorkspaceFileEntry,
+  projectLoaderErrorMessage,
+  type LoadWorkspaceOptions,
+} from '@/app/projectLoaderUtils'
 
 type UseProjectLoaderArgs = {
   rootPath: string
@@ -34,33 +41,6 @@ type UseProjectLoaderArgs = {
   setActiveTabId: (id: string | null) => void
   touchRecentProject: (path: string) => void
 }
-
-type LoadWorkspaceOptions = {
-  activeTabId?: string | null
-  preserveCurrentRoute?: boolean
-  snapshot?: FsSnapshot
-  tabs?: WorkspaceTab[]
-}
-
-const isFile = (entry: FileEntry) => {
-  return entry.kind === 'file'
-}
-
-const areTabListsEqual = (left: WorkspaceTab[], right: WorkspaceTab[]) => {
-  return isEqual(left.map(getWorkspaceTabId), right.map(getWorkspaceTabId))
-}
-
-const areEntriesEqual = (left: FileEntry[], right: FileEntry[]) => {
-  return isEqual(left.map(toEntryIdentity), right.map(toEntryIdentity))
-}
-
-const toEntryIdentity = (entry: FileEntry) => [entry.path, entry.kind]
-
-const fetchSnapshot = async () => {
-  return fsApi.getSnapshot()
-}
-
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 export const useProjectLoader = ({
   rootPath,
@@ -88,11 +68,12 @@ export const useProjectLoader = ({
   const locationPathnameRef = useLatest(locationPathname)
   const preserveCurrentRouteRef = useLatest(preserveCurrentRoute)
   const defaultFileViewRef = useLatest(defaultFileView)
+  const internalRootSwitchingRef = useRef(false)
 
   const loadWorkspace = useCallback(
     async (options?: LoadWorkspaceOptions) => {
       await runInDesktop(async () => {
-        const snapshot = options?.snapshot ?? (await fetchSnapshot())
+        const snapshot = options?.snapshot ?? (await fetchWorkspaceSnapshot())
         const rootInfo = snapshot.root
         if (rootPathRef.current !== rootInfo.path) {
           setRootPath(rootInfo.path)
@@ -102,10 +83,10 @@ export const useProjectLoader = ({
         }
 
         let nextEntries = snapshot.entries
-        if (rootInfo.kind !== 'single' && !nextEntries.some(isFile)) {
+        if (rootInfo.kind !== 'single' && !nextEntries.some(isWorkspaceFileEntry)) {
           const fallbackName = 'Untitled.md'
           await fsApi.createFile(fallbackName)
-          const refreshed = await fetchSnapshot()
+          const refreshed = await fetchWorkspaceSnapshot()
           nextEntries = refreshed.entries
           if (rootPathRef.current !== refreshed.root.path) {
             setRootPath(refreshed.root.path)
@@ -115,10 +96,10 @@ export const useProjectLoader = ({
           }
         }
 
-        if (!areEntriesEqual(entriesRef.current, nextEntries)) {
+        if (!areWorkspaceEntriesEqual(entriesRef.current, nextEntries)) {
           setEntries(nextEntries)
         }
-        const filesOnly = nextEntries.filter(isFile)
+        const filesOnly = nextEntries.filter(isWorkspaceFileEntry)
 
         if (filesOnly.length > 0) {
           const available = new Set(filesOnly.map((file) => file.path))
@@ -143,7 +124,7 @@ export const useProjectLoader = ({
                     fileViewForOpenPath(defaultPath, defaultFileViewRef.current),
                   ),
                 ]
-          if (!areTabListsEqual(tabsRef.current, finalTabs)) {
+          if (!areWorkspaceTabListsEqual(tabsRef.current, finalTabs)) {
             setTabs(finalTabs)
           }
           const currentActiveTabId = seedActiveTabId
@@ -220,7 +201,7 @@ export const useProjectLoader = ({
         })
       } catch (error) {
         toast.error(t('projectLoader.openPathFailed'), {
-          description: `${path}\n${errorMessage(error)}`,
+          description: `${path}\n${projectLoaderErrorMessage(error)}`,
         })
       }
     },
@@ -241,7 +222,7 @@ export const useProjectLoader = ({
       })
     } catch (error) {
       toast.error(t('projectLoader.selectFolderFailed'), {
-        description: errorMessage(error),
+        description: projectLoaderErrorMessage(error),
       })
     }
   }, [openFolder, t])
@@ -266,12 +247,20 @@ export const useProjectLoader = ({
       })
     } catch (error) {
       toast.error(t('projectLoader.selectFileFailed'), {
-        description: errorMessage(error),
+        description: projectLoaderErrorMessage(error),
       })
     }
   }, [openFolder, t])
 
   const onUseInternalRoot = useCallback(async () => {
+    if (rootKindRef.current === 'internal') {
+      if (locationPathnameRef.current !== '/') {
+        navigate('/', { replace: false })
+      }
+      return
+    }
+    if (internalRootSwitchingRef.current) return
+    internalRootSwitchingRef.current = true
     try {
       await runInDesktop(async () => {
         await fsApi.setRoot(null)
@@ -279,10 +268,12 @@ export const useProjectLoader = ({
       })
     } catch (error) {
       toast.error(t('projectLoader.openLocalWorkspaceFailed'), {
-        description: errorMessage(error),
+        description: projectLoaderErrorMessage(error),
       })
+    } finally {
+      internalRootSwitchingRef.current = false
     }
-  }, [loadWorkspace, t])
+  }, [loadWorkspace, locationPathnameRef, navigate, rootKindRef, t])
 
   const createFile = useCallback(async (path: string) => {
     await runInDesktop(async () => {

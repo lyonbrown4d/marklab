@@ -23,6 +23,11 @@ import { readWorkspaceFileServiceAssetBytes } from '@electron/services/workspace
 import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata.js'
 import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile.js'
 import {
+  isSameExternalRoot,
+  isSameInternalRoot,
+  isSameSingleFileRoot,
+} from '@electron/services/workspace/workspaceRootState.js'
+import {
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
@@ -78,13 +83,16 @@ export class WorkspaceFileService extends WorkspaceBase {
     if (rootPath) {
       const stat = await fs.promises.stat(rootPath).catch(() => null)
       if (!stat?.isDirectory()) throw new Error('Selected path is not a directory')
+      const resolved = path.resolve(rootPath)
+      if (isSameExternalRoot(this.state, resolved)) return this.rootInfo()
       this.state = {
         ...this.state,
         rootKind: 'external',
-        rootPath: path.resolve(rootPath),
+        rootPath: resolved,
         singleFile: null,
       }
     } else {
+      if (isSameInternalRoot(this.state)) return this.rootInfo()
       fs.mkdirSync(this.state.internalRoot, { recursive: true })
       ensureDefaultFile(this.state.internalRoot)
       this.state = {
@@ -114,6 +122,7 @@ export class WorkspaceFileService extends WorkspaceBase {
     }
 
     const resolved = path.resolve(filePath)
+    if (isSameSingleFileRoot(this.state, resolved)) return this.rootInfo()
     this.state = {
       ...this.state,
       rootKind: 'single',
