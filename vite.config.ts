@@ -57,6 +57,12 @@ const electronMainEntry = {
 }
 const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
 const distElectronDir = path.resolve(__dirname, 'dist-electron')
+const distDesignPreviewAssets = [
+  'logo-preview.html',
+  'marklab-logo-direction-1.svg',
+  'marklab-logo-direction-2.svg',
+  'marklab-logo-direction-3.svg',
+]
 const DEFAULT_DEV_SERVER_PORT = 5173
 const DEFAULT_DEV_SERVER_HOST = '127.0.0.1'
 
@@ -83,6 +89,15 @@ const copyKatexFontsPlugin = () => ({
     if (!source) return
     mkdirSync(distKatexFontsDir, { recursive: true })
     cpSync(source, distKatexFontsDir, { recursive: true })
+  },
+})
+
+const removeDesignPreviewAssetsPlugin = () => ({
+  name: 'remove-design-preview-assets',
+  writeBundle() {
+    for (const fileName of distDesignPreviewAssets) {
+      rmSync(path.resolve(__dirname, 'dist', fileName), { force: true })
+    }
   },
 })
 
@@ -121,6 +136,7 @@ export default defineConfig(({ command, mode }) => {
     : DEFAULT_DEV_SERVER_PORT
 
   return {
+    base: './',
     server: {
       host: process.env.MARKLAB_DEV_SERVER_HOST ?? DEFAULT_DEV_SERVER_HOST,
       port: devServerPort,
@@ -203,6 +219,7 @@ export default defineConfig(({ command, mode }) => {
           template: 'treemap',
         }),
       isServe && !isPerf && !process.env.VITEST && TurboConsole({/* options here */}),
+      isBuild && removeDesignPreviewAssetsPlugin(),
       isBuild && copyKatexFontsPlugin(),
     ].filter(Boolean),
     resolve: {

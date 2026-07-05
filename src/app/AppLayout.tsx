@@ -22,6 +22,7 @@ import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 export type { LayoutContext } from '@/app/AppLayoutContext'
 
 const SettingsDialog = lazy(() => import('@/components/SettingsDialog'))
+const MarkdownDefaultAppPrompt = lazy(() => import('@/components/MarkdownDefaultAppPrompt'))
 
 const AppLayout = () => {
   const state = useAppLayoutState()
@@ -175,6 +176,9 @@ const AppLayout = () => {
           <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         </Suspense>
       )}
+      <Suspense fallback={null}>
+        <MarkdownDefaultAppPrompt />
+      </Suspense>
       <AppShellPanels
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}

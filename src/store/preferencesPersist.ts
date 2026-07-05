@@ -7,6 +7,7 @@ export type PreferencesPersistedState = Pick<
   | 'defaultFileView'
   | 'graphContentMode'
   | 'graphMiniMapEnabled'
+  | 'hideMarkdownDefaultAppPrompt'
   | 'immersiveFocusMode'
   | 'immersiveTypewriterMode'
   | 'immersiveZenMode'

@@ -43,6 +43,7 @@ export type PreferencesState = {
   defaultFileView: FileViewKind
   graphMiniMapEnabled: boolean
   graphContentMode: GraphContentMode
+  hideMarkdownDefaultAppPrompt: boolean
   markdownAssetImportStrategy: MarkdownAssetImportStrategy
   motionSmoothScrolling: boolean
   motionAnimatedCursor: boolean
@@ -65,6 +66,7 @@ export type PreferencesState = {
   setDefaultFileView: (view: FileViewKind) => void
   setGraphMiniMapEnabled: (enabled: boolean) => void
   setGraphContentMode: (mode: GraphContentMode) => void
+  setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
   setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
   setMotionSmoothScrolling: (enabled: boolean) => void
   setMotionAnimatedCursor: (enabled: boolean) => void
@@ -96,6 +98,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       defaultFileView: 'edit',
       graphMiniMapEnabled: true,
       graphContentMode: 'summary',
+      hideMarkdownDefaultAppPrompt: false,
       markdownAssetImportStrategy: 'copy-to-document-assets',
       motionSmoothScrolling: true,
       motionAnimatedCursor: true,
@@ -182,6 +185,12 @@ export const usePreferencesStore = create<PreferencesState>()(
         set((state) =>
           state.graphContentMode === graphContentMode ? state : { graphContentMode },
         ),
+      setHideMarkdownDefaultAppPrompt: (hideMarkdownDefaultAppPrompt) =>
+        set((state) =>
+          state.hideMarkdownDefaultAppPrompt === hideMarkdownDefaultAppPrompt
+            ? state
+            : { hideMarkdownDefaultAppPrompt },
+        ),
       setMarkdownAssetImportStrategy: (markdownAssetImportStrategy) =>
         set((state) =>
           state.markdownAssetImportStrategy === markdownAssetImportStrategy
@@ -267,6 +276,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         defaultFileView: state.defaultFileView,
         graphMiniMapEnabled: state.graphMiniMapEnabled,
         graphContentMode: state.graphContentMode,
+        hideMarkdownDefaultAppPrompt: state.hideMarkdownDefaultAppPrompt,
         markdownAssetImportStrategy: state.markdownAssetImportStrategy,
         motionSmoothScrolling: state.motionSmoothScrolling,
         motionAnimatedCursor: state.motionAnimatedCursor,

@@ -34,7 +34,7 @@
   --crepe-color-hover: color-mix(in srgb, hsl(var(--accent)) 78%, hsl(var(--background)));
   --crepe-color-selected: color-mix(in srgb, hsl(var(--accent)) 92%, hsl(var(--background)));
   --crepe-color-inline-area: hsl(var(--input));
-  --editor-prose-font: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+  --editor-prose-font: ui-sans-serif, system-ui, sans-serif;
   --editor-code-font: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --crepe-font-title: var(--editor-prose-font);
   --crepe-font-default: var(--editor-prose-font);

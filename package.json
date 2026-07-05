@@ -140,6 +140,18 @@
         ]
       }
     ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "md",
+          "markdown"
+        ],
+        "name": "Markdown Document",
+        "description": "Markdown document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      }
+    ],
     "win": {
       "signAndEditExecutable": false,
       "icon": "resources/icons/marklab.ico",
@@ -153,7 +165,7 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "oneClick": false,
-      "perMachine": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "runAfterFinish": true,
       "shortcutName": "Marklab",
@@ -170,6 +182,9 @@
     "linux": {
       "icon": "resources/icons/marklab.png",
       "category": "Office",
+      "mimeTypes": [
+        "text/x-markdown"
+      ],
       "maintainer": "Marklab Maintainers <lyonbrown4d@users.noreply.github.com>",
       "target": [
         "AppImage",
