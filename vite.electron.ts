@@ -7,7 +7,7 @@ export const electronMainRequireBanner = [
   'const require = __marklabCreateRequire(import.meta.url);',
 ].join('\n')
 
-export const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch']
+export const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch', '@parcel/watcher']
 
 export const electronMainManualChunks = (id: string) => {
   const normalizedId = id.replaceAll('\\', '/')
@@ -87,7 +87,7 @@ export const electronMainManualChunks = (id: string) => {
     return 'main-electron-runtime'
   }
   if (includesAny(normalizedId, ['simple-git', 'diff', '@kwsites/'])) return 'main-git'
-  if (normalizedId.includes('chokidar')) return 'main-watcher'
+  if (normalizedId.includes('@parcel/watcher')) return 'main-watcher'
   if (
     includesAny(normalizedId, [
       'axios',
