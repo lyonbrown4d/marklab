@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
@@ -30,6 +31,7 @@ export class WorkspaceSearchIndex {
     if (normalizedPath === this.indexPath && workspaceId === this.workspaceId) return
 
     await this.close()
+    await mkdir(normalizedPath, { recursive: true })
     this.workspaceId = workspaceId
     await this.backend.open(this.workspaceId, normalizedPath)
     this.indexPath = normalizedPath

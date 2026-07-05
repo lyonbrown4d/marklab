@@ -93,6 +93,14 @@ const scheduleMarkdownEditorCreate = (markdown: string, task: () => void) => {
   }
 }
 
+const readInitialCrepeMarkdown = (crepe: MarkdownCrepeInstance, fallback: string): string => {
+  try {
+    return crepe.getMarkdown() ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
 export const useMarkdownCrepeController = ({
   activePath,
   darkMode,
@@ -315,6 +323,7 @@ export const useMarkdownCrepeController = ({
           if (destroyed || !crepe || !initialState) return
           const { initialPathAtCreate, initialValueAtCreate } = initialState
           crepeRef.current = crepe
+          latestValue.current = readInitialCrepeMarkdown(crepe, latestValue.current)
           setStatus({ phase: 'ready' })
           if (
             latestValue.current !== initialValueAtCreate ||

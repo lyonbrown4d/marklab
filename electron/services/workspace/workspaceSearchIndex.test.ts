@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -80,6 +80,18 @@ describe('WorkspaceSearchIndex', () => {
     await second.close()
 
     expect(hasDocuments).toBe(false)
+  })
+
+  it('creates the index directory before opening the backend', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
+    tempDirs.push(dir)
+    const backend = new DirectoryCheckingSearchBackend()
+    const index = new WorkspaceSearchIndex(backend)
+
+    await index.open(path.join(dir, 'nested', 'search'))
+    await index.close()
+
+    expect(backend.openedPaths).toEqual([path.join(dir, 'nested', 'search')])
   })
 
   it('uses the same case and unicode folding as memory search', async () => {
@@ -186,6 +198,18 @@ class FakeSearchBackend implements WorkspaceSearchIndexBackend {
     const documents = this.documentsByWorkspace.get(workspaceId) ?? []
 
     return documents.flatMap((document) => searchDocument(document, terms)).slice(0, limit)
+  }
+}
+
+class DirectoryCheckingSearchBackend extends FakeSearchBackend {
+  readonly openedPaths: string[] = []
+
+  override async open(workspaceId: string, indexPath?: string): Promise<void> {
+    if (!indexPath) throw new Error('Expected index path')
+    const info = await stat(indexPath)
+    expect(info.isDirectory()).toBe(true)
+    this.openedPaths.push(indexPath)
+    await super.open(workspaceId)
   }
 }
 

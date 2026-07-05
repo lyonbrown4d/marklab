@@ -43,6 +43,7 @@ import {
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
 
 type SnapshotListener = (snapshot: FsSnapshot) => void
+type BackgroundTasksListener = (tasks: BackgroundTaskStatus[]) => void
 
 const WATCH_DEBOUNCE_MS = 250
 const WORKSPACE_DOCUMENT_READ_BATCH_SIZE = 8
@@ -51,6 +52,7 @@ export class WorkspaceBase {
   protected readonly buffers: WorkspaceBufferStore
   protected readonly tasks = new Map<string, BackgroundTaskStatus>()
   protected readonly snapshotListeners = new Set<SnapshotListener>()
+  protected readonly backgroundTasksListeners = new Set<BackgroundTasksListener>()
   protected readonly watcher: WorkspaceWatcher
   protected readonly searchIndexTaskState: SearchIndexTaskState = { runs: 0 }
   protected readonly disposeOnWillQuit = () => this.dispose()
@@ -113,6 +115,14 @@ export class WorkspaceBase {
     return [...this.tasks.values()].sort((left, right) => left.id.localeCompare(right.id))
   }
 
+  onBackgroundTasksChanged(listener: BackgroundTasksListener): () => void {
+    this.backgroundTasksListeners.add(listener)
+    listener(this.getBackgroundTasks())
+    return () => {
+      this.backgroundTasksListeners.delete(listener)
+    }
+  }
+
   onBufferStatus(listener: (status: FsBufferStatus) => void): () => void {
     return this.buffers.onStatus(listener)
   }
@@ -136,6 +146,7 @@ export class WorkspaceBase {
     this.watcher.dispose()
     this.buffers.dispose()
     this.snapshotListeners.clear()
+    this.backgroundTasksListeners.clear()
   }
 
   protected async listEntries(): Promise<FsEntry[]> {
@@ -241,7 +252,23 @@ export class WorkspaceBase {
     status: BackgroundTaskStatus['status'],
     message: string | null,
   ): void {
+    const current = this.tasks.get(id)
+    if (
+      current &&
+      current.label === label &&
+      current.status === status &&
+      current.message === message
+    ) {
+      return
+    }
+
     this.tasks.set(id, { id, label, status, message })
+    this.emitBackgroundTasksChanged()
+  }
+
+  private emitBackgroundTasksChanged(): void {
+    const tasks = [...this.tasks.values()].sort((left, right) => left.id.localeCompare(right.id))
+    for (const listener of this.backgroundTasksListeners) listener(tasks)
   }
 
   private async emitSnapshotChanged(): Promise<void> {

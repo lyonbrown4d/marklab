@@ -1,6 +1,10 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
+import {
+  applyAppTaskBadge,
+  applyWindowTaskProgress,
+} from '@electron/services/nativeWindowStatus.js'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
 import type { FsRootInfo } from '@electron/services/workspace/types.js'
@@ -59,10 +63,17 @@ export class WindowWorkspaceRegistry {
     const disposeSnapshot = workspace.onSnapshotChanged((snapshot) => {
       if (!window.isDestroyed()) window.webContents.send('fs-changed', snapshot)
     })
+    const disposeBackgroundTasks = workspace.onBackgroundTasksChanged((tasks) => {
+      applyWindowTaskProgress(window, tasks)
+      this.updateAppTaskBadge()
+    })
     const dispose = () => {
       disposeBufferStatus()
       disposeSnapshot()
+      disposeBackgroundTasks()
+      applyWindowTaskProgress(window, [])
       workspace.dispose()
+      this.updateAppTaskBadge()
     }
     const sessionKey = this.createSessionKey()
 
@@ -120,6 +131,13 @@ export class WindowWorkspaceRegistry {
     const sessionKey = `window-${this.nextSessionId}`
     this.nextSessionId += 1
     return sessionKey
+  }
+
+  private updateAppTaskBadge(): void {
+    const tasks = [...this.bindings.values()].flatMap((binding) =>
+      binding.service.getBackgroundTasks(),
+    )
+    applyAppTaskBadge(this.app, tasks)
   }
 
   private disposeWindow(windowId: number): void {

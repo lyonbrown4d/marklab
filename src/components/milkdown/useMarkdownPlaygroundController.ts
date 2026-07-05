@@ -61,6 +61,14 @@ const replaceMarkdownLikePlayground = (crepe: Crepe, markdown: string) => {
   })
 }
 
+const readPlaygroundMarkdown = (crepe: Crepe, fallback: string): string => {
+  try {
+    return crepe.getMarkdown() ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
@@ -180,6 +188,7 @@ export const useMarkdownPlaygroundController = ({
           crepe?.destroy()
           return
         }
+        latestValueRef.current = readPlaygroundMarkdown(crepe, latestValueRef.current)
         relocateFixedDropIndicatorToViewportRoot(root)
         crepeRef.current = crepe
         setStatus({ phase: 'ready' })
@@ -195,7 +204,9 @@ export const useMarkdownPlaygroundController = ({
       destroyed = true
       updateMarkdown.cancel()
       if (crepeRef.current === crepe) {
-        latestValueRef.current = crepe?.getMarkdown() ?? latestValueRef.current
+        latestValueRef.current = crepe
+          ? readPlaygroundMarkdown(crepe, latestValueRef.current)
+          : latestValueRef.current
         crepeRef.current = null
       }
       try {

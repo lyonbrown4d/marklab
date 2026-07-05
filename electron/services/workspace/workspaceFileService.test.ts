@@ -9,6 +9,14 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { Logger } from '@electron/services/logger.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 
+vi.mock('@parcel/watcher', () => ({
+  default: {
+    subscribe: vi.fn(async () => ({
+      unsubscribe: vi.fn(async () => undefined),
+    })),
+  },
+}))
+
 const tempRoots: string[] = []
 
 afterEach(async () => {
@@ -162,6 +170,27 @@ describe('WorkspaceFileService sidecar mutations', () => {
   })
 })
 
+describe('WorkspaceFileService background tasks', () => {
+  it('does not emit changed events when reading unchanged task state', async () => {
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(service)
+    await settleWatcherTasks()
+    const listener = vi.fn()
+
+    const dispose = workspace.onBackgroundTasksChanged(listener)
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    listener.mockClear()
+    workspace.getBackgroundTasks()
+    workspace.getBackgroundTasks()
+
+    expect(listener).not.toHaveBeenCalled()
+
+    dispose()
+    workspace.dispose()
+  })
+})
+
 const createWorkspace = async (service: KnowledgeEngineService) => {
   const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-sidecar-'))
   tempRoots.push(tempRoot)
@@ -175,6 +204,11 @@ const createWorkspace = async (service: KnowledgeEngineService) => {
 }
 
 const tempDir = () => path.resolve(process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.')
+
+const settleWatcherTasks = async (): Promise<void> => {
+  await Promise.resolve()
+  await Promise.resolve()
+}
 
 const createKnowledgeServiceMock = () =>
   ({
