@@ -10,7 +10,7 @@
       "^src/app/useAppMenuAction",
       "^src/components/WindowControls"
     ],
-    "checks": ["electron menu/window tests", "pnpm exec tsc -b", "pnpm lint"]
+    "checks": ["electron menu/window/preload tests", "pnpm exec tsc -b", "pnpm lint"]
   },
   {
     "area": "Source editor / Monaco",

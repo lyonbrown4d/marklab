@@ -10,6 +10,7 @@ const fileExists = (file: string) => existsSync(new URL(file, import.meta.url))
 
 const boundaryContractTests = [
   '../../electron/menu.test.ts',
+  '../../electron/preloadRuntimeBoundary.test.ts',
   '../app/focusedEditCommand.test.ts',
   '../components/MarkdownSourceEditorSurface.test.tsx',
   '../components/settings/EditingSettingsPage.test.tsx',
