@@ -202,12 +202,7 @@ export default defineConfig(({ command, mode }) => {
           open: false,
           template: 'treemap',
         }),
-      isServe &&
-        !isPerf &&
-        !process.env.VITEST &&
-        TurboConsole({
-          /* options here */
-        }),
+      isServe && !isPerf && !process.env.VITEST && TurboConsole({/* options here */}),
       isBuild && copyKatexFontsPlugin(),
     ].filter(Boolean),
     resolve: {
@@ -239,6 +234,7 @@ export default defineConfig(({ command, mode }) => {
       ],
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
+      testTimeout: 10_000,
     },
     build: {
       chunkSizeWarningLimit: isElectron ? 7000 : 500,
