@@ -1,7 +1,11 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { applyWindowDocumentStatus } from '@electron/services/nativeWindowDocument.js'
+import {
+  applyAppRecentDocument,
+  applyWindowDocumentStatus,
+  createNativeRecentDocumentState,
+} from '@electron/services/nativeWindowDocument.js'
 import {
   applyAppTaskBadge,
   applyWindowTaskAttention,
@@ -62,12 +66,13 @@ export class WindowWorkspaceRegistry {
       this.options.knowledgeEngineService,
     )
     const taskAttentionState = createNativeTaskAttentionState()
+    const recentDocumentState = createNativeRecentDocumentState()
     const disposeBufferStatus = workspace.onBufferStatus((status) => {
-      this.updateWindowDocumentStatus(window, workspace)
+      this.updateWindowDocumentStatus(window, workspace, recentDocumentState)
       if (!window.isDestroyed()) window.webContents.send('fs-buffer-status', status)
     })
     const disposeSnapshot = workspace.onSnapshotChanged((snapshot) => {
-      this.updateWindowDocumentStatus(window, workspace)
+      this.updateWindowDocumentStatus(window, workspace, recentDocumentState)
       if (!window.isDestroyed()) window.webContents.send('fs-changed', snapshot)
     })
     const disposeBackgroundTasks = workspace.onBackgroundTasksChanged((tasks) => {
@@ -89,7 +94,7 @@ export class WindowWorkspaceRegistry {
 
     const binding = { dispose, service: workspace, sessionKey }
     this.bindings.set(window.id, binding)
-    this.updateWindowDocumentStatus(window, workspace)
+    this.updateWindowDocumentStatus(window, workspace, recentDocumentState)
     window.once('closed', () => this.disposeWindow(window.id))
     this.logger.info('window workspace registered', { sessionKey, windowId: window.id })
     return binding
@@ -151,8 +156,14 @@ export class WindowWorkspaceRegistry {
     applyAppTaskBadge(this.app, tasks)
   }
 
-  private updateWindowDocumentStatus(window: BrowserWindow, workspace: WorkspaceService): void {
-    applyWindowDocumentStatus(window, workspace.rootInfo(), workspace.hasDirtyBuffers())
+  private updateWindowDocumentStatus(
+    window: BrowserWindow,
+    workspace: WorkspaceService,
+    recentDocumentState: ReturnType<typeof createNativeRecentDocumentState>,
+  ): void {
+    const root = workspace.rootInfo()
+    applyWindowDocumentStatus(window, root, workspace.hasDirtyBuffers())
+    applyAppRecentDocument(this.app, root, recentDocumentState)
   }
 
   private disposeWindow(windowId: number): void {
