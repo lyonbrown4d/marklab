@@ -115,6 +115,10 @@ export class WorkspaceBase {
     return [...this.tasks.values()].sort((left, right) => left.id.localeCompare(right.id))
   }
 
+  hasDirtyBuffers(): boolean {
+    return this.buffers.getBackgroundDirtyCount() > 0
+  }
+
   onBackgroundTasksChanged(listener: BackgroundTasksListener): () => void {
     this.backgroundTasksListeners.add(listener)
     listener(this.getBackgroundTasks())

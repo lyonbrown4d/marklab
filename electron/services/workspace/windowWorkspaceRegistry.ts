@@ -1,6 +1,7 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { applyWindowDocumentStatus } from '@electron/services/nativeWindowDocument.js'
 import {
   applyAppTaskBadge,
   applyWindowTaskProgress,
@@ -58,9 +59,11 @@ export class WindowWorkspaceRegistry {
       this.options.knowledgeEngineService,
     )
     const disposeBufferStatus = workspace.onBufferStatus((status) => {
+      this.updateWindowDocumentStatus(window, workspace)
       if (!window.isDestroyed()) window.webContents.send('fs-buffer-status', status)
     })
     const disposeSnapshot = workspace.onSnapshotChanged((snapshot) => {
+      this.updateWindowDocumentStatus(window, workspace)
       if (!window.isDestroyed()) window.webContents.send('fs-changed', snapshot)
     })
     const disposeBackgroundTasks = workspace.onBackgroundTasksChanged((tasks) => {
@@ -72,6 +75,7 @@ export class WindowWorkspaceRegistry {
       disposeSnapshot()
       disposeBackgroundTasks()
       applyWindowTaskProgress(window, [])
+      applyWindowDocumentStatus(window, { kind: 'internal', path: '' }, false)
       workspace.dispose()
       this.updateAppTaskBadge()
     }
@@ -79,6 +83,7 @@ export class WindowWorkspaceRegistry {
 
     const binding = { dispose, service: workspace, sessionKey }
     this.bindings.set(window.id, binding)
+    this.updateWindowDocumentStatus(window, workspace)
     window.once('closed', () => this.disposeWindow(window.id))
     this.logger.info('window workspace registered', { sessionKey, windowId: window.id })
     return binding
@@ -138,6 +143,10 @@ export class WindowWorkspaceRegistry {
       binding.service.getBackgroundTasks(),
     )
     applyAppTaskBadge(this.app, tasks)
+  }
+
+  private updateWindowDocumentStatus(window: BrowserWindow, workspace: WorkspaceService): void {
+    applyWindowDocumentStatus(window, workspace.rootInfo(), workspace.hasDirtyBuffers())
   }
 
   private disposeWindow(windowId: number): void {
