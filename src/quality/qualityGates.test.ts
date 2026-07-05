@@ -15,6 +15,7 @@ const boundaryContractTests = [
   '../components/MarkdownSourceEditorSurface.test.tsx',
   '../components/settings/EditingSettingsPage.test.tsx',
   '../components/GraphNodes.test.tsx',
+  './settingsPersistBoundary.test.ts',
   '../styles/graph-interactions.test.ts',
   '../../electron/services/settingsPersistKeys.test.ts',
   '../../electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.test.ts',

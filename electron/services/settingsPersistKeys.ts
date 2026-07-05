@@ -9,6 +9,7 @@ export const rendererPersistKeys = new Set<RendererPersistKey>([
 export const drawioStateKeys = new Set(['drawioEditorMode', 'drawioEmbedUrl'])
 
 export const preferenceStateKeys = new Set([
+  'autoSystemThemeSync',
   'customThemeId',
   'defaultFileView',
   'graphContentMode',
@@ -26,6 +27,7 @@ export const preferenceStateKeys = new Set([
   'showEditorStatusBar',
   'sidebarCollapsed',
   'silentSave',
+  'sourceCodeMiniMapEnabled',
   'theme',
   'themeMode',
   'lightTheme',
