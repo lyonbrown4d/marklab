@@ -149,6 +149,11 @@ export const useAppLayoutState = () => {
       openFolder,
       loadWorkspace,
     })
+  const onOpenWorkspaceOverview = useCallback(() => {
+    if (activeTabIdRef.current) setActiveTabId(null)
+    if (inspectedPathRef.current) setInspectedPath(null)
+    if (locationPathnameRef.current !== '/') navigate('/', { replace: false })
+  }, [activeTabIdRef, inspectedPathRef, locationPathnameRef, navigate, setActiveTabId])
 
   const routeSyncEnabled =
     isSessionRestored &&
@@ -227,6 +232,7 @@ export const useAppLayoutState = () => {
     onOpenGitDiff,
     onOpenWorkspaceGraph,
     onOpenAllPages,
+    onOpenWorkspaceOverview,
     onOpenTab,
     onCloseTab,
     onCloseActiveTab,

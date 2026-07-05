@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import SidebarActivityRail from '@/components/SidebarActivityRail'
 import SidebarToolPanel from '@/components/SidebarToolPanel'
 import type { FileTreeNode } from '@/logic/fileTree'
@@ -18,6 +18,8 @@ type SidebarProps = {
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
   onOpenProject: (path: string) => void
+  onSelectProject: () => void
+  onOpenWorkspaceOverview: () => void
   onOpenWorkspaceGraph: () => void
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
@@ -41,6 +43,8 @@ const SidebarComponent = ({
   onOpenFile,
   onOpenFileView,
   onOpenProject,
+  onSelectProject,
+  onOpenWorkspaceOverview,
   onOpenWorkspaceGraph,
   onCreateFile,
   onCreateFolder,
@@ -54,6 +58,7 @@ const SidebarComponent = ({
   onInspectPath,
   onOpenSearchResult,
 }: SidebarProps) => {
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [focusFileFilterRequest, setFocusFileFilterRequest] = useState(0)
   const activeActivity = useMemo<SidebarActivityId>(() => {
@@ -94,10 +99,11 @@ const SidebarComponent = ({
     >
       <SidebarActivityRail
         activeActivity={activeActivity}
+        homeActive={location.pathname === '/'}
         fileCount={fileCount}
         recentProjectCount={recentProjects.length}
+        onOpenWorkspaceOverview={onOpenWorkspaceOverview}
         onSelectActivity={selectActivity}
-        onUseInternalRoot={onUseInternalRoot}
       />
       {!collapsed && (
         <div className="min-w-0 flex-1">
@@ -115,6 +121,7 @@ const SidebarComponent = ({
             onOpenFileView={onOpenFileView}
             onOpenGitDiff={onOpenGitDiff}
             onOpenProject={onOpenProject}
+            onSelectProject={onSelectProject}
             onOpenSearchResult={onOpenSearchResult}
             onOpenWorkspaceGraph={onOpenWorkspaceGraph}
             onRenamePath={onRenamePath}

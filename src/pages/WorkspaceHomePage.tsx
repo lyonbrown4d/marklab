@@ -115,8 +115,16 @@ const openFilePicker = () => {
 const WorkspaceHomePage = () => {
   const navigate = useNavigate()
   const { t } = useI18n()
-  const { files, workspaceIndex, rootPath, rootKind, recentProjects, onOpenFile, onOpenProject } =
-    useLayoutContext()
+  const {
+    files,
+    workspaceIndex,
+    rootPath,
+    rootKind,
+    recentProjects,
+    onOpenFile,
+    onOpenProject,
+    onUseInternalRoot,
+  } = useLayoutContext()
   const singleFileMode = rootKind === 'single'
   const metrics = useMemo(() => getMetrics(files, workspaceIndex), [files, workspaceIndex])
   const documents = useMemo(() => getDocuments(files, workspaceIndex), [files, workspaceIndex])
@@ -272,6 +280,12 @@ const WorkspaceHomePage = () => {
             title={t('workspaceHome.recentProjects')}
             subtitle={t('workspaceHome.recentSubtitle')}
           >
+            <ListButton
+              description={t('workspaceHome.builtInWorkspace')}
+              icon={FolderOpen}
+              title={t('sidebar.localWorkspace')}
+              onClick={onUseInternalRoot}
+            />
             {recentProjects.length > 0 ? (
               recentProjects
                 .slice(0, 4)

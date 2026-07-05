@@ -11,6 +11,7 @@ vi.mock('@/i18n/useI18n', () => ({
         'sidebar.localWorkspace': 'Local Workspace',
         'sidebar.recentProjects': 'Recent Projects',
         'sidebar.searchAction': 'Search',
+        'sidebar.workspaceOverview': 'Workspace Overview',
         'tabs.workspaceGraph': 'Workspace Graph',
       }
 
@@ -24,10 +25,11 @@ describe('SidebarActivityRail', () => {
     render(
       <SidebarActivityRail
         activeActivity="search"
+        homeActive={false}
         fileCount={135}
         recentProjectCount={0}
+        onOpenWorkspaceOverview={vi.fn()}
         onSelectActivity={vi.fn()}
-        onUseInternalRoot={vi.fn()}
       />,
     )
 
@@ -40,24 +42,27 @@ describe('SidebarActivityRail', () => {
     expect(screen.getByText('99')).toBeInTheDocument()
   })
 
-  it('keeps activity and local workspace actions clickable', () => {
+  it('keeps activity and workspace overview actions clickable', () => {
     const onSelectActivity = vi.fn()
-    const onUseInternalRoot = vi.fn()
+    const onOpenWorkspaceOverview = vi.fn()
 
     render(
       <SidebarActivityRail
         activeActivity="explorer"
+        homeActive
         fileCount={1}
         recentProjectCount={2}
+        onOpenWorkspaceOverview={onOpenWorkspaceOverview}
         onSelectActivity={onSelectActivity}
-        onUseInternalRoot={onUseInternalRoot}
       />,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Recent Projects' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Local Workspace' }))
+    const overviewButton = screen.getByRole('button', { name: 'Workspace Overview' })
+    fireEvent.click(overviewButton)
 
+    expect(overviewButton).toHaveAttribute('aria-current', 'page')
     expect(onSelectActivity).toHaveBeenCalledWith('projects')
-    expect(onUseInternalRoot).toHaveBeenCalledTimes(1)
+    expect(onOpenWorkspaceOverview).toHaveBeenCalledTimes(1)
   })
 })

@@ -130,6 +130,7 @@
   "sidebar.newFile": "新建文件",
   "sidebar.newFolder": "新建文件夹",
   "sidebar.refresh": "刷新",
+  "sidebar.workspaceOverview": "工作区概览",
   "sidebar.localWorkspace": "本地工作区",
   "workspaceHome.internalWorkspace": "内置工作区",
   "workspaceHome.builtInWorkspace": "内置本地工作区",

@@ -24,10 +24,11 @@ type SidebarActivityItem = {
 
 type SidebarActivityRailProps = {
   activeActivity: SidebarActivityId
+  homeActive: boolean
   fileCount: number
   recentProjectCount: number
+  onOpenWorkspaceOverview: () => void
   onSelectActivity: (activity: SidebarActivityId) => void
-  onUseInternalRoot: () => void
 }
 
 const ActivityButton = ({
@@ -86,10 +87,11 @@ const ActivityButton = ({
 
 const SidebarActivityRail = ({
   activeActivity,
+  homeActive,
   fileCount,
   recentProjectCount,
+  onOpenWorkspaceOverview,
   onSelectActivity,
-  onUseInternalRoot,
 }: SidebarActivityRailProps) => {
   const { t } = useI18n()
   const activities: SidebarActivityItem[] = [
@@ -126,17 +128,17 @@ const SidebarActivityRail = ({
     <TooltipProvider delayDuration={180}>
       <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-sidebar-border/80 bg-sidebar py-1.5">
         <ActivityButton
-          active={false}
+          active={homeActive}
           icon={Home}
-          label={t('sidebar.localWorkspace')}
-          onClick={onUseInternalRoot}
+          label={t('sidebar.workspaceOverview')}
+          onClick={onOpenWorkspaceOverview}
         />
         <Separator className="my-1.5 w-7 bg-sidebar-border/70" />
         <div className="flex min-h-0 flex-1 flex-col items-center gap-1">
           {activities.map((activity) => (
             <ActivityButton
               key={activity.id}
-              active={activity.id === activeActivity}
+              active={!homeActive && activity.id === activeActivity}
               badge={activity.badge}
               icon={activity.icon}
               label={activity.label}

@@ -14,6 +14,7 @@ import { useI18n } from '@/i18n/useI18n'
 
 const SidebarProjectsPanel = ({
   onOpenProject,
+  onSelectProject,
   onUseInternalRoot,
   recentProjects,
 }: SidebarProjectsPanelProps) => {
@@ -29,6 +30,17 @@ const SidebarProjectsPanel = ({
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 w-full justify-start rounded-md px-2"
+              onClick={onSelectProject}
+            >
+              <FolderOpen data-icon="inline-start" />
+              <span className="truncate text-xs">{t('actions.openProject')}</span>
+            </Button>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <Button
               variant="ghost"

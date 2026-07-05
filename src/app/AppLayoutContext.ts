@@ -36,4 +36,5 @@ export type LayoutContext = {
   graphContentMode: GraphContentMode
   onCloseActiveTab: () => void
   onOpenProject: (path: string) => void
+  onUseInternalRoot: () => void
 }

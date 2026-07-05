@@ -18,6 +18,7 @@ export type SidebarToolPanelProps = {
   onOpenFileView: (path: string, view: FileViewKind) => void
   onOpenGitDiff: (request: GitDiffRequest) => void
   onOpenProject: (path: string) => void
+  onSelectProject: () => void
   onOpenSearchResult: (result: FsSearchResult) => void
   onOpenWorkspaceGraph: () => void
   onRenamePath: (from: string, to: string) => void
@@ -49,7 +50,7 @@ export type SidebarSearchPanelProps = Pick<SidebarToolPanelProps, 'onOpenSearchR
 
 export type SidebarProjectsPanelProps = Pick<
   SidebarToolPanelProps,
-  'onOpenProject' | 'onUseInternalRoot' | 'recentProjects'
+  'onOpenProject' | 'onSelectProject' | 'onUseInternalRoot' | 'recentProjects'
 >
 
 export type SidebarWorkspaceGraphPanelProps = Pick<

@@ -22,6 +22,7 @@ vi.mock('@/i18n/useI18n', () => ({
       const labels: Record<string, string> = {
         'actions.openFile': 'Open file',
         'actions.openProject': 'Open project',
+        'sidebar.localWorkspace': 'Local workspace',
         'workspaceHome.allPages': 'All pages',
         'workspaceHome.builtInWorkspace': 'Built-in workspace',
         'workspaceHome.browseAllPages': 'Browse all pages',
@@ -84,6 +85,7 @@ beforeEach(() => {
     files: [{ kind: 'file', path: 'README.md' }],
     onOpenFile: vi.fn(),
     onOpenProject: vi.fn(),
+    onUseInternalRoot: vi.fn(),
     recentProjects: [],
     rootKind: 'single',
     rootPath: 'C:/notes/README.md',
@@ -122,5 +124,15 @@ describe('WorkspaceHomePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open current file' }))
 
     expect(context.onOpenFile).toHaveBeenCalledWith('README.md')
+  })
+
+  it('offers local workspace switching from the overview projects panel', () => {
+    const context = layoutContextRef.value as { onUseInternalRoot: ReturnType<typeof vi.fn> }
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /Local workspace/ }))
+
+    expect(context.onUseInternalRoot).toHaveBeenCalledTimes(1)
   })
 })

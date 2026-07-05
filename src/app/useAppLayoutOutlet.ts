@@ -50,6 +50,7 @@ export const useAppLayoutOutlet = ({
       graphContentMode: state.graphContentMode,
       onCloseActiveTab: state.onCloseActiveTab,
       onOpenProject: state.onOpenProject,
+      onUseInternalRoot: state.onUseInternalRoot,
     }
   }, [
     immersiveZenMode,
@@ -68,6 +69,7 @@ export const useAppLayoutOutlet = ({
     state.onCloseActiveTab,
     state.onEditorChange,
     state.onOpenProject,
+    state.onUseInternalRoot,
     state.recentProjects,
     state.rootKind,
     state.rootPath,

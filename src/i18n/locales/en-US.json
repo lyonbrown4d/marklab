@@ -130,6 +130,7 @@
   "sidebar.newFile": "New file",
   "sidebar.newFolder": "New folder",
   "sidebar.refresh": "Refresh",
+  "sidebar.workspaceOverview": "Workspace overview",
   "sidebar.localWorkspace": "Local workspace",
   "workspaceHome.internalWorkspace": "Internal workspace",
   "workspaceHome.builtInWorkspace": "Built-in local workspace",

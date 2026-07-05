@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import SidebarProjectsPanel from '@/components/SidebarProjectsPanel'
 
 const messages: Record<string, string> = {
+  'actions.openProject': 'Open project',
   'sidebar.localWorkspace': 'Local workspace',
   'sidebar.noRecentProjects': 'No recent projects',
   'sidebar.recentProjects': 'Recent projects',
@@ -27,19 +28,23 @@ vi.mock('@/components/ui/sidebar', () => ({
 describe('SidebarProjectsPanel', () => {
   it('opens the internal workspace and recent projects from accessible buttons', () => {
     const onOpenProject = vi.fn()
+    const onSelectProject = vi.fn()
     const onUseInternalRoot = vi.fn()
 
     render(
       <SidebarProjectsPanel
         onOpenProject={onOpenProject}
+        onSelectProject={onSelectProject}
         onUseInternalRoot={onUseInternalRoot}
         recentProjects={['D:/notes', 'D:/archive']}
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Open project' }))
     fireEvent.click(screen.getByRole('button', { name: 'Local workspace' }))
     fireEvent.click(screen.getByRole('button', { name: 'D:/notes' }))
 
+    expect(onSelectProject).toHaveBeenCalledTimes(1)
     expect(onUseInternalRoot).toHaveBeenCalledTimes(1)
     expect(onOpenProject).toHaveBeenCalledWith('D:/notes')
     expect(screen.getByRole('heading', { name: /Recent projects/ })).toBeInTheDocument()
@@ -49,6 +54,7 @@ describe('SidebarProjectsPanel', () => {
     render(
       <SidebarProjectsPanel
         onOpenProject={vi.fn()}
+        onSelectProject={vi.fn()}
         onUseInternalRoot={vi.fn()}
         recentProjects={[]}
       />,

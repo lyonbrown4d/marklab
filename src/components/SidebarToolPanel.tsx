@@ -20,6 +20,7 @@ const SidebarToolPanel = ({
   onOpenFileView,
   onOpenGitDiff,
   onOpenProject,
+  onSelectProject,
   onOpenSearchResult,
   onOpenWorkspaceGraph,
   onRenamePath,
@@ -51,6 +52,7 @@ const SidebarToolPanel = ({
         <SidebarProjectsPanel
           recentProjects={recentProjects}
           onOpenProject={onOpenProject}
+          onSelectProject={onSelectProject}
           onUseInternalRoot={onUseInternalRoot}
         />
       ) : (
