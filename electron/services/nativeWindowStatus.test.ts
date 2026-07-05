@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   applyAppTaskBadge,
+  applyWindowTaskAttention,
   applyWindowTaskProgress,
+  clearWindowTaskAttention,
+  createNativeTaskAttentionState,
   summarizeNativeTasks,
 } from '@electron/services/nativeWindowStatus.js'
 import type { BackgroundTaskStatus } from '@electron/services/workspace/types.js'
@@ -88,5 +91,79 @@ describe('native window task status', () => {
     applyWindowTaskProgress(window, [task('search-index', 'running')])
 
     expect(window.setProgressBar).not.toHaveBeenCalled()
+  })
+
+  it('flashes inactive non-mac windows only for newly failing tasks', () => {
+    const state = createNativeTaskAttentionState()
+    const window = {
+      flashFrame: vi.fn(),
+      isDestroyed: () => false,
+      isFocused: () => false,
+      requestUserAttention: vi.fn(),
+    }
+
+    applyWindowTaskAttention(window, [task('search-index', 'error')], state, 'win32')
+    applyWindowTaskAttention(window, [task('search-index', 'error')], state, 'win32')
+
+    expect(window.flashFrame).toHaveBeenCalledTimes(1)
+    expect(window.flashFrame).toHaveBeenCalledWith(true)
+    expect(window.requestUserAttention).not.toHaveBeenCalled()
+  })
+
+  it('requests macOS attention for newly failing tasks', () => {
+    const state = createNativeTaskAttentionState()
+    const window = {
+      flashFrame: vi.fn(),
+      isDestroyed: () => false,
+      isFocused: () => false,
+      requestUserAttention: vi.fn(),
+    }
+
+    applyWindowTaskAttention(window, [task('watcher', 'error')], state, 'darwin')
+
+    expect(window.requestUserAttention).toHaveBeenCalledWith('informational')
+    expect(window.flashFrame).not.toHaveBeenCalled()
+  })
+
+  it('does not request attention for focused windows', () => {
+    const state = createNativeTaskAttentionState()
+    const window = {
+      flashFrame: vi.fn(),
+      isDestroyed: () => false,
+      isFocused: () => true,
+      requestUserAttention: vi.fn(),
+    }
+
+    applyWindowTaskAttention(window, [task('buffer-flush', 'error')], state, 'linux')
+
+    expect(window.flashFrame).not.toHaveBeenCalled()
+    expect(window.requestUserAttention).not.toHaveBeenCalled()
+  })
+
+  it('stops non-mac flashing when task errors clear', () => {
+    const state = createNativeTaskAttentionState()
+    const window = {
+      flashFrame: vi.fn(),
+      isDestroyed: () => false,
+      isFocused: () => false,
+      requestUserAttention: vi.fn(),
+    }
+
+    applyWindowTaskAttention(window, [task('search-index', 'error')], state, 'linux')
+    applyWindowTaskAttention(window, [task('search-index', 'idle')], state, 'linux')
+
+    expect(window.flashFrame).toHaveBeenNthCalledWith(1, true)
+    expect(window.flashFrame).toHaveBeenNthCalledWith(2, false)
+  })
+
+  it('can explicitly clear native task attention', () => {
+    const window = {
+      flashFrame: vi.fn(),
+      isDestroyed: () => false,
+    }
+
+    clearWindowTaskAttention(window)
+
+    expect(window.flashFrame).toHaveBeenCalledWith(false)
   })
 })

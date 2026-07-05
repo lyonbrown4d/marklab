@@ -4,7 +4,10 @@ import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { applyWindowDocumentStatus } from '@electron/services/nativeWindowDocument.js'
 import {
   applyAppTaskBadge,
+  applyWindowTaskAttention,
   applyWindowTaskProgress,
+  clearWindowTaskAttention,
+  createNativeTaskAttentionState,
 } from '@electron/services/nativeWindowStatus.js'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
@@ -58,6 +61,7 @@ export class WindowWorkspaceRegistry {
       this.options.workspaceSearchIndexFactory,
       this.options.knowledgeEngineService,
     )
+    const taskAttentionState = createNativeTaskAttentionState()
     const disposeBufferStatus = workspace.onBufferStatus((status) => {
       this.updateWindowDocumentStatus(window, workspace)
       if (!window.isDestroyed()) window.webContents.send('fs-buffer-status', status)
@@ -68,6 +72,7 @@ export class WindowWorkspaceRegistry {
     })
     const disposeBackgroundTasks = workspace.onBackgroundTasksChanged((tasks) => {
       applyWindowTaskProgress(window, tasks)
+      applyWindowTaskAttention(window, tasks, taskAttentionState)
       this.updateAppTaskBadge()
     })
     const dispose = () => {
@@ -75,6 +80,7 @@ export class WindowWorkspaceRegistry {
       disposeSnapshot()
       disposeBackgroundTasks()
       applyWindowTaskProgress(window, [])
+      clearWindowTaskAttention(window)
       applyWindowDocumentStatus(window, { kind: 'internal', path: '' }, false)
       workspace.dispose()
       this.updateAppTaskBadge()

@@ -9,11 +9,19 @@ export type NativeTaskSummary = {
   errorCount: number
 }
 
+export type NativeTaskAttentionState = {
+  errorTaskIds: Set<string>
+}
+
 type NativeBadgeApp = {
   dock?: {
     setBadge: (text: string) => void
   }
   setBadgeCount: (count?: number) => boolean
+}
+
+type NativeAttentionWindow = Pick<BrowserWindow, 'flashFrame' | 'isDestroyed' | 'isFocused'> & {
+  requestUserAttention?: (type: 'critical' | 'informational') => number
 }
 
 export const summarizeNativeTasks = (tasks: BackgroundTaskStatus[]): NativeTaskSummary => {
@@ -52,4 +60,43 @@ export const applyAppTaskBadge = (app: NativeBadgeApp, tasks: BackgroundTaskStat
 
   app.setBadgeCount(badgeCount)
   app.dock?.setBadge(badgeCount > 0 ? String(badgeCount) : '')
+}
+
+export const createNativeTaskAttentionState = (): NativeTaskAttentionState => ({
+  errorTaskIds: new Set(),
+})
+
+export const applyWindowTaskAttention = (
+  window: NativeAttentionWindow,
+  tasks: BackgroundTaskStatus[],
+  state: NativeTaskAttentionState,
+  platform: NodeJS.Platform = process.platform,
+): void => {
+  const nextErrorTaskIds = new Set(
+    tasks.filter((task) => task.status === 'error').map((task) => task.id),
+  )
+  const hasNewError = [...nextErrorTaskIds].some((id) => !state.errorTaskIds.has(id))
+  const hadErrors = state.errorTaskIds.size > 0
+  state.errorTaskIds = nextErrorTaskIds
+
+  if (window.isDestroyed()) return
+
+  if (nextErrorTaskIds.size === 0) {
+    if (hadErrors && platform !== 'darwin') window.flashFrame(false)
+    return
+  }
+
+  if (!hasNewError || window.isFocused()) return
+
+  if (platform === 'darwin' && window.requestUserAttention) {
+    window.requestUserAttention('informational')
+  } else {
+    window.flashFrame(true)
+  }
+}
+
+export const clearWindowTaskAttention = (
+  window: Pick<BrowserWindow, 'flashFrame' | 'isDestroyed'>,
+): void => {
+  if (!window.isDestroyed()) window.flashFrame(false)
 }
