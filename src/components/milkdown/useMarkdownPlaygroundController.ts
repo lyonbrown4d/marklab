@@ -98,6 +98,7 @@ export const useMarkdownPlaygroundController = ({
   }, [onCalendarFileCreate])
 
   useLayoutEffect(() => {
+    if (crepeRef.current) return
     latestValueRef.current = value
   }, [value])
 
@@ -236,7 +237,7 @@ export const useMarkdownPlaygroundController = ({
     applyingExternalValueRef.current = true
     try {
       replaceMarkdownLikePlayground(crepe, value)
-      latestValueRef.current = value
+      latestValueRef.current = readPlaygroundMarkdown(crepe, value)
     } finally {
       applyingExternalValueRef.current = false
     }
