@@ -25,6 +25,7 @@ type WindowCommandSetupArgs = {
 export type WindowCommandSetup = {
   commandHandlers: NativeCommandHandlers
   dispatchMenuAction: MenuActionDispatcher
+  openPathInNewWindow: (path: string) => Promise<unknown>
 }
 
 export const createWindowCommandSetup = ({
@@ -59,8 +60,12 @@ export const createWindowCommandSetup = ({
       writeRendererPersistSession('marklab.workspace', targetSessionKey, state),
   }
 
+  const commandHandlers = createAppWindowCommandHandlers(dependencies)
+
   return {
-    commandHandlers: createAppWindowCommandHandlers(dependencies),
+    commandHandlers,
     dispatchMenuAction: createNativeMenuActionDispatcher(dependencies),
+    openPathInNewWindow: (path: string) =>
+      Promise.resolve(commandHandlers.open_path_in_new_window({ path }, null as never)),
   }
 }

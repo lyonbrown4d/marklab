@@ -160,6 +160,7 @@ installSingleInstanceAndDeepLinks({
   bootstrap,
   getContainer,
   getMainWindow: () => windows?.main ?? null,
+  openSystemPath: windowCommandSetup.openPathInNewWindow,
   queueDeepLinkPayload: runtimeEvents.queueDeepLinkPayload,
   queueOrSendRuntimeEvent: runtimeEvents.queueOrSendRuntimeEvent,
   showMainWindow,
