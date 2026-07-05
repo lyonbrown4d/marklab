@@ -61,6 +61,26 @@
     "checks": ["settings tests", "affected component option tests", "pnpm exec tsc -b"]
   },
   {
+    "area": "Keyboard shortcuts",
+    "risk": "missing default binding, untranslated shortcut action, settings drift, or unhandled scoped shortcut",
+    "patterns": [
+      "^src/logic/shortcuts",
+      "^src/app/useKeyboardShortcuts",
+      "^src/pages/useGraphKeyboardActions",
+      "^src/pages/graphKeyboardActions",
+      "^src/components/settings/Shortcut",
+      "^src/components/settings/ShortcutsSettingsPage",
+      "^src/components/milkdown/editorCommandCatalog",
+      "^src/components/milkdown/editorShortcuts"
+    ],
+    "checks": [
+      "shortcut catalog tests",
+      "shortcut settings tests",
+      "graph/editor shortcut tests",
+      "pnpm exec tsc -b"
+    ]
+  },
+  {
     "area": "IPC / runtime services",
     "risk": "stringly payloads, broad capability exposure, or renderer/runtime contract drift",
     "patterns": [

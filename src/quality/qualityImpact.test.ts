@@ -11,6 +11,7 @@ describe('quality impact rules', () => {
     const impacts = analyzeChangedFiles([
       'electron/menu.ts',
       'src/components/MarkdownSourceEditorSurface.tsx',
+      'src/logic/shortcuts.ts',
       'src/store/usePreferencesStore.ts',
       'electron/services/workspace/workspaceFileService.ts',
       'knowledge-engine/src/main.rs',
@@ -20,6 +21,7 @@ describe('quality impact rules', () => {
       expect.arrayContaining([
         'Electron menu/window/preload',
         'Source editor / Monaco',
+        'Keyboard shortcuts',
         'Settings / persisted preferences',
         'Workspace filesystem/services',
         'Knowledge engine / Rust sidecar',

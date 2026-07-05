@@ -6,6 +6,7 @@ export type QualityImpactArea =
   | 'WYSIWYG / Milkdown'
   | 'React Flow graph'
   | 'Settings / persisted preferences'
+  | 'Keyboard shortcuts'
   | 'IPC / runtime services'
   | 'Workspace filesystem/services'
   | 'Knowledge engine / Rust sidecar'
