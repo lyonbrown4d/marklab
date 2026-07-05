@@ -119,6 +119,26 @@ describe('ScmPanel', () => {
     expect(gitApi.getStatus).toHaveBeenCalledWith('D:/Projects/marklab')
   })
 
+  it('prevents repeated collapsed status refreshes while Git status is fetching', async () => {
+    const user = userEvent.setup()
+    vi.mocked(gitApi.getStatus).mockImplementation(
+      () => new Promise<GitStatusSnapshot>(() => undefined),
+    )
+
+    renderPanel({ collapsed: true })
+
+    const collapsedButton = screen.getByRole('button', {
+      name: 'This folder is not a Git repository.',
+    })
+
+    expect(collapsedButton).toHaveAttribute('aria-busy', 'true')
+    expect(collapsedButton).toBeDisabled()
+
+    await user.click(collapsedButton)
+
+    expect(gitApi.getStatus).toHaveBeenCalledTimes(1)
+  })
+
   it('announces loading state without exposing decorative skeletons or spinner labels', () => {
     vi.mocked(gitApi.getStatus).mockImplementation(
       () => new Promise<GitStatusSnapshot>(() => undefined),

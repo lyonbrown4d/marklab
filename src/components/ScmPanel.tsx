@@ -171,6 +171,7 @@ const ScmPanel = ({ rootPath, rootKind, collapsed, onOpenDiff }: ScmPanelProps) 
       <ScmCollapsedButton
         label={collapsedLabel}
         busy={statusQuery.isFetching}
+        disabled={statusQuery.isFetching}
         variant={totalChanges > 0 ? 'secondary' : 'ghost'}
         onClick={invalidateStatus}
       />
