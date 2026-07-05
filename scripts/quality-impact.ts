@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
-type QualityImpactRule = {
+type QualityImpactRuleData = {
   area: string
   checks: string[]
-  patterns: RegExp[]
+  patterns: string[]
   risk: string
 }
 
@@ -13,82 +14,13 @@ type QualityImpactMode =
   | { kind: 'staged' }
   | { kind: 'working-tree' }
 
-const qualityImpactRules: QualityImpactRule[] = [
-  {
-    area: 'Electron menu/window/preload',
-    risk: 'double dispatch, unsafe desktop capability, or platform-specific runtime drift',
-    patterns: [/^electron\/menu/, /^electron\/main\/window/, /^electron\/preload/],
-    checks: ['electron menu/window tests', 'pnpm exec tsc -b', 'pnpm lint'],
-  },
-  {
-    area: 'Source editor / Monaco',
-    risk: 'duplicated edit commands, option drift, focus routing, or source navigation regression',
-    patterns: [/^src\/app\/focusedEditCommand/, /^src\/components\/MarkdownSourceEditor/],
-    checks: ['source editor tests', 'focused edit tests', 'pnpm exec tsc -b'],
-  },
-  {
-    area: 'WYSIWYG / Milkdown',
-    risk: 'command mismatch, paste/drop regression, editor sync drift, or node-view breakage',
-    patterns: [/^src\/components\/MarkdownEditor/, /^src\/components\/milkdown\//],
-    checks: ['Milkdown command/paste/sync tests', 'pnpm exec tsc -b'],
-  },
-  {
-    area: 'React Flow graph',
-    risk: 'default node renderer fallback, drag/selection conflict, or graph model drift',
-    patterns: [/^src\/components\/GraphNodes/, /^src\/logic\/graph/, /^src\/pages\/graph/],
-    checks: ['graph logic tests', 'graph node tests', 'graph interaction style tests'],
-  },
-  {
-    area: 'Settings / persisted preferences',
-    risk: 'default drift, missing persisted field, inaccessible control, or migration mismatch',
-    patterns: [/^electron\/services\/settings/, /^src\/components\/settings\//, /^src\/store\//],
-    checks: ['settings tests', 'affected component option tests', 'pnpm exec tsc -b'],
-  },
-  {
-    area: 'IPC / runtime services',
-    risk: 'stringly payloads, broad capability exposure, or renderer/runtime contract drift',
-    patterns: [/^electron\/channels/, /^electron\/ipc\//, /^electron\/preload/, /^src\/runtime\//],
-    checks: ['runtime/preload/service contract tests', 'pnpm exec tsc -b'],
-  },
-  {
-    area: 'Knowledge engine / Rust sidecar',
-    risk: 'spawn/config drift, protocol mismatch, blocking work, or sidecar lifecycle regression',
-    patterns: [
-      /^Cargo\.(toml|lock)$/,
-      /^buf\./,
-      /^electron\/services\/knowledgeEngine\//,
-      /^knowledge-engine\//,
-    ],
-    checks: [
-      'cargo fmt --all --check',
-      'cargo check --workspace',
-      'cargo test --workspace',
-      'pnpm test:knowledge:integration',
-    ],
-  },
-  {
-    area: 'Build/package',
-    risk: 'missing resources, oversized bundles, asset drift, or broken package metadata',
-    patterns: [/^package\.json$/, /^pnpm-lock\.yaml$/, /^resources\//, /^scripts\//, /^vite/],
-    checks: [
-      'pnpm exec tsc -b',
-      'pnpm lint',
-      'pnpm exec vite build --mode electron --logLevel error',
-    ],
-  },
-  {
-    area: 'i18n',
-    risk: 'untranslated menu/settings text or renderer/native locale mismatch',
-    patterns: [/^electron\/menuLocalization/, /^src\/i18n\//],
-    checks: ['locale/resource tests', 'affected UI tests'],
-  },
-  {
-    area: 'Quality gates',
-    risk: 'quality checklist drift, missing boundary guard, or stale verification guidance',
-    patterns: [/^docs\/quality-gates\.md$/, /^scripts\/quality-impact\.ts$/, /^src\/quality\//],
-    checks: ['quality gate tests', 'pnpm quality:impact', 'pnpm lint'],
-  },
-]
+const rulesPath = new URL('../src/quality/qualityImpactRules.json', import.meta.url)
+const qualityImpactRules = (
+  JSON.parse(readFileSync(rulesPath, 'utf8')) as QualityImpactRuleData[]
+).map((rule) => ({
+  ...rule,
+  patterns: rule.patterns.map((pattern) => new RegExp(pattern)),
+}))
 
 const parseMode = (args: string[]): QualityImpactMode => {
   const filesIndex = args.indexOf('--files')

@@ -46,6 +46,14 @@ describe('quality gates', () => {
       'node --experimental-strip-types scripts/quality-impact.ts',
     )
     expect(fileExists('../../scripts/quality-impact.ts')).toBe(true)
+    expect(fileExists('./qualityImpactRules.json')).toBe(true)
+  })
+
+  it('keeps the change impact CLI backed by the shared rule data', () => {
+    const script = fileText('../../scripts/quality-impact.ts')
+
+    expect(script).toContain('../src/quality/qualityImpactRules.json')
+    expect(script).not.toContain('const qualityImpactRules: QualityImpactRule[] = [')
   })
 
   it('reports impact areas for explicit file lists', () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeChangedFiles, formatQualityImpactReport } from '@/quality/qualityImpact'
+import {
+  analyzeChangedFiles,
+  formatQualityImpactReport,
+  qualityImpactRules,
+} from '@/quality/qualityImpact'
+import qualityImpactRulesData from '@/quality/qualityImpactRules.json'
 
 describe('quality impact rules', () => {
   it('maps changed files to the expected boundary checks', () => {
@@ -33,6 +38,15 @@ describe('quality impact rules', () => {
     expect(impacts.find((impact) => impact.area === 'Quality gates')?.checks).toContain(
       'pnpm quality:impact',
     )
+  })
+
+  it('compiles the shared rule data into runtime matchers', () => {
+    expect(qualityImpactRules).toHaveLength(qualityImpactRulesData.length)
+    expect(
+      qualityImpactRules.every((rule) =>
+        rule.patterns.every((pattern) => pattern instanceof RegExp),
+      ),
+    ).toBe(true)
   })
 
   it('normalizes Windows-style paths before matching rules', () => {
