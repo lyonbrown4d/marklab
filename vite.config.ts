@@ -133,7 +133,7 @@ export default defineConfig(({ command, mode }) => {
       include: devOptimizeDepsInclude,
     },
     plugins: [
-      isBuild && isElectron && cleanElectronDistPlugin(),
+      isElectron && cleanElectronDistPlugin(),
       react(),
       shouldUseReactCompiler &&
         babel({

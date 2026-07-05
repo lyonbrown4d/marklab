@@ -25,6 +25,8 @@ export type KnowledgeEngineGrpcClients = {
   searchClient: SearchClient
 }
 
+export const KNOWLEDGE_ENGINE_GRPC_MESSAGE_LIMIT_BYTES = 32 * 1024 * 1024
+
 export const createKnowledgeEngineGrpcClients = (
   options: KnowledgeEngineGrpcClientOptions,
 ): KnowledgeEngineGrpcClients => {
@@ -33,6 +35,8 @@ export const createKnowledgeEngineGrpcClients = (
   const credentials = ChannelCredentials.createInsecure()
   const clientOptions = {
     'grpc.enable_http_proxy': 0,
+    'grpc.max_receive_message_length': KNOWLEDGE_ENGINE_GRPC_MESSAGE_LIMIT_BYTES,
+    'grpc.max_send_message_length': KNOWLEDGE_ENGINE_GRPC_MESSAGE_LIMIT_BYTES,
     ...options.clientOptions,
   }
 

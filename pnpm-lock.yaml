@@ -176,6 +176,9 @@ importers:
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
+      detect-libc:
+        specifier: ^2.0.3
+        version: 2.1.2
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -209,6 +212,12 @@ importers:
       immer:
         specifier: ^11.1.11
         version: 11.1.11
+      is-extglob:
+        specifier: ^2.1.1
+        version: 2.1.1
+      is-glob:
+        specifier: ^4.0.3
+        version: 4.0.3
       keepalive-for-react:
         specifier: ^5.0.11
         version: 5.0.11(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -233,6 +242,9 @@ importers:
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
+      node-addon-api:
+        specifier: ^7.0.0
+        version: 7.1.1
       p-limit:
         specifier: ^7.3.0
         version: 7.3.0
@@ -242,6 +254,9 @@ importers:
       pdfjs-dist:
         specifier: 6.1.200
         version: 6.1.200
+      picomatch:
+        specifier: ^4.0.5
+        version: 4.0.5
       react:
         specifier: ^19.2.7
         version: 19.2.7

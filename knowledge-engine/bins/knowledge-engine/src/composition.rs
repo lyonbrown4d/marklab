@@ -24,11 +24,13 @@ use marklab_knowledge_workspace_vfs::WorkspaceVfs;
 use serde_json::json;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::codegen::InterceptedService;
 use tonic::transport::Server;
 
 use crate::grpc_services::{KnowledgeGrpcService, SessionTokenInterceptor};
 
 type SidecarResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+const GRPC_MESSAGE_LIMIT_BYTES: usize = 32 * 1024 * 1024;
 
 const CONFIG_ENV_KEYS: &[&str] = &[
   "workspace_instance_id",
@@ -216,27 +218,42 @@ impl KnowledgeGrpcServer {
     tracing::info!(%address, "knowledge engine grpc server started");
 
     Server::builder()
-      .add_service(ControlServiceServer::with_interceptor(
-        service.clone(),
+      .add_service(InterceptedService::new(
+        ControlServiceServer::new(service.clone())
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
         interceptor.clone(),
       ))
-      .add_service(DocumentSessionServiceServer::with_interceptor(
-        service.clone(),
+      .add_service(InterceptedService::new(
+        DocumentSessionServiceServer::new(service.clone())
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
         interceptor.clone(),
       ))
-      .add_service(MarkdownServiceServer::with_interceptor(
-        service.clone(),
+      .add_service(InterceptedService::new(
+        MarkdownServiceServer::new(service.clone())
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
         interceptor.clone(),
       ))
-      .add_service(WorkspaceServiceServer::with_interceptor(
-        service.clone(),
+      .add_service(InterceptedService::new(
+        WorkspaceServiceServer::new(service.clone())
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
         interceptor.clone(),
       ))
-      .add_service(WorkspaceVfsServiceServer::with_interceptor(
-        service.clone(),
+      .add_service(InterceptedService::new(
+        WorkspaceVfsServiceServer::new(service.clone())
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
         interceptor.clone(),
       ))
-      .add_service(SearchServiceServer::with_interceptor(service, interceptor))
+      .add_service(InterceptedService::new(
+        SearchServiceServer::new(service)
+          .max_decoding_message_size(GRPC_MESSAGE_LIMIT_BYTES)
+          .max_encoding_message_size(GRPC_MESSAGE_LIMIT_BYTES),
+        interceptor,
+      ))
       .serve_with_incoming_shutdown(incoming, async {
         let _ = shutdown_receiver.await;
       })
