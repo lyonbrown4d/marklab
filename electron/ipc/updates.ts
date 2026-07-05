@@ -2,6 +2,7 @@ import type * as Electron from 'electron'
 import { nativeIpcChannels } from '@electron/channels.js'
 import { createUpdateService, type UpdateService } from '@electron/services/updater/service.js'
 import type { Logger } from '@electron/services/logger.js'
+import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgress.js'
 import type { UpdateEventPayload } from '@electron/types.js'
 
 export type UpdaterIpcDependencies = {
@@ -40,6 +41,7 @@ const sendUpdateEvent = (
 ): void => {
   for (const window of BrowserWindow.getAllWindows()) {
     if (window.isDestroyed()) continue
+    applyWindowUpdateProgress(window, payload)
     window.webContents.send(nativeIpcChannels.updatesEvent, payload)
   }
 }
