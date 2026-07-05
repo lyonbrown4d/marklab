@@ -42,17 +42,20 @@ describe('installNativeMenu', () => {
     const template = electronMock.buildFromTemplate.mock.calls[0]?.[0]
     const editMenu = template?.find((item) => item.label === 'Edit')
     const editItems = Array.isArray(editMenu?.submenu) ? editMenu.submenu : []
+    const editRoles = ['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll'] as const
 
-    expect(editItems).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'Cut', role: 'cut' }),
-        expect.objectContaining({ label: 'Copy', role: 'copy' }),
-        expect.objectContaining({ label: 'Paste', role: 'paste' }),
-        expect.objectContaining({ label: 'Select All', role: 'selectAll' }),
-      ]),
-    )
-    expect(editItems).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'edit.cut' })]),
-    )
+    editRoles.forEach((role) => {
+      const item = editItems.find((candidate) => 'role' in candidate && candidate.role === role)
+
+      expect(item, `missing native edit role ${role}`).toBeTruthy()
+      expect(
+        item,
+        `native edit role ${role} must not expose a renderer action id`,
+      ).not.toHaveProperty('id')
+      expect(
+        item,
+        `native edit role ${role} must not dispatch renderer menu actions`,
+      ).not.toHaveProperty('click')
+    })
   })
 })
