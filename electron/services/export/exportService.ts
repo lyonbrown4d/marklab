@@ -7,6 +7,7 @@ import { validateExistingLocalPath } from '@electron/services/pathValidation.js'
 import { renderDocx } from '@electron/services/export/docx.js'
 import { ExportQueue } from '@electron/services/export/exportQueue.js'
 import { renderHtml } from '@electron/services/export/html.js'
+import { applyWindowExportProgress } from '@electron/services/nativeExportProgress.js'
 type ExportFormat = 'html' | 'pdf' | 'docx'
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 let exportTaskCounter = 0
@@ -171,6 +172,7 @@ export class ExportService {
   private emitExportTask(payload: ExportTaskPayload): void {
     for (const window of this.BrowserWindowClass.getAllWindows()) {
       if (!window.isDestroyed()) {
+        applyWindowExportProgress(window, payload)
         window.webContents.send('export-task', payload)
       }
     }
