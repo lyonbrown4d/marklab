@@ -59,4 +59,13 @@ describe('Electron preload/runtime boundary', () => {
 
     expect(offenders).toEqual([])
   })
+
+  it('keeps the preload global behind the renderer runtime adapter', () => {
+    const offenders = walkSourceFiles('src').filter((file) => {
+      if (file === 'src/runtime/electron.ts') return false
+      return readText(file).includes('marklabElectron')
+    })
+
+    expect(offenders).toEqual([])
+  })
 })
