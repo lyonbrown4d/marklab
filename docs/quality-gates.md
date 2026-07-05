@@ -27,6 +27,14 @@ before adding behavior.
 
 Mark every touched area, then run the matching checks.
 
+Use the helper before committing to map changed files to likely impact areas:
+
+```bash
+pnpm quality:impact
+pnpm quality:impact --staged
+pnpm quality:impact --base origin/main
+```
+
 | Impact area                      | Common risk                                                    | Required checks                                          |
 | -------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------- |
 | Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron tests, `pnpm exec tsc -b`, `pnpm lint` |
@@ -38,6 +46,7 @@ Mark every touched area, then run the matching checks.
 | Knowledge engine / Rust sidecar  | spawn/config drift, protocol mismatch, blocking work           | cargo checks/tests and knowledge boundary tests          |
 | Build/package                    | missing resources, oversized bundles, asset drift              | Electron build or targeted packaging checks              |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests              |
+| Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`   |
 
 ## Regression Test Rule
 

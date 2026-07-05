@@ -1,4 +1,6 @@
 // @ts-expect-error Vitest runs this repository guard in Node; the renderer tsconfig intentionally omits Node module types.
+import { execFileSync } from 'node:child_process'
+// @ts-expect-error Vitest runs this repository guard in Node; the renderer tsconfig intentionally omits Node module types.
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
@@ -22,6 +24,7 @@ describe('quality gates', () => {
     const guide = fileText('../../docs/quality-gates.md')
 
     expect(readme).toContain('docs/quality-gates.md')
+    expect(guide).toContain('pnpm quality:impact')
     expect(guide).toContain('Ownership Boundaries')
     expect(guide).toContain('Change Impact Checklist')
     expect(guide).toContain('Regression Test Rule')
@@ -32,5 +35,37 @@ describe('quality gates', () => {
     boundaryContractTests.forEach((testPath) => {
       expect(fileExists(testPath), testPath).toBe(true)
     })
+  })
+
+  it('keeps the change impact helper wired into package scripts', () => {
+    const packageJson = JSON.parse(fileText('../../package.json')) as {
+      scripts?: Record<string, string>
+    }
+
+    expect(packageJson.scripts?.['quality:impact']).toBe(
+      'node --experimental-strip-types scripts/quality-impact.ts',
+    )
+    expect(fileExists('../../scripts/quality-impact.ts')).toBe(true)
+  })
+
+  it('reports impact areas for explicit file lists', () => {
+    const output = execFileSync(
+      'node',
+      [
+        '--experimental-strip-types',
+        'scripts/quality-impact.ts',
+        '--files',
+        'electron/menu.ts',
+        'src/components/MarkdownSourceEditorSurface.tsx',
+        'docs/quality-gates.md',
+      ],
+      {
+        encoding: 'utf8',
+      },
+    )
+
+    expect(output).toContain('Electron menu/window/preload')
+    expect(output).toContain('Source editor / Monaco')
+    expect(output).toContain('Quality gates')
   })
 })

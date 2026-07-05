@@ -53,6 +53,7 @@
     "dist:linux": "moon run desktop:dist-linux",
     "lint": "moon run desktop:lint",
     "typecheck": "moon run desktop:typecheck",
+    "quality:impact": "node --experimental-strip-types scripts/quality-impact.ts",
     "typecheck:scripts": "pnpm exec tsc -p tsconfig.scripts.json",
     "test": "moon run desktop:test",
     "test:knowledge:integration": "moon run desktop:test-knowledge-integration",
