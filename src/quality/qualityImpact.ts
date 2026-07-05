@@ -7,6 +7,7 @@ export type QualityImpactArea =
   | 'React Flow graph'
   | 'Settings / persisted preferences'
   | 'IPC / runtime services'
+  | 'Workspace filesystem/services'
   | 'Knowledge engine / Rust sidecar'
   | 'Build/package'
   | 'i18n'

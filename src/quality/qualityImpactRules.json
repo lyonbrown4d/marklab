@@ -73,6 +73,12 @@
     "checks": ["runtime/preload/service contract tests", "pnpm exec tsc -b"]
   },
   {
+    "area": "Workspace filesystem/services",
+    "risk": "workspace boundary drift, path normalization mismatch, sidecar routing regression, or asset access bug",
+    "patterns": ["^electron/services/workspace/"],
+    "checks": ["workspace service tests", "workspace sidecar/path tests", "pnpm exec tsc -b"]
+  },
+  {
     "area": "Knowledge engine / Rust sidecar",
     "risk": "spawn/config drift, protocol mismatch, blocking work, or sidecar lifecycle regression",
     "patterns": [
@@ -91,8 +97,10 @@
   },
   {
     "area": "Build/package",
-    "risk": "missing resources, oversized bundles, asset drift, or broken package metadata",
+    "risk": "CI/task drift, missing resources, oversized bundles, asset drift, or broken package metadata",
     "patterns": [
+      "^\\.github/workflows/",
+      "^moon\\.yml$",
       "^package\\.json$",
       "^pnpm-lock\\.yaml$",
       "^resources/",

@@ -33,7 +33,11 @@ Use the helper before committing to map changed files to likely impact areas:
 pnpm quality:impact
 pnpm quality:impact --staged
 pnpm quality:impact --base origin/main
+pnpm check
 ```
+
+`pnpm check` runs the quality impact helper as part of the project-level gate, so local
+verification and CI use the same entry point.
 
 | Impact area                      | Common risk                                                    | Required checks                                          |
 | -------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------- |
@@ -43,8 +47,9 @@ pnpm quality:impact --base origin/main
 | React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests     |
 | Settings / persisted preferences | default drift, missing partialize field, inaccessible controls | settings tests, affected component option tests          |
 | IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                   |
+| Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                 |
 | Knowledge engine / Rust sidecar  | spawn/config drift, protocol mismatch, blocking work           | cargo checks/tests and knowledge boundary tests          |
-| Build/package                    | missing resources, oversized bundles, asset drift              | Electron build or targeted packaging checks              |
+| Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks              |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests              |
 | Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`   |
 

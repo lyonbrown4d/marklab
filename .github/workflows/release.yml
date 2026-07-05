@@ -41,14 +41,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm exec tsc -b --pretty false
-
-      - name: Lint
-        run: pnpm exec eslint .
-
-      - name: Test
-        run: pnpm test
+      - name: Project check
+        run: pnpm check
 
   build:
     name: Build ${{ matrix.name }}

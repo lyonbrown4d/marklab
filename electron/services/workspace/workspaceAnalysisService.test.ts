@@ -205,9 +205,7 @@ const createWorkspace = async (
   service: KnowledgeGraphServiceMock,
   files: WorkspaceFixture[] = [],
 ) => {
-  const tempRoot = await fs.mkdtemp(
-    path.join(process.env.TEMP ?? process.env.TMP ?? '.', 'marklab-workspace-analysis-'),
-  )
+  const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-analysis-'))
   tempRoots.push(tempRoot)
   const appData = path.join(tempRoot, 'app-data')
   const root = path.join(tempRoot, 'workspace')
@@ -227,6 +225,8 @@ const createWorkspace = async (
   await workspace.setRoot({ path: root })
   return { logger, root, workspace }
 }
+
+const tempDir = () => path.resolve(process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.')
 
 type KnowledgeGraphServiceMock = KnowledgeEngineService & {
   readWorkspaceFile: ReturnType<typeof vi.fn>

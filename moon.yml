@@ -93,6 +93,17 @@ tasks:
     options:
       cache: false
 
+  quality-impact:
+    command: pnpm quality:impact
+    inputs:
+      - docs/quality-gates.md
+      - scripts/quality-impact.ts
+      - src/quality/**/*
+      - package.json
+      - moon.yml
+    options:
+      cache: false
+
   cargo-fmt:
     command: cargo fmt --all --check
     inputs:
@@ -305,6 +316,7 @@ tasks:
 
   check:
     deps:
+      - ~:quality-impact
       - ~:lint
       - ~:typecheck
       - ~:test

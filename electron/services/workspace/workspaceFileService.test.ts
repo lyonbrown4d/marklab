@@ -163,9 +163,7 @@ describe('WorkspaceFileService sidecar mutations', () => {
 })
 
 const createWorkspace = async (service: KnowledgeEngineService) => {
-  const tempRoot = await fs.mkdtemp(
-    path.join(process.env.TEMP ?? process.env.TMP ?? '.', 'marklab-workspace-sidecar-'),
-  )
+  const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-sidecar-'))
   tempRoots.push(tempRoot)
   const appData = path.join(tempRoot, 'app-data')
   const root = path.join(tempRoot, 'workspace')
@@ -175,6 +173,8 @@ const createWorkspace = async (service: KnowledgeEngineService) => {
   await workspace.setRoot({ path: root })
   return { logger, root, workspace }
 }
+
+const tempDir = () => path.resolve(process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.')
 
 const createKnowledgeServiceMock = () =>
   ({

@@ -60,7 +60,7 @@ describe('editor playground baseline styles', () => {
     expect(playgroundControllerSource).toContain('createMarkdownPlaygroundSlashConfig')
     expect(playgroundControllerSource).toContain('[Crepe.Feature.BlockEdit]')
     expect(playgroundControllerSource).toContain('[Crepe.Feature.Placeholder]')
-    expect(playgroundControllerSource).toContain('configureMermaidPreview')
+    expect(playgroundControllerSource).toContain('mermaidCodeBlockConfig')
     expect(playgroundControllerSource).toContain('createMarkdownSafePlugins')
     expect(playgroundControllerSource).toContain('.use(typewriterScroll)')
     expect(playgroundControllerSource).not.toContain('embeddedPreviewPlugin')

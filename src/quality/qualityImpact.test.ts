@@ -12,6 +12,7 @@ describe('quality impact rules', () => {
       'electron/menu.ts',
       'src/components/MarkdownSourceEditorSurface.tsx',
       'src/store/usePreferencesStore.ts',
+      'electron/services/workspace/workspaceFileService.ts',
       'knowledge-engine/src/main.rs',
     ])
 
@@ -20,6 +21,7 @@ describe('quality impact rules', () => {
         'Electron menu/window/preload',
         'Source editor / Monaco',
         'Settings / persisted preferences',
+        'Workspace filesystem/services',
         'Knowledge engine / Rust sidecar',
       ]),
     )
@@ -29,6 +31,9 @@ describe('quality impact rules', () => {
     expect(
       impacts.find((impact) => impact.area === 'Knowledge engine / Rust sidecar')?.checks,
     ).toContain('cargo test --workspace')
+    expect(
+      impacts.find((impact) => impact.area === 'Workspace filesystem/services')?.checks,
+    ).toContain('workspace service tests')
   })
 
   it('flags quality gate changes as their own impact area', () => {
@@ -38,6 +43,12 @@ describe('quality impact rules', () => {
     expect(impacts.find((impact) => impact.area === 'Quality gates')?.checks).toContain(
       'pnpm quality:impact',
     )
+  })
+
+  it('flags project automation changes as build/package impact', () => {
+    const impacts = analyzeChangedFiles(['moon.yml', '.github/workflows/release.yml'])
+
+    expect(impacts.map((impact) => impact.area)).toContain('Build/package')
   })
 
   it('compiles the shared rule data into runtime matchers', () => {
