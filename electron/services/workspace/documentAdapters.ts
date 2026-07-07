@@ -1,13 +1,7 @@
 import path from 'node:path'
 
 export type WorkspaceDocumentAdapterKind =
-  | 'audio'
-  | 'docx'
-  | 'drawio'
-  | 'excalidraw'
-  | 'image'
-  | 'pdf'
-  | 'video'
+  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'video'
 
 export type WorkspaceDocumentAdapter = {
   extensions: readonly string[]

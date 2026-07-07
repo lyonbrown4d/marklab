@@ -1,11 +1,5 @@
 export type DocumentAdapterKind =
-  | 'audio'
-  | 'docx'
-  | 'drawio'
-  | 'excalidraw'
-  | 'image'
-  | 'pdf'
-  | 'video'
+  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'video'
 export type DocumentAdapterMarkdownEmbedKind = 'document' | 'image' | 'media' | 'pdf'
 
 export type DocumentAdapterIcon = 'audio' | 'document' | 'image' | 'pdf' | 'video'

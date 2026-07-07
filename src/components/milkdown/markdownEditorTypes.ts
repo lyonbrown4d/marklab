@@ -15,6 +15,4 @@ export type MarkdownEditorHandle = {
 }
 
 export type MarkdownEditorStatus =
-  | { phase: 'loading' }
-  | { phase: 'ready' }
-  | { phase: 'error'; message: string }
+  { phase: 'loading' } | { phase: 'ready' } | { phase: 'error'; message: string }

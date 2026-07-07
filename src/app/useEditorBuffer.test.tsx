@@ -147,8 +147,7 @@ describe('useEditorBuffer', () => {
 
   it('does not let stale dirty events replace a newer unsaved state', async () => {
     let resolveUpdate:
-      | ((status: { path: string; revision: number; dirty: boolean }) => void)
-      | undefined
+      ((status: { path: string; revision: number; dirty: boolean }) => void) | undefined
     fsApiMock.updateBuffer.mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = resolve
