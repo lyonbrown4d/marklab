@@ -21,7 +21,6 @@ type UseTitlebarCommandModelArgs = Pick<
   | 'files'
   | 'tabs'
   | 'workspaceIndex'
-  | 'onCommandOpenChange'
   | 'onChangeView'
   | 'onSelectProject'
   | 'onSelectSingleFile'
@@ -43,6 +42,7 @@ type UseTitlebarCommandModelArgs = Pick<
 > & {
   commandOpen: boolean
   platform: AppPlatform
+  onCommandOpenChange: (open: boolean) => void
 }
 
 export const useTitlebarCommandModel = ({

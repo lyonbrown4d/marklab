@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fetchPdfObjectUrl } from '@/components/milkdown/pdfObjectUrlSource'
 import { useI18n } from '@/i18n/useI18n'
+import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -210,6 +211,7 @@ const MarkdownPdfPreview = ({
     key: '',
   })
   const [expanded, setExpanded] = useState(false)
+  const expandedContentReady = useDeferredOpenContent(expanded)
   const fileUrl = resolvedSource.key === sourceKey ? resolvedSource.fileUrl : null
   const failed = resolvedSource.key === sourceKey ? resolvedSource.failed : false
 
@@ -270,7 +272,7 @@ const MarkdownPdfPreview = ({
             <DialogTitle className="truncate text-sm">{title}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1">
-            {fileUrl ? (
+            {fileUrl && expandedContentReady ? (
               <PdfPreviewSurface fileUrl={fileUrl} mode="modal" />
             ) : (
               <div className="relative h-full">

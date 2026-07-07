@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/i18n/useI18n'
+import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage'
 import EditingSettingsPage from '@/components/settings/EditingSettingsPage'
 import FileSettingsPage from '@/components/settings/FileSettingsPage'
@@ -24,6 +25,10 @@ import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
 import SavingSettingsPage from '@/components/settings/SavingSettingsPage'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
+import {
+  SettingsDialogLoadingPanel,
+  settingsDialogContentClassName,
+} from '@/components/settings/SettingsDialogLoading'
 
 type SettingsDialogProps = {
   open: boolean
@@ -95,6 +100,7 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     () => settingsRoutes.find((entry) => entry.value === section) ?? settingsRoutes[0],
     [section],
   )
+  const contentReady = useDeferredOpenContent(open)
 
   const onSectionChange = useCallback((nextRoute: string) => {
     setRoute(nextRoute)
@@ -111,7 +117,7 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-md border border-border bg-card p-0 text-card-foreground shadow-[0_16px_40px_-30px_hsl(var(--foreground)/0.34)] sm:h-[min(740px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(960px,calc(100vw-2rem))]">
+      <DialogContent className={settingsDialogContentClassName}>
         <DialogHeader className="border-b border-border/80 bg-card px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-base tracking-[0.01em]">
             <SlidersHorizontal className="size-4 text-primary" aria-hidden="true" />
@@ -157,7 +163,7 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-0 [scrollbar-gutter:stable] [scrollbar-width:thin]"
               >
                 <div className="mx-auto min-h-full w-full max-w-3xl p-5">
-                  {activeRoute.render()}
+                  {contentReady ? activeRoute.render() : <SettingsDialogLoadingPanel />}
                 </div>
               </div>
             </TabsContent>

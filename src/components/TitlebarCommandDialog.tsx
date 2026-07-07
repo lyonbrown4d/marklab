@@ -1,7 +1,9 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import AppCommandDialog from '@/components/AppCommandDialog'
+import { CommandDialogLoadingBody } from '@/components/TitlebarCommandDialogFallback'
 import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
+import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
 import CommandEmptyState from '@/components/command/CommandEmptyState'
@@ -48,6 +50,7 @@ type TitlebarCommandDialogProps = {
   searchIndexRebuilding: boolean
   knowledgeSummary: WorkspaceKnowledgeSummary
   collections: MarkdownCollectionSummary[]
+  dataReady?: boolean
 }
 
 const TitlebarCommandDialog = ({
@@ -74,9 +77,12 @@ const TitlebarCommandDialog = ({
   searchIndexRebuilding,
   knowledgeSummary,
   collections,
+  dataReady = true,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
+  const commandContentReady = useDeferredOpenContent(open)
+  const contentReady = commandContentReady && dataReady
   const deferredQuery = useDeferredValue(query)
   const parsedSearch = useMemo(() => parseCommandSearchScope(query), [query])
   const deferredParsedSearch = useMemo(
@@ -88,7 +94,7 @@ const TitlebarCommandDialog = ({
   const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
   const fullTextSearch = useCommandFullTextSearchStream({
     limit: 8,
-    open,
+    open: contentReady,
     query: deferredTrimmedQuery,
     scope: deferredParsedSearch.scope,
   })
@@ -143,67 +149,73 @@ const TitlebarCommandDialog = ({
   return (
     <AppCommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput value={query} onValueChange={setQuery} placeholder={t('sidebar.search')} />
-      <CommandSearchOverview
-        query={deferredTrimmedQuery}
-        filesCount={files.length}
-        headingsCount={headings.length}
-        fullTextCount={fullTextResults.length}
-        knowledgeSummary={knowledgeSummary}
-      />
-      <CommandList>
-        <CommandEmpty>
-          <CommandEmptyState
-            title={emptyQueryLabel}
-            description={emptyDescription}
-            suggestions={emptyScopeSuggestions}
-            onSelectScope={setQuery}
+      {contentReady ? (
+        <>
+          <CommandSearchOverview
+            query={deferredTrimmedQuery}
+            filesCount={files.length}
+            headingsCount={headings.length}
+            fullTextCount={fullTextResults.length}
+            knowledgeSummary={knowledgeSummary}
           />
-        </CommandEmpty>
-        <CommandSearchHistory
-          query={query}
-          searches={searches}
-          onSelectSearch={setQuery}
-          onClearSearches={clearSearchHistory}
-        />
-        <CommandRecentFilesSection
-          files={recentFiles}
-          query={deferredTrimmedQuery}
-          onOpenFile={handleOpenFile}
-        />
-        <CommandNavigationSection
-          activePath={activePath}
-          headings={navigationHeadings}
-          outgoingLinks={navigationOutgoingLinks}
-          backlinks={navigationBacklinks}
-          missingLinks={navigationMissingLinks}
-          onOpenHeading={handleOpenHeading}
-          onOpenOutgoingLink={onOpenNavigationOutgoingLink}
-          onOpenBacklink={onOpenNavigationBacklink}
-          onOpenMissingLink={onOpenNavigationMissingLink}
-        />
-        <CommandSearchResults
-          query={deferredQuery}
-          scope={deferredParsedSearch.scope}
-          files={files}
-          headings={headings}
-          fullTextResults={fullTextResults}
-          fullTextFetching={fullTextSearch.fullTextFetching}
-          fullTextError={fullTextSearch.fullTextError}
-          workspaceIndexed={workspaceIndexed}
-          indexedFileCount={indexedFileCount}
-          searchIndexRebuilding={searchIndexRebuilding}
-          onOpenFile={handleOpenFile}
-          onOpenHeading={handleOpenHeading}
-          onOpenSearchResult={handleOpenSearchResult}
-        />
-        <CommandActionSections
-          canCreateWorkspaceEntries={canCreateWorkspaceEntries}
-          collections={collections}
-          searchIndexRebuilding={searchIndexRebuilding}
-          onCommandPaletteAction={handleCommandPaletteAction}
-          onAction={onAction}
-        />
-      </CommandList>
+          <CommandList>
+            <CommandEmpty>
+              <CommandEmptyState
+                title={emptyQueryLabel}
+                description={emptyDescription}
+                suggestions={emptyScopeSuggestions}
+                onSelectScope={setQuery}
+              />
+            </CommandEmpty>
+            <CommandSearchHistory
+              query={query}
+              searches={searches}
+              onSelectSearch={setQuery}
+              onClearSearches={clearSearchHistory}
+            />
+            <CommandRecentFilesSection
+              files={recentFiles}
+              query={deferredTrimmedQuery}
+              onOpenFile={handleOpenFile}
+            />
+            <CommandNavigationSection
+              activePath={activePath}
+              headings={navigationHeadings}
+              outgoingLinks={navigationOutgoingLinks}
+              backlinks={navigationBacklinks}
+              missingLinks={navigationMissingLinks}
+              onOpenHeading={handleOpenHeading}
+              onOpenOutgoingLink={onOpenNavigationOutgoingLink}
+              onOpenBacklink={onOpenNavigationBacklink}
+              onOpenMissingLink={onOpenNavigationMissingLink}
+            />
+            <CommandSearchResults
+              query={deferredQuery}
+              scope={deferredParsedSearch.scope}
+              files={files}
+              headings={headings}
+              fullTextResults={fullTextResults}
+              fullTextFetching={fullTextSearch.fullTextFetching}
+              fullTextError={fullTextSearch.fullTextError}
+              workspaceIndexed={workspaceIndexed}
+              indexedFileCount={indexedFileCount}
+              searchIndexRebuilding={searchIndexRebuilding}
+              onOpenFile={handleOpenFile}
+              onOpenHeading={handleOpenHeading}
+              onOpenSearchResult={handleOpenSearchResult}
+            />
+            <CommandActionSections
+              canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+              collections={collections}
+              searchIndexRebuilding={searchIndexRebuilding}
+              onCommandPaletteAction={handleCommandPaletteAction}
+              onAction={onAction}
+            />
+          </CommandList>
+        </>
+      ) : (
+        <CommandDialogLoadingBody />
+      )}
     </AppCommandDialog>
   )
 }

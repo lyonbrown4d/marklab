@@ -12,6 +12,7 @@ import {
   type EmbeddedPreviewResolvedTarget,
 } from '@/components/previews/embeddedPreviewSource'
 import { useI18n } from '@/i18n/useI18n'
+import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import type { PreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
 import { pathToFileViewRoute } from '@/logic/routing'
@@ -86,6 +87,7 @@ export const EmbeddedFilePreview = ({
   const { t } = useI18n()
   const cardRef = useRef<HTMLElement | null>(null)
   const [expanded, setExpanded] = useState(false)
+  const expandedContentReady = useDeferredOpenContent(expanded)
   const [visible, setVisible] = useState(false)
   const [resolveRequested, setResolveRequested] = useState(false)
   const key = sourceKey(documentPath, target)
@@ -262,7 +264,7 @@ export const EmbeddedFilePreview = ({
             <DialogTitle className="truncate text-sm">{displayTitle}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-auto p-4">
-            {resolved ? (
+            {resolved && expandedContentReady ? (
               <FilePreviewSurface
                 kind={resolved.kind}
                 path={resolved.path ?? target}

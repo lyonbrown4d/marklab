@@ -19,8 +19,45 @@ import { cn } from '@/lib/utils'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
+type AppWorkspacePanelsState = Pick<
+  AppLayoutState,
+  | 'activePath'
+  | 'activeResourcePath'
+  | 'activeTabId'
+  | 'createFile'
+  | 'createFolder'
+  | 'deletePath'
+  | 'dirtyPaths'
+  | 'editorValue'
+  | 'fileContents'
+  | 'fileTree'
+  | 'files'
+  | 'inspectedPath'
+  | 'movePath'
+  | 'onCloseTab'
+  | 'onInspectPath'
+  | 'onOpenProject'
+  | 'onOpenTab'
+  | 'onOpenWorkspaceGraph'
+  | 'onOpenWorkspaceOverview'
+  | 'onSelectProject'
+  | 'onUseInternalRoot'
+  | 'recentProjects'
+  | 'renamePath'
+  | 'rightSidebarCollapsed'
+  | 'rootKind'
+  | 'rootPath'
+  | 'saveStates'
+  | 'setViewMode'
+  | 'sidebarCollapsed'
+  | 'silentSave'
+  | 'tabs'
+  | 'viewMode'
+  | 'workspaceIndex'
+>
+
 type AppWorkspacePanelsProps = {
-  state: AppLayoutState
+  state: AppWorkspacePanelsState
   workspacePanelLayout: ReturnType<typeof useDefaultLayout>
   workspaceGroupElementRef: RefObject<HTMLDivElement | null>
   leftSidebarPanelRef: ReturnType<typeof usePanelRef>

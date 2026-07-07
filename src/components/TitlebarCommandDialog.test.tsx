@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ChangeEvent, ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
-
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
@@ -20,19 +19,20 @@ const fullTextResult = vi.hoisted(() => ({
   title: 'Result title',
 }))
 
+const fullTextSearchOpenStates = vi.hoisted((): boolean[] => [])
 const messages: Record<string, string> = {
   'command.empty.all': 'No matching commands or content.',
   'command.empty.files': 'No matching files.',
   'command.empty.headings': 'No matching headings.',
   'command.empty.text': 'No matching text.',
   'command.noResults': 'No command results',
+  'command.loading': 'Preparing command palette...',
   'command.searchHint': 'Type to search files, headings, and text.',
   'command.search.scopeFiles': 'files',
   'command.search.scopeHeadings': 'headings',
   'command.search.scopeText': 'text',
   'sidebar.search': 'Search workspace',
 }
-
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
     t: (key: string, values?: { query?: string }) => {
@@ -83,11 +83,15 @@ vi.mock('@/components/command/useCommandSearchHistory', () => ({
 }))
 
 vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
-  useCommandFullTextSearchStream: () => ({
-    fullTextError: false,
-    fullTextFetching: false,
-    fullTextResults: [fullTextResult],
-  }),
+  useCommandFullTextSearchStream: ({ open }: { open: boolean }) => {
+    fullTextSearchOpenStates.push(open)
+
+    return {
+      fullTextError: false,
+      fullTextFetching: false,
+      fullTextResults: [fullTextResult],
+    }
+  },
 }))
 
 vi.mock('@/components/command/CommandSearchOverview', () => ({
@@ -233,18 +237,31 @@ const renderDialog = () => {
   return callbacks
 }
 
+const waitForCommandContent = () => screen.findByLabelText('Search overview')
+
+beforeEach(() => (fullTextSearchOpenStates.length = 0))
+
 describe('TitlebarCommandDialog', () => {
-  it('renders the localized empty state and command overview', () => {
+  it('keeps the input mounted while heavy command content is deferred on initial open', async () => {
     renderDialog()
+
+    expect(screen.getByRole('textbox', { name: 'Command input' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: /Preparing/ })).toHaveAttribute('aria-busy', 'true')
+    expect(fullTextSearchOpenStates[0]).toBe(false)
+
+    await waitForCommandContent()
+    expect(fullTextSearchOpenStates).toContain(true)
+  })
+
+  it('renders the localized empty state and command overview', async () => {
+    renderDialog()
+    await waitForCommandContent()
 
     expect(screen.getByRole('status')).toHaveTextContent('No command results')
     expect(screen.getByRole('status')).toHaveTextContent(
       'Type to search files, headings, and text.',
     )
-    expect(screen.getByRole('textbox', { name: 'Command input' })).toHaveAttribute(
-      'placeholder',
-      'Search workspace',
-    )
+    expect(screen.getByRole('textbox', { name: 'Command input' })).toBeInTheDocument()
     expect(screen.getByRole('status').querySelector('[data-slot="empty-icon"]')).not.toBeNull()
     expect(screen.getByRole('button', { name: '@ files' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '# headings' })).toBeInTheDocument()
@@ -254,6 +271,7 @@ describe('TitlebarCommandDialog', () => {
 
   it('lets empty-state suggestions switch command search scopes', async () => {
     renderDialog()
+    await waitForCommandContent()
 
     fireEvent.click(screen.getByRole('button', { name: '@ files' }))
 
@@ -301,6 +319,7 @@ describe('TitlebarCommandDialog', () => {
 
   it('clears query through command palette action and forwards global actions', async () => {
     const callbacks = renderDialog()
+    await waitForCommandContent()
     const input = screen.getByRole('textbox', { name: 'Command input' })
 
     fireEvent.change(input, { target: { value: 'guide' } })

@@ -5,7 +5,7 @@ import {
   type useDefaultLayout,
   type usePanelRef,
 } from 'react-resizable-panels'
-import { lazy, Suspense, type ReactNode, type RefObject } from 'react'
+import { lazy, memo, Suspense, type ReactNode, type RefObject } from 'react'
 import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +22,7 @@ type AppShellPanelsProps = {
   onCloseTerminalArea: () => void
 }
 
-export const AppShellPanels = ({
+const AppShellPanelsView = ({
   shellPanelLayout,
   shellGroupElementRef,
   terminalPanelRef,
@@ -80,3 +80,7 @@ export const AppShellPanels = ({
     </ResizableGroup>
   )
 }
+
+AppShellPanelsView.displayName = 'AppShellPanels'
+
+export const AppShellPanels = memo(AppShellPanelsView)

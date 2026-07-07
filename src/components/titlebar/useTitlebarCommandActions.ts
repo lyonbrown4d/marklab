@@ -9,7 +9,6 @@ import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
 
 type UseTitlebarCommandActionsArgs = Pick<
   TitlebarProps,
-  | 'onCommandOpenChange'
   | 'onChangeView'
   | 'onSelectProject'
   | 'onSelectSingleFile'
@@ -28,7 +27,9 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'onOpenAllPages'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
->
+> & {
+  onCommandOpenChange: (open: boolean) => void
+}
 
 export const useTitlebarCommandActions = ({
   onCommandOpenChange,

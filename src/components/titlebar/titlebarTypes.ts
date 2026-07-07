@@ -63,7 +63,7 @@ export type TitlebarProps = {
   setIsMaximized: (value: boolean) => void
   theme: ThemeMode
   setTheme: (theme: ThemeMode) => void
-  commandOpen: boolean
-  onCommandOpenChange: (open: boolean) => void
+  commandOpen?: boolean
+  onCommandOpenChange?: (open: boolean) => void
   onOpenSettings: () => void
 }

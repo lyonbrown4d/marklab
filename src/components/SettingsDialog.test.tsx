@@ -10,6 +10,7 @@ const labels: Record<string, string> = {
   'settings.files': 'Files',
   'settings.general': 'General',
   'settings.graphEditor': 'Graph editor',
+  'settings.loading': 'Loading settings...',
   'settings.saveBehavior': 'Saving',
   'settings.shortcuts': 'Shortcuts',
   'settings.title': 'Settings',
@@ -56,7 +57,7 @@ const renderSettingsDialog = () => {
 }
 
 describe('SettingsDialog', () => {
-  it('exposes a named dialog and settings tablist', () => {
+  it('exposes a named dialog and settings tablist', async () => {
     renderSettingsDialog()
 
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
@@ -66,7 +67,11 @@ describe('SettingsDialog', () => {
     expect(generalTab).toHaveAttribute('aria-selected', 'true')
     expect(generalTab).toHaveAttribute('aria-current', 'page')
     expect(generalTab).toHaveAttribute('title', 'General')
-    expect(screen.getByText('General settings panel')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading settings...' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(await screen.findByText('General settings panel')).toBeInTheDocument()
   })
 
   it('updates the active section when a settings tab is selected', async () => {

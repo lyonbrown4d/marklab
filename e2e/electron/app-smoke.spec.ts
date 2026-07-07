@@ -3,6 +3,7 @@ import {
   expect,
   test,
   type ElectronApplication,
+  type Locator,
   type Page,
 } from '@playwright/test'
 import fs from 'node:fs'
@@ -118,6 +119,34 @@ const waitForMainWindow = async (app: ElectronApplication, output: string[]) => 
   )
 }
 
+const waitForRendererAppShell = async (page: Page, output: string[]) => {
+  try {
+    await page.waitForSelector('#root > *', { timeout: 30_000 })
+  } catch (error) {
+    const rootHtml = await page
+      .locator('#root')
+      .evaluate((element) => element.innerHTML.slice(0, 500))
+      .catch(() => '(unavailable)')
+
+    throw new Error(
+      `Timed out waiting for the React app shell. Root HTML: ${rootHtml}. Electron output: ${
+        output.join('\n') || '(none)'
+      }`,
+      { cause: error },
+    )
+  }
+}
+const firstVisibleLocator = async (locators: Locator[], description: string) => {
+  for (const locator of locators) {
+    const candidate = locator.first()
+
+    if (await candidate.isVisible().catch(() => false)) {
+      return candidate
+    }
+  }
+
+  throw new Error(`Unable to find visible ${description}`)
+}
 test.describe('Electron desktop shell', () => {
   let app: ElectronApplication | undefined
   let electronOutput: string[] = []
@@ -185,6 +214,8 @@ test.describe('Electron desktop shell', () => {
 
     attachElectronOutput(app, electronOutput)
     page = await waitForMainWindow(app, electronOutput)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await waitForRendererAppShell(page, electronOutput)
   })
 
   test.afterEach(async () => {
@@ -217,5 +248,38 @@ test.describe('Electron desktop shell', () => {
       hasMarklabElectronBridge: true,
       hasNodeRequire: false,
     })
+  })
+
+  test('opens modal shells promptly without blank first paint', async () => {
+    await expect(page).toHaveTitle(/marklab/i)
+
+    const commandTrigger = await firstVisibleLocator(
+      [
+        page.locator('.command-trigger'),
+        page.getByRole('button', { name: /Search workspace|搜索工作区/i }),
+        page.getByRole('button', { name: /Search files|搜索文件/i }),
+        page.getByRole('button', { name: /^Search$|^搜索$/i }),
+      ],
+      'command palette trigger',
+    )
+
+    const commandStartedAt = Date.now()
+    await commandTrigger.click()
+
+    const commandDialog = page.getByRole('dialog', { name: /Command palette|命令面板/i })
+    await expect(commandDialog).toBeVisible({ timeout: 2_000 })
+    expect(Date.now() - commandStartedAt).toBeLessThan(2_000)
+    await expect(commandDialog.getByRole('combobox')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(commandDialog).toBeHidden({ timeout: 2_000 })
+
+    const settingsStartedAt = Date.now()
+    await page.keyboard.press('Control+Comma')
+
+    const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
+    await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
+    expect(Date.now() - settingsStartedAt).toBeLessThan(2_000)
+    await expect(settingsDialog.getByRole('tablist', { name: /Settings|设置/i })).toBeVisible()
   })
 })

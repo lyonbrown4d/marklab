@@ -103,6 +103,29 @@ const renderTitlebar = (props: TitlebarProps) => {
   )
 }
 
+const EditorRenderProbe = ({ onRender }: { onRender: () => void }) => {
+  onRender()
+
+  return <div aria-label="Editor render probe" />
+}
+
+const renderTitlebarWithEditorProbe = (props: TitlebarProps, onEditorRender: () => void) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Titlebar {...props} />
+      <EditorRenderProbe onRender={onEditorRender} />
+    </QueryClientProvider>,
+  )
+}
+
 beforeEach(async () => {
   localStorage.clear()
   writeClipboardTextMock.mockReset()
@@ -112,6 +135,21 @@ beforeEach(async () => {
 })
 
 describe('Titlebar command palette', () => {
+  it('opens the command palette without rerendering sibling editor content', async () => {
+    const onEditorRender = vi.fn()
+    renderTitlebarWithEditorProbe(
+      createProps({ commandOpen: undefined, onCommandOpenChange: undefined }),
+      onEditorRender,
+    )
+
+    expect(onEditorRender).toHaveBeenCalledTimes(1)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Search files... - target.md' }))
+    await screen.findByRole('dialog', { name: 'Command palette' })
+
+    expect(onEditorRender).toHaveBeenCalledTimes(1)
+  })
+
   it('opens workspace files from the command palette', async () => {
     const onOpenFile = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenFile }))
@@ -240,7 +278,7 @@ describe('Titlebar command palette', () => {
     )
 
     expect(
-      screen.getByText('Project file creation is unavailable in single-file mode.'),
+      await screen.findByText('Project file creation is unavailable in single-file mode.'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
