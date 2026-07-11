@@ -14,6 +14,7 @@ export const preferenceStateKeys = new Set([
   'defaultFileView',
   'graphContentMode',
   'graphMiniMapEnabled',
+  'hideMarkdownDefaultAppPrompt',
   'immersiveFocusMode',
   'immersiveTypewriterMode',
   'immersiveZenMode',
