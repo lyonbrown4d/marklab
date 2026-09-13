@@ -24,7 +24,6 @@ import type {
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/appTypes'
-import { Badge } from '@/components/ui/badge'
 import { CircleAlert, FileText, ImageIcon, Link2, ListTree, Network } from 'lucide-react'
 
 const inspectorTabs = [
@@ -72,10 +71,8 @@ type RightSidebarCollapsedProps = {
 }
 
 export const RightSidebarContent = ({
-  activePath,
   targetPath,
   targetLabel,
-  viewMode,
   outline,
   backlinks,
   problems,
@@ -111,17 +108,8 @@ export const RightSidebarContent = ({
   }
 
   return (
-    <div className="flex h-full flex-col p-1.5">
-      <RightSidebarSummary
-        activePath={activePath}
-        targetPath={targetPath}
-        targetLabel={targetLabel}
-        viewMode={viewMode}
-        outlineCount={outline.length}
-        backlinksCount={backlinks.length}
-        problemsCount={problems.length}
-        lineCount={documentStats.lines}
-      />
+    <div className="flex h-full min-h-0 flex-col px-3 pb-3">
+      <RightSidebarSummary targetPath={targetPath} targetLabel={targetLabel} />
 
       {!targetPath ? (
         <div className="mt-1.5 min-h-0 flex-1 p-1">
@@ -132,9 +120,12 @@ export const RightSidebarContent = ({
           />
         </div>
       ) : (
-        <Tabs defaultValue="outline" className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5">
-          <TooltipProvider>
-            <TabsList className="flex h-9 w-full min-w-0 gap-0.5 rounded-lg border border-sidebar-border bg-background/70 p-0.5">
+        <Tabs defaultValue="outline" className="flex min-h-0 flex-1 flex-col gap-3">
+          <TooltipProvider delayDuration={180}>
+            <TabsList
+              aria-label={t('inspector.title')}
+              className="grid h-10 w-full shrink-0 grid-cols-6 gap-0 rounded-none border-b border-border/50 bg-transparent p-0"
+            >
               {inspectorTabs.map(({ value, labelKey, icon: Icon }) => {
                 const label = t(labelKey)
                 const count = getTabCount(value)
@@ -146,23 +137,21 @@ export const RightSidebarContent = ({
                       <TabsTrigger
                         value={value}
                         aria-label={label}
+                        aria-description={hasCount ? `${label}: ${count}` : undefined}
                         className={cn(
-                          'group h-8 min-w-0 flex-1 gap-1 rounded-md px-1 text-[11px] font-medium text-muted-foreground transition-colors',
-                          'hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground',
-                          'focus-visible:ring-1 focus-visible:ring-ring',
-                          'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
-                          '[&_svg]:size-3.5 [&_svg]:shrink-0',
+                          'relative h-10 min-w-0 rounded-none border-b-2 border-transparent px-0 text-muted-foreground transition-colors',
+                          'hover:bg-muted/40 hover:text-foreground',
+                          'focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-0',
+                          'data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none',
+                          '[&_svg]:size-4 [&_svg]:shrink-0',
                         )}
                       >
                         <Icon aria-hidden="true" />
-                        <span className="hidden truncate min-[1360px]:inline">{label}</span>
-                        {hasCount && (
-                          <Badge
-                            variant="secondary"
-                            className="h-4 min-w-4 rounded px-1 text-[10px] leading-none"
-                          >
-                            {count}
-                          </Badge>
+                        {value === 'problems' && hasCount && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-current"
+                          />
                         )}
                       </TabsTrigger>
                     </TooltipTrigger>
@@ -174,7 +163,7 @@ export const RightSidebarContent = ({
                 )
               })}
             </TabsList>
-          </TooltipProvider>{' '}
+          </TooltipProvider>
           <TabsContent value="outline" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarOutlinePanel
               outline={outline}

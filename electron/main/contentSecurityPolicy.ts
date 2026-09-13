@@ -31,7 +31,6 @@ const createContentSecurityPolicy = (): string => {
   const fontSources = ["'self'", 'data:']
   const connectSources = [
     "'self'",
-    'marklab-asset:',
     'http://localhost:*',
     'http://127.0.0.1:*',
     'ws://localhost:*',
@@ -54,10 +53,10 @@ const createContentSecurityPolicy = (): string => {
     "object-src 'none'",
     `script-src ${scriptSources.join(' ')}`,
     `style-src ${styleSources.join(' ')}`,
-    "img-src 'self' data: blob: file: marklab-asset: http: https:",
+    "img-src 'self' data: blob: marklab-asset: http: https:",
     `font-src ${fontSources.join(' ')}`,
     `connect-src ${connectSources.join(' ')}`,
-    "media-src 'self' data: blob: file: marklab-asset:",
+    "media-src 'self' data: blob: marklab-asset:",
     "frame-src 'self' https:",
     "child-src 'self' https:",
     "worker-src 'self' blob:",

@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingsDialog from '@/components/SettingsDialog'
+
+const viewport = vi.hoisted(() => ({ mobile: false }))
+
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => viewport.mobile }))
 
 const labels: Record<string, string> = {
   'settings.appearance': 'Appearance',
@@ -57,6 +61,41 @@ const renderSettingsDialog = () => {
 }
 
 describe('SettingsDialog', () => {
+  beforeEach(() => {
+    viewport.mobile = false
+  })
+
+  it.each([
+    { mobile: false, orientation: 'vertical', forward: '{ArrowDown}', backward: '{ArrowUp}' },
+    { mobile: true, orientation: 'horizontal', forward: '{ArrowRight}', backward: '{ArrowLeft}' },
+  ])(
+    'matches keyboard navigation to the $orientation layout',
+    async ({ mobile, orientation, forward, backward }) => {
+      viewport.mobile = mobile
+      const user = userEvent.setup()
+      renderSettingsDialog()
+      await screen.findByText('General settings panel')
+      expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', orientation)
+      const general = screen.getByRole('tab', { name: 'General' })
+      await user.click(general)
+      await user.keyboard(forward)
+      expect(await screen.findByText('Appearance settings panel')).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'Appearance' })).toHaveFocus()
+      expect(screen.queryByText('General settings panel')).not.toBeInTheDocument()
+      await user.keyboard(backward)
+      expect(await screen.findByText('General settings panel')).toBeInTheDocument()
+      expect(general).toHaveFocus()
+    },
+  )
+
+  it('closes with Escape', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderSettingsDialog()
+    await screen.findByText('General settings panel')
+    await user.keyboard('{Escape}')
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
   it('exposes a named dialog and settings tablist', async () => {
     renderSettingsDialog()
 

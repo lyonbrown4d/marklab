@@ -1,10 +1,14 @@
 import path from 'node:path'
+
 import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
 import type { FsStateData } from '@electron/services/workspace/types.js'
+
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
+
 export const normalizeRelativePath = (value: string): string => {
   return value.replace(/\\/g, '/')
 }
+
 export const toWorkspaceRelative = (root: string, absolutePath: string): string | null => {
   const relative = normalizeRelativePath(
     path.relative(path.resolve(root), path.resolve(absolutePath)),
@@ -13,6 +17,7 @@ export const toWorkspaceRelative = (root: string, absolutePath: string): string 
   if (relative === '..' || relative.startsWith('../')) return null
   return relative
 }
+
 export const resolveWorkspacePath = (data: FsStateData, relative: string): string => {
   if (typeof relative !== 'string' || relative.trim() === '') {
     throw new Error('Path must not be empty')
@@ -50,38 +55,86 @@ export const resolveWorkspacePath = (data: FsStateData, relative: string): strin
   }
   return resolved
 }
+
 export const workspaceRootForAssets = (data: FsStateData): string => {
   if (data.rootKind === 'single') {
     return data.singleFile ? path.dirname(data.singleFile) : data.rootPath
   }
   return data.rootPath
 }
+
+export type WorkspaceAssetLexicalPath = {
+  absolutePath: string
+  relativePath: string
+  rootPath: string
+}
+
+export const resolveWorkspaceAssetPath = (
+  data: FsStateData,
+  relative: string,
+): WorkspaceAssetLexicalPath => {
+  if (typeof relative !== 'string' || relative.trim() === '') {
+    throw new Error('Asset path must not be empty')
+  }
+  if (relative.includes('\0')) throw new Error('Asset path contains invalid characters')
+  if (
+    path.isAbsolute(relative) ||
+    path.win32.isAbsolute(relative) ||
+    path.posix.isAbsolute(relative) ||
+    schemePattern.test(relative)
+  ) {
+    throw new Error('Asset path must be relative')
+  }
+
+  const portable = normalizeRelativePath(relative)
+  if (portable.split('/').includes('..')) {
+    throw new Error('Parent asset paths are not allowed')
+  }
+  const normalized = normalizeRelativePath(path.normalize(portable.split('/').join(path.sep)))
+  const rootPath = path.resolve(workspaceRootForAssets(data))
+  const absolutePath = path.resolve(rootPath, normalized)
+  const relativePath = normalizeRelativePath(path.relative(rootPath, absolutePath))
+  if (relativePath === '..' || relativePath.startsWith('../') || path.isAbsolute(relativePath)) {
+    throw new Error('Asset path must stay inside the current workspace')
+  }
+  return { absolutePath, relativePath, rootPath }
+}
+
 export const isMarkdownPath = (value: string): boolean => {
   const ext = path.extname(value).toLowerCase()
   return ext === '.md' || ext === '.markdown'
 }
+
 export const isSearchIndexablePath = (value: string): boolean => isMarkdownPath(value)
+
 export const isCalendarPath = (value: string): boolean => {
   return path.extname(value).toLowerCase() === '.ics'
 }
+
 export const isPdfPath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'pdf'
 }
+
 export const isDocxPath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'docx'
 }
+
 export const isDrawioPath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'drawio'
 }
+
 export const isImagePath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'image'
 }
+
 export const isAudioPath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'audio'
 }
+
 export const isVideoPath = (value: string): boolean => {
   return workspaceDocumentAdapterForPath(value)?.kind === 'video'
 }
+
 export const isWorkspaceDocumentPath = (value: string): boolean => {
   return (
     isMarkdownPath(value) ||
@@ -89,6 +142,7 @@ export const isWorkspaceDocumentPath = (value: string): boolean => {
     Boolean(workspaceDocumentAdapterForPath(value))
   )
 }
+
 export const isExternalTarget = (target: string): boolean => {
   try {
     const url = new URL(target)
@@ -97,6 +151,7 @@ export const isExternalTarget = (target: string): boolean => {
     return false
   }
 }
+
 export const stripAssetQueryAndHash = (target: string): string => {
   return target.split('#')[0]?.split('?')[0] ?? target
 }

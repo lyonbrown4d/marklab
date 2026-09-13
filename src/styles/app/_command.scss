@@ -1,5 +1,8 @@
 .command-dialog-surface {
-  width: min(780px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
+  top: clamp(3rem, 12vh, 7rem);
+  --tw-translate-y: 0%;
+  max-height: calc(100dvh - clamp(3rem, 12vh, 7rem) - 2rem);
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
   border: 1px solid hsl(var(--border));
@@ -9,9 +12,13 @@
 }
 
 .command-dialog-command {
-  min-height: min(680px, calc(100vh - 80px));
+  min-height: 0;
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
+}
+
+.command-dialog-command [cmdk-list] {
+  max-height: min(440px, calc(100dvh - clamp(3rem, 12vh, 7rem) - 9rem));
 }
 
 .command-dialog-command [cmdk-input-wrapper] {

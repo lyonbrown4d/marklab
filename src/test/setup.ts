@@ -29,6 +29,11 @@ class ResizeObserverMock {
 
 globalThis.ResizeObserver = ResizeObserverMock
 globalThis.PointerEvent = MouseEvent as typeof PointerEvent
+Object.defineProperties(HTMLElement.prototype, {
+  hasPointerCapture: { configurable: true, value: () => false },
+  setPointerCapture: { configurable: true, value: () => undefined },
+  releasePointerCapture: { configurable: true, value: () => undefined },
+})
 Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
   configurable: true,
   value: vi.fn(),

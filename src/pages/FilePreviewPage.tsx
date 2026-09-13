@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
@@ -7,7 +7,6 @@ import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { getPreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
-import { convertAssetFileSrc } from '@/runtime/assets'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
@@ -20,28 +19,35 @@ const FilePreviewPage = () => {
   const { t } = useI18n()
   const requestedPath = params['*'] || null
   const previewKind = requestedPath ? getPreviewFileKind(requestedPath) : null
+  const previewFileExists = fileExists(context.files, requestedPath)
+  const canLoadPreview = Boolean(requestedPath && previewKind && previewFileExists)
   const title = requestedPath ? createFileLabel(requestedPath) : ''
 
-  const metadataQuery = useQuery({
-    queryKey: ['file-preview-metadata', requestedPath],
-    queryFn: () => fsApi.getPathMetadata(requestedPath ?? ''),
-    enabled: isDesktopRuntime() && Boolean(requestedPath && previewKind),
-    staleTime: 10_000,
+  const previewQuery = useQuery({
+    queryKey: ['file-preview-source', context.rootKind, context.rootPath, requestedPath],
+    queryFn: async () => {
+      if (!requestedPath) throw new Error('Missing preview path')
+      const [metadata, capability] = await Promise.all([
+        fsApi.getPathMetadata(requestedPath),
+        fsApi.toAssetUrl(requestedPath),
+      ])
+      return { capability, metadata }
+    },
+    enabled: isDesktopRuntime() && canLoadPreview,
+    gcTime: 0,
+    retry: 1,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
-  const previewSrc = useMemo(() => {
-    const absolutePath = metadataQuery.data?.absolute_path
-    return absolutePath ? convertAssetFileSrc(absolutePath) : null
-  }, [metadataQuery.data?.absolute_path])
   const openInSystem = useCallback(() => {
     if (!requestedPath) return
     void fsApi.openPathInSystem(requestedPath)
   }, [requestedPath])
 
-  if (!requestedPath || !fileExists(context.files, requestedPath)) {
+  if (!requestedPath || !previewFileExists) {
     return <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
   }
-
   if (!previewKind) {
     return (
       <div className="flex h-full items-center justify-center bg-background p-6">
@@ -81,11 +87,10 @@ const FilePreviewPage = () => {
           {t('preview.openInSystem')}
         </Button>
       </header>
-
       <main className="min-h-0 flex-1 overflow-auto p-4">
-        {metadataQuery.isLoading ? (
+        {previewQuery.isLoading ? (
           <PreviewLoadingFallback label={t('preview.loading')} />
-        ) : metadataQuery.isError || !previewSrc ? (
+        ) : previewQuery.isError || !previewQuery.data?.capability.url ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t('preview.failed')}
           </div>
@@ -93,8 +98,8 @@ const FilePreviewPage = () => {
           <FilePreviewSurface
             kind={previewKind}
             path={requestedPath}
-            readonly={metadataQuery.data?.readonly ?? false}
-            src={previewSrc}
+            readonly={previewQuery.data.metadata.readonly}
+            src={previewQuery.data.capability.url}
             title={title}
           />
         )}
@@ -102,5 +107,4 @@ const FilePreviewPage = () => {
     </div>
   )
 }
-
 export default FilePreviewPage

@@ -1,4 +1,5 @@
 import { MonitorCog } from 'lucide-react'
+import MarkdownDefaultAppPrompt from '@/components/MarkdownDefaultAppPrompt'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
@@ -14,11 +15,7 @@ const GeneralSettingsPage = () => {
 
   return (
     <SettingsPageStack>
-      <SettingsSection
-        title={t('settings.general')}
-        description={t('settings.statusBarDescription')}
-        icon={MonitorCog}
-      >
+      <SettingsSection title={t('settings.general')} icon={MonitorCog}>
         <SettingsSwitchRow
           title={t('settings.statusBar')}
           description={t('settings.statusBarDescription')}
@@ -26,6 +23,7 @@ const GeneralSettingsPage = () => {
           onCheckedChange={setShowEditorStatusBar}
         />
       </SettingsSection>
+      <MarkdownDefaultAppPrompt />
     </SettingsPageStack>
   )
 }

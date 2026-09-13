@@ -1,271 +1,315 @@
-import fs from 'node:fs'
-import path from 'node:path'
-
-import { noopLogger, type Logger } from '@electron/services/logger.js'
 import type { BackgroundTaskStatus, FsBufferStatus } from '@electron/services/workspace/types.js'
+import {
+  assertWorkspaceClaimMutationAllowed,
+  canonicalWorkspaceRelativeKey,
+  createWorkspaceWriteOwner,
+  releaseWorkspaceWriteOwner,
+  replaceWorkspaceWriteClaims,
+  type WorkspaceWriteClaim,
+} from '@electron/services/workspace/workspaceWriteCoordinator.js'
+import { flushWorkspaceBufferPass } from '@electron/services/workspace/workspaceBufferFlush.js'
+import type {
+  BufferRecord,
+  WorkspaceBufferStoreOptions,
+  WorkspaceBufferTarget,
+} from '@electron/services/workspace/workspaceBufferTypes.js'
+export type {
+  WorkspaceBufferTarget,
+  WorkspaceBufferWriteFile,
+} from '@electron/services/workspace/workspaceBufferTypes.js'
 
-type BufferRecord = {
-  content: string
-  dirty: boolean
-  revision: number
-}
+const AUTO_FLUSH_DELAY_MS = 700
+const AUTO_FLUSH_RETRY_MS = 1_500
+const FLUSH_TASK_ID = 'buffer-flush'
+const FLUSH_TASK_LABEL = 'Workspace save'
 
-type BufferStatusListener = (status: FsBufferStatus) => void
-
-export type WorkspaceBufferWriteFile = (args: {
-  relativePath: string
-  absolutePath: string
-  content: string
-  writeWithNode: () => Promise<void>
-}) => Promise<void>
-
-type WorkspaceBufferStoreOptions = {
-  logger?: Logger
-  resolvePath: (relativePath: string) => string
-  markOwnWrite: (absolutePath: string) => void
-  writeFile?: WorkspaceBufferWriteFile
-  scheduleSnapshotChanged: () => void
-  onBuffersFlushed?: (relativePaths: string[]) => void
-  setTask: (
-    id: string,
-    label: string,
-    status: BackgroundTaskStatus['status'],
-    message: string | null,
-  ) => void
-  errorMessage: (error: unknown) => string
-}
-
-const BUFFER_AUTO_FLUSH_INTERVAL_MS = 3000
+type BufferUpdateTarget = WorkspaceBufferTarget | { target: WorkspaceBufferTarget }
+type FlushTaskState = { message: string | null; status: BackgroundTaskStatus['status'] }
+type AutoFlushMutationRunner = (work: () => Promise<void>) => Promise<void>
 
 export class WorkspaceBufferStore {
-  private readonly buffers = new Map<string, BufferRecord>()
-  private readonly listeners = new Set<BufferStatusListener>()
-  private autoFlushTimer: ReturnType<typeof setInterval> | null = null
-  private flushInFlight: Promise<number> | null = null
+  private readonly listeners = new Set<(status: FsBufferStatus) => void>()
+  private readonly ownerId = createWorkspaceWriteOwner()
+  private readonly records = new Map<string, BufferRecord>()
+  private autoFlushTimer: ReturnType<typeof setTimeout> | null = null
+  private autoFlushMutationRunner: AutoFlushMutationRunner = (work) => work()
   private disposed = false
-  private readonly logger: Logger
+  private flushTail: Promise<void> = Promise.resolve()
+  private mutationEpoch = 0
+  private taskState: FlushTaskState = { message: null, status: 'idle' }
 
-  constructor(private readonly options: WorkspaceBufferStoreOptions) {
-    this.logger = options.logger ?? noopLogger
-    this.startAutoFlushWorker()
+  constructor(private readonly options: WorkspaceBufferStoreOptions) {}
+
+  onStatus(listener: (status: FsBufferStatus) => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
   }
 
-  clear(): void {
-    this.buffers.clear()
-    this.updateFlushIdleTask()
+  setAutoFlushMutationRunner(runner: AutoFlushMutationRunner): void {
+    this.autoFlushMutationRunner = runner
   }
 
   readCached(relativePath: string): string | null {
-    return this.buffers.get(relativePath)?.content ?? null
+    return this.records.get(canonicalWorkspaceRelativeKey(relativePath))?.content ?? null
+  }
+
+  cacheCleanFile(relativePath: string, content: string): string {
+    const key = canonicalWorkspaceRelativeKey(relativePath)
+    const current = this.records.get(key)
+    if (current?.dirty) {
+      if (current.baselineContent === undefined) {
+        this.assertMutable()
+        current.baselineContent = content
+        this.syncWriteClaims()
+      }
+      return current.content
+    }
+    this.records.set(key, this.cleanRecord(relativePath, content, current?.revision ?? 0))
+    return content
   }
 
   setCleanFile(relativePath: string, content: string): void {
-    this.buffers.set(relativePath, { content, dirty: false, revision: 0 })
-    this.emitStatusFor(relativePath)
+    const key = canonicalWorkspaceRelativeKey(relativePath)
+    this.assertMutable()
+    if (this.records.get(key)?.dirty) throw new Error('Cannot replace a dirty workspace buffer')
+    const revision = (this.records.get(key)?.revision ?? 0) + 1
+    this.records.set(key, this.cleanRecord(relativePath, content, revision))
+    this.bumpMutation()
+    this.syncWriteClaims()
+    this.emit(this.records.get(key)!)
+  }
+
+  update(relativePath: string, content: string, value?: BufferUpdateTarget): FsBufferStatus {
+    const key = canonicalWorkspaceRelativeKey(relativePath)
+    this.assertMutable(key)
+    const current = this.records.get(key)
+    const baseline = current?.dirty ? current.baselineContent : current?.content
+    const targetValue = value && 'target' in value ? value.target : value
+    const target: WorkspaceBufferTarget = {
+      absolutePath: targetValue?.absolutePath ?? this.options.resolvePath(relativePath),
+      state: targetValue?.state ? { ...targetValue.state } : null,
+    }
+    const record: BufferRecord = {
+      baselineContent: baseline,
+      content,
+      dirty: baseline === undefined || content !== baseline,
+      relativePath,
+      revision: (current?.revision ?? 0) + 1,
+      target,
+    }
+    this.records.set(key, record)
+    this.bumpMutation()
+    this.syncWriteClaims()
+    this.emit(record)
+    this.scheduleAutoFlush()
+    return this.status(record)
   }
 
   delete(relativePath: string): void {
-    this.buffers.delete(relativePath)
-    this.updateFlushIdleTask()
-  }
-
-  update(relativePath: string, content: string): FsBufferStatus {
-    const previous = this.buffers.get(relativePath)
-    const record = {
-      content,
-      dirty: true,
-      revision: (previous?.revision ?? 0) + 1,
-    }
-    this.buffers.set(relativePath, record)
-    const status = this.statusFor(relativePath, record)
-    this.emitBufferStatus(status)
-    this.updateFlushIdleTask()
-    return status
-  }
-
-  async flush(): Promise<number> {
-    if (this.flushInFlight) return this.flushInFlight
-    this.flushInFlight = this.flushOnce().finally(() => {
-      this.flushInFlight = null
-    })
-    return this.flushInFlight
-  }
-
-  getStatus(relativePath: string): FsBufferStatus | null {
-    const record = this.buffers.get(relativePath)
-    return record ? this.statusFor(relativePath, record) : null
-  }
-
-  getBackgroundDirtyCount(): number {
-    return [...this.buffers.values()].filter((record) => record.dirty).length
-  }
-
-  updateFlushIdleTask(): void {
-    const currentStatus = this.currentFlushTaskStatus()
-    if (currentStatus === 'running' || currentStatus === 'error') return
-    const dirtyCount = this.getBackgroundDirtyCount()
-    this.options.setTask(
-      'buffer-flush',
-      'Save queue',
-      'idle',
-      dirtyCount > 0 ? `${dirtyCount} pending` : null,
-    )
+    this.assertMutable()
+    const key = canonicalWorkspaceRelativeKey(relativePath)
+    const current = this.records.get(key)
+    if (!current) return
+    this.records.delete(key)
+    this.bumpMutation()
+    this.syncWriteClaims()
+    this.emit({ ...current, dirty: false })
   }
 
   rename(from: string, to: string): void {
-    for (const [bufferPath, record] of [...this.buffers.entries()]) {
-      if (bufferPath !== from && !bufferPath.startsWith(`${from}/`)) continue
-      const suffix = bufferPath.slice(from.length)
-      this.buffers.delete(bufferPath)
-      this.buffers.set(`${to}${suffix}`, record)
+    this.assertMutable()
+    const fromKey = canonicalWorkspaceRelativeKey(from)
+    const toKey = canonicalWorkspaceRelativeKey(to)
+    const current = this.records.get(fromKey)
+    if (!current) return
+    const destination = this.records.get(toKey)
+    if (destination?.dirty && destination !== current) {
+      throw new Error('Cannot replace dirty buffer while renaming to ' + to)
     }
-    this.updateFlushIdleTask()
+    this.records.delete(fromKey)
+    current.relativePath = to
+    current.target = { ...current.target, absolutePath: this.options.resolvePath(to) }
+    this.records.set(toKey, current)
+    this.bumpMutation()
+    this.syncWriteClaims()
+    this.emit(current)
   }
 
   deleteUnder(relativePath: string): void {
-    for (const bufferPath of [...this.buffers.keys()]) {
-      if (bufferPath === relativePath || bufferPath.startsWith(`${relativePath}/`)) {
-        this.buffers.delete(bufferPath)
-      }
+    this.assertMutable()
+    const prefix = canonicalWorkspaceRelativeKey(relativePath) + '/'
+    let changed = false
+    for (const [key, record] of this.records) {
+      if (key !== prefix.slice(0, -1) && !key.startsWith(prefix)) continue
+      this.records.delete(key)
+      this.emit({ ...record, dirty: false })
+      changed = true
     }
-    this.updateFlushIdleTask()
+    if (!changed) return
+    this.bumpMutation()
+    this.syncWriteClaims()
+  }
+
+  getStatus(relativePath: string): FsBufferStatus | null {
+    const record = this.records.get(canonicalWorkspaceRelativeKey(relativePath))
+    return record ? this.status(record) : null
+  }
+
+  getBackgroundDirtyCount(): number {
+    let count = 0
+    for (const record of this.records.values()) if (record.dirty) count += 1
+    return count
+  }
+
+  getWriteOwnerId(): string {
+    return this.ownerId
+  }
+  getMutationEpoch(): number {
+    return this.mutationEpoch
   }
 
   invalidateCleanForRelativePaths(relativePaths: string[]): void {
     for (const relativePath of relativePaths) {
-      for (const [bufferPath, record] of this.buffers.entries()) {
-        if (record.dirty) continue
-        if (bufferPath === relativePath || bufferPath.startsWith(`${relativePath}/`)) {
-          this.buffers.delete(bufferPath)
-        }
-      }
+      const key = canonicalWorkspaceRelativeKey(relativePath)
+      if (this.records.get(key)?.dirty === false) this.records.delete(key)
     }
   }
 
   invalidateAllClean(): void {
-    for (const [bufferPath, record] of this.buffers.entries()) {
-      if (!record.dirty) this.buffers.delete(bufferPath)
-    }
+    for (const [key, record] of this.records) if (!record.dirty) this.records.delete(key)
   }
 
-  onStatus(listener: BufferStatusListener): () => void {
-    this.listeners.add(listener)
-    return () => {
-      this.listeners.delete(listener)
+  flush(): Promise<void> {
+    if (this.disposed) return Promise.reject(new Error('Workspace buffers are disposed'))
+    const run = this.flushTail.then(
+      () => this.drainFlushes(),
+      () => this.drainFlushes(),
+    )
+    this.flushTail = run.catch(() => undefined)
+    return run
+  }
+
+  updateFlushIdleTask(): void {
+    this.publishTask()
+  }
+
+  clear(): void {
+    this.assertMutable()
+    if (this.getBackgroundDirtyCount() > 0) {
+      throw new Error('Cannot clear workspace buffers while unsaved content remains')
     }
+    this.records.clear()
+    this.bumpMutation()
+    this.syncWriteClaims()
+    this.setTaskState('idle', null)
   }
 
   dispose(): void {
-    this.disposed = true
-    if (this.autoFlushTimer) {
-      clearInterval(this.autoFlushTimer)
-      this.autoFlushTimer = null
+    if (this.disposed) return
+    if (this.getBackgroundDirtyCount() > 0) {
+      const error = new Error('Cannot dispose workspace buffers while unsaved content remains')
+      this.setTaskState('error', error.message)
+      throw error
     }
+    this.disposed = true
+    if (this.autoFlushTimer) clearTimeout(this.autoFlushTimer)
+    this.autoFlushTimer = null
+    releaseWorkspaceWriteOwner(this.ownerId)
+    this.records.clear()
     this.listeners.clear()
   }
 
-  private async flushOnce(): Promise<number> {
-    const dirty = [...this.buffers.entries()].filter(([, record]) => record.dirty)
-    if (dirty.length === 0) {
-      this.updateFlushIdleTask()
-      return 0
-    }
+  private assertMutable(recordKey?: string): void {
+    if (this.disposed) throw new Error('Workspace buffers are disposed')
+    assertWorkspaceClaimMutationAllowed(this.ownerId, recordKey)
+  }
 
-    this.options.setTask('buffer-flush', 'Save queue', 'running', `${dirty.length} pending`)
-    this.logger.info('buffer flush started', { dirtyCount: dirty.length })
-    let flushed = 0
-    const flushedPaths: string[] = []
-    try {
-      for (const [relativePath, record] of dirty) {
-        const absolutePath = this.options.resolvePath(relativePath)
-        await this.writeBufferFile(relativePath, absolutePath, record.content)
+  private bumpMutation(): void {
+    this.mutationEpoch += 1
+  }
 
-        const current = this.buffers.get(relativePath)
-        if (current !== record || current.revision !== record.revision) continue
-
-        record.dirty = false
-        flushed += 1
-        flushedPaths.push(relativePath)
-        this.emitBufferStatus(this.statusFor(relativePath, record))
-      }
-
-      this.updateFlushIdleTask()
-      if (flushed > 0) {
-        this.options.scheduleSnapshotChanged()
-        this.options.onBuffersFlushed?.(flushedPaths)
-      }
-      this.logger.info('buffer flush finished', { flushed })
-      return flushed
-    } catch (error) {
-      this.options.setTask('buffer-flush', 'Save queue', 'error', this.options.errorMessage(error))
-      this.logger.error('buffer flush failed', { error })
-      throw error
+  private cleanRecord(relativePath: string, content: string, revision: number): BufferRecord {
+    return {
+      baselineContent: content,
+      content,
+      dirty: false,
+      relativePath,
+      revision,
+      target: { absolutePath: this.options.resolvePath(relativePath), state: null },
     }
   }
 
-  private async writeBufferFile(
-    relativePath: string,
-    absolutePath: string,
-    content: string,
-  ): Promise<void> {
-    const writeWithNode = () => this.writeBufferFileWithNode(absolutePath, content)
-    if (this.options.writeFile) {
-      await this.options.writeFile({ relativePath, absolutePath, content, writeWithNode })
-      return
-    }
-    await writeWithNode()
+  private status(record: BufferRecord): FsBufferStatus {
+    return { path: record.relativePath, revision: record.revision, dirty: record.dirty }
   }
 
-  private async writeBufferFileWithNode(absolutePath: string, content: string): Promise<void> {
-    const existing = await fs.promises.readFile(absolutePath, 'utf8').catch(() => null)
-    if (existing === content) return
-
-    const tempPath = `${absolutePath}.${process.pid}.${Date.now()}.tmp`
-    this.options.markOwnWrite(absolutePath)
-    this.options.markOwnWrite(tempPath)
-    try {
-      await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
-      await fs.promises.writeFile(tempPath, content)
-      await fs.promises.rename(tempPath, absolutePath)
-    } catch (error) {
-      await fs.promises.unlink(tempPath).catch(() => undefined)
-      throw error
-    }
-  }
-
-  private startAutoFlushWorker(): void {
-    this.autoFlushTimer = setInterval(() => {
-      if (this.disposed || this.flushInFlight) return
-      if (this.getBackgroundDirtyCount() === 0) return
-      void this.flush().catch((error) => {
-        this.logger.warn('background buffer flush failed', { error })
-      })
-    }, BUFFER_AUTO_FLUSH_INTERVAL_MS)
-  }
-
-  private statusFor(relativePath: string, record: BufferRecord): FsBufferStatus {
-    return { path: relativePath, revision: record.revision, dirty: record.dirty }
-  }
-
-  private emitStatusFor(relativePath: string): void {
-    const record = this.buffers.get(relativePath)
-    if (record) this.emitBufferStatus(this.statusFor(relativePath, record))
-  }
-
-  private emitBufferStatus(status: FsBufferStatus): void {
+  private emit(record: BufferRecord): void {
+    const status = this.status(record)
     for (const listener of this.listeners) listener(status)
   }
 
-  getDirtyRecords(): Array<{ path: string; content: string }> {
-    const dirty: Array<{ path: string; content: string }> = []
-    for (const [relativePath, record] of this.buffers) {
+  private syncWriteClaims(): void {
+    const claims: WorkspaceWriteClaim[] = []
+    for (const [recordKey, record] of this.records) {
       if (!record.dirty) continue
-      dirty.push({ path: relativePath, content: record.content })
+      claims.push({
+        absolutePath: record.target.absolutePath,
+        baselineContent: record.baselineContent,
+        content: record.content,
+        recordKey,
+      })
     }
-    return dirty
+    replaceWorkspaceWriteClaims(this.ownerId, claims)
   }
 
-  private currentFlushTaskStatus(): BackgroundTaskStatus['status'] | null {
-    return null
+  private scheduleAutoFlush(delay = AUTO_FLUSH_DELAY_MS): void {
+    if (this.disposed || this.autoFlushTimer || this.getBackgroundDirtyCount() === 0) return
+    this.autoFlushTimer = setTimeout(() => {
+      this.autoFlushTimer = null
+      void this.autoFlushMutationRunner(() => this.flush()).catch((error) => {
+        this.options.logger.warn('workspace buffer auto-flush failed', { error })
+        this.scheduleAutoFlush(AUTO_FLUSH_RETRY_MS)
+      })
+    }, delay)
+  }
+
+  private async drainFlushes(): Promise<void> {
+    this.setTaskState('running', null)
+    try {
+      while (this.getBackgroundDirtyCount() > 0) await this.flushPass()
+      this.setTaskState('idle', null)
+    } catch (error) {
+      this.setTaskState('error', this.options.errorMessage(error))
+      throw error
+    }
+  }
+
+  private flushPass(): Promise<void> {
+    return flushWorkspaceBufferPass({
+      records: this.records,
+      ownerId: this.ownerId,
+      options: this.options,
+      emit: (record) => this.emit(record),
+      syncWriteClaims: () => this.syncWriteClaims(),
+    })
+  }
+
+  private currentFlushTaskStatus(): BackgroundTaskStatus['status'] {
+    return this.taskState.status
+  }
+
+  private publishTask(): void {
+    const dirtyCount = this.getBackgroundDirtyCount()
+    const message =
+      this.taskState.message ??
+      (this.currentFlushTaskStatus() === 'idle' && dirtyCount > 0
+        ? String(dirtyCount) + ' file(s) waiting to save'
+        : null)
+    this.options.setTask(FLUSH_TASK_ID, FLUSH_TASK_LABEL, this.currentFlushTaskStatus(), message)
+  }
+
+  private setTaskState(status: BackgroundTaskStatus['status'], message: string | null): void {
+    this.taskState = { message, status }
+    this.publishTask()
   }
 }

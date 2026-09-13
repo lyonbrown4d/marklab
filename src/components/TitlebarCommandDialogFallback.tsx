@@ -1,11 +1,5 @@
-import AppCommandDialog from '@/components/AppCommandDialog'
 import { CommandInput, CommandList } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
-
-type TitlebarCommandDialogFallbackProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
 
 export const CommandDialogLoadingBody = () => {
   const { t } = useI18n()
@@ -16,7 +10,7 @@ export const CommandDialogLoadingBody = () => {
       <div
         aria-busy="true"
         aria-label={label}
-        className="flex h-[300px] flex-col gap-3 p-3"
+        className="flex h-[300px] flex-col gap-3 p-3 motion-reduce:[&_.animate-pulse]:animate-none"
         role="status"
       >
         <span className="sr-only">{label}</span>
@@ -35,14 +29,10 @@ export const CommandDialogLoadingBody = () => {
   )
 }
 
-const TitlebarCommandDialogFallback = ({
-  open,
-  onOpenChange,
-}: TitlebarCommandDialogFallbackProps) => {
+const TitlebarCommandDialogFallback = () => {
   const { t } = useI18n()
-
   return (
-    <AppCommandDialog open={open} onOpenChange={onOpenChange}>
+    <>
       <CommandInput
         disabled
         placeholder={t('sidebar.search')}
@@ -50,7 +40,7 @@ const TitlebarCommandDialogFallback = ({
         onValueChange={() => undefined}
       />
       <CommandDialogLoadingBody />
-    </AppCommandDialog>
+    </>
   )
 }
 

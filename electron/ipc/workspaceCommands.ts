@@ -1,14 +1,11 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
 import { LinkPreviewService } from '@electron/services/linkPreview/service.js'
-import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
-import { isMarkdownPath, normalizeRelativePath } from '@electron/services/workspace/path.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { Logger } from '@electron/services/logger.js'
+import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
@@ -52,6 +49,8 @@ const createWorkspaceCommandHandlers = (
     fs_set_single_file: (payload, event) => workspaceForEvent(event).setSingleFile(payload),
     fs_open_file: (payload, event) => workspaceForEvent(event).openFile(payload),
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
+    fs_issue_asset_capability: (payload, event) =>
+      workspaceForEvent(event).issueAssetCapability(payload),
     fs_read_asset_bytes: (payload, event) => workspaceForEvent(event).readAssetBytes(payload),
     fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
@@ -95,13 +94,11 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getCodeActions(workspaceForEvent(event), payload),
     markdown_language_get_hover: (payload, event) =>
       markdownLanguageService.getHover(workspaceForEvent(event), payload),
-    list_markdown_files: (payload) => listMarkdownFiles(payload),
-    read_markdown_file: (payload) => readMarkdownFile(payload),
-    write_markdown_file: (payload) => writeMarkdownFile(payload),
     export_markdown: (payload) => exportService.exportMarkdown(payload),
     export_open_output_path: (payload) => exportService.openOutputPath(payload),
   }
 }
+
 const registerLegacyCommandHandlers = (
   ipcMain: IpcMain,
   commandHandlers: NativeCommandHandlers,
@@ -109,62 +106,4 @@ const registerLegacyCommandHandlers = (
   for (const [command, handler] of Object.entries(commandHandlers)) {
     ipcMain.handle(command, (event, payload: unknown) => handler(payload, event))
   }
-}
-const listMarkdownFiles = async (
-  value: unknown,
-): Promise<
-  Array<{
-    path: string
-    relative_path: string
-  }>
-> => {
-  const root = pathArg(value, 'root')
-  const stat = await fs.stat(root).catch(() => null)
-  if (!stat?.isDirectory()) throw new Error('Project path is not a directory')
-  const files: Array<{
-    path: string
-    relative_path: string
-  }> = []
-  const visit = async (directory: string) => {
-    for (const dirent of await fs.readdir(directory, { withFileTypes: true })) {
-      if (dirent.name.startsWith('.')) continue
-      const absolutePath = path.join(directory, dirent.name)
-      if (dirent.isDirectory()) {
-        await visit(absolutePath)
-      } else if (dirent.isFile() && isMarkdownPath(dirent.name)) {
-        files.push({
-          path: absolutePath,
-          relative_path: normalizeRelativePath(path.relative(root, absolutePath)),
-        })
-      }
-    }
-  }
-  await visit(root)
-  return files.sort((left, right) => left.relative_path.localeCompare(right.relative_path))
-}
-const readMarkdownFile = async (value: unknown): Promise<string> => {
-  return fs.readFile(markdownPathArg(value, 'path'), 'utf8')
-}
-const writeMarkdownFile = async (value: unknown): Promise<void> => {
-  const filePath = markdownPathArg(value, 'path')
-  const content = stringArg(value, 'content')
-  await fs.writeFile(filePath, content)
-}
-const markdownPathArg = (value: unknown, key: string): string => {
-  const filePath = pathArg(value, key)
-  if (!isMarkdownPath(filePath)) throw new Error('Path must be a Markdown file')
-  return filePath
-}
-const pathArg = (value: unknown, key: string): string => {
-  const result = stringArg(value, key)
-  if (result.includes('\0')) throw new Error(`${key} contains invalid characters`)
-  return path.resolve(result)
-}
-const stringArg = (value: unknown, key: string): string => {
-  const result =
-    value && typeof value === 'object' && key in value
-      ? (value as Record<string, unknown>)[key]
-      : value
-  if (typeof result !== 'string' || !result.trim()) throw new Error(`${key} must be a string`)
-  return result
 }

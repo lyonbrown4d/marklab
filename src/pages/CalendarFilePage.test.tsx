@@ -1,6 +1,18 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render as renderUi, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import CalendarFilePage from '@/pages/CalendarFilePage'
+import { AppStatusBarProvider, EditorStatusBarSlot } from '@/components/EditorStatusBar'
+
+const render = (ui: ReactNode) =>
+  renderUi(
+    <AppStatusBarProvider activePath="notes/calendar.ics" viewMode="wysiwyg">
+      {ui}
+      <footer>
+        <EditorStatusBarSlot label="Document status" />
+      </footer>
+    </AppStatusBarProvider>,
+  )
 
 const calendarEvents = vi.hoisted(() => [
   {

@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
-import { useLocation, useOutlet } from 'react-router-dom'
+import { createElement, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { FileViewKind } from '@/store/appTypes'
 import type { LayoutContext } from '@/app/AppLayoutContext'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
+import { AppCachedOutlet } from '@/app/AppCachedOutlet'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -80,14 +81,27 @@ export const useAppLayoutOutlet = ({
     state.viewMode,
     state.workspaceIndex,
   ])
-  const outlet = useOutlet(outletContext)
   const routeCacheKey = useMemo(
     () => `${state.rootKind}:${state.rootPath}:${location.pathname}`,
     [location.pathname, state.rootKind, state.rootPath],
   )
+  // Tightening eviction requires document-bound callbacks for queued editor updates.
   const routeCacheMax = useMemo(
     () => Math.min(24, Math.max(8, state.tabs.length + 2)),
     [state.tabs.length],
+  )
+  const shouldAnimateRouteCache = state.viewMode !== 'wysiwyg'
+  // Keep sidebar and terminal state changes outside the cached route subtree.
+  // AppCachedOutlet still subscribes to router context for navigation updates.
+  const outlet = useMemo(
+    () =>
+      createElement(AppCachedOutlet, {
+        context: outletContext,
+        routeCacheKey,
+        routeCacheMax,
+        shouldAnimateRouteCache,
+      }),
+    [outletContext, routeCacheKey, routeCacheMax, shouldAnimateRouteCache],
   )
 
   return {

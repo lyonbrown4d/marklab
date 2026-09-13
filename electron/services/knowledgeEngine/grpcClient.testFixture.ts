@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 
 import {
   Metadata,
+  type CallOptions,
   type ClientDuplexStream,
   type ClientReadableStream,
   type ClientUnaryCall,
@@ -315,7 +316,8 @@ const unary =
   (
     request: Request,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: Response) => void,
+    _options: CallOptions,
+    callback: (error: ServiceError | null, response?: Response) => void,
   ) => {
     calls[key] = { metadata, request }
     callback(null, response)

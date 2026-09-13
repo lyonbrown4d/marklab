@@ -1,4 +1,4 @@
-import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 
 import type {
   KnowledgeCloseDocumentInput,
@@ -97,7 +97,7 @@ export type WorkspaceSidecarRuntime = {
   openedAt: number
   lastActivityAt: number
   address?: string
-  child?: ChildProcessWithoutNullStreams
+  child?: ChildProcess
   client?: WorkspaceSidecarClient
   lastError?: string
 }
@@ -126,6 +126,6 @@ export type WorkspaceSidecarManagerOptions = {
 
 export type StartedWorkspaceSidecar = {
   address: string
-  child?: ChildProcessWithoutNullStreams
+  child?: ChildProcess
   client: WorkspaceSidecarClient
 }

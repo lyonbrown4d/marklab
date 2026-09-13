@@ -79,7 +79,7 @@ describe('RightSidebarPropertiesPanel', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute('aria-busy', 'true')
     const skeletons = container.querySelectorAll('[data-slot="metadata-skeleton"]')
-    expect(skeletons).toHaveLength(10)
+    expect(skeletons).toHaveLength(9)
     skeletons.forEach((skeleton) => {
       expect(skeleton).toHaveAttribute('aria-hidden', 'true')
     })
@@ -101,7 +101,6 @@ describe('RightSidebarPropertiesPanel', () => {
       <RightSidebarPropertiesPanel
         {...baseProps}
         displayMetadata={{
-          absolute_path: 'D:\\Projects\\marklab\\notes\\daily.md',
           kind: 'file',
           modified_ms: undefined,
           path: 'notes/daily.md',
@@ -127,6 +126,6 @@ describe('RightSidebarPropertiesPanel', () => {
     expect(screen.getByText('Unknown')).toBeInTheDocument()
     expect(screen.getByText('Yes')).toBeInTheDocument()
     expect(screen.getByText('notes/daily.md')).toBeInTheDocument()
-    expect(screen.getByText('D:\\Projects\\marklab\\notes\\daily.md')).toBeInTheDocument()
+    expect(screen.queryByText('D:\\Projects\\marklab\\notes\\daily.md')).not.toBeInTheDocument()
   })
 })

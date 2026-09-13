@@ -9,7 +9,6 @@ import { useI18n } from '@/i18n/useI18n'
 import { copyText } from '@/components/file-tree/fileTreeActions'
 import { cn } from '@/lib/utils'
 import type { MarkdownAssetReference, MarkdownAssetReport } from '@/logic/assets'
-import { revealPathInSystem } from '@/runtime/opener'
 import { fsApi } from '@/services/fsApi'
 
 type RightSidebarAssetsPanelProps = {
@@ -59,16 +58,15 @@ export const RightSidebarAssetsPanel = ({ report }: RightSidebarAssetsPanelProps
     runAssetAction(asset, 'copy', () => copyText(asset.targetPath ?? asset.target))
 
   const handleOpenAsset = (asset: MarkdownAssetReference) => {
-    if (!asset.targetPath) return
-    return runAssetAction(asset, 'open', () => fsApi.openPathInSystem(asset.targetPath ?? ''))
+    const targetPath = asset.targetPath
+    if (!targetPath) return
+    return runAssetAction(asset, 'open', () => fsApi.openPathInSystem(targetPath))
   }
 
   const handleRevealAsset = (asset: MarkdownAssetReference) => {
-    if (!asset.targetPath) return
-    return runAssetAction(asset, 'reveal', async () => {
-      const metadata = await fsApi.getPathMetadata(asset.targetPath ?? '')
-      await revealPathInSystem(metadata.absolute_path)
-    })
+    const targetPath = asset.targetPath
+    if (!targetPath) return
+    return runAssetAction(asset, 'reveal', () => fsApi.revealPathInSystem(targetPath))
   }
 
   return (

@@ -9,11 +9,11 @@ dashmap.workspace = true
 moka.workspace = true
 pulldown-cmark.workspace = true
 rayon.workspace = true
-redb = "4.1.0"
+redb = "4.2.0"
 ropey.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tantivy = { version = "0.26.1", default-features = false, features = ["mmap", "lz4-compression"] }
+tantivy = { version = "0.26.2", default-features = false, features = ["mmap", "lz4-compression"] }
 tree-sitter = { workspace = true, optional = true }
 tree-sitter-md = { workspace = true, optional = true }
 unicode-normalization.workspace = true

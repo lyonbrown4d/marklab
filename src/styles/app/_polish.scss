@@ -1,7 +1,8 @@
 /* Shell and graph polish: keep chrome quiet and content-led. */
 .app-titlebar {
-  border-bottom-color: color-mix(in srgb, hsl(var(--border)) 70%, transparent);
-  background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)) 12%);
+  border-bottom-color: transparent;
+  background: hsl(var(--sidebar));
+  backdrop-filter: none;
 }
 
 .chrome-button {
@@ -16,15 +17,15 @@
 }
 
 .command-trigger {
-  border-color: color-mix(in srgb, hsl(var(--border)) 72%, transparent);
-  background: color-mix(in srgb, hsl(var(--card)) 76%, transparent);
+  border-color: transparent;
+  background: hsl(var(--muted));
   box-shadow: none;
 }
 
 .command-trigger:hover,
 .command-trigger:focus-visible {
-  border-color: color-mix(in srgb, hsl(var(--primary)) 44%, hsl(var(--border)));
-  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--primary)) 8%);
+  border-color: hsl(var(--border));
+  background: hsl(var(--secondary));
 }
 
 .activity-rail-button {

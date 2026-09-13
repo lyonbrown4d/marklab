@@ -65,4 +65,45 @@ describe('SidebarActivityRail', () => {
     expect(onSelectActivity).toHaveBeenCalledWith('projects')
     expect(onOpenWorkspaceOverview).toHaveBeenCalledTimes(1)
   })
+
+  it('uses one workspace menu when expanded while preserving every destination', async () => {
+    const onSelectActivity = vi.fn()
+    render(
+      <SidebarActivityRail
+        collapsed={false}
+        rootPath="D:\\Notes\\Marklab\\"
+        activeActivity="explorer"
+        homeActive={false}
+        fileCount={1}
+        recentProjectCount={2}
+        onOpenWorkspaceOverview={vi.fn()}
+        onSelectActivity={onSelectActivity}
+      />,
+    )
+    const trigger = screen.getByRole('button', { name: 'Marklab' })
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    const search = await screen.findByRole('menuitem', { name: 'Search' })
+    expect(screen.getAllByRole('menuitem')).toHaveLength(6)
+    expect(screen.getByRole('menuitem', { name: /Files/ })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(search)
+    expect(onSelectActivity).toHaveBeenCalledWith('search')
+  })
+
+  it('supports POSIX workspace paths without exposing the full path in the header', () => {
+    render(
+      <SidebarActivityRail
+        collapsed={false}
+        rootPath="/home/writer/Notes/"
+        activeActivity="explorer"
+        homeActive={false}
+        fileCount={0}
+        recentProjectCount={0}
+        onOpenWorkspaceOverview={vi.fn()}
+        onSelectActivity={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Notes' })).toBeVisible()
+  })
 })

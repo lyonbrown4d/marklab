@@ -31,7 +31,7 @@ const SidebarToolPanel = ({
   rootPath,
 }: SidebarToolPanelProps) => {
   return (
-    <SidebarContent className="h-full p-1.5">
+    <SidebarContent className="h-full px-2 pb-2">
       {activeActivity === 'search' ? (
         <SidebarSearchPanel onOpenSearchResult={onOpenSearchResult} />
       ) : activeActivity === 'scm' ? (

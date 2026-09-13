@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react'
 import { FilePlus2, Files, FolderPlus, Search } from 'lucide-react'
 import AppEmptyState from '@/components/AppEmptyState'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import SidebarFileTree from '@/components/SidebarFileTree'
@@ -19,18 +17,28 @@ const ExplorerToolbarButton = ({
   label,
   icon: Icon,
   onClick,
+  expanded,
+  controls,
+  buttonRef,
 }: {
   label: string
   icon: typeof FilePlus2
   onClick: () => void
+  expanded?: boolean
+  controls?: string
+  buttonRef?: Ref<HTMLButtonElement>
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <Button
+        ref={buttonRef}
+        type="button"
         variant="ghost"
         size="icon"
         className="size-7 rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
         aria-label={label}
+        aria-expanded={expanded}
+        aria-controls={controls}
         onClick={onClick}
       >
         <Icon aria-hidden="true" />
@@ -59,6 +67,14 @@ const SidebarExplorerPanel = ({
 }: SidebarExplorerPanelProps) => {
   const { t } = useI18n()
   const [filter, setFilter] = useState('')
+  const [filterVisibility, setFilterVisibility] = useState({ open: false, request: 0 })
+  const filterOpen = filterVisibility.open || focusFileFilterRequest > filterVisibility.request
+  const setFilterOpen = (open: boolean) => {
+    setFilterVisibility({ open, request: focusFileFilterRequest })
+  }
+  const filterId = useId()
+  const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const [rootCreateOpen, setRootCreateOpen] = useState(false)
   const [rootCreateKind, setRootCreateKind] = useState<RootCreateKind | null>(null)
   const filterInputRef = useRef<HTMLInputElement | null>(null)
   const readonlyTree = rootKind === 'single'
@@ -104,89 +120,101 @@ const SidebarExplorerPanel = ({
     rootCreateKind === 'file' ? labels.newFilePrompt : labels.newFolderPrompt
   const emptyIcon = hasFilter ? <Search /> : <Files />
 
-  const handleRootCreate = (path: string) => {
-    if (rootCreateKind === 'file') {
-      onCreateFile(path)
-      return
-    }
-    if (rootCreateKind === 'folder') {
-      onCreateFolder(path)
-    }
-  }
-
   useEffect(() => {
-    if (focusFileFilterRequest === 0) return
+    if (!filterOpen) return
     filterInputRef.current?.focus()
     filterInputRef.current?.select()
-  }, [focusFileFilterRequest])
+  }, [filterOpen, focusFileFilterRequest])
+
+  const handleRootCreate = async (path: string) => {
+    if (rootCreateKind === 'file') await onCreateFile(path)
+    if (rootCreateKind === 'folder') await onCreateFolder(path)
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-1.5">
-      <SidebarGroup className="min-h-0 flex-1 rounded-lg border border-sidebar-border/60 bg-sidebar/45 p-1.5">
-        <SidebarGroupLabel className="flex h-auto items-start justify-between gap-2 px-1.5 py-1.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Files aria-hidden="true" className="size-3.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground">
-                {t('sidebar.files')}
-              </div>
-              <div className="mt-0.5 text-[11px] font-normal normal-case tracking-normal text-muted-foreground">
-                {readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.recentProjects')}
-              </div>
-            </div>
-          </div>
+      <SidebarGroup className="min-h-0 flex-1 p-0">
+        <div className="flex shrink-0 items-center gap-1 px-1 pb-1">
+          <SidebarGroupLabel className="h-8 min-w-0 flex-1 gap-1.5 truncate px-1 text-xs font-medium">
+            {readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.files')}
+            <span className="text-[10px] font-normal tabular-nums text-muted-foreground/70">
+              {fileCount}
+            </span>
+          </SidebarGroupLabel>
           <TooltipProvider delayDuration={180}>
             <div className="flex shrink-0 items-center gap-1">
-              <Badge variant="secondary" className="h-5 rounded px-1.5 text-[10px]">
-                {fileCount}
-              </Badge>
+              <ExplorerToolbarButton
+                label={t('sidebar.search')}
+                icon={Search}
+                expanded={filterOpen}
+                controls={filterId}
+                buttonRef={filterButtonRef}
+                onClick={() => {
+                  setFilterOpen(!filterOpen)
+                  setFilter('')
+                }}
+              />
               {!readonlyTree && (
                 <>
                   <ExplorerToolbarButton
                     label={t('sidebar.newFile')}
                     icon={FilePlus2}
-                    onClick={() => setRootCreateKind('file')}
+                    onClick={() => {
+                      setRootCreateKind('file')
+                      setRootCreateOpen(true)
+                    }}
                   />
                   <ExplorerToolbarButton
                     label={t('sidebar.newFolder')}
                     icon={FolderPlus}
-                    onClick={() => setRootCreateKind('folder')}
+                    onClick={() => {
+                      setRootCreateKind('folder')
+                      setRootCreateOpen(true)
+                    }}
                   />
                 </>
               )}
             </div>
           </TooltipProvider>
-        </SidebarGroupLabel>
+        </div>
         <SidebarGroupContent className="flex min-h-0 flex-1 flex-col gap-2">
           {readonlyTree && (
-            <div className="rounded-md border border-sidebar-border/70 bg-background/50 px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+            <div className="px-2 py-1 text-xs leading-5 text-muted-foreground">
               {t('sidebar.singleFileReadonlyHint')}
             </div>
           )}
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              ref={filterInputRef}
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder={t('sidebar.search')}
-              aria-label={t('sidebar.search')}
-              className="h-8 rounded-md border-sidebar-border bg-background/70 pl-7 text-xs shadow-sm transition-colors focus-visible:border-ring"
-            />
-          </div>
-          <Separator className="bg-sidebar-border/70" />
+          {filterOpen && (
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                id={filterId}
+                ref={filterInputRef}
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder={t('sidebar.search')}
+                aria-label={t('sidebar.search')}
+                className="h-8 border-sidebar-border bg-transparent pl-7 text-xs shadow-none"
+                onKeyDown={(event) => {
+                  if (event.key !== 'Escape') return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setFilter('')
+                  setFilterOpen(false)
+                  filterButtonRef.current?.focus()
+                }}
+              />
+            </div>
+          )}
           <div className="min-h-0 flex-1 overflow-hidden pr-1">
             {!hasVisibleFiles ? (
               <AppEmptyState
                 compact
-                className="min-h-28 flex-none border-sidebar-border/70 bg-background/40 px-3 py-4 md:p-4"
+                className="min-h-28 flex-none border-0 bg-transparent px-3 py-4 md:p-4"
                 icon={emptyIcon}
-                mediaClassName="mb-0 size-8 border border-sidebar-border bg-background/80 text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
+                mediaClassName="mb-0 size-8 bg-transparent text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
                 role="status"
                 title={emptyMessage}
                 titleClassName="text-[11px] font-normal text-muted-foreground"
@@ -213,13 +241,13 @@ const SidebarExplorerPanel = ({
         </SidebarGroupContent>
       </SidebarGroup>
       <FileNameDialog
-        open={rootCreateKind !== null}
+        open={rootCreateOpen}
         title={rootCreateTitle}
         description={rootCreateDescription}
         defaultValue=""
         confirmLabel={rootCreateTitle}
         onOpenChange={(open) => {
-          if (!open) setRootCreateKind(null)
+          if (!open) setRootCreateOpen(false)
         }}
         onSubmit={handleRootCreate}
       />

@@ -8,6 +8,8 @@ import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import { compression, defineAlgorithm } from 'vite-plugin-compression2'
 import { visualizer } from 'rollup-plugin-visualizer'
+// eslint-disable-next-line no-restricted-imports -- Root Vite helpers are outside renderer aliases.
+import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development'
 // eslint-disable-next-line no-restricted-imports -- Vite config helpers live at repository root before app aliases are available.
 import {
   electronMainExternal,
@@ -27,26 +29,6 @@ const alias = {
   '@': path.resolve(__dirname, 'src'),
   '@electron': path.resolve(__dirname, 'electron'),
 }
-
-const devOptimizeDepsInclude = [
-  'react',
-  'react-dom',
-  'react-dom/client',
-  'react/jsx-runtime',
-  'react-router-dom',
-  '@tanstack/react-query',
-  'zustand',
-  'sonner',
-  'lucide-react',
-]
-
-const devWarmupClientFiles = [
-  './src/main.tsx',
-  './src/App.tsx',
-  './src/app/AppLayout.tsx',
-  './src/app/AppShellPanels.tsx',
-  './src/pages/WorkspaceHomePage.tsx',
-]
 
 const electronMainEntry = {
   main: path.resolve(__dirname, 'electron/main.ts'),

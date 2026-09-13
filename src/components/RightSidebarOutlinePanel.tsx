@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -64,7 +63,7 @@ export const RightSidebarOutlinePanel = ({
           onChange={(event) => setQuery(event.target.value)}
           aria-label={t('inspector.outlineSearchPlaceholder')}
           placeholder={t('inspector.outlineSearchPlaceholder')}
-          className="h-8 rounded-md border-sidebar-border bg-background/70 pl-7 text-xs shadow-none"
+          className="h-8 rounded-none border-0 border-b border-border/50 bg-transparent pl-7 text-xs shadow-none focus-visible:ring-1"
         />
       </div>
 
@@ -76,20 +75,20 @@ export const RightSidebarOutlinePanel = ({
             description={t('inspector.noOutlineMatchesDescription')}
           />
         ) : (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-0.5">
             {filteredOutline.map((heading) => (
               <Button
                 key={`${heading.slug}-${heading.level}`}
                 variant="ghost"
                 size="sm"
-                className="h-7 w-full justify-start rounded-md px-2 text-xs transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
+                className="h-auto min-h-8 w-full justify-start rounded-sm px-2 py-1.5 text-left text-xs font-normal transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground"
                 style={{ paddingLeft: 6 + (heading.level - 1) * 12 }}
                 onClick={() => onOpenHeading(heading.slug)}
               >
-                <Badge variant="secondary" className="mr-2 rounded px-1 py-0 text-[10px]">
-                  H{heading.level}
-                </Badge>
-                <span className="truncate">{heading.text}</span>
+                <span className="sr-only">H{heading.level} </span>
+                <span className="min-w-0 whitespace-normal break-words leading-5">
+                  {heading.text}
+                </span>
               </Button>
             ))}
           </div>

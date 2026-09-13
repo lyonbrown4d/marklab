@@ -10,6 +10,7 @@ import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 
 const TerminalPanel = lazy(() => import('@/components/TerminalPanel'))
+const RESIZE_TARGET_MINIMUM_SIZE = { coarse: 28, fine: 8 }
 
 type AppShellPanelsProps = {
   shellPanelLayout: ReturnType<typeof useDefaultLayout>
@@ -34,13 +35,13 @@ const AppShellPanelsView = ({
 }: AppShellPanelsProps) => {
   return (
     <ResizableGroup
-      className="motion-panel-group min-h-0 flex-1"
+      className="workspace-shell-panels motion-panel-group min-h-0 flex-1"
       defaultLayout={shellPanelLayout.defaultLayout}
       elementRef={shellGroupElementRef}
       id="marklab-shell-panels"
       onLayoutChanged={shellPanelLayout.onLayoutChanged}
       orientation="vertical"
-      resizeTargetMinimumSize={{ coarse: 28, fine: 8 }}
+      resizeTargetMinimumSize={RESIZE_TARGET_MINIMUM_SIZE}
     >
       <ResizablePanel
         className="motion-panel motion-shell-workspace min-h-0"

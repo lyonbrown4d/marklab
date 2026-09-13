@@ -102,6 +102,8 @@ describe('SidebarExplorerPanel', () => {
   it('uses a search-specific empty state when filtering hides all files', () => {
     render(<SidebarExplorerPanel {...createProps()} />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Search files...' }))
+
     fireEvent.change(screen.getByRole('textbox', { name: 'Search files...' }), {
       target: { value: 'missing' },
     })
@@ -119,5 +121,38 @@ describe('SidebarExplorerPanel', () => {
     expect(empty).toHaveTextContent('No project loaded.')
     expect(empty).toHaveAttribute('data-slot', 'empty')
     expect(screen.queryByTestId('file-tree')).not.toBeInTheDocument()
+  })
+
+  it('keeps filtering out of the way until requested and restores focus on Escape', () => {
+    render(<SidebarExplorerPanel {...createProps()} />)
+    const trigger = screen.getByRole('button', { name: 'Search files...' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByText('Recent projects')).not.toBeInTheDocument()
+    fireEvent.click(trigger)
+    const input = screen.getByRole('textbox', { name: 'Search files...' })
+    expect(input).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-controls', input.id)
+    fireEvent.change(input, { target: { value: 'missing' } })
+    expect(screen.queryByTestId('file-tree')).not.toBeInTheDocument()
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByTestId('file-tree')).toBeVisible()
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('opens and selects the filter for repeated keyboard focus requests', () => {
+    const props = createProps()
+    const { rerender } = render(<SidebarExplorerPanel {...props} />)
+    rerender(<SidebarExplorerPanel {...props} focusFileFilterRequest={1} />)
+    const input = screen.getByRole('textbox', { name: 'Search files...' }) as HTMLInputElement
+    expect(input).toHaveFocus()
+    fireEvent.change(input, { target: { value: 'README' } })
+    screen.getByRole('button', { name: 'New file' }).focus()
+    rerender(<SidebarExplorerPanel {...props} focusFileFilterRequest={2} />)
+    expect(input).toHaveFocus()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(6)
   })
 })

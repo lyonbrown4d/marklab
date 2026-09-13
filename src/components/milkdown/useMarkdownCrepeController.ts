@@ -12,17 +12,16 @@ import {
   insertImageIntoCrepe,
   placeCrepeSelectionAtClientPoint,
   readCrepeMarkdown,
-  normalizeMarkdownLineBreaks,
   replaceImageSourceInCrepe,
   replaceCrepeMarkdown,
   type PendingExternalValue,
   type ReplaceMarkdownOptions,
 } from '@/components/milkdown/editorActions'
 import {
-  importMarkdownImageSources,
   pickMarkdownImageSource,
   type MarkdownImageImportSource,
 } from '@/components/milkdown/assetEvents'
+import { importMarkdownImageSourcesWithPathNotifications } from '@/components/milkdown/documentPathAssetImport'
 import {
   resolveExternalMarkdownSync,
   resolvePendingMarkdownSync,
@@ -30,7 +29,8 @@ import {
 import { runMarkdownEditorShortcut } from '@/components/milkdown/editorShortcuts'
 import { resolveMarkdownImageSource } from '@/components/milkdown/markdownImageSource'
 import { useFocusHeadingEvent } from '@/components/milkdown/useFocusHeadingEvent'
-import { loadMarkdownCrepeRuntime } from '@/components/milkdown/markdownCrepeRuntime'
+import { scheduleMicrotask } from '@/components/milkdown/markdownCrepeScheduling'
+import { useMarkdownCrepeLifecycle } from '@/components/milkdown/useMarkdownCrepeLifecycle'
 import type {
   MarkdownEditorProps,
   MarkdownEditorStatus,
@@ -42,63 +42,6 @@ type UseMarkdownCrepeControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
   markdownAssetImportStrategy: MarkdownAssetImportStrategy
   nodeViewFactory: NodeViewFactory
-}
-
-const scheduleMicrotask = (task: () => void) => {
-  if (typeof queueMicrotask === 'function') {
-    queueMicrotask(task)
-    return
-  }
-
-  void Promise.resolve().then(task)
-}
-
-const LARGE_MARKDOWN_AUTO_FOCUS_LIMIT = 50_000
-const LARGE_MARKDOWN_DEFER_CREATE_LIMIT = 30_000
-
-const scheduleMarkdownEditorCreate = (markdown: string, task: () => void) => {
-  let cancelled = false
-
-  if (markdown.length <= LARGE_MARKDOWN_DEFER_CREATE_LIMIT) {
-    let frame: number | null = window.requestAnimationFrame(() => {
-      frame = null
-      if (!cancelled) task()
-    })
-    return () => {
-      cancelled = true
-      if (frame !== null) window.cancelAnimationFrame(frame)
-    }
-  }
-
-  let firstFrame: number | null = null
-  let secondFrame: number | null = null
-  let timer: number | null = null
-
-  firstFrame = window.requestAnimationFrame(() => {
-    firstFrame = null
-    secondFrame = window.requestAnimationFrame(() => {
-      secondFrame = null
-      timer = window.setTimeout(() => {
-        timer = null
-        if (!cancelled) task()
-      }, 0)
-    })
-  })
-
-  return () => {
-    cancelled = true
-    if (firstFrame !== null) window.cancelAnimationFrame(firstFrame)
-    if (secondFrame !== null) window.cancelAnimationFrame(secondFrame)
-    if (timer !== null) window.clearTimeout(timer)
-  }
-}
-
-const readInitialCrepeMarkdown = (crepe: MarkdownCrepeInstance, fallback: string): string => {
-  try {
-    return crepe.getMarkdown() ?? fallback
-  } catch {
-    return fallback
-  }
 }
 
 export const useMarkdownCrepeController = ({
@@ -124,10 +67,17 @@ export const useMarkdownCrepeController = ({
   const localEchoRef = useRef<{ path: string | null; value: string } | null>(null)
   const applyingExternalValueRef = useRef(false)
   const isComposingRef = useRef(false)
-  const hasInitializedEditorRef = useRef(false)
   const lastSyncedPathRef = useRef(activePath)
   const pendingExternalValueRef = useRef<PendingExternalValue | null>(null)
   const scheduledExternalApplyRef = useRef(0)
+
+  const getImageDocumentPath = useCallback(() => activePathRef.current, [])
+  const subscribeImageDocumentPath = useCallback((listener: () => void) => {
+    activePathListenersRef.current.add(listener)
+    return () => {
+      activePathListenersRef.current.delete(listener)
+    }
+  }, [])
 
   const focusEditor = useCallback(() => {
     focusCrepeEditor(crepeRef.current)
@@ -151,15 +101,18 @@ export const useMarkdownCrepeController = ({
 
   const importImageSources = useCallback(
     async (sources: MarkdownImageImportSource[]) => {
-      return importMarkdownImageSources(sources, {
+      return importMarkdownImageSourcesWithPathNotifications(sources, {
         activePath: activePathRef.current,
+        getDocumentPath: getImageDocumentPath,
+        getEditorIdentity: () => crepeRef.current,
+        subscribeDocumentPath: subscribeImageDocumentPath,
         insertImage,
         markdown: readCrepeMarkdown(crepeRef.current, latestValue.current),
         replaceImageSource,
         strategy: markdownAssetImportStrategyRef.current,
       })
     },
-    [insertImage, replaceImageSource],
+    [getImageDocumentPath, insertImage, replaceImageSource, subscribeImageDocumentPath],
   )
 
   const pickAndImportImage = useCallback(async () => {
@@ -181,17 +134,6 @@ export const useMarkdownCrepeController = ({
     },
     [pickAndImportImage],
   )
-
-  const getImageDocumentPath = useCallback(() => {
-    return activePathRef.current
-  }, [])
-
-  const subscribeImageDocumentPath = useCallback((listener: () => void) => {
-    activePathListenersRef.current.add(listener)
-    return () => {
-      activePathListenersRef.current.delete(listener)
-    }
-  }, [])
 
   const resolveImageSrc = useCallback((documentPath: string | null, src: string) => {
     return resolveMarkdownImageSource(documentPath, src)
@@ -265,126 +207,30 @@ export const useMarkdownCrepeController = ({
 
   useFocusHeadingEvent(activePath, crepeRef)
 
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const valueAtSchedule = latestValue.current
-
-    let destroyed = false
-    let crepe: MarkdownCrepeInstance | null = null
-    let initialViewportFrame: number | null = null
-    setStatus({ phase: 'loading' })
-
-    const cancelCreate = scheduleMarkdownEditorCreate(valueAtSchedule, () => {
-      if (destroyed) return
-      void loadMarkdownCrepeRuntime()
-        .then(({ configureMarkdownCrepe, createMarkdownCrepe }) => {
-          if (destroyed) return null
-          const initialValueAtCreate = latestValue.current
-          const initialPathAtCreate = activePathRef.current
-
-          crepe = createMarkdownCrepe({
-            root,
-            initialValue: initialValueAtCreate,
-            darkMode,
-            onSlashImageImport: pickAndImportImage,
-            onSlashCalendarFileCreate: createCalendarFileLink,
-            placeholder,
-            slashLabels,
-          })
-
-          configureMarkdownCrepe(crepe, {
-            getImageDocumentPath,
-            nodeViewFactory,
-            onMarkdownUpdated: (markdown) => {
-              const nextMarkdown = normalizeMarkdownLineBreaks(markdown)
-              if (applyingExternalValueRef.current) {
-                latestValue.current = nextMarkdown
-                return
-              }
-              if (nextMarkdown === latestValue.current) return
-              latestValue.current = nextMarkdown
-              localEchoRef.current = {
-                path: activePathRef.current,
-                value: nextMarkdown,
-              }
-              onChangeRef.current(nextMarkdown)
-            },
-            resolveImageSrc,
-            subscribeImageDocumentPath,
-          })
-
-          return Promise.resolve(crepe.create()).then(() => ({
-            initialPathAtCreate,
-            initialValueAtCreate,
-          }))
-        })
-        .then((initialState) => {
-          if (destroyed || !crepe || !initialState) return
-          const { initialPathAtCreate, initialValueAtCreate } = initialState
-          crepeRef.current = crepe
-          latestValue.current = readInitialCrepeMarkdown(crepe, latestValue.current)
-          setStatus({ phase: 'ready' })
-          if (
-            latestValue.current !== initialValueAtCreate ||
-            activePathRef.current !== initialPathAtCreate
-          ) {
-            applyExternalValue(crepe, latestValue.current, { preserveSelection: false })
-          }
-          lastSyncedPathRef.current = activePathRef.current
-          if (!hasInitializedEditorRef.current) {
-            hasInitializedEditorRef.current = true
-            if (activePathRef.current) {
-              initialViewportFrame = window.requestAnimationFrame(() => {
-                initialViewportFrame = null
-                if (destroyed || crepeRef.current !== crepe) return
-                scrollEditorToTop()
-                if (initialValueAtCreate.length <= LARGE_MARKDOWN_AUTO_FOCUS_LIMIT) {
-                  focusEditor()
-                }
-              })
-            }
-          }
-        })
-        .catch((error: unknown) => {
-          if (destroyed) return
-          const message = error instanceof Error ? error.message : String(error)
-          setStatus({ phase: 'error', message })
-          console.error('Failed to initialize Milkdown', error)
-        })
-    })
-
-    return () => {
-      destroyed = true
-      cancelCreate()
-      scheduledExternalApplyRef.current += 1
-      if (initialViewportFrame !== null) {
-        window.cancelAnimationFrame(initialViewportFrame)
-      }
-      if (crepe && crepeRef.current === crepe) {
-        latestValue.current = readCrepeMarkdown(crepe, latestValue.current)
-        crepeRef.current = null
-      }
-      try {
-        crepe?.destroy()
-      } catch {
-        // Crepe can be half-initialized during React dev teardown.
-      }
-    }
-  }, [
-    applyExternalValue,
+  useMarkdownCrepeLifecycle({
+    rootRef,
+    crepeRef,
+    latestValue,
+    activePathRef,
+    onChangeRef,
+    localEchoRef,
+    applyingExternalValueRef,
+    lastSyncedPathRef,
+    scheduledExternalApplyRef,
+    setStatus,
     darkMode,
-    focusEditor,
-    getImageDocumentPath,
-    nodeViewFactory,
-    createCalendarFileLink,
-    pickAndImportImage,
     placeholder,
-    resolveImageSrc,
-    scrollEditorToTop,
     slashLabels,
+    nodeViewFactory,
+    getImageDocumentPath,
     subscribeImageDocumentPath,
-  ])
+    resolveImageSrc,
+    pickAndImportImage,
+    createCalendarFileLink,
+    applyExternalValue,
+    scrollEditorToTop,
+    focusEditor,
+  })
 
   useEffect(() => {
     const crepe = crepeRef.current

@@ -1,5 +1,9 @@
 import { app } from 'electron'
 
+export const isBackgroundElectronE2e = (): boolean => {
+  return !app.isPackaged && process.env.MARKLAB_E2E === '1'
+}
+
 export const installElectronE2eRuntimeFlags = (): void => {
   if (process.env.MARKLAB_E2E !== '1') return
 

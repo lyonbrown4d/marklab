@@ -1,44 +1,3 @@
-.settings-dialog-surface {
-  width: min(960px, calc(100vw - 32px));
-  height: min(740px, calc(100vh - 32px));
-  max-height: calc(100vh - 32px);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  background: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-  border: 1px solid hsl(var(--border));
-  box-shadow:
-    0 16px 40px -30px color-mix(in srgb, hsl(var(--foreground)) 34%, transparent),
-    0 0 0 1px color-mix(in srgb, hsl(var(--card)) 72%, transparent);
-}
-
-.settings-dialog-header {
-  background: hsl(var(--card));
-  border-bottom-color: color-mix(in srgb, hsl(var(--border)) 72%, transparent);
-}
-
-.settings-dialog-title {
-  letter-spacing: 0.01em;
-}
-
-.settings-dialog-description {
-  color: color-mix(in srgb, hsl(var(--muted-foreground)) 86%, transparent);
-}
-
-.settings-dialog-body {
-  display: grid;
-  grid-template-columns: 176px minmax(0, 1fr);
-  background: hsl(var(--card));
-}
-
-.settings-dialog-panel-shell {
-  background: hsl(var(--card));
-}
-
-.settings-dialog-panel {
-  min-height: 100%;
-}
-
 .settings-scroll-viewport {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -73,83 +32,12 @@
 }
 
 .settings-dialog-tabs {
-  gap: 0.25rem;
-  background: color-mix(in srgb, hsl(var(--muted)) 32%, transparent);
   scroll-padding-inline: 0.5rem;
   scrollbar-width: none;
 }
 
 .settings-dialog-tabs::-webkit-scrollbar {
   display: none;
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger {
-  position: relative;
-  cursor: pointer;
-  color: color-mix(in srgb, hsl(var(--muted-foreground)) 88%, transparent);
-  border: 1px solid transparent;
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease;
-  scroll-snap-align: start;
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger::before {
-  content: '';
-  position: absolute;
-  left: 0.25rem;
-  top: 50%;
-  width: 0.1875rem;
-  height: 1rem;
-  border-radius: 999px;
-  background: transparent;
-  transform: translateY(-50%);
-  transition: background-color var(--motion-duration-fast) ease;
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active'] {
-  background: color-mix(in srgb, hsl(var(--card)) 78%, hsl(var(--accent)) 22%);
-  color: hsl(var(--foreground));
-  border-color: color-mix(in srgb, hsl(var(--border)) 84%, transparent);
-  box-shadow: none;
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']::before {
-  background: hsl(var(--primary));
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger:hover {
-  background: color-mix(in srgb, hsl(var(--accent)) 34%, transparent);
-  color: hsl(var(--foreground));
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 40%, transparent);
-}
-
-.settings-dialog-tabs .settings-dialog-tab-trigger[data-state='active']:hover {
-  background: color-mix(in srgb, hsl(var(--card)) 74%, hsl(var(--accent)) 26%);
-}
-
-@media (max-width: 639.98px) {
-  .settings-dialog-tabs {
-    scroll-snap-type: x proximity;
-    mask-image: linear-gradient(
-      90deg,
-      transparent 0,
-      #000 0.75rem,
-      #000 calc(100% - 0.75rem),
-      transparent 100%
-    );
-  }
-}
-
-@media (min-width: 640px) {
-  .settings-dialog-tabs {
-    overflow-x: hidden;
-  }
 }
 
 .activity-rail-button {
@@ -304,28 +192,4 @@
 
 .settings-shortcut-conflict {
   color: hsl(var(--destructive));
-}
-
-@media (max-width: 640px) {
-  .settings-dialog-surface {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
-    max-height: calc(100vh - 24px);
-  }
-
-  .settings-dialog-body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .settings-dialog-tabs {
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid hsl(var(--border));
-  }
-
-  .settings-dialog-tab-trigger {
-    flex: 0 0 auto;
-  }
 }

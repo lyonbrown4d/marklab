@@ -1,27 +1,35 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import MarkdownPdfPreview, { PdfPreviewSurface } from '@/components/milkdown/MarkdownPdfPreview'
 
-vi.mock('react-pdf', () => ({
-  Document: ({
-    children,
-    error,
-    loading,
-  }: {
-    children?: React.ReactNode
-    error?: React.ReactNode
-    loading?: React.ReactNode
-  }) => <div data-testid="pdf-document">{loading ?? error ?? children}</div>,
-  Page: ({ pageNumber }: { pageNumber?: number }) => <div data-testid="pdf-page">{pageNumber}</div>,
-  pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
-}))
+vi.mock('react-pdf', async () => {
+  const { useEffect } = await import('react')
+  return {
+    Document: ({
+      children,
+      onLoadSuccess,
+    }: {
+      children?: React.ReactNode
+      onLoadSuccess?: (pdf: { numPages: number }) => void
+    }) => {
+      useEffect(() => {
+        onLoadSuccess?.({ numPages: 3 })
+      }, [onLoadSuccess])
+      return <div data-testid="pdf-document">{children}</div>
+    },
+    Page: ({ pageNumber }: { pageNumber?: number }) => (
+      <div data-testid="pdf-page">{pageNumber}</div>
+    ),
+    pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
+  }
+})
 
 vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({
   default: 'mock-worker.js',
 }))
 
-vi.mock('@/components/milkdown/pdfObjectUrlSource', () => ({
-  fetchPdfObjectUrl: vi.fn(async () => 'blob:pdf-preview'),
+vi.mock('@/components/milkdown/pdfDocumentSource', () => ({
+  fetchPdfDocumentData: vi.fn(async () => new Uint8Array([37, 80, 68, 70])),
 }))
 
 const messages: Record<string, string> = {
@@ -52,6 +60,8 @@ describe('MarkdownPdfPreview', () => {
     render(<PdfPreviewSurface fileUrl="file:///docs/example.pdf" mode="inline" />)
 
     expect(await screen.findByRole('navigation', { name: 'PDF pages' })).toBeInTheDocument()
+    expect(screen.getAllByTestId('pdf-document')).toHaveLength(1)
+    await waitFor(() => expect(screen.getAllByTestId('pdf-page')).toHaveLength(4))
   })
 
   it('uses localized PDF loading and failed states', async () => {

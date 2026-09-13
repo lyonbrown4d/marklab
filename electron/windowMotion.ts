@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime.js'
 
 const SHOW_DURATION_MS = 140
 const HIDE_DURATION_MS = 110
@@ -69,6 +70,10 @@ const animateWindowOpacity = ({
 export const showWindowWithMotion = (window: BrowserWindow, options: { focus?: boolean } = {}) => {
   if (window.isDestroyed()) return
   stopWindowMotion(window)
+  if (isBackgroundElectronE2e()) {
+    setOpacitySafely(window, 1)
+    return
+  }
 
   if (window.isVisible()) {
     setOpacitySafely(window, 1)

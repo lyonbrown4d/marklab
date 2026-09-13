@@ -26,36 +26,6 @@ afterEach(async () => {
   )
 })
 
-describe('WorkspaceFileService asset bytes', () => {
-  it('reads preview asset bytes after validating the workspace boundary', async () => {
-    const service = createKnowledgeServiceMock()
-    const { root, workspace } = await createWorkspace(service)
-    const assetPath = path.join(root, 'brief.pdf')
-    await fs.writeFile(assetPath, new Uint8Array([37, 80, 68, 70]))
-
-    const result = await workspace.readAssetBytes({ path: assetPath })
-
-    expect(new TextDecoder().decode(result.bytes)).toBe('%PDF')
-    expect(result).toMatchObject({
-      media_type: 'application/pdf',
-      size_bytes: 4,
-    })
-
-    workspace.dispose()
-  })
-
-  it('rejects preview asset reads outside the workspace boundary', async () => {
-    const service = createKnowledgeServiceMock()
-    const { workspace } = await createWorkspace(service)
-
-    await expect(workspace.readAssetBytes({ path: path.resolve('outside.pdf') })).rejects.toThrow(
-      'Asset path is not allowed',
-    )
-
-    workspace.dispose()
-  })
-})
-
 describe('WorkspaceFileService sidecar mutations', () => {
   it('routes structural mutations to the knowledge sidecar when available', async () => {
     const service = createKnowledgeServiceMock()
@@ -117,10 +87,11 @@ describe('WorkspaceFileService sidecar mutations', () => {
   it('routes buffer flush writes to the knowledge sidecar when available', async () => {
     const service = createKnowledgeServiceMock()
     const { root, workspace } = await createWorkspace(service)
+    await prepareBufferForSave(root, workspace, service)
 
     workspace.updateBuffer({ path: 'notes/a.md', content: '# A' })
 
-    await expect(workspace.flushBuffers()).resolves.toBe(1)
+    await expect(workspace.flushBuffers()).resolves.toBeUndefined()
 
     expect(service.writeWorkspaceFile).toHaveBeenCalledWith(
       expect.stringMatching(/^vfs:/),
@@ -128,7 +99,7 @@ describe('WorkspaceFileService sidecar mutations', () => {
       'notes/a.md',
       '# A',
     )
-    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(false)
+    expect(await fs.readFile(path.join(root, 'notes', 'a.md'), 'utf8')).toBe('# A')
     expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({ dirty: false })
 
     workspace.dispose()
@@ -136,19 +107,25 @@ describe('WorkspaceFileService sidecar mutations', () => {
 
   it('propagates sidecar write failures instead of falling back to node filesystem', async () => {
     const service = createKnowledgeServiceMock()
-    service.writeWorkspaceFile.mockRejectedValueOnce(new Error('sidecar unavailable'))
+    const error = new Error('sidecar unavailable')
+    service.writeWorkspaceFile.mockRejectedValueOnce(error)
     const { logger, root, workspace } = await createWorkspace(service)
+    await prepareBufferForSave(root, workspace, service)
 
     workspace.updateBuffer({ path: 'notes/a.md', content: '# A' })
 
-    await expect(workspace.flushBuffers()).rejects.toThrow('sidecar unavailable')
+    await expect(workspace.flushBuffers()).rejects.toMatchObject({ errors: [error] })
 
-    expect(fsSync.existsSync(path.join(root, 'notes', 'a.md'))).toBe(false)
+    expect(await fs.readFile(path.join(root, 'notes', 'a.md'), 'utf8')).toBe('# Initial')
+    expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({ dirty: true })
     expect(logger.error).toHaveBeenCalledWith(
       'workspace vfs write failed',
       expect.objectContaining({ path: 'notes/a.md' }),
     )
 
+    await expect(workspace.flushBuffers()).resolves.toBeUndefined()
+    expect(await fs.readFile(path.join(root, 'notes', 'a.md'), 'utf8')).toBe('# A')
+    expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({ dirty: false })
     workspace.dispose()
   })
 
@@ -193,6 +170,20 @@ describe('WorkspaceFileService background tasks', () => {
 })
 
 describe('WorkspaceFileService root switching', () => {
+  it('rejects invalid selections without changing the current root', async () => {
+    const { root, workspace } = await createWorkspace(createKnowledgeServiceMock())
+    const file = path.join(root, 'note.md')
+    await fs.writeFile(file, '# Note')
+    await expect(workspace.setRoot({ path: file })).rejects.toThrow('not a directory')
+    await expect(workspace.setSingleFile({ path: root })).rejects.toThrow('not a file')
+    expect(workspace.rootInfo()).toEqual({ kind: 'external', path: root })
+    await expect(workspace.setSingleFile({ path: file })).resolves.toEqual({
+      kind: 'single',
+      path: file,
+    })
+    workspace.dispose()
+  })
+
   it('does not restart the watcher when setting the same external root', async () => {
     const service = createKnowledgeServiceMock()
     const { logger, root, workspace } = await createWorkspace(service)
@@ -212,6 +203,23 @@ describe('WorkspaceFileService root switching', () => {
     workspace.dispose()
   })
 })
+
+const prepareBufferForSave = async (
+  root: string,
+  workspace: WorkspaceFileService,
+  service: ReturnType<typeof createKnowledgeServiceMock>,
+): Promise<void> => {
+  await fs.mkdir(path.join(root, 'notes'))
+  await fs.writeFile(path.join(root, 'notes/a.md'), '# Initial')
+  service.readWorkspaceFile.mockResolvedValueOnce('# Initial')
+  service.writeWorkspaceFile.mockImplementation(
+    async (_id: string, workspaceRoot: string, relativePath: string, content: string) => {
+      await fs.writeFile(path.join(workspaceRoot, relativePath), content)
+      return { changed: true, kind: 'file' as const }
+    },
+  )
+  await workspace.openFile({ path: 'notes/a.md' })
+}
 
 const createWorkspace = async (service: KnowledgeEngineService) => {
   const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-sidecar-'))
@@ -238,12 +246,14 @@ const createKnowledgeServiceMock = () =>
     createWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
     deleteWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
     renameWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
+    readWorkspaceFile: vi.fn<() => Promise<string>>(),
     writeWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
   }) as unknown as KnowledgeEngineService & {
     createWorkspaceDirectory: ReturnType<typeof vi.fn>
     createWorkspaceFile: ReturnType<typeof vi.fn>
     deleteWorkspacePath: ReturnType<typeof vi.fn>
     renameWorkspacePath: ReturnType<typeof vi.fn>
+    readWorkspaceFile: ReturnType<typeof vi.fn>
     writeWorkspaceFile: ReturnType<typeof vi.fn>
   }
 

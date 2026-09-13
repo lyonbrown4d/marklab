@@ -14,9 +14,9 @@ import {
 import { getMarkdownAssetReport } from '@/logic/assets'
 import { buildKnowledgeInsights } from '@/logic/knowledge'
 import { splitLinkTarget } from '@/logic/paths'
+import { getElectronRuntime } from '@/runtime/electron'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
-import { isDesktopRuntime } from '@/runtime/environment'
 
 type UseRightSidebarDataArgs = {
   collapsed: boolean
@@ -39,31 +39,22 @@ export const useRightSidebarData = ({
   dirtyPaths = {},
   workspaceIndex,
 }: UseRightSidebarDataArgs) => {
-  const desktopAvailable = isDesktopRuntime()
+  getElectronRuntime()
   const deferredEditorValue = useDeferredValue(editorValue)
   const deferredFileContents = useDeferredValue(fileContents)
   const deferredTargetPath = useDeferredValue(targetPath)
   const metadataQuery = useQuery({
     queryKey: ['path-metadata', targetPath],
     queryFn: () => fsApi.getPathMetadata(targetPath ?? ''),
-    enabled: !collapsed && desktopAvailable && Boolean(targetPath),
+    enabled: !collapsed && Boolean(targetPath),
     staleTime: 10_000,
   })
   const displayMetadata = useMemo(() => {
     if (!targetPath) return null
-    if (!desktopAvailable) {
-      return {
-        path: targetPath,
-        absolute_path: targetPath,
-        kind: 'file' as const,
-        size_bytes: 0,
-        readonly: false,
-      }
-    }
     const metadata = metadataQuery.data
     if (!metadata || metadata.path !== targetPath) return null
     return metadata
-  }, [metadataQuery.data, targetPath, desktopAvailable])
+  }, [metadataQuery.data, targetPath])
   const indexedFilesByPath = useMemo(() => {
     if (!workspaceIndex) return null
     return keyBy(workspaceIndex.files, 'path')
@@ -74,17 +65,9 @@ export const useRightSidebarData = ({
   const targetIsDirty = Boolean(deferredTargetPath && dirtyPaths[deferredTargetPath])
   const shouldUseIndexedTarget = Boolean(indexedTargetFile && !targetIsDirty)
   const shouldWaitForIndexedActiveTarget = Boolean(
-    desktopAvailable &&
-    !workspaceIndex &&
-    deferredTargetPath &&
-    deferredTargetPath === activePath &&
-    !targetIsDirty,
+    !workspaceIndex && deferredTargetPath && deferredTargetPath === activePath && !targetIsDirty,
   )
-  const workspaceContents = useWorkspaceMarkdownContents(
-    files,
-    deferredFileContents,
-    !collapsed && !workspaceIndex && !desktopAvailable,
-  )
+  const workspaceContents = useWorkspaceMarkdownContents(files, deferredFileContents, false)
   const targetContent = useMemo(() => {
     if (collapsed) return ''
     if (!deferredTargetPath) return ''

@@ -10,6 +10,7 @@
 .crepe-playground {
   height: 100%;
   flex: 1;
+  container-type: inline-size;
 }
 
 .crepe-playground .milkdown .ProseMirror.marklab-animated-cursor-host {
@@ -142,26 +143,15 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   padding: 0;
 }
 
-div:not(.expanded) .crepe-playground > .milkdown > .ProseMirror {
-  height: 100%;
-  padding: 0.5rem !important;
-}
-
-.crepe-playground > .milkdown > .ProseMirror {
+.crepe.crepe-playground > .milkdown > .ProseMirror {
   min-height: 100%;
+  padding: clamp(1.5rem, 5cqi, 3rem) clamp(2rem, 6cqi, 4rem) 6rem;
+  transition: opacity 160ms ease;
 }
 
 @media (min-width: 768px) {
   .crepe-playground .cm-editor {
     font-size: 0.75rem;
-  }
-
-  div:not(.expanded) .crepe-playground > .milkdown > .ProseMirror {
-    padding: 3rem 8rem !important;
-  }
-
-  .crepe-playground > .milkdown > .ProseMirror {
-    padding: 60px 120px !important;
   }
 }
 

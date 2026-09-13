@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLatest } from 'ahooks'
+import type { EditorCursorPosition } from '@/components/EditorDocumentStatus'
 import { ReplaySubject, catchError, debounceTime, from, map, of, switchMap } from 'rxjs'
 import type { OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor } from 'monaco-editor'
@@ -26,6 +28,7 @@ type MarkdownSourceEditorProps = {
   workspaceIndex?: FsWorkspaceIndex | null
   onChange: (value: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
+  onCursorChange?: (position: EditorCursorPosition | null) => void
 }
 
 const SOURCE_DIAGNOSTICS_MAX_CHARS = 500_000
@@ -53,6 +56,7 @@ const MarkdownSourceEditor = ({
   workspaceIndex,
   onChange,
   onOpenFileView,
+  onCursorChange,
 }: MarkdownSourceEditorProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
@@ -65,6 +69,8 @@ const MarkdownSourceEditor = ({
   const [monacoReady, setMonacoReady] = useState(false)
   const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const cursorCallbackRef = useLatest(onCursorChange)
+  const cursorSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticHostRef = useRef<{
     editor: Parameters<OnMount>[0]
     monaco: typeof import('monaco-editor')
@@ -180,6 +186,11 @@ const MarkdownSourceEditor = ({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    cursorSubscriptionRef.current?.dispose()
+    cursorSubscriptionRef.current = editor.onDidChangeCursorPosition(({ position }) => {
+      cursorCallbackRef.current?.(position)
+    })
+    cursorCallbackRef.current?.(editor.getPosition())
     setFocusedCodeEditor(editor)
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
@@ -196,7 +207,12 @@ const MarkdownSourceEditor = ({
   }
 
   useEffect(() => {
+    if (onCursorChange && editorRef.current) onCursorChange(editorRef.current.getPosition())
+  }, [activePath, onCursorChange])
+
+  useEffect(() => {
     return () => {
+      cursorSubscriptionRef.current?.dispose()
       providersDisposableRef.current?.dispose()
       providersDisposableRef.current = null
       if (searchHighlightTimerRef.current !== null) {

@@ -45,6 +45,8 @@ export const useSidebarFileTreeState = ({
 }: SidebarFileTreeProps) => {
   const treeRef = useRef<TreeApi<FileTreeNode> | undefined>(undefined)
   const [dndRootElement, setDndRootElement] = useState<HTMLDivElement | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [createRequest, setCreateRequest] = useState<CreateDialogRequest | null>(null)
   const [deleteRequest, setDeleteRequest] = useState<DeleteDialogRequest | null>(null)
   const createDialogTitle = createRequest?.kind === 'file' ? labels.newFile : labels.newFolder
@@ -118,6 +120,7 @@ export const useSidebarFileTreeState = ({
   const requestDeleteNode = useCallback(
     (node: NodeApi<FileTreeNode> | null) => {
       if (!node || node.isRoot || readonlyTree) return
+      setDeleteDialogOpen(true)
       setDeleteRequest({
         name: node.data.name,
         path: node.data.path,
@@ -130,6 +133,7 @@ export const useSidebarFileTreeState = ({
   const requestCreateNode = useCallback(
     (node: NodeApi<FileTreeNode> | null, kind: 'file' | 'folder') => {
       if (readonlyTree) return
+      setCreateDialogOpen(true)
       setCreateRequest({
         kind,
         parentPath: getCreateParentPath(node),
@@ -139,48 +143,33 @@ export const useSidebarFileTreeState = ({
   )
 
   const handleCreateSubmit = useCallback(
-    (name: string) => {
-      if (!createRequest) return
+    async (name: string) => {
+      if (!createDialogOpen || !createRequest) return
       const nextPath = appendChildPath(createRequest.parentPath, name)
-      try {
-        if (createRequest.kind === 'file') {
-          onCreateFile(nextPath)
-        } else {
-          onCreateFolder(nextPath)
-        }
-        setCreateRequest(null)
-      } catch (error) {
-        toast.error(labels.actionFailed, {
-          description: String(error),
-        })
-      }
+      if (createRequest.kind === 'file') await onCreateFile(nextPath)
+      else await onCreateFolder(nextPath)
+      if (createRequest.parentPath) treeRef.current?.open(createRequest.parentPath)
     },
-    [createRequest, labels.actionFailed, onCreateFile, onCreateFolder],
+    [createDialogOpen, createRequest, onCreateFile, onCreateFolder],
   )
 
-  const handleDeleteConfirm = useCallback(() => {
-    if (!deleteRequest) return
-    try {
-      onDeletePath(deleteRequest.path)
-      setDeleteRequest(null)
-    } catch (error) {
-      toast.error(labels.actionFailed, {
-        description: String(error),
-      })
-    }
-  }, [deleteRequest, labels.actionFailed, onDeletePath])
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteDialogOpen || !deleteRequest) return
+    await onDeletePath(deleteRequest.path)
+  }, [deleteDialogOpen, deleteRequest, onDeletePath])
 
   const closeCreateDialog = useCallback((open: boolean) => {
-    if (!open) setCreateRequest(null)
+    if (!open) setCreateDialogOpen(false)
   }, [])
   const closeDeleteDialog = useCallback((open: boolean) => {
-    if (!open) setDeleteRequest(null)
+    if (!open) setDeleteDialogOpen(false)
   }, [])
 
   const handleKeyDownCapture = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.defaultPrevented) return
       const target = event.target as HTMLElement | null
+      if (target && !event.currentTarget.contains(target)) return
       if (target?.closest('input, textarea, [contenteditable="true"]')) return
 
       const node = getActiveNode()
@@ -274,7 +263,9 @@ export const useSidebarFileTreeState = ({
     treeRef,
     dndRootElement,
     setTreeContainerRef,
+    createDialogOpen,
     createRequest,
+    deleteDialogOpen,
     deleteRequest,
     createDialogTitle,
     createDialogDescription,

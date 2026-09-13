@@ -1,7 +1,8 @@
 import { useI18n } from '@/i18n/useI18n'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const settingsDialogContentClassName =
-  'grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-md border border-border bg-card p-0 text-card-foreground shadow-[0_16px_40px_-30px_hsl(var(--foreground)/0.34)] sm:h-[min(740px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(960px,calc(100vw-2rem))]'
+  'grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-md border border-border bg-card p-0 text-card-foreground shadow-[0_16px_40px_-30px_hsl(var(--foreground)/0.34)] sm:h-[min(620px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(840px,calc(100vw-2rem))]'
 
 export const SettingsDialogLoadingPanel = () => {
   const { t } = useI18n()
@@ -15,11 +16,17 @@ export const SettingsDialogLoadingPanel = () => {
       role="status"
     >
       <span className="sr-only">{label}</span>
-      <div className="space-y-3" aria-hidden="true">
-        <div className="h-10 w-2/3 animate-pulse rounded-md bg-muted/70" />
-        <div className="h-16 animate-pulse rounded-lg border border-border bg-muted/35" />
-        <div className="h-16 animate-pulse rounded-lg border border-border bg-muted/30" />
-        <div className="h-16 animate-pulse rounded-lg border border-border bg-muted/25" />
+      <div className="flex flex-col gap-6" aria-hidden="true">
+        <Skeleton className="h-5 w-1/3 motion-reduce:animate-none" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="flex items-center justify-between gap-4">
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-1/2 motion-reduce:animate-none" />
+              <Skeleton className="h-3 w-3/4 motion-reduce:animate-none" />
+            </div>
+            <Skeleton className="h-7 w-12 motion-reduce:animate-none" />
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -27,14 +34,11 @@ export const SettingsDialogLoadingPanel = () => {
 
 export const SettingsDialogLoadingTabs = () => (
   <div
-    className="flex h-auto flex-row gap-1 overflow-hidden border-b border-border bg-muted/30 p-2 sm:h-full sm:flex-col sm:border-b-0 sm:border-r"
+    className="flex h-auto flex-row gap-1 overflow-hidden px-3 pb-3 md:h-full md:flex-col"
     aria-hidden="true"
   >
     {Array.from({ length: 7 }).map((_, index) => (
-      <div
-        className="h-9 w-28 flex-none animate-pulse rounded-md bg-muted/60 sm:w-full"
-        key={index}
-      />
+      <Skeleton className="h-9 w-28 flex-none motion-reduce:animate-none md:w-full" key={index} />
     ))}
   </div>
 )

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { nativeIpcChannels } from '@electron/channels.js'
 import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
 import { onFileDrop } from '@electron/preload/fileDrop.js'
+import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -19,6 +20,7 @@ import type {
   UpdateState,
   WindowActionResult,
 } from '@electron/types.js'
+import type { RendererSafeElectronApi } from '@/runtime/electron'
 
 type MenuActionHandler = (id: string) => void
 type RuntimeEventHandler<T = unknown> = (event: RuntimeEventPayload<T>) => void
@@ -52,13 +54,13 @@ const runWindowAction = async (channel: string): Promise<void> => {
 
 const assertAllowedCommand = (command: string): void => {
   if (!allowedCommands.has(command)) {
-    throw new Error(`Unsupported command: ${command}`)
+    throw new Error('Unsupported command: ' + command)
   }
 }
 
 const assertAllowedEvent = (eventName: string): void => {
   if (!allowedEvents.has(eventName)) {
-    throw new Error(`Unsupported event: ${eventName}`)
+    throw new Error('Unsupported event: ' + eventName)
   }
 }
 
@@ -107,11 +109,14 @@ const listenToRuntimeEvent = <T>(
   }
 }
 
-const desktopApi = {
+const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
+
+const desktopApi: RendererSafeElectronApi = {
   appReady: () => ipcRenderer.invoke(nativeIpcChannels.appReadySignal) as Promise<{ ok: boolean }>,
   lifecycle: {
     getLaunchInfo: () =>
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,
+    ...workspacePreloadSurfaces.lifecycle,
   },
   platform: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.platformGet) as Promise<PlatformInfo>,
@@ -212,20 +217,16 @@ const desktopApi = {
     startDragging: () => runWindowAction(nativeIpcChannels.windowStartDrag),
   },
   commands: {
-    invoke: (command: string, args?: Record<string, unknown>) => {
+    invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => {
       assertAllowedCommand(command)
-      return ipcRenderer.invoke(nativeIpcChannels.commandInvoke, { command, args })
+      return ipcRenderer.invoke(nativeIpcChannels.commandInvoke, { command, args }) as Promise<T>
     },
   },
   events: {
     listen: listenToRuntimeEvent,
   },
-  assets: {
-    convertFileSrc: (filePath: string) => {
-      if (typeof filePath !== 'string' || !filePath) return ''
-      return `marklab-asset://local/?path=${encodeURIComponent(filePath)}`
-    },
-  },
+  assets: workspacePreloadSurfaces.assets,
+  workspace: workspacePreloadSurfaces.workspace,
   webview: {
     onFileDrop,
   },
@@ -235,12 +236,5 @@ contextBridge.exposeInMainWorld('marklabElectron', desktopApi)
 
 desktopApi.menu.onCommand(() => {})
 
-export type ElectronPreloadApi = typeof desktopApi
-
-declare global {
-  interface Window {
-    marklabElectron: ElectronPreloadApi
-  }
-}
-
+export type ElectronPreloadApi = RendererSafeElectronApi
 export type { DialogFilter }

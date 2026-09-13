@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import type { usePanelRef } from 'react-resizable-panels'
+import { useInspectorOverlay } from '@/app/useInspectorOverlay'
 
 const PANEL_LAYOUT_ANIMATION_MS = 260
 const panelLayoutAnimationTimers = new WeakMap<HTMLElement, number>()
@@ -42,9 +43,11 @@ export const useAppPanelLayoutSync = ({
   workspaceGroupElementRef,
   shellGroupElementRef,
   sidebarCollapsed,
-  rightSidebarCollapsed,
+  rightSidebarCollapsed: requestedRightSidebarCollapsed,
   terminalOpen,
 }: UseAppPanelLayoutSyncArgs) => {
+  const inspectorOverlay = useInspectorOverlay()
+  const rightSidebarCollapsed = requestedRightSidebarCollapsed || inspectorOverlay
   const leftSidebarCollapsedRef = useRef(sidebarCollapsed)
   const rightSidebarCollapsedRef = useRef(rightSidebarCollapsed)
   const terminalOpenRef = useRef(terminalOpen)
@@ -71,25 +74,30 @@ export const useAppPanelLayoutSync = ({
   }, [leftSidebarPanelRef, sidebarCollapsed, workspaceGroupElementRef])
 
   useEffect(() => {
-    const panel = rightSidebarPanelRef.current
-    if (!panel) return
+    // Constraint changes re-register the panel through a nested library commit.
+    // Wait for that commit before invoking an API backed by its previous constraints.
+    const frame = window.requestAnimationFrame(() => {
+      const panel = rightSidebarPanelRef.current
+      if (!panel) return
 
-    const shouldAnimate = rightSidebarCollapsedRef.current !== rightSidebarCollapsed
-    rightSidebarCollapsedRef.current = rightSidebarCollapsed
-    const updateLayout = () => {
-      if (rightSidebarCollapsed) {
-        panel.collapse()
+      const shouldAnimate = rightSidebarCollapsedRef.current !== rightSidebarCollapsed
+      rightSidebarCollapsedRef.current = rightSidebarCollapsed
+      const updateLayout = () => {
+        if (rightSidebarCollapsed) {
+          panel.collapse()
+          return
+        }
+        if (panel.isCollapsed()) panel.expand()
+      }
+
+      if (shouldAnimate) {
+        animatePanelLayoutChange(workspaceGroupElementRef.current, updateLayout)
         return
       }
-      if (panel.isCollapsed()) panel.expand()
-    }
-
-    if (shouldAnimate) {
-      animatePanelLayoutChange(workspaceGroupElementRef.current, updateLayout)
-      return
-    }
-    updateLayout()
-  }, [rightSidebarCollapsed, rightSidebarPanelRef, workspaceGroupElementRef])
+      updateLayout()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [inspectorOverlay, rightSidebarCollapsed, rightSidebarPanelRef, workspaceGroupElementRef])
 
   useLayoutEffect(() => {
     const panel = terminalPanelRef.current

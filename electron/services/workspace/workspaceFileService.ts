@@ -2,40 +2,38 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import { isWorkspaceDocumentPath } from '@electron/services/workspace/path.js'
 import type {
   FsBufferStatus,
   FsEntry,
-  FsPathMetadata,
+  FsPathMetadataResult,
   FsRootInfo,
   FsSnapshot,
+  FsStateData,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
 import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
 import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences.js'
 import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers.js'
 import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
-import {
-  workspaceTerminalCwd,
-  isWorkspaceAssetPathAllowed,
-} from '@electron/services/workspace/workspaceAssetAccess.js'
-import { readWorkspaceFileServiceAssetBytes } from '@electron/services/workspace/workspaceFileServiceAssetBytes.js'
+import { workspaceTerminalCwd } from '@electron/services/workspace/workspaceAssetAccess.js'
+import { toPathMetadataResult } from '@electron/services/workspace/workspaceNodePathMetadata.js'
 import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata.js'
 import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile.js'
 import {
-  isSameExternalRoot,
-  isSameInternalRoot,
-  isSameSingleFileRoot,
-} from '@electron/services/workspace/workspaceRootState.js'
+  selectWorkspaceRoot,
+  selectSingleFileWorkspace,
+} from '@electron/services/workspace/workspaceRootSelection.js'
 import {
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import { ensureDefaultFile, stringArg } from '@electron/services/workspace/workspaceUtils.js'
+import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
 export class WorkspaceFileService extends WorkspaceBase {
+  private rootTransitionInProgress = false
+
   constructor(
     app: ConstructorParameters<typeof WorkspaceBase>[0],
     shell: ConstructorParameters<typeof WorkspaceBase>[1],
@@ -71,69 +69,24 @@ export class WorkspaceFileService extends WorkspaceBase {
     return workspaceTerminalCwd(this.state)
   }
 
-  isAssetPathAllowed(value: string): boolean {
-    return isWorkspaceAssetPathAllowed(this.state, value)
-  }
   async setRoot(value: unknown): Promise<FsRootInfo> {
-    const rootPath = typeof value === 'object' && value && 'path' in value ? value.path : value
-    if (rootPath != null && typeof rootPath !== 'string') {
-      throw new Error('fs_set_root requires path to be a string or null')
+    this.beginRootTransition()
+    try {
+      const nextState = await selectWorkspaceRoot(this.state, value)
+      return nextState ? this.commitWorkspaceState(nextState) : this.rootInfo()
+    } finally {
+      this.rootTransitionInProgress = false
     }
-
-    if (rootPath) {
-      const stat = await fs.promises.stat(rootPath).catch(() => null)
-      if (!stat?.isDirectory()) throw new Error('Selected path is not a directory')
-      const resolved = path.resolve(rootPath)
-      if (isSameExternalRoot(this.state, resolved)) return this.rootInfo()
-      this.state = {
-        ...this.state,
-        rootKind: 'external',
-        rootPath: resolved,
-        singleFile: null,
-      }
-    } else {
-      if (isSameInternalRoot(this.state)) return this.rootInfo()
-      fs.mkdirSync(this.state.internalRoot, { recursive: true })
-      ensureDefaultFile(this.state.internalRoot)
-      this.state = {
-        ...this.state,
-        rootKind: 'internal',
-        rootPath: this.state.internalRoot,
-        singleFile: null,
-      }
-    }
-
-    this.buffers.clear()
-    this.watcher.restart()
-    this.scheduleSnapshotChanged()
-    this.logger.info('workspace root changed', {
-      rootKind: this.state.rootKind,
-      rootPath: this.state.rootPath,
-    })
-    return this.rootInfo()
   }
 
   async setSingleFile(value: unknown): Promise<FsRootInfo> {
-    const filePath = stringArg(value, 'path')
-    const stat = await fs.promises.stat(filePath).catch(() => null)
-    if (!stat?.isFile()) throw new Error('Selected path is not a file')
-    if (!isWorkspaceDocumentPath(filePath)) {
-      throw new Error('Selected file is not supported by this workspace')
+    this.beginRootTransition()
+    try {
+      const nextState = await selectSingleFileWorkspace(this.state, value)
+      return nextState ? this.commitWorkspaceState(nextState) : this.rootInfo()
+    } finally {
+      this.rootTransitionInProgress = false
     }
-
-    const resolved = path.resolve(filePath)
-    if (isSameSingleFileRoot(this.state, resolved)) return this.rootInfo()
-    this.state = {
-      ...this.state,
-      rootKind: 'single',
-      rootPath: resolved,
-      singleFile: resolved,
-    }
-    this.buffers.clear()
-    this.watcher.restart()
-    this.scheduleSnapshotChanged()
-    this.logger.info('single file workspace opened', { path: path.basename(resolved) })
-    return this.rootInfo()
   }
 
   async openFile(value: unknown): Promise<string> {
@@ -151,33 +104,58 @@ export class WorkspaceFileService extends WorkspaceBase {
       path: relativePath,
       state: this.state,
     })
-    if (sidecarContent != null) return sidecarContent
-    return fs.promises.readFile(absolutePath, 'utf8')
+    if (sidecarContent != null) {
+      return this.buffers.cacheCleanFile(relativePath, sidecarContent)
+    }
+    const content = await fs.promises.readFile(absolutePath, 'utf8')
+    return this.buffers.cacheCleanFile(relativePath, content)
   }
 
   updateBuffer(value: unknown): FsBufferStatus {
+    if (this.rootTransitionInProgress) {
+      throw new Error('Workspace is switching; retry the buffer update')
+    }
     const relativePath = stringArg(value, 'path')
     const content = stringArg(value, 'content')
-    this.resolve(relativePath)
-    return this.buffers.update(relativePath, content)
+    const absolutePath = this.resolve(relativePath)
+    return this.buffers.update(relativePath, content, {
+      absolutePath,
+      state: { ...this.state },
+    })
   }
 
   writeFile(value: unknown): void {
     this.updateBuffer(value)
   }
 
-  flushBuffers(): Promise<number> {
+  flushBuffers(): Promise<void> {
     return this.buffers.flush()
+  }
+
+  writeCoordinatorOwnerId(): string {
+    return this.buffers.getWriteOwnerId()
+  }
+  resolveCoordinatorPath(relativePath: string): string {
+    return this.resolve(relativePath)
+  }
+  bufferMutationEpoch(): number {
+    return this.buffers.getMutationEpoch()
+  }
+  setAutoFlushMutationRunner(runner: (work: () => Promise<void>) => Promise<void>): void {
+    this.buffers.setAutoFlushMutationRunner(runner)
   }
 
   protected override async writeBufferedFile(
     args: Parameters<WorkspaceBufferWriteFile>[0],
   ): Promise<void> {
+    if (!args.state) {
+      throw new Error(`Missing workspace session for buffered write: ${args.relativePath}`)
+    }
     const sidecarWritten = await trySidecarWriteFile({
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
       path: args.relativePath,
-      state: this.state,
+      state: args.state,
       content: args.content,
       beforeWrite: () => this.watcher.markOwnWrite(args.absolutePath),
     })
@@ -194,7 +172,7 @@ export class WorkspaceFileService extends WorkspaceBase {
   async createFile(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
     await createWorkspaceFileEntry({
-      deleteBuffer: (relativePath) => this.buffers.delete(relativePath),
+      hasDirtyBuffer: (relativePath) => this.buffers.getStatus(relativePath)?.dirty === true,
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
       resolveRelativePath: (relativePath) => this.resolve(relativePath),
@@ -273,33 +251,49 @@ export class WorkspaceFileService extends WorkspaceBase {
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path deleted', { path: relativePath, kind })
   }
-  pathMetadata(value: unknown): Promise<FsPathMetadata> {
+  async pathMetadata(value: unknown): Promise<FsPathMetadataResult> {
     const relativePath = stringArg(value, 'path')
-    return readWorkspacePathMetadata({
+    const metadata = await readWorkspacePathMetadata({
       absolutePath: this.resolve(relativePath),
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
       path: relativePath,
       state: this.state,
     })
-  }
-
-  readAssetBytes(value: unknown) {
-    return readWorkspaceFileServiceAssetBytes(
-      {
-        isAssetPathAllowed: (path) => this.isAssetPathAllowed(path),
-        resolveRelativePath: (path) => this.resolve(path),
-      },
-      value,
-    )
+    return toPathMetadataResult(metadata)
   }
 
   async openPathInSystem(value: unknown): Promise<void> {
-    const metadata = await this.pathMetadata(value)
-    const error = await this.shell.openPath(metadata.absolute_path)
-    if (error) this.logger.warn('open path in system failed', { path: metadata.path, error })
+    const relativePath = stringArg(value, 'path')
+    const error = await this.shell.openPath(this.resolve(relativePath))
+    if (error) this.logger.warn('open path in system failed', { path: relativePath, error })
     if (error) throw new Error(`Failed to open path: ${error}`)
-    this.logger.info('path opened in system', { path: metadata.path })
+    this.logger.info('path opened in system', { path: relativePath })
+  }
+
+  private beginRootTransition(): void {
+    if (this.rootTransitionInProgress) {
+      throw new Error('Another workspace switch is already in progress')
+    }
+    this.rootTransitionInProgress = true
+  }
+
+  private async commitWorkspaceState(nextState: FsStateData): Promise<FsRootInfo> {
+    await this.buffers.flush()
+    const dirtyCount = this.buffers.getBackgroundDirtyCount()
+    if (dirtyCount > 0) {
+      throw new Error(`Workspace switch blocked by ${dirtyCount} unsaved buffer(s)`)
+    }
+
+    this.buffers.clear()
+    this.state = nextState
+    this.watcher.restart()
+    this.scheduleSnapshotChanged()
+    this.logger.info('workspace root changed', {
+      rootKind: nextState.rootKind,
+      rootPath: nextState.rootPath,
+    })
+    return this.rootInfo()
   }
 
   private async getWorkspaceIndexForRename(): Promise<FsWorkspaceIndex | null> {

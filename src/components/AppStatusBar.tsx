@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
 import { AppStatusBarRight } from '@/components/AppStatusBarRight'
-import { createFileLabel } from '@/logic/paths'
+import { EditorStatusBarSlot } from '@/components/EditorStatusBar'
 import { SIDEBAR_ACTIVITY_PARAM } from '@/logic/routing'
 import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic/gitStatus'
 import { useI18n } from '@/i18n/useI18n'
@@ -35,21 +35,11 @@ const basename = (path: string) => {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
-const getActiveResourceLabel = (activeTab: WorkspaceTab | null, activePath: string | null) => {
-  if (!activeTab) return null
-  if (activeTab.kind === 'workspace-graph') return 'workspace-graph'
-  if (activeTab.kind === 'git-diff') return `${createFileLabel(activeTab.path)} · Diff`
-  return activePath ?? activeTab.path
-}
-
 const AppStatusBar = ({
   rootKind,
   rootPath,
   files,
-  tabs,
-  activeTab,
   activePath,
-  viewMode,
   dirtyPaths,
   saveStates,
   terminalOpen,
@@ -96,12 +86,6 @@ const AppStatusBar = ({
       : rootPath
         ? basename(rootPath)
         : t('statusBar.noWorkspace')
-  const activeResourceLabel = getActiveResourceLabel(activeTab, activePath)
-  const activeLabel =
-    activeResourceLabel === 'workspace-graph'
-      ? t('tabs.workspaceGraph')
-      : (activeResourceLabel ?? t('statusBar.noFile'))
-
   const gitChangeCount = countChangedFiles(gitStatusQuery.data)
   const gitConflictCount = countGitConflicts(gitStatusQuery.data)
   const gitBranch = gitStatusQuery.data?.repo.branch ?? t('scm.noBranch')
@@ -125,7 +109,7 @@ const AppStatusBar = ({
     <TooltipProvider>
       <footer
         aria-label={t('statusBar.label')}
-        className="app-status-bar flex h-7 shrink-0 items-center justify-between gap-2 border-t border-border/80 px-2 text-[11px] text-muted-foreground"
+        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-3 px-2 text-[11px] text-muted-foreground"
       >
         <AppStatusBarLeft
           gitBranch={gitBranch}
@@ -142,8 +126,8 @@ const AppStatusBar = ({
           onRestoreSession={onRestoreSession}
           onToggleTerminal={onToggleTerminal}
         />
+        <EditorStatusBarSlot label={t('statusBar.label')} />
         <AppStatusBarRight
-          activeLabel={activeLabel}
           activePath={activePath}
           activeSaveState={activeSaveState}
           assetSyncFailed={assetSyncFailed}
@@ -152,9 +136,7 @@ const AppStatusBar = ({
           dirtyCount={dirtyCount}
           dirtyPaths={dirtyPaths}
           saveStates={saveStates}
-          tabsCount={tabs.length}
           terminalOpen={terminalOpen}
-          viewMode={viewMode}
         />
       </footer>
     </TooltipProvider>

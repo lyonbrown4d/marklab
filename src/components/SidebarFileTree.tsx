@@ -11,8 +11,8 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
     treeRef,
     dndRootElement,
     setTreeContainerRef,
-    createRequest,
-    deleteRequest,
+    createDialogOpen,
+    deleteDialogOpen,
     createDialogTitle,
     createDialogDescription,
     createDialogDefaultValue,
@@ -32,6 +32,13 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
     renderNode,
     readonlyTree,
   } = useSidebarFileTreeState(props)
+
+  const restoreTreeFocus = (event: Event) => {
+    const tree = dndRootElement?.querySelector<HTMLElement>('[role="tree"]')
+    if (!tree) return
+    event.preventDefault()
+    tree.focus({ preventScroll: true })
+  }
 
   return (
     <>
@@ -92,19 +99,21 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
         />
       </ContextMenu>
       <FileNameDialog
-        open={createRequest !== null}
+        open={createDialogOpen}
         title={createDialogTitle}
         description={createDialogDescription}
         defaultValue={createDialogDefaultValue}
         confirmLabel={createDialogTitle}
+        onCloseAutoFocus={restoreTreeFocus}
         onOpenChange={closeCreateDialog}
         onSubmit={handleCreateSubmit}
       />
       <FileConfirmDialog
-        open={deleteRequest !== null}
+        open={deleteDialogOpen}
         title={props.labels.delete}
         description={deleteDialogDescription}
         confirmLabel={props.labels.delete}
+        onCloseAutoFocus={restoreTreeFocus}
         onOpenChange={closeDeleteDialog}
         onConfirm={handleDeleteConfirm}
       />

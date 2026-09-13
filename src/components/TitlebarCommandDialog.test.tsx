@@ -1,334 +1,244 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { ChangeEvent, ReactNode } from 'react'
+import { forwardRef, type ComponentProps, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
 
-const historyState = vi.hoisted(() => ({
-  clearSearchHistory: vi.fn(),
+const state = vi.hoisted(() => ({
   rememberSearch: vi.fn(),
+  clearSearchHistory: vi.fn(),
   searches: ['recent query'],
-}))
-
-const fullTextResult = vi.hoisted(() => ({
-  column: 2,
-  line: 4,
-  path: 'docs/result.md',
-  snippet: 'Matched content',
-  title: 'Result title',
-}))
-
-const fullTextSearchOpenStates = vi.hoisted((): boolean[] => [])
-const messages: Record<string, string> = {
-  'command.empty.all': 'No matching commands or content.',
-  'command.empty.files': 'No matching files.',
-  'command.empty.headings': 'No matching headings.',
-  'command.empty.text': 'No matching text.',
-  'command.noResults': 'No command results',
-  'command.loading': 'Preparing command palette...',
-  'command.searchHint': 'Type to search files, headings, and text.',
-  'command.search.scopeFiles': 'files',
-  'command.search.scopeHeadings': 'headings',
-  'command.search.scopeText': 'text',
-  'sidebar.search': 'Search workspace',
-}
-vi.mock('@/i18n/useI18n', () => ({
-  useI18n: () => ({
-    t: (key: string, values?: { query?: string }) => {
-      if (key === 'command.noResultsFor') return `No command results for ${values?.query ?? ''}`
-      return messages[key] ?? key
-    },
-  }),
-}))
-
-vi.mock('@/components/AppCommandDialog', () => ({
-  default: ({
-    children,
-    open,
-  }: {
-    children: ReactNode
-    onOpenChange: (open: boolean) => void
-    open: boolean
-  }) => (
-    <section aria-label="Command dialog" data-open={open ? 'true' : 'false'}>
-      {children}
-    </section>
-  ),
-}))
-
-vi.mock('@/components/ui/command', () => ({
-  CommandEmpty: ({ children }: { children: ReactNode }) => <div role="status">{children}</div>,
-  CommandInput: ({
-    onValueChange,
-    placeholder,
-    value,
-  }: {
-    onValueChange: (value: string) => void
-    placeholder: string
-    value: string
-  }) => (
-    <input
-      aria-label="Command input"
-      onChange={(event: ChangeEvent<HTMLInputElement>) => onValueChange(event.currentTarget.value)}
-      placeholder={placeholder}
-      value={value}
-    />
-  ),
-  CommandList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}))
-
-vi.mock('@/components/command/useCommandSearchHistory', () => ({
-  useCommandSearchHistory: () => historyState,
-}))
-
-vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
-  useCommandFullTextSearchStream: ({ open }: { open: boolean }) => {
-    fullTextSearchOpenStates.push(open)
-
-    return {
-      fullTextError: false,
-      fullTextFetching: false,
-      fullTextResults: [fullTextResult],
-    }
+  streamCalls: [] as { open: boolean; query: string; scope: string }[],
+  result: {
+    column: 2,
+    end_column: 9,
+    line: 4,
+    path: 'docs/result.md',
+    snippet: 'Matched content',
+    snippet_highlights: [{ start: 0, end: 7 }],
+    score: 1,
+    title: 'Result title',
   },
 }))
 
-vi.mock('@/components/command/CommandSearchOverview', () => ({
-  default: ({
-    filesCount,
-    fullTextCount,
-    headingsCount,
-    query,
-  }: {
-    filesCount: number
-    fullTextCount: number
-    headingsCount: number
-    query: string
-  }) => (
-    <div aria-label="Search overview">
-      {query}|{filesCount}|{headingsCount}|{fullTextCount}
-    </div>
-  ),
+vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('@/components/AppCommandDialog', () => ({
+  default: ({ children }: { children: ReactNode }) => <section>{children}</section>,
 }))
-
+vi.mock('@/components/ui/command', () => ({
+  CommandEmpty: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CommandList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CommandInput: forwardRef<
+    HTMLInputElement,
+    { value: string; onValueChange: (value: string) => void; placeholder: string }
+  >(({ value, onValueChange, placeholder }, ref) => (
+    <input
+      ref={ref}
+      aria-label="Command input"
+      placeholder={placeholder}
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+    />
+  )),
+}))
+vi.mock('@/components/command/useCommandSearchHistory', () => ({
+  useCommandSearchHistory: () => state,
+}))
+vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
+  useCommandFullTextSearchStream: (options: (typeof state.streamCalls)[number]) => {
+    state.streamCalls.push(options)
+    return { fullTextResults: [state.result], fullTextFetching: false, fullTextError: null }
+  },
+}))
 vi.mock('@/components/command/CommandSearchHistory', () => ({
-  default: ({
-    onClearSearches,
-    onSelectSearch,
-    searches,
-  }: {
-    onClearSearches: () => void
-    onSelectSearch: (query: string) => void
-    query: string
-    searches: string[]
-  }) => (
-    <section aria-label="Search history">
-      <button onClick={() => onSelectSearch(searches[0] ?? '')} type="button">
-        Pick history
-      </button>
-      <button onClick={onClearSearches} type="button">
-        Clear history
-      </button>
-    </section>
+  default: ({ onSelectSearch }: { onSelectSearch: (query: string) => void }) => (
+    <button onClick={() => onSelectSearch('recent query')}>Pick history</button>
   ),
 }))
-
 vi.mock('@/components/command/CommandRecentFilesSection', () => ({
-  default: ({ onOpenFile, query }: { onOpenFile: (path: string) => void; query: string }) => (
-    <section aria-label="Recent files" data-query={query}>
-      <button onClick={() => onOpenFile('docs/recent.md')} type="button">
-        Open recent file
-      </button>
-    </section>
+  default: ({ onOpenFile }: { onOpenFile: (path: string) => void }) => (
+    <button onClick={() => onOpenFile('docs/recent.md')}>Open recent file</button>
   ),
 }))
-
 vi.mock('@/components/command/CommandNavigationSection', () => ({
   default: ({ onOpenHeading }: { onOpenHeading: (path: string, slug: string) => void }) => (
-    <section aria-label="Navigation">
-      <button onClick={() => onOpenHeading('docs/nav.md', 'intro')} type="button">
-        Open navigation heading
-      </button>
-    </section>
+    <button onClick={() => onOpenHeading('docs/nav.md', 'intro')}>Open navigation heading</button>
   ),
 }))
-
 vi.mock('@/components/command/CommandSearchResults', () => ({
   default: ({
-    onOpenHeading,
-    onOpenSearchResult,
     query,
     scope,
+    onOpenFile,
+    onOpenHeading,
+    onOpenSearchResult,
   }: {
-    onOpenHeading: (path: string, slug: string) => void
-    onOpenSearchResult: (result: FsSearchResult) => void
     query: string
     scope: string
+    onOpenFile: (path: string) => void
+    onOpenHeading: (path: string, slug: string) => void
+    onOpenSearchResult: (result: FsSearchResult) => void
   }) => (
     <section aria-label="Search results" data-query={query} data-scope={scope}>
-      <button onClick={() => onOpenHeading('docs/search.md', 'match')} type="button">
-        Open search heading
-      </button>
-      <button onClick={() => onOpenSearchResult(fullTextResult as FsSearchResult)} type="button">
-        Open search result
-      </button>
+      <button onClick={() => onOpenFile('docs/search.md')}>Open search file</button>
+      <button onClick={() => onOpenHeading('docs/search.md', 'match')}>Open search heading</button>
+      <button onClick={() => onOpenSearchResult(state.result)}>Open search result</button>
     </section>
   ),
 }))
-
 vi.mock('@/components/command/CommandActionSections', () => ({
   default: ({
-    onAction,
     onCommandPaletteAction,
+    onAction,
   }: {
-    onAction: (id: string) => void
     onCommandPaletteAction: () => void
+    onAction: (id: string) => void
   }) => (
     <section aria-label="Actions">
-      <button onClick={onCommandPaletteAction} type="button">
-        Reset palette query
-      </button>
-      <button onClick={() => onAction('settings.open')} type="button">
-        Open settings
-      </button>
+      <button onClick={onCommandPaletteAction}>Return to search</button>
+      <button onClick={() => onAction('settings.open')}>Open settings</button>
     </section>
   ),
 }))
 
-const createCallbacks = () => ({
-  onAction: vi.fn(),
-  onOpenChange: vi.fn(),
-  onOpenFile: vi.fn(),
-  onOpenHeading: vi.fn(),
-  onOpenNavigationBacklink: vi.fn(),
-  onOpenNavigationMissingLink: vi.fn(),
-  onOpenNavigationOutgoingLink: vi.fn(),
-  onOpenSearchResult: vi.fn(),
-})
-
-const renderDialog = () => {
-  const callbacks = createCallbacks()
-
+const renderDialog = (overrides: Partial<ComponentProps<typeof TitlebarCommandDialog>> = {}) => {
+  const callbacks = {
+    onOpenChange: vi.fn(),
+    onOpenFile: vi.fn(),
+    onOpenHeading: vi.fn(),
+    onOpenSearchResult: vi.fn(),
+    onOpenNavigationOutgoingLink: vi.fn(),
+    onOpenNavigationBacklink: vi.fn(),
+    onOpenNavigationMissingLink: vi.fn(),
+    onAction: vi.fn(),
+  }
   render(
     <TitlebarCommandDialog
-      activePath="docs/current.md"
-      canCreateWorkspaceEntries
-      collections={[]}
-      files={[
-        { label: 'One.md', path: 'docs/One.md' },
-        { label: 'Two.md', path: 'docs/Two.md' },
-      ]}
-      headings={[{ label: 'One.md', level: 2, path: 'docs/One.md', slug: 'intro', text: 'Intro' }]}
-      indexedFileCount={2}
-      knowledgeSummary={{} as WorkspaceKnowledgeSummary}
-      navigationBacklinks={[]}
-      navigationHeadings={[]}
-      navigationMissingLinks={[]}
-      navigationOutgoingLinks={[]}
       open
-      recentFiles={[{ label: 'Recent.md', path: 'docs/recent.md' }]}
-      searchIndexRebuilding={false}
+      activePath="docs/current.md"
+      files={[{ path: 'docs/recent.md', label: 'Recent' }]}
+      recentFiles={[{ path: 'docs/recent.md', label: 'Recent' }]}
+      headings={[]}
+      navigationHeadings={[]}
+      navigationOutgoingLinks={[]}
+      navigationBacklinks={[]}
+      navigationMissingLinks={[]}
+      canCreateWorkspaceEntries
       workspaceIndexed
+      indexedFileCount={1}
+      searchIndexRebuilding={false}
+      knowledgeSummary={{} as WorkspaceKnowledgeSummary}
+      collections={[]}
       {...callbacks}
+      {...overrides}
     />,
   )
-
   return callbacks
 }
 
-const waitForCommandContent = () => screen.findByLabelText('Search overview')
+const ready = () => screen.findByRole('button', { name: 'shortcuts.commandPalette' })
+const input = () => screen.getByRole('textbox', { name: 'Command input' })
 
-beforeEach(() => (fullTextSearchOpenStates.length = 0))
+beforeEach(() => {
+  state.streamCalls.length = 0
+  state.rememberSearch.mockClear()
+})
 
 describe('TitlebarCommandDialog', () => {
-  it('keeps the input mounted while heavy command content is deferred on initial open', async () => {
+  it('keeps its input mounted while content is deferred without starting a search', async () => {
     renderDialog()
-
-    expect(screen.getByRole('textbox', { name: 'Command input' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: /Preparing/ })).toHaveAttribute('aria-busy', 'true')
-    expect(fullTextSearchOpenStates[0]).toBe(false)
-
-    await waitForCommandContent()
-    expect(fullTextSearchOpenStates).toContain(true)
+    const initialInput = input()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true')
+    await ready()
+    expect(input()).toBe(initialInput)
+    expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 
-  it('renders the localized empty state and command overview', async () => {
-    renderDialog()
-    await waitForCommandContent()
-
-    expect(screen.getByRole('status')).toHaveTextContent('No command results')
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Type to search files, headings, and text.',
-    )
-    expect(screen.getByRole('textbox', { name: 'Command input' })).toBeInTheDocument()
-    expect(screen.getByRole('status').querySelector('[data-slot="empty-icon"]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: '@ files' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '# headings' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '? text' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Search overview')).toHaveTextContent('|2|1|1')
-  })
-
-  it('lets empty-state suggestions switch command search scopes', async () => {
-    renderDialog()
-    await waitForCommandContent()
-
-    fireEvent.click(screen.getByRole('button', { name: '@ files' }))
-
-    await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: 'Command input' })).toHaveValue('@ ')
-      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', 'files')
-    })
-  })
-
-  it('updates query-dependent empty copy and propagates query to command sections', async () => {
-    renderDialog()
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Command input' }), {
-      target: { value: 'guide' },
-    })
-
-    await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent('No command results for guide'),
-    )
-    expect(screen.getByRole('status')).toHaveTextContent('No matching commands or content.')
-    expect(screen.getByLabelText('Recent files')).toHaveAttribute('data-query', 'guide')
-    expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'guide')
-    expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', 'all')
-  })
-
-  it('remembers the active search before opening file or search-result entries', async () => {
+  it('shows only recent content on entry, without duplicated results or all actions', async () => {
     const callbacks = renderDialog()
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Command input' }), {
-      target: { value: 'guide' },
-    })
-    await waitFor(() =>
-      expect(screen.getByLabelText('Recent files')).toHaveAttribute('data-query', 'guide'),
-    )
-
+    await ready()
+    expect(screen.getByRole('button', { name: 'Pick history' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Open recent file' }))
+    expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/recent.md')
+    expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Open navigation heading' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['@', 'scopeFiles', 'files'],
+    ['#', 'scopeHeadings', 'headings'],
+    ['?', 'scopeText', 'text'],
+  ])(
+    'selects the %s scope and returns keyboard focus to the input',
+    async (marker, label, scope) => {
+      renderDialog()
+      await ready()
+      fireEvent.click(
+        screen.getAllByRole('button', { name: `${marker} command.search.${label}` })[0],
+      )
+      expect(input()).toHaveValue(`${marker} `)
+      expect(input()).toHaveFocus()
+      await waitFor(() =>
+        expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', scope),
+      )
+      expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
+    },
+  )
+
+  it('searches instead of repeating recent files and remembers selections', async () => {
+    const callbacks = renderDialog()
+    await ready()
+    fireEvent.change(input(), { target: { value: 'guide' } })
+    await waitFor(() =>
+      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'guide'),
+    )
+    expect(screen.queryByRole('button', { name: 'Open recent file' })).not.toBeInTheDocument()
+    expect(state.streamCalls.at(-1)).toMatchObject({ open: true, query: 'guide' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open search file' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open search heading' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open search result' }))
-
-    expect(historyState.rememberSearch).toHaveBeenCalledWith('guide')
-    expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/recent.md')
+    expect(state.rememberSearch).toHaveBeenCalledWith('guide')
+    expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/search.md')
     expect(callbacks.onOpenHeading).toHaveBeenCalledWith('docs/search.md', 'match')
-    expect(callbacks.onOpenSearchResult).toHaveBeenCalledWith(fullTextResult)
+    expect(callbacks.onOpenSearchResult).toHaveBeenCalledWith(state.result)
   })
 
-  it('clears query through command palette action and forwards global actions', async () => {
+  it('opens explicit commands without full-text work and returns to recent content', async () => {
     const callbacks = renderDialog()
-    await waitForCommandContent()
-    const input = screen.getByRole('textbox', { name: 'Command input' })
-
-    fireEvent.change(input, { target: { value: 'guide' } })
-    await waitFor(() => expect(input).toHaveValue('guide'))
-
-    fireEvent.click(screen.getByRole('button', { name: 'Reset palette query' }))
+    fireEvent.click(await ready())
+    expect(input()).toHaveFocus()
+    fireEvent.change(input(), { target: { value: 'settings' } })
+    expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
+    expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
-
-    await waitFor(() => expect(input).toHaveValue(''))
     expect(callbacks.onAction).toHaveBeenCalledWith('settings.open')
+    fireEvent.click(screen.getByRole('button', { name: 'Return to search' }))
+    expect(input()).toHaveValue('')
+    expect(input()).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Open recent file' })).toBeVisible()
+  })
+
+  it('restores a history query and focuses the input', async () => {
+    renderDialog()
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: 'Pick history' }))
+    expect(input()).toHaveValue('recent query')
+    expect(input()).toHaveFocus()
+    await waitFor(() =>
+      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'recent query'),
+    )
+  })
+
+  it('does not mount expensive content until workspace data is ready', () => {
+    renderDialog({ dataReady: false })
+    expect(input()).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'shortcuts.commandPalette' }),
+    ).not.toBeInTheDocument()
+    expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 })

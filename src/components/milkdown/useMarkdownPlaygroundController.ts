@@ -1,17 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
 import throttle from 'lodash-es/throttle'
-import { editorViewCtx, parserCtx } from '@milkdown/kit/core'
+import { editorViewCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
-import { Slice } from '@milkdown/kit/prose/model'
-import { Selection } from '@milkdown/kit/prose/state'
 import { getMarkdown } from '@milkdown/kit/utils'
-import { eclipse } from '@uiw/codemirror-theme-eclipse'
+import { createMarkdownCodeBlockTheme } from '@/components/milkdown/markdownCodeBlockTheme'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
-import { mermaidCodeBlockConfig } from '@/components/milkdown/mermaidPreview'
+import {
+  mermaidCodeBlockConfig,
+  refreshMermaidPreviews,
+} from '@/components/milkdown/mermaidPreview'
 import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
+import {
+  readPlaygroundMarkdown,
+  relocateFixedDropIndicatorToViewportRoot,
+  replaceMarkdownLikePlayground,
+} from '@/components/milkdown/markdownPlaygroundActions'
 import type {
   MarkdownEditorProps,
   MarkdownEditorStatus,
@@ -21,52 +27,15 @@ type UseMarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
 }
 
-type ThrottledMarkdownUpdate = ((markdown: string) => void) & {
+type QueuedMarkdownUpdate = {
+  documentIdentity: MarkdownEditorProps['activePath']
+  markdown: string
+  onChange: MarkdownEditorProps['onChange']
+}
+
+type ThrottledMarkdownUpdate = ((update: QueuedMarkdownUpdate) => void) & {
   cancel: () => void
-}
-
-const createThrottledMarkdownUpdate = (
-  callback: (markdown: string) => void,
-  delay: number,
-): ThrottledMarkdownUpdate => {
-  return throttle(callback, delay, { leading: false, trailing: true }) as ThrottledMarkdownUpdate
-}
-
-const relocateFixedDropIndicatorToViewportRoot = (root: HTMLElement) => {
-  const indicators = root.querySelectorAll<HTMLElement>('.milkdown-drop-indicator')
-  indicators.forEach((indicator) => {
-    indicator.dataset.marklabPlaygroundOverlay = 'drop-cursor'
-    document.body.appendChild(indicator)
-  })
-}
-
-const replaceMarkdownLikePlayground = (crepe: Crepe, markdown: string) => {
-  if (crepe.getMarkdown() === markdown) return
-
-  crepe.editor.action((ctx) => {
-    const view = ctx.get(editorViewCtx)
-    const parser = ctx.get(parserCtx)
-    const doc = parser(markdown)
-    if (!doc) return
-
-    const state = view.state
-    const { from } = state.selection
-    let tr = state.tr
-    tr = tr.replace(0, state.doc.content.size, new Slice(doc.content, 0, 0))
-
-    const docSize = doc.content.size
-    const safeFrom = Math.max(0, Math.min(from, Math.max(0, docSize - 2)))
-    tr = tr.setSelection(Selection.near(tr.doc.resolve(safeFrom)))
-    view.dispatch(tr)
-  })
-}
-
-const readPlaygroundMarkdown = (crepe: Crepe, fallback: string): string => {
-  try {
-    return crepe.getMarkdown() ?? fallback
-  } catch {
-    return fallback
-  }
+  flush: () => void
 }
 
 export const useMarkdownPlaygroundController = ({
@@ -81,15 +50,27 @@ export const useMarkdownPlaygroundController = ({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
+  const pendingDestroyRef = useRef<Promise<unknown>>(Promise.resolve())
+  const editorGenerationRef = useRef(0)
   const latestValueRef = useRef(value)
+  const latestValuePathRef = useRef(activePath)
   const onChangeRef = useRef(onChange)
+  const throttledMarkdownUpdateRef = useRef<ThrottledMarkdownUpdate | null>(null)
   const onCalendarFileCreateRef = useRef(onCalendarFileCreate)
   const activePathRef = useRef(activePath)
   const activePathListenersRef = useRef(new Set<() => void>())
   const applyingExternalValueRef = useRef(false)
   const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
+  const [codeBlockTheme] = useState(createMarkdownCodeBlockTheme)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    codeBlockTheme.setDarkMode(darkMode)
+    if (rootRef.current) refreshMermaidPreviews(rootRef.current)
+  }, [codeBlockTheme, darkMode])
+
+  useLayoutEffect(() => {
+    if (onChangeRef.current === onChange) return
+    throttledMarkdownUpdateRef.current?.flush()
     onChangeRef.current = onChange
   }, [onChange])
 
@@ -98,14 +79,30 @@ export const useMarkdownPlaygroundController = ({
   }, [onCalendarFileCreate])
 
   useLayoutEffect(() => {
-    if (crepeRef.current) return
-    latestValueRef.current = value
-  }, [value])
+    throttledMarkdownUpdateRef.current?.flush()
+    const documentChanged = activePathRef.current !== activePath
+    const valueChanged =
+      latestValuePathRef.current !== activePath || latestValueRef.current !== value
 
-  useEffect(() => {
-    activePathRef.current = activePath
-    activePathListenersRef.current.forEach((listener) => listener())
-  }, [activePath])
+    applyingExternalValueRef.current = true
+    try {
+      activePathRef.current = activePath
+      latestValuePathRef.current = activePath
+      latestValueRef.current = value
+      const crepe = crepeRef.current
+      if (crepe && valueChanged) {
+        replaceMarkdownLikePlayground(crepe, value)
+      }
+      if (crepe) {
+        latestValueRef.current = readPlaygroundMarkdown(crepe, value)
+      }
+      if (documentChanged) {
+        activePathListenersRef.current.forEach((listener) => listener())
+      }
+    } finally {
+      applyingExternalValueRef.current = false
+    }
+  }, [activePath, value])
 
   const getDocumentPath = useCallback(() => activePathRef.current, [])
 
@@ -128,17 +125,46 @@ export const useMarkdownPlaygroundController = ({
     const root = rootRef.current
     if (!root) return undefined
 
+    const creationGeneration = editorGenerationRef.current + 1
+    const creationDocumentIdentity = activePathRef.current
+    editorGenerationRef.current = creationGeneration
+    let acceptingMarkdownUpdates = false
+    let creationStarted = false
+    let crepeDestroyed = false
     let destroyed = false
     let crepe: Crepe | null = null
-    const updateMarkdown = createThrottledMarkdownUpdate((markdown) => {
-      if (applyingExternalValueRef.current) {
-        latestValueRef.current = markdown
-        return
+    const destroyCrepe = () => {
+      if (!crepe || crepeDestroyed || !creationStarted) return
+      crepeDestroyed = true
+      try {
+        pendingDestroyRef.current = Promise.resolve(crepe.destroy()).catch((error: unknown) => {
+          console.error('Failed to destroy Milkdown playground editor', error)
+        })
+      } catch (error) {
+        console.error('Failed to destroy Milkdown playground editor', error)
       }
-      if (markdown === latestValueRef.current) return
-      latestValueRef.current = markdown
-      onChangeRef.current(markdown)
-    }, 200)
+    }
+    const updateMarkdown = throttle(
+      (update: QueuedMarkdownUpdate) => {
+        const { documentIdentity, markdown, onChange: queuedOnChange } = update
+        const isCurrentTarget =
+          documentIdentity === activePathRef.current && queuedOnChange === onChangeRef.current
+        if (
+          isCurrentTarget &&
+          documentIdentity === latestValuePathRef.current &&
+          markdown === latestValueRef.current
+        )
+          return
+        if (isCurrentTarget) {
+          latestValuePathRef.current = documentIdentity
+          latestValueRef.current = markdown
+        }
+        queuedOnChange(markdown)
+      },
+      200,
+      { leading: false, trailing: true },
+    ) as ThrottledMarkdownUpdate
+    throttledMarkdownUpdateRef.current = updateMarkdown
 
     setStatus({ phase: 'loading' })
 
@@ -152,7 +178,7 @@ export const useMarkdownPlaygroundController = ({
           onImageImport: runSlashImageImport,
         }),
         [Crepe.Feature.CodeMirror]: {
-          theme: darkMode ? undefined : eclipse,
+          theme: codeBlockTheme.extension,
           ...mermaidCodeBlockConfig,
         },
         [Crepe.Feature.LinkTooltip]: {
@@ -168,7 +194,12 @@ export const useMarkdownPlaygroundController = ({
     crepe.editor
       .config((ctx) => {
         ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-          updateMarkdown(markdown)
+          if (destroyed || !acceptingMarkdownUpdates || applyingExternalValueRef.current) return
+          updateMarkdown({
+            documentIdentity: activePathRef.current,
+            markdown,
+            onChange: onChangeRef.current,
+          })
         })
       })
       .use(listener)
@@ -182,20 +213,50 @@ export const useMarkdownPlaygroundController = ({
 
     crepe.editor.use(animatedCursor).use(typewriterScroll)
 
-    crepe
-      .create()
+    const pendingCrepe = crepe
+    void pendingDestroyRef.current
       .then(() => {
-        if (destroyed) {
-          crepe?.destroy()
+        if (destroyed) return
+        creationStarted = true
+        return pendingCrepe.create()
+      })
+      .then(() => {
+        const createdCrepe = crepe
+        if (!createdCrepe || destroyed || editorGenerationRef.current !== creationGeneration) {
+          destroyCrepe()
           return
         }
-        latestValueRef.current = readPlaygroundMarkdown(crepe, latestValueRef.current)
+
+        const latestDocumentIdentity = latestValuePathRef.current
+        const latestValue = latestValueRef.current
+        if (latestDocumentIdentity !== activePathRef.current) {
+          destroyCrepe()
+          return
+        }
+
+        applyingExternalValueRef.current = true
+        try {
+          if (
+            creationDocumentIdentity !== latestDocumentIdentity ||
+            readPlaygroundMarkdown(createdCrepe, latestValue) !== latestValue
+          ) {
+            replaceMarkdownLikePlayground(createdCrepe, latestValue)
+          }
+        } finally {
+          applyingExternalValueRef.current = false
+        }
+
         relocateFixedDropIndicatorToViewportRoot(root)
-        crepeRef.current = crepe
+        latestValueRef.current = readPlaygroundMarkdown(createdCrepe, latestValue)
+        crepeRef.current = createdCrepe
+        acceptingMarkdownUpdates = true
         setStatus({ phase: 'ready' })
       })
       .catch((error: unknown) => {
-        if (destroyed) return
+        if (destroyed || editorGenerationRef.current !== creationGeneration) {
+          destroyCrepe()
+          return
+        }
         const message = error instanceof Error ? error.message : String(error)
         setStatus({ phase: 'error', message })
         console.error('Failed to initialize Milkdown playground editor', error)
@@ -203,21 +264,22 @@ export const useMarkdownPlaygroundController = ({
 
     return () => {
       destroyed = true
+      updateMarkdown.flush()
       updateMarkdown.cancel()
+      acceptingMarkdownUpdates = false
+      if (editorGenerationRef.current === creationGeneration) {
+        editorGenerationRef.current += 1
+      }
+      if (throttledMarkdownUpdateRef.current === updateMarkdown) {
+        throttledMarkdownUpdateRef.current = null
+      }
       if (crepeRef.current === crepe) {
-        latestValueRef.current = crepe
-          ? readPlaygroundMarkdown(crepe, latestValueRef.current)
-          : latestValueRef.current
         crepeRef.current = null
       }
-      try {
-        crepe?.destroy()
-      } catch {
-        // Crepe can be half-initialized during React dev teardown.
-      }
+      destroyCrepe()
     }
   }, [
-    darkMode,
+    codeBlockTheme,
     getDocumentPath,
     placeholder,
     runSlashCalendarFileCreate,
@@ -225,23 +287,6 @@ export const useMarkdownPlaygroundController = ({
     slashLabels,
     subscribeDocumentPath,
   ])
-
-  useEffect(() => {
-    const crepe = crepeRef.current
-    if (!crepe) {
-      latestValueRef.current = value
-      return
-    }
-    if (value === latestValueRef.current) return
-
-    applyingExternalValueRef.current = true
-    try {
-      replaceMarkdownLikePlayground(crepe, value)
-      latestValueRef.current = readPlaygroundMarkdown(crepe, value)
-    } finally {
-      applyingExternalValueRef.current = false
-    }
-  }, [value])
 
   const focusEditor = useCallback(() => {
     crepeRef.current?.editor.action((ctx) => {

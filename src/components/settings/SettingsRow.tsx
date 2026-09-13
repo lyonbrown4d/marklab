@@ -27,7 +27,7 @@ type SettingsRowProps = {
 
 type SettingsSectionProps = {
   title: ReactNode
-  description: ReactNode
+  description?: ReactNode
   children: ReactNode
   icon?: ElementType
   surface?: boolean
@@ -54,11 +54,11 @@ type SettingsSelectFieldProps = Omit<SettingsRowProps, 'control'> & {
 }
 
 export const SettingsPageStack = ({ className, ...props }: ComponentProps<'div'>) => {
-  return <div className={cn('flex flex-col gap-4', className)} {...props} />
+  return <div className={cn('flex flex-col gap-8', className)} {...props} />
 }
 
 export const SettingsFieldGroup = ({ className, ...props }: ComponentProps<typeof FieldGroup>) => {
-  return <FieldGroup className={cn('gap-3', className)} {...props} />
+  return <FieldGroup className={cn('gap-0', className)} {...props} />
 }
 
 export const SettingsSubsection = ({
@@ -90,30 +90,28 @@ export const SettingsSection = ({
   description,
   children,
   icon: Icon,
-  surface = true,
+  surface = false,
   className,
   bodyClassName,
 }: SettingsSectionProps) => {
   return (
     <section
-      className={cn(
-        'flex flex-col gap-3',
-        surface && 'rounded-md border border-border/80 bg-card/70 p-3',
-        className,
-      )}
+      className={cn('flex flex-col gap-4', surface && 'rounded-md bg-muted/30 p-3', className)}
     >
       <header className="flex items-start gap-3">
         {Icon && (
-          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-muted-foreground">
             <Icon className="size-4" aria-hidden="true" />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-muted-foreground">{description}</div>
+          <h2 className="text-sm font-medium">{title}</h2>
+          {description && (
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+          )}
         </div>
       </header>
-      <div className={cn('flex flex-col gap-3', bodyClassName)}>{children}</div>
+      <div className={cn('flex flex-col gap-0', bodyClassName)}>{children}</div>
     </section>
   )
 }
@@ -130,7 +128,7 @@ export const SettingsField = ({
       orientation="vertical"
       data-disabled={disabled ? 'true' : undefined}
       className={cn(
-        'items-start justify-between rounded-md border border-border/70 bg-background/60 p-3 data-[disabled=true]:opacity-60 sm:flex-row sm:[&>*]:w-auto',
+        'items-start justify-between gap-3 py-3 data-[disabled=true]:opacity-60 sm:flex-row sm:gap-5 sm:[&>*]:w-auto',
         className,
       )}
     >
@@ -138,7 +136,7 @@ export const SettingsField = ({
         <FieldTitle>{title}</FieldTitle>
         <FieldDescription className="text-xs leading-5">{description}</FieldDescription>
       </FieldContent>
-      <div className="flex w-full shrink-0 justify-start pt-0.5 sm:w-auto sm:justify-end">
+      <div className="flex w-full max-w-full shrink-0 justify-start pt-0.5 sm:w-auto sm:justify-end">
         {control}
       </div>
     </Field>
@@ -193,7 +191,10 @@ export const SettingsSelectField = ({
       className={className}
       control={
         <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-          <SelectTrigger className="min-w-40">
+          <SelectTrigger
+            aria-label={typeof title === 'string' ? title : undefined}
+            className="min-w-40 max-w-full"
+          >
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>

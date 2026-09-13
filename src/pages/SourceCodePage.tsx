@@ -1,9 +1,9 @@
-import { lazy, memo, Suspense, useMemo } from 'react'
+import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
-import { useI18n } from '@/i18n/useI18n'
 import { useDocumentStats } from '@/pages/useDocumentStats'
+import { EditorDocumentStatus, type EditorCursorPosition } from '@/components/EditorDocumentStatus'
 const MarkdownSourceEditor = lazy(() => import('@/components/MarkdownSourceEditor'))
 type SourceCodePageProps = {
   activePath: string | null
@@ -25,7 +25,16 @@ const SourceCodePage = ({
   onOpenFileView,
   showStatusBar,
 }: SourceCodePageProps) => {
-  const { t } = useI18n()
+  const [cursor, setCursor] = useState<{
+    path: string | null
+    position: EditorCursorPosition | null
+  } | null>(null)
+  const onCursorChange = useCallback(
+    (position: EditorCursorPosition | null) => {
+      setCursor({ path: activePath, position })
+    },
+    [activePath],
+  )
   const stats = useDocumentStats(value, showStatusBar)
   const sourceFileContents = useMemo(
     () =>
@@ -51,27 +60,20 @@ const SourceCodePage = ({
                 workspaceIndex={workspaceIndex}
                 onChange={onChange}
                 onOpenFileView={onOpenFileView}
+                onCursorChange={showStatusBar ? onCursorChange : undefined}
               />
             </Suspense>
           </div>
         </div>
       </div>
       {showStatusBar && activePath && (
-        <div className="tab-strip flex h-7 items-center justify-between gap-3 border-t border-border/80 px-3 text-[11px] text-muted-foreground">
-          <div className="min-w-0 truncate">{activePath}</div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span>{t('editor.modeSource')}</span>
-            <span>
-              {stats.lines} {t('status.lines')}
-            </span>
-            <span>
-              {stats.words} {t('status.words')}
-            </span>
-            <span>
-              {stats.characters} {t('status.characters')}
-            </span>
-          </div>
-        </div>
+        <EditorDocumentStatus
+          activePath={activePath}
+          viewMode="source"
+          stats={stats}
+          value={value}
+          cursor={cursor?.path === activePath ? cursor.position : null}
+        />
       )}
     </div>
   )

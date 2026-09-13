@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { useLatest } from 'ahooks'
+import { useProjectPathActions } from '@/app/useProjectPathActions'
 import type { NavigateFunction } from 'react-router-dom'
 import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
 import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
@@ -69,9 +70,11 @@ export const useProjectLoader = ({
   const preserveCurrentRouteRef = useLatest(preserveCurrentRoute)
   const defaultFileViewRef = useLatest(defaultFileView)
   const internalRootSwitchingRef = useRef(false)
+  const pathMutationInProgress = useRef(false)
 
   const loadWorkspace = useCallback(
     async (options?: LoadWorkspaceOptions) => {
+      if (pathMutationInProgress.current && options?.snapshot) return
       await runInDesktop(async () => {
         const snapshot = options?.snapshot ?? (await fetchWorkspaceSnapshot())
         const rootInfo = snapshot.root
@@ -136,7 +139,7 @@ export const useProjectLoader = ({
             finalTabs[0] ??
             createFileTab(defaultPath, fileViewForOpenPath(defaultPath, defaultFileViewRef.current))
           const nextActiveTabId = getWorkspaceTabId(nextActiveTab)
-          if (nextActiveTabId !== currentActiveTabId) {
+          if (nextActiveTabId !== activeTabIdRef.current) {
             setActiveTabId(nextActiveTabId)
           }
           if (options?.preserveCurrentRoute ?? preserveCurrentRouteRef.current) return
@@ -275,29 +278,15 @@ export const useProjectLoader = ({
     }
   }, [loadWorkspace, locationPathnameRef, navigate, rootKindRef, t])
 
-  const createFile = useCallback(async (path: string) => {
-    await runInDesktop(async () => {
-      const normalized = path.endsWith('.md') || path.endsWith('.markdown') ? path : `${path}.md`
-      await fsApi.createFile(normalized)
-    })
-  }, [])
-
-  const createFolder = useCallback(async (path: string) => {
-    await runInDesktop(() => fsApi.createDir(path))
-  }, [])
-
-  const renamePath = useCallback(async (from: string, to: string) => {
-    await runInDesktop(() => fsApi.renamePath(from, to))
-  }, [])
-
-  const movePath = useCallback(async (from: string, to: string) => {
-    await runInDesktop(() => fsApi.movePath(from, to))
-  }, [])
-
-  const deletePath = useCallback(async (path: string) => {
-    await runInDesktop(() => fsApi.deletePath(path))
-  }, [])
-
+  const { createFile, createFolder, renamePath, movePath, deletePath } = useProjectPathActions({
+    rootPath,
+    rootKind,
+    tabs,
+    activeTabId,
+    locationPathname,
+    loadWorkspace,
+    mutationInProgress: pathMutationInProgress,
+  })
   return {
     loadWorkspace,
     onSelectFolder,

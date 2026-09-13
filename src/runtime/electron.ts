@@ -1,7 +1,14 @@
+import type { AssetApi, WorkspaceLifecycleApi, WorkspaceSessionApi } from '@/types/workspaceSession'
+
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
 }
+
+/**
+ * @deprecated Transitional argument type for commands.invoke.
+ */
 export type ElectronCommandArgs = Record<string, unknown> | undefined
+
 export type ElectronOpenDialogOptions = {
   title?: string
   defaultPath?: string
@@ -14,6 +21,7 @@ export type ElectronOpenDialogOptions = {
   directory?: boolean
   file?: boolean
 }
+
 export type ElectronSaveDialogOptions = {
   title?: string
   defaultPath?: string
@@ -23,6 +31,7 @@ export type ElectronSaveDialogOptions = {
     extensions: string[]
   }>
 }
+
 export type ElectronFileDropEvent = {
   paths: string[]
   position: {
@@ -30,24 +39,30 @@ export type ElectronFileDropEvent = {
     y: number
   }
 }
+
 export type ElectronLaunchSource = 'startup' | 'second-instance' | 'open-url'
+
 export type ElectronSingleInstanceEvent = {
   args: string[]
   cwd: string
 }
+
 export type ElectronDeepLinkEvent = {
   url: string
   source: ElectronLaunchSource
   receivedAt: number
 }
+
 export type ElectronLaunchInfo = ElectronSingleInstanceEvent & {
   deepLinks: ElectronDeepLinkEvent[]
 }
+
 export type ElectronUserThemeInfo = {
   createdAt: number
   id: string
   name: string
 }
+
 export type ElectronUpdateStatus =
   | 'idle'
   | 'checking'
@@ -58,26 +73,31 @@ export type ElectronUpdateStatus =
   | 'installing'
   | 'error'
   | 'unavailable'
+
 export type ElectronUpdateInfo = {
   releaseDate?: string
   releaseName?: string
   version: string
 }
+
 export type ElectronUpdateProgress = {
   bytesPerSecond: number
   percent: number
   transferred: number
   total: number
 }
+
 export type ElectronUpdateState = {
   error?: string
   info?: ElectronUpdateInfo
   progress?: ElectronUpdateProgress
   status: ElectronUpdateStatus
 }
+
 export type ElectronUpdateResult = ElectronUpdateState & {
   ok: boolean
 }
+
 export type ElectronUpdateEvent = ElectronUpdateState & {
   event:
     | 'checking'
@@ -89,35 +109,47 @@ export type ElectronUpdateEvent = ElectronUpdateState & {
     | 'error'
     | 'unavailable'
 }
+
+/**
+ * @deprecated Transitional event envelope for the generic events surface.
+ */
 export type ElectronRuntimeEvent<T = unknown> = {
   event: string
   id: number
   payload: T
 }
-export type ElectronRuntimeApi = {
-  appReady: () => Promise<{
-    ok: boolean
-  }>
-  lifecycle?: {
+
+/**
+ * @deprecated Use a named runtime API instead.
+ */
+export type TransitionalElectronCommandApi = {
+  invoke: <T = unknown>(command: string, args?: ElectronCommandArgs) => Promise<T>
+}
+
+/**
+ * @deprecated Use a named runtime event subscription instead.
+ */
+export type TransitionalElectronEventApi = {
+  listen: <T = unknown>(
+    eventName: string,
+    handler: (event: ElectronRuntimeEvent<T>) => void,
+  ) => (() => void) | Promise<() => void>
+  emit?: <T = unknown>(eventName: string, payload?: T) => Promise<void> | void
+}
+
+export type RendererSafeElectronApi = {
+  appReady: () => Promise<{ ok: boolean }>
+  assets: AssetApi
+  lifecycle: WorkspaceLifecycleApi & {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>
   }
-  commands?: {
-    invoke: <T = unknown>(command: string, args?: ElectronCommandArgs) => Promise<T>
-  }
-  events?: {
-    listen: <T = unknown>(
-      eventName: string,
-      handler: (event: ElectronRuntimeEvent<T>) => void,
-    ) => (() => void) | Promise<() => void>
-    emit?: <T = unknown>(eventName: string, payload?: T) => Promise<void> | void
-  }
+  commands: TransitionalElectronCommandApi
+  events: TransitionalElectronEventApi
   platform: {
     get: () => Promise<ElectronPlatformInfo>
   }
   menu: {
-    dispatch: (id: string) => Promise<{
-      ok: boolean
-    }>
+    dispatch: (id: string) => Promise<{ ok: boolean }>
     onCommand: (handler: (id: string) => void) => () => void
   }
   dialog: {
@@ -126,9 +158,7 @@ export type ElectronRuntimeApi = {
   }
   clipboard: {
     readText: () => Promise<string>
-    writeText: (text: string) => Promise<{
-      ok: boolean
-    }>
+    writeText: (text: string) => Promise<{ ok: boolean }>
     readImage: () => Promise<{
       dataUrl: string
       width: number
@@ -147,8 +177,8 @@ export type ElectronRuntimeApi = {
       error?: string
     }>
   }
-  settings?: {
-    persist?: {
+  settings: {
+    persist: {
       getItem: (key: string) => Promise<unknown>
       setItem: (
         key: string,
@@ -163,7 +193,7 @@ export type ElectronRuntimeApi = {
       }>
     }
   }
-  themes?: {
+  themes: {
     importCss: (path: string) => Promise<{
       error?: string
       ok: boolean
@@ -174,33 +204,25 @@ export type ElectronRuntimeApi = {
       ok: boolean
       themes: ElectronUserThemeInfo[]
     }>
-    openFolder: () => Promise<{
-      error?: string
-      ok: boolean
-    }>
+    openFolder: () => Promise<{ error?: string; ok: boolean }>
     readCss: (id: string | null) => Promise<{
       css?: string
       error?: string
       ok: boolean
     }>
-    remove: (id: string) => Promise<{
-      error?: string
-      ok: boolean
-    }>
+    remove: (id: string) => Promise<{ error?: string; ok: boolean }>
   }
-  updates?: {
+  updates: {
     check: () => Promise<ElectronUpdateResult>
     download: () => Promise<ElectronUpdateResult>
     getState: () => Promise<ElectronUpdateState>
     install: () => Promise<ElectronUpdateResult>
     onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
   }
-  assets?: {
-    convertFileSrc?: (path: string) => string
+  webview: {
+    onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => () => void
   }
-  webview?: {
-    onFileDrop?: (handler: (event: ElectronFileDropEvent) => void) => () => void
-  }
+  workspace: WorkspaceSessionApi
   window: {
     minimize: () => Promise<void>
     maximize: () => Promise<void>
@@ -210,15 +232,21 @@ export type ElectronRuntimeApi = {
     startDragging: () => Promise<void>
   }
 }
+
+export type ElectronRuntimeApi = RendererSafeElectronApi
+
 declare global {
   interface Window {
-    marklabElectron?: ElectronRuntimeApi
+    marklabElectron?: RendererSafeElectronApi
   }
 }
-export const getElectronRuntime = () => {
-  if (typeof window === 'undefined') return null
-  return window.marklabElectron ?? null
+
+export const getElectronRuntime = (): RendererSafeElectronApi => {
+  if (typeof window === 'undefined' || !window.marklabElectron) {
+    throw new Error('Electron runtime API is unavailable.')
+  }
+  return window.marklabElectron
 }
-export const isElectronRuntime = () => {
-  return getElectronRuntime() !== null
-}
+
+export const isElectronRuntime = () =>
+  typeof window !== 'undefined' && window.marklabElectron !== undefined

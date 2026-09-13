@@ -55,7 +55,8 @@ export const registerDeepLinkProtocol = (logger: Logger = noopLogger): void => {
       argv?: readonly unknown[]
       execPath?: string
     }
-    const entryPath = normalizeArgs(processWithLaunchPath.argv ?? [])[1]
+    const args = normalizeArgs(processWithLaunchPath.argv ?? [])
+    const entryPath = args[commandLineEntryIndex(args)]
     for (const scheme of SUPPORTED_DEEP_LINK_SCHEMES) {
       if (!app.isPackaged && processWithLaunchPath.execPath && entryPath) {
         app.setAsDefaultProtocolClient(scheme, processWithLaunchPath.execPath, [entryPath])
@@ -84,9 +85,29 @@ const getProcessCwd = (): string => {
 const normalizeArgs = (args: readonly unknown[]): string[] =>
   args.filter((arg): arg is string => typeof arg === 'string')
 
+// Electron switches may precede the development entry, including split-value switches.
+const ENTRY_SWITCHES_WITH_VALUES = new Set([
+  '--user-data-dir',
+  '--remote-debugging-port',
+  '--js-flags',
+  '--log-file',
+])
+
+const commandLineEntryIndex = (args: readonly string[]): number => {
+  for (let index = 1; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg === '--') return index + 1 < args.length ? index + 1 : -1
+    if (!arg.startsWith('-')) return index
+    if (ENTRY_SWITCHES_WITH_VALUES.has(arg)) index += 1
+  }
+  return -1
+}
+
 const userArgsFromCommandLine = (args: readonly unknown[]): string[] => {
   const normalized = normalizeArgs(args)
-  return normalized.slice(app.isPackaged ? 1 : 2)
+  if (app.isPackaged) return normalized.slice(1)
+  const entryIndex = commandLineEntryIndex(normalized)
+  return entryIndex < 0 ? [] : normalized.slice(entryIndex + 1)
 }
 
 export const launchInfo: AppLaunchInfo = {

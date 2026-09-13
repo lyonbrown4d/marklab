@@ -123,7 +123,7 @@ const bootstrap = async (): Promise<void> => {
   }
 
   installContentSecurityPolicy()
-  registerAssetProtocol(() => nativeIpc)
+  registerAssetProtocol(() => container?.cradle.workspaceRegistry ?? null)
   legacyShellIpc.register()
 
   didShowMain = false
@@ -173,6 +173,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', (event) => {
-  container?.cradle.knowledgeEngineService.dispose()
   windowLifecycle.handleBeforeQuit(event, () => app.quit())
+})
+
+app.once('will-quit', () => {
+  container?.cradle.knowledgeEngineService.dispose()
 })

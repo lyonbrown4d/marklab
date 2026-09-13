@@ -12,6 +12,7 @@ import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
 import AppStatusBar from '@/components/AppStatusBar'
+import { AppStatusBarProvider } from '@/components/EditorStatusBar'
 import SettingsDialogFallback from '@/components/SettingsDialogFallback'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
@@ -32,7 +33,6 @@ import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 export type { LayoutContext } from '@/app/AppLayoutContext'
 
 const SettingsDialog = lazy(() => import('@/components/SettingsDialog'))
-const MarkdownDefaultAppPrompt = lazy(() => import('@/components/MarkdownDefaultAppPrompt'))
 
 type SettingsDialogHostHandle = {
   openSettings: () => void
@@ -267,7 +267,7 @@ const AppLayout = () => {
   )
 
   return (
-    <div className="app-shell flex h-full flex-col">
+    <AppStatusBarProvider activePath={state.activePath} viewMode={state.viewMode}>
       <ExportStatusOverlay />
       <Titlebar
         ref={titlebarRef}
@@ -303,9 +303,6 @@ const AppLayout = () => {
         onOpenSettings={openSettings}
       />
       <SettingsDialogHost ref={settingsDialogRef} />
-      <Suspense fallback={null}>
-        <MarkdownDefaultAppPrompt />
-      </Suspense>
       <AppShellPanels
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}
@@ -334,7 +331,7 @@ const AppLayout = () => {
           restoreStatusBusy={state.isRestoringSession}
         />
       )}
-    </div>
+    </AppStatusBarProvider>
   )
 }
 

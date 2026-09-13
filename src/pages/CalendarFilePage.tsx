@@ -8,6 +8,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { dateKey, parseIcsCalendar } from '@/logic/ics'
 import { createFileLabel } from '@/logic/paths'
 import { useI18n } from '@/i18n/useI18n'
+import { EditorStatusBar } from '@/components/EditorStatusBar'
 
 type CalendarFilePageProps = {
   activePath: string
@@ -149,10 +150,10 @@ const CalendarFilePage = memo(
         </div>
 
         {showStatusBar && (
-          <div className="flex h-8 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-xs text-muted-foreground">
+          <EditorStatusBar activePath={activePath} viewMode="wysiwyg">
             <span>{t('calendar.mode')}</span>
             <span>{t('calendar.totalEvents', { count: calendar.events.length })}</span>
-          </div>
+          </EditorStatusBar>
         )}
       </div>
     )

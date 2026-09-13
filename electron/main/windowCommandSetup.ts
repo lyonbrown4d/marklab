@@ -43,10 +43,13 @@ export const createWindowCommandSetup = ({
         targetSessionKey,
         overrides,
       ),
-    getCurrentWorkspaceRoot: () =>
-      getContainer().cradle.workspaceRegistry.rootInfoForWindow(
-        BrowserWindow.getFocusedWindow() ?? getPrimaryWindow(),
-      ),
+    getCurrentWorkspaceRoot: () => {
+      const window = BrowserWindow.getFocusedWindow() ?? getPrimaryWindow()
+      if (!window || window.isDestroyed()) {
+        throw new Error('No active workspace window is available')
+      }
+      return getContainer().cradle.workspaceRegistry.rootInfoForWindow(window)
+    },
     getLogger: () => getContainer().cradle.logger,
     getNativeIpc,
     getPrimaryWindow,

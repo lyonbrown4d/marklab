@@ -1,4 +1,11 @@
+import { getElectronRuntime } from '@/runtime/electron'
 import { invoke } from '@/runtime/ipc'
+import type {
+  WorkspacePathActionRequest,
+  WorkspacePathActionResult,
+  WorkspaceResult,
+  WorkspaceSessionApi,
+} from '@/types/workspaceSession'
 import { z } from 'zod'
 
 export const fsRootInfoSchema = z.object({
@@ -28,7 +35,6 @@ const arrayBufferSchema = z
 
 export const fsPathMetadataSchema = z.object({
   path: z.string(),
-  absolute_path: z.string(),
   kind: z.enum(['file', 'folder']),
   size_bytes: z.number(),
   modified_ms: z.number().optional(),
@@ -40,6 +46,45 @@ export const fsAssetBytesSchema = z.object({
   media_type: z.string().nullable().optional(),
   size_bytes: z.number(),
 })
+
+const opaqueAssetUrlSchema = z
+  .string()
+  .regex(
+    /^marklab-asset:\/\/local\/v1\/[A-Za-z0-9._~-]+$/,
+    'Expected a strict marklab-asset capability URL',
+  )
+
+const isWorkspaceRelativeAssetPath = (value: string) => {
+  if (!value || !value.trim() || value.includes('\0') || value.includes('#')) return false
+
+  const candidate = value.trimStart()
+  if (/^[\\/]/.test(candidate)) return false
+  if (/^[A-Za-z]:/.test(candidate)) return false
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(candidate)) return false
+
+  let depth = 0
+  for (const segment of value.replace(/\\/g, '/').split('/')) {
+    if (!segment || segment === '.') continue
+    if (segment === '..') {
+      if (depth === 0) return false
+      depth -= 1
+      continue
+    }
+    depth += 1
+  }
+  return depth > 0
+}
+
+const workspaceRelativeAssetPathSchema = z
+  .string()
+  .refine(isWorkspaceRelativeAssetPath, 'Expected a safe workspace-relative asset path')
+
+export const fsAssetCapabilitySchema = z
+  .object({
+    url: opaqueAssetUrlSchema,
+    expires_at_ms: z.number().int().nonnegative(),
+  })
+  .strict()
 
 export const fsBufferStatusSchema = z.object({
   path: z.string(),
@@ -169,8 +214,7 @@ export const markdownAssetImportStrategySchema = z.enum([
 
 export const fsMarkdownAssetImportResultSchema = z.object({
   markdown_target: z.string(),
-  relative_path: z.string(),
-  absolute_path: z.string(),
+  relative_path: z.string().nullable(),
   asset_dir: z.string().nullable().optional(),
   copied: z.boolean(),
 })
@@ -178,8 +222,7 @@ export const fsMarkdownAssetImportResultSchema = z.object({
 export const fsMarkdownAssetResolveResultSchema = z.object({
   source_path: z.string(),
   target: z.string(),
-  absolute_path: z.string().nullable().optional(),
-  relative_path: z.string().nullable().optional(),
+  relative_path: z.string().nullable(),
   is_external: z.boolean(),
   media_type: z.string().nullable().optional(),
   exists: z.boolean(),
@@ -201,6 +244,7 @@ export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
 export type FsSnapshot = z.infer<typeof fsSnapshotSchema>
 export type FsPathMetadata = z.infer<typeof fsPathMetadataSchema>
 export type FsAssetBytes = z.infer<typeof fsAssetBytesSchema>
+export type FsAssetCapability = z.infer<typeof fsAssetCapabilitySchema>
 export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
 export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
 export type FsMarkdownHeading = z.infer<typeof fsMarkdownHeadingSchema>
@@ -227,6 +271,29 @@ export type MarkdownAssetImportStrategy = z.infer<typeof markdownAssetImportStra
 export type FsMarkdownAssetImportResult = z.infer<typeof fsMarkdownAssetImportResultSchema>
 export type FsMarkdownAssetResolveResult = z.infer<typeof fsMarkdownAssetResolveResultSchema>
 export type FsLinkPreviewMetadata = z.infer<typeof fsLinkPreviewMetadataSchema>
+
+type WorkspacePathActionInvoker = (
+  workspace: WorkspaceSessionApi,
+  request: WorkspacePathActionRequest,
+) => Promise<WorkspacePathActionResult>
+
+const unwrapWorkspaceResult = <T>(result: WorkspaceResult<T>): T => {
+  if (result.ok) return result.value
+  throw new Error(`${result.error.code}: ${result.error.message}`)
+}
+
+const runWorkspacePathAction = async (
+  path: string,
+  invokeAction: WorkspacePathActionInvoker,
+): Promise<void> => {
+  const workspace = getElectronRuntime().workspace
+  const descriptor = unwrapWorkspaceResult(await workspace.getSession())
+  const request: WorkspacePathActionRequest = {
+    session: descriptor.session,
+    path,
+  }
+  unwrapWorkspaceResult(await invokeAction(workspace, request))
+}
 
 export const fsApi = {
   async getSnapshot() {
@@ -304,12 +371,32 @@ export const fsApi = {
     const result = await invoke<unknown>('fs_get_path_metadata', { path })
     return fsPathMetadataSchema.parse(result)
   },
-  async readAssetBytes(path: string) {
-    const result = await invoke<unknown>('fs_read_asset_bytes', { path })
+  async toAssetUrl(relativePath: string) {
+    const path = workspaceRelativeAssetPathSchema.parse(relativePath)
+    const result = await invoke<unknown>('fs_issue_asset_capability', { path })
+    const capability = fsAssetCapabilitySchema.parse(result)
+    if (capability.expires_at_ms <= Date.now()) {
+      throw new Error('Issued asset capability has already expired')
+    }
+    return capability
+  },
+  async readAssetBytes(assetUrl: string) {
+    const asset_url = opaqueAssetUrlSchema.parse(assetUrl)
+    const result = await invoke<unknown>('fs_read_asset_bytes', { asset_url })
     return fsAssetBytesSchema.parse(result)
   },
   openPathInSystem(path: string) {
-    return invoke<void>('fs_open_path_in_system', { path })
+    return runWorkspacePathAction(path, (workspace, request) => workspace.openPathInSystem(request))
+  },
+  revealPathInSystem(path: string) {
+    return runWorkspacePathAction(path, (workspace, request) =>
+      workspace.revealPathInSystem(request),
+    )
+  },
+  copyAbsolutePathToClipboard(path: string) {
+    return runWorkspacePathAction(path, (workspace, request) =>
+      workspace.copyAbsolutePathToClipboard(request),
+    )
   },
   async importMarkdownAsset({
     sourcePath,

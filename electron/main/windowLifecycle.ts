@@ -34,17 +34,32 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
   const windowsAllowedToClose = new WeakSet<BrowserWindow>()
   const windowsFlushingBeforeClose = new WeakSet<BrowserWindow>()
 
-  const flushWorkspaceBuffers = async (reason: string): Promise<void> => {
+  const flushWorkspaceBuffersWithBarrier = async (reason: string): Promise<() => void> => {
     const container = options.getContainer()
+    const nativeIpc = options.getNativeIpc()
+    if (!nativeIpc) {
+      throw new Error(`Workspace flush is unavailable during ${reason}`)
+    }
+
+    const workspaceRegistry = nativeIpc.commands.workspace
+    const barrierId = await workspaceRegistry.beginShutdownBarrier(reason)
     try {
-      const flushed = await options.getNativeIpc()?.commands.workspace.flushBuffers()
-      container.cradle.logger.info('workspace buffers flushed', { flushed, reason })
-    } catch (error) {
-      container.cradle.logger.warn('workspace buffer flush failed before lifecycle transition', {
-        error,
+      const flushed = await workspaceRegistry.flushBuffersForShutdown(barrierId)
+      container.cradle.logger.info('workspace buffers flushed behind shutdown barrier', {
+        barrierId,
+        flushed,
         reason,
       })
+    } catch (error) {
+      workspaceRegistry.cancelShutdownBarrier(barrierId)
+      throw error
     }
+    return () => workspaceRegistry.cancelShutdownBarrier(barrierId)
+  }
+
+  const flushWorkspaceBuffers = async (reason: string): Promise<void> => {
+    const releaseBarrier = await flushWorkspaceBuffersWithBarrier(reason)
+    releaseBarrier()
   }
 
   const installMainWindowCloseFlush = (main: BrowserWindow): void => {
@@ -55,11 +70,20 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
       windowsFlushingBeforeClose.add(main)
       void (async () => {
-        await flushWorkspaceBuffers('window close')
-        windowsAllowedToClose.add(main)
+        let releaseBarrier: (() => void) | null = null
         try {
+          releaseBarrier = await flushWorkspaceBuffersWithBarrier('window close')
+          windowsAllowedToClose.add(main)
           if (!main.isDestroyed()) main.close()
+        } catch (error) {
+          options
+            .getContainer()
+            .cradle.logger.error(
+              'window close cancelled because workspace buffers could not be saved',
+              { error, windowId: main.id },
+            )
         } finally {
+          releaseBarrier?.()
           windowsAllowedToClose.delete(main)
           windowsFlushingBeforeClose.delete(main)
         }
@@ -94,7 +118,18 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
     quitFlushInProgress = true
     void (async () => {
-      await flushWorkspaceBuffers('quit')
+      try {
+        await flushWorkspaceBuffersWithBarrier('quit')
+      } catch (error) {
+        quitFlushInProgress = false
+        options
+          .getContainer()
+          .cradle.logger.error('app quit cancelled because workspace buffers could not be saved', {
+            error,
+          })
+        return
+      }
+
       allowAppQuit = true
       allowAllMainWindowClose = true
       windowPool?.destroyIdleWindows()

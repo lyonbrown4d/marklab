@@ -3,11 +3,19 @@ import { languages as codemirrorLanguages } from '@codemirror/language-data'
 import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
 import escape from 'lodash-es/escape'
 import i18n from '@/i18n/setup'
+import { isDarkThemeMode, isThemeMode } from '@/logic/themes'
 
 const MERMAID_ALIASES = new Set(['mermaid', 'mmd'])
 let mermaidRenderSequence = 0
 let mermaidLoader: Promise<(typeof import('mermaid'))['default']> | null = null
 const MERMAID_PREVIEW_ROOT_MARGIN = '360px'
+const mountedPreviewRefreshers = new WeakMap<Element, () => void>()
+
+export const refreshMermaidPreviews = (root: HTMLElement) => {
+  root.querySelectorAll('.milkdown-mermaid-preview').forEach((preview) => {
+    mountedPreviewRefreshers.get(preview)?.()
+  })
+}
 
 const mermaidSupport = new LanguageSupport(
   StreamLanguage.define({
@@ -46,8 +54,7 @@ const loadMermaid = () => {
 
 const resolveMermaidTheme = () => {
   const theme = document.documentElement.dataset.theme?.toLowerCase() ?? ''
-  if (theme.includes('dark')) return 'dark'
-  if (theme.includes('light')) return 'default'
+  if (isThemeMode(theme)) return isDarkThemeMode(theme) ? 'dark' : 'default'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'
 }
 
@@ -78,6 +85,10 @@ const observeMermaidPreview = (target: HTMLElement, render: () => void) => {
   }
   const observer = new IntersectionObserver(
     (entries) => {
+      if (!target.isConnected) {
+        observer.disconnect()
+        return
+      }
       if (entries.some((entry) => entry.isIntersecting)) {
         runOnce()
       }
@@ -89,6 +100,53 @@ const observeMermaidPreview = (target: HTMLElement, render: () => void) => {
 }
 
 type RenderPreview = CodeBlockConfig['renderPreview']
+
+const renderMountedMermaidPreview = (
+  id: string,
+  source: string,
+  applyPreview: Parameters<RenderPreview>[2],
+) => {
+  let generation = 0
+  const render = () => {
+    const target = document.getElementById(id)
+    if (!target) return
+    mountedPreviewRefreshers.set(target, render)
+    const request = ++generation
+    const theme = resolveMermaidTheme()
+    const isCurrent = () => request === generation && target.isConnected
+    void loadMermaid()
+      .then((mermaid) => {
+        if (!isCurrent()) return null
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme })
+        return mermaid.render(`marklab-mermaid-${++mermaidRenderSequence}`, source)
+      })
+      .then((result) => {
+        if (!result || !isCurrent()) return
+        if (theme !== resolveMermaidTheme()) {
+          render()
+          return
+        }
+        const preview = document.createElement('div')
+        preview.id = id
+        preview.className = 'milkdown-mermaid-preview'
+        preview.innerHTML = result.svg
+        applyPreview(preview)
+        // Milkdown replaces the element with a sanitized copy after every update.
+        window.requestAnimationFrame(() => {
+          const mounted = document.getElementById(id)
+          if (!mounted || request !== generation) return
+          mountedPreviewRefreshers.set(mounted, render)
+          if (theme !== resolveMermaidTheme()) render()
+        })
+      })
+      .catch((error) => {
+        if (!isCurrent()) return
+        const message = escape(getErrorMessage(error))
+        applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
+      })
+  }
+  render()
+}
 
 const renderMermaidPreview = (
   fallback: RenderPreview,
@@ -104,31 +162,18 @@ const renderMermaidPreview = (
   if (!source) return null
 
   const placeholder = createMermaidPlaceholder()
+  const currentRender = ++mermaidRenderSequence
+  placeholder.id = `marklab-mermaid-preview-${currentRender}`
   applyPreview(placeholder)
 
-  const currentRender = ++mermaidRenderSequence
-  observeMermaidPreview(placeholder, () => {
-    void loadMermaid()
-      .then((mermaid) => {
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: 'strict',
-          theme: resolveMermaidTheme(),
-        })
-        return mermaid.render(`marklab-mermaid-${currentRender}`, source)
-      })
-      .then((result) => {
-        if (currentRender !== mermaidRenderSequence) return
-        const preview = document.createElement('div')
-        preview.className = 'milkdown-mermaid-preview'
-        preview.innerHTML = result.svg
-        applyPreview(preview)
-      })
-      .catch((error) => {
-        if (currentRender !== mermaidRenderSequence) return
-        const message = escape(getErrorMessage(error))
-        applyPreview(`<pre class="milkdown-mermaid-error">${message}</pre>`)
-      })
+  // Milkdown sanitizes previews into HTML, so the supplied element is not mounted.
+  // Wait for its DOM update and observe the actual copy instead.
+  window.requestAnimationFrame(() => {
+    const target = document.getElementById(placeholder.id)
+    if (!target) return
+    observeMermaidPreview(target, () => {
+      renderMountedMermaidPreview(placeholder.id, source, applyPreview)
+    })
   })
 }
 

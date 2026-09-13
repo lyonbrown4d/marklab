@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { NodeApi } from 'react-arborist'
 import {
   ChevronDown,
@@ -61,6 +62,7 @@ export const FileTreeContextMenu = ({
   onRequestDelete,
   readonlyTree,
 }: FileTreeContextMenuProps) => {
+  const renameRequested = useRef(false)
   const item = node.data
   const isFolder = item.type === 'folder'
   const textViewsAvailable = !isFolder && !isPreviewableFilePath(item.path)
@@ -102,6 +104,15 @@ export const FileTreeContextMenu = ({
   return (
     <ContextMenuContent
       alignOffset={-2}
+      onClick={(event) => event.stopPropagation()}
+      onCloseAutoFocus={(event) => {
+        if (!renameRequested.current) return
+        renameRequested.current = false
+        event.preventDefault()
+        runMenuTask('rename path', async () => {
+          await node.edit()
+        })
+      }}
       className="w-[16rem] rounded-lg border border-border/90 bg-popover p-1.5 shadow-xl"
     >
       <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
@@ -206,7 +217,13 @@ export const FileTreeContextMenu = ({
       <ContextMenuSeparator />
       {!readonlyTree ? (
         <>
-          <MenuItem icon={Pencil} shortcutLabel={shortcut.rename} onSelect={() => void node.edit()}>
+          <MenuItem
+            icon={Pencil}
+            shortcutLabel={shortcut.rename}
+            onSelect={() => {
+              renameRequested.current = true
+            }}
+          >
             {labels.rename}
           </MenuItem>
           <MenuItem

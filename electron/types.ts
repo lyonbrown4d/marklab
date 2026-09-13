@@ -1,3 +1,55 @@
+export { workspaceErrorCodes } from '@/types/workspaceSession'
+export type {
+  AssetApi,
+  AssetBytes,
+  AssetCapability,
+  AssetIssueCapabilityRequest,
+  AssetReadBytesRequest,
+  WorkspaceBufferStatus,
+  WorkspaceCancelSwitchRequest,
+  WorkspaceCancelSwitchResult,
+  WorkspaceCommitResult,
+  WorkspaceCommitRootRequest,
+  WorkspaceCommitSingleFileRequest,
+  WorkspaceDescriptor,
+  WorkspaceEntryKind,
+  WorkspaceError,
+  WorkspaceErrorCode,
+  WorkspaceFlushBuffersAck,
+  WorkspaceFlushBuffersRequest,
+  WorkspaceFlushBuffersResult,
+  WorkspaceGetSessionResult,
+  WorkspaceLifecycleAck,
+  WorkspaceLifecycleApi,
+  WorkspaceLifecycleMessage,
+  WorkspaceLifecycleRequest,
+  WorkspacePrepareAck,
+  WorkspacePrepareCancelledEvent,
+  WorkspacePreparedSwitch,
+  WorkspacePrepareRequest,
+  WorkspacePrepareSwitchRequest,
+  WorkspacePrepareSwitchResult,
+  WorkspaceReadFileRequest,
+  WorkspaceReadFileResponse,
+  WorkspaceReadFileResult,
+  WorkspaceResult,
+  WorkspaceRoot,
+  WorkspaceRootKind,
+  WorkspaceSealAck,
+  WorkspaceSealRequest,
+  WorkspaceSessionApi,
+  WorkspaceSessionChangedEvent,
+  WorkspaceSessionIdentity,
+  WorkspaceSessionSeedEvent,
+  WorkspaceSnapshot,
+  WorkspaceSnapshotChangedEvent,
+  WorkspaceSnapshotEntry,
+  WorkspaceSwitchToken,
+  WorkspaceUpdateBufferRequest,
+  WorkspaceUpdateBufferResponse,
+  WorkspaceUpdateBufferResult,
+} from '@/types/workspaceSession'
+
 export type MarklabPlatform = 'windows' | 'macos' | 'linux' | 'unknown'
 
 export type PlatformInfo = {
@@ -110,6 +162,9 @@ export type AppLaunchInfo = SingleInstancePayload & {
   deepLinks: DeepLinkPayload[]
 }
 
+/**
+ * @deprecated Transitional payload for commands.invoke compatibility.
+ */
 export type RuntimeCommandPayload = {
   command: string
   args?: unknown
@@ -119,6 +174,9 @@ export type SystemThemePayload = {
   colorMode: 'light' | 'dark'
 }
 
+/**
+ * @deprecated Transitional payload for the generic events compatibility surface.
+ */
 export type RuntimeEventPayload<T = unknown> = {
   event: string
   id: number

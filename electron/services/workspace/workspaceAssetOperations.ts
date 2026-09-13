@@ -21,16 +21,17 @@ import {
 } from '@electron/services/workspace/workspaceUtils.js'
 
 export const preserveAssetPath = (
+  state: FsStateData,
   sourcePath: string,
   documentAbs: string,
 ): FsMarkdownAssetImportResult => {
+  const absoluteSourcePath = path.resolve(sourcePath)
   const markdownTarget = normalizeMarkdownTarget(
-    path.relative(path.dirname(documentAbs), sourcePath),
+    path.relative(path.dirname(documentAbs), absoluteSourcePath),
   )
   return {
     markdown_target: markdownTarget,
-    relative_path: normalizeRelativePath(sourcePath),
-    absolute_path: path.resolve(sourcePath),
+    relative_path: toWorkspaceRelative(workspaceRootForAssets(state), absoluteSourcePath),
     asset_dir: null,
     copied: false,
   }
@@ -77,7 +78,6 @@ export const resolveMarkdownAssetTarget = async (
     return {
       source_path: documentPath,
       target,
-      absolute_path: null,
       relative_path: null,
       is_external: true,
       media_type: guessMediaType(target),
@@ -92,7 +92,6 @@ export const resolveMarkdownAssetTarget = async (
   return {
     source_path: documentPath,
     target,
-    absolute_path: absolutePath,
     relative_path: toWorkspaceRelative(workspaceRootForAssets(state), absolutePath),
     is_external: false,
     media_type: guessMediaType(localTarget),
@@ -106,12 +105,11 @@ const copiedAssetResult = (
   targetAbs: string,
   assetDir: string,
 ): FsMarkdownAssetImportResult => {
+  const relativePath = toWorkspaceRelative(workspaceRootForAssets(state), targetAbs)
+  if (!relativePath) throw new Error('Copied asset must stay inside the current workspace')
   return {
     markdown_target: normalizeMarkdownTarget(path.relative(path.dirname(documentAbs), targetAbs)),
-    relative_path:
-      toWorkspaceRelative(workspaceRootForAssets(state), targetAbs) ??
-      normalizeRelativePath(targetAbs),
-    absolute_path: targetAbs,
+    relative_path: relativePath,
     asset_dir: assetDir,
     copied: true,
   }

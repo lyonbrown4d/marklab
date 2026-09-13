@@ -3,9 +3,9 @@ import { useDesktopReadySignal } from '@/app/useDesktopReadySignal'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { listen } from '@/runtime/events'
-import { fsApi } from '@/services/fsApi'
 import type { ThemeMode } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { isDarkThemeMode } from '@/logic/themes'
 
 type UseAppDocumentSyncOptions = {
   theme: ThemeMode
@@ -73,6 +73,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme
+    document.documentElement.classList.toggle('dark', isDarkThemeMode(theme))
     document.documentElement.dataset.motionSmoothScrolling = motionSmoothScrolling
       ? 'true'
       : 'false'
@@ -95,16 +96,8 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
     theme,
   ])
 
-  useEffect(() => {
-    if (!isDesktopRuntime()) return
-    const flushOnClose = () => {
-      void fsApi.flushBuffers()
-    }
-    window.addEventListener('beforeunload', flushOnClose)
-    return () => {
-      window.removeEventListener('beforeunload', flushOnClose)
-    }
-  }, [])
+  // Native window blur and the main-process close/quit barrier own buffer persistence.
+  // Async IPC during beforeunload is too late and races the frozen mutation gate.
 
   return {
     immersiveZenMode,

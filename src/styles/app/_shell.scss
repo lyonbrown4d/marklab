@@ -25,26 +25,68 @@
   transition: box-shadow var(--motion-duration-base) ease;
 }
 
-.is-panel-layout-animating > [data-panel] {
-  transition:
-    flex-grow var(--motion-duration-slow) var(--motion-ease-emphasized),
-    flex-basis var(--motion-duration-slow) var(--motion-ease-emphasized);
+// Keep panel resizing immediate without changing persisted motion preferences.
+:root .workspace-shell-panels {
+  .motion-panel,
+  .motion-panel-surface,
+  .motion-view,
+  .panel-enter,
+  .is-panel-layout-animating > [data-panel] {
+    animation: none;
+    transition: none;
+    transform: none;
+    will-change: auto;
+  }
+
+  &.is-panel-layout-animating > [data-panel] {
+    transition: none;
+  }
 }
 
 .workspace-rail {
-  background: hsl(var(--sidebar));
-  border-right-color: color-mix(in srgb, hsl(var(--sidebar-border)) 72%, transparent);
+  background: hsl(var(--background));
+  border-inline-color: transparent;
 }
 
 .workspace-main {
-  background: color-mix(in srgb, hsl(var(--card)) 84%, hsl(var(--background)) 16%);
+  background: hsl(var(--background));
 }
 
 .workspace-main [data-panel-content] {
-  outline: 1px solid color-mix(in srgb, hsl(var(--border)) 74%, transparent);
+  outline: none;
+}
+
+.workspace-reading-layout {
+  .workspace-rail,
+  .workspace-main,
+  .sidebar-section {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sidebar-section {
+    background: transparent;
+  }
+
+  .resize-handle-vertical {
+    background: transparent;
+  }
+}
+
+.workspace-shell-panels .editor-paper,
+.workspace-shell-panels .editor-paper:focus-within {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transition: none;
 }
 
 :root[data-immersive-zen='true'] {
+  .workspace-shell-panels {
+    padding: 0;
+  }
+
   .motion-panel-left,
   .motion-panel-right,
   #left-sidebar-resize,
@@ -65,13 +107,13 @@
   .editor-paper {
     max-width: min(980px, calc(100vw - 64px));
     margin-inline: auto;
-    border-color: color-mix(in srgb, hsl(var(--border)) 68%, transparent);
-    box-shadow: 0 10px 22px -16px color-mix(in srgb, hsl(var(--foreground)) 28%, transparent);
+    border: 0;
+    box-shadow: none;
   }
 }
 
 .editor-stage {
-  background: color-mix(in srgb, hsl(var(--background)) 94%, hsl(var(--card)) 6%);
+  background: hsl(var(--background));
 }
 
 .editor-paper {
@@ -149,6 +191,7 @@
 }
 
 .app-status-bar {
-  background: hsl(var(--card));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, hsl(var(--card)) 64%, transparent);
+  background: hsl(var(--background));
+  border-top-color: transparent;
+  box-shadow: none;
 }

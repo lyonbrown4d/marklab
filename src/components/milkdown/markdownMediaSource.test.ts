@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   isMarkdownMediaTarget,
   markdownMediaKindForTarget,
@@ -10,15 +10,14 @@ vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
 }))
 
-vi.mock('@/runtime/assets', () => ({
-  convertAssetFileSrc: (path: string) => `asset://${path}`,
-}))
-
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     resolveMarkdownAsset: vi.fn(),
+    toAssetUrl: vi.fn(),
   },
 }))
+
+beforeEach(() => vi.clearAllMocks())
 
 describe('markdownMediaSource', () => {
   it('classifies audio and video link targets', () => {
@@ -38,15 +37,19 @@ describe('markdownMediaSource', () => {
     vi.mocked(fsApi.resolveMarkdownAsset).mockResolvedValueOnce({
       source_path: 'notes/doc.md',
       target: './media/demo.webm#t=2',
-      absolute_path: 'D:/vault/notes/media/demo.webm',
       relative_path: 'notes/media/demo.webm',
       is_external: false,
       media_type: 'video/webm',
       exists: true,
     })
+    vi.mocked(fsApi.toAssetUrl).mockResolvedValueOnce({
+      url: 'marklab-asset://local/v1/test-capability',
+      expires_at_ms: Date.now() + 60_000,
+    })
 
     await expect(resolveMarkdownMediaSource('notes/doc.md', './media/demo.webm#t=2')).resolves.toBe(
-      'asset://D:/vault/notes/media/demo.webm#t=2',
+      'marklab-asset://local/v1/test-capability#t=2',
     )
+    expect(fsApi.toAssetUrl).toHaveBeenCalledWith('notes/media/demo.webm')
   })
 })

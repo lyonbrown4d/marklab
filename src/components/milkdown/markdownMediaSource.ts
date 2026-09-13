@@ -1,61 +1,50 @@
 import { documentAdapterForMarkdownEmbedPath } from '@/logic/documentAdapters'
 import type { PreviewFileKind } from '@/logic/fileTypes'
-import { convertAssetFileSrc } from '@/runtime/assets'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 
-const localProtocolPattern = /^(https?:|data:|blob:|asset:|file:)/i
-const resolvedMediaSourceCache = new Map<string, string>()
-
-const mediaSourceCacheKey = (documentPath: string, target: string) => {
-  return `${documentPath}\u0000${target.trim()}`
+const externalProtocolPattern = /^(https?:|data:|blob:)/i
+const cleanTargetPath = (target: string) =>
+  target.trim().split('#')[0]?.split('?')[0] ?? target.trim()
+const targetFragment = (target: string) => {
+  const index = target.indexOf('#')
+  return index >= 0 ? target.slice(index) : ''
 }
-
-const cleanTargetPath = (target: string) => {
-  return target.trim().split('#')[0]?.split('?')[0] ?? target.trim()
+const withoutFragment = (path: string) => path.split('#')[0] ?? path
+const issueAssetSource = async (relativePath: string, target: string) => {
+  const capability = await fsApi.toAssetUrl(withoutFragment(relativePath))
+  return `${capability.url}${targetFragment(target)}`
 }
-
-const targetSuffix = (target: string) => {
-  const cleanPath = cleanTargetPath(target)
-  return target.trim().slice(cleanPath.length)
-}
-
 export const markdownMediaKindForTarget = (
   target: string,
 ): Extract<PreviewFileKind, 'audio' | 'video'> | null => {
-  const cleanPath = cleanTargetPath(target)
-  const adapter = documentAdapterForMarkdownEmbedPath(cleanPath)
+  const adapter = documentAdapterForMarkdownEmbedPath(cleanTargetPath(target))
   return adapter?.kind === 'audio' || adapter?.kind === 'video' ? adapter.kind : null
 }
-
 export const isMarkdownMediaTarget = (target: string) => markdownMediaKindForTarget(target) !== null
-
-const isExternalMediaTarget = (target: string) => {
-  return localProtocolPattern.test(target.trim())
-}
+const isExternalMediaTarget = (target: string) => externalProtocolPattern.test(target.trim())
 
 export const resolveMarkdownMediaSource = async (documentPath: string | null, target: string) => {
   const trimmed = target.trim()
-  if (!trimmed || !isMarkdownMediaTarget(trimmed)) return target
-  if (!documentPath || !isDesktopRuntime() || isExternalMediaTarget(trimmed)) return trimmed
-
-  const cached = resolvedMediaSourceCache.get(mediaSourceCacheKey(documentPath, trimmed))
-  if (cached) return cached
+  const kind = markdownMediaKindForTarget(trimmed)
+  if (!trimmed || !kind) return target
+  if (isExternalMediaTarget(trimmed)) return trimmed
+  if (!documentPath || !isDesktopRuntime()) return ''
 
   try {
-    const resolved = await fsApi.resolveMarkdownAsset({
-      documentPath,
-      target: trimmed,
-    })
-    if (resolved.is_external || !resolved.exists || !resolved.absolute_path) {
-      return trimmed
+    const resolved = await fsApi.resolveMarkdownAsset({ documentPath, target: trimmed })
+    const relativePath = resolved.relative_path
+    if (
+      resolved.is_external ||
+      !resolved.exists ||
+      !relativePath ||
+      (resolved.media_type && !resolved.media_type.startsWith(`${kind}/`))
+    ) {
+      return ''
     }
-
-    const resolvedSrc = `${convertAssetFileSrc(resolved.absolute_path)}${targetSuffix(trimmed)}`
-    resolvedMediaSourceCache.set(mediaSourceCacheKey(documentPath, trimmed), resolvedSrc)
-    return resolvedSrc
+    return await issueAssetSource(relativePath, trimmed)
   } catch (error) {
     console.warn('Failed to resolve Markdown media source', error)
-    return trimmed
+    return ''
   }
 }

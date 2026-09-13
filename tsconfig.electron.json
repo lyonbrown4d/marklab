@@ -6,7 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "types": [],
+    "types": ["node"],
     "skipLibCheck": true,
     "strict": true,
     "noUnusedLocals": true,
@@ -14,9 +14,10 @@
     "noFallthroughCasesInSwitch": true,
     "outDir": "dist-electron",
     "paths": {
+      "@/*": ["./src/*"],
       "@electron/*": ["./electron/*"]
     },
-    "rootDir": "electron",
+    "rootDir": ".",
     "sourceMap": true
   },
   "include": ["electron/**/*.ts", "electron/**/*.d.ts"]

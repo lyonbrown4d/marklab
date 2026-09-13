@@ -1,6 +1,5 @@
-import { AlertTriangle, FileText, FolderOpen, GitBranch, RotateCcw, Terminal } from 'lucide-react'
+import { AlertTriangle, GitBranch, RotateCcw, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
@@ -61,12 +60,16 @@ export const AppStatusBarLeft = ({
             ) : (
               <GitBranch aria-hidden="true" data-icon="inline-start" />
             )}
-            <span className="truncate">
-              {gitIsRepository ? `${gitBranch} · ${gitLabel}` : gitLabel}
-            </span>
+            {gitIsRepository && <span className="truncate">{gitBranch}</span>}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t('statusBar.openScm')}</TooltipContent>
+        <TooltipContent>
+          <div>{t('statusBar.openScm')}</div>
+          <div>{gitLabel}</div>
+          <div>
+            {workspaceLabel} · {t('statusBar.files', { count: String(markdownFileCount) })}
+          </div>
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -84,11 +87,6 @@ export const AppStatusBarLeft = ({
         </TooltipTrigger>
         <TooltipContent>{t('statusBar.toggleTerminal')}</TooltipContent>
       </Tooltip>
-      <Separator orientation="vertical" className="hidden h-3.5 bg-border/80 sm:block" />
-      <div className="hidden min-w-0 items-center gap-1.5 px-1 sm:flex">
-        <FolderOpen aria-hidden="true" className="size-3.5 shrink-0" />
-        <span className="max-w-[240px] truncate">{workspaceLabel}</span>
-      </div>
       {restoreStatusMessage ? (
         <div className="inline-flex min-w-0 items-center gap-1.5">
           <Tooltip>
@@ -121,10 +119,6 @@ export const AppStatusBarLeft = ({
           </Button>
         </div>
       ) : null}
-      <div className="hidden items-center gap-1.5 px-1 md:flex">
-        <FileText aria-hidden="true" className="size-3.5" />
-        <span>{t('statusBar.files', { count: String(markdownFileCount) })}</span>
-      </div>
     </div>
   )
 }

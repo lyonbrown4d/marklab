@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Locale } from '@/i18n/resources'
 import i18n from '@/i18n/setup'
@@ -10,13 +10,20 @@ export const useI18n = () => {
   const setLocaleStore = usePreferencesStore((state) => state.setLocale)
 
   useEffect(() => {
-    void i18n.changeLanguage(locale)
+    if (i18n.language !== locale) {
+      void i18n.changeLanguage(locale)
+    }
   }, [locale])
 
-  const setLocale = (next: Locale) => {
-    setLocaleStore(next)
-    void i18n.changeLanguage(next)
-  }
+  const setLocale = useCallback(
+    (next: Locale) => {
+      setLocaleStore(next)
+      if (i18n.language !== next) {
+        void i18n.changeLanguage(next)
+      }
+    },
+    [setLocaleStore],
+  )
 
   return { t, locale, setLocale }
 }

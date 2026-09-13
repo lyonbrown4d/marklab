@@ -1,15 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const resolveMarkdownAsset = vi.hoisted(() => vi.fn())
+const toAssetUrl = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     resolveMarkdownAsset,
+    toAssetUrl,
   },
-}))
-
-vi.mock('@/runtime/assets', () => ({
-  convertAssetFileSrc: (path: string) => `asset://${path.replace(/\\/g, '/')}`,
 }))
 
 vi.mock('@/runtime/environment', () => ({
@@ -30,18 +28,23 @@ describe('markdown PDF source helpers', () => {
 
   it('resolves local PDF links through the desktop asset bridge', async () => {
     resolveMarkdownAsset.mockResolvedValueOnce({
-      absolute_path: 'D:\\docs\\spec.pdf',
+      relative_path: 'docs/spec.pdf',
       exists: true,
       is_external: false,
       media_type: 'application/pdf',
     })
+    toAssetUrl.mockResolvedValueOnce({
+      url: 'marklab-asset://local/v1/pdf-capability',
+      expires_at_ms: Date.now() + 60000,
+    })
 
     await expect(resolveMarkdownPdfSource('notes/current.md', './spec.pdf#page=2')).resolves.toBe(
-      'asset://D:/docs/spec.pdf#page=2',
+      'marklab-asset://local/v1/pdf-capability#page=2',
     )
     expect(resolveMarkdownAsset).toHaveBeenCalledWith({
       documentPath: 'notes/current.md',
       target: './spec.pdf#page=2',
     })
+    expect(toAssetUrl).toHaveBeenCalledWith('docs/spec.pdf')
   })
 })

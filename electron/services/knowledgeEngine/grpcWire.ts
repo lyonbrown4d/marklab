@@ -4,6 +4,7 @@ import { Buffer } from 'node:buffer'
 import {
   ChannelCredentials,
   Client,
+  type CallOptions,
   type ClientDuplexStream,
   type ClientOptions,
   type ClientReadableStream,
@@ -69,7 +70,8 @@ type MessageCodec<T> = {
 export type UnaryCall<Request, Response> = (
   request: Request,
   metadata: Metadata,
-  callback: (error: ServiceError | null, response: Response) => void,
+  options: CallOptions,
+  callback: (error: ServiceError | null, response?: Response) => void,
 ) => ClientUnaryCall
 
 type ServerStreamingCall<Request, Response> = (

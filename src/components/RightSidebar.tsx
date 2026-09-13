@@ -36,7 +36,7 @@ type RightSidebarProps = {
 const RightSidebarComponent = ({ collapsed, tabs, totalFiles, ...props }: RightSidebarProps) => {
   return (
     <aside
-      className="layout-rail workspace-rail flex h-full w-full flex-col border-l border-sidebar-border/80"
+      className="layout-rail workspace-rail workspace-inspector flex h-full w-full min-w-0 flex-col"
       data-collapsed={collapsed ? 'true' : 'false'}
     >
       {collapsed ? (

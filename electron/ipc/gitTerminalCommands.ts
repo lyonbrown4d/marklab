@@ -23,7 +23,7 @@ export const registerGitTerminalIpc = (
   const terminal = terminalService
   const commandHandlers = createGitTerminalCommandHandlers(git, terminal)
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
-  app.on('before-quit', () => {
+  app.once('will-quit', () => {
     terminal.dispose()
   })
   logger.info('git and terminal IPC registered')

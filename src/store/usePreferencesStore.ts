@@ -91,7 +91,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       customThemeId: null,
       locale: getInitialLocale(),
       sidebarCollapsed: false,
-      rightSidebarCollapsed: false,
+      rightSidebarCollapsed: true,
       silentSave: true,
       showEditorStatusBar: true,
       sourceCodeMiniMapEnabled: true,

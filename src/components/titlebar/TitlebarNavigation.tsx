@@ -34,7 +34,7 @@ export const TitlebarNavigation = ({
   const toggleSidebarLabel = t('actions.toggleSidebar')
 
   return (
-    <div className="flex min-w-0 shrink-0 items-center gap-1">
+    <div className="flex min-w-0 shrink-0 items-center gap-1.5">
       <Tooltip>
         <TooltipTrigger asChild>
           <TitlebarIconButton aria-label={toggleSidebarLabel} onClick={onToggleSidebar}>
@@ -44,9 +44,9 @@ export const TitlebarNavigation = ({
         <TooltipContent side="bottom">{toggleSidebarLabel}</TooltipContent>
       </Tooltip>
 
-      <div className="flex min-w-0 items-center gap-2 px-1">
-        <AppLogo className="size-6 shrink-0" />
-        <span className="hidden max-w-28 truncate text-sm font-semibold tracking-[-0.01em] text-foreground sm:block">
+      <div className="flex min-w-0 items-center gap-2 pl-1 pr-2.5">
+        <AppLogo className="size-5 shrink-0" />
+        <span className="hidden max-w-28 truncate text-[13px] font-semibold tracking-[-0.02em] text-foreground sm:block">
           MarkLab
         </span>
       </div>

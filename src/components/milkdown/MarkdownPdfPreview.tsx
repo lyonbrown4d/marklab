@@ -10,7 +10,7 @@ import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFall
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { fetchPdfObjectUrl } from '@/components/milkdown/pdfObjectUrlSource'
+import { usePdfDocumentData } from '@/components/milkdown/usePdfDocumentData'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 
@@ -28,12 +28,6 @@ type PdfViewerSurfaceProps = {
   mode: 'inline' | 'modal'
 }
 
-type PdfObjectUrlState = {
-  failed: boolean
-  key: string
-  objectUrl: string | null
-}
-
 const PdfPreviewStatus = ({ failed, label }: { failed: boolean; label: string }) => (
   <div className="marklab-pdf-preview__status p-4">
     {failed ? (
@@ -44,50 +38,7 @@ const PdfPreviewStatus = ({ failed, label }: { failed: boolean; label: string })
   </div>
 )
 
-const isAbortError = (error: unknown) => {
-  return error instanceof Error && error.name === 'AbortError'
-}
-
-const usePdfObjectUrl = (fileUrl: string) => {
-  const [state, setState] = useState<PdfObjectUrlState>({
-    failed: false,
-    key: '',
-    objectUrl: null,
-  })
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    void fetchPdfObjectUrl(fileUrl, controller.signal)
-      .then((objectUrl) => {
-        setState({ failed: false, key: fileUrl, objectUrl })
-      })
-      .catch((error: unknown) => {
-        if (isAbortError(error)) return
-        setState({ failed: true, key: fileUrl, objectUrl: null })
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [fileUrl])
-
-  useEffect(() => {
-    const objectUrl = state.objectUrl
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [state.objectUrl])
-
-  const current = state.key === fileUrl ? state : { failed: false, key: fileUrl, objectUrl: null }
-  return {
-    failed: current.failed,
-    loading: !current.failed && !current.objectUrl,
-    objectUrl: current.objectUrl,
-  }
-}
-
-const useMeasuredWidth = (fallback: number) => {
+const useMeasuredWidth = (fallback: number, ready: boolean) => {
   const elementRef = useRef<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(fallback)
 
@@ -106,24 +57,25 @@ const useMeasuredWidth = (fallback: number) => {
     return () => {
       observer.disconnect()
     }
-  }, [])
+  }, [ready])
 
   return [elementRef, width] as const
 }
 
 export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   const { t } = useI18n()
-  const { failed, loading, objectUrl } = usePdfObjectUrl(fileUrl)
+  const { error, loading, file } = usePdfDocumentData(fileUrl)
+  const failed = error !== null
   const [pageState, setPageState] = useState({ key: '', numPages: 0, pageNumber: 1 })
-  const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680)
+  const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680, Boolean(file))
   const pageWidth = Math.max(240, Math.min(documentWidth - 24, mode === 'modal' ? 960 : 720))
   const currentPageState =
-    pageState.key === objectUrl ? pageState : { key: objectUrl ?? '', numPages: 0, pageNumber: 1 }
+    pageState.key === fileUrl ? pageState : { key: fileUrl, numPages: 0, pageNumber: 1 }
   const { numPages, pageNumber } = currentPageState
   const pages = Array.from({ length: numPages }, (_, index) => index + 1)
   const handleLoadSuccess = useCallback(
     ({ numPages: nextNumPages }: { numPages: number }) => {
-      const key = objectUrl ?? ''
+      const key = fileUrl
       setPageState((current) => {
         const currentPageNumber = current.key === key ? current.pageNumber : 1
         return {
@@ -133,17 +85,17 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
         }
       })
     },
-    [objectUrl],
+    [fileUrl],
   )
   const selectPage = useCallback(
     (page: number) => {
-      const key = objectUrl ?? ''
+      const key = fileUrl
       setPageState((current) => (current.key === key ? { ...current, pageNumber: page } : current))
     },
-    [objectUrl],
+    [fileUrl],
   )
 
-  if (loading || failed || !objectUrl) {
+  if (loading || failed || !file) {
     return (
       <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
         <div className="marklab-pdf-viewer__document" ref={documentRef}>
@@ -157,7 +109,14 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   }
 
   return (
-    <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
+    <Document
+      className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}
+      file={file}
+      suspense={false}
+      loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
+      error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
+      onLoadSuccess={handleLoadSuccess}
+    >
       <nav className="marklab-pdf-viewer__thumbs" aria-label={t('preview.pdfPages')}>
         {pages.map((page) => (
           <button
@@ -167,29 +126,20 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
             onClick={() => selectPage(page)}
             type="button"
           >
-            <Document file={objectUrl} loading={null} error={null}>
-              <Page
-                pageNumber={page}
-                renderAnnotationLayer={false}
-                renderTextLayer={false}
-                width={92}
-              />
-            </Document>
+            <Page
+              pageNumber={page}
+              renderAnnotationLayer={false}
+              renderTextLayer={false}
+              width={92}
+            />
             <span>{page}</span>
           </button>
         ))}
       </nav>
       <div className="marklab-pdf-viewer__document" ref={documentRef}>
-        <Document
-          file={objectUrl}
-          loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
-          error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
-          onLoadSuccess={handleLoadSuccess}
-        >
-          <Page pageNumber={pageNumber} width={pageWidth} />
-        </Document>
+        <Page pageNumber={pageNumber} width={pageWidth} />
       </div>
-    </div>
+    </Document>
   )
 }
 

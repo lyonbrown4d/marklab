@@ -5,6 +5,11 @@ import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 
 type MarkdownUpdatedListener = (ctx: unknown, markdown: string) => void
 
+const codeBlockTheme = vi.hoisted(() => ({ extension: [], setDarkMode: vi.fn() }))
+vi.mock('@/components/milkdown/markdownCodeBlockTheme', () => ({
+  createMarkdownCodeBlockTheme: () => codeBlockTheme,
+}))
+
 const crepeMock = vi.hoisted(() => {
   const instances: FakeCrepe[] = []
   let latestMarkdownUpdated: MarkdownUpdatedListener | null = null
@@ -126,6 +131,7 @@ vi.mock('@/components/milkdown/markdownSafePlugins', () => ({
 
 vi.mock('@/components/milkdown/mermaidPreview', () => ({
   mermaidCodeBlockConfig: {},
+  refreshMermaidPreviews: vi.fn(),
 }))
 
 vi.mock('@/components/milkdown/slashMenuConfig', () => ({
@@ -140,18 +146,22 @@ const slashLabels = {} as SlashCommandLabels
 
 const Harness = ({
   activePath = 'docs/example.md',
+  darkMode = false,
+  placeholder = 'Write',
   onChange,
   value,
 }: {
   activePath?: string
+  darkMode?: boolean
+  placeholder?: string
   onChange: (markdown: string) => void
   value: string
 }) => {
   const controller = useMarkdownPlaygroundController({
     activePath,
-    darkMode: false,
+    darkMode,
     onChange,
-    placeholder: 'Write',
+    placeholder,
     slashLabels,
     value,
   })
@@ -171,13 +181,77 @@ const renderReadyHarness = async (onChange: (markdown: string) => void, value: s
 }
 
 describe('useMarkdownPlaygroundController', () => {
+  it('waits for the old editor to finish destroying before starting its replacement', async () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<Harness onChange={onChange} value="A" />)
+    await act(async () => {})
+    const previous = crepeMock.latestInstance()
+    let finishDestroy = () => {}
+    previous?.destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDestroy = resolve
+        }),
+    )
+    rerender(<Harness onChange={onChange} value="A" placeholder="Continue" />)
+    const replacement = crepeMock.latestInstance()
+    await act(async () => {})
+    expect(previous?.destroy).toHaveBeenCalledOnce()
+    expect(replacement?.create).not.toHaveBeenCalled()
+    await act(async () => {
+      finishDestroy()
+    })
+    expect(replacement?.create).toHaveBeenCalledOnce()
+  })
+
+  it('does not start a superseded editor while another instance is being destroyed', async () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<Harness onChange={onChange} value="A" />)
+    await act(async () => {})
+    let finishDestroy = () => {}
+    crepeMock.latestInstance()?.destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDestroy = resolve
+        }),
+    )
+    rerender(<Harness onChange={onChange} value="A" placeholder="Continue" />)
+    const superseded = crepeMock.latestInstance()
+    rerender(<Harness onChange={onChange} value="B" />)
+    const current = crepeMock.latestInstance()
+    await act(async () => {
+      finishDestroy()
+    })
+    expect(superseded?.create).not.toHaveBeenCalled()
+    expect(current?.create).toHaveBeenCalledOnce()
+    expect(current?.getMarkdown()).toBe('B')
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     crepeMock.reset()
+    codeBlockTheme.setDarkMode.mockClear()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('changes code block appearance without recreating the document editor', async () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<Harness onChange={onChange} value="A" />)
+    await act(async () => {})
+    const original = crepeMock.latestInstance()
+    rerender(<Harness onChange={onChange} value="A" darkMode />)
+    expect(codeBlockTheme.setDarkMode).toHaveBeenLastCalledWith(true)
+    rerender(<Harness onChange={onChange} value="A" />)
+    expect(codeBlockTheme.setDarkMode).toHaveBeenLastCalledWith(false)
+    await act(async () => {})
+    expect(crepeMock.latestInstance()).toBe(original)
+    expect(original?.destroy).not.toHaveBeenCalled()
+    expect(original?.create).toHaveBeenCalledOnce()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('does not save markdown that only changed because Crepe serialized the initial document', async () => {

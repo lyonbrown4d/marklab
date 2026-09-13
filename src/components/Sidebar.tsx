@@ -6,6 +6,7 @@ import type { FileTreeNode } from '@/logic/fileTree'
 import { isSidebarActivity, SIDEBAR_ACTIVITY_PARAM, type SidebarActivityId } from '@/logic/routing'
 import type { FsSearchResult } from '@/services/fsApi'
 import type { GitDiffRequest } from '@/services/gitApi'
+import { cn } from '@/lib/utils'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import { onFileSearchFocusRequest } from '@/utils/appEvents'
 
@@ -94,10 +95,15 @@ const SidebarComponent = ({
 
   return (
     <aside
-      className="layout-rail workspace-rail flex h-full w-full overflow-hidden border-r border-sidebar-border text-sidebar-foreground"
+      className={cn(
+        'layout-rail workspace-rail flex h-full w-full overflow-hidden border-r border-sidebar-border text-sidebar-foreground',
+        !collapsed && 'flex-col',
+      )}
       data-collapsed={collapsed ? 'true' : 'false'}
     >
       <SidebarActivityRail
+        collapsed={collapsed}
+        rootPath={rootPath}
         activeActivity={activeActivity}
         homeActive={location.pathname === '/'}
         fileCount={fileCount}
@@ -106,7 +112,7 @@ const SidebarComponent = ({
         onSelectActivity={selectActivity}
       />
       {!collapsed && (
-        <div className="min-w-0 flex-1">
+        <div className="min-h-0 min-w-0 flex-1">
           <SidebarToolPanel
             activeActivity={activeActivity}
             activePath={activePath}

@@ -26,6 +26,13 @@ export type FsPathMetadata = {
   readonly: boolean
 }
 
+export type FsPathMetadataResult = Omit<FsPathMetadata, 'absolute_path'>
+
+export type FsAssetCapability = {
+  url: string
+  expires_at_ms: number
+}
+
 export type FsAssetBytes = {
   bytes: ArrayBuffer
   media_type?: string | null
@@ -151,8 +158,7 @@ export type FsGraph = {
 
 export type FsMarkdownAssetImportResult = {
   markdown_target: string
-  relative_path: string
-  absolute_path: string
+  relative_path: string | null
   asset_dir?: string | null
   copied: boolean
 }
@@ -160,7 +166,6 @@ export type FsMarkdownAssetImportResult = {
 export type FsMarkdownAssetResolveResult = {
   source_path: string
   target: string
-  absolute_path?: string | null
   relative_path?: string | null
   is_external: boolean
   media_type?: string | null

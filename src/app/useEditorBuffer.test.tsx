@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -33,6 +33,9 @@ vi.mock('@/runtime/events', () => ({
     return vi.fn()
   }),
 }))
+
+vi.mock('react-router-dom', () => ({ useLocation: () => ({ state: null }) }))
+vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 
 const Harness = () => {
   const buffer = useEditorBuffer({
@@ -115,13 +118,12 @@ afterEach(() => {
 })
 
 describe('useEditorBuffer', () => {
-  it('keeps a file dirty until the Rust buffer reports a clean flush', async () => {
-    const user = userEvent.setup()
+  it('keeps a file dirty until the desktop buffer reports a clean flush', async () => {
     render(<Harness />)
 
     expect(await screen.findByText('saved:false')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button'))
+    fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText('unsaved:true')).toBeInTheDocument()
 
     await waitFor(
@@ -201,7 +203,7 @@ describe('useEditorBuffer', () => {
 
     await user.click(screen.getByRole('button', { name: 'edit' }))
     expect(screen.getByTestId('value')).toHaveTextContent('changed')
-    expect(screen.getByTestId('state')).toHaveTextContent('unsaved:true')
+    expect(screen.getByTestId('state')).toHaveTextContent('saving:true')
 
     await user.click(screen.getByRole('button', { name: 'other' }))
     expect(await screen.findByText('saved:false')).toBeInTheDocument()
@@ -211,7 +213,7 @@ describe('useEditorBuffer', () => {
     await user.click(screen.getByRole('button', { name: 'current' }))
     expect(screen.getByTestId('active')).toHaveTextContent('notes/current.md')
     expect(screen.getByTestId('value')).toHaveTextContent('changed')
-    expect(screen.getByTestId('state')).toHaveTextContent('unsaved:true')
+    expect(screen.getByTestId('state')).toHaveTextContent('saving:true')
   })
 
   it('exposes loading state while opening a Markdown file', async () => {

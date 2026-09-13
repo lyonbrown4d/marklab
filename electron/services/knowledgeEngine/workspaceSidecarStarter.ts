@@ -1,4 +1,4 @@
-import { type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { type ChildProcess } from 'node:child_process'
 
 import { execa } from 'execa'
 
@@ -25,7 +25,7 @@ export const startGrpcSidecar = async (
     buffer: false,
     windowsHide: plan.windowsHide,
     reject: false,
-  }) as unknown as ChildProcessWithoutNullStreams
+  }).nodeChildProcess
 
   let stderrTail = ''
   child.stderr?.setEncoding('utf8')
@@ -56,7 +56,7 @@ export const startGrpcSidecar = async (
 }
 
 const waitForReady = (
-  child: ChildProcessWithoutNullStreams,
+  child: ChildProcess,
   workspaceInstanceId: string,
   stderrTail: () => string,
 ): Promise<string> =>
@@ -76,7 +76,7 @@ const waitForReady = (
 
     const cleanup = () => {
       clearTimeout(timeout)
-      child.stdout.off('data', onData)
+      child.stdout?.off('data', onData)
       child.off('error', onError)
       child.off('exit', onExit)
     }
@@ -114,7 +114,7 @@ const waitForReady = (
       }
     }
 
-    child.stdout.on('data', onData)
+    child.stdout?.on('data', onData)
     child.once('error', onError)
     child.once('exit', onExit)
   })

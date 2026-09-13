@@ -33,9 +33,9 @@ const formatBytes = (size: number) => {
 }
 
 const MetadataSkeletonBlock = ({ count }: { count: number }) => (
-  <div className="grid grid-cols-2 gap-2">
+  <div className="flex flex-col gap-2">
     {Array.from({ length: count }, (_, index) => (
-      <Skeleton key={index} aria-hidden="true" className="h-12" data-slot="metadata-skeleton" />
+      <Skeleton key={index} aria-hidden="true" className="h-6" data-slot="metadata-skeleton" />
     ))}
   </div>
 )
@@ -44,7 +44,6 @@ const MetadataSkeleton = ({ label }: { label: string }) => (
   <div aria-busy="true" aria-label={label} className="flex flex-col gap-2" role="status">
     <MetadataSkeletonBlock count={SUMMARY_SKELETON_COUNT} />
     <MetadataSkeletonBlock count={FILE_SKELETON_COUNT} />
-    <Skeleton aria-hidden="true" className="h-11" data-slot="metadata-skeleton" />
     <Skeleton aria-hidden="true" className="h-11" data-slot="metadata-skeleton" />
   </div>
 )
@@ -61,9 +60,7 @@ export const RightSidebarPropertiesPanel = ({
   return (
     <ScrollArea className="h-full" viewportClassName="p-2">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t('inspector.properties')}
-        </div>
+        <div className="text-xs font-medium text-muted-foreground">{t('inspector.properties')}</div>
         {loadingMetadata && (
           <Badge variant="secondary" className="text-[10px]">
             {t('inspector.loading')}
@@ -75,7 +72,7 @@ export const RightSidebarPropertiesPanel = ({
       ) : !displayMetadata ? (
         <AppEmptyState
           compact
-          className="min-h-24 flex-none border-sidebar-border/70 bg-muted/20 px-3 py-4 md:p-4"
+          className="min-h-24 flex-none rounded-none border-0 bg-transparent px-3 py-4 md:p-4"
           role="note"
           title={t('inspector.none')}
           titleClassName="text-[11px] font-normal text-muted-foreground"
@@ -83,13 +80,13 @@ export const RightSidebarPropertiesPanel = ({
         />
       ) : (
         <div className="flex flex-col gap-2 text-xs">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col">
             <PropertyCell label={t('status.lines')} value={documentStats.lines} />
             <PropertyCell label={t('status.words')} value={documentStats.words} />
             <PropertyCell label={t('inspector.outline')} value={outlineCount} />
             <PropertyCell label={t('inspector.backlinks')} value={backlinksCount} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col border-t border-border/50 pt-2">
             <PropertyCell label={t('inspector.kind')} value={displayMetadata.kind} />
             <PropertyCell
               label={t('inspector.size')}
@@ -111,10 +108,6 @@ export const RightSidebarPropertiesPanel = ({
           <div>
             <div className="text-muted-foreground">{t('inspector.path')}</div>
             <div className="break-all font-medium">{displayMetadata.path}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">{t('inspector.absolutePath')}</div>
-            <div className="break-all">{displayMetadata.absolute_path}</div>
           </div>
         </div>
       )}

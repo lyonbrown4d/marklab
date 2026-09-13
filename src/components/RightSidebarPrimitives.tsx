@@ -21,7 +21,7 @@ export const InspectorMetric = ({
   )
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 transition-colors duration-150 hover:border-sidebar-border/60 hover:bg-sidebar-accent/45">
+    <div className="flex min-w-0 items-center gap-2 px-1 py-1.5">
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">{label}</span>
       <span className={cn('shrink-0 text-xs font-semibold tabular-nums', toneClass)}>{value}</span>
@@ -41,11 +41,11 @@ export const InspectorEmptyState = ({
   return (
     <AppEmptyState
       compact
-      className="min-h-32 flex-none border-sidebar-border/80 bg-sidebar/40 px-4 py-5"
+      className="min-h-32 flex-none rounded-none border-0 bg-transparent px-3 py-5"
       description={description}
-      descriptionClassName="max-w-[13rem] text-[11px] leading-4"
+      descriptionClassName="max-w-[13rem] break-words text-xs leading-5"
       icon={icon}
-      mediaClassName="mb-1 border border-sidebar-border bg-background/70 text-muted-foreground"
+      mediaClassName="mb-1 rounded-none border-0 bg-transparent text-muted-foreground"
       title={title}
       titleClassName="text-xs"
       titleLevel={3}
@@ -66,10 +66,7 @@ export const ProblemGroupHeader = ({
 
   return (
     <div
-      className={cn(
-        'flex items-center justify-between rounded-md border border-border/60 bg-muted/35 px-2 py-1 text-[11px] font-medium',
-        toneClass,
-      )}
+      className={cn('flex items-center justify-between px-2 py-2 text-xs font-medium', toneClass)}
     >
       <span>{label}</span>
       <Badge
@@ -87,9 +84,9 @@ export const ProblemGroupHeader = ({
 
 export const PropertyCell = ({ label, value }: { label: string; value: ReactNode }) => {
   return (
-    <div className="rounded-md border border-border/70 bg-muted/25 p-2">
-      <div className="truncate text-[10px] text-muted-foreground">{label}</div>
-      <div className="mt-0.5 truncate text-xs font-medium">{value}</div>
+    <div className="flex min-w-0 items-baseline justify-between gap-3 py-1.5 text-xs">
+      <div className="shrink-0 text-muted-foreground">{label}</div>
+      <div className="min-w-0 break-words text-right leading-5 tabular-nums">{value}</div>
     </div>
   )
 }

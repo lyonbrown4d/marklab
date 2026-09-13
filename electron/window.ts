@@ -2,6 +2,7 @@ import { BrowserWindow, app, screen } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { MARKLAB_APP_NAME } from '@electron/appIdentity.js'
+import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { getWindowState, setWindowState } from '@electron/services/settingsStore.js'
 import { resolveElectronProjectRoots } from '@electron/windowIconPaths.js'
@@ -69,6 +70,7 @@ const secureWebPreferences = () => {
   return {
     contextIsolation: true,
     nodeIntegration: false,
+    backgroundThrottling: !isBackgroundElectronE2e(),
     sandbox: false,
     preload: preloadPath,
   } satisfies Electron.WebPreferences
@@ -212,6 +214,7 @@ export const createSplashWindow = () => {
   })
 
   const showSplash = () => {
+    if (isBackgroundElectronE2e()) return
     if (splash.isDestroyed() || splash.isVisible()) return
     splash.show()
   }

@@ -4,9 +4,28 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, PropsWithChildren } from 'react'
 import AppStatusBar from '@/components/AppStatusBar'
-import i18n from '@/i18n/setup'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
-import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { AppStatusBarProvider, EditorStatusBar } from '@/components/EditorStatusBar'
+
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string, values?: { count?: string }) =>
+      ({
+        'statusBar.label': 'Status bar',
+        'statusBar.openScm': 'Open Source Control',
+        'statusBar.toggleTerminal': 'Toggle Terminal',
+        'statusBar.unsavedFiles': `${values?.count} unsaved files`,
+        'save.saving': 'Saving',
+        'save.saved': 'Saved',
+        'save.error': 'Save failed',
+        'app.restoreRetry': 'Retry restore',
+      })[key] ?? key,
+  }),
+}))
+
+vi.mock('@/components/StatusCenter', () => ({
+  default: () => <button type="button">Task center</button>,
+}))
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => false,
@@ -37,23 +56,22 @@ const createWrapper = () => {
     defaultOptions: { queries: { retry: false } },
   })
 
-  return function Wrapper({ children }: PropsWithChildren) {
+  const Wrapper = ({ children }: PropsWithChildren) => {
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>{children}</MemoryRouter>
       </QueryClientProvider>
     )
   }
+  return Wrapper
 }
 
 const renderStatusBar = (props: AppStatusBarProps) =>
   render(<AppStatusBar {...props} />, { wrapper: createWrapper() })
 
-beforeEach(async () => {
+beforeEach(() => {
   localStorage.clear()
-  usePreferencesStore.setState({ locale: 'en-US' })
   useMarkdownAssetSyncStore.setState({ failed: 0, lastError: null, pending: 0 })
-  await i18n.changeLanguage('en-US')
 })
 
 describe('AppStatusBar', () => {
@@ -76,7 +94,7 @@ describe('AppStatusBar', () => {
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
   })
 
-  it('announces status changes while keeping truncated active resources inspectable', () => {
+  it('announces save changes without repeating the active path as visible text', () => {
     renderStatusBar(
       createProps({
         dirtyPaths: { 'README.md': true },
@@ -89,7 +107,9 @@ describe('AppStatusBar', () => {
 
     expect(liveRegion).toHaveTextContent('1 unsaved files')
     expect(liveRegion).toHaveTextContent('Saving')
-    expect(within(statusBar).getByText('README.md')).toHaveAttribute('title', 'README.md')
+    expect(within(statusBar).queryByText('README.md')).not.toBeInTheDocument()
+    expect(within(statusBar).getByText('Saving')).toHaveAttribute('title', 'README.md')
+    expect(within(statusBar).getByRole('button', { name: 'Task center' })).toBeInTheDocument()
   })
 
   it('uses the shared spinner for busy restore actions without renaming the button', () => {
@@ -109,13 +129,42 @@ describe('AppStatusBar', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
 
-  it('uses decorative shared separators for compact status groups', () => {
+  it('does not render decorative separators', () => {
     renderStatusBar(createProps())
 
     const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
     const separators = statusBar.querySelectorAll('[data-orientation="vertical"]')
 
-    expect(separators).toHaveLength(4)
+    expect(separators).toHaveLength(0)
     expect(within(statusBar).queryByRole('separator')).not.toBeInTheDocument()
   })
+
+  it('hosts document information in the only footer', () => {
+    renderStatusBarComposition(true)
+    const footer = screen.getByRole('contentinfo', { name: 'Status bar' })
+    expect(within(footer).getByText('42 words')).toBeInTheDocument()
+    expect(screen.getAllByRole('contentinfo')).toHaveLength(1)
+  })
+
+  it('keeps tasks and save errors when document status is disabled', () => {
+    renderStatusBarComposition(false)
+    expect(screen.queryByText('42 words')).not.toBeInTheDocument()
+    expect(screen.getByText('Save failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Task center' })).toBeInTheDocument()
+  })
 })
+
+const renderStatusBarComposition = (showStatusBar: boolean) =>
+  render(
+    <AppStatusBarProvider activePath="README.md" viewMode="wysiwyg">
+      <main>
+        {showStatusBar && (
+          <EditorStatusBar activePath="README.md" viewMode="wysiwyg">
+            42 words
+          </EditorStatusBar>
+        )}
+      </main>
+      <AppStatusBar {...createProps({ saveStates: { 'README.md': { status: 'error' } } })} />
+    </AppStatusBarProvider>,
+    { wrapper: createWrapper() },
+  )

@@ -8,10 +8,18 @@ import {
   trySidecarPathMutation,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import { pathExists, stringArg } from '@electron/services/workspace/workspaceUtils.js'
+import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
+export class WorkspaceCreateFileConflictError extends Error {
+  readonly code = 'workspace_file_exists' as const
+
+  constructor(readonly relativePath: string) {
+    super('Workspace file already exists: ' + relativePath)
+    this.name = 'WorkspaceCreateFileConflictError'
+  }
+}
 export type CreateWorkspaceFileEntryOptions = {
-  deleteBuffer: (relativePath: string) => void
+  hasDirtyBuffer?: (relativePath: string) => boolean
   knowledgeEngineService?: KnowledgeEngineService
   logger: Logger
   resolveRelativePath: (relativePath: string) => string
@@ -22,7 +30,7 @@ export type CreateWorkspaceFileEntryOptions = {
 }
 
 export const createWorkspaceFileEntry = async ({
-  deleteBuffer,
+  hasDirtyBuffer,
   knowledgeEngineService,
   logger,
   resolveRelativePath,
@@ -32,6 +40,9 @@ export const createWorkspaceFileEntry = async ({
   value,
 }: CreateWorkspaceFileEntryOptions): Promise<void> => {
   const { relativePath, content } = parseWorkspaceCreateFileRequest(value)
+  if (hasDirtyBuffer?.(relativePath)) {
+    throw new WorkspaceCreateFileConflictError(relativePath)
+  }
   const sidecarMutation = await trySidecarPathMutation({
     knowledgeEngineService,
     logger,
@@ -52,15 +63,15 @@ export const createWorkspaceFileEntry = async ({
       })
       setCleanFile(relativePath, content)
     } else {
-      deleteBuffer(relativePath)
+      throw new WorkspaceCreateFileConflictError(relativePath)
     }
     scheduleCreatedFileChanged(scheduleSnapshotChanged, logger, relativePath)
     return
   }
 
   const created = await createFileWithNode(resolveRelativePath(relativePath), content)
-  if (created) setCleanFile(relativePath, content)
-  else deleteBuffer(relativePath)
+  if (!created) throw new WorkspaceCreateFileConflictError(relativePath)
+  setCleanFile(relativePath, content)
   scheduleCreatedFileChanged(scheduleSnapshotChanged, logger, relativePath)
 }
 
@@ -88,7 +99,7 @@ export const writeCreatedFileContentWithSidecar = async ({
   state: FsStateData
 }): Promise<void> => {
   if (!content) return
-  await trySidecarWriteFile({
+  const written = await trySidecarWriteFile({
     knowledgeEngineService,
     logger,
     path: relativePath,
@@ -96,6 +107,9 @@ export const writeCreatedFileContentWithSidecar = async ({
     content,
     beforeWrite: () => undefined,
   })
+  if (!written) {
+    throw new Error('Sidecar could not persist created file content: ' + relativePath)
+  }
 }
 
 export const createFileWithNode = async (
@@ -103,11 +117,16 @@ export const createFileWithNode = async (
   content: string,
 ): Promise<boolean> => {
   await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true })
-  if (await pathExists(absolutePath)) return false
-  await fs.promises.writeFile(absolutePath, content)
-  return true
+  try {
+    await fs.promises.writeFile(absolutePath, content, { encoding: 'utf8', flag: 'wx' })
+    return true
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
+      return false
+    }
+    throw error
+  }
 }
-
 const optionalStringArg = (value: unknown, key: string): string | null => {
   if (!value || typeof value !== 'object' || !(key in value)) return null
   const result = (value as Record<string, unknown>)[key]

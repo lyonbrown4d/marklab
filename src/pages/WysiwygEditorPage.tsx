@@ -11,6 +11,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
+import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
@@ -208,21 +209,12 @@ const WysiwygEditorPage = ({
         </div>
       </div>
       {showStatusBar && activePath && (
-        <div className="tab-strip flex h-7 items-center justify-between gap-3 border-t border-border/80 px-3 text-[11px] text-muted-foreground">
-          <div className="min-w-0 truncate">{activePath}</div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span>{t('editor.modeWysiwyg')}</span>
-            <span>
-              {stats.lines} {t('status.lines')}
-            </span>
-            <span>
-              {stats.words} {t('status.words')}
-            </span>
-            <span>
-              {stats.characters} {t('status.characters')}
-            </span>
-          </div>
-        </div>
+        <EditorDocumentStatus
+          activePath={activePath}
+          viewMode="wysiwyg"
+          stats={stats}
+          value={value}
+        />
       )}
     </div>
   )

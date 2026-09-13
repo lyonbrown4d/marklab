@@ -63,15 +63,15 @@ export const TitlebarCommandCenter = ({
   const commandLabel = tabTitle ? `${searchLabel} - ${tabTitle}` : searchLabel
 
   return (
-    <div className="mx-1 hidden min-w-0 flex-1 items-center justify-center md:flex">
+    <div className="mx-2 hidden min-w-0 flex-1 items-center justify-center md:flex">
       <Button
         type="button"
         variant="outline"
         aria-label={commandLabel}
-        className="command-trigger group h-8 min-w-0 max-w-2xl flex-1 justify-start rounded-lg border-border/80 bg-background/80 px-2.5 text-left text-xs font-normal text-muted-foreground shadow-none transition-colors duration-150 hover:border-primary/25 hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="command-trigger group h-8 min-w-0 max-w-xl flex-1 justify-start rounded-md border-border/80 bg-background/80 px-3 text-left text-[13px] font-normal text-muted-foreground shadow-none transition-colors duration-150 hover:border-primary/25 hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         onClick={onOpenSearch}
       >
-        <span className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5">
           {tabTitle ? (
             <>
               <TitlebarActiveTabBadge

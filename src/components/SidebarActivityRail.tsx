@@ -1,7 +1,10 @@
 import {
+  Check,
+  ChevronDown,
   FileSearch,
   Files,
   FolderClock,
+  FolderOpen,
   GitBranch,
   GitGraph,
   Home,
@@ -9,6 +12,13 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
@@ -23,6 +33,8 @@ type SidebarActivityItem = {
 }
 
 type SidebarActivityRailProps = {
+  collapsed?: boolean
+  rootPath?: string
   activeActivity: SidebarActivityId
   homeActive: boolean
   fileCount: number
@@ -86,6 +98,8 @@ const ActivityButton = ({
 }
 
 const SidebarActivityRail = ({
+  collapsed = true,
+  rootPath = '',
   activeActivity,
   homeActive,
   fileCount,
@@ -123,6 +137,58 @@ const SidebarActivityRail = ({
       badge: recentProjectCount,
     },
   ]
+
+  if (!collapsed) {
+    const workspaceName =
+      rootPath
+        .replace(/[\\/]+$/, '')
+        .split(/[\\/]/)
+        .pop() || t('sidebar.localWorkspace')
+
+    return (
+      <div className="shrink-0 px-2 py-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-9 w-full justify-start gap-2 px-2 text-sidebar-foreground"
+            >
+              <FolderOpen aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">
+                {workspaceName}
+              </span>
+              <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-56">
+            <DropdownMenuItem
+              onSelect={onOpenWorkspaceOverview}
+              aria-current={homeActive ? 'page' : undefined}
+            >
+              <Home aria-hidden="true" />
+              {t('sidebar.workspaceOverview')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {activities.map(({ id, label, icon: Icon, badge }) => (
+              <DropdownMenuItem
+                key={id}
+                onSelect={() => onSelectActivity(id)}
+                aria-current={id === activeActivity ? 'page' : undefined}
+              >
+                <Icon aria-hidden="true" />
+                <span className="flex-1">{label}</span>
+                {badge ? (
+                  <span className="text-xs tabular-nums text-muted-foreground">{badge}</span>
+                ) : null}
+                {id === activeActivity && <Check aria-hidden="true" className="size-3.5" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
 
   return (
     <TooltipProvider delayDuration={180}>
