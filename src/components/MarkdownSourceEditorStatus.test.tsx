@@ -8,6 +8,9 @@ vi.mock('@/lib/monaco', () => ({
   configureMonaco: vi.fn(),
 }))
 
+vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
+vi.mock('@/store/usePreferencesStore', () => ({ usePreferencesStore: () => false }))
+
 const messages: Record<string, string> = {
   'editor.sourceLoadFailed': 'Failed to load source editor: {{error}}',
   'editor.sourceLoading': 'Loading source editor...',

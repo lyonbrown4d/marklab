@@ -11,6 +11,7 @@ import {
 import type { Edge, Node, OnSelectionChangeParams } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
+import { useDarkMode } from '@/hooks/useDarkMode'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
 import { useGraphAutoLayout } from '@/pages/useGraphAutoLayout'
 import type { GraphHotkeyAction } from '@/pages/graphKeyboardActions'
@@ -27,6 +28,9 @@ import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
 import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
+import { MindmapToolbar } from '@/pages/graph/MindmapToolbar'
+import { mindmapCanvasClassName } from '@/pages/graph/mindmapPresentation'
+import { cn } from '@/lib/utils'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
 import {
   fitViewOptions,
@@ -38,6 +42,8 @@ import {
 
 const GraphPageComponent = ({
   graph,
+  presentation = 'graph',
+  onContentModeChange,
   onOpenFile,
   showMiniMap,
   contentMode,
@@ -49,7 +55,9 @@ const GraphPageComponent = ({
   onUpdateHeadingTitle,
   onUpdateHeadingContent,
 }: GraphPageProps) => {
+  const isMindmap = presentation === 'mindmap'
   const { t } = useI18n()
+  const darkMode = useDarkMode()
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const [selectedHeadingId, setSelectedHeadingId] = useState<string | null>(null)
@@ -174,8 +182,11 @@ const GraphPageComponent = ({
   })
 
   const filteredGraph = useMemo(
-    () => filterGraphElements(visibleNodes, visibleEdges, deferredGraphFilters),
-    [deferredGraphFilters, visibleEdges, visibleNodes],
+    () =>
+      isMindmap
+        ? { nodes: visibleNodes, edges: visibleEdges }
+        : filterGraphElements(visibleNodes, visibleEdges, deferredGraphFilters),
+    [deferredGraphFilters, isMindmap, visibleEdges, visibleNodes],
   )
   const filterStats = useMemo(() => getGraphFilterStats(visibleNodes), [visibleNodes])
   const selectedNodeDetails = useMemo(
@@ -194,27 +205,40 @@ const GraphPageComponent = ({
   return (
     <div
       ref={graphShellRef}
+      data-presentation={presentation}
       aria-label={t('graph.canvasLabel')}
       className="relative h-full bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
       role="region"
       tabIndex={0}
       onMouseDown={handleGraphMouseDown}
     >
-      <GraphToolbar
-        edgeCount={filteredGraph.edges.length}
-        filters={graphFilters}
-        hasActiveFilters={graphHasActiveFilters}
-        nodeCount={filteredGraph.nodes.length}
-        onFiltersChange={setGraphFilters}
-        stats={filterStats}
-        t={t}
-        totalEdgeCount={visibleEdges.length}
-        totalNodeCount={visibleNodes.length}
-      />
+      {isMindmap ? (
+        <MindmapToolbar
+          contentMode={contentMode}
+          editable={editable}
+          details={selectedNodeDetails}
+          onContentModeChange={onContentModeChange}
+          onOpenPath={onOpenFile}
+          t={t}
+        />
+      ) : (
+        <GraphToolbar
+          edgeCount={filteredGraph.edges.length}
+          filters={graphFilters}
+          hasActiveFilters={graphHasActiveFilters}
+          nodeCount={filteredGraph.nodes.length}
+          onFiltersChange={setGraphFilters}
+          stats={filterStats}
+          t={t}
+          totalEdgeCount={visibleEdges.length}
+          totalNodeCount={visibleNodes.length}
+        />
+      )}
       {graphFeedback ? <GraphFeedbackToast message={graphFeedback} /> : null}
-      <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />
+      {!isMindmap && <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />}
       <ReactFlow<Node<GraphNodeData>, Edge>
-        className="h-full w-full"
+        colorMode={darkMode ? 'dark' : 'light'}
+        className={cn('h-full w-full', isMindmap && mindmapCanvasClassName)}
         nodes={filteredGraph.nodes}
         edges={filteredGraph.edges}
         nodeTypes={nodeTypes}
@@ -231,7 +255,7 @@ const GraphPageComponent = ({
         panOnDrag
         zoomOnScroll
         zoomOnPinch
-        zoomOnDoubleClick
+        zoomOnDoubleClick={!isMindmap}
         preventScrolling
         onlyRenderVisibleElements
         minZoom={0.15}
@@ -242,8 +266,8 @@ const GraphPageComponent = ({
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}
       >
-        <Background gap={16} size={1} />
-        <Controls />
+        {!isMindmap && <Background gap={16} size={1} />}
+        <Controls showInteractive={!isMindmap} />
         {shouldRenderGraphMiniMap(showMiniMap, filteredGraph.nodes.length) && (
           <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}

@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownEditor from '@/components/MarkdownEditor'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
+import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdownPlaygroundController'
 
 const controllerMock = vi.hoisted(() => ({
   focusEditor: vi.fn(),
   getMarkdown: vi.fn(() => 'current markdown'),
+  shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
 }))
 
 vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
@@ -22,6 +24,11 @@ vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
 
 vi.mock('@/hooks/useDarkMode', () => ({
   useDarkMode: () => false,
+}))
+
+vi.mock('@/store/usePreferencesStore', () => ({
+  usePreferencesStore: (select: (state: typeof controllerMock) => unknown) =>
+    select(controllerMock),
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -96,6 +103,13 @@ const renderEditor = (ref?: Ref<MarkdownEditorHandle>) =>
   )
 
 describe('MarkdownEditor playground baseline', () => {
+  it('passes persisted shortcut overrides to the real controller entry point', () => {
+    renderEditor()
+    expect(
+      vi.mocked(useMarkdownPlaygroundController).mock.calls.at(-1)?.[0].shortcutOverrides,
+    ).toBe(controllerMock.shortcutOverrides)
+  })
+
   beforeEach(() => {
     controllerMock.focusEditor.mockClear()
     controllerMock.getMarkdown.mockClear()

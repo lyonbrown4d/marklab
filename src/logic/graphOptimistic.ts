@@ -42,11 +42,10 @@ export const patchGraphHeadingInserted = (
   if (!target || insertLine < 1 || level < 1 || level > 6) return graph
 
   const nodes = graph.nodes
-    .map((node) => ({
-      ...node,
-      selected: false,
-      data: shiftGraphNodeDataLines(node.data, insertLine, 1),
-    }))
+    .map((node) => {
+      const data = shiftGraphNodeDataLines(node.data, insertLine, 1)
+      return data === node.data && !node.selected ? node : { ...node, selected: false, data }
+    })
     .concat({
       id: nodeId,
       type: 'heading',
@@ -75,6 +74,7 @@ export const patchGraphHeadingInserted = (
       source: parentId,
       target: nodeId,
       type: 'smoothstep',
+      data: { kind: 'contains' },
     },
   ]
 
@@ -202,6 +202,13 @@ const shiftGraphNodeDataLines = (
   startLine: number,
   delta: number,
 ) => {
+  if (delta > 0 && data.line !== undefined && data.line < startLine) {
+    // A new heading terminates an earlier heading's body; its exclusive end
+    // must not move past the inserted heading and later overwrite it on blur.
+    return data.contentEndLine !== undefined && data.contentEndLine > startLine
+      ? { ...data, contentEndLine: startLine }
+      : data
+  }
   const line = shiftLineOnOrAfter(data.line, startLine, delta)
   const contentStartLine = shiftLineOnOrAfter(data.contentStartLine, startLine, delta)
   const contentEndLine = shiftLineOnOrAfter(data.contentEndLine, startLine, delta)

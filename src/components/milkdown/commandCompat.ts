@@ -17,14 +17,14 @@ export const callMilkdownCommand = (
     const commandKey = command.key
     const call = (commands as { call?: unknown }).call
     if (typeof call === 'function') {
-      return Boolean((call as MilkdownCommandCall)(commandKey, ...args))
+      return Boolean((call as MilkdownCommandCall).call(commands, commandKey, ...args))
     }
 
     if (typeof commandKey !== 'string') return false
 
     const commandRunner = (commands as Record<string, unknown>)[commandKey]
     if (typeof commandRunner === 'function') {
-      return Boolean(commandRunner(...args))
+      return Boolean(commandRunner.apply(commands, args))
     }
   } catch {
     return false

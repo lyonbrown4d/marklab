@@ -1,6 +1,11 @@
 import type { Edge, Node } from '@xyflow/react'
+import type { RegisterableHotkey, UseHotkeyDefinition } from '@tanstack/react-hotkeys'
 import type { GraphNodeData } from '@/logic/graph'
-import type { ShortcutActionId } from '@/logic/shortcuts'
+import {
+  resolveShortcutBindings,
+  type ShortcutActionId,
+  type ShortcutBindings,
+} from '@/logic/shortcuts'
 import {
   getFirstChildHeadingId,
   getFirstHeadingId,
@@ -51,6 +56,26 @@ export const graphShortcutActions = [
   ['graph.expandSubtree', 'expand-subtree'],
 ] as const satisfies ReadonlyArray<readonly [ShortcutActionId, GraphHotkeyAction]>
 
+type GraphHotkeyBinding = Omit<UseHotkeyDefinition, 'callback'> & {
+  action: GraphHotkeyAction
+}
+
+export const createGraphHotkeyBindings = (
+  shortcutOverrides: ShortcutBindings,
+): GraphHotkeyBinding[] => {
+  const bindings = resolveShortcutBindings(shortcutOverrides)
+  return graphShortcutActions.flatMap(([shortcutAction, graphAction]) =>
+    bindings[shortcutAction].map((hotkey) => ({
+      action: graphAction,
+      hotkey: hotkey as RegisterableHotkey,
+      options: {
+        enabled: true,
+        meta: { name: shortcutAction },
+      },
+    })),
+  )
+}
+
 export const getKeyboardNavigationTarget = (
   action: GraphHotkeyAction,
   nodes: Node<GraphNodeData>[],
@@ -79,9 +104,36 @@ export const preventGraphHotkeyDefault = (event: KeyboardEvent) => {
 }
 
 export const isTextEditingTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) return false
-  return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
+  const element = getTargetElement(target)
+  return Boolean(
+    element?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'),
+  )
 }
+
+const getTargetElement = (target: EventTarget | null) =>
+  target instanceof Element
+    ? target
+    : target instanceof globalThis.Node
+      ? target.parentElement
+      : null
+
+const isGraphInteractiveTarget = (target: EventTarget | null) =>
+  isTextEditingTarget(target) ||
+  Boolean(
+    getTargetElement(target)?.closest(
+      'button, a[href], summary, dialog, [role="button"]:not(.react-flow__node), ' +
+        '[role="dialog"], [role="alertdialog"], [role="menu"], [role="menubar"], ' +
+        '[role="menuitem"], [role="listbox"], [role="combobox"], [role="textbox"], ' +
+        '[role="checkbox"], [role="radio"], [role="switch"], [role="slider"], ' +
+        '[role="tab"], [data-radix-popper-content-wrapper]',
+    ),
+  )
+
+export const isGraphCanvasEvent = (event: Event, shell: HTMLElement | null) =>
+  event.target instanceof globalThis.Node &&
+  Boolean(shell?.contains(event.target)) &&
+  !isGraphInteractiveTarget(event.target) &&
+  !event.composedPath().some(isGraphInteractiveTarget)
 
 export const selectElementText = (element: HTMLElement) => {
   const selection = window.getSelection()

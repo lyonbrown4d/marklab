@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { Node } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import {
@@ -24,6 +24,8 @@ type UseGraphMarkdownEditingOptions = {
 
 type OptimisticGraphState = {
   baseGraph: GraphData
+  baseMarkdown: string
+  markdown: string
   graph: GraphData
 }
 
@@ -33,96 +35,119 @@ export const useGraphMarkdownEditing = ({
   onChange,
 }: UseGraphMarkdownEditingOptions) => {
   const [optimisticGraph, setOptimisticGraph] = useState<OptimisticGraphState | null>(null)
-  const editorGraph = optimisticGraph?.baseGraph === graph ? optimisticGraph.graph : graph
-  const nodesById = useMemo(
-    () => new Map(editorGraph.nodes.map((node) => [node.id, node])),
-    [editorGraph.nodes],
+  const workingRef = useRef<OptimisticGraphState | null>(null)
+  const editorState = resolveGraphEditSnapshot(optimisticGraph, graph, markdown)
+  // Once acknowledged, returning to older text is an external edit, not a delayed prop.
+  if (
+    editorState === optimisticGraph &&
+    markdown === editorState.markdown &&
+    editorState.baseMarkdown !== markdown
+  ) {
+    setOptimisticGraph({ ...editorState, baseMarkdown: markdown })
+  }
+  useLayoutEffect(() => {
+    workingRef.current = editorState
+  }, [editorState])
+  const readCurrent = useCallback(
+    () => resolveGraphEditSnapshot(workingRef.current, graph, markdown),
+    [graph, markdown],
+  )
+  const publish = useCallback(
+    (current: OptimisticGraphState, nextMarkdown: string, nextGraph: GraphData) => {
+      if (nextMarkdown === current.markdown) return
+      const next = {
+        baseGraph: graph,
+        baseMarkdown: markdown,
+        markdown: nextMarkdown,
+        graph: nextGraph,
+      }
+      workingRef.current = next
+      setOptimisticGraph(next)
+      onChange(nextMarkdown)
+    },
+    [graph, markdown, onChange],
   )
 
   const updateHeadingTitle = useCallback(
     (nodeId: string, title: string) => {
-      const node = nodesById.get(nodeId)
+      const current = readCurrent()
+      const node = current.graph.nodes.find((item) => item.id === nodeId)
       const headingLine = node?.data.line
       const level = node?.data.level
       if (!headingLine || !level) return
 
-      onChange(replaceMarkdownHeadingTitle(markdown, headingLine, level, title))
-      setOptimisticGraph((current) => {
-        const currentGraph = current?.baseGraph === graph ? current.graph : graph
-        return {
-          baseGraph: graph,
-          graph: patchGraphHeadingTitle(currentGraph, nodeId, title),
-        }
-      })
+      publish(
+        current,
+        replaceMarkdownHeadingTitle(current.markdown, headingLine, level, title),
+        patchGraphHeadingTitle(current.graph, nodeId, title),
+      )
     },
-    [graph, markdown, nodesById, onChange],
+    [publish, readCurrent],
   )
 
   const updateHeadingContent = useCallback(
     (nodeId: string, content: string, contentBlocks?: MarkdownBlock[]) => {
-      const node = nodesById.get(nodeId)
+      const current = readCurrent()
+      const node = current.graph.nodes.find((item) => item.id === nodeId)
       const startLine = node?.data.contentStartLine
       const endLine = node?.data.contentEndLine
       if (!startLine || !endLine) return
 
-      onChange(replaceMarkdownLineRange(markdown, startLine, endLine, content))
-      setOptimisticGraph((current) => {
-        const currentGraph = current?.baseGraph === graph ? current.graph : graph
-        return {
-          baseGraph: graph,
-          graph: patchGraphHeadingContent(currentGraph, nodeId, content, contentBlocks),
-        }
-      })
+      publish(
+        current,
+        replaceMarkdownLineRange(current.markdown, startLine, endLine, content),
+        patchGraphHeadingContent(current.graph, nodeId, content, contentBlocks),
+      )
     },
-    [graph, markdown, nodesById, onChange],
+    [publish, readCurrent],
   )
 
   const addHeading = useCallback(
     (nodeId: string, placement: 'child' | 'sibling' | 'sibling-before') => {
-      const node = findEditableHeadingNode(nodesById.get(nodeId))
+      const current = readCurrent()
+      const node = findEditableHeadingNode(current.graph.nodes.find((item) => item.id === nodeId))
       if (!node) return null
 
       const line = node.data.line
       const level = node.data.level
       if (!line || !level) return null
 
+      if (placement === 'child' && level >= 6) return null
+
       const insertLine =
         placement === 'sibling-before'
           ? line
-          : findHeadingSubtreeEndLine(editorGraph.nodes, line, level, markdown)
-      const nextLevel = placement === 'child' ? Math.min(6, level + 1) : level
+          : findHeadingSubtreeEndLine(current.graph.nodes, line, level, current.markdown)
+      const nextLevel = placement === 'child' ? level + 1 : level
       const nextMarkdown = insertMarkdownHeadingAtLine(
-        markdown,
+        current.markdown,
         insertLine,
         nextLevel,
         NEW_HEADING_TITLE,
       )
-      if (nextMarkdown === markdown) return null
+      if (nextMarkdown === current.markdown) return null
 
       const parentId =
         placement === 'child'
           ? nodeId
-          : (editorGraph.edges.find((edge) => edge.target === nodeId)?.source ?? nodeId)
+          : (current.graph.edges.find((edge) => edge.target === nodeId)?.source ?? nodeId)
       const newNodeId = createOptimisticHeadingId(node, insertLine)
 
-      onChange(nextMarkdown)
-      setOptimisticGraph((current) => {
-        const currentGraph = current?.baseGraph === graph ? current.graph : graph
-        return {
-          baseGraph: graph,
-          graph: patchGraphHeadingInserted(currentGraph, {
-            insertLine,
-            level: nextLevel,
-            nodeId: newNodeId,
-            parentId,
-            targetId: nodeId,
-            title: NEW_HEADING_TITLE,
-          }),
-        }
-      })
+      publish(
+        current,
+        nextMarkdown,
+        patchGraphHeadingInserted(current.graph, {
+          insertLine,
+          level: nextLevel,
+          nodeId: newNodeId,
+          parentId,
+          targetId: nodeId,
+          title: NEW_HEADING_TITLE,
+        }),
+      )
       return newNodeId
     },
-    [editorGraph.edges, editorGraph.nodes, graph, markdown, nodesById, onChange],
+    [publish, readCurrent],
   )
 
   const addSiblingHeading = useCallback(
@@ -148,33 +173,36 @@ export const useGraphMarkdownEditing = ({
 
   const deleteHeading = useCallback(
     (nodeId: string) => {
-      const node = findEditableHeadingNode(nodesById.get(nodeId))
+      const current = readCurrent()
+      const node = findEditableHeadingNode(current.graph.nodes.find((item) => item.id === nodeId))
       if (!node) return null
 
       const line = node.data.line
       const level = node.data.level
       if (!line || !level) return null
 
-      const deleteEndLine = findHeadingSubtreeEndLine(editorGraph.nodes, line, level, markdown)
-      const nextMarkdown = replaceMarkdownLineRange(markdown, line, deleteEndLine, '')
-      if (nextMarkdown === markdown) return null
-      const parentId = editorGraph.edges.find((edge) => edge.target === nodeId)?.source ?? null
+      const deleteEndLine = findHeadingSubtreeEndLine(
+        current.graph.nodes,
+        line,
+        level,
+        current.markdown,
+      )
+      const nextMarkdown = replaceMarkdownLineRange(current.markdown, line, deleteEndLine, '')
+      if (nextMarkdown === current.markdown) return null
+      const parentId = current.graph.edges.find((edge) => edge.target === nodeId)?.source ?? null
 
-      onChange(nextMarkdown)
-      setOptimisticGraph((current) => {
-        const currentGraph = current?.baseGraph === graph ? current.graph : graph
-        return {
-          baseGraph: graph,
-          graph: patchGraphHeadingDeleted(currentGraph, {
-            deleteEndLine,
-            deleteStartLine: line,
-            targetId: nodeId,
-          }),
-        }
-      })
+      publish(
+        current,
+        nextMarkdown,
+        patchGraphHeadingDeleted(current.graph, {
+          deleteEndLine,
+          deleteStartLine: line,
+          targetId: nodeId,
+        }),
+      )
       return parentId
     },
-    [editorGraph.edges, editorGraph.nodes, graph, markdown, nodesById, onChange],
+    [publish, readCurrent],
   )
 
   return {
@@ -182,10 +210,35 @@ export const useGraphMarkdownEditing = ({
     addSiblingHeading,
     addSiblingHeadingBefore,
     deleteHeading,
-    editorGraph,
+    editorGraph: editorState.graph,
     updateHeadingContent,
     updateHeadingTitle,
   }
+}
+
+const graphDocumentKey = (graph: GraphData) => {
+  const heading = graph.nodes.find((node) => node.type === 'heading')
+  return heading?.data.path ?? heading?.id.slice(0, heading.id.lastIndexOf(':'))
+}
+
+const resolveGraphEditSnapshot = (
+  pending: OptimisticGraphState | null,
+  graph: GraphData,
+  markdown: string,
+): OptimisticGraphState => {
+  const documentKey = graphDocumentKey(graph)
+  const sameDocument =
+    pending &&
+    (pending.baseGraph === graph ||
+      (documentKey !== undefined && documentKey === graphDocumentKey(pending.baseGraph)))
+  if (
+    pending &&
+    sameDocument &&
+    (markdown === pending.baseMarkdown || markdown === pending.markdown)
+  ) {
+    return pending
+  }
+  return { baseGraph: graph, baseMarkdown: markdown, markdown, graph }
 }
 
 const findEditableHeadingNode = (node: Node<GraphNodeData> | undefined) => {

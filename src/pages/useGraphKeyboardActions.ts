@@ -1,13 +1,7 @@
 import { useCallback, useMemo, useState, type MouseEvent, type RefObject } from 'react'
-import { useLatest } from 'ahooks'
-import {
-  useHotkeys,
-  type RegisterableHotkey,
-  type UseHotkeyDefinition,
-} from '@tanstack/react-hotkeys'
+import { useHotkeys } from '@tanstack/react-hotkeys'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
-import { resolveShortcutBindings } from '@/logic/shortcuts'
 import {
   buildContainsChildrenMap,
   getDescendants,
@@ -15,10 +9,10 @@ import {
   getVisibleGraphElements,
 } from '@/logic/graphVisibility'
 import {
+  createGraphHotkeyBindings,
   getInitialKeyboardNavigationTarget,
   getKeyboardNavigationTarget,
-  graphShortcutActions,
-  isTextEditingTarget,
+  isGraphCanvasEvent,
   preventGraphHotkeyDefault,
   type GraphHotkeyAction,
 } from '@/pages/graphKeyboardActions'
@@ -149,7 +143,13 @@ export const useGraphKeyboardActions = ({
 
   const executeGraphHotkey = useCallback(
     (action: GraphHotkeyAction, event: KeyboardEvent) => {
-      if (event.defaultPrevented || isTextEditingTarget(event.target)) return
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        !isGraphCanvasEvent(event, graphShellRef.current)
+      )
+        return
 
       if (action === 'fit-view') {
         preventGraphHotkeyDefault(event)
@@ -223,6 +223,12 @@ export const useGraphKeyboardActions = ({
         return
       }
 
+      if (action === 'navigate-child' && collapsedNodeIds.has(selectedHeadingId)) {
+        preventGraphHotkeyDefault(event)
+        expandSelectedHeading(false)
+        return
+      }
+
       const nextSelection = getKeyboardNavigationTarget(
         action,
         visibleNodes,
@@ -231,36 +237,29 @@ export const useGraphKeyboardActions = ({
       )
       if (nextSelection !== undefined) {
         preventGraphHotkeyDefault(event)
-        selectHeading(nextSelection)
-        fitHeading(nextSelection)
+        if (nextSelection) {
+          selectHeading(nextSelection)
+          fitHeading(nextSelection)
+        }
+        return
       }
 
       if (!editable) return
 
-      if (action === 'add-sibling') {
+      if (action === 'add-sibling' || action === 'add-sibling-before' || action === 'add-child') {
         preventGraphHotkeyDefault(event)
-        const nextHeadingId = onAddSiblingHeading(selectedHeadingId)
+        const addHeading =
+          action === 'add-child'
+            ? onAddChildHeading
+            : action === 'add-sibling-before'
+              ? onAddSiblingHeadingBefore
+              : onAddSiblingHeading
+        const nextHeadingId = addHeading(selectedHeadingId)
+        if (!nextHeadingId) return
+        if (action === 'add-child') expandSelectedHeading(false)
         selectHeading(nextHeadingId)
         focusHeadingTitleSoon(nextHeadingId)
-        if (nextHeadingId) onHotkeyFeedback?.(action)
-        return
-      }
-
-      if (action === 'add-sibling-before') {
-        preventGraphHotkeyDefault(event)
-        const nextHeadingId = onAddSiblingHeadingBefore(selectedHeadingId)
-        selectHeading(nextHeadingId)
-        focusHeadingTitleSoon(nextHeadingId)
-        if (nextHeadingId) onHotkeyFeedback?.(action)
-        return
-      }
-
-      if (action === 'add-child') {
-        preventGraphHotkeyDefault(event)
-        const nextHeadingId = onAddChildHeading(selectedHeadingId)
-        selectHeading(nextHeadingId)
-        focusHeadingTitleSoon(nextHeadingId)
-        if (nextHeadingId) onHotkeyFeedback?.(action)
+        onHotkeyFeedback?.(action)
         return
       }
 
@@ -281,6 +280,7 @@ export const useGraphKeyboardActions = ({
       adjustZoom,
       collapseSelectedHeading,
       clearSelection,
+      collapsedNodeIds,
       editable,
       fitHeading,
       expandSelectedHeading,
@@ -288,6 +288,7 @@ export const useGraphKeyboardActions = ({
       fitVisibleGraph,
       focusHeadingTitleSoon,
       focusSelectedHeadingTitle,
+      graphShellRef,
       onAddChildHeading,
       onAddSiblingHeading,
       onAddSiblingHeadingBefore,
@@ -299,21 +300,14 @@ export const useGraphKeyboardActions = ({
       visibleEdges,
     ],
   )
-  const executeGraphHotkeyRef = useLatest(executeGraphHotkey)
-
-  const hotkeyDefinitions = useMemo<UseHotkeyDefinition[]>(() => {
-    const bindings = resolveShortcutBindings(shortcutOverrides)
-    return graphShortcutActions.flatMap(([shortcutAction, graphAction]) =>
-      bindings[shortcutAction].map((hotkey) => ({
-        hotkey: hotkey as RegisterableHotkey,
-        callback: (event) => executeGraphHotkeyRef.current(graphAction, event),
-        options: {
-          enabled: true,
-          meta: { name: shortcutAction },
-        },
+  const hotkeyDefinitions = useMemo(
+    () =>
+      createGraphHotkeyBindings(shortcutOverrides).map(({ action, ...binding }) => ({
+        ...binding,
+        callback: (event: KeyboardEvent) => executeGraphHotkey(action, event),
       })),
-    )
-  }, [executeGraphHotkeyRef, shortcutOverrides])
+    [executeGraphHotkey, shortcutOverrides],
+  )
 
   useHotkeys(hotkeyDefinitions, {
     conflictBehavior: 'replace',
@@ -325,7 +319,8 @@ export const useGraphKeyboardActions = ({
 
   const handleGraphMouseDown = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
-      if (isTextEditingTarget(event.target)) return
+      if (event.defaultPrevented || !isGraphCanvasEvent(event.nativeEvent, graphShellRef.current))
+        return
       const graphShell = graphShellRef.current
       if (graphShell && document.activeElement !== graphShell) {
         graphShell.focus()

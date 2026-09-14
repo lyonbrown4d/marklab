@@ -131,7 +131,7 @@ export const markdownEditorCommandCatalog: readonly MarkdownEditorCommandSpec[] 
   {
     id: 'editor.imageUrl',
     kind: 'asset',
-    slash: customSlash('advanced', 'image-url', 'imageUrl', ['url']),
+    slash: customSlash('advanced', 'image-url', 'imageUrl', ['image-url', 'url']),
   },
   {
     id: 'editor.calendarFile',
@@ -253,7 +253,7 @@ export const markdownEditorCommandCatalog: readonly MarkdownEditorCommandSpec[] 
     id: 'editor.link',
     actionId: 'editor.link',
     kind: 'inline',
-    slash: customSlash('text', 'link', 'link', ['url']),
+    slash: customSlash('text', 'link', 'link', ['link', 'url']),
   },
   {
     id: 'editor.clearFormat',

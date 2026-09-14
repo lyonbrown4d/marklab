@@ -5,6 +5,11 @@ import { GraphInspector } from '@/pages/graph/GraphInspector'
 import type { GraphNodeData } from '@/logic/graph'
 import type { GraphNodeDetails } from '@/logic/graphViewModel'
 
+vi.mock('@/store/usePreferencesStore', () => ({
+  usePreferencesStore: (selector: (state: { motionSmoothScrolling: boolean }) => unknown) =>
+    selector({ motionSmoothScrolling: false }),
+}))
+
 vi.mock('@/components/previews/EmbeddedFilePreview', () => ({
   default: ({ target, title }: { target: string; title?: string }) => (
     <div data-testid="embedded-preview" data-target={target}>

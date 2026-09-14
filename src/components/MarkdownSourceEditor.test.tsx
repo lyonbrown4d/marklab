@@ -5,7 +5,7 @@ import { configureMonaco } from '@/lib/monaco'
 
 type CompletionProviderMock = {
   provideCompletionItems: (
-    model: { getValue: () => string },
+    model: { getValue: () => string; getVersionId: () => number; isDisposed: () => boolean },
     position: { lineNumber: number; column: number },
   ) => Promise<{
     suggestions: Array<Record<string, unknown>>
@@ -28,6 +28,8 @@ const monacoEditor = vi.hoisted(() => ({
     clear: vi.fn(),
   })),
   getModel: vi.fn(),
+  getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
+  onDidChangeCursorPosition: vi.fn(() => ({ dispose: vi.fn() })),
   addCommand: vi.fn(() => 'mock.command'),
   onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),
   onMouseDown: vi.fn(() => ({ dispose: vi.fn() })),
@@ -84,6 +86,9 @@ const monaco = vi.hoisted(() => ({
 vi.mock('@/lib/monaco', () => ({
   configureMonaco: vi.fn(),
 }))
+
+vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
+vi.mock('@/store/usePreferencesStore', () => ({ usePreferencesStore: () => false }))
 
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
@@ -176,7 +181,7 @@ describe('MarkdownSourceEditor', () => {
 
     const provider = providerCall?.[1]
     const result = await provider?.provideCompletionItems(
-      { getValue: () => 'See [Target](' },
+      { getValue: () => 'See [Target](', getVersionId: () => 1, isDisposed: () => false },
       { lineNumber: 1, column: 14 },
     )
 

@@ -9,8 +9,12 @@ import {
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
 
+export type GraphPresentation = 'mindmap' | 'graph'
+
 export type GraphPageProps = {
   graph: GraphData
+  presentation?: GraphPresentation
+  onContentModeChange?: (mode: GraphContentMode) => void
   onOpenFile: (path: string) => void
   showMiniMap: boolean
   contentMode: GraphContentMode

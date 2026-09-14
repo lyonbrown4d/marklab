@@ -3,7 +3,6 @@ import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
 import type { Ctx } from '@milkdown/kit/ctx'
 import {
   clearTextInCurrentBlockCommand,
-  insertImageCommand,
   paragraphSchema,
   setBlockTypeCommand,
 } from '@milkdown/kit/preset/commonmark'
@@ -14,6 +13,10 @@ import {
 } from '@/components/milkdown/editorCommandCatalog'
 import { slashMenuIcons } from '@/components/milkdown/slashMenuIcons'
 import { markdownTemplates } from '@/components/milkdown/slashMenuTemplates'
+import {
+  captureSlashUrlInsertion,
+  type SlashUrlInsertionRequest,
+} from '@/components/milkdown/slashUrlInsertion'
 
 export type SlashCommandLabels = {
   textGroup: string
@@ -71,6 +74,7 @@ type CustomSlashCommand = {
     labels: SlashCommandLabels,
     onImageImport: () => Promise<boolean>,
     onCalendarFileCreate: () => Promise<string | null>,
+    onUrlInsert?: (request: SlashUrlInsertionRequest) => void,
   ) => void
 }
 
@@ -78,6 +82,7 @@ type MarkdownPlaygroundSlashConfigOptions = {
   labels: SlashCommandLabels
   onCalendarFileCreate: () => Promise<string | null>
   onImageImport: () => Promise<boolean>
+  onUrlInsert?: (request: SlashUrlInsertionRequest) => void
 }
 
 const templateSlashCommand = (key: string, icon: string): CustomSlashCommand => ({
@@ -95,13 +100,8 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
   },
   'image-url': {
     icon: slashMenuIcons.image,
-    onRun: (ctx, labels) => {
-      const src = window.prompt(labels.imageUrlPrompt)?.trim()
-      if (!src) return
-      const alt = window.prompt(labels.imageAltPrompt)?.trim() ?? ''
-      clearSlashText(ctx)
-      ctx.get(commandsCtx).call(insertImageCommand.key, { src, alt, title: '' })
-      ctx.get(editorViewCtx).focus()
+    onRun: (ctx, _labels, _onImageImport, _onCalendarFileCreate, onUrlInsert) => {
+      onUrlInsert?.(captureSlashUrlInsertion(ctx, 'image-url'))
     },
   },
   'calendar-file': {
@@ -116,11 +116,8 @@ const customSlashCommands: Record<string, CustomSlashCommand> = {
   },
   link: {
     icon: slashMenuIcons.link,
-    onRun: (ctx, labels) => {
-      const href = window.prompt(labels.linkUrlPrompt)?.trim()
-      if (!href) return
-      const text = window.prompt(labels.linkTextPrompt)?.trim() || href
-      insertMarkdownTemplate(ctx, `[${escapeLinkText(text)}](${escapeLinkHref(href)})\n`)
+    onRun: (ctx, _labels, _onImageImport, _onCalendarFileCreate, onUrlInsert) => {
+      onUrlInsert?.(captureSlashUrlInsertion(ctx, 'link'))
     },
   },
   bold: templateSlashCommand('bold', slashMenuIcons.callout),
@@ -152,6 +149,7 @@ export const createSlashMenuConfig = (
   labels: SlashCommandLabels,
   onImageImport: () => Promise<boolean>,
   onCalendarFileCreate: () => Promise<string | null>,
+  onUrlInsert?: (request: SlashUrlInsertionRequest) => void,
 ) => ({
   textGroup: {
     label: labels.textGroup,
@@ -188,7 +186,7 @@ export const createSlashMenuConfig = (
         builder.getGroup(command.group).addItem(command.key, {
           label: slashLabel(labels[command.labelKey], command.aliases),
           icon: item.icon,
-          onRun: (ctx) => item.onRun(ctx, labels, onImageImport, onCalendarFileCreate),
+          onRun: (ctx) => item.onRun(ctx, labels, onImageImport, onCalendarFileCreate, onUrlInsert),
         })
       })
   },
@@ -209,8 +207,9 @@ export const createMarkdownPlaygroundSlashConfig = ({
   labels,
   onCalendarFileCreate,
   onImageImport,
+  onUrlInsert,
 }: MarkdownPlaygroundSlashConfigOptions): BlockEditFeatureConfig =>
-  createSlashMenuConfig(labels, onImageImport, onCalendarFileCreate)
+  createSlashMenuConfig(labels, onImageImport, onCalendarFileCreate, onUrlInsert)
 
 export const slashLabel = (label: string, aliases?: readonly string[]) => {
   if (!aliases?.length) return label
@@ -258,7 +257,3 @@ const clearCurrentFormat = (ctx: Ctx) => {
   commands.call(setBlockTypeCommand.key, { nodeType: paragraphSchema.type(ctx) })
   view.focus()
 }
-
-const escapeLinkText = (text: string) => text.replace(/\\/g, '\\\\').replace(/\]/g, '\\]')
-
-const escapeLinkHref = (href: string) => href.replace(/\)/g, '%29')

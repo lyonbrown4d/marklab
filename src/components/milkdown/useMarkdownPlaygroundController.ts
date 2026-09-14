@@ -12,6 +12,9 @@ import {
   refreshMermaidPreviews,
 } from '@/components/milkdown/mermaidPreview'
 import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
+import { useSlashUrlDialog } from '@/components/milkdown/useSlashUrlDialog'
+import { useMarkdownPlaygroundShortcuts } from '@/components/milkdown/useMarkdownPlaygroundShortcuts'
+import type { ShortcutBindings } from '@/logic/shortcuts'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 import {
   readPlaygroundMarkdown,
@@ -25,6 +28,7 @@ import type {
 
 type UseMarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
+  shortcutOverrides?: ShortcutBindings
 }
 
 type QueuedMarkdownUpdate = {
@@ -45,6 +49,7 @@ export const useMarkdownPlaygroundController = ({
   onCalendarFileCreate,
   placeholder,
   slashLabels,
+  shortcutOverrides,
   value,
 }: UseMarkdownPlaygroundControllerOptions) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -62,6 +67,14 @@ export const useMarkdownPlaygroundController = ({
   const applyingExternalValueRef = useRef(false)
   const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
   const [codeBlockTheme] = useState(createMarkdownCodeBlockTheme)
+  const urlDialog = useSlashUrlDialog(activePath)
+  const { open: openUrlDialog, invalidate: invalidateUrlDialog } = urlDialog
+  const shortcutPlugin = useMarkdownPlaygroundShortcuts({
+    crepeRef,
+    enabled: status.phase === 'ready' && !urlDialog.request,
+    overrides: shortcutOverrides,
+    onUrlInsert: openUrlDialog,
+  })
 
   useLayoutEffect(() => {
     codeBlockTheme.setDarkMode(darkMode)
@@ -92,8 +105,8 @@ export const useMarkdownPlaygroundController = ({
       const crepe = crepeRef.current
       if (crepe && valueChanged) {
         replaceMarkdownLikePlayground(crepe, value)
-      }
-      if (crepe) {
+        // An echoed value can lag behind live edits awaiting their listener callback.
+        // Normalize only applied external values, not newer, still-unsaved editor content.
         latestValueRef.current = readPlaygroundMarkdown(crepe, value)
       }
       if (documentChanged) {
@@ -176,6 +189,7 @@ export const useMarkdownPlaygroundController = ({
           labels: slashLabels,
           onCalendarFileCreate: runSlashCalendarFileCreate,
           onImageImport: runSlashImageImport,
+          onUrlInsert: openUrlDialog,
         }),
         [Crepe.Feature.CodeMirror]: {
           theme: codeBlockTheme.extension,
@@ -211,7 +225,7 @@ export const useMarkdownPlaygroundController = ({
       crepe?.editor.use(plugin)
     })
 
-    crepe.editor.use(animatedCursor).use(typewriterScroll)
+    crepe.editor.use(animatedCursor).use(typewriterScroll).use(shortcutPlugin)
 
     const pendingCrepe = crepe
     void pendingDestroyRef.current
@@ -264,6 +278,7 @@ export const useMarkdownPlaygroundController = ({
 
     return () => {
       destroyed = true
+      invalidateUrlDialog()
       updateMarkdown.flush()
       updateMarkdown.cancel()
       acceptingMarkdownUpdates = false
@@ -281,10 +296,13 @@ export const useMarkdownPlaygroundController = ({
   }, [
     codeBlockTheme,
     getDocumentPath,
+    invalidateUrlDialog,
+    openUrlDialog,
     placeholder,
     runSlashCalendarFileCreate,
     runSlashImageImport,
     slashLabels,
+    shortcutPlugin,
     subscribeDocumentPath,
   ])
 
@@ -306,5 +324,6 @@ export const useMarkdownPlaygroundController = ({
     rootRef,
     scrollAreaRef,
     status,
+    urlDialog,
   }
 }

@@ -9,11 +9,13 @@ import {
   setBlockTypeCommand,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
-  toggleLinkCommand,
   toggleStrongCommand,
   wrapInBlockTypeCommand,
 } from '@milkdown/kit/preset/commonmark'
 import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
+import { Schema } from '@milkdown/kit/prose/model'
+import { EditorState, TextSelection, type Transaction } from '@milkdown/kit/prose/state'
+import { history, undo } from '@milkdown/kit/prose/history'
 import { describe, expect, it, vi } from 'vitest'
 import { runMarkdownEditorShortcut } from '@/components/milkdown/editorShortcuts'
 import type { ShortcutActionId } from '@/logic/shortcuts'
@@ -59,6 +61,9 @@ type FakeCommands = {
 
 type FakeTransaction = {
   removeMark: ReturnType<typeof vi.fn>
+  setBlockType: ReturnType<typeof vi.fn>
+  setStoredMarks: ReturnType<typeof vi.fn>
+  scrollIntoView: ReturnType<typeof vi.fn>
 }
 
 const createShortcutHarness = () => {
@@ -67,6 +72,9 @@ const createShortcutHarness = () => {
   }
   const transaction: FakeTransaction = {
     removeMark: vi.fn(() => transaction),
+    setBlockType: vi.fn(() => transaction),
+    setStoredMarks: vi.fn(() => transaction),
+    scrollIntoView: vi.fn(() => transaction),
   }
   const view = {
     state: {
@@ -109,6 +117,37 @@ const runShortcut = (
 const keyOf = (command: { key: unknown }) => command.key
 
 const nodeTypeOf = (schema: { type: (ctx: never) => unknown }) => schema.type(null as never)
+
+const createNativeClearFormatHarness = (block: 'paragraph' | 'heading', collapsed = false) => {
+  const schema = new Schema({
+    nodes: {
+      doc: { content: 'block+' },
+      paragraph: { group: 'block', content: 'text*' },
+      heading: { group: 'block', content: 'text*', attrs: { level: { default: 2 } } },
+      text: {},
+    },
+    marks: { strong: {} },
+  })
+  const marked = schema.text('marked', [schema.marks.strong.create()])
+  const doc = schema.node('doc', null, schema.node(block, null, marked))
+  let state = EditorState.create({
+    doc,
+    selection: TextSelection.create(doc, collapsed ? 3 : 1, collapsed ? 3 : 7),
+    plugins: [history()],
+  })
+  const view = {
+    get state() {
+      return state
+    },
+    dispatch: vi.fn((transaction: Transaction) => {
+      state = state.apply(transaction)
+    }),
+  }
+  const ctx = { get: (token: unknown) => (token === editorViewCtx ? view : { call: () => false }) }
+  const crepe = { editor: { action: (run: (value: typeof ctx) => void) => run(ctx) } }
+  vi.mocked(paragraphSchema.type).mockReturnValueOnce(schema.nodes.paragraph)
+  return { view, run: () => runMarkdownEditorShortcut(crepe as never, 'editor.clearFormat') }
+}
 
 describe('runMarkdownEditorShortcut', () => {
   it('returns false when the editor is not ready', () => {
@@ -178,22 +217,19 @@ describe('runMarkdownEditorShortcut', () => {
     })
   })
 
-  it('prompts before toggling links and treats cancelled prompts as handled', () => {
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce('https://marklab.local')
-
-    const linked = runShortcut('editor.link')
-
+  it('opens the supplied link dialog instead of a native prompt', () => {
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue(null)
+    const onLinkInsert = vi.fn()
+    const linked = runShortcut('editor.link', { onLinkInsert })
     expect(linked.handled).toBe(true)
-    expect(linked.commands.call).toHaveBeenCalledWith(keyOf(toggleLinkCommand), {
-      href: 'https://marklab.local',
-    })
+    expect(onLinkInsert).toHaveBeenCalledTimes(1)
+    expect(linked.commands.call).not.toHaveBeenCalled()
+    expect(prompt).not.toHaveBeenCalled()
+  })
 
-    prompt.mockReturnValueOnce(null)
-
-    const cancelled = runShortcut('editor.link')
-
-    expect(cancelled.handled).toBe(true)
-    expect(cancelled.commands.call).not.toHaveBeenCalled()
+  it('does not claim unsupported link or image integrations were handled', () => {
+    expect(runShortcut('editor.link').handled).toBe(false)
+    expect(runShortcut('editor.image').handled).toBe(false)
   })
 
   it('delegates image import to the provided callback without running a Milkdown command', () => {
@@ -205,15 +241,35 @@ describe('runMarkdownEditorShortcut', () => {
     expect(onImageImport).toHaveBeenCalledTimes(1)
   })
 
-  it('removes active marks before resetting clear format to a paragraph', () => {
+  it('clears selection and stored marks in one paragraph transaction', () => {
     const { commands, handled, transaction, view } = runShortcut('editor.clearFormat')
 
     expect(handled).toBe(true)
-    expect(transaction.removeMark).toHaveBeenCalledWith(2, 8, { name: 'emphasis' })
-    expect(transaction.removeMark).toHaveBeenCalledWith(2, 8, { name: 'strong' })
+    expect(transaction.removeMark).toHaveBeenCalledWith(2, 8)
+    expect(transaction.setBlockType).toHaveBeenCalledWith(2, 8, nodeTypeOf(paragraphSchema))
+    expect(transaction.setStoredMarks).toHaveBeenCalledWith([])
     expect(view.dispatch).toHaveBeenCalledWith(transaction)
-    expect(commands.call).toHaveBeenCalledWith(keyOf(setBlockTypeCommand), {
-      nodeType: nodeTypeOf(paragraphSchema),
-    })
+    expect(view.dispatch).toHaveBeenCalledTimes(1)
+    expect(commands.call).not.toHaveBeenCalled()
+  })
+
+  it('clears inherited typing styles at a collapsed caret in an existing paragraph', () => {
+    const { view, run } = createNativeClearFormatHarness('paragraph', true)
+    expect(run()).toBe(true)
+    expect(view.state.storedMarks).toEqual([])
+    view.dispatch(view.state.tr.insertText('plain'))
+    expect(view.state.doc.firstChild?.child(1).text).toBe('plain')
+    expect(view.state.doc.firstChild?.child(1).marks).toEqual([])
+  })
+
+  it('restores both heading and inline formatting with one native undo', () => {
+    const { view, run } = createNativeClearFormatHarness('heading')
+    const original = view.state.doc
+    expect(run()).toBe(true)
+    expect(view.state.doc.firstChild?.type.name).toBe('paragraph')
+    expect(view.state.doc.firstChild?.firstChild?.marks).toEqual([])
+    expect(view.dispatch).toHaveBeenCalledTimes(1)
+    expect(undo(view.state, view.dispatch)).toBe(true)
+    expect(view.state.doc.eq(original)).toBe(true)
   })
 })

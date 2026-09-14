@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   embeddedLinksInTextNode,
   markdownEmbeddedLinksInText,
 } from '@/components/milkdown/embeddedPreviewPlugin'
+
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}))
 
 const linkType = Symbol('link')
 

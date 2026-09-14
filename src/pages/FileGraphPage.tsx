@@ -21,6 +21,7 @@ const FileGraphPage = () => {
 
   return (
     <GraphViewPage
+      presentation="mindmap"
       graph={context.graph}
       markdown={context.editorValue}
       onOpenFile={context.onOpenFile}

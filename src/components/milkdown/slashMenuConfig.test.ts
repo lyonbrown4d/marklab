@@ -1,5 +1,5 @@
 import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core'
-import { clearTextInCurrentBlockCommand, insertImageCommand } from '@milkdown/kit/preset/commonmark'
+import { clearTextInCurrentBlockCommand } from '@milkdown/kit/preset/commonmark'
 import { Slice } from '@milkdown/kit/prose/model'
 import { describe, expect, it, vi } from 'vitest'
 import { createSlashMenuConfig } from '@/components/milkdown/slashMenuConfig'
@@ -96,7 +96,10 @@ describe('createSlashMenuConfig', () => {
       'callout-warning',
       expect.objectContaining({ label: 'Warning callout · warn' }),
     )
-    expect(addItem).toHaveBeenCalledWith('link', expect.objectContaining({ label: 'Link · url' }))
+    expect(addItem).toHaveBeenCalledWith(
+      'link',
+      expect.objectContaining({ label: 'Link · link url' }),
+    )
     expect(addItem).toHaveBeenCalledWith(
       'bold',
       expect.objectContaining({ label: 'Bold · strong' }),
@@ -177,113 +180,25 @@ describe('createSlashMenuConfig', () => {
     expect(view.focus).toHaveBeenCalledTimes(1)
   })
 
-  it('prompts for an image URL and inserts it through the native image command', () => {
+  it.each(['link', 'image-url'])('never uses window.prompt for %s with a legacy caller', (key) => {
     const config = createSlashMenuConfig(
       labels,
       async () => true,
       async () => null,
     )
     const addItem = vi.fn()
-    const call = vi.fn()
-    const focus = vi.fn()
-    const prompt = vi
-      .spyOn(window, 'prompt')
-      .mockReturnValueOnce('https://example.com/image.png')
-      .mockReturnValueOnce('Example image')
+    const prompt = vi.spyOn(window, 'prompt')
 
     config.buildMenu({
       getGroup: vi.fn(() => ({ addItem })),
     })
 
-    const [, item] = addItem.mock.calls.find(([key]) => key === 'image-url') as [
+    const [, item] = addItem.mock.calls.find(([itemKey]) => itemKey === key) as [
       string,
       { onRun: (ctx: { get: (token: unknown) => unknown }) => void },
     ]
 
-    item.onRun({
-      get: (token) => {
-        if (token === commandsCtx) return { call }
-        if (token === editorViewCtx) return { focus }
-        return null
-      },
-    })
-
-    expect(prompt).toHaveBeenCalledWith('Enter image URL')
-    expect(prompt).toHaveBeenCalledWith('Enter image description')
-    expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
-    expect(call).toHaveBeenCalledWith(insertImageCommand.key, {
-      alt: 'Example image',
-      src: 'https://example.com/image.png',
-      title: '',
-    })
-    expect(focus).toHaveBeenCalledTimes(1)
-
-    prompt.mockRestore()
-  })
-
-  it('prompts for a link and inserts a parsed markdown link', () => {
-    const config = createSlashMenuConfig(
-      labels,
-      async () => true,
-      async () => null,
-    )
-    const addItem = vi.fn()
-    const call = vi.fn()
-    const parser = vi.fn(() => ({ content: { childCount: 1 } }))
-    const replaceRange = vi.fn(function replaceRange() {
-      return tr
-    })
-    const scrollIntoView = vi.fn(function scrollIntoView() {
-      return tr
-    })
-    const tr = { replaceRange, scrollIntoView }
-    const view = {
-      dispatch: vi.fn(),
-      focus: vi.fn(),
-      state: {
-        selection: {
-          $from: {
-            after: vi.fn(() => 8),
-            before: vi.fn(() => 2),
-            depth: 1,
-          },
-          from: 4,
-          to: 4,
-        },
-        tr,
-      },
-    }
-    const prompt = vi
-      .spyOn(window, 'prompt')
-      .mockReturnValueOnce('https://example.com/docs')
-      .mockReturnValueOnce('Docs')
-
-    config.buildMenu({
-      getGroup: vi.fn(() => ({ addItem })),
-    })
-
-    const [, item] = addItem.mock.calls.find(([key]) => key === 'link') as [
-      string,
-      { onRun: (ctx: { get: (token: unknown) => unknown }) => void },
-    ]
-
-    item.onRun({
-      get: (token) => {
-        if (token === commandsCtx) return { call }
-        if (token === editorViewCtx) return view
-        if (token === parserCtx) return parser
-        return null
-      },
-    })
-
-    expect(prompt).toHaveBeenCalledWith('Enter link URL')
-    expect(prompt).toHaveBeenCalledWith('Enter link text')
-    expect(call).toHaveBeenCalledWith(clearTextInCurrentBlockCommand.key)
-    expect(parser).toHaveBeenCalledWith('[Docs](https://example.com/docs)\n')
-    expect(replaceRange).toHaveBeenCalledWith(2, 8, expect.any(Slice))
-    expect(view.dispatch).toHaveBeenCalledWith(tr)
-    expect(view.focus).toHaveBeenCalledTimes(1)
-
-    prompt.mockRestore()
+    item.onRun({ get: vi.fn() })
+    expect(prompt).not.toHaveBeenCalled()
   })
 })

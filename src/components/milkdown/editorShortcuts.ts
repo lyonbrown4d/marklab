@@ -1,4 +1,5 @@
 import type { Crepe } from '@milkdown/crepe'
+import type { Ctx } from '@milkdown/kit/ctx'
 import { commandsCtx, editorViewCtx } from '@milkdown/kit/core'
 import {
   blockquoteSchema,
@@ -10,7 +11,6 @@ import {
   setBlockTypeCommand,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
-  toggleLinkCommand,
   toggleStrongCommand,
   wrapInBlockTypeCommand,
 } from '@milkdown/kit/preset/commonmark'
@@ -24,6 +24,7 @@ import {
 
 type MarkdownEditorShortcutOptions = {
   onImageImport?: () => Promise<boolean>
+  onLinkInsert?: (ctx: Ctx) => void
 }
 
 export const runMarkdownEditorShortcut = (
@@ -71,12 +72,12 @@ export const runMarkdownEditorShortcut = (
     const clearFormat = () => {
       const view = ctx.get(editorViewCtx)
       const { from, to } = view.state.selection
-      let tr = view.state.tr
-      Object.values(view.state.schema.marks).forEach((mark) => {
-        tr = tr.removeMark(from, to, mark)
-      })
-      view.dispatch(tr)
-      return setParagraph()
+      const tr = view.state.tr
+        .removeMark(from, to)
+        .setBlockType(from, to, paragraphSchema.type(ctx))
+        .setStoredMarks([])
+      view.dispatch(tr.scrollIntoView())
+      return true
     }
 
     const headingLevel = markdownEditorHeadingShortcutLevels[action]
@@ -102,13 +103,17 @@ export const runMarkdownEditorShortcut = (
         handled = callMilkdownCommand(commands, toggleStrikethroughCommand)
         break
       case 'editor.link': {
-        const href = window.prompt('Link URL')
-        handled = href ? commands.call(toggleLinkCommand.key, { href }) : true
+        if (!options.onLinkInsert) break
+        options.onLinkInsert(ctx)
+        handled = true
         break
       }
       case 'editor.image': {
+        if (!options.onImageImport) break
         handled = true
-        void options.onImageImport?.()
+        void options.onImageImport().catch((error: unknown) => {
+          console.error('Failed to import Markdown image', error)
+        })
         break
       }
       case 'editor.codeBlock':

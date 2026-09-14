@@ -146,6 +146,12 @@ describe('graph optimistic patches', () => {
     expect(inserted?.data.level).toBe(2)
     expect(shifted?.data.line).toBe(4)
     expect(next.edges.some((edge) => edge.target === inserted?.id)).toBe(true)
+    expect(next.edges.find((edge) => edge.target === inserted?.id)).toMatchObject({
+      source: 'heading:notes/current.md:intro',
+      target: 'heading:notes/current.md:new-topic',
+      type: 'smoothstep',
+      data: { kind: 'contains' },
+    })
     expect(next.layoutKey).not.toBe(graph.layoutKey)
   })
 

@@ -12,7 +12,10 @@ import {
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@/services/fsApi'
 import { markdownLanguageApi } from '@/services/markdownLanguageApi'
-import { onFocusSourcePositionRequest } from '@/utils/editorNavigation'
+import {
+  onFocusSourcePositionRequest,
+  type FocusSourcePositionRequest,
+} from '@/utils/editorNavigation'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
@@ -79,11 +82,8 @@ const MarkdownSourceEditor = ({
   const diagnosticsRequestStreamRef = useRef(new ReplaySubject<MarkdownSourceDiagnosticsRequest>(1))
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const searchHighlightTimerRef = useRef<number | null>(null)
-  const completionContextRef = useRef({ activePath, files, fileContents, workspaceIndex })
-
-  useEffect(() => {
-    completionContextRef.current = { activePath, files, fileContents, workspaceIndex }
-  }, [activePath, fileContents, files, workspaceIndex])
+  const completionContextRef = useLatest({ activePath, files, fileContents, workspaceIndex })
+  const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -106,40 +106,33 @@ const MarkdownSourceEditor = ({
     }
   }, [])
 
-  const applyDiagnostics = useCallback(
-    (
-      diagnostics: Array<
-        FsMarkdownDiagnostic | ReturnType<typeof getMarkdownSourceDiagnostics>[number]
-      >,
-    ) => {
-      const host = diagnosticHostRef.current
-      const editor = host?.editor
-      const monaco = host?.monaco
-      const model = editor?.getModel()
-      if (!host || !model || !monaco) return
+  const applyDiagnostics = useCallback((diagnostics: MarkdownSourceDiagnostics) => {
+    const host = diagnosticHostRef.current
+    const editor = host?.editor
+    const monaco = host?.monaco
+    const model = editor?.getModel()
+    if (!host || !model || !monaco) return
 
-      const markers = diagnostics.map((diagnostic) => {
-        const startColumn =
-          'start_column' in diagnostic ? diagnostic.start_column : diagnostic.startColumn
-        const endColumn = 'end_column' in diagnostic ? diagnostic.end_column : diagnostic.endColumn
-        return {
-          severity:
-            diagnostic.severity === 'error'
-              ? monaco.MarkerSeverity.Error
-              : monaco.MarkerSeverity.Warning,
-          message: diagnostic.message,
-          startLineNumber: diagnostic.line,
-          startColumn,
-          endLineNumber: diagnostic.line,
-          endColumn: Math.max(startColumn + 1, endColumn),
-          source: 'markdown',
-          code: diagnostic.severity === 'error' ? 'M001' : 'M002',
-        }
-      })
-      monaco.editor.setModelMarkers(model, MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER, markers)
-    },
-    [],
-  )
+    const markers = diagnostics.map((diagnostic) => {
+      const startColumn =
+        'start_column' in diagnostic ? diagnostic.start_column : diagnostic.startColumn
+      const endColumn = 'end_column' in diagnostic ? diagnostic.end_column : diagnostic.endColumn
+      return {
+        severity:
+          diagnostic.severity === 'error'
+            ? monaco.MarkerSeverity.Error
+            : monaco.MarkerSeverity.Warning,
+        message: diagnostic.message,
+        startLineNumber: diagnostic.line,
+        startColumn,
+        endLineNumber: diagnostic.line,
+        endColumn: Math.max(startColumn + 1, endColumn),
+        source: 'markdown',
+        code: diagnostic.severity === 'error' ? 'M001' : 'M002',
+      }
+    })
+    monaco.editor.setModelMarkers(model, MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER, markers)
+  }, [])
 
   useEffect(() => {
     const subscription = diagnosticsRequestStreamRef.current
@@ -178,9 +171,12 @@ const MarkdownSourceEditor = ({
       content: model.getValue(),
       context: completionContextRef.current,
     })
-  }, [])
+  }, [completionContextRef])
 
   useEffect(() => {
+    if (pendingSourcePositionRef.current?.path !== activePath) {
+      pendingSourcePositionRef.current = null
+    }
     scheduleDiagnostics()
   }, [activePath, files, fileContents, scheduleDiagnostics, workspaceIndex])
 
@@ -204,6 +200,8 @@ const MarkdownSourceEditor = ({
     })
 
     scheduleDiagnostics()
+    const pending = pendingSourcePositionRef.current
+    if (pending) focusSourcePosition(pending)
   }
 
   useEffect(() => {
@@ -231,17 +229,23 @@ const MarkdownSourceEditor = ({
         clearFocusedCodeEditor(host.editor)
       }
       diagnosticHostRef.current = null
+      editorRef.current = null
+      pendingSourcePositionRef.current = null
     }
   }, [])
 
-  useEffect(() => {
-    return onFocusSourcePositionRequest(({ path, line, column, endColumn }) => {
-      if (!path || path !== activePath) return
+  const focusSourcePosition = useCallback(
+    ({ path, line, column, endColumn }: FocusSourcePositionRequest) => {
+      if (!path || path !== completionContextRef.current.activePath) return
       if (!Number.isFinite(line) || !Number.isFinite(column)) return
 
       const editor = editorRef.current
       const monaco = diagnosticHostRef.current?.monaco
-      if (!editor || !monaco) return
+      if (!editor || !monaco) {
+        pendingSourcePositionRef.current = { path, line, column, endColumn }
+        return
+      }
+      pendingSourcePositionRef.current = null
 
       const lineNumber = Math.max(1, line)
       const columnNumber = Math.max(1, column)
@@ -269,8 +273,11 @@ const MarkdownSourceEditor = ({
         searchHighlightRef.current?.clear()
         searchHighlightTimerRef.current = null
       }, 2_400)
-    })
-  }, [activePath])
+    },
+    [completionContextRef],
+  )
+
+  useEffect(() => onFocusSourcePositionRequest(focusSourcePosition), [focusSourcePosition])
 
   const editorLoadError =
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)

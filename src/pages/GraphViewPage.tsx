@@ -1,13 +1,16 @@
-import { lazy, memo, Suspense, useMemo } from 'react'
+import { lazy, memo, Suspense, useMemo, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import type { GraphData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphMarkdownEditing } from '@/pages/useGraphMarkdownEditing'
+import type { GraphPresentation } from '@/pages/graph/graphPageConfig'
+import { createMindmapPresentation } from '@/pages/graph/mindmapPresentation'
 const GraphPage = lazy(() => import('@/pages/GraphPage'))
 type GraphViewPageProps = {
   graph: GraphData
+  presentation?: GraphPresentation
   markdown: string
   onOpenFile: (path: string) => void
   onChange: (value: string) => void
@@ -18,6 +21,7 @@ type GraphViewPageProps = {
 }
 const GraphViewPage = ({
   graph,
+  presentation = 'graph',
   markdown,
   onOpenFile,
   onChange,
@@ -27,6 +31,7 @@ const GraphViewPage = ({
   showEmptyMessage,
 }: GraphViewPageProps) => {
   const { t } = useI18n()
+  const [mindmapContentMode, setMindmapContentMode] = useState<GraphContentMode>('none')
   const {
     addChildHeading,
     addSiblingHeading,
@@ -45,7 +50,15 @@ const GraphViewPage = ({
     [editorGraph.nodes],
   )
   const canEdit = editable && hasHeadingNodes
-  const graphContentMode = canEdit ? 'full' : contentMode
+  const graphContentMode =
+    presentation === 'mindmap' ? mindmapContentMode : canEdit ? 'full' : contentMode
+  const presentedGraph = useMemo(
+    () =>
+      presentation === 'mindmap'
+        ? createMindmapPresentation(editorGraph, graphContentMode)
+        : editorGraph,
+    [editorGraph, graphContentMode, presentation],
+  )
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="editor-stage min-h-0 flex-1 overflow-hidden">
@@ -53,7 +66,9 @@ const GraphViewPage = ({
           <div className="motion-view h-full">
             <Suspense fallback={<EditorPaneFallback />}>
               <GraphPage
-                graph={editorGraph}
+                graph={presentedGraph}
+                presentation={presentation}
+                onContentModeChange={setMindmapContentMode}
                 onOpenFile={onOpenFile}
                 showMiniMap={showMiniMap}
                 contentMode={graphContentMode}
