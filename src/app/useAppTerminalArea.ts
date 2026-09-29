@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
-import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type UseAppTerminalAreaOptions = {
   disabled: boolean
@@ -8,33 +7,55 @@ type UseAppTerminalAreaOptions = {
 export const useAppTerminalArea = ({ disabled }: UseAppTerminalAreaOptions) => {
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalInitialized, setTerminalInitialized] = useState(false)
-  const terminalPanelToggleGuard = useMemo(() => createToggleGuard(PANEL_TOGGLE_GUARD_MS), [])
+  const [terminalFocusRequest, setTerminalFocusRequest] = useState(0)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const focusFrameRef = useRef<number | null>(null)
   const effectiveTerminalOpen = terminalOpen && !disabled
 
-  const closeTerminalArea = useCallback(() => {
-    if (!terminalPanelToggleGuard()) return
-    setTerminalOpen(false)
-  }, [terminalPanelToggleGuard])
+  const cancelFocusRestore = useCallback(() => {
+    if (focusFrameRef.current === null) return
+    window.cancelAnimationFrame(focusFrameRef.current)
+    focusFrameRef.current = null
+  }, [])
 
-  const toggleTerminalArea = useCallback(() => {
-    if (!terminalPanelToggleGuard()) return
-    setTerminalOpen((open) => {
-      if (!open) setTerminalInitialized(true)
-      return !open
+  useEffect(() => cancelFocusRestore, [cancelFocusRestore])
+
+  const closeTerminalArea = useCallback(() => {
+    setTerminalOpen(false)
+    cancelFocusRestore()
+    const returnTarget = returnFocusRef.current
+    returnFocusRef.current = null
+    focusFrameRef.current = window.requestAnimationFrame(() => {
+      focusFrameRef.current = null
+      if (returnTarget?.isConnected) returnTarget.focus()
     })
-  }, [terminalPanelToggleGuard])
+  }, [cancelFocusRestore])
 
   const openTerminalArea = useCallback(() => {
-    if (!terminalPanelToggleGuard()) return
+    if (disabled) return
+    cancelFocusRestore()
+    if (!terminalOpen && document.activeElement instanceof HTMLElement) {
+      returnFocusRef.current = document.activeElement
+    }
     setTerminalInitialized(true)
     setTerminalOpen(true)
-  }, [terminalPanelToggleGuard])
+    setTerminalFocusRequest((request) => request + 1)
+  }, [cancelFocusRestore, disabled, terminalOpen])
+
+  const toggleTerminalArea = useCallback(() => {
+    if (terminalOpen) {
+      closeTerminalArea()
+      return
+    }
+    openTerminalArea()
+  }, [closeTerminalArea, openTerminalArea, terminalOpen])
 
   return {
     closeTerminalArea,
     effectiveTerminalOpen,
     openTerminalArea,
     terminalInitialized,
+    terminalFocusRequest,
     terminalOpen,
     toggleTerminalArea,
   }

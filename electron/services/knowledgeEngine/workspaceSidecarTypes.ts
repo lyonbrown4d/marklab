@@ -20,17 +20,22 @@ import {
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
 import type {
   FsEntry,
+  FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
 } from '@electron/services/workspace/types.js'
 import type { Logger } from '@electron/services/logger.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type {
+  WorkspaceSearchDocument,
+  WorkspaceSearchMutationBatch,
+} from '@electron/services/workspace/workspaceSearchTypes.js'
 import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
 
 export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'error'
 
 export type WorkspaceSidecarClient = {
+  applySearchChanges: (batch: WorkspaceSearchMutationBatch) => Promise<void>
   changeMarkdownDocument: (
     workspaceInstanceId: string,
     change: KnowledgeDocumentChangeInput,
@@ -49,6 +54,11 @@ export type WorkspaceSidecarClient = {
     documentId: string,
     documentVersion: number | string,
   ) => Promise<KnowledgeMarkdownDocumentSymbol[]>
+  getMarkdownDiagnostics: (
+    path: string,
+    content: string,
+    signal?: AbortSignal,
+  ) => Promise<FsMarkdownDiagnostic[]>
   getMarkdownLinks: (
     documentId: string,
     documentVersion: number | string,

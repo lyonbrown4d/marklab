@@ -53,6 +53,78 @@ describe('Node knowledge sidecar process', () => {
 
     await expect(pending).rejects.toThrow(/exited/i)
   })
+
+  it('rejects when the utility process does not spawn before the timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const process = new FakeUtilityProcess()
+      const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn() } as unknown as Logger
+      const starting = startNodeSidecar(identity(), logger, {
+        entryPath: 'knowledgeSidecarEntry.js',
+        fork: () => process,
+      })
+      const rejected = expect(starting).rejects.toThrow(/did not spawn in time/i)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      await rejected
+      expect(process.kill).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('routes Markdown diagnostics over the utility-process RPC boundary', async () => {
+    const process = new FakeUtilityProcess()
+    const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn() } as unknown as Logger
+    const starting = startNodeSidecar(identity(), logger, {
+      entryPath: 'knowledgeSidecarEntry.js',
+      fork: () => process,
+    })
+    process.emit('spawn')
+    const started = await starting
+    const pending = started.client.getMarkdownDiagnostics('alpha.md', '[A][missing]')
+    const request = process.postMessage.mock.calls[0]?.[0] as {
+      args: unknown[]
+      id: number
+      method: string
+    }
+    process.emit('message', { id: request.id, ok: true, result: [] })
+
+    await expect(pending).resolves.toEqual([])
+    expect(request).toMatchObject({
+      args: ['alpha.md', '[A][missing]'],
+      method: 'getMarkdownDiagnostics',
+    })
+  })
+
+  it('cancels a stale diagnostics request without affecting the next request', async () => {
+    const process = new FakeUtilityProcess()
+    const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn() } as unknown as Logger
+    const starting = startNodeSidecar(identity(), logger, {
+      entryPath: 'knowledgeSidecarEntry.js',
+      fork: () => process,
+    })
+    process.emit('spawn')
+    const started = await starting
+    const controller = new AbortController()
+    const stale = started.client.getMarkdownDiagnostics(
+      'alpha.md',
+      '[Stale][missing]',
+      controller.signal,
+    )
+    const staleRequest = process.postMessage.mock.calls[0]?.[0] as { id: number }
+
+    controller.abort()
+    await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
+
+    process.emit('message', { id: staleRequest.id, ok: true, result: [] })
+    const current = started.client.getMarkdownDiagnostics('alpha.md', '[Current][missing]')
+    const currentRequest = process.postMessage.mock.calls[1]?.[0] as { id: number }
+    process.emit('message', { id: currentRequest.id, ok: true, result: [{ line: 1 }] })
+
+    await expect(current).resolves.toEqual([{ line: 1 }])
+  })
 })
 
 class FakeUtilityProcess extends EventEmitter {

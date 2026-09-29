@@ -150,6 +150,31 @@ describe('WorkspaceSidecarManager', () => {
     expect(client.rebuildIndex).toHaveBeenCalledWith(documents)
   })
 
+  it('routes a mixed search mutation batch in one client request', async () => {
+    const { client, manager } = createManager()
+    const batch = {
+      removeDocuments: ['old.md'],
+      removePrefixes: ['archive'],
+      upserts: [{ content: 'Fresh', path: 'fresh.md', title: 'Fresh' }],
+    }
+    await manager.open('workspace-a', 'index-a')
+
+    await manager.applySearchChanges('workspace-a', batch)
+
+    expect(client.applySearchChanges).toHaveBeenCalledWith(batch)
+  })
+
+  it('reopens a workspace after its utility process enters the error state', async () => {
+    const { child, manager, startSidecar } = createManager()
+    await manager.open('workspace-a', 'index-a')
+    child.emit('exit', 7)
+
+    await manager.open('workspace-a', 'index-a')
+
+    expect(startSidecar).toHaveBeenCalledTimes(2)
+    expect(manager.listActive()[0]).toMatchObject({ state: 'ready', workspaceId: 'workspace-a' })
+  })
+
   it('routes workspace vfs write requests to the workspace grpc client', async () => {
     const { client, manager } = createManager()
     await manager.open('workspace-a', 'index-a')
@@ -195,6 +220,15 @@ describe('WorkspaceSidecarManager', () => {
       version: 2,
     })
     expect(client.getMarkdownDocumentSymbols).toHaveBeenCalledWith('alpha.md', 2)
+  })
+
+  it('routes stateless Markdown diagnostics to the workspace client', async () => {
+    const { client, manager } = createManager()
+    await manager.open('workspace-a', 'index-a')
+
+    await manager.getMarkdownDiagnostics('workspace-a', 'alpha.md', '[A][missing]')
+
+    expect(client.getMarkdownDiagnostics).toHaveBeenCalledWith('alpha.md', '[A][missing]')
   })
 
   it('does not reopen an already ready workspace with the same index path', async () => {

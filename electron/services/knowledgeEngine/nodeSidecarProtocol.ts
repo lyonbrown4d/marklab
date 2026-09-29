@@ -29,6 +29,7 @@ export const isNodeSidecarResponse = (value: unknown): value is NodeSidecarRespo
 }
 
 const allowedMethods = new Set<NodeSidecarMethod>([
+  'applySearchChanges',
   'buildOutlineGraph',
   'buildWorkspaceGraph',
   'changeMarkdownDocument',
@@ -40,6 +41,7 @@ const allowedMethods = new Set<NodeSidecarMethod>([
   'deleteWorkspacePath',
   'getCapabilities',
   'getMarkdownDocumentSymbols',
+  'getMarkdownDiagnostics',
   'getMarkdownLinks',
   'getWorkspaceFileSnapshot',
   'getWorkspacePathMetadata',

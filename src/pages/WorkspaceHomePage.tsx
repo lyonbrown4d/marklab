@@ -15,7 +15,7 @@ import { pathToAllPagesRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { appApi } from '@/services/appApi'
 import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
-import { requestFileSearchFocus } from '@/utils/appEvents'
+import { requestWorkspaceSearchFocus } from '@/utils/appEvents'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import WorkspaceHomeHero from '@/pages/WorkspaceHomeHero'
 import {
@@ -184,7 +184,7 @@ const WorkspaceHomePage = () => {
           onOpenFilePicker={openFilePicker}
           onOpenProjectPicker={openProjectPicker}
           onOpenWorkspaceGraph={openWorkspaceGraph}
-          onSearch={requestFileSearchFocus}
+          onSearch={requestWorkspaceSearchFocus}
         />
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -222,7 +222,7 @@ const WorkspaceHomePage = () => {
                     ? t('workspaceHome.openDocument', { name: pathName(firstDocument) })
                     : t('workspaceHome.noDocumentYet')}
                 </QuickButton>
-                <QuickButton icon={Search} onClick={requestFileSearchFocus}>
+                <QuickButton icon={Search} onClick={requestWorkspaceSearchFocus}>
                   {t('workspaceHome.showInSidebar')}
                 </QuickButton>
                 <QuickButton icon={FolderOpen} onClick={openFilePicker}>
@@ -231,7 +231,7 @@ const WorkspaceHomePage = () => {
               </>
             ) : (
               <>
-                <QuickButton icon={Search} onClick={requestFileSearchFocus}>
+                <QuickButton icon={Search} onClick={requestWorkspaceSearchFocus}>
                   {t('workspaceHome.findFileOrNote')}
                 </QuickButton>
                 <QuickButton icon={Network} onClick={openWorkspaceGraph}>

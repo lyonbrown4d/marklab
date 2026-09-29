@@ -28,6 +28,7 @@ import { useAppMenuEventSync } from '@/app/useAppMenuEventSync'
 import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
+import { formatShortcutList, resolveShortcutBindings } from '@/logic/shortcuts'
 
 export type { LayoutContext } from '@/app/AppLayoutContext'
 
@@ -88,10 +89,21 @@ const AppLayout = () => {
     settingsDialogRef.current?.openSettings()
   }, [])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
-  const { closeTerminalArea, effectiveTerminalOpen, openTerminalArea, terminalInitialized } =
-    useAppTerminalArea({
-      disabled: immersiveZenMode,
-    })
+  const {
+    closeTerminalArea,
+    effectiveTerminalOpen,
+    openTerminalArea,
+    terminalFocusRequest,
+    terminalInitialized,
+    toggleTerminalArea,
+  } = useAppTerminalArea({
+    disabled: immersiveZenMode,
+  })
+  const terminalShortcutLabel = useMemo(
+    () =>
+      formatShortcutList(resolveShortcutBindings(state.shortcutOverrides)['view.toggleTerminal']),
+    [state.shortcutOverrides],
+  )
   useAppPanelLayoutSync({
     leftSidebarPanelRef,
     rightSidebarPanelRef,
@@ -146,6 +158,7 @@ const AppLayout = () => {
     onSetViewMode: state.setViewMode,
     onToggleRightSidebar: state.toggleRightSidebar,
     onToggleSidebar: state.toggleSidebar,
+    onToggleTerminal: toggleTerminalArea,
   })
   useAppMenuEventSync(handleMenuAction)
   useNativeMenuLocaleSync()
@@ -285,8 +298,10 @@ const AppLayout = () => {
         onOpenTerminal={openTerminalArea}
         onRebuildSearchIndex={handleRebuildSearchIndex}
         onChangeView={state.setViewMode}
+        viewMode={state.viewMode}
         files={state.files}
         workspaceIndex={state.workspaceIndex}
+        workspaceKey={state.workspaceKey}
         canCreateWorkspaceEntries={state.rootKind !== 'single'}
         searchIndexRebuilding={searchIndexRebuilding}
         isMaximized={state.isMaximized}
@@ -303,8 +318,11 @@ const AppLayout = () => {
         workspacePanels={workspacePanels}
         terminalOpen={effectiveTerminalOpen}
         terminalInitialized={terminalInitialized}
+        terminalFocusRequest={terminalFocusRequest}
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
+        onOpenTerminalArea={openTerminalArea}
+        terminalShortcutLabel={terminalShortcutLabel}
       />
     </AppStatusBarProvider>
   )

@@ -3,6 +3,7 @@ import mitt, { type Handler } from 'mitt'
 export const APP_EVENT = {
   exportContent: 'marklab:get-export-content',
   focusFileSearch: 'marklab:focus-file-search',
+  focusWorkspaceSearch: 'marklab:focus-workspace-search',
   focusHeading: 'marklab:focus-heading',
   focusSourcePosition: 'marklab:focus-source-position',
   menuAction: 'marklab:menu-action',
@@ -14,6 +15,7 @@ export type AppEventMap = {
     respond: (content: string) => void
   }
   [APP_EVENT.focusFileSearch]: undefined
+  [APP_EVENT.focusWorkspaceSearch]: undefined
   [APP_EVENT.focusHeading]: {
     path: string
     slug: string
@@ -51,6 +53,14 @@ export const requestFileSearchFocus = () => {
 
 export const onFileSearchFocusRequest = (handler: () => void) => {
   return onAppEvent(APP_EVENT.focusFileSearch, handler)
+}
+
+export const requestWorkspaceSearchFocus = () => {
+  emitAppEvent(APP_EVENT.focusWorkspaceSearch, undefined)
+}
+
+export const onWorkspaceSearchFocusRequest = (handler: () => void) => {
+  return onAppEvent(APP_EVENT.focusWorkspaceSearch, handler)
 }
 
 export const requestMenuAction = (id: string) => {

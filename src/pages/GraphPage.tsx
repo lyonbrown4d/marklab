@@ -28,9 +28,7 @@ import { GraphEmptyState } from '@/pages/graph/GraphEmptyState'
 import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
-import { MindmapToolbar } from '@/pages/graph/MindmapToolbar'
-import { mindmapCanvasClassName } from '@/pages/graph/mindmapPresentation'
-import { cn } from '@/lib/utils'
+import { MindmapGraphPage } from '@/pages/graph/MindmapGraphPage'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
 import {
   fitViewOptions,
@@ -40,10 +38,9 @@ import {
   type GraphPageProps,
 } from '@/pages/graph/graphPageConfig'
 
-const GraphPageComponent = ({
+const KnowledgeGraphPage = ({
   graph,
   presentation = 'graph',
-  onContentModeChange,
   onOpenFile,
   showMiniMap,
   contentMode,
@@ -55,7 +52,6 @@ const GraphPageComponent = ({
   onUpdateHeadingTitle,
   onUpdateHeadingContent,
 }: GraphPageProps) => {
-  const isMindmap = presentation === 'mindmap'
   const { t } = useI18n()
   const darkMode = useDarkMode()
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
@@ -182,11 +178,8 @@ const GraphPageComponent = ({
   })
 
   const filteredGraph = useMemo(
-    () =>
-      isMindmap
-        ? { nodes: visibleNodes, edges: visibleEdges }
-        : filterGraphElements(visibleNodes, visibleEdges, deferredGraphFilters),
-    [deferredGraphFilters, isMindmap, visibleEdges, visibleNodes],
+    () => filterGraphElements(visibleNodes, visibleEdges, deferredGraphFilters),
+    [deferredGraphFilters, visibleEdges, visibleNodes],
   )
   const filterStats = useMemo(() => getGraphFilterStats(visibleNodes), [visibleNodes])
   const selectedNodeDetails = useMemo(
@@ -212,33 +205,22 @@ const GraphPageComponent = ({
       tabIndex={0}
       onMouseDown={handleGraphMouseDown}
     >
-      {isMindmap ? (
-        <MindmapToolbar
-          contentMode={contentMode}
-          editable={editable}
-          details={selectedNodeDetails}
-          onContentModeChange={onContentModeChange}
-          onOpenPath={onOpenFile}
-          t={t}
-        />
-      ) : (
-        <GraphToolbar
-          edgeCount={filteredGraph.edges.length}
-          filters={graphFilters}
-          hasActiveFilters={graphHasActiveFilters}
-          nodeCount={filteredGraph.nodes.length}
-          onFiltersChange={setGraphFilters}
-          stats={filterStats}
-          t={t}
-          totalEdgeCount={visibleEdges.length}
-          totalNodeCount={visibleNodes.length}
-        />
-      )}
+      <GraphToolbar
+        edgeCount={filteredGraph.edges.length}
+        filters={graphFilters}
+        hasActiveFilters={graphHasActiveFilters}
+        nodeCount={filteredGraph.nodes.length}
+        onFiltersChange={setGraphFilters}
+        stats={filterStats}
+        t={t}
+        totalEdgeCount={visibleEdges.length}
+        totalNodeCount={visibleNodes.length}
+      />
       {graphFeedback ? <GraphFeedbackToast message={graphFeedback} /> : null}
-      {!isMindmap && <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />}
+      <GraphInspector details={selectedNodeDetails} onOpenPath={onOpenFile} t={t} />
       <ReactFlow<Node<GraphNodeData>, Edge>
         colorMode={darkMode ? 'dark' : 'light'}
-        className={cn('h-full w-full', isMindmap && mindmapCanvasClassName)}
+        className="h-full w-full"
         nodes={filteredGraph.nodes}
         edges={filteredGraph.edges}
         nodeTypes={nodeTypes}
@@ -255,7 +237,7 @@ const GraphPageComponent = ({
         panOnDrag
         zoomOnScroll
         zoomOnPinch
-        zoomOnDoubleClick={!isMindmap}
+        zoomOnDoubleClick
         preventScrolling
         onlyRenderVisibleElements
         minZoom={0.15}
@@ -266,8 +248,8 @@ const GraphPageComponent = ({
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}
       >
-        {!isMindmap && <Background gap={16} size={1} />}
-        <Controls showInteractive={!isMindmap} />
+        <Background gap={16} size={1} />
+        <Controls showInteractive />
         {shouldRenderGraphMiniMap(showMiniMap, filteredGraph.nodes.length) && (
           <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
         )}
@@ -289,6 +271,13 @@ const GraphPageComponent = ({
     </div>
   )
 }
+
+const GraphPageComponent = (props: GraphPageProps) =>
+  props.presentation === 'mindmap' ? (
+    <MindmapGraphPage {...props} />
+  ) : (
+    <KnowledgeGraphPage {...props} />
+  )
 
 const GraphPage = React.memo(GraphPageComponent)
 export default GraphPage

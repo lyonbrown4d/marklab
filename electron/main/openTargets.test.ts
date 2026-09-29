@@ -32,7 +32,7 @@ describe('native open targets', () => {
         ['--inspect', 'marklab://open?id=1', 'notes/a.md', '/tmp/project', 'notes/a.md'],
         cwd,
       ),
-    ).toEqual([path.resolve(cwd, 'notes/a.md'), '/tmp/project'])
+    ).toEqual([path.resolve(cwd, 'notes/a.md'), path.resolve('/tmp/project')])
   })
 
   it('resolves only existing files and directories', async () => {

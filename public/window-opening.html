@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marklab</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #faf9f7;
+        --surface: rgba(255, 255, 255, 0.82);
+        --text: #292724;
+        --muted: #77716a;
+        --border: rgba(84, 76, 67, 0.14);
+        --accent: #756b5f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #171717;
+          --surface: rgba(31, 31, 31, 0.86);
+          --text: #f2f0ec;
+          --muted: #aaa49c;
+          --border: rgba(230, 224, 215, 0.14);
+          --accent: #b8ad9f;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+      }
+      main {
+        width: min(520px, calc(100vw - 64px));
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--surface);
+        backdrop-filter: blur(20px);
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: -0.025em;
+      }
+      [data-workspace-path] {
+        margin: 8px 0 24px;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .skeleton {
+        display: grid;
+        gap: 9px;
+      }
+      .line {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--border);
+      }
+      .line::after {
+        display: block;
+        width: 38%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+        content: '';
+        animation: sweep 1.15s ease-in-out infinite;
+      }
+      .line.short {
+        width: 68%;
+      }
+      button {
+        margin-top: 20px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 8px 12px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+      button[hidden] {
+        display: none;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @keyframes sweep {
+        from {
+          transform: translateX(-110%);
+        }
+        to {
+          transform: translateX(270%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .line::after {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-labelledby="opening-title">
+      <p class="eyebrow">Marklab workspace</p>
+      <h1 id="opening-title" role="status" aria-live="polite" data-opening-stage>Starting…</h1>
+      <p data-workspace-path>Preparing window</p>
+      <div class="skeleton" aria-hidden="true">
+        <span class="line"></span>
+        <span class="line short"></span>
+      </div>
+      <button type="button" data-retry hidden>Retry</button>
+    </main>
+    <script src="./window-opening.js" defer></script>
+  </body>
+</html>

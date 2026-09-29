@@ -22,6 +22,7 @@ import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
+import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 
@@ -51,8 +52,10 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenTerminal,
       onRebuildSearchIndex,
       onChangeView,
+      viewMode,
       files,
       workspaceIndex,
+      workspaceKey,
       canCreateWorkspaceEntries,
       searchIndexRebuilding,
       isMaximized,
@@ -87,6 +90,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     )
 
     const { platform, getAppWindow, isWindows, isMacDesktop } = useTitlebarPlatform()
+    const workspaceWindowActions = useWorkspaceWindowActions()
     const {
       commandFiles,
       commandHeadings,
@@ -128,6 +132,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       setTheme,
       platform,
       commandOpen: commandDataReady,
+      onOpenCurrentWorkspaceInNewWindow: workspaceWindowActions.openCurrentWorkspaceInNewWindow,
     })
 
     const handleTitlebarMouseDown = useCallback(
@@ -170,10 +175,27 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           toggleSidebarLabel={t('actions.toggleSidebar')}
           toggleOutlineLabel={t('titlebar.documentOutline')}
           settingsLabel={t('menu.settings')}
+          viewMode={viewMode}
+          wysiwygLabel={t('editor.modeWysiwyg')}
+          sourceLabel={t('editor.modeSource')}
+          graphLabel={t('tabs.graph')}
+          workspaceMenuLabel={t('menu.workspace')}
+          newWorkspaceLabel={t('actions.newWorkspace')}
+          openFileLabel={t('actions.openFile')}
+          newFileLabel={t('sidebar.newFile')}
+          openCurrentWorkspaceInNewWindowLabel={t('actions.openCurrentWorkspaceInNewWindow')}
+          openWorkspaceInNewWindowLabel={t('actions.openWorkspaceInNewWindow')}
           onOpenSearch={onOpenSearch}
           onToggleSidebar={onToggleSidebar}
           onToggleOutline={onToggleRightSidebar}
           onOpenSettings={onOpenSettings}
+          onChangeView={onChangeView}
+          onNewWorkspace={onSelectProject}
+          onOpenFile={onSelectSingleFile}
+          onCreateFile={onCreateFile}
+          onOpenCurrentWorkspaceInNewWindow={workspaceWindowActions.openCurrentWorkspaceInNewWindow}
+          onSelectWorkspaceInNewWindow={workspaceWindowActions.selectWorkspaceInNewWindow}
+          workspaceWindowOpening={workspaceWindowActions.opening}
         />
         {commandOpen && (
           <AppCommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
@@ -212,6 +234,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
                 indexedFileCount={workspaceIndex?.files.length ?? 0}
                 searchIndexRebuilding={searchIndexRebuilding}
                 knowledgeSummary={workspaceKnowledgeSummary}
+                workspaceKey={workspaceKey}
               />
             </Suspense>
           </AppCommandDialog>

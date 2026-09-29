@@ -26,6 +26,7 @@ export type TerminalRuntimeState = {
 type TerminalSessionPaneProps = {
   active: boolean
   exitedLabel: string
+  focusRequest: number
   restartKey: number
   statusLabel: string
   tabKey: string
@@ -42,6 +43,7 @@ const applyTerminalTheme = (terminal: Terminal) => {
 const TerminalSessionPane = ({
   active,
   exitedLabel,
+  focusRequest,
   restartKey,
   statusLabel,
   tabKey,
@@ -261,7 +263,7 @@ const TerminalSessionPane = ({
     if (!activeAndVisible) return
     const frame = window.requestAnimationFrame(fitAndFocusTerminal)
     return () => window.cancelAnimationFrame(frame)
-  }, [activeAndVisible, fitAndFocusTerminal])
+  }, [activeAndVisible, fitAndFocusTerminal, focusRequest])
 
   return (
     <div

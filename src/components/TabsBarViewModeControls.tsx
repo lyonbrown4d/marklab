@@ -35,7 +35,7 @@ export const TabsBarViewModeControls = ({
   ]
 
   return (
-    <div className="hidden shrink-0 items-center gap-2 md:flex">
+    <div className="flex shrink-0 items-center gap-2">
       <TooltipProvider>
         <div className="flex items-center gap-0.5 rounded-md border border-border bg-background/70 p-0.5 shadow-sm">
           {controls.map(({ label, mode, Icon, onPreload }) => (

@@ -10,6 +10,9 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { ViewMode } from '@/store/appTypes'
+import { TabsBarViewModeControls } from '@/components/TabsBarViewModeControls'
+import { TitlebarWorkspaceMenu } from '@/components/TitlebarWorkspaceMenu'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -26,10 +29,27 @@ type ImmersiveTitlebarChromeProps = {
   toggleSidebarLabel: string
   toggleOutlineLabel: string
   settingsLabel: string
+  viewMode: ViewMode
+  wysiwygLabel: string
+  sourceLabel: string
+  graphLabel: string
+  workspaceMenuLabel: string
+  newWorkspaceLabel: string
+  openFileLabel: string
+  newFileLabel: string
+  openCurrentWorkspaceInNewWindowLabel: string
+  openWorkspaceInNewWindowLabel: string
   onOpenSearch: () => void
   onToggleSidebar: () => void
   onToggleOutline: () => void
   onOpenSettings: () => void
+  onChangeView: (mode: ViewMode) => void
+  onNewWorkspace: () => void
+  onOpenFile: () => void
+  onCreateFile: () => void
+  onOpenCurrentWorkspaceInNewWindow: () => void
+  onSelectWorkspaceInNewWindow: () => void
+  workspaceWindowOpening: boolean
 }
 
 const getDocumentContext = (
@@ -73,10 +93,27 @@ export const ImmersiveTitlebarChrome = ({
   toggleSidebarLabel,
   toggleOutlineLabel,
   settingsLabel,
+  viewMode,
+  wysiwygLabel,
+  sourceLabel,
+  graphLabel,
+  workspaceMenuLabel,
+  newWorkspaceLabel,
+  openFileLabel,
+  newFileLabel,
+  openCurrentWorkspaceInNewWindowLabel,
+  openWorkspaceInNewWindowLabel,
   onOpenSearch,
   onToggleSidebar,
   onToggleOutline,
   onOpenSettings,
+  onChangeView,
+  onNewWorkspace,
+  onOpenFile,
+  onCreateFile,
+  onOpenCurrentWorkspaceInNewWindow,
+  onSelectWorkspaceInNewWindow,
+  workspaceWindowOpening,
 }: ImmersiveTitlebarChromeProps) => {
   const context = getDocumentContext(activePath, localLibraryLabel, untitledLabel)
   const logoUrl = new URL('marklab-light.svg', document.baseURI).toString()
@@ -117,10 +154,26 @@ export const ImmersiveTitlebarChrome = ({
             draggable={false}
             className="hidden size-7 select-none dark:block"
           />
-          <span className="text-[15px] font-semibold tracking-[-0.01em]">Marklab</span>
+          <span className="hidden text-[15px] font-semibold tracking-[-0.01em] xl:inline">
+            Marklab
+          </span>
         </div>
-        <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border/70" />
-        <span className="truncate text-xs text-muted-foreground">{context.section}</span>
+        <span aria-hidden="true" className="hidden h-4 w-px shrink-0 bg-border/70 sm:block" />
+        <TitlebarWorkspaceMenu
+          section={context.section}
+          workspaceMenuLabel={workspaceMenuLabel}
+          newWorkspaceLabel={newWorkspaceLabel}
+          openFileLabel={openFileLabel}
+          newFileLabel={newFileLabel}
+          openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
+          openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
+          onNewWorkspace={onNewWorkspace}
+          onOpenFile={onOpenFile}
+          onCreateFile={onCreateFile}
+          onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
+          onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
+          workspaceWindowOpening={workspaceWindowOpening}
+        />
       </div>
 
       <span className="pointer-events-none absolute left-1/2 hidden max-w-[32vw] -translate-x-1/2 truncate px-6 text-center text-[15px] font-medium text-foreground/85 md:block">
@@ -153,16 +206,26 @@ export const ImmersiveTitlebarChrome = ({
         >
           <Search aria-hidden="true" className="size-4" />
         </Button>
+        <TabsBarViewModeControls
+          active={Boolean(activePath)}
+          viewMode={viewMode}
+          wysiwygLabel={wysiwygLabel}
+          sourceLabel={sourceLabel}
+          graphLabel={graphLabel}
+          onChangeView={onChangeView}
+        />
         <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/70" />
         <Button
           type="button"
           variant="ghost"
-          className="chrome-button h-8 gap-2 rounded-full px-3 text-xs font-medium"
+          size="icon"
+          aria-label={toggleOutlineLabel}
+          className="chrome-button size-8 rounded-full xl:w-auto xl:gap-2 xl:px-3"
           data-no-drag
           onClick={onToggleOutline}
         >
           <ListTree aria-hidden="true" className="size-4" />
-          {toggleOutlineLabel}
+          <span className="hidden text-xs font-medium xl:inline">{toggleOutlineLabel}</span>
         </Button>
         <Button
           type="button"

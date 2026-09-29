@@ -8,6 +8,7 @@ import {
 } from '@electron/main/assetProtocol.js'
 import { installContentSecurityPolicy } from '@electron/main/contentSecurityPolicy.js'
 import { getLaunchInfo } from '@electron/main/deepLinks.js'
+import { configureDevUserDataPath } from '@electron/main/devUserData.js'
 import { installElectronE2eRuntimeFlags } from '@electron/main/e2eRuntime.js'
 import { registerMainNativeIpc } from '@electron/main/ipcBootstrap.js'
 import { createLegacyShellIpcRegistration } from '@electron/main/legacyShellIpc.js'
@@ -18,6 +19,7 @@ import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle.js'
 import type { MarklabWindows } from '@electron/window.js'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion.js'
+import { syncNativeWindowBackgrounds } from '@electron/windowTheme.js'
 
 const APP_READY_FALLBACK_MS = 5000
 
@@ -30,6 +32,7 @@ let container: ElectronContainer | null = null
 
 installElectronE2eRuntimeFlags()
 configureAppIdentity(app)
+configureDevUserDataPath(app)
 registerAssetProtocolPrivileges()
 
 const clearFallbackTimer = (): void => {
@@ -82,6 +85,7 @@ const currentSystemThemePayload = () =>
   }) as const
 
 nativeTheme.on('updated', () => {
+  syncNativeWindowBackgrounds(windows, nativeTheme.shouldUseDarkColors)
   runtimeEvents.queueOrSendRuntimeEvent({
     eventName: 'system-theme-changed',
     payload: currentSystemThemePayload(),

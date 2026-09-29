@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import type { App, BrowserWindow, Shell } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding.js'
+import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose.js'
 
 const state = vi.hoisted(() => ({
   dirty: true,
@@ -10,6 +11,7 @@ const state = vi.hoisted(() => ({
 vi.mock('@electron/services/workspace/workspaceService.js', () => ({
   WorkspaceService: class {
     flushBuffers = state.flush
+    bufferMutationEpoch = () => 1
     rootInfo = () => ({ kind: 'internal', path: '/workspace' })
     hasDirtyBuffers = () => state.dirty
     getBackgroundTasks = () => []
@@ -75,6 +77,23 @@ beforeEach(() => {
 })
 
 describe('workspace window blur persistence', () => {
+  it('freezes and flushes only the binding being closed', async () => {
+    state.flush.mockImplementation(async () => {
+      state.dirty = false
+    })
+    const closing = createHarness().binding
+    const other = createHarness().binding
+
+    await flushWindowWorkspaceBindingForClose(closing)
+
+    expect(state.flush).toHaveBeenCalledOnce()
+    expect(closing.mutationGate.reason).toBeNull()
+    expect(other.mutationGate.reason).toBeNull()
+    other.service.writeFile({ path: 'other.md', content: 'still writable' })
+    closing.dispose()
+    other.dispose()
+  })
+
   it('keeps synchronous writes synchronous and rejects them while frozen', async () => {
     const { binding } = createHarness()
     expect(binding.service.writeFile({ path: 'note.md', content: '# Note' })).toBeUndefined()

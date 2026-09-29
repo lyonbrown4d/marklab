@@ -100,6 +100,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       )
       expect(knownPaths.assetPaths).toEqual(expect.arrayContaining(['assets/logo.png']))
     } finally {
+      await workspace.flushBuffers()
       workspace.dispose()
     }
   })
@@ -121,6 +122,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       await expect(workspace.workspaceGraph()).resolves.toBe(secondGraph)
       expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2)
     } finally {
+      await workspace.flushBuffers()
       workspace.dispose()
     }
   })
@@ -144,6 +146,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       )
       expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(1)
     } finally {
+      await workspace.flushBuffers()
       workspace.dispose()
     }
   })
@@ -167,6 +170,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(secondGraph)
       expect(service.buildOutlineGraph).toHaveBeenCalledTimes(2)
     } finally {
+      await workspace.flushBuffers()
       workspace.dispose()
     }
   })
@@ -179,6 +183,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
     ])
 
     try {
+      await workspace.readFile({ path: 'alpha.md' })
       workspace.updateBuffer({ path: 'alpha.md', content: '# Dirty Alpha' })
 
       await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(graph)
@@ -191,6 +196,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       expect(relativePath).toBe('alpha.md')
       expect(content).toBe('# Dirty Alpha')
     } finally {
+      await workspace.flushBuffers()
       workspace.dispose()
     }
   })

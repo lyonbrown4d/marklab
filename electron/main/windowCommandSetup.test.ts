@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
 import { createAppWindowCommandHandlers } from '@electron/main/windowCommands.js'
+import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands.js'
 
 vi.mock('electron', () => ({ BrowserWindow: { getFocusedWindow: vi.fn() } }))
 vi.mock('@electron/main/windowCommands.js', () => ({
@@ -39,12 +40,32 @@ beforeEach(() => {
 })
 
 describe('window command workspace selection', () => {
+  it('shares command handlers with native-menu opens so failed targets remain retryable', () => {
+    createHarness(createWindow())
+
+    expect(createNativeMenuActionDispatcher).toHaveBeenCalledWith(
+      expect.any(Object),
+      vi.mocked(createAppWindowCommandHandlers).mock.results[0].value,
+    )
+  })
+
   it('uses the focused window when present', () => {
     const focused = createWindow()
     vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(focused)
     const { dependencies, root, rootInfoForWindow } = createHarness(createWindow())
     expect(dependencies.getCurrentWorkspaceRoot()).toEqual(root)
     expect(rootInfoForWindow).toHaveBeenCalledWith(focused)
+  })
+
+  it('uses the invoking renderer window even if focus changes during the command', () => {
+    const invoking = createWindow()
+    const newlyFocused = createWindow()
+    vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(newlyFocused)
+    const { dependencies, rootInfoForWindow } = createHarness(createWindow())
+
+    dependencies.getCurrentWorkspaceRoot(invoking)
+
+    expect(rootInfoForWindow).toHaveBeenCalledWith(invoking)
   })
 
   it('falls back to the primary window when none is focused', () => {

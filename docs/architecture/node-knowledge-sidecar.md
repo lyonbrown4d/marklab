@@ -59,6 +59,57 @@ Vite treats the sidecar as an Electron main entry, so the compiled JavaScript
 is included by the existing `dist-electron/**/*` packaging rule. No
 `extraResources` engine directory or per-platform executable is required.
 
+## Dependency policy
+
+Runtime dependencies for the sidecar must have an active release history,
+documented compatibility and a stable public API. Prefer maintainers that own
+the relevant protocol or editor implementation over thin community wrappers.
+The current implementation therefore uses MiniSearch for the local in-memory
+index, Microsoft's `vscode-markdown-languageservice` for embedded Markdown
+language features and the official `@modelcontextprotocol/sdk` for MCP.
+
+Dependency upgrades must keep the lockfile reproducible and pass the sidecar,
+MCP, multi-workspace isolation and persistence-recovery suites. Major-version
+overrides of transitive packages are not accepted as an audit workaround.
+MCP SDK v2 is tracked as a dedicated migration because its split package model
+and nominal types require coordinated API changes; v1 and v2 types must not be
+mixed in the same runtime boundary.
+
+### Read-only MCP entry
+
+The former Rust `marklab-mcp` binary is replaced by
+`electron/mcp/marklabMcpEntry.ts`, compiled as
+`dist-electron/marklabMcpEntry.js`. It uses the official Model Context
+Protocol SDK over stdio and exposes only two read-only tools:
+
+- `marklab_workspace_status` reads workspace, health, index, and storage status.
+- `marklab_search_workspace` reads the same persisted Node/MiniSearch snapshot
+  used by the knowledge sidecar. It accepts a required query and a limit from
+  1 through 50.
+
+The MCP process does not expose workspace mutation or command execution. Pass
+the canonical workspace and engine-data paths explicitly:
+
+```text
+node dist-electron/marklabMcpEntry.js --workspace-root <workspace> --engine-data-dir <engine-data> --default-search-limit 10
+```
+
+Each MCP process is bound to exactly one explicit workspace root and its own
+engine-data directory for its lifetime. It never consults Electron's active
+workspace, so multi-window clients start one MCP process per workspace/window
+and cannot accidentally search another window's index.
+
+The Electron executable can also host the same built entry in Node mode:
+
+```text
+ELECTRON_RUN_AS_NODE=1 <electron-executable> dist-electron/marklabMcpEntry.js --workspace-root <workspace> --engine-data-dir <engine-data>
+```
+
+`MARKLAB_MCP_WORKSPACE_ROOT`, `MARKLAB_MCP_ENGINE_DATA_DIR`, and
+`MARKLAB_MCP_DEFAULT_SEARCH_LIMIT` remain supported for MCP client
+configurations that prefer environment variables; explicit CLI arguments take
+precedence.
+
 Focused verification:
 
 ```text

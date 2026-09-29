@@ -16,4 +16,11 @@ describe('shortcut boundary', () => {
       expect(source, actionId).toContain(`'${actionId}'`)
     })
   })
+
+  it('lets the hotkey library resolve input safety per shortcut chord', () => {
+    const source = fileText('../app/useKeyboardShortcuts.ts')
+
+    expect(source).not.toContain('ignoreInputs: false')
+    expect(source).not.toContain('ignoreInputs: true')
+  })
 })

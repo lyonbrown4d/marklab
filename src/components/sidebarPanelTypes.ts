@@ -10,6 +10,7 @@ export type SidebarToolPanelProps = {
   fileCount: number
   fileTree: FileTreeNode[]
   focusFileFilterRequest: number
+  focusWorkspaceSearchRequest: number
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
   onDeletePath: (path: string) => void
@@ -46,7 +47,10 @@ export type SidebarExplorerPanelProps = Pick<
   | 'rootKind'
 >
 
-export type SidebarSearchPanelProps = Pick<SidebarToolPanelProps, 'onOpenSearchResult'>
+export type SidebarSearchPanelProps = Pick<
+  SidebarToolPanelProps,
+  'focusWorkspaceSearchRequest' | 'onOpenSearchResult' | 'rootKind' | 'rootPath'
+>
 
 export type SidebarProjectsPanelProps = Pick<
   SidebarToolPanelProps,

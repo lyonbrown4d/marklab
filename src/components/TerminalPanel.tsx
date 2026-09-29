@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/environment'
 
 type TerminalPanelProps = {
+  focusRequest?: number
   onClose: () => void
   theme: ThemeMode
   visible: boolean
@@ -57,7 +58,7 @@ const TerminalStatusIcon = ({ status }: { status: TerminalStatus }) => {
   return <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
 }
 
-const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
+const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPanelProps) => {
   const { t } = useI18n()
   const nextTabIndexRef = useRef(2)
   const [tabs, setTabs] = useState<TerminalTab[]>(() => [createTerminalTab(1)])
@@ -139,6 +140,12 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
       <Tabs
         value={activeTabKey}
         onValueChange={setActiveTabKey}
+        onKeyDownCapture={(event) => {
+          if (event.key !== 'Escape' || event.defaultPrevented) return
+          event.preventDefault()
+          event.stopPropagation()
+          onClose()
+        }}
         aria-hidden={!visible}
         className={cn(
           'terminal-panel flex shrink-0 flex-col overflow-hidden border-t border-border/80',
@@ -193,6 +200,7 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
             <TooltipTrigger asChild>
               <Button
                 type="button"
+                aria-label={t('terminal.new')}
                 variant="ghost"
                 size="icon"
                 className="size-7 shrink-0"
@@ -211,6 +219,7 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
               <TooltipTrigger asChild>
                 <Button
                   type="button"
+                  aria-label={t('terminal.restart')}
                   variant="ghost"
                   size="icon"
                   className="size-7"
@@ -225,6 +234,7 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
               <TooltipTrigger asChild>
                 <Button
                   type="button"
+                  aria-label={t('terminal.close')}
                   variant="ghost"
                   size="icon"
                   className="size-7"
@@ -243,6 +253,7 @@ const TerminalPanel = ({ onClose, theme, visible }: TerminalPanelProps) => {
               key={tab.key}
               active={tab.key === activeTabKey}
               exitedLabel={t('terminal.exited')}
+              focusRequest={focusRequest}
               restartKey={tab.restartKey}
               statusLabel={statusLabel(tab.status)}
               tabKey={tab.key}

@@ -8,6 +8,7 @@ import {
 } from '@/components/GraphNodes'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
+import type { MindmapDropPlacement } from '@/pages/graph/mindmapModel'
 
 export type GraphPresentation = 'mindmap' | 'graph'
 
@@ -25,6 +26,11 @@ export type GraphPageProps = {
   onDeleteHeading: (nodeId: string) => string | null
   onUpdateHeadingTitle: (nodeId: string, title: string) => void
   onUpdateHeadingContent: NonNullable<GraphNodeData['onUpdateContent']>
+  onInsertParentHeading?: (nodeId: string) => boolean
+  onMoveHeading?: (nodeId: string, targetId: string, placement: MindmapDropPlacement) => boolean
+  onReorderHeading?: (nodeId: string, direction: 'up' | 'down') => boolean
+  onUndo?: () => boolean
+  onRedo?: () => boolean
 }
 
 export type GraphFlowInstance = ReactFlowInstance<Node<GraphNodeData>, Edge> | null

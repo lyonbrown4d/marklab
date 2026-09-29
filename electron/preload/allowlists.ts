@@ -7,6 +7,7 @@ const allowedCommandNames = [
   'menu_set_locale',
   'open_current_workspace_in_new_window',
   'open_path_in_new_window',
+  'retry_window_open',
   transitionalNativeCommands.workspaceGetSession,
   transitionalNativeCommands.workspaceReadFile,
   transitionalNativeCommands.workspaceUpdateBuffer,

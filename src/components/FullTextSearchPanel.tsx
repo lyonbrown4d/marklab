@@ -1,6 +1,6 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useDebounce } from 'ahooks'
-import { Search } from 'lucide-react'
+import { AlertCircle, Search } from 'lucide-react'
 import AppButton from '@/components/AppButton'
 import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,7 @@ import SearchResultPreview from '@/components/SearchResultPreview'
 
 type FullTextSearchPanelProps = {
   query: string
+  workspaceKey: string
   onOpenResult: (result: FsSearchResult) => void
 }
 
@@ -32,15 +33,15 @@ const FullTextSearchLoading = ({ label }: { label: string }) => (
   </div>
 )
 
-const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) => {
+const FullTextSearchPanel = ({ query, workspaceKey, onOpenResult }: FullTextSearchPanelProps) => {
   const { t } = useI18n()
   const debouncedQuery = useDebounce(query.trim(), { wait: 180 })
   const enabled = isDesktopRuntime() && debouncedQuery.length >= 2
   const searchQuery = useQuery({
-    queryKey: ['workspace-search', debouncedQuery],
+    queryKey: ['workspace-search', workspaceKey, debouncedQuery],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, 20),
     enabled,
-    placeholderData: keepPreviousData,
+    retry: false,
     staleTime: 5_000,
   })
 
@@ -68,7 +69,20 @@ const FullTextSearchPanel = ({ query, onOpenResult }: FullTextSearchPanelProps) 
         ) : null}
       </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="h-full pr-1">
-        {searchQuery.isFetching && !searchQuery.data?.length ? (
+        {searchQuery.isError ? (
+          <AppEmptyState
+            compact
+            role="alert"
+            className="border-destructive/30 bg-destructive/5"
+            icon={<AlertCircle className="size-4" />}
+            title={t('search.failed')}
+            action={
+              <AppButton size="sm" variant="outline" onClick={() => void searchQuery.refetch()}>
+                {t('actions.retry')}
+              </AppButton>
+            }
+          />
+        ) : searchQuery.isFetching && !searchQuery.data?.length ? (
           <FullTextSearchLoading label={t('search.searching')} />
         ) : searchQuery.data?.length ? (
           <div className="flex flex-col gap-1">

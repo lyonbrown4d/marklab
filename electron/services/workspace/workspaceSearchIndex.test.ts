@@ -147,9 +147,46 @@ describe('WorkspaceSearchIndex', () => {
       snippet: 'install-guide',
     })
   })
+
+  it('filters and forwards mixed mutations as one backend batch', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
+    tempDirs.push(dir)
+    const backend = new FakeSearchBackend()
+    const index = new WorkspaceSearchIndex(backend)
+    await index.open(path.join(dir, 'search'), 'workspace-a')
+
+    await index.applySearchChanges({
+      removeDocuments: ['old.md'],
+      removePrefixes: ['archive'],
+      upserts: [
+        { path: 'fresh.md', title: 'Fresh', content: 'indexed' },
+        { path: 'asset.png', title: 'Asset', content: 'ignored' },
+      ],
+    })
+
+    expect(backend.batches).toEqual([
+      {
+        workspaceId: 'workspace-a',
+        batch: {
+          removeDocuments: ['old.md'],
+          removePrefixes: ['archive'],
+          upserts: [{ path: 'fresh.md', title: 'Fresh', content: 'indexed' }],
+        },
+      },
+    ])
+    await index.close()
+  })
 })
 
 class FakeSearchBackend implements WorkspaceSearchIndexBackend {
+  readonly batches: Array<{
+    workspaceId: string
+    batch: {
+      removeDocuments: string[]
+      removePrefixes: string[]
+      upserts: WorkspaceSearchDocument[]
+    }
+  }> = []
   private readonly documentsByWorkspace = new Map<string, WorkspaceSearchDocument[]>()
 
   async open(workspaceId: string): Promise<void> {
@@ -168,6 +205,17 @@ class FakeSearchBackend implements WorkspaceSearchIndexBackend {
 
   async rebuild(workspaceId: string, documents: WorkspaceSearchDocument[]): Promise<void> {
     this.documentsByWorkspace.set(workspaceId, documents)
+  }
+
+  async applySearchChanges(
+    workspaceId: string,
+    batch: {
+      removeDocuments: string[]
+      removePrefixes: string[]
+      upserts: WorkspaceSearchDocument[]
+    },
+  ): Promise<void> {
+    this.batches.push({ workspaceId, batch })
   }
 
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {

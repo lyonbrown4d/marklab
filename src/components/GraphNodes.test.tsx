@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from '@xyflow/react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ExternalNode, FileNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
@@ -149,5 +149,46 @@ describe('GraphNodes', () => {
       maxHeight: `${FULL_HEADING_NODE_MAX_HEIGHT}px`,
       overflowY: 'auto',
     })
+  })
+
+  it('shows a quiet branch dock only for the selected mindmap topic', () => {
+    const addChild = vi.fn()
+    const addSibling = vi.fn()
+    const toggleFold = vi.fn()
+    renderGraphNode(
+      <HeadingNode
+        {...headingNodeProps({
+          id: 'heading:topic',
+          data: {
+            label: 'Topic',
+            contentMode: 'none',
+            mindmap: { addChild, addSibling, edit: vi.fn(), hiddenCount: 3, toggleFold },
+          },
+          selected: true,
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add child topic' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add sibling topic' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show 3 hidden topics' }))
+    expect(addChild).toHaveBeenCalledWith('heading:topic')
+    expect(addSibling).toHaveBeenCalledWith('heading:topic')
+    expect(toggleFold).toHaveBeenCalledWith('heading:topic')
+  })
+
+  it('enters title editing on a mindmap topic double click', () => {
+    const edit = vi.fn()
+    renderGraphNode(
+      <HeadingNode
+        {...headingNodeProps({
+          id: 'heading:topic',
+          data: { label: 'Topic', contentMode: 'none', mindmap: { edit } },
+          selected: true,
+        })}
+      />,
+    )
+    fireEvent.doubleClick(screen.getByRole('group', { name: 'Topic' }))
+    expect(edit).toHaveBeenCalledWith('heading:topic')
   })
 })

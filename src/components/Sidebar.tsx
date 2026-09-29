@@ -8,7 +8,7 @@ import type { FsSearchResult } from '@/services/fsApi'
 import type { GitDiffRequest } from '@/services/gitApi'
 import { cn } from '@/lib/utils'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
-import { onFileSearchFocusRequest } from '@/utils/appEvents'
+import { onFileSearchFocusRequest, onWorkspaceSearchFocusRequest } from '@/utils/appEvents'
 
 type SidebarProps = {
   collapsed: boolean
@@ -62,6 +62,7 @@ const SidebarComponent = ({
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [focusFileFilterRequest, setFocusFileFilterRequest] = useState(0)
+  const [focusWorkspaceSearchRequest, setFocusWorkspaceSearchRequest] = useState(0)
   const activeActivity = useMemo<SidebarActivityId>(() => {
     const value = searchParams.get(SIDEBAR_ACTIVITY_PARAM)
     return isSidebarActivity(value) ? value : 'explorer'
@@ -93,6 +94,13 @@ const SidebarComponent = ({
     })
   }, [selectActivity])
 
+  useEffect(() => {
+    return onWorkspaceSearchFocusRequest(() => {
+      selectActivity('search')
+      setFocusWorkspaceSearchRequest((request) => request + 1)
+    })
+  }, [selectActivity])
+
   return (
     <aside
       className={cn(
@@ -119,6 +127,7 @@ const SidebarComponent = ({
             fileCount={fileCount}
             fileTree={fileTree}
             focusFileFilterRequest={focusFileFilterRequest}
+            focusWorkspaceSearchRequest={focusWorkspaceSearchRequest}
             onCreateFile={onCreateFile}
             onCreateFolder={onCreateFolder}
             onDeletePath={onDeletePath}

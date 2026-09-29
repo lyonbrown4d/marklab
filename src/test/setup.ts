@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+
+// Keep async DOM assertions resilient under the full 1,000+ test suite on
+// slower Windows CI hosts. Individual tests still use Vitest's 10s ceiling.
+configure({ asyncUtilTimeout: 3_000 })
 
 afterEach(() => {
   cleanup()

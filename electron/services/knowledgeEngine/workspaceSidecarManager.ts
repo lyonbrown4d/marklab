@@ -12,11 +12,15 @@ import type {
 } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
 import type {
   FsEntry,
+  FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
 } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type {
+  WorkspaceSearchDocument,
+  WorkspaceSearchMutationBatch,
+} from '@electron/services/workspace/workspaceSearchTypes.js'
 import {
   KnowledgeCloseDocumentInput,
   KnowledgeDocumentChangeInput,
@@ -154,6 +158,13 @@ export class WorkspaceSidecarManager {
     await this.requireReady(workspaceId).client.rebuildIndex(documents)
   }
 
+  async applySearchChanges(
+    workspaceId: string,
+    batch: WorkspaceSearchMutationBatch,
+  ): Promise<void> {
+    await this.requireReady(workspaceId).client.applySearchChanges(batch)
+  }
+
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
     await this.requireReady(workspaceId).client.upsertDocument(document)
   }
@@ -215,6 +226,18 @@ export class WorkspaceSidecarManager {
     documentVersion: number | string,
   ): Promise<KnowledgeMarkdownLink[]> {
     return this.requireReady(workspaceId).client.getMarkdownLinks(documentId, documentVersion)
+  }
+
+  async getMarkdownDiagnostics(
+    workspaceId: string,
+    path: string,
+    content: string,
+    signal?: AbortSignal,
+  ): Promise<FsMarkdownDiagnostic[]> {
+    const client = this.requireReady(workspaceId).client
+    return signal
+      ? client.getMarkdownDiagnostics(path, content, signal)
+      : client.getMarkdownDiagnostics(path, content)
   }
 
   async buildWorkspaceGraph(

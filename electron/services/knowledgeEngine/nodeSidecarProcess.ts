@@ -71,10 +71,14 @@ export const startNodeSidecar = async (
 
 const waitForSpawn = (utility: NodeUtilityProcess): Promise<void> =>
   new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error('Knowledge utility process did not spawn in time.')),
-      10_000,
-    )
+    const timeout = setTimeout(() => {
+      try {
+        utility.kill()
+      } catch {
+        // Preserve the timeout failure even if the stalled process cannot be terminated.
+      }
+      reject(new Error('Knowledge utility process did not spawn in time.'))
+    }, 10_000)
     utility.once('spawn', () => {
       clearTimeout(timeout)
       resolve()

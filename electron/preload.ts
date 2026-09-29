@@ -3,6 +3,7 @@ import { nativeIpcChannels } from '@electron/channels.js'
 import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
 import { onFileDrop } from '@electron/preload/fileDrop.js'
 import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
+import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -110,6 +111,7 @@ const listenToRuntimeEvent = <T>(
 }
 
 const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
+const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   appReady: () => ipcRenderer.invoke(nativeIpcChannels.appReadySignal) as Promise<{ ok: boolean }>,
@@ -118,6 +120,7 @@ const desktopApi: RendererSafeElectronApi = {
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,
     ...workspacePreloadSurfaces.lifecycle,
   },
+  opening: windowOpeningSurface,
   platform: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.platformGet) as Promise<PlatformInfo>,
   },

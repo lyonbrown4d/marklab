@@ -37,6 +37,13 @@ describe('shortcuts', () => {
     })
   })
 
+  it('provides a configurable terminal toggle shortcut', () => {
+    expect(defaultShortcutBindings['view.toggleTerminal']).toEqual(['Mod+J'])
+    expect(shortcutCategories.find((category) => category.id === 'workspace')?.actions).toContain(
+      'view.toggleTerminal',
+    )
+  })
+
   it('keeps scoped shortcut consumers aligned with the action catalog', () => {
     const graphActionIds = shortcutActions
       .filter((action) => action.scope === 'graph')

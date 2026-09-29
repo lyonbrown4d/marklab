@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import type { ChangeEvent, ReactNode } from 'react'
+import { forwardRef, type ChangeEvent, type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import SidebarSearchPanel from '@/components/SidebarSearchPanel'
@@ -28,25 +28,24 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({
-    className,
-    onChange,
-    placeholder,
-    value,
-  }: {
-    className?: string
-    onChange: (event: ChangeEvent<HTMLInputElement>) => void
-    placeholder?: string
-    value: string
-  }) => (
+  Input: forwardRef<
+    HTMLInputElement,
+    {
+      className?: string
+      onChange: (event: ChangeEvent<HTMLInputElement>) => void
+      placeholder?: string
+      value: string
+    }
+  >(({ className, onChange, placeholder, value }, ref) => (
     <input
+      ref={ref}
       aria-label="Search input"
       className={className}
       onChange={onChange}
       placeholder={placeholder}
       value={value}
     />
-  ),
+  )),
 }))
 
 vi.mock('@/components/ui/sidebar', () => ({
@@ -79,7 +78,14 @@ vi.mock('@/components/FullTextSearchPanel', () => ({
 
 describe('SidebarSearchPanel', () => {
   it('renders localized search chrome with normalized icon sizing', () => {
-    render(<SidebarSearchPanel onOpenSearchResult={vi.fn()} />)
+    render(
+      <SidebarSearchPanel
+        focusWorkspaceSearchRequest={0}
+        rootKind="external"
+        rootPath="/workspace"
+        onOpenSearchResult={vi.fn()}
+      />,
+    )
 
     expect(screen.getByRole('heading', { name: 'Search' })).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'Search input' })).toHaveAttribute(
@@ -94,7 +100,14 @@ describe('SidebarSearchPanel', () => {
   it('passes query changes to the full text panel and forwards selected results', () => {
     const onOpenSearchResult = vi.fn()
 
-    render(<SidebarSearchPanel onOpenSearchResult={onOpenSearchResult} />)
+    render(
+      <SidebarSearchPanel
+        focusWorkspaceSearchRequest={0}
+        rootKind="external"
+        rootPath="/workspace"
+        onOpenSearchResult={onOpenSearchResult}
+      />,
+    )
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search input' }), {
       target: { value: 'notes' },
@@ -105,5 +118,20 @@ describe('SidebarSearchPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open full text result' }))
 
     expect(onOpenSearchResult).toHaveBeenCalledWith(sampleResult)
+  })
+
+  it('focuses the full-text query when a new focus request arrives', () => {
+    const props = {
+      focusWorkspaceSearchRequest: 0,
+      rootKind: 'external' as const,
+      rootPath: '/workspace',
+      onOpenSearchResult: vi.fn(),
+    }
+    const { rerender } = render(<SidebarSearchPanel {...props} />)
+
+    expect(screen.getByRole('textbox', { name: 'Search input' })).not.toHaveFocus()
+    rerender(<SidebarSearchPanel {...props} focusWorkspaceSearchRequest={1} />)
+
+    expect(screen.getByRole('textbox', { name: 'Search input' })).toHaveFocus()
   })
 })

@@ -36,6 +36,7 @@ export const createManager = () => {
 }
 
 const createClient = (): WorkspaceSidecarClient => ({
+  applySearchChanges: vi.fn(async () => undefined),
   changeMarkdownDocument: vi.fn(async () => ({
     acknowledged: { documentId: 'alpha.md', version: '2' },
   })),
@@ -91,6 +92,7 @@ const createClient = (): WorkspaceSidecarClient => ({
     },
   })),
   getMarkdownDocumentSymbols: vi.fn(async () => []),
+  getMarkdownDiagnostics: vi.fn(async () => []),
   getMarkdownLinks: vi.fn(async () => []),
   hasDocuments: vi.fn(async () => false),
   listWorkspaceEntries: vi.fn(async () => [

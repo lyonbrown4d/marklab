@@ -126,6 +126,7 @@ const renderDialog = (overrides: Partial<ComponentProps<typeof TitlebarCommandDi
       navigationMissingLinks={[]}
       canCreateWorkspaceEntries
       workspaceIndexed
+      workspaceKey="external:/workspace"
       indexedFileCount={1}
       searchIndexRebuilding={false}
       knowledgeSummary={{} as WorkspaceKnowledgeSummary}
@@ -195,6 +196,7 @@ describe('TitlebarCommandDialog', () => {
       expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'guide'),
     )
     expect(screen.queryByRole('button', { name: 'Open recent file' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Actions')).toBeInTheDocument()
     expect(state.streamCalls.at(-1)).toMatchObject({ open: true, query: 'guide' })
     fireEvent.click(screen.getByRole('button', { name: 'Open search file' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open search heading' }))

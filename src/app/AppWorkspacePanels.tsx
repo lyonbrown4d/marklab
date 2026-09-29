@@ -127,6 +127,7 @@ export const AppWorkspacePanels = ({
       onToggleSidebar={() =>
         usePreferencesStore.setState({ sidebarCollapsed: !state.sidebarCollapsed })
       }
+      onSidebarOpenChange={(open) => usePreferencesStore.setState({ sidebarCollapsed: !open })}
       onToggleInspector={() =>
         usePreferencesStore.setState({ rightSidebarCollapsed: !state.rightSidebarCollapsed })
       }

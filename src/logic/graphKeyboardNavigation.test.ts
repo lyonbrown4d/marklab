@@ -6,6 +6,7 @@ import {
   getNextHeadingId,
   getParentHeadingId,
   getPreviousHeadingId,
+  getSpatialHeadingId,
 } from '@/logic/graphKeyboardNavigation'
 
 const nodes: Node<GraphNodeData>[] = [
@@ -70,5 +71,17 @@ describe('graph keyboard navigation', () => {
     expect(getFirstChildHeadingId(nodes, edges, 'heading:notes/current.md:intro')).toBe(
       'heading:notes/current.md:child',
     )
+  })
+
+  it('navigates by rendered space instead of markdown order', () => {
+    const spatialNodes = [
+      { ...nodes[1], position: { x: 0, y: 100 }, measured: { width: 100, height: 40 } },
+      { ...nodes[2], position: { x: 180, y: 20 }, measured: { width: 100, height: 40 } },
+      { ...nodes[3], position: { x: 180, y: 180 }, measured: { width: 100, height: 40 } },
+    ]
+
+    expect(getSpatialHeadingId(spatialNodes, spatialNodes[0].id, 'right')).toBe(spatialNodes[1].id)
+    expect(getSpatialHeadingId(spatialNodes, spatialNodes[1].id, 'down')).toBe(spatialNodes[2].id)
+    expect(getSpatialHeadingId(spatialNodes, spatialNodes[1].id, 'left')).toBe(spatialNodes[0].id)
   })
 })

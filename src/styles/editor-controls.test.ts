@@ -66,9 +66,17 @@ describe('editor playground baseline styles', () => {
     expect(playgroundControllerSource).toContain('.use(typewriterScroll)')
     expect(playgroundControllerSource).not.toContain('embeddedPreviewPlugin')
     expect(markdownSafePluginsSource).toContain('embeddedPreviewPlugin')
+    expect(markdownSafePluginsSource).toContain('markdownTableEditingPlugin')
     expect(markdownSafePluginsSource).not.toContain('pdfPreviewPlugin')
     expect(markdownSafePluginsSource).not.toContain('mediaPreviewPlugin')
     expect(playgroundControllerSource).not.toContain('createMarkdownImageNodeView')
+  })
+
+  it('styles the table toolbar as a low-interference accessible overlay', () => {
+    expect(playgroundStyles).toContain('.marklab-table-toolbar')
+    expect(playgroundStyles).toContain('.ProseMirror table:focus-within')
+    expect(playgroundStyles).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(playgroundStyles).toContain('border-collapse: separate;')
   })
 
   it('scopes local playground overrides to the active editor root', () => {
@@ -101,11 +109,18 @@ describe('editor playground baseline styles', () => {
   })
 
   it('does not include Marklab editor interaction overrides in the playground baseline', () => {
-    expect(playgroundStyles).not.toContain('marklab-md-block')
     expect(playgroundStyles).not.toContain('marklab-editor-drop-indicator')
     expect(playgroundStyles).not.toContain('ProseMirror-hideselection')
     expect(playgroundStyles).not.toContain('milkdown-block-handle')
     expect(playgroundStyles).not.toContain('data-editor-dragging')
+  })
+
+  it('keeps focus and typewriter behavior active in the runtime stylesheet', () => {
+    expect(playgroundStyles).toContain('.crepe-playground.is-typewriter-editor')
+    expect(playgroundStyles).toContain('.crepe-playground.is-focus-editor')
+    expect(playgroundStyles).toContain('.marklab-md-block:not(:focus-within)')
+    expect(playgroundStyles).toContain('opacity: 0.64;')
+    expect(playgroundStyles).toContain('scroll-padding-block: 22vh 34vh;')
   })
 
   it('keeps the legacy custom editor styles available but inactive', () => {

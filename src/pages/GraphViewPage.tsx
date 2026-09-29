@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import type { GraphData } from '@/logic/graph'
 import type { GraphContentMode } from '@/store/appTypes'
@@ -7,6 +7,13 @@ import { useI18n } from '@/i18n/useI18n'
 import { useGraphMarkdownEditing } from '@/pages/useGraphMarkdownEditing'
 import type { GraphPresentation } from '@/pages/graph/graphPageConfig'
 import { createMindmapPresentation } from '@/pages/graph/mindmapPresentation'
+import { useMindmapHistory } from '@/pages/graph/useMindmapHistory'
+import {
+  insertMindmapParent,
+  moveMindmapHeading,
+  reorderMindmapHeading,
+} from '@/pages/graph/mindmapMarkdownEdits'
+import type { MindmapDropPlacement } from '@/pages/graph/mindmapModel'
 const GraphPage = lazy(() => import('@/pages/GraphPage'))
 type GraphViewPageProps = {
   graph: GraphData
@@ -32,6 +39,7 @@ const GraphViewPage = ({
 }: GraphViewPageProps) => {
   const { t } = useI18n()
   const [mindmapContentMode, setMindmapContentMode] = useState<GraphContentMode>('none')
+  const history = useMindmapHistory(markdown, onChange, presentation === 'mindmap')
   const {
     addChildHeading,
     addSiblingHeading,
@@ -43,7 +51,7 @@ const GraphViewPage = ({
   } = useGraphMarkdownEditing({
     graph,
     markdown,
-    onChange,
+    onChange: presentation === 'mindmap' ? history.commit : onChange,
   })
   const hasHeadingNodes = useMemo(
     () => editorGraph.nodes.some((node) => node.type === 'heading'),
@@ -58,6 +66,25 @@ const GraphViewPage = ({
         ? createMindmapPresentation(editorGraph, graphContentMode)
         : editorGraph,
     [editorGraph, graphContentMode, presentation],
+  )
+  const moveHeading = useCallback(
+    (nodeId: string, targetId: string, placement: MindmapDropPlacement) =>
+      history.commit(
+        moveMindmapHeading(history.getCurrentMarkdown(), editorGraph, nodeId, targetId, placement),
+      ),
+    [editorGraph, history],
+  )
+  const reorderHeading = useCallback(
+    (nodeId: string, direction: 'up' | 'down') =>
+      history.commit(
+        reorderMindmapHeading(history.getCurrentMarkdown(), editorGraph, nodeId, direction),
+      ),
+    [editorGraph, history],
+  )
+  const insertParentHeading = useCallback(
+    (nodeId: string) =>
+      history.commit(insertMindmapParent(history.getCurrentMarkdown(), editorGraph, nodeId)),
+    [editorGraph, history],
   )
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -79,6 +106,11 @@ const GraphViewPage = ({
                 onDeleteHeading={deleteHeading}
                 onUpdateHeadingTitle={updateHeadingTitle}
                 onUpdateHeadingContent={updateHeadingContent}
+                onInsertParentHeading={insertParentHeading}
+                onMoveHeading={moveHeading}
+                onReorderHeading={reorderHeading}
+                onUndo={history.undo}
+                onRedo={history.redo}
               />
             </Suspense>
           </div>

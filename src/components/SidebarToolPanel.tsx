@@ -12,6 +12,7 @@ const SidebarToolPanel = ({
   fileCount,
   fileTree,
   focusFileFilterRequest,
+  focusWorkspaceSearchRequest,
   onCreateFile,
   onCreateFolder,
   onDeletePath,
@@ -33,7 +34,12 @@ const SidebarToolPanel = ({
   return (
     <SidebarContent className="h-full px-2 pb-2">
       {activeActivity === 'search' ? (
-        <SidebarSearchPanel onOpenSearchResult={onOpenSearchResult} />
+        <SidebarSearchPanel
+          focusWorkspaceSearchRequest={focusWorkspaceSearchRequest}
+          rootKind={rootKind}
+          rootPath={rootPath}
+          onOpenSearchResult={onOpenSearchResult}
+        />
       ) : activeActivity === 'scm' ? (
         <ScmPanel
           collapsed={false}

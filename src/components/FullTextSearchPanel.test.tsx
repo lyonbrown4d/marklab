@@ -10,6 +10,8 @@ const messages: Record<string, string> = {
   'search.minQuery': 'Type at least 2 characters',
   'search.noResults': 'No results',
   'search.searching': 'Searching',
+  'search.failed': 'Search failed',
+  'actions.retry': 'Retry',
 }
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -44,7 +46,7 @@ vi.mock('@/components/ui/scroll-area', () => ({
   ),
 }))
 
-const renderPanel = (query: string) => {
+const renderPanel = (query: string, workspaceKey = 'external:/workspace-a') => {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -53,7 +55,7 @@ const renderPanel = (query: string) => {
 
   return render(
     <QueryClientProvider client={client}>
-      <FullTextSearchPanel query={query} onOpenResult={vi.fn()} />
+      <FullTextSearchPanel query={query} workspaceKey={workspaceKey} onOpenResult={vi.fn()} />
     </QueryClientProvider>,
   )
 }
@@ -83,5 +85,18 @@ describe('FullTextSearchPanel', () => {
 
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
     expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
+  it('shows a retry action when the sidecar search fails', async () => {
+    vi.mocked(fsApi.searchWorkspace)
+      .mockRejectedValueOnce(new Error('sidecar failed'))
+      .mockResolvedValueOnce([])
+
+    renderPanel('notes')
+
+    expect(await screen.findByRole('heading', { name: 'Search failed' })).toBeInTheDocument()
+    screen.getByRole('button', { name: 'Retry' }).click()
+
+    await waitFor(() => expect(fsApi.searchWorkspace).toHaveBeenCalledTimes(2))
   })
 })

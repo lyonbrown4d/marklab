@@ -2,9 +2,10 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
+import { NodeSearchSnapshot } from '@electron/services/knowledgeEngine/nodeSearchSnapshot.js'
 
 const tempRoots: string[] = []
 
@@ -110,7 +111,7 @@ describe('NodeSearchIndex', () => {
     const first = new NodeSearchIndex(storageRoot)
     await first.rebuild([{ path: 'notes/stable.md', title: 'Stable', content: 'recoverable' }])
     await first.upsert({ path: 'notes/new.md', title: 'New', content: 'latest' })
-    await fs.writeFile(path.join(storageRoot, 'search-index-v1.json'), '{broken')
+    await fs.writeFile(path.join(storageRoot, 'search-index-v2.json'), '{broken')
 
     const restarted = new NodeSearchIndex(storageRoot)
 
@@ -135,5 +136,122 @@ describe('NodeSearchIndex', () => {
     const result = await restarted.search('alpha', { order: 'path' })
 
     expect(result.results.map((entry) => entry.path)).toEqual(['notes-old/two.md'])
+  })
+
+  it('uses MiniSearch for AND, prefix, fuzzy, and CJK retrieval while preserving substrings', async () => {
+    const index = new NodeSearchIndex()
+    await index.rebuild([
+      {
+        path: 'notes/collaboration.md',
+        title: 'Collaboration Protocol',
+        content: 'A durable workspace protocol.',
+      },
+      {
+        path: 'notes/search.md',
+        title: '本地知识库',
+        content: '沉浸式全文搜索体验',
+      },
+      {
+        path: 'code/cpp.md',
+        title: 'C++ Guide',
+        content: 'Literal (alpha:beta) syntax.',
+      },
+    ])
+
+    await expect(index.search('collab protocol')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'notes/collaboration.md' }],
+    })
+    await expect(index.search('colaboration')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'notes/collaboration.md' }],
+    })
+    await expect(index.search('全文搜索')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'notes/search.md' }],
+    })
+    await expect(index.search('C++ (alpha:beta)')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'code/cpp.md' }],
+    })
+  })
+
+  it('maps folded matches back to UTF-16 snippet offsets and editor columns', async () => {
+    const index = new NodeSearchIndex()
+    await index.rebuild([{ path: 'unicode.md', title: 'Unicode', content: '🙂 Café 搜索' }])
+
+    const result = await index.search('cafe')
+
+    expect(result.results[0]).toMatchObject({
+      column: 4,
+      end_column: 8,
+      line: 1,
+      snippet: '🙂 Café 搜索',
+      snippet_highlights: [{ start: 3, end: 7 }],
+    })
+  })
+
+  it('persists one versioned MiniSearch snapshot envelope for a mutation batch', async () => {
+    const storageRoot = await createStorageRoot()
+    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await index.rebuild([
+      { path: 'remove.md', title: 'Remove', content: 'old' },
+      { path: 'folder/remove.md', title: 'Nested', content: 'old' },
+    ])
+    const write = vi.spyOn(NodeSearchSnapshot.prototype, 'write')
+
+    await index.applyBatch({
+      removeDocuments: ['remove.md'],
+      removePrefixes: ['folder'],
+      upserts: [{ path: 'added.md', title: 'Added', content: 'new searchable text' }],
+    })
+
+    expect(write).toHaveBeenCalledTimes(1)
+    const envelope = JSON.parse(
+      await fs.readFile(path.join(storageRoot, 'search-index-v2.json'), 'utf8'),
+    ) as Record<string, unknown>
+    expect(envelope).toMatchObject({
+      schemaVersion: 2,
+      engine: 'minisearch',
+      options: expect.objectContaining({ fields: ['title', 'path', 'content'] }),
+      workspace: { identity: 'workspace-a' },
+      source: expect.objectContaining({ documentCount: 1 }),
+      index: expect.any(Object),
+    })
+    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await expect(restarted.search('searchable')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'added.md' }],
+    })
+  })
+
+  it('rejects a snapshot from another workspace so the caller can rebuild safely', async () => {
+    const storageRoot = await createStorageRoot()
+    const first = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await first.rebuild([{ path: 'secret.md', title: 'Secret', content: 'workspace A only' }])
+
+    const moved = new NodeSearchIndex(storageRoot, 'workspace-b')
+
+    await expect(moved.hasDocuments()).resolves.toBe(false)
+    await expect(moved.search('workspace')).resolves.toMatchObject({ totalHits: 0 })
+  })
+
+  it('loads legacy v1 document snapshots by rebuilding the in-memory index', async () => {
+    const storageRoot = await createStorageRoot()
+    await fs.writeFile(
+      path.join(storageRoot, 'search-index-v1.json'),
+      JSON.stringify({
+        version: 1,
+        documents: [{ path: 'legacy.md', title: 'Legacy', content: 'migrated safely' }],
+        metadata: { documentCount: 1, updatedAt: new Date().toISOString() },
+      }),
+    )
+
+    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
+
+    await expect(index.search('migrated')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'legacy.md' }],
+    })
   })
 })

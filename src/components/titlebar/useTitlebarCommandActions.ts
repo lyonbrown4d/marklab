@@ -29,6 +29,7 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'canCreateWorkspaceEntries'
 > & {
   onCommandOpenChange: (open: boolean) => void
+  onOpenCurrentWorkspaceInNewWindow: () => void
 }
 
 export const useTitlebarCommandActions = ({
@@ -51,15 +52,19 @@ export const useTitlebarCommandActions = ({
   onOpenAllPages,
   setTheme,
   canCreateWorkspaceEntries,
+  onOpenCurrentWorkspaceInNewWindow,
 }: UseTitlebarCommandActionsArgs) => {
-  const onMenuAction = useCallback((id: string) => {
-    if (!isDesktopRuntime()) return
-    if (id === 'window.open_current_workspace_in_new_window') {
-      void appApi.openCurrentWorkspaceInNewWindow()
-      return
-    }
-    void appApi.menuDispatch(id)
-  }, [])
+  const onMenuAction = useCallback(
+    (id: string) => {
+      if (!isDesktopRuntime()) return
+      if (id === 'window.open_current_workspace_in_new_window') {
+        onOpenCurrentWorkspaceInNewWindow()
+        return
+      }
+      void appApi.menuDispatch(id)
+    },
+    [onOpenCurrentWorkspaceInNewWindow],
+  )
 
   const onFocusFileSearch = useCallback(() => requestFileSearchFocus(), [])
 

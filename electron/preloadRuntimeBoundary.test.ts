@@ -41,12 +41,12 @@ describe('Electron preload/runtime boundary', () => {
     expect(preloadSource).toContain('allowedEvents.has(eventName)')
   })
 
-  it('does not expose generic IPC methods through the renderer runtime type', () => {
+  it('limits transitional IPC surfaces to their explicit allowlisted adapters', () => {
     const runtimeSource = readText('src/runtime/electron.ts')
 
-    expect(runtimeSource).not.toMatch(/^\s{2}(invoke|send|on|off|removeListener):/m)
-    expect(runtimeSource).toContain('commands?: {')
-    expect(runtimeSource).toContain('events?: {')
+    expect(runtimeSource).toContain('commands: TransitionalElectronCommandApi')
+    expect(runtimeSource).toContain('events: TransitionalElectronEventApi')
+    expect(runtimeSource).not.toMatch(/^\s{2}(send|on|off|removeListener):/m)
   })
 
   it('keeps renderer source files from importing Electron directly', () => {
@@ -62,7 +62,7 @@ describe('Electron preload/runtime boundary', () => {
 
   it('keeps the preload global behind the renderer runtime adapter', () => {
     const offenders = walkSourceFiles('src').filter((file) => {
-      if (file === 'src/runtime/electron.ts') return false
+      if (path.normalize(file) === path.normalize('src/runtime/electron.ts')) return false
       return readText(file).includes('marklabElectron')
     })
 

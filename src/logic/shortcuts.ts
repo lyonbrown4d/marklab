@@ -24,6 +24,7 @@ export const shortcutActions = [
   { id: 'view.toggleSource', scope: 'app', labelKey: 'shortcuts.toggleSource' },
   { id: 'view.toggleSidebar', scope: 'app', labelKey: 'shortcuts.toggleSidebar' },
   { id: 'view.toggleRightSidebar', scope: 'app', labelKey: 'shortcuts.toggleRightSidebar' },
+  { id: 'view.toggleTerminal', scope: 'app', labelKey: 'shortcuts.toggleTerminal' },
   { id: 'editor.paragraph', scope: 'editor', labelKey: 'shortcuts.paragraph' },
   { id: 'editor.heading1', scope: 'editor', labelKey: 'shortcuts.heading1' },
   { id: 'editor.heading2', scope: 'editor', labelKey: 'shortcuts.heading2' },
@@ -89,6 +90,7 @@ export const shortcutCategories = [
       'view.toggleSource',
       'view.toggleSidebar',
       'view.toggleRightSidebar',
+      'view.toggleTerminal',
     ],
   },
   {
@@ -161,6 +163,7 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'view.toggleSource': ['Mod+/'],
   'view.toggleSidebar': ['Mod+Shift+L'],
   'view.toggleRightSidebar': ['Mod+Shift+R'],
+  'view.toggleTerminal': ['Mod+J'],
   'editor.paragraph': ['Mod+0'],
   'editor.heading1': ['Mod+1'],
   'editor.heading2': ['Mod+2'],

@@ -12,6 +12,7 @@ export type NodeSidecarProcessPort = {
 }
 
 type PendingRequest = {
+  cleanup?: () => void
   reject: (error: Error) => void
   resolve: (value: unknown) => void
 }
@@ -99,6 +100,9 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
   rebuildIndex(documents: Parameters<WorkspaceSidecarClient['rebuildIndex']>[0]) {
     return this.request<void>('rebuildIndex', documents)
   }
+  applySearchChanges(batch: Parameters<WorkspaceSidecarClient['applySearchChanges']>[0]) {
+    return this.request<void>('applySearchChanges', batch)
+  }
   upsertDocument(document: Parameters<WorkspaceSidecarClient['upsertDocument']>[0]) {
     return this.request<void>('upsertDocument', document)
   }
@@ -163,6 +167,18 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
       ...args,
     )
   }
+  getMarkdownDiagnostics(path: string, content: string, signal?: AbortSignal) {
+    if (signal) {
+      return this.requestCancellable<
+        Awaited<ReturnType<WorkspaceSidecarClient['getMarkdownDiagnostics']>>
+      >(signal, 'getMarkdownDiagnostics', path, content)
+    }
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getMarkdownDiagnostics']>>>(
+      'getMarkdownDiagnostics',
+      path,
+      content,
+    )
+  }
   buildWorkspaceGraph(...args: Parameters<WorkspaceSidecarClient['buildWorkspaceGraph']>) {
     return this.request<Awaited<ReturnType<WorkspaceSidecarClient['buildWorkspaceGraph']>>>(
       'buildWorkspaceGraph',
@@ -190,18 +206,53 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
     })
   }
 
+  private requestCancellable<T>(
+    signal: AbortSignal,
+    method: NodeSidecarMethod,
+    ...args: unknown[]
+  ): Promise<T> {
+    if (signal.aborted) return Promise.reject(abortError())
+    const id = this.nextId++
+    return new Promise<T>((resolve, reject) => {
+      const onAbort = () => {
+        const pending = this.pending.get(id)
+        if (!pending) return
+        this.pending.delete(id)
+        pending.cleanup?.()
+        reject(abortError())
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+      this.pending.set(id, {
+        cleanup: () => signal.removeEventListener('abort', onAbort),
+        reject,
+        resolve: (value) => resolve(value as T),
+      })
+      this.port.postMessage({ args, id, method })
+    })
+  }
+
   private handleMessage(message: unknown): void {
     if (!isNodeSidecarResponse(message)) return
     const pending = this.pending.get(message.id)
     if (!pending) return
     this.pending.delete(message.id)
+    pending.cleanup?.()
     if (message.ok) pending.resolve(message.result)
     else pending.reject(new Error(message.error))
   }
 
   private handleExit(code: number): void {
     const error = new Error(`Knowledge utility process exited with code ${code}.`)
-    for (const pending of this.pending.values()) pending.reject(error)
+    for (const pending of this.pending.values()) {
+      pending.cleanup?.()
+      pending.reject(error)
+    }
     this.pending.clear()
   }
+}
+
+const abortError = (): Error => {
+  const error = new Error('Markdown diagnostics request was cancelled')
+  error.name = 'AbortError'
+  return error
 }

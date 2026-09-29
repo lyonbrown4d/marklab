@@ -21,11 +21,20 @@ import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine
 import type { Logger } from '@electron/services/logger.js'
 import type {
   FsEntry,
+  FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
 } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type {
+  WorkspaceSearchDocument,
+  WorkspaceSearchMutationBatch,
+} from '@electron/services/workspace/workspaceSearchTypes.js'
+import type {
+  KnowledgeSearchOptions,
+  KnowledgeSearchResultSet,
+} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+import { workspaceStatusWorkspaceId } from '@electron/services/knowledgeEngine/workspaceStatusPayload.js'
 
 type KnowledgeEngineServiceOptions = {
   app: App
@@ -71,7 +80,7 @@ export class KnowledgeEngineService {
     const status = this.getStatus()
     if (status.state === 'error') {
       return {
-        error: status.lastError ?? 'Knowledge engine binary is not available.',
+        error: status.lastError ?? 'Knowledge engine runtime is not available.',
         ok: false,
         status,
       }
@@ -191,6 +200,13 @@ export class KnowledgeEngineService {
     await (await this.getSidecars()).rebuildIndex(workspaceId, documents)
   }
 
+  async applySearchChanges(
+    workspaceId: string,
+    batch: WorkspaceSearchMutationBatch,
+  ): Promise<void> {
+    await (await this.getSidecars()).applySearchChanges(workspaceId, batch)
+  }
+
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
     await (await this.getSidecars()).upsertDocument(workspaceId, document)
   }
@@ -251,6 +267,20 @@ export class KnowledgeEngineService {
     return (await this.getSidecars()).getMarkdownLinks(workspaceId, documentId, documentVersion)
   }
 
+  async getMarkdownDiagnostics(
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+    content: string,
+    signal?: AbortSignal,
+  ): Promise<FsMarkdownDiagnostic[]> {
+    const sidecars = await this.getSidecars()
+    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
+    return signal
+      ? sidecars.getMarkdownDiagnostics(workspaceId, path, content, signal)
+      : sidecars.getMarkdownDiagnostics(workspaceId, path, content)
+  }
+
   async buildWorkspaceGraph(
     workspaceId: string,
     workspaceRoot: string,
@@ -276,6 +306,14 @@ export class KnowledgeEngineService {
     return (await this.getSidecars()).search(workspaceId, query, limit)
   }
 
+  async searchWithOptions(
+    workspaceId: string,
+    query: string,
+    options: KnowledgeSearchOptions,
+  ): Promise<KnowledgeSearchResultSet> {
+    return (await this.getSidecars()).searchWithOptions(workspaceId, query, options)
+  }
+
   stop(): KnowledgeEngineStatus {
     this.sidecars?.clear()
     return this.getStatus()
@@ -296,17 +334,4 @@ export class KnowledgeEngineService {
     })
     return this.sidecars
   }
-}
-
-const workspaceStatusWorkspaceId = (payload: unknown): string => {
-  if (!payload || typeof payload !== 'object' || !('workspaceId' in payload)) {
-    throw new Error('workspaceId is required')
-  }
-
-  const workspaceId = (payload as { workspaceId: unknown }).workspaceId
-  if (typeof workspaceId !== 'string' || workspaceId.length === 0) {
-    throw new Error('workspaceId is required')
-  }
-
-  return workspaceId
 }

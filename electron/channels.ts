@@ -41,6 +41,7 @@ export const nativeIpcChannels = {
   windowMinimize: 'marklab:window:minimize',
   windowStartDrag: 'marklab:window:start-drag',
   windowUnmaximize: 'marklab:window:unmaximize',
+  windowOpeningProgress: 'marklab:window:opening-progress',
   workspaceGetSession: 'marklab:workspace:get-session',
   workspaceReadFile: 'marklab:workspace:read-file',
   workspaceUpdateBuffer: 'marklab:workspace:update-buffer',

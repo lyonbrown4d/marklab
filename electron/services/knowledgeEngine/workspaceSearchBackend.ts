@@ -1,5 +1,7 @@
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
 import type { WorkspaceSearchIndexBackend } from '@electron/services/workspace/workspaceSearchIndex.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 
@@ -22,6 +24,13 @@ export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchInd
     await this.knowledgeEngine.rebuildIndex(workspaceId, documents)
   }
 
+  async applySearchChanges(
+    workspaceId: string,
+    batch: WorkspaceSearchMutationBatch,
+  ): Promise<void> {
+    await this.knowledgeEngine.applySearchChanges(workspaceId, batch)
+  }
+
   async upsertDocument(workspaceId: string, document: WorkspaceSearchDocument): Promise<void> {
     await this.knowledgeEngine.upsertDocument(workspaceId, document)
   }
@@ -36,5 +45,9 @@ export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchInd
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return this.knowledgeEngine.search(workspaceId, query, limit)
+  }
+
+  async searchWithOptions(workspaceId: string, query: string, options: KnowledgeSearchOptions) {
+    return this.knowledgeEngine.searchWithOptions(workspaceId, query, options)
   }
 }

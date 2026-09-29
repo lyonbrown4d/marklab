@@ -9,12 +9,21 @@ import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { CornerDownRight, Plus } from 'lucide-react'
 
 type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
 type FileGraphNode = Node<GraphNodeData, 'file'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
 type PreviewGraphNode = Node<GraphNodeData, 'preview'>
+
+export type MindmapNodeActions = {
+  addChild?: (nodeId: string) => void
+  addSibling?: (nodeId: string) => void
+  edit?: (nodeId: string) => void
+  hiddenCount?: number
+  toggleFold?: (nodeId: string) => void
+}
 
 const graphHandleClass = 'graph-node-handle'
 
@@ -125,6 +134,7 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
       : data.contentMode === 'summary' && data.content
         ? 'w-[240px]'
         : 'w-[180px]'
+  const mindmap = (data as GraphNodeData & { mindmap?: MindmapNodeActions }).mindmap
 
   const commitBlock = useCallback(
     (commit: MarkdownBlockCommit) => {
@@ -165,6 +175,11 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
       data-graph-node-id={id}
       data-graph-node-kind="heading"
       {...getGraphNodeA11yProps(data.label, selected)}
+      onDoubleClickCapture={(event) => {
+        if (!mindmap?.edit || (event.target as Element).closest('button')) return
+        event.preventDefault()
+        mindmap.edit(id)
+      }}
     >
       <Handle type="target" position={Position.Left} className={graphHandleClass} />
       <Handle type="source" position={Position.Right} className={graphHandleClass} />
@@ -176,6 +191,40 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
         >
           {data.subtitle}
         </Badge>
+      ) : null}
+      {mindmap && selected ? (
+        <div className="mindmap-branch-dock nodrag nopan" aria-label="Topic actions">
+          {mindmap.addChild ? (
+            <button
+              type="button"
+              aria-label="Add child topic"
+              title="Add child topic (Tab)"
+              onClick={() => mindmap.addChild?.(id)}
+            >
+              <Plus aria-hidden="true" />
+            </button>
+          ) : null}
+          {mindmap.addSibling ? (
+            <button
+              type="button"
+              aria-label="Add sibling topic"
+              title="Add sibling topic (Enter)"
+              onClick={() => mindmap.addSibling?.(id)}
+            >
+              <CornerDownRight aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {mindmap?.hiddenCount ? (
+        <button
+          type="button"
+          className="mindmap-hidden-count nodrag nopan"
+          aria-label={`Show ${mindmap.hiddenCount} hidden topics`}
+          onClick={() => mindmap.toggleFold?.(id)}
+        >
+          +{mindmap.hiddenCount}
+        </button>
       ) : null}
     </div>
   )

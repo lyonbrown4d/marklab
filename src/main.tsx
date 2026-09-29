@@ -13,6 +13,7 @@ import '@/i18n/setup'
 import App from '@/App.tsx'
 import { queryClient } from '@/app/queryClient'
 import { Toaster } from '@/components/ui/sonner'
+import { initializeReactScan } from '@/dev/reactScan'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -21,15 +22,7 @@ const ReactQueryDevtools = import.meta.env.DEV
     })
   : null
 
-if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN === 'true') {
-  void import('react-scan')
-    .then(({ scan }) => {
-      void scan({ enabled: true })
-    })
-    .catch((error) => {
-      console.warn('React Scan failed to initialize', error)
-    })
-}
+initializeReactScan(import.meta.env.DEV, import.meta.env.VITE_REACT_SCAN)
 
 if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
   const loadReactDevTools = () => {

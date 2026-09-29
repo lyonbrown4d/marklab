@@ -93,6 +93,17 @@ describe('document synchronization lifecycle', () => {
     expect(mocks.preferences.syncSystemTheme).not.toHaveBeenCalled()
   })
 
+  it('always follows the operating system when the selected mode is system', () => {
+    const media = Object.assign(new EventTarget(), { matches: true })
+    vi.spyOn(window, 'matchMedia').mockReturnValue(media as MediaQueryList)
+    mocks.preferences.themeMode = 'system'
+    mocks.preferences.autoSystemThemeSync = false
+
+    renderHook(() => useAppDocumentSync({ theme: 'paper' }))
+
+    expect(mocks.preferences.syncSystemTheme).toHaveBeenLastCalledWith('dark')
+  })
+
   it.each(['light', 'dark'])('does not follow system changes in explicit %s mode', (mode) => {
     const matchMedia = vi.spyOn(window, 'matchMedia')
     mocks.preferences.themeMode = mode

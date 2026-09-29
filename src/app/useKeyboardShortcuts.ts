@@ -13,6 +13,9 @@ import {
 } from '@/logic/shortcuts'
 import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 import { getWorkspaceTabId } from '@/logic/tabs'
+import { toggleSidebarFromShortcut } from '@/app/sidebarShortcut'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { requestFileSearchFocus } from '@/utils/appEvents'
 
 type UseKeyboardShortcutsArgs = {
   activeTabId: string | null
@@ -29,6 +32,7 @@ type UseKeyboardShortcutsArgs = {
   onSetViewMode: (mode: ViewMode) => void
   onToggleRightSidebar: () => void
   onToggleSidebar: () => void
+  onToggleTerminal: () => void
 }
 
 export const useKeyboardShortcuts = ({
@@ -46,6 +50,7 @@ export const useKeyboardShortcuts = ({
   onSetViewMode,
   onToggleRightSidebar,
   onToggleSidebar,
+  onToggleTerminal,
 }: UseKeyboardShortcutsArgs) => {
   const argsRef = useLatest<UseKeyboardShortcutsArgs>({
     activeTabId,
@@ -62,6 +67,7 @@ export const useKeyboardShortcuts = ({
     onSetViewMode,
     onToggleRightSidebar,
     onToggleSidebar,
+    onToggleTerminal,
   })
 
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
@@ -81,6 +87,7 @@ export const useKeyboardShortcuts = ({
         onSetViewMode: setViewMode,
         onToggleRightSidebar: toggleRightSidebar,
         onToggleSidebar: toggleSidebar,
+        onToggleTerminal: toggleTerminal,
       } = argsRef.current
 
       if (action === 'app.commandPalette') {
@@ -132,11 +139,20 @@ export const useKeyboardShortcuts = ({
         return
       }
       if (action === 'view.toggleSidebar') {
-        toggleSidebar()
+        toggleSidebarFromShortcut({
+          isCollapsed: () => usePreferencesStore.getState().sidebarCollapsed,
+          toggleSidebar,
+          requestFocus: requestFileSearchFocus,
+          scheduleFocus: (callback) => window.requestAnimationFrame(callback),
+        })
         return
       }
       if (action === 'view.toggleRightSidebar') {
         toggleRightSidebar()
+        return
+      }
+      if (action === 'view.toggleTerminal') {
+        toggleTerminal()
       }
     }
 
@@ -155,7 +171,6 @@ export const useKeyboardShortcuts = ({
 
   useHotkeys(definitions, {
     conflictBehavior: 'replace',
-    ignoreInputs: false,
     preventDefault: true,
     stopPropagation: true,
   })

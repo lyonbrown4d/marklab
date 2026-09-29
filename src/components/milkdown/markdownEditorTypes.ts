@@ -16,3 +16,14 @@ export type MarkdownEditorHandle = {
 
 export type MarkdownEditorStatus =
   { phase: 'loading' } | { phase: 'ready' } | { phase: 'error'; message: string }
+
+export type QueuedMarkdownUpdate = {
+  documentIdentity: MarkdownEditorProps['activePath']
+  markdown: string
+  onChange: MarkdownEditorProps['onChange']
+}
+
+export type ThrottledMarkdownUpdate = ((update: QueuedMarkdownUpdate) => void) & {
+  cancel: () => void
+  flush: () => void
+}

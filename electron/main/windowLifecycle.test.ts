@@ -33,6 +33,9 @@ const createHarness = () => {
       barrier.review(id, participants)
       return 1
     }),
+    flushWindowForClose: vi.fn(async () => {
+      await save()
+    }),
     registerWindow: vi.fn(),
   }
   const logger = {
@@ -123,6 +126,18 @@ describe('window persistence shutdown barrier', () => {
     window.close()
     await vi.waitFor(() => expect(window.isDestroyed()).toBe(true))
     expect(gate.reason).toBeNull()
+  })
+
+  it('flushes only the closing window and does not freeze other workspace sessions', async () => {
+    const { lifecycle, window, workspace } = createHarness()
+    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+
+    window.close()
+    await vi.waitFor(() => expect(window.isDestroyed()).toBe(true))
+
+    expect(workspace.flushWindowForClose).toHaveBeenCalledWith(window)
+    expect(workspace.beginShutdownBarrier).not.toHaveBeenCalled()
+    expect(workspace.flushBuffersForShutdown).not.toHaveBeenCalled()
   })
 
   it('rejects shutdown when buffers remain dirty despite a fulfilled save', async () => {

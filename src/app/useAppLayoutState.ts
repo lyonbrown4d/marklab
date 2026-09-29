@@ -219,6 +219,7 @@ export const useAppLayoutState = () => {
     graph: graphState.graph,
     graphLoading: graphState.loading,
     workspaceIndex,
+    workspaceKey,
     restoreStatusMessage,
     isRestoringSession,
     restoreSession: restoreWorkspaceSession,

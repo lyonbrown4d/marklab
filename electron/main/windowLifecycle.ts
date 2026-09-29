@@ -70,9 +70,12 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
       windowsFlushingBeforeClose.add(main)
       void (async () => {
-        let releaseBarrier: (() => void) | null = null
         try {
-          releaseBarrier = await flushWorkspaceBuffersWithBarrier('window close')
+          const workspaceRegistry = options.getNativeIpc()?.commands.workspace
+          if (!workspaceRegistry) {
+            throw new Error('Workspace flush is unavailable during window close')
+          }
+          await workspaceRegistry.flushWindowForClose(main)
           windowsAllowedToClose.add(main)
           if (!main.isDestroyed()) main.close()
         } catch (error) {
@@ -83,7 +86,6 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
               { error, windowId: main.id },
             )
         } finally {
-          releaseBarrier?.()
           windowsAllowedToClose.delete(main)
           windowsFlushingBeforeClose.delete(main)
         }

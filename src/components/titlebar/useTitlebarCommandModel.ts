@@ -43,6 +43,7 @@ type UseTitlebarCommandModelArgs = Pick<
   commandOpen: boolean
   platform: AppPlatform
   onCommandOpenChange: (open: boolean) => void
+  onOpenCurrentWorkspaceInNewWindow: () => void
 }
 
 export const useTitlebarCommandModel = ({
@@ -71,6 +72,7 @@ export const useTitlebarCommandModel = ({
   canCreateWorkspaceEntries,
   commandOpen,
   platform,
+  onOpenCurrentWorkspaceInNewWindow,
 }: UseTitlebarCommandModelArgs) => {
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
@@ -230,6 +232,7 @@ export const useTitlebarCommandModel = ({
     onOpenAllPages,
     setTheme,
     canCreateWorkspaceEntries,
+    onOpenCurrentWorkspaceInNewWindow,
   })
 
   return {

@@ -19,8 +19,10 @@ import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/wo
 import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
 import {
   trySidecarOutlineGraph,
+  trySidecarMarkdownDiagnostics,
   trySidecarWorkspaceGraph,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
+import { mergeMarkdownDiagnostics } from '@electron/services/workspace/markdown/diagnostics.js'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient.js'
 import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
 
@@ -53,7 +55,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly graphCache = new WorkspaceGraphCache()
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<SearchDocumentToIndex>({
+      applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
+      getDocumentPath: (document) => document.path,
       loadDocuments: (paths) => this.loadDocuments(paths),
       logger: this.logger.child('search-index-updates'),
       openIndex: () => this.openWorkspaceSearchIndex(),
@@ -61,10 +65,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
         await this.buildSearchIndexFromWorkspace()
         this.needsSearchIndexRebuild = false
       },
-      removeDocument: (pathValue) => this.workspaceSearchIndex.removeDocument(pathValue),
-      removePathPrefix: (pathValue) => this.workspaceSearchIndex.removePathPrefix(pathValue),
       runTask: (work, taskName) => this.runSearchIndexTask(work, taskName),
-      upsertDocument: (document) => this.workspaceSearchIndex.upsertDocument(document),
     })
   private activeWorkspaceSearchKey = ''
   private needsSearchIndexRebuild = true
@@ -82,7 +83,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
       return this.runWorkerTask(
         () =>
-          this.analysisWorker.run({
+          this.analysisWorker.run<FsWorkspaceIndex>({
             type: 'workspace-index',
             documents,
             knownPaths,
@@ -129,16 +130,26 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const pathValue = stringArg(value, 'path')
     const content = stringArg(value, 'content')
     const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths(pathValue, content)
-    return this.runWorkerTask(
-      () =>
-        this.analysisWorker.run({
-          type: 'markdown-diagnostics',
-          documents,
-          knownPaths,
-          path: pathValue,
-        }),
-      'markdown-diagnostics',
-    )
+    const [localDiagnostics, sidecarDiagnostics] = await Promise.all([
+      this.runWorkerTask(
+        () =>
+          this.analysisWorker.run<FsMarkdownDiagnostic[]>({
+            type: 'markdown-diagnostics',
+            documents,
+            knownPaths,
+            path: pathValue,
+          }),
+        'markdown-diagnostics',
+      ),
+      trySidecarMarkdownDiagnostics({
+        content,
+        knowledgeEngineService: this.analysisKnowledgeEngineService,
+        logger: this.logger,
+        path: pathValue,
+        state: this.state,
+      }),
+    ])
+    return mergeMarkdownDiagnostics(localDiagnostics, sidecarDiagnostics)
   }
 
   async searchWorkspace(value: unknown): Promise<FsSearchResult[]> {
@@ -202,9 +213,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     void this.runSearchIndexTask(async () => {
       await this.openWorkspaceSearchIndex()
       const documents = await this.loadDocuments(markdownPaths)
-      for (const document of documents) {
-        await this.workspaceSearchIndex.upsertDocument(document)
-      }
+      const loadedPaths = new Set(documents.map((document) => document.path))
+      await this.workspaceSearchIndex.applySearchChanges({
+        removeDocuments: markdownPaths.filter((pathValue) => !loadedPaths.has(pathValue)),
+        removePrefixes: [],
+        upserts: documents,
+      })
     }, 'search-index').catch((error) => {
       this.logger.warn('search index update from flush failed; scheduling full rebuild', { error })
       this.needsSearchIndexRebuild = true
@@ -282,7 +296,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
           error,
           path: relativePath,
         })
-        await this.workspaceSearchIndex.removeDocument(relativePath).catch(() => undefined)
       }
     }
     return documents

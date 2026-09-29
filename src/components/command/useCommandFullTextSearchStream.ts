@@ -9,6 +9,7 @@ type CommandFullTextSearchInput = {
   open: boolean
   query: string
   scope: CommandSearchScope
+  workspaceKey: string
 }
 
 type CommandFullTextSearchState = {
@@ -36,7 +37,7 @@ export const useCommandFullTextSearchStream = (
   const debouncedQuery = useDebounce(query, { wait: COMMAND_FULL_TEXT_DEBOUNCE_MS })
   const searchable = canSearchFullText({ ...input, query })
   const searchQuery = useQuery({
-    queryKey: ['command-workspace-search', debouncedQuery, input.limit],
+    queryKey: ['command-workspace-search', input.workspaceKey, debouncedQuery, input.limit],
     queryFn: () => fsApi.searchWorkspace(debouncedQuery, input.limit),
     enabled: canSearchFullText({ ...input, query: debouncedQuery }),
     placeholderData: keepPreviousData,

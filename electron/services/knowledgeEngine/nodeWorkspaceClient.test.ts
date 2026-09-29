@@ -91,10 +91,28 @@ describe('Node workspace client', () => {
     ])
   })
 
+  it('applies a mixed search mutation batch through the sidecar boundary', async () => {
+    const { client } = await createWorkspace()
+    await client.rebuildIndex([
+      { path: 'remove.md', title: 'Remove', content: 'stale' },
+      { path: 'folder/remove.md', title: 'Nested', content: 'stale' },
+    ])
+
+    await client.applySearchChanges({
+      removeDocuments: ['remove.md'],
+      removePrefixes: ['folder'],
+      upserts: [{ path: 'fresh.md', title: 'Fresh', content: 'batch update' }],
+    })
+
+    await expect(client.search('stale', 10)).resolves.toEqual([])
+    await expect(client.search('batch', 10)).resolves.toMatchObject([{ path: 'fresh.md' }])
+  })
+
   it('advertises the utility-process protocol boundary', async () => {
     const { client } = await createWorkspace()
 
     await expect(client.getCapabilities('workspace-a')).resolves.toMatchObject({
+      capabilities: expect.arrayContaining(['markdown-reference-diagnostics']),
       engineVersion: 'node',
       protocolVersion: 'utility-process-v1',
     })
@@ -132,6 +150,37 @@ describe('Node workspace client', () => {
     })
     await expect(client.getMarkdownDocumentSymbols('alpha.md', 2)).resolves.toMatchObject([
       { name: 'Gamma' },
+    ])
+  })
+
+  it('computes reference diagnostics inside the Node workspace process', async () => {
+    const { client } = await createWorkspace()
+
+    await expect(
+      client.getMarkdownDiagnostics('alpha.md', '[Missing][missing-ref]'),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        line: 1,
+        message: "No link definition found: 'missing-ref'",
+        severity: 'warning',
+      }),
+    ])
+  })
+
+  it('keeps simultaneous workspace diagnostics isolated', async () => {
+    const workspaceA = await createWorkspace()
+    const workspaceB = await createWorkspace()
+
+    const [diagnosticsA, diagnosticsB] = await Promise.all([
+      workspaceA.client.getMarkdownDiagnostics('shared.md', '[A][missing-a]'),
+      workspaceB.client.getMarkdownDiagnostics('shared.md', '[B][missing-b]'),
+    ])
+
+    expect(diagnosticsA.map((diagnostic) => diagnostic.message)).toEqual([
+      "No link definition found: 'missing-a'",
+    ])
+    expect(diagnosticsB.map((diagnostic) => diagnostic.message)).toEqual([
+      "No link definition found: 'missing-b'",
     ])
   })
 

@@ -23,5 +23,11 @@ export const createMainWindowSession = async (
   )
   installNativeMenu(windows.main, options.dispatchNativeMenuAction)
   options.installManagedMainWindowLifecycle(windows.main, options.logger)
+  void options
+    .ensureWindowPool()
+    .prewarmMainWindow()
+    .catch((error) => {
+      options.logger.warn('unable to prewarm lightweight main window', { error })
+    })
   return windows
 }

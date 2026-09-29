@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
@@ -6,9 +6,20 @@ import FullTextSearchPanel from '@/components/FullTextSearchPanel'
 import type { SidebarSearchPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
 
-const SidebarSearchPanel = ({ onOpenSearchResult }: SidebarSearchPanelProps) => {
+const SidebarSearchPanel = ({
+  focusWorkspaceSearchRequest,
+  onOpenSearchResult,
+  rootKind,
+  rootPath,
+}: SidebarSearchPanelProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (focusWorkspaceSearchRequest <= 0) return
+    inputRef.current?.focus()
+  }, [focusWorkspaceSearchRequest])
 
   return (
     <SidebarGroup className="sidebar-section flex min-h-0 flex-1 flex-col rounded-md p-1">
@@ -18,12 +29,17 @@ const SidebarSearchPanel = ({ onOpenSearchResult }: SidebarSearchPanelProps) => 
       </SidebarGroupLabel>
       <SidebarGroupContent className="flex min-h-0 flex-1 flex-col gap-2">
         <Input
+          ref={inputRef}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('search.fullText')}
           className="h-7 rounded-md border-sidebar-border bg-background/70 text-xs shadow-sm"
         />
-        <FullTextSearchPanel query={query} onOpenResult={onOpenSearchResult} />
+        <FullTextSearchPanel
+          query={query}
+          workspaceKey={`${rootKind}:${rootPath}`}
+          onOpenResult={onOpenSearchResult}
+        />
       </SidebarGroupContent>
     </SidebarGroup>
   )

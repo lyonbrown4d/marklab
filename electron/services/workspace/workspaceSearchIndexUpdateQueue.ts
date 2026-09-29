@@ -11,15 +11,18 @@ type SearchIndexChange = {
 }
 
 type WorkspaceSearchIndexUpdateQueueOptions<TDocument> = {
+  applyChanges: (changes: {
+    removeDocuments: string[]
+    removePrefixes: string[]
+    upserts: TDocument[]
+  }) => Promise<void>
   delayMs: number
+  getDocumentPath: (document: TDocument) => string
   loadDocuments: (paths: string[]) => Promise<TDocument[]>
   logger: Logger
   openIndex: () => Promise<void>
   rebuildAll: () => Promise<void>
-  removeDocument: (path: string) => Promise<void>
-  removePathPrefix: (path: string) => Promise<void>
   runTask: <T>(work: () => Promise<T>, taskName: string) => Promise<T>
-  upsertDocument: (document: TDocument) => Promise<void>
 }
 
 export class WorkspaceSearchIndexUpdateQueue<TDocument> {
@@ -27,6 +30,7 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   private readonly flushCancelRequests = new Subject<void>()
   private readonly flushRequests = new Subject<void>()
   private readonly flushSubscription: Subscription
+  private flushQueue: Promise<void> = Promise.resolve()
   private rebuildScheduled = false
   private disposed = false
 
@@ -64,8 +68,11 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   async flushPending(): Promise<void> {
-    if (!this.rebuildScheduled && this.changes.size === 0) return
     this.flushCancelRequests.next()
+    if (!this.rebuildScheduled && this.changes.size === 0) {
+      await this.flushQueue
+      return
+    }
     await this.flush()
   }
 
@@ -109,36 +116,65 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   private async flush(): Promise<void> {
+    const operation = this.flushQueue.then(() => this.flushOnce())
+    this.flushQueue = operation.catch(() => undefined)
+    return operation
+  }
+
+  private async flushOnce(): Promise<void> {
+    if (!this.rebuildScheduled && this.changes.size === 0) return
     const shouldRebuild = this.rebuildScheduled
     const changes = [...this.changes.entries()].map(([path, kind]) => ({ kind, path }))
     this.rebuildScheduled = false
     this.changes.clear()
 
-    await this.options.runTask(async () => {
-      await this.options.openIndex()
-      if (shouldRebuild) {
-        await this.options.rebuildAll()
-        return
-      }
-      await this.applyChanges(changes)
-    }, 'search-index')
+    try {
+      await this.options.runTask(async () => {
+        await this.options.openIndex()
+        if (shouldRebuild) {
+          await this.options.rebuildAll()
+          return
+        }
+        await this.applyChanges(changes)
+      }, 'search-index')
+    } catch (error) {
+      this.restoreFailedChanges(shouldRebuild, changes)
+      throw error
+    }
   }
 
   private async applyChanges(changes: SearchIndexChange[]): Promise<void> {
     const upsertPaths: string[] = []
+    const removeDocuments: string[] = []
+    const removePrefixes: string[] = []
     for (const change of changes) {
       if (change.kind === 'upsert') {
         upsertPaths.push(change.path)
       } else if (change.kind === 'remove-file') {
-        await this.options.removeDocument(change.path)
+        removeDocuments.push(change.path)
       } else {
-        await this.options.removePathPrefix(change.path)
+        removePrefixes.push(change.path)
       }
     }
 
     const documents = await this.options.loadDocuments(upsertPaths)
-    for (const document of documents) {
-      await this.options.upsertDocument(document)
+    const loadedPaths = new Set(documents.map(this.options.getDocumentPath))
+    for (const upsertPath of upsertPaths) {
+      if (!loadedPaths.has(upsertPath)) removeDocuments.push(upsertPath)
     }
+    await this.options.applyChanges({ removeDocuments, removePrefixes, upserts: documents })
+  }
+
+  private restoreFailedChanges(shouldRebuild: boolean, changes: SearchIndexChange[]): void {
+    if (this.disposed) return
+    if (shouldRebuild) {
+      this.rebuildScheduled = true
+      this.changes.clear()
+    } else {
+      for (const change of changes) {
+        if (!this.changes.has(change.path)) this.changes.set(change.path, change.kind)
+      }
+    }
+    this.scheduleFlush()
   }
 }

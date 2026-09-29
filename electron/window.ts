@@ -1,4 +1,4 @@
-import { BrowserWindow, app, screen } from 'electron'
+import { BrowserWindow, app, nativeTheme, screen } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { MARKLAB_APP_NAME } from '@electron/appIdentity.js'
@@ -8,6 +8,8 @@ import { getWindowState, setWindowState } from '@electron/services/settingsStore
 import { resolveElectronProjectRoots } from '@electron/windowIconPaths.js'
 import { createWindowIcon } from '@electron/windowIcon.js'
 import type { PersistedWindowState } from '@electron/types.js'
+import { resolveNativeWindowBackground } from '@electron/windowTheme.js'
+import type { WindowPoolAcquisition } from '@electron/windowPool.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -27,7 +29,8 @@ export type MarklabWindows = {
   main: BrowserWindow
 }
 export type MainWindowPool = {
-  acquireMainWindow: () => Promise<BrowserWindow>
+  acquireMainWindow: () => Promise<WindowPoolAcquisition>
+  activateMainWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
 }
 type WindowBounds = {
   height: number
@@ -209,7 +212,7 @@ export const createSplashWindow = () => {
     center: true,
     show: false,
     skipTaskbar: true,
-    backgroundColor: '#0b1c1a',
+    backgroundColor: resolveNativeWindowBackground(nativeTheme.shouldUseDarkColors),
     webPreferences: secureWebPreferences(),
   })
 
@@ -242,6 +245,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     fullscreen: false,
     ...mainWindowChromeOptions(),
     show: false,
+    backgroundColor: resolveNativeWindowBackground(nativeTheme.shouldUseDarkColors),
     webPreferences: secureWebPreferences(),
   })
   if (isMacOS()) {
@@ -266,6 +270,14 @@ export const loadMainWindow = async (main: BrowserWindow) => {
   }
   await main.loadFile(getRendererUrl())
 }
+export const loadWindowOpeningShell = async (main: BrowserWindow) => {
+  const openingPage = getRendererUrl('window-opening.html')
+  if (isDevMode()) {
+    await loadDevUrl(main, openingPage)
+    return
+  }
+  await main.loadFile(openingPage)
+}
 export const createLoadedMainWindow = async (logger: Logger = noopLogger) => {
   const main = createMainWindow(logger)
   await loadMainWindow(main)
@@ -276,7 +288,12 @@ export const createMarklabWindows = async (
   mainWindowPool?: MainWindowPool,
 ): Promise<MarklabWindows> => {
   const splash = createSplashWindow()
-  const mainWindow = mainWindowPool?.acquireMainWindow() ?? createLoadedMainWindow(logger)
+  const mainWindow = mainWindowPool
+    ? mainWindowPool.acquireMainWindow().then(async (acquisition) => {
+        await mainWindowPool.activateMainWindow(acquisition)
+        return acquisition.window
+      })
+    : createLoadedMainWindow(logger)
   const [main] = await Promise.all([mainWindow, loadSplashWindow(splash)])
   return { splash, main }
 }

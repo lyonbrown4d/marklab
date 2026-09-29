@@ -5,6 +5,10 @@ import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
 import { configureMonaco } from '@/lib/monaco'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 
+vi.mock('@/components/markdownSourceShortcuts', () => ({
+  registerMarkdownSourceShortcuts: () => ({ dispose: vi.fn() }),
+}))
+
 const monacoEditor = vi.hoisted(() => ({
   addCommand: vi.fn(() => 'mock.command'),
   createDecorationsCollection: vi.fn(() => ({

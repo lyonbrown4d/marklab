@@ -16,10 +16,27 @@ const createProps = () => ({
   toggleSidebarLabel: '切换侧边栏',
   toggleOutlineLabel: '文档大纲',
   settingsLabel: '设置',
+  viewMode: 'wysiwyg' as const,
+  wysiwygLabel: '所见即所得',
+  sourceLabel: '源码',
+  graphLabel: '思维导图',
+  workspaceMenuLabel: '工作区',
+  newWorkspaceLabel: '新建工作区',
+  openFileLabel: '打开文件',
+  newFileLabel: '新建文件',
   onOpenSearch: vi.fn(),
   onToggleSidebar: vi.fn(),
   onToggleOutline: vi.fn(),
   onOpenSettings: vi.fn(),
+  onChangeView: vi.fn(),
+  onNewWorkspace: vi.fn(),
+  onOpenFile: vi.fn(),
+  onCreateFile: vi.fn(),
+  onOpenCurrentWorkspaceInNewWindow: vi.fn(),
+  onSelectWorkspaceInNewWindow: vi.fn(),
+  workspaceWindowOpening: false,
+  openCurrentWorkspaceInNewWindowLabel: 'Open Current Workspace in New Window',
+  openWorkspaceInNewWindowLabel: 'Open Workspace in New Window…',
 })
 
 describe('ImmersiveTitlebarChrome', () => {
@@ -35,10 +52,15 @@ describe('ImmersiveTitlebarChrome', () => {
     await userEvent.click(screen.getByRole('button', { name: '搜索文件...' }))
     await userEvent.click(screen.getByRole('button', { name: '文档大纲' }))
     await userEvent.click(screen.getByRole('button', { name: '设置' }))
+    await userEvent.click(screen.getByRole('button', { name: '源码' }))
+    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '新建工作区' }))
 
     expect(props.onOpenSearch).toHaveBeenCalledOnce()
     expect(props.onToggleOutline).toHaveBeenCalledOnce()
     expect(props.onOpenSettings).toHaveBeenCalledOnce()
+    expect(props.onChangeView).toHaveBeenCalledWith('source')
+    expect(props.onNewWorkspace).toHaveBeenCalledOnce()
   })
 
   it('uses a generic local-library context when no document is active', () => {
@@ -47,5 +69,33 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(screen.getByText('Marklab')).toBeInTheDocument()
     expect(screen.getByText('本地知识库')).toBeInTheDocument()
     expect(screen.getByText('未命名文档')).toBeInTheDocument()
+  })
+
+  it('offers both explicit new-window workspace actions', async () => {
+    const props = createProps()
+    render(<ImmersiveTitlebarChrome {...props} />)
+    const trigger = screen.getByRole('button', { name: '工作区: 随笔' })
+
+    await userEvent.click(trigger)
+    await userEvent.click(
+      screen.getByRole('menuitem', { name: 'Open Current Workspace in New Window' }),
+    )
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Open Workspace in New Window…' }))
+
+    expect(props.onOpenCurrentWorkspaceInNewWindow).toHaveBeenCalledOnce()
+    expect(props.onSelectWorkspaceInNewWindow).toHaveBeenCalledOnce()
+  })
+
+  it('disables new-window actions while one workspace is opening', async () => {
+    render(<ImmersiveTitlebarChrome {...createProps()} workspaceWindowOpening />)
+    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+
+    expect(
+      screen.getByRole('menuitem', { name: 'Open Current Workspace in New Window' }),
+    ).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: 'Open Workspace in New Window…' })).toHaveAttribute(
+      'data-disabled',
+    )
   })
 })

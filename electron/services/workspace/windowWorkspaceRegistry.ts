@@ -10,6 +10,7 @@ import {
   disposeWindowWorkspaceBinding,
   type WindowWorkspaceBinding,
 } from '@electron/services/workspace/windowWorkspaceBinding.js'
+import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose.js'
 import {
   WorkspaceShutdownBarrier,
   type WorkspaceShutdownParticipant,
@@ -62,6 +63,12 @@ export class WindowWorkspaceRegistry {
 
   rootInfoForWindow(window: BrowserWindow): FsRootInfo {
     return this.bindingForWindow(window).service.rootInfo()
+  }
+
+  async flushWindowForClose(window: BrowserWindow): Promise<void> {
+    const binding = this.bindings.get(window.id)
+    if (!binding) return
+    await flushWindowWorkspaceBindingForClose(binding)
   }
 
   terminalCwdForWebContents(webContents: WebContents): string | null {

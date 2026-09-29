@@ -1,0 +1,121 @@
+.mindmap-canvas {
+  --mindmap-paper-dot: color-mix(in srgb, hsl(var(--muted-foreground)) 13%, transparent);
+  background-color: hsl(var(--background));
+  background-image: radial-gradient(circle, var(--mindmap-paper-dot) 0.65px, transparent 0.75px);
+  background-position: 12px 12px;
+  background-size: 24px 24px;
+}
+
+.mindmap-canvas .react-flow__edge-path {
+  stroke: color-mix(in srgb, hsl(var(--primary)) 38%, hsl(var(--muted-foreground)));
+  stroke-width: 1.55;
+}
+
+.mindmap-canvas .graph-node-shell {
+  border-color: color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  border-radius: calc(var(--radius) + 2px);
+  background: color-mix(in srgb, hsl(var(--card)) 96%, transparent);
+  box-shadow:
+    0 1px 0 hsl(var(--foreground) / 4%),
+    0 10px 26px -24px hsl(var(--foreground) / 42%);
+}
+
+.mindmap-canvas .graph-node-shell--selected {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 54%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--primary)) 5%, hsl(var(--card)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 14%, transparent),
+    0 12px 30px -24px hsl(var(--foreground) / 46%);
+}
+
+.mindmap-canvas .graph-node-handle {
+  opacity: 0;
+}
+
+.mindmap-branch-dock {
+  position: absolute;
+  top: 50%;
+  right: -34px;
+  display: flex;
+  translate: 0 -50%;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, hsl(var(--card)) 94%, transparent);
+  box-shadow: 0 8px 20px -15px hsl(var(--foreground) / 38%);
+  opacity: 0.86;
+  backdrop-filter: blur(10px);
+  transition:
+    opacity var(--motion-duration-fast) ease,
+    translate var(--motion-duration-fast) ease;
+}
+
+.mindmap-branch-dock:hover,
+.mindmap-branch-dock:focus-within {
+  opacity: 1;
+  translate: 2px -50%;
+}
+
+.mindmap-branch-dock button {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  color: hsl(var(--muted-foreground));
+}
+
+.mindmap-branch-dock button:hover,
+.mindmap-branch-dock button:focus-visible {
+  background: hsl(var(--primary) / 10%);
+  color: hsl(var(--foreground));
+  outline: none;
+}
+
+.mindmap-branch-dock svg {
+  width: 12px;
+  height: 12px;
+}
+
+.graph-node-shell:focus-within .mindmap-branch-dock {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.mindmap-hidden-count {
+  position: absolute;
+  right: -13px;
+  bottom: -10px;
+  min-width: 25px;
+  height: 19px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 28%, hsl(var(--border)));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 17px;
+  box-shadow: 0 5px 14px -11px hsl(var(--foreground) / 45%);
+}
+
+.mindmap-hidden-count:hover,
+.mindmap-hidden-count:focus-visible {
+  border-color: hsl(var(--primary) / 55%);
+  color: hsl(var(--foreground));
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mindmap-canvas .graph-node-shell,
+  .mindmap-canvas .react-flow__edge-path,
+  .mindmap-branch-dock,
+  .mindmap-branch-dock button,
+  .mindmap-hidden-count {
+    animation: none;
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

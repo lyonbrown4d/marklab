@@ -1,5 +1,7 @@
 import { embeddedPreviewPlugin } from '@/components/milkdown/embeddedPreviewPlugin'
+import { remarkImageTitleCompatibility } from '@/components/milkdown/markdownImageTitleCompatibility'
 import { pasteLinkOnSelection } from '@/components/milkdown/pasteEnhancements'
+import { markdownTableEditingPlugin } from '@/components/milkdown/tableEditingPlugin'
 
 export type MarkdownSafePluginOptions = {
   getDocumentPath: () => string | null
@@ -11,6 +13,8 @@ export const createMarkdownSafePreviewPlugins = (options: MarkdownSafePluginOpti
 ]
 
 export const createMarkdownSafePlugins = (options: MarkdownSafePluginOptions) => [
+  remarkImageTitleCompatibility,
   pasteLinkOnSelection,
+  markdownTableEditingPlugin,
   ...createMarkdownSafePreviewPlugins(options),
 ]

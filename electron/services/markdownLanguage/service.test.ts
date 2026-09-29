@@ -33,9 +33,17 @@ const workspaceIndex = {
 } satisfies FsWorkspaceIndex
 
 describe('EmbeddedMarkdownLanguageService diagnostics', () => {
-  it('uses the workspace index with current buffer content for link and asset diagnostics', async () => {
+  it('delegates diagnostics to workspace analysis so the Node sidecar can supplement results', async () => {
     const workspaceIndexMock = vi.fn(async () => workspaceIndex)
-    const analyzeMarkdownBuffer = vi.fn(async () => [])
+    const analyzeMarkdownBuffer = vi.fn(async () => [
+      {
+        end_column: 10,
+        line: 1,
+        message: "No link definition found: 'missing'",
+        severity: 'warning' as const,
+        start_column: 5,
+      },
+    ])
     const workspace = {
       workspaceIndex: workspaceIndexMock,
       analyzeMarkdownBuffer,
@@ -55,26 +63,12 @@ describe('EmbeddedMarkdownLanguageService diagnostics', () => {
       ].join('\n'),
     })
 
-    expect(workspaceIndexMock).toHaveBeenCalledTimes(1)
-    expect(analyzeMarkdownBuffer).not.toHaveBeenCalled()
-    expect(diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          line: 3,
-          message: 'Cannot find linked file "missing.md"',
-          severity: 'error',
-        }),
-        expect.objectContaining({
-          line: 4,
-          message: 'Cannot find heading "gone" in notes/target.md',
-          severity: 'warning',
-        }),
-        expect.objectContaining({
-          line: 5,
-          message: 'Cannot find local asset "../assets/missing.png"',
-          severity: 'error',
-        }),
-      ]),
+    expect(workspaceIndexMock).not.toHaveBeenCalled()
+    expect(analyzeMarkdownBuffer).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'notes/current.md' }),
     )
+    expect(diagnostics).toEqual([
+      expect.objectContaining({ message: "No link definition found: 'missing'" }),
+    ])
   })
 })

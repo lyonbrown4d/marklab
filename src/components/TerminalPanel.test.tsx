@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import TerminalPanel from '@/components/TerminalPanel'
 
@@ -40,5 +40,15 @@ describe('TerminalPanel', () => {
 
     expect(spinner).toHaveAttribute('aria-hidden', 'true')
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+  })
+
+  it('closes from the panel button and from Escape', () => {
+    const onClose = vi.fn()
+    render(<TerminalPanel visible theme="paper" onClose={onClose} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close terminal' }))
+    fireEvent.keyDown(screen.getByRole('tablist', { name: 'Terminal' }), { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledTimes(2)
   })
 })

@@ -74,8 +74,10 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   onOpenTerminal: vi.fn(),
   onRebuildSearchIndex: vi.fn(),
   onChangeView: vi.fn(),
+  viewMode: 'wysiwyg',
   files: [{ path: 'notes/target.md', kind: 'file' }],
   workspaceIndex,
+  workspaceKey: 'external:/workspace',
   canCreateWorkspaceEntries: true,
   searchIndexRebuilding: false,
   isMaximized: false,
@@ -302,10 +304,15 @@ describe('Titlebar command palette', () => {
     await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }))
     await user.click(screen.getByRole('button', { name: 'Document outline' }))
     await user.click(screen.getByRole('button', { name: 'Search files...' }))
+    await user.click(screen.getByRole('button', { name: 'Source' }))
+    await user.click(screen.getByRole('button', { name: 'Workspace: notes' }))
+    await user.click(screen.getByRole('menuitem', { name: 'New Workspace' }))
 
     expect(props.onToggleSidebar).toHaveBeenCalledTimes(1)
     expect(props.onToggleRightSidebar).toHaveBeenCalledTimes(1)
     expect(props.onCommandOpenChange).toHaveBeenCalledWith(true)
+    expect(props.onChangeView).toHaveBeenCalledWith('source')
+    expect(props.onSelectProject).toHaveBeenCalledTimes(1)
   })
 
   it('localizes chrome-only controls', async () => {

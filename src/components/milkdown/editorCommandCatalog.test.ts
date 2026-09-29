@@ -21,7 +21,12 @@ describe('markdown editor command catalog', () => {
     expect(bindings['editor.quote']).toEqual(['Control+Shift+Q', 'Meta+Alt+Q'])
     expect(bindings['editor.bold']).toEqual(['Mod+B'])
     expect(bindings['editor.italic']).toEqual(['Mod+I'])
+    expect(bindings['editor.inlineCode']).toEqual(['Mod+Shift+`'])
+    expect(bindings['editor.strike']).toEqual(['Alt+Shift+5'])
     expect(bindings['editor.link']).toEqual(['Mod+K'])
+    expect(bindings['editor.orderedList']).toEqual(['Control+Shift+[', 'Meta+Alt+O'])
+    expect(bindings['editor.bulletList']).toEqual(['Control+Shift+]', 'Meta+Alt+U'])
+    expect(bindings['editor.table']).toEqual(['Control+T', 'Meta+Alt+T'])
     expect(bindings['editor.clearFormat']).toEqual(['Mod+\\'])
   })
 

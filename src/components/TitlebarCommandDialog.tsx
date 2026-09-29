@@ -48,6 +48,7 @@ type TitlebarCommandDialogProps = {
   searchIndexRebuilding: boolean
   knowledgeSummary: WorkspaceKnowledgeSummary
   collections: MarkdownCollectionSummary[]
+  workspaceKey: string
   dataReady?: boolean
 }
 
@@ -73,6 +74,7 @@ const TitlebarCommandDialog = ({
   indexedFileCount,
   searchIndexRebuilding,
   collections,
+  workspaceKey,
   dataReady = true,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
@@ -102,6 +104,7 @@ const TitlebarCommandDialog = ({
     open: contentReady && !actionsOnly && deferredTrimmedQuery.length >= 2,
     query: deferredTrimmedQuery,
     scope: deferredParsedSearch.scope,
+    workspaceKey,
   })
   const fullTextResults = fullTextSearch.fullTextResults
   const emptyQueryLabel =
@@ -170,15 +173,17 @@ const TitlebarCommandDialog = ({
         value={query}
         onValueChange={setQuery}
         placeholder={t('sidebar.search')}
+        className="h-14 text-[15px]"
       />
       {contentReady ? (
         <>
           <CommandSearchOverview
             actionsOnly={actionsOnly}
+            scope={parsedSearch.scope}
             onSelectScope={handleSelectQuery}
             onToggleActions={handleToggleActions}
           />
-          <CommandList>
+          <CommandList className="max-h-[min(62vh,520px)] scroll-py-2 px-1 pb-2">
             <CommandEmpty>
               <CommandEmptyState
                 title={emptyQueryLabel}

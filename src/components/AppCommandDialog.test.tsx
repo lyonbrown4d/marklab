@@ -69,7 +69,10 @@ describe('AppCommandDialog', () => {
         <div>Command content</div>
       </AppCommandDialog>,
     )
-    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Command palette' })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveClass('rounded-2xl')
+    expect(dialog).toHaveClass('border-border/70')
   })
 
   it('returns keyboard focus to the editor when dismissed without a DialogTrigger', async () => {

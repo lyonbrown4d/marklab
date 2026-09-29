@@ -120,8 +120,94 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   --crepe-shadow-2: 0 10px 24px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
 }
 
-.crepe-playground table td {
+.crepe-playground .milkdown.marklab-table-toolbar-host {
+  position: relative;
+}
+
+.crepe-playground .milkdown .ProseMirror table {
+  width: 100%;
+  margin-block: 1.5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: calc(var(--radius) + 2px);
+  background: hsl(var(--background));
+  box-shadow: 0 10px 30px -28px color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.crepe-playground .milkdown .ProseMirror table:hover,
+.crepe-playground .milkdown .ProseMirror table:focus-within {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 42%, hsl(var(--border)));
+  box-shadow: 0 14px 36px -28px color-mix(in srgb, hsl(var(--primary)) 50%, transparent);
+}
+
+.crepe-playground .milkdown .ProseMirror table th,
+.crepe-playground .milkdown .ProseMirror table td {
+  min-width: 6rem;
+  padding: 0.55rem 0.7rem;
   overflow: auto;
+  border-right: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
+  vertical-align: top;
+}
+
+.crepe-playground .milkdown .ProseMirror table th {
+  background: color-mix(in srgb, hsl(var(--muted)) 62%, hsl(var(--background)));
+  font-weight: 650;
+}
+
+.crepe-playground .milkdown .ProseMirror table tr:last-child > * {
+  border-bottom: 0;
+}
+
+.crepe-playground .milkdown .ProseMirror table tr > *:last-child {
+  border-right: 0;
+}
+
+.crepe-playground .milkdown .marklab-table-toolbar {
+  position: absolute;
+  z-index: 12;
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  width: max-content;
+  padding: 0.25rem;
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
+  border-radius: calc(var(--radius) - 2px);
+  background: color-mix(in srgb, hsl(var(--popover)) 94%, transparent);
+  box-shadow: 0 8px 24px -16px color-mix(in srgb, hsl(var(--foreground)) 44%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.crepe-playground .milkdown .marklab-table-toolbar[hidden] {
+  display: none;
+}
+
+.crepe-playground .milkdown .marklab-table-toolbar button {
+  min-width: 1.8rem;
+  min-height: 1.75rem;
+  padding-inline: 0.45rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font: 600 0.7rem/1 var(--crepe-font-default);
+  cursor: pointer;
+}
+
+.crepe-playground .milkdown .marklab-table-toolbar button:hover,
+.crepe-playground .milkdown .marklab-table-toolbar button:focus-visible {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  outline: none;
+}
+
+.crepe-playground .milkdown .marklab-table-toolbar button:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 58%, transparent);
 }
 
 .crepe-playground .cm-editor {
@@ -168,9 +254,34 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   line-height: 1.9;
 }
 
+.crepe-playground.is-typewriter-editor .milkdown .ProseMirror {
+  scroll-padding-block: 22vh 34vh;
+}
+
+.crepe-playground.is-focus-editor
+  .milkdown
+  .ProseMirror:has(.marklab-md-block:focus-within)
+  .marklab-md-block:not(:focus-within):not(:hover):not([data-selected='true']) {
+  opacity: 0.64;
+}
+
+.crepe-playground.is-focus-editor .milkdown .marklab-md-block:focus-within,
+.crepe-playground.is-focus-editor .milkdown .marklab-md-block[data-selected='true'] {
+  opacity: 1;
+}
+
 @media (max-width: 720px) {
   .crepe.crepe-playground > .milkdown > .ProseMirror {
     padding: 2.5rem 1.25rem 5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crepe-playground .milkdown .ProseMirror table,
+  .crepe-playground .milkdown .marklab-table-toolbar,
+  .crepe-playground .milkdown .marklab-table-toolbar button {
+    scroll-behavior: auto;
+    transition: none;
   }
 }
 

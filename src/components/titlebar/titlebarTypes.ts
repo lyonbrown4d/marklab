@@ -55,8 +55,10 @@ export type TitlebarProps = {
   onOpenTerminal: () => void
   onRebuildSearchIndex: () => void
   onChangeView: (mode: ViewMode) => void
+  viewMode: ViewMode
   files: FileEntry[]
   workspaceIndex: FsWorkspaceIndex | null
+  workspaceKey: string
   canCreateWorkspaceEntries: boolean
   searchIndexRebuilding: boolean
   isMaximized: boolean

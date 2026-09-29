@@ -6,6 +6,7 @@ import type { AppPlatform } from '@/services/appApi'
 import { requestMenuAction } from '@/utils/appEvents'
 
 export type AppWindowOpenResult = {
+  cancelled?: boolean
   ok: boolean
   windowId?: number
   requestedPath?: string
@@ -13,6 +14,12 @@ export type AppWindowOpenResult = {
   rootKind?: 'internal' | 'external' | 'single'
   sharedWorkspaceSession: boolean
   error?: string
+  startup?: {
+    constructorCallsAvoided: 0 | 1
+    openingShellLoadsAvoided: 0 | 1
+    preparationDurationMs: number
+    source: 'cold' | 'pool'
+  }
 }
 const normalizePlatform = (raw: string): AppPlatform => {
   if (raw === 'windows' || raw === 'linux' || raw === 'macos') return raw
@@ -73,4 +80,12 @@ export const openPathInNewWindow = async (path: string): Promise<AppWindowOpenRe
     )
   }
   return invoke<AppWindowOpenResult>('open_path_in_new_window', { path })
+}
+export const selectWorkspaceInNewWindow = async (title?: string): Promise<AppWindowOpenResult> => {
+  const electron = getElectronRuntime()
+  if (!electron) return unavailableWindowOpenResult('Electron runtime API is unavailable.')
+  const selected = await electron.dialog.open({ directory: true, title })
+  const path = Array.isArray(selected) ? selected[0] : selected
+  if (!path) return { cancelled: true, ok: false, sharedWorkspaceSession: false }
+  return openPathInNewWindow(path)
 }

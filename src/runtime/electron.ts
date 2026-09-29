@@ -1,4 +1,5 @@
 import type { AssetApi, WorkspaceLifecycleApi, WorkspaceSessionApi } from '@/types/workspaceSession'
+import type { WindowOpeningProgress, WindowOpeningRetryResult } from '@/types/windowOpening'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -151,6 +152,10 @@ export type RendererSafeElectronApi = {
   menu: {
     dispatch: (id: string) => Promise<{ ok: boolean }>
     onCommand: (handler: (id: string) => void) => () => void
+  }
+  opening: {
+    onProgress: (handler: (progress: WindowOpeningProgress) => void) => () => void
+    retry: () => Promise<WindowOpeningRetryResult>
   }
   dialog: {
     open: (options?: ElectronOpenDialogOptions) => Promise<string | string[] | null>

@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
 import { configureMonaco } from '@/lib/monaco'
 
+const sourceShortcutMock = vi.hoisted(() => ({
+  dispose: vi.fn(),
+  register: vi.fn(() => ({ dispose: sourceShortcutMock.dispose })),
+}))
+
 type CompletionProviderMock = {
   provideCompletionItems: (
     model: { getValue: () => string; getVersionId: () => number; isDisposed: () => boolean },
@@ -87,6 +92,10 @@ vi.mock('@/lib/monaco', () => ({
   configureMonaco: vi.fn(),
 }))
 
+vi.mock('@/components/markdownSourceShortcuts', () => ({
+  registerMarkdownSourceShortcuts: sourceShortcutMock.register,
+}))
+
 vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
 vi.mock('@/store/usePreferencesStore', () => ({ usePreferencesStore: () => false }))
 
@@ -154,9 +163,29 @@ beforeEach(() => {
   monaco.languages.registerCompletionItemProvider.mockClear()
   monaco.languages.registerDocumentSymbolProvider.mockClear()
   monaco.editor.setModelMarkers.mockClear()
+  sourceShortcutMock.dispose.mockClear()
+  sourceShortcutMock.register.mockClear()
 })
 
 describe('MarkdownSourceEditor', () => {
+  it('registers the shared configurable formatting shortcuts with Monaco', async () => {
+    render(
+      <MarkdownSourceEditor
+        activePath="notes/current.md"
+        value="Alpha"
+        files={[]}
+        fileContents={{}}
+        onChange={vi.fn()}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(sourceShortcutMock.register).toHaveBeenCalledWith(
+        expect.objectContaining({ editor: monacoEditor }),
+      ),
+    )
+  })
+
   it('registers workspace-aware markdown completions', async () => {
     render(
       <MarkdownSourceEditor

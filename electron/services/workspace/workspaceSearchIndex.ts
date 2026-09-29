@@ -4,12 +4,18 @@ import path from 'node:path'
 import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type {
+  KnowledgeSearchOptions,
+  KnowledgeSearchResultSet,
+} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
 
 const MAX_SEARCH_LIMIT = 100
 
 export type { WorkspaceSearchDocument }
 
 export type WorkspaceSearchIndexBackend = {
+  applySearchChanges: (workspaceId: string, batch: WorkspaceSearchMutationBatch) => Promise<void>
   close: (workspaceId: string) => Promise<void>
   hasDocuments: (workspaceId: string) => Promise<boolean>
   open: (workspaceId: string, indexPath: string) => Promise<void>
@@ -17,6 +23,11 @@ export type WorkspaceSearchIndexBackend = {
   removeDocument: (workspaceId: string, path: string) => Promise<void>
   removePathPrefix: (workspaceId: string, prefix: string) => Promise<void>
   search: (workspaceId: string, query: string, limit: number) => Promise<FsSearchResult[]>
+  searchWithOptions?: (
+    workspaceId: string,
+    query: string,
+    options: KnowledgeSearchOptions,
+  ) => Promise<KnowledgeSearchResultSet>
   upsertDocument: (workspaceId: string, document: WorkspaceSearchDocument) => Promise<void>
 }
 
@@ -60,6 +71,14 @@ export class WorkspaceSearchIndex {
     await this.backend.upsertDocument(this.requireWorkspaceId(), document)
   }
 
+  async applySearchChanges(batch: WorkspaceSearchMutationBatch): Promise<void> {
+    const indexable = batch.upserts.filter((document) => isSearchIndexablePath(document.path))
+    await this.backend.applySearchChanges(this.requireWorkspaceId(), {
+      ...batch,
+      upserts: indexable,
+    })
+  }
+
   async removeDocument(pathValue: string): Promise<void> {
     await this.backend.removeDocument(this.requireWorkspaceId(), pathValue)
   }
@@ -74,6 +93,18 @@ export class WorkspaceSearchIndex {
     return this.backend.search(this.requireWorkspaceId(), query, finalLimit)
   }
 
+  async searchWithOptions(
+    query: string,
+    options: KnowledgeSearchOptions,
+  ): Promise<KnowledgeSearchResultSet> {
+    if (!query.trim()) return { results: [], totalHits: 0 }
+    if (this.backend.searchWithOptions) {
+      return this.backend.searchWithOptions(this.requireWorkspaceId(), query, options)
+    }
+    const results = await this.search(query, options.limit ?? 20)
+    return { results, totalHits: results.length }
+  }
+
   private requireWorkspaceId(): string {
     if (!this.workspaceId) throw new Error('Workspace search index is not opened.')
     return this.workspaceId
@@ -81,6 +112,9 @@ export class WorkspaceSearchIndex {
 }
 
 const createUnavailableBackend = (): WorkspaceSearchIndexBackend => ({
+  applySearchChanges: async () => {
+    throw new Error('Workspace search backend is not configured.')
+  },
   close: async () => undefined,
   hasDocuments: async () => {
     throw new Error('Workspace search backend is not configured.')

@@ -1,34 +1,36 @@
-import { BrowserWindow } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+
+import { BrowserWindow } from 'electron'
+
+import { nativeIpcChannels } from '@electron/channels.js'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
 import type { MenuActionDispatcher } from '@electron/menu.js'
 import type { Logger } from '@electron/services/logger.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import type { FsRootInfo } from '@electron/services/workspace/types.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { WindowOpeningProgress } from '@/types/windowOpening'
 import { showWindowWithMotion } from '@electron/windowMotion.js'
-import type { MarklabWindowPool } from '@electron/windowPool.js'
-
-type AppWindowOpenResult = {
-  ok: boolean
-  windowId?: number
-  requestedPath?: string
-  workspacePath?: string
-  rootKind?: FsRootInfo['kind']
-  sharedWorkspaceSession: boolean
-  error?: string
-}
-
-type PathOpenTarget = {
-  path: string
-  kind: 'directory' | 'file'
-}
+import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool.js'
 
 type WorkspaceSessionSeed = {
   state?: Record<string, unknown>
   version?: number
 }
+
+export type AppWindowOpenResult = {
+  error?: string
+  ok: boolean
+  requestedPath?: string
+  rootKind?: FsRootInfo['kind']
+  sharedWorkspaceSession: false
+  startup?: WindowPoolAcquisition['metrics'] & { source: WindowPoolAcquisition['source'] }
+  windowId?: number
+  workspacePath?: string
+}
+
+type PathOpenTarget = { kind: 'directory' | 'file'; path: string }
 
 type AppWindowCommandDependencies = {
   copyWorkspaceSession: (
@@ -36,7 +38,7 @@ type AppWindowCommandDependencies = {
     targetSessionKey: string,
     overrides?: Record<string, unknown>,
   ) => WorkspaceSessionSeed | null
-  getCurrentWorkspaceRoot: () => FsRootInfo
+  getCurrentWorkspaceRoot: (source?: BrowserWindow | null) => FsRootInfo
   getLogger: () => Logger
   getNativeIpc: () => NativeIpcRegistration | null
   getPrimaryWindow: () => BrowserWindow | null
@@ -50,29 +52,24 @@ type AppWindowCommandDependencies = {
   ) => WorkspaceSessionSeed
 }
 
-const WORKSPACE_SESSION_SEED_EVENT = 'workspace-session-seed'
+type OpenWindowRequest = {
+  createSeed: (target: BrowserWindow, root: FsRootInfo) => WorkspaceSessionSeed | null
+  initializeWorkspace: (workspace: WorkspaceService) => Promise<FsRootInfo>
+  reason: string
+  requestedPath: string
+}
 
-const openPooledMainWindow = async (
-  dependencies: AppWindowCommandDependencies,
-  reason: string,
-  requestedPath: string | undefined,
-  initializeWorkspace: (main: BrowserWindow) => Promise<FsRootInfo>,
-): Promise<{ main: BrowserWindow; root: FsRootInfo }> => {
-  const logger = dependencies.getLogger()
-  const main = await dependencies.getWindowPool().acquireMainWindow()
-  dependencies.installManagedMainWindowLifecycle(main, logger)
-  const root = await initializeWorkspace(main)
-  if (main.isMinimized()) main.restore()
-  showWindowWithMotion(main, { focus: true })
-  logger.info('main window opened from pool', {
-    reason,
-    requestedPath,
-    rootKind: root.kind,
-    workspacePath: root.path,
-    windowId: main.id,
-    windowPool: dependencies.getWindowPool().stats(),
-  })
-  return { main, root }
+const failure = (error: unknown, requestedPath?: string): AppWindowOpenResult => ({
+  error: error instanceof Error ? error.message : String(error),
+  ok: false,
+  requestedPath,
+  sharedWorkspaceSession: false,
+})
+
+const sendOpeningProgress = (window: BrowserWindow, progress: WindowOpeningProgress): void => {
+  if (!window.webContents.isDestroyed()) {
+    window.webContents.send(nativeIpcChannels.windowOpeningProgress, progress)
+  }
 }
 
 const sendWorkspaceSessionSeed = (
@@ -82,54 +79,21 @@ const sendWorkspaceSessionSeed = (
   if (!seed || window.webContents.isDestroyed()) return
   const send = () => {
     if (!window.webContents.isDestroyed()) {
-      window.webContents.send(WORKSPACE_SESSION_SEED_EVENT, seed)
+      window.webContents.send(nativeIpcChannels.workspaceSessionSeed, seed)
+      window.webContents.send('workspace-session-seed', seed)
     }
   }
   send()
   setTimeout(send, 250)
 }
 
-const setWorkspaceRoot = (
+const setWorkspaceRoot = async (
   workspace: WorkspaceService,
   root: FsRootInfo,
-): Promise<FsRootInfo> | FsRootInfo => {
+): Promise<FsRootInfo> => {
   if (root.kind === 'single') return workspace.setSingleFile({ path: root.path })
   if (root.kind === 'external') return workspace.setRoot({ path: root.path })
   return workspace.setRoot(null)
-}
-
-const openCurrentWorkspaceInNewWindow = async (
-  dependencies: AppWindowCommandDependencies,
-  reason: string,
-): Promise<AppWindowOpenResult> => {
-  const root = dependencies.getCurrentWorkspaceRoot()
-  const sourceWindow = BrowserWindow.getFocusedWindow() ?? dependencies.getPrimaryWindow()
-  const { main } = await openPooledMainWindow(dependencies, reason, root.path, (window) =>
-    Promise.resolve(setWorkspaceRoot(dependencies.getWorkspaceServiceForWindow(window), root)),
-  )
-  const targetSessionKey = dependencies.getSessionKeyForWindow(main)
-  const seed = sourceWindow
-    ? dependencies.copyWorkspaceSession(
-        dependencies.getSessionKeyForWindow(sourceWindow),
-        targetSessionKey,
-        {
-          rootKind: root.kind,
-          rootPath: root.path,
-        },
-      )
-    : dependencies.writeWorkspaceSession(targetSessionKey, {
-        rootKind: root.kind,
-        rootPath: root.path,
-      })
-  sendWorkspaceSessionSeed(main, seed)
-  return {
-    ok: true,
-    windowId: main.id,
-    requestedPath: root.path,
-    workspacePath: root.path,
-    rootKind: root.kind,
-    sharedWorkspaceSession: false,
-  }
 }
 
 const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarget> => {
@@ -150,63 +114,164 @@ const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarget> => {
 const setWorkspaceTarget = async (
   workspace: WorkspaceService,
   target: PathOpenTarget,
-): Promise<FsRootInfo> => {
-  if (target.kind === 'directory') return workspace.setRoot({ path: target.path })
-  return workspace.setSingleFile({ path: target.path })
-}
+): Promise<FsRootInfo> =>
+  target.kind === 'directory'
+    ? workspace.setRoot({ path: target.path })
+    : workspace.setSingleFile({ path: target.path })
 
-const openPathInNewWindow = async (
-  dependencies: AppWindowCommandDependencies,
-  value: unknown,
-  reason: string,
-): Promise<AppWindowOpenResult> => {
-  const target = await parsePathOpenTarget(value)
-  const { main, root } = await openPooledMainWindow(dependencies, reason, target.path, (window) =>
-    setWorkspaceTarget(dependencies.getWorkspaceServiceForWindow(window), target),
-  )
-  sendWorkspaceSessionSeed(
-    main,
-    dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(main), {
-      activeTabId: null,
-      rootKind: root.kind,
-      rootPath: root.path,
-      tabs: [],
-    }),
-  )
-  return {
-    ok: true,
-    windowId: main.id,
-    requestedPath: target.path,
-    workspacePath: root.path,
-    rootKind: root.kind,
-    sharedWorkspaceSession: false,
-  }
-}
+const sourceWindowForEvent = (
+  event: Electron.IpcMainInvokeEvent | null,
+  primary: BrowserWindow | null,
+): BrowserWindow | null =>
+  (event ? BrowserWindow.fromWebContents(event.sender) : null) ??
+  BrowserWindow.getFocusedWindow() ??
+  primary
 
 export const createAppWindowCommandHandlers = (
   dependencies: AppWindowCommandDependencies,
 ): NativeCommandHandlers => {
+  const retries = new Map<number, () => Promise<AppWindowOpenResult>>()
+
+  const openWindow = async (request: OpenWindowRequest): Promise<AppWindowOpenResult> => {
+    const logger = dependencies.getLogger()
+    let acquisition: WindowPoolAcquisition
+    try {
+      acquisition = await dependencies.getWindowPool().acquireMainWindow()
+    } catch (error) {
+      return failure(error, request.requestedPath)
+    }
+    const main = acquisition.window
+    dependencies.installManagedMainWindowLifecycle(main, logger)
+    if (main.isMinimized()) main.restore()
+    showWindowWithMotion(main, { focus: true })
+
+    const runAttempt = async (retry: boolean): Promise<AppWindowOpenResult> => {
+      try {
+        if (retry) await dependencies.getWindowPool().restoreOpeningWindow(acquisition)
+        sendOpeningProgress(main, {
+          stage: 'starting',
+          workspacePath: request.requestedPath,
+        })
+        sendOpeningProgress(main, { stage: 'loading', workspacePath: request.requestedPath })
+        const workspace = dependencies.getWorkspaceServiceForWindow(main)
+        const root = await request.initializeWorkspace(workspace)
+        const seed = request.createSeed(main, root)
+        sendOpeningProgress(main, { stage: 'indexing', workspacePath: root.path })
+        await dependencies.getWindowPool().activateMainWindow(acquisition)
+        sendWorkspaceSessionSeed(main, seed)
+        if (main.isMinimized()) main.restore()
+        showWindowWithMotion(main, { focus: true })
+        retries.delete(main.id)
+        void dependencies
+          .getWindowPool()
+          .prewarmMainWindow()
+          .catch((error) => logger.warn('unable to replenish window pool', { error }))
+        logger.info('workspace window opened', {
+          reason: request.reason,
+          requestedPath: request.requestedPath,
+          startup: { source: acquisition.source, ...acquisition.metrics },
+          windowId: main.id,
+          windowPool: dependencies.getWindowPool().stats(),
+        })
+        return {
+          ok: true,
+          requestedPath: request.requestedPath,
+          rootKind: root.kind,
+          sharedWorkspaceSession: false,
+          startup: { source: acquisition.source, ...acquisition.metrics },
+          windowId: main.id,
+          workspacePath: root.path,
+        }
+      } catch (error) {
+        const result = failure(error, request.requestedPath)
+        sendOpeningProgress(main, {
+          error: result.error,
+          stage: 'failed',
+          workspacePath: request.requestedPath,
+        })
+        retries.set(main.id, () => runAttempt(true))
+        logger.error('workspace window open failed', {
+          error,
+          reason: request.reason,
+          windowId: main.id,
+        })
+        return result
+      }
+    }
+
+    main.once('closed', () => retries.delete(main.id))
+    return runAttempt(false)
+  }
+
+  const openCurrent = async (
+    event: Electron.IpcMainInvokeEvent | null,
+    reason: string,
+  ): Promise<AppWindowOpenResult> => {
+    try {
+      const source = sourceWindowForEvent(event, dependencies.getPrimaryWindow())
+      const root = dependencies.getCurrentWorkspaceRoot(source)
+      return openWindow({
+        createSeed: (target) =>
+          source
+            ? dependencies.copyWorkspaceSession(
+                dependencies.getSessionKeyForWindow(source),
+                dependencies.getSessionKeyForWindow(target),
+                { rootKind: root.kind, rootPath: root.path },
+              )
+            : dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(target), {
+                rootKind: root.kind,
+                rootPath: root.path,
+              }),
+        initializeWorkspace: (workspace) => setWorkspaceRoot(workspace, root),
+        reason,
+        requestedPath: root.path,
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  const openPath = async (value: unknown, reason: string): Promise<AppWindowOpenResult> => {
+    try {
+      const target = await parsePathOpenTarget(value)
+      return openWindow({
+        createSeed: (window, root) =>
+          dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(window), {
+            activeTabId: null,
+            rootKind: root.kind,
+            rootPath: root.path,
+            tabs: [],
+          }),
+        initializeWorkspace: (workspace) => setWorkspaceTarget(workspace, target),
+        reason,
+        requestedPath: target.path,
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
   return {
-    open_current_workspace_in_new_window: () =>
-      openCurrentWorkspaceInNewWindow(dependencies, 'open_current_workspace_in_new_window'),
-    open_path_in_new_window: (payload) =>
-      openPathInNewWindow(dependencies, payload, 'open_path_in_new_window'),
+    open_current_workspace_in_new_window: (_payload, event) =>
+      openCurrent(event, 'open_current_workspace_in_new_window'),
+    open_path_in_new_window: (payload) => openPath(payload, 'open_path_in_new_window'),
+    retry_window_open: (_payload, event) => {
+      const target = BrowserWindow.fromWebContents(event.sender)
+      const retry = target ? retries.get(target.id) : null
+      return retry?.() ?? failure('No failed workspace open is available to retry.')
+    },
   }
 }
 
 export const createNativeMenuActionDispatcher = (
   dependencies: AppWindowCommandDependencies,
+  handlers: NativeCommandHandlers = createAppWindowCommandHandlers(dependencies),
 ): MenuActionDispatcher => {
   return (id) => {
     if (id === 'window.open_current_workspace_in_new_window') {
-      void openCurrentWorkspaceInNewWindow(dependencies, 'menu').catch((error) => {
-        dependencies.getLogger().error('failed to open current workspace in new window', {
-          error,
-        })
-      })
+      void handlers.open_current_workspace_in_new_window(undefined, null as never)
       return
     }
-
     const target = BrowserWindow.getFocusedWindow() ?? dependencies.getPrimaryWindow()
     const nativeIpc = dependencies.getNativeIpc()
     if (target && nativeIpc?.menu.dispatchToWindow(target, id)) return

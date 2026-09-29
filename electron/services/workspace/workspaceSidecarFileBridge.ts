@@ -6,6 +6,7 @@ import { fileLabel } from '@electron/services/workspace/markdown.js'
 import type { Logger } from '@electron/services/logger.js'
 import type {
   FsGraph,
+  FsMarkdownDiagnostic,
   FsPathMetadata,
   FsRootInfo,
   FsSnapshot,
@@ -35,6 +36,15 @@ type WorkspaceSidecarGraphService = KnowledgeEngineService & {
     path: string,
     content: string,
   ) => Promise<FsGraph>
+}
+type WorkspaceSidecarDiagnosticsService = KnowledgeEngineService & {
+  getMarkdownDiagnostics?: (
+    workspaceId: string,
+    workspaceRoot: string,
+    path: string,
+    content: string,
+    signal?: AbortSignal,
+  ) => Promise<FsMarkdownDiagnostic[]>
 }
 type WorkspaceSidecarWriteService = KnowledgeEngineService & {
   writeWorkspaceFile?: (
@@ -180,6 +190,66 @@ export const trySidecarOutlineGraph = async (
     throw error
   }
 }
+
+export const trySidecarMarkdownDiagnostics = async (
+  options: SidecarPathOptions & { content: string; timeoutMs?: number },
+): Promise<FsMarkdownDiagnostic[]> => {
+  const runtime = sidecarRuntime(options)
+  const getMarkdownDiagnostics = (
+    options.knowledgeEngineService as WorkspaceSidecarDiagnosticsService | undefined
+  )?.getMarkdownDiagnostics
+  if (!runtime || typeof getMarkdownDiagnostics !== 'function') return []
+  const controller = new AbortController()
+  try {
+    return await withTimeout(
+      getMarkdownDiagnostics.call(
+        options.knowledgeEngineService,
+        runtime.workspaceId,
+        runtime.workspaceRoot,
+        options.path,
+        options.content,
+        controller.signal,
+      ),
+      options.timeoutMs ?? 1_500,
+      () => controller.abort(),
+    )
+  } catch (error) {
+    options.logger.warn('markdown diagnostics sidecar failed; using local diagnostics', {
+      error,
+      path: options.path,
+    })
+    return []
+  }
+}
+
+const withTimeout = <T>(
+  request: Promise<T>,
+  timeoutMs: number,
+  onTimeout: () => void,
+): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    let settled = false
+    const settle = (action: () => void): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      action()
+    }
+    const timer = setTimeout(
+      () => {
+        onTimeout()
+        const error = new Error(`Markdown diagnostics sidecar timed out after ${timeoutMs}ms`)
+        error.name = 'TimeoutError'
+        settle(() => reject(error))
+      },
+      Math.max(0, timeoutMs),
+    )
+
+    request.then(
+      (value) => settle(() => resolve(value)),
+      (error: unknown) => settle(() => reject(error)),
+    )
+  })
 export const trySidecarPathMutation = async (
   options: SidecarPathOptions & {
     mutate: (

@@ -13,6 +13,7 @@ import {
   captureSlashUrlInsertion,
   type SlashUrlInsertionRequest,
 } from '@/components/milkdown/slashUrlInsertion'
+import { remarkImageTitleCompatibility } from '@/components/milkdown/markdownImageTitleCompatibility'
 import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
 import { slashMenuTestLabels as labels } from '@/components/milkdown/slashMenuConfigTestFixtures'
 
@@ -28,6 +29,7 @@ describe('slash URL insertion with the native Markdown schema', () => {
         ctx.set(defaultValueCtx, 'Before /link after\n\nOther paragraph')
       })
       .use(commonmark)
+      .use(remarkImageTitleCompatibility)
       .create()
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)

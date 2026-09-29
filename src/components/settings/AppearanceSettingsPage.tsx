@@ -1,17 +1,16 @@
-import { Check, Languages, Palette } from 'lucide-react'
+import { Check, Languages, Monitor, Moon, Palette, Sun } from 'lucide-react'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
   SettingsFieldGroup,
   SettingsPageStack,
   SettingsSection,
-  SettingsSwitchField,
   SettingsSubsection,
 } from '@/components/settings/SettingsRow'
 import CustomThemesSettingsSection from '@/components/settings/CustomThemesSettingsSection'
 import { useI18n } from '@/i18n/useI18n'
 import type { Locale } from '@/i18n/resources'
-import { darkThemes, lightThemes } from '@/logic/themes'
+import { darkThemes, isDarkThemeMode, lightThemes } from '@/logic/themes'
 import { cn } from '@/lib/utils'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
@@ -23,11 +22,10 @@ const locales: Array<{ value: Locale; labelKey: string }> = [
 const AppearanceSettingsPage = () => {
   const { t, locale, setLocale } = useI18n()
   const themeMode = usePreferencesStore((state) => state.themeMode)
-  const autoSystemThemeSync = usePreferencesStore((state) => state.autoSystemThemeSync)
+  const theme = usePreferencesStore((state) => state.theme)
   const lightTheme = usePreferencesStore((state) => state.lightTheme)
   const darkTheme = usePreferencesStore((state) => state.darkTheme)
   const setThemeMode = usePreferencesStore((state) => state.setThemeMode)
-  const setAutoSystemThemeSync = usePreferencesStore((state) => state.setAutoSystemThemeSync)
   const setLightTheme = usePreferencesStore((state) => state.setLightTheme)
   const setDarkTheme = usePreferencesStore((state) => state.setDarkTheme)
 
@@ -40,24 +38,32 @@ const AppearanceSettingsPage = () => {
         surface={false}
       >
         <SettingsFieldGroup className="gap-4">
-          <SettingsChoiceGrid columns={2} aria-label={t('menu.theme')}>
-            {(['system', 'light', 'dark'] as const).map((mode) => (
+          <SettingsChoiceGrid columns={3} aria-label={t('menu.theme')}>
+            {(
+              [
+                ['system', Monitor],
+                ['light', Sun],
+                ['dark', Moon],
+              ] as const
+            ).map(([mode, Icon]) => (
               <SettingsChoiceButton
                 key={mode}
                 selected={themeMode === mode}
+                className="gap-2"
                 onClick={() => setThemeMode(mode)}
               >
+                <Icon aria-hidden="true" className="size-4" />
                 {t(`themeMode.${mode}`)}
               </SettingsChoiceButton>
             ))}
           </SettingsChoiceGrid>
-
-          <SettingsSwitchField
-            title={t('settings.autoSystemThemeSync')}
-            description={t('settings.autoSystemThemeSyncDescription')}
-            checked={autoSystemThemeSync}
-            onCheckedChange={setAutoSystemThemeSync}
-          />
+          {themeMode === 'system' && (
+            <p aria-live="polite" role="status" className="text-xs text-muted-foreground">
+              {t('settings.systemThemeCurrent', {
+                mode: t(isDarkThemeMode(theme) ? 'themeMode.dark' : 'themeMode.light'),
+              })}
+            </p>
+          )}
 
           <SettingsSubsection title={t('settings.lightTheme')}>
             <SettingsChoiceGrid columns={2} aria-label={t('settings.lightTheme')}>

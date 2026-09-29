@@ -89,6 +89,24 @@ export const diagnosticsForFile = (
   return diagnostics
 }
 
+export const mergeMarkdownDiagnostics = (
+  primary: FsMarkdownDiagnostic[],
+  supplemental: FsMarkdownDiagnostic[],
+): FsMarkdownDiagnostic[] => {
+  const unique = new Map<string, FsMarkdownDiagnostic>()
+  for (const diagnostic of [...primary, ...supplemental]) {
+    const key = [
+      diagnostic.line,
+      diagnostic.start_column,
+      diagnostic.end_column,
+      diagnostic.severity,
+      diagnostic.message,
+    ].join('\u0000')
+    unique.set(key, diagnostic)
+  }
+  return [...unique.values()].sort(compareDiagnostics)
+}
+
 const duplicateHeadingDiagnostics = (
   file: FsWorkspaceIndex['files'][number],
 ): FsMarkdownDiagnostic[] => {
@@ -143,3 +161,10 @@ const findPathIgnoringCase = (paths: Iterable<string>, targetPath: string): stri
   }
   return null
 }
+
+const compareDiagnostics = (left: FsMarkdownDiagnostic, right: FsMarkdownDiagnostic): number =>
+  left.line - right.line ||
+  left.start_column - right.start_column ||
+  left.end_column - right.end_column ||
+  left.severity.localeCompare(right.severity) ||
+  left.message.localeCompare(right.message)

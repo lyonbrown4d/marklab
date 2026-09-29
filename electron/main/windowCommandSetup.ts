@@ -43,8 +43,8 @@ export const createWindowCommandSetup = ({
         targetSessionKey,
         overrides,
       ),
-    getCurrentWorkspaceRoot: () => {
-      const window = BrowserWindow.getFocusedWindow() ?? getPrimaryWindow()
+    getCurrentWorkspaceRoot: (sourceWindow?: BrowserWindow | null) => {
+      const window = sourceWindow ?? BrowserWindow.getFocusedWindow() ?? getPrimaryWindow()
       if (!window || window.isDestroyed()) {
         throw new Error('No active workspace window is available')
       }
@@ -67,7 +67,7 @@ export const createWindowCommandSetup = ({
 
   return {
     commandHandlers,
-    dispatchMenuAction: createNativeMenuActionDispatcher(dependencies),
+    dispatchMenuAction: createNativeMenuActionDispatcher(dependencies, commandHandlers),
     openPathInNewWindow: (path: string) =>
       Promise.resolve(commandHandlers.open_path_in_new_window({ path }, null as never)),
   }

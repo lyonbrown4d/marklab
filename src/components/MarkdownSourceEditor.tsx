@@ -22,6 +22,8 @@ import { registerMarkdownSourceProviders } from '@/components/markdownSourceProv
 import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
 import { useI18n } from '@/i18n/useI18n'
 import { clearFocusedCodeEditor, setFocusedCodeEditor } from '@/lib/focusedCodeEditor'
+import { registerMarkdownSourceShortcuts } from '@/components/markdownSourceShortcuts'
+import { markdownEditorPerformancePolicy } from '@/components/markdownEditorPerformance'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -34,7 +36,6 @@ type MarkdownSourceEditorProps = {
   onCursorChange?: (position: EditorCursorPosition | null) => void
 }
 
-const SOURCE_DIAGNOSTICS_MAX_CHARS = 500_000
 const SOURCE_DIAGNOSTICS_DEBOUNCE_MS = 120
 
 type MarkdownSourceDiagnostics = Array<
@@ -69,6 +70,7 @@ const MarkdownSourceEditor = ({
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
+  const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const [monacoReady, setMonacoReady] = useState(false)
   const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
@@ -79,6 +81,7 @@ const MarkdownSourceEditor = ({
     monaco: typeof import('monaco-editor')
   } | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const shortcutsDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticsRequestStreamRef = useRef(new ReplaySubject<MarkdownSourceDiagnosticsRequest>(1))
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const searchHighlightTimerRef = useRef<number | null>(null)
@@ -139,7 +142,7 @@ const MarkdownSourceEditor = ({
       .pipe(
         debounceTime(SOURCE_DIAGNOSTICS_DEBOUNCE_MS),
         switchMap(({ content, context }) => {
-          if (content.length > SOURCE_DIAGNOSTICS_MAX_CHARS)
+          if (markdownEditorPerformancePolicy(content.length).diagnostics === 'disabled')
             return of<MarkdownSourceDiagnostics>([])
 
           if (isDesktopRuntime() && context.activePath) {
@@ -198,6 +201,11 @@ const MarkdownSourceEditor = ({
       onOpenFileView,
       scheduleDiagnostics,
     })
+    shortcutsDisposableRef.current?.dispose()
+    shortcutsDisposableRef.current = registerMarkdownSourceShortcuts({
+      editor,
+      overrides: shortcutOverrides,
+    })
 
     scheduleDiagnostics()
     const pending = pendingSourcePositionRef.current
@@ -209,10 +217,22 @@ const MarkdownSourceEditor = ({
   }, [activePath, onCursorChange])
 
   useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    shortcutsDisposableRef.current?.dispose()
+    shortcutsDisposableRef.current = registerMarkdownSourceShortcuts({
+      editor,
+      overrides: shortcutOverrides,
+    })
+  }, [shortcutOverrides])
+
+  useEffect(() => {
     return () => {
       cursorSubscriptionRef.current?.dispose()
       providersDisposableRef.current?.dispose()
       providersDisposableRef.current = null
+      shortcutsDisposableRef.current?.dispose()
+      shortcutsDisposableRef.current = null
       if (searchHighlightTimerRef.current !== null) {
         window.clearTimeout(searchHighlightTimerRef.current)
         searchHighlightTimerRef.current = null

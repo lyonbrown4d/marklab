@@ -9,13 +9,13 @@ import TurboConsole from 'unplugin-turbo-console/vite'
 import { compression, defineAlgorithm } from 'vite-plugin-compression2'
 import { visualizer } from 'rollup-plugin-visualizer'
 // eslint-disable-next-line no-restricted-imports -- Root Vite helpers are outside renderer aliases.
-import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development'
+import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development.ts'
 // eslint-disable-next-line no-restricted-imports -- Vite config helpers live at repository root before app aliases are available.
 import {
   electronMainExternal,
   electronMainManualChunks,
   electronMainRequireBanner,
-} from './vite.electron'
+} from './vite.electron.ts'
 
 const isNodeModule = (id: string) => id.includes('/node_modules/')
 
@@ -26,20 +26,24 @@ const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
 const isEnabled = (value: string | undefined) => value === '1' || value === 'true'
 
 const alias = {
-  '@': path.resolve(__dirname, 'src'),
-  '@electron': path.resolve(__dirname, 'electron'),
+  '@': path.resolve(import.meta.dirname, 'src'),
+  '@electron': path.resolve(import.meta.dirname, 'electron'),
 }
 
 const electronMainEntry = {
-  knowledgeSidecarEntry: path.resolve(__dirname, 'electron/sidecar/knowledgeSidecarEntry.ts'),
-  main: path.resolve(__dirname, 'electron/main.ts'),
+  knowledgeSidecarEntry: path.resolve(
+    import.meta.dirname,
+    'electron/sidecar/knowledgeSidecarEntry.ts',
+  ),
+  main: path.resolve(import.meta.dirname, 'electron/main.ts'),
+  marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
   workspaceAnalysisWorkerEntry: path.resolve(
-    __dirname,
+    import.meta.dirname,
     'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
   ),
 }
-const distKatexFontsDir = path.resolve(__dirname, 'dist/fonts')
-const distElectronDir = path.resolve(__dirname, 'dist-electron')
+const distKatexFontsDir = path.resolve(import.meta.dirname, 'dist/fonts')
+const distElectronDir = path.resolve(import.meta.dirname, 'dist-electron')
 const distDesignPreviewAssets = [
   'logo-preview.html',
   'marklab-logo-direction-1.svg',
@@ -50,10 +54,10 @@ const DEFAULT_DEV_SERVER_PORT = 5173
 const DEFAULT_DEV_SERVER_HOST = '127.0.0.1'
 
 const resolveKatexFontsDir = (): string | null => {
-  const hoistedFontsDir = path.resolve(__dirname, 'node_modules/katex/dist/fonts')
+  const hoistedFontsDir = path.resolve(import.meta.dirname, 'node_modules/katex/dist/fonts')
   if (existsSync(hoistedFontsDir)) return hoistedFontsDir
 
-  const pnpmDir = path.resolve(__dirname, 'node_modules/.pnpm')
+  const pnpmDir = path.resolve(import.meta.dirname, 'node_modules/.pnpm')
   if (!existsSync(pnpmDir)) return null
 
   const candidates = readdirSync(pnpmDir, { withFileTypes: true })
@@ -79,7 +83,7 @@ const removeDesignPreviewAssetsPlugin = () => ({
   name: 'remove-design-preview-assets',
   writeBundle() {
     for (const fileName of distDesignPreviewAssets) {
-      rmSync(path.resolve(__dirname, 'dist', fileName), { force: true })
+      rmSync(path.resolve(import.meta.dirname, 'dist', fileName), { force: true })
     }
   },
 })

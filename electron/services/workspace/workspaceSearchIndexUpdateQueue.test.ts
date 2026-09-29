@@ -18,40 +18,35 @@ const createLogger = (): Logger => {
 }
 
 const createQueue = () => {
+  const applyChanges = vi.fn(async (): Promise<void> => undefined)
   const loadDocuments = vi.fn(async (paths: string[]) => paths.map((path) => ({ path })))
   const logger = createLogger()
   const openIndex = vi.fn(async () => undefined)
   const rebuildAll = vi.fn(async () => undefined)
-  const removeDocument = vi.fn(async () => undefined)
-  const removePathPrefix = vi.fn(async () => undefined)
   const runTaskSpy = vi.fn()
   const runTask = async <T>(work: () => Promise<T>, taskName: string): Promise<T> => {
     runTaskSpy(work, taskName)
     return work()
   }
-  const upsertDocument = vi.fn(async () => undefined)
   const queue = new WorkspaceSearchIndexUpdateQueue<SearchDocument>({
+    applyChanges,
     delayMs: 100,
+    getDocumentPath: (document) => document.path,
     loadDocuments,
     logger,
     openIndex,
     rebuildAll,
-    removeDocument,
-    removePathPrefix,
     runTask,
-    upsertDocument,
   })
 
   return {
+    applyChanges,
     loadDocuments,
     logger,
     openIndex,
     queue,
     rebuildAll,
-    removeDocument,
-    removePathPrefix,
     runTask: runTaskSpy,
-    upsertDocument,
   }
 }
 
@@ -65,7 +60,7 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
   })
 
   it('debounces path changes and batches upserts', async () => {
-    const { loadDocuments, openIndex, queue, upsertDocument } = createQueue()
+    const { applyChanges, loadDocuments, openIndex, queue } = createQueue()
 
     expect(queue.schedulePathChange('a.md', 'change')).toBe(true)
     expect(queue.schedulePathChange('b.md', 'add')).toBe(true)
@@ -77,9 +72,11 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
 
     expect(openIndex).toHaveBeenCalledTimes(1)
     expect(loadDocuments).toHaveBeenCalledWith(['a.md', 'b.md'])
-    expect(upsertDocument).toHaveBeenCalledTimes(2)
-    expect(upsertDocument).toHaveBeenNthCalledWith(1, { path: 'a.md' })
-    expect(upsertDocument).toHaveBeenNthCalledWith(2, { path: 'b.md' })
+    expect(applyChanges).toHaveBeenCalledWith({
+      removeDocuments: [],
+      removePrefixes: [],
+      upserts: [{ path: 'a.md' }, { path: 'b.md' }],
+    })
 
     queue.dispose()
   })
@@ -109,7 +106,7 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
   })
 
   it('runs full rebuilds without applying pending path updates', async () => {
-    const { loadDocuments, queue, rebuildAll, upsertDocument } = createQueue()
+    const { applyChanges, loadDocuments, queue, rebuildAll } = createQueue()
 
     queue.schedulePathChange('a.md', 'change')
     queue.scheduleFullRebuild()
@@ -117,22 +114,88 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
 
     expect(rebuildAll).toHaveBeenCalledTimes(1)
     expect(loadDocuments).not.toHaveBeenCalled()
-    expect(upsertDocument).not.toHaveBeenCalled()
+    expect(applyChanges).not.toHaveBeenCalled()
 
     queue.dispose()
   })
 
   it('collapses child updates under a removed directory prefix', async () => {
-    const { loadDocuments, queue, removePathPrefix, upsertDocument } = createQueue()
+    const { applyChanges, loadDocuments, queue } = createQueue()
 
     queue.schedulePathChange('folder/a.md', 'change')
     queue.schedulePathChange('folder', 'unlinkDir')
     await vi.advanceTimersByTimeAsync(100)
 
-    expect(removePathPrefix).toHaveBeenCalledWith('folder')
     expect(loadDocuments).toHaveBeenCalledWith([])
-    expect(upsertDocument).not.toHaveBeenCalled()
+    expect(applyChanges).toHaveBeenCalledWith({
+      removeDocuments: [],
+      removePrefixes: ['folder'],
+      upserts: [],
+    })
 
+    queue.dispose()
+  })
+
+  it('requeues the exact mutation batch when persistence fails', async () => {
+    const { applyChanges, queue } = createQueue()
+    applyChanges.mockRejectedValueOnce(new Error('disk full'))
+    queue.schedulePathChange('a.md', 'change')
+
+    await expect(queue.flushPending()).rejects.toThrow('disk full')
+    expect(applyChanges).toHaveBeenCalledTimes(1)
+
+    await queue.flushPending()
+    expect(applyChanges).toHaveBeenCalledTimes(2)
+    expect(applyChanges).toHaveBeenLastCalledWith({
+      removeDocuments: [],
+      removePrefixes: [],
+      upserts: [{ path: 'a.md' }],
+    })
+
+    queue.dispose()
+  })
+
+  it('removes an indexed document when an upsert target no longer loads', async () => {
+    const { applyChanges, loadDocuments, queue } = createQueue()
+    loadDocuments.mockResolvedValueOnce([])
+    queue.schedulePathChange('missing.md', 'change')
+
+    await queue.flushPending()
+
+    expect(applyChanges).toHaveBeenCalledWith({
+      removeDocuments: ['missing.md'],
+      removePrefixes: [],
+      upserts: [],
+    })
+    queue.dispose()
+  })
+
+  it('serializes flushes so a failed older update cannot overwrite a newer change', async () => {
+    const { applyChanges, queue } = createQueue()
+    let rejectFirst!: (error: Error) => void
+    const firstWrite = new Promise<void>((_resolve, reject) => {
+      rejectFirst = reject
+    })
+    applyChanges.mockReturnValueOnce(firstWrite)
+    queue.schedulePathChange('note.md', 'change')
+    const firstFlush = queue.flushPending()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    queue.schedulePathChange('note.md', 'unlink')
+    const secondFlush = queue.flushPending()
+    rejectFirst(new Error('first write failed'))
+
+    await expect(firstFlush).rejects.toThrow('first write failed')
+    await secondFlush
+    await queue.flushPending()
+
+    expect(applyChanges).toHaveBeenCalledTimes(2)
+    expect(applyChanges).toHaveBeenLastCalledWith({
+      removeDocuments: ['note.md'],
+      removePrefixes: [],
+      upserts: [],
+    })
     queue.dispose()
   })
 })

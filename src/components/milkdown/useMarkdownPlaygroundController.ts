@@ -24,24 +24,18 @@ import {
 import type {
   MarkdownEditorProps,
   MarkdownEditorStatus,
+  QueuedMarkdownUpdate,
+  ThrottledMarkdownUpdate,
 } from '@/components/milkdown/markdownEditorTypes'
+import {
+  markdownEditorPerformancePolicy,
+  waitForMarkdownEditorMount,
+} from '@/components/markdownEditorPerformance'
 
 type UseMarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
   shortcutOverrides?: ShortcutBindings
 }
-
-type QueuedMarkdownUpdate = {
-  documentIdentity: MarkdownEditorProps['activePath']
-  markdown: string
-  onChange: MarkdownEditorProps['onChange']
-}
-
-type ThrottledMarkdownUpdate = ((update: QueuedMarkdownUpdate) => void) & {
-  cancel: () => void
-  flush: () => void
-}
-
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
@@ -174,7 +168,7 @@ export const useMarkdownPlaygroundController = ({
         }
         queuedOnChange(markdown)
       },
-      200,
+      markdownEditorPerformancePolicy(latestValueRef.current.length).updateThrottleMs,
       { leading: false, trailing: true },
     ) as ThrottledMarkdownUpdate
     throttledMarkdownUpdateRef.current = updateMarkdown
@@ -229,6 +223,7 @@ export const useMarkdownPlaygroundController = ({
 
     const pendingCrepe = crepe
     void pendingDestroyRef.current
+      .then(() => waitForMarkdownEditorMount(latestValueRef.current.length))
       .then(() => {
         if (destroyed) return
         creationStarted = true
@@ -307,16 +302,13 @@ export const useMarkdownPlaygroundController = ({
   ])
 
   const focusEditor = useCallback(() => {
-    crepeRef.current?.editor.action((ctx) => {
-      ctx.get(editorViewCtx).focus()
-    })
+    crepeRef.current?.editor.action((ctx) => ctx.get(editorViewCtx).focus())
   }, [])
 
-  const getCurrentMarkdown = useCallback(() => {
-    const crepe = crepeRef.current
-    if (!crepe) return latestValueRef.current
-    return crepe.editor.action(getMarkdown())
-  }, [])
+  const getCurrentMarkdown = useCallback(
+    () => crepeRef.current?.editor.action(getMarkdown()) ?? latestValueRef.current,
+    [],
+  )
 
   return {
     focusEditor,

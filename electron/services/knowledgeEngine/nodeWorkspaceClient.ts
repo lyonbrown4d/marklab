@@ -6,6 +6,7 @@ import {
 import { NodeMarkdownOverlay } from '@electron/services/knowledgeEngine/nodeMarkdownOverlay.js'
 import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
 import { NodeWorkspaceVfs } from '@electron/services/knowledgeEngine/nodeWorkspaceVfs.js'
+import { computeMicrosoftReferenceDiagnostics } from '@electron/services/markdownLanguage/microsoftDiagnostics.js'
 
 export const createNodeWorkspaceClient = (
   workspaceRoot: string,
@@ -19,7 +20,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
 
   constructor(workspaceRoot: string, engineDataDir?: string) {
     this.vfs = new NodeWorkspaceVfs(workspaceRoot)
-    this.searchIndex = new NodeSearchIndex(engineDataDir)
+    this.searchIndex = new NodeSearchIndex(engineDataDir, workspaceRoot)
   }
 
   async getCapabilities() {
@@ -30,13 +31,14 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         'markdown-overlay',
         'workspace-graph',
         'outline-graph',
+        'markdown-reference-diagnostics',
       ],
       engineVersion: 'node',
       protocolVersion: 'utility-process-v1',
       storage: {
         blobStore: false,
         metadataStore: 'node-json',
-        searchIndex: 'node-json',
+        searchIndex: 'minisearch-json',
       },
     }
   }
@@ -70,7 +72,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         pendingOutboxEvents: '0',
         ready: true,
         searchableDocuments: documents,
-        searchIndex: 'node-json',
+        searchIndex: 'minisearch-json',
       },
       storage: {
         blobBytes: '0',
@@ -79,7 +81,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         metadataDocuments: documents,
         metadataStore: 'node-json',
         pendingOutboxEvents: '0',
-        searchIndex: 'node-json',
+        searchIndex: 'minisearch-json',
         searchIndexBytes: '0',
         totalBytes: '0',
       },
@@ -130,6 +132,10 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
     await this.searchIndex.upsert(document)
   }
 
+  async applySearchChanges(batch: Parameters<NodeSearchIndex['applyBatch']>[0]): Promise<void> {
+    await this.searchIndex.applyBatch(batch)
+  }
+
   async removeDocument(path: string): Promise<void> {
     await this.searchIndex.remove(path)
   }
@@ -177,6 +183,10 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
 
   async getMarkdownLinks(documentId: string, version: number | string) {
     return this.markdown.links(documentId, version)
+  }
+
+  async getMarkdownDiagnostics(path: string, content: string, signal?: AbortSignal) {
+    return computeMicrosoftReferenceDiagnostics({ content, path }, { signal })
   }
 
   async buildWorkspaceGraph(

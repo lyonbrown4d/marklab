@@ -27,7 +27,6 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
   const motionAnimatedPanels = usePreferencesStore((store) => store.motionAnimatedPanels)
   const customThemeId = usePreferencesStore((store) => store.customThemeId)
   const themeMode = usePreferencesStore((store) => store.themeMode)
-  const autoSystemThemeSync = usePreferencesStore((store) => store.autoSystemThemeSync)
   const syncSystemTheme = usePreferencesStore((store) => store.syncSystemTheme)
   const immersiveZenMode = usePreferencesStore((store) => store.immersiveZenMode)
   const immersiveFocusMode = usePreferencesStore((store) => store.immersiveFocusMode)
@@ -36,7 +35,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
   useUserThemeCss(customThemeId)
 
   useEffect(() => {
-    if (!autoSystemThemeSync || themeMode !== 'system') return
+    if (themeMode !== 'system') return
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const sync = () => syncSystemTheme(media.matches ? 'dark' : 'light')
@@ -45,10 +44,10 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
     return () => {
       media.removeEventListener('change', sync)
     }
-  }, [autoSystemThemeSync, syncSystemTheme, themeMode])
+  }, [syncSystemTheme, themeMode])
 
   useEffect(() => {
-    if (!autoSystemThemeSync || themeMode !== 'system') return
+    if (themeMode !== 'system') return
     if (!isDesktopRuntime()) return
 
     let disposed = false
@@ -67,7 +66,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
       disposed = true
       unlisten?.()
     }
-  }, [autoSystemThemeSync, syncSystemTheme, themeMode])
+  }, [syncSystemTheme, themeMode])
 
   useDesktopReadySignal()
 

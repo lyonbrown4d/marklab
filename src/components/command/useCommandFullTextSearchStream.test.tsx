@@ -77,6 +77,7 @@ describe('useCommandFullTextSearchStream', () => {
           open: true,
           query,
           scope,
+          workspaceKey: 'external:/workspace-a',
         }),
       {
         initialProps: { query: 'a', scope: 'all' as CommandSearchScope },
@@ -112,6 +113,7 @@ describe('useCommandFullTextSearchStream', () => {
           open: true,
           query,
           scope: 'all',
+          workspaceKey: 'external:/workspace-a',
         }),
       {
         initialProps: { query: 'alpha' },
@@ -160,6 +162,7 @@ describe('useCommandFullTextSearchStream', () => {
           open: true,
           query: 'error',
           scope: 'text',
+          workspaceKey: 'external:/workspace-a',
         }),
       { wrapper: createQueryWrapper() },
     )
@@ -172,5 +175,35 @@ describe('useCommandFullTextSearchStream', () => {
 
     expect(result.current.fullTextFetching).toBe(false)
     expect(result.current.fullTextResults).toEqual([])
+  })
+
+  it('never reuses results across workspace sessions with the same query', async () => {
+    searchWorkspaceMock
+      .mockResolvedValueOnce([createResult('workspace-a.md')])
+      .mockResolvedValueOnce([createResult('workspace-b.md')])
+
+    const { result, rerender } = renderHook(
+      ({ workspaceKey }) =>
+        useCommandFullTextSearchStream({
+          limit: 8,
+          open: true,
+          query: 'shared',
+          scope: 'all',
+          workspaceKey,
+        }),
+      {
+        initialProps: { workspaceKey: 'external:/workspace-a' },
+        wrapper: createQueryWrapper(),
+      },
+    )
+
+    await advanceDebounce()
+    await waitFor(() => expect(result.current.fullTextResults[0]?.path).toBe('workspace-a.md'))
+
+    rerender({ workspaceKey: 'external:/workspace-b' })
+    expect(result.current.fullTextResults).toEqual([])
+
+    await waitFor(() => expect(result.current.fullTextResults[0]?.path).toBe('workspace-b.md'))
+    expect(searchWorkspaceMock).toHaveBeenCalledTimes(2)
   })
 })
