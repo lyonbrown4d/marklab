@@ -31,8 +31,9 @@ Marklab-${version}-${os}-${arch}.${ext}
 
 ## Native Modules
 
-The persisted knowledge/search index is owned by the Rust knowledge-engine
-sidecar. The sidecar binary is built by `pnpm knowledge:build:dev` for desktop development and `pnpm knowledge:build` for packaging, then copied into `resources/engine/<platform>-<arch>/`.
+Workspace knowledge and search run in the bundled Node.js utility-process
+entry. There is no native knowledge-engine binary, Cargo build, or
+`resources/engine` packaging step.
 
 `electron-builder` has `npmRebuild` disabled because a full native rebuild also
 tries to compile `@homebridge/node-pty-prebuilt-multiarch`, which is intended to

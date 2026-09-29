@@ -11,7 +11,6 @@ import {
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
-import AppStatusBar from '@/components/AppStatusBar'
 import { AppStatusBarProvider } from '@/components/EditorStatusBar'
 import SettingsDialogFallback from '@/components/SettingsDialogFallback'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
@@ -89,16 +88,10 @@ const AppLayout = () => {
     settingsDialogRef.current?.openSettings()
   }, [])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
-  const {
-    closeTerminalArea,
-    effectiveTerminalOpen,
-    openTerminalArea,
-    terminalInitialized,
-    terminalOpen,
-    toggleTerminalArea,
-  } = useAppTerminalArea({
-    disabled: immersiveZenMode,
-  })
+  const { closeTerminalArea, effectiveTerminalOpen, openTerminalArea, terminalInitialized } =
+    useAppTerminalArea({
+      disabled: immersiveZenMode,
+    })
   useAppPanelLayoutSync({
     leftSidebarPanelRef,
     rightSidebarPanelRef,
@@ -313,24 +306,6 @@ const AppLayout = () => {
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
       />
-      {!immersiveZenMode && (
-        <AppStatusBar
-          rootKind={state.rootKind}
-          rootPath={state.rootPath}
-          files={state.files}
-          tabs={state.tabs}
-          activeTab={state.activeTab}
-          activePath={state.activePath}
-          viewMode={state.viewMode}
-          dirtyPaths={state.dirtyPaths}
-          saveStates={state.saveStates}
-          terminalOpen={terminalOpen}
-          onToggleTerminal={toggleTerminalArea}
-          onRestoreSession={state.restoreSession}
-          restoreStatusMessage={state.restoreStatusMessage}
-          restoreStatusBusy={state.isRestoringSession}
-        />
-      )}
     </AppStatusBarProvider>
   )
 }

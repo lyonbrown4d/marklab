@@ -1,7 +1,6 @@
 import type { App } from 'electron'
 
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import { resolveKnowledgeEngineBinary } from '@electron/services/knowledgeEngine/binaryPath.js'
 import type {
   KnowledgeCloseDocumentInput,
   KnowledgeDocumentChangeInput,
@@ -13,7 +12,7 @@ import type {
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/grpcClient.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
 import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
@@ -50,15 +49,6 @@ export class KnowledgeEngineService {
   }
 
   getStatus(): KnowledgeEngineStatus {
-    const binary = resolveKnowledgeEngineBinary(this.options.app)
-    if (!binary?.exists) {
-      return {
-        binaryPath: binary?.binaryPath ?? null,
-        lastError: 'Knowledge engine binary not found. Run pnpm knowledge:build first.',
-        state: 'missing',
-      }
-    }
-
     const runtimes = this.sidecars?.listActive() ?? []
     const activeRuntime = runtimes.find((runtime) => runtime.state === 'ready') ?? runtimes[0]
     const state: KnowledgeEngineStatus['state'] = activeRuntime
@@ -70,7 +60,7 @@ export class KnowledgeEngineService {
       : 'stopped'
 
     return {
-      binaryPath: binary.binaryPath,
+      binaryPath: null,
       state,
       ...(activeRuntime?.pid ? { pid: activeRuntime.pid } : {}),
       ...(activeRuntime?.lastError ? { lastError: activeRuntime.lastError } : {}),
@@ -79,7 +69,7 @@ export class KnowledgeEngineService {
 
   async initialize(): Promise<KnowledgeEngineInitializeResult> {
     const status = this.getStatus()
-    if (status.state === 'missing' || status.state === 'error') {
+    if (status.state === 'error') {
       return {
         error: status.lastError ?? 'Knowledge engine binary is not available.',
         ok: false,
@@ -89,7 +79,7 @@ export class KnowledgeEngineService {
 
     return {
       ok: true,
-      response: { mode: 'workspace-sidecar-grpc' },
+      response: { mode: 'node-utility-process' },
       status,
     }
   }
@@ -303,7 +293,6 @@ export class KnowledgeEngineService {
     this.sidecars = new WorkspaceSidecarManager({
       appDataDir: this.options.app.getPath('userData'),
       logger: this.options.logger,
-      resolveBinary: () => resolveKnowledgeEngineBinary(this.options.app),
     })
     return this.sidecars
   }

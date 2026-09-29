@@ -1,6 +1,5 @@
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
-import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 
 import { vi } from 'vitest'
 
@@ -9,12 +8,9 @@ import {
   type WorkspaceSidecarClient,
 } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
 import type { Logger } from '@electron/services/logger.js'
+import type { WorkspaceSidecarProcess } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
 
-type CreateManagerOptions = {
-  resolveBinary?: ConstructorParameters<typeof WorkspaceSidecarManager>[0]['resolveBinary']
-}
-
-export const createManager = (options: CreateManagerOptions = {}) => {
+export const createManager = () => {
   const child = createChild()
   const client = createClient()
   const startSidecar = vi.fn(async () => ({
@@ -33,13 +29,6 @@ export const createManager = (options: CreateManagerOptions = {}) => {
     manager: new WorkspaceSidecarManager({
       appDataDir: 'app-data',
       logger,
-      resolveBinary:
-        options.resolveBinary ??
-        (() => ({
-          binaryPath: 'engine.exe',
-          exists: true,
-          source: 'dev-resource',
-        })),
       startSidecar,
     }),
     startSidecar,
@@ -140,11 +129,11 @@ const createClient = (): WorkspaceSidecarClient => ({
   writeWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
 })
 
-const createChild = (): ChildProcessWithoutNullStreams => {
+const createChild = (): WorkspaceSidecarProcess & EventEmitter => {
   const stdout = new PassThrough()
   const stderr = new PassThrough()
   const stdin = new PassThrough()
-  const child = new EventEmitter() as ChildProcessWithoutNullStreams
+  const child = new EventEmitter() as WorkspaceSidecarProcess & EventEmitter
 
   Object.assign(child, {
     kill: vi.fn(() => {
@@ -153,6 +142,9 @@ const createChild = (): ChildProcessWithoutNullStreams => {
       return true
     }),
     killed: false,
+    onExit: (listener: (code: number) => void) => {
+      child.on('exit', listener)
+    },
     pid: 1234,
     stderr,
     stdin,

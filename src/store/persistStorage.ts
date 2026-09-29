@@ -1,5 +1,5 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
-import { getElectronRuntime } from '@/runtime/electron'
+import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
 type IdleHandle =
   | {
       kind: 'idle'
@@ -101,7 +101,7 @@ export const createIdleJsonStorage = <S>(
 export const createElectronSettingsJsonStorage = <S>(
   name = 'marklab.preferences',
 ): PersistStorage<S> | undefined => {
-  const electronPersist = getElectronRuntime()?.settings?.persist
+  const electronPersist = isElectronRuntime() ? getElectronRuntime().settings?.persist : undefined
   if (!electronPersist) return createIdleJsonStorage<S>(name)
   return {
     getItem: async (key) => {

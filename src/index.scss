@@ -7,9 +7,9 @@
   /* Marklab defaults: paper is the default light theme, ink is the default dark theme. */
   :root {
     color-scheme: light;
-    --background: 0 0% 98%;
+    --background: 40 20% 98%;
     --foreground: 0 0% 13%;
-    --card: 0 0% 100%;
+    --card: 40 24% 99%;
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
@@ -42,9 +42,9 @@
 
   :root[data-theme='paper'] {
     color-scheme: light;
-    --background: 0 0% 98%;
+    --background: 40 20% 98%;
     --foreground: 0 0% 13%;
-    --card: 0 0% 100%;
+    --card: 40 24% 99%;
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;

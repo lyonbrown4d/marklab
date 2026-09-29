@@ -28,7 +28,7 @@ import {
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/grpcClient.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
 
 export type {
   WorkspaceSidecarClient,

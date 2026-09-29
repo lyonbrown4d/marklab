@@ -17,8 +17,8 @@ non-trivial changes.
 - React Flow owns graph canvas interaction. Graph data must explicitly map to registered node
   renderers.
 - Zustand owns renderer preferences and persisted UI defaults.
-- The Rust knowledge engine owns indexing and knowledge-heavy work. Electron owns process lifecycle
-  and request routing.
+- The Node knowledge runtime owns indexing and knowledge-heavy work inside Electron's main-process
+  service boundary. Electron owns lifecycle, workspace isolation, and request routing.
 
 If two layers handle the same input, persistence value, or lifecycle event, consolidate ownership
 before adding behavior.
@@ -49,7 +49,7 @@ verification and CI use the same entry point.
 | Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, graph/editor shortcut tests |
 | IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                  |
 | Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                |
-| Knowledge engine / Rust sidecar  | spawn/config drift, protocol mismatch, blocking work           | cargo checks/tests and knowledge boundary tests         |
+| Knowledge engine / Node runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Node runtime tests, typecheck, Electron build           |
 | Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks             |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests             |
 | Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`  |
@@ -93,13 +93,12 @@ pnpm exec vite build --mode electron --logLevel error
 git diff --check
 ```
 
-For Rust or knowledge-engine changes, add:
+For knowledge-engine runtime changes, add:
 
 ```bash
-cargo fmt --all --check
-cargo check --workspace
-cargo test --workspace
-pnpm test:knowledge:integration
+pnpm exec vitest run electron/services/knowledgeEngine
+pnpm typecheck
+pnpm test:electron:build
 ```
 
 For dependency updates or packaging changes, prefer `pnpm build:desktop` or the platform-specific

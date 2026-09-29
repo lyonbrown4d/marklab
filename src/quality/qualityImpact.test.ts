@@ -14,7 +14,7 @@ describe('quality impact rules', () => {
       'src/logic/shortcuts.ts',
       'src/store/usePreferencesStore.ts',
       'electron/services/workspace/workspaceFileService.ts',
-      'knowledge-engine/src/main.rs',
+      'electron/services/knowledgeEngine/nodeWorkspaceClient.ts',
     ])
 
     expect(impacts.map((impact) => impact.area)).toEqual(
@@ -24,15 +24,15 @@ describe('quality impact rules', () => {
         'Keyboard shortcuts',
         'Settings / persisted preferences',
         'Workspace filesystem/services',
-        'Knowledge engine / Rust sidecar',
+        'Knowledge engine / Node runtime',
       ]),
     )
     expect(impacts.find((impact) => impact.area === 'Source editor / Monaco')?.checks).toContain(
       'source editor tests',
     )
     expect(
-      impacts.find((impact) => impact.area === 'Knowledge engine / Rust sidecar')?.checks,
-    ).toContain('cargo test --workspace')
+      impacts.find((impact) => impact.area === 'Knowledge engine / Node runtime')?.checks,
+    ).toContain('knowledge engine Node runtime tests')
     expect(
       impacts.find((impact) => impact.area === 'Workspace filesystem/services')?.checks,
     ).toContain('workspace service tests')

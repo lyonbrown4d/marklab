@@ -31,6 +31,7 @@ const alias = {
 }
 
 const electronMainEntry = {
+  knowledgeSidecarEntry: path.resolve(__dirname, 'electron/sidecar/knowledgeSidecarEntry.ts'),
   main: path.resolve(__dirname, 'electron/main.ts'),
   workspaceAnalysisWorkerEntry: path.resolve(
     __dirname,

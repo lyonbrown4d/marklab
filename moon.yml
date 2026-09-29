@@ -5,27 +5,8 @@ tasks:
       cache: false
       persistent: true
 
-  proto-lint:
-    command: pnpm exec buf lint knowledge-engine/proto
-    inputs:
-      - buf.yaml
-      - knowledge-engine/proto/**/*
-    options:
-      cache: false
-
-  proto-gen:
-    command: pnpm exec buf generate knowledge-engine/proto
-    inputs:
-      - buf.gen.yaml
-      - buf.yaml
-      - knowledge-engine/proto/**/*
-    outputs:
-      - electron/generated/knowledge-engine/**/*
-
   typecheck:
     script: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
-    deps:
-      - ~:proto-gen
     inputs:
       - tsconfig*.json
       - src/**/*
@@ -39,8 +20,6 @@ tasks:
 
   test:
     command: pnpm exec vitest run
-    deps:
-      - ~:proto-gen
     inputs:
       - src/**/*
       - electron/**/*
@@ -61,18 +40,12 @@ tasks:
       cache: false
 
   test-knowledge-integration:
-    command: node --experimental-strip-types scripts/run-knowledge-engine-integration.ts
+    command: pnpm exec vitest run electron/services/knowledgeEngine
     inputs:
-      - scripts/run-knowledge-engine-integration.ts
-      - scripts/build-knowledge-engine.ts
-      - knowledge-engine/**/*
-      - knowledge-engine/proto/**/*
-      - electron/**/*
-      - scripts/**/*
+      - electron/services/knowledgeEngine/**/*
+      - electron/services/workspace/**/*
       - package.json
       - pnpm-lock.yaml
-      - Cargo.toml
-      - Cargo.lock
     options:
       cache: false
 
@@ -104,62 +77,6 @@ tasks:
     options:
       cache: false
 
-  cargo-fmt:
-    command: cargo fmt --all --check
-    inputs:
-      - Cargo.toml
-      - Cargo.lock
-      - knowledge-engine/**/*
-    options:
-      cache: false
-
-  cargo-check:
-    command: cargo check --workspace
-    inputs:
-      - Cargo.toml
-      - Cargo.lock
-      - knowledge-engine/**/*
-    options:
-      cache: false
-
-  cargo-test:
-    command: cargo test --workspace
-    inputs:
-      - Cargo.toml
-      - Cargo.lock
-      - knowledge-engine/**/*
-    options:
-      cache: false
-
-  knowledge-build:
-    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release
-    inputs:
-      - scripts/build-knowledge-engine.ts
-      - Cargo.toml
-      - Cargo.lock
-      - knowledge-engine/**/*
-    outputs:
-      - resources/engine/**/*
-    options:
-      cache: false
-
-  knowledge-build-dev:
-    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile debug
-    inputs:
-      - scripts/build-knowledge-engine.ts
-      - Cargo.toml
-      - Cargo.lock
-      - knowledge-engine/**/*
-    outputs:
-      - resources/engine/**/*
-    options:
-      cache: false
-
-  knowledge-build-force:
-    command: node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release --force
-    options:
-      cache: false
-
   icons-generate:
     command: node --experimental-strip-types scripts/generate-app-icons.ts
     inputs:
@@ -170,8 +87,6 @@ tasks:
 
   prepare:
     deps:
-      - ~:proto-gen
-      - ~:knowledge-build
       - ~:icons-generate
     inputs: []
     options:
@@ -179,8 +94,6 @@ tasks:
 
   prepare-dev:
     deps:
-      - ~:proto-gen
-      - ~:knowledge-build-dev
       - ~:icons-generate
     inputs: []
     options:
@@ -244,7 +157,6 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
       - resources/icons/**/*
-      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -260,7 +172,6 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
       - resources/icons/**/*
-      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -276,7 +187,6 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
       - resources/icons/**/*
-      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -292,7 +202,6 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
       - resources/icons/**/*
-      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -308,7 +217,6 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
       - resources/icons/**/*
-      - resources/engine/**/*
     outputs:
       - release/**/*
     options:
@@ -320,9 +228,6 @@ tasks:
       - ~:lint
       - ~:typecheck
       - ~:test
-      - ~:cargo-fmt
-      - ~:cargo-check
-      - ~:cargo-test
     inputs: []
     options:
       cache: false

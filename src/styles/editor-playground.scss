@@ -104,8 +104,9 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   --crepe-color-hover: color-mix(in srgb, hsl(var(--accent)) 82%, transparent);
   --crepe-color-selected: color-mix(in srgb, hsl(var(--accent)) 72%, hsl(var(--background)));
   --crepe-color-inline-area: hsl(var(--input));
-  --crepe-font-title: var(--editor-prose-font, Rubik, Cambria, 'Times New Roman', Times, serif);
-  --crepe-font-default: var(--editor-prose-font, Inter, Arial, Helvetica, sans-serif);
+  --editor-prose-font: ui-serif, 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  --crepe-font-title: var(--editor-prose-font);
+  --crepe-font-default: var(--editor-prose-font);
   --crepe-font-code: var(
     --editor-code-font,
     'JetBrains Mono',
@@ -145,8 +146,32 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
 
 .crepe.crepe-playground > .milkdown > .ProseMirror {
   min-height: 100%;
-  padding: clamp(1.5rem, 5cqi, 3rem) clamp(2rem, 6cqi, 4rem) 6rem;
-  transition: opacity 160ms ease;
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding: clamp(5rem, 12vh, 8rem) clamp(1.5rem, 5cqi, 3rem) 8rem;
+  font-family: var(--crepe-font-default);
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  transition:
+    opacity 160ms ease,
+    width 180ms ease,
+    padding 180ms ease;
+}
+
+.crepe.crepe-playground > .milkdown > .ProseMirror h1 {
+  font-size: clamp(2.25rem, 4cqi, 3rem);
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+.crepe.crepe-playground > .milkdown > .ProseMirror p {
+  line-height: 1.9;
+}
+
+@media (max-width: 720px) {
+  .crepe.crepe-playground > .milkdown > .ProseMirror {
+    padding: 2.5rem 1.25rem 5rem;
+  }
 }
 
 @media (min-width: 768px) {

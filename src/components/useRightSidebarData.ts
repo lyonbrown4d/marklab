@@ -14,7 +14,6 @@ import {
 import { getMarkdownAssetReport } from '@/logic/assets'
 import { buildKnowledgeInsights } from '@/logic/knowledge'
 import { splitLinkTarget } from '@/logic/paths'
-import { getElectronRuntime } from '@/runtime/electron'
 import { fsApi, type FsIndexedMarkdownFile, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 
@@ -39,7 +38,6 @@ export const useRightSidebarData = ({
   dirtyPaths = {},
   workspaceIndex,
 }: UseRightSidebarDataArgs) => {
-  getElectronRuntime()
   const deferredEditorValue = useDeferredValue(editorValue)
   const deferredFileContents = useDeferredValue(fileContents)
   const deferredTargetPath = useDeferredValue(targetPath)
@@ -64,14 +62,11 @@ export const useRightSidebarData = ({
     : undefined
   const targetIsDirty = Boolean(deferredTargetPath && dirtyPaths[deferredTargetPath])
   const shouldUseIndexedTarget = Boolean(indexedTargetFile && !targetIsDirty)
-  const shouldWaitForIndexedActiveTarget = Boolean(
-    !workspaceIndex && deferredTargetPath && deferredTargetPath === activePath && !targetIsDirty,
-  )
   const workspaceContents = useWorkspaceMarkdownContents(files, deferredFileContents, false)
   const targetContent = useMemo(() => {
     if (collapsed) return ''
     if (!deferredTargetPath) return ''
-    if (shouldUseIndexedTarget || shouldWaitForIndexedActiveTarget) return ''
+    if (shouldUseIndexedTarget) return ''
     if (deferredTargetPath === activePath) return deferredEditorValue
     return workspaceContents[deferredTargetPath] ?? ''
   }, [
@@ -80,7 +75,6 @@ export const useRightSidebarData = ({
     deferredEditorValue,
     deferredTargetPath,
     shouldUseIndexedTarget,
-    shouldWaitForIndexedActiveTarget,
     workspaceContents,
   ])
   const statsContent = useMemo(() => {
@@ -99,17 +93,9 @@ export const useRightSidebarData = ({
     if (shouldUseIndexedTarget && indexedTargetFile) {
       return indexedTargetFile.headings
     }
-    if (shouldWaitForIndexedActiveTarget) return []
     if (!targetContent) return []
     return textAnalysis.outline
-  }, [
-    collapsed,
-    indexedTargetFile,
-    shouldUseIndexedTarget,
-    shouldWaitForIndexedActiveTarget,
-    targetContent,
-    textAnalysis.outline,
-  ])
+  }, [collapsed, indexedTargetFile, shouldUseIndexedTarget, targetContent, textAnalysis.outline])
   const backlinks = useMemo(() => {
     if (collapsed) return []
     if (!deferredTargetPath) return []
@@ -146,7 +132,6 @@ export const useRightSidebarData = ({
         workspaceIndex,
       })
     }
-    if (shouldWaitForIndexedActiveTarget) return []
     return getMarkdownSourceDiagnostics({
       activePath: deferredTargetPath,
       content: targetContent,
@@ -160,7 +145,6 @@ export const useRightSidebarData = ({
     files,
     indexedTargetFile,
     shouldUseIndexedTarget,
-    shouldWaitForIndexedActiveTarget,
     targetContent,
     workspaceContents,
     workspaceIndex,

@@ -7,12 +7,6 @@ export type KnowledgeEngineStatus = {
   lastError?: string
 }
 
-export type KnowledgeEngineBinaryResolution = {
-  binaryPath: string
-  exists: boolean
-  source: 'override' | 'packaged' | 'dev-resource' | 'cargo-target-debug' | 'cargo-target-release'
-}
-
 export type KnowledgeEngineInitializeResult = {
   ok: boolean
   status: KnowledgeEngineStatus

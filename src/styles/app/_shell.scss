@@ -136,8 +136,20 @@
 }
 
 .app-titlebar {
-  background: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--background)));
+  background: color-mix(in srgb, hsl(var(--background)) 96%, transparent);
+  backdrop-filter: blur(18px);
   -webkit-app-region: drag;
+}
+
+.immersive-titlebar-chrome button,
+.immersive-titlebar-chrome [data-no-drag],
+.immersive-edge-handle,
+.immersive-drawer {
+  -webkit-app-region: no-drag;
+}
+
+.immersive-workspace {
+  background: hsl(var(--background));
 }
 
 .chrome-button {

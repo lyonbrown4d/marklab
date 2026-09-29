@@ -1,6 +1,3 @@
-import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowledgeEngine/types.js'
-import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
-
 export type WorkspaceSidecarSpawnPlan = {
   command: string
   args: string[]
@@ -8,35 +5,16 @@ export type WorkspaceSidecarSpawnPlan = {
   windowsHide: true
 }
 
-export type CreateWorkspaceSidecarSpawnPlanOptions = {
-  binary: KnowledgeEngineBinaryResolution
-  identity: WorkspaceSidecarIdentity
-}
-
-export const createWorkspaceSidecarSpawnPlan = (
-  options: CreateWorkspaceSidecarSpawnPlanOptions,
-): WorkspaceSidecarSpawnPlan => ({
-  command: options.binary.binaryPath,
-  args: [
-    '--workspace-instance-id',
-    options.identity.workspaceInstanceId,
-    '--workspace-root',
-    options.identity.canonicalRoot,
-    '--engine-data-dir',
-    options.identity.engineDataDir,
-    '--grpc-session-token',
-    options.identity.sessionToken,
-  ],
+export const createWorkspaceSidecarSpawnPlan = (): WorkspaceSidecarSpawnPlan => ({
+  command: 'node:utility-process',
+  args: [],
   windowsHide: true,
 })
 
 export const redactWorkspaceSidecarSpawnPlan = (plan: WorkspaceSidecarSpawnPlan) => ({
   command: plan.command,
-  args: redactSpawnPlanArgs(plan.args),
+  args: plan.args,
   cwd: plan.cwd,
   env: {},
   windowsHide: plan.windowsHide,
 })
-
-const redactSpawnPlanArgs = (args: string[]): string[] =>
-  args.map((arg, index) => (args[index - 1] === '--grpc-session-token' ? '<redacted>' : arg))

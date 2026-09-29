@@ -1,7 +1,6 @@
 [tools]
 node = "24.15.0"
 pnpm = "10.26.0"
-rust = "1.96.0"
 just = "1"
 
 [env]
@@ -32,7 +31,7 @@ description = "Create distributable Electron artifacts."
 run = "pnpm exec moon run desktop:dist"
 
 [tasks.check]
-description = "Run lint, typecheck, JS tests, and Rust checks."
+description = "Run lint, typecheck, tests, and builds."
 run = "pnpm exec moon run desktop:check"
 
 [tasks.typecheck]

@@ -155,17 +155,15 @@ describe('TitlebarCommandDialog', () => {
     expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 
-  it('shows only recent content on entry, without duplicated results or all actions', async () => {
+  it('shows recent files with document navigation and actions on entry', async () => {
     const callbacks = renderDialog()
     await ready()
     expect(screen.getByRole('button', { name: 'Pick history' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Open recent file' }))
     expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/recent.md')
     expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Open navigation heading' }),
-    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Actions')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open navigation heading' })).toBeInTheDocument()
   })
 
   it.each([

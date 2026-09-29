@@ -15,7 +15,6 @@
       "@codemirror/view": "6.43.5"
     },
     "onlyBuiltDependencies": [
-      "@bufbuild/buf",
       "@homebridge/node-pty-prebuilt-multiarch",
       "@parcel/watcher",
       "electron",
@@ -33,11 +32,6 @@
     "build:compressed": "pnpm typecheck && vite build --mode compressed",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "icons:generate": "node --experimental-strip-types scripts/generate-app-icons.ts",
-    "knowledge:build": "node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release",
-    "knowledge:build:dev": "node --experimental-strip-types scripts/build-knowledge-engine.ts --profile debug",
-    "knowledge:build:force": "node --experimental-strip-types scripts/build-knowledge-engine.ts --profile release --force",
-    "knowledge:proto:lint": "buf lint",
-    "knowledge:proto:gen": "buf generate knowledge-engine/proto",
     "desktop:prepare": "moon run desktop:prepare",
     "desktop:prepare:dev": "moon run desktop:prepare-dev",
     "build:electron": "moon run desktop:electron-build",
@@ -110,16 +104,6 @@
       "node_modules/node-addon-api/**/*",
       "node_modules/picomatch/**/*",
       "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/engine",
-        "to": "engine",
-        "filter": [
-          "**/*",
-          "!**/.DS_Store"
-        ]
-      }
     ],
     "npmRebuild": false,
     "nodeGypRebuild": false,
@@ -194,7 +178,6 @@
     }
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.15.0",
     "@codemirror/commands": "6.11.0",
     "@codemirror/language": "^6.12.4",
     "@codemirror/language-data": "^6.5.2",
@@ -204,7 +187,6 @@
     "@dagrejs/dagre": "^3.1.1",
     "@excalidraw/excalidraw": "^0.18.1",
     "@fontsource/jetbrains-mono": "5.3.0",
-    "@grpc/grpc-js": "^1.14.4",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
     "@hookform/resolvers": "^5.9.1",
     "@milkdown/core": "^7.22.1",
@@ -308,7 +290,6 @@
   },
   "devDependencies": {
     "@babel/core": "8.0.5",
-    "@bufbuild/buf": "^1.73.0",
     "@eslint/js": "^10.0.1",
     "@moonrepo/cli": "^2.5.4",
     "@playwright/test": "^1.63.0",
@@ -350,7 +331,6 @@
     "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "ts-proto": "^2.12.3",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
     "typescript-eslint": "8.70.0",
     "unplugin-turbo-console": "^2.3.3",

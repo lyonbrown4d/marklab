@@ -7,7 +7,4 @@ release/
 coverage/
 playwright-report/
 test-results/
-target/
 resources/icons/
-resources/engine/
-electron/generated/knowledge-engine/

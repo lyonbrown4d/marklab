@@ -1,0 +1,207 @@
+import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+import type {
+  NodeSidecarMethod,
+  NodeSidecarRequest,
+} from '@electron/services/knowledgeEngine/nodeSidecarProtocol.js'
+import { isNodeSidecarResponse } from '@electron/services/knowledgeEngine/nodeSidecarProtocol.js'
+
+export type NodeSidecarProcessPort = {
+  on(event: 'exit', listener: (code: number) => void): unknown
+  on(event: 'message', listener: (message: unknown) => void): unknown
+  postMessage(message: NodeSidecarRequest): void
+}
+
+type PendingRequest = {
+  reject: (error: Error) => void
+  resolve: (value: unknown) => void
+}
+
+export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
+  private nextId = 1
+  private readonly pending = new Map<number, PendingRequest>()
+
+  constructor(private readonly port: NodeSidecarProcessPort) {
+    port.on('message', (message) => this.handleMessage(message))
+    port.on('exit', (code) => this.handleExit(code))
+  }
+
+  getCapabilities(workspaceInstanceId: string) {
+    return this.request('getCapabilities', workspaceInstanceId)
+  }
+  openWorkspace(indexPath: string) {
+    return this.request<void>('openWorkspace', indexPath)
+  }
+  closeWorkspace() {
+    return this.request<void>('closeWorkspace')
+  }
+  hasDocuments() {
+    return this.request<boolean>('hasDocuments')
+  }
+  getWorkspaceStatus() {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getWorkspaceStatus']>>>(
+      'getWorkspaceStatus',
+    )
+  }
+  getWorkspaceFileSnapshot(
+    root: Parameters<WorkspaceSidecarClient['getWorkspaceFileSnapshot']>[0],
+  ) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getWorkspaceFileSnapshot']>>>(
+      'getWorkspaceFileSnapshot',
+      root,
+    )
+  }
+  listWorkspaceEntries() {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['listWorkspaceEntries']>>>(
+      'listWorkspaceEntries',
+    )
+  }
+  readWorkspaceFile(path: string) {
+    return this.request<string>('readWorkspaceFile', path)
+  }
+  writeWorkspaceFile(path: string, content: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['writeWorkspaceFile']>>>(
+      'writeWorkspaceFile',
+      path,
+      content,
+    )
+  }
+  createWorkspaceFile(path: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['createWorkspaceFile']>>>(
+      'createWorkspaceFile',
+      path,
+    )
+  }
+  createWorkspaceDirectory(path: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['createWorkspaceDirectory']>>>(
+      'createWorkspaceDirectory',
+      path,
+    )
+  }
+  renameWorkspacePath(from: string, to: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['renameWorkspacePath']>>>(
+      'renameWorkspacePath',
+      from,
+      to,
+    )
+  }
+  deleteWorkspacePath(path: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['deleteWorkspacePath']>>>(
+      'deleteWorkspacePath',
+      path,
+    )
+  }
+  getWorkspacePathMetadata(path: string) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getWorkspacePathMetadata']>>>(
+      'getWorkspacePathMetadata',
+      path,
+    )
+  }
+  rebuildIndex(documents: Parameters<WorkspaceSidecarClient['rebuildIndex']>[0]) {
+    return this.request<void>('rebuildIndex', documents)
+  }
+  upsertDocument(document: Parameters<WorkspaceSidecarClient['upsertDocument']>[0]) {
+    return this.request<void>('upsertDocument', document)
+  }
+  removeDocument(path: string) {
+    return this.request<void>('removeDocument', path)
+  }
+  removePathPrefix(prefix: string) {
+    return this.request<void>('removePathPrefix', prefix)
+  }
+  search(query: string, limit: number) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['search']>>>(
+      'search',
+      query,
+      limit,
+    )
+  }
+  searchWithOptions(
+    query: string,
+    options: Parameters<WorkspaceSidecarClient['searchWithOptions']>[1],
+  ) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['searchWithOptions']>>>(
+      'searchWithOptions',
+      query,
+      options,
+    )
+  }
+  openMarkdownDocument(...args: Parameters<WorkspaceSidecarClient['openMarkdownDocument']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['openMarkdownDocument']>>>(
+      'openMarkdownDocument',
+      ...args,
+    )
+  }
+  changeMarkdownDocument(...args: Parameters<WorkspaceSidecarClient['changeMarkdownDocument']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['changeMarkdownDocument']>>>(
+      'changeMarkdownDocument',
+      ...args,
+    )
+  }
+  resyncMarkdownDocument(...args: Parameters<WorkspaceSidecarClient['resyncMarkdownDocument']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['resyncMarkdownDocument']>>>(
+      'resyncMarkdownDocument',
+      ...args,
+    )
+  }
+  closeMarkdownDocument(...args: Parameters<WorkspaceSidecarClient['closeMarkdownDocument']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['closeMarkdownDocument']>>>(
+      'closeMarkdownDocument',
+      ...args,
+    )
+  }
+  getMarkdownDocumentSymbols(
+    ...args: Parameters<WorkspaceSidecarClient['getMarkdownDocumentSymbols']>
+  ) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getMarkdownDocumentSymbols']>>>(
+      'getMarkdownDocumentSymbols',
+      ...args,
+    )
+  }
+  getMarkdownLinks(...args: Parameters<WorkspaceSidecarClient['getMarkdownLinks']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['getMarkdownLinks']>>>(
+      'getMarkdownLinks',
+      ...args,
+    )
+  }
+  buildWorkspaceGraph(...args: Parameters<WorkspaceSidecarClient['buildWorkspaceGraph']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['buildWorkspaceGraph']>>>(
+      'buildWorkspaceGraph',
+      ...args,
+    )
+  }
+  buildOutlineGraph(...args: Parameters<WorkspaceSidecarClient['buildOutlineGraph']>) {
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['buildOutlineGraph']>>>(
+      'buildOutlineGraph',
+      ...args,
+    )
+  }
+  shutdown(reason: string) {
+    return this.request<void>('shutdown', reason)
+  }
+  close(): void {
+    this.handleExit(0)
+  }
+
+  private request<T>(method: NodeSidecarMethod, ...args: unknown[]): Promise<T> {
+    const id = this.nextId++
+    return new Promise<T>((resolve, reject) => {
+      this.pending.set(id, { reject, resolve: (value) => resolve(value as T) })
+      this.port.postMessage({ args, id, method })
+    })
+  }
+
+  private handleMessage(message: unknown): void {
+    if (!isNodeSidecarResponse(message)) return
+    const pending = this.pending.get(message.id)
+    if (!pending) return
+    this.pending.delete(message.id)
+    if (message.ok) pending.resolve(message.result)
+    else pending.reject(new Error(message.error))
+  }
+
+  private handleExit(code: number): void {
+    const error = new Error(`Knowledge utility process exited with code ${code}.`)
+    for (const pending of this.pending.values()) pending.reject(error)
+    this.pending.clear()
+  }
+}

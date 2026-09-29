@@ -12,9 +12,6 @@ export const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch', 
 export const electronMainManualChunks = (id: string) => {
   const normalizedId = id.replaceAll('\\', '/')
 
-  if (normalizedId.includes('/electron/generated/knowledge-engine/')) {
-    return 'main-knowledge-proto'
-  }
   if (normalizedId.includes('/electron/services/knowledgeEngine/')) {
     return 'main-knowledge-engine'
   }
@@ -43,9 +40,6 @@ export const electronMainManualChunks = (id: string) => {
     ])
   ) {
     return 'main-glob'
-  }
-  if (includesAny(normalizedId, ['@grpc/grpc-js', '@grpc/proto-loader', '@bufbuild/protobuf'])) {
-    return 'main-grpc'
   }
   if (normalizedId.includes('rxjs')) return 'main-rxjs'
   if (

@@ -9,7 +9,7 @@ export type QualityImpactArea =
   | 'Keyboard shortcuts'
   | 'IPC / runtime services'
   | 'Workspace filesystem/services'
-  | 'Knowledge engine / Rust sidecar'
+  | 'Knowledge engine / Node runtime'
   | 'Build/package'
   | 'i18n'
   | 'Quality gates'

@@ -1,9 +1,49 @@
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+
 import { describe, expect, it, vi } from 'vitest'
 
+import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
+import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient.js'
 import { createManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.testFixture.js'
+import type { Logger } from '@electron/services/logger.js'
 
 describe('WorkspaceSidecarManager', () => {
-  it('starts a sidecar, opens a workspace over grpc, and tracks runtime state', async () => {
+  it('opens a workspace with the built-in Node runtime and no binary resolver', async () => {
+    const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-node-manager-'))
+    const logger = { info: vi.fn(), warn: vi.fn() } as unknown as Logger
+    const manager = new WorkspaceSidecarManager({
+      appDataDir: workspaceRoot,
+      logger,
+      startSidecar: async (_plan, identity) => ({
+        address: 'node:utility-process',
+        client: createNodeWorkspaceClient(identity.canonicalRoot),
+      }),
+    })
+
+    try {
+      await manager.open('workspace-node', workspaceRoot, { openWorkspace: false })
+      await manager.createWorkspaceFile('workspace-node', 'local.md')
+
+      expect(manager.listActive()).toMatchObject([
+        {
+          address: 'node:utility-process',
+          spawnPlan: { command: 'node:utility-process' },
+          state: 'ready',
+          workspaceId: 'workspace-node',
+        },
+      ])
+      await expect(manager.listWorkspaceEntries('workspace-node')).resolves.toMatchObject([
+        { kind: 'file', path: 'local.md' },
+      ])
+    } finally {
+      manager.clear()
+      await fs.rm(workspaceRoot, { force: true, recursive: true })
+    }
+  })
+
+  it('starts an isolated runtime, opens a workspace, and tracks runtime state', async () => {
     const { child, client, manager, startSidecar } = createManager()
 
     await manager.open('workspace-a', 'index-a')
@@ -24,24 +64,33 @@ describe('WorkspaceSidecarManager', () => {
     expect(JSON.stringify(manager.listActive())).not.toContain('sessionToken')
   })
 
-  it('attaches a redacted spawn plan when a knowledge engine binary is available', async () => {
+  it('marks a ready runtime as failed when its utility process exits unexpectedly', async () => {
+    const { child, manager } = createManager()
+    await manager.open('workspace-a', 'index-a')
+
+    child.emit('exit', 7)
+
+    expect(manager.listActive()).toMatchObject([
+      {
+        lastError: 'Knowledge utility process exited with code 7.',
+        state: 'error',
+        workspaceId: 'workspace-a',
+      },
+    ])
+    await expect(manager.search('workspace-a', 'alpha', 10)).rejects.toThrow(
+      'Knowledge sidecar workspace is not ready',
+    )
+  })
+
+  it('reports the Node runtime plan without exposing workspace secrets', async () => {
     const { manager } = createManager()
 
     await manager.open('workspace-a', 'index-a')
 
     expect(manager.listActive()[0]).toMatchObject({
       spawnPlan: {
-        command: 'engine.exe',
-        args: [
-          '--workspace-instance-id',
-          expect.any(String),
-          '--workspace-root',
-          expect.stringContaining('index-a'),
-          '--engine-data-dir',
-          expect.stringContaining('app-data'),
-          '--grpc-session-token',
-          '<redacted>',
-        ],
+        command: 'node:utility-process',
+        args: [],
         env: {},
         windowsHide: true,
       },
@@ -49,7 +98,7 @@ describe('WorkspaceSidecarManager', () => {
     expect(JSON.stringify(manager.listActive())).not.toContain('sessionToken')
   })
 
-  it('routes search requests to the workspace grpc client', async () => {
+  it('routes search requests to the workspace client', async () => {
     const { client, manager } = createManager()
     await manager.open('workspace-a', 'index-a')
 
@@ -58,7 +107,7 @@ describe('WorkspaceSidecarManager', () => {
     expect(client.search).toHaveBeenCalledWith('alpha', 10)
   })
 
-  it('routes search requests with options to the workspace grpc client', async () => {
+  it('routes search requests with options to the workspace client', async () => {
     const { client, manager } = createManager()
     await manager.open('workspace-a', 'index-a')
 
@@ -189,20 +238,6 @@ describe('WorkspaceSidecarManager', () => {
 
     await expect(manager.search('missing', 'alpha', 10)).rejects.toThrow(
       'Knowledge sidecar workspace is not ready',
-    )
-  })
-
-  it('rejects open when the binary is not available', async () => {
-    const { manager } = createManager({
-      resolveBinary: () => ({
-        binaryPath: 'missing-engine.exe',
-        exists: false,
-        source: 'dev-resource',
-      }),
-    })
-
-    await expect(manager.open('workspace-a', 'index-a')).rejects.toThrow(
-      'Knowledge engine binary not found',
     )
   })
 })

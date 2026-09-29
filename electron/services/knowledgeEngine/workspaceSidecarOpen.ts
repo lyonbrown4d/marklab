@@ -7,11 +7,11 @@ import {
   createWorkspaceSidecarIdentity,
   type WorkspaceSidecarIdentity,
 } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
+import { startNodeSidecar } from '@electron/services/knowledgeEngine/nodeSidecarProcess.js'
 import {
   createWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
-import { startGrpcSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarStarter.js'
 
 type OpenWorkspaceSidecarRuntimeInput = {
   workspaceId: string
@@ -46,7 +46,7 @@ export const openWorkspaceSidecarRuntime = async ({
     workspaceId,
     indexPath,
   })
-  const spawnPlan = createSpawnPlan(options, identity)
+  const spawnPlan = createSpawnPlan()
   const openingRuntime: WorkspaceSidecarRuntime = {
     workspaceId,
     indexPath,
@@ -64,13 +64,24 @@ export const openWorkspaceSidecarRuntime = async ({
     if (openWorkspace ?? true) {
       await started.client.openWorkspace(indexPath)
     }
-    runtimes.set(workspaceId, {
+    const readyRuntime: WorkspaceSidecarRuntime = {
       ...openingRuntime,
       address: started.address,
       child: started.child,
       client: started.client,
       lastActivityAt: Date.now(),
       state: 'ready',
+    }
+    runtimes.set(workspaceId, readyRuntime)
+    started.child?.onExit?.((code) => {
+      const current = runtimes.get(workspaceId)
+      if (!current || current.child !== started.child || current.state === 'closing') return
+      runtimes.set(workspaceId, {
+        ...current,
+        lastActivityAt: Date.now(),
+        lastError: `Knowledge utility process exited with code ${code}.`,
+        state: 'error',
+      })
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
@@ -84,19 +95,8 @@ export const openWorkspaceSidecarRuntime = async ({
   }
 }
 
-const createSpawnPlan = (
-  options: WorkspaceSidecarManagerOptions,
-  identity: WorkspaceSidecarIdentity,
-): WorkspaceSidecarSpawnPlan => {
-  const binary = options.resolveBinary()
-  if (!binary?.exists) {
-    throw new Error('Knowledge engine binary not found. Run pnpm knowledge:build first.')
-  }
-
-  return createWorkspaceSidecarSpawnPlan({
-    binary,
-    identity,
-  })
+const createSpawnPlan = (): WorkspaceSidecarSpawnPlan => {
+  return createWorkspaceSidecarSpawnPlan()
 }
 
 const startSidecar = (
@@ -104,7 +104,6 @@ const startSidecar = (
   plan: WorkspaceSidecarSpawnPlan,
   identity: WorkspaceSidecarIdentity,
 ): Promise<StartedWorkspaceSidecar> => {
-  return options.startSidecar
-    ? options.startSidecar(plan, identity)
-    : startGrpcSidecar(plan, identity, options.logger)
+  if (options.startSidecar) return options.startSidecar(plan, identity)
+  return startNodeSidecar(identity, options.logger)
 }

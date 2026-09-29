@@ -1,5 +1,3 @@
-import type { ChildProcess } from 'node:child_process'
-
 import type {
   KnowledgeCloseDocumentInput,
   KnowledgeDocumentChangeInput,
@@ -7,18 +5,19 @@ import type {
   KnowledgeMarkdownLink,
   KnowledgeOpenDocumentInput,
   KnowledgeResyncDocumentInput,
-  KnowledgeSearchOptions,
-  KnowledgeSearchResultSet,
   KnowledgeSyncResponse,
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/grpcClient.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+import type {
+  KnowledgeSearchOptions,
+  KnowledgeSearchResultSet,
+} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
 import {
   redactWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
 } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
-import type { KnowledgeEngineBinaryResolution } from '@electron/services/knowledgeEngine/types.js'
 import type {
   FsEntry,
   FsPathMetadata,
@@ -97,7 +96,7 @@ export type WorkspaceSidecarRuntime = {
   openedAt: number
   lastActivityAt: number
   address?: string
-  child?: ChildProcess
+  child?: WorkspaceSidecarProcess
   client?: WorkspaceSidecarClient
   lastError?: string
 }
@@ -117,7 +116,6 @@ export type WorkspaceSidecarRuntimeSummary = Omit<
 export type WorkspaceSidecarManagerOptions = {
   appDataDir: string
   logger: Logger
-  resolveBinary: () => KnowledgeEngineBinaryResolution | null
   startSidecar?: (
     plan: WorkspaceSidecarSpawnPlan,
     identity: WorkspaceSidecarIdentity,
@@ -126,6 +124,13 @@ export type WorkspaceSidecarManagerOptions = {
 
 export type StartedWorkspaceSidecar = {
   address: string
-  child?: ChildProcess
+  child?: WorkspaceSidecarProcess
   client: WorkspaceSidecarClient
+}
+
+export type WorkspaceSidecarProcess = {
+  killed: boolean
+  kill: () => boolean
+  onExit?: (listener: (code: number) => void) => void
+  pid?: number
 }

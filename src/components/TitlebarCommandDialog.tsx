@@ -202,7 +202,7 @@ const TitlebarCommandDialog = ({
                 onOpenFile={handleOpenFile}
               />
             )}
-            {actionsOnly && (
+            {(actionsOnly || parsedSearch.scope === 'all') && (
               <CommandNavigationSection
                 activePath={activePath}
                 headings={navigationHeadings}
@@ -232,7 +232,7 @@ const TitlebarCommandDialog = ({
                 onOpenSearchResult={handleOpenSearchResult}
               />
             )}
-            {(actionsOnly || (searching && parsedSearch.scope === 'all')) && (
+            {(actionsOnly || parsedSearch.scope === 'all') && (
               <CommandActionSections
                 canCreateWorkspaceEntries={canCreateWorkspaceEntries}
                 collections={collections}

@@ -17,9 +17,11 @@ beforeEach(() => {
 })
 
 describe('writing-first layout preferences', () => {
-  it('keeps navigation visible and the inspector collapsed for new users', () => {
-    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
+  it('starts new users on a distraction-free canvas', () => {
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
     expect(usePreferencesStore.getState().rightSidebarCollapsed).toBe(true)
+    expect(usePreferencesStore.getState().showEditorStatusBar).toBe(false)
+    expect(usePreferencesStore.getState().immersiveFocusMode).toBe(true)
   })
 
   it('preserves an existing preference to keep the inspector open', async () => {

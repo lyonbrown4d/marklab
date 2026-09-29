@@ -11,11 +11,7 @@ import {
 import WindowControls from '@/components/WindowControls'
 import AppCommandDialog from '@/components/AppCommandDialog'
 import TitlebarCommandDialogFallback from '@/components/TitlebarCommandDialogFallback'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { isDesktopRuntime } from '@/runtime/window'
-import { TitlebarActions } from '@/components/titlebar/TitlebarActions'
-import { TitlebarCommandCenter } from '@/components/titlebar/TitlebarCommandCenter'
-import { TitlebarNavigation } from '@/components/titlebar/TitlebarNavigation'
 import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandModel } from '@/components/titlebar/useTitlebarCommandModel'
 import {
@@ -24,7 +20,8 @@ import {
 } from '@/components/titlebar/titlebarCommandNavigation'
 import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
-import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
+import { useI18n } from '@/i18n/useI18n'
+import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 
@@ -36,11 +33,9 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
   (
     {
       activePath,
-      activeTab,
       tabs,
       dirtyPaths,
       saveStates,
-      silentSave,
       onToggleSidebar,
       onToggleRightSidebar,
       onSelectProject,
@@ -62,7 +57,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       searchIndexRebuilding,
       isMaximized,
       setIsMaximized,
-      theme,
       setTheme,
       commandOpen: controlledCommandOpen,
       onCommandOpenChange,
@@ -71,8 +65,9 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     ref,
   ) => {
     const [internalCommandOpen, setInternalCommandOpen] = useState(false)
+    const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
-    const commandDataReady = useDeferredOpenContent(commandOpen)
+    const commandDataReady = commandOpen
     const setCommandOpen = useCallback(
       (open: boolean) => {
         if (controlledCommandOpen === undefined) {
@@ -91,10 +86,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       [setCommandOpen],
     )
 
-    const { platform, getAppWindow, isWindows, showInlineMenu, isMacDesktop } =
-      useTitlebarPlatform()
+    const { platform, getAppWindow, isWindows, isMacDesktop } = useTitlebarPlatform()
     const {
-      menuGroups,
       commandFiles,
       commandHeadings,
       commandNavigationHeadings,
@@ -104,8 +97,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       commandRecentFiles,
       commandCollections,
       workspaceKnowledgeSummary,
-      commandPaletteShortcut,
-      onMenuAction,
       onOpenSearch,
       onCommandAction,
       onCommandOpenFile,
@@ -154,44 +145,36 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       },
       [getAppWindow, platform],
     )
+    const activeSaveStatus = activePath
+      ? (saveStates[activePath]?.status ?? (dirtyPaths[activePath] ? 'unsaved' : 'saved'))
+      : 'saved'
 
     return (
       <header
         className={cn(
-          'app-titlebar flex h-11 items-center justify-between border-b border-border/80 px-2.5',
+          'app-titlebar relative flex h-14 items-center justify-between border-b border-border/60 px-2.5',
           isMacDesktop && 'pl-[76px]',
         )}
         onMouseDown={handleTitlebarMouseDown}
       >
-        <TooltipProvider>
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <TitlebarNavigation
-              showInlineMenu={showInlineMenu}
-              menuGroups={menuGroups}
-              onMenuAction={onMenuAction}
-              onToggleSidebar={onToggleSidebar}
-            />
-            <TitlebarCommandCenter
-              activePath={activePath}
-              activeTab={activeTab}
-              dirtyPaths={dirtyPaths}
-              saveStates={saveStates}
-              silentSave={silentSave}
-              commandPaletteShortcut={commandPaletteShortcut}
-              onOpenSearch={onOpenSearch}
-            />
-            <TitlebarActions
-              theme={theme}
-              setTheme={setTheme}
-              onMenuAction={onMenuAction}
-              onOpenSearch={onOpenSearch}
-              onOpenSettings={onOpenSettings}
-              onSelectProject={onSelectProject}
-              onSelectSingleFile={onSelectSingleFile}
-              onToggleRightSidebar={onToggleRightSidebar}
-            />
-          </div>
-        </TooltipProvider>
+        <ImmersiveTitlebarChrome
+          activePath={activePath}
+          saveStatus={activeSaveStatus}
+          searchLabel={t('sidebar.search')}
+          savedLabel={t('titlebar.savedLocal')}
+          savingLabel={t('titlebar.savingLocal')}
+          unsavedLabel={t('titlebar.unsavedLocal')}
+          saveErrorLabel={t('save.error')}
+          localLibraryLabel={t('titlebar.localLibrary')}
+          untitledLabel={t('titlebar.untitled')}
+          toggleSidebarLabel={t('actions.toggleSidebar')}
+          toggleOutlineLabel={t('titlebar.documentOutline')}
+          settingsLabel={t('menu.settings')}
+          onOpenSearch={onOpenSearch}
+          onToggleSidebar={onToggleSidebar}
+          onToggleOutline={onToggleRightSidebar}
+          onOpenSettings={onOpenSettings}
+        />
         {commandOpen && (
           <AppCommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
             <Suspense fallback={<TitlebarCommandDialogFallback />}>

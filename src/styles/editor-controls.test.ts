@@ -14,6 +14,7 @@ describe('editor playground baseline styles', () => {
   const playgroundControllerSource = readSource(
     '../components/milkdown/useMarkdownPlaygroundController.ts',
   )
+  const playgroundActionsSource = readSource('../components/milkdown/markdownPlaygroundActions.ts')
   const wysiwygSource = readSource('../pages/WysiwygEditorPage.tsx')
   const playgroundStyles = readStyle('./editor-playground.scss')
   const appWindowStyles = readStyle('./app/_window.scss')
@@ -26,20 +27,20 @@ describe('editor playground baseline styles', () => {
     expect(mainSource).not.toContain("import '@/styles/editor-controls.scss'")
   })
 
-  it('renders the wysiwyg editor without app shell or route cache motion transforms', () => {
+  it('renders the wysiwyg editor without legacy app shell or route cache motion transforms', () => {
     expect(wysiwygSource).not.toContain('editor-stage')
     expect(wysiwygSource).not.toContain('editor-paper')
     expect(wysiwygSource).not.toContain('motion-view')
-    expect(appWorkspacePanelsSource).toContain("state.viewMode !== 'wysiwyg'")
-    expect(appWorkspacePanelsSource).toContain("shouldAnimateRouteCache && 'motion-view'")
-    expect(appWorkspacePanelsSource).toContain("shouldAnimateRouteCache && 'motion-view-stack'")
+    expect(appWorkspacePanelsSource).toContain('<ImmersiveWorkspaceShell')
+    expect(appWorkspacePanelsSource).not.toContain('motion-view')
+    expect(appWorkspacePanelsSource).not.toContain('motion-view-stack')
   })
 
   it('moves fixed Milkdown overlays into the viewport coordinate root', () => {
     expect(playgroundControllerSource).toContain('relocateFixedDropIndicatorToViewportRoot')
-    expect(playgroundControllerSource).toContain('document.body.appendChild(indicator)')
+    expect(playgroundActionsSource).toContain('document.body.appendChild(indicator)')
     expect(playgroundControllerSource).toContain('.use(animatedCursor)')
-    expect(playgroundControllerSource).toContain(
+    expect(playgroundActionsSource).toContain(
       "indicator.dataset.marklabPlaygroundOverlay = 'drop-cursor'",
     )
     expect(animatedCursorSource).toContain('document.body.appendChild(caret)')
@@ -77,14 +78,17 @@ describe('editor playground baseline styles', () => {
     expect(playgroundStyles).not.toMatch(/(^|\n)\.milkdown \*/)
   })
 
-  it('maps Crepe colors to MarkLab theme tokens without changing playground layout', () => {
+  it('maps Crepe colors to MarkLab tokens and keeps an editorial reading column', () => {
     expect(playgroundStyles).toContain('.crepe-playground > .milkdown > .ProseMirror')
     expect(playgroundStyles).toContain('--crepe-color-background: hsl(var(--background));')
     expect(playgroundStyles).toContain('--crepe-color-on-background: hsl(var(--foreground));')
     expect(playgroundStyles).toContain('--crepe-color-primary: hsl(var(--primary));')
     expect(playgroundStyles).toContain('--crepe-color-hover: color-mix(in srgb, hsl(var(--accent))')
     expect(playgroundStyles).toContain('overflow-y: scroll;')
-    expect(playgroundStyles).toContain('padding: 60px 120px !important;')
+    expect(playgroundStyles).toContain("--editor-prose-font: ui-serif, 'Noto Serif SC'")
+    expect(playgroundStyles).toContain('width: min(100%, 760px);')
+    expect(playgroundStyles).toContain('margin-inline: auto;')
+    expect(playgroundStyles).toContain('line-height: 1.9;')
     expect(playgroundStyles).not.toContain('#fdfcff')
     expect(playgroundStyles).not.toContain('#37618e')
     expect(playgroundStyles).not.toContain('.dark .crepe-playground .milkdown')

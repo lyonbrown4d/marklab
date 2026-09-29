@@ -173,12 +173,13 @@ export const useTitlebarCommandModel = ({
   const commandRecentFiles = useMemo(() => {
     if (!commandOpen) return []
     const seen = new Set<string>()
-    return [...tabs].reverse().flatMap((tab) => {
+    const active = activePath ? [{ kind: 'file' as const, path: activePath }] : []
+    return [...active, ...[...tabs].reverse()].flatMap((tab) => {
       if (tab.kind !== 'file' || seen.has(tab.path)) return []
       seen.add(tab.path)
       return [{ path: tab.path, label: createFileLabel(tab.path) }]
     })
-  }, [commandOpen, tabs])
+  }, [activePath, commandOpen, tabs])
 
   const workspaceKnowledgeSummary = useMemo(
     () => buildWorkspaceKnowledgeSummary(commandOpen ? workspaceIndex : null),

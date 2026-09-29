@@ -144,7 +144,7 @@ describe('Titlebar command palette', () => {
 
     expect(onEditorRender).toHaveBeenCalledTimes(1)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Search files... - target.md' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Search files...' }))
     await screen.findByRole('dialog', { name: 'Command palette' })
 
     expect(onEditorRender).toHaveBeenCalledTimes(1)
@@ -174,9 +174,10 @@ describe('Titlebar command palette', () => {
     const onOpenFile = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenFile }))
 
+    await userEvent.type(screen.getByRole('combobox'), 'target')
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /Copy Markdown Link notes\/target\.md/i,
+        name: /^Copy Markdown Link notes\/target\.md$/i,
       }),
     )
 
@@ -299,13 +300,12 @@ describe('Titlebar command palette', () => {
     renderTitlebar(props)
 
     await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }))
-    await user.click(screen.getByRole('button', { name: 'Toggle right sidebar' }))
-    await user.click(screen.getByRole('button', { name: 'Settings' }))
-    await user.click(screen.getByRole('button', { name: 'More' }))
+    await user.click(screen.getByRole('button', { name: 'Document outline' }))
+    await user.click(screen.getByRole('button', { name: 'Search files...' }))
 
     expect(props.onToggleSidebar).toHaveBeenCalledTimes(1)
     expect(props.onToggleRightSidebar).toHaveBeenCalledTimes(1)
-    expect(props.onOpenSettings).toHaveBeenCalledTimes(1)
+    expect(props.onCommandOpenChange).toHaveBeenCalledWith(true)
   })
 
   it('localizes chrome-only controls', async () => {
@@ -315,8 +315,8 @@ describe('Titlebar command palette', () => {
     renderTitlebar(createProps())
 
     expect(screen.getByRole('button', { name: '切换侧边栏' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '切换右侧栏' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '更多' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '文档大纲' })).toBeInTheDocument()
+    expect(screen.getByText('已保存到本机')).toBeInTheDocument()
   })
 
   it('announces active file save state from the command center', () => {
@@ -327,10 +327,11 @@ describe('Titlebar command palette', () => {
       }),
     )
 
-    expect(screen.getByRole('button', { name: 'Search files... - target.md' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search files...' })).toBeInTheDocument()
+    expect(screen.getByText('Not yet saved')).toBeInTheDocument()
   })
 
-  it('hides routine dirty state from the command center during silent save', () => {
+  it('keeps local persistence visible during silent save', () => {
     renderTitlebar(
       createProps({
         dirtyPaths: { 'notes/target.md': true },
@@ -338,7 +339,7 @@ describe('Titlebar command palette', () => {
       }),
     )
 
-    expect(screen.getByRole('button', { name: 'Search files... - target.md' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('target.md - Unsaved')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search files...' })).toBeInTheDocument()
+    expect(screen.getByText('Not yet saved')).toBeInTheDocument()
   })
 })

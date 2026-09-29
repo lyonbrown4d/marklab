@@ -99,21 +99,14 @@
     "checks": ["workspace service tests", "workspace sidecar/path tests", "pnpm exec tsc -b"]
   },
   {
-    "area": "Knowledge engine / Rust sidecar",
-    "risk": "spawn/config drift, protocol mismatch, blocking work, or sidecar lifecycle regression",
+    "area": "Knowledge engine / Node runtime",
+    "risk": "workspace isolation drift, blocking I/O, index mismatch, or runtime lifecycle regression",
     "patterns": [
-      "^Cargo\\.(toml|lock)$",
       "^buf\\.",
       "^electron/generated/knowledge-engine/",
-      "^electron/services/knowledgeEngine/",
-      "^knowledge-engine/"
+      "^electron/services/knowledgeEngine/"
     ],
-    "checks": [
-      "cargo fmt --all --check",
-      "cargo check --workspace",
-      "cargo test --workspace",
-      "pnpm test:knowledge:integration"
-    ]
+    "checks": ["knowledge engine Node runtime tests", "pnpm typecheck", "pnpm test:electron:build"]
   },
   {
     "area": "Build/package",
