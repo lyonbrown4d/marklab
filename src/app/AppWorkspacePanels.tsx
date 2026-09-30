@@ -1,8 +1,7 @@
-import { useMemo, type ReactNode, type RefObject } from 'react'
-import type { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
-import Sidebar from '@/components/Sidebar'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import { ImmersiveWorkspaceShell } from '@/components/ImmersiveWorkspaceShell'
+import { AppWorkspaceSidebar } from '@/app/AppWorkspaceSidebar'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
 import type { FileViewKind } from '@/store/appTypes'
 import type { GitDiffRequest } from '@/services/gitApi'
@@ -47,13 +46,7 @@ type AppWorkspacePanelsState = Pick<
 
 type AppWorkspacePanelsProps = {
   state: AppWorkspacePanelsState
-  workspacePanelLayout: ReturnType<typeof useDefaultLayout>
-  workspaceGroupElementRef: RefObject<HTMLDivElement | null>
-  leftSidebarPanelRef: ReturnType<typeof usePanelRef>
-  rightSidebarPanelRef: ReturnType<typeof usePanelRef>
   outlet: ReactNode
-  routeCacheKey: string
-  routeCacheMax: number
   totalFiles: number
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
@@ -74,13 +67,26 @@ export const AppWorkspacePanels = ({
 }: AppWorkspacePanelsProps) => {
   const { t } = useI18n()
   const tabIds = useMemo(() => state.tabs.map(getWorkspaceTabId), [state.tabs])
+  const toggleSidebar = useCallback(() => {
+    const { sidebarCollapsed } = usePreferencesStore.getState()
+    usePreferencesStore.setState({ sidebarCollapsed: !sidebarCollapsed })
+  }, [])
+  const setSidebarOpen = useCallback((open: boolean) => {
+    usePreferencesStore.setState((current) =>
+      current.sidebarCollapsed === !open ? current : { sidebarCollapsed: !open },
+    )
+  }, [])
+  const toggleInspector = useCallback(() => {
+    const { rightSidebarCollapsed } = usePreferencesStore.getState()
+    usePreferencesStore.setState({ rightSidebarCollapsed: !rightSidebarCollapsed })
+  }, [])
   const sidebar = (
-    <Sidebar
-      collapsed={false}
+    <AppWorkspaceSidebar
+      activeEditorPath={state.activePath}
+      activeResourcePath={state.activeResourcePath}
       recentProjects={state.recentProjects}
       files={state.files}
       fileTree={state.fileTree}
-      activePath={state.activeResourcePath}
       onOpenFile={onOpenFile}
       onOpenFileView={onOpenFileView}
       onOpenProject={state.onOpenProject}
@@ -91,9 +97,7 @@ export const AppWorkspacePanels = ({
       onCreateFolder={state.createFolder}
       onRenamePath={state.renamePath}
       onMovePath={state.movePath}
-      onRestoreHistoryContent={(path, content) => {
-        if (path === state.activePath) state.onEditorChange(content)
-      }}
+      onEditorChange={state.onEditorChange}
       onDeletePath={state.deletePath}
       onUseInternalRoot={state.onUseInternalRoot}
       rootKind={state.rootKind}
@@ -128,13 +132,9 @@ export const AppWorkspacePanels = ({
       inspectorOpen={!state.rightSidebarCollapsed && !immersiveZenMode}
       sidebarLabel={t('actions.toggleSidebar')}
       inspectorLabel={t('titlebar.documentOutline')}
-      onToggleSidebar={() =>
-        usePreferencesStore.setState({ sidebarCollapsed: !state.sidebarCollapsed })
-      }
-      onSidebarOpenChange={(open) => usePreferencesStore.setState({ sidebarCollapsed: !open })}
-      onToggleInspector={() =>
-        usePreferencesStore.setState({ rightSidebarCollapsed: !state.rightSidebarCollapsed })
-      }
+      onToggleSidebar={toggleSidebar}
+      onSidebarOpenChange={setSidebarOpen}
+      onToggleInspector={toggleInspector}
     >
       <section className="workspace-main flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">{outlet}</div>

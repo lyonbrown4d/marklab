@@ -1,6 +1,7 @@
 import { FileText, Filter, ListFilter, Search } from 'lucide-react'
 import { useCallback, useDeferredValue, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,7 +51,13 @@ const collectionIds = builtInMarkdownCollections.map((collection) => collection.
 
 const AllPagesPage = () => {
   const { t } = useI18n()
-  const { files, onOpenFile, workspaceIndex } = useLayoutContext()
+  const { files, onOpenFile, workspaceIndex } = useLayoutContext(
+    useShallow((state) => ({
+      files: state.files,
+      onOpenFile: state.onOpenFile,
+      workspaceIndex: state.workspaceIndex,
+    })),
+  )
   const [searchParams, setSearchParams] = useSearchParams()
   const routeState = useMemo(
     () => parseAllPagesRouteState(searchParams, collectionIds),

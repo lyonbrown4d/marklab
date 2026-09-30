@@ -10,6 +10,7 @@ import type {
   WorkspaceTab,
 } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
+import { createStore, type StoreApi } from 'zustand/vanilla'
 
 export type LayoutContext = {
   activePath: string | null
@@ -40,3 +41,8 @@ export type LayoutContext = {
   onOpenProjectInCurrentWindow: (path: string) => void
   onUseInternalRoot: () => void
 }
+
+export type LayoutContextStore = StoreApi<LayoutContext>
+
+export const createLayoutContextStore = (initialState: LayoutContext): LayoutContextStore =>
+  createStore<LayoutContext>()(() => initialState)

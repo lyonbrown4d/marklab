@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/button'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
@@ -15,7 +16,14 @@ import { useLayoutContext } from '@/pages/useLayoutContext'
 
 const FilePreviewPage = () => {
   const params = useParams()
-  const context = useLayoutContext()
+  const context = useLayoutContext(
+    useShallow((state) => ({
+      files: state.files,
+      onOpenFile: state.onOpenFile,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
+    })),
+  )
   const { t } = useI18n()
   const requestedPath = params['*'] || null
   const previewKind = requestedPath ? getPreviewFileKind(requestedPath) : null

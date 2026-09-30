@@ -1,18 +1,8 @@
-import {
-  forwardRef,
-  lazy,
-  Suspense,
-  useCallback,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
 import { AppStatusBarProvider } from '@/components/EditorStatusBar'
-import SettingsDialogFallback from '@/components/SettingsDialogFallback'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
 import AppStatusBar from '@/components/AppStatusBar'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
@@ -29,38 +19,9 @@ import { useAppMenuEventSync } from '@/app/useAppMenuEventSync'
 import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
+import { SettingsDialogHost, type SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
 
 export type { LayoutContext } from '@/app/AppLayoutContext'
-
-const SettingsDialog = lazy(() => import('@/components/SettingsDialog'))
-
-type SettingsDialogHostHandle = {
-  openSettings: () => void
-}
-
-const SettingsDialogHost = forwardRef<SettingsDialogHostHandle>((_, ref) => {
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const openSettings = useCallback(() => {
-    setSettingsOpen(true)
-  }, [])
-  useImperativeHandle(
-    ref,
-    () => ({
-      openSettings,
-    }),
-    [openSettings],
-  )
-
-  return settingsOpen ? (
-    <Suspense
-      fallback={<SettingsDialogFallback open={settingsOpen} onOpenChange={setSettingsOpen} />}
-    >
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </Suspense>
-  ) : null
-})
-
-SettingsDialogHost.displayName = 'SettingsDialogHost'
 
 const AppLayout = () => {
   const state = useAppLayoutState()
@@ -68,15 +29,8 @@ const AppLayout = () => {
   const queryClient = useQueryClient()
   const titlebarRef = useRef<TitlebarHandle | null>(null)
   const settingsDialogRef = useRef<SettingsDialogHostHandle | null>(null)
-  const workspaceGroupElementRef = useRef<HTMLDivElement | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
-  const leftSidebarPanelRef = usePanelRef()
-  const rightSidebarPanelRef = usePanelRef()
   const terminalPanelRef = usePanelRef()
-  const workspacePanelLayout = useDefaultLayout({
-    id: 'marklab-workspace-panels',
-    panelIds: ['left-sidebar', 'workspace-main', 'right-sidebar'],
-  })
   const shellPanelLayout = useDefaultLayout({
     id: 'marklab-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
@@ -93,6 +47,9 @@ const AppLayout = () => {
     current.setEditorReadOnlyMode(nextReadOnly)
     if (nextReadOnly && current.activePath) current.setViewMode('wysiwyg')
   }, [stateRef])
+  const hideStatusBar = useCallback(() => {
+    stateRef.current.setShowEditorStatusBar(false)
+  }, [stateRef])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
   const {
     closeTerminalArea,
@@ -105,13 +62,8 @@ const AppLayout = () => {
     disabled: immersiveZenMode,
   })
   useAppPanelLayoutSync({
-    leftSidebarPanelRef,
-    rightSidebarPanelRef,
     terminalPanelRef,
-    workspaceGroupElementRef,
     shellGroupElementRef,
-    sidebarCollapsed: state.sidebarCollapsed || immersiveZenMode,
-    rightSidebarCollapsed: state.rightSidebarCollapsed || immersiveZenMode,
     terminalOpen: effectiveTerminalOpen,
   })
   const handleMenuAction = useAppMenuAction({
@@ -136,7 +88,7 @@ const AppLayout = () => {
     onOpenFileView: handleOpenFileView,
     viewMode: state.viewMode,
   })
-  const { outlet, routeCacheKey, routeCacheMax, totalFiles } = useAppLayoutOutlet({
+  const { outlet, totalFiles } = useAppLayoutOutlet({
     immersiveZenMode,
     onOpenFile: handleOpenFile,
     onOpenFileView: handleOpenFileView,
@@ -169,7 +121,6 @@ const AppLayout = () => {
     () => ({
       activePath: state.activePath,
       activeResourcePath: state.activeResourcePath,
-      activeTabId: state.activeTabId,
       createFile: state.createFile,
       createFolder: state.createFolder,
       deletePath: state.deletePath,
@@ -180,11 +131,9 @@ const AppLayout = () => {
       files: state.files,
       inspectedPath: state.inspectedPath,
       movePath: state.movePath,
-      onCloseTab: state.onCloseTab,
       onEditorChange: state.onEditorChange,
       onInspectPath: state.onInspectPath,
       onOpenProject: state.onOpenProject,
-      onOpenTab: state.onOpenTab,
       onOpenWorkspaceGraph: state.onOpenWorkspaceGraph,
       onOpenWorkspaceOverview: state.onOpenWorkspaceOverview,
       onSelectProject: state.onSelectProject,
@@ -194,10 +143,7 @@ const AppLayout = () => {
       rightSidebarCollapsed: state.rightSidebarCollapsed,
       rootKind: state.rootKind,
       rootPath: state.rootPath,
-      saveStates: state.saveStates,
-      setViewMode: state.setViewMode,
       sidebarCollapsed: state.sidebarCollapsed,
-      silentSave: state.silentSave,
       tabs: state.tabs,
       viewMode: state.viewMode,
       workspaceIndex: state.workspaceIndex,
@@ -205,7 +151,6 @@ const AppLayout = () => {
     [
       state.activePath,
       state.activeResourcePath,
-      state.activeTabId,
       state.createFile,
       state.createFolder,
       state.deletePath,
@@ -216,11 +161,9 @@ const AppLayout = () => {
       state.files,
       state.inspectedPath,
       state.movePath,
-      state.onCloseTab,
       state.onEditorChange,
       state.onInspectPath,
       state.onOpenProject,
-      state.onOpenTab,
       state.onOpenWorkspaceGraph,
       state.onOpenWorkspaceOverview,
       state.onSelectProject,
@@ -230,10 +173,7 @@ const AppLayout = () => {
       state.rightSidebarCollapsed,
       state.rootKind,
       state.rootPath,
-      state.saveStates,
-      state.setViewMode,
       state.sidebarCollapsed,
-      state.silentSave,
       state.tabs,
       state.viewMode,
       state.workspaceIndex,
@@ -243,13 +183,7 @@ const AppLayout = () => {
     () => (
       <AppWorkspacePanels
         state={workspacePanelState}
-        workspacePanelLayout={workspacePanelLayout}
-        workspaceGroupElementRef={workspaceGroupElementRef}
-        leftSidebarPanelRef={leftSidebarPanelRef}
-        rightSidebarPanelRef={rightSidebarPanelRef}
         outlet={outlet}
-        routeCacheKey={routeCacheKey}
-        routeCacheMax={routeCacheMax}
         totalFiles={totalFiles}
         onOpenFile={handleOpenFile}
         onOpenFileView={handleOpenFileView}
@@ -264,15 +198,9 @@ const AppLayout = () => {
       handleOpenGitDiff,
       handleOpenSearchResult,
       immersiveZenMode,
-      leftSidebarPanelRef,
       outlet,
-      rightSidebarPanelRef,
-      routeCacheKey,
-      routeCacheMax,
       workspacePanelState,
       totalFiles,
-      workspaceGroupElementRef,
-      workspacePanelLayout,
     ],
   )
 
@@ -347,7 +275,7 @@ const AppLayout = () => {
           readOnlyMode={state.editorReadOnlyMode}
           onToggleTerminal={toggleTerminalArea}
           onToggleReadOnly={toggleReadOnly}
-          onHideStatusBar={() => state.setShowEditorStatusBar(false)}
+          onHideStatusBar={hideStatusBar}
           onRestoreSession={state.restoreSession}
           restoreStatusMessage={state.restoreStatusMessage}
           restoreStatusBusy={state.isRestoringSession}

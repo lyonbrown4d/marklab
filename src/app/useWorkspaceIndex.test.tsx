@@ -96,4 +96,68 @@ describe('useWorkspaceIndex', () => {
       })
     })
   })
+
+  it('coalesces a burst of dirty buffer notifications into one index refresh', async () => {
+    const queryClient = createQueryClient()
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    vi.useFakeTimers()
+    try {
+      renderHook(() => useWorkspaceIndex([{ path: 'D:/notes/today.md' }] as never, true), {
+        wrapper: createWrapper(queryClient),
+      })
+      await act(async () => Promise.resolve())
+      expect(bufferStatusHandler).toBeTypeOf('function')
+
+      act(() => {
+        for (let revision = 1; revision <= 10; revision += 1) {
+          bufferStatusHandler?.({
+            payload: {
+              path: 'D:/notes/today.md',
+              revision,
+              dirty: true,
+            },
+          })
+        }
+      })
+
+      expect(invalidateQueries).not.toHaveBeenCalled()
+      act(() => vi.advanceTimersByTime(150))
+      expect(invalidateQueries).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('refreshes immediately when a buffer becomes clean and cancels a pending dirty refresh', async () => {
+    const queryClient = createQueryClient()
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+
+    vi.useFakeTimers()
+    try {
+      renderHook(() => useWorkspaceIndex([{ path: 'D:/notes/today.md' }] as never, true), {
+        wrapper: createWrapper(queryClient),
+      })
+      await act(async () => Promise.resolve())
+      expect(bufferStatusHandler).toBeTypeOf('function')
+
+      act(() => {
+        bufferStatusHandler?.({
+          payload: { path: 'D:/notes/today.md', revision: 1, dirty: true },
+        })
+        bufferStatusHandler?.({
+          payload: { path: 'D:/notes/today.md', revision: 2, dirty: false },
+        })
+      })
+
+      expect(invalidateQueries).toHaveBeenCalledOnce()
+      act(() => vi.advanceTimersByTime(150))
+      expect(invalidateQueries).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

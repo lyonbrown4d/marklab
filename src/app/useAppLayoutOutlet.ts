@@ -89,11 +89,6 @@ export const useAppLayoutOutlet = ({
     () => `${state.rootKind}:${state.rootPath}:${location.pathname}`,
     [location.pathname, state.rootKind, state.rootPath],
   )
-  // Tightening eviction requires document-bound callbacks for queued editor updates.
-  const routeCacheMax = useMemo(
-    () => Math.min(24, Math.max(8, state.tabs.length + 2)),
-    [state.tabs.length],
-  )
   const shouldAnimateRouteCache = state.viewMode !== 'wysiwyg'
   // Keep sidebar and terminal state changes outside the cached route subtree.
   // AppCachedOutlet still subscribes to router context for navigation updates.
@@ -102,16 +97,14 @@ export const useAppLayoutOutlet = ({
       createElement(AppCachedOutlet, {
         context: outletContext,
         routeCacheKey,
-        routeCacheMax,
+        routePathname: location.pathname,
         shouldAnimateRouteCache,
       }),
-    [outletContext, routeCacheKey, routeCacheMax, shouldAnimateRouteCache],
+    [location.pathname, outletContext, routeCacheKey, shouldAnimateRouteCache],
   )
 
   return {
     outlet,
-    routeCacheKey,
-    routeCacheMax,
     totalFiles,
   }
 }

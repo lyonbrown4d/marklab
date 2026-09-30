@@ -1,13 +1,15 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
-import { useState } from 'react'
-import { MemoryRouter, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
+import { useLayoutEffect, useMemo, useState } from 'react'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { describe, expect, it, vi } from 'vitest'
 import { AppCachedOutlet } from '@/app/AppCachedOutlet'
-import type { LayoutContext } from '@/app/AppLayoutContext'
+import { createLayoutContextStore, type LayoutContext } from '@/app/AppLayoutContext'
 import MarkdownHeadingView from '@/components/markdown/MarkdownHeadingView'
 import type { GraphData } from '@/logic/graph'
 import { patchGraphHeadingInserted } from '@/logic/graphOptimistic'
 import { useGraphMarkdownEditing } from '@/pages/useGraphMarkdownEditing'
+import { useLayoutContext } from '@/pages/useLayoutContext'
 
 const rootId = 'heading:interaction.md:interaction'
 const initialMarkdown = '# Interaction\nStart here'
@@ -33,7 +35,13 @@ const graph: GraphData = {
 }
 
 const GraphProbe = () => {
-  const context = useOutletContext<LayoutContext>()
+  const context = useLayoutContext(
+    useShallow((state) => ({
+      editorValue: state.editorValue,
+      graph: state.graph,
+      onEditorChange: state.onEditorChange,
+    })),
+  )
   const { addChildHeading, editorGraph, updateHeadingTitle } = useGraphMarkdownEditing({
     graph: context.graph,
     markdown: context.editorValue,
@@ -63,7 +71,14 @@ const GraphProbe = () => {
 const Shell = ({ cached }: { cached: boolean }) => {
   const [markdown, setMarkdown] = useState(initialMarkdown)
   // Only the graph-route fields are consumed by this focused integration fixture.
-  const context = { graph, editorValue: markdown, onEditorChange: setMarkdown } as LayoutContext
+  const context = useMemo(
+    () => ({ graph, editorValue: markdown, onEditorChange: setMarkdown }) as LayoutContext,
+    [markdown],
+  )
+  const [contextStore] = useState(() => createLayoutContextStore(context))
+  useLayoutEffect(() => {
+    contextStore.setState(context, true)
+  }, [context, contextStore])
   return (
     <>
       <output data-testid="buffer-markdown">{markdown}</output>
@@ -71,11 +86,11 @@ const Shell = ({ cached }: { cached: boolean }) => {
         <AppCachedOutlet
           context={context}
           routeCacheKey="graph:interaction.md"
-          routeCacheMax={3}
+          routePathname="/files/graph/interaction.md"
           shouldAnimateRouteCache={false}
         />
       ) : (
-        <Outlet context={context} />
+        <Outlet context={contextStore} />
       )}
     </>
   )

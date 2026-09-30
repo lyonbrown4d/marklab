@@ -1,4 +1,5 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'
 import { Button } from '@/components/ui/button'
@@ -13,9 +14,22 @@ const SourceFilePage = () => {
   const params = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const context = useLayoutContext()
-  const { t } = useI18n()
   const requestedPath = params['*'] || null
+  const context = useLayoutContext(
+    useShallow((state) => ({
+      editorReadOnlyMode: state.editorReadOnlyMode,
+      fileContents: state.fileContents,
+      files: state.files,
+      loading: requestedPath ? state.loadingPaths[requestedPath] : undefined,
+      onEditorChange: state.onEditorChange,
+      onOpenFile: state.onOpenFile,
+      onOpenFileView: state.onOpenFileView,
+      saveState: requestedPath ? state.saveStates[requestedPath] : undefined,
+      showEditorStatusBar: state.showEditorStatusBar,
+      workspaceIndex: state.workspaceIndex,
+    })),
+  )
+  const { t } = useI18n()
 
   if (!requestedPath || !fileExists(context.files, requestedPath)) {
     return <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
@@ -40,9 +54,9 @@ const SourceFilePage = () => {
   }
   const loadState = resolveEditorLoadState({
     fileContents: context.fileContents,
-    loadingPaths: context.loadingPaths,
+    loadingPaths: context.loading ? { [requestedPath]: true } : {},
     path: requestedPath,
-    saveStates: context.saveStates,
+    saveStates: context.saveState ? { [requestedPath]: context.saveState } : {},
   })
 
   if (loadState.status === 'loading') {

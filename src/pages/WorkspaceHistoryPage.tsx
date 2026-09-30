@@ -1,4 +1,5 @@
 import { ArrowUpRight, Clock3, FolderClock, FolderOpen, LibraryBig } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import AppEmptyState from '@/components/AppEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,7 +27,16 @@ const WorkspaceHistoryPage = () => {
     recentProjects,
     rootKind,
     rootPath,
-  } = useLayoutContext()
+  } = useLayoutContext(
+    useShallow((state) => ({
+      onOpenProject: state.onOpenProject,
+      onOpenProjectInCurrentWindow: state.onOpenProjectInCurrentWindow,
+      onUseInternalRoot: state.onUseInternalRoot,
+      recentProjects: state.recentProjects,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
+    })),
+  )
   const currentExternalPath = rootKind === 'internal' ? null : rootPath || null
   const visibleRecentProjects = uniquePaths(recentProjects)
   const openWorkspacePicker = () => {

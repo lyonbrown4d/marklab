@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Plus, RotateCcw, Terminal as TerminalIcon, X } from 'lucide-react'
 import TerminalSessionPane, {
   type TerminalRuntimeState,
@@ -268,4 +268,4 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
   )
 }
 
-export default TerminalPanel
+export default memo(TerminalPanel)

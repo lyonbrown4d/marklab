@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { AlertTriangle, LockKeyhole } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,7 +21,7 @@ type AppStatusBarRightProps = {
   onToggleReadOnly: () => void
 }
 
-export const AppStatusBarRight = ({
+const AppStatusBarRightView = ({
   activePath,
   activeSaveState,
   assetSyncFailed,
@@ -105,3 +106,5 @@ export const AppStatusBarRight = ({
     </div>
   )
 }
+
+export const AppStatusBarRight = memo(AppStatusBarRightView)

@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ImmersiveWorkspaceShell } from '@/components/ImmersiveWorkspaceShell'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const FocusReturnHarness = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -119,9 +120,12 @@ describe('ImmersiveWorkspaceShell', () => {
     expect(onSidebarOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it('temporarily opens from the left hover zone and closes after leaving the drawer', () => {
+  it('keeps hover open and close transient instead of requesting persisted state changes', () => {
     vi.useFakeTimers()
-    const onSidebarOpenChange = vi.fn()
+    usePreferencesStore.setState({ sidebarCollapsed: true })
+    const onSidebarOpenChange = vi.fn((open: boolean) => {
+      usePreferencesStore.setState({ sidebarCollapsed: !open })
+    })
     const props = {
       sidebarOpen: false,
       inspectorOpen: false,
@@ -133,7 +137,7 @@ describe('ImmersiveWorkspaceShell', () => {
       onSidebarOpenChange,
       onToggleInspector: vi.fn(),
     }
-    const { rerender } = render(
+    render(
       <ImmersiveWorkspaceShell {...props}>
         <article>Editor canvas</article>
       </ImmersiveWorkspaceShell>,
@@ -143,19 +147,18 @@ describe('ImmersiveWorkspaceShell', () => {
     act(() => vi.advanceTimersByTime(179))
     expect(onSidebarOpenChange).not.toHaveBeenCalled()
     act(() => vi.advanceTimersByTime(1))
-    expect(onSidebarOpenChange).toHaveBeenLastCalledWith(true)
+    expect(screen.getByRole('dialog', { name: 'Workspace' })).toBeInTheDocument()
+    expect(onSidebarOpenChange).not.toHaveBeenCalled()
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
 
-    rerender(
-      <ImmersiveWorkspaceShell {...props} sidebarOpen>
-        <article>Editor canvas</article>
-      </ImmersiveWorkspaceShell>,
-    )
     fireEvent.pointerEnter(screen.getByRole('dialog', { name: 'Workspace' }))
     fireEvent.pointerLeave(screen.getByRole('dialog', { name: 'Workspace' }))
     act(() => vi.advanceTimersByTime(219))
-    expect(onSidebarOpenChange).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog', { name: 'Workspace' })).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(1))
-    expect(onSidebarOpenChange).toHaveBeenLastCalledWith(false)
+    expect(screen.queryByRole('dialog', { name: 'Workspace' })).not.toBeInTheDocument()
+    expect(onSidebarOpenChange).not.toHaveBeenCalled()
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
     vi.useRealTimers()
   })
 

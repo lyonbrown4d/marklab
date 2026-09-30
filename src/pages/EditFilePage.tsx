@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'
 import { Button } from '@/components/ui/button'
@@ -19,9 +20,28 @@ const EditFilePage = () => {
   const params = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const context = useLayoutContext()
-  const { t } = useI18n()
   const requestedPath = params['*'] || null
+  const context = useLayoutContext(
+    useShallow((state) => {
+      const path = requestedPath ?? state.activePath
+      return {
+        activePath: state.activePath,
+        editorReadOnlyMode: state.editorReadOnlyMode,
+        fileContent: path ? state.fileContents[path] : undefined,
+        files: state.files,
+        hasFileContent: path
+          ? Object.prototype.hasOwnProperty.call(state.fileContents, path)
+          : false,
+        loading: path ? state.loadingPaths[path] : undefined,
+        onEditorChange: state.onEditorChange,
+        onOpenFile: state.onOpenFile,
+        onOpenFileView: state.onOpenFileView,
+        saveState: path ? state.saveStates[path] : undefined,
+        showEditorStatusBar: state.showEditorStatusBar,
+      }
+    }),
+  )
+  const { t } = useI18n()
   const activePath = requestedPath ?? context.activePath
 
   if (!requestedPath && context.activePath) {
@@ -59,10 +79,10 @@ const EditFilePage = () => {
     )
   }
   const loadState = resolveEditorLoadState({
-    fileContents: context.fileContents,
-    loadingPaths: context.loadingPaths,
+    fileContents: context.hasFileContent ? { [activePath]: context.fileContent ?? '' } : {},
+    loadingPaths: context.loading ? { [activePath]: true } : {},
     path: activePath,
-    saveStates: context.saveStates,
+    saveStates: context.saveState ? { [activePath]: context.saveState } : {},
   })
 
   if (loadState.status === 'loading') {

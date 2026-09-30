@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export const SIDEBAR_HOVER_OPEN_DELAY_MS = 180
 export const SIDEBAR_HOVER_CLOSE_DELAY_MS = 220
 
 type UseSidebarHoverPreviewArgs = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  pinnedOpen: boolean
+  onPinOpen: () => void
 }
 
-export const useSidebarHoverPreview = ({ open, onOpenChange }: UseSidebarHoverPreviewArgs) => {
+export const useSidebarHoverPreview = ({ pinnedOpen, onPinOpen }: UseSidebarHoverPreviewArgs) => {
+  const [previewOpen, setPreviewOpen] = useState(false)
   const previewOpenRef = useRef(false)
   const openTimerRef = useRef<number | null>(null)
   const closeTimerRef = useRef<number | null>(null)
@@ -27,13 +28,13 @@ export const useSidebarHoverPreview = ({ open, onOpenChange }: UseSidebarHoverPr
 
   const enterHoverZone = useCallback(() => {
     clearCloseTimer()
-    if (open || openTimerRef.current !== null) return
+    if (pinnedOpen || previewOpenRef.current || openTimerRef.current !== null) return
     openTimerRef.current = window.setTimeout(() => {
       openTimerRef.current = null
       previewOpenRef.current = true
-      onOpenChange(true)
+      setPreviewOpen(true)
     }, SIDEBAR_HOVER_OPEN_DELAY_MS)
-  }, [clearCloseTimer, onOpenChange, open])
+  }, [clearCloseTimer, pinnedOpen])
 
   const leaveHoverRegion = useCallback(() => {
     clearOpenTimer()
@@ -42,9 +43,9 @@ export const useSidebarHoverPreview = ({ open, onOpenChange }: UseSidebarHoverPr
       closeTimerRef.current = null
       if (!previewOpenRef.current) return
       previewOpenRef.current = false
-      onOpenChange(false)
+      setPreviewOpen(false)
     }, SIDEBAR_HOVER_CLOSE_DELAY_MS)
-  }, [clearOpenTimer, onOpenChange])
+  }, [clearOpenTimer])
 
   const enterDrawer = useCallback(() => {
     clearCloseTimer()
@@ -52,17 +53,24 @@ export const useSidebarHoverPreview = ({ open, onOpenChange }: UseSidebarHoverPr
 
   const pinOpen = useCallback(() => {
     clearCloseTimer()
+    if (!previewOpenRef.current) return
     previewOpenRef.current = false
-  }, [clearCloseTimer])
+    onPinOpen()
+    setPreviewOpen(false)
+  }, [clearCloseTimer, onPinOpen])
+
+  const dismissPreview = useCallback(() => {
+    clearOpenTimer()
+    clearCloseTimer()
+    if (!previewOpenRef.current) return
+    previewOpenRef.current = false
+    setPreviewOpen(false)
+  }, [clearCloseTimer, clearOpenTimer])
 
   useEffect(() => {
-    if (open) {
-      clearOpenTimer()
-      return
-    }
-    previewOpenRef.current = false
-    clearCloseTimer()
-  }, [clearCloseTimer, clearOpenTimer, open])
+    if (!pinnedOpen) return
+    dismissPreview()
+  }, [dismissPreview, pinnedOpen])
 
   useEffect(
     () => () => {
@@ -72,5 +80,5 @@ export const useSidebarHoverPreview = ({ open, onOpenChange }: UseSidebarHoverPr
     [clearCloseTimer, clearOpenTimer],
   )
 
-  return { enterDrawer, enterHoverZone, leaveHoverRegion, pinOpen }
+  return { dismissPreview, enterDrawer, enterHoverZone, leaveHoverRegion, pinOpen, previewOpen }
 }

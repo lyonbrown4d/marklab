@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { AlertTriangle, GitBranch, RotateCcw, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,7 +21,7 @@ type AppStatusBarLeftProps = {
   onToggleTerminal: () => void
 }
 
-export const AppStatusBarLeft = ({
+const AppStatusBarLeftView = ({
   gitBranch,
   gitHasProblem,
   gitIsFetching,
@@ -122,3 +123,5 @@ export const AppStatusBarLeft = ({
     </div>
   )
 }
+
+export const AppStatusBarLeft = memo(AppStatusBarLeftView)

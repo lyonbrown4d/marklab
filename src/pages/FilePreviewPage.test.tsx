@@ -8,7 +8,8 @@ import { fsApi } from '@/services/fsApi'
 const layoutContextRef = vi.hoisted(() => ({ value: null as unknown }))
 
 vi.mock('@/pages/useLayoutContext', () => ({
-  useLayoutContext: () => layoutContextRef.value,
+  useLayoutContext: (selector: (state: never) => unknown) =>
+    selector(layoutContextRef.value as never),
 }))
 
 vi.mock('@/runtime/environment', () => ({

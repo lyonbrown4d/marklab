@@ -16,7 +16,7 @@ const layoutContext = {
 }
 
 vi.mock('@/pages/useLayoutContext', () => ({
-  useLayoutContext: () => layoutContext,
+  useLayoutContext: (selector: (state: never) => unknown) => selector(layoutContext as never),
 }))
 
 vi.mock('@/services/appApi', () => ({

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { useI18n } from '@/i18n/useI18n'
 import { pathToAllPagesRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
 import { appApi } from '@/services/appApi'
@@ -36,15 +37,12 @@ type Metrics = {
   issues: number
   indexReady: boolean
 }
-
 type DocumentSummary = {
   path: string
   headings: number | null
   links: number | null
 }
-
 const formatter = new Intl.NumberFormat()
-
 const count = (value: number) => formatter.format(value)
 
 const pathName = (path: string) => {
@@ -125,7 +123,18 @@ const WorkspaceHomePage = () => {
     onOpenFile,
     onOpenProject,
     onUseInternalRoot,
-  } = useLayoutContext()
+  } = useLayoutContext(
+    useShallow((state) => ({
+      files: state.files,
+      onOpenFile: state.onOpenFile,
+      onOpenProject: state.onOpenProject,
+      onUseInternalRoot: state.onUseInternalRoot,
+      recentProjects: state.recentProjects,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
+      workspaceIndex: state.workspaceIndex,
+    })),
+  )
   const singleFileMode = rootKind === 'single'
   const metrics = useMemo(() => getMetrics(files, workspaceIndex), [files, workspaceIndex])
   const documents = useMemo(() => getDocuments(files, workspaceIndex), [files, workspaceIndex])

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { PanelLeftOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -31,26 +31,40 @@ export const ImmersiveWorkspaceShell = ({
 }: ImmersiveWorkspaceShellProps) => {
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const wasSidebarOpenRef = useRef(sidebarOpen)
-  const hoverPreview = useSidebarHoverPreview({
-    open: sidebarOpen,
-    onOpenChange: onSidebarOpenChange,
-  })
+  const pinSidebarOpen = useCallback(() => onSidebarOpenChange(true), [onSidebarOpenChange])
+  const { dismissPreview, enterDrawer, enterHoverZone, leaveHoverRegion, pinOpen, previewOpen } =
+    useSidebarHoverPreview({
+      pinnedOpen: sidebarOpen,
+      onPinOpen: pinSidebarOpen,
+    })
+  const effectiveSidebarOpen = sidebarOpen || previewOpen
+  const handleSidebarOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) return
+      if (previewOpen && !sidebarOpen) {
+        dismissPreview()
+        return
+      }
+      if (sidebarOpen) onSidebarOpenChange(false)
+    },
+    [dismissPreview, onSidebarOpenChange, previewOpen, sidebarOpen],
+  )
 
   useEffect(() => {
-    if (!wasSidebarOpenRef.current && sidebarOpen) {
+    if (!wasSidebarOpenRef.current && effectiveSidebarOpen) {
       returnFocusRef.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null
     }
-    wasSidebarOpenRef.current = sidebarOpen
-  }, [sidebarOpen])
+    wasSidebarOpenRef.current = effectiveSidebarOpen
+  }, [effectiveSidebarOpen])
 
   return (
     <div className="immersive-workspace relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <div
         data-testid="sidebar-hover-zone"
         className="absolute inset-y-0 left-0 z-30 w-5"
-        onPointerEnter={hoverPreview.enterHoverZone}
-        onPointerLeave={hoverPreview.leaveHoverRegion}
+        onPointerEnter={enterHoverZone}
+        onPointerLeave={leaveHoverRegion}
       >
         <Button
           type="button"
@@ -59,7 +73,7 @@ export const ImmersiveWorkspaceShell = ({
           aria-label={sidebarLabel}
           className="immersive-edge-handle absolute left-0 top-1/2 h-14 w-5 -translate-y-1/2 rounded-l-none rounded-r-lg border border-l-0 border-border/60 bg-background/80 text-muted-foreground shadow-sm backdrop-blur hover:w-7 hover:bg-background hover:text-foreground"
           onClick={() => {
-            hoverPreview.pinOpen()
+            dismissPreview()
             onToggleSidebar()
           }}
         >
@@ -69,7 +83,7 @@ export const ImmersiveWorkspaceShell = ({
 
       <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
 
-      <Sheet modal={false} open={sidebarOpen} onOpenChange={onSidebarOpenChange}>
+      <Sheet modal={false} open={effectiveSidebarOpen} onOpenChange={handleSidebarOpenChange}>
         <SheetContent
           side="left"
           showOverlay={false}
@@ -80,9 +94,9 @@ export const ImmersiveWorkspaceShell = ({
             event.preventDefault()
             returnFocusRef.current?.focus({ preventScroll: true })
           }}
-          onPointerEnter={hoverPreview.enterDrawer}
-          onPointerLeave={hoverPreview.leaveHoverRegion}
-          onPointerDownCapture={hoverPreview.pinOpen}
+          onPointerEnter={enterDrawer}
+          onPointerLeave={leaveHoverRegion}
+          onPointerDownCapture={pinOpen}
         >
           <SheetTitle className="sr-only">{sidebarLabel}</SheetTitle>
           <div className="min-h-0 flex-1">{sidebar}</div>

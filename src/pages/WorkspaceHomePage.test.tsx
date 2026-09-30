@@ -7,7 +7,8 @@ const layoutContextRef = vi.hoisted(() => ({ value: null as unknown }))
 const menuDispatchMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/pages/useLayoutContext', () => ({
-  useLayoutContext: () => layoutContextRef.value,
+  useLayoutContext: (selector: (state: never) => unknown) =>
+    selector(layoutContextRef.value as never),
 }))
 
 vi.mock('@/services/appApi', () => ({
