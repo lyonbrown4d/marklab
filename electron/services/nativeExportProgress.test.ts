@@ -56,6 +56,17 @@ describe('native export progress', () => {
     expect(window.setProgressBar).toHaveBeenCalledWith(-1)
   })
 
+  it('clears native progress when export is cancelled', () => {
+    const window = {
+      isDestroyed: () => false,
+      setProgressBar: vi.fn(),
+    }
+
+    applyWindowExportProgress(window, task({ status: 'cancelled', progress: null }))
+
+    expect(window.setProgressBar).toHaveBeenCalledWith(-1)
+  })
+
   it('shows native error progress when export fails', () => {
     const window = {
       isDestroyed: () => false,

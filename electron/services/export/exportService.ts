@@ -12,6 +12,7 @@ import {
   notifyExportFailed,
   notifyExportFinished,
 } from '@electron/services/export/exportNotifications.js'
+import { revealFinishedExport } from '@electron/services/export/exportResultAction.js'
 import { renderPdfDocument } from '@electron/services/export/pdf.js'
 import {
   createExportTaskId,
@@ -28,6 +29,7 @@ type ActiveExport = {
   cancellationReported: boolean
   committing: boolean
   ownerId?: number
+  progress: number
 }
 type ExportResourceContext = {
   commitOutput?: (data: string | NodeJS.ArrayBufferView) => Promise<void>
@@ -61,6 +63,7 @@ export class ExportService {
       cancellationReported: false,
       committing: false,
       ownerId: resources.ownerId,
+      progress: 0.05,
     }
     this.activeTasks.set(taskId, task)
     this.logger.info('export task queued', {
@@ -74,7 +77,7 @@ export class ExportService {
         format,
         output_path: outputPath,
         status: 'started',
-        progress: 0,
+        progress: 0.05,
         message: 'Export queued',
       },
       task.ownerId,
@@ -159,7 +162,9 @@ export class ExportService {
         },
         task.ownerId,
       )
-      notifyExportFinished(format, outputPath)
+      notifyExportFinished(format, outputPath, () =>
+        revealFinishedExport(this.BrowserWindowClass, this.shell, outputPath, task.ownerId),
+      )
     } catch (error) {
       if (task.controller.signal.aborted) {
         if (!task.cancellationReported) this.cancelExport(taskId, task.ownerId)
@@ -202,12 +207,14 @@ export class ExportService {
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
     this.emitExportProgress(taskId, format, outputPath, 0.15, 'Preparing export')
     if (format === 'html') {
+      this.emitExportProgress(taskId, format, outputPath, 0.45, 'Rendering HTML document')
       const html = await renderHtmlWithLocalImages(markdown, {
         readImage: resources.readImage,
         resourceBasePath,
         resolveRelativeResources: true,
         workspaceRootPath,
       })
+      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
       await this.commitOutput(resources, task, html)
       return
     }
@@ -222,13 +229,16 @@ export class ExportService {
         signal,
         workspaceRootPath,
       })
+      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
       await this.commitOutput(resources, task, pdf)
       return
     }
     if (format === 'docx') {
+      this.emitExportProgress(taskId, format, outputPath, 0.45, 'Rendering Word document')
       const document = await renderDocx(markdown, {
         readImage: resources.readImage,
       })
+      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
       await this.commitOutput(resources, task, document)
       return
     }
@@ -258,16 +268,20 @@ export class ExportService {
     progress: number,
     message: string,
   ): void {
+    const task = this.activeTasks.get(taskId)
+    if (!task) return
+    const normalizedProgress = Math.min(Math.max(progress, 0), 1)
+    task.progress = Math.max(task.progress, normalizedProgress)
     this.emitExportTask(
       {
         id: taskId,
         format,
         output_path: outputPath,
         status: 'started',
-        progress,
+        progress: task.progress,
         message,
       },
-      this.activeTasks.get(taskId)?.ownerId,
+      task.ownerId,
     )
   }
 }

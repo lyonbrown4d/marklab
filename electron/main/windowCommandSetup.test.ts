@@ -4,9 +4,14 @@ import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
 import { createAppWindowCommandHandlers } from '@electron/main/windowCommands.js'
 import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands.js'
 
+const commandHandlers = vi.hoisted(() => ({
+  open_path_in_current_window: vi.fn(),
+  open_path_in_new_window: vi.fn(),
+}))
+
 vi.mock('electron', () => ({ BrowserWindow: { getFocusedWindow: vi.fn() } }))
 vi.mock('@electron/main/windowCommands.js', () => ({
-  createAppWindowCommandHandlers: vi.fn(() => ({})),
+  createAppWindowCommandHandlers: vi.fn(() => commandHandlers),
   createNativeMenuActionDispatcher: vi.fn(() => vi.fn()),
 }))
 vi.mock('@electron/services/settingsStore.js', () => ({
@@ -36,10 +41,34 @@ const createHarness = (primary: BrowserWindow | null) => {
 
 beforeEach(() => {
   vi.mocked(createAppWindowCommandHandlers).mockClear()
+  commandHandlers.open_path_in_current_window.mockClear()
+  commandHandlers.open_path_in_new_window.mockClear()
   vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(null)
 })
 
 describe('window command workspace selection', () => {
+  it('routes native paths according to the requested window disposition', async () => {
+    const setup = createWindowCommandSetup({
+      getContainer: () => ({ cradle: {} }),
+      getNativeIpc: () => null,
+      getPrimaryWindow: () => createWindow(),
+      getWindowPool: vi.fn(),
+      installManagedMainWindowLifecycle: vi.fn(),
+    } as never)
+
+    await setup.openSystemPath('C:/notes/current.md', 'current')
+    await setup.openSystemPath('C:/notes/new.md', 'new')
+
+    expect(commandHandlers.open_path_in_current_window).toHaveBeenCalledWith(
+      { path: 'C:/notes/current.md' },
+      null,
+    )
+    expect(commandHandlers.open_path_in_new_window).toHaveBeenCalledWith(
+      { path: 'C:/notes/new.md' },
+      null,
+    )
+  })
+
   it('shares command handlers with native-menu opens so failed targets remain retryable', () => {
     createHarness(createWindow())
 

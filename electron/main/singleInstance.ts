@@ -18,8 +18,15 @@ type SingleInstanceOptions = Pick<
   bootstrap: () => Promise<void>
   getContainer: () => ElectronContainer
   getMainWindow: () => BrowserWindow | null
-  openSystemPath: (path: string) => Promise<unknown>
+  openSystemPath: (path: string, disposition: NativeOpenDisposition) => Promise<unknown>
   showMainWindow: () => void
+}
+
+export type NativeOpenDisposition = 'current' | 'new'
+
+type PendingOpenTarget = {
+  disposition: NativeOpenDisposition
+  path: string
 }
 
 const focusMainWindow = (options: SingleInstanceOptions): boolean => {
@@ -32,63 +39,72 @@ const focusMainWindow = (options: SingleInstanceOptions): boolean => {
   return true
 }
 
-const runBootstrap = (
-  options: SingleInstanceOptions,
-  reason: string,
-  afterBootstrap?: () => void,
-): void => {
-  void options
-    .bootstrap()
-    .then(() => {
-      afterBootstrap?.()
-    })
-    .catch((error) => {
-      options.getContainer().cradle.logger.error('bootstrap failed', { error, reason })
-      throw error
-    })
-}
-
-const focusOrBootstrap = (
-  options: SingleInstanceOptions,
-  reason: string,
-  afterBootstrap?: () => void,
-): void => {
-  if (focusMainWindow(options)) return
-  if (app.isReady()) runBootstrap(options, reason, afterBootstrap)
-}
-
 export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions): void => {
-  const pendingOpenTargets: string[] = []
+  const pendingOpenTargets: PendingOpenTarget[] = []
   const queuedOpenTargets = new Set<string>()
+  let bootstrapPromise: Promise<void> | null = null
+  let primaryOpenTargetReserved = false
+
+  const runBootstrap = (reason: string, afterBootstrap?: () => void): void => {
+    if (!bootstrapPromise) {
+      bootstrapPromise = options
+        .bootstrap()
+        .catch((error) => {
+          options.getContainer().cradle.logger.error('bootstrap failed', { error, reason })
+          throw error
+        })
+        .finally(() => {
+          bootstrapPromise = null
+        })
+    }
+    void bootstrapPromise.then(afterBootstrap).catch(() => undefined)
+  }
+
+  const focusOrBootstrap = (reason: string, afterBootstrap?: () => void): void => {
+    if (focusMainWindow(options)) return
+    if (app.isReady()) runBootstrap(reason, afterBootstrap)
+  }
 
   const flushOpenTargets = (): void => {
     if (!options.getMainWindow()) return
-    const target = pendingOpenTargets.shift()
-    if (!target) return
-    queuedOpenTargets.delete(target)
+    const next = pendingOpenTargets.shift()
+    if (!next) return
+    queuedOpenTargets.delete(next.path)
     void options
-      .openSystemPath(target)
+      .openSystemPath(next.path, next.disposition)
       .catch((error) => {
-        options.getContainer().cradle.logger.warn('native open target failed', { error, target })
+        options.getContainer().cradle.logger.warn('native open target failed', {
+          error,
+          target: next.path,
+        })
       })
       .finally(flushOpenTargets)
   }
 
-  const queueOpenTargets = (targets: string[]): void => {
+  const queueOpenTargets = (targets: string[], preferPrimaryWindow: boolean): void => {
     for (const target of targets) {
       if (queuedOpenTargets.has(target)) continue
       queuedOpenTargets.add(target)
-      pendingOpenTargets.push(target)
+      const usePrimaryWindow = preferPrimaryWindow && !primaryOpenTargetReserved
+      if (usePrimaryWindow) primaryOpenTargetReserved = true
+      pendingOpenTargets.push({
+        disposition: usePrimaryWindow ? 'current' : 'new',
+        path: target,
+      })
     }
     if (targets.length > 0) {
-      focusOrBootstrap(options, 'native-open-target', flushOpenTargets)
+      focusOrBootstrap('native-open-target', flushOpenTargets)
       flushOpenTargets()
     }
   }
 
-  const resolveAndQueueOpenTargets = (args: readonly unknown[], cwd: string): void => {
+  const resolveAndQueueOpenTargets = (
+    args: readonly unknown[],
+    cwd: string,
+    preferPrimaryWindow: boolean,
+  ): void => {
     void resolveExistingOpenTargets(args, cwd)
-      .then(queueOpenTargets)
+      .then((targets) => queueOpenTargets(targets, preferPrimaryWindow))
       .catch((error) => {
         options.getContainer().cradle.logger.warn('native open target resolution failed', { error })
       })
@@ -99,19 +115,19 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
   }
 
   publishDeepLinksFromArgs(launchInfo.args, 'startup', queueDeepLinkPayload)
-  resolveAndQueueOpenTargets(launchInfo.args, launchInfo.cwd)
+  resolveAndQueueOpenTargets(launchInfo.args, launchInfo.cwd, true)
 
   app.on('open-url', (event, url) => {
     event.preventDefault()
     options.getContainer().cradle.logger.info('deep link received from open-url')
     publishDeepLinkUrl(url, 'open-url', queueDeepLinkPayload)
-    focusOrBootstrap(options, 'open-url')
+    focusOrBootstrap('open-url')
   })
 
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
     options.getContainer().cradle.logger.info('native file open received')
-    queueOpenTargets([filePath])
+    queueOpenTargets([filePath], !app.isReady())
   })
 
   if (!app.requestSingleInstanceLock()) {
@@ -125,18 +141,18 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
   app.on('second-instance', (_event, commandLine, workingDirectory) => {
     options.getContainer().cradle.logger.info('second instance received')
     const payload = createSingleInstancePayload(commandLine, workingDirectory)
-    focusOrBootstrap(options, 'second-instance')
+    focusOrBootstrap('second-instance')
     options.queueOrSendRuntimeEvent({ eventName: 'single-instance', payload })
     publishDeepLinksFromArgs(payload.args, 'second-instance', queueDeepLinkPayload)
-    resolveAndQueueOpenTargets(payload.args, payload.cwd)
+    resolveAndQueueOpenTargets(payload.args, payload.cwd, false)
   })
 
   app.whenReady().then(() => {
-    runBootstrap(options, 'ready', flushOpenTargets)
+    runBootstrap('ready', flushOpenTargets)
   })
 
   app.on('activate', () => {
     if (focusMainWindow(options)) return
-    runBootstrap(options, 'activate', flushOpenTargets)
+    runBootstrap('activate', flushOpenTargets)
   })
 }

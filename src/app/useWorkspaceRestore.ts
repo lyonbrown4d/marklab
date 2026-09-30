@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fsApi, fsSnapshotSchema, type FsSnapshot } from '@/services/fsApi'
-import { appApi } from '@/services/appApi'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
 import type { RootKind, WorkspaceTab } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
-import { toast } from 'sonner'
 import { useI18n } from '@/i18n/useI18n'
 
 type LoadWorkspace = (options?: {
@@ -21,7 +19,6 @@ type UseWorkspaceRestoreArgs = {
   hasHydrated: boolean
   rootPath: string
   rootKind: RootKind
-  openFolder: (path: string) => Promise<void>
   loadWorkspace: LoadWorkspace
 }
 
@@ -104,7 +101,6 @@ export const useWorkspaceRestore = ({
   hasHydrated,
   rootPath,
   rootKind,
-  openFolder,
   loadWorkspace,
 }: UseWorkspaceRestoreArgs): UseWorkspaceRestoreResult => {
   const { t } = useI18n()
@@ -156,37 +152,6 @@ export const useWorkspaceRestore = ({
       cancelled = true
     }
   }, [hasHydrated, restoreWorkspaceSession])
-
-  useEffect(() => {
-    if (!isDesktopRuntime()) return
-
-    const openArgs = (args: string[]) => {
-      const paths = args.filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('marklab:'))
-      for (const path of paths) {
-        void openFolder(path).catch((error) => {
-          toast.error(t('app.openPathFromArgumentsFailed'), {
-            description: `${path}\n${String(error)}`,
-          })
-        })
-      }
-    }
-
-    let unlistenSingleInstance: (() => void) | undefined
-    void appApi.getLaunchInfo().then((info) => {
-      openArgs(info.args)
-    })
-    void listen<{ args: string[]; cwd: string }>('single-instance', (event) => {
-      openArgs(event.payload.args)
-    }).then((fn) => {
-      unlistenSingleInstance = fn
-    })
-
-    return () => {
-      if (unlistenSingleInstance) {
-        unlistenSingleInstance()
-      }
-    }
-  }, [openFolder, t])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return

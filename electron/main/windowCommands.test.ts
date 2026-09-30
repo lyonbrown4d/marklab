@@ -43,7 +43,10 @@ const createHarness = () => {
   }
   const sourceWorkspace = {
     setRoot: vi.fn(),
-    setSingleFile: vi.fn(),
+    setSingleFile: vi.fn(async ({ path: filePath }) => ({
+      kind: 'single' as const,
+      path: filePath,
+    })),
   }
   const pool = {
     acquireMainWindow: vi.fn(async () => ({
@@ -159,6 +162,33 @@ describe('app window commands', () => {
     expect(workspace.setRoot).toHaveBeenCalledWith({ path: root })
     expect(sourceWorkspace.setRoot).not.toHaveBeenCalled()
     expect(sourceWorkspace.setSingleFile).not.toHaveBeenCalled()
+  })
+
+  it('opens a native file in the existing primary window without acquiring a pooled window', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-native-file-open-'))
+    temporaryRoots.push(root)
+    const filePath = path.join(root, 'note.md')
+    await fs.writeFile(filePath, '# Note')
+    const { dependencies, event, handlers, pool, source, sourceWorkspace } = createHarness()
+    const openInCurrentWindow = handlers.open_path_in_current_window
+
+    expect(openInCurrentWindow).toBeTypeOf('function')
+    const result = await openInCurrentWindow({ path: filePath }, event)
+
+    expect(result).toMatchObject({
+      ok: true,
+      rootKind: 'single',
+      windowId: source.id,
+      workspacePath: filePath,
+    })
+    expect(sourceWorkspace.setSingleFile).toHaveBeenCalledWith({ path: filePath })
+    expect(dependencies.writeWorkspaceSession).toHaveBeenCalledWith('session-1', {
+      activeTabId: null,
+      rootKind: 'single',
+      rootPath: filePath,
+      tabs: [],
+    })
+    expect(pool.acquireMainWindow).not.toHaveBeenCalled()
   })
 
   it('keeps a failed target retryable and succeeds through its own renderer command', async () => {

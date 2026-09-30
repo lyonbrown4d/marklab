@@ -251,9 +251,43 @@ export const createAppWindowCommandHandlers = (
     }
   }
 
+  const openPathInCurrentWindow = async (
+    value: unknown,
+    event: Electron.IpcMainInvokeEvent | null,
+  ): Promise<AppWindowOpenResult> => {
+    let requestedPath: string | undefined
+    try {
+      const target = await parsePathOpenTarget(value)
+      requestedPath = target.path
+      const main = sourceWindowForEvent(event, dependencies.getPrimaryWindow())
+      if (!main || main.isDestroyed()) throw new Error('No active window is available.')
+      const root = await setWorkspaceTarget(dependencies.getWorkspaceServiceForWindow(main), target)
+      const seed = dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(main), {
+        activeTabId: null,
+        rootKind: root.kind,
+        rootPath: root.path,
+        tabs: [],
+      })
+      sendWorkspaceSessionSeed(main, seed)
+      if (main.isMinimized()) main.restore()
+      showWindowWithMotion(main, { focus: true })
+      return {
+        ok: true,
+        requestedPath,
+        rootKind: root.kind,
+        sharedWorkspaceSession: false,
+        windowId: main.id,
+        workspacePath: root.path,
+      }
+    } catch (error) {
+      return failure(error, requestedPath)
+    }
+  }
+
   return {
     open_current_workspace_in_new_window: (_payload, event) =>
       openCurrent(event, 'open_current_workspace_in_new_window'),
+    open_path_in_current_window: (payload, event) => openPathInCurrentWindow(payload, event),
     open_path_in_new_window: (payload) => openPath(payload, 'open_path_in_new_window'),
     retry_window_open: (_payload, event) => {
       const target = BrowserWindow.fromWebContents(event.sender)

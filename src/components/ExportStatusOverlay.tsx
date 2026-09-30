@@ -5,6 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { exportApi } from '@/services/exportApi'
+import { ExportProgressDescription } from '@/components/ExportProgressDescription'
 
 type ExportTaskStatus = 'started' | 'finished' | 'failed' | 'cancelled'
 
@@ -32,12 +33,6 @@ const getToastDescription = (task: ExportTaskPayload) => {
   return `${outputName} - ${task.message}`
 }
 
-const getProgressDescription = (task: ExportTaskPayload) => {
-  const details = [task.message, getOutputName(task.output_path)]
-  if (typeof task.progress === 'number') details.push(`${Math.round(task.progress * 100)}%`)
-  return details.filter(Boolean).join(' · ')
-}
-
 const ExportStatusOverlay = () => {
   const { t } = useI18n()
 
@@ -53,9 +48,17 @@ const ExportStatusOverlay = () => {
       const description = getToastDescription(task)
 
       if (task.status === 'started') {
-        toast.loading(t('export.running', { format }), {
+        const label = t('export.running', { format })
+        toast.loading(label, {
           id: task.id,
-          description: getProgressDescription(task),
+          description: (
+            <ExportProgressDescription
+              label={label}
+              message={task.message}
+              outputName={getOutputName(task.output_path)}
+              progress={task.progress}
+            />
+          ),
           icon: (
             <span aria-hidden="true">
               <Spinner className="size-4" />

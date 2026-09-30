@@ -7,6 +7,7 @@ import { ExportService } from '@electron/services/export/exportService.js'
 import type { ExportTaskPayload } from '@electron/types.js'
 
 const electron = vi.hoisted(() => ({
+  notificationInstances: [] as Array<{ click?: () => void; show: ReturnType<typeof vi.fn> }>,
   notificationSupported: vi.fn(() => false),
 }))
 const commitOutput = vi.hoisted(() => vi.fn(async () => undefined))
@@ -14,29 +15,67 @@ const commitOutput = vi.hoisted(() => vi.fn(async () => undefined))
 vi.mock('electron', () => ({
   Notification: class {
     static isSupported = electron.notificationSupported
-    show = vi.fn()
+    private readonly instance = { show: vi.fn() } as {
+      click?: () => void
+      show: ReturnType<typeof vi.fn>
+    }
+
+    constructor() {
+      electron.notificationInstances.push(this.instance)
+    }
+
+    on(event: string, listener: () => void) {
+      if (event === 'click') this.instance.click = listener
+      return this
+    }
+
+    show() {
+      ;(this.instance.show as unknown as () => void)()
+    }
   },
 }))
 
 const sent: ExportTaskPayload[] = []
 const sentByWindow = new Map<number, ExportTaskPayload[]>()
+const nativeWindows = new Map<
+  number,
+  {
+    focus: ReturnType<typeof vi.fn>
+    isDestroyed: () => boolean
+    isMinimized: () => boolean
+    restore: ReturnType<typeof vi.fn>
+    setProgressBar: ReturnType<typeof vi.fn>
+    show: ReturnType<typeof vi.fn>
+    webContents: { id: number; send: (channel: string, payload: ExportTaskPayload) => void }
+  }
+>()
 let windowIds = [1]
 
 class FakeBrowserWindow {
   static getAllWindows = () =>
-    windowIds.map((id) => ({
-      isDestroyed: () => false,
-      setProgressBar: vi.fn(),
-      webContents: {
-        id,
-        send: (_channel: string, payload: ExportTaskPayload) => {
-          sent.push(payload)
-          const tasks = sentByWindow.get(id) ?? []
-          tasks.push(payload)
-          sentByWindow.set(id, tasks)
+    windowIds.map((id) => {
+      const existing = nativeWindows.get(id)
+      if (existing) return existing
+      const window = {
+        focus: vi.fn(),
+        isDestroyed: () => false,
+        isMinimized: () => false,
+        restore: vi.fn(),
+        setProgressBar: vi.fn(),
+        show: vi.fn(),
+        webContents: {
+          id,
+          send: (_channel: string, payload: ExportTaskPayload) => {
+            sent.push(payload)
+            const tasks = sentByWindow.get(id) ?? []
+            tasks.push(payload)
+            sentByWindow.set(id, tasks)
+          },
         },
-      },
-    }))
+      }
+      nativeWindows.set(id, window)
+      return window
+    })
   destroyed = false
   isDestroyed = () => this.destroyed
   destroy = () => {
@@ -53,7 +92,11 @@ describe('ExportService PDF lifecycle', () => {
   beforeEach(() => {
     sent.length = 0
     sentByWindow.clear()
+    nativeWindows.clear()
     windowIds = [1]
+    electron.notificationInstances.length = 0
+    electron.notificationSupported.mockReset()
+    electron.notificationSupported.mockReturnValue(false)
     commitOutput.mockClear()
     vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined)
     vi.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined)
@@ -158,5 +201,54 @@ describe('ExportService PDF lifecycle', () => {
     expect(sentByWindow.get(8)).toBeUndefined()
     expect(service.cancelExport({ taskId }, 8)).toBe(false)
     expect(service.cancelExport({ taskId }, 7)).toBe(true)
+  })
+
+  it('reports coherent rendering and writing progress for HTML exports', async () => {
+    const service = new ExportService(
+      { openPath: vi.fn() } as unknown as Shell,
+      FakeBrowserWindow as unknown as typeof BrowserWindow,
+    )
+
+    service.exportMarkdown(
+      { markdown: '# Progress', format: 'html', outputPath: 'D:/exports/progress.html' },
+      { commitOutput },
+    )
+
+    await vi.waitFor(() => expect(sent.some((task) => task.status === 'finished')).toBe(true))
+    const started = sent.filter((task) => task.status === 'started')
+    const progress = started.map((task) => task.progress)
+
+    expect(progress).toEqual([0.05, 0.15, 0.45, 0.9])
+    expect(started.map((task) => task.message)).toEqual([
+      'Export queued',
+      'Preparing export',
+      'Rendering HTML document',
+      'Saving exported file',
+    ])
+  })
+
+  it('focuses the owner window and reveals the output when a completion notification is clicked', async () => {
+    electron.notificationSupported.mockReturnValue(true)
+    windowIds = [7]
+    const shell = {
+      openPath: vi.fn(),
+      showItemInFolder: vi.fn(),
+    }
+    const service = new ExportService(
+      shell as unknown as Shell,
+      FakeBrowserWindow as unknown as typeof BrowserWindow,
+    )
+
+    service.exportMarkdown(
+      { markdown: '# Done', format: 'html', outputPath: 'D:/exports/done.html' },
+      { commitOutput, ownerId: 7 },
+    )
+
+    await vi.waitFor(() => expect(sent.some((task) => task.status === 'finished')).toBe(true))
+    electron.notificationInstances[0]?.click?.()
+
+    expect(nativeWindows.get(7)?.show).toHaveBeenCalledOnce()
+    expect(nativeWindows.get(7)?.focus).toHaveBeenCalledOnce()
+    expect(shell.showItemInFolder).toHaveBeenCalledWith(path.resolve('D:/exports/done.html'))
   })
 })

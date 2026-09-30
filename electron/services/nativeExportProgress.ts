@@ -13,7 +13,7 @@ export const applyWindowExportProgress = (
     return
   }
 
-  if (task.status === 'finished') {
+  if (task.status === 'finished' || task.status === 'cancelled') {
     window.setProgressBar(-1)
     return
   }

@@ -8,6 +8,7 @@
   "projectLoader.selectFolderFailed": "选择文件夹失败",
   "projectLoader.selectFileFailed": "选择文件失败",
   "projectLoader.openLocalWorkspaceFailed": "打开本地工作区失败",
+  "projectLoader.multipleMarkdownFilesDropped": "已打开第一个 Markdown 文件，并忽略其余 {{count}} 个文件。",
   "workspaceIndex.refreshFailed": "刷新工作区索引失败",
   "appMenu.exportFailed": "导出失败",
   "appMenu.aboutDescription": "支持图谱导航的桌面 Markdown 工作区。",

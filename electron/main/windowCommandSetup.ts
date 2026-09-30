@@ -26,6 +26,7 @@ export type WindowCommandSetup = {
   commandHandlers: NativeCommandHandlers
   dispatchMenuAction: MenuActionDispatcher
   openPathInNewWindow: (path: string) => Promise<unknown>
+  openSystemPath: (path: string, disposition: 'current' | 'new') => Promise<unknown>
 }
 
 export const createWindowCommandSetup = ({
@@ -70,5 +71,11 @@ export const createWindowCommandSetup = ({
     dispatchMenuAction: createNativeMenuActionDispatcher(dependencies, commandHandlers),
     openPathInNewWindow: (path: string) =>
       Promise.resolve(commandHandlers.open_path_in_new_window({ path }, null as never)),
+    openSystemPath: (path: string, disposition: 'current' | 'new') =>
+      Promise.resolve(
+        commandHandlers[
+          disposition === 'current' ? 'open_path_in_current_window' : 'open_path_in_new_window'
+        ]({ path }, null as never),
+      ),
   }
 }

@@ -16,6 +16,7 @@ import { useWorkspaceRestore } from '@/app/useWorkspaceRestore'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { pathToWorkspaceHistoryRoute } from '@/logic/routing'
 import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
+import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
 
 export const useAppLayoutState = () => {
   const workspaceWindowActions = useWorkspaceWindowActions()
@@ -148,12 +149,12 @@ export const useAppLayoutState = () => {
     setActiveTabId,
     touchRecentProject,
   })
+  useMarkdownFileDrop(openFolder)
   const { isSessionRestored, restoreStatusMessage, isRestoringSession, restoreWorkspaceSession } =
     useWorkspaceRestore({
       hasHydrated,
       rootPath,
       rootKind,
-      openFolder,
       loadWorkspace,
     })
   const onOpenWorkspaceOverview = useCallback(() => {

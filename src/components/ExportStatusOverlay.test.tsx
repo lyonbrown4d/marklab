@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
@@ -116,11 +116,16 @@ describe('ExportStatusOverlay', () => {
 
     expect(toastLoadingMock).toHaveBeenCalledWith(
       'export.running:Word',
-      expect.objectContaining({
-        description: 'Rendering document · Quarterly Report.docx · 35%',
-        id: 'export-1',
-        icon: expect.anything(),
-      }),
+      expect.objectContaining({ id: 'export-1', icon: expect.anything() }),
+    )
+
+    const description = toastLoadingMock.mock.calls[0]?.[1]?.description
+    render(<>{description}</>)
+    expect(screen.getByText('Rendering document')).toBeInTheDocument()
+    expect(screen.getByText('Quarterly Report.docx')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'export.running:Word' })).toHaveAttribute(
+      'aria-valuenow',
+      '35',
     )
 
     const options = toastLoadingMock.mock.calls[0]?.[1]

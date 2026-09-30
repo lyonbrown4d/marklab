@@ -8,6 +8,7 @@
   "projectLoader.selectFolderFailed": "Failed to select folder",
   "projectLoader.selectFileFailed": "Failed to select file",
   "projectLoader.openLocalWorkspaceFailed": "Failed to open local workspace",
+  "projectLoader.multipleMarkdownFilesDropped": "Opened the first Markdown file; ignored {{count}} more.",
   "workspaceIndex.refreshFailed": "Failed to refresh workspace index",
   "appMenu.exportFailed": "Export failed",
   "appMenu.aboutDescription": "A desktop Markdown workspace with graph navigation.",

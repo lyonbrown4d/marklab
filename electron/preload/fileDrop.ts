@@ -16,8 +16,6 @@ export const onFileDrop = (handler: FileDropHandler): (() => void) => {
 
   const dropListener = (event: DragEvent) => {
     if (!isFileDragEvent(event)) return
-    event.preventDefault()
-    event.stopPropagation()
 
     const files = event.dataTransfer?.files
     if (!files) return
@@ -25,6 +23,8 @@ export const onFileDrop = (handler: FileDropHandler): (() => void) => {
     const paths = getDroppedFilePaths(files)
     if (paths.length === 0) return
 
+    event.preventDefault()
+    event.stopPropagation()
     handler({
       paths,
       position: getFileDropPosition(event),
@@ -51,9 +51,7 @@ const getFilePath = (file: File): string | null => {
   } catch {
     // Electron can deny path resolution for synthetic File objects.
   }
-
-  const legacyPath = (file as File & { path?: unknown }).path
-  return typeof legacyPath === 'string' && legacyPath ? legacyPath : null
+  return null
 }
 
 const getDroppedFilePaths = (files: FileList): string[] => {
@@ -62,7 +60,9 @@ const getDroppedFilePaths = (files: FileList): string[] => {
     const filePath = getFilePath(file)
     if (filePath) paths.add(filePath)
   }
-  return [...paths]
+  const resolvedPaths = [...paths]
+  const markdownPaths = resolvedPaths.filter((path) => /\.(?:md|markdown)$/i.test(path))
+  return markdownPaths.length > 0 ? markdownPaths : resolvedPaths
 }
 
 const getFileDropPosition = (event: DragEvent): { x: number; y: number } => {

@@ -168,6 +168,7 @@
       "icon": "resources/icons/marklab.png",
       "category": "Office",
       "mimeTypes": [
+        "text/markdown",
         "text/x-markdown"
       ],
       "maintainer": "Marklab Maintainers <lyonbrown4d@users.noreply.github.com>",
