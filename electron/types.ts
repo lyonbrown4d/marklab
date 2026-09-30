@@ -183,7 +183,7 @@ export type RuntimeEventPayload<T = unknown> = {
   payload: T
 }
 
-export type ExportTaskStatus = 'started' | 'finished' | 'failed'
+export type ExportTaskStatus = 'started' | 'finished' | 'failed' | 'cancelled'
 
 export type ExportTaskPayload = {
   id: string

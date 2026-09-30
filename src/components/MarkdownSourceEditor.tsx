@@ -1,29 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
 import type { EditorCursorPosition } from '@/components/EditorDocumentStatus'
-import { ReplaySubject, catchError, debounceTime, from, map, of, switchMap } from 'rxjs'
 import type { OnMount } from '@monaco-editor/react'
 import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
-import {
-  getMarkdownSourceDiagnostics,
-  MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
-} from '@/logic/markdownDiagnostics'
+import { MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER } from '@/logic/markdownDiagnostics'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
-import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@/services/fsApi'
-import { markdownLanguageApi } from '@/services/markdownLanguageApi'
+import type { FsWorkspaceIndex } from '@/services/fsApi'
 import {
   onFocusSourcePositionRequest,
   type FocusSourcePositionRequest,
 } from '@/utils/editorNavigation'
-import { isDesktopRuntime } from '@/runtime/environment'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
 import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
 import { useI18n } from '@/i18n/useI18n'
 import { clearFocusedCodeEditor, setFocusedCodeEditor } from '@/lib/focusedCodeEditor'
 import { registerMarkdownSourceShortcuts } from '@/components/markdownSourceShortcuts'
-import { markdownEditorPerformancePolicy } from '@/components/markdownEditorPerformance'
+import { useMarkdownSourceContextMenu } from '@/components/markdownSourceContextMenu'
+import {
+  useMarkdownSourceDiagnostics,
+  type MarkdownSourceDiagnosticHost,
+} from '@/components/useMarkdownSourceDiagnostics'
 
 type MarkdownSourceEditorProps = {
   activePath: string | null
@@ -34,22 +32,6 @@ type MarkdownSourceEditorProps = {
   onChange: (value: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
   onCursorChange?: (position: EditorCursorPosition | null) => void
-}
-
-const SOURCE_DIAGNOSTICS_DEBOUNCE_MS = 120
-
-type MarkdownSourceDiagnostics = Array<
-  FsMarkdownDiagnostic | ReturnType<typeof getMarkdownSourceDiagnostics>[number]
->
-
-type MarkdownSourceDiagnosticsRequest = {
-  content: string
-  context: {
-    activePath: string | null
-    files: FileEntry[]
-    fileContents: Record<string, string>
-    workspaceIndex?: FsWorkspaceIndex | null
-  }
 }
 
 const MarkdownSourceEditor = ({
@@ -76,17 +58,20 @@ const MarkdownSourceEditor = ({
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const cursorCallbackRef = useLatest(onCursorChange)
   const cursorSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
-  const diagnosticHostRef = useRef<{
-    editor: Parameters<OnMount>[0]
-    monaco: typeof import('monaco-editor')
-  } | null>(null)
+  const diagnosticHostRef = useRef<MarkdownSourceDiagnosticHost | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const shortcutsDisposableRef = useRef<{ dispose: () => void } | null>(null)
-  const diagnosticsRequestStreamRef = useRef(new ReplaySubject<MarkdownSourceDiagnosticsRequest>(1))
   const searchHighlightRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const searchHighlightTimerRef = useRef<number | null>(null)
-  const completionContextRef = useLatest({ activePath, files, fileContents, workspaceIndex })
+  const { completionContextRef, scheduleDiagnostics } = useMarkdownSourceDiagnostics({
+    activePath,
+    files,
+    fileContents,
+    hostRef: diagnosticHostRef,
+    workspaceIndex,
+  })
   const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
+  const contextMenu = useMarkdownSourceContextMenu(editorRef)
 
   useEffect(() => {
     let cancelled = false
@@ -109,79 +94,11 @@ const MarkdownSourceEditor = ({
     }
   }, [])
 
-  const applyDiagnostics = useCallback((diagnostics: MarkdownSourceDiagnostics) => {
-    const host = diagnosticHostRef.current
-    const editor = host?.editor
-    const monaco = host?.monaco
-    const model = editor?.getModel()
-    if (!host || !model || !monaco) return
-
-    const markers = diagnostics.map((diagnostic) => {
-      const startColumn =
-        'start_column' in diagnostic ? diagnostic.start_column : diagnostic.startColumn
-      const endColumn = 'end_column' in diagnostic ? diagnostic.end_column : diagnostic.endColumn
-      return {
-        severity:
-          diagnostic.severity === 'error'
-            ? monaco.MarkerSeverity.Error
-            : monaco.MarkerSeverity.Warning,
-        message: diagnostic.message,
-        startLineNumber: diagnostic.line,
-        startColumn,
-        endLineNumber: diagnostic.line,
-        endColumn: Math.max(startColumn + 1, endColumn),
-        source: 'markdown',
-        code: diagnostic.severity === 'error' ? 'M001' : 'M002',
-      }
-    })
-    monaco.editor.setModelMarkers(model, MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER, markers)
-  }, [])
-
-  useEffect(() => {
-    const subscription = diagnosticsRequestStreamRef.current
-      .pipe(
-        debounceTime(SOURCE_DIAGNOSTICS_DEBOUNCE_MS),
-        switchMap(({ content, context }) => {
-          if (markdownEditorPerformancePolicy(content.length).diagnostics === 'disabled')
-            return of<MarkdownSourceDiagnostics>([])
-
-          if (isDesktopRuntime() && context.activePath) {
-            return from(
-              markdownLanguageApi.getDiagnostics({ path: context.activePath, content }),
-            ).pipe(
-              map((diagnostics) => diagnostics as MarkdownSourceDiagnostics),
-              catchError(() => of(getMarkdownSourceDiagnostics({ ...context, content }))),
-            )
-          }
-
-          return of(getMarkdownSourceDiagnostics({ ...context, content }))
-        }),
-      )
-      .subscribe((diagnostics) => {
-        applyDiagnostics(diagnostics)
-      })
-
-    return () => subscription.unsubscribe()
-  }, [applyDiagnostics])
-
-  const scheduleDiagnostics = useCallback(() => {
-    const host = diagnosticHostRef.current
-    const editor = host?.editor
-    const model = editor?.getModel()
-    if (!host || !model) return
-
-    diagnosticsRequestStreamRef.current.next({
-      content: model.getValue(),
-      context: completionContextRef.current,
-    })
-  }, [completionContextRef])
-
   useEffect(() => {
     if (pendingSourcePositionRef.current?.path !== activePath) {
       pendingSourcePositionRef.current = null
     }
-    scheduleDiagnostics()
-  }, [activePath, files, fileContents, scheduleDiagnostics, workspaceIndex])
+  }, [activePath])
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
@@ -318,6 +235,7 @@ const MarkdownSourceEditor = ({
       motionSmoothScrolling={motionSmoothScrolling}
       sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
       value={value}
+      contextMenu={contextMenu}
       onChange={onChange}
       onMount={handleMount}
     />

@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
@@ -6,6 +7,13 @@ import type { Logger } from '@electron/services/logger.js'
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import {
+  commitSavePathCapability,
+  consumeSavePathCapability,
+  releaseSavePathCapability,
+} from '@electron/ipc/savePathCapabilities.js'
+import { validateExportOutputPath } from '@electron/services/export/exportRequest.js'
+import { maxLocalImageBytes } from '@electron/services/export/docxImages.js'
 
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
@@ -94,9 +102,47 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getCodeActions(workspaceForEvent(event), payload),
     markdown_language_get_hover: (payload, event) =>
       markdownLanguageService.getHover(workspaceForEvent(event), payload),
-    export_markdown: (payload) => exportService.exportMarkdown(payload),
-    export_open_output_path: (payload) => exportService.openOutputPath(payload),
+    export_markdown: async (payload, event) => {
+      const capability = await consumeSavePathCapability(
+        event.sender.id,
+        validateExportOutputPath(payload),
+      )
+      const workspace = workspaceForEvent(event)
+      const sourceDocumentPath = readOptionalString(payload, 'sourceDocumentPath')
+      const resourceBasePath = sourceDocumentPath
+        ? path.dirname(workspace.resolveCoordinatorPath(sourceDocumentPath))
+        : undefined
+      const root = workspace.rootInfo()
+      const workspaceRootPath = root.kind === 'single' ? path.dirname(root.path) : root.path
+      try {
+        return exportService.exportMarkdown(payload, {
+          commitOutput: (data) => commitSavePathCapability(capability, data),
+          ownerId: event.sender.id,
+          readImage: sourceDocumentPath
+            ? (url) =>
+                workspace.readMarkdownExportAsset(sourceDocumentPath, url, maxLocalImageBytes)
+            : undefined,
+          resourceBasePath,
+          releaseOutput: () => releaseSavePathCapability(capability),
+          workspaceRootPath,
+        })
+      } catch (error) {
+        await releaseSavePathCapability(capability)
+        throw error
+      }
+    },
+    export_cancel: (payload, event) => exportService.cancelExport(payload, event.sender.id),
+    export_open_output_path: (payload, event) =>
+      exportService.openOutputPath(payload, event.sender.id),
   }
+}
+
+const readOptionalString = (value: unknown, key: string): string | undefined => {
+  if (!value || typeof value !== 'object' || !(key in value)) return undefined
+  const result = (value as Record<string, unknown>)[key]
+  if (result === undefined) return undefined
+  if (typeof result !== 'string') throw new Error(`${key} must be a string`)
+  return result
 }
 
 const registerLegacyCommandHandlers = (

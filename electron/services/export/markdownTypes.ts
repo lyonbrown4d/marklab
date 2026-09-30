@@ -2,6 +2,7 @@ export type MarkdownInline =
   | { type: 'text'; text: string }
   | { type: 'strong'; children: MarkdownInline[] }
   | { type: 'emphasis'; children: MarkdownInline[] }
+  | { type: 'deletion'; children: MarkdownInline[] }
   | { type: 'code'; text: string }
   | { type: 'link'; url: string; title?: string; children: MarkdownInline[] }
   | { type: 'image'; url: string; title?: string; alt: string }

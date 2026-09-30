@@ -6,9 +6,14 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 import { normalizeHtmlBreaks } from '@electron/services/export/markdownText.js'
+import { parseMarkdown } from '@electron/services/export/markdown.js'
+import { loadLocalImages, type LocalImageMap } from '@electron/services/export/docxImages.js'
 type RenderHtmlOptions = {
+  embeddedImages?: LocalImageMap
+  readImage?: (url: string) => Promise<Buffer | null>
   resourceBasePath?: string
   resolveRelativeResources?: boolean
+  workspaceRootPath?: string
 }
 type HastNode = {
   type: string
@@ -22,7 +27,7 @@ type HastElement = HastNode & {
   properties: Record<string, unknown>
 }
 const safeLinkSchemes = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
-const safeImageSchemes = new Set(['http:', 'https:', 'file:', 'data:'])
+const safeImageSchemes = new Set<string>()
 export const renderHtml = (markdown: string, options: RenderHtmlOptions = {}): string => {
   const body = renderMarkdownBody(markdown, options)
   return `<!DOCTYPE html>
@@ -87,6 +92,13 @@ ${body}
 </body>
 </html>`
 }
+export const renderHtmlWithLocalImages = async (
+  markdown: string,
+  options: RenderHtmlOptions,
+): Promise<string> => {
+  const embeddedImages = await loadLocalImages(parseMarkdown(markdown), options)
+  return renderHtml(markdown, { ...options, embeddedImages })
+}
 const renderMarkdownBody = (markdown: string, options: RenderHtmlOptions): string => {
   const file = unified()
     .use(remarkParse)
@@ -137,9 +149,14 @@ const resolveResourceUrl = (
     if (scheme === 'data:') return safeSchemes.has('data:') ? trimmed : '#'
     return trimmed
   }
+  if (safeSchemes === safeImageSchemes && options.resolveRelativeResources) {
+    const image = options.embeddedImages?.get(trimmed)
+    return image ? imageDataUrl(image.type, image.data) : '#'
+  }
   const split = splitUrlSuffix(trimmed)
   const targetPath = decodeFilePath(split.path)
   if (isLocalAbsolutePath(targetPath)) {
+    if (safeSchemes === safeImageSchemes) return '#'
     return fileUrlFromPath(targetPath) + split.suffix
   }
   if (
@@ -147,9 +164,17 @@ const resolveResourceUrl = (
     options.resourceBasePath &&
     isRelativeResourcePath(targetPath)
   ) {
-    return fileUrlFromPath(path.resolve(options.resourceBasePath, targetPath)) + split.suffix
+    const basePath = path.resolve(options.resourceBasePath)
+    const resolvedPath = path.resolve(basePath, targetPath)
+    const relativePath = path.relative(basePath, resolvedPath)
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) return '#'
+    return fileUrlFromPath(resolvedPath) + split.suffix
   }
   return trimmed
+}
+const imageDataUrl = (type: 'bmp' | 'gif' | 'jpg' | 'png', data: Buffer): string => {
+  const mime = type === 'jpg' ? 'jpeg' : type
+  return `data:image/${mime};base64,${data.toString('base64')}`
 }
 const splitUrlSuffix = (
   value: string,

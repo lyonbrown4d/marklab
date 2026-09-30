@@ -31,8 +31,8 @@ const exportMarkdown = async (
     rootPath?: string
     activePath?: string | null
   },
-): Promise<void> => {
-  if (exportInProgress) return
+): Promise<string | undefined> => {
+  if (exportInProgress) return undefined
   exportInProgress = true
   try {
     const config = FORMAT_CONFIG[format]
@@ -47,11 +47,12 @@ const exportMarkdown = async (
       defaultPath,
       filters: [{ name: config.filterName, extensions: config.extensions }],
     })
-    if (!path) return
-    await invoke('export_markdown', {
+    if (!path) return undefined
+    return await invoke<string>('export_markdown', {
       markdown,
       format,
       outputPath: path,
+      sourceDocumentPath: options?.activePath ?? undefined,
     })
   } finally {
     exportInProgress = false
@@ -59,6 +60,9 @@ const exportMarkdown = async (
 }
 export const exportApi = {
   exportMarkdown,
+  cancelExport(taskId: string) {
+    return invoke<boolean>('export_cancel', { taskId })
+  },
   openExportedFile(path: string) {
     return invoke<void>('export_open_output_path', { path })
   },

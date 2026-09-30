@@ -10,12 +10,13 @@ import type {
 } from '@/components/milkdown/markdownEditorTypes'
 import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdownPlaygroundController'
 import { SlashUrlDialog } from '@/components/milkdown/SlashUrlDialog'
+import { EditorContextMenu } from '@/components/EditorContextMenu'
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
-  const { focusEditor, getMarkdown, rootRef, scrollAreaRef, status, urlDialog } =
+  const { contextMenu, focusEditor, getMarkdown, rootRef, scrollAreaRef, status, urlDialog } =
     useMarkdownPlaygroundController({
       ...props,
       darkMode,
@@ -36,25 +37,31 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   )
 
   return (
-    <div className="relative flex h-full flex-1 flex-col">
-      <div
-        className="crepe crepe-playground flex h-full flex-1 flex-col"
-        ref={setPlaygroundRootElement}
-      />
-      <MarkdownEditorStatusOverlay
-        errorLabel={t('editor.loadFailed')}
-        loadingLabel={t('editor.loading')}
-        status={status}
-      />
-      {urlDialog?.request && (
-        <SlashUrlDialog
-          state={urlDialog}
-          labels={props.slashLabels}
-          cancelLabel={t('scm.cancel')}
-          errorLabel={t('editor.loadFailed')}
+    <EditorContextMenu
+      getCapabilities={contextMenu.getCapabilities}
+      onAction={contextMenu.onAction}
+      shortcutOverrides={shortcutOverrides}
+    >
+      <div className="relative flex h-full flex-1 flex-col">
+        <div
+          className="crepe crepe-playground flex h-full flex-1 flex-col"
+          ref={setPlaygroundRootElement}
         />
-      )}
-    </div>
+        <MarkdownEditorStatusOverlay
+          errorLabel={t('editor.loadFailed')}
+          loadingLabel={t('editor.loading')}
+          status={status}
+        />
+        {urlDialog?.request && (
+          <SlashUrlDialog
+            state={urlDialog}
+            labels={props.slashLabels}
+            cancelLabel={t('scm.cancel')}
+            errorLabel={t('editor.loadFailed')}
+          />
+        )}
+      </div>
+    </EditorContextMenu>
   )
 })
 

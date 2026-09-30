@@ -1,6 +1,7 @@
 import type * as Electron from 'electron'
 import { nativeIpcChannels } from '@electron/channels.js'
 import type { OpenDialogOptions, SaveDialogOptions } from '@electron/types.js'
+import { issueSavePathCapability } from '@electron/ipc/savePathCapabilities.js'
 const openProperties = (
   options: OpenDialogOptions,
 ): Array<'openFile' | 'openDirectory' | 'multiSelections'> => {
@@ -50,6 +51,8 @@ export const registerDialogIpc = (
       ? await dialog.showSaveDialog(parent, dialogOptions)
       : await dialog.showSaveDialog(dialogOptions)
     if (result.canceled) return null
-    return result.filePath ?? null
+    if (!result.filePath) return null
+    await issueSavePathCapability(event.sender.id, result.filePath)
+    return result.filePath
   })
 }

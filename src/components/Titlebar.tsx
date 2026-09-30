@@ -102,6 +102,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       commandCollections,
       workspaceKnowledgeSummary,
       onOpenSearch,
+      onMenuAction,
       onCommandAction,
       onCommandOpenFile,
       onCommandOpenHeading,
@@ -183,6 +184,9 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           newWorkspaceLabel={t('actions.newWorkspace')}
           openFileLabel={t('actions.openFile')}
           newFileLabel={t('sidebar.newFile')}
+          exportLabel={t('actions.export')}
+          exportPdfLabel={t('actions.exportPdf')}
+          exportDocxLabel={t('actions.exportDocx')}
           openCurrentWorkspaceInNewWindowLabel={t('actions.openCurrentWorkspaceInNewWindow')}
           openWorkspaceInNewWindowLabel={t('actions.openWorkspaceInNewWindow')}
           onOpenSearch={onOpenSearch}
@@ -193,6 +197,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onNewWorkspace={onSelectProject}
           onOpenFile={onSelectSingleFile}
           onCreateFile={onCreateFile}
+          onExport={(format) => onMenuAction(`file.export_${format}`)}
           onOpenCurrentWorkspaceInNewWindow={workspaceWindowActions.openCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={workspaceWindowActions.selectWorkspaceInNewWindow}
           workspaceWindowOpening={workspaceWindowActions.opening}

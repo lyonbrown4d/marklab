@@ -1,0 +1,53 @@
+import { createRef } from 'react'
+import { renderHook } from '@testing-library/react'
+import type { editor as MonacoEditor } from 'monaco-editor'
+import { describe, expect, it, vi } from 'vitest'
+import { useMarkdownSourceContextMenu } from '@/components/markdownSourceContextMenu'
+
+const createEditor = (selectionEmpty = false) => {
+  const editor = {
+    focus: vi.fn(),
+    getModel: () => ({ canRedo: () => false, canUndo: () => true }),
+    getSelection: () => ({ isEmpty: () => selectionEmpty }),
+    trigger: vi.fn(),
+  } as unknown as MonacoEditor.IStandaloneCodeEditor
+  return editor
+}
+
+describe('useMarkdownSourceContextMenu', () => {
+  it('reports live Monaco capabilities and routes formatting through registered actions', () => {
+    const editor = createEditor()
+    const editorRef = createRef<MonacoEditor.IStandaloneCodeEditor | null>()
+    editorRef.current = editor
+    const { result } = renderHook(() => useMarkdownSourceContextMenu(editorRef))
+
+    expect(result.current.getCapabilities()).toMatchObject({
+      copy: true,
+      cut: true,
+      redo: false,
+      undo: true,
+    })
+    result.current.onAction('bold')
+
+    expect(editor.focus).toHaveBeenCalledTimes(1)
+    expect(editor.trigger).toHaveBeenCalledWith(
+      'marklab.editorContextMenu',
+      'marklab.editor.bold',
+      null,
+    )
+  })
+
+  it('disables editor actions before Monaco mounts', () => {
+    const editorRef = createRef<MonacoEditor.IStandaloneCodeEditor | null>()
+    const { result } = renderHook(() => useMarkdownSourceContextMenu(editorRef))
+
+    expect(result.current.getCapabilities()).toMatchObject({
+      bold: false,
+      copy: false,
+      link: false,
+      paste: false,
+      undo: false,
+    })
+    expect(() => result.current.onAction('bold')).not.toThrow()
+  })
+})

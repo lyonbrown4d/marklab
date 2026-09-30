@@ -14,7 +14,6 @@ import {
 import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
 import { useSlashUrlDialog } from '@/components/milkdown/useSlashUrlDialog'
 import { useMarkdownPlaygroundShortcuts } from '@/components/milkdown/useMarkdownPlaygroundShortcuts'
-import type { ShortcutBindings } from '@/logic/shortcuts'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
 import {
   readPlaygroundMarkdown,
@@ -22,8 +21,8 @@ import {
   replaceMarkdownLikePlayground,
 } from '@/components/milkdown/markdownPlaygroundActions'
 import type {
-  MarkdownEditorProps,
   MarkdownEditorStatus,
+  MarkdownPlaygroundControllerOptions,
   QueuedMarkdownUpdate,
   ThrottledMarkdownUpdate,
 } from '@/components/milkdown/markdownEditorTypes'
@@ -31,11 +30,9 @@ import {
   markdownEditorPerformancePolicy,
   waitForMarkdownEditorMount,
 } from '@/components/markdownEditorPerformance'
+import { useMilkdownEditorContextMenu } from '@/components/milkdown/useMilkdownEditorContextMenu'
+import { useMarkdownPlaygroundSync } from '@/components/milkdown/useMarkdownPlaygroundSync'
 
-type UseMarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
-  darkMode: boolean
-  shortcutOverrides?: ShortcutBindings
-}
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
@@ -45,7 +42,7 @@ export const useMarkdownPlaygroundController = ({
   slashLabels,
   shortcutOverrides,
   value,
-}: UseMarkdownPlaygroundControllerOptions) => {
+}: MarkdownPlaygroundControllerOptions) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
@@ -63,6 +60,7 @@ export const useMarkdownPlaygroundController = ({
   const [codeBlockTheme] = useState(createMarkdownCodeBlockTheme)
   const urlDialog = useSlashUrlDialog(activePath)
   const { open: openUrlDialog, invalidate: invalidateUrlDialog } = urlDialog
+  const contextMenu = useMilkdownEditorContextMenu({ crepeRef, onLinkInsert: openUrlDialog })
   const shortcutPlugin = useMarkdownPlaygroundShortcuts({
     crepeRef,
     enabled: status.phase === 'ready' && !urlDialog.request,
@@ -75,41 +73,21 @@ export const useMarkdownPlaygroundController = ({
     if (rootRef.current) refreshMermaidPreviews(rootRef.current)
   }, [codeBlockTheme, darkMode])
 
-  useLayoutEffect(() => {
-    if (onChangeRef.current === onChange) return
-    throttledMarkdownUpdateRef.current?.flush()
-    onChangeRef.current = onChange
-  }, [onChange])
-
-  useLayoutEffect(() => {
-    onCalendarFileCreateRef.current = onCalendarFileCreate
-  }, [onCalendarFileCreate])
-
-  useLayoutEffect(() => {
-    throttledMarkdownUpdateRef.current?.flush()
-    const documentChanged = activePathRef.current !== activePath
-    const valueChanged =
-      latestValuePathRef.current !== activePath || latestValueRef.current !== value
-
-    applyingExternalValueRef.current = true
-    try {
-      activePathRef.current = activePath
-      latestValuePathRef.current = activePath
-      latestValueRef.current = value
-      const crepe = crepeRef.current
-      if (crepe && valueChanged) {
-        replaceMarkdownLikePlayground(crepe, value)
-        // An echoed value can lag behind live edits awaiting their listener callback.
-        // Normalize only applied external values, not newer, still-unsaved editor content.
-        latestValueRef.current = readPlaygroundMarkdown(crepe, value)
-      }
-      if (documentChanged) {
-        activePathListenersRef.current.forEach((listener) => listener())
-      }
-    } finally {
-      applyingExternalValueRef.current = false
-    }
-  }, [activePath, value])
+  useMarkdownPlaygroundSync({
+    activePath,
+    activePathListenersRef,
+    activePathRef,
+    applyingExternalValueRef,
+    crepeRef,
+    latestValuePathRef,
+    latestValueRef,
+    onCalendarFileCreate,
+    onCalendarFileCreateRef,
+    onChange,
+    onChangeRef,
+    throttledMarkdownUpdateRef,
+    value,
+  })
 
   const getDocumentPath = useCallback(() => activePathRef.current, [])
 
@@ -311,6 +289,7 @@ export const useMarkdownPlaygroundController = ({
   )
 
   return {
+    contextMenu,
     focusEditor,
     getMarkdown: getCurrentMarkdown,
     rootRef,

@@ -19,6 +19,7 @@ vi.mock('@/runtime/events', () => ({
 
 vi.mock('@/services/exportApi', () => ({
   exportApi: {
+    cancelExport: vi.fn(),
     openExportedFile: vi.fn(),
   },
 }))
@@ -26,6 +27,7 @@ vi.mock('@/services/exportApi', () => ({
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
+    info: vi.fn(),
     loading: vi.fn(),
     success: vi.fn(),
   },
@@ -45,7 +47,8 @@ type ExportTaskEvent = {
     id: string
     format: string
     output_path: string
-    status: 'started' | 'finished' | 'failed'
+    status: 'started' | 'finished' | 'failed' | 'cancelled'
+    progress?: number | null
     message?: string | null
   }
 }
@@ -60,7 +63,9 @@ const listenMock = vi.mocked(listen)
 const toastLoadingMock = vi.mocked(toast.loading)
 const toastSuccessMock = vi.mocked(toast.success)
 const toastErrorMock = vi.mocked(toast.error)
+const toastInfoMock = vi.mocked(toast.info)
 const openExportedFileMock = vi.mocked(exportApi.openExportedFile)
+const cancelExportMock = vi.mocked(exportApi.cancelExport)
 
 const renderOverlayWithListener = async () => {
   const registered: { listener: ExportTaskListener | null } = { listener: null }
@@ -89,7 +94,9 @@ beforeEach(() => {
   toastLoadingMock.mockReset()
   toastSuccessMock.mockReset()
   toastErrorMock.mockReset()
+  toastInfoMock.mockReset()
   openExportedFileMock.mockReset()
+  cancelExportMock.mockReset()
 })
 
 describe('ExportStatusOverlay', () => {
@@ -102,16 +109,42 @@ describe('ExportStatusOverlay', () => {
         format: 'docx',
         output_path: 'C:/exports/Quarterly Report.docx',
         status: 'started',
+        progress: 0.35,
+        message: 'Rendering document',
       },
     })
 
     expect(toastLoadingMock).toHaveBeenCalledWith(
       'export.running:Word',
       expect.objectContaining({
-        description: 'Quarterly Report.docx',
+        description: 'Rendering document · Quarterly Report.docx · 35%',
         id: 'export-1',
         icon: expect.anything(),
       }),
+    )
+
+    const options = toastLoadingMock.mock.calls[0]?.[1]
+    const action = options?.action as (ToastAction & { label?: string }) | undefined
+    expect(action?.label).toBe('export.cancel')
+    action?.onClick?.()
+    expect(cancelExportMock).toHaveBeenCalledWith('export-1')
+  })
+
+  it('replaces the loading toast when an export is cancelled', async () => {
+    const { listener } = await renderOverlayWithListener()
+
+    listener({
+      payload: {
+        id: 'export-4',
+        format: 'pdf',
+        output_path: '/tmp/report.pdf',
+        status: 'cancelled',
+      },
+    })
+
+    expect(toastInfoMock).toHaveBeenCalledWith(
+      'export.cancelled:PDF',
+      expect.objectContaining({ id: 'export-4', description: 'report.pdf' }),
     )
   })
 

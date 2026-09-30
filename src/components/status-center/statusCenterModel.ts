@@ -2,7 +2,7 @@ import type { SaveState } from '@/app/useEditorBuffer'
 import type { BackgroundTaskStatus } from '@/services/fsApi'
 import type { TerminalExitEvent, TerminalOutputEvent } from '@/services/terminalApi'
 
-export type ExportTaskStatus = 'started' | 'finished' | 'failed'
+export type ExportTaskStatus = 'started' | 'finished' | 'failed' | 'cancelled'
 
 export type ExportTaskPayload = {
   id: string
@@ -43,11 +43,13 @@ export const formatExportLabel = (task: ExportTaskEntry, t?: Translate) => {
   if (t) {
     if (task.status === 'started') return t('statusCenter.exportStarted', { format })
     if (task.status === 'finished') return t('statusCenter.exportFinished', { format })
+    if (task.status === 'cancelled') return t('statusCenter.exportCancelled', { format })
     return t('statusCenter.exportFailed', { format })
   }
 
   if (task.status === 'started') return `Exporting ${format}`
   if (task.status === 'finished') return `Exported ${format}`
+  if (task.status === 'cancelled') return `Cancelled ${format} export`
   return `Failed to export ${format}`
 }
 

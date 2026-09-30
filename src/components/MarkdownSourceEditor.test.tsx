@@ -2,26 +2,12 @@ import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
 import { configureMonaco } from '@/lib/monaco'
+import type { CompletionMock, SymbolMock } from '@/components/sourceEditorTestTypes'
 
 const sourceShortcutMock = vi.hoisted(() => ({
   dispose: vi.fn(),
   register: vi.fn(() => ({ dispose: sourceShortcutMock.dispose })),
 }))
-
-type CompletionProviderMock = {
-  provideCompletionItems: (
-    model: { getValue: () => string; getVersionId: () => number; isDisposed: () => boolean },
-    position: { lineNumber: number; column: number },
-  ) => Promise<{
-    suggestions: Array<Record<string, unknown>>
-  }>
-}
-
-type DocumentSymbolProviderMock = {
-  provideDocumentSymbols: (model: {
-    getValue: () => string
-  }) => Promise<Array<Record<string, unknown>>>
-}
 
 const monacoEditor = vi.hoisted(() => ({
   setPosition: vi.fn(),
@@ -205,7 +191,7 @@ describe('MarkdownSourceEditor', () => {
     })
 
     const providerCall = monaco.languages.registerCompletionItemProvider.mock
-      .calls[0] as unknown as [string, CompletionProviderMock] | undefined
+      .calls[0] as unknown as [string, CompletionMock] | undefined
     expect(providerCall?.[0]).toBe('markdown')
 
     const provider = providerCall?.[1]
@@ -298,7 +284,7 @@ describe('MarkdownSourceEditor', () => {
     })
 
     const providerCall = monaco.languages.registerDocumentSymbolProvider.mock
-      .calls[0] as unknown as [string, DocumentSymbolProviderMock] | undefined
+      .calls[0] as unknown as [string, SymbolMock] | undefined
     expect(providerCall?.[0]).toBe('markdown')
 
     const symbols = await providerCall?.[1].provideDocumentSymbols({

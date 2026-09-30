@@ -1,4 +1,5 @@
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
+import type { ShortcutBindings } from '@/logic/shortcuts'
 
 export type MarkdownEditorProps = {
   activePath: string | null
@@ -16,6 +17,11 @@ export type MarkdownEditorHandle = {
 
 export type MarkdownEditorStatus =
   { phase: 'loading' } | { phase: 'ready' } | { phase: 'error'; message: string }
+
+export type MarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
+  darkMode: boolean
+  shortcutOverrides?: ShortcutBindings
+}
 
 export type QueuedMarkdownUpdate = {
   documentIdentity: MarkdownEditorProps['activePath']

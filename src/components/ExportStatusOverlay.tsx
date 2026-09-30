@@ -6,7 +6,7 @@ import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { exportApi } from '@/services/exportApi'
 
-type ExportTaskStatus = 'started' | 'finished' | 'failed'
+type ExportTaskStatus = 'started' | 'finished' | 'failed' | 'cancelled'
 
 type ExportTaskPayload = {
   id: string
@@ -14,6 +14,7 @@ type ExportTaskPayload = {
   output_path: string
   status: ExportTaskStatus
   message?: string | null
+  progress?: number | null
 }
 
 const getOutputName = (path: string) => {
@@ -29,6 +30,12 @@ const getToastDescription = (task: ExportTaskPayload) => {
   const outputName = getOutputName(task.output_path)
   if (task.status !== 'failed' || !task.message) return outputName
   return `${outputName} - ${task.message}`
+}
+
+const getProgressDescription = (task: ExportTaskPayload) => {
+  const details = [task.message, getOutputName(task.output_path)]
+  if (typeof task.progress === 'number') details.push(`${Math.round(task.progress * 100)}%`)
+  return details.filter(Boolean).join(' · ')
 }
 
 const ExportStatusOverlay = () => {
@@ -48,12 +55,18 @@ const ExportStatusOverlay = () => {
       if (task.status === 'started') {
         toast.loading(t('export.running', { format }), {
           id: task.id,
-          description,
+          description: getProgressDescription(task),
           icon: (
             <span aria-hidden="true">
               <Spinner className="size-4" />
             </span>
           ),
+          action: {
+            label: t('export.cancel'),
+            onClick: () => {
+              void exportApi.cancelExport(task.id)
+            },
+          },
         })
         return
       }
@@ -68,6 +81,14 @@ const ExportStatusOverlay = () => {
               void exportApi.openExportedFile(task.output_path)
             },
           },
+        })
+        return
+      }
+
+      if (task.status === 'cancelled') {
+        toast.info(t('export.cancelled', { format }), {
+          id: task.id,
+          description,
         })
         return
       }

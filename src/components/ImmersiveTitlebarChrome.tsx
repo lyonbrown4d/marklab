@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import type { ViewMode } from '@/store/appTypes'
 import { TabsBarViewModeControls } from '@/components/TabsBarViewModeControls'
 import { TitlebarWorkspaceMenu } from '@/components/TitlebarWorkspaceMenu'
+import { TitlebarExportMenu } from '@/components/TitlebarExportMenu'
+import type { ExportFormat } from '@/services/exportApi'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -37,6 +39,9 @@ type ImmersiveTitlebarChromeProps = {
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
+  exportLabel: string
+  exportPdfLabel: string
+  exportDocxLabel: string
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
   onOpenSearch: () => void
@@ -47,6 +52,7 @@ type ImmersiveTitlebarChromeProps = {
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
+  onExport: (format: Extract<ExportFormat, 'pdf' | 'docx'>) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
   workspaceWindowOpening: boolean
@@ -101,6 +107,9 @@ export const ImmersiveTitlebarChrome = ({
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
+  exportLabel,
+  exportPdfLabel,
+  exportDocxLabel,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
   onOpenSearch,
@@ -111,6 +120,7 @@ export const ImmersiveTitlebarChrome = ({
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
+  onExport,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
   workspaceWindowOpening,
@@ -213,6 +223,13 @@ export const ImmersiveTitlebarChrome = ({
           sourceLabel={sourceLabel}
           graphLabel={graphLabel}
           onChangeView={onChangeView}
+        />
+        <TitlebarExportMenu
+          disabled={!activePath}
+          exportLabel={exportLabel}
+          exportPdfLabel={exportPdfLabel}
+          exportDocxLabel={exportDocxLabel}
+          onExport={onExport}
         />
         <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/70" />
         <Button

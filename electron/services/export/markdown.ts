@@ -111,7 +111,7 @@ const inlineFromNode = (node: MdastNode): MarkdownInline[] => {
   if (node.type === 'inlineCode') return [{ type: 'code', text: node.value ?? '' }]
   if (node.type === 'strong') return [{ type: 'strong', children: inlineChildren(node) }]
   if (node.type === 'emphasis') return [{ type: 'emphasis', children: inlineChildren(node) }]
-  if (node.type === 'delete') return inlineChildren(node)
+  if (node.type === 'delete') return [{ type: 'deletion', children: inlineChildren(node) }]
   if (node.type === 'break') return textInline('\n')
   if (node.type === 'link') return [linkInline(node)]
   if (node.type === 'image') return [imageInline(node)]

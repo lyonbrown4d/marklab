@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createRef, type Ref } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownEditor from '@/components/MarkdownEditor'
@@ -8,12 +8,24 @@ import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdo
 
 const controllerMock = vi.hoisted(() => ({
   focusEditor: vi.fn(),
+  getContextMenuCapabilities: vi.fn(() => ({
+    copy: true,
+    cut: true,
+    link: true,
+    redo: false,
+    undo: true,
+  })),
   getMarkdown: vi.fn(() => 'current markdown'),
+  runContextMenuAction: vi.fn(),
   shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
 }))
 
 vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
   useMarkdownPlaygroundController: vi.fn(() => ({
+    contextMenu: {
+      getCapabilities: controllerMock.getContextMenuCapabilities,
+      onAction: controllerMock.runContextMenuAction,
+    },
     focusEditor: controllerMock.focusEditor,
     getMarkdown: controllerMock.getMarkdown,
     rootRef: { current: null },
@@ -37,6 +49,17 @@ vi.mock('@/i18n/useI18n', () => ({
       ({
         'editor.loadFailed': 'Editor failed to load',
         'editor.loading': 'Loading editor...',
+        'edit.undo': 'Undo',
+        'edit.redo': 'Redo',
+        'edit.cut': 'Cut',
+        'edit.copy': 'Copy',
+        'edit.paste': 'Paste',
+        'edit.selectAll': 'Select All',
+        'shortcuts.bold': 'Bold',
+        'shortcuts.italic': 'Italic',
+        'shortcuts.inlineCode': 'Inline code',
+        'shortcuts.strike': 'Strikethrough',
+        'shortcuts.link': 'Insert link',
       })[key] ?? key,
   }),
 }))
@@ -113,6 +136,8 @@ describe('MarkdownEditor playground baseline', () => {
   beforeEach(() => {
     controllerMock.focusEditor.mockClear()
     controllerMock.getMarkdown.mockClear()
+    controllerMock.getContextMenuCapabilities.mockClear()
+    controllerMock.runContextMenuAction.mockClear()
   })
 
   it('renders the same empty crepe root shape as the official playground', () => {
@@ -147,5 +172,53 @@ describe('MarkdownEditor playground baseline', () => {
 
     expect(ref.current?.getMarkdown()).toBe('current markdown')
     expect(controllerMock.focusEditor).toHaveBeenCalledTimes(1)
+  })
+
+  it('replaces the browser menu with editor actions and runs formatting commands', async () => {
+    renderEditor()
+    const root = document.querySelector('.crepe') as HTMLElement
+    const contextMenuEvent = createEvent.contextMenu(root)
+
+    fireEvent(root, contextMenuEvent)
+
+    expect(contextMenuEvent.defaultPrevented).toBe(true)
+    expect(screen.getByRole('menuitem', { name: /Undo/ })).toBeEnabled()
+    expect(screen.getByRole('menuitem', { name: /Redo/ })).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: /Insert link/ })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /Bold/ }))
+    expect(controllerMock.runContextMenuAction).toHaveBeenCalledWith('bold')
+
+    fireEvent.contextMenu(root)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+  })
+
+  it('disables unavailable selection actions and hides links without link capability', () => {
+    controllerMock.getContextMenuCapabilities.mockReturnValueOnce({
+      copy: false,
+      cut: false,
+      link: false,
+      redo: false,
+      undo: false,
+    })
+    renderEditor()
+
+    fireEvent.contextMenu(document.querySelector('.crepe') as HTMLElement)
+
+    expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: /Cut/ })).toHaveAttribute('data-disabled')
+    expect(screen.queryByRole('menuitem', { name: /Insert link/ })).not.toBeInTheDocument()
+  })
+
+  it('opens the editor menu from the keyboard', () => {
+    renderEditor()
+
+    fireEvent.keyDown(document.querySelector('.crepe') as HTMLElement, {
+      key: 'F10',
+      shiftKey: true,
+    })
+
+    expect(screen.getByRole('menuitem', { name: /Undo/ })).toBeInTheDocument()
   })
 })

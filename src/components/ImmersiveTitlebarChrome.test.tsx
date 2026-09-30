@@ -24,6 +24,9 @@ const createProps = () => ({
   newWorkspaceLabel: '新建工作区',
   openFileLabel: '打开文件',
   newFileLabel: '新建文件',
+  exportLabel: '导出',
+  exportPdfLabel: '导出为 PDF',
+  exportDocxLabel: '导出为 Word',
   onOpenSearch: vi.fn(),
   onToggleSidebar: vi.fn(),
   onToggleOutline: vi.fn(),
@@ -32,6 +35,7 @@ const createProps = () => ({
   onNewWorkspace: vi.fn(),
   onOpenFile: vi.fn(),
   onCreateFile: vi.fn(),
+  onExport: vi.fn(),
   onOpenCurrentWorkspaceInNewWindow: vi.fn(),
   onSelectWorkspaceInNewWindow: vi.fn(),
   workspaceWindowOpening: false,
@@ -85,6 +89,20 @@ describe('ImmersiveTitlebarChrome', () => {
 
     expect(props.onOpenCurrentWorkspaceInNewWindow).toHaveBeenCalledOnce()
     expect(props.onSelectWorkspaceInNewWindow).toHaveBeenCalledOnce()
+  })
+
+  it('offers a visible export menu for PDF and Word', async () => {
+    const props = createProps()
+    render(<ImmersiveTitlebarChrome {...props} />)
+
+    const trigger = screen.getByRole('button', { name: '导出' })
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: '导出为 PDF' }))
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: '导出为 Word' }))
+
+    expect(props.onExport).toHaveBeenNthCalledWith(1, 'pdf')
+    expect(props.onExport).toHaveBeenNthCalledWith(2, 'docx')
   })
 
   it('disables new-window actions while one workspace is opening', async () => {

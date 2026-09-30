@@ -65,6 +65,7 @@ const allowedCommandNames = [
   'terminal_resize',
   'terminal_close',
   'export_markdown',
+  'export_cancel',
   'knowledge.engine.status',
   'knowledge.engine.initialize',
   'knowledge.engine.stop',

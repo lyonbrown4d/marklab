@@ -21,6 +21,7 @@ import {
 } from '@electron/services/workspace/workspaceAssetOperations.js'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
 import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils.js'
+import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset.js'
 
 export class WorkspaceAssetService extends WorkspaceAnalysisService {
   private readonly assetCapabilities = new WorkspaceAssetCapabilities(() => this.state)
@@ -64,6 +65,20 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     return readWorkspaceAssetBytes(value, {
       resolveAssetUrl: (assetUrl) => this.assetCapabilities.resolveUrl(assetUrl),
     })
+  }
+
+  readMarkdownExportAsset(
+    documentPath: string,
+    target: string,
+    maxBytes: number,
+  ): Promise<Buffer | null> {
+    return readWorkspaceExportAsset(
+      this.state,
+      documentPath,
+      this.resolve(documentPath),
+      target,
+      maxBytes,
+    )
   }
 
   async importMarkdownAsset(value: unknown): Promise<FsMarkdownAssetImportResult> {
