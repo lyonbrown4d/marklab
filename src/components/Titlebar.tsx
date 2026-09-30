@@ -22,7 +22,6 @@ import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
-import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 
@@ -35,8 +34,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     {
       activePath,
       tabs,
-      dirtyPaths,
-      saveStates,
       onToggleSidebar,
       onToggleRightSidebar,
       onSelectProject,
@@ -48,6 +45,11 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenSearchResult,
       onOpenWorkspaceGraph,
       onOpenAllPages,
+      onOpenHistory,
+      onOpenProject,
+      onOpenCurrentWorkspaceInNewWindow,
+      onSelectWorkspaceInNewWindow,
+      onToggleReadOnly,
       onCloseActiveTab,
       onOpenTerminal,
       onRebuildSearchIndex,
@@ -64,6 +66,10 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       commandOpen: controlledCommandOpen,
       onCommandOpenChange,
       onOpenSettings,
+      recentProjects,
+      rootKind,
+      rootPath,
+      workspaceWindowOpening,
     },
     ref,
   ) => {
@@ -90,7 +96,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     )
 
     const { platform, getAppWindow, isWindows, isMacDesktop } = useTitlebarPlatform()
-    const workspaceWindowActions = useWorkspaceWindowActions()
     const {
       commandFiles,
       commandHeadings,
@@ -125,6 +130,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenSettings,
       onOpenWorkspaceGraph,
       onOpenAllPages,
+      onOpenHistory,
+      onToggleReadOnly,
       onOpenTerminal,
       onRebuildSearchIndex,
       onOpenFile,
@@ -133,7 +140,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       setTheme,
       platform,
       commandOpen: commandDataReady,
-      onOpenCurrentWorkspaceInNewWindow: workspaceWindowActions.openCurrentWorkspaceInNewWindow,
+      onOpenCurrentWorkspaceInNewWindow,
     })
 
     const handleTitlebarMouseDown = useCallback(
@@ -151,10 +158,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       },
       [getAppWindow, platform],
     )
-    const activeSaveStatus = activePath
-      ? (saveStates[activePath]?.status ?? (dirtyPaths[activePath] ? 'unsaved' : 'saved'))
-      : 'saved'
-
     return (
       <header
         className={cn(
@@ -165,12 +168,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       >
         <ImmersiveTitlebarChrome
           activePath={activePath}
-          saveStatus={activeSaveStatus}
           searchLabel={t('sidebar.search')}
-          savedLabel={t('titlebar.savedLocal')}
-          savingLabel={t('titlebar.savingLocal')}
-          unsavedLabel={t('titlebar.unsavedLocal')}
-          saveErrorLabel={t('save.error')}
           localLibraryLabel={t('titlebar.localLibrary')}
           untitledLabel={t('titlebar.untitled')}
           toggleSidebarLabel={t('actions.toggleSidebar')}
@@ -180,6 +178,17 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           wysiwygLabel={t('editor.modeWysiwyg')}
           sourceLabel={t('editor.modeSource')}
           graphLabel={t('tabs.graph')}
+          moreLabel={t('actions.more')}
+          historyLabel={t('workspace.viewAllRecent')}
+          recentWorkspaces={{
+            currentLabel: t('workspace.current'),
+            emptyLabel: t('workspace.noRecent'),
+            openLabel: t('workspace.openRecentInNewWindow', { name: '{name}' }),
+            paths: recentProjects,
+            rootKind,
+            rootPath,
+            sectionLabel: t('workspace.recent'),
+          }}
           workspaceMenuLabel={t('menu.workspace')}
           newWorkspaceLabel={t('actions.newWorkspace')}
           openFileLabel={t('actions.openFile')}
@@ -194,13 +203,15 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onToggleOutline={onToggleRightSidebar}
           onOpenSettings={onOpenSettings}
           onChangeView={onChangeView}
+          onOpenHistory={onOpenHistory}
+          onOpenProject={onOpenProject}
           onNewWorkspace={onSelectProject}
           onOpenFile={onSelectSingleFile}
           onCreateFile={onCreateFile}
           onExport={(format) => onMenuAction(`file.export_${format}`)}
-          onOpenCurrentWorkspaceInNewWindow={workspaceWindowActions.openCurrentWorkspaceInNewWindow}
-          onSelectWorkspaceInNewWindow={workspaceWindowActions.selectWorkspaceInNewWindow}
-          workspaceWindowOpening={workspaceWindowActions.opening}
+          onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
+          onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
+          workspaceWindowOpening={workspaceWindowOpening}
         />
         {commandOpen && (
           <AppCommandDialog open={commandOpen} onOpenChange={setCommandOpen}>

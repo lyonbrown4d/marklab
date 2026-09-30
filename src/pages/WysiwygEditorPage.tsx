@@ -21,6 +21,7 @@ type WysiwygEditorPageProps = {
   onChange: (value: string) => void
   files: FileEntry[]
   showStatusBar: boolean
+  readOnly: boolean
 }
 
 const INITIAL_ICS_CONTENT = [
@@ -91,6 +92,7 @@ const WysiwygEditorPage = ({
   onChange,
   files,
   showStatusBar,
+  readOnly,
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
@@ -203,7 +205,8 @@ const WysiwygEditorPage = ({
               onChange={onChange}
               placeholder={t('editor.placeholder')}
               slashLabels={slashLabels}
-              onCalendarFileCreate={onCalendarFileCreate}
+              onCalendarFileCreate={readOnly ? undefined : onCalendarFileCreate}
+              readOnly={readOnly}
             />
           </Suspense>
         </div>

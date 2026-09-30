@@ -1,6 +1,7 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import { applyAppTaskBadge } from '@electron/services/nativeWindowStatus.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
@@ -21,6 +22,7 @@ import type { BackgroundTaskStatus, FsRootInfo } from '@electron/services/worksp
 
 type WindowWorkspaceRegistryOptions = {
   knowledgeEngineService?: KnowledgeEngineService
+  localHistoryService: LocalHistoryServiceContract
   onSessionDisposed?: (sessionKey: string) => void
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
 }
@@ -33,7 +35,7 @@ export class WindowWorkspaceRegistry {
     private readonly app: App,
     private readonly shell: Shell,
     private readonly logger: Logger,
-    private readonly options: WindowWorkspaceRegistryOptions = {},
+    private readonly options: WindowWorkspaceRegistryOptions,
   ) {}
 
   registerWindow(window: BrowserWindow): WorkspaceService {
@@ -171,6 +173,7 @@ export class WindowWorkspaceRegistry {
     const binding = createWindowWorkspaceBinding({
       app: this.app,
       knowledgeEngineService: this.options.knowledgeEngineService,
+      localHistoryService: this.options.localHistoryService,
       logger: this.logger.child('window-' + window.id),
       onReadyToFinalize: (candidate) => this.tryFinalizeWindow(candidate),
       onTaskStateChanged: () => this.updateAppTaskBadge(),

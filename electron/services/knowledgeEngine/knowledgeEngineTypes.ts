@@ -66,6 +66,11 @@ export type KnowledgeWorkspaceStatus = {
     metadataDocuments: string
     searchableDocuments: string
     pendingOutboxEvents: string
+    building?: boolean
+    updatedAt?: string | null
+    lastBuildDurationMs?: number | null
+    lastBuildError?: string | null
+    lastError?: string | null
   }
   storage?: {
     metadataStore: string

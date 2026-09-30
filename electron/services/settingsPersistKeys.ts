@@ -12,6 +12,7 @@ export const preferenceStateKeys = new Set([
   'autoSystemThemeSync',
   'customThemeId',
   'defaultFileView',
+  'editorReadOnlyMode',
   'graphContentMode',
   'graphMiniMapEnabled',
   'hideMarkdownDefaultAppPrompt',

@@ -63,8 +63,17 @@ describe('Node workspace client', () => {
     await expect(client.hasDocuments()).resolves.toBe(true)
     await expect(client.getWorkspaceStatus()).resolves.toMatchObject({
       health: { metadataDocuments: '2', searchableDocuments: '2' },
-      index: { metadataDocuments: '2', searchableDocuments: '2' },
-      storage: { metadataDocuments: '2' },
+      index: {
+        metadataDocuments: '2',
+        ready: true,
+        searchableDocuments: '2',
+        updatedAt: expect.any(String),
+        lastBuildDurationMs: expect.any(Number),
+      },
+      storage: {
+        metadataDocuments: '2',
+        searchIndexBytes: expect.stringMatching(/^[1-9]\d*$/),
+      },
     })
     await expect(client.search('needle', 10)).resolves.toMatchObject([
       { path: 'alpha.md', title: 'Alpha', line: 2 },
@@ -89,6 +98,34 @@ describe('Node workspace client', () => {
     await expect(restarted.search('restart-safe', 10)).resolves.toMatchObject([
       { path: 'alpha.md' },
     ])
+  })
+
+  it('reports snapshot recovery failures through workspace status without becoming unusable', async () => {
+    const { client, engineDataDir, root } = await createWorkspace()
+    await client.rebuildIndex([{ path: 'alpha.md', title: 'Alpha', content: 'first' }])
+    await client.upsertDocument({ path: 'beta.md', title: 'Beta', content: 'second' })
+    await fs.writeFile(path.join(engineDataDir, 'search-index-v2.json'), '{broken-primary')
+    await fs.writeFile(path.join(engineDataDir, 'search-index-v2.backup.json'), '{broken-backup')
+
+    const restarted = createNodeWorkspaceClient(root, engineDataDir)
+
+    await expect(restarted.getWorkspaceStatus()).resolves.toMatchObject({
+      health: {
+        ok: false,
+        state: 'degraded',
+        warnings: [expect.stringMatching(/snapshot/i)],
+      },
+      index: {
+        lastError: expect.stringMatching(/snapshot/i),
+        ready: false,
+        searchableDocuments: '0',
+      },
+      storage: { searchIndexBytes: expect.stringMatching(/^\d+$/) },
+    })
+    await expect(
+      restarted.rebuildIndex([{ path: 'recovered.md', title: 'Recovered', content: 'healthy' }]),
+    ).resolves.toBeUndefined()
+    await expect(restarted.search('healthy', 10)).resolves.toMatchObject([{ path: 'recovered.md' }])
   })
 
   it('applies a mixed search mutation batch through the sidecar boundary', async () => {

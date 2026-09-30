@@ -14,6 +14,7 @@ import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
 import { AppStatusBarProvider } from '@/components/EditorStatusBar'
 import SettingsDialogFallback from '@/components/SettingsDialogFallback'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
+import AppStatusBar from '@/components/AppStatusBar'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
 import { useLatest } from 'ahooks'
 import { useKeyboardShortcuts } from '@/app/useKeyboardShortcuts'
@@ -28,7 +29,6 @@ import { useAppMenuEventSync } from '@/app/useAppMenuEventSync'
 import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
-import { formatShortcutList, resolveShortcutBindings } from '@/logic/shortcuts'
 
 export type { LayoutContext } from '@/app/AppLayoutContext'
 
@@ -43,7 +43,6 @@ const SettingsDialogHost = forwardRef<SettingsDialogHostHandle>((_, ref) => {
   const openSettings = useCallback(() => {
     setSettingsOpen(true)
   }, [])
-
   useImperativeHandle(
     ref,
     () => ({
@@ -88,6 +87,12 @@ const AppLayout = () => {
   const openSettings = useCallback(() => {
     settingsDialogRef.current?.openSettings()
   }, [])
+  const toggleReadOnly = useCallback(() => {
+    const current = stateRef.current
+    const nextReadOnly = !current.editorReadOnlyMode
+    current.setEditorReadOnlyMode(nextReadOnly)
+    if (nextReadOnly && current.activePath) current.setViewMode('wysiwyg')
+  }, [stateRef])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
   const {
     closeTerminalArea,
@@ -99,11 +104,6 @@ const AppLayout = () => {
   } = useAppTerminalArea({
     disabled: immersiveZenMode,
   })
-  const terminalShortcutLabel = useMemo(
-    () =>
-      formatShortcutList(resolveShortcutBindings(state.shortcutOverrides)['view.toggleTerminal']),
-    [state.shortcutOverrides],
-  )
   useAppPanelLayoutSync({
     leftSidebarPanelRef,
     rightSidebarPanelRef,
@@ -154,11 +154,13 @@ const AppLayout = () => {
     onOpenFile: () => handleMenuAction('file.open_file'),
     onOpenProject: () => handleMenuAction('file.open_project'),
     onOpenSettings: openSettings,
+    onOpenHistory: state.onOpenWorkspaceHistory,
     onOpenTab: state.onOpenTab,
     onSetViewMode: state.setViewMode,
     onToggleRightSidebar: state.toggleRightSidebar,
     onToggleSidebar: state.toggleSidebar,
     onToggleTerminal: toggleTerminalArea,
+    onToggleReadOnly: toggleReadOnly,
   })
   useAppMenuEventSync(handleMenuAction)
   useNativeMenuLocaleSync()
@@ -179,6 +181,7 @@ const AppLayout = () => {
       inspectedPath: state.inspectedPath,
       movePath: state.movePath,
       onCloseTab: state.onCloseTab,
+      onEditorChange: state.onEditorChange,
       onInspectPath: state.onInspectPath,
       onOpenProject: state.onOpenProject,
       onOpenTab: state.onOpenTab,
@@ -214,6 +217,7 @@ const AppLayout = () => {
       state.inspectedPath,
       state.movePath,
       state.onCloseTab,
+      state.onEditorChange,
       state.onInspectPath,
       state.onOpenProject,
       state.onOpenTab,
@@ -280,9 +284,6 @@ const AppLayout = () => {
         activePath={state.activePath}
         activeTab={state.activeTab}
         tabs={state.tabs}
-        dirtyPaths={state.dirtyPaths}
-        saveStates={state.saveStates}
-        silentSave={state.silentSave}
         onToggleSidebar={state.toggleSidebar}
         onToggleRightSidebar={state.toggleRightSidebar}
         onSelectProject={state.onSelectProject}
@@ -294,6 +295,11 @@ const AppLayout = () => {
         onOpenSearchResult={handleOpenSearchResult}
         onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
         onOpenAllPages={state.onOpenAllPages}
+        onOpenHistory={state.onOpenWorkspaceHistory}
+        onOpenProject={state.onOpenProject}
+        onOpenCurrentWorkspaceInNewWindow={state.onOpenCurrentWorkspaceInNewWindow}
+        onSelectWorkspaceInNewWindow={state.onSelectWorkspaceInNewWindow}
+        onToggleReadOnly={toggleReadOnly}
         onCloseActiveTab={state.onCloseActiveTab}
         onOpenTerminal={openTerminalArea}
         onRebuildSearchIndex={handleRebuildSearchIndex}
@@ -309,6 +315,10 @@ const AppLayout = () => {
         theme={state.theme}
         setTheme={state.setTheme}
         onOpenSettings={openSettings}
+        recentProjects={state.recentProjects}
+        rootKind={state.rootKind}
+        rootPath={state.rootPath}
+        workspaceWindowOpening={state.workspaceWindowOpening}
       />
       <SettingsDialogHost ref={settingsDialogRef} />
       <AppShellPanels
@@ -321,9 +331,28 @@ const AppLayout = () => {
         terminalFocusRequest={terminalFocusRequest}
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
-        onOpenTerminalArea={openTerminalArea}
-        terminalShortcutLabel={terminalShortcutLabel}
       />
+      {state.showEditorStatusBar && !immersiveZenMode ? (
+        <AppStatusBar
+          rootKind={state.rootKind}
+          rootPath={state.rootPath}
+          files={state.files}
+          tabs={state.tabs}
+          activeTab={state.activeTab}
+          activePath={state.activePath}
+          viewMode={state.viewMode}
+          dirtyPaths={state.dirtyPaths}
+          saveStates={state.saveStates}
+          terminalOpen={effectiveTerminalOpen}
+          readOnlyMode={state.editorReadOnlyMode}
+          onToggleTerminal={toggleTerminalArea}
+          onToggleReadOnly={toggleReadOnly}
+          onHideStatusBar={() => state.setShowEditorStatusBar(false)}
+          onRestoreSession={state.restoreSession}
+          restoreStatusMessage={state.restoreStatusMessage}
+          restoreStatusBusy={state.isRestoringSession}
+        />
+      ) : null}
     </AppStatusBarProvider>
   )
 }

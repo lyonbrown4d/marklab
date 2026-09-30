@@ -122,6 +122,27 @@ describe('NodeSearchIndex', () => {
     await expect(restarted.search('latest')).resolves.toMatchObject({ totalHits: 0 })
   })
 
+  it('falls back to an empty rebuildable index when primary and backup are both corrupt', async () => {
+    const storageRoot = await createStorageRoot()
+    const first = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await first.rebuild([{ path: 'stable.md', title: 'Stable', content: 'first' }])
+    await first.upsert({ path: 'second.md', title: 'Second', content: 'second' })
+    await fs.writeFile(path.join(storageRoot, 'search-index-v2.json'), '{broken-primary')
+    await fs.writeFile(path.join(storageRoot, 'search-index-v2.backup.json'), '{broken-backup')
+
+    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
+
+    await expect(restarted.hasDocuments()).resolves.toBe(false)
+    await expect(restarted.getStats()).resolves.toMatchObject({
+      documentCount: 0,
+      lastError: expect.stringMatching(/snapshot/i),
+    })
+    await restarted.rebuild([
+      { path: 'recovered.md', title: 'Recovered', content: 'healthy again' },
+    ])
+    await expect(restarted.search('healthy')).resolves.toMatchObject({ totalHits: 1 })
+  })
+
   it('persists normalized upsert and prefix removals', async () => {
     const storageRoot = await createStorageRoot()
     const first = new NodeSearchIndex(storageRoot)
@@ -136,6 +157,45 @@ describe('NodeSearchIndex', () => {
     const result = await restarted.search('alpha', { order: 'path' })
 
     expect(result.results.map((entry) => entry.path)).toEqual(['notes-old/two.md'])
+  })
+
+  it('keeps CJK, path, and fuzzy retrieval correct across incremental replacement and restart', async () => {
+    const storageRoot = await createStorageRoot()
+    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await index.rebuild([
+      { path: 'drafts/roadmap.md', title: 'Old roadmap', content: 'obsolete content' },
+      { path: 'archive/remove.md', title: 'Remove', content: 'remove marker' },
+    ])
+
+    await index.applyBatch({
+      removeDocuments: ['archive/remove.md'],
+      removePrefixes: [],
+      upserts: [
+        {
+          path: '规划/路线图.md',
+          title: '本地知识库路线图',
+          content: '沉浸式全文搜索与协作体验',
+        },
+        {
+          path: 'drafts/roadmap.md',
+          title: 'Collaboration roadmap',
+          content: 'durable local search protocol',
+        },
+      ],
+    })
+
+    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
+    await expect(restarted.search('全文搜索')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: '规划/路线图.md' }],
+    })
+    await expect(restarted.search('规划 路线')).resolves.toMatchObject({ totalHits: 1 })
+    await expect(restarted.search('colaboration protocol')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'drafts/roadmap.md' }],
+    })
+    await expect(restarted.search('obsolete')).resolves.toMatchObject({ totalHits: 0 })
+    await expect(restarted.search('remove marker')).resolves.toMatchObject({ totalHits: 0 })
   })
 
   it('uses MiniSearch for AND, prefix, fuzzy, and CJK retrieval while preserving substrings', async () => {

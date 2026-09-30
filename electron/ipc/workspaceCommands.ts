@@ -4,6 +4,7 @@ import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
 import { LinkPreviewService } from '@electron/services/linkPreview/service.js'
 import type { Logger } from '@electron/services/logger.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
@@ -23,6 +24,7 @@ export type WorkspaceCommandServices = {
 
 type WorkspaceIpcDependencies = {
   exportService: ExportService
+  localHistoryService: LocalHistoryServiceContract
   logger: Logger
   workspaceRegistry: WindowWorkspaceRegistry
 }
@@ -31,11 +33,12 @@ type WorkspaceForEvent = (event: IpcMainInvokeEvent) => WorkspaceService
 
 export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
-  { exportService, logger, workspaceRegistry }: WorkspaceIpcDependencies,
+  { exportService, localHistoryService, logger, workspaceRegistry }: WorkspaceIpcDependencies,
 ): WorkspaceCommandServices => {
   const commandHandlers = createWorkspaceCommandHandlers(
     (event) => workspaceRegistry.serviceForWebContents(event.sender),
     exportService,
+    localHistoryService,
   )
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
   logger.info('workspace IPC registered')
@@ -45,6 +48,7 @@ export const registerWorkspaceCommandsIpc = (
 const createWorkspaceCommandHandlers = (
   workspaceForEvent: WorkspaceForEvent,
   exportService: ExportService,
+  localHistory: LocalHistoryServiceContract,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
   const linkPreviewService = new LinkPreviewService()
@@ -70,6 +74,43 @@ const createWorkspaceCommandHandlers = (
     fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),
     fs_write_file: (payload, event) => workspaceForEvent(event).writeFile(payload),
     fs_flush_buffers: (_payload, event) => workspaceForEvent(event).flushBuffers(),
+    local_history_list: (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      return localHistory.list(workspace.rootInfo(), readRequiredString(payload, 'path'))
+    },
+    local_history_read: (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      return localHistory.read(
+        workspace.rootInfo(),
+        readRequiredString(payload, 'path'),
+        readRequiredString(payload, 'entryId'),
+      )
+    },
+    local_history_restore: (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      const filePath = readRequiredString(payload, 'path')
+      return localHistory.restore(
+        workspace.rootInfo(),
+        filePath,
+        readRequiredString(payload, 'entryId'),
+        async (content) => {
+          workspace.writeFile({ path: filePath, content })
+          await workspace.flushBuffers()
+        },
+      )
+    },
+    local_history_delete: (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      return localHistory.delete(
+        workspace.rootInfo(),
+        readRequiredString(payload, 'path'),
+        readRequiredString(payload, 'entryId'),
+      )
+    },
+    local_history_clear: (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      return localHistory.clear(workspace.rootInfo(), readRequiredString(payload, 'path'))
+    },
     fs_get_buffer_status: (payload, event) => workspaceForEvent(event).getBufferStatus(payload),
     fs_get_background_tasks: (_payload, event) => workspaceForEvent(event).getBackgroundTasks(),
     fs_create_file: (payload, event) => workspaceForEvent(event).createFile(payload),
@@ -142,6 +183,12 @@ const readOptionalString = (value: unknown, key: string): string | undefined => 
   const result = (value as Record<string, unknown>)[key]
   if (result === undefined) return undefined
   if (typeof result !== 'string') throw new Error(`${key} must be a string`)
+  return result
+}
+
+const readRequiredString = (value: unknown, key: string): string => {
+  const result = readOptionalString(value, key)
+  if (result === undefined || !result.trim()) throw new Error(`${key} must be a non-empty string`)
   return result
 }
 

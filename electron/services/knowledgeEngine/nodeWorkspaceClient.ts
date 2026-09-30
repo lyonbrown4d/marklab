@@ -49,6 +49,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
   }
 
   async closeWorkspace(): Promise<void> {
+    this.searchIndex.cancelPendingRebuild()
     this.markdown.clear()
   }
 
@@ -57,22 +58,29 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
   }
 
   async getWorkspaceStatus() {
-    const documents = String(await this.searchIndex.getSize())
+    const stats = await this.searchIndex.getStats()
+    const documents = String(stats.documentCount)
+    const latestError = stats.lastBuildError ?? stats.lastError
     return {
       health: {
         metadataDocuments: documents,
-        ok: true,
+        ok: !latestError,
         pendingOutboxEvents: '0',
         searchableDocuments: documents,
-        state: 'ready',
-        warnings: [],
+        state: stats.building ? 'building' : latestError ? 'degraded' : 'ready',
+        warnings: latestError ? [latestError] : [],
       },
       index: {
         metadataDocuments: documents,
         pendingOutboxEvents: '0',
-        ready: true,
+        ready: !stats.building && !latestError,
         searchableDocuments: documents,
         searchIndex: 'minisearch-json',
+        building: stats.building,
+        updatedAt: stats.updatedAt,
+        lastBuildDurationMs: stats.lastBuildDurationMs,
+        lastBuildError: stats.lastBuildError,
+        lastError: stats.lastError,
       },
       storage: {
         blobBytes: '0',
@@ -82,8 +90,8 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         metadataStore: 'node-json',
         pendingOutboxEvents: '0',
         searchIndex: 'minisearch-json',
-        searchIndexBytes: '0',
-        totalBytes: '0',
+        searchIndexBytes: String(stats.indexBytes),
+        totalBytes: String(stats.indexBytes),
       },
     }
   }
@@ -201,6 +209,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
   }
 
   async shutdown(): Promise<void> {
+    this.searchIndex.cancelPendingRebuild()
     this.markdown.clear()
   }
 

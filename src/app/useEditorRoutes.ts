@@ -9,6 +9,7 @@ import {
   GRAPH_WORKSPACE_ROUTE_PATTERN,
   PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
+  WORKSPACE_HISTORY_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
 import type { WorkspaceTab } from '@/store/appTypes'
@@ -29,6 +30,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   const previewMatch = useMatch(PREVIEW_ROUTE_PATTERN)
   const graphWorkspaceMatch = useMatch(GRAPH_WORKSPACE_ROUTE_PATTERN)
   const allPagesMatch = useMatch(ALL_PAGES_ROUTE_PATTERN)
+  const historyMatch = useMatch(WORKSPACE_HISTORY_ROUTE_PATTERN)
 
   const routeSegment = params['*']
   const gitDiffSection = gitDiffMatch?.params.section
@@ -55,7 +57,8 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     graphFileMatch ||
     previewMatch ||
     graphWorkspaceMatch ||
-    allPagesMatch,
+    allPagesMatch ||
+    historyMatch,
   )
   const isRouteFile = useMemo(
     () =>
@@ -65,12 +68,12 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   )
   const activeFilePath = activeTab?.kind === 'file' ? activeTab.path : null
   const currentFilePath =
-    !internalRouteActive || graphWorkspaceMatch || allPagesMatch
+    !internalRouteActive || graphWorkspaceMatch || allPagesMatch || historyMatch
       ? null
       : (routeFilePath ?? activeFilePath)
   const activeResourcePath = !internalRouteActive
     ? null
-    : graphWorkspaceMatch || allPagesMatch
+    : graphWorkspaceMatch || allPagesMatch || historyMatch
       ? getWorkspaceTabPath(activeTab)
       : (routeFilePath ?? getWorkspaceTabPath(activeTab))
   const viewMode: ViewMode = sourceMatch
@@ -97,6 +100,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     previewMatch,
     graphWorkspaceMatch,
     allPagesMatch,
+    historyMatch,
     gitDiffSection,
     gitDiffPath,
     routeFileView,

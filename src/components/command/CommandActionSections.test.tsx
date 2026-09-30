@@ -30,6 +30,8 @@ const messages: Record<string, string> = {
   'menu.settings': 'Settings',
   'menu.theme': 'Theme',
   'menu.view': 'View',
+  'titlebar.readOnly': 'Read-only Browsing',
+  'settings.statusBar': 'Status Bar',
   'shortcuts.commandPalette': 'Command Palette',
   'sidebar.newFile': 'New File',
   'sidebar.newFolder': 'New Folder',
@@ -193,6 +195,22 @@ describe('CommandActionSections', () => {
     expect(onAction).toHaveBeenCalledWith('file.new')
     expect(onAction).toHaveBeenCalledWith('file.open_file')
     expect(onAction).toHaveBeenCalledWith('workspace.open_pages')
+  })
+
+  it('dispatches rendered read-only browsing from the view commands', () => {
+    const { onAction } = renderActions()
+
+    fireEvent.click(buttonFromText('Read-only Browsing'))
+
+    expect(onAction).toHaveBeenCalledWith('view.toggle_readonly')
+  })
+
+  it('dispatches the bottom status bar toggle from the view commands', () => {
+    const { onAction } = renderActions()
+
+    fireEvent.click(buttonFromText('Status Bar'))
+
+    expect(onAction).toHaveBeenCalledWith('view.toggle_status_bar')
   })
 
   it('shows a disabled create hint in single-file mode while keeping global commands available', () => {

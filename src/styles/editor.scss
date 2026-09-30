@@ -209,9 +209,53 @@
 }
 
 .crepe.is-typewriter-editor .milkdown .ProseMirror {
-  padding-top: 22vh;
-  padding-bottom: 34vh;
-  scroll-padding-block: 22vh 34vh;
+  padding-top: 30vh;
+  padding-bottom: 42vh;
+  scroll-padding-block: 30vh 42vh;
+}
+
+.crepe.is-readonly-editor {
+  position: relative;
+  isolation: isolate;
+  cursor: default;
+}
+
+.crepe.is-readonly-editor::after {
+  content: '';
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, hsl(var(--background)) 84%, transparent) 0%,
+    transparent 26%,
+    transparent 64%,
+    color-mix(in srgb, hsl(var(--background)) 88%, transparent) 100%
+  );
+}
+
+.crepe.is-readonly-editor .milkdown .ProseMirror {
+  caret-color: transparent;
+  cursor: default;
+  scroll-snap-type: y proximity;
+}
+
+.crepe.is-readonly-editor .milkdown .ProseMirror > * {
+  scroll-margin-block: 30vh 38vh;
+  scroll-snap-align: center;
+}
+
+.crepe.is-readonly-editor .milkdown .milkdown-toolbar,
+.crepe.is-readonly-editor .milkdown .milkdown-slash-menu {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crepe.is-readonly-editor .milkdown .ProseMirror {
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
 }
 
 .crepe.is-focus-editor

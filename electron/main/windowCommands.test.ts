@@ -41,6 +41,10 @@ const createHarness = () => {
     }),
     setSingleFile: vi.fn(),
   }
+  const sourceWorkspace = {
+    setRoot: vi.fn(),
+    setSingleFile: vi.fn(),
+  }
   const pool = {
     acquireMainWindow: vi.fn(async () => ({
       metrics: {
@@ -65,7 +69,8 @@ const createHarness = () => {
     getNativeIpc: () => null,
     getPrimaryWindow: () => source,
     getSessionKeyForWindow: (window: BrowserWindow) => `session-${window.id}`,
-    getWorkspaceServiceForWindow: () => workspace,
+    getWorkspaceServiceForWindow: (window: BrowserWindow) =>
+      window === source ? sourceWorkspace : workspace,
     getWindowPool: () => pool,
     installManagedMainWindowLifecycle: vi.fn(),
     writeWorkspaceSession: vi.fn(() => ({ state: { tabs: [] }, version: 1 })),
@@ -74,7 +79,17 @@ const createHarness = () => {
   vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(source)
   const handlers = createAppWindowCommandHandlers(dependencies as never)
   const event = { sender: source.webContents } as never
-  return { dependencies, event, handlers, order, pool, source, target, workspace }
+  return {
+    dependencies,
+    event,
+    handlers,
+    order,
+    pool,
+    source,
+    sourceWorkspace,
+    target,
+    workspace,
+  }
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -130,7 +145,7 @@ describe('app window commands', () => {
   it('opens a selected directory with an empty independent tab seed', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-window-open-'))
     temporaryRoots.push(root)
-    const { dependencies, event, handlers } = createHarness()
+    const { dependencies, event, handlers, sourceWorkspace, workspace } = createHarness()
 
     const result = await handlers.open_path_in_new_window({ path: root }, event)
 
@@ -141,6 +156,9 @@ describe('app window commands', () => {
       rootPath: root,
       tabs: [],
     })
+    expect(workspace.setRoot).toHaveBeenCalledWith({ path: root })
+    expect(sourceWorkspace.setRoot).not.toHaveBeenCalled()
+    expect(sourceWorkspace.setSingleFile).not.toHaveBeenCalled()
   })
 
   it('keeps a failed target retryable and succeeds through its own renderer command', async () => {

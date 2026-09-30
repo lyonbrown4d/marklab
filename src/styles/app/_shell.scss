@@ -204,6 +204,7 @@
 
 .app-status-bar {
   background: hsl(var(--background));
-  border-top-color: transparent;
+  border-top-color: color-mix(in srgb, hsl(var(--border)) 68%, transparent);
   box-shadow: none;
+  contain: layout paint;
 }

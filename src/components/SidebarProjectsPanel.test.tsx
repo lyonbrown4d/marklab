@@ -6,6 +6,7 @@ import SidebarProjectsPanel from '@/components/SidebarProjectsPanel'
 
 const messages: Record<string, string> = {
   'actions.openProject': 'Open project',
+  'workspace.openRecentInNewWindow': 'Open in new window: {{name}}',
   'sidebar.localWorkspace': 'Local workspace',
   'sidebar.noRecentProjects': 'No recent projects',
   'sidebar.recentProjects': 'Recent projects',
@@ -13,7 +14,11 @@ const messages: Record<string, string> = {
 
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
-    t: (key: string) => messages[key] ?? key,
+    t: (key: string, values?: Record<string, string>) =>
+      Object.entries(values ?? {}).reduce(
+        (label, [name, value]) => label.replaceAll(`{{${name}}}`, value),
+        messages[key] ?? key,
+      ),
   }),
 }))
 
@@ -42,7 +47,7 @@ describe('SidebarProjectsPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open project' }))
     fireEvent.click(screen.getByRole('button', { name: 'Local workspace' }))
-    fireEvent.click(screen.getByRole('button', { name: 'D:/notes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open in new window: D:/notes' }))
 
     expect(onSelectProject).toHaveBeenCalledTimes(1)
     expect(onUseInternalRoot).toHaveBeenCalledTimes(1)

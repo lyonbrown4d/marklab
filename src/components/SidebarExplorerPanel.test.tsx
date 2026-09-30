@@ -20,6 +20,10 @@ vi.mock('@/components/file-tree/FileOperationDialogs', () => ({
   FileNameDialog: () => null,
 }))
 
+vi.mock('@/components/local-history/LocalHistoryTimeline', () => ({
+  default: ({ path }: { path: string }) => <div data-testid="local-history">{path}</div>,
+}))
+
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
     t: (key: string) => {
@@ -77,6 +81,7 @@ const createProps = (
   onDeletePath: vi.fn(),
   onInspectPath: vi.fn(),
   onMovePath: vi.fn(),
+  onRestoreHistoryContent: vi.fn(),
   onOpenFile: vi.fn(),
   onOpenFileView: vi.fn(),
   onRenamePath: vi.fn(),
@@ -85,6 +90,12 @@ const createProps = (
 })
 
 describe('SidebarExplorerPanel', () => {
+  it('connects the active file to the local history timeline', () => {
+    render(<SidebarExplorerPanel {...createProps()} />)
+
+    expect(screen.getByTestId('local-history')).toHaveTextContent('README.md')
+  })
+
   it('explains the single-file readonly explorer instead of showing create actions', () => {
     render(<SidebarExplorerPanel {...createProps({ rootKind: 'single' })} />)
 

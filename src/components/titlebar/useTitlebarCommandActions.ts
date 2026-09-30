@@ -25,6 +25,8 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'onOpenHeading'
   | 'onOpenSearchResult'
   | 'onOpenAllPages'
+  | 'onOpenHistory'
+  | 'onToggleReadOnly'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
 > & {
@@ -50,6 +52,8 @@ export const useTitlebarCommandActions = ({
   onOpenHeading,
   onOpenSearchResult,
   onOpenAllPages,
+  onOpenHistory,
+  onToggleReadOnly,
   setTheme,
   canCreateWorkspaceEntries,
   onOpenCurrentWorkspaceInNewWindow,
@@ -85,6 +89,15 @@ export const useTitlebarCommandActions = ({
       }
       if (id === 'view.graph') {
         onChangeView('graph')
+        return
+      }
+      if (id === 'view.toggle_readonly') {
+        onToggleReadOnly()
+        return
+      }
+      if (id === 'view.toggle_status_bar') {
+        const preferences = usePreferencesStore.getState()
+        preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
         return
       }
       if (id === 'file.open_project') {
@@ -135,6 +148,10 @@ export const useTitlebarCommandActions = ({
         onOpenAllPages()
         return
       }
+      if (id === 'workspace.open_history') {
+        onOpenHistory()
+        return
+      }
       if (id.startsWith('collection.open:')) {
         onOpenAllPages(id.replace('collection.open:', ''))
         return
@@ -172,6 +189,8 @@ export const useTitlebarCommandActions = ({
       onOpenSettings,
       onOpenTerminal,
       onOpenAllPages,
+      onOpenHistory,
+      onToggleReadOnly,
       onOpenWorkspaceGraph,
       onRebuildSearchIndex,
       onSelectProject,

@@ -5,6 +5,7 @@ import {
 import type { App, BrowserWindow, Shell } from 'electron'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import {
   applyAppRecentDocument,
@@ -37,6 +38,7 @@ export type WindowWorkspaceBinding = {
 type CreateWindowWorkspaceBindingOptions = {
   app: App
   knowledgeEngineService?: KnowledgeEngineService
+  localHistoryService: LocalHistoryServiceContract
   logger: Logger
   onReadyToFinalize: (binding: WindowWorkspaceBinding) => void
   onTaskStateChanged: () => void
@@ -143,6 +145,7 @@ export const createWindowWorkspaceBinding = (
     options.app,
     options.shell,
     options.logger,
+    options.localHistoryService,
     options.workspaceSearchIndexFactory,
     options.knowledgeEngineService,
   )

@@ -7,6 +7,7 @@ import watcher from '@parcel/watcher'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 
@@ -228,7 +229,13 @@ const createWorkspace = async (service: KnowledgeEngineService) => {
   const root = path.join(tempRoot, 'workspace')
   await fs.mkdir(root, { recursive: true })
   const logger = createLogger()
-  const workspace = new WorkspaceFileService(createApp(appData), createShell(), logger, service)
+  const workspace = new WorkspaceFileService(
+    createApp(appData),
+    createShell(),
+    logger,
+    createLocalHistoryService(),
+    service,
+  )
   await workspace.setRoot({ path: root })
   return { logger, root, workspace }
 }
@@ -256,6 +263,11 @@ const createKnowledgeServiceMock = () =>
     readWorkspaceFile: ReturnType<typeof vi.fn>
     writeWorkspaceFile: ReturnType<typeof vi.fn>
   }
+
+const createLocalHistoryService = (): LocalHistoryServiceContract =>
+  ({
+    capture: vi.fn(async () => ({ status: 'skipped', reason: 'duplicate' as const })),
+  }) as unknown as LocalHistoryServiceContract
 
 const createLogger = (): Logger & {
   error: ReturnType<typeof vi.fn>

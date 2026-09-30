@@ -1,6 +1,5 @@
-import type { SaveState } from '@/app/useEditorBuffer'
 import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
-import type { FileEntry, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
+import type { FileEntry, RootKind, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
 
 export type TabLabelText = {
   workspaceGraph: string
@@ -37,9 +36,6 @@ export type TitlebarProps = {
   activePath: string | null
   activeTab: WorkspaceTab | null
   tabs: WorkspaceTab[]
-  dirtyPaths: Record<string, true>
-  saveStates: Record<string, SaveState>
-  silentSave: boolean
   onToggleSidebar: () => void
   onToggleRightSidebar: () => void
   onSelectProject: () => void
@@ -51,6 +47,11 @@ export type TitlebarProps = {
   onOpenSearchResult: (result: FsSearchResult) => void
   onOpenWorkspaceGraph: () => void
   onOpenAllPages: (collectionId?: string) => void
+  onOpenHistory: () => void
+  onOpenProject: (path: string) => void
+  onOpenCurrentWorkspaceInNewWindow: () => void
+  onSelectWorkspaceInNewWindow: () => void
+  onToggleReadOnly: () => void
   onCloseActiveTab: () => void
   onOpenTerminal: () => void
   onRebuildSearchIndex: () => void
@@ -68,4 +69,8 @@ export type TitlebarProps = {
   commandOpen?: boolean
   onCommandOpenChange?: (open: boolean) => void
   onOpenSettings: () => void
+  recentProjects: string[]
+  rootKind: RootKind
+  rootPath: string
+  workspaceWindowOpening: boolean
 }

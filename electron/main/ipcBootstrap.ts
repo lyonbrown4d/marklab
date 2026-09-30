@@ -16,6 +16,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
   const { container } = options
 
   return registerNativeIpc({
+    aiService: container.cradle.aiService,
     app,
     BrowserWindow,
     clipboard,
@@ -23,6 +24,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     exportService: container.cradle.exportService,
     gitService: container.cradle.gitService,
     knowledgeEngineService: container.cradle.knowledgeEngineService,
+    localHistoryService: container.cradle.localHistoryService,
     getLaunchInfo,
     ipcMain,
     logger: container.cradle.logger,

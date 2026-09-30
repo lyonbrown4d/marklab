@@ -14,8 +14,11 @@ import { useRouteTabSync } from '@/app/useRouteTabSync'
 import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
 import { useWorkspaceRestore } from '@/app/useWorkspaceRestore'
 import { isTextFileViewPath } from '@/logic/fileTypes'
+import { pathToWorkspaceHistoryRoute } from '@/logic/routing'
+import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 
 export const useAppLayoutState = () => {
+  const workspaceWindowActions = useWorkspaceWindowActions()
   const {
     rootPath,
     rootKind,
@@ -40,10 +43,13 @@ export const useAppLayoutState = () => {
     defaultFileView,
     graphMiniMapEnabled,
     graphContentMode,
+    editorReadOnlyMode,
     shortcutOverrides,
     toggleSidebar,
     toggleRightSidebar,
     setTheme,
+    setEditorReadOnlyMode,
+    setShowEditorStatusBar,
   } = useLayoutStoreSlice()
 
   const [isMaximized, setIsMaximized] = useState(false)
@@ -64,6 +70,7 @@ export const useAppLayoutState = () => {
     previewMatch,
     graphWorkspaceMatch,
     allPagesMatch,
+    historyMatch,
     gitDiffSection,
     gitDiffPath,
     routeFileView,
@@ -154,6 +161,11 @@ export const useAppLayoutState = () => {
     if (inspectedPathRef.current) setInspectedPath(null)
     if (locationPathnameRef.current !== '/') navigate('/', { replace: false })
   }, [activeTabIdRef, inspectedPathRef, locationPathnameRef, navigate, setActiveTabId])
+  const onOpenWorkspaceHistory = useCallback(() => {
+    if (activeTabIdRef.current) setActiveTabId(null)
+    if (inspectedPathRef.current) setInspectedPath(null)
+    navigate(pathToWorkspaceHistoryRoute(), { replace: false })
+  }, [activeTabIdRef, inspectedPathRef, navigate, setActiveTabId])
 
   const routeSyncEnabled =
     isSessionRestored &&
@@ -168,6 +180,7 @@ export const useAppLayoutState = () => {
     previewMatch,
     graphWorkspaceMatch,
     allPagesMatch,
+    historyMatch,
     gitDiffSection,
     gitDiffPath,
     routeFileView,
@@ -213,6 +226,7 @@ export const useAppLayoutState = () => {
     defaultFileView,
     graphMiniMapEnabled,
     graphContentMode,
+    editorReadOnlyMode,
     shortcutOverrides,
     viewMode,
     fileTree,
@@ -234,12 +248,17 @@ export const useAppLayoutState = () => {
     onOpenWorkspaceGraph,
     onOpenAllPages,
     onOpenWorkspaceOverview,
+    onOpenWorkspaceHistory,
     onOpenTab,
     onCloseTab,
     onCloseActiveTab,
     onSelectProject: onSelectFolder,
     onSelectSingleFile,
-    onOpenProject: openFolder,
+    onOpenProject: workspaceWindowActions.openWorkspacePathInNewWindow,
+    onOpenProjectInCurrentWindow: openFolder,
+    onOpenCurrentWorkspaceInNewWindow: workspaceWindowActions.openCurrentWorkspaceInNewWindow,
+    onSelectWorkspaceInNewWindow: workspaceWindowActions.selectWorkspaceInNewWindow,
+    workspaceWindowOpening: workspaceWindowActions.opening,
     onUseInternalRoot,
     createFile,
     createFolder,
@@ -249,6 +268,8 @@ export const useAppLayoutState = () => {
     onRefresh: loadWorkspace,
     onInspectPath: setInspectedPath,
     setTheme,
+    setEditorReadOnlyMode,
+    setShowEditorStatusBar,
     setViewMode,
     toggleSidebar,
     toggleRightSidebar,

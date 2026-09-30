@@ -1,4 +1,13 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  safeStorage,
+  shell,
+} from 'electron'
 import { createElectronContainer, type ElectronContainer } from '@electron/container.js'
 import { configureAppIdentity } from '@electron/appIdentity.js'
 import type { NativeIpcRegistration } from '@electron/ipc/index.js'
@@ -50,6 +59,7 @@ const getContainer = (): ElectronContainer => {
     getLaunchInfo,
     ipcMain,
     onRendererReady: handleRendererReady,
+    safeStorage,
     shell,
   })
   return container

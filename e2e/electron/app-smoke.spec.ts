@@ -10,6 +10,7 @@ import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isMainRendererUrl } from '@/quality/electronWindowUrl'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const electronMain = path.join(repoRoot, 'dist-electron', 'main.js')
@@ -23,8 +24,6 @@ type RendererWindow = Window & {
   marklabElectron?: unknown
   require?: unknown
 }
-
-const isMainRendererUrl = (url: string) => url.startsWith(rendererUrl)
 
 const contentTypeByExtension = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -102,7 +101,7 @@ const waitForMainWindow = async (app: ElectronApplication, output: string[]) => 
     const mainWindow = app.windows().find((candidate) => {
       const url = candidate.url()
       if (url) observedUrls.add(url)
-      return isMainRendererUrl(url)
+      return isMainRendererUrl(url, rendererUrl)
     })
 
     if (mainWindow) {

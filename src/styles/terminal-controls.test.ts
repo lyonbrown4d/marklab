@@ -6,11 +6,9 @@ const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url),
 
 const terminalStyles = readStyle('./app/_terminal.scss')
 
-describe('terminal dock trigger styles', () => {
-  it('keeps hover, active, and focus states anchored to the same border box', () => {
-    expect(terminalStyles).toContain('&:focus-visible')
-    expect(terminalStyles).not.toMatch(
-      /&:(?:hover|active|focus-visible)\s*{[^}]*(?:transform|padding|width|height|border-width)\s*:/s,
-    )
+describe('terminal dock styles', () => {
+  it('does not retain the removed floating terminal trigger', () => {
+    expect(terminalStyles).not.toContain('.terminal-dock-trigger')
+    expect(terminalStyles).not.toContain('.terminal-dock-key')
   })
 })

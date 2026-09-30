@@ -113,7 +113,7 @@ const slashLabels: SlashCommandLabels = {
   calendarFilePrompt: 'Calendar file name',
 }
 
-const renderEditor = (ref?: Ref<MarkdownEditorHandle>) =>
+const renderEditor = (ref?: Ref<MarkdownEditorHandle>, readOnly = false) =>
   render(
     <MarkdownEditor
       activePath="notes/example.md"
@@ -121,6 +121,7 @@ const renderEditor = (ref?: Ref<MarkdownEditorHandle>) =>
       onChange={vi.fn()}
       placeholder="Write"
       slashLabels={slashLabels}
+      readOnly={readOnly}
       ref={ref}
     />,
   )
@@ -131,6 +132,17 @@ describe('MarkdownEditor playground baseline', () => {
     expect(
       vi.mocked(useMarkdownPlaygroundController).mock.calls.at(-1)?.[0].shortcutOverrides,
     ).toBe(controllerMock.shortcutOverrides)
+  })
+
+  it('marks the playground as a typewriter reading surface in read-only mode', () => {
+    renderEditor(undefined, true)
+
+    const root = document.querySelector('.crepe')
+    expect(root).toHaveAttribute('data-readonly', 'true')
+    expect(root).toHaveClass('is-readonly-editor')
+    expect(root).toHaveClass('is-typewriter-editor')
+    expect(root).toHaveAttribute('tabindex', '0')
+    expect(vi.mocked(useMarkdownPlaygroundController).mock.calls.at(-1)?.[0].readOnly).toBe(true)
   })
 
   beforeEach(() => {

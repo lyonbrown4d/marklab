@@ -71,6 +71,7 @@ const SidebarProjectsPanel = ({
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label={t('workspace.openRecentInNewWindow', { name: path })}
                 className="h-8 w-full justify-start rounded-md px-2 text-sidebar-foreground/85 hover:bg-sidebar-accent"
                 onClick={() => onOpenProject(path)}
               >

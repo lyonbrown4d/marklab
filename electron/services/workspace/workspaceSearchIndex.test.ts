@@ -82,6 +82,23 @@ describe('WorkspaceSearchIndex', () => {
     expect(hasDocuments).toBe(false)
   })
 
+  it('does not let a slow close clear a workspace opened concurrently', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
+    tempDirs.push(dir)
+    const backend = new DelayedFirstCloseBackend()
+    const index = new WorkspaceSearchIndex(backend)
+    await index.open(path.join(dir, 'first'), 'workspace-a')
+    const staleClose = index.close()
+    await backend.firstCloseStarted
+
+    await index.open(path.join(dir, 'second'), 'workspace-b')
+    backend.releaseFirstClose()
+    await staleClose
+
+    await expect(index.hasDocuments()).resolves.toBe(false)
+    await index.close()
+  })
+
   it('creates the index directory before opening the backend', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-index-'))
     tempDirs.push(dir)
@@ -258,6 +275,29 @@ class DirectoryCheckingSearchBackend extends FakeSearchBackend {
     expect(info.isDirectory()).toBe(true)
     this.openedPaths.push(indexPath)
     await super.open(workspaceId)
+  }
+}
+
+class DelayedFirstCloseBackend extends FakeSearchBackend {
+  private closeCount = 0
+  private markFirstCloseStarted!: () => void
+  private release!: () => void
+  readonly firstCloseStarted = new Promise<void>((resolve) => {
+    this.markFirstCloseStarted = resolve
+  })
+  private readonly firstCloseGate = new Promise<void>((resolve) => {
+    this.release = resolve
+  })
+
+  releaseFirstClose(): void {
+    this.release()
+  }
+
+  override async close(): Promise<void> {
+    this.closeCount += 1
+    if (this.closeCount !== 1) return
+    this.markFirstCloseStarted()
+    await this.firstCloseGate
   }
 }
 

@@ -1,4 +1,5 @@
 import {
+  Check,
   ChevronDown,
   ExternalLink,
   FilePlus2,
@@ -6,6 +7,7 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  History,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,17 +20,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+export type RecentWorkspaceMenuData = {
+  currentLabel: string
+  emptyLabel: string
+  openLabel: string
+  paths: string[]
+  rootKind: 'internal' | 'external' | 'single'
+  rootPath: string
+  sectionLabel: string
+}
+
 type TitlebarWorkspaceMenuProps = {
   section: string
   workspaceMenuLabel: string
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
+  historyLabel: string
+  recentWorkspaces: RecentWorkspaceMenuData
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
+  onOpenHistory: () => void
+  onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
   workspaceWindowOpening: boolean
@@ -40,11 +56,15 @@ export const TitlebarWorkspaceMenu = ({
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
+  historyLabel,
+  recentWorkspaces,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
+  onOpenHistory,
+  onOpenProject,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
   workspaceWindowOpening,
@@ -77,7 +97,48 @@ export const TitlebarWorkspaceMenu = ({
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
+      <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {recentWorkspaces.sectionLabel}
+      </DropdownMenuLabel>
       <DropdownMenuGroup>
+        {recentWorkspaces.paths.length > 0 ? (
+          recentWorkspaces.paths.slice(0, 4).map((path) => {
+            const label = workspaceName(path)
+            const current =
+              recentWorkspaces.rootKind !== 'internal' && path === recentWorkspaces.rootPath
+            return (
+              <DropdownMenuItem
+                key={path}
+                aria-current={current ? 'page' : undefined}
+                aria-label={recentWorkspaces.openLabel.replace('{name}', label)}
+                className="rounded-lg px-2.5 py-2"
+                disabled={workspaceWindowOpening}
+                onSelect={() => onOpenProject(path)}
+              >
+                <FolderOpen aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium">{label}</span>
+                  <span className="block truncate text-[10px] text-muted-foreground">{path}</span>
+                </span>
+                {current ? (
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-primary">
+                    <Check aria-hidden="true" className="size-3" />
+                    {recentWorkspaces.currentLabel}
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            )
+          })
+        ) : (
+          <DropdownMenuItem disabled className="rounded-lg px-2.5 py-2 text-xs">
+            {recentWorkspaces.emptyLabel}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem className="rounded-lg px-2.5 py-2" onSelect={onOpenHistory}>
+          <History aria-hidden="true" />
+          {historyLabel}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           className="rounded-lg px-2.5 py-2"
           disabled={workspaceWindowOpening}
@@ -114,3 +175,11 @@ export const TitlebarWorkspaceMenu = ({
     </DropdownMenuContent>
   </DropdownMenu>
 )
+
+const workspaceName = (path: string) => {
+  const parts = path
+    .replace(/[\\/]+$/, '')
+    .split(/[\\/]/)
+    .filter(Boolean)
+  return parts.at(-1) ?? path
+}

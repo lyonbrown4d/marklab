@@ -17,10 +17,19 @@ beforeEach(() => {
 })
 
 describe('writing-first layout preferences', () => {
+  it('toggles the editor read-only browsing mode', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.editorReadOnlyMode).toBe(false)
+    store.setEditorReadOnlyMode(true)
+
+    expect(usePreferencesStore.getState().editorReadOnlyMode).toBe(true)
+  })
+
   it('starts new users on a distraction-free canvas', () => {
     expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
     expect(usePreferencesStore.getState().rightSidebarCollapsed).toBe(true)
-    expect(usePreferencesStore.getState().showEditorStatusBar).toBe(false)
+    expect(usePreferencesStore.getState().showEditorStatusBar).toBe(true)
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(true)
   })
 

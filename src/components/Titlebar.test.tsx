@@ -56,9 +56,6 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   activePath: 'notes/target.md',
   activeTab: { kind: 'file', path: 'notes/target.md', view: 'edit' },
   tabs: [],
-  dirtyPaths: {},
-  saveStates: {},
-  silentSave: true,
   onToggleSidebar: vi.fn(),
   onToggleRightSidebar: vi.fn(),
   onSelectProject: vi.fn(),
@@ -70,6 +67,11 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   onOpenSearchResult: vi.fn(),
   onOpenWorkspaceGraph: vi.fn(),
   onOpenAllPages: vi.fn(),
+  onOpenHistory: vi.fn(),
+  onOpenProject: vi.fn(),
+  onOpenCurrentWorkspaceInNewWindow: vi.fn(),
+  onSelectWorkspaceInNewWindow: vi.fn(),
+  onToggleReadOnly: vi.fn(),
   onCloseActiveTab: vi.fn(),
   onOpenTerminal: vi.fn(),
   onRebuildSearchIndex: vi.fn(),
@@ -87,6 +89,10 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   commandOpen: false,
   onCommandOpenChange: vi.fn(),
   onOpenSettings: vi.fn(),
+  recentProjects: ['C:/workspace'],
+  rootPath: 'C:/workspace',
+  rootKind: 'external',
+  workspaceWindowOpening: false,
   ...overrides,
 })
 
@@ -323,30 +329,6 @@ describe('Titlebar command palette', () => {
 
     expect(screen.getByRole('button', { name: '切换侧边栏' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '文档大纲' })).toBeInTheDocument()
-    expect(screen.getByText('已保存到本机')).toBeInTheDocument()
-  })
-
-  it('announces active file save state from the command center', () => {
-    renderTitlebar(
-      createProps({
-        dirtyPaths: { 'notes/target.md': true },
-        silentSave: false,
-      }),
-    )
-
-    expect(screen.getByRole('button', { name: 'Search files...' })).toBeInTheDocument()
-    expect(screen.getByText('Not yet saved')).toBeInTheDocument()
-  })
-
-  it('keeps local persistence visible during silent save', () => {
-    renderTitlebar(
-      createProps({
-        dirtyPaths: { 'notes/target.md': true },
-        silentSave: true,
-      }),
-    )
-
-    expect(screen.getByRole('button', { name: 'Search files...' })).toBeInTheDocument()
-    expect(screen.getByText('Not yet saved')).toBeInTheDocument()
+    expect(screen.queryByText('已保存到本机')).not.toBeInTheDocument()
   })
 })

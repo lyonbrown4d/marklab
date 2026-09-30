@@ -34,7 +34,9 @@ export type LayoutContext = {
   showEditorStatusBar: boolean
   graphMiniMapEnabled: boolean
   graphContentMode: GraphContentMode
+  editorReadOnlyMode: boolean
   onCloseActiveTab: () => void
   onOpenProject: (path: string) => void
+  onOpenProjectInCurrentWindow: (path: string) => void
   onUseInternalRoot: () => void
 }

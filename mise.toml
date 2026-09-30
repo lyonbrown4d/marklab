@@ -1,7 +1,6 @@
 [tools]
 node = "24.15.0"
 pnpm = "10.26.0"
-just = "1"
 
 [env]
 MISE_NODE_COREPACK = "true"
@@ -10,17 +9,9 @@ MISE_NODE_COREPACK = "true"
 description = "Run the Electron desktop development workflow."
 run = "pnpm exec moon run desktop:electron-dev"
 
-[tasks.web-dev]
-description = "Run the renderer-only Vite development server."
-run = "pnpm exec moon run desktop:web-dev"
-
 [tasks.build]
 description = "Build the Electron desktop application."
 run = "pnpm exec moon run desktop:build"
-
-[tasks.web-build]
-description = "Build the renderer bundle."
-run = "pnpm exec moon run desktop:web-build"
 
 [tasks.package]
 description = "Create an unpacked Electron package."

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import SidebarFileTree from '@/components/SidebarFileTree'
+import LocalHistoryTimeline from '@/components/local-history/LocalHistoryTimeline'
 import { FileNameDialog } from '@/components/file-tree/FileOperationDialogs'
 import type { SidebarExplorerPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
@@ -62,6 +63,7 @@ const SidebarExplorerPanel = ({
   onOpenFile,
   onOpenFileView,
   onMovePath,
+  onRestoreHistoryContent,
   onRenamePath,
   rootKind,
 }: SidebarExplorerPanelProps) => {
@@ -240,6 +242,12 @@ const SidebarExplorerPanel = ({
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
+      {activePath ? (
+        <LocalHistoryTimeline
+          path={activePath}
+          onRestoreContent={(content) => onRestoreHistoryContent(activePath, content)}
+        />
+      ) : null}
       <FileNameDialog
         open={rootCreateOpen}
         title={rootCreateTitle}

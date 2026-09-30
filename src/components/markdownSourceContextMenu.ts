@@ -29,11 +29,13 @@ const editorCommandByMenuAction: Partial<Record<EditorContextMenuAction, string>
 
 export const useMarkdownSourceContextMenu = (
   editorRef: RefObject<MonacoEditor.IStandaloneCodeEditor | null>,
+  readOnly = false,
 ): EditorContextMenuAdapter =>
   useMemo(
     () => ({
-      getCapabilities: () => getSourceCapabilities(editorRef.current),
+      getCapabilities: () => getSourceCapabilities(editorRef.current, readOnly),
       onAction: (action: EditorContextMenuAction) => {
+        if (readOnly && action !== 'copy' && action !== 'selectAll') return
         const editor = editorRef.current
         if (!editor) return
         const formatAction = formatActionByMenuAction[action]
@@ -45,11 +47,12 @@ export const useMarkdownSourceContextMenu = (
         editor.trigger('marklab.editorContextMenu', command, null)
       },
     }),
-    [editorRef],
+    [editorRef, readOnly],
   )
 
 const getSourceCapabilities = (
   editor: MonacoEditor.IStandaloneCodeEditor | null,
+  readOnly: boolean,
 ): EditorContextMenuCapabilities => {
   const model = editor?.getModel()
   if (!editor || !model) {
@@ -63,9 +66,15 @@ const getSourceCapabilities = (
   const hasSelection = !editor.getSelection()?.isEmpty()
   return {
     copy: hasSelection,
-    cut: hasSelection,
-    link: true,
-    redo: model.canRedo?.() ?? true,
-    undo: model.canUndo?.() ?? true,
+    cut: !readOnly && hasSelection,
+    link: !readOnly,
+    paste: !readOnly,
+    redo: !readOnly && (model.canRedo?.() ?? true),
+    undo: !readOnly && (model.canUndo?.() ?? true),
+    bold: !readOnly,
+    inlineCode: !readOnly,
+    italic: !readOnly,
+    selectAll: true,
+    strike: !readOnly,
   }
 }

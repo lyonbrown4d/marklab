@@ -7,6 +7,7 @@ import {
   GIT_DIFF_ROUTE_PATTERN,
   GRAPH_FILE_ROUTE_PATTERN,
   GRAPH_WORKSPACE_ROUTE_PATTERN,
+  WORKSPACE_HISTORY_ROUTE_PATTERN,
   ALL_PAGES_ROUTE_PATTERN,
   PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
@@ -20,6 +21,7 @@ const GitDiffRoutePage = lazy(() => import('@/pages/GitDiffRoutePage'))
 const SourceFilePage = lazy(() => import('@/pages/SourceFilePage'))
 const WorkspaceGraphPage = lazy(() => import('@/pages/WorkspaceGraphPage'))
 const WorkspaceHomePage = lazy(() => import('@/pages/WorkspaceHomePage'))
+const WorkspaceHistoryPage = lazy(() => import('@/pages/WorkspaceHistoryPage'))
 
 const lazyRoute = (Page: ComponentType) => (
   <Suspense fallback={<EditorPaneFallback />}>
@@ -38,6 +40,7 @@ const App = () => (
         <Route path={SOURCE_ROUTE_PATTERN} element={lazyRoute(SourceFilePage)} />
         <Route path={GRAPH_FILE_ROUTE_PATTERN} element={lazyRoute(FileGraphPage)} />
         <Route path={GRAPH_WORKSPACE_ROUTE_PATTERN} element={lazyRoute(WorkspaceGraphPage)} />
+        <Route path={WORKSPACE_HISTORY_ROUTE_PATTERN} element={lazyRoute(WorkspaceHistoryPage)} />
         <Route path={FILE_ROUTE_PATTERN} element={lazyRoute(EditFilePage)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

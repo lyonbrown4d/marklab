@@ -37,6 +37,8 @@ type UseTitlebarCommandModelArgs = Pick<
   | 'onOpenHeading'
   | 'onOpenSearchResult'
   | 'onOpenAllPages'
+  | 'onOpenHistory'
+  | 'onToggleReadOnly'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
 > & {
@@ -68,6 +70,8 @@ export const useTitlebarCommandModel = ({
   onOpenHeading,
   onOpenSearchResult,
   onOpenAllPages,
+  onOpenHistory,
+  onToggleReadOnly,
   setTheme,
   canCreateWorkspaceEntries,
   commandOpen,
@@ -108,6 +112,9 @@ export const useTitlebarCommandModel = ({
           { id: 'view.wysiwyg', label: t('editor.modeWysiwyg') },
           { id: 'view.source', label: t('editor.modeSource') },
           { id: 'view.graph', label: t('tabs.workspaceGraph') },
+          { id: 'view.toggle_readonly', label: t('titlebar.readOnly') },
+          { id: 'view.toggle_status_bar', label: t('settings.statusBar') },
+          { id: 'workspace.open_history', label: t('workspace.history') },
           { id: 'view.toggle_sidebar', label: t('actions.toggleSidebar') },
           { id: 'view.toggle_right_sidebar', label: t('actions.toggleRightSidebar') },
         ],
@@ -230,6 +237,8 @@ export const useTitlebarCommandModel = ({
     onOpenHeading,
     onOpenSearchResult,
     onOpenAllPages,
+    onOpenHistory,
+    onToggleReadOnly,
     setTheme,
     canCreateWorkspaceEntries,
     onOpenCurrentWorkspaceInNewWindow,

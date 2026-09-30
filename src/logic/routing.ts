@@ -11,6 +11,7 @@ export const GRAPH_FILE_ROUTE_PATTERN = '/files/graph/*'
 export const PREVIEW_ROUTE_PATTERN = '/files/preview/*'
 export const ALL_PAGES_ROUTE_PATTERN = '/workspace/pages'
 export const GRAPH_WORKSPACE_ROUTE_PATTERN = '/workspace/graph'
+export const WORKSPACE_HISTORY_ROUTE_PATTERN = '/workspace/history'
 export const SIDEBAR_ACTIVITY_PARAM = 'sidebar'
 export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'projects'
 
@@ -44,6 +45,8 @@ export const pathToGraphFileRoute = (path: string) => {
 }
 
 export const pathToWorkspaceGraphRoute = () => generatePath(GRAPH_WORKSPACE_ROUTE_PATTERN)
+
+export const pathToWorkspaceHistoryRoute = () => generatePath(WORKSPACE_HISTORY_ROUTE_PATTERN)
 
 export const pathToAllPagesRoute = (collectionId?: string) => {
   const route = generatePath(ALL_PAGES_ROUTE_PATTERN)

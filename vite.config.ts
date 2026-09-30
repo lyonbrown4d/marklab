@@ -37,6 +37,10 @@ const electronMainEntry = {
   ),
   main: path.resolve(import.meta.dirname, 'electron/main.ts'),
   marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
+  nodeSearchWorkerEntry: path.resolve(
+    import.meta.dirname,
+    'electron/services/knowledgeEngine/nodeSearchWorkerEntry.ts',
+  ),
   workspaceAnalysisWorkerEntry: path.resolve(
     import.meta.dirname,
     'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',

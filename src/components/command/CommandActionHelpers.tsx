@@ -19,6 +19,9 @@ export const commandActionShortcutIds = {
   viewGraph: 'view.graph',
   toggleSidebar: 'view.toggleSidebar',
   toggleRightSidebar: 'view.toggleRightSidebar',
+  toggleReadonly: 'view.toggleReadonly',
+  toggleStatusBar: 'view.toggleStatusBar',
+  openWorkspaceHistory: 'workspace.openHistory',
 } as const satisfies Record<string, ShortcutActionId>
 
 const shortcutActionIds = Object.values(commandActionShortcutIds)

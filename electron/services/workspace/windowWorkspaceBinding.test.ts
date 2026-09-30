@@ -1,15 +1,20 @@
 import { EventEmitter } from 'node:events'
 import type { App, BrowserWindow, Shell } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding.js'
 import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose.js'
 
 const state = vi.hoisted(() => ({
+  constructorArgs: [] as unknown[][],
   dirty: true,
   flush: vi.fn<() => Promise<void>>(),
 }))
 vi.mock('@electron/services/workspace/workspaceService.js', () => ({
   WorkspaceService: class {
+    constructor(...args: unknown[]) {
+      state.constructorArgs.push(args)
+    }
     flushBuffers = state.flush
     bufferMutationEpoch = () => 1
     rootInfo = () => ({ kind: 'internal', path: '/workspace' })
@@ -59,8 +64,17 @@ const createHarness = () => {
     info: vi.fn(),
     warn: vi.fn(),
   }
+  const localHistoryService: LocalHistoryServiceContract = {
+    capture: vi.fn(),
+    clear: vi.fn(),
+    delete: vi.fn(),
+    list: vi.fn(),
+    read: vi.fn(),
+    restore: vi.fn(),
+  }
   const binding = createWindowWorkspaceBinding({
     app: {} as App,
+    localHistoryService,
     logger,
     onReadyToFinalize: vi.fn(),
     onTaskStateChanged: vi.fn(),
@@ -68,15 +82,29 @@ const createHarness = () => {
     shell: {} as Shell,
     window: window as unknown as BrowserWindow,
   })
-  return { binding, logger, window }
+  return { binding, localHistoryService, logger, window }
 }
 
 beforeEach(() => {
+  state.constructorArgs.length = 0
   state.dirty = true
   state.flush.mockReset().mockResolvedValue(undefined)
 })
 
 describe('workspace window blur persistence', () => {
+  it('injects shared local history into distinct per-window workspace services', () => {
+    const first = createHarness()
+    const second = createHarness()
+
+    expect(first.binding.service).not.toBe(second.binding.service)
+    expect(first.binding.mutationGate).not.toBe(second.binding.mutationGate)
+    expect(state.constructorArgs[0]).toContain(first.localHistoryService)
+    expect(state.constructorArgs[1]).toContain(second.localHistoryService)
+
+    first.binding.dispose()
+    second.binding.dispose()
+  })
+
   it('freezes and flushes only the binding being closed', async () => {
     state.flush.mockImplementation(async () => {
       state.dirty = false

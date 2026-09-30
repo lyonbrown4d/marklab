@@ -80,7 +80,7 @@ describe('createHeadingSectionBlocks', () => {
     ])
   })
 
-  it('uses rust-parsed blocks for full content mode', () => {
+  it('uses knowledge-engine parsed blocks for full content mode', () => {
     const blocks = createHeadingSectionBlocks({
       headingId: 'heading:notes/current.md:intro',
       level: 2,
@@ -129,7 +129,7 @@ describe('createHeadingSectionBlocks', () => {
     ])
   })
 
-  it('keeps editable rust-parsed content blocks in graph full content mode', () => {
+  it('keeps editable knowledge-engine parsed content blocks in graph full content mode', () => {
     const blocks = createHeadingSectionBlocks({
       headingId: 'heading:notes/current.md:intro',
       level: 2,

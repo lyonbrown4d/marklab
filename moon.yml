@@ -1,10 +1,4 @@
 tasks:
-  web-dev:
-    command: pnpm exec vite
-    options:
-      cache: false
-      persistent: true
-
   typecheck:
     script: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
     inputs:
@@ -125,18 +119,6 @@ tasks:
     outputs:
       - dist/**/*
       - dist-electron/**/*
-
-  web-build:
-    command: pnpm exec vite build
-    deps:
-      - ~:typecheck
-    inputs:
-      - src/**/*
-      - vite.config.ts
-      - package.json
-      - pnpm-lock.yaml
-    outputs:
-      - dist/**/*
 
   build:
     deps:

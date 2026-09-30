@@ -28,7 +28,7 @@ const FileGraphPage = () => {
       onChange={context.onEditorChange}
       showMiniMap={context.graphMiniMapEnabled}
       contentMode={context.graphContentMode}
-      editable
+      editable={!context.editorReadOnlyMode}
       showEmptyMessage={false}
     />
   )

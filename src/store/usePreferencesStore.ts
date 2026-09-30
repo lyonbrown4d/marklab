@@ -51,6 +51,7 @@ export type PreferencesState = {
   immersiveZenMode: boolean
   immersiveFocusMode: boolean
   immersiveTypewriterMode: boolean
+  editorReadOnlyMode: boolean
   shortcutOverrides: ShortcutBindings
   setTheme: (theme: ThemeMode) => void
   setThemeMode: (mode: ThemeModePreference) => void
@@ -74,6 +75,7 @@ export type PreferencesState = {
   setImmersiveZenMode: (enabled: boolean) => void
   setImmersiveFocusMode: (enabled: boolean) => void
   setImmersiveTypewriterMode: (enabled: boolean) => void
+  setEditorReadOnlyMode: (enabled: boolean) => void
   setShortcutOverride: (action: ShortcutActionId, bindings: string[] | null) => void
   resetShortcutOverrides: () => void
   toggleSidebar: () => void
@@ -93,7 +95,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       sidebarCollapsed: true,
       rightSidebarCollapsed: true,
       silentSave: true,
-      showEditorStatusBar: false,
+      showEditorStatusBar: true,
       sourceCodeMiniMapEnabled: true,
       defaultFileView: 'edit',
       graphMiniMapEnabled: true,
@@ -106,6 +108,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       immersiveZenMode: false,
       immersiveFocusMode: true,
       immersiveTypewriterMode: false,
+      editorReadOnlyMode: false,
       shortcutOverrides: {},
       setTheme: (theme) =>
         set((state) => {
@@ -223,6 +226,10 @@ export const usePreferencesStore = create<PreferencesState>()(
             ? state
             : { immersiveTypewriterMode },
         ),
+      setEditorReadOnlyMode: (editorReadOnlyMode) =>
+        set((state) =>
+          state.editorReadOnlyMode === editorReadOnlyMode ? state : { editorReadOnlyMode },
+        ),
       setShortcutOverride: (action, bindings) =>
         set((state) => {
           if (
@@ -284,6 +291,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         immersiveZenMode: state.immersiveZenMode,
         immersiveFocusMode: state.immersiveFocusMode,
         immersiveTypewriterMode: state.immersiveTypewriterMode,
+        editorReadOnlyMode: state.editorReadOnlyMode,
         shortcutOverrides: state.shortcutOverrides,
       }),
     },

@@ -1,8 +1,7 @@
 import path from 'node:path'
 
-import MiniSearch, { type SearchResult } from 'minisearch'
+import MiniSearch from 'minisearch'
 
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
@@ -23,20 +22,46 @@ import {
   queryTerms,
   resultForSearchDocument,
 } from '@electron/services/knowledgeEngine/nodeSearchText.js'
+import {
+  buildNodeSearchIndex,
+  type NodeSearchBuildOptions,
+} from '@electron/services/knowledgeEngine/nodeSearchBuild.js'
+import {
+  applyIncrementalIndexChanges,
+  includeDocumentPath,
+  indexedSearchCandidates,
+  normalizeSearchDocument,
+  normalizeSearchOffset,
+  normalizeSearchPath,
+  rebuildMiniSearch,
+  removeSearchPathPrefix,
+  searchErrorMessage,
+  serializedIndexBytes,
+  storeSearchDocument,
+  sortSearchResults,
+} from '@electron/services/knowledgeEngine/nodeSearchIndexSupport.js'
+import {
+  emptyNodeSearchIndexStats,
+  type NodeSearchIndexStats,
+} from '@electron/services/knowledgeEngine/nodeSearchStats.js'
 
-type IndexedCandidate = {
-  matches: string[]
-  score: number
-}
+export type { NodeSearchIndexStats } from '@electron/services/knowledgeEngine/nodeSearchStats.js'
 
 export class NodeSearchIndex {
-  private readonly documents = new Map<string, WorkspaceSearchDocument>()
+  private documents = new Map<string, WorkspaceSearchDocument>()
   private miniSearch = createMiniSearch()
   private readonly snapshot?: NodeSearchSnapshot
   private loadPromise?: Promise<void>
   private mutationQueue: Promise<void> = Promise.resolve()
+  private rebuildGeneration = 0
+  private activeBuildAbortController: AbortController | null = null
+  private stats: NodeSearchIndexStats = emptyNodeSearchIndexStats()
 
-  constructor(storageDirectory?: string, workspaceIdentity = '') {
+  constructor(
+    storageDirectory?: string,
+    private readonly workspaceIdentity = '',
+    private readonly buildOptions: NodeSearchBuildOptions = {},
+  ) {
     this.snapshot = storageDirectory
       ? new NodeSearchSnapshot(path.resolve(storageDirectory), workspaceIdentity)
       : undefined
@@ -55,11 +80,82 @@ export class NodeSearchIndex {
     return (await this.getSize()) > 0
   }
 
+  async getStats(): Promise<NodeSearchIndexStats> {
+    await this.ensureLoaded()
+    return { ...this.stats, documentCount: this.documents.size }
+  }
+
+  cancelPendingRebuild(): void {
+    this.rebuildGeneration += 1
+    this.activeBuildAbortController?.abort()
+    this.stats = { ...this.stats, building: false }
+  }
+
   rebuild(documents: WorkspaceSearchDocument[]): Promise<void> {
-    return this.mutate(() => {
-      this.documents.clear()
-      for (const document of documents) this.store(document)
+    this.activeBuildAbortController?.abort()
+    const generation = ++this.rebuildGeneration
+    const abortController = new AbortController()
+    this.stats = {
+      ...this.stats,
+      building: true,
+      lastBuildError: null,
+      lastError: null,
+    }
+    const operation = this.mutationQueue.then(async () => {
+      const startedAt = performance.now()
+      try {
+        await this.ensureLoaded()
+        if (generation !== this.rebuildGeneration) return
+        this.activeBuildAbortController = abortController
+        const built = await buildNodeSearchIndex(
+          documents,
+          normalizeSearchDocument,
+          {
+            ...this.buildOptions,
+            abortSignal: abortController.signal,
+            workspaceIdentity: this.workspaceIdentity,
+          },
+          () => generation === this.rebuildGeneration,
+        )
+        if (!built) return
+        const serializedIndex = built.serializedIndex ?? built.miniSearch.toJSON()
+        const persisted = await this.persist(
+          built.documents,
+          serializedIndex,
+          () => generation === this.rebuildGeneration,
+        )
+        if (!persisted.committed || generation !== this.rebuildGeneration) return
+        this.documents = built.documents
+        this.miniSearch = built.miniSearch
+        this.stats = {
+          building: false,
+          documentCount: built.documents.size,
+          indexBytes: built.indexBytes ?? serializedIndexBytes(serializedIndex),
+          lastBuildDurationMs: performance.now() - startedAt,
+          lastBuildError: null,
+          lastError: null,
+          updatedAt: persisted.updatedAt,
+        }
+      } catch (error) {
+        if (generation === this.rebuildGeneration) {
+          const message = searchErrorMessage(error)
+          this.stats = {
+            ...this.stats,
+            building: false,
+            lastBuildDurationMs: performance.now() - startedAt,
+            lastBuildError: message,
+            lastError: message,
+          }
+        }
+        throw error
+      } finally {
+        if (this.activeBuildAbortController === abortController) {
+          this.activeBuildAbortController = null
+        }
+      }
     })
+    this.mutationQueue = operation.catch(() => undefined)
+    return operation
   }
 
   upsert(document: WorkspaceSearchDocument): Promise<void> {
@@ -83,8 +179,8 @@ export class NodeSearchIndex {
       for (const documentPath of batch.removeDocuments) {
         this.documents.delete(normalizeSearchPath(documentPath))
       }
-      for (const prefix of batch.removePrefixes) this.removeNormalizedPrefix(prefix)
-      for (const document of batch.upserts) this.store(document)
+      for (const prefix of batch.removePrefixes) removeSearchPathPrefix(this.documents, prefix)
+      for (const document of batch.upserts) storeSearchDocument(this.documents, document)
     })
   }
 
@@ -96,11 +192,11 @@ export class NodeSearchIndex {
     await this.readyForRead()
     const terms = queryTerms(query)
     const limit = searchLimitValue(options.limit)
-    const offset = normalizeOffset(options.offset)
+    const offset = normalizeSearchOffset(options.offset)
     if (terms.length === 0) return { results: [], totalHits: 0 }
 
     const includes = (options.includePaths ?? []).map(normalizeSearchPath)
-    const candidates = this.indexedCandidates(query)
+    const candidates = indexedSearchCandidates(this.miniSearch, query, nodeSearchQueryOptions())
     for (const document of this.documents.values()) {
       if (documentContainsAllTerms(document, terms) && !candidates.has(document.path)) {
         candidates.set(document.path, { matches: terms, score: 0 })
@@ -111,7 +207,7 @@ export class NodeSearchIndex {
       if (!document || !includeDocumentPath(document.path, includes)) return []
       return [resultForSearchDocument(document, query, candidate.score, candidate.matches)]
     })
-    sortResults(matches, options.order)
+    sortSearchResults(matches, options.order)
     const results = matches.slice(offset, offset + limit)
 
     return {
@@ -131,34 +227,6 @@ export class NodeSearchIndex {
     }
   }
 
-  private indexedCandidates(query: string): Map<string, IndexedCandidate> {
-    const candidates = new Map<string, IndexedCandidate>()
-    for (const result of this.miniSearch.search(query, nodeSearchQueryOptions())) {
-      const documentPath = resultPath(result)
-      if (!documentPath) continue
-      candidates.set(documentPath, {
-        matches: Object.keys(result.match),
-        score: result.score,
-      })
-    }
-    return candidates
-  }
-
-  private store(document: WorkspaceSearchDocument): void {
-    const normalizedPath = normalizeSearchPath(document.path)
-    if (!normalizedPath || normalizedPath === '.') {
-      throw new TypeError('Search document path must identify a workspace file.')
-    }
-    this.documents.set(normalizedPath, { ...document, path: normalizedPath })
-  }
-
-  private removeNormalizedPrefix(prefix: string): void {
-    const normalizedPrefix = normalizeSearchPath(prefix)
-    for (const documentPath of this.documents.keys()) {
-      if (pathMatchesInclude(documentPath, normalizedPrefix)) this.documents.delete(documentPath)
-    }
-  }
-
   private async readyForRead(): Promise<void> {
     await this.ensureLoaded()
     await this.mutationQueue
@@ -172,9 +240,31 @@ export class NodeSearchIndex {
   private async load(): Promise<void> {
     if (!this.snapshot) return
     const loaded = await this.snapshot.load()
-    for (const document of loaded.documents) this.store(document)
-    if (loaded.serializedIndex && this.tryRestoreMiniSearch(loaded.serializedIndex)) return
-    this.rebuildMiniSearch()
+    for (const document of loaded.documents) storeSearchDocument(this.documents, document)
+    this.stats = {
+      ...this.stats,
+      documentCount: this.documents.size,
+      lastError: loaded.recoveryError ?? null,
+      updatedAt: loaded.updatedAt ?? null,
+    }
+    if (loaded.serializedIndex && this.tryRestoreMiniSearch(loaded.serializedIndex)) {
+      this.stats = {
+        ...this.stats,
+        indexBytes: serializedIndexBytes(loaded.serializedIndex),
+      }
+      return
+    }
+    const built = await buildNodeSearchIndex(
+      [...this.documents.values()],
+      normalizeSearchDocument,
+      { ...this.buildOptions, workspaceIdentity: this.workspaceIdentity },
+      () => true,
+    )
+    if (built) this.miniSearch = built.miniSearch
+    this.stats = {
+      ...this.stats,
+      indexBytes: serializedIndexBytes(this.miniSearch.toJSON()),
+    }
   }
 
   private tryRestoreMiniSearch(serializedIndex: unknown): boolean {
@@ -197,14 +287,20 @@ export class NodeSearchIndex {
       const previous = new Map(this.documents)
       try {
         change()
-        this.rebuildMiniSearch()
-        await this.persist()
-      } catch (error) {
-        this.documents.clear()
-        for (const [documentPath, document] of previous) {
-          this.documents.set(documentPath, document)
+        applyIncrementalIndexChanges(this.miniSearch, previous, this.documents)
+        const serializedIndex = this.miniSearch.toJSON()
+        const persisted = await this.persist(this.documents, serializedIndex)
+        this.stats = {
+          ...this.stats,
+          documentCount: this.documents.size,
+          indexBytes: serializedIndexBytes(serializedIndex),
+          lastError: null,
+          updatedAt: persisted.updatedAt,
         }
-        this.rebuildMiniSearch()
+      } catch (error) {
+        this.documents = previous
+        this.miniSearch = rebuildMiniSearch(this.documents.values())
+        this.stats = { ...this.stats, lastError: searchErrorMessage(error) }
         throw error
       }
     })
@@ -212,63 +308,16 @@ export class NodeSearchIndex {
     return operation
   }
 
-  private rebuildMiniSearch(): void {
-    const next = createMiniSearch()
-    next.addAll([...this.documents.values()])
-    this.miniSearch = next
+  private async persist(
+    documents: Map<string, WorkspaceSearchDocument>,
+    serializedIndex: unknown,
+    shouldCommit: () => boolean = () => true,
+  ): Promise<{ committed: boolean; updatedAt: string }> {
+    const written = await this.snapshot?.write(
+      [...documents.values()],
+      serializedIndex,
+      shouldCommit,
+    )
+    return written ?? { committed: shouldCommit(), updatedAt: new Date().toISOString() }
   }
-
-  private async persist(): Promise<void> {
-    await this.snapshot?.write([...this.documents.values()], this.miniSearch.toJSON())
-  }
-}
-
-const resultPath = (result: SearchResult): string | null => {
-  const pathValue = typeof result.path === 'string' ? result.path : result.id
-  return typeof pathValue === 'string' ? normalizeSearchPath(pathValue) : null
-}
-
-const normalizeSearchPath = (value: string): string => {
-  let normalized = value
-    .trim()
-    .replaceAll('\\', '/')
-    .replace(/\/{2,}/g, '/')
-  while (normalized.startsWith('./')) normalized = normalized.slice(2)
-  while (normalized.endsWith('/')) normalized = normalized.slice(0, -1)
-  return normalized
-}
-
-const includeDocumentPath = (documentPath: string, includes: string[]): boolean =>
-  includes.length === 0 || includes.some((include) => pathMatchesInclude(documentPath, include))
-
-const pathMatchesInclude = (documentPath: string, include: string): boolean =>
-  !include || include === '.' || documentPath === include || documentPath.startsWith(`${include}/`)
-
-const normalizeOffset = (offset?: number): number =>
-  typeof offset === 'number' && Number.isFinite(offset) ? Math.max(0, Math.trunc(offset)) : 0
-
-const compareText = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0
-
-const sortResults = (results: FsSearchResult[], order: KnowledgeSearchOptions['order']): void => {
-  results.sort((left, right) => {
-    if (order === 'path') {
-      return (
-        compareText(left.path, right.path) ||
-        right.score - left.score ||
-        compareText(left.title, right.title)
-      )
-    }
-    if (order === 'title') {
-      return (
-        compareText(left.title, right.title) ||
-        right.score - left.score ||
-        compareText(left.path, right.path)
-      )
-    }
-    if (order === 'pathThenScore') {
-      return compareText(left.path, right.path) || right.score - left.score
-    }
-    return right.score - left.score || compareText(left.path, right.path)
-  })
 }

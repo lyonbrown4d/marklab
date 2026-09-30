@@ -24,6 +24,7 @@ export type SidebarToolPanelProps = {
   onOpenWorkspaceGraph: () => void
   onRenamePath: (from: string, to: string) => void
   onMovePath: (from: string, to: string) => void
+  onRestoreHistoryContent: (path: string, content: string) => void
   onUseInternalRoot: () => void
   recentProjects: string[]
   rootKind: 'internal' | 'external' | 'single'
@@ -44,6 +45,7 @@ export type SidebarExplorerPanelProps = Pick<
   | 'onOpenFileView'
   | 'onRenamePath'
   | 'onMovePath'
+  | 'onRestoreHistoryContent'
   | 'rootKind'
 >
 

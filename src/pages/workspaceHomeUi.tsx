@@ -89,14 +89,22 @@ export const QuickButton = ({ children, disabled, icon: Icon, onClick }: QuickBu
 )
 
 type ListButtonProps = {
+  ariaLabel?: string
   description: ReactNode
   icon: LucideIcon
   onClick: () => void
   title: ReactNode
 }
 
-export const ListButton = ({ description, icon: Icon, onClick, title }: ListButtonProps) => (
+export const ListButton = ({
+  ariaLabel,
+  description,
+  icon: Icon,
+  onClick,
+  title,
+}: ListButtonProps) => (
   <Button
+    aria-label={ariaLabel}
     variant="ghost"
     className="h-auto min-h-11 cursor-pointer justify-start rounded-md px-3 py-2 text-left transition-colors duration-200"
     onClick={onClick}

@@ -1,31 +1,16 @@
-import {
-  Check,
-  Circle,
-  CircleAlert,
-  ListTree,
-  LoaderCircle,
-  PanelLeft,
-  Search,
-  Settings,
-} from 'lucide-react'
+import { ListTree, PanelLeft, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import type { ViewMode } from '@/store/appTypes'
 import { TabsBarViewModeControls } from '@/components/TabsBarViewModeControls'
 import { TitlebarWorkspaceMenu } from '@/components/TitlebarWorkspaceMenu'
+import type { RecentWorkspaceMenuData } from '@/components/TitlebarWorkspaceMenu'
+import TitlebarOverflowMenu from '@/components/TitlebarOverflowMenu'
 import { TitlebarExportMenu } from '@/components/TitlebarExportMenu'
 import type { ExportFormat } from '@/services/exportApi'
 
-type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
-
 type ImmersiveTitlebarChromeProps = {
   activePath: string | null
-  saveStatus: SaveStatus
   searchLabel: string
-  savedLabel: string
-  savingLabel: string
-  unsavedLabel: string
-  saveErrorLabel: string
   localLibraryLabel: string
   untitledLabel: string
   toggleSidebarLabel: string
@@ -35,6 +20,9 @@ type ImmersiveTitlebarChromeProps = {
   wysiwygLabel: string
   sourceLabel: string
   graphLabel: string
+  moreLabel: string
+  historyLabel: string
+  recentWorkspaces: RecentWorkspaceMenuData
   workspaceMenuLabel: string
   newWorkspaceLabel: string
   openFileLabel: string
@@ -49,6 +37,8 @@ type ImmersiveTitlebarChromeProps = {
   onToggleOutline: () => void
   onOpenSettings: () => void
   onChangeView: (mode: ViewMode) => void
+  onOpenHistory: () => void
+  onOpenProject: (path: string) => void
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
@@ -73,27 +63,9 @@ const getDocumentContext = (
   return { section, title }
 }
 
-const savePresentation = (
-  status: SaveStatus,
-  labels: Pick<
-    ImmersiveTitlebarChromeProps,
-    'savedLabel' | 'savingLabel' | 'unsavedLabel' | 'saveErrorLabel'
-  >,
-) => {
-  if (status === 'saving') return { Icon: LoaderCircle, label: labels.savingLabel }
-  if (status === 'unsaved') return { Icon: Circle, label: labels.unsavedLabel }
-  if (status === 'error') return { Icon: CircleAlert, label: labels.saveErrorLabel }
-  return { Icon: Check, label: labels.savedLabel }
-}
-
 export const ImmersiveTitlebarChrome = ({
   activePath,
-  saveStatus,
   searchLabel,
-  savedLabel,
-  savingLabel,
-  unsavedLabel,
-  saveErrorLabel,
   localLibraryLabel,
   untitledLabel,
   toggleSidebarLabel,
@@ -103,6 +75,9 @@ export const ImmersiveTitlebarChrome = ({
   wysiwygLabel,
   sourceLabel,
   graphLabel,
+  moreLabel,
+  historyLabel,
+  recentWorkspaces,
   workspaceMenuLabel,
   newWorkspaceLabel,
   openFileLabel,
@@ -117,6 +92,8 @@ export const ImmersiveTitlebarChrome = ({
   onToggleOutline,
   onOpenSettings,
   onChangeView,
+  onOpenHistory,
+  onOpenProject,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
@@ -128,12 +105,6 @@ export const ImmersiveTitlebarChrome = ({
   const context = getDocumentContext(activePath, localLibraryLabel, untitledLabel)
   const logoUrl = new URL('marklab-light.svg', document.baseURI).toString()
   const darkLogoUrl = new URL('marklab-dark.svg', document.baseURI).toString()
-  const save = savePresentation(saveStatus, {
-    savedLabel,
-    savingLabel,
-    unsavedLabel,
-    saveErrorLabel,
-  })
 
   return (
     <div className="immersive-titlebar-chrome grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center">
@@ -175,36 +146,29 @@ export const ImmersiveTitlebarChrome = ({
           newWorkspaceLabel={newWorkspaceLabel}
           openFileLabel={openFileLabel}
           newFileLabel={newFileLabel}
+          historyLabel={historyLabel}
+          recentWorkspaces={recentWorkspaces}
           openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
           openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
           onNewWorkspace={onNewWorkspace}
           onOpenFile={onOpenFile}
           onCreateFile={onCreateFile}
+          onOpenHistory={onOpenHistory}
+          onOpenProject={onOpenProject}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
           workspaceWindowOpening={workspaceWindowOpening}
         />
       </div>
 
-      <span className="pointer-events-none absolute left-1/2 hidden max-w-[32vw] -translate-x-1/2 truncate px-6 text-center text-[15px] font-medium text-foreground/85 md:block">
+      <span className="pointer-events-none absolute left-1/2 block max-w-[28vw] -translate-x-1/2 truncate px-3 text-center text-sm font-medium text-foreground/85 sm:max-w-[36vw] sm:text-[15px]">
         {context.title}
       </span>
 
-      <div className="flex min-w-0 items-center justify-end gap-1">
-        <span
-          aria-live="polite"
-          role="status"
-          className={cn(
-            'sr-only items-center gap-1.5 px-2 text-[13px] text-muted-foreground lg:not-sr-only lg:flex',
-            saveStatus === 'error' && 'text-destructive',
-          )}
-        >
-          <save.Icon
-            aria-hidden="true"
-            className={cn('size-3.5', saveStatus === 'saving' && 'animate-spin')}
-          />
-          {save.label}
-        </span>
+      <div
+        className="hidden min-w-0 items-center justify-end gap-1 lg:flex"
+        data-slot="wide-titlebar-actions"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -256,6 +220,30 @@ export const ImmersiveTitlebarChrome = ({
         >
           <Settings aria-hidden="true" className="size-4" />
         </Button>
+      </div>
+      <div
+        className="flex min-w-0 items-center justify-end lg:hidden"
+        data-slot="compact-titlebar-actions"
+      >
+        <TitlebarOverflowMenu
+          active={Boolean(activePath)}
+          exportDocxLabel={exportDocxLabel}
+          exportLabel={exportLabel}
+          exportPdfLabel={exportPdfLabel}
+          graphLabel={graphLabel}
+          moreLabel={moreLabel}
+          searchLabel={searchLabel}
+          settingsLabel={settingsLabel}
+          sourceLabel={sourceLabel}
+          toggleOutlineLabel={toggleOutlineLabel}
+          viewMode={viewMode}
+          wysiwygLabel={wysiwygLabel}
+          onChangeView={onChangeView}
+          onExport={onExport}
+          onOpenSearch={onOpenSearch}
+          onOpenSettings={onOpenSettings}
+          onToggleOutline={onToggleOutline}
+        />
       </div>
     </div>
   )

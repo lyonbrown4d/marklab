@@ -1,4 +1,5 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, LockKeyhole } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import StatusCenter from '@/components/StatusCenter'
@@ -15,6 +16,8 @@ type AppStatusBarRightProps = {
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
   terminalOpen: boolean
+  readOnlyMode: boolean
+  onToggleReadOnly: () => void
 }
 
 export const AppStatusBarRight = ({
@@ -27,6 +30,8 @@ export const AppStatusBarRight = ({
   dirtyPaths,
   saveStates,
   terminalOpen,
+  readOnlyMode,
+  onToggleReadOnly,
 }: AppStatusBarRightProps) => {
   const { t } = useI18n()
 
@@ -74,6 +79,23 @@ export const AppStatusBarRight = ({
           </TooltipContent>
         </Tooltip>
       )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant={readOnlyMode ? 'secondary' : 'ghost'}
+            size="icon"
+            className="size-6 rounded"
+            aria-label={t('statusBar.toggleReadOnly')}
+            aria-pressed={readOnlyMode}
+            disabled={!activePath}
+            onClick={onToggleReadOnly}
+          >
+            <LockKeyhole aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t('statusBar.toggleReadOnly')}</TooltipContent>
+      </Tooltip>
       <StatusCenter
         activePath={activePath}
         dirtyPaths={dirtyPaths}

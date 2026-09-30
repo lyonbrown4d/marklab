@@ -8,12 +8,39 @@
 .chrome-button {
   color: hsl(var(--muted-foreground));
   background: transparent;
+  transition:
+    color var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
 }
 
-.chrome-button:hover,
+.chrome-button:not(:disabled):hover,
 .chrome-button:focus-visible {
   color: hsl(var(--foreground));
-  background: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  background: color-mix(in srgb, hsl(var(--foreground)) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+}
+
+.chrome-button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.chrome-button[aria-pressed='true'],
+.chrome-button[data-state='open'] {
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--primary)) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chrome-button {
+    transition: none;
+  }
+
+  .chrome-button:not(:disabled):hover {
+    transform: none;
+  }
 }
 
 .command-trigger {

@@ -1,10 +1,20 @@
 import { asFunction, asValue, createContainer, InjectionMode, type AwilixContainer } from 'awilix'
 import type * as Electron from 'electron'
 
+import { AiService } from '@electron/services/ai/aiService.js'
+import { AiProviderStore } from '@electron/services/ai/providerStore.js'
+import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver.js'
+import type {
+  AiModelResolverContract,
+  AiProviderStoreContract,
+  AiServiceContract,
+} from '@electron/services/ai/types.js'
 import { ExportService } from '@electron/services/export/exportService.js'
 import { GitService } from '@electron/services/git/service.js'
 import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import { KnowledgeEngineWorkspaceSearchBackend } from '@electron/services/knowledgeEngine/workspaceSearchBackend.js'
+import { LocalHistoryService } from '@electron/services/localHistory/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { createElectronLogger, type Logger } from '@electron/services/logger.js'
 import {
   configureSettingsStoreLogger,
@@ -25,14 +35,19 @@ export type ElectronRuntimeDependencies = {
   getLaunchInfo: () => AppLaunchInfo
   ipcMain: Electron.IpcMain
   onRendererReady?: () => void
+  safeStorage: Electron.SafeStorage
   shell: Electron.Shell
 }
 
 export type ElectronCradle = ElectronRuntimeDependencies & {
+  aiModelResolver: AiModelResolverContract
+  aiProviderStore: AiProviderStoreContract
+  aiService: AiServiceContract
   exportService: ExportService
   gitService: GitService
   knowledgeEngineService: KnowledgeEngineService
   logger: Logger
+  localHistoryService: LocalHistoryServiceContract
   terminalService: TerminalService
   workspaceRegistry: WindowWorkspaceRegistry
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
@@ -60,16 +75,35 @@ export const createElectronContainer = (
     getLaunchInfo: asValue(dependencies.getLaunchInfo),
     ipcMain: asValue(dependencies.ipcMain),
     onRendererReady: asValue(dependencies.onRendererReady ?? (() => undefined)),
+    safeStorage: asValue(dependencies.safeStorage),
     shell: asValue(dependencies.shell),
     logger: asValue(logger),
+    aiProviderStore: asFunction(({ app, safeStorage }) => {
+      return new AiProviderStore(app.getPath('userData'), safeStorage)
+    }).singleton(),
+    aiModelResolver: asFunction(() => new VercelAiProviderResolver()).singleton(),
+    aiService: asFunction(({ aiModelResolver, aiProviderStore }) => {
+      return new AiService({ resolver: aiModelResolver, store: aiProviderStore })
+    }).singleton(),
+    localHistoryService: asFunction(({ app }) => {
+      return new LocalHistoryService({ userDataPath: app.getPath('userData') })
+    }).singleton(),
     workspaceSearchIndexFactory: asFunction(({ knowledgeEngineService }) => {
       return () =>
         new WorkspaceSearchIndex(new KnowledgeEngineWorkspaceSearchBackend(knowledgeEngineService))
     }).singleton(),
     workspaceRegistry: asFunction(
-      ({ app, knowledgeEngineService, logger, shell, workspaceSearchIndexFactory }) => {
+      ({
+        app,
+        knowledgeEngineService,
+        localHistoryService,
+        logger,
+        shell,
+        workspaceSearchIndexFactory,
+      }) => {
         return new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
           knowledgeEngineService,
+          localHistoryService,
           onSessionDisposed: removeRendererSession,
           workspaceSearchIndexFactory,
         })

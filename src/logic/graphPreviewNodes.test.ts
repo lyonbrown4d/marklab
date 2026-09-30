@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGraphFromRustGraph, buildGraphFromWorkspaceIndex } from '@/logic/graph'
+import { buildGraphFromKnowledgeGraph, buildGraphFromWorkspaceIndex } from '@/logic/graph'
 import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 
@@ -51,9 +51,9 @@ describe('graphPreviewNodes', () => {
     )
   })
 
-  it('can append preview nodes to Rust graph output without changing the graph schema', () => {
+  it('can append preview nodes to knowledge graph output without changing the graph schema', () => {
     const graph = appendPreviewNodesFromWorkspaceIndex(
-      buildGraphFromRustGraph({
+      buildGraphFromKnowledgeGraph({
         mode: 'mindmap',
         nodes: [
           {

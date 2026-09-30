@@ -2,6 +2,50 @@
   padding-bottom: 0.75rem;
 }
 
+@keyframes editor-menu-surface-enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    translate: 0 -4px;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+.crepe-playground .milkdown .milkdown-slash-menu[data-show='true'],
+.crepe-playground .milkdown .milkdown-toolbar[data-show='true'],
+.crepe-playground .milkdown .milkdown-link-preview[data-show='true'] > .link-preview,
+.crepe-playground .milkdown .milkdown-link-edit[data-show='true'] > .link-edit,
+.crepe-playground .milkdown .milkdown-code-block .list-wrapper,
+.crepe-playground .milkdown .marklab-table-toolbar:not([hidden]) {
+  animation: editor-menu-surface-enter 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+  will-change: opacity, scale, translate;
+}
+
+.crepe-playground .milkdown .milkdown-slash-menu li,
+.crepe-playground .milkdown .milkdown-toolbar .toolbar-item,
+.crepe-playground .milkdown .milkdown-link-preview .button,
+.crepe-playground .milkdown .milkdown-link-edit .button,
+.crepe-playground .milkdown .marklab-table-toolbar button {
+  transition:
+    background-color 115ms ease,
+    color 115ms ease,
+    translate 115ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.crepe-playground .milkdown .milkdown-slash-menu li:is(:hover, .hover, .active),
+.crepe-playground .milkdown .milkdown-toolbar .toolbar-item:hover,
+.crepe-playground .milkdown .milkdown-link-preview .button:hover,
+.crepe-playground .milkdown .milkdown-link-edit .button:hover,
+.crepe-playground .milkdown .marklab-table-toolbar button:hover {
+  translate: 1px 0;
+}
+
 .crepe-playground .cm-cursor,
 .crepe-playground .cm-dropCursor {
   border-left-color: hsl(var(--foreground)) !important;
@@ -277,11 +321,22 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .crepe-playground .milkdown .milkdown-slash-menu,
+  .crepe-playground .milkdown .milkdown-toolbar,
+  .crepe-playground .milkdown .milkdown-link-preview > .link-preview,
+  .crepe-playground .milkdown .milkdown-link-edit > .link-edit,
+  .crepe-playground .milkdown .milkdown-code-block .list-wrapper,
   .crepe-playground .milkdown .ProseMirror table,
   .crepe-playground .milkdown .marklab-table-toolbar,
-  .crepe-playground .milkdown .marklab-table-toolbar button {
+  .crepe-playground .milkdown .marklab-table-toolbar button,
+  .crepe-playground .milkdown .milkdown-slash-menu li,
+  .crepe-playground .milkdown .milkdown-toolbar .toolbar-item,
+  .crepe-playground .milkdown .milkdown-link-preview .button,
+  .crepe-playground .milkdown .milkdown-link-edit .button {
+    animation: none;
     scroll-behavior: auto;
     transition: none;
+    translate: none;
   }
 }
 

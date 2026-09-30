@@ -18,6 +18,7 @@ import type { FileEntry } from '@/store/appTypes'
 import { requestWorkspaceSearchFocus } from '@/utils/appEvents'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import WorkspaceHomeHero from '@/pages/WorkspaceHomeHero'
+import WorkspaceHomeRecentProjects from '@/pages/WorkspaceHomeRecentProjects'
 import {
   EmptyBlock,
   ListButton,
@@ -276,32 +277,11 @@ const WorkspaceHomePage = () => {
             )}
           </Panel>
 
-          <Panel
-            title={t('workspaceHome.recentProjects')}
-            subtitle={t('workspaceHome.recentSubtitle')}
-          >
-            <ListButton
-              description={t('workspaceHome.builtInWorkspace')}
-              icon={FolderOpen}
-              title={t('sidebar.localWorkspace')}
-              onClick={onUseInternalRoot}
-            />
-            {recentProjects.length > 0 ? (
-              recentProjects
-                .slice(0, 4)
-                .map((project) => (
-                  <ListButton
-                    key={project}
-                    description={project}
-                    icon={FolderOpen}
-                    title={pathName(project)}
-                    onClick={() => onOpenProject(project)}
-                  />
-                ))
-            ) : (
-              <EmptyBlock icon={FolderOpen}>{t('workspaceHome.noRecentProjects')}</EmptyBlock>
-            )}
-          </Panel>
+          <WorkspaceHomeRecentProjects
+            onOpenProject={onOpenProject}
+            onUseInternalRoot={onUseInternalRoot}
+            recentProjects={recentProjects}
+          />
         </section>
       </div>
     </div>

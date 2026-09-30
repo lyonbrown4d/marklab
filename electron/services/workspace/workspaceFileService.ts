@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type {
   FsBufferStatus,
   FsEntry,
@@ -38,6 +39,7 @@ export class WorkspaceFileService extends WorkspaceBase {
     app: ConstructorParameters<typeof WorkspaceBase>[0],
     shell: ConstructorParameters<typeof WorkspaceBase>[1],
     logger: ConstructorParameters<typeof WorkspaceBase>[2],
+    private readonly localHistory: LocalHistoryServiceContract,
     private readonly knowledgeEngineService?: KnowledgeEngineService,
   ) {
     super(app, shell, logger)
@@ -159,8 +161,19 @@ export class WorkspaceFileService extends WorkspaceBase {
       content: args.content,
       beforeWrite: () => this.watcher.markOwnWrite(args.absolutePath),
     })
-    if (sidecarWritten) return
-    await args.writeWithNode()
+    if (!sidecarWritten) await args.writeWithNode()
+    try {
+      await this.localHistory.capture(
+        { kind: args.state.rootKind, path: args.state.rootPath },
+        args.relativePath,
+        args.content,
+      )
+    } catch (error) {
+      this.logger.warn('local history snapshot failed', {
+        error,
+        path: args.relativePath,
+      })
+    }
   }
 
   getBufferStatus(value: unknown): FsBufferStatus | null {

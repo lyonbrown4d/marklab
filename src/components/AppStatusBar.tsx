@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
 import { AppStatusBarRight } from '@/components/AppStatusBarRight'
 import { EditorStatusBarSlot } from '@/components/EditorStatusBar'
@@ -11,6 +11,8 @@ import { useI18n } from '@/i18n/useI18n'
 import { gitApi } from '@/services/gitApi'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { PanelBottomClose } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { SaveState } from '@/app/useEditorBuffer'
 import type { FileEntry, ViewMode, WorkspaceTab } from '@/store/appTypes'
 
@@ -25,7 +27,10 @@ type AppStatusBarProps = {
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
   terminalOpen: boolean
+  readOnlyMode: boolean
   onToggleTerminal: () => void
+  onToggleReadOnly: () => void
+  onHideStatusBar: () => void
   onRestoreSession: () => void
   restoreStatusMessage: string | null
   restoreStatusBusy: boolean
@@ -43,7 +48,10 @@ const AppStatusBar = ({
   dirtyPaths,
   saveStates,
   terminalOpen,
+  readOnlyMode,
   onToggleTerminal,
+  onToggleReadOnly,
+  onHideStatusBar,
   onRestoreSession,
   restoreStatusMessage,
   restoreStatusBusy,
@@ -109,7 +117,7 @@ const AppStatusBar = ({
     <TooltipProvider>
       <footer
         aria-label={t('statusBar.label')}
-        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-3 px-2 text-[11px] text-muted-foreground"
+        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-3 border-t border-border/60 px-2 text-[11px] text-muted-foreground"
       >
         <AppStatusBarLeft
           gitBranch={gitBranch}
@@ -127,17 +135,36 @@ const AppStatusBar = ({
           onToggleTerminal={onToggleTerminal}
         />
         <EditorStatusBarSlot label={t('statusBar.label')} />
-        <AppStatusBarRight
-          activePath={activePath}
-          activeSaveState={activeSaveState}
-          assetSyncFailed={assetSyncFailed}
-          assetSyncLastError={assetSyncLastError}
-          assetSyncPending={assetSyncPending}
-          dirtyCount={dirtyCount}
-          dirtyPaths={dirtyPaths}
-          saveStates={saveStates}
-          terminalOpen={terminalOpen}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          <AppStatusBarRight
+            activePath={activePath}
+            activeSaveState={activeSaveState}
+            assetSyncFailed={assetSyncFailed}
+            assetSyncLastError={assetSyncLastError}
+            assetSyncPending={assetSyncPending}
+            dirtyCount={dirtyCount}
+            dirtyPaths={dirtyPaths}
+            saveStates={saveStates}
+            terminalOpen={terminalOpen}
+            readOnlyMode={readOnlyMode}
+            onToggleReadOnly={onToggleReadOnly}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded"
+                aria-label={t('statusBar.hide')}
+                onClick={onHideStatusBar}
+              >
+                <PanelBottomClose aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('statusBar.hide')}</TooltipContent>
+          </Tooltip>
+        </div>
       </footer>
     </TooltipProvider>
   )

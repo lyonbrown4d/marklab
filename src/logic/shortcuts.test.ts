@@ -44,6 +44,18 @@ describe('shortcuts', () => {
     )
   })
 
+  it('provides quick workspace history and read-only browsing shortcuts', () => {
+    expect(defaultShortcutBindings['workspace.openHistory']).toEqual(['Mod+Shift+H'])
+    expect(defaultShortcutBindings['view.toggleReadonly']).toEqual(['Mod+Shift+E'])
+    expect(shortcutCategories.find((category) => category.id === 'workspace')?.actions).toEqual(
+      expect.arrayContaining(['workspace.openHistory', 'view.toggleReadonly']),
+    )
+  })
+
+  it('provides a shortcut for the bottom status bar', () => {
+    expect(defaultShortcutBindings['view.toggleStatusBar']).toEqual(['Mod+Shift+B'])
+  })
+
   it('keeps scoped shortcut consumers aligned with the action catalog', () => {
     const graphActionIds = shortcutActions
       .filter((action) => action.scope === 'graph')

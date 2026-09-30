@@ -28,11 +28,13 @@ type UseKeyboardShortcutsArgs = {
   onOpenFile: () => void
   onOpenProject: () => void
   onOpenSettings: () => void
+  onOpenHistory: () => void
   onOpenTab: (id: string) => void
   onSetViewMode: (mode: ViewMode) => void
   onToggleRightSidebar: () => void
   onToggleSidebar: () => void
   onToggleTerminal: () => void
+  onToggleReadOnly: () => void
 }
 
 export const useKeyboardShortcuts = ({
@@ -46,11 +48,13 @@ export const useKeyboardShortcuts = ({
   onOpenFile,
   onOpenProject,
   onOpenSettings,
+  onOpenHistory,
   onOpenTab,
   onSetViewMode,
   onToggleRightSidebar,
   onToggleSidebar,
   onToggleTerminal,
+  onToggleReadOnly,
 }: UseKeyboardShortcutsArgs) => {
   const argsRef = useLatest<UseKeyboardShortcutsArgs>({
     activeTabId,
@@ -63,11 +67,13 @@ export const useKeyboardShortcuts = ({
     onOpenFile,
     onOpenProject,
     onOpenSettings,
+    onOpenHistory,
     onOpenTab,
     onSetViewMode,
     onToggleRightSidebar,
     onToggleSidebar,
     onToggleTerminal,
+    onToggleReadOnly,
   })
 
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
@@ -83,11 +89,13 @@ export const useKeyboardShortcuts = ({
         onOpenFile: openFile,
         onOpenProject: openProject,
         onOpenSettings: openSettings,
+        onOpenHistory: openHistory,
         onOpenTab: openTab,
         onSetViewMode: setViewMode,
         onToggleRightSidebar: toggleRightSidebar,
         onToggleSidebar: toggleSidebar,
         onToggleTerminal: toggleTerminal,
+        onToggleReadOnly: toggleReadOnly,
       } = argsRef.current
 
       if (action === 'app.commandPalette') {
@@ -153,6 +161,19 @@ export const useKeyboardShortcuts = ({
       }
       if (action === 'view.toggleTerminal') {
         toggleTerminal()
+        return
+      }
+      if (action === 'view.toggleReadonly') {
+        toggleReadOnly()
+        return
+      }
+      if (action === 'view.toggleStatusBar') {
+        const preferences = usePreferencesStore.getState()
+        preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
+        return
+      }
+      if (action === 'workspace.openHistory') {
+        openHistory()
       }
     }
 

@@ -11,6 +11,7 @@ import type {
 import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdownPlaygroundController'
 import { SlashUrlDialog } from '@/components/milkdown/SlashUrlDialog'
 import { EditorContextMenu } from '@/components/EditorContextMenu'
+import { cn } from '@/lib/utils'
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
@@ -44,7 +45,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     >
       <div className="relative flex h-full flex-1 flex-col">
         <div
-          className="crepe crepe-playground flex h-full flex-1 flex-col"
+          className={cn(
+            'crepe crepe-playground flex h-full flex-1 flex-col',
+            props.readOnly && 'is-readonly-editor is-typewriter-editor',
+          )}
+          data-readonly={props.readOnly ? 'true' : undefined}
+          tabIndex={props.readOnly ? 0 : undefined}
           ref={setPlaygroundRootElement}
         />
         <MarkdownEditorStatusOverlay

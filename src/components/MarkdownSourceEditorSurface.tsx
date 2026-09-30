@@ -15,6 +15,7 @@ type MarkdownSourceEditorSurfaceProps = {
   monacoReady: boolean
   motionAnimatedCursor: boolean
   motionSmoothScrolling: boolean
+  readOnly?: boolean
   sourceCodeMiniMapEnabled: boolean
   loadingLabel: string
   value: string
@@ -33,6 +34,7 @@ export const MarkdownSourceEditorSurface = ({
   monacoReady,
   motionAnimatedCursor,
   motionSmoothScrolling,
+  readOnly = false,
   sourceCodeMiniMapEnabled,
   loadingLabel,
   value,
@@ -47,6 +49,7 @@ export const MarkdownSourceEditorSurface = ({
         immersiveZenMode && 'is-zen-editor',
         immersiveFocusMode && 'is-focus-editor',
         immersiveTypewriterMode && 'is-typewriter-editor',
+        readOnly && 'is-readonly-editor',
       )}
     >
       {errorMessage ? (
@@ -71,6 +74,8 @@ export const MarkdownSourceEditorSurface = ({
           onMount={onMount}
           options={{
             contextmenu: false,
+            readOnly,
+            domReadOnly: readOnly,
             minimap: { enabled: sourceCodeMiniMapEnabled },
             wordWrap: 'on',
             tabSize: 2,

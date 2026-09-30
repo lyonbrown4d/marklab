@@ -31,6 +31,15 @@ describe('useMarkdownPlaygroundController', () => {
     expect(crepeMock.latestInstance()).toBe(original)
   })
 
+  it('configures ProseMirror as non-editable and disables editor shortcuts when read-only', async () => {
+    render(<Harness value="A" onChange={vi.fn()} readOnly />)
+    await act(async () => {})
+
+    const editable = crepeMock.editorViewOptions().editable as (() => boolean) | undefined
+    expect(editable?.()).toBe(false)
+    expect(shortcutBridgeMock.mock.calls.at(-1)?.[0].enabled).toBe(false)
+  })
+
   it('waits for the old editor to finish destroying before starting its replacement', async () => {
     const onChange = vi.fn()
     const { rerender } = render(<Harness onChange={onChange} value="A" />)

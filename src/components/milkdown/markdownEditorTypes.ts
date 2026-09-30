@@ -8,6 +8,7 @@ export type MarkdownEditorProps = {
   placeholder: string
   slashLabels: SlashCommandLabels
   onCalendarFileCreate?: () => Promise<string | null>
+  readOnly?: boolean
 }
 
 export type MarkdownEditorHandle = {

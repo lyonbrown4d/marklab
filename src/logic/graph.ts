@@ -174,7 +174,7 @@ export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData
   )
 }
 
-export const buildGraphFromRustGraph = (
+export const buildGraphFromKnowledgeGraph = (
   graph: FsGraph,
   contentMode: GraphContentMode = 'none',
 ): GraphData => {

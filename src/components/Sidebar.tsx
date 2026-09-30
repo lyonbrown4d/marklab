@@ -26,6 +26,7 @@ type SidebarProps = {
   onCreateFolder: (path: string) => void
   onRenamePath: (from: string, to: string) => void
   onMovePath: (from: string, to: string) => void
+  onRestoreHistoryContent: (path: string, content: string) => void
   onDeletePath: (path: string) => void
   onUseInternalRoot: () => void
   rootKind: 'internal' | 'external' | 'single'
@@ -51,6 +52,7 @@ const SidebarComponent = ({
   onCreateFolder,
   onRenamePath,
   onMovePath,
+  onRestoreHistoryContent,
   onDeletePath,
   onUseInternalRoot,
   rootKind,
@@ -141,6 +143,7 @@ const SidebarComponent = ({
             onOpenWorkspaceGraph={onOpenWorkspaceGraph}
             onRenamePath={onRenamePath}
             onMovePath={onMovePath}
+            onRestoreHistoryContent={onRestoreHistoryContent}
             onUseInternalRoot={onUseInternalRoot}
             recentProjects={recentProjects}
             rootKind={rootKind}

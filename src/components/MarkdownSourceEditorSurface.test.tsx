@@ -4,7 +4,14 @@ import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSu
 
 const editorMock = vi.hoisted(() => ({
   onContextMenuAction: vi.fn(),
-  options: undefined as { contextmenu?: boolean; minimap?: { enabled?: boolean } } | undefined,
+  options: undefined as
+    | {
+        contextmenu?: boolean
+        domReadOnly?: boolean
+        minimap?: { enabled?: boolean }
+        readOnly?: boolean
+      }
+    | undefined,
 }))
 
 vi.mock('@monaco-editor/react', () => ({
@@ -14,7 +21,7 @@ vi.mock('@monaco-editor/react', () => ({
   },
 }))
 
-const renderSurface = (sourceCodeMiniMapEnabled: boolean) =>
+const renderSurface = (sourceCodeMiniMapEnabled: boolean, readOnly = false) =>
   render(
     <MarkdownSourceEditorSurface
       activePath="notes/current.md"
@@ -27,6 +34,7 @@ const renderSurface = (sourceCodeMiniMapEnabled: boolean) =>
       monacoReady
       motionAnimatedCursor={false}
       motionSmoothScrolling={false}
+      readOnly={readOnly}
       sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
       value="# Current"
       onChange={vi.fn()}
@@ -57,5 +65,16 @@ describe('MarkdownSourceEditorSurface', () => {
     expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveAttribute('data-disabled')
     fireEvent.click(screen.getByRole('menuitem', { name: /Inline code/ }))
     expect(editorMock.onContextMenuAction).toHaveBeenCalledWith('inlineCode')
+  })
+
+  it('uses Monaco read-only semantics without applying the rendered typewriter treatment', () => {
+    const { container } = renderSurface(false, true)
+
+    expect(editorMock.options?.readOnly).toBe(true)
+    expect(editorMock.options?.domReadOnly).toBe(true)
+    expect(container.querySelector('.markdown-source-editor')).toHaveClass('is-readonly-editor')
+    expect(container.querySelector('.markdown-source-editor')).not.toHaveClass(
+      'is-typewriter-editor',
+    )
   })
 })

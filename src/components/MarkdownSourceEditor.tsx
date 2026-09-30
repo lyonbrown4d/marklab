@@ -32,6 +32,7 @@ type MarkdownSourceEditorProps = {
   onChange: (value: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
   onCursorChange?: (position: EditorCursorPosition | null) => void
+  readOnly?: boolean
 }
 
 const MarkdownSourceEditor = ({
@@ -43,6 +44,7 @@ const MarkdownSourceEditor = ({
   onChange,
   onOpenFileView,
   onCursorChange,
+  readOnly = false,
 }: MarkdownSourceEditorProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
@@ -71,7 +73,7 @@ const MarkdownSourceEditor = ({
     workspaceIndex,
   })
   const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
-  const contextMenu = useMarkdownSourceContextMenu(editorRef)
+  const contextMenu = useMarkdownSourceContextMenu(editorRef, readOnly)
 
   useEffect(() => {
     let cancelled = false
@@ -119,10 +121,9 @@ const MarkdownSourceEditor = ({
       scheduleDiagnostics,
     })
     shortcutsDisposableRef.current?.dispose()
-    shortcutsDisposableRef.current = registerMarkdownSourceShortcuts({
-      editor,
-      overrides: shortcutOverrides,
-    })
+    shortcutsDisposableRef.current = readOnly
+      ? null
+      : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
 
     scheduleDiagnostics()
     const pending = pendingSourcePositionRef.current
@@ -137,11 +138,10 @@ const MarkdownSourceEditor = ({
     const editor = editorRef.current
     if (!editor) return
     shortcutsDisposableRef.current?.dispose()
-    shortcutsDisposableRef.current = registerMarkdownSourceShortcuts({
-      editor,
-      overrides: shortcutOverrides,
-    })
-  }, [shortcutOverrides])
+    shortcutsDisposableRef.current = readOnly
+      ? null
+      : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
+  }, [readOnly, shortcutOverrides])
 
   useEffect(() => {
     return () => {
@@ -233,6 +233,7 @@ const MarkdownSourceEditor = ({
       monacoReady={monacoReady}
       motionAnimatedCursor={motionAnimatedCursor}
       motionSmoothScrolling={motionSmoothScrolling}
+      readOnly={readOnly}
       sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
       value={value}
       contextMenu={contextMenu}

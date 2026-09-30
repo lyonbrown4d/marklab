@@ -14,6 +14,8 @@ vi.mock('@/i18n/useI18n', () => ({
         'statusBar.label': 'Status bar',
         'statusBar.openScm': 'Open Source Control',
         'statusBar.toggleTerminal': 'Toggle Terminal',
+        'statusBar.toggleReadOnly': 'Toggle Read-only',
+        'statusBar.hide': 'Hide status bar',
         'statusBar.unsavedFiles': `${values?.count} unsaved files`,
         'save.saving': 'Saving',
         'save.saved': 'Saved',
@@ -44,7 +46,10 @@ const createProps = (overrides: Partial<AppStatusBarProps> = {}): AppStatusBarPr
   dirtyPaths: {},
   saveStates: {},
   terminalOpen: false,
+  readOnlyMode: false,
   onToggleTerminal: vi.fn(),
+  onToggleReadOnly: vi.fn(),
+  onHideStatusBar: vi.fn(),
   onRestoreSession: vi.fn(),
   restoreStatusMessage: null,
   restoreStatusBusy: false,
@@ -77,7 +82,9 @@ beforeEach(() => {
 describe('AppStatusBar', () => {
   it('exposes icon-only status bar actions with accessible names', () => {
     const onToggleTerminal = vi.fn()
-    renderStatusBar(createProps({ onToggleTerminal }))
+    const onToggleReadOnly = vi.fn()
+    const onHideStatusBar = vi.fn()
+    renderStatusBar(createProps({ onHideStatusBar, onToggleReadOnly, onToggleTerminal }))
 
     const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
 
@@ -90,8 +97,23 @@ describe('AppStatusBar', () => {
     expect(terminalButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     fireEvent.click(terminalButton)
+    const readOnlyButton = within(statusBar).getByRole('button', { name: 'Toggle Read-only' })
+    expect(readOnlyButton).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(readOnlyButton)
+    fireEvent.click(within(statusBar).getByRole('button', { name: 'Hide status bar' }))
 
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
+    expect(onToggleReadOnly).toHaveBeenCalledTimes(1)
+    expect(onHideStatusBar).toHaveBeenCalledTimes(1)
+  })
+
+  it('marks read-only browsing as active in the bottom status bar', () => {
+    renderStatusBar(createProps({ readOnlyMode: true }))
+
+    expect(screen.getByRole('button', { name: 'Toggle Read-only' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('announces save changes without repeating the active path as visible text', () => {

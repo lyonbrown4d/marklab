@@ -6,11 +6,8 @@ import {
   type usePanelRef,
 } from 'react-resizable-panels'
 import { lazy, memo, Suspense, type ReactNode, type RefObject } from 'react'
-import { Terminal as TerminalIcon } from 'lucide-react'
 import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { useI18n } from '@/i18n/useI18n'
 
 const TerminalPanel = lazy(() => import('@/components/TerminalPanel'))
 const RESIZE_TARGET_MINIMUM_SIZE = { coarse: 28, fine: 8 }
@@ -25,8 +22,6 @@ type AppShellPanelsProps = {
   terminalFocusRequest: number
   theme: ThemeMode
   onCloseTerminalArea: () => void
-  onOpenTerminalArea: () => void
-  terminalShortcutLabel: string
 }
 
 const AppShellPanelsView = ({
@@ -39,11 +34,7 @@ const AppShellPanelsView = ({
   terminalFocusRequest,
   theme,
   onCloseTerminalArea,
-  onOpenTerminalArea,
-  terminalShortcutLabel,
 }: AppShellPanelsProps) => {
-  const { t } = useI18n()
-
   return (
     <div className="terminal-dock relative flex min-h-0 flex-1">
       <ResizableGroup
@@ -96,24 +87,6 @@ const AppShellPanelsView = ({
           )}
         </ResizablePanel>
       </ResizableGroup>
-      <Button
-        type="button"
-        aria-hidden={terminalOpen}
-        aria-label={t('actions.openTerminal')}
-        className={cn(
-          'terminal-dock-trigger absolute bottom-2 left-1/2 z-30 h-7 -translate-x-1/2 gap-2 rounded-full border px-3 text-[11px] font-normal shadow-sm',
-          terminalOpen && 'pointer-events-none opacity-0',
-        )}
-        tabIndex={terminalOpen ? -1 : 0}
-        variant="secondary"
-        onClick={onOpenTerminalArea}
-      >
-        <TerminalIcon aria-hidden="true" className="size-3.5" />
-        <span>{t('terminal.title')}</span>
-        <kbd className="terminal-dock-key rounded px-1.5 py-0.5 font-mono text-[10px]">
-          {terminalShortcutLabel}
-        </kbd>
-      </Button>
     </div>
   )
 }

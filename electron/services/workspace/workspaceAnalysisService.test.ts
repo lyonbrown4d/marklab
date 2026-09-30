@@ -5,6 +5,7 @@ import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { FsGraph } from '@electron/services/workspace/types.js'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
@@ -225,6 +226,7 @@ const createWorkspace = async (
     createApp(appData),
     createShell(),
     logger,
+    createLocalHistoryService(),
     undefined,
     service,
   )
@@ -233,6 +235,11 @@ const createWorkspace = async (
 }
 
 const tempDir = () => path.resolve(process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.')
+
+const createLocalHistoryService = (): LocalHistoryServiceContract =>
+  ({
+    capture: vi.fn(async () => ({ status: 'skipped', reason: 'duplicate' as const })),
+  }) as unknown as LocalHistoryServiceContract
 
 type KnowledgeGraphServiceMock = KnowledgeEngineService & {
   readWorkspaceFile: ReturnType<typeof vi.fn>

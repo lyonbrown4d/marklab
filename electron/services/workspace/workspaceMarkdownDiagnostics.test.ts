@@ -5,6 +5,7 @@ import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
 import { trySidecarMarkdownDiagnostics } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
@@ -152,6 +153,7 @@ const createWorkspace = async (service: KnowledgeEngineService) => {
     } as unknown as App,
     { openPath: vi.fn(async () => '') } as unknown as Shell,
     logger,
+    createLocalHistoryService(),
     undefined,
     service,
   )
@@ -167,6 +169,11 @@ const createSidecarMock = (getMarkdownDiagnostics: ReturnType<typeof vi.fn>) =>
         fs.readFile(path.join(workspaceRoot, ...relativePath.split('/')), 'utf8'),
     ),
   }) as unknown as KnowledgeEngineService
+
+const createLocalHistoryService = (): LocalHistoryServiceContract =>
+  ({
+    capture: vi.fn(async () => ({ status: 'skipped', reason: 'duplicate' as const })),
+  }) as unknown as LocalHistoryServiceContract
 
 const createLogger = (): Logger & { warn: ReturnType<typeof vi.fn> } => {
   const logger = {

@@ -16,6 +16,7 @@ vi.mock('sonner', () => ({
 vi.mock('@/services/appApi', () => ({
   appApi: {
     openCurrentWorkspaceInNewWindow: vi.fn(),
+    openPathInNewWindow: vi.fn(),
     selectWorkspaceInNewWindow: vi.fn(),
   },
 }))
@@ -24,6 +25,26 @@ vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) 
 beforeEach(() => vi.clearAllMocks())
 
 describe('useWorkspaceWindowActions', () => {
+  it('opens a recent workspace path in a new window with shared feedback', async () => {
+    vi.mocked(appApi.openPathInNewWindow).mockResolvedValue({
+      ok: true,
+      sharedWorkspaceSession: false,
+    })
+    const { result } = renderHook(() => useWorkspaceWindowActions())
+
+    expect(result.current).toHaveProperty('openWorkspacePathInNewWindow')
+    const openWorkspacePathInNewWindow = Reflect.get(
+      result.current,
+      'openWorkspacePathInNewWindow',
+    ) as (path: string) => Promise<void>
+    await act(() => openWorkspacePathInNewWindow('D:/notes'))
+
+    expect(appApi.openPathInNewWindow).toHaveBeenCalledWith('D:/notes')
+    expect(appApi.openCurrentWorkspaceInNewWindow).not.toHaveBeenCalled()
+    expect(toast.loading).toHaveBeenCalledWith('windowOpening.opening', expect.any(Object))
+    expect(toast.success).toHaveBeenCalledWith('windowOpening.opened', expect.any(Object))
+  })
+
   it('shows pending and success feedback while preventing duplicate opens', async () => {
     let resolve!: (value: { ok: boolean; sharedWorkspaceSession: false }) => void
     vi.mocked(appApi.openCurrentWorkspaceInNewWindow).mockReturnValue(

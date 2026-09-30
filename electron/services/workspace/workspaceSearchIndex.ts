@@ -50,11 +50,11 @@ export class WorkspaceSearchIndex {
 
   async close(): Promise<void> {
     const workspaceId = this.workspaceId
+    this.indexPath = null
+    this.workspaceId = null
     if (workspaceId) {
       await this.backend.close(workspaceId)
     }
-    this.indexPath = null
-    this.workspaceId = null
   }
 
   async hasDocuments(): Promise<boolean> {

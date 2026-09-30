@@ -7,6 +7,8 @@ import {
   GitGraph,
   Monitor,
   Moon,
+  LockKeyhole,
+  PanelBottom,
   PanelLeft,
   PanelRight,
   PenLine,
@@ -141,6 +143,7 @@ const CommandActionSections = ({
         projectWorkspace={canCreateWorkspaceEntries}
         searchIndexRebuilding={searchIndexRebuilding}
         onAction={onAction}
+        historyShortcut={shortcutLabels[commandActionShortcutIds.openWorkspaceHistory]}
       />
       <CommandSeparator />
       <CommandGroup heading={t('menu.view')}>
@@ -153,6 +156,22 @@ const CommandActionSections = ({
           <PenLine className="size-4" />
           <span className="truncate">{t('editor.modeWysiwyg')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewWysiwyg]} />
+        </CommandItem>
+        <CommandItem
+          value="readonly reading typewriter rendered preview"
+          onSelect={() => onAction('view.toggle_readonly')}
+        >
+          <LockKeyhole className="size-4" />
+          <span className="truncate">{t('titlebar.readOnly')}</span>
+          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleReadonly]} />
+        </CommandItem>
+        <CommandItem
+          value="status bar bottom footer hide show"
+          onSelect={() => onAction('view.toggle_status_bar')}
+        >
+          <PanelBottom className="size-4" />
+          <span className="truncate">{t('settings.statusBar')}</span>
+          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleStatusBar]} />
         </CommandItem>
         <CommandItem
           onFocus={preloadSourceEditor}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGraphFromRustGraph, buildGraphFromWorkspaceIndex } from '@/logic/graph'
+import { buildGraphFromKnowledgeGraph, buildGraphFromWorkspaceIndex } from '@/logic/graph'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 
 describe('buildGraphFromWorkspaceIndex', () => {
@@ -59,7 +59,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
   })
 
   it('maps Rust outline graph nodes to React Flow nodes', () => {
-    const graph = buildGraphFromRustGraph(
+    const graph = buildGraphFromKnowledgeGraph(
       {
         mode: 'outline',
         nodes: [
@@ -113,7 +113,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
   })
 
   it('omits heading content from graph nodes when content mode is none', () => {
-    const graph = buildGraphFromRustGraph({
+    const graph = buildGraphFromKnowledgeGraph({
       mode: 'outline',
       nodes: [
         {
@@ -144,8 +144,8 @@ describe('buildGraphFromWorkspaceIndex', () => {
     )
   })
 
-  it('creates the same compact layout key for equivalent Rust graph structures', () => {
-    const graph = buildGraphFromRustGraph({
+  it('creates the same compact layout key for equivalent knowledge graph structures', () => {
+    const graph = buildGraphFromKnowledgeGraph({
       mode: 'outline',
       nodes: [
         {
@@ -187,7 +187,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
       ],
     } satisfies FsGraph)
 
-    const reorderedGraph = buildGraphFromRustGraph({
+    const reorderedGraph = buildGraphFromKnowledgeGraph({
       mode: 'outline',
       nodes: [...graph.nodes].reverse().map((node) => ({
         id: node.id,
@@ -209,7 +209,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
     expect(graph.layoutKey).not.toContain('heading:notes/current.md:intro')
   })
 
-  it('changes the layout key when Rust graph structure or mode changes', () => {
+  it('changes the layout key when knowledge graph structure or mode changes', () => {
     const baseGraph = {
       mode: 'outline',
       nodes: [
@@ -238,8 +238,8 @@ describe('buildGraphFromWorkspaceIndex', () => {
       ],
     } satisfies FsGraph
 
-    const baseLayoutKey = buildGraphFromRustGraph(baseGraph).layoutKey
-    const nodeLayoutKey = buildGraphFromRustGraph({
+    const baseLayoutKey = buildGraphFromKnowledgeGraph(baseGraph).layoutKey
+    const nodeLayoutKey = buildGraphFromKnowledgeGraph({
       ...baseGraph,
       nodes: [
         ...baseGraph.nodes,
@@ -253,7 +253,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
         },
       ],
     }).layoutKey
-    const edgeLayoutKey = buildGraphFromRustGraph({
+    const edgeLayoutKey = buildGraphFromKnowledgeGraph({
       ...baseGraph,
       edges: [
         ...baseGraph.edges,
@@ -265,7 +265,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
         },
       ],
     }).layoutKey
-    const modeLayoutKey = buildGraphFromRustGraph({
+    const modeLayoutKey = buildGraphFromKnowledgeGraph({
       ...baseGraph,
       mode: 'graph' as FsGraph['mode'],
     }).layoutKey
@@ -293,8 +293,8 @@ describe('buildGraphFromWorkspaceIndex', () => {
       edges: [],
     } satisfies FsGraph
 
-    const compactLayoutKey = buildGraphFromRustGraph(baseGraph, 'none').layoutKey
-    const fullLayoutKey = buildGraphFromRustGraph(baseGraph, 'full').layoutKey
+    const compactLayoutKey = buildGraphFromKnowledgeGraph(baseGraph, 'none').layoutKey
+    const fullLayoutKey = buildGraphFromKnowledgeGraph(baseGraph, 'full').layoutKey
 
     expect(fullLayoutKey).not.toBe(compactLayoutKey)
   })

@@ -24,6 +24,7 @@ vi.mock('@/components/milkdown/markdownCodeBlockTheme', () => ({
 const crepeMock = vi.hoisted(() => {
   const instances: FakeCrepe[] = []
   let latestMarkdownUpdated: MarkdownUpdatedListener | null = null
+  let editorViewOptions: Record<string, unknown> = {}
 
   class FakeCrepe {
     static Feature = {
@@ -62,16 +63,29 @@ const crepeMock = vi.hoisted(() => {
         }
         return this.markdown
       }),
-      config: vi.fn((configure: (ctx: { get: () => unknown }) => void) => {
-        configure({
-          get: () => ({
-            markdownUpdated: (listener: MarkdownUpdatedListener) => {
-              latestMarkdownUpdated = listener
+      config: vi.fn(
+        (
+          configure: (ctx: {
+            get: () => unknown
+            update: (
+              key: unknown,
+              updater: (value: Record<string, unknown>) => Record<string, unknown>,
+            ) => void
+          }) => void,
+        ) => {
+          configure({
+            get: () => ({
+              markdownUpdated: (listener: MarkdownUpdatedListener) => {
+                latestMarkdownUpdated = listener
+              },
+            }),
+            update: (_key, updater) => {
+              editorViewOptions = updater(editorViewOptions)
             },
-          }),
-        })
-        return this.editor
-      }),
+          })
+          return this.editor
+        },
+      ),
       use: vi.fn(() => this.editor),
     }
     markdown: string
@@ -93,9 +107,11 @@ const crepeMock = vi.hoisted(() => {
     FakeCrepe,
     latestInstance: () => instances.at(-1) ?? null,
     latestMarkdownUpdated: () => latestMarkdownUpdated,
+    editorViewOptions: () => editorViewOptions,
     reset: () => {
       instances.length = 0
       latestMarkdownUpdated = null
+      editorViewOptions = {}
     },
   }
 })
@@ -108,6 +124,7 @@ vi.mock('@milkdown/crepe', () => ({
 
 vi.mock('@milkdown/kit/core', () => ({
   editorViewCtx: Symbol('editorViewCtx'),
+  editorViewOptionsCtx: Symbol('editorViewOptionsCtx'),
   parserCtx: Symbol('parserCtx'),
 }))
 
@@ -163,6 +180,7 @@ export const Harness = ({
   placeholder = 'Write',
   onChange,
   shortcutOverrides,
+  readOnly = false,
   value,
 }: {
   activePath?: string
@@ -170,6 +188,7 @@ export const Harness = ({
   placeholder?: string
   onChange: (markdown: string) => void
   shortcutOverrides?: ShortcutBindings
+  readOnly?: boolean
   value: string
 }) => {
   const controller = useMarkdownPlaygroundController({
@@ -177,6 +196,7 @@ export const Harness = ({
     darkMode,
     onChange,
     placeholder,
+    readOnly,
     slashLabels,
     shortcutOverrides,
     value,

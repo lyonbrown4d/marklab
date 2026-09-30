@@ -39,7 +39,11 @@ export type NodeSearchSnapshotLoadResult = {
   documents: WorkspaceSearchDocument[]
   serializedIndex?: unknown
   requiresRebuild: boolean
+  recoveryError?: string
+  updatedAt?: string
 }
+
+export type NodeSearchSnapshotWriteResult = { committed: boolean; updatedAt: string }
 
 export class NodeSearchSnapshot {
   private recoveredFromBackup = false
@@ -75,20 +79,39 @@ export class NodeSearchSnapshot {
         documents: snapshot.documents,
         serializedIndex: snapshot.index,
         requiresRebuild: false,
+        ...(primaryError ? { recoveryError: errorMessage(primaryError) } : {}),
+        updatedAt: snapshot.metadata.updatedAt,
       }
     }
 
     const legacy = await readLegacySnapshot(path.join(this.storageDirectory, LEGACY_FILE))
-    if (legacy) return { documents: legacy.documents, requiresRebuild: true }
-    if (primaryError) throw primaryError
+    if (legacy) {
+      return {
+        documents: legacy.documents,
+        requiresRebuild: true,
+        updatedAt: legacy.metadata.updatedAt,
+      }
+    }
+    if (primaryError) {
+      return {
+        documents: [],
+        recoveryError: `Search snapshot recovery failed: ${errorMessage(primaryError)}`,
+        requiresRebuild: true,
+      }
+    }
     return { documents: [], requiresRebuild: false }
   }
 
-  async write(documents: WorkspaceSearchDocument[], serializedIndex: unknown): Promise<void> {
+  async write(
+    documents: WorkspaceSearchDocument[],
+    serializedIndex: unknown,
+    shouldCommit: () => boolean = () => true,
+  ): Promise<NodeSearchSnapshotWriteResult> {
     await fs.mkdir(this.storageDirectory, { recursive: true })
     const primaryPath = path.join(this.storageDirectory, SNAPSHOT_FILE)
     const backupPath = path.join(this.storageDirectory, BACKUP_FILE)
     const temporaryPath = path.join(this.storageDirectory, `.${SNAPSHOT_FILE}.${randomUUID()}.tmp`)
+    const updatedAt = new Date().toISOString()
     const snapshot: SearchSnapshotEnvelope = {
       schemaVersion: NODE_SEARCH_SCHEMA_VERSION,
       engine: 'minisearch',
@@ -97,27 +120,39 @@ export class NodeSearchSnapshot {
       source: sourceManifest(documents),
       documents,
       index: serializedIndex,
-      metadata: { updatedAt: new Date().toISOString() },
+      metadata: { updatedAt },
     }
     let committed = false
+    let movedPrimaryToBackup = false
     const handle = await fs.open(temporaryPath, 'wx', 0o600)
     try {
       await handle.writeFile(JSON.stringify(snapshot))
       await handle.sync()
       await handle.close()
+      if (!shouldCommit()) return { committed: false, updatedAt }
       if (this.recoveredFromBackup) {
         await fs.rm(primaryPath, { force: true })
       } else {
         await fs.rm(backupPath, { force: true })
-        await renameIfPresent(primaryPath, backupPath)
+        if (!shouldCommit()) return { committed: false, updatedAt }
+        movedPrimaryToBackup = await renameIfPresent(primaryPath, backupPath)
+      }
+      if (!shouldCommit()) {
+        await restorePreviousPrimary(primaryPath, backupPath, movedPrimaryToBackup)
+        return { committed: false, updatedAt }
       }
       await fs.rename(temporaryPath, primaryPath)
+      if (!shouldCommit()) {
+        await restorePreviousPrimary(primaryPath, backupPath, movedPrimaryToBackup)
+        return { committed: false, updatedAt }
+      }
       this.recoveredFromBackup = false
       committed = true
     } finally {
       await handle.close().catch(() => undefined)
       if (!committed) await fs.rm(temporaryPath, { force: true }).catch(() => undefined)
     }
+    return { committed: true, updatedAt }
   }
 }
 
@@ -228,13 +263,27 @@ const isSearchDocument = (value: unknown): value is WorkspaceSearchDocument => {
   )
 }
 
-const renameIfPresent = async (from: string, to: string): Promise<void> => {
+const renameIfPresent = async (from: string, to: string): Promise<boolean> => {
   try {
     await fs.rename(from, to)
+    return true
   } catch (error) {
     if (!isErrorCode(error, 'ENOENT')) throw error
+    return false
   }
+}
+
+const restorePreviousPrimary = async (
+  primaryPath: string,
+  backupPath: string,
+  movedPrimaryToBackup: boolean,
+): Promise<void> => {
+  await fs.rm(primaryPath, { force: true })
+  if (movedPrimaryToBackup) await fs.rename(backupPath, primaryPath)
 }
 
 const isErrorCode = (error: unknown, code: string): boolean =>
   error instanceof Error && 'code' in error && error.code === code
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)

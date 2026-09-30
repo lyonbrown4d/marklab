@@ -26,6 +26,7 @@ const SidebarToolPanel = ({
   onOpenWorkspaceGraph,
   onRenamePath,
   onMovePath,
+  onRestoreHistoryContent,
   onUseInternalRoot,
   recentProjects,
   rootKind,
@@ -75,6 +76,7 @@ const SidebarToolPanel = ({
           onOpenFileView={onOpenFileView}
           onRenamePath={onRenamePath}
           onMovePath={onMovePath}
+          onRestoreHistoryContent={onRestoreHistoryContent}
           rootKind={rootKind}
         />
       )}

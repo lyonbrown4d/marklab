@@ -28,6 +28,7 @@ type AppWorkspacePanelsState = Pick<
   | 'inspectedPath'
   | 'movePath'
   | 'onInspectPath'
+  | 'onEditorChange'
   | 'onOpenProject'
   | 'onOpenWorkspaceGraph'
   | 'onOpenWorkspaceOverview'
@@ -90,6 +91,9 @@ export const AppWorkspacePanels = ({
       onCreateFolder={state.createFolder}
       onRenamePath={state.renamePath}
       onMovePath={state.movePath}
+      onRestoreHistoryContent={(path, content) => {
+        if (path === state.activePath) state.onEditorChange(content)
+      }}
       onDeletePath={state.deletePath}
       onUseInternalRoot={state.onUseInternalRoot}
       rootKind={state.rootKind}

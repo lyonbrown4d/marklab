@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { buildGraphFromRustGraph, type GraphData } from '@/logic/graph'
+import { buildGraphFromKnowledgeGraph, type GraphData } from '@/logic/graph'
 import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -49,7 +49,7 @@ export const useGraphData = (
     if (mode === 'file') {
       return outlineQuery.data
         ? appendPreviewNodesFromWorkspaceIndex(
-            buildGraphFromRustGraph(outlineQuery.data, graphContentMode),
+            buildGraphFromKnowledgeGraph(outlineQuery.data, graphContentMode),
             workspaceIndex,
             activePath,
           )
@@ -59,7 +59,7 @@ export const useGraphData = (
     if (mode === 'workspace' && hasWorkspaceIndex) {
       if (workspaceGraphQuery.data) {
         return appendPreviewNodesFromWorkspaceIndex(
-          buildGraphFromRustGraph(workspaceGraphQuery.data, graphContentMode),
+          buildGraphFromKnowledgeGraph(workspaceGraphQuery.data, graphContentMode),
           workspaceIndex,
         )
       }

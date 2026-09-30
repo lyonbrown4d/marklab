@@ -27,31 +27,39 @@ const shortcutActionByMenuAction: Partial<Record<EditorContextMenuAction, Shortc
 type UseMilkdownEditorContextMenuOptions = {
   crepeRef: RefObject<Crepe | null>
   onLinkInsert: (request: SlashUrlInsertionRequest) => void
+  readOnly?: boolean
 }
 
 export const useMilkdownEditorContextMenu = ({
   crepeRef,
   onLinkInsert,
+  readOnly = false,
 }: UseMilkdownEditorContextMenuOptions): EditorContextMenuAdapter =>
   useMemo(
     () => ({
-      getCapabilities: () => getCapabilities(crepeRef.current),
-      onAction: (action) => runAction(crepeRef.current, action, onLinkInsert),
+      getCapabilities: () => getCapabilities(crepeRef.current, readOnly),
+      onAction: (action) => runAction(crepeRef.current, action, onLinkInsert, readOnly),
     }),
-    [crepeRef, onLinkInsert],
+    [crepeRef, onLinkInsert, readOnly],
   )
 
-const getCapabilities = (crepe: Crepe | null): EditorContextMenuCapabilities => {
+const getCapabilities = (crepe: Crepe | null, readOnly: boolean): EditorContextMenuCapabilities => {
   if (!crepe) return disabledCapabilities
   return crepe.editor.action((ctx) => {
     const view = ctx.get(editorViewCtx)
     const hasSelection = !view.state.selection.empty
     return {
       copy: hasSelection,
-      cut: hasSelection,
-      link: true,
-      redo: redo(view.state),
-      undo: undo(view.state),
+      cut: !readOnly && hasSelection,
+      link: !readOnly,
+      paste: !readOnly,
+      redo: !readOnly && redo(view.state),
+      undo: !readOnly && undo(view.state),
+      bold: !readOnly,
+      inlineCode: !readOnly,
+      italic: !readOnly,
+      strike: !readOnly,
+      selectAll: true,
     }
   })
 }
@@ -60,7 +68,9 @@ const runAction = (
   crepe: Crepe | null,
   action: EditorContextMenuAction,
   onLinkInsert: (request: SlashUrlInsertionRequest) => void,
+  readOnly: boolean,
 ) => {
+  if (readOnly && action !== 'copy' && action !== 'selectAll') return
   const shortcutAction = shortcutActionByMenuAction[action]
   if (shortcutAction) {
     runMarkdownEditorShortcut(crepe, shortcutAction, {

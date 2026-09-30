@@ -128,6 +128,7 @@ const EditFilePage = () => {
         onChange={context.onEditorChange}
         files={context.files}
         showStatusBar={context.showEditorStatusBar}
+        readOnly={context.editorReadOnlyMode}
       />
     </Suspense>
   )

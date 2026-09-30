@@ -4,6 +4,7 @@ import type { App, Shell } from 'electron'
 
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
 import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
 import type {
@@ -41,10 +42,11 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     app: App,
     shell: Shell,
     logger: Logger = noopLogger,
+    localHistoryService: LocalHistoryServiceContract,
     workspaceSearchIndexFactory: WorkspaceSearchIndexFactory = () => new WorkspaceSearchIndex(),
     private readonly analysisKnowledgeEngineService?: KnowledgeEngineService,
   ) {
-    super(app, shell, logger, analysisKnowledgeEngineService)
+    super(app, shell, logger, localHistoryService, analysisKnowledgeEngineService)
     this.workspaceSearchIndex = workspaceSearchIndexFactory()
   }
 
@@ -62,15 +64,18 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       logger: this.logger.child('search-index-updates'),
       openIndex: () => this.openWorkspaceSearchIndex(),
       rebuildAll: async () => {
-        await this.buildSearchIndexFromWorkspace()
-        this.needsSearchIndexRebuild = false
+        if (await this.buildSearchIndexFromWorkspace()) {
+          this.needsSearchIndexRebuild = false
+        }
       },
       runTask: (work, taskName) => this.runSearchIndexTask(work, taskName),
     })
   private activeWorkspaceSearchKey = ''
+  private searchIndexBuildGeneration = 0
   private needsSearchIndexRebuild = true
 
   override dispose(): void {
+    this.searchIndexBuildGeneration += 1
     this.searchIndexUpdateQueue.dispose()
     this.graphCache.clear()
     void this.workspaceSearchIndex.close()
@@ -170,8 +175,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   async rebuildSearchIndex(): Promise<void> {
     await this.openWorkspaceSearchIndex()
     this.needsSearchIndexRebuild = true
-    await this.buildSearchIndexFromWorkspace()
-    this.needsSearchIndexRebuild = false
+    if (await this.buildSearchIndexFromWorkspace()) {
+      this.needsSearchIndexRebuild = false
+    }
   }
 
   override async setRoot(value: unknown): Promise<FsRootInfo> {
@@ -238,18 +244,30 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   private async rebuildSearchIndexIfNeeded(): Promise<void> {
     if (!this.needsSearchIndexRebuild) return
-    await this.buildSearchIndexFromWorkspace()
-    this.needsSearchIndexRebuild = false
+    if (await this.buildSearchIndexFromWorkspace()) {
+      this.needsSearchIndexRebuild = false
+    }
   }
 
-  private async buildSearchIndexFromWorkspace(): Promise<void> {
+  private async buildSearchIndexFromWorkspace(): Promise<boolean> {
+    const generation = ++this.searchIndexBuildGeneration
+    const workspaceSearchKey = this.getWorkspaceSearchKey()
     const documents = await this.workspaceDocuments()
+    if (!this.isCurrentSearchIndexBuild(generation, workspaceSearchKey)) return false
     const indexable = documents.map<SearchDocumentToIndex>((document) => ({
       path: document.path,
       title: fileLabel(document.path),
       content: document.content,
     }))
     await this.workspaceSearchIndex.rebuild(indexable)
+    return this.isCurrentSearchIndexBuild(generation, workspaceSearchKey)
+  }
+
+  private isCurrentSearchIndexBuild(generation: number, workspaceSearchKey: string): boolean {
+    return (
+      generation === this.searchIndexBuildGeneration &&
+      workspaceSearchKey === this.getWorkspaceSearchKey()
+    )
   }
 
   private getWorkspaceSearchIndexPath(): string {
@@ -273,6 +291,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   private resetSearchIndexState(): void {
+    this.searchIndexBuildGeneration += 1
     this.searchIndexUpdateQueue.clear()
     this.activeWorkspaceSearchKey = ''
     this.needsSearchIndexRebuild = true

@@ -19,44 +19,6 @@
   }
 }
 
-.terminal-dock-trigger {
-  border-color: color-mix(in srgb, hsl(var(--border)) 82%, transparent);
-  background: color-mix(in srgb, hsl(var(--background)) 92%, hsl(var(--card)));
-  color: color-mix(in srgb, hsl(var(--foreground)) 76%, transparent);
-  backdrop-filter: blur(14px);
-  transition:
-    color var(--motion-duration-fast) ease,
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease;
-
-  &:hover {
-    border-color: color-mix(in srgb, hsl(var(--border)) 55%, hsl(var(--foreground)) 45%);
-    background: hsl(var(--card));
-    color: hsl(var(--foreground));
-  }
-
-  &:active {
-    background: color-mix(in srgb, hsl(var(--card)) 82%, hsl(var(--muted)));
-  }
-
-  &:focus-visible {
-    outline: 1px solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-}
-
-.terminal-dock-key {
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 72%, transparent);
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .terminal-dock-trigger {
-    transition: none;
-  }
-}
-
 .terminal-tab-strip {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 18%, transparent) transparent;

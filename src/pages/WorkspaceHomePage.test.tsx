@@ -61,6 +61,7 @@ vi.mock('@/i18n/useI18n', () => ({
         'workspaceHome.titles': 'Headings',
         'workspaceHome.waitingForIndex': 'Waiting for index',
         'workspaceHome.workspaceGraph': 'Workspace graph',
+        'workspace.openRecentInNewWindow': 'Open in new window: {{name}}',
       }
       const template = labels[key] ?? key
 
@@ -103,6 +104,22 @@ beforeEach(() => {
 })
 
 describe('WorkspaceHomePage', () => {
+  it('opens recent workspaces in a new window without changing the current workspace', () => {
+    const context = layoutContextRef.value as {
+      onOpenProject: ReturnType<typeof vi.fn>
+      onOpenProjectInCurrentWindow: ReturnType<typeof vi.fn>
+      recentProjects: string[]
+    }
+    context.recentProjects = ['D:/notes']
+    context.onOpenProjectInCurrentWindow = vi.fn()
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Open in new window: notes' }))
+
+    expect(context.onOpenProject).toHaveBeenCalledWith('D:/notes')
+    expect(context.onOpenProjectInCurrentWindow).not.toHaveBeenCalled()
+  })
+
   it('hides project-only actions in single-file mode and opens files through desktop menu', () => {
     renderPage()
 

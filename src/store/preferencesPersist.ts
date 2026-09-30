@@ -10,6 +10,7 @@ export type PreferencesPersistedState = Pick<
   | 'hideMarkdownDefaultAppPrompt'
   | 'immersiveFocusMode'
   | 'immersiveTypewriterMode'
+  | 'editorReadOnlyMode'
   | 'immersiveZenMode'
   | 'locale'
   | 'markdownAssetImportStrategy'

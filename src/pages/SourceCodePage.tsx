@@ -14,6 +14,7 @@ type SourceCodePageProps = {
   onChange: (value: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
   showStatusBar: boolean
+  readOnly: boolean
 }
 const SourceCodePage = ({
   activePath,
@@ -24,6 +25,7 @@ const SourceCodePage = ({
   onChange,
   onOpenFileView,
   showStatusBar,
+  readOnly,
 }: SourceCodePageProps) => {
   const [cursor, setCursor] = useState<{
     path: string | null
@@ -61,6 +63,7 @@ const SourceCodePage = ({
                 onChange={onChange}
                 onOpenFileView={onOpenFileView}
                 onCursorChange={showStatusBar ? onCursorChange : undefined}
+                readOnly={readOnly}
               />
             </Suspense>
           </div>

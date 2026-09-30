@@ -95,6 +95,7 @@ const SourceFilePage = () => {
       onChange={context.onEditorChange}
       onOpenFileView={context.onOpenFileView}
       showStatusBar={context.showEditorStatusBar}
+      readOnly={context.editorReadOnlyMode}
     />
   )
 }

@@ -8,15 +8,8 @@ vi.mock('react-resizable-panels', () => ({
   Separator: () => <div />,
 }))
 
-vi.mock('@/i18n/useI18n', () => ({
-  useI18n: () => ({
-    t: (key: string) => (key === 'actions.openTerminal' ? 'Open terminal' : key),
-  }),
-}))
-
 describe('AppShellPanels', () => {
-  it('offers an explicit bottom trigger while the terminal is closed', () => {
-    const onOpenTerminalArea = vi.fn()
+  it('leaves terminal opening to the bottom status bar while closed', () => {
     render(
       <AppShellPanels
         shellPanelLayout={{ defaultLayout: undefined, onLayoutChanged: vi.fn() } as never}
@@ -28,18 +21,14 @@ describe('AppShellPanels', () => {
         terminalFocusRequest={0}
         theme="paper"
         onCloseTerminalArea={vi.fn()}
-        onOpenTerminalArea={onOpenTerminalArea}
-        terminalShortcutLabel="Ctrl J"
       />,
     )
 
-    const trigger = screen.getByRole('button', { name: 'Open terminal' })
-    expect(trigger).toHaveTextContent('Ctrl J')
-    trigger.click()
-    expect(onOpenTerminalArea).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /terminal/i })).not.toBeInTheDocument()
   })
 
-  it('hides the bottom trigger while the terminal is open', () => {
+  it('keeps the terminal panel available when it is open', () => {
     render(
       <AppShellPanels
         shellPanelLayout={{ defaultLayout: undefined, onLayoutChanged: vi.fn() } as never}
@@ -51,11 +40,9 @@ describe('AppShellPanels', () => {
         terminalFocusRequest={0}
         theme="paper"
         onCloseTerminalArea={vi.fn()}
-        onOpenTerminalArea={vi.fn()}
-        terminalShortcutLabel="Ctrl J"
       />,
     )
 
-    expect(screen.queryByRole('button', { name: 'Open terminal' })).not.toBeInTheDocument()
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
   })
 })

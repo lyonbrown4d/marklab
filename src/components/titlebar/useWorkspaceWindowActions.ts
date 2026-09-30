@@ -66,10 +66,19 @@ export const useWorkspaceWindowActions = () => {
     () => run(appApi.openCurrentWorkspaceInNewWindow),
     [run],
   )
+  const openWorkspacePathInNewWindow = useCallback(
+    (path: string) => run(() => appApi.openPathInNewWindow(path)),
+    [run],
+  )
   const selectWorkspaceInNewWindow = useCallback(
     () => run(() => appApi.selectWorkspaceInNewWindow(t('actions.openWorkspaceInNewWindow'))),
     [run, t],
   )
 
-  return { openCurrentWorkspaceInNewWindow, opening, selectWorkspaceInNewWindow }
+  return {
+    openCurrentWorkspaceInNewWindow,
+    openWorkspacePathInNewWindow,
+    opening,
+    selectWorkspaceInNewWindow,
+  }
 }
