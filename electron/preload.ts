@@ -4,6 +4,7 @@ import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
 import { onFileDrop } from '@electron/preload/fileDrop.js'
 import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
+import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -118,6 +119,7 @@ const listenToRuntimeEvent = <T>(
 
 const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
 const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
+const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   aiCompletion: {
@@ -141,6 +143,7 @@ const desktopApi: RendererSafeElectronApi = {
     getLaunchInfo: () =>
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,
   },
+  languageIntelligence: languageIntelligenceSurface,
   opening: windowOpeningSurface,
   platform: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.platformGet) as Promise<PlatformInfo>,

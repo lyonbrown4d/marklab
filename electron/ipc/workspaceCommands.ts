@@ -124,8 +124,6 @@ const createWorkspaceCommandHandlers = (
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
     fs_fetch_link_preview: (payload) => linkPreviewService.fetch(payload),
-    markdown_language_get_completions: (payload, event) =>
-      markdownLanguageService.getCompletions(workspaceForEvent(event), payload),
     markdown_language_get_diagnostics: (payload, event) =>
       markdownLanguageService.getDiagnostics(workspaceForEvent(event), payload),
     markdown_language_get_document_symbols: (payload, event) =>

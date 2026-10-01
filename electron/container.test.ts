@@ -51,6 +51,9 @@ describe('Electron dependency container', () => {
     expect(container.cradle.localAiModelManager).toBe(container.cradle.localAiModelManager)
     expect(container.cradle.localAiRuntime).toBe(container.cradle.localAiRuntime)
     expect(container.cradle.localAiService).toBe(container.cradle.localAiService)
+    expect(container.cradle.languageIntelligenceService).toBe(
+      container.cradle.languageIntelligenceService,
+    )
     expect(safeStorage.isAsyncEncryptionAvailable).not.toHaveBeenCalled()
 
     await container.cradle.aiProviderStore.update({

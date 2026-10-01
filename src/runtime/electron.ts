@@ -12,6 +12,7 @@ import type {
   WorkspaceSyncProgressEvent,
   WorkspaceSyncResult,
 } from '@/types/workspaceSync'
+import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -172,6 +173,7 @@ export type RendererSafeElectronApi = {
   lifecycle: {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>
   }
+  languageIntelligence: LanguageIntelligenceApi
   commands: ElectronCommandBridgeApi
   events: ElectronEventBridgeApi
   git: ElectronGitApi

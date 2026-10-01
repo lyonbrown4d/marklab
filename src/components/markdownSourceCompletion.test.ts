@@ -1,27 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CancellationToken, Position, editor, languages } from 'monaco-editor'
 import {
+  CompletionItemKind,
+  type CompletionItem,
+  type CompletionList,
+} from 'vscode-languageserver-types'
+import {
   registerMarkdownCompletionProvider,
   type MarkdownSourceCompletionContext,
 } from '@/components/markdownSourceCompletion'
+import type { MarkdownSourceDocumentSession } from '@/components/markdownSourceDocumentSession'
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
-import { markdownLanguageApi } from '@/services/markdownLanguageApi'
+import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
-vi.mock('@/services/markdownLanguageApi', () => ({
-  markdownLanguageApi: { getCompletions: vi.fn() },
+vi.mock('@/services/languageIntelligenceApi', () => ({
+  languageIntelligenceApi: { completion: vi.fn() },
 }))
 vi.mock('@/logic/markdownCompletions', () => ({ getMarkdownCompletions: vi.fn(() => []) }))
-
-type Completion = Awaited<ReturnType<typeof markdownLanguageApi.getCompletions>>[number]
-const fileCompletion: Completion = {
+const fileCompletion: CompletionItem = {
   label: 'Target',
-  kind: 'file',
+  kind: CompletionItemKind.File,
+  filterText: '/url',
   insertText: '../notes/target.md',
   detail: 'notes/target.md',
-  replacementStartColumn: 10,
-  lspKind: 17,
   sortText: '0001',
+  textEdit: {
+    newText: '../notes/target.md',
+    range: {
+      start: { line: 0, character: 9 },
+      end: { line: 0, character: 9 },
+    },
+  },
 }
 const deferred = <T>() => {
   let resolve!: (value: T) => void
@@ -58,12 +68,12 @@ const createCancellation = () => {
     listenerCount: () => listeners.size,
   }
 }
-
 let provider: languages.CompletionItemProvider
 let registration: { dispose: () => void }
 let context: MarkdownSourceCompletionContext
 let model: editor.ITextModel
 let state: { content: string; version: number; disposed: boolean }
+let documentSession: MarkdownSourceDocumentSession
 const disposeProvider = vi.fn()
 const request = (token = createCancellation().token, lineNumber = 1, column = 10) =>
   Promise.resolve(
@@ -77,18 +87,30 @@ const request = (token = createCancellation().token, lineNumber = 1, column = 10
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(markdownLanguageApi.getCompletions).mockReset().mockResolvedValue([fileCompletion])
+  vi.mocked(languageIntelligenceApi.completion)
+    .mockReset()
+    .mockResolvedValue({ isIncomplete: false, items: [fileCompletion] })
   vi.mocked(getMarkdownCompletions).mockReset().mockReturnValue([])
   context = { activePath: 'drafts/current.md', files: [], fileContents: {} }
   state = { content: '[Target](', version: 1, disposed: false }
   model = {
+    uri: { toString: () => 'file:///workspace/drafts/current.md' },
     getValue: () => state.content,
     getVersionId: () => state.version,
     isDisposed: () => state.disposed,
   } as editor.ITextModel
+  documentSession = {
+    dispose: vi.fn(),
+    prepareCompletion: vi.fn(async (nextModel: editor.ITextModel) => ({
+      uri: nextModel.uri.toString(),
+      version: nextModel.getVersionId(),
+    })),
+    whenSettled: vi.fn(async () => undefined),
+  }
   const monaco = {
     languages: {
-      CompletionItemKind: { File: 17, Reference: 18, Keyword: 14 },
+      CompletionItemInsertTextRule: { InsertAsSnippet: 4 },
+      CompletionItemKind: { File: 20, Reference: 21, Keyword: 17, Snippet: 27, Text: 18 },
       registerCompletionItemProvider: (
         _language: string,
         next: languages.CompletionItemProvider,
@@ -110,29 +132,27 @@ beforeEach(() => {
       }
     },
   } as unknown as typeof import('monaco-editor')
-  registration = registerMarkdownCompletionProvider(monaco, () => context)
+  registration = registerMarkdownCompletionProvider(monaco, () => context, documentSession)
 })
-
 afterEach(() => {
   registration.dispose()
   vi.useRealTimers()
 })
-
 describe('Markdown source completion lifecycle', () => {
   it('maps workspace-relative link completions from the typed language API', async () => {
     const cancellation = createCancellation()
     const result = await request(cancellation.token)
-    expect(markdownLanguageApi.getCompletions).toHaveBeenCalledExactlyOnceWith({
-      path: 'drafts/current.md',
-      content: '[Target](',
-      line: 1,
-      column: 10,
+    expect(languageIntelligenceApi.completion).toHaveBeenCalledExactlyOnceWith({
+      uri: 'file:///workspace/drafts/current.md',
+      version: 1,
+      position: { line: 0, character: 9 },
     })
     expect(result?.suggestions).toEqual([
       expect.objectContaining({
         label: 'Target',
         insertText: '../notes/target.md',
-        kind: 17,
+        kind: 20,
+        filterText: '/url',
         sortText: '0001',
         range: { startLineNumber: 1, startColumn: 10, endLineNumber: 1, endColumn: 10 },
       }),
@@ -141,27 +161,34 @@ describe('Markdown source completion lifecycle', () => {
     expect(cancellation.listenerCount()).toBe(0)
   })
 
-  it('passes unsaved document content for heading completion and preserves its replacement range', async () => {
+  it('uses the synchronized document version for unsaved heading completion', async () => {
     state.content = '# Fresh heading\n[Jump](#'
-    vi.mocked(markdownLanguageApi.getCompletions).mockResolvedValue([
-      {
-        label: 'Fresh heading',
-        kind: 'heading',
-        insertText: 'fresh-heading',
-        lspKind: 18,
-        replacementStartColumn: 9,
-      },
-    ])
+    vi.mocked(languageIntelligenceApi.completion).mockResolvedValue({
+      isIncomplete: false,
+      items: [
+        {
+          label: 'Fresh heading',
+          kind: 18,
+          insertText: 'fresh-heading',
+          textEdit: {
+            newText: 'fresh-heading',
+            range: {
+              start: { line: 1, character: 8 },
+              end: { line: 1, character: 8 },
+            },
+          },
+        },
+      ],
+    })
     const result = await request(undefined, 2, 9)
-    expect(markdownLanguageApi.getCompletions).toHaveBeenCalledWith({
-      path: context.activePath,
-      content: state.content,
-      line: 2,
-      column: 9,
+    expect(languageIntelligenceApi.completion).toHaveBeenCalledWith({
+      uri: 'file:///workspace/drafts/current.md',
+      version: 1,
+      position: { line: 1, character: 8 },
     })
     expect(result?.suggestions[0]).toMatchObject({
       insertText: 'fresh-heading',
-      kind: 18,
+      kind: 21,
       range: { startLineNumber: 2, startColumn: 9, endLineNumber: 2, endColumn: 9 },
     })
   })
@@ -170,16 +197,18 @@ describe('Markdown source completion lifecycle', () => {
     const cancellation = createCancellation()
     cancellation.cancel()
     expect(await request(cancellation.token)).toEqual({ suggestions: [] })
-    expect(markdownLanguageApi.getCompletions).not.toHaveBeenCalled()
+    expect(languageIntelligenceApi.completion).not.toHaveBeenCalled()
   })
 
   it('settles cancellation without waiting for IPC and skips fallback on a late failure', async () => {
     vi.useFakeTimers()
-    const pending = deferred<Completion[]>()
-    vi.mocked(markdownLanguageApi.getCompletions).mockReturnValue(pending.promise)
+    const pending = deferred<CompletionList>()
+    vi.mocked(languageIntelligenceApi.completion).mockReturnValue(pending.promise)
     const cancellation = createCancellation()
     const settled = vi.fn()
     void request(cancellation.token).then(settled)
+    await Promise.resolve()
+    await Promise.resolve()
     cancellation.cancel()
     await vi.advanceTimersByTimeAsync(0)
     expect(settled).toHaveBeenCalledExactlyOnceWith({ suggestions: [] })
@@ -193,37 +222,41 @@ describe('Markdown source completion lifecycle', () => {
   it.each(['version', 'path', 'model disposal', 'provider disposal'])(
     'drops results after %s changes',
     async (change) => {
-      const pending = deferred<Completion[]>()
-      vi.mocked(markdownLanguageApi.getCompletions).mockReturnValue(pending.promise)
+      const pending = deferred<CompletionList>()
+      vi.mocked(languageIntelligenceApi.completion).mockReturnValue(pending.promise)
       const result = request()
       if (change === 'version') state.version += 1
       if (change === 'path') context = { ...context, activePath: 'other.md' }
       if (change === 'model disposal') state.disposed = true
       if (change === 'provider disposal') registration.dispose()
-      pending.resolve([fileCompletion])
+      pending.resolve({ isIncomplete: false, items: [fileCompletion] })
       expect(await result).toEqual({ suggestions: [] })
     },
   )
 
   it('allows a newer request while IPC is pending and discards the older response', async () => {
-    const pending = deferred<Completion[]>()
-    vi.mocked(markdownLanguageApi.getCompletions).mockReturnValueOnce(pending.promise)
+    const pending = deferred<CompletionList>()
+    vi.mocked(languageIntelligenceApi.completion).mockReturnValueOnce(pending.promise)
     const previous = request()
+    await Promise.resolve()
+    await Promise.resolve()
     state.content = '[Target](n'
     state.version += 1
     const next = await request(undefined, 1, 11)
-    expect(markdownLanguageApi.getCompletions).toHaveBeenCalledTimes(2)
+    expect(languageIntelligenceApi.completion).toHaveBeenCalledTimes(2)
     expect(next?.suggestions[0].insertText).toBe('../notes/target.md')
-    pending.resolve([fileCompletion])
+    pending.resolve({ isIncomplete: false, items: [fileCompletion] })
     expect(await previous).toEqual({ suggestions: [] })
   })
 
   it('discards superseded requests even if content and path have not changed', async () => {
-    const pending = deferred<Completion[]>()
-    vi.mocked(markdownLanguageApi.getCompletions).mockReturnValueOnce(pending.promise)
+    const pending = deferred<CompletionList>()
+    vi.mocked(languageIntelligenceApi.completion).mockReturnValueOnce(pending.promise)
     const previous = request()
+    await Promise.resolve()
+    await Promise.resolve()
     expect((await request())?.suggestions).toHaveLength(1)
-    pending.resolve([fileCompletion])
+    pending.resolve({ isIncomplete: false, items: [fileCompletion] })
     expect(await previous).toEqual({ suggestions: [] })
   })
 
@@ -231,12 +264,20 @@ describe('Markdown source completion lifecycle', () => {
     if (target === 'model') state.disposed = true
     else registration.dispose()
     expect(await request()).toEqual({ suggestions: [] })
-    expect(markdownLanguageApi.getCompletions).not.toHaveBeenCalled()
+    expect(languageIntelligenceApi.completion).not.toHaveBeenCalled()
   })
 
   it('keeps the existing fallback for a current request when IPC fails', async () => {
-    vi.mocked(markdownLanguageApi.getCompletions).mockRejectedValue(new Error('unavailable'))
-    vi.mocked(getMarkdownCompletions).mockReturnValue([fileCompletion])
+    vi.mocked(languageIntelligenceApi.completion).mockRejectedValue(new Error('unavailable'))
+    vi.mocked(getMarkdownCompletions).mockReturnValue([
+      {
+        label: 'Target',
+        kind: 'file',
+        insertText: '../notes/target.md',
+        detail: 'notes/target.md',
+        replacementStartColumn: 10,
+      },
+    ])
     expect((await request())?.suggestions[0].insertText).toBe('../notes/target.md')
     expect(getMarkdownCompletions).toHaveBeenCalledWith({
       ...context,
@@ -247,9 +288,11 @@ describe('Markdown source completion lifecycle', () => {
   })
 
   it('does not compute fallback for a document that changed during IPC', async () => {
-    const pending = deferred<Completion[]>()
-    vi.mocked(markdownLanguageApi.getCompletions).mockReturnValue(pending.promise)
+    const pending = deferred<CompletionList>()
+    vi.mocked(languageIntelligenceApi.completion).mockReturnValue(pending.promise)
     const response = request()
+    await Promise.resolve()
+    await Promise.resolve()
     state.version += 1
     pending.reject(new Error('unavailable'))
     expect(await response).toEqual({ suggestions: [] })

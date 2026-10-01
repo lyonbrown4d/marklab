@@ -98,7 +98,6 @@ vi.mock('@/i18n/useI18n', () => ({
 
 vi.mock('@/services/markdownLanguageApi', () => ({
   markdownLanguageApi: {
-    getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDocumentSymbols: vi.fn(() => Promise.resolve([])),
     getDefinition: vi.fn(() => Promise.resolve(null)),
@@ -123,6 +122,9 @@ vi.mock('@monaco-editor/react', () => ({
   }) => {
     monacoEditor.getModel = vi.fn(() => ({
       getValue: () => value,
+      getVersionId: () => 1,
+      isDisposed: () => false,
+      uri: { toString: () => 'file:///notes/current.md' },
     }))
     monacoEditor.onDidChangeModelContent = vi.fn(() => ({ dispose: vi.fn() }))
     onMount?.(monacoEditor, monaco)

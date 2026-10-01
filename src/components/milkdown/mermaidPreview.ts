@@ -2,8 +2,11 @@ import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirro
 import { languages as codemirrorLanguages } from '@codemirror/language-data'
 import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
 import escape from 'lodash-es/escape'
+import { createEmbeddedLanguageClient } from '@/components/milkdown/embeddedLanguageClient'
+import { createEmbeddedLanguageCodeMirrorExtensions } from '@/components/milkdown/embeddedLanguageCodeMirror'
 import i18n from '@/i18n/setup'
 import { isDarkThemeMode, isThemeMode } from '@/logic/themes'
+import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 const MERMAID_ALIASES = new Set(['mermaid', 'mmd'])
 let mermaidRenderSequence = 0
@@ -19,12 +22,17 @@ export const refreshMermaidPreviews = (root: HTMLElement) => {
 
 const mermaidSupport = new LanguageSupport(
   StreamLanguage.define({
+    name: 'mermaid',
     token: (stream) => {
       stream.skipToEnd()
       return null
     },
   }),
 )
+
+const mermaidIntelligenceExtensions = createEmbeddedLanguageCodeMirrorExtensions({
+  client: createEmbeddedLanguageClient(languageIntelligenceApi),
+})
 
 const mermaidLanguage = LanguageDescription.of({
   name: 'Mermaid',
@@ -179,12 +187,14 @@ const renderMermaidPreview = (
 
 export const configureMermaidPreview = (prev: CodeBlockConfig): CodeBlockConfig => ({
   ...prev,
+  extensions: [...(prev.extensions ?? []), ...mermaidIntelligenceExtensions],
   languages: ensureMermaidLanguage(prev.languages),
   renderPreview: (language, content, applyPreview) =>
     renderMermaidPreview(prev.renderPreview, language, content, applyPreview),
 })
 
 export const mermaidCodeBlockConfig = {
+  extensions: mermaidIntelligenceExtensions,
   languages: ensureMermaidLanguage(codemirrorLanguages),
   renderPreview: (language, content, applyPreview) =>
     renderMermaidPreview(() => null, language, content, applyPreview),

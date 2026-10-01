@@ -15,6 +15,7 @@ import {
   type GitTerminalIpcBridge,
 } from '@electron/ipc/gitTerminalCommands.js'
 import { registerLifecycleIpc } from '@electron/ipc/lifecycle.js'
+import { registerLanguageIntelligenceIpc } from '@electron/ipc/languageIntelligence.js'
 import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
 import { registerPlatformIpc } from '@electron/ipc/platform.js'
 import { registerSettingsIpc } from '@electron/ipc/settings.js'
@@ -35,6 +36,7 @@ import type { GitService } from '@electron/services/git/service.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
+import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
 import { getPlatformInfo } from '@electron/services/platform.js'
@@ -56,6 +58,7 @@ export type NativeIpcDependencies = {
   exportService: ExportService
   gitService: GitService
   knowledgeEngineService: KnowledgeEngineService
+  languageIntelligenceService: LanguageIntelligenceServiceContract
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
   localAiService: LocalAiServiceContract
@@ -82,6 +85,12 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerClipboardIpc(dependencies.ipcMain, dependencies.clipboard)
   registerDialogIpc(dependencies.ipcMain, dependencies.dialog, dependencies.BrowserWindow)
   registerLifecycleIpc(dependencies.ipcMain, dependencies.getLaunchInfo)
+  registerLanguageIntelligenceIpc(
+    dependencies.ipcMain,
+    dependencies.languageIntelligenceService,
+    dependencies.workspaceRegistry,
+    logger.child('language-intelligence'),
+  )
   registerPlatformIpc(dependencies.ipcMain)
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)
   registerShellIpc(dependencies.ipcMain, dependencies.shell)

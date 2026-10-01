@@ -77,7 +77,6 @@ vi.mock('@/i18n/useI18n', () => ({
 vi.mock('@/services/markdownLanguageApi', () => ({
   markdownLanguageApi: {
     getCodeActions: vi.fn(() => Promise.resolve([])),
-    getCompletions: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDefinition: vi.fn(() => Promise.resolve(null)),
     getDiagnostics: vi.fn(() => Promise.reject(new Error('desktop unavailable'))),
     getDocumentSymbols: vi.fn(() => Promise.resolve([])),
@@ -103,7 +102,12 @@ vi.mock('@monaco-editor/react', () => {
       valueRef.current = value
     }, [value])
     useEffect(() => {
-      monacoEditor.getModel = vi.fn(() => ({ getValue: () => valueRef.current }))
+      monacoEditor.getModel = vi.fn(() => ({
+        getValue: () => valueRef.current,
+        getVersionId: () => 1,
+        isDisposed: () => false,
+        uri: { toString: () => 'file:///source.md' },
+      }))
       mountRef.current?.(monacoEditor, monaco)
     }, [])
     return <textarea aria-label="markdown source" value={value} readOnly />

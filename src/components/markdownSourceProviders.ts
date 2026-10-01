@@ -1,5 +1,6 @@
 import type { editor as MonacoEditor } from 'monaco-editor'
 import type { FileViewKind } from '@/store/appTypes'
+import { registerMarkdownSourceDocumentSession } from '@/components/markdownSourceDocumentSession'
 import { registerMarkdownCodeActionProvider } from '@/components/markdownSourceCodeActions'
 import {
   registerMarkdownCompletionProvider,
@@ -12,7 +13,9 @@ import { registerMarkdownLinkDecorations } from '@/components/markdownSourceLink
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
 import { registerMarkdownSourceInlineCompletion } from '@/components/markdownSourceInlineCompletion'
+import { registerMarkdownSourceLanguageDiagnostics } from '@/components/markdownSourceLanguageDiagnostics'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
+import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type MonacoModule = typeof import('monaco-editor')
@@ -31,6 +34,11 @@ export const registerMarkdownSourceProviders = ({
   onOpenFileView?: (path: string, view: FileViewKind) => void
   scheduleDiagnostics: () => void
 }): Disposable => {
+  const documentSession = registerMarkdownSourceDocumentSession({
+    client: languageIntelligenceApi,
+    editor,
+    getPath: () => getContext().activePath,
+  })
   const inlineCompletionDisposable =
     typeof monaco.languages.registerInlineCompletionsProvider === 'function'
       ? registerMarkdownSourceInlineCompletion({
@@ -43,7 +51,14 @@ export const registerMarkdownSourceProviders = ({
         })
       : { dispose: () => undefined }
   const disposables: Disposable[] = [
-    registerMarkdownCompletionProvider(monaco, getContext),
+    documentSession,
+    registerMarkdownCompletionProvider(monaco, getContext, documentSession),
+    registerMarkdownSourceLanguageDiagnostics({
+      client: languageIntelligenceApi,
+      documentSession,
+      editor,
+      monaco,
+    }),
     inlineCompletionDisposable,
     registerMarkdownDocumentSymbolProvider(monaco, getContext),
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),

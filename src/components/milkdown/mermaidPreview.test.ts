@@ -1,7 +1,9 @@
 import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
+import type { Extension } from '@codemirror/state'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   configureMermaidPreview,
+  mermaidCodeBlockConfig,
   refreshMermaidPreviews,
 } from '@/components/milkdown/mermaidPreview'
 
@@ -73,6 +75,19 @@ afterEach(() => {
 })
 
 describe('Mermaid preview lifecycle', () => {
+  it('adds embedded intelligence extensions while preserving existing CodeMirror extensions', () => {
+    const existingExtension: Extension = []
+    const configured = configureMermaidPreview({
+      extensions: [existingExtension],
+      languages: [],
+      renderPreview: vi.fn(),
+    } as unknown as CodeBlockConfig)
+
+    expect(configured.extensions[0]).toBe(existingExtension)
+    expect(configured.extensions.length).toBeGreaterThan(1)
+    expect(mermaidCodeBlockConfig.extensions?.length).toBeGreaterThan(0)
+  })
+
   it('uses the localized loading placeholder and observes its mounted copy', () => {
     const { host, apply } = createHost()
     renderPreview('mermaid', 'graph TD\n A --> B', apply)

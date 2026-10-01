@@ -25,6 +25,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     exportService: container.cradle.exportService,
     gitService: container.cradle.gitService,
     knowledgeEngineService: container.cradle.knowledgeEngineService,
+    languageIntelligenceService: container.cradle.languageIntelligenceService,
     localHistoryService: container.cradle.localHistoryService,
     localAiService: container.cradle.localAiService,
     getLaunchInfo,
