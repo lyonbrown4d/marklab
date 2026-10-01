@@ -5,6 +5,8 @@ import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
 import { AppStatusBarProvider } from '@/components/EditorStatusBar'
 import ExportStatusOverlay from '@/components/ExportStatusOverlay'
 import AppStatusBar from '@/components/AppStatusBar'
+import { AppStatusBarDock } from '@/components/AppStatusBarDock'
+import { AppStatusBarEdgeHandle } from '@/components/AppStatusBarEdgeHandle'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
 import { useLatest } from 'ahooks'
 import { useKeyboardShortcuts } from '@/app/useKeyboardShortcuts'
@@ -47,8 +49,9 @@ const AppLayout = () => {
     current.setEditorReadOnlyMode(nextReadOnly)
     if (nextReadOnly && current.activePath) current.setViewMode('wysiwyg')
   }, [stateRef])
-  const hideStatusBar = useCallback(() => {
-    stateRef.current.setShowEditorStatusBar(false)
+  const toggleStatusBar = useCallback(() => {
+    const current = stateRef.current
+    current.setShowEditorStatusBar(!current.showEditorStatusBar)
   }, [stateRef])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
   const {
@@ -260,7 +263,7 @@ const AppLayout = () => {
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
       />
-      {state.showEditorStatusBar && !immersiveZenMode ? (
+      <AppStatusBarDock open={state.showEditorStatusBar && !immersiveZenMode}>
         <AppStatusBar
           rootKind={state.rootKind}
           rootPath={state.rootPath}
@@ -275,11 +278,13 @@ const AppLayout = () => {
           readOnlyMode={state.editorReadOnlyMode}
           onToggleTerminal={toggleTerminalArea}
           onToggleReadOnly={toggleReadOnly}
-          onHideStatusBar={hideStatusBar}
           onRestoreSession={state.restoreSession}
           restoreStatusMessage={state.restoreStatusMessage}
           restoreStatusBusy={state.isRestoringSession}
         />
+      </AppStatusBarDock>
+      {!immersiveZenMode ? (
+        <AppStatusBarEdgeHandle open={state.showEditorStatusBar} onToggle={toggleStatusBar} />
       ) : null}
     </AppStatusBarProvider>
   )

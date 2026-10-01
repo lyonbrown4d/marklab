@@ -28,7 +28,7 @@ export const AppStatusBarProvider = ({
 
   return (
     <EditorStatusContext.Provider value={context}>
-      <div className="app-shell flex h-full flex-col">{children}</div>
+      <div className="app-shell relative flex h-full flex-col">{children}</div>
     </EditorStatusContext.Provider>
   )
 }

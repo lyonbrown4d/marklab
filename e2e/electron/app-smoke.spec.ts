@@ -124,4 +124,30 @@ test.describe('Electron desktop shell', () => {
       path: path.join(captureDirectory, 'unified-titlebar-menu.png'),
     })
   })
+
+  test('toggles the bottom status bar from a click-only edge handle', async () => {
+    const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
+    const hideHandle = page.getByRole('button', { name: /Hide status bar|隐藏状态栏/i })
+
+    await expect(statusBar).toBeVisible()
+    await expect(hideHandle).toHaveAttribute('aria-expanded', 'true')
+    await hideHandle.click()
+    await expect(statusBar).toBeHidden()
+
+    const showHandle = page.getByRole('button', { name: /Show status bar|显示状态栏/i })
+    await expect(showHandle).toHaveAttribute('aria-expanded', 'false')
+    await showHandle.hover()
+    await page.waitForTimeout(350)
+    await expect(statusBar).toBeHidden()
+
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'collapsed-status-bar-handle.png'),
+    })
+
+    await showHandle.click()
+    await expect(statusBar).toBeVisible()
+  })
 })

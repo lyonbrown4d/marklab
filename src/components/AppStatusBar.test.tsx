@@ -49,7 +49,6 @@ const createProps = (overrides: Partial<AppStatusBarProps> = {}): AppStatusBarPr
   readOnlyMode: false,
   onToggleTerminal: vi.fn(),
   onToggleReadOnly: vi.fn(),
-  onHideStatusBar: vi.fn(),
   onRestoreSession: vi.fn(),
   restoreStatusMessage: null,
   restoreStatusBusy: false,
@@ -83,8 +82,7 @@ describe('AppStatusBar', () => {
   it('exposes icon-only status bar actions with accessible names', () => {
     const onToggleTerminal = vi.fn()
     const onToggleReadOnly = vi.fn()
-    const onHideStatusBar = vi.fn()
-    renderStatusBar(createProps({ onHideStatusBar, onToggleReadOnly, onToggleTerminal }))
+    renderStatusBar(createProps({ onToggleReadOnly, onToggleTerminal }))
 
     const statusBar = screen.getByRole('contentinfo', { name: 'Status bar' })
 
@@ -100,11 +98,9 @@ describe('AppStatusBar', () => {
     const readOnlyButton = within(statusBar).getByRole('button', { name: 'Toggle Read-only' })
     expect(readOnlyButton).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(readOnlyButton)
-    fireEvent.click(within(statusBar).getByRole('button', { name: 'Hide status bar' }))
 
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
     expect(onToggleReadOnly).toHaveBeenCalledTimes(1)
-    expect(onHideStatusBar).toHaveBeenCalledTimes(1)
   })
 
   it('marks read-only browsing as active in the bottom status bar', () => {

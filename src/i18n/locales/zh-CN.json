@@ -760,6 +760,7 @@
   "statusBar.noWorkspace": "未打开工作区",
   "statusBar.label": "状态栏",
   "statusBar.hide": "隐藏状态栏",
+  "statusBar.show": "显示状态栏",
   "statusBar.singleFile": "单文件",
   "statusBar.files": "{{count}} 个文件",
   "statusBar.tabs": "{{count}} 个标签",

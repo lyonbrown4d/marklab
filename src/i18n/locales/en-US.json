@@ -760,6 +760,7 @@
   "statusBar.noWorkspace": "No workspace",
   "statusBar.label": "Status bar",
   "statusBar.hide": "Hide status bar",
+  "statusBar.show": "Show status bar",
   "statusBar.singleFile": "Single file",
   "statusBar.files": "{{count}} files",
   "statusBar.tabs": "{{count}} tabs",
