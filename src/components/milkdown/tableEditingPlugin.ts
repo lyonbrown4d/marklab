@@ -11,6 +11,9 @@ import {
   setCellAttr,
 } from '@milkdown/kit/prose/tables'
 import i18n from '@/i18n/setup'
+import { createMarkdownTableToolbarScheduler } from '@/components/milkdown/tableToolbarScheduler'
+
+export { createMarkdownTableToolbarScheduler } from '@/components/milkdown/tableToolbarScheduler'
 
 export type MarkdownTableAction =
   | 'add-row'
@@ -258,10 +261,11 @@ export const markdownTableEditingPlugin = $prose(
           if (table) toolbar.show(table, selection?.cell)
           else toolbar.hide()
         }
+        const toolbarScheduler = createMarkdownTableToolbarScheduler(updateToolbar)
         const onPointerOver = (event: PointerEvent) => {
           const target = event.target
           hoveredTable = target instanceof Element ? target.closest('table') : null
-          updateToolbar()
+          toolbarScheduler.schedule()
         }
         const onPointerOut = (event: PointerEvent) => {
           if (
@@ -270,22 +274,23 @@ export const markdownTableEditingPlugin = $prose(
             return
           }
           hoveredTable = null
-          updateToolbar()
+          toolbarScheduler.schedule()
         }
         view.dom.addEventListener('pointerover', onPointerOver)
         view.dom.addEventListener('pointerout', onPointerOut)
         toolbar.element.addEventListener('pointerout', onPointerOut)
-        updateToolbar()
+        toolbarScheduler.schedule()
 
         return {
           destroy: () => {
+            toolbarScheduler.cancel()
             view.dom.removeEventListener('pointerover', onPointerOver)
             view.dom.removeEventListener('pointerout', onPointerOut)
             toolbar.element.removeEventListener('pointerout', onPointerOut)
             parent?.classList.remove('marklab-table-toolbar-host')
             toolbar.destroy()
           },
-          update: updateToolbar,
+          update: toolbarScheduler.schedule,
         }
       },
     }),

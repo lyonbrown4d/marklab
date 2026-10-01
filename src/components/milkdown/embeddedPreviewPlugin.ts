@@ -2,11 +2,17 @@ import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { linkSchema } from '@milkdown/kit/preset/commonmark'
 import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
-import { Plugin, PluginKey, type EditorState } from '@milkdown/kit/prose/state'
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet, type EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import { embeddedPreviewKindForTarget } from '@/components/previews/embeddedPreviewSource'
+import {
+  changedTextblockRanges,
+  type TextblockRange,
+} from '@/components/milkdown/embeddedPreviewRanges'
+
+export { changedTextblockRanges } from '@/components/milkdown/embeddedPreviewRanges'
 
 type EmbeddedPreviewPluginOptions = {
   getDocumentPath: () => string | null
@@ -43,16 +49,18 @@ const readMarkAttr = (value: unknown) => (typeof value === 'string' ? value : ''
 const embeddedPreviewWidgetKeyBase = (
   link: EmbeddedLinkPreview,
   index: number,
+  position: number,
   documentPath: string | null,
-) => `${documentPath ?? ''}\u0000${index}\u0000${link.href}\u0000${link.title}`
+) => `${documentPath ?? ''}\u0000${position}\u0000${index}\u0000${link.href}\u0000${link.title}`
 
 const nextEmbeddedPreviewWidgetKey = (
   keyCounts: Map<string, number>,
   link: EmbeddedLinkPreview,
   index: number,
+  position: number,
   documentPath: string | null,
 ) => {
-  const baseKey = embeddedPreviewWidgetKeyBase(link, index, documentPath)
+  const baseKey = embeddedPreviewWidgetKeyBase(link, index, position, documentPath)
   const count = keyCounts.get(baseKey) ?? 0
   keyCounts.set(baseKey, count + 1)
 
@@ -152,16 +160,17 @@ const createEmbeddedPreviewWidget = (link: EmbeddedLinkPreview, documentPath: st
   return host
 }
 
-const buildEmbeddedPreviewDecorations = (
+const buildEmbeddedPreviewDecorationList = (
   state: EditorState,
   linkType: ReturnType<typeof linkSchema.type>,
   options: EmbeddedPreviewPluginOptions,
+  ranges?: readonly TextblockRange[],
 ) => {
   const decorations: Decoration[] = []
   const documentPath = options.getDocumentPath()
   const widgetKeyCounts = new Map<string, number>()
 
-  state.doc.descendants((node, pos) => {
+  const visitTextblock = (node: ProseMirrorNode, pos: number) => {
     if (!node.isTextblock) return true
 
     const links = embeddedLinksInNode(node, linkType)
@@ -176,7 +185,8 @@ const buildEmbeddedPreviewDecorations = (
               widgetRoots.delete(node as HTMLElement)
             },
             ignoreSelection: true,
-            key: nextEmbeddedPreviewWidgetKey(widgetKeyCounts, link, index, documentPath),
+            key: nextEmbeddedPreviewWidgetKey(widgetKeyCounts, link, index, pos, documentPath),
+            marklabEmbeddedPreview: true,
             side: 1,
           },
         ),
@@ -184,9 +194,51 @@ const buildEmbeddedPreviewDecorations = (
     })
 
     return false
-  })
+  }
 
-  return DecorationSet.create(state.doc, decorations)
+  if (ranges) {
+    ranges.forEach(({ from, to }) => {
+      state.doc.nodesBetween(from, Math.min(to, state.doc.content.size), visitTextblock)
+    })
+  } else {
+    state.doc.descendants(visitTextblock)
+  }
+
+  return decorations
+}
+
+const buildEmbeddedPreviewDecorations = (
+  state: EditorState,
+  linkType: ReturnType<typeof linkSchema.type>,
+  options: EmbeddedPreviewPluginOptions,
+) => {
+  return DecorationSet.create(
+    state.doc,
+    buildEmbeddedPreviewDecorationList(state, linkType, options),
+  )
+}
+
+const updateEmbeddedPreviewDecorations = (
+  transaction: Transaction,
+  value: DecorationSet,
+  newState: EditorState,
+  linkType: ReturnType<typeof linkSchema.type>,
+  options: EmbeddedPreviewPluginOptions,
+) => {
+  const mapped = value.map(transaction.mapping, transaction.doc)
+  const ranges = changedTextblockRanges(transaction)
+  if (ranges.length === 0) return buildEmbeddedPreviewDecorations(newState, linkType, options)
+
+  const removed = ranges.flatMap(({ from, to }) =>
+    mapped.find(from, Math.min(to + 1, transaction.doc.content.size), (spec) =>
+      Boolean(spec.marklabEmbeddedPreview),
+    ),
+  )
+  const retained = mapped.remove(removed)
+  return retained.add(
+    transaction.doc,
+    buildEmbeddedPreviewDecorationList(newState, linkType, options, ranges),
+  )
 }
 
 const createEmbeddedPreviewPluginView = (
@@ -219,8 +271,11 @@ export const embeddedPreviewPlugin = (options: EmbeddedPreviewPluginOptions) =>
       state: {
         init: (_, state) => buildEmbeddedPreviewDecorations(state, linkType, options),
         apply: (tr, value, _oldState, newState) => {
-          if (tr.docChanged || tr.getMeta(embeddedPreviewPluginKey)?.refresh) {
+          if (tr.getMeta(embeddedPreviewPluginKey)?.refresh) {
             return buildEmbeddedPreviewDecorations(newState, linkType, options)
+          }
+          if (tr.docChanged) {
+            return updateEmbeddedPreviewDecorations(tr, value, newState, linkType, options)
           }
           return value.map(tr.mapping, tr.doc)
         },

@@ -197,6 +197,24 @@ test.describe('Electron desktop shell', () => {
     await expect(editableToggle).toHaveAttribute('aria-pressed', 'false')
   })
 
+  test('updates document statistics after normal rich-text typing', async () => {
+    const editor = page.locator('.milkdown .ProseMirror').first()
+    const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
+    await expect(editor).toBeVisible({ timeout: 10_000 })
+
+    await editor.click()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.insertText('one two')
+    await page.keyboard.press('Enter')
+    await page.keyboard.insertText('three')
+
+    await expect(editor).toContainText('one two')
+    await expect(editor).toContainText('three')
+    await expect(statusBar).toContainText(/[1-9]\d*\s+(Lines|行)/i, { timeout: 5_000 })
+    await expect(statusBar).toContainText(/3\s+(Words|词)/i)
+    await expect(statusBar).toContainText(/11\s+(Characters|字符)/i)
+  })
+
   test('releases the canvas after a hover-preview sidebar closes', async () => {
     await page.setViewportSize({ width: 1280, height: 900 })
     const hoverZone = page.getByTestId('sidebar-hover-zone')

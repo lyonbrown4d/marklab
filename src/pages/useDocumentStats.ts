@@ -21,11 +21,31 @@ const getDocumentStats = (value: string): DocumentStats => {
     characters: value.replace(/\s/g, '').length,
   }
 }
-const scheduleIdleStatsUpdate = (callback: () => void) => {
+const STATS_UPDATE_DELAY_MS = 700
+
+export const scheduleIdleStatsUpdate = (callback: () => void) => {
   const idleWindow = window as IdleWindow
   if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
-    const handle = idleWindow.requestIdleCallback(callback, { timeout: 700 })
-    return () => idleWindow.cancelIdleCallback?.(handle)
+    let completed = false
+    let idleHandle: number | null = null
+    let fallbackHandle: number | null = null
+    const cancel = () => {
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle)
+      if (fallbackHandle !== null) window.clearTimeout(fallbackHandle)
+    }
+    const run = () => {
+      if (completed) return
+      completed = true
+      cancel()
+      callback()
+    }
+    idleHandle = idleWindow.requestIdleCallback(run, { timeout: STATS_UPDATE_DELAY_MS })
+    if (completed) idleWindow.cancelIdleCallback(idleHandle)
+    else fallbackHandle = window.setTimeout(run, STATS_UPDATE_DELAY_MS)
+    return () => {
+      completed = true
+      cancel()
+    }
   }
   const timer = window.setTimeout(callback, 120)
   return () => window.clearTimeout(timer)

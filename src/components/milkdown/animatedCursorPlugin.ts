@@ -1,4 +1,4 @@
-import { Plugin } from '@milkdown/kit/prose/state'
+import { Plugin, type EditorState } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
@@ -19,7 +19,7 @@ const getScrollHost = (view: EditorView) =>
   view.dom.closest<HTMLElement>('.milkdown') ??
   view.dom.closest<HTMLElement>('.editor-scroll-viewport')
 
-const createAnimatedCursorView = (initialView: EditorView) => {
+export const createAnimatedCursorView = (initialView: EditorView) => {
   if (prefersReducedMotion()) {
     return {
       update: () => {},
@@ -81,8 +81,15 @@ const createAnimatedCursorView = (initialView: EditorView) => {
   scheduleUpdate()
 
   return {
-    update(nextView: EditorView) {
+    update(nextView: EditorView, previousState?: EditorState) {
       view = nextView
+      if (
+        previousState &&
+        view.state.doc.eq(previousState.doc) &&
+        view.state.selection.eq(previousState.selection)
+      ) {
+        return
+      }
       scheduleUpdate()
     },
     destroy() {

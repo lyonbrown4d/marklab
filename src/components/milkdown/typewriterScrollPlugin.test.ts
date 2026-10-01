@@ -132,4 +132,19 @@ describe('typewriterScrollPlugin', () => {
     expect(nextView.coordsAtPos).not.toHaveBeenCalled()
     expect(viewport.scrollTo).not.toHaveBeenCalled()
   })
+
+  it('does not schedule animation work when typewriter mode is disabled', () => {
+    delete document.documentElement.dataset.immersiveTypewriter
+    const requestAnimationFrame = vi.fn(() => 1)
+    window.requestAnimationFrame = requestAnimationFrame
+    const { editor } = createEditorDom()
+    const initialView = createView(editor, { state: createState(1) })
+    const nextView = createView(editor, { state: createState(2) })
+    const pluginView = createTypewriterScrollView(asEditorView(initialView))
+
+    pluginView.update(asEditorView(nextView))
+
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+    expect(nextView.coordsAtPos).not.toHaveBeenCalled()
+  })
 })

@@ -43,17 +43,17 @@ describe('useMarkdownPlaygroundController persistence ordering', () => {
       const { rerender } = render(<Harness onChange={onChange} value={original} />)
       await act(async () => {})
       const crepe = crepeMock.latestInstance()!
-      const listener = crepeMock.latestMarkdownUpdated()!
+      const listener = crepeMock.latestDocumentChange()!
 
       // Milkdown has reported the slash text; the controller has not emitted it yet.
       act(() => {
         crepe.markdown = slash
-        listener({}, slash)
+        listener({ markdown: slash })
       })
       // Model the native insertion while Milkdown's next markdown notification is pending.
       if (insertBeforeEcho) crepe.markdown = newer
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(200)
+        await vi.advanceTimersByTimeAsync(500)
       })
       expect(onChange).toHaveBeenLastCalledWith(slash)
 
@@ -63,8 +63,8 @@ describe('useMarkdownPlaygroundController persistence ordering', () => {
       expect(crepe.getMarkdown()).toBe(newer)
 
       await act(async () => {
-        listener({}, newer)
-        await vi.advanceTimersByTimeAsync(200)
+        listener({ markdown: newer })
+        await vi.advanceTimersByTimeAsync(500)
       })
 
       expect(crepeMock.latestInstance()).toBe(crepe)

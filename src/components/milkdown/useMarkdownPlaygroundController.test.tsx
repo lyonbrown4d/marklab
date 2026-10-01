@@ -1,4 +1,5 @@
-import { act, render } from '@testing-library/react'
+import { useState } from 'react'
+import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   codeBlockTheme,
@@ -7,6 +8,20 @@ import {
   renderReadyHarness,
   shortcutBridgeMock,
 } from '@/components/milkdown/markdownPlaygroundControllerTestHarness'
+import { useDocumentStats } from '@/pages/useDocumentStats'
+
+const EditorStatsHarness = () => {
+  const [value, setValue] = useState('')
+  const stats = useDocumentStats(value)
+  return (
+    <>
+      <Harness onChange={setValue} value={value} />
+      <output data-testid="stats">
+        {stats.lines}:{stats.words}:{stats.characters}
+      </output>
+    </>
+  )
+}
 
 describe('useMarkdownPlaygroundController', () => {
   it('installs the shortcut bridge on the actual playground instance with user bindings', async () => {
@@ -119,7 +134,7 @@ describe('useMarkdownPlaygroundController', () => {
 
     await act(async () => {
       listener?.({}, '* A\n\n* B')
-      await vi.advanceTimersByTimeAsync(250)
+      await vi.advanceTimersByTimeAsync(500)
     })
 
     expect(onChange).not.toHaveBeenCalled()
@@ -131,10 +146,49 @@ describe('useMarkdownPlaygroundController', () => {
 
     await act(async () => {
       listener?.({}, '* A\n\n* B\n\nNew line')
-      await vi.advanceTimersByTimeAsync(250)
+      await vi.advanceTimersByTimeAsync(500)
     })
 
     expect(onChange).toHaveBeenCalledWith('* A\n\n* B\n\nNew line')
+  })
+
+  it('defers full markdown serialization until the renderer is idle', async () => {
+    const onChange = vi.fn()
+    render(<Harness onChange={onChange} value="A" />)
+    await act(async () => {})
+    const listener = crepeMock.latestDocumentChange()
+
+    expect(listener).toBeTypeOf('function')
+    expect(crepeMock.latestMarkdownUpdated()).toBeNull()
+    act(() => listener?.({ markdown: 'B' }))
+    expect(crepeMock.serializer).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(279)
+    })
+    expect(crepeMock.serializer).not.toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(201)
+    })
+
+    expect(crepeMock.serializer).toHaveBeenCalledOnce()
+    expect(onChange).toHaveBeenCalledWith('B')
+  })
+
+  it('updates document statistics after a pasted document snapshot is committed', async () => {
+    render(<EditorStatsHarness />)
+    await act(async () => {})
+    const listener = crepeMock.latestDocumentChange()
+
+    act(() => listener?.({ markdown: 'one two\nthree' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200)
+    })
+
+    expect(screen.getByTestId('stats')).toHaveTextContent('2:3:11')
   })
 
   it('does not save markdown that only changed because a replacement document was serialized', async () => {
@@ -148,7 +202,7 @@ describe('useMarkdownPlaygroundController', () => {
       await Promise.resolve()
     })
 
-    const listener = crepeMock.latestMarkdownUpdated()
+    const listener = crepeMock.latestDocumentChange()
 
     await act(async () => {
       rerender(<Harness activePath="docs/second.md" onChange={onChange} value="- C\n- D" />)
@@ -158,8 +212,8 @@ describe('useMarkdownPlaygroundController', () => {
     const serializedReplacement = crepeMock.latestInstance()?.getMarkdown() ?? ''
 
     await act(async () => {
-      listener?.({}, serializedReplacement)
-      await vi.advanceTimersByTimeAsync(250)
+      listener?.({ markdown: serializedReplacement })
+      await vi.advanceTimersByTimeAsync(500)
     })
 
     expect(onChange).not.toHaveBeenCalled()

@@ -15,6 +15,25 @@ vi.mock('@/components/milkdown/useMarkdownPlaygroundShortcuts', () => ({
 }))
 
 type MarkdownUpdatedListener = (ctx: unknown, markdown: string) => void
+type DocumentChangeListener = (document: { markdown: string }) => void
+
+const markdownDocumentChangeMock = vi.hoisted(() => {
+  let listener: DocumentChangeListener | null = null
+  return {
+    latest: () => listener,
+    plugin: (nextListener: DocumentChangeListener) => {
+      listener = nextListener
+      return 'markdown-document-change-plugin'
+    },
+    reset: () => {
+      listener = null
+    },
+  }
+})
+
+vi.mock('@/components/milkdown/markdownDocumentChangePlugin', () => ({
+  markdownDocumentChangePlugin: markdownDocumentChangeMock.plugin,
+}))
 
 const codeBlockTheme = vi.hoisted(() => ({ extension: [], setDarkMode: vi.fn() }))
 vi.mock('@/components/milkdown/markdownCodeBlockTheme', () => ({
@@ -25,6 +44,7 @@ const crepeMock = vi.hoisted(() => {
   const instances: FakeCrepe[] = []
   let latestMarkdownUpdated: MarkdownUpdatedListener | null = null
   let editorViewOptions: Record<string, unknown> = {}
+  const serializer = vi.fn((document: { markdown: string }) => document.markdown)
 
   class FakeCrepe {
     static Feature = {
@@ -51,6 +71,7 @@ const crepeMock = vi.hoisted(() => {
           }
           return action({
             get: (key: unknown) => {
+              if (String(key).includes('serializerCtx')) return serializer
               if (String(key).includes('parserCtx')) {
                 return (markdown: string) => {
                   this.markdown = serializeMarkdown(markdown)
@@ -66,7 +87,7 @@ const crepeMock = vi.hoisted(() => {
       config: vi.fn(
         (
           configure: (ctx: {
-            get: () => unknown
+            get: (key: unknown) => unknown
             update: (
               key: unknown,
               updater: (value: Record<string, unknown>) => Record<string, unknown>,
@@ -74,11 +95,14 @@ const crepeMock = vi.hoisted(() => {
           }) => void,
         ) => {
           configure({
-            get: () => ({
-              markdownUpdated: (listener: MarkdownUpdatedListener) => {
-                latestMarkdownUpdated = listener
-              },
-            }),
+            get: (key: unknown) => {
+              if (String(key).includes('serializerCtx')) return serializer
+              return {
+                markdownUpdated: (listener: MarkdownUpdatedListener) => {
+                  latestMarkdownUpdated = listener
+                },
+              }
+            },
             update: (_key, updater) => {
               editorViewOptions = updater(editorViewOptions)
             },
@@ -106,12 +130,16 @@ const crepeMock = vi.hoisted(() => {
   return {
     FakeCrepe,
     latestInstance: () => instances.at(-1) ?? null,
+    latestDocumentChange: () => markdownDocumentChangeMock.latest(),
     latestMarkdownUpdated: () => latestMarkdownUpdated,
+    serializer,
     editorViewOptions: () => editorViewOptions,
     reset: () => {
       instances.length = 0
       latestMarkdownUpdated = null
       editorViewOptions = {}
+      markdownDocumentChangeMock.reset()
+      serializer.mockClear()
     },
   }
 })
@@ -126,6 +154,7 @@ vi.mock('@milkdown/kit/core', () => ({
   editorViewCtx: Symbol('editorViewCtx'),
   editorViewOptionsCtx: Symbol('editorViewOptionsCtx'),
   parserCtx: Symbol('parserCtx'),
+  serializerCtx: Symbol('serializerCtx'),
 }))
 
 vi.mock('@milkdown/kit/plugin/listener', () => ({
@@ -213,5 +242,8 @@ export const renderReadyHarness = async (onChange: (markdown: string) => void, v
     await Promise.resolve()
   })
   expect(crepeMock.latestInstance()).toBeTruthy()
-  return crepeMock.latestMarkdownUpdated()
+  return (ctx: unknown, markdown: string) => {
+    void ctx
+    crepeMock.latestDocumentChange()?.({ markdown })
+  }
 }

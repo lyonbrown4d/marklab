@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import i18n from '@/i18n/setup'
 import {
+  createMarkdownTableToolbarScheduler,
   createMarkdownTableToolbar,
   handleMarkdownTableKeydown,
   isMarkdownTableToolbarPointerTarget,
@@ -46,6 +47,25 @@ const mockRect = (
 }
 
 describe('Markdown table editing', () => {
+  it('coalesces repeated toolbar geometry updates into one animation frame', () => {
+    const callbacks: FrameRequestCallback[] = []
+    const requestFrame = vi.fn((callback: FrameRequestCallback) => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    const update = vi.fn()
+    const scheduler = createMarkdownTableToolbarScheduler(update, requestFrame, vi.fn())
+
+    scheduler.schedule()
+    scheduler.schedule()
+    scheduler.schedule()
+
+    expect(requestFrame).toHaveBeenCalledTimes(1)
+    expect(update).not.toHaveBeenCalled()
+    callbacks.shift()?.(0)
+    expect(update).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the toolbar visible while the pointer crosses between a table and its toolbar', () => {
     const host = document.createElement('div')
     const table = document.createElement('table')

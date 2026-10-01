@@ -98,6 +98,7 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
       const docChanged = previousState ? !view.state.doc.eq(previousState.doc) : false
       if (nextHead === lastHead && !docChanged) return
       lastHead = nextHead
+      if (!isTypewriterEnabled()) return
       scheduleScroll()
     },
     destroy() {

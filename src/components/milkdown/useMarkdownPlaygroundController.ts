@@ -1,7 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
-import { editorViewOptionsCtx } from '@milkdown/kit/core'
-import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
+import { editorViewOptionsCtx, serializerCtx } from '@milkdown/kit/core'
 import { createMarkdownCodeBlockTheme } from '@/components/milkdown/markdownCodeBlockTheme'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
@@ -27,6 +26,7 @@ import { waitForMarkdownEditorMount } from '@/components/markdownEditorPerforman
 import { useMilkdownEditorContextMenu } from '@/components/milkdown/useMilkdownEditorContextMenu'
 import { useMarkdownPlaygroundSync } from '@/components/milkdown/useMarkdownPlaygroundSync'
 import { createMarkdownUpdateThrottle } from '@/components/milkdown/markdownUpdateThrottle'
+import * as snapshotBridge from '@/components/milkdown/markdownSnapshotBridge'
 import { useMarkdownEditorAccess } from '@/components/milkdown/useMarkdownEditorAccess'
 export const useMarkdownPlaygroundController = ({
   activePath,
@@ -48,6 +48,7 @@ export const useMarkdownPlaygroundController = ({
   const latestValuePathRef = useRef(activePath)
   const onChangeRef = useRef(onChange)
   const throttledMarkdownUpdateRef = useRef<ThrottledMarkdownUpdate | null>(null)
+  const markdownSnapshotSchedulerRef = useRef<snapshotBridge.MarkdownSnapshotScheduler | null>(null)
   const onCalendarFileCreateRef = useRef(onCalendarFileCreate)
   const activePathRef = useRef(activePath)
   const activePathListenersRef = useRef(new Set<() => void>())
@@ -82,6 +83,7 @@ export const useMarkdownPlaygroundController = ({
     crepeRef,
     latestValuePathRef,
     latestValueRef,
+    markdownSnapshotSchedulerRef,
     onCalendarFileCreate,
     onCalendarFileCreateRef,
     onChange,
@@ -137,6 +139,7 @@ export const useMarkdownPlaygroundController = ({
       onChangeRef,
     })
     throttledMarkdownUpdateRef.current = updateMarkdown
+    let markdownSnapshotScheduler: snapshotBridge.MarkdownSnapshotScheduler | null = null
 
     setStatus({ phase: 'loading' })
 
@@ -170,26 +173,32 @@ export const useMarkdownPlaygroundController = ({
         },
       },
     })
+    const pendingCrepe = crepe
 
     crepe.editor
       .config((ctx) => {
         ctx.update(editorViewOptionsCtx, (options) => ({ ...options, editable: () => !readOnly }))
-        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-          if (
-            readOnly ||
-            destroyed ||
-            !acceptingMarkdownUpdates ||
-            applyingExternalValueRef.current
-          )
-            return
-          updateMarkdown({
-            documentIdentity: activePathRef.current,
-            markdown,
-            onChange: onChangeRef.current,
-          })
-        })
+        markdownSnapshotScheduler = snapshotBridge.createMarkdownSnapshotBridge(
+          (document) =>
+            pendingCrepe.editor.action((actionCtx) => actionCtx.get(serializerCtx)(document)),
+          {
+            activePathRef,
+            onChangeRef,
+            updateMarkdown,
+          },
+        )
+        markdownSnapshotSchedulerRef.current = markdownSnapshotScheduler
       })
-      .use(listener)
+      .use(
+        snapshotBridge.createMarkdownSnapshotPlugin(
+          () =>
+            !readOnly &&
+            !destroyed &&
+            acceptingMarkdownUpdates &&
+            !applyingExternalValueRef.current,
+          () => markdownSnapshotScheduler,
+        ),
+      )
 
     createMarkdownSafePlugins({
       getDocumentPath,
@@ -200,7 +209,6 @@ export const useMarkdownPlaygroundController = ({
 
     crepe.editor.use(animatedCursor).use(typewriterScroll).use(shortcutPlugin)
 
-    const pendingCrepe = crepe
     void pendingDestroyRef.current
       .then(() => waitForMarkdownEditorMount(latestValueRef.current.length))
       .then(() => {
@@ -253,14 +261,15 @@ export const useMarkdownPlaygroundController = ({
     return () => {
       destroyed = true
       invalidateUrlDialog()
-      updateMarkdown.flush()
-      updateMarkdown.cancel()
+      snapshotBridge.disposeMarkdownSnapshotBridge(
+        markdownSnapshotScheduler,
+        markdownSnapshotSchedulerRef,
+        updateMarkdown,
+        throttledMarkdownUpdateRef,
+      )
       acceptingMarkdownUpdates = false
       if (editorGenerationRef.current === creationGeneration) {
         editorGenerationRef.current += 1
-      }
-      if (throttledMarkdownUpdateRef.current === updateMarkdown) {
-        throttledMarkdownUpdateRef.current = null
       }
       if (crepeRef.current === crepe) {
         crepeRef.current = null
