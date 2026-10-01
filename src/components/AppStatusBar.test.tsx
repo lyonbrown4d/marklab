@@ -14,7 +14,10 @@ vi.mock('@/i18n/useI18n', () => ({
         'statusBar.label': 'Status bar',
         'statusBar.openScm': 'Open Source Control',
         'statusBar.toggleTerminal': 'Toggle Terminal',
-        'statusBar.toggleReadOnly': 'Toggle Read-only',
+        'statusBar.readOnlyEditable': 'Editable',
+        'statusBar.readOnlyLocked': 'Read-only',
+        'statusBar.enableReadOnly': 'Enter read-only browsing',
+        'statusBar.disableReadOnly': 'Resume editing',
         'statusBar.hide': 'Hide status bar',
         'statusBar.unsavedFiles': `${values?.count} unsaved files`,
         'save.saving': 'Saving',
@@ -95,21 +98,40 @@ describe('AppStatusBar', () => {
     expect(terminalButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     fireEvent.click(terminalButton)
-    const readOnlyButton = within(statusBar).getByRole('button', { name: 'Toggle Read-only' })
+    const readOnlyButton = within(statusBar).getByRole('button', {
+      name: 'Enter read-only browsing',
+    })
     expect(readOnlyButton).toHaveAttribute('aria-pressed', 'false')
+    expect(readOnlyButton).toHaveAttribute('data-read-only', 'false')
+    expect(readOnlyButton).toHaveTextContent('Editable')
+    expect(readOnlyButton.querySelector('[data-icon="read-only-unlocked"]')).toBeInTheDocument()
     fireEvent.click(readOnlyButton)
 
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
     expect(onToggleReadOnly).toHaveBeenCalledTimes(1)
   })
 
-  it('marks read-only browsing as active in the bottom status bar', () => {
+  it('makes read-only browsing visibly locked and keeps the escape action available', () => {
     renderStatusBar(createProps({ readOnlyMode: true }))
 
-    expect(screen.getByRole('button', { name: 'Toggle Read-only' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    const readOnlyButton = screen.getByRole('button', { name: 'Resume editing' })
+
+    expect(readOnlyButton).toHaveAttribute('aria-pressed', 'true')
+    expect(readOnlyButton).toHaveAttribute('data-read-only', 'true')
+    expect(readOnlyButton).toHaveTextContent('Read-only')
+    expect(readOnlyButton.querySelector('[data-icon="read-only-locked"]')).toBeInTheDocument()
+    expect(readOnlyButton).toBeEnabled()
+  })
+
+  it('allows leaving read-only mode even after the active file is cleared', () => {
+    const onToggleReadOnly = vi.fn()
+    renderStatusBar(createProps({ activePath: null, readOnlyMode: true, onToggleReadOnly }))
+
+    const readOnlyButton = screen.getByRole('button', { name: 'Resume editing' })
+    expect(readOnlyButton).toBeEnabled()
+
+    fireEvent.click(readOnlyButton)
+    expect(onToggleReadOnly).toHaveBeenCalledTimes(1)
   })
 
   it('announces save changes without repeating the active path as visible text', () => {

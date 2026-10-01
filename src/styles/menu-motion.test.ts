@@ -7,6 +7,7 @@ const readSource = (file: string) => readFileSync(new URL(file, import.meta.url)
 
 const menuMotionStyles = readStyle('./app/_menu-motion.scss')
 const editorPlaygroundStyles = readStyle('./editor-playground.scss')
+const tableStyles = readStyle('./editor-playground/table.scss')
 const commandSource = readSource('../components/ui/command.tsx')
 
 describe('menu motion styles', () => {
@@ -45,6 +46,7 @@ describe('menu motion styles', () => {
     expect(editorPlaygroundStyles).toContain(".milkdown-slash-menu[data-show='true']")
     expect(editorPlaygroundStyles).toContain(".milkdown-toolbar[data-show='true']")
     expect(editorPlaygroundStyles).toContain(".milkdown-link-preview[data-show='true']")
-    expect(editorPlaygroundStyles).toContain('.marklab-table-toolbar:not([hidden])')
+    expect(tableStyles).toContain('.marklab-table-toolbar')
+    expect(tableStyles).toContain('animation: editor-menu-surface-enter')
   })
 })

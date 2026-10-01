@@ -14,7 +14,10 @@ export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 
 const electronMain = path.join(repoRoot, 'dist-electron', 'main.js')
 const rendererDistRoot = path.join(repoRoot, 'dist')
-const e2eOutputRoot = path.join(repoRoot, '.tmp', 'electron-e2e')
+const configuredE2eOutputRoot = process.env.MARKLAB_E2E_OUTPUT_ROOT?.trim()
+const e2eOutputRoot = configuredE2eOutputRoot
+  ? path.resolve(repoRoot, configuredE2eOutputRoot)
+  : path.join(repoRoot, '.tmp', 'electron-e2e')
 
 const contentTypeByExtension = new Map([
   ['.css', 'text/css; charset=utf-8'],

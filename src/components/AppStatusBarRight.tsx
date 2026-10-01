@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { AlertTriangle, LockKeyhole } from 'lucide-react'
+import { AlertTriangle, LockKeyhole, LockKeyholeOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -35,6 +35,8 @@ const AppStatusBarRightView = ({
   onToggleReadOnly,
 }: AppStatusBarRightProps) => {
   const { t } = useI18n()
+  const readOnlyLabel = t(readOnlyMode ? 'statusBar.readOnlyLocked' : 'statusBar.readOnlyEditable')
+  const readOnlyAction = t(readOnlyMode ? 'statusBar.disableReadOnly' : 'statusBar.enableReadOnly')
 
   return (
     <div className="flex shrink-0 items-center justify-end gap-3" aria-live="polite">
@@ -84,18 +86,31 @@ const AppStatusBarRightView = ({
         <TooltipTrigger asChild>
           <Button
             type="button"
-            variant={readOnlyMode ? 'secondary' : 'ghost'}
-            size="icon"
-            className="size-6 rounded"
-            aria-label={t('statusBar.toggleReadOnly')}
+            variant="ghost"
+            size="sm"
+            className={`h-6 gap-1.5 rounded border px-2 text-[11px] font-medium shadow-none transition-[background-color,border-color,color,box-shadow] duration-[180ms] ease-out motion-reduce:transition-none ${
+              readOnlyMode
+                ? 'border-status-warning/50 bg-status-warning/10 text-foreground hover:border-status-warning/60 hover:bg-status-warning/15 hover:text-foreground'
+                : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent hover:text-foreground'
+            }`}
+            aria-label={readOnlyAction}
             aria-pressed={readOnlyMode}
-            disabled={!activePath}
+            data-read-only={readOnlyMode}
             onClick={onToggleReadOnly}
           >
-            <LockKeyhole aria-hidden="true" />
+            {readOnlyMode ? (
+              <LockKeyhole
+                aria-hidden="true"
+                className="text-status-warning"
+                data-icon="read-only-locked"
+              />
+            ) : (
+              <LockKeyholeOpen aria-hidden="true" data-icon="read-only-unlocked" />
+            )}
+            <span>{readOnlyLabel}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t('statusBar.toggleReadOnly')}</TooltipContent>
+        <TooltipContent>{readOnlyAction}</TooltipContent>
       </Tooltip>
       <StatusCenter
         activePath={activePath}

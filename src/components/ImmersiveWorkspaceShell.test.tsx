@@ -162,6 +162,56 @@ describe('ImmersiveWorkspaceShell', () => {
     vi.useRealTimers()
   })
 
+  it('makes a retained closing drawer inert while its exit animation completes', () => {
+    const nativeGetComputedStyle = window.getComputedStyle
+    const getComputedStyleSpy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockImplementation((element) => {
+        const styles = nativeGetComputedStyle(element)
+        if (!(element instanceof HTMLElement) || !element.classList.contains('immersive-drawer')) {
+          return styles
+        }
+        return new Proxy(styles, {
+          get: (target, property) =>
+            property === 'animationName'
+              ? element.dataset.state === 'closed'
+                ? 'drawer-out'
+                : 'drawer-in'
+              : Reflect.get(target, property, target),
+        })
+      })
+    const props = {
+      sidebarOpen: true,
+      inspectorOpen: false,
+      sidebar: <button type="button">Search files</button>,
+      inspector: <div>Document outline</div>,
+      sidebarLabel: 'Workspace',
+      inspectorLabel: 'Document outline',
+      onToggleSidebar: vi.fn(),
+      onSidebarOpenChange: vi.fn(),
+      onToggleInspector: vi.fn(),
+    }
+    const { rerender } = render(
+      <ImmersiveWorkspaceShell {...props}>
+        <article>Editor canvas</article>
+      </ImmersiveWorkspaceShell>,
+    )
+
+    rerender(
+      <ImmersiveWorkspaceShell {...props} sidebarOpen={false}>
+        <article>Editor canvas</article>
+      </ImmersiveWorkspaceShell>,
+    )
+
+    const closingDrawer = document.querySelector<HTMLElement>(
+      '[role="dialog"][data-state="closed"]',
+    )
+    expect(closingDrawer).toHaveAttribute('aria-hidden', 'true')
+    expect(closingDrawer).toHaveAttribute('inert')
+    expect(closingDrawer).toHaveClass('data-[state=closed]:pointer-events-none')
+    getComputedStyleSpy.mockRestore()
+  })
+
   it('does not auto-close a sidebar that was explicitly opened or pinned by interaction', () => {
     vi.useFakeTimers()
     const onSidebarOpenChange = vi.fn()

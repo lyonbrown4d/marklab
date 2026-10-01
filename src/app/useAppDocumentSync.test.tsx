@@ -9,13 +9,16 @@ const mocks = vi.hoisted(() => ({
   preferences: {
     autoSystemThemeSync: false,
     customThemeId: null,
+    darkTheme: 'ink',
     immersiveFocusMode: false,
     immersiveTypewriterMode: false,
     immersiveZenMode: false,
     motionAnimatedCursor: false,
     motionAnimatedPanels: false,
     motionSmoothScrolling: false,
+    lightTheme: 'paper',
     syncSystemTheme: vi.fn(),
+    theme: 'paper',
     themeMode: 'light',
   },
 }))
@@ -24,16 +27,24 @@ vi.mock('@/hooks/useUserThemeCss', () => ({ useUserThemeCss: vi.fn() }))
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
 vi.mock('@/runtime/events', () => ({ listen: vi.fn().mockResolvedValue(vi.fn()) }))
 vi.mock('@/services/fsApi', () => ({ fsApi: { flushBuffers: mocks.flushBuffers } }))
-vi.mock('@/store/usePreferencesStore', () => ({
-  usePreferencesStore: (select: (state: typeof mocks.preferences) => unknown) =>
-    select(mocks.preferences),
-}))
+vi.mock('@/store/usePreferencesStore', () => {
+  const usePreferencesStore = (select: (state: typeof mocks.preferences) => unknown) =>
+    select(mocks.preferences)
+  usePreferencesStore.getState = () => mocks.preferences
+  return { usePreferencesStore }
+})
 
 beforeEach(() => {
   vi.restoreAllMocks()
   mocks.preferences.autoSystemThemeSync = false
+  mocks.preferences.theme = 'paper'
   mocks.preferences.themeMode = 'light'
   mocks.preferences.syncSystemTheme.mockClear()
+  mocks.preferences.syncSystemTheme.mockImplementation((mode: 'light' | 'dark') => {
+    if (mocks.preferences.themeMode !== 'system') return
+    mocks.preferences.theme =
+      mode === 'dark' ? mocks.preferences.darkTheme : mocks.preferences.lightTheme
+  })
 })
 
 describe('document synchronization lifecycle', () => {
@@ -91,6 +102,22 @@ describe('document synchronization lifecycle', () => {
     mocks.preferences.syncSystemTheme.mockClear()
     media.dispatchEvent(new Event('change'))
     expect(mocks.preferences.syncSystemTheme).not.toHaveBeenCalled()
+  })
+
+  it('applies a system appearance change before the React tree rerenders', () => {
+    const media = Object.assign(new EventTarget(), { matches: false })
+    vi.spyOn(window, 'matchMedia').mockReturnValue(media as MediaQueryList)
+    mocks.preferences.themeMode = 'system'
+
+    renderHook(() => useAppDocumentSync({ theme: 'paper' }))
+
+    act(() => {
+      media.matches = true
+      media.dispatchEvent(new Event('change'))
+    })
+
+    expect(document.documentElement.dataset.theme).toBe('ink')
+    expect(document.documentElement).toHaveClass('dark')
   })
 
   it('always follows the operating system when the selected mode is system', () => {

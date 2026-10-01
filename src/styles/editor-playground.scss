@@ -1,3 +1,5 @@
+@use './editor-playground/table';
+
 .crepe-playground .milkdown .milkdown-slash-menu .tab-group {
   padding-bottom: 0.75rem;
 }
@@ -20,8 +22,7 @@
 .crepe-playground .milkdown .milkdown-toolbar[data-show='true'],
 .crepe-playground .milkdown .milkdown-link-preview[data-show='true'] > .link-preview,
 .crepe-playground .milkdown .milkdown-link-edit[data-show='true'] > .link-edit,
-.crepe-playground .milkdown .milkdown-code-block .list-wrapper,
-.crepe-playground .milkdown .marklab-table-toolbar:not([hidden]) {
+.crepe-playground .milkdown .milkdown-code-block .list-wrapper {
   animation: editor-menu-surface-enter 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: top center;
   will-change: opacity, scale, translate;
@@ -30,8 +31,7 @@
 .crepe-playground .milkdown .milkdown-slash-menu li,
 .crepe-playground .milkdown .milkdown-toolbar .toolbar-item,
 .crepe-playground .milkdown .milkdown-link-preview .button,
-.crepe-playground .milkdown .milkdown-link-edit .button,
-.crepe-playground .milkdown .marklab-table-toolbar button {
+.crepe-playground .milkdown .milkdown-link-edit .button {
   transition:
     background-color 115ms ease,
     color 115ms ease,
@@ -41,8 +41,7 @@
 .crepe-playground .milkdown .milkdown-slash-menu li:is(:hover, .hover, .active),
 .crepe-playground .milkdown .milkdown-toolbar .toolbar-item:hover,
 .crepe-playground .milkdown .milkdown-link-preview .button:hover,
-.crepe-playground .milkdown .milkdown-link-edit .button:hover,
-.crepe-playground .milkdown .marklab-table-toolbar button:hover {
+.crepe-playground .milkdown .milkdown-link-edit .button:hover {
   translate: 1px 0;
 }
 
@@ -164,96 +163,6 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   --crepe-shadow-2: 0 10px 24px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
 }
 
-.crepe-playground .milkdown.marklab-table-toolbar-host {
-  position: relative;
-}
-
-.crepe-playground .milkdown .ProseMirror table {
-  width: 100%;
-  margin-block: 1.5rem;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: calc(var(--radius) + 2px);
-  background: hsl(var(--background));
-  box-shadow: 0 10px 30px -28px color-mix(in srgb, hsl(var(--foreground)) 52%, transparent);
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease;
-}
-
-.crepe-playground .milkdown .ProseMirror table:hover,
-.crepe-playground .milkdown .ProseMirror table:focus-within {
-  border-color: color-mix(in srgb, hsl(var(--primary)) 42%, hsl(var(--border)));
-  box-shadow: 0 14px 36px -28px color-mix(in srgb, hsl(var(--primary)) 50%, transparent);
-}
-
-.crepe-playground .milkdown .ProseMirror table th,
-.crepe-playground .milkdown .ProseMirror table td {
-  min-width: 6rem;
-  padding: 0.55rem 0.7rem;
-  overflow: auto;
-  border-right: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
-  vertical-align: top;
-}
-
-.crepe-playground .milkdown .ProseMirror table th {
-  background: color-mix(in srgb, hsl(var(--muted)) 62%, hsl(var(--background)));
-  font-weight: 650;
-}
-
-.crepe-playground .milkdown .ProseMirror table tr:last-child > * {
-  border-bottom: 0;
-}
-
-.crepe-playground .milkdown .ProseMirror table tr > *:last-child {
-  border-right: 0;
-}
-
-.crepe-playground .milkdown .marklab-table-toolbar {
-  position: absolute;
-  z-index: 12;
-  display: flex;
-  gap: 0.2rem;
-  align-items: center;
-  width: max-content;
-  padding: 0.25rem;
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
-  border-radius: calc(var(--radius) - 2px);
-  background: color-mix(in srgb, hsl(var(--popover)) 94%, transparent);
-  box-shadow: 0 8px 24px -16px color-mix(in srgb, hsl(var(--foreground)) 44%, transparent);
-  backdrop-filter: blur(12px);
-}
-
-.crepe-playground .milkdown .marklab-table-toolbar[hidden] {
-  display: none;
-}
-
-.crepe-playground .milkdown .marklab-table-toolbar button {
-  min-width: 1.8rem;
-  min-height: 1.75rem;
-  padding-inline: 0.45rem;
-  border: 0;
-  border-radius: calc(var(--radius) - 4px);
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  font: 600 0.7rem/1 var(--crepe-font-default);
-  cursor: pointer;
-}
-
-.crepe-playground .milkdown .marklab-table-toolbar button:hover,
-.crepe-playground .milkdown .marklab-table-toolbar button:focus-visible {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-  outline: none;
-}
-
-.crepe-playground .milkdown .marklab-table-toolbar button:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 58%, transparent);
-}
-
 .crepe-playground .cm-editor {
   height: 100%;
   font-family: var(--crepe-font-code);
@@ -326,9 +235,6 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
   .crepe-playground .milkdown .milkdown-link-preview > .link-preview,
   .crepe-playground .milkdown .milkdown-link-edit > .link-edit,
   .crepe-playground .milkdown .milkdown-code-block .list-wrapper,
-  .crepe-playground .milkdown .ProseMirror table,
-  .crepe-playground .milkdown .marklab-table-toolbar,
-  .crepe-playground .milkdown .marklab-table-toolbar button,
   .crepe-playground .milkdown .milkdown-slash-menu li,
   .crepe-playground .milkdown .milkdown-toolbar .toolbar-item,
   .crepe-playground .milkdown .milkdown-link-preview .button,

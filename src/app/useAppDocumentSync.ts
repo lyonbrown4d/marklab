@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from 'react'
+import { useCallback, useEffect, useLayoutEffect } from 'react'
 import { useDesktopReadySignal } from '@/app/useDesktopReadySignal'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -21,6 +21,11 @@ const isSystemThemePayload = (value: unknown): value is SystemThemePayload => {
   return colorMode === 'light' || colorMode === 'dark'
 }
 
+const applyDocumentTheme = (theme: ThemeMode): void => {
+  document.documentElement.dataset.theme = theme
+  document.documentElement.classList.toggle('dark', isDarkThemeMode(theme))
+}
+
 export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
   const motionSmoothScrolling = usePreferencesStore((store) => store.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((store) => store.motionAnimatedCursor)
@@ -32,19 +37,30 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
   const immersiveFocusMode = usePreferencesStore((store) => store.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((store) => store.immersiveTypewriterMode)
 
+  const syncSystemAppearance = useCallback(
+    (colorMode: SystemThemePayload['colorMode']) => {
+      syncSystemTheme(colorMode)
+      const currentPreferences = usePreferencesStore.getState()
+      if (currentPreferences.themeMode === 'system') {
+        applyDocumentTheme(currentPreferences.theme)
+      }
+    },
+    [syncSystemTheme],
+  )
+
   useUserThemeCss(customThemeId)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (themeMode !== 'system') return
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const sync = () => syncSystemTheme(media.matches ? 'dark' : 'light')
+    const sync = () => syncSystemAppearance(media.matches ? 'dark' : 'light')
     sync()
     media.addEventListener('change', sync)
     return () => {
       media.removeEventListener('change', sync)
     }
-  }, [syncSystemTheme, themeMode])
+  }, [syncSystemAppearance, themeMode])
 
   useEffect(() => {
     if (themeMode !== 'system') return
@@ -53,7 +69,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
     let disposed = false
     let unlisten: (() => void) | null = null
     void listen<unknown>('system-theme-changed', (event) => {
-      if (isSystemThemePayload(event.payload)) syncSystemTheme(event.payload.colorMode)
+      if (isSystemThemePayload(event.payload)) syncSystemAppearance(event.payload.colorMode)
     }).then((nextUnlisten) => {
       if (disposed) {
         nextUnlisten()
@@ -66,13 +82,12 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
       disposed = true
       unlisten?.()
     }
-  }, [syncSystemTheme, themeMode])
+  }, [syncSystemAppearance, themeMode])
 
   useDesktopReadySignal()
 
   useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.classList.toggle('dark', isDarkThemeMode(theme))
+    applyDocumentTheme(theme)
     document.documentElement.dataset.motionSmoothScrolling = motionSmoothScrolling
       ? 'true'
       : 'false'

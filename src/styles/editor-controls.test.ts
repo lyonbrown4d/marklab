@@ -1,8 +1,12 @@
 // @ts-expect-error Vitest runs this stylesheet regression in Node; the renderer tsconfig intentionally omits Node module types.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
+const readOptionalStyle = (file: string) => {
+  const url = new URL(file, import.meta.url)
+  return existsSync(url) ? (readFileSync(url, 'utf8') as string) : ''
+}
 const readSource = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
 
 describe('editor playground baseline styles', () => {
@@ -20,6 +24,7 @@ describe('editor playground baseline styles', () => {
   const appWindowStyles = readStyle('./app/_window.scss')
   const legacyEditorStyles = readStyle('./editor.scss')
   const legacyControlStyles = readStyle('./editor-controls.scss')
+  const tableStyles = readOptionalStyle('./editor-playground/table.scss')
 
   it('loads only the playground baseline editor stylesheet at runtime', () => {
     expect(mainSource).toContain("import '@/styles/editor-playground.scss'")
@@ -72,11 +77,17 @@ describe('editor playground baseline styles', () => {
     expect(playgroundControllerSource).not.toContain('createMarkdownImageNodeView')
   })
 
-  it('styles the table toolbar as a low-interference accessible overlay', () => {
-    expect(playgroundStyles).toContain('.marklab-table-toolbar')
-    expect(playgroundStyles).toContain('.ProseMirror table:focus-within')
-    expect(playgroundStyles).toContain('@media (prefers-reduced-motion: reduce)')
-    expect(playgroundStyles).toContain('border-collapse: separate;')
+  it('styles the table toolbar as a cell-anchored accessible overlay', () => {
+    expect(playgroundStyles).toContain("@use './editor-playground/table';")
+    expect(tableStyles).toContain('.marklab-table-toolbar')
+    expect(tableStyles).toContain("[data-placement='above']::after")
+    expect(tableStyles).toContain('--marklab-table-anchor-x')
+    expect(tableStyles).toContain('max-width: calc(100% - 1rem);')
+    expect(tableStyles).toContain('flex-wrap: wrap;')
+    expect(tableStyles).not.toContain('overflow-x: auto;')
+    expect(tableStyles).toContain('.ProseMirror table:focus-within')
+    expect(tableStyles).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(tableStyles).toContain('border-collapse: separate;')
   })
 
   it('scopes local playground overrides to the active editor root', () => {

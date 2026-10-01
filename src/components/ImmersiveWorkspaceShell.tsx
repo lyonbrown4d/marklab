@@ -88,7 +88,9 @@ export const ImmersiveWorkspaceShell = ({
           side="left"
           showOverlay={false}
           aria-describedby={undefined}
-          className="immersive-drawer flex w-[min(22rem,88vw)] flex-col border-r border-border/60 bg-background/96 p-0 pt-10 shadow-2xl backdrop-blur-xl sm:max-w-[22rem]"
+          aria-hidden={!effectiveSidebarOpen || undefined}
+          inert={!effectiveSidebarOpen || undefined}
+          className="immersive-drawer flex w-[min(22rem,88vw)] flex-col border-r border-border/60 bg-background/96 p-0 pt-10 shadow-2xl backdrop-blur-xl data-[state=closed]:pointer-events-none data-[state=closed]:invisible sm:max-w-[22rem]"
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => {
             event.preventDefault()

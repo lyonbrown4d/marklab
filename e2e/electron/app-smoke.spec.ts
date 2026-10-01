@@ -6,7 +6,6 @@ import path from 'node:path'
 import {
   closeElectronTestSession,
   closeRendererServer,
-  firstVisibleLocator,
   launchElectronTestSession,
   repoRoot,
   startRendererServer,
@@ -65,17 +64,9 @@ test.describe('Electron desktop shell', () => {
   test('opens modal shells promptly without blank first paint', async () => {
     await expect(page).toHaveTitle(/marklab/i)
 
-    const commandTrigger = await firstVisibleLocator(
-      [
-        page.locator('.command-trigger'),
-        page.getByRole('button', { name: /Search workspace|搜索工作区/i }),
-        page.getByRole('button', { name: /Search files|搜索文件/i }),
-        page.getByRole('button', { name: /^Search$|^搜索$/i }),
-      ],
-      'command palette trigger',
-    )
+    await expect(page.locator('.app-titlebar')).toBeVisible({ timeout: 10_000 })
     const commandStartedAt = Date.now()
-    await commandTrigger.click()
+    await page.keyboard.press('ControlOrMeta+P')
 
     const commandDialog = page.getByRole('dialog', { name: /Command palette|命令面板/i })
     await expect(commandDialog).toBeVisible({ timeout: 2_000 })
@@ -149,5 +140,128 @@ test.describe('Electron desktop shell', () => {
 
     await showHandle.click()
     await expect(statusBar).toBeVisible()
+  })
+
+  test('makes the bottom read-only toggle visibly switch between unlocked and locked', async () => {
+    const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
+    const editableToggle = statusBar.getByRole('button', {
+      name: /Enter read-only browsing|进入只读浏览/i,
+    })
+
+    await expect(editableToggle).toBeVisible()
+    await expect(editableToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(editableToggle).toHaveAttribute('data-read-only', 'false')
+    await expect(editableToggle).toContainText(/Editable|可编辑/i)
+
+    await editableToggle.click()
+
+    const readOnlyToggle = statusBar.getByRole('button', {
+      name: /Resume editing|退出只读浏览/i,
+    })
+    await expect(readOnlyToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(readOnlyToggle).toHaveAttribute('data-read-only', 'true')
+    await expect(readOnlyToggle).toContainText(/Read-only|只读/i)
+
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await statusBar.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'readonly-status-toggle.png'),
+    })
+
+    await readOnlyToggle.click()
+    await expect(editableToggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('releases the canvas after a hover-preview sidebar closes', async () => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const hoverZone = page.getByTestId('sidebar-hover-zone')
+    const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
+
+    await hoverZone.hover()
+    await expect(drawer).toBeVisible({ timeout: 1_500 })
+
+    await page.mouse.move(700, 450)
+    await expect(drawer).toBeHidden({ timeout: 1_500 })
+    const drawerInterceptsCanvas = await page.evaluate(() =>
+      Boolean(document.elementFromPoint(100, 100)?.closest('[role="dialog"]')),
+    )
+    expect(drawerInterceptsCanvas).toBe(false)
+  })
+
+  test('toggles and focuses the sidebar from its app shortcut', async () => {
+    const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
+    const fileSearch = page.locator(
+      'input[placeholder*="Search files"], input[placeholder*="搜索文件"]',
+    )
+
+    await page.keyboard.press('Control+Shift+L')
+    await expect(drawer).toBeVisible({ timeout: 1_500 })
+    await expect(fileSearch).toBeFocused({ timeout: 1_500 })
+
+    await page.keyboard.press('Control+Shift+L')
+    await expect(drawer).toBeHidden({ timeout: 1_500 })
+  })
+
+  test('tracks system color-scheme changes in both directions', async () => {
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+        timeout: 3_000,
+      })
+      .toBe(true)
+
+    await page.emulateMedia({ colorScheme: 'light' })
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+        timeout: 3_000,
+      })
+      .toBe(false)
+  })
+
+  test('anchors the localized Markdown table toolbar to the active cell', async () => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page
+      .getByRole('button', { name: /Source Editor|源码/i })
+      .first()
+      .click()
+    const sourceEditor = page.locator('.monaco-editor')
+    await expect(sourceEditor).toBeVisible({ timeout: 10_000 })
+    await sourceEditor.click()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.insertText('| Name | Status |\n| --- | --- |\n| Marklab | Ready |')
+
+    await page
+      .getByRole('button', { name: /Rich Text Editor|所见即所得/i })
+      .first()
+      .click()
+    const activeCell = page.locator('.milkdown table:visible td').first()
+    await expect(activeCell).toBeVisible({ timeout: 10_000 })
+    await activeCell.click()
+
+    const toolbar = page.getByRole('toolbar', { name: /Table editing|表格编辑/i })
+    await expect(toolbar).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: /Add row|添加行/i })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: /Delete column|删除列/i })).toBeVisible()
+
+    const [toolbarBox, cellBox] = await Promise.all([
+      toolbar.boundingBox(),
+      activeCell.boundingBox(),
+    ])
+    expect(toolbarBox).not.toBeNull()
+    expect(cellBox).not.toBeNull()
+    if (!toolbarBox || !cellBox) return
+    expect(toolbarBox.x).toBeGreaterThanOrEqual(0)
+    expect(toolbarBox.x + toolbarBox.width).toBeLessThanOrEqual(1280)
+    expect(
+      toolbarBox.y + toolbarBox.height <= cellBox.y || toolbarBox.y >= cellBox.y + cellBox.height,
+    ).toBe(true)
+
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'markdown-table-toolbar.png'),
+    })
   })
 })
