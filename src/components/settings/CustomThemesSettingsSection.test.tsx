@@ -139,6 +139,11 @@ describe('CustomThemesSettingsSection', () => {
 
     const selectedTheme = await screen.findByRole('button', { name: 'Ocean' })
     expect(selectedTheme).toHaveAttribute('aria-pressed', 'true')
-    expect(selectedTheme.closest('.settings-theme-item')).toHaveAttribute('data-selected', 'true')
+    const selectedThemeRow = selectedTheme.closest('.settings-theme-item')
+    expect(selectedThemeRow).toHaveAttribute('data-selected', 'true')
+    expect(selectedThemeRow?.querySelector('.settings-theme-check')).toHaveClass(
+      'size-4',
+      'shrink-0',
+    )
   })
 })

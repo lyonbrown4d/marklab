@@ -83,6 +83,30 @@ test.describe('Electron desktop shell', () => {
     await expect(settingsDialog.getByRole('tablist', { name: /Settings|设置/i })).toBeVisible()
   })
 
+  test('centers the settings dialog within the Electron viewport', async () => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.keyboard.press('Control+Comma')
+
+    const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
+    await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
+
+    const dialogBox = await settingsDialog.boundingBox()
+    expect(dialogBox).not.toBeNull()
+    if (!dialogBox) return
+
+    const expectedX = (1280 - dialogBox.width) / 2
+    const expectedY = (900 - dialogBox.height) / 2
+    expect(Math.abs(dialogBox.x - expectedX)).toBeLessThanOrEqual(1)
+    expect(Math.abs(dialogBox.y - expectedY)).toBeLessThanOrEqual(1)
+
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'settings-dialog-position.png'),
+    })
+  })
+
   test('uses the shared contextual-menu surface for titlebar menus', async () => {
     const workspaceMenuTrigger = page.getByRole('button', {
       name: /^Workspace:|^工作区:/i,

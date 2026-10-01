@@ -159,7 +159,9 @@ const CustomThemesSettingsSection = () => {
                   <span className="block truncate font-medium">{item.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
                 </button>
-                {selected && <Check className="settings-theme-check" aria-hidden="true" />}
+                {selected && (
+                  <Check className="settings-theme-check size-4 shrink-0" aria-hidden="true" />
+                )}
                 <SettingsIconButton
                   type="button"
                   size="icon"
