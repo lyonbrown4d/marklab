@@ -33,6 +33,9 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     onRendererReady: options.onRendererReady,
     shell,
     terminalService: container.cradle.terminalService,
+    webDavProfileStore: container.cradle.webDavProfileStore,
+    workspaceSyncConfigStore: container.cradle.workspaceSyncConfigStore,
+    workspaceWebDavSyncService: container.cradle.workspaceWebDavSyncService,
     updates: {
       onBeforeInstall: () => options.flushWorkspaceBuffers('update install'),
     },

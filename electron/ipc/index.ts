@@ -9,6 +9,7 @@ import {
   type NativeCommandHandlers,
 } from '@electron/ipc/commandInvoke.js'
 import { registerDialogIpc } from '@electron/ipc/dialogs.js'
+import { registerGitNamedIpc } from '@electron/ipc/gitNamed.js'
 import {
   registerGitTerminalIpc,
   type GitTerminalIpcBridge,
@@ -22,6 +23,7 @@ import { registerThemeIpc } from '@electron/ipc/themes.js'
 import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
 import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed.js'
+import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync.js'
 import {
   registerWorkspaceCommandsIpc,
   type WorkspaceCommandServices,
@@ -39,6 +41,9 @@ import { getPlatformInfo } from '@electron/services/platform.js'
 import { setNativeMenuLocale } from '@electron/menu.js'
 import type { TerminalService } from '@electron/services/terminal/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types.js'
+import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
+import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
 export type NativeIpcDependencies = {
   aiService: AiServiceContract
   aiInlineCompletionService: AiInlineCompletionServiceContract
@@ -57,6 +62,9 @@ export type NativeIpcDependencies = {
   onRendererReady?: () => void
   shell: Electron.Shell
   terminalService: TerminalService
+  webDavProfileStore: WebDavProfileStoreContract
+  workspaceSyncConfigStore: WorkspaceSyncConfigStore
+  workspaceWebDavSyncService: WorkspaceWebDavSyncService
   updates?: Pick<UpdaterIpcDependencies, 'onBeforeInstall'>
   workspaceRegistry: WindowWorkspaceRegistry
   windowCommandHandlers?: NativeCommandHandlers
@@ -86,9 +94,19 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
   })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
+  registerGitNamedIpc(dependencies.ipcMain, {
+    gitService: dependencies.gitService,
+    workspaceRegistry: dependencies.workspaceRegistry,
+  })
   registerWorkspaceNamedIpc(dependencies.ipcMain, {
     clipboard: dependencies.clipboard,
     shell: dependencies.shell,
+    workspaceRegistry: dependencies.workspaceRegistry,
+  })
+  registerWorkspaceSyncIpc(dependencies.ipcMain, {
+    configStore: dependencies.workspaceSyncConfigStore,
+    profileStore: dependencies.webDavProfileStore,
+    syncService: dependencies.workspaceWebDavSyncService,
     workspaceRegistry: dependencies.workspaceRegistry,
   })
   const ai = registerAiIpc(

@@ -1,4 +1,4 @@
-import { invoke } from '@/runtime/ipc'
+import { getElectronRuntime } from '@/runtime/electron'
 import { z } from 'zod'
 import type { GitDiffSection } from '@/store/appTypes'
 
@@ -46,10 +46,26 @@ export const gitFileDiffSchema = z.object({
   unified_diff: z.string().optional(),
 })
 
+export const gitRemoteStatusSchema = z.object({
+  remotes: z.array(
+    z.object({
+      name: z.string(),
+      fetch_url: z.string().nullable(),
+      push_url: z.string().nullable(),
+    }),
+  ),
+  branch: z.string().nullable(),
+  upstream: z.string().nullable(),
+  ahead: z.number().int().nonnegative(),
+  behind: z.number().int().nonnegative(),
+  detached: z.boolean(),
+})
+
 export type GitRepoInfo = z.infer<typeof gitRepoInfoSchema>
 export type GitFileChange = z.infer<typeof gitFileChangeSchema>
 export type GitStatusSnapshot = z.infer<typeof gitStatusSnapshotSchema>
 export type GitFileDiff = z.infer<typeof gitFileDiffSchema>
+export type GitRemoteStatus = z.infer<typeof gitRemoteStatusSchema>
 
 export type GitDiffRequest = {
   path: string
@@ -59,23 +75,46 @@ export type GitDiffRequest = {
 
 export const gitApi = {
   async discoverRepo(rootPath: string) {
-    const result = await invoke<unknown>('git_discover_repo', { rootPath })
+    void rootPath
+    const result = await getElectronRuntime().git.discover()
     return gitRepoInfoSchema.parse(result)
   },
   async initRepo(rootPath: string) {
-    const result = await invoke<unknown>('git_init_repo', { rootPath })
+    void rootPath
+    const result = await getElectronRuntime().git.init()
     return gitRepoInfoSchema.parse(result)
   },
   async getStatus(rootPath: string) {
-    const result = await invoke<unknown>('git_get_status', { rootPath })
+    void rootPath
+    const result = await getElectronRuntime().git.status()
     return gitStatusSnapshotSchema.parse(result)
   },
   async getFileDiff(rootPath: string, path: string, section: GitDiffRequest['section']) {
-    const result = await invoke<unknown>('git_get_file_diff', { rootPath, path, section })
+    void rootPath
+    const result = await getElectronRuntime().git.fileDiff(path, section)
     return gitFileDiffSchema.parse(result)
   },
   async commitAll(rootPath: string, message: string) {
-    const result = await invoke<unknown>('git_commit_all', { rootPath, message })
+    void rootPath
+    const result = await getElectronRuntime().git.commitAll(message)
     return gitStatusSnapshotSchema.parse(result)
+  },
+  async getRemoteStatus() {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.remoteStatus())
+  },
+  async setRemote(name: string, url: string) {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.setRemote(name, url))
+  },
+  async removeRemote(name: string) {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.removeRemote(name))
+  },
+  async fetch(remote?: string) {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.fetch(remote))
+  },
+  async pull() {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.pull())
+  },
+  async push(options?: { remote?: string; setUpstream?: boolean }) {
+    return gitRemoteStatusSchema.parse(await getElectronRuntime().git.push(options))
   },
 }

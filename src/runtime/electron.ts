@@ -5,6 +5,13 @@ import type {
   AiInlineCompletionRequest,
   AiInlineCompletionStartResult,
 } from '@/types/aiCompletion'
+import type {
+  WebDavProfile,
+  WebDavProfileInput,
+  WorkspaceSyncBinding,
+  WorkspaceSyncProgressEvent,
+  WorkspaceSyncResult,
+} from '@/types/workspaceSync'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -17,6 +24,23 @@ export type ElectronWorkspacePathApi = {
 }
 
 export type ElectronCommandArguments = Record<string, unknown> | undefined
+
+export type ElectronGitApi = {
+  commitAll: (message: string) => Promise<unknown>
+  discover: () => Promise<unknown>
+  fetch: (remote?: string) => Promise<unknown>
+  fileDiff: (
+    path: string,
+    section: 'staged' | 'unstaged' | 'untracked' | 'conflicts',
+  ) => Promise<unknown>
+  init: () => Promise<unknown>
+  pull: () => Promise<unknown>
+  push: (options?: { remote?: string; setUpstream?: boolean }) => Promise<unknown>
+  removeRemote: (name: string) => Promise<unknown>
+  remoteStatus: () => Promise<unknown>
+  setRemote: (name: string, url: string) => Promise<unknown>
+  status: () => Promise<unknown>
+}
 
 export type ElectronOpenDialogOptions = {
   title?: string
@@ -150,6 +174,7 @@ export type RendererSafeElectronApi = {
   }
   commands: ElectronCommandBridgeApi
   events: ElectronEventBridgeApi
+  git: ElectronGitApi
   platform: {
     get: () => Promise<ElectronPlatformInfo>
   }
@@ -227,6 +252,22 @@ export type RendererSafeElectronApi = {
     getState: () => Promise<ElectronUpdateState>
     install: () => Promise<ElectronUpdateResult>
     onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
+  }
+  workspaceSync: {
+    binding: {
+      get: () => Promise<WorkspaceSyncBinding | null>
+      remove: () => Promise<{ ok: true }>
+      set: (binding: WorkspaceSyncBinding) => Promise<WorkspaceSyncBinding>
+    }
+    cancel: () => Promise<{ ok: true; cancelled: boolean }>
+    onProgress: (handler: (event: WorkspaceSyncProgressEvent) => void) => () => void
+    start: (requestId: string) => Promise<WorkspaceSyncResult>
+    webDavProfiles: {
+      delete: (id: string) => Promise<{ ok: true }>
+      list: () => Promise<WebDavProfile[]>
+      test: (id: string) => Promise<{ ok: true } | { ok: false; code: string; message: string }>
+      update: (input: WebDavProfileInput) => Promise<WebDavProfile>
+    }
   }
   webview: {
     onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => () => void

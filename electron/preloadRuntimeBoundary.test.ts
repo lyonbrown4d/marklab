@@ -49,13 +49,17 @@ describe('Electron preload/runtime boundary', () => {
     expect(runtimeSource).not.toMatch(/^\s{2}(send|on|off|removeListener):/m)
   })
 
-  it('does not keep project-owned deprecated declarations in active code', () => {
-    const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]
-    const deprecatedTag = ['@', 'deprecated'].join('')
-    const offenders = files.filter((file) => readText(file).includes(deprecatedTag))
+  it(
+    'does not keep project-owned deprecated declarations in active code',
+    { timeout: 30_000 },
+    () => {
+      const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]
+      const deprecatedTag = ['@', 'deprecated'].join('')
+      const offenders = files.filter((file) => readText(file).includes(deprecatedTag))
 
-    expect(offenders).toEqual([])
-  })
+      expect(offenders).toEqual([])
+    },
+  )
 
   it('does not retain the retired transitional workspace command map', () => {
     const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]

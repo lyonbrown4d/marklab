@@ -21,7 +21,7 @@ export const registerGitTerminalIpc = (
 ): GitTerminalIpcBridge => {
   const git = gitService
   const terminal = terminalService
-  const commandHandlers = createGitTerminalCommandHandlers(git, terminal)
+  const commandHandlers = createTerminalCommandHandlers(terminal)
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
   app.once('will-quit', () => {
     terminal.dispose()
@@ -29,22 +29,8 @@ export const registerGitTerminalIpc = (
   logger.info('git and terminal IPC registered')
   return { commandHandlers, git, terminal }
 }
-const createGitTerminalCommandHandlers = (
-  git: GitService,
-  terminal: TerminalService,
-): NativeCommandHandlers => {
+const createTerminalCommandHandlers = (terminal: TerminalService): NativeCommandHandlers => {
   return {
-    git_discover_repo: (payload) => git.discover(commandPayload(payload)?.rootPath),
-    git_init_repo: (payload) => git.init(commandPayload(payload)?.rootPath),
-    git_get_status: (payload) => git.status(commandPayload(payload)?.rootPath),
-    git_get_file_diff: (payload) =>
-      git.fileDiff(
-        commandPayload(payload)?.rootPath,
-        commandPayload(payload)?.path,
-        commandPayload(payload)?.section,
-      ),
-    git_commit_all: (payload) =>
-      git.commitAll(commandPayload(payload)?.rootPath, commandPayload(payload)?.message),
     terminal_create: (payload, event) =>
       terminal.create(
         event.sender,

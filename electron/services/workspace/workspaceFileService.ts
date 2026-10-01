@@ -12,7 +12,7 @@ import type {
   FsStateData,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types.js'
-import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
+import { WorkspaceMutationService } from '@electron/services/workspace/workspaceMutationService.js'
 import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences.js'
 import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers.js'
 import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
@@ -32,13 +32,13 @@ import {
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
 
-export class WorkspaceFileService extends WorkspaceBase {
+export class WorkspaceFileService extends WorkspaceMutationService {
   private rootTransitionInProgress = false
 
   constructor(
-    app: ConstructorParameters<typeof WorkspaceBase>[0],
-    shell: ConstructorParameters<typeof WorkspaceBase>[1],
-    logger: ConstructorParameters<typeof WorkspaceBase>[2],
+    app: ConstructorParameters<typeof WorkspaceMutationService>[0],
+    shell: ConstructorParameters<typeof WorkspaceMutationService>[1],
+    logger: ConstructorParameters<typeof WorkspaceMutationService>[2],
     private readonly localHistory: LocalHistoryServiceContract,
     private readonly knowledgeEngineService?: KnowledgeEngineService,
   ) {
@@ -132,19 +132,6 @@ export class WorkspaceFileService extends WorkspaceBase {
 
   flushBuffers(): Promise<void> {
     return this.buffers.flush()
-  }
-
-  writeCoordinatorOwnerId(): string {
-    return this.buffers.getWriteOwnerId()
-  }
-  resolveCoordinatorPath(relativePath: string): string {
-    return this.resolve(relativePath)
-  }
-  bufferMutationEpoch(): number {
-    return this.buffers.getMutationEpoch()
-  }
-  setAutoFlushMutationRunner(runner: (work: () => Promise<void>) => Promise<void>): void {
-    this.buffers.setAutoFlushMutationRunner(runner)
   }
 
   protected override async writeBufferedFile(

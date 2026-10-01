@@ -4,6 +4,8 @@ import path from 'node:path'
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff'
 import { simpleGit } from 'simple-git'
 
+import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors.js'
+import { buildSafeGitArgs, SAFE_SIMPLE_GIT_OPTIONS } from '@electron/services/git/gitPolicy.js'
 import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types.js'
 
 type GitExecResult = {
@@ -13,6 +15,7 @@ type GitExecResult = {
 
 type GitExecOptions = {
   allowFailure?: boolean
+  signal?: AbortSignal
 }
 
 export const emptyRepoInfo: GitRepoInfo = {
@@ -28,9 +31,14 @@ export const runGit = async (
   args: string[],
   options: GitExecOptions = {},
 ): Promise<GitExecResult> => {
-  const git = simpleGit({ baseDir: cwd, binary: 'git' })
+  const git = simpleGit({
+    baseDir: cwd,
+    binary: 'git',
+    abort: options.signal,
+    ...SAFE_SIMPLE_GIT_OPTIONS,
+  })
   try {
-    const stdout = await git.raw(args)
+    const stdout = await git.raw(await buildSafeGitArgs(args))
     return {
       stdout: outputToString(stdout),
       stderr: '',
@@ -44,16 +52,15 @@ export const runGit = async (
     if (options.allowFailure) {
       return {
         stdout: outputToString(failure.stdout),
-        stderr: outputToString(failure.stderr, failure.message),
+        stderr: redactGitCredentials(outputToString(failure.stderr, failure.message)),
       }
     }
-    const message = outputToString(failure.stderr, failure.message)
-    const command = args.join(' ')
-    throw new Error(
+    const message = redactGitCredentials(outputToString(failure.stderr, failure.message))
+    const command = redactGitCredentials(args.join(' '))
+    throw new GitOperationError(
+      'git_command_failed',
       `Git command failed: git ${command} (cwd: ${cwd})${message ? ` - ${message.trim()}` : ''}`,
-      {
-        cause: error,
-      },
+      error,
     )
   }
 }
@@ -92,13 +99,55 @@ export const normalizeRepoRelativePath = (value: unknown): string => {
   return normalized
 }
 
-export const readUtf8IfFile = async (filePath: string): Promise<string> => {
+export const readUtf8RepoFile = async (root: string, relativePath: string): Promise<string> => {
+  const canonicalRoot = await fs.realpath(root)
+  const segments = relativePath.split('/').filter(Boolean)
+  let candidate = canonicalRoot
+  let expectedFileIdentity: { dev: bigint; ino: bigint } | null = null
+
+  for (const [index, segment] of segments.entries()) {
+    candidate = path.join(candidate, segment)
+    let stat
+    try {
+      stat = await fs.lstat(candidate, { bigint: true })
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''
+      throw error
+    }
+    if (stat.isSymbolicLink()) {
+      throw new Error(`Refusing to read a symbolic link from the Git worktree: ${relativePath}`)
+    }
+    if (index < segments.length - 1 && !stat.isDirectory()) return ''
+    if (index === segments.length - 1) {
+      if (!stat.isFile()) return ''
+      expectedFileIdentity = { dev: stat.dev, ino: stat.ino }
+    }
+  }
+
+  const canonicalFile = await fs.realpath(candidate)
+  const relativeCanonical = path.relative(canonicalRoot, canonicalFile)
+  if (
+    relativeCanonical === '..' ||
+    relativeCanonical.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeCanonical)
+  ) {
+    throw new Error(`Refusing to read outside the Git worktree: ${relativePath}`)
+  }
+
+  const handle = await fs.open(candidate, 'r')
   try {
-    const stat = await fs.stat(filePath)
-    if (!stat.isFile()) return ''
-    return await fs.readFile(filePath, 'utf8')
-  } catch {
-    return ''
+    const opened = await handle.stat({ bigint: true })
+    if (
+      !expectedFileIdentity ||
+      expectedFileIdentity.dev !== opened.dev ||
+      expectedFileIdentity.ino !== opened.ino ||
+      !opened.isFile()
+    ) {
+      throw new Error(`Git worktree path changed while being read: ${relativePath}`)
+    }
+    return await handle.readFile('utf8')
+  } finally {
+    await handle.close()
   }
 }
 
@@ -114,12 +163,11 @@ export const parsePorcelainStatus = (stdout: string) => {
     if (entry.length < 4) continue
     const stagedCode = entry[0] ?? ' '
     const unstagedCode = entry[1] ?? ' '
-    let filePath = entry.slice(3)
+    const filePath = entry.slice(3)
     let oldPath: string | null = null
 
     if (stagedCode === 'R' || stagedCode === 'C' || unstagedCode === 'R' || unstagedCode === 'C') {
-      oldPath = filePath
-      filePath = entries[index + 1] ?? filePath
+      oldPath = entries[index + 1] ?? null
       index += 1
     }
 

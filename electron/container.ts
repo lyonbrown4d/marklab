@@ -39,6 +39,10 @@ import {
 } from '@electron/services/settingsStore.js'
 import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore.js'
 import { TerminalService } from '@electron/services/terminal/service.js'
+import { WebDavProfileStore } from '@electron/services/sync/webdav/profileStore.js'
+import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore.js'
+import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
+import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
 import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
@@ -72,6 +76,10 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
   terminalService: TerminalService
+  webDavProfileStore: WebDavProfileStore
+  webDavSyncStateStore: FileLocalSyncStateStore
+  workspaceSyncConfigStore: WorkspaceSyncConfigStore
+  workspaceWebDavSyncService: WorkspaceWebDavSyncService
   workspaceRegistry: WindowWorkspaceRegistry
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
 }
@@ -182,6 +190,24 @@ export const createElectronContainer = (
         logger.child('terminal'),
       )
     }).singleton(),
+    webDavProfileStore: asFunction(({ app, safeStorage }) => {
+      return new WebDavProfileStore(app.getPath('userData'), safeStorage)
+    }).singleton(),
+    webDavSyncStateStore: asFunction(({ app }) => {
+      return new FileLocalSyncStateStore(app.getPath('userData'))
+    }).singleton(),
+    workspaceSyncConfigStore: asFunction(({ app }) => {
+      return new WorkspaceSyncConfigStore(app.getPath('userData'))
+    }).singleton(),
+    workspaceWebDavSyncService: asFunction(
+      ({ webDavProfileStore, webDavSyncStateStore, workspaceSyncConfigStore }) => {
+        return new WorkspaceWebDavSyncService({
+          configStore: workspaceSyncConfigStore,
+          profileStore: webDavProfileStore,
+          stateStore: webDavSyncStateStore,
+        })
+      },
+    ).singleton(),
   })
 
   return container
