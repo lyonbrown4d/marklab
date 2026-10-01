@@ -143,6 +143,12 @@ beforeEach(async () => {
 })
 
 describe('Titlebar command palette', () => {
+  it('uses a compact desktop chrome height', () => {
+    const { container } = renderTitlebar(createProps())
+
+    expect(container.querySelector('header')).toHaveClass('h-[52px]')
+  })
+
   it('opens the command palette without rerendering sibling editor content', async () => {
     const onEditorRender = vi.fn()
     renderTitlebarWithEditorProbe(

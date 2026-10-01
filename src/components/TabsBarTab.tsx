@@ -54,7 +54,9 @@ const renderTabIcon = (tab: WorkspaceTab) => {
 type WorkspaceTabButtonProps = {
   id: string
   tab: WorkspaceTab
-  compact: boolean
+  width: number
+  position: number
+  setSize: number
   isActive: boolean
   isDirty: boolean
   hasError: boolean
@@ -72,7 +74,9 @@ export const WorkspaceTabButton = memo(
   ({
     id,
     tab,
-    compact,
+    width,
+    position,
+    setSize,
     isActive,
     isDirty,
     hasError,
@@ -109,20 +113,21 @@ export const WorkspaceTabButton = memo(
     return (
       <div
         role="tab"
-        tabIndex={0}
+        tabIndex={isActive ? 0 : -1}
         aria-label={tabAriaLabel}
+        aria-posinset={position}
         aria-selected={isActive}
+        aria-setsize={setSize}
         data-state={isActive ? 'active' : 'inactive'}
         data-tab-id={id}
-        className="tab-item group relative inline-flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm after:absolute after:bottom-0 after:left-2 after:right-2 after:hidden after:h-0.5 after:rounded-full after:bg-primary data-[state=active]:after:block"
+        className="tab-item group relative inline-flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground outline-none transition-[background-color,color,box-shadow] duration-150 hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm after:absolute after:bottom-0.5 after:left-3 after:right-3 after:hidden after:h-0.5 after:rounded-full after:bg-primary data-[state=active]:after:block motion-reduce:transition-none"
+        style={{ width }}
         title={tab.kind === 'workspace-graph' ? label : tab.path}
         onClick={openTab}
         onKeyDown={handleTabKeyDown}
       >
         {renderTabIcon(tab)}
-        <span className={cn('truncate', compact ? 'max-w-[86px]' : 'max-w-[160px]')}>
-          {compact && label.length > 12 ? `${label.slice(0, 11)}…` : label}
-        </span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
         {isDirty && (
           <span
             aria-label={dirtyLabel}
@@ -157,7 +162,9 @@ export const WorkspaceTabButton = memo(
   (prev, next) =>
     prev.id === next.id &&
     prev.tab === next.tab &&
-    prev.compact === next.compact &&
+    prev.width === next.width &&
+    prev.position === next.position &&
+    prev.setSize === next.setSize &&
     prev.isActive === next.isActive &&
     prev.isDirty === next.isDirty &&
     prev.hasError === next.hasError &&

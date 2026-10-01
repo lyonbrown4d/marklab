@@ -1,18 +1,15 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  type KeyboardEvent,
-  type WheelEvent,
-} from 'react'
-import { getTabLabel, WorkspaceTabButton } from '@/components/TabsBarTab'
-import { TabsBarViewModeControls } from '@/components/TabsBarViewModeControls'
-import { useI18n } from '@/i18n/useI18n'
-import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
+import { memo, useMemo, type FocusEvent, type KeyboardEvent } from 'react'
+import { Files, PanelTopClose, Pin } from 'lucide-react'
+
 import type { SaveState } from '@/app/useEditorBuffer'
+import { TabsBarVirtualList } from '@/components/TabsBarVirtualList'
+import { getTabLabel, type TabLabelText } from '@/components/TabsBarTab'
+import { useTabsDockDisclosure } from '@/components/useTabsDockDisclosure'
+import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible'
+import { useI18n } from '@/i18n/useI18n'
 import { getWorkspaceTabId } from '@/logic/tabs'
+import type { WorkspaceTab } from '@/store/appTypes'
 
 type TabsBarProps = {
   tabs: WorkspaceTab[]
@@ -21,8 +18,6 @@ type TabsBarProps = {
   activeTabId: string | null
   onOpenTab: (id: string) => void
   onCloseTab: (id: string) => void
-  viewMode: ViewMode
-  onChangeView: (mode: ViewMode) => void
   silentSave: boolean
 }
 
@@ -33,16 +28,11 @@ const TabsBarComponent = ({
   activeTabId,
   onOpenTab,
   onCloseTab,
-  viewMode,
-  onChangeView,
   silentSave,
 }: TabsBarProps) => {
   const { t } = useI18n()
-  const tabsViewportRef = useRef<HTMLDivElement | null>(null)
-  const compact = tabs.length >= 8
-  const activeTab = tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? null
-  const fileTabActive = activeTab?.kind === 'file' && activeTab.view !== 'preview'
-  const tabLabels = useMemo(
+  const disclosure = useTabsDockDisclosure()
+  const labels = useMemo<TabLabelText>(
     () => ({
       workspaceGraph: t('tabs.workspaceGraph'),
       source: t('editor.modeSource'),
@@ -52,125 +42,83 @@ const TabsBarComponent = ({
     }),
     [t],
   )
-  const dirtyLabel = t('save.unsaved')
-  const errorLabel = t('save.error')
-  const baseCloseLabel = t('actions.closeTab')
+  const activeTab = tabs.find((tab) => getWorkspaceTabId(tab) === activeTabId) ?? tabs[0]
+  const activeLabel = activeTab ? getTabLabel(activeTab, labels) : t('tabs.openFiles')
 
-  const handleTabsWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
-    const viewport = event.currentTarget
-    if (viewport.scrollWidth <= viewport.clientWidth) return
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
-    viewport.scrollLeft += event.deltaY
+  if (tabs.length === 0) return null
+
+  const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget)) return
+    disclosure.closePreviewAfterDelay()
+  }
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape' || !disclosure.expanded) return
     event.preventDefault()
-  }, [])
-
-  const handleTabListKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.key !== 'ArrowLeft' &&
-        event.key !== 'ArrowRight' &&
-        event.key !== 'Home' &&
-        event.key !== 'End'
-      ) {
-        return
-      }
-
-      const tabElements = Array.from(
-        event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"][data-tab-id]'),
-      )
-      const currentTab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]')
-      const currentIndex = currentTab ? tabElements.indexOf(currentTab) : -1
-      if (currentIndex < 0 || tabElements.length === 0) return
-
-      const nextIndex =
-        event.key === 'Home'
-          ? 0
-          : event.key === 'End'
-            ? tabElements.length - 1
-            : event.key === 'ArrowLeft'
-              ? (currentIndex - 1 + tabElements.length) % tabElements.length
-              : (currentIndex + 1) % tabElements.length
-      const nextTab = tabElements[nextIndex]
-      const nextId = nextTab.dataset.tabId
-      if (!nextId) return
-
-      event.preventDefault()
-      nextTab.focus()
-      onOpenTab(nextId)
-    },
-    [onOpenTab],
-  )
-
-  useEffect(() => {
-    if (!activeTabId) return
-    const viewport = tabsViewportRef.current
-    const activeTrigger = Array.from(
-      viewport?.querySelectorAll<HTMLElement>('[data-tab-id]') ?? [],
-    ).find((trigger) => trigger.dataset.tabId === activeTabId)
-    activeTrigger?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }, [activeTabId])
+    disclosure.collapse()
+  }
 
   return (
-    <div className="tab-strip flex h-10 items-center gap-2 border-b border-border/80 px-2">
-      <div className="min-w-0 flex-1">
-        <div
-          ref={tabsViewportRef}
-          className="tabs-scrollbar w-full overflow-x-auto overflow-y-hidden whitespace-nowrap"
-          onWheel={handleTabsWheel}
-        >
-          <div
-            role="tablist"
-            aria-label={t('tabs.openFiles')}
-            className="inline-flex h-8 w-max min-w-full justify-start"
-            onKeyDown={handleTabListKeyDown}
+    <div
+      data-testid="tabs-dock"
+      className="pointer-events-none absolute inset-x-0 top-1 z-30 flex justify-center px-3"
+      onPointerEnter={disclosure.previewAfterDelay}
+      onPointerLeave={disclosure.closePreviewAfterDelay}
+      onFocusCapture={disclosure.expanded ? disclosure.keepPreviewOpen : undefined}
+      onBlurCapture={handleBlur}
+      onKeyDown={handleKeyDown}
+    >
+      <Collapsible
+        open={disclosure.expanded}
+        className="pointer-events-auto relative flex min-h-11 w-full max-w-[min(56rem,calc(100vw-3rem))] justify-center"
+      >
+        {!disclosure.expanded ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`${t('tabs.showOpenFiles')}: ${activeLabel}`}
+            aria-expanded="false"
+            className="absolute left-1/2 top-0 z-0 h-7 max-w-64 -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
+            onClick={disclosure.pinOpen}
           >
-            {tabs.map((tab) => {
-              const id = getWorkspaceTabId(tab)
-              const label = getTabLabel(tab, tabLabels)
-              const saveState = tab.kind === 'file' ? saveStates[tab.path] : undefined
-              const isDirty = tab.kind === 'file' && !silentSave && Boolean(dirtyPaths[tab.path])
-              const hasError = saveState?.status === 'error'
-              const isActive = id === activeTabId
-              const tabAriaLabel = [
-                label,
-                isDirty ? dirtyLabel : null,
-                hasError ? errorLabel : null,
-              ]
-                .filter(Boolean)
-                .join(' - ')
-              const closeLabel = `${baseCloseLabel}: ${label}`
-
-              return (
-                <WorkspaceTabButton
-                  key={id}
-                  id={id}
-                  tab={tab}
-                  compact={compact}
-                  isActive={isActive}
-                  isDirty={isDirty}
-                  hasError={hasError}
-                  label={label}
-                  tabAriaLabel={tabAriaLabel}
-                  closeLabel={closeLabel}
-                  dirtyLabel={dirtyLabel}
-                  errorLabel={errorLabel}
-                  errorMessage={saveState?.message}
-                  onOpenTab={onOpenTab}
-                  onCloseTab={onCloseTab}
-                />
-              )
-            })}
+            <Files aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="truncate">{activeLabel}</span>
+            <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary/70" />
+          </Button>
+        ) : null}
+        <CollapsibleContent className="relative z-10 w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 data-[state=open]:duration-[180ms] data-[state=closed]:duration-100 motion-reduce:animate-none">
+          <div className="flex h-11 w-full items-center gap-1.5 rounded-xl border border-border/65 bg-background/92 p-1.5 shadow-lg shadow-foreground/10 backdrop-blur-xl">
+            <TabsBarVirtualList
+              activeTabId={activeTabId}
+              baseCloseLabel={t('actions.closeTab')}
+              dirtyLabel={t('save.unsaved')}
+              dirtyPaths={dirtyPaths}
+              errorLabel={t('save.error')}
+              labels={labels}
+              saveStates={saveStates}
+              silentSave={silentSave}
+              tabs={tabs}
+              tablistLabel={t('tabs.openFiles')}
+              onCloseTab={onCloseTab}
+              onOpenTab={onOpenTab}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t(disclosure.pinned ? 'tabs.collapse' : 'tabs.pinOpen')}
+              className="size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={disclosure.pinned ? disclosure.collapse : disclosure.pinOpen}
+            >
+              {disclosure.pinned ? (
+                <PanelTopClose aria-hidden="true" className="size-3.5" />
+              ) : (
+                <Pin aria-hidden="true" className="size-3.5" />
+              )}
+            </Button>
           </div>
-        </div>
-      </div>
-      <TabsBarViewModeControls
-        active={fileTabActive}
-        graphLabel={tabLabels.graph}
-        sourceLabel={tabLabels.source}
-        viewMode={viewMode}
-        wysiwygLabel={t('editor.modeWysiwyg')}
-        onChangeView={onChangeView}
-      />
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }

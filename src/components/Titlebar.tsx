@@ -161,7 +161,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     return (
       <header
         className={cn(
-          'app-titlebar relative flex h-14 items-center justify-between border-b border-border/60 px-2.5',
+          'app-titlebar relative flex h-[52px] items-center justify-between border-b border-border/60 px-2.5',
           isMacDesktop && 'pl-[76px]',
         )}
         onMouseDown={handleTitlebarMouseDown}

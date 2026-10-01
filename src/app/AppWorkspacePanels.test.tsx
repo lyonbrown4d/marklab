@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 
@@ -47,6 +47,7 @@ vi.mock('@/i18n/useI18n', () => ({
 const action = vi.fn()
 const baseState = {
   activePath: '/notes/one.md',
+  activeTabId: 'file:edit:/notes/one.md',
   activeResourcePath: '/notes/one.md',
   createFile: action,
   createFolder: action,
@@ -70,10 +71,14 @@ const baseState = {
   rightSidebarCollapsed: false,
   rootKind: 'internal',
   rootPath: '/notes',
+  saveStates: {},
   sidebarCollapsed: false,
-  tabs: [],
+  silentSave: true,
+  tabs: [{ kind: 'file' as const, view: 'edit' as const, path: '/notes/one.md' }],
   viewMode: 'wysiwyg',
   workspaceIndex: null,
+  onCloseTab: action,
+  onOpenTab: action,
 }
 
 const renderPanels = (state: typeof baseState) => (
@@ -121,5 +126,12 @@ describe('AppWorkspacePanels render isolation', () => {
     expect(nextProps.onToggleSidebar).toBe(firstProps.onToggleSidebar)
     expect(nextProps.onSidebarOpenChange).toBe(firstProps.onSidebarOpenChange)
     expect(nextProps.onToggleInspector).toBe(firstProps.onToggleInspector)
+  })
+
+  it('mounts the immersive tabs dock over the workspace content', () => {
+    render(renderPanels(baseState))
+
+    expect(screen.getByTestId('tabs-dock')).toBeInTheDocument()
+    expect(screen.getByText('Editor')).toBeInTheDocument()
   })
 })

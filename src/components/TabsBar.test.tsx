@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react'
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import TabsBar from '@/components/TabsBar'
 import i18n from '@/i18n/setup'
 import { getWorkspaceTabId } from '@/logic/tabs'
@@ -9,129 +10,128 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type TabsBarTestProps = ComponentProps<typeof TabsBar>
 
+const currentTab = { kind: 'file' as const, view: 'source' as const, path: 'notes/current.md' }
+
 const createProps = (): TabsBarTestProps => ({
-  tabs: [{ kind: 'file' as const, view: 'source' as const, path: 'notes/current.md' }],
+  tabs: [currentTab],
   dirtyPaths: {},
   saveStates: {},
-  activeTabId: 'file:source:notes/current.md',
+  activeTabId: getWorkspaceTabId(currentTab),
   onOpenTab: vi.fn(),
   onCloseTab: vi.fn(),
-  viewMode: 'source' as const,
-  onChangeView: vi.fn(),
   silentSave: true,
 })
 
 const renderTabsBar = (overrides: Partial<TabsBarTestProps> = {}) => {
   const props = { ...createProps(), ...overrides }
-
   render(<TabsBar {...props} />)
-
   return props
+}
+
+const openFromHover = () => {
+  fireEvent.pointerEnter(screen.getByTestId('tabs-dock'))
+  act(() => vi.advanceTimersByTime(200))
 }
 
 beforeEach(async () => {
   localStorage.clear()
   vi.clearAllMocks()
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(720)
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(32)
   usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
 
-describe('TabsBar', () => {
-  it('labels the open files tablist from i18n', () => {
+afterEach(() => vi.useRealTimers())
+
+describe('TabsBar immersive dock', () => {
+  it('keeps only the active-file handle visible while collapsed', () => {
     renderTabsBar()
 
-    expect(screen.getByRole('tablist', { name: 'Open files' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show open files.*current · Source/ })).toBeVisible()
+    expect(screen.queryByRole('tablist', { name: 'Open files' })).not.toBeInTheDocument()
   })
 
-  it('shows a compact unsaved indicator when visible save state is enabled', () => {
-    renderTabsBar({
-      silentSave: false,
-      dirtyPaths: { 'notes/current.md': true },
-      saveStates: { 'notes/current.md': { status: 'saving' } },
-    })
+  it('opens on hover and closes after the pointer leaves', () => {
+    renderTabsBar()
 
-    expect(screen.getByLabelText('Unsaved')).toBeInTheDocument()
-    expect(screen.queryByText('Saving')).not.toBeInTheDocument()
+    openFromHover()
+    expect(screen.getByRole('tablist', { name: 'Open files' })).toBeVisible()
+    screen.getByRole('tab').focus()
+
+    fireEvent.pointerLeave(screen.getByTestId('tabs-dock'))
+    act(() => vi.advanceTimersByTime(250))
+
+    expect(screen.queryByRole('tablist', { name: 'Open files' })).not.toBeInTheDocument()
   })
 
-  it('hides routine save state when silent save is enabled', () => {
-    renderTabsBar({
-      dirtyPaths: { 'notes/current.md': true },
-      saveStates: { 'notes/current.md': { status: 'saving' } },
-    })
+  it('cancels a pending hover close when the pointer returns', () => {
+    renderTabsBar()
+    openFromHover()
 
-    expect(screen.queryByText('Saving')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Unsaved')).not.toBeInTheDocument()
+    fireEvent.pointerLeave(screen.getByTestId('tabs-dock'))
+    act(() => vi.advanceTimersByTime(100))
+    fireEvent.pointerEnter(screen.getByTestId('tabs-dock'))
+    act(() => vi.advanceTimersByTime(150))
+
+    expect(screen.getByRole('tablist', { name: 'Open files' })).toBeVisible()
   })
 
-  it('still shows compact save errors when silent save is enabled', () => {
-    renderTabsBar({
-      dirtyPaths: { 'notes/current.md': true },
-      saveStates: { 'notes/current.md': { status: 'error' } },
-    })
+  it('can stay pinned after hover until explicitly collapsed', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTabsBar()
+    openFromHover()
 
-    expect(screen.getByLabelText('Save failed')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Keep tabs open' }))
+    fireEvent.pointerLeave(screen.getByTestId('tabs-dock'))
+    act(() => vi.advanceTimersByTime(250))
+
+    expect(screen.getByRole('tablist', { name: 'Open files' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Collapse tabs' }))
+    expect(screen.queryByRole('tablist', { name: 'Open files' })).not.toBeInTheDocument()
   })
 
-  it('names tab state and close controls with file context', async () => {
-    const user = userEvent.setup()
-    const props = renderTabsBar({
-      silentSave: false,
-      dirtyPaths: { 'notes/current.md': true },
-      saveStates: { 'notes/current.md': { status: 'saving' } },
-    })
+  it('uses a horizontally virtualized track for many open files', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const tabs = Array.from({ length: 20 }, (_, index) => ({
+      kind: 'file' as const,
+      view: 'edit' as const,
+      path: `notes/note-${index}.md`,
+    }))
+    renderTabsBar({ tabs, activeTabId: getWorkspaceTabId(tabs[0]) })
 
-    expect(screen.getByRole('tab', { name: /current · Source.*Unsaved/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    await user.click(screen.getByRole('button', { name: /Show open files/ }))
 
-    const closeButton = screen.getByRole('button', { name: /current · Source/ })
-
-    expect(closeButton).toHaveAttribute('title', expect.stringContaining('current · Source'))
-
-    await user.click(closeButton)
-
-    expect(props.onCloseTab).toHaveBeenCalledWith('file:source:notes/current.md')
-    expect(props.onOpenTab).not.toHaveBeenCalled()
+    expect(screen.getByTestId('virtual-tabs-track')).toHaveStyle({ width: '2720px' })
+    expect(screen.getAllByRole('tab').length).toBeLessThan(tabs.length)
   })
 
-  it('opens adjacent tabs with tablist arrow navigation', async () => {
-    const user = userEvent.setup()
+  it('keeps tab state, close controls, and keyboard navigation accessible', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const nextTab = { kind: 'file' as const, view: 'preview' as const, path: 'notes/next.md' }
     const props = renderTabsBar({
-      tabs: [{ kind: 'file' as const, view: 'source' as const, path: 'notes/current.md' }, nextTab],
+      tabs: [currentTab, nextTab],
+      silentSave: false,
+      dirtyPaths: { 'notes/current.md': true },
+      saveStates: { 'notes/current.md': { status: 'saving' } },
     })
+    await user.click(screen.getByRole('button', { name: /Show open files/ }))
 
-    screen.getByRole('tab', { name: 'current · Source' }).focus()
-
+    const activeTab = screen.getByRole('tab', { name: /current · Source.*Unsaved/ })
+    expect(activeTab).toHaveAttribute('aria-selected', 'true')
+    activeTab.focus()
     await user.keyboard('{ArrowRight}')
-
-    expect(screen.getByRole('tab', { name: 'next · Preview' })).toHaveFocus()
     expect(props.onOpenTab).toHaveBeenCalledWith(getWorkspaceTabId(nextTab))
+
+    await user.click(screen.getByRole('button', { name: /Close tab.*current · Source/i }))
+    expect(props.onCloseTab).toHaveBeenCalledWith(getWorkspaceTabId(currentTab))
   })
 
-  it('exposes pressed state on view mode controls', () => {
-    renderTabsBar({ viewMode: 'source' })
+  it('does not render a dock when no documents are open', () => {
+    renderTabsBar({ tabs: [], activeTabId: null })
 
-    expect(screen.getByRole('button', { name: 'Source' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'WYSIWYG' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Mind Map' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-  })
-
-  it('disables view mode controls when no editable file tab is active', () => {
-    const workspaceGraphTab = { kind: 'workspace-graph' as const }
-
-    renderTabsBar({
-      tabs: [workspaceGraphTab],
-      activeTabId: getWorkspaceTabId(workspaceGraphTab),
-    })
-
-    expect(screen.getByRole('button', { name: 'Source' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'WYSIWYG' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Mind Map' })).toBeDisabled()
+    expect(screen.queryByTestId('tabs-dock')).not.toBeInTheDocument()
   })
 })

@@ -9,12 +9,14 @@ import type { FsSearchResult } from '@/services/fsApi'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import TabsBar from '@/components/TabsBar'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
 type AppWorkspacePanelsState = Pick<
   AppLayoutState,
   | 'activePath'
+  | 'activeTabId'
   | 'activeResourcePath'
   | 'createFile'
   | 'createFolder'
@@ -26,9 +28,11 @@ type AppWorkspacePanelsState = Pick<
   | 'files'
   | 'inspectedPath'
   | 'movePath'
+  | 'onCloseTab'
   | 'onInspectPath'
   | 'onEditorChange'
   | 'onOpenProject'
+  | 'onOpenTab'
   | 'onOpenWorkspaceGraph'
   | 'onOpenWorkspaceOverview'
   | 'onSelectProject'
@@ -38,7 +42,9 @@ type AppWorkspacePanelsState = Pick<
   | 'rightSidebarCollapsed'
   | 'rootKind'
   | 'rootPath'
+  | 'saveStates'
   | 'sidebarCollapsed'
+  | 'silentSave'
   | 'tabs'
   | 'viewMode'
   | 'workspaceIndex'
@@ -136,7 +142,18 @@ export const AppWorkspacePanels = ({
       onSidebarOpenChange={setSidebarOpen}
       onToggleInspector={toggleInspector}
     >
-      <section className="workspace-main flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+      <section className="workspace-main relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        {!immersiveZenMode ? (
+          <TabsBar
+            activeTabId={state.activeTabId}
+            dirtyPaths={state.dirtyPaths}
+            saveStates={state.saveStates}
+            silentSave={state.silentSave}
+            tabs={state.tabs}
+            onCloseTab={state.onCloseTab}
+            onOpenTab={state.onOpenTab}
+          />
+        ) : null}
         <div className="min-h-0 flex-1 overflow-hidden">{outlet}</div>
       </section>
     </ImmersiveWorkspaceShell>
