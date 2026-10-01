@@ -1,9 +1,7 @@
 @use './editor-playground/table';
 @use './editor-playground/ai-inline-completion';
-
-.crepe-playground .milkdown .milkdown-slash-menu .tab-group {
-  padding-bottom: 0.75rem;
-}
+@use './editor-playground/slash-menu';
+@use './editor-playground/selection-toolbar';
 
 @keyframes editor-menu-surface-enter {
   from {

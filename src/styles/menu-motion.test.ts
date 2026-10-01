@@ -6,6 +6,7 @@ const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url),
 const readSource = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
 
 const menuMotionStyles = readStyle('./app/_menu-motion.scss')
+const sharedMenuStyles = readStyle('./shared/_menu.scss')
 const editorPlaygroundStyles = readStyle('./editor-playground.scss')
 const tableStyles = readStyle('./editor-playground/table.scss')
 const commandSource = readSource('../components/ui/command.tsx')
@@ -37,8 +38,10 @@ describe('menu motion styles', () => {
   it('composes a shared visual contract without modifying Radix menu primitives', () => {
     expect(menuMotionStyles).toContain(".menu-motion-surface[role='menu']")
     expect(menuMotionStyles).toContain(".menu-motion-item[role^='menuitem']")
-    expect(menuMotionStyles).toContain('border-radius: 0.75rem')
-    expect(menuMotionStyles).toContain('backdrop-filter: blur(16px)')
+    expect(menuMotionStyles).toContain('@include menu.surface;')
+    expect(menuMotionStyles).toContain('@include menu.item;')
+    expect(sharedMenuStyles).toContain('border-radius: 0.75rem')
+    expect(sharedMenuStyles).toContain('backdrop-filter: blur(16px)')
   })
 
   it('also animates the editor-owned menus that do not use Radix', () => {
