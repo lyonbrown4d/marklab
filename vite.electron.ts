@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 const isNodeModule = (id: string) => id.includes('/node_modules/')
 
 const includesAny = (id: string, values: string[]) => values.some((value) => id.includes(value))
@@ -7,7 +9,29 @@ export const electronMainRequireBanner = [
   'const require = __marklabCreateRequire(import.meta.url);',
 ].join('\n')
 
-export const electronMainExternal = ['@homebridge/node-pty-prebuilt-multiarch', '@parcel/watcher']
+export const electronMainExternal = [
+  '@homebridge/node-pty-prebuilt-multiarch',
+  '@parcel/watcher',
+  'node-llama-cpp',
+]
+
+export const electronMainEntry = {
+  knowledgeSidecarEntry: path.resolve(
+    import.meta.dirname,
+    'electron/sidecar/knowledgeSidecarEntry.ts',
+  ),
+  localAiUtilityEntry: path.resolve(import.meta.dirname, 'electron/localAiUtilityEntry.ts'),
+  main: path.resolve(import.meta.dirname, 'electron/main.ts'),
+  marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
+  nodeSearchWorkerEntry: path.resolve(
+    import.meta.dirname,
+    'electron/services/knowledgeEngine/nodeSearchWorkerEntry.ts',
+  ),
+  workspaceAnalysisWorkerEntry: path.resolve(
+    import.meta.dirname,
+    'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
+  ),
+}
 
 export const electronMainManualChunks = (id: string) => {
   const normalizedId = id.replaceAll('\\', '/')

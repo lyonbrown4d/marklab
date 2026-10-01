@@ -1,7 +1,18 @@
 import { asFunction, asValue, createContainer, InjectionMode, type AwilixContainer } from 'awilix'
 import type * as Electron from 'electron'
+import path from 'node:path'
 
 import { AiService } from '@electron/services/ai/aiService.js'
+import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog.js'
+import { LocalAiDirectoryStore } from '@electron/services/ai/local/directoryStore.js'
+import { LocalAiModelManager } from '@electron/services/ai/local/modelManager.js'
+import { LocalAiService } from '@electron/services/ai/local/service.js'
+import type {
+  LocalAiModelManagerContract,
+  LocalAiRuntimeContract,
+  LocalAiServiceContract,
+} from '@electron/services/ai/local/types.js'
+import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime.js'
 import { AiProviderStore } from '@electron/services/ai/providerStore.js'
 import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver.js'
 import type {
@@ -41,6 +52,10 @@ export type ElectronRuntimeDependencies = {
 
 export type ElectronCradle = ElectronRuntimeDependencies & {
   aiModelResolver: AiModelResolverContract
+  localAiModelManager: LocalAiModelManagerContract
+  localAiDirectoryStore: LocalAiDirectoryStore
+  localAiRuntime: LocalAiRuntimeContract
+  localAiService: LocalAiServiceContract
   aiProviderStore: AiProviderStoreContract
   aiService: AiServiceContract
   exportService: ExportService
@@ -85,6 +100,28 @@ export const createElectronContainer = (
     aiService: asFunction(({ aiModelResolver, aiProviderStore }) => {
       return new AiService({ resolver: aiModelResolver, store: aiProviderStore })
     }).singleton(),
+    localAiDirectoryStore: asFunction(({ app }) => {
+      return new LocalAiDirectoryStore(app.getPath('userData'))
+    }).singleton(),
+    localAiModelManager: asFunction(({ app, localAiDirectoryStore }) => {
+      return new LocalAiModelManager({
+        catalog: LOCAL_AI_MODEL_CATALOG,
+        forbiddenModelDirectories: packagedApplicationDirectories(app),
+        initialDirectoryPreference: localAiDirectoryStore.getConfig(),
+        initialDeviceId: localAiDirectoryStore.getDeviceId(),
+        initialMigration: localAiDirectoryStore.getMigration(),
+        userDataPath: app.getPath('userData'),
+      })
+    }).singleton(),
+    localAiRuntime: asFunction(() => new UtilityLocalAiRuntime()).singleton(),
+    localAiService: asFunction(({ localAiDirectoryStore, localAiModelManager, localAiRuntime }) => {
+      return new LocalAiService({
+        modelManager: localAiModelManager,
+        persistMigration: (migration) => localAiDirectoryStore.recordMigration(migration),
+        persistModelDirectory: (config) => localAiDirectoryStore.commit(config),
+        runtime: localAiRuntime,
+      })
+    }).singleton(),
     localHistoryService: asFunction(({ app }) => {
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),
@@ -128,4 +165,16 @@ export const createElectronContainer = (
   })
 
   return container
+}
+
+const packagedApplicationDirectories = (app: Electron.App): string[] => {
+  if (!app.isPackaged) return []
+  const directories = [app.getAppPath(), path.dirname(app.getPath('exe'))]
+  if (process.platform !== 'darwin') return directories
+  let current = path.resolve(app.getPath('exe'))
+  while (path.dirname(current) !== current) {
+    if (current.toLowerCase().endsWith('.app')) return [...directories, current]
+    current = path.dirname(current)
+  }
+  return directories
 }

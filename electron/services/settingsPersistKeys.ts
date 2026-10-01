@@ -10,6 +10,9 @@ export const drawioStateKeys = new Set(['drawioEditorMode', 'drawioEmbedUrl'])
 
 export const preferenceStateKeys = new Set([
   'autoSystemThemeSync',
+  'aiDefaultProviderId',
+  'aiCustomModelDirectoryEnabled',
+  'aiModelDirectory',
   'customThemeId',
   'defaultFileView',
   'editorReadOnlyMode',

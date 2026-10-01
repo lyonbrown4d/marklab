@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LanguageModel } from 'ai'
 
 import { AiService } from '@electron/services/ai/aiService.js'
-import type { AiProviderStoreContract } from '@electron/services/ai/types.js'
+import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types.js'
 
 const storedProvider = {
   id: 'openai-main',
@@ -151,13 +151,54 @@ describe('AiService', () => {
       'AI provider API key is not configured',
     )
   })
+
+  it.each(['http://127.0.0.1:11434/v1', 'http://localhost:11434/v1', 'http://[::1]:11434/v1'])(
+    'allows a keyless loopback compatible provider at %s',
+    async (baseUrl) => {
+      const { generate, resolver, service, store } = createService({
+        id: 'ollama',
+        kind: 'openai-compatible',
+        baseUrl,
+        encryptedApiKey: undefined,
+      })
+      vi.mocked(store.resolveApiKey).mockResolvedValue(null)
+      vi.mocked(generate).mockResolvedValue({
+        text: 'Hello',
+        finishReason: 'stop',
+        usage: {},
+        warnings: [],
+      })
+
+      await expect(
+        service.generateText({ providerId: 'ollama', prompt: 'Hi' }),
+      ).resolves.toMatchObject({ text: 'Hello' })
+      expect(resolver.resolve).toHaveBeenCalledWith(expect.objectContaining({ baseUrl }), 'ollama')
+    },
+  )
+
+  it.each(['https://localhost:11434/v1', 'https://example.com/v1'])(
+    'requires a real key for compatible provider at %s',
+    async (baseUrl) => {
+      const { service, store } = createService({
+        id: 'compatible',
+        kind: 'openai-compatible',
+        baseUrl,
+        encryptedApiKey: undefined,
+      })
+      vi.mocked(store.resolveApiKey).mockResolvedValue(null)
+
+      await expect(
+        service.generateText({ providerId: 'compatible', prompt: 'Hi' }),
+      ).rejects.toThrow('AI provider API key is not configured')
+    },
+  )
 })
 
 const createService = (
-  providerOverrides: Partial<typeof storedProvider> = {},
+  providerOverrides: Partial<StoredAiProvider> = {},
   environmentKey: string | undefined = undefined,
 ) => {
-  const provider = { ...storedProvider, ...providerOverrides }
+  const provider: StoredAiProvider = { ...storedProvider, ...providerOverrides }
   const store = {
     list: vi.fn(async () => [provider]),
     get: vi.fn(async () => provider),

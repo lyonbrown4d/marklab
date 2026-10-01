@@ -1,9 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
-import throttle from 'lodash-es/throttle'
-import { editorViewCtx, editorViewOptionsCtx } from '@milkdown/kit/core'
+import { editorViewOptionsCtx } from '@milkdown/kit/core'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
-import { getMarkdown } from '@milkdown/kit/utils'
 import { createMarkdownCodeBlockTheme } from '@/components/milkdown/markdownCodeBlockTheme'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
@@ -23,15 +21,13 @@ import {
 import type {
   MarkdownEditorStatus,
   MarkdownPlaygroundControllerOptions,
-  QueuedMarkdownUpdate,
   ThrottledMarkdownUpdate,
 } from '@/components/milkdown/markdownEditorTypes'
-import {
-  markdownEditorPerformancePolicy,
-  waitForMarkdownEditorMount,
-} from '@/components/markdownEditorPerformance'
+import { waitForMarkdownEditorMount } from '@/components/markdownEditorPerformance'
 import { useMilkdownEditorContextMenu } from '@/components/milkdown/useMilkdownEditorContextMenu'
 import { useMarkdownPlaygroundSync } from '@/components/milkdown/useMarkdownPlaygroundSync'
+import { createMarkdownUpdateThrottle } from '@/components/milkdown/markdownUpdateThrottle'
+import { useMarkdownEditorAccess } from '@/components/milkdown/useMarkdownEditorAccess'
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
@@ -65,6 +61,7 @@ export const useMarkdownPlaygroundController = ({
     onLinkInsert: openUrlDialog,
     readOnly,
   })
+  const editorAccess = useMarkdownEditorAccess({ crepeRef, latestValueRef })
   const shortcutPlugin = useMarkdownPlaygroundShortcuts({
     crepeRef,
     enabled: status.phase === 'ready' && !urlDialog.request && !readOnly,
@@ -133,26 +130,12 @@ export const useMarkdownPlaygroundController = ({
         console.error('Failed to destroy Milkdown playground editor', error)
       }
     }
-    const updateMarkdown = throttle(
-      (update: QueuedMarkdownUpdate) => {
-        const { documentIdentity, markdown, onChange: queuedOnChange } = update
-        const isCurrentTarget =
-          documentIdentity === activePathRef.current && queuedOnChange === onChangeRef.current
-        if (
-          isCurrentTarget &&
-          documentIdentity === latestValuePathRef.current &&
-          markdown === latestValueRef.current
-        )
-          return
-        if (isCurrentTarget) {
-          latestValuePathRef.current = documentIdentity
-          latestValueRef.current = markdown
-        }
-        queuedOnChange(markdown)
-      },
-      markdownEditorPerformancePolicy(latestValueRef.current.length).updateThrottleMs,
-      { leading: false, trailing: true },
-    ) as ThrottledMarkdownUpdate
+    const updateMarkdown = createMarkdownUpdateThrottle({
+      activePathRef,
+      latestValuePathRef,
+      latestValueRef,
+      onChangeRef,
+    })
     throttledMarkdownUpdateRef.current = updateMarkdown
 
     setStatus({ phase: 'loading' })
@@ -298,17 +281,9 @@ export const useMarkdownPlaygroundController = ({
     subscribeDocumentPath,
   ])
 
-  const focusEditor = useCallback(() => {
-    crepeRef.current?.editor.action((ctx) => ctx.get(editorViewCtx).focus())
-  }, [])
-  const getCurrentMarkdown = useCallback(
-    () => crepeRef.current?.editor.action(getMarkdown()) ?? latestValueRef.current,
-    [],
-  )
   return {
     contextMenu,
-    focusEditor,
-    getMarkdown: getCurrentMarkdown,
+    ...editorAccess,
     rootRef,
     scrollAreaRef,
     status,

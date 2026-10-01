@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react'
 import '@milkdown/crepe/theme/common/style.css'
 import MarkdownEditorStatusOverlay from '@/components/MarkdownEditorStatusOverlay'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -12,17 +12,69 @@ import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdo
 import { SlashUrlDialog } from '@/components/milkdown/SlashUrlDialog'
 import { EditorContextMenu } from '@/components/EditorContextMenu'
 import { cn } from '@/lib/utils'
+import { useInlineAiComposer } from '@/components/milkdown/useInlineAiComposer'
+import type { InlineAiComposerMessages } from '@/components/milkdown/inlineAiComposerPrompt'
+import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
-  const { contextMenu, focusEditor, getMarkdown, rootRef, scrollAreaRef, status, urlDialog } =
-    useMarkdownPlaygroundController({
-      ...props,
-      darkMode,
-      shortcutOverrides,
-    })
+  const aiDefaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
+  const aiLabels = useMemo<AiComposerLabels>(
+    () => ({
+      accept: t('ai.composer.accept'),
+      abandon: t('ai.composer.abandon'),
+      concise: t('ai.composer.actionConcise'),
+      dialog: t('ai.composer.label'),
+      diff: t('ai.composer.diffLabel'),
+      explain: t('ai.composer.actionExplain'),
+      findingModel: t('ai.composer.findingModel'),
+      generate: t('ai.composer.generate'),
+      instruction: t('ai.composer.instructionLabel'),
+      placeholder: t('ai.composer.placeholder'),
+      retry: t('ai.composer.retry'),
+      rewrite: t('ai.composer.actionRewrite'),
+      stop: t('ai.composer.stop'),
+    }),
+    [t],
+  )
+  const aiMessages = useMemo<InlineAiComposerMessages>(
+    () => ({
+      defaultProviderUnavailable: t('ai.composer.errorDefaultProviderUnavailable'),
+      noProvider: t('ai.composer.errorNoProvider'),
+      quickActionInstructions: {
+        concise: t('ai.composer.instructionConcise'),
+        explain: t('ai.composer.instructionExplain'),
+        rewrite: t('ai.composer.instructionRewrite'),
+      },
+      staleSelection: t('ai.composer.errorStaleSelection'),
+    }),
+    [t],
+  )
+  const {
+    contextMenu,
+    focusEditor,
+    getEditorView,
+    getMarkdown,
+    rootRef,
+    scrollAreaRef,
+    status,
+    urlDialog,
+  } = useMarkdownPlaygroundController({
+    ...props,
+    darkMode,
+    shortcutOverrides,
+  })
+  const aiComposer = useInlineAiComposer({
+    activePath: props.activePath,
+    defaultProviderId: aiDefaultProviderId,
+    getEditorView,
+    messages: aiMessages,
+    readOnly: props.readOnly ?? false,
+    ready: status.phase === 'ready',
+    rootRef,
+  })
 
   useImperativeHandle(ref, () => ({
     focus: focusEditor,
@@ -58,6 +110,25 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           loadingLabel={t('editor.loading')}
           status={status}
         />
+        {aiComposer.isOpen && (
+          <AiInlineComposer
+            anchor={aiComposer.anchor}
+            error={aiComposer.error}
+            instruction={aiComposer.instruction}
+            labels={aiLabels}
+            modelLabel={aiComposer.modelLabel}
+            onAccept={aiComposer.accept}
+            onDismiss={aiComposer.dismiss}
+            onInstructionChange={aiComposer.setInstruction}
+            onQuickAction={aiComposer.quickAction}
+            onRetry={aiComposer.retry}
+            onStop={aiComposer.stop}
+            onSubmit={aiComposer.submit}
+            phase={aiComposer.phase}
+            proposal={aiComposer.proposal}
+            sourceText={aiComposer.sourceText}
+          />
+        )}
         {urlDialog?.request && (
           <SlashUrlDialog
             state={urlDialog}

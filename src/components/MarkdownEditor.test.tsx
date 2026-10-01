@@ -5,6 +5,7 @@ import MarkdownEditor from '@/components/MarkdownEditor'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdownPlaygroundController'
+import { useInlineAiComposer } from '@/components/milkdown/useInlineAiComposer'
 
 const controllerMock = vi.hoisted(() => ({
   focusEditor: vi.fn(),
@@ -16,6 +17,8 @@ const controllerMock = vi.hoisted(() => ({
     undo: true,
   })),
   getMarkdown: vi.fn(() => 'current markdown'),
+  getEditorView: vi.fn(() => null),
+  aiDefaultProviderId: 'openai-main',
   runContextMenuAction: vi.fn(),
   shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
 }))
@@ -27,11 +30,34 @@ vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
       onAction: controllerMock.runContextMenuAction,
     },
     focusEditor: controllerMock.focusEditor,
+    getEditorView: controllerMock.getEditorView,
     getMarkdown: controllerMock.getMarkdown,
     rootRef: { current: null },
     scrollAreaRef: { current: null },
     status: { phase: 'ready' },
   })),
+}))
+
+const inlineAiMock = vi.hoisted(() => ({
+  accept: vi.fn(),
+  anchor: { left: 8, top: 8 },
+  dismiss: vi.fn(),
+  error: null,
+  instruction: '',
+  isOpen: false,
+  modelLabel: 'OpenAI · gpt-5-mini',
+  phase: 'prompt' as const,
+  proposal: '',
+  quickAction: vi.fn(),
+  retry: vi.fn(),
+  setInstruction: vi.fn(),
+  sourceText: 'Original',
+  stop: vi.fn(),
+  submit: vi.fn(),
+}))
+
+vi.mock('@/components/milkdown/useInlineAiComposer', () => ({
+  useInlineAiComposer: vi.fn(() => inlineAiMock),
 }))
 
 vi.mock('@/hooks/useDarkMode', () => ({
@@ -146,10 +172,27 @@ describe('MarkdownEditor playground baseline', () => {
   })
 
   beforeEach(() => {
+    inlineAiMock.isOpen = false
     controllerMock.focusEditor.mockClear()
     controllerMock.getMarkdown.mockClear()
     controllerMock.getContextMenuCapabilities.mockClear()
     controllerMock.runContextMenuAction.mockClear()
+  })
+
+  it('mounts the transient AI companion against the editor bridge', () => {
+    inlineAiMock.isOpen = true
+    renderEditor()
+
+    expect(useInlineAiComposer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activePath: 'notes/example.md',
+        defaultProviderId: 'openai-main',
+        getEditorView: controllerMock.getEditorView,
+        readOnly: false,
+        ready: true,
+      }),
+    )
+    expect(screen.getByRole('dialog', { name: 'ai.composer.label' })).toBeInTheDocument()
   })
 
   it('renders the same empty crepe root shape as the official playground', () => {

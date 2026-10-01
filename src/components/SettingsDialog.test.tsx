@@ -9,6 +9,7 @@ vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => viewport.mobile }))
 
 const labels: Record<string, string> = {
   'settings.appearance': 'Appearance',
+  'settings.ai': 'AI',
   'settings.description': 'Configure MarkLab desktop preferences.',
   'settings.editing': 'Editing',
   'settings.files': 'Files',
@@ -28,6 +29,10 @@ vi.mock('@/i18n/useI18n', () => ({
 
 vi.mock('@/components/settings/AppearanceSettingsPage', () => ({
   default: () => <section>Appearance settings panel</section>,
+}))
+
+vi.mock('@/components/settings/AiSettingsPage', () => ({
+  default: () => <section>AI settings panel</section>,
 }))
 
 vi.mock('@/components/settings/EditingSettingsPage', () => ({
@@ -127,6 +132,16 @@ describe('SettingsDialog', () => {
     expect(generalTab).toHaveAttribute('aria-selected', 'false')
     expect(generalTab).not.toHaveAttribute('aria-current')
     expect(screen.getByText('Appearance settings panel')).toBeInTheDocument()
+  })
+
+  it('opens AI configuration as a first-class settings section', async () => {
+    const user = userEvent.setup()
+    renderSettingsDialog()
+
+    await user.click(screen.getByRole('tab', { name: 'AI' }))
+
+    expect(await screen.findByText('AI settings panel')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'AI' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('keeps the active settings tab in view when sections change', async () => {

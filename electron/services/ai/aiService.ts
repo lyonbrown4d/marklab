@@ -4,6 +4,7 @@ import pLimit, { type LimitFunction } from 'p-limit'
 import { readAiEnvironment } from '@electron/services/ai/environment.js'
 import {
   generateTextRequestSchema,
+  isLoopbackHttpUrl,
   providerIdRequestSchema,
   providerUpdateSchema,
   type AiGenerateTextRequest,
@@ -24,6 +25,7 @@ const GENERATION_TIMEOUT_MS = 120_000
 const DEFAULT_MAX_OUTPUT_TOKENS = 4_096
 const MAX_CONCURRENT_GENERATIONS = 2
 const MAX_GENERATION_JOBS = 8
+const LOOPBACK_COMPATIBLE_API_KEY = 'ollama'
 
 type AiServiceOptions = {
   store: AiProviderStoreContract
@@ -73,13 +75,14 @@ export class AiService implements AiServiceContract {
     return { ok: true }
   }
 
-  async generateText(input: unknown): Promise<AiGenerateTextResult> {
-    return this.schedule(generateTextRequestSchema.parse(input), { maxRetries: 1 })
+  async generateText(input: unknown, abortSignal?: AbortSignal): Promise<AiGenerateTextResult> {
+    return this.schedule(generateTextRequestSchema.parse(input), { maxRetries: 1 }, abortSignal)
   }
 
   private schedule(
     request: AiGenerateTextRequest,
     options: { maxRetries: number },
+    abortSignal?: AbortSignal,
   ): Promise<AiGenerateTextResult> {
     if (
       this.generationLimit.activeCount + this.generationLimit.pendingCount >=
@@ -87,16 +90,23 @@ export class AiService implements AiServiceContract {
     ) {
       return Promise.reject(new Error('AI generation queue is full'))
     }
-    return this.generationLimit(() => this.execute(request, options))
+    return this.generationLimit(() => this.execute(request, options, abortSignal))
   }
 
   private async execute(
     request: AiGenerateTextRequest,
     options: { maxRetries: number },
+    abortSignal?: AbortSignal,
   ): Promise<AiGenerateTextResult> {
+    abortSignal?.throwIfAborted()
     const provider = await this.requireProvider(request.providerId)
-    const apiKey =
+    const configuredApiKey =
       (await this.options.store.resolveApiKey(provider.id)) ?? this.environment[provider.kind]
+    const apiKey =
+      configuredApiKey ??
+      (provider.kind === 'openai-compatible' && isLoopbackHttpUrl(provider.baseUrl)
+        ? LOOPBACK_COMPATIBLE_API_KEY
+        : undefined)
     if (!apiKey) throw new Error('AI provider API key is not configured')
     try {
       const model = this.options.resolver.resolve(provider, apiKey)
@@ -108,6 +118,7 @@ export class AiService implements AiServiceContract {
         ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
         maxRetries: options.maxRetries,
         timeout: GENERATION_TIMEOUT_MS,
+        ...(abortSignal ? { abortSignal } : {}),
       })
       return { ...result, warnings: result.warnings ?? [] }
     } catch {

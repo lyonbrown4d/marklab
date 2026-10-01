@@ -7,7 +7,11 @@ import {
   type ShortcutBindings,
 } from '@/logic/shortcuts'
 import { isDarkThemeMode } from '@/logic/themes'
-import { areStringArraysEqual, type PreferencesPersistedState } from '@/store/preferencesPersist'
+import {
+  areStringArraysEqual,
+  selectPreferencesPersistedState,
+  type PreferencesPersistedState,
+} from '@/store/preferencesPersist'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 import type {
@@ -34,6 +38,9 @@ export type PreferencesState = {
   darkTheme: DarkThemeMode
   autoSystemThemeSync: boolean
   customThemeId: string | null
+  aiDefaultProviderId: string | null
+  aiCustomModelDirectoryEnabled: boolean
+  aiModelDirectory: string | null
   locale: AppLocale
   sidebarCollapsed: boolean
   rightSidebarCollapsed: boolean
@@ -60,6 +67,9 @@ export type PreferencesState = {
   setDarkTheme: (theme: DarkThemeMode) => void
   setAutoSystemThemeSync: (enabled: boolean) => void
   setCustomThemeId: (themeId: string | null) => void
+  setAiDefaultProviderId: (providerId: string | null) => void
+  setAiCustomModelDirectoryEnabled: (enabled: boolean) => void
+  setAiModelDirectory: (path: string | null) => void
   setLocale: (locale: AppLocale) => void
   setSilentSave: (silent: boolean) => void
   setShowEditorStatusBar: (show: boolean) => void
@@ -91,6 +101,9 @@ export const usePreferencesStore = create<PreferencesState>()(
       darkTheme: 'ink',
       autoSystemThemeSync: true,
       customThemeId: null,
+      aiDefaultProviderId: null,
+      aiCustomModelDirectoryEnabled: false,
+      aiModelDirectory: null,
       locale: getInitialLocale(),
       sidebarCollapsed: true,
       rightSidebarCollapsed: true,
@@ -165,6 +178,20 @@ export const usePreferencesStore = create<PreferencesState>()(
         ),
       setCustomThemeId: (customThemeId) =>
         set((state) => (state.customThemeId === customThemeId ? state : { customThemeId })),
+      setAiDefaultProviderId: (aiDefaultProviderId) =>
+        set((state) =>
+          state.aiDefaultProviderId === aiDefaultProviderId ? state : { aiDefaultProviderId },
+        ),
+      setAiCustomModelDirectoryEnabled: (aiCustomModelDirectoryEnabled) =>
+        set((state) =>
+          state.aiCustomModelDirectoryEnabled === aiCustomModelDirectoryEnabled
+            ? state
+            : { aiCustomModelDirectoryEnabled },
+        ),
+      setAiModelDirectory: (aiModelDirectory) =>
+        set((state) =>
+          state.aiModelDirectory === aiModelDirectory ? state : { aiModelDirectory },
+        ),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
       setSilentSave: (silentSave) =>
         set((state) => (state.silentSave === silentSave ? state : { silentSave })),
@@ -267,33 +294,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       name: 'marklab.preferences',
       storage: createElectronSettingsJsonStorage<PreferencesPersistedState>('marklab.preferences'),
       version: 2,
-      partialize: (state): PreferencesPersistedState => ({
-        theme: state.theme,
-        themeMode: state.themeMode,
-        lightTheme: state.lightTheme,
-        darkTheme: state.darkTheme,
-        autoSystemThemeSync: state.autoSystemThemeSync,
-        customThemeId: state.customThemeId,
-        locale: state.locale,
-        sidebarCollapsed: state.sidebarCollapsed,
-        rightSidebarCollapsed: state.rightSidebarCollapsed,
-        silentSave: state.silentSave,
-        showEditorStatusBar: state.showEditorStatusBar,
-        sourceCodeMiniMapEnabled: state.sourceCodeMiniMapEnabled,
-        defaultFileView: state.defaultFileView,
-        graphMiniMapEnabled: state.graphMiniMapEnabled,
-        graphContentMode: state.graphContentMode,
-        hideMarkdownDefaultAppPrompt: state.hideMarkdownDefaultAppPrompt,
-        markdownAssetImportStrategy: state.markdownAssetImportStrategy,
-        motionSmoothScrolling: state.motionSmoothScrolling,
-        motionAnimatedCursor: state.motionAnimatedCursor,
-        motionAnimatedPanels: state.motionAnimatedPanels,
-        immersiveZenMode: state.immersiveZenMode,
-        immersiveFocusMode: state.immersiveFocusMode,
-        immersiveTypewriterMode: state.immersiveTypewriterMode,
-        editorReadOnlyMode: state.editorReadOnlyMode,
-        shortcutOverrides: state.shortcutOverrides,
-      }),
+      partialize: selectPreferencesPersistedState,
     },
   ),
 )

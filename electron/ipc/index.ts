@@ -1,5 +1,6 @@
 import type * as Electron from 'electron'
 import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai.js'
+import { createLocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory.js'
 import { registerAppReadyIpc } from '@electron/ipc/appReady.js'
 import { registerClipboardIpc } from '@electron/ipc/clipboard.js'
 import {
@@ -28,6 +29,7 @@ import type { AiServiceContract } from '@electron/services/ai/types.js'
 import type { GitService } from '@electron/services/git/service.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
+import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
 import { getPlatformInfo } from '@electron/services/platform.js'
@@ -47,6 +49,7 @@ export type NativeIpcDependencies = {
   knowledgeEngineService: KnowledgeEngineService
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
+  localAiService: LocalAiServiceContract
   onRendererReady?: () => void
   shell: Electron.Shell
   terminalService: TerminalService
@@ -78,7 +81,13 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
   })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
-  const ai = registerAiIpc(dependencies.ipcMain, dependencies.aiService, logger.child('ai'))
+  const ai = registerAiIpc(
+    dependencies.ipcMain,
+    dependencies.aiService,
+    logger.child('ai'),
+    dependencies.localAiService,
+    createLocalAiDirectoryPicker(dependencies.dialog, dependencies.BrowserWindow),
+  )
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
     exportService: dependencies.exportService,
     localHistoryService: dependencies.localHistoryService,

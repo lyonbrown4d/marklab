@@ -9,6 +9,15 @@ const allowedCommandNames = [
   'ai_delete_provider',
   'ai_test_provider',
   'ai_generate_text',
+  'ai_local_status',
+  'ai_local_download',
+  'ai_local_cancel_download',
+  'ai_local_delete_model',
+  'ai_local_set_active_model',
+  'ai_local_select_model_directory',
+  'ai_local_set_model_directory',
+  'ai_start_generation',
+  'ai_cancel_generation',
   'menu_dispatch',
   'menu_set_locale',
   'open_current_workspace_in_new_window',
@@ -97,6 +106,9 @@ const allowedEventNames = [
   'app-ready',
   'workspace-session-seed',
   'system-theme-changed',
+  'ai-local-progress',
+  'ai-local-directory-progress',
+  'ai-generation-event',
 ] as const
 
 export const allowedCommands: ReadonlySet<string> = new Set(allowedCommandNames)

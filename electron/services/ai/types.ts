@@ -42,6 +42,7 @@ export type AiGenerateOptions = Pick<
   model: LanguageModel
   maxRetries: number
   timeout: number
+  abortSignal?: AbortSignal
 }
 
 export type AiGenerateAdapterResult = {
@@ -65,7 +66,7 @@ export type AiServiceContract = {
   updateProvider: (input: unknown) => Promise<PublicAiProvider>
   deleteProvider: (id: string) => Promise<{ ok: true }>
   testProvider: (id: string) => Promise<{ ok: true }>
-  generateText: (input: unknown) => Promise<AiGenerateTextResult>
+  generateText: (input: unknown, abortSignal?: AbortSignal) => Promise<AiGenerateTextResult>
 }
 
 export type AiSafeStorage = {

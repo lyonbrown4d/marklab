@@ -1,4 +1,5 @@
 import {
+  Bot,
   FileText,
   GitGraph,
   Keyboard,
@@ -20,6 +21,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import { useIsMobile } from '@/hooks/use-mobile'
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage'
+import AiSettingsPage from '@/components/settings/AiSettingsPage'
 import EditingSettingsPage from '@/components/settings/EditingSettingsPage'
 import FileSettingsPage from '@/components/settings/FileSettingsPage'
 import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
@@ -72,6 +74,12 @@ const settingsRoutes = [
     labelKey: 'settings.graphEditor',
     icon: GitGraph,
     render: () => <GraphSettingsPage />,
+  },
+  {
+    value: 'ai',
+    labelKey: 'settings.ai',
+    icon: Bot,
+    render: () => <AiSettingsPage />,
   },
   {
     value: 'shortcuts',

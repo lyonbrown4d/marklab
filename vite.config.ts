@@ -12,6 +12,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development.ts'
 // eslint-disable-next-line no-restricted-imports -- Vite config helpers live at repository root before app aliases are available.
 import {
+  electronMainEntry,
   electronMainExternal,
   electronMainManualChunks,
   electronMainRequireBanner,
@@ -30,22 +31,6 @@ const alias = {
   '@electron': path.resolve(import.meta.dirname, 'electron'),
 }
 
-const electronMainEntry = {
-  knowledgeSidecarEntry: path.resolve(
-    import.meta.dirname,
-    'electron/sidecar/knowledgeSidecarEntry.ts',
-  ),
-  main: path.resolve(import.meta.dirname, 'electron/main.ts'),
-  marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
-  nodeSearchWorkerEntry: path.resolve(
-    import.meta.dirname,
-    'electron/services/knowledgeEngine/nodeSearchWorkerEntry.ts',
-  ),
-  workspaceAnalysisWorkerEntry: path.resolve(
-    import.meta.dirname,
-    'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
-  ),
-}
 const distKatexFontsDir = path.resolve(import.meta.dirname, 'dist/fonts')
 const distElectronDir = path.resolve(import.meta.dirname, 'dist-electron')
 const distDesignPreviewAssets = [

@@ -11,6 +11,16 @@ const isLoopbackHost = (hostname: string): boolean => {
   return host.split('.')[0] === '127'
 }
 
+export const isLoopbackHttpUrl = (value: string | undefined): boolean => {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' && isLoopbackHost(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 export const validateProviderBaseUrl = (value: string): string => {
   let url: URL
   try {

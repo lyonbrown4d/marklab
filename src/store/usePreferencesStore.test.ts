@@ -17,6 +17,28 @@ beforeEach(() => {
 })
 
 describe('writing-first layout preferences', () => {
+  it('stores the default AI provider as an optional persisted preference', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.aiDefaultProviderId).toBeNull()
+    store.setAiDefaultProviderId('marklab-local')
+
+    expect(usePreferencesStore.getState().aiDefaultProviderId).toBe('marklab-local')
+  })
+
+  it('stores an opt-in custom AI model directory without losing the selected path', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.aiCustomModelDirectoryEnabled).toBe(false)
+    expect(store.aiModelDirectory).toBeNull()
+    store.setAiModelDirectory('D:\\MarkLab Models')
+    store.setAiCustomModelDirectoryEnabled(true)
+    store.setAiCustomModelDirectoryEnabled(false)
+
+    expect(usePreferencesStore.getState().aiCustomModelDirectoryEnabled).toBe(false)
+    expect(usePreferencesStore.getState().aiModelDirectory).toBe('D:\\MarkLab Models')
+  })
+
   it('toggles the editor read-only browsing mode', () => {
     const store = usePreferencesStore.getState()
 
