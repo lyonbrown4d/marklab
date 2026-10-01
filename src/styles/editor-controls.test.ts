@@ -18,6 +18,9 @@ describe('editor playground baseline styles', () => {
   const playgroundControllerSource = readSource(
     '../components/milkdown/useMarkdownPlaygroundController.ts',
   )
+  const playgroundFactorySource = readSource(
+    '../components/milkdown/createMarkdownPlaygroundCrepe.ts',
+  )
   const playgroundActionsSource = readSource('../components/milkdown/markdownPlaygroundActions.ts')
   const wysiwygSource = readSource('../pages/WysiwygEditorPage.tsx')
   const playgroundStyles = readStyle('./editor-playground.scss')
@@ -63,10 +66,10 @@ describe('editor playground baseline styles', () => {
   })
 
   it('restores safe Markdown playground features without restoring legacy drag chrome', () => {
-    expect(playgroundControllerSource).toContain('createMarkdownPlaygroundSlashConfig')
-    expect(playgroundControllerSource).toContain('[Crepe.Feature.BlockEdit]')
-    expect(playgroundControllerSource).toContain('[Crepe.Feature.Placeholder]')
-    expect(playgroundControllerSource).toContain('mermaidCodeBlockConfig')
+    expect(playgroundFactorySource).toContain('createMarkdownPlaygroundSlashConfig')
+    expect(playgroundFactorySource).toContain('[Crepe.Feature.BlockEdit]')
+    expect(playgroundFactorySource).toContain('[Crepe.Feature.Placeholder]')
+    expect(playgroundFactorySource).toContain('mermaidCodeBlockConfig')
     expect(playgroundControllerSource).toContain('createMarkdownSafePlugins')
     expect(playgroundControllerSource).toContain('.use(typewriterScroll)')
     expect(playgroundControllerSource).not.toContain('embeddedPreviewPlugin')

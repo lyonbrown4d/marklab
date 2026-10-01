@@ -10,7 +10,7 @@ import type {
   DialogFilter,
   OpenDialogOptions,
   PlatformInfo,
-  RuntimeEventPayload,
+  RuntimeEventEnvelope,
   SaveDialogOptions,
   SettingsPersistResult,
   UserThemeCssResult,
@@ -22,9 +22,14 @@ import type {
   WindowActionResult,
 } from '@electron/types.js'
 import type { RendererSafeElectronApi } from '@/runtime/electron'
+import type {
+  AiInlineCompletionEvent,
+  AiInlineCompletionRequest,
+  AiInlineCompletionStartResult,
+} from '@/types/aiCompletion'
 
 type MenuActionHandler = (id: string) => void
-type RuntimeEventHandler<T = unknown> = (event: RuntimeEventPayload<T>) => void
+type RuntimeEventHandler<T = unknown> = (event: RuntimeEventEnvelope<T>) => void
 
 let nextRuntimeEventId = 1
 
@@ -114,11 +119,26 @@ const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
 const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
+  aiCompletion: {
+    cancel: (requestId: string) =>
+      ipcRenderer.invoke(nativeIpcChannels.aiCompletionCancel, requestId) as Promise<{ ok: true }>,
+    onEvent: (handler: (event: AiInlineCompletionEvent) => void) => {
+      const listener = (_event: IpcRendererEvent, payload: AiInlineCompletionEvent) => {
+        handler(payload)
+      }
+      ipcRenderer.on(nativeIpcChannels.aiCompletionEvent, listener)
+      return () => ipcRenderer.removeListener(nativeIpcChannels.aiCompletionEvent, listener)
+    },
+    start: (input: AiInlineCompletionRequest) =>
+      ipcRenderer.invoke(
+        nativeIpcChannels.aiCompletionStart,
+        input,
+      ) as Promise<AiInlineCompletionStartResult>,
+  },
   appReady: () => ipcRenderer.invoke(nativeIpcChannels.appReadySignal) as Promise<{ ok: boolean }>,
   lifecycle: {
     getLaunchInfo: () =>
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,
-    ...workspacePreloadSurfaces.lifecycle,
   },
   opening: windowOpeningSurface,
   platform: {

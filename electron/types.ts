@@ -162,10 +162,7 @@ export type AppLaunchInfo = SingleInstancePayload & {
   deepLinks: DeepLinkPayload[]
 }
 
-/**
- * @deprecated Transitional payload for commands.invoke compatibility.
- */
-export type RuntimeCommandPayload = {
+export type CommandInvokePayload = {
   command: string
   args?: unknown
 }
@@ -174,10 +171,7 @@ export type SystemThemePayload = {
   colorMode: 'light' | 'dark'
 }
 
-/**
- * @deprecated Transitional payload for the generic events compatibility surface.
- */
-export type RuntimeEventPayload<T = unknown> = {
+export type RuntimeEventEnvelope<T = unknown> = {
   event: string
   id: number
   payload: T

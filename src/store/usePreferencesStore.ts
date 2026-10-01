@@ -13,7 +13,11 @@ import {
   type PreferencesPersistedState,
 } from '@/store/preferencesPersist'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
-import { createToggleGuard, PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
+import {
+  createAiCompletionPreferencesSlice,
+  type AiCompletionPreferencesState,
+} from '@/store/aiCompletionPreferences'
+import { preferencesSidebarGuards } from '@/store/preferencesSidebarGuards'
 import type {
   AppLocale,
   DarkThemeMode,
@@ -26,12 +30,7 @@ import type {
   ThemeModePreference,
 } from '@/store/appTypes'
 
-const sidebarGuards = {
-  left: createToggleGuard(PANEL_TOGGLE_GUARD_MS),
-  right: createToggleGuard(PANEL_TOGGLE_GUARD_MS),
-}
-
-export type PreferencesState = {
+export type PreferencesState = AiCompletionPreferencesState & {
   theme: ThemeMode
   themeMode: ThemeModePreference
   lightTheme: LightThemeMode
@@ -94,7 +93,7 @@ export type PreferencesState = {
 
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
-    (set) => ({
+    (set, get, store) => ({
       theme: 'paper',
       themeMode: 'system',
       lightTheme: 'paper',
@@ -104,6 +103,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       aiDefaultProviderId: null,
       aiCustomModelDirectoryEnabled: false,
       aiModelDirectory: null,
+      ...createAiCompletionPreferencesSlice(set, get, store),
       locale: getInitialLocale(),
       sidebarCollapsed: true,
       rightSidebarCollapsed: true,
@@ -282,11 +282,11 @@ export const usePreferencesStore = create<PreferencesState>()(
           Object.keys(state.shortcutOverrides).length === 0 ? state : { shortcutOverrides: {} },
         ),
       toggleSidebar: () => {
-        if (!sidebarGuards.left()) return
+        if (!preferencesSidebarGuards.left()) return
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }))
       },
       toggleRightSidebar: () => {
-        if (!sidebarGuards.right()) return
+        if (!preferencesSidebarGuards.right()) return
         set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed }))
       },
     }),

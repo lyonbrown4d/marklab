@@ -10,6 +10,13 @@ export const drawioStateKeys = new Set(['drawioEditorMode', 'drawioEmbedUrl'])
 
 export const preferenceStateKeys = new Set([
   'autoSystemThemeSync',
+  'aiCompletionCloudContextConsent',
+  'aiCompletionEnabled',
+  'aiCompletionLength',
+  'aiCompletionNearbyContextEnabled',
+  'aiCompletionProviderId',
+  'aiCompletionTriggerMode',
+  'documentCompletionEnabled',
   'aiDefaultProviderId',
   'aiCustomModelDirectoryEnabled',
   'aiModelDirectory',

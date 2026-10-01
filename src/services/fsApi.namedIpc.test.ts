@@ -1,0 +1,47 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { fsApi } from '@/services/fsApi'
+
+const runtime = vi.hoisted(() => ({
+  assets: {
+    issueCapability: vi.fn(),
+    readBytes: vi.fn(),
+  },
+  workspace: {
+    copyAbsolutePathToClipboard: vi.fn(),
+    openPathInSystem: vi.fn(),
+    revealPathInSystem: vi.fn(),
+  },
+}))
+
+vi.mock('@/runtime/electron', () => ({ getElectronRuntime: () => runtime }))
+
+describe('fsApi named IPC', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('delegates asset capability operations to the named asset API', async () => {
+    const capability = {
+      url: 'marklab-asset://local/v1/token',
+      expires_at_ms: Date.now() + 10_000,
+    }
+    const bytes = { bytes: new ArrayBuffer(2), size_bytes: 2 }
+    runtime.assets.issueCapability.mockResolvedValue(capability)
+    runtime.assets.readBytes.mockResolvedValue(bytes)
+
+    await expect(fsApi.toAssetUrl('images/photo.png')).resolves.toEqual(capability)
+    await expect(fsApi.readAssetBytes(capability.url)).resolves.toEqual(bytes)
+
+    expect(runtime.assets.issueCapability).toHaveBeenCalledWith({ path: 'images/photo.png' })
+    expect(runtime.assets.readBytes).toHaveBeenCalledWith({ asset_url: capability.url })
+  })
+
+  it('delegates path operations to the narrow workspace API', async () => {
+    await fsApi.openPathInSystem('notes/today.md')
+    await fsApi.revealPathInSystem('notes/today.md')
+    await fsApi.copyAbsolutePathToClipboard('notes/today.md')
+
+    expect(runtime.workspace.openPathInSystem).toHaveBeenCalledWith('notes/today.md')
+    expect(runtime.workspace.revealPathInSystem).toHaveBeenCalledWith('notes/today.md')
+    expect(runtime.workspace.copyAbsolutePathToClipboard).toHaveBeenCalledWith('notes/today.md')
+  })
+})

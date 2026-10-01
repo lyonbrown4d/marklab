@@ -18,6 +18,9 @@ export const useAiProviders = () => {
       if (preferences.aiDefaultProviderId === provider.id && !isAiProviderUsable(provider)) {
         preferences.setAiDefaultProviderId(null)
       }
+      if (preferences.aiCompletionProviderId === provider.id && !isAiProviderUsable(provider)) {
+        preferences.setAiCompletionProviderId(null)
+      }
       return queryClient.invalidateQueries({ queryKey: providersKey })
     },
   })
@@ -26,6 +29,7 @@ export const useAiProviders = () => {
     onSuccess: (_data, id) => {
       const preferences = usePreferencesStore.getState()
       if (preferences.aiDefaultProviderId === id) preferences.setAiDefaultProviderId(null)
+      if (preferences.aiCompletionProviderId === id) preferences.setAiCompletionProviderId(null)
       return queryClient.invalidateQueries({ queryKey: providersKey })
     },
   })

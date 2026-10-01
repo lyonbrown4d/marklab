@@ -41,12 +41,55 @@ describe('Electron preload/runtime boundary', () => {
     expect(preloadSource).toContain('allowedEvents.has(eventName)')
   })
 
-  it('limits transitional IPC surfaces to their explicit allowlisted adapters', () => {
+  it('limits compatibility IPC surfaces to their explicit allowlisted adapters', () => {
     const runtimeSource = readText('src/runtime/electron.ts')
 
-    expect(runtimeSource).toContain('commands: TransitionalElectronCommandApi')
-    expect(runtimeSource).toContain('events: TransitionalElectronEventApi')
+    expect(runtimeSource).toContain('commands: ElectronCommandBridgeApi')
+    expect(runtimeSource).toContain('events: ElectronEventBridgeApi')
     expect(runtimeSource).not.toMatch(/^\s{2}(send|on|off|removeListener):/m)
+  })
+
+  it('does not keep project-owned deprecated declarations in active code', () => {
+    const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]
+    const deprecatedTag = ['@', 'deprecated'].join('')
+    const offenders = files.filter((file) => readText(file).includes(deprecatedTag))
+
+    expect(offenders).toEqual([])
+  })
+
+  it('does not retain the retired transitional workspace command map', () => {
+    const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]
+    const retiredSymbol = ['transitional', 'Native', 'Commands'].join('')
+    const offenders = files.filter((file) => readText(file).includes(retiredSymbol))
+
+    expect(offenders).toEqual([])
+  })
+
+  it('does not retain legacy generic asset command handlers', () => {
+    const retiredCommands = [
+      ['fs', 'issue', 'asset', 'capability'].join('_'),
+      ['fs', 'read', 'asset', 'bytes'].join('_'),
+    ]
+    const files = [...walkSourceFiles('electron'), ...walkSourceFiles('src')]
+    const offenders = files.filter((file) => {
+      const source = readText(file)
+      return retiredCommands.some((command) => source.includes(command))
+    })
+
+    expect(offenders).toEqual([])
+  })
+
+  it('keeps AI inline completion off the generic command and event bridges', () => {
+    const allowlists = readText('electron/preload/allowlists.ts')
+    const genericAiIpc = readText('electron/ipc/ai.ts')
+    const completionApi = readText('src/services/aiCompletionApi.ts')
+
+    expect(allowlists).not.toContain('ai_start_inline_completion')
+    expect(completionApi).not.toContain("from '@/runtime/ipc'")
+    expect(completionApi).not.toContain("from '@/runtime/events'")
+    expect(completionApi).toContain('getElectronRuntime().aiCompletion')
+    expect(genericAiIpc).not.toContain('AiInlineCompletionServiceContract')
+    expect(genericAiIpc).not.toContain('completionService')
   })
 
   it('keeps renderer source files from importing Electron directly', () => {

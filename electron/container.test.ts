@@ -42,6 +42,12 @@ describe('Electron dependency container', () => {
     expect(container.cradle.aiProviderStore).toBe(container.cradle.aiProviderStore)
     expect(container.cradle.aiModelResolver).toBe(container.cradle.aiModelResolver)
     expect(container.cradle.aiService).toBe(container.cradle.aiService)
+    expect(container.cradle.aiInlineCompletionService).toBe(
+      container.cradle.aiInlineCompletionService,
+    )
+    expect(container.cradle.aiInlineCompletionPolicy).toBe(
+      container.cradle.aiInlineCompletionPolicy,
+    )
     expect(container.cradle.localAiModelManager).toBe(container.cradle.localAiModelManager)
     expect(container.cradle.localAiRuntime).toBe(container.cradle.localAiRuntime)
     expect(container.cradle.localAiService).toBe(container.cradle.localAiService)

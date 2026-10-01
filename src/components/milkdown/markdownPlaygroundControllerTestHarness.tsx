@@ -4,6 +4,15 @@ import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdo
 import type { useMarkdownPlaygroundShortcuts } from '@/components/milkdown/useMarkdownPlaygroundShortcuts'
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 import type { ShortcutBindings } from '@/logic/shortcuts'
+import type { AiInlineCompletionOptions } from '@/components/milkdown/aiInlineCompletionPlugin'
+
+const inlineCompletionPluginMock = vi.hoisted(() =>
+  vi.fn<(options: AiInlineCompletionOptions) => string>(() => 'inline-completion-plugin'),
+)
+vi.mock('@/components/milkdown/aiInlineCompletionPlugin', () => ({
+  aiInlineCompletionPlugin: inlineCompletionPluginMock,
+}))
+const safePluginsMock = vi.hoisted(() => vi.fn(() => ['safe-plugin']))
 
 const shortcutBridgeMock = vi.hoisted(() =>
   vi.fn<(options: Parameters<typeof useMarkdownPlaygroundShortcuts>[0]) => string>(
@@ -110,7 +119,10 @@ const crepeMock = vi.hoisted(() => {
           return this.editor
         },
       ),
-      use: vi.fn(() => this.editor),
+      use: vi.fn((plugin: unknown) => {
+        void plugin
+        return this.editor
+      }),
     }
     markdown: string
     readonly destroy = vi.fn()
@@ -144,7 +156,13 @@ const crepeMock = vi.hoisted(() => {
   }
 })
 
-export { codeBlockTheme, crepeMock, shortcutBridgeMock }
+export {
+  codeBlockTheme,
+  crepeMock,
+  inlineCompletionPluginMock,
+  safePluginsMock,
+  shortcutBridgeMock,
+}
 
 vi.mock('@milkdown/crepe', () => ({
   Crepe: crepeMock.FakeCrepe,
@@ -185,7 +203,7 @@ vi.mock('@/components/milkdown/animatedCursorPlugin', () => ({
 }))
 
 vi.mock('@/components/milkdown/markdownSafePlugins', () => ({
-  createMarkdownSafePlugins: () => [],
+  createMarkdownSafePlugins: safePluginsMock,
 }))
 
 vi.mock('@/components/milkdown/mermaidPreview', () => ({
@@ -208,6 +226,7 @@ export const Harness = ({
   darkMode = false,
   placeholder = 'Write',
   onChange,
+  inlineCompletionOptions,
   shortcutOverrides,
   readOnly = false,
   value,
@@ -216,6 +235,7 @@ export const Harness = ({
   darkMode?: boolean
   placeholder?: string
   onChange: (markdown: string) => void
+  inlineCompletionOptions?: AiInlineCompletionOptions
   shortcutOverrides?: ShortcutBindings
   readOnly?: boolean
   value: string
@@ -223,6 +243,7 @@ export const Harness = ({
   const controller = useMarkdownPlaygroundController({
     activePath,
     darkMode,
+    inlineCompletionOptions,
     onChange,
     placeholder,
     readOnly,

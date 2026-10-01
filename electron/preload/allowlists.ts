@@ -1,5 +1,3 @@
-import { transitionalNativeCommands } from '@electron/channels.js'
-
 const allowedCommandNames = [
   'app-ready',
   'app_get_platform',
@@ -23,14 +21,6 @@ const allowedCommandNames = [
   'open_current_workspace_in_new_window',
   'open_path_in_new_window',
   'retry_window_open',
-  transitionalNativeCommands.workspaceGetSession,
-  transitionalNativeCommands.workspaceReadFile,
-  transitionalNativeCommands.workspaceUpdateBuffer,
-  transitionalNativeCommands.workspaceFlushBuffers,
-  transitionalNativeCommands.workspacePrepareSwitch,
-  transitionalNativeCommands.workspaceCommitRoot,
-  transitionalNativeCommands.workspaceCommitSingleFile,
-  transitionalNativeCommands.workspaceCancelSwitch,
   'fs_get_root_info',
   'fs_get_snapshot',
   'fs_list_entries',
@@ -38,8 +28,6 @@ const allowedCommandNames = [
   'fs_set_single_file',
   'fs_open_file',
   'fs_read_file',
-  transitionalNativeCommands.assetsIssueCapability,
-  transitionalNativeCommands.assetsReadBytes,
   'fs_get_workspace_index',
   'fs_get_workspace_graph',
   'fs_get_outline_graph',

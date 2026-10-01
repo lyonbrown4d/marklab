@@ -1,5 +1,6 @@
 import type * as Electron from 'electron'
 import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai.js'
+import { registerAiCompletionIpc, type AiCompletionIpcBridge } from '@electron/ipc/aiCompletion.js'
 import { createLocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory.js'
 import { registerAppReadyIpc } from '@electron/ipc/appReady.js'
 import { registerClipboardIpc } from '@electron/ipc/clipboard.js'
@@ -20,12 +21,14 @@ import { registerShellIpc } from '@electron/ipc/shell.js'
 import { registerThemeIpc } from '@electron/ipc/themes.js'
 import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
+import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed.js'
 import {
   registerWorkspaceCommandsIpc,
   type WorkspaceCommandServices,
 } from '@electron/ipc/workspaceCommands.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
 import type { AiServiceContract } from '@electron/services/ai/types.js'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
 import type { GitService } from '@electron/services/git/service.js'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
@@ -38,6 +41,7 @@ import type { TerminalService } from '@electron/services/terminal/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 export type NativeIpcDependencies = {
   aiService: AiServiceContract
+  aiInlineCompletionService: AiInlineCompletionServiceContract
   app: Electron.App
   BrowserWindow: typeof Electron.BrowserWindow
   clipboard: Electron.Clipboard
@@ -59,6 +63,7 @@ export type NativeIpcDependencies = {
 }
 export type NativeIpcRegistration = {
   ai: AiIpcBridge
+  aiCompletion: AiCompletionIpcBridge
   commands: WorkspaceCommandServices
   gitTerminal: GitTerminalIpcBridge
   menu: MenuDispatchBridge
@@ -81,12 +86,22 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
   })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
+  registerWorkspaceNamedIpc(dependencies.ipcMain, {
+    clipboard: dependencies.clipboard,
+    shell: dependencies.shell,
+    workspaceRegistry: dependencies.workspaceRegistry,
+  })
   const ai = registerAiIpc(
     dependencies.ipcMain,
     dependencies.aiService,
     logger.child('ai'),
     dependencies.localAiService,
     createLocalAiDirectoryPicker(dependencies.dialog, dependencies.BrowserWindow),
+  )
+  const aiCompletion = registerAiCompletionIpc(
+    dependencies.ipcMain,
+    dependencies.aiInlineCompletionService,
+    logger.child('ai-completion'),
   )
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
     exportService: dependencies.exportService,
@@ -116,7 +131,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     logger.child('command-invoke'),
   )
   logger.info('native IPC registered')
-  return { ai, commands, gitTerminal, menu }
+  return { ai, aiCompletion, commands, gitTerminal, menu }
 }
 const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,

@@ -11,6 +11,9 @@ import { registerMarkdownHoverProvider } from '@/components/markdownSourceHover'
 import { registerMarkdownLinkDecorations } from '@/components/markdownSourceLinkDecorations'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
+import { registerMarkdownSourceInlineCompletion } from '@/components/markdownSourceInlineCompletion'
+import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type MonacoModule = typeof import('monaco-editor')
 type Disposable = { dispose: () => void }
@@ -28,8 +31,20 @@ export const registerMarkdownSourceProviders = ({
   onOpenFileView?: (path: string, view: FileViewKind) => void
   scheduleDiagnostics: () => void
 }): Disposable => {
+  const inlineCompletionDisposable =
+    typeof monaco.languages.registerInlineCompletionsProvider === 'function'
+      ? registerMarkdownSourceInlineCompletion({
+          monaco,
+          editor,
+          getDocumentKey: () => getContext().activePath,
+          getPreferences: usePreferencesStore.getState,
+          requestCompletion: requestAiInlineCompletion,
+          subscribePreferences: (listener) => usePreferencesStore.subscribe(listener),
+        })
+      : { dispose: () => undefined }
   const disposables: Disposable[] = [
     registerMarkdownCompletionProvider(monaco, getContext),
+    inlineCompletionDisposable,
     registerMarkdownDocumentSymbolProvider(monaco, getContext),
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),
     registerMarkdownDefinitionClick({ editor, getContext, onOpenFileView }),

@@ -3,6 +3,12 @@ import type * as Electron from 'electron'
 import path from 'node:path'
 
 import { AiService } from '@electron/services/ai/aiService.js'
+import { AiInlineCompletionService } from '@electron/services/ai/completion/service.js'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
+import {
+  AiInlineCompletionPolicy,
+  type AiInlineCompletionPolicyContract,
+} from '@electron/services/ai/completion/policy.js'
 import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog.js'
 import { LocalAiDirectoryStore } from '@electron/services/ai/local/directoryStore.js'
 import { LocalAiModelManager } from '@electron/services/ai/local/modelManager.js'
@@ -58,6 +64,8 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   localAiService: LocalAiServiceContract
   aiProviderStore: AiProviderStoreContract
   aiService: AiServiceContract
+  aiInlineCompletionService: AiInlineCompletionServiceContract
+  aiInlineCompletionPolicy: AiInlineCompletionPolicyContract
   exportService: ExportService
   gitService: GitService
   knowledgeEngineService: KnowledgeEngineService
@@ -122,6 +130,18 @@ export const createElectronContainer = (
         runtime: localAiRuntime,
       })
     }).singleton(),
+    aiInlineCompletionPolicy: asFunction(({ aiProviderStore }) => {
+      return new AiInlineCompletionPolicy({ providerStore: aiProviderStore })
+    }).singleton(),
+    aiInlineCompletionService: asFunction(
+      ({ aiInlineCompletionPolicy, aiService, localAiService }) => {
+        return new AiInlineCompletionService({
+          aiService,
+          localAiService,
+          policy: aiInlineCompletionPolicy,
+        })
+      },
+    ).singleton(),
     localHistoryService: asFunction(({ app }) => {
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),

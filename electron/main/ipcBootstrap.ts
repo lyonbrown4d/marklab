@@ -17,6 +17,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
 
   return registerNativeIpc({
     aiService: container.cradle.aiService,
+    aiInlineCompletionService: container.cradle.aiInlineCompletionService,
     app,
     BrowserWindow,
     clipboard,

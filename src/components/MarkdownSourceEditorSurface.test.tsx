@@ -8,6 +8,7 @@ const editorMock = vi.hoisted(() => ({
     | {
         contextmenu?: boolean
         domReadOnly?: boolean
+        inlineSuggest?: { enabled?: boolean }
         minimap?: { enabled?: boolean }
         readOnly?: boolean
       }
@@ -60,6 +61,7 @@ describe('MarkdownSourceEditorSurface', () => {
     renderSurface(false)
     expect(editorMock.options?.minimap?.enabled).toBe(false)
     expect(editorMock.options?.contextmenu).toBe(false)
+    expect(editorMock.options?.inlineSuggest?.enabled).toBe(true)
   })
 
   it('opens the source editor menu and delegates enabled actions', () => {

@@ -161,6 +161,7 @@ describe('AiSettingsPage provider management', () => {
 
   it('tests, defaults, and deletes a configured provider', async () => {
     api.listProviders.mockResolvedValueOnce([cloudProvider]).mockResolvedValue([])
+    usePreferencesStore.setState({ aiCompletionProviderId: cloudProvider.id })
     const user = userEvent.setup()
     renderPage()
 
@@ -173,6 +174,7 @@ describe('AiSettingsPage provider management', () => {
 
     await waitFor(() => expect(api.deleteProvider).toHaveBeenCalledWith(cloudProvider.id))
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull()
+    expect(usePreferencesStore.getState().aiCompletionProviderId).toBeNull()
     expect(screen.getByRole('button', { name: 'settings.aiAddCloudProvider' })).toHaveFocus()
   })
 

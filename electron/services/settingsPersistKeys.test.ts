@@ -21,4 +21,19 @@ describe('settingsPersistKeys', () => {
     expect(preferenceStateKeys.has('aiCustomModelDirectoryEnabled')).toBe(true)
     expect(preferenceStateKeys.has('aiModelDirectory')).toBe(true)
   })
+
+  it('allows AI completion preferences through the renderer persist boundary', () => {
+    expect(preferenceStateKeys).toEqual(
+      expect.objectContaining({
+        has: expect.any(Function),
+      }),
+    )
+    expect(preferenceStateKeys.has('aiCompletionEnabled')).toBe(true)
+    expect(preferenceStateKeys.has('aiCompletionProviderId')).toBe(true)
+    expect(preferenceStateKeys.has('aiCompletionTriggerMode')).toBe(true)
+    expect(preferenceStateKeys.has('aiCompletionLength')).toBe(true)
+    expect(preferenceStateKeys.has('aiCompletionNearbyContextEnabled')).toBe(true)
+    expect(preferenceStateKeys.has('aiCompletionCloudContextConsent')).toBe(true)
+    expect(preferenceStateKeys.has('documentCompletionEnabled')).toBe(true)
+  })
 })

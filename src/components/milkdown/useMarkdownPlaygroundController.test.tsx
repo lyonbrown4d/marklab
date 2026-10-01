@@ -5,6 +5,7 @@ import {
   codeBlockTheme,
   crepeMock,
   Harness,
+  inlineCompletionPluginMock,
   renderReadyHarness,
   shortcutBridgeMock,
 } from '@/components/milkdown/markdownPlaygroundControllerTestHarness'
@@ -24,6 +25,22 @@ const EditorStatsHarness = () => {
 }
 
 describe('useMarkdownPlaygroundController', () => {
+  it('registers inline completion before safe table plugins', async () => {
+    const options = {
+      canComplete: () => true,
+      enabled: () => true,
+      requestCompletion: vi.fn(async () => null),
+    }
+    render(<Harness inlineCompletionOptions={options} onChange={vi.fn()} value="A" />)
+    await act(async () => {})
+
+    const calls = crepeMock.latestInstance()?.editor.use.mock.calls ?? []
+    expect(inlineCompletionPluginMock).toHaveBeenCalledWith(options)
+    expect(calls.findIndex(([plugin]) => plugin === 'inline-completion-plugin')).toBeLessThan(
+      calls.findIndex(([plugin]) => plugin === 'safe-plugin'),
+    )
+  })
+
   it('installs the shortcut bridge on the actual playground instance with user bindings', async () => {
     const overrides = { 'editor.clearFormat': ['Control+Shift+X'] }
     const { rerender } = render(

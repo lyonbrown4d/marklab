@@ -1,7 +1,7 @@
 import type * as Electron from 'electron'
 import { nativeIpcChannels } from '@electron/channels.js'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
-import type { RuntimeCommandPayload } from '@electron/types.js'
+import type { CommandInvokePayload } from '@electron/types.js'
 
 export type NativeCommandHandler = (
   payload: unknown,
@@ -42,10 +42,7 @@ export const registerCommandInvokeIpc = (
   }
   ipcMain.handle(nativeIpcChannels.commandInvoke, invokeHandler)
 }
-const parseCommandInvokePayload = (
-  payload: unknown,
-  legacyArgs: unknown,
-): RuntimeCommandPayload => {
+const parseCommandInvokePayload = (payload: unknown, legacyArgs: unknown): CommandInvokePayload => {
   if (typeof payload === 'string') {
     return {
       command: payload,

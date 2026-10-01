@@ -158,7 +158,10 @@ describe('AiSettingsPage provider safety', () => {
       }),
     ])
     const user = userEvent.setup()
-    usePreferencesStore.setState({ aiDefaultProviderId: 'stored' })
+    usePreferencesStore.setState({
+      aiDefaultProviderId: 'stored',
+      aiCompletionProviderId: 'stored',
+    })
     renderPage()
 
     expect(await screen.findByText('settings.aiCredentialStored')).toBeInTheDocument()
@@ -178,6 +181,7 @@ describe('AiSettingsPage provider safety', () => {
       expect.objectContaining({ id: 'stored', apiKey: null }),
     )
     await waitFor(() => expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull())
+    expect(usePreferencesStore.getState().aiCompletionProviderId).toBeNull()
   })
 
   it('serializes provider deletes across rows and clears the deleted default in the hook', async () => {

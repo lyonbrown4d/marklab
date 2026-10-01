@@ -1,14 +1,22 @@
-import type { AssetApi, WorkspaceLifecycleApi, WorkspaceSessionApi } from '@/types/workspaceSession'
+import type { AssetApi } from '@/types/workspaceSession'
 import type { WindowOpeningProgress, WindowOpeningRetryResult } from '@/types/windowOpening'
+import type {
+  AiInlineCompletionEvent,
+  AiInlineCompletionRequest,
+  AiInlineCompletionStartResult,
+} from '@/types/aiCompletion'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
 }
 
-/**
- * @deprecated Transitional argument type for commands.invoke.
- */
-export type ElectronCommandArgs = Record<string, unknown> | undefined
+export type ElectronWorkspacePathApi = {
+  copyAbsolutePathToClipboard: (path: string) => Promise<void>
+  openPathInSystem: (path: string) => Promise<void>
+  revealPathInSystem: (path: string) => Promise<void>
+}
+
+export type ElectronCommandArguments = Record<string, unknown> | undefined
 
 export type ElectronOpenDialogOptions = {
   title?: string
@@ -111,41 +119,37 @@ export type ElectronUpdateEvent = ElectronUpdateState & {
     | 'unavailable'
 }
 
-/**
- * @deprecated Transitional event envelope for the generic events surface.
- */
-export type ElectronRuntimeEvent<T = unknown> = {
+export type ElectronRuntimeEventEnvelope<T = unknown> = {
   event: string
   id: number
   payload: T
 }
 
-/**
- * @deprecated Use a named runtime API instead.
- */
-export type TransitionalElectronCommandApi = {
-  invoke: <T = unknown>(command: string, args?: ElectronCommandArgs) => Promise<T>
+export type ElectronCommandBridgeApi = {
+  invoke: <T = unknown>(command: string, args?: ElectronCommandArguments) => Promise<T>
 }
 
-/**
- * @deprecated Use a named runtime event subscription instead.
- */
-export type TransitionalElectronEventApi = {
+export type ElectronEventBridgeApi = {
   listen: <T = unknown>(
     eventName: string,
-    handler: (event: ElectronRuntimeEvent<T>) => void,
+    handler: (event: ElectronRuntimeEventEnvelope<T>) => void,
   ) => (() => void) | Promise<() => void>
   emit?: <T = unknown>(eventName: string, payload?: T) => Promise<void> | void
 }
 
 export type RendererSafeElectronApi = {
+  aiCompletion: {
+    cancel: (requestId: string) => Promise<{ ok: true }>
+    onEvent: (handler: (event: AiInlineCompletionEvent) => void) => () => void
+    start: (input: AiInlineCompletionRequest) => Promise<AiInlineCompletionStartResult>
+  }
   appReady: () => Promise<{ ok: boolean }>
   assets: AssetApi
-  lifecycle: WorkspaceLifecycleApi & {
+  lifecycle: {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>
   }
-  commands: TransitionalElectronCommandApi
-  events: TransitionalElectronEventApi
+  commands: ElectronCommandBridgeApi
+  events: ElectronEventBridgeApi
   platform: {
     get: () => Promise<ElectronPlatformInfo>
   }
@@ -227,7 +231,7 @@ export type RendererSafeElectronApi = {
   webview: {
     onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => () => void
   }
-  workspace: WorkspaceSessionApi
+  workspace: ElectronWorkspacePathApi
   window: {
     minimize: () => Promise<void>
     maximize: () => Promise<void>

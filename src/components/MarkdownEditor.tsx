@@ -15,12 +15,18 @@ import { cn } from '@/lib/utils'
 import { useInlineAiComposer } from '@/components/milkdown/useInlineAiComposer'
 import type { InlineAiComposerMessages } from '@/components/milkdown/inlineAiComposerPrompt'
 import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
+import { useMarkdownInlineCompletionOptions } from '@/components/milkdown/useMarkdownInlineCompletionOptions'
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const aiDefaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
+  const inlineCompletionOptions = useMarkdownInlineCompletionOptions({
+    activePath: props.activePath,
+    readOnly: props.readOnly ?? false,
+    value: props.value,
+  })
   const aiLabels = useMemo<AiComposerLabels>(
     () => ({
       accept: t('ai.composer.accept'),
@@ -64,6 +70,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   } = useMarkdownPlaygroundController({
     ...props,
     darkMode,
+    inlineCompletionOptions,
     shortcutOverrides,
   })
   const aiComposer = useInlineAiComposer({

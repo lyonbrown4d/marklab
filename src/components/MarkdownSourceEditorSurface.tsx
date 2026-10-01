@@ -80,6 +80,7 @@ export const MarkdownSourceEditorSurface = ({
             readOnly,
             domReadOnly: readOnly,
             minimap: { enabled: sourceCodeMiniMapEnabled },
+            inlineSuggest: { enabled: true, showToolbar: 'onHover' },
             wordWrap: 'on',
             tabSize: 2,
             scrollBeyondLastLine: false,

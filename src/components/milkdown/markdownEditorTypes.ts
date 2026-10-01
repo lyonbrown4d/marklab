@@ -1,5 +1,6 @@
 import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 import type { ShortcutBindings } from '@/logic/shortcuts'
+import type { AiInlineCompletionOptions } from '@/components/milkdown/aiInlineCompletionPlugin'
 
 export type MarkdownEditorProps = {
   activePath: string | null
@@ -21,6 +22,7 @@ export type MarkdownEditorStatus =
 
 export type MarkdownPlaygroundControllerOptions = MarkdownEditorProps & {
   darkMode: boolean
+  inlineCompletionOptions?: AiInlineCompletionOptions
   shortcutOverrides?: ShortcutBindings
 }
 

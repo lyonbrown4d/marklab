@@ -1,14 +1,11 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Crepe } from '@milkdown/crepe'
 import { editorViewOptionsCtx, serializerCtx } from '@milkdown/kit/core'
+import { createMarkdownPlaygroundCrepe } from '@/components/milkdown/createMarkdownPlaygroundCrepe'
 import { createMarkdownCodeBlockTheme } from '@/components/milkdown/markdownCodeBlockTheme'
 import { animatedCursor } from '@/components/milkdown/animatedCursorPlugin'
 import { createMarkdownSafePlugins } from '@/components/milkdown/markdownSafePlugins'
-import {
-  mermaidCodeBlockConfig,
-  refreshMermaidPreviews,
-} from '@/components/milkdown/mermaidPreview'
-import { createMarkdownPlaygroundSlashConfig } from '@/components/milkdown/slashMenuConfig'
+import { refreshMermaidPreviews } from '@/components/milkdown/mermaidPreview'
 import { useSlashUrlDialog } from '@/components/milkdown/useSlashUrlDialog'
 import { useMarkdownPlaygroundShortcuts } from '@/components/milkdown/useMarkdownPlaygroundShortcuts'
 import { typewriterScroll } from '@/components/milkdown/typewriterScrollPlugin'
@@ -28,9 +25,11 @@ import { useMarkdownPlaygroundSync } from '@/components/milkdown/useMarkdownPlay
 import { createMarkdownUpdateThrottle } from '@/components/milkdown/markdownUpdateThrottle'
 import * as snapshotBridge from '@/components/milkdown/markdownSnapshotBridge'
 import { useMarkdownEditorAccess } from '@/components/milkdown/useMarkdownEditorAccess'
+import { aiInlineCompletionPlugin } from '@/components/milkdown/aiInlineCompletionPlugin'
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
+  inlineCompletionOptions,
   onChange,
   onCalendarFileCreate,
   placeholder,
@@ -143,35 +142,16 @@ export const useMarkdownPlaygroundController = ({
 
     setStatus({ phase: 'loading' })
 
-    crepe = new Crepe({
+    crepe = createMarkdownPlaygroundCrepe({
       root,
       defaultValue: latestValueRef.current,
-      features: readOnly
-        ? {
-            [Crepe.Feature.BlockEdit]: false,
-            [Crepe.Feature.Cursor]: false,
-            [Crepe.Feature.Toolbar]: false,
-          }
-        : undefined,
-      featureConfigs: {
-        [Crepe.Feature.BlockEdit]: createMarkdownPlaygroundSlashConfig({
-          labels: slashLabels,
-          onCalendarFileCreate: runSlashCalendarFileCreate,
-          onImageImport: runSlashImageImport,
-          onUrlInsert: openUrlDialog,
-        }),
-        [Crepe.Feature.CodeMirror]: {
-          theme: codeBlockTheme.extension,
-          ...mermaidCodeBlockConfig,
-        },
-        [Crepe.Feature.LinkTooltip]: {
-          onCopyLink: () => {},
-        },
-        [Crepe.Feature.Placeholder]: {
-          mode: 'block',
-          text: placeholder,
-        },
-      },
+      readOnly,
+      slashLabels,
+      onCalendarFileCreate: runSlashCalendarFileCreate,
+      onImageImport: runSlashImageImport,
+      onUrlInsert: openUrlDialog,
+      codeBlockTheme: codeBlockTheme.extension,
+      placeholder,
     })
     const pendingCrepe = crepe
 
@@ -199,6 +179,8 @@ export const useMarkdownPlaygroundController = ({
           () => markdownSnapshotScheduler,
         ),
       )
+
+    if (inlineCompletionOptions) crepe.editor.use(aiInlineCompletionPlugin(inlineCompletionOptions))
 
     createMarkdownSafePlugins({
       getDocumentPath,
@@ -280,6 +262,7 @@ export const useMarkdownPlaygroundController = ({
     codeBlockTheme,
     getDocumentPath,
     invalidateUrlDialog,
+    inlineCompletionOptions,
     openUrlDialog,
     placeholder,
     runSlashCalendarFileCreate,

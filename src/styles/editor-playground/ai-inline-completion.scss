@@ -1,0 +1,17 @@
+.crepe-playground .milkdown .ProseMirror .marklab-ai-ghost-text {
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 72%, transparent);
+  font: inherit;
+  white-space: pre-wrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.crepe-playground .milkdown .ProseMirror .marklab-ai-ghost-text[data-source='document'] {
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 62%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  .crepe-playground .milkdown .ProseMirror .marklab-ai-ghost-text {
+    color: hsl(var(--muted-foreground));
+  }
+}

@@ -2,6 +2,13 @@ import type { PreferencesState } from '@/store/usePreferencesStore'
 
 export type PreferencesPersistedState = Pick<
   PreferencesState,
+  | 'aiCompletionCloudContextConsent'
+  | 'aiCompletionEnabled'
+  | 'aiCompletionLength'
+  | 'aiCompletionNearbyContextEnabled'
+  | 'aiCompletionProviderId'
+  | 'aiCompletionTriggerMode'
+  | 'documentCompletionEnabled'
   | 'aiCustomModelDirectoryEnabled'
   | 'aiDefaultProviderId'
   | 'aiModelDirectory'
@@ -46,6 +53,13 @@ export const selectPreferencesPersistedState = (
   darkTheme: state.darkTheme,
   autoSystemThemeSync: state.autoSystemThemeSync,
   customThemeId: state.customThemeId,
+  aiCompletionCloudContextConsent: state.aiCompletionCloudContextConsent,
+  aiCompletionEnabled: state.aiCompletionEnabled,
+  aiCompletionLength: state.aiCompletionLength,
+  aiCompletionNearbyContextEnabled: state.aiCompletionNearbyContextEnabled,
+  aiCompletionProviderId: state.aiCompletionProviderId,
+  aiCompletionTriggerMode: state.aiCompletionTriggerMode,
+  documentCompletionEnabled: state.documentCompletionEnabled,
   aiCustomModelDirectoryEnabled: state.aiCustomModelDirectoryEnabled,
   aiDefaultProviderId: state.aiDefaultProviderId,
   aiModelDirectory: state.aiModelDirectory,
