@@ -64,8 +64,6 @@ const createWorkspaceCommandHandlers = (
     fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
     fs_get_outline_graph: (payload, event) => workspaceForEvent(event).outlineGraph(payload),
-    fs_analyze_markdown_buffer: (payload, event) =>
-      workspaceForEvent(event).analyzeMarkdownBuffer(payload),
     fs_search_workspace: (payload, event) => workspaceForEvent(event).searchWorkspace(payload),
     fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
     fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),
@@ -124,8 +122,6 @@ const createWorkspaceCommandHandlers = (
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
     fs_fetch_link_preview: (payload) => linkPreviewService.fetch(payload),
-    markdown_language_get_diagnostics: (payload, event) =>
-      markdownLanguageService.getDiagnostics(workspaceForEvent(event), payload),
     markdown_language_get_document_symbols: (payload, event) =>
       markdownLanguageService.getDocumentSymbols(workspaceForEvent(event), payload),
     markdown_language_get_definition: (payload, event) =>

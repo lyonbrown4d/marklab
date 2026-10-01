@@ -203,4 +203,15 @@ describe('createMarkdownCompletions', () => {
       }),
     )
   })
+
+  it('limits file candidates before they reach the renderer', async () => {
+    const paths = Array.from({ length: 250 }, (_, index) => `docs/note-${index}.md`)
+    const completions = await completeAtEnd('See [Note](', {
+      files: [],
+      paths,
+      asset_paths: [],
+    })
+
+    expect(completions).toHaveLength(100)
+  })
 })

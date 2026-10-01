@@ -11,7 +11,6 @@ import {
   fsLinkPreviewMetadataSchema,
   fsMarkdownAssetImportResultSchema,
   fsMarkdownAssetResolveResultSchema,
-  fsMarkdownDiagnosticSchema,
   fsPathMetadataSchema,
   fsRootInfoSchema,
   fsSearchResultSchema,
@@ -54,10 +53,6 @@ export const fsApi = {
   async getOutlineGraph(path: string) {
     const result = await invoke<unknown>('fs_get_outline_graph', { path })
     return fsGraphSchema.parse(result)
-  },
-  async analyzeMarkdownBuffer(path: string, content: string) {
-    const result = await invoke<unknown>('fs_analyze_markdown_buffer', { path, content })
-    return z.array(fsMarkdownDiagnosticSchema).parse(result)
   },
   async searchWorkspace(query: string, limit = 20) {
     const result = await invoke<unknown>('fs_search_workspace', { query, limit })

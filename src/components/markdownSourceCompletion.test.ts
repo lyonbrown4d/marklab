@@ -161,6 +161,17 @@ describe('Markdown source completion lifecycle', () => {
     expect(cancellation.listenerCount()).toBe(0)
   })
 
+  it('asks Monaco to request again when the LSP result is incomplete', async () => {
+    vi.mocked(languageIntelligenceApi.completion).mockResolvedValue({
+      isIncomplete: true,
+      items: [fileCompletion],
+    })
+
+    const result = await request()
+
+    expect(result?.incomplete).toBe(true)
+  })
+
   it('uses the synchronized document version for unsaved heading completion', async () => {
     state.content = '# Fresh heading\n[Jump](#'
     vi.mocked(languageIntelligenceApi.completion).mockResolvedValue({

@@ -48,6 +48,7 @@ const LANGUAGE_ALIASES: Record<string, string[]> = {
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 const WORKSPACE_LINK_TARGET_EXTENSIONS =
   /\.(md|markdown|ics|pdf|drawio|excalidraw|docx?|pptx?|xlsx?|csv|tsv|png|jpe?g|gif|webp|svg|avif|bmp|mp3|wav|ogg|m4a|mp4|webm|mov)$/i
+export const MAX_FILE_COMPLETIONS = 100
 
 export const createMarkdownCompletions = async (
   request: CompletionRequest,
@@ -194,18 +195,20 @@ const fileCompletions = ({
     activePath,
     query,
     paths: workspaceDocumentPaths(workspaceIndex, mode),
-  }).map((path) => {
-    const label = createFileLabel(path)
-    return {
-      label,
-      kind: 'file',
-      insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
-      detail: path,
-      replacementStartColumn,
-      lspKind: CompletionItemKind.File,
-      sortText: fileCompletionSortText({ activePath, query, path, label }),
-    }
   })
+    .slice(0, MAX_FILE_COMPLETIONS)
+    .map((path) => {
+      const label = createFileLabel(path)
+      return {
+        label,
+        kind: 'file',
+        insertText: mode === 'wiki' ? label : createRelativeLinkTarget(activePath, path),
+        detail: path,
+        replacementStartColumn,
+        lspKind: CompletionItemKind.File,
+        sortText: fileCompletionSortText({ activePath, query, path, label }),
+      }
+    })
 }
 
 const workspaceDocumentPaths = (workspaceIndex: FsWorkspaceIndex, mode: 'markdown' | 'wiki') => {

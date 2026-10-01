@@ -39,6 +39,10 @@ type MarkdownCompletionItem = {
   lspRange?: Range
   snippet?: boolean
 }
+type MarkdownCompletionResult = {
+  items: MarkdownCompletionItem[]
+  isIncomplete: boolean
+}
 
 export const registerMarkdownCompletionProvider = (
   monaco: MonacoModule,
@@ -70,8 +74,10 @@ export const registerMarkdownCompletionProvider = (
         model.getVersionId() === version &&
         getContext().activePath === path
       let cancellationSubscription: IDisposable | undefined
-      const cancelled = new Promise<MarkdownCompletionItem[]>((resolve) => {
-        cancellationSubscription = token.onCancellationRequested?.(() => resolve([]))
+      const cancelled = new Promise<MarkdownCompletionResult>((resolve) => {
+        cancellationSubscription = token.onCancellationRequested?.(() =>
+          resolve({ items: [], isIncomplete: false }),
+        )
       })
 
       try {
@@ -81,7 +87,7 @@ export const registerMarkdownCompletionProvider = (
           cancelled,
         ])
         if (!isCurrent()) return { suggestions: [] }
-        const suggestions: MonacoLanguages.CompletionItem[] = completions.map((item) => {
+        const suggestions: MonacoLanguages.CompletionItem[] = completions.items.map((item) => {
           const range = item.lspRange
             ? new monaco.Range(
                 item.lspRange.start.line + 1,
@@ -115,7 +121,7 @@ export const registerMarkdownCompletionProvider = (
             range,
           }
         })
-        return { suggestions }
+        return { suggestions, incomplete: completions.isIncomplete }
       } finally {
         cancellationSubscription?.dispose()
       }
@@ -192,13 +198,13 @@ const getCompletionItems = async (
   context: MarkdownSourceCompletionContext,
   documentSession: MarkdownSourceDocumentSession,
   isCurrent: () => boolean,
-): Promise<MarkdownCompletionItem[]> => {
-  if (!isCurrent()) return []
+): Promise<MarkdownCompletionResult> => {
+  if (!isCurrent()) return { items: [], isIncomplete: false }
 
   if (isDesktopRuntime() && context.activePath) {
     try {
       const document = await documentSession.prepareCompletion(model)
-      if (!document || !isCurrent()) return []
+      if (!document || !isCurrent()) return { items: [], isIncomplete: false }
       const result = await languageIntelligenceApi.completion({
         ...document,
         position: {
@@ -206,19 +212,25 @@ const getCompletionItems = async (
           character: position.column - 1,
         },
       })
-      return result.items.map(fromLanguageCompletion)
+      return {
+        items: result.items.map(fromLanguageCompletion),
+        isIncomplete: result.isIncomplete ?? false,
+      }
     } catch {
-      if (!isCurrent()) return []
+      if (!isCurrent()) return { items: [], isIncomplete: false }
     }
   }
 
   const content = model.getValue()
-  return getMarkdownCompletions({
-    ...context,
-    content,
-    line: position.lineNumber,
-    column: position.column,
-  })
+  return {
+    items: getMarkdownCompletions({
+      ...context,
+      content,
+      line: position.lineNumber,
+      column: position.column,
+    }),
+    isIncomplete: false,
+  }
 }
 
 const fromLanguageCompletion = (item: CompletionItem): MarkdownCompletionItem => {

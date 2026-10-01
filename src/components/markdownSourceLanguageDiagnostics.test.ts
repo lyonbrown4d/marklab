@@ -72,4 +72,35 @@ describe('Markdown source language diagnostics', () => {
     ])
     registration.dispose()
   })
+
+  it('reports desktop diagnostics failures without clearing the last valid markers', async () => {
+    const onError = vi.fn()
+    diagnostics.mockRejectedValueOnce(new Error('diagnostics unavailable'))
+
+    const registration = registerMarkdownSourceLanguageDiagnostics({
+      client: { diagnostics },
+      documentSession: { prepareCompletion } as never,
+      editor: {
+        getModel: () => model,
+        onDidChangeModelContent: (listener: () => void) => {
+          changeListener = listener
+          return { dispose: vi.fn() }
+        },
+      } as unknown as editor.IStandaloneCodeEditor,
+      monaco: {
+        MarkerSeverity: { Error: 8, Warning: 4, Info: 2, Hint: 1 },
+        editor: { setModelMarkers },
+      } as never,
+      onError,
+    })
+
+    changeListener()
+    await vi.advanceTimersByTimeAsync(150)
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'diagnostics unavailable' }),
+    )
+    expect(setModelMarkers).not.toHaveBeenCalled()
+    registration.dispose()
+  })
 })

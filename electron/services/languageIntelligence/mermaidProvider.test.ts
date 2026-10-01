@@ -25,7 +25,9 @@ describe('MermaidLanguageIntelligenceProvider', () => {
       'flowchart LR',
     )
 
-    await expect(provider.diagnostics({ document, path: null })).resolves.toHaveLength(1)
+    await expect(
+      provider.diagnostics({ document, path: null, workspace: {} as never }),
+    ).resolves.toHaveLength(1)
     expect(provideDiagnostics).toHaveBeenCalledWith({
       uri: document.uri,
       languageId: 'mermaid',

@@ -74,7 +74,8 @@ export const createLanguageIntelligenceIpcHandlers = (
     diagnostics: (payload: unknown, event: Electron.IpcMainInvokeEvent) => {
       const request = languageDiagnosticsRequestSchema.parse(payload)
       subscribeToDestruction(event)
-      return service.diagnostics(event.sender.id, request)
+      const workspace = workspaceRegistry.serviceForWebContents(event.sender)
+      return service.diagnostics(event.sender.id, workspace, request)
     },
   }
 }

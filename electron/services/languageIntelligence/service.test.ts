@@ -215,7 +215,7 @@ describe('LanguageIntelligenceService', () => {
     })
 
     await expect(
-      service.diagnostics(11, {
+      service.diagnostics(11, {} as never, {
         uri: 'marklab-embedded://code-block/1.mermaid',
         version: 2,
       }),

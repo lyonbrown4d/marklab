@@ -12,15 +12,15 @@ const completionRequest = {
 describe('language intelligence IPC', () => {
   it('routes diagnostics without accepting document content', async () => {
     const service = createService()
-    const handlers = createLanguageIntelligenceIpcHandlers(service, {
-      serviceForWebContents: vi.fn(() => ({})),
-    } as never)
+    const workspace = {} as never
+    const workspaceRegistry = { serviceForWebContents: vi.fn(() => workspace) }
+    const handlers = createLanguageIntelligenceIpcHandlers(service, workspaceRegistry as never)
     const event = createEvent(17)
     const request = { uri: 'marklab-embedded://code-block/1.mermaid', version: 2 }
 
     await handlers.diagnostics(request, event.value)
 
-    expect(service.diagnostics).toHaveBeenCalledWith(17, request)
+    expect(service.diagnostics).toHaveBeenCalledWith(17, workspace, request)
     expect(() =>
       handlers.diagnostics({ ...request, content: 'flowchart LR' }, event.value),
     ).toThrow()

@@ -7,8 +7,10 @@ import type {
   Range,
   TextEdit,
 } from 'vscode-languageserver-types'
+import { DiagnosticSeverity } from 'vscode-languageserver-types'
 
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
+import { MAX_FILE_COMPLETIONS } from '@electron/services/markdownLanguage/completions.js'
 import { MermaidLanguageProvider } from '@electron/services/mermaidLanguage/provider.js'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
 import { markdownSnippetCompletions } from '@electron/services/languageIntelligence/markdownSnippets.js'
@@ -28,6 +30,7 @@ type MermaidBlock = {
 }
 
 const mermaidAliases = new Set(['mermaid', 'mmd'])
+const MAX_MARKDOWN_DIAGNOSTICS_LENGTH = 500_000
 
 export class MarkdownLanguageIntelligenceProvider {
   readonly languageIds = ['markdown']
@@ -62,7 +65,7 @@ export class MarkdownLanguageIntelligenceProvider {
       column: position.character + 1,
     })
     return {
-      isIncomplete: false,
+      isIncomplete: items.length >= MAX_FILE_COMPLETIONS,
       items: items.map((item): CompletionItem => {
         const startCharacter = Math.max(0, item.replacementStartColumn - 1)
         return {
@@ -85,9 +88,35 @@ export class MarkdownLanguageIntelligenceProvider {
 
   async diagnostics({
     document,
-  }: Pick<MarkdownProviderContext, 'document' | 'path'>): Promise<Diagnostic[]> {
-    const diagnostics: Diagnostic[] = []
-    for (const block of mermaidBlocks(document.getText())) {
+    path,
+    workspace,
+  }: Pick<MarkdownProviderContext, 'document' | 'path' | 'workspace'>): Promise<Diagnostic[]> {
+    const content = document.getText()
+    if (content.length > MAX_MARKDOWN_DIAGNOSTICS_LENGTH) return []
+    const diagnostics: Diagnostic[] = path
+      ? (
+          await this.markdown.getDiagnostics(workspace, {
+            path,
+            content,
+          })
+        ).map((diagnostic) => ({
+          message: diagnostic.message,
+          range: {
+            start: {
+              line: Math.max(0, diagnostic.line - 1),
+              character: Math.max(0, diagnostic.start_column - 1),
+            },
+            end: {
+              line: Math.max(0, diagnostic.line - 1),
+              character: Math.max(diagnostic.start_column, diagnostic.end_column - 1),
+            },
+          },
+          severity:
+            diagnostic.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+          source: 'markdown',
+        }))
+      : []
+    for (const block of mermaidBlocks(content)) {
       const embeddedDiagnostics = await this.mermaid.provideDiagnostics(
         embeddedDocument(document, block),
       )
@@ -153,7 +182,8 @@ const mermaidBlocks = (text: string): MermaidBlock[] => {
 const openingFence = (
   line: string,
 ): { character: string; length: number; languageId: string } | null => {
-  const value = line.trimStart()
+  const value = commonMarkFenceLine(line)
+  if (value === null) return null
   const character = value[0]
   if (character !== '`' && character !== '~') return null
   let length = 0
@@ -166,10 +196,18 @@ const openingFence = (
 }
 
 const isClosingFence = (line: string, character: string, minimumLength: number): boolean => {
-  const value = line.trimStart()
+  const value = commonMarkFenceLine(line)
+  if (value === null) return false
   let length = 0
   while (value[length] === character) length += 1
   return length >= minimumLength && value.slice(length).trim().length === 0
+}
+
+const commonMarkFenceLine = (line: string): string | null => {
+  let indentation = 0
+  while (line[indentation] === ' ') indentation += 1
+  if (indentation > 3 || line[indentation] === '\t') return null
+  return line.slice(indentation)
 }
 
 const isWhitespace = (character: number): boolean =>

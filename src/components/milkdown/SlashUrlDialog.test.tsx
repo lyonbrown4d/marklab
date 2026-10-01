@@ -1,8 +1,10 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { CompletionItemKind } from 'vscode-languageserver-types'
 import { describe, expect, it, vi } from 'vitest'
 import { SlashUrlDialog } from '@/components/milkdown/SlashUrlDialog'
 import { useSlashUrlDialog } from '@/components/milkdown/useSlashUrlDialog'
+import type { MarkdownLinkCompletionClient } from '@/components/milkdown/markdownLinkCompletionSession'
 import type { SlashUrlInsertionRequest } from '@/components/milkdown/slashUrlInsertion'
 import { slashMenuTestLabels as labels } from '@/components/milkdown/slashMenuConfigTestFixtures'
 
@@ -17,9 +19,11 @@ const createRequest = (
 })
 
 const Harness = ({
+  completionClient,
   request,
   path = 'a.md',
 }: {
+  completionClient?: MarkdownLinkCompletionClient
   request: SlashUrlInsertionRequest
   path?: string
 }) => {
@@ -29,6 +33,8 @@ const Harness = ({
       <button onClick={() => state.open(request)}>Open</button>
       {state.request && (
         <SlashUrlDialog
+          activePath={path}
+          completionClient={completionClient}
           state={state}
           labels={labels}
           cancelLabel="Cancel"
@@ -150,5 +156,38 @@ describe('slash URL dialog', () => {
       result.current.submit(request, { url: '/once', text: '' })
     })
     expect(request.insert).toHaveBeenCalledOnce()
+  })
+
+  it('offers relative workspace paths from the language intelligence session', async () => {
+    const request = createRequest()
+    const client: MarkdownLinkCompletionClient = {
+      openDocument: vi.fn().mockResolvedValue({ ok: true, version: 1 }),
+      changeDocument: vi.fn().mockImplementation(async ({ version }) => ({ ok: true, version })),
+      closeDocument: vi.fn().mockResolvedValue({ ok: true }),
+      completion: vi.fn().mockResolvedValue({
+        isIncomplete: false,
+        items: [
+          {
+            label: 'Guide',
+            detail: 'docs/guide.md',
+            kind: CompletionItemKind.File,
+            insertText: '../docs/guide.md',
+          },
+        ],
+      }),
+    }
+    const user = userEvent.setup()
+    render(<Harness request={request} path="notes/today.md" completionClient={client} />)
+
+    await user.click(screen.getByText('Open'))
+    const input = screen.getByLabelText(labels.linkUrlPrompt)
+    await user.type(input, 'gui')
+    await user.click(await screen.findByRole('option', { name: /Guide/ }))
+
+    expect(input).toHaveValue('../docs/guide.md')
+    expect(client.openDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'notes/today.md', text: '[]()' }),
+    )
+    expect(vi.mocked(client.completion).mock.calls.at(-1)?.[0]).not.toHaveProperty('content')
   })
 })

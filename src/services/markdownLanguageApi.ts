@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { invoke } from '@/runtime/ipc'
-import { fsMarkdownDiagnosticSchema } from '@/services/fsApi'
 
 const markdownLanguageDefinitionSchema = z
   .object({
@@ -95,11 +94,6 @@ export type MarkdownLanguageCodeAction = z.infer<typeof markdownLanguageCodeActi
 export type MarkdownLanguageHover = z.infer<typeof markdownLanguageHoverSchema>
 
 export const markdownLanguageApi = {
-  async getDiagnostics({ path, content }: { path: string; content: string }) {
-    const result = await invoke<unknown>('markdown_language_get_diagnostics', { path, content })
-    return z.array(fsMarkdownDiagnosticSchema).parse(result)
-  },
-
   async getDocumentSymbols({ path, content }: { path: string | null; content: string }) {
     const result = await invoke<unknown>('markdown_language_get_document_symbols', {
       path,

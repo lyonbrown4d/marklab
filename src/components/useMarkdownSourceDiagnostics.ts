@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react'
 import { useLatest } from 'ahooks'
-import { ReplaySubject, catchError, debounceTime, from, map, of, switchMap } from 'rxjs'
+import { ReplaySubject, debounceTime, of, switchMap } from 'rxjs'
 import type { OnMount } from '@monaco-editor/react'
 import {
   getMarkdownSourceDiagnostics,
   MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
 } from '@/logic/markdownDiagnostics'
 import { markdownEditorPerformancePolicy } from '@/components/markdownEditorPerformance'
-import { markdownLanguageApi } from '@/services/markdownLanguageApi'
-import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@/services/fsApi'
+import type { FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 import { isDesktopRuntime } from '@/runtime/environment'
 
@@ -17,9 +16,7 @@ export type MarkdownSourceDiagnosticHost = {
   monaco: typeof import('monaco-editor')
 }
 
-type Diagnostics = Array<
-  FsMarkdownDiagnostic | ReturnType<typeof getMarkdownSourceDiagnostics>[number]
->
+type Diagnostics = ReturnType<typeof getMarkdownSourceDiagnostics>
 
 type DiagnosticsContext = {
   activePath: string | null
@@ -39,6 +36,7 @@ export const useMarkdownSourceDiagnostics = ({
   hostRef,
   workspaceIndex,
 }: UseMarkdownSourceDiagnosticsOptions) => {
+  const desktopRuntime = isDesktopRuntime()
   const contextRef = useLatest({ activePath, files, fileContents, workspaceIndex })
   const requestsRef = useRef(new ReplaySubject<{ content: string; context: DiagnosticsContext }>(1))
 
@@ -48,12 +46,9 @@ export const useMarkdownSourceDiagnostics = ({
       const model = host?.editor.getModel()
       if (!host || !model) return
       const markers = diagnostics.map((diagnostic) => {
-        const startColumn =
-          'start_column' in diagnostic ? diagnostic.start_column : diagnostic.startColumn
-        const endColumn = 'end_column' in diagnostic ? diagnostic.end_column : diagnostic.endColumn
         return {
           code: diagnostic.severity === 'error' ? 'M001' : 'M002',
-          endColumn: Math.max(startColumn + 1, endColumn),
+          endColumn: Math.max(diagnostic.startColumn + 1, diagnostic.endColumn),
           endLineNumber: diagnostic.line,
           message: diagnostic.message,
           severity:
@@ -61,7 +56,7 @@ export const useMarkdownSourceDiagnostics = ({
               ? host.monaco.MarkerSeverity.Error
               : host.monaco.MarkerSeverity.Warning,
           source: 'markdown',
-          startColumn,
+          startColumn: diagnostic.startColumn,
           startLineNumber: diagnostic.line,
         }
       })
@@ -71,32 +66,32 @@ export const useMarkdownSourceDiagnostics = ({
   )
 
   useEffect(() => {
+    if (desktopRuntime) {
+      applyDiagnostics([])
+      return
+    }
     const subscription = requestsRef.current
       .pipe(
         debounceTime(120),
         switchMap(({ content, context }) => {
           if (markdownEditorPerformancePolicy(content.length).diagnostics === 'disabled')
             return of<Diagnostics>([])
-          if (isDesktopRuntime() && context.activePath) {
-            return from(
-              markdownLanguageApi.getDiagnostics({ path: context.activePath, content }),
-            ).pipe(
-              map((diagnostics) => diagnostics as Diagnostics),
-              catchError(() => of(getMarkdownSourceDiagnostics({ ...context, content }))),
-            )
-          }
           return of(getMarkdownSourceDiagnostics({ ...context, content }))
         }),
       )
       .subscribe(applyDiagnostics)
     return () => subscription.unsubscribe()
-  }, [applyDiagnostics])
+  }, [applyDiagnostics, desktopRuntime])
 
   const scheduleDiagnostics = useCallback(() => {
+    if (desktopRuntime) {
+      applyDiagnostics([])
+      return
+    }
     const model = hostRef.current?.editor.getModel()
     if (!model) return
     requestsRef.current.next({ content: model.getValue(), context: contextRef.current })
-  }, [contextRef, hostRef])
+  }, [applyDiagnostics, contextRef, desktopRuntime, hostRef])
 
   useEffect(scheduleDiagnostics, [
     activePath,

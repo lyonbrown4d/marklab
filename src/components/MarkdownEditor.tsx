@@ -16,6 +16,7 @@ import { useInlineAiComposer } from '@/components/milkdown/useInlineAiComposer'
 import type { InlineAiComposerMessages } from '@/components/milkdown/inlineAiComposerPrompt'
 import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
 import { useMarkdownInlineCompletionOptions } from '@/components/milkdown/useMarkdownInlineCompletionOptions'
+import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const darkMode = useDarkMode()
@@ -138,6 +139,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
         )}
         {urlDialog?.request && (
           <SlashUrlDialog
+            activePath={props.activePath}
+            completionClient={languageIntelligenceApi}
             state={urlDialog}
             labels={props.slashLabels}
             cancelLabel={t('scm.cancel')}

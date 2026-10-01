@@ -12,11 +12,13 @@ export const registerMarkdownSourceLanguageDiagnostics = ({
   documentSession,
   editor,
   monaco,
+  onError = console.error,
 }: {
   client: { diagnostics: (request: { uri: string; version: number }) => Promise<Diagnostic[]> }
   documentSession: MarkdownSourceDocumentSession
   editor: MonacoEditor.IStandaloneCodeEditor
   monaco: MonacoModule
+  onError?: (error: unknown) => void
 }) => {
   let disposed = false
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -43,8 +45,8 @@ export const registerMarkdownSourceLanguageDiagnostics = ({
         DIAGNOSTIC_OWNER,
         diagnostics.map((diagnostic) => toMarker(monaco, diagnostic)),
       )
-    } catch {
-      if (!disposed && currentRequest === requestId) clear(model)
+    } catch (error) {
+      if (!disposed && currentRequest === requestId) onError(error)
     }
   }
 

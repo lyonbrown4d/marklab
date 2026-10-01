@@ -28,7 +28,9 @@ export type LanguageCompletionContext = DocumentSession & {
   workspace: WorkspaceService
 }
 
-export type LanguageDiagnosticsContext = DocumentSession
+export type LanguageDiagnosticsContext = DocumentSession & {
+  workspace: WorkspaceService
+}
 
 export type LanguageIntelligenceProvider = {
   readonly languageIds: readonly string[]
@@ -49,7 +51,11 @@ export type LanguageIntelligenceServiceContract = {
     workspace: WorkspaceService,
     request: LanguageCompletionRequest,
   ) => Promise<CompletionList>
-  diagnostics: (ownerId: number, request: LanguageDiagnosticsRequest) => Promise<Diagnostic[]>
+  diagnostics: (
+    ownerId: number,
+    workspace: WorkspaceService,
+    request: LanguageDiagnosticsRequest,
+  ) => Promise<Diagnostic[]>
 }
 
 export class LanguageIntelligenceService implements LanguageIntelligenceServiceContract {
@@ -145,11 +151,15 @@ export class LanguageIntelligenceService implements LanguageIntelligenceServiceC
     return provider.completion({ ...session, position: request.position, workspace })
   }
 
-  async diagnostics(ownerId: number, request: LanguageDiagnosticsRequest): Promise<Diagnostic[]> {
+  async diagnostics(
+    ownerId: number,
+    workspace: WorkspaceService,
+    request: LanguageDiagnosticsRequest,
+  ): Promise<Diagnostic[]> {
     const session = this.requireVersionedDocument(ownerId, request)
     const provider = this.providers.get(session.document.languageId)
     if (!provider) throw new Error(`Unsupported language: ${session.document.languageId}`)
-    return provider.diagnostics?.(session) ?? []
+    return provider.diagnostics?.({ ...session, workspace }) ?? []
   }
 
   private requireDocument(ownerId: number, uri: string): DocumentSession {
