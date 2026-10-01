@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import SidebarProjectsPanel from '@/components/SidebarProjectsPanel'
@@ -22,15 +21,32 @@ vi.mock('@/i18n/useI18n', () => ({
   }),
 }))
 
-vi.mock('@/components/ui/sidebar', () => ({
-  SidebarGroup: ({ children }: { children: ReactNode }) => <section>{children}</section>,
-  SidebarGroupContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SidebarGroupLabel: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  SidebarMenu: ({ children }: { children: ReactNode }) => <ul>{children}</ul>,
-  SidebarMenuItem: ({ children }: { children: ReactNode }) => <li>{children}</li>,
-}))
-
 describe('SidebarProjectsPanel', () => {
+  it('uses the shared flat sidebar panel structure', () => {
+    render(
+      <SidebarProjectsPanel
+        onOpenProject={vi.fn()}
+        onSelectProject={vi.fn()}
+        onUseInternalRoot={vi.fn()}
+        recentProjects={[]}
+      />,
+    )
+
+    const panel = screen.getByRole('region', { name: 'Recent projects' })
+    expect(panel).toHaveAttribute('data-sidebar-panel', 'projects')
+    expect(panel).toHaveClass('p-0')
+    expect(screen.getByRole('heading', { name: 'Recent projects' })).toHaveClass(
+      'h-8',
+      'px-1',
+      'text-xs',
+      'font-medium',
+    )
+    expect(screen.getByRole('button', { name: 'Open project' })).toHaveClass(
+      'focus-visible:ring-sidebar-ring',
+      'active:bg-sidebar-accent',
+    )
+  })
+
   it('opens the internal workspace and recent projects from accessible buttons', () => {
     const onOpenProject = vi.fn()
     const onSelectProject = vi.fn()

@@ -4,6 +4,7 @@ import i18n from '@/i18n/setup'
 import {
   createMarkdownTableToolbar,
   handleMarkdownTableKeydown,
+  isMarkdownTableToolbarPointerTarget,
   runMarkdownTableAction,
   type MarkdownTableCommandSet,
 } from '@/components/milkdown/tableEditingPlugin'
@@ -45,6 +46,22 @@ const mockRect = (
 }
 
 describe('Markdown table editing', () => {
+  it('keeps the toolbar visible while the pointer crosses between a table and its toolbar', () => {
+    const host = document.createElement('div')
+    const table = document.createElement('table')
+    const cell = document.createElement('td')
+    const toolbar = document.createElement('div')
+    const toolbarButton = document.createElement('button')
+    const outside = document.createElement('div')
+    table.append(cell)
+    toolbar.append(toolbarButton)
+    host.append(table, toolbar, outside)
+    expect(isMarkdownTableToolbarPointerTarget(toolbarButton, table, toolbar)).toBe(true)
+    expect(isMarkdownTableToolbarPointerTarget(cell, table, toolbar)).toBe(true)
+    expect(isMarkdownTableToolbarPointerTarget(outside, table, toolbar)).toBe(false)
+    expect(isMarkdownTableToolbarPointerTarget(outside, null, toolbar)).toBe(false)
+  })
+
   it('adds a final row and moves into it when Tab reaches the last cell', () => {
     const commands = createCommands()
     vi.mocked(commands.goToNextCell).mockReturnValueOnce(false).mockReturnValueOnce(true)

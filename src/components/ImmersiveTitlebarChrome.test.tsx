@@ -78,8 +78,25 @@ describe('ImmersiveTitlebarChrome', () => {
     render(<ImmersiveTitlebarChrome {...createProps()} activePath={null} />)
 
     expect(screen.getByText('Marklab')).toBeInTheDocument()
-    expect(screen.getByText('本地知识库')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '工作区: 随笔' })).toBeInTheDocument()
     expect(screen.getByText('未命名文档')).toBeInTheDocument()
+  })
+
+  it('keeps the workspace identity stable when the active document is nested', () => {
+    render(
+      <ImmersiveTitlebarChrome
+        {...createProps()}
+        activePath="docs/spec/architecture.md"
+        recentWorkspaces={{
+          ...createProps().recentWorkspaces,
+          rootPath: 'D:/随笔',
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: '工作区: 随笔' })).toBeInTheDocument()
+    expect(screen.getByText('architecture')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '工作区: docs / spec' })).not.toBeInTheDocument()
   })
 
   it('offers both explicit new-window workspace actions', async () => {

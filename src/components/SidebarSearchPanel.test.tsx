@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { forwardRef, type ChangeEvent, type ReactNode } from 'react'
+import { forwardRef, type ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import SidebarSearchPanel from '@/components/SidebarSearchPanel'
@@ -28,36 +28,9 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 vi.mock('@/components/ui/input', () => ({
-  Input: forwardRef<
-    HTMLInputElement,
-    {
-      className?: string
-      onChange: (event: ChangeEvent<HTMLInputElement>) => void
-      placeholder?: string
-      value: string
-    }
-  >(({ className, onChange, placeholder, value }, ref) => (
-    <input
-      ref={ref}
-      aria-label="Search input"
-      className={className}
-      onChange={onChange}
-      placeholder={placeholder}
-      value={value}
-    />
+  Input: forwardRef<HTMLInputElement, ComponentProps<'input'>>((props, ref) => (
+    <input ref={ref} {...props} />
   )),
-}))
-
-vi.mock('@/components/ui/sidebar', () => ({
-  SidebarGroup: ({ children, className }: { children: ReactNode; className?: string }) => (
-    <section className={className}>{children}</section>
-  ),
-  SidebarGroupContent: ({ children, className }: { children: ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  SidebarGroupLabel: ({ children, className }: { children: ReactNode; className?: string }) => (
-    <h2 className={className}>{children}</h2>
-  ),
 }))
 
 vi.mock('@/components/FullTextSearchPanel', () => ({
@@ -77,6 +50,30 @@ vi.mock('@/components/FullTextSearchPanel', () => ({
 }))
 
 describe('SidebarSearchPanel', () => {
+  it('uses the shared flat sidebar panel structure', () => {
+    render(
+      <SidebarSearchPanel
+        focusWorkspaceSearchRequest={0}
+        rootKind="external"
+        rootPath="/workspace"
+        onOpenSearchResult={vi.fn()}
+      />,
+    )
+
+    const panel = screen.getByRole('region', { name: 'Search' })
+    expect(panel).toHaveAttribute('data-sidebar-panel', 'search')
+    expect(panel).toHaveClass('p-0')
+    expect(screen.getByRole('heading', { name: 'Search' })).toHaveClass(
+      'h-8',
+      'px-1',
+      'text-xs',
+      'font-medium',
+    )
+    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveClass(
+      'focus-visible:ring-sidebar-ring',
+    )
+  })
+
   it('renders localized search chrome with normalized icon sizing', () => {
     render(
       <SidebarSearchPanel
@@ -88,7 +85,7 @@ describe('SidebarSearchPanel', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Search' })).toBeTruthy()
-    expect(screen.getByRole('textbox', { name: 'Search input' })).toHaveAttribute(
+    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveAttribute(
       'placeholder',
       'Full text search',
     )
@@ -109,7 +106,7 @@ describe('SidebarSearchPanel', () => {
       />,
     )
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search input' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Full text search' }), {
       target: { value: 'notes' },
     })
 
@@ -129,9 +126,9 @@ describe('SidebarSearchPanel', () => {
     }
     const { rerender } = render(<SidebarSearchPanel {...props} />)
 
-    expect(screen.getByRole('textbox', { name: 'Search input' })).not.toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Full text search' })).not.toHaveFocus()
     rerender(<SidebarSearchPanel {...props} focusWorkspaceSearchRequest={1} />)
 
-    expect(screen.getByRole('textbox', { name: 'Search input' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveFocus()
   })
 })

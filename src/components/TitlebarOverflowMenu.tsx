@@ -12,6 +12,11 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  menuItemStyles,
+  menuSeparatorStyles,
+  menuSurfaceStyles,
+} from '@/components/overlay/overlayStyles'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -95,24 +100,24 @@ const TitlebarOverflowMenu = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 rounded-xl p-2"
+        className={menuSurfaceStyles({ className: 'w-56' })}
         collisionPadding={8}
         sideOffset={7}
         onCloseAutoFocus={handleCloseAutoFocus}
       >
-        <DropdownMenuItem className="rounded-lg" onSelect={onOpenSearch}>
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenSearch}>
           <Search aria-hidden="true" />
           {searchLabel}
         </DropdownMenuItem>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="rounded-lg" disabled={!active}>
+          <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
             <PenLine aria-hidden="true" />
             {wysiwygLabel}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent
               alignOffset={-4}
-              className="w-48 rounded-xl p-2"
+              className={menuSurfaceStyles({ className: 'w-48' })}
               collisionPadding={8}
               sideOffset={4}
             >
@@ -120,16 +125,16 @@ const TitlebarOverflowMenu = ({
                 value={viewMode}
                 onValueChange={(value) => onChangeView(value as ViewMode)}
               >
-                <DropdownMenuRadioItem value="wysiwyg" className="rounded-lg">
-                  <PenLine aria-hidden="true" className="mr-2 size-4" />
+                <DropdownMenuRadioItem value="wysiwyg" className={menuItemStyles({ inset: true })}>
+                  <PenLine aria-hidden="true" />
                   {wysiwygLabel}
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="source" className="rounded-lg">
-                  <Code2 aria-hidden="true" className="mr-2 size-4" />
+                <DropdownMenuRadioItem value="source" className={menuItemStyles({ inset: true })}>
+                  <Code2 aria-hidden="true" />
                   {sourceLabel}
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="graph" className="rounded-lg">
-                  <GitGraph aria-hidden="true" className="mr-2 size-4" />
+                <DropdownMenuRadioItem value="graph" className={menuItemStyles({ inset: true })}>
+                  <GitGraph aria-hidden="true" />
                   {graphLabel}
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
@@ -137,37 +142,37 @@ const TitlebarOverflowMenu = ({
           </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="rounded-lg" disabled={!active}>
+          <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
             <FileDown aria-hidden="true" />
             {exportLabel}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent
               alignOffset={-4}
-              className="w-48 rounded-xl p-2"
+              className={menuSurfaceStyles({ className: 'w-48' })}
               collisionPadding={8}
               sideOffset={4}
             >
-              <DropdownMenuItem className="rounded-lg" onSelect={() => onExport('pdf')}>
+              <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('pdf')}>
                 <FileText aria-hidden="true" />
                 {exportPdfLabel}
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg" onSelect={() => onExport('docx')}>
+              <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('docx')}>
                 <FileText aria-hidden="true" />
                 {exportDocxLabel}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className={menuSeparatorStyles} />
         <DropdownMenuItem
-          className="rounded-lg"
+          className={menuItemStyles()}
           onSelect={() => runAfterMenuClose(onToggleOutline)}
         >
           <ListTree aria-hidden="true" />
           {toggleOutlineLabel}
         </DropdownMenuItem>
-        <DropdownMenuItem className="rounded-lg" onSelect={onOpenSettings}>
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenSettings}>
           <Settings aria-hidden="true" />
           {settingsLabel}
         </DropdownMenuItem>

@@ -90,6 +90,24 @@ const createProps = (
 })
 
 describe('SidebarExplorerPanel', () => {
+  it('uses the shared flat sidebar panel structure', () => {
+    render(<SidebarExplorerPanel {...createProps()} />)
+
+    const panel = screen.getByRole('region', { name: 'Files' })
+    expect(panel).toHaveAttribute('data-sidebar-panel', 'explorer')
+    expect(panel).toHaveClass('p-0')
+    expect(screen.getByRole('heading', { name: 'Files' })).toHaveClass(
+      'h-8',
+      'px-1',
+      'text-xs',
+      'font-medium',
+    )
+    expect(screen.getByRole('button', { name: 'Search files...' })).toHaveClass(
+      'focus-visible:ring-sidebar-ring',
+      'active:bg-sidebar-accent',
+    )
+  })
+
   it('connects the active file to the local history timeline', () => {
     render(<SidebarExplorerPanel {...createProps()} />)
 

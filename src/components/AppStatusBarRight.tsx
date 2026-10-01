@@ -5,6 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import StatusCenter from '@/components/StatusCenter'
 import { useI18n } from '@/i18n/useI18n'
+import { cn } from '@/lib/utils'
 import type { SaveState } from '@/app/useEditorBuffer'
 
 type AppStatusBarRightProps = {
@@ -39,29 +40,53 @@ const AppStatusBarRightView = ({
   const readOnlyAction = t(readOnlyMode ? 'statusBar.disableReadOnly' : 'statusBar.enableReadOnly')
 
   return (
-    <div className="flex shrink-0 items-center justify-end gap-3" aria-live="polite">
+    <div className="flex min-w-0 shrink-0 items-center justify-end gap-1.5" aria-live="polite">
       {dirtyCount > 0 && (
-        <span className="shrink-0 text-status-warning">
-          {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
+        <span
+          aria-label={t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
+          role="status"
+          className="inline-flex shrink-0 items-center gap-1.5 text-status-warning"
+          data-status-priority="primary"
+        >
+          <AlertTriangle aria-hidden="true" className="size-3.5" />
+          <span data-status-label data-status-priority="primary">
+            {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
+          </span>
         </span>
       )}
       {activeSaveState?.status === 'saving' && (
-        <span className="shrink-0 text-status-info" title={activePath ?? undefined}>
+        <span
+          className="shrink-0 text-status-info"
+          data-status-priority="secondary"
+          title={activePath ?? undefined}
+        >
           {t('save.saving')}
         </span>
       )}
       {activeSaveState?.status === 'error' && (
-        <span className="shrink-0 text-destructive" title={activePath ?? undefined}>
-          {t('save.error')}
+        <span
+          aria-label={t('save.error')}
+          role="status"
+          className="inline-flex shrink-0 items-center gap-1.5 text-destructive"
+          data-status-priority="primary"
+          title={activePath ?? undefined}
+        >
+          <AlertTriangle aria-hidden="true" className="size-3.5" />
+          <span data-status-label data-status-priority="primary">
+            {t('save.error')}
+          </span>
         </span>
       )}
       {activePath && activeSaveState?.status === 'saved' && !dirtyPaths[activePath] && (
-        <span className="shrink-0" title={activePath}>
+        <span className="shrink-0" data-status-priority="secondary" title={activePath}>
           {t('save.saved')}
         </span>
       )}
       {assetSyncPending > 0 && (
-        <span className="inline-flex shrink-0 items-center gap-1.5 text-status-info">
+        <span
+          className="inline-flex shrink-0 items-center gap-1.5 text-status-info"
+          data-status-priority="secondary"
+        >
           <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
           {t('statusBar.assetsSyncing', { count: String(assetSyncPending) })}
         </span>
@@ -70,11 +95,16 @@ const AppStatusBarRightView = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <span
+              aria-label={t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
+              role="status"
               className="inline-flex shrink-0 items-center gap-1.5 text-destructive"
+              data-status-priority="primary"
               title={assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
             >
               <AlertTriangle aria-hidden="true" className="size-3.5" />
-              {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
+              <span data-status-label data-status-priority="primary">
+                {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
+              </span>
             </span>
           </TooltipTrigger>
           <TooltipContent>
@@ -88,14 +118,16 @@ const AppStatusBarRightView = ({
             type="button"
             variant="ghost"
             size="sm"
-            className={`h-6 gap-1.5 rounded border px-2 text-[11px] font-medium shadow-none transition-[background-color,border-color,color,box-shadow] duration-[180ms] ease-out motion-reduce:transition-none ${
+            className={cn(
+              'h-6 gap-1.5 rounded border px-2 text-[11px] font-medium shadow-none transition-[background-color,border-color,color,box-shadow] duration-[180ms] ease-out motion-reduce:transition-none',
               readOnlyMode
                 ? 'border-status-warning/50 bg-status-warning/10 text-foreground hover:border-status-warning/60 hover:bg-status-warning/15 hover:text-foreground'
-                : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent hover:text-foreground'
-            }`}
+                : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent hover:text-foreground',
+            )}
             aria-label={readOnlyAction}
             aria-pressed={readOnlyMode}
             data-read-only={readOnlyMode}
+            data-status-priority="primary"
             onClick={onToggleReadOnly}
           >
             {readOnlyMode ? (
@@ -107,7 +139,7 @@ const AppStatusBarRightView = ({
             ) : (
               <LockKeyholeOpen aria-hidden="true" data-icon="read-only-unlocked" />
             )}
-            <span>{readOnlyLabel}</span>
+            <span data-status-label>{readOnlyLabel}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>{readOnlyAction}</TooltipContent>

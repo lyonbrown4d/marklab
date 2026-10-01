@@ -235,6 +235,7 @@ const MarkdownSourceEditor = ({
       motionSmoothScrolling={motionSmoothScrolling}
       readOnly={readOnly}
       sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
+      shortcutOverrides={shortcutOverrides}
       value={value}
       contextMenu={contextMenu}
       onChange={onChange}

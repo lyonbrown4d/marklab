@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState, type RefObject } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { SettingsActionButton } from '@/components/settings/SettingsButtons'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { AiProviderDialog } from '@/components/settings/AiProviderDialog'
+import { ConfirmDestructiveActionDialog } from '@/components/ConfirmDestructiveActionDialog'
 import {
   isAiProviderUsable,
   isLoopbackHttpUrl,
@@ -14,32 +15,45 @@ import {
 type ProviderRowProps = {
   provider: PublicAiProvider
   deletePending: boolean
+  deleteError?: string
   testPending: boolean
   savePending: boolean
   saveError?: string
+  clearCredentialError?: string
+  fallbackFocusRef: RefObject<HTMLElement | null>
   testPassed: boolean
   onSave: (input: AiProviderUpdate) => Promise<void>
-  onDelete: (id: string) => void
+  onDelete: (id: string) => Promise<void>
   onTest: (id: string) => void
   onStartEdit: () => void
-  onClearCredential: (provider: PublicAiProvider) => void
+  onStartDelete: () => void
+  onStartClearCredential: () => void
+  onClearCredential: (provider: PublicAiProvider) => Promise<void>
 }
 
 export const AiProviderRow = ({
   provider,
   deletePending,
+  deleteError,
   testPending,
   savePending,
   saveError,
+  clearCredentialError,
+  fallbackFocusRef,
   testPassed,
   onSave,
   onDelete,
   onTest,
   onStartEdit,
+  onStartDelete,
+  onStartClearCredential,
   onClearCredential,
 }: ProviderRowProps) => {
   const { t } = useI18n()
   const [editing, setEditing] = useState(false)
+  const [destructiveAction, setDestructiveAction] = useState<'delete' | 'credential' | null>(null)
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null)
+  const credentialTriggerRef = useRef<HTMLButtonElement>(null)
   const defaultId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const setDefaultId = usePreferencesStore((state) => state.setAiDefaultProviderId)
   const usable = isAiProviderUsable(provider)
@@ -119,18 +133,26 @@ export const AiProviderRow = ({
               {t('settings.edit')}
             </SettingsActionButton>
             <SettingsActionButton
+              ref={deleteTriggerRef}
               aria-label={`${t('settings.delete')} ${provider.label}`}
               variant="ghost"
-              onClick={() => onDelete(provider.id)}
+              onClick={() => {
+                onStartDelete()
+                setDestructiveAction('delete')
+              }}
               disabled={deletePending}
             >
               {t('settings.delete')}
             </SettingsActionButton>
             {provider.apiKeySource === 'stored' && (
               <SettingsActionButton
+                ref={credentialTriggerRef}
                 aria-label={`${t('settings.aiClearCredential')} ${provider.label}`}
                 variant="ghost"
-                onClick={() => onClearCredential(provider)}
+                onClick={() => {
+                  onStartClearCredential()
+                  setDestructiveAction('credential')
+                }}
                 disabled={savePending}
               >
                 {t('settings.aiClearCredential')}
@@ -143,6 +165,11 @@ export const AiProviderRow = ({
             {t('settings.aiTestSucceeded')}
           </p>
         )}
+        {(deleteError || clearCredentialError) && (
+          <p role="alert" className="mt-2 text-xs text-destructive">
+            {deleteError ?? clearCredentialError}
+          </p>
+        )}
       </div>
       <AiProviderDialog
         mode={formMode}
@@ -152,6 +179,42 @@ export const AiProviderRow = ({
         error={saveError}
         onOpenChange={setEditing}
         onSave={handleSave}
+      />
+      <ConfirmDestructiveActionDialog
+        open={destructiveAction !== null}
+        title={
+          destructiveAction === 'credential'
+            ? t('settings.aiClearCredentialTitle')
+            : t('settings.aiDeleteProviderTitle')
+        }
+        description={
+          destructiveAction === 'credential'
+            ? t('settings.aiClearCredentialDescription')
+            : t('settings.aiDeleteProviderDescription')
+        }
+        resourceName={provider.label}
+        confirmLabel={
+          destructiveAction === 'credential'
+            ? t('settings.aiConfirmClearCredential')
+            : t('settings.aiConfirmDeleteProvider')
+        }
+        pendingLabel={
+          destructiveAction === 'credential'
+            ? t('settings.aiClearingCredential')
+            : t('settings.aiDeletingProvider')
+        }
+        cancelLabel={t('settings.cancel')}
+        error={destructiveAction === 'credential' ? clearCredentialError : deleteError}
+        returnFocusRef={
+          destructiveAction === 'credential' ? credentialTriggerRef : deleteTriggerRef
+        }
+        fallbackFocusRef={fallbackFocusRef}
+        onOpenChange={(open) => {
+          if (!open) setDestructiveAction(null)
+        }}
+        onConfirm={() =>
+          destructiveAction === 'credential' ? onClearCredential(provider) : onDelete(provider.id)
+        }
       />
     </>
   )

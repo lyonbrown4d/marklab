@@ -48,19 +48,27 @@ type ImmersiveTitlebarChromeProps = {
   workspaceWindowOpening: boolean
 }
 
-const getDocumentContext = (
-  activePath: string | null,
-  localLibraryLabel: string,
-  untitledLabel: string,
-) => {
-  if (!activePath) return { section: localLibraryLabel, title: untitledLabel }
+const getDocumentTitle = (activePath: string | null, untitledLabel: string) => {
+  if (!activePath) return untitledLabel
 
   const parts = activePath.split(/[\\/]/).filter(Boolean)
   const filename = parts.at(-1) ?? activePath
-  const title = filename.replace(/\.(md|markdown)$/i, '')
-  const section = parts.length > 1 ? parts.slice(0, -1).join(' / ') : localLibraryLabel
+  return filename.replace(/\.(md|markdown)$/i, '')
+}
 
-  return { section, title }
+const getWorkspaceLabel = (
+  recentWorkspaces: RecentWorkspaceMenuData,
+  localLibraryLabel: string,
+) => {
+  if (recentWorkspaces.rootKind === 'internal' || !recentWorkspaces.rootPath) {
+    return localLibraryLabel
+  }
+
+  const parts = recentWorkspaces.rootPath
+    .replace(/[\\/]+$/, '')
+    .split(/[\\/]/)
+    .filter(Boolean)
+  return parts.at(-1) ?? localLibraryLabel
 }
 
 export const ImmersiveTitlebarChrome = ({
@@ -102,7 +110,8 @@ export const ImmersiveTitlebarChrome = ({
   onSelectWorkspaceInNewWindow,
   workspaceWindowOpening,
 }: ImmersiveTitlebarChromeProps) => {
-  const context = getDocumentContext(activePath, localLibraryLabel, untitledLabel)
+  const documentTitle = getDocumentTitle(activePath, untitledLabel)
+  const workspaceLabel = getWorkspaceLabel(recentWorkspaces, localLibraryLabel)
   const logoUrl = new URL('marklab-light.svg', document.baseURI).toString()
   const darkLogoUrl = new URL('marklab-dark.svg', document.baseURI).toString()
 
@@ -141,7 +150,7 @@ export const ImmersiveTitlebarChrome = ({
         </div>
         <span aria-hidden="true" className="hidden h-4 w-px shrink-0 bg-border/70 sm:block" />
         <TitlebarWorkspaceMenu
-          section={context.section}
+          section={workspaceLabel}
           workspaceMenuLabel={workspaceMenuLabel}
           newWorkspaceLabel={newWorkspaceLabel}
           openFileLabel={openFileLabel}
@@ -162,7 +171,7 @@ export const ImmersiveTitlebarChrome = ({
       </div>
 
       <span className="pointer-events-none absolute left-1/2 block max-w-[28vw] -translate-x-1/2 truncate px-3 text-center text-sm font-medium text-foreground/85 sm:max-w-[36vw] sm:text-[15px]">
-        {context.title}
+        {documentTitle}
       </span>
 
       <div

@@ -22,6 +22,12 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import {
+  menuItemStyles,
+  menuSeparatorStyles,
+  menuShortcutStyles,
+  menuSurfaceStyles,
+} from '@/components/overlay/overlayStyles'
 import { useI18n } from '@/i18n/useI18n'
 import { formatShortcut, resolveShortcutBindings, type ShortcutBindings } from '@/logic/shortcuts'
 
@@ -110,12 +116,12 @@ export const EditorContextMenu = ({
       <ContextMenuItem
         disabled={capabilities[entry.action] === false}
         key={entry.action}
-        className="gap-2.5 rounded-md px-2 py-1.5 text-[13px] data-[highlighted]:bg-accent/80"
+        className={menuItemStyles()}
         onSelect={() => onAction(entry.action)}
       >
         <Icon aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
         <span>{t(entry.labelKey)}</span>
-        <ContextMenuShortcut className="ml-auto pl-5 font-mono text-[10px] tracking-normal">
+        <ContextMenuShortcut className={menuShortcutStyles}>
           {formatShortcut(shortcut)}
         </ContextMenuShortcut>
       </ContextMenuItem>
@@ -133,13 +139,13 @@ export const EditorContextMenu = ({
       </ContextMenuTrigger>
       <ContextMenuContent
         aria-label={t('menu.edit')}
-        className="w-56 rounded-xl border-border/80 bg-popover/95 p-1.5 shadow-xl backdrop-blur-xl"
+        className={menuSurfaceStyles({ className: 'w-56' })}
         collisionPadding={8}
       >
         {editEntries.map(renderEntry)}
-        <ContextMenuSeparator className="mx-1" />
+        <ContextMenuSeparator className={menuSeparatorStyles} />
         {clipboardEntries.map(renderEntry)}
-        <ContextMenuSeparator className="mx-1" />
+        <ContextMenuSeparator className={menuSeparatorStyles} />
         {formatEntries
           .filter((entry) => entry.action !== 'link' || capabilities.link !== false)
           .map((entry) =>

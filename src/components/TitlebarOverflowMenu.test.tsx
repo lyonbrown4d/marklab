@@ -50,6 +50,31 @@ const OutlineHarness = ({ onToggle }: { onToggle: () => void }) => {
 }
 
 describe('TitlebarOverflowMenu', () => {
+  it('uses the shared application menu treatment for root, submenu, and items', async () => {
+    const user = userEvent.setup()
+    render(<TitlebarOverflowMenu {...createProps()} />)
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+    const rootMenu = screen.getByRole('menu')
+    const searchItem = within(rootMenu).getByRole('menuitem', { name: 'Search files' })
+
+    expect(rootMenu).toHaveClass(
+      'rounded-xl',
+      'border-border/80',
+      'bg-popover/98',
+      'p-1.5',
+      'shadow-xl',
+    )
+    expect(searchItem).toHaveClass('min-h-8', 'rounded-lg', 'px-2.5', 'text-[13px]')
+
+    await user.hover(within(rootMenu).getByRole('menuitem', { name: 'Rich text editor' }))
+    const sourceItem = await screen.findByRole('menuitemradio', { name: 'Source editor' })
+    const submenu = sourceItem.closest('[role="menu"]')
+
+    expect(submenu).toHaveClass('rounded-xl', 'border-border/80', 'bg-popover/98', 'p-1.5')
+    expect(sourceItem).toHaveClass('min-h-8', 'rounded-lg', 'pl-8', 'pr-2.5', 'text-[13px]')
+  })
+
   it('portals submenus outside the scroll-clipped root menu', async () => {
     const user = userEvent.setup()
     render(<TitlebarOverflowMenu {...createProps()} />)

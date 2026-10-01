@@ -86,6 +86,22 @@ const Harness = ({
 }
 
 describe('FileTreeContextMenu', () => {
+  it('uses the shared application menu surface and item geometry', () => {
+    render(<Harness />)
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'README.md' }))
+
+    expect(screen.getByRole('menu')).toHaveClass(
+      'rounded-xl',
+      'border-border/80',
+      'bg-popover/98',
+      'p-1.5',
+      'shadow-xl',
+    )
+    const openItem = screen.getByRole('menuitem', { name: /^Open\s*Enter$/ })
+    expect(openItem).toHaveClass('min-h-8', 'rounded-lg', 'px-2.5', 'text-[13px]')
+    expect(openItem.className).not.toContain('before:')
+  })
+
   it('renders shortcut hints with the shared Kbd component', () => {
     render(<Harness />)
     fireEvent.contextMenu(screen.getByRole('button', { name: 'README.md' }))

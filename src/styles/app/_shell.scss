@@ -208,3 +208,15 @@
   box-shadow: none;
   contain: layout paint;
 }
+
+@media (max-width: 800px) {
+  .app-status-bar [data-status-priority='secondary'] {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-status-bar [data-status-label] {
+    display: none;
+  }
+}

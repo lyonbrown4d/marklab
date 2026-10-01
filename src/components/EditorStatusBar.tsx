@@ -41,6 +41,7 @@ export const EditorStatusBarSlot = ({ label }: { label: string }) => {
       ref={context?.setTarget}
       aria-label={label}
       className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-1 outline-none focus-visible:ring-1 focus-visible:ring-ring empty:hidden"
+      data-status-priority="secondary"
       role="group"
       tabIndex={0}
     />

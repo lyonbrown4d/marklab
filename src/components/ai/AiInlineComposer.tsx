@@ -13,6 +13,8 @@ import {
 import { AiProposalDiff } from '@/components/ai/AiProposalDiff'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Kbd } from '@/components/ui/kbd'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type AiComposerPhase =
   'loading-provider' | 'prompt' | 'starting' | 'streaming' | 'proposal' | 'error'
@@ -155,12 +157,34 @@ export const AiInlineComposer = ({
             type="submit"
           >
             {phase === 'loading-provider' ? (
-              <LoaderCircle aria-hidden="true" className="animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="animate-spin motion-reduce:animate-none"
+              />
             ) : (
               <Sparkles aria-hidden="true" />
             )}
           </Button>
         )}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label={`${labels.abandon} (Esc)`}
+                onClick={onDismiss}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="flex items-center gap-2" side="bottom">
+              <span>{labels.abandon}</span>
+              <Kbd>Esc</Kbd>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </form>
 
       {phase === 'streaming' && proposal && (

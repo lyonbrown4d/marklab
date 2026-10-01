@@ -4,6 +4,7 @@ import AppAlert from '@/components/AppAlert'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { EditorContextMenu, type EditorContextMenuAdapter } from '@/components/EditorContextMenu'
+import type { ShortcutBindings } from '@/logic/shortcuts'
 
 type MarkdownSourceEditorSurfaceProps = {
   activePath: string | null
@@ -17,6 +18,7 @@ type MarkdownSourceEditorSurfaceProps = {
   motionSmoothScrolling: boolean
   readOnly?: boolean
   sourceCodeMiniMapEnabled: boolean
+  shortcutOverrides?: ShortcutBindings
   loadingLabel: string
   value: string
   onChange: (value: string) => void
@@ -36,6 +38,7 @@ export const MarkdownSourceEditorSurface = ({
   motionSmoothScrolling,
   readOnly = false,
   sourceCodeMiniMapEnabled,
+  shortcutOverrides,
   loadingLabel,
   value,
   onChange,
@@ -117,6 +120,7 @@ export const MarkdownSourceEditorSurface = ({
     <EditorContextMenu
       getCapabilities={contextMenu.getCapabilities}
       onAction={contextMenu.onAction}
+      shortcutOverrides={shortcutOverrides}
     >
       {surface}
     </EditorContextMenu>

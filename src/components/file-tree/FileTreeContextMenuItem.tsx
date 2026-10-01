@@ -56,12 +56,11 @@ export const FileTreeContextMenuItem = ({
         props.onPointerMove?.(event)
       }}
       className={cn(
-        'group/file-tree-menu relative gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
-        'before:absolute before:left-0 before:top-1 before:h-5 before:w-0.5 before:rounded-full before:bg-transparent before:transition-colors',
-        'hover:bg-accent hover:text-accent-foreground hover:before:bg-primary',
-        'data-[active=true]:before:bg-primary data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[highlighted]:before:bg-primary',
+        'group/file-tree-menu gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
+        'hover:bg-accent hover:text-accent-foreground',
+        'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
         destructive &&
-          'text-destructive hover:bg-destructive/10 hover:text-destructive hover:before:bg-destructive data-[active=true]:before:bg-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive data-[highlighted]:before:bg-destructive',
+          'text-destructive hover:bg-destructive/10 hover:text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive',
         props.className,
       )}
     >

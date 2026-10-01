@@ -268,6 +268,7 @@ const TerminalSessionPane = ({
   return (
     <div
       aria-hidden={!activeAndVisible}
+      inert={!activeAndVisible}
       className={cn(
         'absolute inset-0 min-h-0 bg-background',
         activeAndVisible ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0',

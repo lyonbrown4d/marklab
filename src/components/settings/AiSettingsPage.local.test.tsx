@@ -220,6 +220,14 @@ describe('AiSettingsPage local AI', () => {
       await screen.findByRole('button', { name: `settings.aiDeleteModel ${model.label}` }),
     )
 
+    expect(screen.getByRole('alertdialog')).toHaveTextContent(model.label)
+    expect(api.deleteLocalModel).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'settings.cancel' }))
+    expect(api.deleteLocalModel).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: `settings.aiDeleteModel ${model.label}` }))
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmDeleteModel' }))
+
     await waitFor(() => expect(api.deleteLocalModel).toHaveBeenCalledWith(model.id))
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull()
   })

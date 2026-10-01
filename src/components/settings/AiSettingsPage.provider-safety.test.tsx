@@ -167,6 +167,13 @@ describe('AiSettingsPage provider safety', () => {
       screen.queryByRole('button', { name: 'settings.aiClearCredential Environment' }),
     ).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'settings.aiClearCredential Stored' }))
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Stored')
+    expect(api.updateProvider).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'settings.cancel' }))
+    expect(api.updateProvider).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'settings.aiClearCredential Stored' }))
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmClearCredential' }))
     expect(api.updateProvider).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'stored', apiKey: null }),
     )
@@ -185,7 +192,16 @@ describe('AiSettingsPage provider safety', () => {
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: 'settings.delete First' }))
-    expect(screen.getByRole('button', { name: 'settings.delete Second' })).toBeDisabled()
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('First')
+    expect(api.deleteProvider).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmDeleteProvider' }))
+    expect(
+      screen.getByRole('button', { name: 'settings.delete Second', hidden: true }),
+    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'settings.aiDeletingProvider' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
     resolveDelete()
     await waitFor(() => expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull())
   })

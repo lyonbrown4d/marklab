@@ -1,5 +1,5 @@
 import { Cloud, Server } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState, type RefObject } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SettingsActionButton, SettingsEmptyState } from '@/components/settings/SettingsButtons'
 import { SettingsSection } from '@/components/settings/SettingsRow'
@@ -14,20 +14,19 @@ type ProviderListProps = {
   providers: PublicAiProvider[]
   emptyText: string
   actions: ReturnType<typeof useAiProviders>
+  fallbackFocusRef: RefObject<HTMLElement | null>
 }
 
-const ProviderList = ({ providers, emptyText, actions }: ProviderListProps) => {
+const ProviderList = ({ providers, emptyText, actions, fallbackFocusRef }: ProviderListProps) => {
   const [testedId, setTestedId] = useState<string | null>(null)
   const saveError = actions.saveMutation.error?.message
   if (providers.length === 0) return <SettingsEmptyState>{emptyText}</SettingsEmptyState>
 
   const providerIds = new Set(providers.map((provider) => provider.id))
   const actionError =
-    actions.deleteMutation.isError && providerIds.has(actions.deleteMutation.variables)
-      ? actions.deleteMutation.error.message
-      : actions.testMutation.isError && providerIds.has(actions.testMutation.variables)
-        ? actions.testMutation.error.message
-        : undefined
+    actions.testMutation.isError && providerIds.has(actions.testMutation.variables)
+      ? actions.testMutation.error.message
+      : undefined
 
   return (
     <>
@@ -41,21 +40,36 @@ const ProviderList = ({ providers, emptyText, actions }: ProviderListProps) => {
           key={provider.id}
           provider={provider}
           deletePending={actions.deleteMutation.isPending}
+          deleteError={
+            actions.deleteMutation.isError && actions.deleteMutation.variables === provider.id
+              ? actions.deleteMutation.error.message
+              : undefined
+          }
           testPending={actions.testMutation.isPending}
           savePending={actions.saveMutation.isPending}
           saveError={saveError}
+          clearCredentialError={
+            actions.saveMutation.isError &&
+            actions.saveMutation.variables.id === provider.id &&
+            actions.saveMutation.variables.apiKey === null
+              ? actions.saveMutation.error.message
+              : undefined
+          }
+          fallbackFocusRef={fallbackFocusRef}
           testPassed={testedId === provider.id && actions.testMutation.isSuccess}
           onSave={async (input) => {
             await actions.saveMutation.mutateAsync(input)
           }}
-          onDelete={(id) => actions.deleteMutation.mutate(id)}
+          onDelete={(id) => actions.deleteMutation.mutateAsync(id)}
           onTest={(id) => {
             setTestedId(id)
             actions.testMutation.mutate(id)
           }}
           onStartEdit={() => actions.saveMutation.reset()}
-          onClearCredential={(item) =>
-            actions.saveMutation.mutate({
+          onStartDelete={() => actions.deleteMutation.reset()}
+          onStartClearCredential={() => actions.saveMutation.reset()}
+          onClearCredential={async (item) => {
+            await actions.saveMutation.mutateAsync({
               id: item.id,
               label: item.label,
               kind: item.kind,
@@ -63,7 +77,7 @@ const ProviderList = ({ providers, emptyText, actions }: ProviderListProps) => {
               ...(item.baseUrl ? { baseUrl: item.baseUrl } : {}),
               apiKey: null,
             })
-          }
+          }}
         />
       ))}
     </>
@@ -73,6 +87,8 @@ const ProviderList = ({ providers, emptyText, actions }: ProviderListProps) => {
 export const AiProviderSettingsSections = () => {
   const { t } = useI18n()
   const actions = useAiProviders()
+  const localProviderFallbackRef = useRef<HTMLButtonElement>(null)
+  const cloudProviderFallbackRef = useRef<HTMLButtonElement>(null)
   const [formMode, setFormMode] = useState<'ollama' | 'compatible' | 'cloud' | null>(null)
   const providers = actions.providersQuery.data ?? []
   const localProviders = providers.filter((provider) => provider.kind === 'openai-compatible')
@@ -119,10 +135,11 @@ export const AiProviderSettingsSections = () => {
             providers={localProviders}
             emptyText={t('settings.aiNoExternalLocal')}
             actions={actions}
+            fallbackFocusRef={localProviderFallbackRef}
           />
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          <SettingsActionButton onClick={() => openForm('ollama')}>
+          <SettingsActionButton ref={localProviderFallbackRef} onClick={() => openForm('ollama')}>
             {t('settings.aiConfigureOllama')}
           </SettingsActionButton>
           <SettingsActionButton variant="ghost" onClick={() => openForm('compatible')}>
@@ -141,9 +158,14 @@ export const AiProviderSettingsSections = () => {
             providers={cloudProviders}
             emptyText={t('settings.aiNoCloudProviders')}
             actions={actions}
+            fallbackFocusRef={cloudProviderFallbackRef}
           />
         )}
-        <SettingsActionButton className="mt-3 self-start" onClick={() => openForm('cloud')}>
+        <SettingsActionButton
+          ref={cloudProviderFallbackRef}
+          className="mt-3 self-start"
+          onClick={() => openForm('cloud')}
+        >
           {t('settings.aiAddCloudProvider')}
         </SettingsActionButton>
       </SettingsSection>

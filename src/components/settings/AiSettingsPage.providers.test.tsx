@@ -160,7 +160,7 @@ describe('AiSettingsPage provider management', () => {
   })
 
   it('tests, defaults, and deletes a configured provider', async () => {
-    api.listProviders.mockResolvedValue([cloudProvider])
+    api.listProviders.mockResolvedValueOnce([cloudProvider]).mockResolvedValue([])
     const user = userEvent.setup()
     renderPage()
 
@@ -169,21 +169,32 @@ describe('AiSettingsPage provider management', () => {
     await user.click(screen.getByRole('button', { name: 'settings.aiMakeDefault OpenAI' }))
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBe(cloudProvider.id)
     await user.click(screen.getByRole('button', { name: 'settings.delete OpenAI' }))
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmDeleteProvider' }))
 
     await waitFor(() => expect(api.deleteProvider).toHaveBeenCalledWith(cloudProvider.id))
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull()
+    expect(screen.getByRole('button', { name: 'settings.aiAddCloudProvider' })).toHaveFocus()
   })
 
   it('keeps the default and reports an error when deletion fails', async () => {
     api.listProviders.mockResolvedValue([cloudProvider])
-    api.deleteProvider.mockRejectedValue(new Error('Could not delete provider'))
+    api.deleteProvider
+      .mockRejectedValueOnce(new Error('Could not delete provider'))
+      .mockResolvedValueOnce(undefined)
     usePreferencesStore.setState({ aiDefaultProviderId: cloudProvider.id })
     const user = userEvent.setup()
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: 'settings.delete OpenAI' }))
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmDeleteProvider' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not delete provider')
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBe(cloudProvider.id)
+    expect(screen.getByRole('button', { name: 'settings.aiConfirmDeleteProvider' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'settings.cancel' }))
+    await user.click(screen.getByRole('button', { name: 'settings.delete OpenAI' }))
+    expect(screen.queryByText('Could not delete provider')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'settings.aiConfirmDeleteProvider' }))
+    await waitFor(() => expect(api.deleteProvider).toHaveBeenCalledTimes(2))
   })
 })

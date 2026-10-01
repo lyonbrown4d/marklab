@@ -152,6 +152,52 @@ describe('AppStatusBar', () => {
     expect(within(statusBar).getByRole('button', { name: 'Task center' })).toBeInTheDocument()
   })
 
+  it('prioritizes unsaved work while marking verbose activity as secondary', () => {
+    useMarkdownAssetSyncStore.setState({ failed: 0, lastError: null, pending: 2 })
+    renderStatusBar(
+      createProps({
+        dirtyPaths: { 'README.md': true },
+        saveStates: { 'README.md': { status: 'saving' } },
+      }),
+    )
+
+    expect(screen.getByText('1 unsaved files')).toHaveAttribute('data-status-priority', 'primary')
+    expect(screen.getByLabelText('1 unsaved files')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '1 unsaved files' })).toBeInTheDocument()
+    expect(screen.getByText('Saving')).toHaveAttribute('data-status-priority', 'secondary')
+    expect(screen.getByText('statusBar.assetsSyncing')).toHaveAttribute(
+      'data-status-priority',
+      'secondary',
+    )
+    expect(screen.getByRole('button', { name: 'Enter read-only browsing' })).toHaveAttribute(
+      'data-status-priority',
+      'primary',
+    )
+  })
+
+  it('keeps save and asset failures visible at narrow widths', () => {
+    useMarkdownAssetSyncStore.setState({
+      failed: 1,
+      lastError: 'Could not copy image',
+      pending: 0,
+    })
+    renderStatusBar(
+      createProps({
+        saveStates: { 'README.md': { status: 'error' } },
+      }),
+    )
+
+    expect(screen.getByText('Save failed')).toHaveAttribute('data-status-priority', 'primary')
+    expect(screen.getByLabelText('Save failed')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Save failed' })).toBeInTheDocument()
+    expect(screen.getByText('statusBar.assetsFailed')).toHaveAttribute(
+      'data-status-priority',
+      'primary',
+    )
+    expect(screen.getByLabelText('statusBar.assetsFailed')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'statusBar.assetsFailed' })).toBeInTheDocument()
+  })
+
   it('uses the shared spinner for busy restore actions without renaming the button', () => {
     renderStatusBar(
       createProps({

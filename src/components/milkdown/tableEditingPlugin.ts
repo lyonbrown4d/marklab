@@ -128,6 +128,18 @@ const TOOLBAR_ANCHOR_INSET = 17
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(Math.max(value, minimum), maximum)
 
+export const isMarkdownTableToolbarPointerTarget = (
+  target: EventTarget | null,
+  activeTable: HTMLTableElement | null,
+  toolbarElement: HTMLElement,
+): boolean => {
+  if (!(target instanceof Node)) return false
+  if (toolbarElement.contains(target)) return true
+  return Boolean(
+    activeTable && target instanceof Element && target.closest('table') === activeTable,
+  )
+}
+
 export const createMarkdownTableToolbar = (
   view: EditorView,
   commands: MarkdownTableCommandSet = defaultCommands,
@@ -252,19 +264,24 @@ export const markdownTableEditingPlugin = $prose(
           updateToolbar()
         }
         const onPointerOut = (event: PointerEvent) => {
-          const next = event.relatedTarget
-          if (next instanceof Element && next.closest('table') === hoveredTable) return
+          if (
+            isMarkdownTableToolbarPointerTarget(event.relatedTarget, hoveredTable, toolbar.element)
+          ) {
+            return
+          }
           hoveredTable = null
           updateToolbar()
         }
         view.dom.addEventListener('pointerover', onPointerOver)
         view.dom.addEventListener('pointerout', onPointerOut)
+        toolbar.element.addEventListener('pointerout', onPointerOut)
         updateToolbar()
 
         return {
           destroy: () => {
             view.dom.removeEventListener('pointerover', onPointerOver)
             view.dom.removeEventListener('pointerout', onPointerOut)
+            toolbar.element.removeEventListener('pointerout', onPointerOut)
             parent?.classList.remove('marklab-table-toolbar-host')
             toolbar.destroy()
           },

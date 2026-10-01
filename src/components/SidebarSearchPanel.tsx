@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
+import SidebarPanelFrame from '@/components/SidebarPanelFrame'
 import { Input } from '@/components/ui/input'
-import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import FullTextSearchPanel from '@/components/FullTextSearchPanel'
 import type { SidebarSearchPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
@@ -22,26 +22,28 @@ const SidebarSearchPanel = ({
   }, [focusWorkspaceSearchRequest])
 
   return (
-    <SidebarGroup className="sidebar-section flex min-h-0 flex-1 flex-col rounded-md p-1">
-      <SidebarGroupLabel className="sidebar-section-header flex h-8 items-center gap-2 px-2 text-[11px] uppercase">
-        <Search className="size-3.5" />
-        <span>{t('sidebar.searchAction')}</span>
-      </SidebarGroupLabel>
-      <SidebarGroupContent className="flex min-h-0 flex-1 flex-col gap-2">
-        <Input
-          ref={inputRef}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('search.fullText')}
-          className="h-7 rounded-md border-sidebar-border bg-background/70 text-xs shadow-sm"
-        />
-        <FullTextSearchPanel
-          query={query}
-          workspaceKey={`${rootKind}:${rootPath}`}
-          onOpenResult={onOpenSearchResult}
-        />
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <SidebarPanelFrame
+      panel="search"
+      ariaLabel={t('sidebar.searchAction')}
+      className="flex-1"
+      contentClassName="flex-1"
+      icon={Search}
+      title={t('sidebar.searchAction')}
+    >
+      <Input
+        ref={inputRef}
+        aria-label={t('search.fullText')}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t('search.fullText')}
+        className="h-8 border-sidebar-border bg-transparent text-xs shadow-none focus-visible:ring-sidebar-ring"
+      />
+      <FullTextSearchPanel
+        query={query}
+        workspaceKey={`${rootKind}:${rootPath}`}
+        onOpenResult={onOpenSearchResult}
+      />
+    </SidebarPanelFrame>
   )
 }
 

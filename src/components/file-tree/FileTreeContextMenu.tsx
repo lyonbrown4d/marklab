@@ -22,6 +22,11 @@ import { toast } from 'sonner'
 import { ContextMenuContent, ContextMenuSeparator } from '@/components/ui/context-menu'
 import { FileTreeContextMenuItem as MenuItem } from '@/components/file-tree/FileTreeContextMenuItem'
 import {
+  menuItemStyles,
+  menuSeparatorStyles,
+  menuSurfaceStyles,
+} from '@/components/overlay/overlayStyles'
+import {
   copyAbsolutePath,
   copyText,
   createMarkdownLink,
@@ -113,7 +118,7 @@ export const FileTreeContextMenu = ({
           await node.edit()
         })
       }}
-      className="w-[16rem] rounded-lg border border-border/90 bg-popover p-1.5 shadow-xl"
+      className={menuSurfaceStyles({ className: 'w-[16rem]' })}
     >
       <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
         <HeaderIcon className="size-4 shrink-0 text-primary" />
@@ -122,15 +127,20 @@ export const FileTreeContextMenu = ({
           <div className="truncate text-[10px] text-muted-foreground">{item.path || item.name}</div>
         </div>
       </div>
-      <ContextMenuSeparator />
+      <ContextMenuSeparator className={menuSeparatorStyles} />
 
       {isFolder && hasChildren ? (
-        <MenuItem icon={node.isOpen ? ChevronDown : ChevronRight} onSelect={() => node.toggle()}>
+        <MenuItem
+          className={menuItemStyles()}
+          icon={node.isOpen ? ChevronDown : ChevronRight}
+          onSelect={() => node.toggle()}
+        >
           {node.isOpen ? labels.collapse : labels.expand}
         </MenuItem>
       ) : !isFolder ? (
         <>
           <MenuItem
+            className={menuItemStyles()}
             icon={FileText}
             shortcutLabel={shortcut.enter}
             onSelect={() => onOpenFile(item.path)}
@@ -139,10 +149,18 @@ export const FileTreeContextMenu = ({
           </MenuItem>
           {textViewsAvailable ? (
             <>
-              <MenuItem icon={Code2} onSelect={() => onOpenFileView(item.path, 'source')}>
+              <MenuItem
+                className={menuItemStyles()}
+                icon={Code2}
+                onSelect={() => onOpenFileView(item.path, 'source')}
+              >
                 {labels.openSource}
               </MenuItem>
-              <MenuItem icon={ScanSearch} onSelect={() => onOpenFileView(item.path, 'graph')}>
+              <MenuItem
+                className={menuItemStyles()}
+                icon={ScanSearch}
+                onSelect={() => onOpenFileView(item.path, 'graph')}
+              >
                 {labels.openGraph}
               </MenuItem>
             </>
@@ -150,7 +168,7 @@ export const FileTreeContextMenu = ({
         </>
       ) : null}
 
-      {isFolder && hasChildren ? <ContextMenuSeparator /> : null}
+      {isFolder && hasChildren ? <ContextMenuSeparator className={menuSeparatorStyles} /> : null}
 
       {isFolder && !hasChildren ? (
         <div className="px-2 pb-1 text-[10px] text-muted-foreground">{item.path || item.name}</div>
@@ -158,11 +176,17 @@ export const FileTreeContextMenu = ({
 
       {isFolder && !readonlyTree ? (
         <>
-          <ContextMenuSeparator />
-          <MenuItem icon={FilePlus2} shortcutLabel={shortcut.newFile} onSelect={handleCreateFile}>
+          <ContextMenuSeparator className={menuSeparatorStyles} />
+          <MenuItem
+            className={menuItemStyles()}
+            icon={FilePlus2}
+            shortcutLabel={shortcut.newFile}
+            onSelect={handleCreateFile}
+          >
             {labels.newFile}
           </MenuItem>
           <MenuItem
+            className={menuItemStyles()}
             icon={FolderPlus}
             shortcutLabel={shortcut.newFolder}
             onSelect={handleCreateFolder}
@@ -172,26 +196,30 @@ export const FileTreeContextMenu = ({
         </>
       ) : null}
 
-      <ContextMenuSeparator />
+      <ContextMenuSeparator className={menuSeparatorStyles} />
       <MenuItem
+        className={menuItemStyles()}
         icon={ExternalLink}
         onSelect={() => runMenuTask('open path', () => openPathInSystem(item.path))}
       >
         {labels.openInSystem}
       </MenuItem>
       <MenuItem
+        className={menuItemStyles()}
         icon={FolderOpen}
         onSelect={() => runMenuTask('reveal path', () => revealPath(item.path))}
       >
         {labels.revealInFolder}
       </MenuItem>
       <MenuItem
+        className={menuItemStyles()}
         icon={Copy}
         onSelect={() => runMenuTask('copy path', () => copyText(item.path), labels.copied)}
       >
         {labels.copyPath}
       </MenuItem>
       <MenuItem
+        className={menuItemStyles()}
         icon={Copy}
         onSelect={() =>
           runMenuTask('copy absolute path', () => copyAbsolutePath(item.path), labels.copied)
@@ -201,6 +229,7 @@ export const FileTreeContextMenu = ({
       </MenuItem>
       {!isFolder ? (
         <MenuItem
+          className={menuItemStyles()}
           icon={Link2}
           onSelect={() =>
             runMenuTask(
@@ -214,10 +243,11 @@ export const FileTreeContextMenu = ({
         </MenuItem>
       ) : null}
 
-      <ContextMenuSeparator />
+      <ContextMenuSeparator className={menuSeparatorStyles} />
       {!readonlyTree ? (
         <>
           <MenuItem
+            className={menuItemStyles()}
             icon={Pencil}
             shortcutLabel={shortcut.rename}
             onSelect={() => {
@@ -227,6 +257,7 @@ export const FileTreeContextMenu = ({
             {labels.rename}
           </MenuItem>
           <MenuItem
+            className={menuItemStyles({ tone: 'destructive' })}
             destructive
             icon={Trash2}
             shortcutLabel={shortcut.delete}
@@ -234,10 +265,10 @@ export const FileTreeContextMenu = ({
           >
             {labels.delete}
           </MenuItem>
-          <ContextMenuSeparator />
+          <ContextMenuSeparator className={menuSeparatorStyles} />
         </>
       ) : null}
-      <MenuItem icon={Info} onSelect={() => onInspectPath(item.path)}>
+      <MenuItem className={menuItemStyles()} icon={Info} onSelect={() => onInspectPath(item.path)}>
         {labels.properties}
       </MenuItem>
     </ContextMenuContent>

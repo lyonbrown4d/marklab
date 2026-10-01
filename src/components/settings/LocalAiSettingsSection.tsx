@@ -1,4 +1,5 @@
 import { Cpu, Download, HardDrive, ShieldCheck } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -9,6 +10,7 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { MARKLAB_LOCAL_PROVIDER_ID, type LocalAiModel } from '@/components/settings/aiSettingsTypes'
 import { useLocalAiSettings } from '@/components/settings/useLocalAiSettings'
 import { LocalAiDirectorySettings } from '@/components/settings/LocalAiDirectorySettings'
+import { ConfirmDestructiveActionDialog } from '@/components/ConfirmDestructiveActionDialog'
 
 const formatModelSize = (sizeBytes: number) => `${Math.round(sizeBytes / 1_000_000)} MB`
 
@@ -19,6 +21,9 @@ type ModelRowProps = {
 
 const LocalModelRow = ({ model, actions }: ModelRowProps) => {
   const { t } = useI18n()
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null)
+  const rowFocusRef = useRef<HTMLDivElement>(null)
   const defaultId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const setDefaultId = usePreferencesStore((state) => state.setAiDefaultProviderId)
   const progress = actions.progressByModel[model.id]
@@ -34,7 +39,11 @@ const LocalModelRow = ({ model, actions }: ModelRowProps) => {
     (progress && ['queued', 'downloading', 'verifying'].includes(progress.state))
 
   return (
-    <div className="border-t border-border/70 py-4 first:border-t-0 first:pt-0 last:pb-0">
+    <div
+      ref={rowFocusRef}
+      tabIndex={-1}
+      className="border-t border-border/70 py-4 outline-none first:border-t-0 first:pt-0 last:pb-0"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -94,9 +103,13 @@ const LocalModelRow = ({ model, actions }: ModelRowProps) => {
           )}
           {model.installed && (
             <SettingsActionButton
+              ref={deleteTriggerRef}
               variant="ghost"
               aria-label={`${t('settings.aiDeleteModel')} ${model.label}`}
-              onClick={() => actions.deleteMutation.mutate(model.id)}
+              onClick={() => {
+                actions.deleteMutation.reset()
+                setConfirmDeleteOpen(true)
+              }}
               disabled={actions.deleteMutation.isPending || directoryMigrationActive}
             >
               {t('settings.aiDeleteModel')}
@@ -128,9 +141,32 @@ const LocalModelRow = ({ model, actions }: ModelRowProps) => {
           {progress.error}
         </p>
       )}
+      {actions.deleteMutation.isError && actions.deleteMutation.variables === model.id && (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          {actions.deleteMutation.error.message}
+        </p>
+      )}
       {defaultId === MARKLAB_LOCAL_PROVIDER_ID && (
         <p className="mt-2 text-xs text-muted-foreground">{t('settings.aiDefaultActive')}</p>
       )}
+      <ConfirmDestructiveActionDialog
+        open={confirmDeleteOpen}
+        title={t('settings.aiDeleteModelTitle')}
+        description={t('settings.aiDeleteModelDescription')}
+        resourceName={model.label}
+        confirmLabel={t('settings.aiConfirmDeleteModel')}
+        pendingLabel={t('settings.aiDeletingModel')}
+        cancelLabel={t('settings.cancel')}
+        error={
+          actions.deleteMutation.isError && actions.deleteMutation.variables === model.id
+            ? actions.deleteMutation.error.message
+            : undefined
+        }
+        returnFocusRef={deleteTriggerRef}
+        fallbackFocusRef={rowFocusRef}
+        onOpenChange={setConfirmDeleteOpen}
+        onConfirm={() => actions.deleteMutation.mutateAsync(model.id)}
+      />
     </div>
   )
 }
@@ -140,10 +176,7 @@ export const LocalAiSettingsSection = () => {
   const actions = useLocalAiSettings()
   const query = actions.statusQuery
   const actionError =
-    actions.downloadMutation.error ??
-    actions.cancelMutation.error ??
-    actions.deleteMutation.error ??
-    actions.activateMutation.error
+    actions.downloadMutation.error ?? actions.cancelMutation.error ?? actions.activateMutation.error
   const directoryError = actions.selectDirectoryMutation.error ?? actions.setDirectoryMutation.error
 
   return (

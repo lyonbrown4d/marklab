@@ -37,6 +37,33 @@ const baseProps = {
 }
 
 describe('AiInlineComposer', () => {
+  it.each(['loading-provider', 'prompt', 'starting', 'streaming', 'proposal', 'error'] as const)(
+    'offers a pointer-accessible close action during the %s phase',
+    (phase) => {
+      const onDismiss = vi.fn()
+      render(
+        <AiInlineComposer
+          {...baseProps}
+          error={phase === 'error' ? 'Request failed' : null}
+          onDismiss={onDismiss}
+          phase={phase}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: `${labels.abandon} (Esc)` }))
+
+      expect(onDismiss).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('disables loading motion when reduced motion is requested', () => {
+    render(<AiInlineComposer {...baseProps} phase="loading-provider" />)
+
+    expect(screen.getByRole('button', { name: labels.generate }).querySelector('svg')).toHaveClass(
+      'motion-reduce:animate-none',
+    )
+  })
+
   it('submits with Enter, closes with Escape, and exposes quick actions', () => {
     const onSubmit = vi.fn()
     const onDismiss = vi.fn()

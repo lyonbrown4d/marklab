@@ -114,7 +114,7 @@ const AppStatusBar = ({
       <footer
         id="app-status-bar"
         aria-label={t('statusBar.label')}
-        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-3 border-t border-border/60 px-2 text-[11px] text-muted-foreground"
+        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-2 overflow-hidden border-t border-border/60 px-2 text-[11px] text-muted-foreground"
       >
         <AppStatusBarLeft
           gitBranch={gitBranch}

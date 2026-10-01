@@ -11,6 +11,11 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  menuItemStyles,
+  menuSeparatorStyles,
+  menuSurfaceStyles,
+} from '@/components/overlay/overlayStyles'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -84,7 +89,7 @@ export const TitlebarWorkspaceMenu = ({
     </DropdownMenuTrigger>
     <DropdownMenuContent
       align="start"
-      className="w-64 rounded-xl border-border/70 bg-popover/98 p-2 shadow-xl shadow-foreground/10 backdrop-blur-xl"
+      className={menuSurfaceStyles({ className: 'w-64' })}
       sideOffset={7}
     >
       <DropdownMenuLabel className="flex min-w-0 items-center gap-2 px-2 py-2 font-normal">
@@ -96,7 +101,7 @@ export const TitlebarWorkspaceMenu = ({
           <span className="block truncate text-sm font-medium text-foreground">{section}</span>
         </span>
       </DropdownMenuLabel>
-      <DropdownMenuSeparator />
+      <DropdownMenuSeparator className={menuSeparatorStyles} />
       <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
         {recentWorkspaces.sectionLabel}
       </DropdownMenuLabel>
@@ -111,7 +116,7 @@ export const TitlebarWorkspaceMenu = ({
                 key={path}
                 aria-current={current ? 'page' : undefined}
                 aria-label={recentWorkspaces.openLabel.replace('{name}', label)}
-                className="rounded-lg px-2.5 py-2"
+                className={menuItemStyles({ className: 'py-2' })}
                 disabled={workspaceWindowOpening}
                 onSelect={() => onOpenProject(path)}
               >
@@ -130,17 +135,17 @@ export const TitlebarWorkspaceMenu = ({
             )
           })
         ) : (
-          <DropdownMenuItem disabled className="rounded-lg px-2.5 py-2 text-xs">
+          <DropdownMenuItem disabled className={menuItemStyles({ className: 'py-2 text-xs' })}>
             {recentWorkspaces.emptyLabel}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem className="rounded-lg px-2.5 py-2" onSelect={onOpenHistory}>
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenHistory}>
           <History aria-hidden="true" />
           {historyLabel}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className={menuSeparatorStyles} />
         <DropdownMenuItem
-          className="rounded-lg px-2.5 py-2"
+          className={menuItemStyles()}
           disabled={workspaceWindowOpening}
           onSelect={onOpenCurrentWorkspaceInNewWindow}
         >
@@ -148,26 +153,23 @@ export const TitlebarWorkspaceMenu = ({
           {openCurrentWorkspaceInNewWindowLabel}
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="rounded-lg px-2.5 py-2"
+          className={menuItemStyles()}
           disabled={workspaceWindowOpening}
           onSelect={onSelectWorkspaceInNewWindow}
         >
           <FolderOpen aria-hidden="true" />
           {openWorkspaceInNewWindowLabel}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="rounded-lg px-2.5 py-2 focus:bg-primary/10 focus:text-foreground"
-          onSelect={onNewWorkspace}
-        >
+        <DropdownMenuSeparator className={menuSeparatorStyles} />
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
           <FolderPlus aria-hidden="true" />
           {newWorkspaceLabel}
         </DropdownMenuItem>
-        <DropdownMenuItem className="rounded-lg px-2.5 py-2" onSelect={onOpenFile}>
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenFile}>
           <FileText aria-hidden="true" />
           {openFileLabel}
         </DropdownMenuItem>
-        <DropdownMenuItem className="rounded-lg px-2.5 py-2" onSelect={onCreateFile}>
+        <DropdownMenuItem className={menuItemStyles()} onSelect={onCreateFile}>
           <FilePlus2 aria-hidden="true" />
           {newFileLabel}
         </DropdownMenuItem>

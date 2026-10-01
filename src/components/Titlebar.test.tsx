@@ -311,7 +311,7 @@ describe('Titlebar command palette', () => {
     await user.click(screen.getByRole('button', { name: 'Document outline' }))
     await user.click(screen.getByRole('button', { name: 'Search files...' }))
     await user.click(screen.getByRole('button', { name: 'Source' }))
-    await user.click(screen.getByRole('button', { name: 'Workspace: notes' }))
+    await user.click(screen.getByRole('button', { name: 'Workspace: workspace' }))
     await user.click(screen.getByRole('menuitem', { name: 'New Workspace' }))
 
     expect(props.onToggleSidebar).toHaveBeenCalledTimes(1)

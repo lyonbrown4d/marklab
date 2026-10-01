@@ -21,7 +21,11 @@ vi.mock('@monaco-editor/react', () => ({
   },
 }))
 
-const renderSurface = (sourceCodeMiniMapEnabled: boolean, readOnly = false) =>
+const renderSurface = (
+  sourceCodeMiniMapEnabled: boolean,
+  readOnly = false,
+  shortcutOverrides = {},
+) =>
   render(
     <MarkdownSourceEditorSurface
       activePath="notes/current.md"
@@ -36,6 +40,7 @@ const renderSurface = (sourceCodeMiniMapEnabled: boolean, readOnly = false) =>
       motionSmoothScrolling={false}
       readOnly={readOnly}
       sourceCodeMiniMapEnabled={sourceCodeMiniMapEnabled}
+      shortcutOverrides={shortcutOverrides}
       value="# Current"
       onChange={vi.fn()}
       contextMenu={{
@@ -65,6 +70,14 @@ describe('MarkdownSourceEditorSurface', () => {
     expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveAttribute('data-disabled')
     fireEvent.click(screen.getByRole('menuitem', { name: /Inline code/ }))
     expect(editorMock.onContextMenuAction).toHaveBeenCalledWith('inlineCode')
+  })
+
+  it('shows the configured source editor shortcuts in the shared context menu', () => {
+    renderSurface(false, false, { 'editor.inlineCode': ['F8'] })
+
+    fireEvent.contextMenu(screen.getByLabelText('markdown source'))
+
+    expect(screen.getByRole('menuitem', { name: /Inline code/ })).toHaveTextContent('F8')
   })
 
   it('uses Monaco read-only semantics without applying the rendered typewriter treatment', () => {
