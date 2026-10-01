@@ -63,7 +63,7 @@ export const AiProviderForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 grid gap-3 rounded-md border p-3">
+    <form onSubmit={handleSubmit} className="grid gap-4">
       <div className={fieldClassName}>
         <Label htmlFor={labelId}>{t('settings.aiProviderName')}</Label>
         <Input

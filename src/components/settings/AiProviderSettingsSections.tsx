@@ -5,7 +5,7 @@ import { SettingsActionButton, SettingsEmptyState } from '@/components/settings/
 import { SettingsSection } from '@/components/settings/SettingsRow'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
-import { AiProviderForm } from '@/components/settings/AiProviderForm'
+import { AiProviderDialog } from '@/components/settings/AiProviderDialog'
 import { AiProviderRow } from '@/components/settings/AiProviderRow'
 import { isOllamaPreset } from '@/components/settings/aiProviderUtils'
 import { useAiProviders } from '@/components/settings/useAiProviders'
@@ -122,36 +122,13 @@ export const AiProviderSettingsSections = () => {
           />
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          {formMode !== 'ollama' && (
-            <SettingsActionButton onClick={() => openForm('ollama')}>
-              {t('settings.aiConfigureOllama')}
-            </SettingsActionButton>
-          )}
-          {formMode !== 'compatible' && (
-            <SettingsActionButton variant="ghost" onClick={() => openForm('compatible')}>
-              {t('settings.aiAddCompatible')}
-            </SettingsActionButton>
-          )}
+          <SettingsActionButton onClick={() => openForm('ollama')}>
+            {t('settings.aiConfigureOllama')}
+          </SettingsActionButton>
+          <SettingsActionButton variant="ghost" onClick={() => openForm('compatible')}>
+            {t('settings.aiAddCompatible')}
+          </SettingsActionButton>
         </div>
-        {formMode === 'ollama' && (
-          <AiProviderForm
-            mode="ollama"
-            provider={ollamaProvider}
-            pending={actions.saveMutation.isPending}
-            error={actions.saveMutation.error?.message}
-            onCancel={() => setFormMode(null)}
-            onSave={handleSave}
-          />
-        )}
-        {formMode === 'compatible' && (
-          <AiProviderForm
-            mode="compatible"
-            pending={actions.saveMutation.isPending}
-            error={actions.saveMutation.error?.message}
-            onCancel={() => setFormMode(null)}
-            onSave={handleSave}
-          />
-        )}
       </SettingsSection>
       <SettingsSection
         title={t('settings.aiCloud')}
@@ -166,21 +143,24 @@ export const AiProviderSettingsSections = () => {
             actions={actions}
           />
         )}
-        {formMode !== 'cloud' && (
-          <SettingsActionButton className="mt-3 self-start" onClick={() => openForm('cloud')}>
-            {t('settings.aiAddCloudProvider')}
-          </SettingsActionButton>
-        )}
-        {formMode === 'cloud' && (
-          <AiProviderForm
-            mode="cloud"
-            pending={actions.saveMutation.isPending}
-            error={actions.saveMutation.error?.message}
-            onCancel={() => setFormMode(null)}
-            onSave={handleSave}
-          />
-        )}
+        <SettingsActionButton className="mt-3 self-start" onClick={() => openForm('cloud')}>
+          {t('settings.aiAddCloudProvider')}
+        </SettingsActionButton>
       </SettingsSection>
+      {formMode && (
+        <AiProviderDialog
+          key={formMode}
+          mode={formMode}
+          provider={formMode === 'ollama' ? ollamaProvider : undefined}
+          open
+          pending={actions.saveMutation.isPending}
+          error={actions.saveMutation.error?.message}
+          onOpenChange={(open) => {
+            if (!open) setFormMode(null)
+          }}
+          onSave={handleSave}
+        />
+      )}
     </>
   )
 }

@@ -33,6 +33,13 @@ describe('menu motion styles', () => {
     expect(menuMotionStyles).toContain('transition: none')
   })
 
+  it('composes a shared visual contract without modifying Radix menu primitives', () => {
+    expect(menuMotionStyles).toContain(".menu-motion-surface[role='menu']")
+    expect(menuMotionStyles).toContain(".menu-motion-item[role^='menuitem']")
+    expect(menuMotionStyles).toContain('border-radius: 0.75rem')
+    expect(menuMotionStyles).toContain('backdrop-filter: blur(16px)')
+  })
+
   it('also animates the editor-owned menus that do not use Radix', () => {
     expect(editorPlaygroundStyles).toContain('@keyframes editor-menu-surface-enter')
     expect(editorPlaygroundStyles).toContain(".milkdown-slash-menu[data-show='true']")

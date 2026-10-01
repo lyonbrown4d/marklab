@@ -1,11 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
+import fs from 'node:fs'
 import type http from 'node:http'
+import path from 'node:path'
 // eslint-disable-next-line no-restricted-imports -- Electron E2E helpers are colocated outside application aliases.
 import {
   closeElectronTestSession,
   closeRendererServer,
   firstVisibleLocator,
   launchElectronTestSession,
+  repoRoot,
   startRendererServer,
   type ElectronTestSession,
 } from './electronTestHarness.js'
@@ -87,5 +90,38 @@ test.describe('Electron desktop shell', () => {
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     expect(Date.now() - settingsStartedAt).toBeLessThan(2_000)
     await expect(settingsDialog.getByRole('tablist', { name: /Settings|设置/i })).toBeVisible()
+  })
+
+  test('uses the shared contextual-menu surface for titlebar menus', async () => {
+    const workspaceMenuTrigger = page.getByRole('button', {
+      name: /^Workspace:|^工作区:/i,
+    })
+    await expect(workspaceMenuTrigger).toBeVisible()
+    await workspaceMenuTrigger.click()
+
+    const menu = page.getByRole('menu').first()
+    await expect(menu).toBeVisible()
+    const menuStyle = await menu.evaluate((element) => {
+      const style = window.getComputedStyle(element)
+      return {
+        backdropFilter: style.backdropFilter,
+        borderRadius: style.borderRadius,
+      }
+    })
+    expect(menuStyle).toEqual({ backdropFilter: 'blur(16px)', borderRadius: '12px' })
+
+    const firstItem = menu.getByRole('menuitem').first()
+    const itemStyle = await firstItem.evaluate((element) => {
+      const style = window.getComputedStyle(element)
+      return { borderRadius: style.borderRadius, fontSize: style.fontSize }
+    })
+    expect(itemStyle).toEqual({ borderRadius: '8px', fontSize: '13px' })
+
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'unified-titlebar-menu.png'),
+    })
   })
 })

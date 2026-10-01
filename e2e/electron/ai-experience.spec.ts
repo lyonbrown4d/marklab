@@ -68,6 +68,20 @@ test.describe('Electron AI experience', () => {
       animations: 'disabled',
       path: path.join(captureDirectory, 'ai-settings.png'),
     })
+
+    await settingsDialog
+      .getByRole('button', { name: /Add compatible service|添加兼容服务/i })
+      .click()
+    const providerDialog = page.getByRole('dialog', {
+      name: /Add compatible service|添加兼容服务/i,
+    })
+    await expect(providerDialog).toBeVisible()
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'ai-provider-dialog.png'),
+    })
+    await providerDialog.getByRole('button', { name: /Cancel|取消/i }).click()
+    await expect(providerDialog).toBeHidden()
   })
 
   test('opens the transient AI companion from the Markdown editor', async () => {
@@ -79,12 +93,16 @@ test.describe('Electron AI experience', () => {
     await settingsDialog
       .getByRole('button', { name: /Add compatible service|添加兼容服务/i })
       .click()
-    await settingsDialog.getByRole('textbox', { name: /Display name|显示名称/i }).fill('Local E2E')
-    await settingsDialog.getByRole('textbox', { name: /^Model$|^模型$/i }).fill('marklab-e2e')
-    await settingsDialog
+    const providerDialog = page.getByRole('dialog', {
+      name: /Add compatible service|添加兼容服务/i,
+    })
+    await providerDialog.getByRole('textbox', { name: /Display name|显示名称/i }).fill('Local E2E')
+    await providerDialog.getByRole('textbox', { name: /^Model$|^模型$/i }).fill('marklab-e2e')
+    await providerDialog
       .getByRole('textbox', { name: /Service URL|服务地址/i })
       .fill(mockAiServer.baseUrl)
-    await settingsDialog.getByRole('button', { name: /Save|保存/i }).click()
+    await providerDialog.getByRole('button', { name: /Save|保存/i }).click()
+    await expect(providerDialog).toBeHidden()
     await expect(settingsDialog.getByText('marklab-e2e', { exact: true })).toBeVisible()
     await settingsDialog
       .getByRole('button', { name: /Make default Local E2E|设为默认 Local E2E/i })

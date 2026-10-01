@@ -124,8 +124,17 @@ describe('AiSettingsPage provider management', () => {
     await screen.findByRole('heading', { name: 'settings.aiExternalLocal' })
     await user.click(externalSection().getByRole('button', { name: 'settings.aiAddCompatible' }))
 
-    expect(screen.getByLabelText('settings.aiBaseUrl')).toHaveValue('')
-    expect(screen.getByLabelText('settings.aiApiKey')).toHaveAttribute('type', 'password')
+    const providerDialog = screen.getByRole('dialog', { name: 'settings.aiAddCompatible' })
+    expect(within(providerDialog).getByLabelText('settings.aiBaseUrl')).toHaveValue('')
+    expect(within(providerDialog).getByLabelText('settings.aiApiKey')).toHaveAttribute(
+      'type',
+      'password',
+    )
+
+    await user.click(within(providerDialog).getByRole('button', { name: 'settings.cancel' }))
+    expect(
+      screen.queryByRole('dialog', { name: 'settings.aiAddCompatible' }),
+    ).not.toBeInTheDocument()
   })
 
   it('never reveals a stored key and preserves it when an edited key stays blank', async () => {
@@ -134,7 +143,8 @@ describe('AiSettingsPage provider management', () => {
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: 'settings.edit OpenAI' }))
-    const keyInput = screen.getByLabelText('settings.aiApiKey')
+    const providerDialog = screen.getByRole('dialog', { name: 'settings.aiEditProvider' })
+    const keyInput = within(providerDialog).getByLabelText('settings.aiApiKey')
     expect(keyInput).toHaveAttribute('type', 'password')
     expect(keyInput).toHaveValue('')
     expect(screen.queryByDisplayValue('••••••••')).not.toBeInTheDocument()
