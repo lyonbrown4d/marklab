@@ -192,7 +192,7 @@ export const createAiInlineCompletionSession = (
         return
       }
       if (
-        view.state.doc === previousState.doc &&
+        view.state.doc.eq(previousState.doc) &&
         view.state.selection.eq(previousState.selection)
       ) {
         return

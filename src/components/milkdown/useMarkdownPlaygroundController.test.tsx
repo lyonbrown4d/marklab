@@ -72,13 +72,6 @@ describe('useMarkdownPlaygroundController', () => {
     expect(shortcutBridgeMock.mock.calls.at(-1)?.[0].enabled).toBe(false)
   })
 
-  it('disables browser spellcheck for line-dense large documents', async () => {
-    render(<Harness value={'x\n'.repeat(2_000)} onChange={vi.fn()} />)
-    await act(async () => {})
-
-    expect(crepeMock.editorViewOptions().attributes).toMatchObject({ spellcheck: 'false' })
-  })
-
   it('waits for the old editor to finish destroying before starting its replacement', async () => {
     const onChange = vi.fn()
     const { rerender } = render(<Harness onChange={onChange} value="A" />)
@@ -253,7 +246,6 @@ describe('useMarkdownPlaygroundController', () => {
     const crepe = crepeMock.latestInstance()!
 
     act(() => root.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true })))
-    act(() => root.dispatchEvent(new CompositionEvent('compositionupdate', { bubbles: true })))
     crepe.markdown = '正在输入'
     rerender(<Harness activePath="docs/first.md" onChange={onChange} value="Remote update" />)
 
@@ -265,27 +257,5 @@ describe('useMarkdownPlaygroundController', () => {
     })
 
     expect(crepe.getMarkdown()).toBe('正在输入')
-  })
-
-  it('does not serialize or synchronously flush the document at IME boundaries', async () => {
-    const onChange = vi.fn()
-    const { container } = render(
-      <Harness activePath="docs/first.md" onChange={onChange} value="Before" />,
-    )
-    await act(async () => {})
-    const root = container.firstElementChild as HTMLElement
-    const crepe = crepeMock.latestInstance()!
-    crepe.getMarkdown.mockClear()
-    crepeMock.serializer.mockClear()
-
-    await act(async () => {
-      root.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
-      root.dispatchEvent(new CompositionEvent('compositionupdate', { bubbles: true }))
-      root.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }))
-      await Promise.resolve()
-    })
-
-    expect(crepe.getMarkdown).not.toHaveBeenCalled()
-    expect(crepeMock.serializer).not.toHaveBeenCalled()
   })
 })

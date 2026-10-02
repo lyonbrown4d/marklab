@@ -13,12 +13,6 @@ export type PendingExternalValue = {
   baseValue: string
 }
 
-export type PendingRevisionExternalValue = {
-  path: string | null
-  value: string
-  baseRevision: number
-}
-
 export type ReplaceMarkdownOptions = {
   preserveSelection?: boolean
 }

@@ -51,7 +51,7 @@ export const startFrameProbe = async (page: Page) => {
       state.lastFrame = timestamp
       state.deltas.push(delta)
       const visible = [
-        ...document.querySelectorAll<HTMLElement>('.virtualized-markdown-segment'),
+        ...document.querySelectorAll<HTMLElement>('.crepe-playground > .milkdown'),
       ].filter((element) => {
         const rect = element.getBoundingClientRect()
         return rect.bottom > 0 && rect.top < innerHeight && rect.height > 0
@@ -59,8 +59,8 @@ export const startFrameProbe = async (page: Page) => {
       const readySurfaceCount = visible.filter((element) =>
         element.querySelector('.ProseMirror'),
       ).length
-      const loadingSurfaceCount = visible.filter((element) =>
-        element.querySelector('.virtualized-markdown-readonly .milkdown[data-state="loading"]'),
+      const loadingSurfaceCount = visible.filter(
+        (element) => element.dataset.state === 'loading',
       ).length
       state.minVisibleSurfaces = Math.min(state.minVisibleSurfaces, readySurfaceCount)
       state.maxVisibleSurfaces = Math.max(state.maxVisibleSurfaces, readySurfaceCount)

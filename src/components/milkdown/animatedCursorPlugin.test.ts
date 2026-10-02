@@ -26,7 +26,6 @@ describe('animatedCursorPlugin', () => {
     window.requestAnimationFrame = originalRequestAnimationFrame
     window.cancelAnimationFrame = originalCancelAnimationFrame
     document.body.innerHTML = ''
-    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -45,23 +44,6 @@ describe('animatedCursorPlugin', () => {
     pluginView.update(view as never, initialState as never)
 
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
-    pluginView.destroy()
-  })
-
-  it('uses the native caret without forced geometry in large-document mode', () => {
-    window.requestAnimationFrame = vi.fn(() => 1)
-    window.cancelAnimationFrame = vi.fn()
-    const shell = document.createElement('div')
-    shell.className = 'crepe'
-    shell.dataset.largeDocument = 'true'
-    const view = createView()
-    shell.append(view.dom)
-    document.body.append(shell)
-
-    const pluginView = createAnimatedCursorView(view as never)
-
-    expect(window.requestAnimationFrame).not.toHaveBeenCalled()
-    expect(view.coordsAtPos).not.toHaveBeenCalled()
     pluginView.destroy()
   })
 
@@ -88,41 +70,6 @@ describe('animatedCursorPlugin', () => {
     view.dom.dispatchEvent(new CompositionEvent('compositionend'))
     callbacks.shift()?.(0)
     expect(caret).toHaveClass('is-visible')
-    pluginView.destroy()
-  })
-
-  it('tracks the outer virtualized viewport while a segment scrolls', () => {
-    vi.useFakeTimers()
-    const callbacks: FrameRequestCallback[] = []
-    window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
-      callbacks.push(callback)
-      return callbacks.length
-    })
-    window.cancelAnimationFrame = vi.fn()
-    const viewport = document.createElement('div')
-    viewport.className = 'virtualized-markdown-editor'
-    const milkdown = document.createElement('div')
-    milkdown.className = 'milkdown'
-    const view = createView()
-    milkdown.append(view.dom)
-    viewport.append(milkdown)
-    document.body.append(viewport)
-    const pluginView = createAnimatedCursorView(view as never)
-    callbacks.shift()?.(0)
-    view.coordsAtPos.mockReturnValue({ bottom: 80, left: 24, right: 24, top: 64 })
-
-    viewport.dispatchEvent(new Event('scroll'))
-    expect(view.coordsAtPos).toHaveBeenCalledOnce()
-    expect(document.querySelector('.marklab-animated-caret')).not.toHaveClass('is-visible')
-    vi.advanceTimersByTime(100)
-    callbacks.shift()?.(0)
-
-    expect(view.coordsAtPos).toHaveBeenCalledTimes(2)
-    expect(
-      document
-        .querySelector<HTMLElement>('.marklab-animated-caret')
-        ?.style.getPropertyValue('--marklab-caret-y'),
-    ).toBe('64px')
     pluginView.destroy()
   })
 })

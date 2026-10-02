@@ -74,7 +74,7 @@ export const useMarkdownSourceDiagnostics = ({
       .pipe(
         debounceTime(120),
         switchMap(({ content, context }) => {
-          if (markdownEditorPerformancePolicy(content).diagnostics === 'disabled')
+          if (markdownEditorPerformancePolicy(content.length).diagnostics === 'disabled')
             return of<Diagnostics>([])
           return of(getMarkdownSourceDiagnostics({ ...context, content }))
         }),

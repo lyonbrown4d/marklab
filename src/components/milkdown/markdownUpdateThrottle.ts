@@ -38,6 +38,6 @@ export const createMarkdownUpdateThrottle = ({
       }
       queuedOnChange(markdown)
     },
-    markdownEditorPerformancePolicy(latestValueRef.current).updateThrottleMs,
+    markdownEditorPerformancePolicy(latestValueRef.current.length).updateThrottleMs,
     { leading: false, trailing: true },
   ) as ThrottledMarkdownUpdate

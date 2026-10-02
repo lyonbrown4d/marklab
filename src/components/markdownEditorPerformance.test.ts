@@ -25,33 +25,17 @@ describe('Markdown editor large-document policy', () => {
     expect(markdownEditorPerformancePolicy(100_000)).toEqual({
       diagnostics: 'full',
       deferInitialMount: false,
-      largeDocumentMode: false,
       updateThrottleMs: 200,
-      virtualizeDocument: false,
     })
     expect(markdownEditorPerformancePolicy(1_000_000)).toEqual({
       diagnostics: 'disabled',
       deferInitialMount: true,
-      largeDocumentMode: true,
       updateThrottleMs: 350,
-      virtualizeDocument: true,
     })
     expect(markdownEditorPerformancePolicy(5_000_000)).toEqual({
       diagnostics: 'disabled',
       deferInitialMount: true,
-      largeDocumentMode: true,
       updateThrottleMs: 650,
-      virtualizeDocument: true,
-    })
-  })
-
-  it('detects line-dense Markdown before character thresholds are reached', () => {
-    expect(markdownEditorPerformancePolicy('x\n'.repeat(29_256))).toEqual({
-      diagnostics: 'disabled',
-      deferInitialMount: true,
-      largeDocumentMode: true,
-      updateThrottleMs: 650,
-      virtualizeDocument: true,
     })
   })
 
@@ -76,7 +60,6 @@ describe('Markdown editor large-document policy', () => {
     expect(waitForMarkdownEditorMount(100_000)).toBeUndefined()
     const pending = waitForMarkdownEditorMount(1_000_000)
     expect(pending).toBeInstanceOf(Promise)
-    expect(waitForMarkdownEditorMount('x\n'.repeat(5_000))).toBeInstanceOf(Promise)
 
     await vi.runAllTimersAsync()
     await expect(pending).resolves.toBeUndefined()

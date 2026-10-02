@@ -2,11 +2,8 @@ import { createEvent, fireEvent, render, screen, waitFor } from '@testing-librar
 import { createRef, type Ref } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownEditor from '@/components/MarkdownEditor'
-import type {
-  MarkdownEditorHandle,
-  MarkdownEditorStatus,
-} from '@/components/milkdown/markdownEditorTypes'
-import { markdownEditorTestSlashLabels } from '@/components/markdownEditorTestFixtures'
+import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
+import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
 import { useMarkdownPlaygroundController } from '@/components/milkdown/useMarkdownPlaygroundController'
 import { useInlineAiComposer } from '@/components/milkdown/useInlineAiComposer'
 
@@ -21,11 +18,9 @@ const controllerMock = vi.hoisted(() => ({
   })),
   getMarkdown: vi.fn(() => 'current markdown'),
   getEditorView: vi.fn(() => null),
-  largeDocumentMode: false,
   aiDefaultProviderId: 'openai-main',
   runContextMenuAction: vi.fn(),
   shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
-  status: { phase: 'ready' } as MarkdownEditorStatus,
 }))
 
 vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
@@ -37,10 +32,9 @@ vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
     focusEditor: controllerMock.focusEditor,
     getEditorView: controllerMock.getEditorView,
     getMarkdown: controllerMock.getMarkdown,
-    largeDocumentMode: controllerMock.largeDocumentMode,
     rootRef: { current: null },
     scrollAreaRef: { current: null },
-    status: controllerMock.status,
+    status: { phase: 'ready' },
   })),
 }))
 
@@ -96,20 +90,67 @@ vi.mock('@/i18n/useI18n', () => ({
   }),
 }))
 
-const editorElement = (ref?: Ref<MarkdownEditorHandle>, readOnly = false) => (
-  <MarkdownEditor
-    activePath="notes/example.md"
-    value="# Heading"
-    onChange={vi.fn()}
-    placeholder="Write"
-    slashLabels={markdownEditorTestSlashLabels}
-    readOnly={readOnly}
-    ref={ref}
-  />
-)
+const slashLabels: SlashCommandLabels = {
+  textGroup: 'Text',
+  listGroup: 'List',
+  advancedGroup: 'Advanced',
+  text: 'Text',
+  heading1: 'Heading 1',
+  heading2: 'Heading 2',
+  heading3: 'Heading 3',
+  heading4: 'Heading 4',
+  heading5: 'Heading 5',
+  heading6: 'Heading 6',
+  quote: 'Quote',
+  divider: 'Divider',
+  link: 'Link',
+  linkUrlPrompt: 'Enter link URL',
+  linkTextPrompt: 'Enter link text',
+  bold: 'Bold',
+  italic: 'Italic',
+  inlineCode: 'Inline code',
+  strike: 'Strikethrough',
+  clearFormat: 'Clear format',
+  bulletList: 'Bullet list',
+  orderedList: 'Ordered list',
+  taskList: 'Task list',
+  image: 'Image',
+  imageUrl: 'Image URL',
+  imageUrlPrompt: 'Enter image URL',
+  imageAltPrompt: 'Enter image description',
+  codeBlock: 'Code block',
+  codeTypeScript: 'TypeScript code',
+  codeJavaScript: 'JavaScript code',
+  codeJson: 'JSON code',
+  codeBash: 'Bash code',
+  codeHtml: 'HTML code',
+  mermaid: 'Mermaid diagram',
+  table: 'Table',
+  footnote: 'Footnote',
+  frontmatter: 'Frontmatter',
+  details: 'Details',
+  toc: 'Table of contents',
+  calloutNote: 'Note callout',
+  calloutTip: 'Tip callout',
+  calloutImportant: 'Important callout',
+  calloutWarning: 'Warning callout',
+  calloutCaution: 'Caution callout',
+  calendarFile: 'Calendar file',
+  calendarFilePrompt: 'Calendar file name',
+}
 
-const renderEditor = (ref?: Ref<MarkdownEditorHandle>, readOnly = false) =>
-  render(editorElement(ref, readOnly))
+const renderEditor = (ref?: Ref<MarkdownEditorHandle>, readOnly = false, value = '# Heading') =>
+  render(
+    <MarkdownEditor
+      activePath="notes/example.md"
+      value={value}
+      onChange={vi.fn()}
+      placeholder="Write"
+      slashLabels={slashLabels}
+      readOnly={readOnly}
+      ref={ref}
+    />,
+  )
 
 describe('MarkdownEditor playground baseline', () => {
   it('passes persisted shortcut overrides to the real controller entry point', () => {
@@ -132,19 +173,10 @@ describe('MarkdownEditor playground baseline', () => {
 
   beforeEach(() => {
     inlineAiMock.isOpen = false
-    controllerMock.largeDocumentMode = false
     controllerMock.focusEditor.mockClear()
     controllerMock.getMarkdown.mockClear()
     controllerMock.getContextMenuCapabilities.mockClear()
     controllerMock.runContextMenuAction.mockClear()
-    controllerMock.status = { phase: 'ready' }
-  })
-
-  it('exposes large-document rendering mode on the editor surface', () => {
-    controllerMock.largeDocumentMode = true
-    renderEditor()
-
-    expect(document.querySelector('.crepe')).toHaveAttribute('data-large-document', 'true')
   })
 
   it('mounts the transient AI companion against the editor bridge', () => {
@@ -175,6 +207,17 @@ describe('MarkdownEditor playground baseline', () => {
     expect(root?.querySelector('.milkdown')).toBeNull()
   })
 
+  it('keeps large documents on the single Milkdown editor path', () => {
+    const value = '# Large document\n\n' + 'paragraph\n\n'.repeat(30_000)
+
+    renderEditor(undefined, false, value)
+
+    expect(document.querySelectorAll('.crepe-playground')).toHaveLength(1)
+    expect(vi.mocked(useMarkdownPlaygroundController)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ value }),
+    )
+  })
+
   it('does not render Marklab editor interaction hooks in the playground baseline', () => {
     renderEditor()
 
@@ -195,33 +238,6 @@ describe('MarkdownEditor playground baseline', () => {
 
     expect(ref.current?.getMarkdown()).toBe('current markdown')
     expect(controllerMock.focusEditor).toHaveBeenCalledTimes(1)
-  })
-
-  it('replays an imperative focus request after the editor becomes ready', async () => {
-    controllerMock.status = { phase: 'loading' }
-    const ref = createRef<MarkdownEditorHandle>()
-    const { rerender } = renderEditor(ref)
-
-    ref.current?.focus()
-    expect(controllerMock.focusEditor).not.toHaveBeenCalled()
-
-    controllerMock.status = { phase: 'ready' }
-    rerender(editorElement(ref))
-
-    await waitFor(() => expect(controllerMock.focusEditor).toHaveBeenCalledOnce())
-  })
-
-  it('uses current readiness when an earlier editor handle requests focus', async () => {
-    controllerMock.status = { phase: 'loading' }
-    const ref = createRef<MarkdownEditorHandle>()
-    const { rerender } = renderEditor(ref)
-    const requestFocus = ref.current?.focus
-
-    controllerMock.status = { phase: 'ready' }
-    rerender(editorElement(ref))
-    requestFocus?.()
-
-    await waitFor(() => expect(controllerMock.focusEditor).toHaveBeenCalledOnce())
   })
 
   it('replaces the browser menu with editor actions and runs formatting commands', async () => {

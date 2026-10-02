@@ -17,14 +17,14 @@ renderer. It does not add test-only APIs to the production preload surface.
 The test creates an isolated workspace containing a deterministic 29,256-line Markdown document,
 opens it in a real Marklab window through the typed preload command, and exercises:
 
-1. initial rich-editor load and readonly/editable style parity;
+1. initial single-editor load;
 2. wheel scrolling;
 3. native scrollbar-thumb dragging;
-4. readonly-segment activation;
-5. sequential typing into the active ProseMirror editor.
+4. native `Ctrl+A` selection across the complete document;
+5. focus and sequential typing in the ProseMirror editor.
 
 Each interaction samples animation-frame gaps, long tasks, layout shifts, blank editor frames,
-loading placeholders, and visible editor-surface counts. It also records load, activation, typing,
+loading placeholders, and visible editor-surface counts. It also records load, focus, typing,
 heap, document geometry, and window-pool data.
 
 ## Artifacts

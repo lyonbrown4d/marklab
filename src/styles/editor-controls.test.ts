@@ -12,7 +12,7 @@ const readSource = (file: string) => readFileSync(new URL(file, import.meta.url)
 describe('editor playground baseline styles', () => {
   const mainSource = readSource('../main.tsx')
   const appWorkspacePanelsSource = readSource('../app/AppWorkspacePanels.tsx')
-  const markdownEditorSource = readSource('../components/MarkdownEditorSurface.tsx')
+  const markdownEditorSource = readSource('../components/MarkdownEditor.tsx')
   const markdownSafePluginsSource = readSource('../components/milkdown/markdownSafePlugins.ts')
   const animatedCursorSource = readSource('../components/milkdown/animatedCursorPlugin.ts')
   const playgroundControllerSource = readSource(
@@ -24,7 +24,6 @@ describe('editor playground baseline styles', () => {
   const playgroundActionsSource = readSource('../components/milkdown/markdownPlaygroundActions.ts')
   const wysiwygSource = readSource('../pages/WysiwygEditorPage.tsx')
   const playgroundStyles = readStyle('./editor-playground.scss')
-  const virtualizedDocumentStyles = readStyle('./editor-playground/virtualized-document.scss')
   const appWindowStyles = readStyle('./app/_window.scss')
   const appMenuMotionStyles = readStyle('./app/_menu-motion.scss')
   const legacyEditorStyles = readStyle('./editor.scss')
@@ -33,12 +32,6 @@ describe('editor playground baseline styles', () => {
   const tableStyles = readOptionalStyle('./editor-playground/table.scss')
   const slashMenuStyles = readOptionalStyle('./editor-playground/slash-menu.scss')
   const selectionToolbarStyles = readOptionalStyle('./editor-playground/selection-toolbar.scss')
-
-  it('uses structural virtualization instead of retaining every rich-text DOM block', () => {
-    expect(playgroundStyles).toContain("@use './editor-playground/virtualized-document';")
-    expect(playgroundStyles).not.toContain('content-visibility: auto')
-    expect(playgroundStyles).not.toContain('contain-intrinsic-size: auto')
-  })
 
   it('loads only the playground baseline editor stylesheet at runtime', () => {
     expect(mainSource).toContain("import '@/styles/editor-playground.scss'")
@@ -169,17 +162,6 @@ describe('editor playground baseline styles', () => {
     expect(playgroundStyles).not.toContain('#fdfcff')
     expect(playgroundStyles).not.toContain('#37618e')
     expect(playgroundStyles).not.toContain('.dark .crepe-playground .milkdown')
-  })
-
-  it('lets virtualized segments share one scroll viewport without nested editor scrollers', () => {
-    expect(playgroundStyles).toContain("@use './editor-playground/virtualized-document';")
-    expect(virtualizedDocumentStyles).toContain('.virtualized-markdown-editor')
-    expect(virtualizedDocumentStyles).toContain(
-      '.virtualized-markdown-segment .crepe-playground .milkdown',
-    )
-    expect(virtualizedDocumentStyles).toContain('overflow: visible;')
-    expect(virtualizedDocumentStyles).toContain("[data-first-segment='true']")
-    expect(virtualizedDocumentStyles).toContain("[data-last-segment='true']")
   })
 
   it('does not include right-panel or doc-page playground styles in the single-column baseline', () => {

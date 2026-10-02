@@ -138,8 +138,10 @@ export const openWorkspaceWindow = async (
   while (Date.now() < deadline) {
     for (const page of session.app.windows()) {
       if (!decodeURIComponent(page.url()).includes(`/files/edit/${fileName}`)) continue
-      const viewport = page.locator('.virtualized-markdown-editor')
-      if (await viewport.isVisible().catch(() => false)) {
+      const editor = page.locator(
+        '.crepe-playground > .milkdown > .ProseMirror[contenteditable="true"]',
+      )
+      if (await editor.isVisible().catch(() => false)) {
         await revealElectronWindow(session.app, page)
         return { page, result }
       }

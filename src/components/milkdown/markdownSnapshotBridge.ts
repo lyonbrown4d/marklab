@@ -39,10 +39,8 @@ export const createMarkdownSnapshotBridge = (
 export const createMarkdownSnapshotPlugin = (
   canSnapshot: () => boolean,
   getScheduler: () => MarkdownSnapshotScheduler | null,
-  onDocumentChange?: () => void,
 ) =>
   markdownDocumentChangePlugin((document) => {
-    onDocumentChange?.()
     if (canSnapshot()) getScheduler()?.update(document)
   })
 

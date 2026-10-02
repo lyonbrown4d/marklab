@@ -1,5 +1,5 @@
 export type EditorPerformanceBudget = {
-  activationMs: number
+  focusMs: number
   loadMs: number
   maxLayoutShift: number
   maxFrameMs: number
@@ -9,21 +9,21 @@ export type EditorPerformanceBudget = {
 }
 
 const nativeGpu: EditorPerformanceBudget = {
-  activationMs: 1_000,
+  focusMs: 1_000,
   loadMs: 30_000,
   maxLayoutShift: 0.1,
   maxFrameMs: 500,
-  maxVisibleSurfaces: 8,
+  maxVisibleSurfaces: 1,
   p95FrameMs: 50,
   typingMs: 1_000,
 }
 
 const softwareRendering: EditorPerformanceBudget = {
-  activationMs: 2_000,
+  focusMs: 2_000,
   loadMs: 45_000,
   maxLayoutShift: 0.25,
   maxFrameMs: 1_000,
-  maxVisibleSurfaces: 12,
+  maxVisibleSurfaces: 1,
   p95FrameMs: 100,
   typingMs: 2_000,
 }

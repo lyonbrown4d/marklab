@@ -4,7 +4,6 @@ import { $prose } from '@milkdown/kit/utils'
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const CURSOR_WIDTH = 2
-const SCROLL_SETTLE_DELAY_MS = 80
 
 const prefersReducedMotion = () => {
   if (typeof window === 'undefined') return true
@@ -16,11 +15,7 @@ const isAnimatedCursorEnabled = () => {
   return !prefersReducedMotion() && document.documentElement.dataset.motionCursor !== 'false'
 }
 
-const isLargeDocumentEditor = (view: EditorView) =>
-  view.dom.closest<HTMLElement>('.crepe')?.dataset.largeDocument === 'true'
-
 const getScrollHost = (view: EditorView) =>
-  view.dom.closest<HTMLElement>('.virtualized-markdown-editor') ??
   view.dom.closest<HTMLElement>('.milkdown') ??
   view.dom.closest<HTMLElement>('.editor-scroll-viewport')
 
@@ -34,7 +29,6 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
 
   let view = initialView
   let animationFrame: number | null = null
-  let scrollSettleTimer: number | null = null
   const scrollHost = getScrollHost(view)
   const caret = document.createElement('span')
   caret.className = 'marklab-animated-caret'
@@ -71,12 +65,6 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
   }
 
   const scheduleUpdate = () => {
-    if (isLargeDocumentEditor(view)) {
-      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame)
-      animationFrame = null
-      setVisible(false)
-      return
-    }
     if (animationFrame !== null) return
     animationFrame = window.requestAnimationFrame(updateCaret)
   }
@@ -84,18 +72,7 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
   const handleFocus = () => scheduleUpdate()
   const handleBlur = () => scheduleUpdate()
   const handleComposition = () => scheduleUpdate()
-  const handleScroll = () => {
-    if (animationFrame !== null) {
-      window.cancelAnimationFrame(animationFrame)
-      animationFrame = null
-    }
-    if (scrollSettleTimer !== null) window.clearTimeout(scrollSettleTimer)
-    setVisible(false)
-    scrollSettleTimer = window.setTimeout(() => {
-      scrollSettleTimer = null
-      scheduleUpdate()
-    }, SCROLL_SETTLE_DELAY_MS)
-  }
+  const handleScroll = () => scheduleUpdate()
   const handleResize = () => scheduleUpdate()
 
   view.dom.addEventListener('focus', handleFocus)
@@ -111,7 +88,7 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
       view = nextView
       if (
         previousState &&
-        view.state.doc === previousState.doc &&
+        view.state.doc.eq(previousState.doc) &&
         view.state.selection.eq(previousState.selection)
       ) {
         return
@@ -122,10 +99,6 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame)
         animationFrame = null
-      }
-      if (scrollSettleTimer !== null) {
-        window.clearTimeout(scrollSettleTimer)
-        scrollSettleTimer = null
       }
       view.dom.classList.remove('marklab-animated-cursor-host')
       view.dom.removeEventListener('focus', handleFocus)
