@@ -71,23 +71,32 @@ const TitlebarOverflowMenu = ({
   onToggleOutline,
 }: TitlebarOverflowMenuProps) => {
   const pendingCloseActionRef = useRef<(() => void) | null>(null)
+  const preventCloseAutoFocusRef = useRef(false)
   const runAfterMenuClose = useCallback((action: () => void) => {
     pendingCloseActionRef.current = action
+    preventCloseAutoFocusRef.current = true
   }, [])
-  const handleCloseAutoFocus = useCallback((event: Event) => {
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (open) return
+
     const action = pendingCloseActionRef.current
     if (!action) return
 
-    event.preventDefault()
     pendingCloseActionRef.current = null
     queueMicrotask(action)
+  }, [])
+  const handleCloseAutoFocus = useCallback((event: Event) => {
+    if (!preventCloseAutoFocusRef.current) return
+
+    event.preventDefault()
+    preventCloseAutoFocusRef.current = false
   }, [])
   const handleViewChange = (value: string) => {
     if (value === 'wysiwyg' || value === 'source') onChangeView(value)
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
@@ -102,10 +111,12 @@ const TitlebarOverflowMenu = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className={menuSurfaceStyles({ className: 'w-56' })}
+        className={menuSurfaceStyles({
+          className: 'w-56 data-[state=closed]:!animate-none',
+        })}
         collisionPadding={8}
-        sideOffset={7}
         onCloseAutoFocus={handleCloseAutoFocus}
+        sideOffset={7}
       >
         <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenSearch}>
           <Search aria-hidden="true" />

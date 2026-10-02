@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import TitlebarOverflowMenu from '@/components/TitlebarOverflowMenu'
@@ -91,13 +91,58 @@ describe('TitlebarOverflowMenu', () => {
   it('keeps the outline drawer open after the overflow menu closes', async () => {
     const user = userEvent.setup()
     const onToggle = vi.fn()
+    const nativeGetComputedStyle = window.getComputedStyle
+    const getComputedStyleSpy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockImplementation((element) => {
+        const styles = nativeGetComputedStyle(element)
+        if (!(element instanceof HTMLElement) || element.getAttribute('role') !== 'menu') {
+          return styles
+        }
+        return new Proxy(styles, {
+          get: (target, property) =>
+            property === 'animationName'
+              ? element.dataset.state === 'closed'
+                ? 'menu-surface-exit'
+                : 'menu-surface-enter'
+              : Reflect.get(target, property, target),
+        })
+      })
     render(<OutlineHarness onToggle={onToggle} />)
 
-    await user.click(screen.getByRole('button', { name: 'More actions' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Document outline' }))
+    try {
+      await user.click(screen.getByRole('button', { name: 'More actions' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Document outline' }))
 
-    expect(onToggle).toHaveBeenCalledOnce()
-    expect(screen.getByRole('dialog', { name: 'Document outline drawer' })).toBeVisible()
+      const closingMenu = screen.getByRole('menu')
+      expect(closingMenu).toHaveAttribute('data-state', 'closed')
+      expect(onToggle).toHaveBeenCalledOnce()
+      expect(screen.getByRole('dialog', { name: 'Document outline drawer' })).toBeVisible()
+
+      const exitAnimationEnd = new Event('animationend', { bubbles: true })
+      Object.defineProperty(exitAnimationEnd, 'animationName', { value: 'menu-surface-exit' })
+      fireEvent(closingMenu, exitAnimationEnd)
+
+      await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+      expect(screen.getByRole('dialog', { name: 'Document outline drawer' })).toBeVisible()
+      expect(screen.getByRole('button', { name: 'More actions' })).not.toHaveFocus()
+    } finally {
+      getComputedStyleSpy.mockRestore()
+    }
+  })
+
+  it('restores focus normally when the menu closes without an outline action', async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    render(<TitlebarOverflowMenu {...props} />)
+
+    const trigger = screen.getByRole('button', { name: 'More actions' })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+    expect(props.onToggleOutline).not.toHaveBeenCalled()
   })
 
   it('hides document actions and graph mode outside a document context', async () => {

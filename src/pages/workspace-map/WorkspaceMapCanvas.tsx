@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
 import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
+import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
 
 const nodeTypes: NodeTypes = {
@@ -125,7 +126,7 @@ export const WorkspaceMapCanvas = ({
   ])
   const [nodes, setNodes, onNodesChange] = useNodesState(presentedGraph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(presentedGraph.edges)
-  useWorkspaceMapLayout({ activePath, flow, graph: presentedGraph, setNodes })
+  const layout = useWorkspaceMapLayout({ activePath, flow, graph: presentedGraph, setNodes })
 
   useEffect(() => {
     setNodes((current) => {
@@ -185,6 +186,19 @@ export const WorkspaceMapCanvas = ({
     },
     [onOpenFile],
   )
+
+  if (layout.status === 'loading') {
+    return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
+  }
+  if (layout.status === 'error') {
+    return (
+      <WorkspaceMapState
+        actionLabel={t('workspaceMap.retry')}
+        label={t('workspaceMap.loadFailed')}
+        onAction={layout.retry}
+      />
+    )
+  }
 
   return (
     <ReactFlow<Node<GraphNodeData>, Edge>

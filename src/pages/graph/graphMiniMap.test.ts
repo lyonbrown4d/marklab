@@ -10,10 +10,12 @@ const node = (type?: string): Node => ({
 })
 
 describe('graphMiniMap', () => {
-  it('only renders the minimap when enabled and there are visible nodes', () => {
-    expect(shouldRenderGraphMiniMap(true, 3)).toBe(true)
+  it('only renders the minimap when enabled and the graph benefits from navigation', () => {
+    expect(shouldRenderGraphMiniMap(true, 4)).toBe(true)
+    expect(shouldRenderGraphMiniMap(true, 3)).toBe(false)
+    expect(shouldRenderGraphMiniMap(true, 1)).toBe(false)
     expect(shouldRenderGraphMiniMap(true, 0)).toBe(false)
-    expect(shouldRenderGraphMiniMap(false, 3)).toBe(false)
+    expect(shouldRenderGraphMiniMap(false, 4)).toBe(false)
   })
 
   it('uses semantic theme tokens for minimap node colors', () => {

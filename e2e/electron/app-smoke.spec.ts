@@ -263,19 +263,18 @@ test.describe('Electron desktop shell', () => {
 
   test('anchors the localized Markdown table toolbar to the active cell', async () => {
     await page.setViewportSize({ width: 1280, height: 900 })
-    await page
-      .getByRole('button', { name: /Source Editor|源码/i })
-      .first()
-      .click()
+    const editingModeGroup = page.getByRole('radiogroup', {
+      name: /Editing Mode|编辑模式/i,
+    })
+    await editingModeGroup.getByRole('radio', { name: /^(Source|Source Editor|源码)$/i }).click()
     const sourceEditor = page.locator('.monaco-editor')
     await expect(sourceEditor).toBeVisible({ timeout: 10_000 })
     await sourceEditor.click()
     await page.keyboard.press('Control+A')
     await page.keyboard.insertText('| Name | Status |\n| --- | --- |\n| Marklab | Ready |')
 
-    await page
-      .getByRole('button', { name: /Rich Text Editor|所见即所得/i })
-      .first()
+    await editingModeGroup
+      .getByRole('radio', { name: /^(WYSIWYG|Rich Text Editor|所见即所得)$/i })
       .click()
     const activeCell = page.locator('.milkdown table:visible td').first()
     await expect(activeCell).toBeVisible({ timeout: 10_000 })

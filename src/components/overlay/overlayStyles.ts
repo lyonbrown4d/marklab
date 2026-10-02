@@ -1,7 +1,7 @@
 import { cva } from 'class-variance-authority'
 
 export const menuSurfaceStyles = cva(
-  'rounded-xl border border-border/80 bg-popover/98 p-1.5 text-popover-foreground shadow-xl shadow-foreground/10 backdrop-blur-xl',
+  'rounded-xl border border-border/80 bg-popover/98 p-1.5 text-popover-foreground shadow-xl shadow-foreground/10 backdrop-blur-[var(--menu-surface-blur)]',
 )
 
 export const menuItemStyles = cva(

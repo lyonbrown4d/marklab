@@ -164,10 +164,16 @@ export const launchElectronTestSession = async (
   const collect = (chunk: Buffer) => output.push(chunk.toString('utf8').trim())
   app.process().stdout?.on('data', collect)
   app.process().stderr?.on('data', collect)
-  const page = await waitForMainWindow(app, rendererUrl, output)
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await waitForRendererAppShell(page, output)
-  return { app, output, page, testRunRoot }
+  try {
+    const page = await waitForMainWindow(app, rendererUrl, output)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await waitForRendererAppShell(page, output)
+    return { app, output, page, testRunRoot }
+  } catch (error) {
+    await app.close().catch(() => undefined)
+    fs.rmSync(testRunRoot, { recursive: true, force: true })
+    throw error
+  }
 }
 
 export const closeElectronTestSession = async (session: ElectronTestSession | undefined) => {

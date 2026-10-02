@@ -8,11 +8,15 @@ import {
 
 describe('application overlay styles', () => {
   it('uses one semantic surface treatment for dropdown and context menus', () => {
-    expect(menuSurfaceStyles()).toContain('rounded-xl')
-    expect(menuSurfaceStyles()).toContain('border-border/80')
-    expect(menuSurfaceStyles()).toContain('bg-popover/98')
-    expect(menuSurfaceStyles()).toContain('shadow-foreground/10')
-    expect(menuSurfaceStyles()).not.toContain('dark:')
+    const surface = menuSurfaceStyles()
+
+    expect(surface).toContain('rounded-xl')
+    expect(surface).toContain('border-border/80')
+    expect(surface).toContain('bg-popover/98')
+    expect(surface).toContain('shadow-foreground/10')
+    expect(surface).toContain('backdrop-blur-[var(--menu-surface-blur)]')
+    expect(surface).not.toContain('backdrop-blur-xl')
+    expect(surface).not.toContain('dark:')
   })
 
   it('keeps menu items compact and provides semantic interaction states', () => {

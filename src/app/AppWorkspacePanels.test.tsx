@@ -75,6 +75,7 @@ const baseState = {
   silentSave: true,
   tabs: [{ kind: 'file' as const, view: 'edit' as const, path: '/notes/one.md' }],
   viewMode: 'wysiwyg',
+  workspaceView: 'files' as 'files' | 'map',
   workspaceIndex: null,
   onCloseTab: action,
   onOpenTab: action,
@@ -131,6 +132,13 @@ describe('AppWorkspacePanels render isolation', () => {
     render(renderPanels(baseState))
 
     expect(screen.getByTestId('tabs-dock')).toBeInTheDocument()
+    expect(screen.getByText('Editor')).toBeInTheDocument()
+  })
+
+  it('hides the file tabs dock while the workspace map is active', () => {
+    render(renderPanels({ ...baseState, workspaceView: 'map' }))
+
+    expect(screen.queryByTestId('tabs-dock')).not.toBeInTheDocument()
     expect(screen.getByText('Editor')).toBeInTheDocument()
   })
 })

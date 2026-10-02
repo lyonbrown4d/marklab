@@ -149,6 +149,7 @@ const AppLayout = () => {
       silentSave: state.silentSave,
       tabs: state.tabs,
       viewMode: state.viewMode,
+      workspaceView: state.workspaceView,
       workspaceIndex: state.workspaceIndex,
     }),
     [
@@ -183,6 +184,7 @@ const AppLayout = () => {
       state.silentSave,
       state.tabs,
       state.viewMode,
+      state.workspaceView,
       state.workspaceIndex,
     ],
   )

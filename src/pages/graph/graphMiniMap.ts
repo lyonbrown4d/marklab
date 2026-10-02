@@ -1,7 +1,9 @@
 import type { Node } from '@xyflow/react'
 
+const MINIMAP_NAVIGATION_NODE_THRESHOLD = 4
+
 export const shouldRenderGraphMiniMap = (showMiniMap: boolean, visibleNodeCount: number) =>
-  showMiniMap && visibleNodeCount > 0
+  showMiniMap && visibleNodeCount >= MINIMAP_NAVIGATION_NODE_THRESHOLD
 
 export const getMiniMapNodeColor = (node: Node) =>
   node.type === 'file'

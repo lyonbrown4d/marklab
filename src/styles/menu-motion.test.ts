@@ -41,7 +41,8 @@ describe('menu motion styles', () => {
     expect(menuMotionStyles).toContain('@include menu.surface;')
     expect(menuMotionStyles).toContain('@include menu.item;')
     expect(sharedMenuStyles).toContain('border-radius: 0.75rem')
-    expect(sharedMenuStyles).toContain('backdrop-filter: blur(16px)')
+    expect(sharedMenuStyles).toContain('--menu-surface-blur: 16px;')
+    expect(sharedMenuStyles).toContain('backdrop-filter: blur(var(--menu-surface-blur));')
   })
 
   it('also animates the editor-owned menus that do not use Radix', () => {

@@ -1,3 +1,7 @@
+:root {
+  --menu-surface-blur: 16px;
+}
+
 @mixin surface {
   border-color: hsl(var(--border) / 0.8);
   border-radius: 0.75rem;
@@ -6,8 +10,8 @@
   box-shadow:
     0 18px 48px -24px hsl(var(--foreground) / 0.34),
     0 8px 20px -14px hsl(var(--foreground) / 0.22);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--menu-surface-blur));
+  -webkit-backdrop-filter: blur(var(--menu-surface-blur));
 }
 
 @mixin item {

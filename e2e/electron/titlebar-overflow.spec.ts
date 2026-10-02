@@ -65,9 +65,12 @@ test.describe('Compact titlebar overflow menu', () => {
   })
 
   test('keeps the document outline open after the menu dismisses', async () => {
-    await page.getByRole('button', { name: /^(More|更多)$/i }).click()
-    await page.getByRole('menuitem', { name: /Document outline|文档大纲/i }).click()
+    const trigger = page.getByRole('button', { name: /^(More|更多)$/i })
+    await trigger.click()
+    const menu = page.getByRole('menu')
+    await menu.getByRole('menuitem', { name: /Document outline|文档大纲/i }).click()
 
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
     const drawer = page.getByRole('dialog', { name: /Document outline|文档大纲/i })
     await expect(drawer).toBeVisible()
     await page.waitForTimeout(250)
