@@ -13,7 +13,7 @@ import {
   useState,
 } from 'react'
 import MarkdownEditorSurface from '@/components/MarkdownEditorSurface'
-import { VirtualizedMarkdownPreview } from '@/components/VirtualizedMarkdownPreview'
+import { VirtualizedMarkdownReadonlySurface } from '@/components/VirtualizedMarkdownReadonlySurface'
 import type {
   MarkdownEditorHandle,
   MarkdownEditorProps,
@@ -61,7 +61,7 @@ const VirtualizedSegmentEditor = ({
       {active ? (
         <MarkdownEditorSurface {...editorProps} value={segment.markdown} ref={setEditorHandle} />
       ) : (
-        <VirtualizedMarkdownPreview
+        <VirtualizedMarkdownReadonlySurface
           activationLabel={editorProps.placeholder}
           cacheKey={segment}
           markdown={segment.markdown}

@@ -9,14 +9,20 @@
   contain: layout style;
 }
 
-.virtualized-markdown-preview {
+.virtualized-markdown-readonly {
   cursor: text;
   min-height: 0;
   outline: none;
 }
 
-.virtualized-markdown-preview:focus-visible {
+.virtualized-markdown-readonly:focus-visible {
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+.virtualized-markdown-readonly .ProseMirror,
+.virtualized-markdown-readonly .ProseMirror * {
+  animation: none !important;
+  transition: none !important;
 }
 
 .virtualized-markdown-segment .crepe-playground,

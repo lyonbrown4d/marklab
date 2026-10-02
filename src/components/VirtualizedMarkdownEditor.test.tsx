@@ -25,6 +25,12 @@ vi.mock('@/components/MarkdownEditorSurface', () => ({
   }),
 }))
 
+vi.mock('@/components/VirtualizedMarkdownReadonlySurface', () => ({
+  VirtualizedMarkdownReadonlySurface: ({ onActivate }: { onActivate: () => void }) => (
+    <div data-testid="virtual-markdown-segment-readonly" onPointerDown={onActivate} />
+  ),
+}))
+
 const section = (index: number) =>
   [
     `## Section ${index}`,
@@ -92,23 +98,23 @@ const props = {
 } satisfies MarkdownEditorProps
 
 describe('VirtualizedMarkdownEditor', () => {
-  it('mounts one active editor and lightweight previews for other visible segments', async () => {
+  it('mounts one active editor and lightweight readonly views for other visible segments', async () => {
     render(<VirtualizedMarkdownEditor {...props} />)
 
     const editors = await screen.findAllByTestId('virtual-markdown-segment-editor')
-    const previews = await screen.findAllByTestId('virtual-markdown-segment-preview')
+    const readonlyViews = await screen.findAllByTestId('virtual-markdown-segment-readonly')
 
     expect(editors).toHaveLength(1)
-    expect(previews.length).toBeGreaterThan(0)
-    expect(editors.length + previews.length).toBeLessThan(16)
+    expect(readonlyViews.length).toBeGreaterThan(0)
+    expect(editors.length + readonlyViews.length).toBeLessThan(16)
   })
 
-  it('promotes a preview to the only active editor when it is selected', async () => {
+  it('promotes a readonly view to the only active editor when it is selected', async () => {
     render(<VirtualizedMarkdownEditor {...props} />)
     const initialEditor = (await screen.findAllByTestId('virtual-markdown-segment-editor'))[0]
-    const preview = (await screen.findAllByTestId('virtual-markdown-segment-preview'))[0]
+    const readonlyView = (await screen.findAllByTestId('virtual-markdown-segment-readonly'))[0]
 
-    fireEvent.pointerDown(preview)
+    fireEvent.pointerDown(readonlyView)
 
     const editors = await screen.findAllByTestId('virtual-markdown-segment-editor')
     expect(editors).toHaveLength(1)
