@@ -12,6 +12,7 @@ import {
   type ElectronPerformanceSession,
   type GraphicsMode,
 } from './electronPerformanceHarness.js'
+import { captureFocusState, startFocusProbe } from './focusProbe.js'
 import { measureFrames, waitForAnimationFrames, type FrameMetrics } from './frameProbe.js'
 import { LARGE_DOCUMENT_FILE_NAME, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
 import { performanceBudgetForProject } from './performanceBudgets.js'
@@ -191,15 +192,18 @@ test.describe('large Markdown document @performance @blackbox', () => {
       const targetIndex = await readonlySurface.evaluate(
         (element) => element.closest('[data-index]')?.getAttribute('data-index') ?? '',
       )
+      await startFocusProbe(page)
       const activationStartedAt = performance.now()
       await readonlySurface.click()
       const activeEditor = page
         .locator(`[data-index="${targetIndex}"] .ProseMirror[contenteditable="true"]`)
         .first()
       await expect(activeEditor).toBeVisible()
+      await expect
+        .poll(() => captureFocusState(page, targetIndex), { timeout: 5_000 })
+        .toEqual(expect.objectContaining({ targetEditorFocused: true }))
       const activationMs = performance.now() - activationStartedAt
 
-      await activeEditor.click()
       await page.keyboard.press('End')
       const marker = ` responsive typing ${Date.now()}`
       const typingStartedAt = performance.now()

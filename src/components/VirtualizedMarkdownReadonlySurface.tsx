@@ -1,6 +1,6 @@
 import { EditorState } from '@milkdown/kit/prose/state'
 import { EditorView } from '@milkdown/kit/prose/view'
-import { memo, useEffect, useRef, type KeyboardEvent } from 'react'
+import { memo, useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { parseReadonlyMarkdown } from '@/components/milkdown/readonlyMarkdownParser'
 import { createVirtualizedMarkdownReadonlyCache } from '@/components/virtualizedMarkdownReadonlyCache'
 
@@ -64,13 +64,18 @@ export const VirtualizedMarkdownReadonlySurface = memo(
       onActivate()
     }
 
+    const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      onActivate()
+    }
+
     return (
       <div
         aria-label={activationLabel}
         className="crepe crepe-playground virtualized-markdown-readonly"
         data-testid="virtual-markdown-segment-readonly"
         onKeyDown={handleKeyDown}
-        onPointerDown={onActivate}
+        onPointerDown={handlePointerDown}
         role="button"
         tabIndex={0}
       >

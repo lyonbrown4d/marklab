@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import '@milkdown/crepe/theme/common/style.css'
 import MarkdownEditorStatusOverlay from '@/components/MarkdownEditorStatusOverlay'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -76,6 +76,24 @@ const MarkdownEditorSurface = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       inlineCompletionOptions,
       shortcutOverrides,
     })
+    const pendingImperativeFocusRef = useRef(false)
+    const editorStatusPhaseRef = useRef(status.phase)
+    editorStatusPhaseRef.current = status.phase
+    const focusWhenReady = useCallback(() => {
+      if (editorStatusPhaseRef.current !== 'ready') {
+        pendingImperativeFocusRef.current = true
+        return
+      }
+      pendingImperativeFocusRef.current = false
+      focusEditor()
+    }, [focusEditor])
+
+    useEffect(() => {
+      if (status.phase !== 'ready' || !pendingImperativeFocusRef.current) return
+      pendingImperativeFocusRef.current = false
+      focusEditor()
+    }, [focusEditor, status.phase])
+
     const aiComposer = useInlineAiComposer({
       activePath: props.activePath,
       defaultProviderId: aiDefaultProviderId,
@@ -86,7 +104,7 @@ const MarkdownEditorSurface = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       rootRef,
     })
 
-    useImperativeHandle(ref, () => ({ focus: focusEditor, getMarkdown }))
+    useImperativeHandle(ref, () => ({ focus: focusWhenReady, getMarkdown }))
 
     const setPlaygroundRootElement = useCallback(
       (node: HTMLDivElement | null) => {

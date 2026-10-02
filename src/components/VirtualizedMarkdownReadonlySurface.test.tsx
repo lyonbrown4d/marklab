@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { createEvent, fireEvent, render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { VirtualizedMarkdownReadonlySurface } from '@/components/VirtualizedMarkdownReadonlySurface'
 
@@ -39,11 +39,13 @@ describe('VirtualizedMarkdownReadonlySurface', () => {
     )
     const surface = getByTestId('virtual-markdown-segment-readonly')
 
-    fireEvent.pointerDown(surface)
+    const pointerDown = createEvent.pointerDown(surface)
+    fireEvent(surface, pointerDown)
     fireEvent.keyDown(surface, { key: 'Enter' })
     fireEvent.keyDown(surface, { key: ' ' })
     fireEvent.keyDown(surface, { key: 'ArrowDown' })
 
     expect(onActivate).toHaveBeenCalledTimes(3)
+    expect(pointerDown.defaultPrevented).toBe(true)
   })
 })

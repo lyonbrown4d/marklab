@@ -5,7 +5,7 @@ import type {
   MarkdownEditorHandle,
   MarkdownEditorProps,
 } from '@/components/milkdown/markdownEditorTypes'
-import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
+import { markdownEditorTestSlashLabels } from '@/components/markdownEditorTestFixtures'
 import VirtualizedMarkdownEditor from '@/components/VirtualizedMarkdownEditor'
 
 vi.mock('@/components/MarkdownEditorSurface', () => ({
@@ -40,60 +40,11 @@ const section = (index: number) =>
 
 const markdown = Array.from({ length: 16 }, (_, index) => section(index)).join('\n\n')
 
-const slashLabels: SlashCommandLabels = {
-  advancedGroup: 'Advanced',
-  bold: 'Bold',
-  bulletList: 'Bullet list',
-  calendarFile: 'Calendar file',
-  calendarFilePrompt: 'Calendar file name',
-  calloutCaution: 'Caution',
-  calloutImportant: 'Important',
-  calloutNote: 'Note',
-  calloutTip: 'Tip',
-  calloutWarning: 'Warning',
-  clearFormat: 'Clear format',
-  codeBash: 'Bash',
-  codeBlock: 'Code block',
-  codeHtml: 'HTML',
-  codeJavaScript: 'JavaScript',
-  codeJson: 'JSON',
-  codeTypeScript: 'TypeScript',
-  details: 'Details',
-  divider: 'Divider',
-  footnote: 'Footnote',
-  frontmatter: 'Frontmatter',
-  heading1: 'Heading 1',
-  heading2: 'Heading 2',
-  heading3: 'Heading 3',
-  heading4: 'Heading 4',
-  heading5: 'Heading 5',
-  heading6: 'Heading 6',
-  image: 'Image',
-  imageAltPrompt: 'Image description',
-  imageUrl: 'Image URL',
-  imageUrlPrompt: 'Image URL',
-  inlineCode: 'Inline code',
-  italic: 'Italic',
-  link: 'Link',
-  linkTextPrompt: 'Link text',
-  linkUrlPrompt: 'Link URL',
-  listGroup: 'List',
-  mermaid: 'Mermaid',
-  orderedList: 'Ordered list',
-  quote: 'Quote',
-  strike: 'Strike',
-  table: 'Table',
-  taskList: 'Task list',
-  text: 'Text',
-  textGroup: 'Text',
-  toc: 'Table of contents',
-}
-
 const props = {
   activePath: 'docs/large.md',
   onChange: vi.fn(),
   placeholder: 'Write',
-  slashLabels,
+  slashLabels: markdownEditorTestSlashLabels,
   value: markdown,
 } satisfies MarkdownEditorProps
 
