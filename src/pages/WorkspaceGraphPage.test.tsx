@@ -203,7 +203,7 @@ describe('WorkspaceGraphPage', () => {
     expect(screen.getByTestId('map-canvas')).toHaveAttribute('data-editor-content', '')
   })
 
-  it('publishes document status only for the active embedded editor path', () => {
+  it('does not duplicate the global document status for the embedded editor', () => {
     contextRef.value.graphEditorPath = 'notes/a.md'
     contextRef.value.editorValue = 'one two\nthree'
     contextRef.value.fileContents = { 'notes/a.md': 'one two\nthree' }
@@ -211,8 +211,6 @@ describe('WorkspaceGraphPage', () => {
 
     renderPage('/workspace/graph?edit=notes%2Fa.md')
 
-    expect(screen.getByTestId('document-status')).toHaveTextContent(
-      'notes/a.md:wysiwyg:2:3:11:one two three',
-    )
+    expect(screen.queryByTestId('document-status')).not.toBeInTheDocument()
   })
 })

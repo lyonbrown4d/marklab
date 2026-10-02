@@ -4,6 +4,7 @@ import type { AiInlineCompletionOptions } from '@/components/milkdown/aiInlineCo
 
 export type MarkdownEditorProps = {
   activePath: string | null
+  autoFocus?: boolean
   value: string
   onChange: (value: string) => void
   placeholder: string

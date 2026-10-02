@@ -107,11 +107,7 @@ export const WorkspaceMapCanvas = ({
         },
       }
     }
-    return {
-      nodes,
-      edges: graph.edges,
-      layoutKey: `${graph.layoutKey ?? 'workspace-map'}:editor:${activePath ?? ''}`,
-    }
+    return { edges: graph.edges, layoutKey: graph.layoutKey ?? 'workspace-map', nodes }
   }, [
     activePath,
     editorLoadState,
@@ -126,7 +122,37 @@ export const WorkspaceMapCanvas = ({
   ])
   const [nodes, setNodes, onNodesChange] = useNodesState(presentedGraph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(presentedGraph.edges)
-  const layout = useWorkspaceMapLayout({ activePath, flow, graph: presentedGraph, setNodes })
+  const layoutFlow = useMemo(
+    () =>
+      flow
+        ? {
+            fitView: (options?: Parameters<typeof flow.fitView>[0]) =>
+              flow.fitView({ ...options, maxZoom: Math.min(options?.maxZoom ?? 1, 1) }),
+          }
+        : null,
+    [flow],
+  )
+  const layout = useWorkspaceMapLayout({
+    activePath: null,
+    flow: layoutFlow,
+    graph: presentedGraph,
+    setNodes,
+  })
+  useEffect(() => {
+    if (!flow || layout.status !== 'ready') return
+    let frame = 0
+    const handleResize = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        void flow.fitView({ duration: 0, maxZoom: 1, padding: 0.22 })
+      })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [flow, layout.status])
 
   useEffect(() => {
     setNodes((current) => {
@@ -166,8 +192,26 @@ export const WorkspaceMapCanvas = ({
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
   const handleCanvasKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return
       if (!(event.target instanceof HTMLElement)) return
+      if (event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) {
+        return
+      }
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault()
+        void flow?.zoomIn({ duration: 0 })
+        return
+      }
+      if (event.key === '-') {
+        event.preventDefault()
+        void flow?.zoomOut({ duration: 0 })
+        return
+      }
+      if (event.key === '0') {
+        event.preventDefault()
+        void flow?.fitView({ duration: 0, maxZoom: 1, padding: 0.22 })
+        return
+      }
+      if (event.key !== 'Enter' && event.key !== ' ') return
       const nodeElement = event.target.closest<HTMLElement>('.react-flow__node')
       if (!nodeElement || event.target !== nodeElement) return
       const node = nodesById.get(nodeElement.dataset.id ?? '')
@@ -175,7 +219,7 @@ export const WorkspaceMapCanvas = ({
       event.preventDefault()
       activateNode(node)
     },
-    [activateNode, nodesById],
+    [activateNode, flow, nodesById],
   )
   const handleNodeDoubleClick = useCallback(
     (event: MouseEvent, node: Node<GraphNodeData>) => {
@@ -203,6 +247,7 @@ export const WorkspaceMapCanvas = ({
   return (
     <ReactFlow<Node<GraphNodeData>, Edge>
       aria-label={t('workspaceMap.canvas')}
+      tabIndex={0}
       colorMode={darkMode ? 'dark' : 'light'}
       className={cn('workspace-map-canvas h-full w-full', activePath && 'is-editing')}
       nodes={nodes}
@@ -236,7 +281,11 @@ export const WorkspaceMapCanvas = ({
         size={1}
         color="hsl(var(--muted-foreground) / 0.22)"
       />
-      <Controls position="bottom-right" showInteractive={false} />
+      <Controls
+        position="bottom-right"
+        showInteractive={false}
+        fitViewOptions={{ maxZoom: 1, padding: 0.22 }}
+      />
       {shouldRenderGraphMiniMap(showMiniMap, nodes.length) ? (
         <MiniMap
           position="bottom-left"

@@ -20,7 +20,7 @@ afterEach(async () => {
 })
 
 describe('WorkspaceGraphCache', () => {
-  it('keys workspace graphs by document path, content hash, and known paths', () => {
+  it('keys workspace graphs by document path, content hash, and known file and asset paths', () => {
     const cache = new WorkspaceGraphCache()
     const graph = createGraph('mindmap')
     const documents = [{ path: 'alpha.md', content: '# Alpha' }]
@@ -34,6 +34,9 @@ describe('WorkspaceGraphCache', () => {
     ).toBeUndefined()
     expect(
       cache.getWorkspaceGraph(documents, { paths: ['alpha.md', 'beta.md'], assetPaths: [] }),
+    ).toBeUndefined()
+    expect(
+      cache.getWorkspaceGraph(documents, { paths: ['alpha.md'], assetPaths: ['logo.png'] }),
     ).toBeUndefined()
   })
 

@@ -43,6 +43,7 @@ export const preloadGraphView = () => {
       import('@/pages/GraphViewPage'),
       import('@/pages/FileGraphPage'),
       import('@/pages/WorkspaceGraphPage'),
+      import('@/logic/graphLayout').then(({ preloadGraphLayout }) => preloadGraphLayout()),
     ]),
     () => {
       graphViewPreload = null

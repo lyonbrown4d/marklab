@@ -2,6 +2,7 @@ import { Files, Network } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { WorkspaceView } from '@/app/useEditorRoutes'
+import { preloadGraphView } from '@/lib/preloadFeatures'
 
 type WorkspaceViewSwitcherProps = {
   activeView: WorkspaceView
@@ -59,6 +60,8 @@ export const WorkspaceViewSwitcher = ({
                 aria-label={mapLabel}
                 className="size-6 rounded"
                 data-no-drag
+                onFocus={preloadGraphView}
+                onPointerEnter={preloadGraphView}
               >
                 <Network aria-hidden="true" />
               </ToggleGroupItem>

@@ -37,10 +37,16 @@ export const useWorkspaceMapLayout = ({ activePath, flow, graph, setNodes }: Opt
     let cancelled = false
     const layoutGraph = graphRef.current
     const layoutKey = layoutGraph.layoutKey
+    const controller = new AbortController()
     setLayoutState({ key: layoutKey, status: 'loading' })
 
     void import('@/logic/graphLayout')
-      .then(({ layoutGraphWithElk }) => layoutGraphWithElk(layoutGraph.nodes, layoutGraph.edges))
+      .then(({ layoutGraphWithElk }) =>
+        layoutGraphWithElk(layoutGraph.nodes, layoutGraph.edges, {
+          layoutKey,
+          signal: controller.signal,
+        }),
+      )
       .then((nodes) => {
         if (cancelled || runRef.current !== run) return
         laidOutNodesRef.current = nodes
@@ -55,6 +61,7 @@ export const useWorkspaceMapLayout = ({ activePath, flow, graph, setNodes }: Opt
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [graph.layoutKey, graphRef, retryGeneration, setNodes])
 

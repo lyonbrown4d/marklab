@@ -26,15 +26,13 @@ const fileNode = (active: boolean): Node<GraphNodeData> => ({
 })
 
 describe('workspace map graph layout metrics', () => {
-  it('uses the expanded editor card size and changes the layout signature', () => {
+  it('uses one stable page size and layout signature before and during editing', () => {
     const inactive = fileNode(false)
     const active = fileNode(true)
 
-    expect(getGraphNodeLayoutSize(inactive)).toEqual({ width: 200, height: 96 })
-    expect(getGraphNodeLayoutSize(active)).toEqual({ width: 560, height: 520 })
-    expect(createGraphNodeLayoutSignature(active)).not.toBe(
-      createGraphNodeLayoutSignature(inactive),
-    )
+    expect(getGraphNodeLayoutSize(inactive)).toEqual({ width: 520, height: 640 })
+    expect(getGraphNodeLayoutSize(active)).toEqual({ width: 520, height: 640 })
+    expect(createGraphNodeLayoutSignature(active)).toBe(createGraphNodeLayoutSignature(inactive))
   })
 
   it('uses one compact size for every lightweight workspace map reference', () => {

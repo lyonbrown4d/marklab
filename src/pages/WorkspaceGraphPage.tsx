@@ -3,13 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'
-import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
 import { Button } from '@/components/ui/button'
 import { useWorkspaceMapEditorRoute } from '@/app/useWorkspaceMapEditorRoute'
 import { useI18n } from '@/i18n/useI18n'
 import { buildWorkspaceMapGraph } from '@/logic/workspaceMapGraph'
 import { useLayoutContext } from '@/pages/useLayoutContext'
-import { useDocumentStats } from '@/pages/useDocumentStats'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 
@@ -17,7 +15,6 @@ const WorkspaceGraphPage = () => {
   const context = useLayoutContext(
     useShallow((state) => ({
       editorReadOnlyMode: state.editorReadOnlyMode,
-      currentView: state.currentView,
       fileContents: state.fileContents,
       files: state.files,
       graph: state.graph,
@@ -31,7 +28,6 @@ const WorkspaceGraphPage = () => {
       onEditorChange: state.onEditorChange,
       onOpenFile: state.onOpenFile,
       saveStates: state.saveStates,
-      showEditorStatusBar: state.showEditorStatusBar,
     })),
   )
   const location = useLocation()
@@ -50,13 +46,6 @@ const WorkspaceGraphPage = () => {
         saveStates: context.saveStates,
       })
     : ({ status: 'loading' } as const)
-  const editorContent = editorLoadState.status === 'ready' ? editorLoadState.content : ''
-  const stats = useDocumentStats(
-    editorContent,
-    Boolean(
-      context.graphEditorPath && context.showEditorStatusBar && editorLoadState.status === 'ready',
-    ),
-  )
   const retryEditorLoad = useCallback(() => {
     navigate(
       {
@@ -119,16 +108,6 @@ const WorkspaceGraphPage = () => {
         <div className="pointer-events-none absolute right-3 top-3 rounded-md border border-border/70 bg-card/90 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
           {t('workspaceMap.refreshing')}
         </div>
-      ) : null}
-      {context.showEditorStatusBar &&
-      context.graphEditorPath &&
-      editorLoadState.status === 'ready' ? (
-        <EditorDocumentStatus
-          activePath={context.graphEditorPath}
-          viewMode={context.currentView}
-          stats={stats}
-          value={editorContent}
-        />
       ) : null}
     </div>
   )

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
   useEffect,
   useState,
@@ -16,13 +16,25 @@ type FlowProps = {
   nodes: GraphData['nodes']
   nodesFocusable: boolean
   onlyRenderVisibleElements: boolean
+  onInit?: (flow: FlowApi) => void
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>
   onNodeClick?: (event: ReactMouseEvent<HTMLDivElement>, node: GraphData['nodes'][number]) => void
+  tabIndex: number
+  zoomOnScroll: boolean
+}
+
+type FlowApi = {
+  fitView: ReturnType<typeof vi.fn>
+  zoomIn: ReturnType<typeof vi.fn>
+  zoomOut: ReturnType<typeof vi.fn>
 }
 
 const flowPropsRef = vi.hoisted(() => ({ current: null as FlowProps | null }))
 const layoutStatusRef = vi.hoisted(() => ({ current: 'ready' as 'error' | 'loading' | 'ready' }))
 const layoutRetry = vi.hoisted(() => vi.fn())
+const layoutArgsRef = vi.hoisted(() => ({
+  current: null as null | { activePath: string | null; graph: GraphData },
+}))
 
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
@@ -66,8 +78,17 @@ vi.mock('@/pages/graph/graphMiniMap', () => ({
   shouldRenderGraphMiniMap: () => false,
 }))
 vi.mock('@/pages/workspace-map/useWorkspaceMapLayout', () => ({
-  useWorkspaceMapLayout: ({ flow }: { flow: { fitView: () => Promise<boolean> } | null }) => {
+  useWorkspaceMapLayout: ({
+    activePath,
+    flow,
+    graph,
+  }: {
+    activePath: string | null
+    flow: { fitView: () => Promise<boolean> } | null
+    graph: GraphData
+  }) => {
     const status = layoutStatusRef.current
+    layoutArgsRef.current = { activePath, graph }
     useEffect(() => {
       if (status === 'ready' && flow) void flow.fitView()
     }, [flow, status])
@@ -117,6 +138,7 @@ describe('WorkspaceMapCanvas', () => {
     flowPropsRef.current = null
     layoutStatusRef.current = 'ready'
     layoutRetry.mockClear()
+    layoutArgsRef.current = null
   })
 
   it('keeps raw nodes hidden behind explicit layout loading and error states', () => {
@@ -177,6 +199,8 @@ describe('WorkspaceMapCanvas', () => {
     )
     expect(editorNodes).toHaveLength(1)
     expect(editorNodes?.[0].focusable).toBe(false)
+    expect(layoutArgsRef.current?.graph.layoutKey).toBe('map')
+    expect(layoutArgsRef.current?.activePath).toBeNull()
   })
 
   it('activates the clicked file node and presents only that node as the editor', () => {
@@ -212,5 +236,41 @@ describe('WorkspaceMapCanvas', () => {
       focusable: false,
       data: { workspaceMapEditor: { active: true } },
     })
+  })
+
+  it('caps initial fit and supports canvas-focused zoom shortcuts', async () => {
+    renderCanvas(null)
+    const flow: FlowApi = {
+      fitView: vi.fn().mockResolvedValue(true),
+      zoomIn: vi.fn().mockResolvedValue(true),
+      zoomOut: vi.fn().mockResolvedValue(true),
+    }
+
+    act(() => flowPropsRef.current?.onInit?.(flow))
+    await waitFor(() => expect(flow.fitView).toHaveBeenCalledWith({ maxZoom: 1 }))
+    flow.fitView.mockClear()
+
+    const canvas = screen.getByTestId('flow')
+    fireEvent.keyDown(canvas, { key: '+' })
+    fireEvent.keyDown(canvas, { ctrlKey: true, key: '=' })
+    fireEvent.keyDown(canvas, { key: '-' })
+    fireEvent.keyDown(canvas, { key: '0' })
+
+    expect(flow.zoomIn).toHaveBeenCalledTimes(2)
+    expect(flow.zoomOut).toHaveBeenCalledOnce()
+    expect(flow.fitView).toHaveBeenCalledWith({ duration: 0, maxZoom: 1, padding: 0.22 })
+    expect(flowPropsRef.current?.tabIndex).toBe(0)
+    expect(flowPropsRef.current?.zoomOnScroll).toBe(true)
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'file:notes/a.md child' }), {
+      key: '+',
+    })
+    expect(flow.zoomIn).toHaveBeenCalledTimes(2)
+
+    flow.fitView.mockClear()
+    fireEvent(window, new Event('resize'))
+    await waitFor(() =>
+      expect(flow.fitView).toHaveBeenCalledWith({ duration: 0, maxZoom: 1, padding: 0.22 }),
+    )
   })
 })

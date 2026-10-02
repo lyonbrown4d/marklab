@@ -260,6 +260,35 @@ describe('MarkdownEditor playground baseline', () => {
     expect(controllerMock.focusEditor).toHaveBeenCalledTimes(1)
   })
 
+  it('focuses once after an embedded editor reports ready', async () => {
+    const view = render(
+      <MarkdownEditor
+        activePath="notes/example.md"
+        autoFocus
+        onChange={vi.fn()}
+        placeholder="Write"
+        slashLabels={slashLabels}
+        value="# Heading"
+        variant="embedded"
+      />,
+    )
+
+    await waitFor(() => expect(controllerMock.focusEditor).toHaveBeenCalledOnce())
+    view.rerender(
+      <MarkdownEditor
+        activePath="notes/example.md"
+        autoFocus
+        onChange={vi.fn()}
+        placeholder="Write"
+        slashLabels={slashLabels}
+        value="# Updated"
+        variant="embedded"
+      />,
+    )
+
+    expect(controllerMock.focusEditor).toHaveBeenCalledOnce()
+  })
+
   it('replaces the browser menu with editor actions and runs formatting commands', async () => {
     renderEditor()
     const root = document.querySelector('.crepe') as HTMLElement

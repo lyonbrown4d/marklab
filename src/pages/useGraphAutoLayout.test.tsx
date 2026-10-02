@@ -152,4 +152,51 @@ describe('useGraphAutoLayout', () => {
 
     expect(result.getCurrentNodes()[0]?.position).toEqual({ x: 300, y: 150 })
   })
+
+  it('aborts a superseded layout run without logging the expected cancellation', async () => {
+    let firstSignal: AbortSignal | undefined
+    layoutGraphWithElk
+      .mockImplementationOnce(
+        (
+          _nodes: Node<GraphNodeData>[],
+          _edges: GraphData['edges'],
+          options?: { signal?: AbortSignal },
+        ) =>
+          new Promise<Node<GraphNodeData>[]>((_resolve, reject) => {
+            firstSignal = options?.signal
+            firstSignal?.addEventListener(
+              'abort',
+              () => reject(new DOMException('Graph layout was cancelled.', 'AbortError')),
+              { once: true },
+            )
+          }),
+      )
+      .mockImplementationOnce(async (nodes: Node<GraphNodeData>[]) => nodes)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const result = renderAutoLayout(null)
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    result.rerender({
+      activeGraph: { ...graph, layoutKey: 'layout:two' },
+      flowInstance: null,
+    })
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    expect(firstSignal?.aborted).toBe(true)
+    expect(layoutGraphWithElk.mock.calls[1]?.[2]?.signal).toBeInstanceOf(AbortSignal)
+    await act(async () => Promise.resolve())
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('still logs genuine layout failures', async () => {
+    const error = new Error('ELK failed')
+    layoutGraphWithElk.mockRejectedValueOnce(error)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderAutoLayout(null)
+
+    await waitFor(() =>
+      expect(warn).toHaveBeenCalledWith('Failed to apply ELK graph layout', error),
+    )
+  })
 })

@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import '@milkdown/crepe/theme/common/style.css'
 import MarkdownEditorStatusOverlay from '@/components/MarkdownEditorStatusOverlay'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -23,6 +23,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const aiDefaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
+  const didAutoFocusRef = useRef(false)
   const inlineCompletionOptions = useMarkdownInlineCompletionOptions({
     activePath: props.activePath,
     readOnly: props.readOnly ?? false,
@@ -83,6 +84,16 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     ready: status.phase === 'ready',
     rootRef,
   })
+
+  useEffect(() => {
+    if (!props.autoFocus) {
+      didAutoFocusRef.current = false
+      return
+    }
+    if (status.phase !== 'ready' || didAutoFocusRef.current) return
+    didAutoFocusRef.current = true
+    focusEditor()
+  }, [focusEditor, props.autoFocus, status.phase])
 
   useImperativeHandle(ref, () => ({
     focus: focusEditor,

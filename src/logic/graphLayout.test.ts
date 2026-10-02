@@ -1,8 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
 import { layoutGraphWithElk } from '@/logic/graphLayout'
 import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 import type { GraphNodeData } from '@/logic/graph'
+
+const workerState = vi.hoisted(() => ({
+  layout: vi.fn(async (graph: { children: Array<{ id: string }> }) =>
+    graph.children.map((child, index) => ({ id: child.id, x: index * 1_000, y: 0 })),
+  ),
+  warmup: vi.fn(),
+}))
+
+vi.mock('@/logic/graphLayoutWorkerClient', () => ({
+  graphLayoutWorkerClient: workerState,
+}))
 
 const node = (
   id: string,

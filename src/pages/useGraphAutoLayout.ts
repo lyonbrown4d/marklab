@@ -19,6 +19,9 @@ type UseGraphAutoLayoutOptions = {
   setNodes: Dispatch<SetStateAction<Node<GraphNodeData>[]>>
 }
 
+const isAbortError = (error: unknown) =>
+  error instanceof DOMException && error.name === 'AbortError'
+
 export const useGraphAutoLayout = ({
   contentMode,
   editable,
@@ -52,10 +55,13 @@ export const useGraphAutoLayout = ({
     const layoutRun = layoutRunRef.current + 1
     layoutRunRef.current = layoutRun
     let cancelled = false
+    const controller = new AbortController()
     const requestedViewport = flowInstance?.getViewport()
 
     void import('@/logic/graphLayout')
-      .then(({ layoutGraphWithElk }) => layoutGraphWithElk(nextNodes, graph.edges))
+      .then(({ layoutGraphWithElk }) =>
+        layoutGraphWithElk(nextNodes, graph.edges, { signal: controller.signal }),
+      )
       .then((layoutNodes) => {
         if (cancelled || layoutRunRef.current !== layoutRun) return
         appliedLayoutKeyRef.current = graph.layoutKey
@@ -85,11 +91,13 @@ export const useGraphAutoLayout = ({
         })
       })
       .catch((error: unknown) => {
+        if (isAbortError(error)) return
         console.warn('Failed to apply ELK graph layout', error)
       })
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [
     contentMode,

@@ -1,12 +1,51 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import type { ComponentProps } from 'react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReactFlowProvider } from '@xyflow/react'
 import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
 import type { GraphNodeData } from '@/logic/graph'
 
+const editorHarness = vi.hoisted(() => ({ recreateHandle: null as null | (() => void) }))
+
 vi.mock('@/components/MarkdownEditor', () => ({
-  default: () => <div data-testid="milkdown-editor" />,
+  default: forwardRef<
+    { focus: () => void; generation: number; getMarkdown: () => string },
+    { autoFocus?: boolean; readOnly?: boolean; value: string }
+  >(({ autoFocus, readOnly, value }, forwardedRef) => {
+    const editorRef = useRef<HTMLTextAreaElement>(null)
+    const [handleGeneration, setHandleGeneration] = useState(0)
+    editorHarness.recreateHandle = () => setHandleGeneration((generation) => generation + 1)
+    useImperativeHandle(
+      forwardedRef,
+      () => ({
+        focus: () => editorRef.current?.focus(),
+        generation: handleGeneration,
+        getMarkdown: () => value,
+      }),
+      [handleGeneration, value],
+    )
+    useEffect(() => {
+      if (autoFocus) editorRef.current?.focus()
+    }, [autoFocus])
+    return (
+      <>
+        <textarea
+          data-testid="milkdown-editor"
+          defaultValue={value}
+          readOnly={readOnly}
+          ref={editorRef}
+        />
+        <button type="button">Dialog control</button>
+      </>
+    )
+  }),
 }))
 
 vi.mock('@/components/milkdown/useSlashCommandLabels', () => ({
@@ -41,27 +80,36 @@ const renderNode = (data: GraphNodeData, parentHandlers = {}) =>
   )
 
 beforeEach(() => {
+  editorHarness.recreateHandle = null
   editor.onClose.mockClear()
   editor.onOpenFull.mockClear()
   editor.onRetry.mockClear()
 })
 
 describe('WorkspaceMapFileNode', () => {
-  it('mounts exactly one real editor only for the active file node', async () => {
+  it('keeps one page surface mounted and activates one native editor in place', async () => {
     const view = renderNode({ label: 'a', path: 'notes/a.md' })
+    const surface = screen.getByTestId('workspace-map-editor-surface')
+
     expect(screen.queryByTestId('milkdown-editor')).not.toBeInTheDocument()
+    expect(surface).toHaveAttribute('data-editor-active', 'false')
 
     view.rerender(
-      <ReactFlowProvider>
+      <div>
         <WorkspaceMapFileNode
           {...nodeProps({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor })}
         />
-      </ReactFlowProvider>,
+      </div>,
     )
-    expect(await screen.findAllByTestId('milkdown-editor')).toHaveLength(1)
+
+    expect(screen.getByTestId('workspace-map-editor-surface')).toBe(surface)
+    const milkdown = await screen.findByTestId('milkdown-editor')
+    expect(milkdown).not.toHaveAttribute('readonly')
+    expect(surface).toHaveAttribute('data-editor-active', 'true')
+    await waitFor(() => expect(milkdown).toHaveFocus())
   })
 
-  it('does not mount Milkdown while the document is still loading', () => {
+  it('keeps the lightweight page surface mounted while the document loads', () => {
     renderNode({
       label: 'a',
       path: 'notes/a.md',
@@ -114,7 +162,7 @@ describe('WorkspaceMapFileNode', () => {
     expect(editor.onOpenFull).toHaveBeenCalledOnce()
   })
 
-  it('isolates editor pointer, wheel, double-click, and keyboard events from the graph', () => {
+  it('keeps document scrolling local but lets modified wheel gestures reach canvas zoom', () => {
     const parentHandlers = {
       onClick: vi.fn(),
       onDoubleClick: vi.fn(),
@@ -127,11 +175,41 @@ describe('WorkspaceMapFileNode', () => {
     fireEvent.click(surface)
     fireEvent.doubleClick(surface)
     fireEvent.keyDown(surface, { key: 'b' })
-    fireEvent.wheel(surface)
+    fireEvent.wheel(surface, { deltaY: 40 })
 
     expect(parentHandlers.onClick).not.toHaveBeenCalled()
     expect(parentHandlers.onDoubleClick).not.toHaveBeenCalled()
     expect(parentHandlers.onKeyDown).not.toHaveBeenCalled()
     expect(parentHandlers.onWheel).not.toHaveBeenCalled()
+
+    fireEvent.wheel(surface, { ctrlKey: true, deltaY: -40 })
+    fireEvent.wheel(surface, { deltaY: -40, metaKey: true })
+    expect(parentHandlers.onWheel).toHaveBeenCalledTimes(2)
+  })
+
+  it('lets inactive preview pointer and wheel gestures reach the canvas', () => {
+    const parentHandlers = { onPointerDown: vi.fn(), onWheel: vi.fn() }
+    renderNode({ label: 'a', path: 'notes/a.md' }, parentHandlers)
+    const surface = screen.getByTestId('workspace-map-editor-surface')
+
+    fireEvent.pointerDown(surface)
+    fireEvent.wheel(surface, { deltaY: 40 })
+
+    expect(surface).not.toHaveClass('nopan')
+    expect(parentHandlers.onPointerDown).toHaveBeenCalledOnce()
+    expect(parentHandlers.onWheel).toHaveBeenCalledOnce()
+  })
+
+  it('does not steal focus when Milkdown recreates its imperative handle', async () => {
+    renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor })
+    const milkdown = await screen.findByTestId('milkdown-editor')
+    await waitFor(() => expect(milkdown).toHaveFocus())
+    const dialogControl = screen.getByRole('button', { name: 'Dialog control' })
+
+    dialogControl.focus()
+    expect(dialogControl).toHaveFocus()
+    act(() => editorHarness.recreateHandle?.())
+
+    await waitFor(() => expect(dialogControl).toHaveFocus())
   })
 })

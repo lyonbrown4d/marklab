@@ -180,4 +180,30 @@ describe('useWorkspaceMapLayout', () => {
     await waitFor(() => expect(fitViewB).toHaveBeenCalledOnce())
     expect(fitViewA).toHaveBeenCalledOnce()
   })
+
+  it('aborts obsolete worker layout requests when the layout key changes', async () => {
+    let firstSignal: AbortSignal | undefined
+    vi.mocked(layoutGraphWithElk)
+      .mockImplementationOnce((_nodes, _edges, options) => {
+        firstSignal = options?.signal
+        return new Promise(() => undefined)
+      })
+      .mockImplementationOnce(async (nodes) => nodes)
+    const setNodes = vi.fn()
+    const firstGraph = createGraph('notes/a.md')
+    const nextGraph = createGraph('notes/b.md')
+    const { rerender } = renderHook(
+      ({ graph }) => useWorkspaceMapLayout({ activePath: null, flow: null, graph, setNodes }),
+      { initialProps: { graph: firstGraph } },
+    )
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    rerender({ graph: nextGraph })
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    expect(firstSignal?.aborted).toBe(true)
+    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[2]).toMatchObject({
+      layoutKey: nextGraph.layoutKey,
+    })
+  })
 })

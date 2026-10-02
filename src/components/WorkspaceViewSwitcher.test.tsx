@@ -1,9 +1,18 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceViewSwitcher } from '@/components/WorkspaceViewSwitcher'
+import { preloadGraphView } from '@/lib/preloadFeatures'
+
+vi.mock('@/lib/preloadFeatures', () => ({
+  preloadGraphView: vi.fn(),
+}))
 
 describe('WorkspaceViewSwitcher', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('shows the active workspace view and dispatches Files and Map actions', async () => {
     const onOpenFiles = vi.fn()
     const onOpenMap = vi.fn()
@@ -67,5 +76,24 @@ describe('WorkspaceViewSwitcher', () => {
     await user.click(files)
     expect(onOpenFiles).not.toHaveBeenCalled()
     expect(onOpenMap).not.toHaveBeenCalled()
+  })
+
+  it('preloads the map feature when its control is hovered or focused', () => {
+    render(
+      <WorkspaceViewSwitcher
+        activeView="files"
+        filesLabel="Files"
+        groupLabel="Workspace view"
+        mapLabel="Map"
+        onOpenFiles={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    )
+
+    const map = screen.getByRole('radio', { name: 'Map' })
+    fireEvent.pointerEnter(map)
+    fireEvent.focus(map)
+
+    expect(preloadGraphView).toHaveBeenCalledTimes(2)
   })
 })

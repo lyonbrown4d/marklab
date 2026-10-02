@@ -13,7 +13,19 @@
 }
 
 .workspace-map-editor {
-  border-color: color-mix(in srgb, var(--workspace-map-node-accent) 42%, hsl(var(--border)));
+  width: min(520px, calc(100vw - 2.5rem));
+  height: min(640px, calc(100vh - 6rem));
+  border-color: color-mix(in srgb, var(--workspace-map-node-accent) 28%, hsl(var(--border)));
+  container-type: inline-size;
+  cursor: text;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent),
+    0 18px 42px -30px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
+}
+
+.workspace-map-editor[data-editor-active='true'],
+.workspace-map-editor--selected {
+  border-color: color-mix(in srgb, var(--workspace-map-node-accent) 48%, hsl(var(--border)));
   box-shadow:
     0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 16%, transparent),
     0 18px 42px -26px color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
@@ -78,7 +90,8 @@
   stroke-width: 1.15;
 }
 
-.workspace-map-canvas.is-editing .react-flow__node:not(:has(.workspace-map-editor)) {
+.workspace-map-canvas.is-editing
+  .react-flow__node:not(:has(.workspace-map-editor[data-editor-active='true'])) {
   opacity: 0.58;
   transition: opacity var(--motion-duration-fast) ease;
 }
@@ -93,7 +106,8 @@
     transition: none;
   }
 
-  .workspace-map-canvas.is-editing .react-flow__node:not(:has(.workspace-map-editor)) {
+  .workspace-map-canvas.is-editing
+    .react-flow__node:not(:has(.workspace-map-editor[data-editor-active='true'])) {
     transition: none;
   }
 }
