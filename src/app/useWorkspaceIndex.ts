@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n/useI18n'
 
 const INDEX_INVALIDATION_DELAY_MS = 120
 
-export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
+export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()
   const { t } = useI18n()
   const invalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -19,7 +19,7 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
     [entries],
   )
   const query = useQuery<FsWorkspaceIndex | null>({
-    queryKey: ['workspace-index', entriesKey],
+    queryKey: ['workspace-index', workspaceKey, entriesKey],
     queryFn: () => fsApi.getWorkspaceIndex(),
     enabled: enabled && desktopAvailable,
     staleTime: 10_000,
@@ -30,9 +30,12 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
 
     let cancelled = false
     let unlisten: (() => void) | undefined
-    const invalidateIndex = () => {
+    const invalidateWorkspaceData = () => {
       invalidationTimerRef.current = null
-      void queryClient.invalidateQueries({ queryKey: ['workspace-index'] }).catch((error) => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workspace-index', workspaceKey] }),
+        queryClient.invalidateQueries({ queryKey: ['workspace-graph', workspaceKey] }),
+      ]).catch((error) => {
         toast.error(t('workspaceIndex.refreshFailed'), {
           description: String(error),
         })
@@ -45,13 +48,16 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
         if (invalidationTimerRef.current != null) {
           clearTimeout(invalidationTimerRef.current)
         }
-        invalidateIndex()
+        invalidateWorkspaceData()
         return
       }
       if (invalidationTimerRef.current != null) {
         clearTimeout(invalidationTimerRef.current)
       }
-      invalidationTimerRef.current = setTimeout(invalidateIndex, INDEX_INVALIDATION_DELAY_MS)
+      invalidationTimerRef.current = setTimeout(
+        invalidateWorkspaceData,
+        INDEX_INVALIDATION_DELAY_MS,
+      )
     }).then((nextUnlisten) => {
       if (cancelled) {
         nextUnlisten()
@@ -68,7 +74,14 @@ export const useWorkspaceIndex = (entries: FileEntry[], enabled: boolean) => {
       }
       unlisten?.()
     }
-  }, [enabled, queryClient, desktopAvailable, t])
+  }, [desktopAvailable, enabled, queryClient, t, workspaceKey])
 
-  return query.data ?? null
+  const retry = query.refetch
+  return {
+    data: query.data ?? null,
+    error: query.error ?? null,
+    loading: query.isFetching && !query.data,
+    refreshing: query.isFetching && Boolean(query.data),
+    retry,
+  }
 }

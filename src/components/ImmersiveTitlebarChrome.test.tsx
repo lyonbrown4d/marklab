@@ -5,6 +5,7 @@ import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 
 const createProps = () => ({
   activePath: '随笔/与自己协作.md',
+  activeWorkspaceView: 'files' as const,
   searchLabel: '搜索文件...',
   localLibraryLabel: '本地知识库',
   untitledLabel: '未命名文档',
@@ -14,7 +15,11 @@ const createProps = () => ({
   viewMode: 'wysiwyg' as const,
   wysiwygLabel: '所见即所得',
   sourceLabel: '源码',
-  graphLabel: '思维导图',
+  editorModeLabel: '编辑模式',
+  workspaceFilesLabel: '文件',
+  workspaceMapLabel: '地图',
+  workspaceMapTitle: '工作区地图',
+  workspaceViewLabel: '工作区视图',
   moreLabel: '更多操作',
   historyLabel: '工作区历史',
   recentWorkspaces: {
@@ -34,6 +39,8 @@ const createProps = () => ({
   exportPdfLabel: '导出为 PDF',
   exportDocxLabel: '导出为 Word',
   onOpenSearch: vi.fn(),
+  onOpenWorkspaceFiles: vi.fn(),
+  onOpenWorkspaceGraph: vi.fn(),
   onToggleSidebar: vi.fn(),
   onToggleOutline: vi.fn(),
   onOpenSettings: vi.fn(),
@@ -63,7 +70,7 @@ describe('ImmersiveTitlebarChrome', () => {
     await userEvent.click(screen.getByRole('button', { name: '搜索文件...' }))
     await userEvent.click(screen.getByRole('button', { name: '文档大纲' }))
     await userEvent.click(screen.getByRole('button', { name: '设置' }))
-    await userEvent.click(screen.getByRole('button', { name: '源码' }))
+    await userEvent.click(screen.getByRole('radio', { name: '源码' }))
     await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
     await userEvent.click(screen.getByRole('menuitem', { name: '新建工作区' }))
 
@@ -72,6 +79,49 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(props.onOpenSettings).toHaveBeenCalledOnce()
     expect(props.onChangeView).toHaveBeenCalledWith('source')
     expect(props.onNewWorkspace).toHaveBeenCalledOnce()
+  })
+
+  it('switches between workspace files and map beside the workspace menu', async () => {
+    const props = createProps()
+    const user = userEvent.setup()
+    const { rerender } = render(<ImmersiveTitlebarChrome {...props} />)
+
+    await user.click(screen.getByRole('radio', { name: '地图' }))
+    expect(props.onOpenWorkspaceGraph).toHaveBeenCalledOnce()
+
+    rerender(<ImmersiveTitlebarChrome {...props} activeWorkspaceView="map" />)
+    await user.click(screen.getByRole('radio', { name: '文件' }))
+    expect(props.onOpenWorkspaceFiles).toHaveBeenCalledOnce()
+  })
+
+  it('shows the workspace map title and hides document-only actions on the map', async () => {
+    const props = createProps()
+    const user = userEvent.setup()
+    render(<ImmersiveTitlebarChrome {...props} activePath={null} activeWorkspaceView="map" />)
+
+    expect(screen.getByText('工作区地图')).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: '所见即所得' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '导出' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '文档大纲' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '更多操作' }))
+    expect(screen.queryByRole('menuitem', { name: '所见即所得' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '导出' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '文档大纲' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '搜索文件...' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '设置' })).toBeInTheDocument()
+  })
+
+  it('hides the workspace view switch in single-file mode', () => {
+    render(
+      <ImmersiveTitlebarChrome
+        {...createProps()}
+        recentWorkspaces={{ ...createProps().recentWorkspaces, rootKind: 'single' }}
+      />,
+    )
+
+    expect(screen.queryByRole('radio', { name: '文件' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: '地图' })).not.toBeInTheDocument()
   })
 
   it('uses a generic local-library context when no document is active', () => {

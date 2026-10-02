@@ -1,9 +1,9 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
 import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
-import type { SlashCommandLabels } from '@/components/milkdown/slashMenuConfig'
+import { useSlashCommandLabels } from '@/components/milkdown/useSlashCommandLabels'
 import type { FileEntry } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { fsApi } from '@/services/fsApi'
@@ -100,57 +100,7 @@ const WysiwygEditorPage = ({
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
 
-  const slashLabels = useMemo<SlashCommandLabels>(
-    () => ({
-      textGroup: t('slash.textGroup'),
-      listGroup: t('slash.listGroup'),
-      advancedGroup: t('slash.advancedGroup'),
-      text: t('slash.text'),
-      heading1: t('slash.heading1'),
-      heading2: t('slash.heading2'),
-      heading3: t('slash.heading3'),
-      heading4: t('slash.heading4'),
-      heading5: t('slash.heading5'),
-      heading6: t('slash.heading6'),
-      quote: t('slash.quote'),
-      divider: t('slash.divider'),
-      link: t('slash.link'),
-      linkUrlPrompt: t('slash.linkUrlPrompt'),
-      linkTextPrompt: t('slash.linkTextPrompt'),
-      bold: t('slash.bold'),
-      italic: t('slash.italic'),
-      inlineCode: t('slash.inlineCode'),
-      strike: t('slash.strike'),
-      clearFormat: t('slash.clearFormat'),
-      bulletList: t('slash.bulletList'),
-      orderedList: t('slash.orderedList'),
-      taskList: t('slash.taskList'),
-      image: t('slash.image'),
-      imageUrl: t('slash.imageUrl'),
-      imageUrlPrompt: t('slash.imageUrlPrompt'),
-      imageAltPrompt: t('slash.imageAltPrompt'),
-      codeBlock: t('slash.codeBlock'),
-      codeTypeScript: t('slash.codeTypeScript'),
-      codeJavaScript: t('slash.codeJavaScript'),
-      codeJson: t('slash.codeJson'),
-      codeBash: t('slash.codeBash'),
-      codeHtml: t('slash.codeHtml'),
-      mermaid: t('slash.mermaid'),
-      table: t('slash.table'),
-      footnote: t('slash.footnote'),
-      frontmatter: t('slash.frontmatter'),
-      details: t('slash.details'),
-      toc: t('slash.toc'),
-      calloutNote: t('slash.calloutNote'),
-      calloutTip: t('slash.calloutTip'),
-      calloutImportant: t('slash.calloutImportant'),
-      calloutWarning: t('slash.calloutWarning'),
-      calloutCaution: t('slash.calloutCaution'),
-      calendarFile: t('slash.calendarFile'),
-      calendarFilePrompt: t('slash.calendarFilePrompt'),
-    }),
-    [t],
-  )
+  const slashLabels = useSlashCommandLabels()
   const onCalendarFileCreate = useCallback(async () => {
     if (!activePath) {
       return null

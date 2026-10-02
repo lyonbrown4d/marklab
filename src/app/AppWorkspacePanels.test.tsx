@@ -63,7 +63,6 @@ const baseState = {
   onInspectPath: action,
   onOpenProject: action,
   onOpenWorkspaceGraph: action,
-  onOpenWorkspaceOverview: action,
   onSelectProject: action,
   onUseInternalRoot: action,
   recentProjects: [],

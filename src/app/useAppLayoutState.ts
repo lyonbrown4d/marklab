@@ -2,11 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { ViewMode } from '@/store/appTypes'
-import { buildFileTree } from '@/logic/fileTree'
 import { useProjectLoader } from '@/app/useProjectLoader'
 import { useEditorBuffer } from '@/app/useEditorBuffer'
-import { useGraphData } from '@/app/useGraphData'
-import { useWorkspaceIndex } from '@/app/useWorkspaceIndex'
 import { useLayoutStoreSlice, useWorkspaceStoreSlice } from '@/store/selectors'
 import { getWorkspaceTabId } from '@/logic/tabs'
 import { useEditorRoutes } from '@/app/useEditorRoutes'
@@ -17,6 +14,9 @@ import { isTextFileViewPath } from '@/logic/fileTypes'
 import { pathToWorkspaceHistoryRoute } from '@/logic/routing'
 import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
+import { useWorkspaceMapEditorRoute } from '@/app/useWorkspaceMapEditorRoute'
+import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
+import { useAppLayoutGraphState } from '@/app/useAppLayoutGraphState'
 
 export const useAppLayoutState = () => {
   const workspaceWindowActions = useWorkspaceWindowActions()
@@ -82,6 +82,7 @@ export const useAppLayoutState = () => {
     currentFilePath,
     activeResourcePath,
     viewMode,
+    workspaceView,
   } = useEditorRoutes({ entries, activeTab, tabViewModes })
   const activeTabIdRef = useLatest(activeTabId)
   const currentFilePathRef = useLatest(currentFilePath)
@@ -113,8 +114,13 @@ export const useAppLayoutState = () => {
   })
   const workspaceKey = `${rootKind}:${rootPath}`
   const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
+  const { editorPath: graphEditorPath } = useWorkspaceMapEditorRoute({
+    enabled: Boolean(graphWorkspaceMatch),
+    entries,
+  })
   const editorBufferPath =
-    currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null
+    graphEditorPath ??
+    (currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null)
   const { fileContents, editorValue, dirtyPaths, loadingPaths, saveStates, onEditorChange } =
     useEditorBuffer({
       activePath: editorBufferPath,
@@ -157,16 +163,20 @@ export const useAppLayoutState = () => {
       rootKind,
       loadWorkspace,
     })
-  const onOpenWorkspaceOverview = useCallback(() => {
-    if (activeTabIdRef.current) setActiveTabId(null)
-    if (inspectedPathRef.current) setInspectedPath(null)
-    if (locationPathnameRef.current !== '/') navigate('/', { replace: false })
-  }, [activeTabIdRef, inspectedPathRef, locationPathnameRef, navigate, setActiveTabId])
   const onOpenWorkspaceHistory = useCallback(() => {
     if (activeTabIdRef.current) setActiveTabId(null)
     if (inspectedPathRef.current) setInspectedPath(null)
     navigate(pathToWorkspaceHistoryRoute(), { replace: false })
   }, [activeTabIdRef, inspectedPathRef, navigate, setActiveTabId])
+  const onOpenWorkspaceFiles = useCallback(() => {
+    const target = getWorkspaceFilesTarget(
+      tabsRef.current,
+      entries,
+      activeTabIdRef.current,
+      defaultFileView,
+    )
+    if (target) onOpenFileView(target.path, target.view)
+  }, [activeTabIdRef, defaultFileView, entries, onOpenFileView, tabsRef])
 
   const routeSyncEnabled =
     isSessionRestored &&
@@ -197,13 +207,14 @@ export const useAppLayoutState = () => {
     setActiveTabId,
     setInspectedPath,
   })
-  const fileTree = useMemo(() => buildFileTree(entries), [entries])
-  const workspaceIndex = useWorkspaceIndex(
+  const graphState = useAppLayoutGraphState({
+    currentFilePath,
     entries,
-    entries.some((entry) => entry.kind === 'file'),
-  )
-  const graphMode = graphWorkspaceMatch ? 'workspace' : graphFileMatch ? 'file' : null
-  const graphState = useGraphData(graphMode, workspaceIndex, currentFilePath, graphContentMode)
+    graphContentMode,
+    graphFile: Boolean(graphFileMatch),
+    graphWorkspace: Boolean(graphWorkspaceMatch),
+    workspaceKey,
+  })
 
   return {
     rootPath,
@@ -218,6 +229,8 @@ export const useAppLayoutState = () => {
     loadingPaths,
     saveStates,
     activePath: currentFilePath,
+    editorBufferPath,
+    graphEditorPath,
     activeResourcePath,
     sidebarCollapsed,
     rightSidebarCollapsed,
@@ -230,10 +243,8 @@ export const useAppLayoutState = () => {
     editorReadOnlyMode,
     shortcutOverrides,
     viewMode,
-    fileTree,
-    graph: graphState.graph,
-    graphLoading: graphState.loading,
-    workspaceIndex,
+    workspaceView,
+    ...graphState,
     workspaceKey,
     restoreStatusMessage,
     isRestoringSession,
@@ -248,7 +259,7 @@ export const useAppLayoutState = () => {
     onOpenGitDiff,
     onOpenWorkspaceGraph,
     onOpenAllPages,
-    onOpenWorkspaceOverview,
+    onOpenWorkspaceFiles,
     onOpenWorkspaceHistory,
     onOpenTab,
     onCloseTab,

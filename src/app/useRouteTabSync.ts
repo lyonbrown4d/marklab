@@ -3,12 +3,10 @@ import { isGitDiffSection } from '@/logic/routing'
 import {
   createFileTab,
   createGitDiffTab,
-  createWorkspaceGraphTab,
   fileViewTabId,
   fileTabId,
   getWorkspaceTabId,
   gitDiffTabId,
-  workspaceGraphTabId,
 } from '@/logic/tabs'
 import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
@@ -84,6 +82,7 @@ export const useRouteTabSync = ({
       lastHandledRouteRef.current = locationPathname
       onRouteHandled()
     }
+    if (locationPathname === '/') return
     if (!activeTabId && !inspectedPathRef.current) return
 
     setActiveTabId(null)
@@ -146,14 +145,7 @@ export const useRouteTabSync = ({
     lastHandledRouteRef.current = locationPathname
     onRouteHandled()
 
-    if (graphWorkspaceMatch) {
-      openRouteWorkspaceGraph({
-        tabsRef,
-        setTabs,
-        setActiveTabId,
-      })
-      return
-    }
+    if (graphWorkspaceMatch) return
     if (!routeFilePath || !routeFileView) return
 
     openRouteFile({
@@ -247,25 +239,6 @@ const openRouteFile = ({
   if (inspect && inspectedPathRef.current !== path) {
     setInspectedPath(path)
   }
-}
-
-type OpenRouteWorkspaceGraphArgs = {
-  tabsRef: LatestRef<WorkspaceTab[]>
-  setTabs: (tabs: WorkspaceTab[]) => void
-  setActiveTabId: (id: string | null) => void
-}
-
-const openRouteWorkspaceGraph = ({
-  tabsRef,
-  setTabs,
-  setActiveTabId,
-}: OpenRouteWorkspaceGraphArgs) => {
-  const id = workspaceGraphTabId()
-  const currentTabs = tabsRef.current
-  if (!currentTabs.some((tab) => getWorkspaceTabId(tab) === id)) {
-    setTabs([...currentTabs, createWorkspaceGraphTab()])
-  }
-  setActiveTabId(id)
 }
 
 type OpenRouteGitDiffArgs = {

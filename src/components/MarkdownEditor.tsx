@@ -107,6 +107,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
         <div
           className={cn(
             'crepe crepe-playground flex h-full flex-1 flex-col',
+            props.variant === 'embedded' && 'crepe-playground--embedded',
             props.readOnly && 'is-readonly-editor is-typewriter-editor',
           )}
           data-readonly={props.readOnly ? 'true' : undefined}

@@ -1,5 +1,6 @@
 import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry, RootKind, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
+import type { WorkspaceView } from '@/app/useEditorRoutes'
 
 export type TabLabelText = {
   workspaceGraph: string
@@ -46,6 +47,7 @@ export type TitlebarProps = {
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
   onOpenWorkspaceGraph: () => void
+  onOpenWorkspaceFiles?: () => void
   onOpenAllPages: (collectionId?: string) => void
   onOpenHistory: () => void
   onOpenProject: (path: string) => void
@@ -73,4 +75,5 @@ export type TitlebarProps = {
   rootKind: RootKind
   rootPath: string
   workspaceWindowOpening: boolean
+  workspaceView?: WorkspaceView
 }

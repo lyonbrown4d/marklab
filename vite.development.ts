@@ -32,7 +32,6 @@ export const devWarmupClientFiles = [
   './src/App.tsx',
   './src/app/AppLayout.tsx',
   './src/app/AppShellPanels.tsx',
-  './src/pages/WorkspaceHomePage.tsx',
   './src/components/MarkdownEditor.tsx',
   './src/components/TitlebarCommandDialog.tsx',
 ]

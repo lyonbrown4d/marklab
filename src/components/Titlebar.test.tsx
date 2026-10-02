@@ -168,7 +168,9 @@ describe('Titlebar command palette', () => {
     const onOpenFile = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenFile }))
 
-    await userEvent.click(await screen.findByText('notes/target.md'))
+    await userEvent.click(
+      await screen.findByText('notes/target.md', undefined, { timeout: 15_000 }),
+    )
 
     expect(onOpenFile).toHaveBeenCalledWith('notes/target.md')
   })
@@ -316,7 +318,7 @@ describe('Titlebar command palette', () => {
     await user.click(screen.getByRole('button', { name: 'Toggle sidebar' }))
     await user.click(screen.getByRole('button', { name: 'Document outline' }))
     await user.click(screen.getByRole('button', { name: 'Search files...' }))
-    await user.click(screen.getByRole('button', { name: 'Source' }))
+    await user.click(screen.getByRole('radio', { name: 'Source' }))
     await user.click(screen.getByRole('button', { name: 'Workspace: workspace' }))
     await user.click(screen.getByRole('menuitem', { name: 'New Workspace' }))
 

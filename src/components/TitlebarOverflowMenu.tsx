@@ -3,7 +3,6 @@ import {
   Code2,
   FileDown,
   FileText,
-  GitGraph,
   ListTree,
   MoreHorizontal,
   PenLine,
@@ -34,10 +33,10 @@ import type { ViewMode } from '@/store/appTypes'
 
 type TitlebarOverflowMenuProps = {
   active: boolean
+  documentActionsVisible: boolean
   exportDocxLabel: string
   exportLabel: string
   exportPdfLabel: string
-  graphLabel: string
   moreLabel: string
   searchLabel: string
   settingsLabel: string
@@ -54,10 +53,10 @@ type TitlebarOverflowMenuProps = {
 
 const TitlebarOverflowMenu = ({
   active,
+  documentActionsVisible,
   exportDocxLabel,
   exportLabel,
   exportPdfLabel,
-  graphLabel,
   moreLabel,
   searchLabel,
   settingsLabel,
@@ -83,6 +82,9 @@ const TitlebarOverflowMenu = ({
     pendingCloseActionRef.current = null
     queueMicrotask(action)
   }, [])
+  const handleViewChange = (value: string) => {
+    if (value === 'wysiwyg' || value === 'source') onChangeView(value)
+  }
 
   return (
     <DropdownMenu>
@@ -109,69 +111,72 @@ const TitlebarOverflowMenu = ({
           <Search aria-hidden="true" />
           {searchLabel}
         </DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
-            <PenLine aria-hidden="true" />
-            {wysiwygLabel}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent
-              alignOffset={-4}
-              className={menuSurfaceStyles({ className: 'w-48' })}
-              collisionPadding={8}
-              sideOffset={4}
+        {documentActionsVisible ? (
+          <>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
+                <PenLine aria-hidden="true" />
+                {wysiwygLabel}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent
+                  alignOffset={-4}
+                  className={menuSurfaceStyles({ className: 'w-48' })}
+                  collisionPadding={8}
+                  sideOffset={4}
+                >
+                  <DropdownMenuRadioGroup value={viewMode} onValueChange={handleViewChange}>
+                    <DropdownMenuRadioItem
+                      value="wysiwyg"
+                      className={menuItemStyles({ inset: true })}
+                    >
+                      <PenLine aria-hidden="true" />
+                      {wysiwygLabel}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="source"
+                      className={menuItemStyles({ inset: true })}
+                    >
+                      <Code2 aria-hidden="true" />
+                      {sourceLabel}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
+                <FileDown aria-hidden="true" />
+                {exportLabel}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent
+                  alignOffset={-4}
+                  className={menuSurfaceStyles({ className: 'w-48' })}
+                  collisionPadding={8}
+                  sideOffset={4}
+                >
+                  <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('pdf')}>
+                    <FileText aria-hidden="true" />
+                    {exportPdfLabel}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('docx')}>
+                    <FileText aria-hidden="true" />
+                    {exportDocxLabel}
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator className={menuSeparatorStyles} />
+            <DropdownMenuItem
+              className={menuItemStyles()}
+              onSelect={() => runAfterMenuClose(onToggleOutline)}
             >
-              <DropdownMenuRadioGroup
-                value={viewMode}
-                onValueChange={(value) => onChangeView(value as ViewMode)}
-              >
-                <DropdownMenuRadioItem value="wysiwyg" className={menuItemStyles({ inset: true })}>
-                  <PenLine aria-hidden="true" />
-                  {wysiwygLabel}
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="source" className={menuItemStyles({ inset: true })}>
-                  <Code2 aria-hidden="true" />
-                  {sourceLabel}
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="graph" className={menuItemStyles({ inset: true })}>
-                  <GitGraph aria-hidden="true" />
-                  {graphLabel}
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className={menuItemStyles()} disabled={!active}>
-            <FileDown aria-hidden="true" />
-            {exportLabel}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent
-              alignOffset={-4}
-              className={menuSurfaceStyles({ className: 'w-48' })}
-              collisionPadding={8}
-              sideOffset={4}
-            >
-              <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('pdf')}>
-                <FileText aria-hidden="true" />
-                {exportPdfLabel}
-              </DropdownMenuItem>
-              <DropdownMenuItem className={menuItemStyles()} onSelect={() => onExport('docx')}>
-                <FileText aria-hidden="true" />
-                {exportDocxLabel}
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator className={menuSeparatorStyles} />
-        <DropdownMenuItem
-          className={menuItemStyles()}
-          onSelect={() => runAfterMenuClose(onToggleOutline)}
-        >
-          <ListTree aria-hidden="true" />
-          {toggleOutlineLabel}
-        </DropdownMenuItem>
+              <ListTree aria-hidden="true" />
+              {toggleOutlineLabel}
+            </DropdownMenuItem>
+          </>
+        ) : null}
         <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenSettings}>
           <Settings aria-hidden="true" />
           {settingsLabel}

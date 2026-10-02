@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useMatch, useParams } from 'react-router-dom'
-import type { FileViewKind, ViewMode } from '@/store/appTypes'
+import type { FileEntry, FileViewKind, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import {
   ALL_PAGES_ROUTE_PATTERN,
   FILE_ROUTE_PATTERN,
@@ -12,13 +12,43 @@ import {
   WORKSPACE_HISTORY_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
-import type { WorkspaceTab } from '@/store/appTypes'
-import type { FileEntry } from '@/store/appTypes'
 
 type UseEditorRoutesArgs = {
   entries: FileEntry[]
   activeTab: WorkspaceTab | null
   tabViewModes: Record<string, ViewMode>
+}
+
+export type WorkspaceView = 'files' | 'map'
+
+type ResolveEditorViewModeArgs = {
+  activeTab: WorkspaceTab | null
+  currentFilePath: string | null
+  graphFileRouteActive: boolean
+  previewRouteActive: boolean
+  sourceRouteActive: boolean
+  tabViewModes: Record<string, ViewMode>
+}
+
+export const resolveEditorViewMode = ({
+  activeTab,
+  currentFilePath,
+  graphFileRouteActive,
+  previewRouteActive,
+  sourceRouteActive,
+  tabViewModes,
+}: ResolveEditorViewModeArgs): ViewMode => {
+  if (sourceRouteActive) return 'source'
+  if (graphFileRouteActive) return 'graph'
+  if (previewRouteActive) return 'preview'
+  if (!currentFilePath) return 'wysiwyg'
+
+  const activeTabView = activeTab?.kind === 'file' ? activeTab.view : null
+  if (activeTabView === 'source' || activeTabView === 'graph' || activeTabView === 'preview') {
+    return activeTabView
+  }
+
+  return tabViewModes[currentFilePath] ?? 'wysiwyg'
 }
 
 export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorRoutesArgs) => {
@@ -76,21 +106,15 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     : graphWorkspaceMatch || allPagesMatch || historyMatch
       ? getWorkspaceTabPath(activeTab)
       : (routeFilePath ?? getWorkspaceTabPath(activeTab))
-  const viewMode: ViewMode = sourceMatch
-    ? 'source'
-    : graphFileMatch || graphWorkspaceMatch
-      ? 'graph'
-      : previewMatch
-        ? 'preview'
-        : currentFilePath
-          ? activeTab?.kind === 'file' && activeTab.view === 'source'
-            ? 'source'
-            : activeTab?.kind === 'file' && activeTab.view === 'graph'
-              ? 'graph'
-              : activeTab?.kind === 'file' && activeTab.view === 'preview'
-                ? 'preview'
-                : (tabViewModes[currentFilePath] ?? 'wysiwyg')
-          : 'wysiwyg'
+  const viewMode = resolveEditorViewMode({
+    activeTab,
+    currentFilePath,
+    graphFileRouteActive: Boolean(graphFileMatch),
+    previewRouteActive: Boolean(previewMatch),
+    sourceRouteActive: Boolean(sourceMatch),
+    tabViewModes,
+  })
+  const workspaceView: WorkspaceView = graphWorkspaceMatch ? 'map' : 'files'
 
   return {
     editMatch,
@@ -111,5 +135,6 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     currentFilePath,
     activeResourcePath,
     viewMode,
+    workspaceView,
   }
 }

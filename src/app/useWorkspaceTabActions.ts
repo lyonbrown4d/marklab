@@ -6,13 +6,7 @@ import {
   pathToGitDiffRoute,
   pathToWorkspaceGraphRoute,
 } from '@/logic/routing'
-import {
-  createGitDiffTab,
-  createWorkspaceGraphTab,
-  getWorkspaceTabId,
-  gitDiffTabId,
-  workspaceGraphTabId,
-} from '@/logic/tabs'
+import { createGitDiffTab, getWorkspaceTabId, gitDiffTabId } from '@/logic/tabs'
 import { fileViewForOpenPath, isPreviewableFilePath } from '@/logic/fileTypes'
 import {
   navigateIfNeeded,
@@ -165,17 +159,8 @@ export const useWorkspaceTabActions = ({
   )
 
   const onOpenWorkspaceGraph = useCallback(() => {
-    const currentTabs = tabsRef.current
-    const id = workspaceGraphTabId()
-    const nextTabs = currentTabs.some((tab) => getWorkspaceTabId(tab) === id)
-      ? currentTabs
-      : [...currentTabs, createWorkspaceGraphTab()]
-    if (nextTabs !== currentTabs) {
-      setTabs(nextTabs)
-    }
-    setActiveTabId(id)
     navigateIfNeeded(locationPathnameRef.current, pathToWorkspaceGraphRoute(), navigate)
-  }, [locationPathnameRef, navigate, setActiveTabId, setTabs, tabsRef])
+  }, [locationPathnameRef, navigate])
 
   const onOpenAllPages = useCallback(
     (collectionId?: string) => {

@@ -7,7 +7,6 @@ import {
   FolderOpen,
   GitBranch,
   GitGraph,
-  Home,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -16,10 +15,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -36,10 +33,8 @@ type SidebarActivityRailProps = {
   collapsed?: boolean
   rootPath?: string
   activeActivity: SidebarActivityId
-  homeActive: boolean
   fileCount: number
   recentProjectCount: number
-  onOpenWorkspaceOverview: () => void
   onSelectActivity: (activity: SidebarActivityId) => void
 }
 
@@ -101,10 +96,8 @@ const SidebarActivityRail = ({
   collapsed = true,
   rootPath = '',
   activeActivity,
-  homeActive,
   fileCount,
   recentProjectCount,
-  onOpenWorkspaceOverview,
   onSelectActivity,
 }: SidebarActivityRailProps) => {
   const { t } = useI18n()
@@ -162,14 +155,6 @@ const SidebarActivityRail = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-56">
-            <DropdownMenuItem
-              onSelect={onOpenWorkspaceOverview}
-              aria-current={homeActive ? 'page' : undefined}
-            >
-              <Home aria-hidden="true" />
-              {t('sidebar.workspaceOverview')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             {activities.map(({ id, label, icon: Icon, badge }) => (
               <DropdownMenuItem
                 key={id}
@@ -193,18 +178,11 @@ const SidebarActivityRail = ({
   return (
     <TooltipProvider delayDuration={180}>
       <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-sidebar-border/80 bg-sidebar py-1.5">
-        <ActivityButton
-          active={homeActive}
-          icon={Home}
-          label={t('sidebar.workspaceOverview')}
-          onClick={onOpenWorkspaceOverview}
-        />
-        <Separator className="my-1.5 w-7 bg-sidebar-border/70" />
         <div className="flex min-h-0 flex-1 flex-col items-center gap-1">
           {activities.map((activity) => (
             <ActivityButton
               key={activity.id}
-              active={!homeActive && activity.id === activeActivity}
+              active={activity.id === activeActivity}
               badge={activity.badge}
               icon={activity.icon}
               label={activity.label}

@@ -11,7 +11,6 @@ vi.mock('@/i18n/useI18n', () => ({
         'sidebar.localWorkspace': 'Local Workspace',
         'sidebar.recentProjects': 'Recent Projects',
         'sidebar.searchAction': 'Search',
-        'sidebar.workspaceOverview': 'Workspace Overview',
         'tabs.workspaceGraph': 'Workspace Graph',
       }
 
@@ -25,10 +24,8 @@ describe('SidebarActivityRail', () => {
     render(
       <SidebarActivityRail
         activeActivity="search"
-        homeActive={false}
         fileCount={135}
         recentProjectCount={0}
-        onOpenWorkspaceOverview={vi.fn()}
         onSelectActivity={vi.fn()}
       />,
     )
@@ -42,28 +39,23 @@ describe('SidebarActivityRail', () => {
     expect(screen.getByText('99')).toBeInTheDocument()
   })
 
-  it('keeps activity and workspace overview actions clickable', () => {
+  it('keeps activity actions clickable without exposing a workspace overview', () => {
     const onSelectActivity = vi.fn()
-    const onOpenWorkspaceOverview = vi.fn()
 
     render(
       <SidebarActivityRail
         activeActivity="explorer"
-        homeActive
         fileCount={1}
         recentProjectCount={2}
-        onOpenWorkspaceOverview={onOpenWorkspaceOverview}
         onSelectActivity={onSelectActivity}
       />,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Recent Projects' }))
-    const overviewButton = screen.getByRole('button', { name: 'Workspace Overview' })
-    fireEvent.click(overviewButton)
 
-    expect(overviewButton).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('button', { name: 'Workspace Overview' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Files' })).toHaveAttribute('aria-current', 'page')
     expect(onSelectActivity).toHaveBeenCalledWith('projects')
-    expect(onOpenWorkspaceOverview).toHaveBeenCalledTimes(1)
   })
 
   it('uses one workspace menu when expanded while preserving every destination', async () => {
@@ -73,10 +65,8 @@ describe('SidebarActivityRail', () => {
         collapsed={false}
         rootPath="D:\\Notes\\Marklab\\"
         activeActivity="explorer"
-        homeActive={false}
         fileCount={1}
         recentProjectCount={2}
-        onOpenWorkspaceOverview={vi.fn()}
         onSelectActivity={onSelectActivity}
       />,
     )
@@ -85,7 +75,8 @@ describe('SidebarActivityRail', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     const search = await screen.findByRole('menuitem', { name: 'Search' })
-    expect(screen.getAllByRole('menuitem')).toHaveLength(6)
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5)
+    expect(screen.queryByRole('menuitem', { name: 'Workspace Overview' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /Files/ })).toHaveAttribute('aria-current', 'page')
     fireEvent.click(search)
     expect(onSelectActivity).toHaveBeenCalledWith('search')
@@ -97,10 +88,8 @@ describe('SidebarActivityRail', () => {
         collapsed={false}
         rootPath="/home/writer/Notes/"
         activeActivity="explorer"
-        homeActive={false}
         fileCount={0}
         recentProjectCount={0}
-        onOpenWorkspaceOverview={vi.fn()}
         onSelectActivity={vi.fn()}
       />,
     )

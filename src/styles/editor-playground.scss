@@ -196,6 +196,26 @@ body > .milkdown-drop-indicator.crepe-drop-cursor[data-marklab-playground-overla
     padding 180ms ease;
 }
 
+.crepe.crepe-playground--embedded > .milkdown {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.crepe.crepe-playground--embedded > .milkdown > .ProseMirror {
+  width: 100%;
+  padding: 1.25rem 1.5rem 3rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.crepe.crepe-playground--embedded > .milkdown > .ProseMirror h1 {
+  font-size: 1.75rem;
+}
+
+.crepe.crepe-playground--embedded > .milkdown > .ProseMirror p {
+  line-height: 1.7;
+}
+
 .crepe.crepe-playground > .milkdown > .ProseMirror h1 {
   font-size: clamp(2.25rem, 4cqi, 3rem);
   line-height: 1.18;

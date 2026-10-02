@@ -1,0 +1,99 @@
+.workspace-map-editor,
+.workspace-map-node {
+  --workspace-map-node-accent: hsl(var(--primary));
+  position: relative;
+  background: hsl(var(--card));
+  border: 1px solid color-mix(in srgb, var(--workspace-map-node-accent) 20%, hsl(var(--border)));
+  outline: none;
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
+    opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-editor {
+  border-color: color-mix(in srgb, var(--workspace-map-node-accent) 42%, hsl(var(--border)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 16%, transparent),
+    0 18px 42px -26px color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
+}
+
+.workspace-map-node {
+  box-shadow: 0 8px 20px -18px color-mix(in srgb, hsl(var(--foreground)) 36%, transparent);
+}
+
+.workspace-map-node:hover,
+.workspace-map-node:focus-visible,
+.workspace-map-canvas .react-flow__node:focus-visible .workspace-map-node,
+.workspace-map-node--selected {
+  border-color: color-mix(in srgb, var(--workspace-map-node-accent) 48%, hsl(var(--border)));
+  background: color-mix(in srgb, var(--workspace-map-node-accent) 4%, hsl(var(--card)));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--workspace-map-node-accent) 14%, transparent),
+    0 10px 24px -18px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
+}
+
+.workspace-map-node[data-workspace-map-kind='external'] {
+  --workspace-map-node-accent: hsl(var(--muted-foreground));
+}
+
+.workspace-map-node[data-workspace-map-kind='missing'] {
+  --workspace-map-node-accent: hsl(var(--destructive));
+}
+
+.workspace-map-node__icon {
+  color: var(--workspace-map-node-accent);
+}
+
+.workspace-map-node__handle {
+  width: 8px;
+  height: 8px;
+  border: 1px solid color-mix(in srgb, var(--workspace-map-node-accent) 44%, hsl(var(--border)));
+  background: hsl(var(--background));
+  opacity: 0;
+  transition: opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-node:hover .workspace-map-node__handle,
+.workspace-map-node:focus-visible .workspace-map-node__handle,
+.workspace-map-canvas
+  .react-flow__node:focus-visible
+  .workspace-map-node
+  .workspace-map-node__handle,
+.workspace-map-node--selected .workspace-map-node__handle,
+.workspace-map-editor:focus-within .workspace-map-node__handle {
+  opacity: 0.72;
+}
+
+.workspace-map-editor:focus-within {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 62%, hsl(var(--border)));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, hsl(var(--primary)) 20%, transparent),
+    0 22px 48px -28px color-mix(in srgb, hsl(var(--foreground)) 54%, transparent);
+}
+
+.workspace-map-canvas .react-flow__edge-path {
+  stroke: color-mix(in srgb, hsl(var(--primary)) 30%, hsl(var(--muted-foreground)));
+  stroke-width: 1.15;
+}
+
+.workspace-map-canvas.is-editing .react-flow__node:not(:has(.workspace-map-editor)) {
+  opacity: 0.58;
+  transition: opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-canvas .react-flow__controls {
+  transform: scale(0.9);
+  transform-origin: bottom right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-map-editor {
+    transition: none;
+  }
+
+  .workspace-map-canvas.is-editing .react-flow__node:not(:has(.workspace-map-editor)) {
+    transition: none;
+  }
+}

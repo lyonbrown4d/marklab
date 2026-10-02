@@ -1,6 +1,7 @@
 import { EditorStatusBar } from '@/components/EditorStatusBar'
 import { useI18n } from '@/i18n/useI18n'
 import type { DocumentStats } from '@/pages/useDocumentStats'
+import type { ViewMode } from '@/store/appTypes'
 
 export type EditorCursorPosition = {
   lineNumber: number
@@ -15,7 +16,7 @@ export const EditorDocumentStatus = ({
   cursor,
 }: {
   activePath: string | null
-  viewMode: 'wysiwyg' | 'source'
+  viewMode: ViewMode
   stats: DocumentStats
   value: string
   cursor?: EditorCursorPosition | null

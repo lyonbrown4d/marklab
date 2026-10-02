@@ -152,6 +152,18 @@ const renderEditor = (ref?: Ref<MarkdownEditorHandle>, readOnly = false, value =
     />,
   )
 
+const renderEmbeddedEditor = () =>
+  render(
+    <MarkdownEditor
+      activePath="notes/example.md"
+      value="# Heading"
+      onChange={vi.fn()}
+      placeholder="Write"
+      slashLabels={slashLabels}
+      variant="embedded"
+    />,
+  )
+
 describe('MarkdownEditor playground baseline', () => {
   it('passes persisted shortcut overrides to the real controller entry point', () => {
     renderEditor()
@@ -205,6 +217,14 @@ describe('MarkdownEditor playground baseline', () => {
     expect(root).toHaveClass('flex-1')
     expect(root).toHaveClass('flex-col')
     expect(root?.querySelector('.milkdown')).toBeNull()
+  })
+
+  it('scopes embedded presentation without creating a second editor path', () => {
+    renderEmbeddedEditor()
+
+    expect(document.querySelectorAll('.crepe-playground')).toHaveLength(1)
+    expect(document.querySelector('.crepe-playground')).toHaveClass('crepe-playground--embedded')
+    expect(vi.mocked(useMarkdownPlaygroundController)).toHaveBeenCalledTimes(1)
   })
 
   it('keeps large documents on the single Milkdown editor path', () => {

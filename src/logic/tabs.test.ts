@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { getWorkspaceTabId, normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
 
 describe('normalizeWorkspaceTabs', () => {
-  it('drops malformed git diff tabs and deduplicates valid tabs', () => {
+  it('drops malformed and legacy workspace graph tabs while deduplicating valid tabs', () => {
     const tabs = normalizeWorkspaceTabs([
       { kind: 'git-diff' },
       { kind: 'git-diff', path: undefined, section: undefined },
@@ -18,7 +18,6 @@ describe('normalizeWorkspaceTabs', () => {
       'git-diff:unstaged:README.md',
       'file:edit:README.md',
       'file:source:README.md',
-      'workspace-graph',
     ])
   })
 })

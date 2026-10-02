@@ -111,7 +111,7 @@ export const useProjectLoader = ({
           const seedActiveTabId =
             options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
           const nextTabs = seedTabs.flatMap((tab) => {
-            if (tab.kind === 'workspace-graph') return [tab]
+            if (tab.kind === 'workspace-graph') return []
             if (!available.has(tab.path)) return []
             if (tab.kind === 'file') {
               return [createFileTab(tab.path, fileViewForOpenPath(tab.path, tab.view))]
@@ -257,9 +257,7 @@ export const useProjectLoader = ({
 
   const onUseInternalRoot = useCallback(async () => {
     if (rootKindRef.current === 'internal') {
-      if (locationPathnameRef.current !== '/') {
-        navigate('/', { replace: false })
-      }
+      await loadWorkspace({ preserveCurrentRoute: false })
       return
     }
     if (internalRootSwitchingRef.current) return
@@ -276,7 +274,7 @@ export const useProjectLoader = ({
     } finally {
       internalRootSwitchingRef.current = false
     }
-  }, [loadWorkspace, locationPathnameRef, navigate, rootKindRef, t])
+  }, [loadWorkspace, rootKindRef, t])
 
   const { createFile, createFolder, renamePath, movePath, deletePath } = useProjectPathActions({
     rootPath,

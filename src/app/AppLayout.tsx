@@ -22,9 +22,7 @@ import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 import { SettingsDialogHost, type SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
-
 export type { LayoutContext } from '@/app/AppLayoutContext'
-
 const AppLayout = () => {
   const state = useAppLayoutState()
   const stateRef = useLatest(state)
@@ -97,7 +95,6 @@ const AppLayout = () => {
     onOpenFileView: handleOpenFileView,
     state,
   })
-
   useKeyboardShortcuts({
     activeTabId: state.activeTabId,
     shortcutOverrides: state.shortcutOverrides,
@@ -119,7 +116,6 @@ const AppLayout = () => {
   })
   useAppMenuEventSync(handleMenuAction)
   useNativeMenuLocaleSync()
-
   const workspacePanelState = useMemo(
     () => ({
       activePath: state.activePath,
@@ -141,7 +137,6 @@ const AppLayout = () => {
       onOpenProject: state.onOpenProject,
       onOpenTab: state.onOpenTab,
       onOpenWorkspaceGraph: state.onOpenWorkspaceGraph,
-      onOpenWorkspaceOverview: state.onOpenWorkspaceOverview,
       onSelectProject: state.onSelectProject,
       onUseInternalRoot: state.onUseInternalRoot,
       recentProjects: state.recentProjects,
@@ -176,7 +171,6 @@ const AppLayout = () => {
       state.onOpenProject,
       state.onOpenTab,
       state.onOpenWorkspaceGraph,
-      state.onOpenWorkspaceOverview,
       state.onSelectProject,
       state.onUseInternalRoot,
       state.recentProjects,
@@ -216,9 +210,8 @@ const AppLayout = () => {
       totalFiles,
     ],
   )
-
   return (
-    <AppStatusBarProvider activePath={state.activePath} viewMode={state.viewMode}>
+    <AppStatusBarProvider activePath={state.editorBufferPath} viewMode={state.viewMode}>
       <ExportStatusOverlay />
       <Titlebar
         ref={titlebarRef}
@@ -235,6 +228,7 @@ const AppLayout = () => {
         onOpenHeading={openHeading}
         onOpenSearchResult={handleOpenSearchResult}
         onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
+        onOpenWorkspaceFiles={state.onOpenWorkspaceFiles}
         onOpenAllPages={state.onOpenAllPages}
         onOpenHistory={state.onOpenWorkspaceHistory}
         onOpenProject={state.onOpenProject}
@@ -260,6 +254,7 @@ const AppLayout = () => {
         rootKind={state.rootKind}
         rootPath={state.rootPath}
         workspaceWindowOpening={state.workspaceWindowOpening}
+        workspaceView={state.workspaceView}
       />
       <SettingsDialogHost ref={settingsDialogRef} />
       <AppShellPanels
@@ -280,7 +275,7 @@ const AppLayout = () => {
           files={state.files}
           tabs={state.tabs}
           activeTab={state.activeTab}
-          activePath={state.activePath}
+          activePath={state.editorBufferPath}
           viewMode={state.viewMode}
           dirtyPaths={state.dirtyPaths}
           saveStates={state.saveStates}

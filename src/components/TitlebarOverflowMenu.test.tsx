@@ -7,6 +7,7 @@ import { ImmersiveWorkspaceShell } from '@/components/ImmersiveWorkspaceShell'
 
 const createProps = () => ({
   active: true,
+  documentActionsVisible: true,
   exportDocxLabel: 'Export as Word',
   exportLabel: 'Export',
   exportPdfLabel: 'Export as PDF',
@@ -97,5 +98,28 @@ describe('TitlebarOverflowMenu', () => {
 
     expect(onToggle).toHaveBeenCalledOnce()
     expect(screen.getByRole('dialog', { name: 'Document outline drawer' })).toBeVisible()
+  })
+
+  it('hides document actions and graph mode outside a document context', async () => {
+    const user = userEvent.setup()
+    render(<TitlebarOverflowMenu {...createProps()} documentActionsVisible={false} />)
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+
+    expect(screen.queryByRole('menuitem', { name: 'Rich text editor' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Export' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Document outline' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Search files' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('does not expose graph as an editor mode', async () => {
+    const user = userEvent.setup()
+    render(<TitlebarOverflowMenu {...createProps()} />)
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+    await user.hover(screen.getByRole('menuitem', { name: 'Rich text editor' }))
+
+    expect(screen.queryByRole('menuitemradio', { name: 'Mind map' })).not.toBeInTheDocument()
   })
 })

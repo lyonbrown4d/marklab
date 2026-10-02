@@ -5,6 +5,7 @@ import GraphViewPage from '@/pages/GraphViewPage'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 
 const FileGraphPage = () => {
   const params = useParams()
@@ -16,8 +17,10 @@ const FileGraphPage = () => {
       files: state.files,
       graph: state.graph,
       graphContentMode: state.graphContentMode,
+      graphError: state.graphError,
       graphLoading: state.graphLoading,
       graphMiniMapEnabled: state.graphMiniMapEnabled,
+      graphRetry: state.graphRetry,
       loading: requestedPath ? state.loadingPaths[requestedPath] : undefined,
       onEditorChange: state.onEditorChange,
       onOpenFile: state.onOpenFile,
@@ -31,6 +34,16 @@ const FileGraphPage = () => {
 
   if (context.loading || context.graphLoading) {
     return <EditorPaneFallback label={t('editor.loadingDocument')} path={requestedPath} />
+  }
+
+  if (context.graphError && context.graph.nodes.length === 0) {
+    return (
+      <WorkspaceMapState
+        label={t('editor.loadFailed')}
+        actionLabel={t('actions.retry')}
+        onAction={() => void context.graphRetry()}
+      />
+    )
   }
 
   return (

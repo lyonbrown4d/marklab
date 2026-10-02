@@ -34,7 +34,6 @@ type AppWorkspacePanelsState = Pick<
   | 'onOpenProject'
   | 'onOpenTab'
   | 'onOpenWorkspaceGraph'
-  | 'onOpenWorkspaceOverview'
   | 'onSelectProject'
   | 'onUseInternalRoot'
   | 'recentProjects'
@@ -97,7 +96,6 @@ export const AppWorkspacePanels = ({
       onOpenFileView={onOpenFileView}
       onOpenProject={state.onOpenProject}
       onSelectProject={state.onSelectProject}
-      onOpenWorkspaceOverview={state.onOpenWorkspaceOverview}
       onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
       onCreateFile={state.createFile}
       onCreateFolder={state.createFolder}

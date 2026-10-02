@@ -17,7 +17,6 @@ type AppWorkspaceSidebarProps = {
   onOpenFileView: (path: string, view: FileViewKind) => void
   onOpenProject: (path: string) => void
   onSelectProject: () => void
-  onOpenWorkspaceOverview: () => void
   onOpenWorkspaceGraph: () => void
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
@@ -43,7 +42,6 @@ const AppWorkspaceSidebarComponent = ({
   onOpenFileView,
   onOpenProject,
   onSelectProject,
-  onOpenWorkspaceOverview,
   onOpenWorkspaceGraph,
   onCreateFile,
   onCreateFolder,
@@ -74,7 +72,6 @@ const AppWorkspaceSidebarComponent = ({
       onOpenFileView={onOpenFileView}
       onOpenProject={onOpenProject}
       onSelectProject={onSelectProject}
-      onOpenWorkspaceOverview={onOpenWorkspaceOverview}
       onOpenWorkspaceGraph={onOpenWorkspaceGraph}
       onCreateFile={onCreateFile}
       onCreateFolder={onCreateFolder}

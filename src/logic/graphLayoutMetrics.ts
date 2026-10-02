@@ -7,10 +7,19 @@ const HEADING_NODE_WIDTH = 180
 const HEADING_NODE_HEIGHT = 56
 const FILE_NODE_WIDTH = 200
 const FILE_NODE_HEIGHT = 54
+const WORKSPACE_MAP_NODE_HEIGHT = 96
+const WORKSPACE_MAP_EDITOR_WIDTH = 560
+const WORKSPACE_MAP_EDITOR_HEIGHT = 520
 
 export const FULL_HEADING_NODE_MAX_HEIGHT = 360
 
 export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
+  if (node.data.workspaceMapEditor?.active) {
+    return { width: WORKSPACE_MAP_EDITOR_WIDTH, height: WORKSPACE_MAP_EDITOR_HEIGHT }
+  }
+  if (node.data.workspaceMap) {
+    return { width: FILE_NODE_WIDTH, height: WORKSPACE_MAP_NODE_HEIGHT }
+  }
   if (node.measured?.width && node.measured.height) {
     return { width: node.measured.width, height: node.measured.height }
   }

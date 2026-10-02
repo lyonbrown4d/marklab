@@ -24,6 +24,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
+const noop = () => undefined
 
 export type TitlebarHandle = {
   openCommandPalette: () => void
@@ -33,6 +34,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
   (
     {
       activePath,
+      activeTab,
       tabs,
       onToggleSidebar,
       onToggleRightSidebar,
@@ -44,6 +46,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenHeading,
       onOpenSearchResult,
       onOpenWorkspaceGraph,
+      onOpenWorkspaceFiles = noop,
       onOpenAllPages,
       onOpenHistory,
       onOpenProject,
@@ -70,12 +73,15 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       rootKind,
       rootPath,
       workspaceWindowOpening,
+      workspaceView,
     },
     ref,
   ) => {
     const [internalCommandOpen, setInternalCommandOpen] = useState(false)
     const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
+    const activeWorkspaceView =
+      workspaceView ?? (activeTab?.kind === 'workspace-graph' ? 'map' : 'files')
     const commandDataReady = commandOpen
     const setCommandOpen = useCallback(
       (open: boolean) => {
@@ -168,6 +174,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       >
         <ImmersiveTitlebarChrome
           activePath={activePath}
+          activeWorkspaceView={activeWorkspaceView}
           searchLabel={t('sidebar.search')}
           localLibraryLabel={t('titlebar.localLibrary')}
           untitledLabel={t('titlebar.untitled')}
@@ -175,9 +182,13 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           toggleOutlineLabel={t('titlebar.documentOutline')}
           settingsLabel={t('menu.settings')}
           viewMode={viewMode}
+          editorModeLabel={t('editor.modeToggle')}
           wysiwygLabel={t('editor.modeWysiwyg')}
           sourceLabel={t('editor.modeSource')}
-          graphLabel={t('tabs.graph')}
+          workspaceFilesLabel={t('titlebar.workspaceFiles')}
+          workspaceMapLabel={t('titlebar.workspaceMap')}
+          workspaceMapTitle={t('titlebar.workspaceMapTitle')}
+          workspaceViewLabel={t('titlebar.workspaceView')}
           moreLabel={t('actions.more')}
           historyLabel={t('workspace.viewAllRecent')}
           recentWorkspaces={{
@@ -199,6 +210,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           openCurrentWorkspaceInNewWindowLabel={t('actions.openCurrentWorkspaceInNewWindow')}
           openWorkspaceInNewWindowLabel={t('actions.openWorkspaceInNewWindow')}
           onOpenSearch={onOpenSearch}
+          onOpenWorkspaceFiles={onOpenWorkspaceFiles}
+          onOpenWorkspaceGraph={onOpenWorkspaceGraph}
           onToggleSidebar={onToggleSidebar}
           onToggleOutline={onToggleRightSidebar}
           onOpenSettings={onOpenSettings}

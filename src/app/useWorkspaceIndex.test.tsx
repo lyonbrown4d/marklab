@@ -8,6 +8,7 @@ import { listen } from '@/runtime/events'
 import { fsApi } from '@/services/fsApi'
 
 let bufferStatusHandler: ((event: { payload: unknown }) => void) | undefined
+const ENTRIES = [{ path: 'D:/notes/today.md', kind: 'file' }] as const
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
@@ -68,11 +69,62 @@ describe('useWorkspaceIndex', () => {
     vi.mocked(fsApi.getWorkspaceIndex).mockResolvedValue({ files: [] })
   })
 
+  it('does not share an index between workspaces with identical entries', async () => {
+    const queryClient = createQueryClient()
+    const { rerender } = renderHook(
+      ({ workspaceKey }) => useWorkspaceIndex(workspaceKey, [...ENTRIES], true),
+      {
+        initialProps: { workspaceKey: 'directory:D:/notes' },
+        wrapper: createWrapper(queryClient),
+      },
+    )
+    await waitFor(() => expect(fsApi.getWorkspaceIndex).toHaveBeenCalledOnce())
+
+    rerender({ workspaceKey: 'directory:E:/notes' })
+
+    await waitFor(() => expect(fsApi.getWorkspaceIndex).toHaveBeenCalledTimes(2))
+  })
+
+  it('exposes loading, refreshing, error, retry, and retained data', async () => {
+    const queryClient = createQueryClient()
+    let resolveIndex: ((value: { files: [] }) => void) | undefined
+    vi.mocked(fsApi.getWorkspaceIndex).mockImplementation(
+      () => new Promise((resolve) => (resolveIndex = resolve)),
+    )
+
+    const { result } = renderHook(
+      () => useWorkspaceIndex('directory:D:/notes', [...ENTRIES], true),
+      { wrapper: createWrapper(queryClient) },
+    )
+
+    expect(result.current).toMatchObject({
+      data: null,
+      error: null,
+      loading: true,
+      refreshing: false,
+    })
+    expect(result.current.retry).toBeTypeOf('function')
+
+    await act(async () => resolveIndex?.({ files: [] }))
+    await waitFor(() => expect(result.current.data).toEqual({ files: [] }))
+
+    vi.mocked(fsApi.getWorkspaceIndex).mockImplementation(
+      () => new Promise((resolve) => (resolveIndex = resolve)),
+    )
+    act(() => {
+      void result.current.retry()
+    })
+    await waitFor(() => expect(result.current.refreshing).toBe(true))
+    expect(result.current.loading).toBe(false)
+    expect(result.current.data).toEqual({ files: [] })
+    await act(async () => resolveIndex?.({ files: [] }))
+  })
+
   it('shows localized feedback when refreshing the workspace index fails', async () => {
     const queryClient = createQueryClient()
     vi.spyOn(queryClient, 'invalidateQueries').mockRejectedValue(new Error('index locked'))
 
-    renderHook(() => useWorkspaceIndex([{ path: 'D:/notes/today.md' }] as never, true), {
+    renderHook(() => useWorkspaceIndex('directory:D:/notes', [...ENTRIES], true), {
       wrapper: createWrapper(queryClient),
     })
 
@@ -104,7 +156,7 @@ describe('useWorkspaceIndex', () => {
       .mockResolvedValue(undefined)
     vi.useFakeTimers()
     try {
-      renderHook(() => useWorkspaceIndex([{ path: 'D:/notes/today.md' }] as never, true), {
+      renderHook(() => useWorkspaceIndex('directory:D:/notes', [...ENTRIES], true), {
         wrapper: createWrapper(queryClient),
       })
       await act(async () => Promise.resolve())
@@ -124,7 +176,13 @@ describe('useWorkspaceIndex', () => {
 
       expect(invalidateQueries).not.toHaveBeenCalled()
       act(() => vi.advanceTimersByTime(150))
-      expect(invalidateQueries).toHaveBeenCalledOnce()
+      expect(invalidateQueries).toHaveBeenCalledTimes(2)
+      expect(invalidateQueries).toHaveBeenNthCalledWith(1, {
+        queryKey: ['workspace-index', 'directory:D:/notes'],
+      })
+      expect(invalidateQueries).toHaveBeenNthCalledWith(2, {
+        queryKey: ['workspace-graph', 'directory:D:/notes'],
+      })
     } finally {
       vi.useRealTimers()
     }
@@ -138,7 +196,7 @@ describe('useWorkspaceIndex', () => {
 
     vi.useFakeTimers()
     try {
-      renderHook(() => useWorkspaceIndex([{ path: 'D:/notes/today.md' }] as never, true), {
+      renderHook(() => useWorkspaceIndex('directory:D:/notes', [...ENTRIES], true), {
         wrapper: createWrapper(queryClient),
       })
       await act(async () => Promise.resolve())
@@ -153,9 +211,9 @@ describe('useWorkspaceIndex', () => {
         })
       })
 
-      expect(invalidateQueries).toHaveBeenCalledOnce()
+      expect(invalidateQueries).toHaveBeenCalledTimes(2)
       act(() => vi.advanceTimersByTime(150))
-      expect(invalidateQueries).toHaveBeenCalledOnce()
+      expect(invalidateQueries).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
     }

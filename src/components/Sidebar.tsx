@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import SidebarActivityRail from '@/components/SidebarActivityRail'
 import SidebarToolPanel from '@/components/SidebarToolPanel'
 import type { FileTreeNode } from '@/logic/fileTree'
@@ -20,7 +20,6 @@ type SidebarProps = {
   onOpenFileView: (path: string, view: FileViewKind) => void
   onOpenProject: (path: string) => void
   onSelectProject: () => void
-  onOpenWorkspaceOverview: () => void
   onOpenWorkspaceGraph: () => void
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
@@ -46,7 +45,6 @@ const SidebarComponent = ({
   onOpenFileView,
   onOpenProject,
   onSelectProject,
-  onOpenWorkspaceOverview,
   onOpenWorkspaceGraph,
   onCreateFile,
   onCreateFolder,
@@ -61,7 +59,6 @@ const SidebarComponent = ({
   onInspectPath,
   onOpenSearchResult,
 }: SidebarProps) => {
-  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [focusFileFilterRequest, setFocusFileFilterRequest] = useState(0)
   const [focusWorkspaceSearchRequest, setFocusWorkspaceSearchRequest] = useState(0)
@@ -115,10 +112,8 @@ const SidebarComponent = ({
         collapsed={collapsed}
         rootPath={rootPath}
         activeActivity={activeActivity}
-        homeActive={location.pathname === '/'}
         fileCount={fileCount}
         recentProjectCount={recentProjects.length}
-        onOpenWorkspaceOverview={onOpenWorkspaceOverview}
         onSelectActivity={selectActivity}
       />
       {!collapsed && (

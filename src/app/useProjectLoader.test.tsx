@@ -46,7 +46,7 @@ const createProps = (overrides: Record<string, unknown> = {}) => ({
   activeTabId: null,
   locationPathname: '/',
   preserveCurrentRoute: false,
-  defaultFileView: 'wysiwyg',
+  defaultFileView: 'edit',
   navigate: vi.fn(),
   setEntries: vi.fn(),
   setRootPath: vi.fn(),
@@ -95,8 +95,10 @@ describe('useProjectLoader', () => {
     })
   })
 
-  it('navigates home without resetting the watcher when already using the internal workspace', async () => {
+  it('reloads the current internal workspace into its active file route', async () => {
     const navigate = vi.fn()
+    const setActiveTabId = vi.fn()
+    const setTabs = vi.fn()
     const { result } = renderHook(() =>
       useProjectLoader(
         createProps({
@@ -104,6 +106,8 @@ describe('useProjectLoader', () => {
           navigate,
           rootKind: 'internal',
           rootPath: '/app-data/workspace',
+          setActiveTabId,
+          setTabs,
         }) as never,
       ),
     )
@@ -113,7 +117,29 @@ describe('useProjectLoader', () => {
     })
 
     expect(fsApi.setRoot).not.toHaveBeenCalled()
-    expect(navigate).toHaveBeenCalledWith('/', { replace: false })
+    expect(setTabs).toHaveBeenCalledWith([{ kind: 'file', path: 'Untitled.md', view: 'edit' }])
+    expect(setActiveTabId).toHaveBeenCalledWith('file:edit:Untitled.md')
+    expect(navigate).toHaveBeenCalledWith('/files/edit/Untitled.md', { replace: true })
+  })
+
+  it('drops legacy workspace graph tabs while loading a workspace', async () => {
+    const setTabs = vi.fn()
+    const { result } = renderHook(() =>
+      useProjectLoader(
+        createProps({
+          activeTabId: 'file:edit:Untitled.md',
+          entries: [{ kind: 'file', path: 'Untitled.md' }],
+          setTabs,
+          tabs: [{ kind: 'file', path: 'Untitled.md', view: 'edit' }, { kind: 'workspace-graph' }],
+        }) as never,
+      ),
+    )
+
+    await act(async () => {
+      await result.current.loadWorkspace({ preserveCurrentRoute: true })
+    })
+
+    expect(setTabs).toHaveBeenCalledWith([{ kind: 'file', path: 'Untitled.md', view: 'edit' }])
   })
 
   it('coalesces repeated internal workspace switches while the IPC call is pending', async () => {

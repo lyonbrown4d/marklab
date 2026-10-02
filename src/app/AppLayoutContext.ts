@@ -17,6 +17,11 @@ export type LayoutContext = {
   editorValue: string
   graph: GraphData
   graphLoading: boolean
+  graphError: unknown
+  graphRetry: () => Promise<unknown>
+  graphRefreshing: boolean
+  graphEditorPath: string | null
+  editorBufferPath: string | null
   onEditorChange: (value: string) => void
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void

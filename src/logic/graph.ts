@@ -28,7 +28,22 @@ export type GraphNodeData = Record<string, unknown> & {
   editable?: boolean
   onUpdateTitle?: (nodeId: string, title: string) => void
   onUpdateContent?: (nodeId: string, content: string, contentBlocks?: MarkdownBlock[]) => void
+  workspaceMapEditor?: {
+    active: true
+    loadState: WorkspaceMapEditorLoadState
+    onChange: (value: string) => void
+    onClose: () => void
+    onOpenFull: () => void
+    onRetry: () => void
+    readOnly: boolean
+  }
+  workspaceMap?: true
 }
+
+export type WorkspaceMapEditorLoadState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; content: string }
 
 export type GraphData = {
   nodes: Node<GraphNodeData>[]

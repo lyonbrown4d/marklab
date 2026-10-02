@@ -61,9 +61,7 @@ export const normalizeWorkspaceTabs = (value: unknown): WorkspaceTab[] => {
     if (tab.kind === 'file' && isNonEmptyString(tab.path)) {
       return [createFileTab(tab.path, isFileView(tab.view) ? tab.view : 'edit')]
     }
-    if (tab.kind === 'workspace-graph') {
-      return [createWorkspaceGraphTab()]
-    }
+    if (tab.kind === 'workspace-graph') return []
     if (tab.kind === 'git-diff' && isNonEmptyString(tab.path) && isGitDiffSection(tab.section)) {
       return [createGitDiffTab(tab.path, tab.section)]
     }

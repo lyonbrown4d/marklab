@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from '@/app/AppLayout'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
+import WorkspaceRootPage from '@/pages/WorkspaceRootPage'
 import {
   FILE_ROUTE_PATTERN,
   GIT_DIFF_ROUTE_PATTERN,
@@ -20,7 +21,6 @@ const FileGraphPage = lazy(() => import('@/pages/FileGraphPage'))
 const GitDiffRoutePage = lazy(() => import('@/pages/GitDiffRoutePage'))
 const SourceFilePage = lazy(() => import('@/pages/SourceFilePage'))
 const WorkspaceGraphPage = lazy(() => import('@/pages/WorkspaceGraphPage'))
-const WorkspaceHomePage = lazy(() => import('@/pages/WorkspaceHomePage'))
 const WorkspaceHistoryPage = lazy(() => import('@/pages/WorkspaceHistoryPage'))
 
 const lazyRoute = (Page: ComponentType) => (
@@ -33,7 +33,7 @@ const App = () => (
   <HashRouter>
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={lazyRoute(WorkspaceHomePage)} />
+        <Route index element={<WorkspaceRootPage />} />
         <Route path={ALL_PAGES_ROUTE_PATTERN} element={lazyRoute(AllPagesPage)} />
         <Route path={GIT_DIFF_ROUTE_PATTERN} element={lazyRoute(GitDiffRoutePage)} />
         <Route path={PREVIEW_ROUTE_PATTERN} element={lazyRoute(FilePreviewPage)} />
