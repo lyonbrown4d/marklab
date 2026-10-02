@@ -7,7 +7,7 @@ type OnMarkdownDocumentChange = (document: ProseMirrorNode) => void
 
 export const createMarkdownDocumentChangeView = (onDocumentChange: OnMarkdownDocumentChange) => ({
   update: (view: EditorView, previousState: EditorState) => {
-    if (view.state.doc.eq(previousState.doc)) return
+    if (view.state.doc === previousState.doc) return
     onDocumentChange(view.state.doc)
   },
 })

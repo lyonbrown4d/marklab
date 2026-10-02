@@ -14,19 +14,23 @@ import {
   relocateFixedDropIndicatorToViewportRoot,
   replaceMarkdownLikePlayground,
 } from '@/components/milkdown/markdownPlaygroundActions'
-import type { PendingExternalValue } from '@/components/milkdown/editorActions'
+import type { PendingRevisionExternalValue } from '@/components/milkdown/editorActions'
 import type {
   MarkdownEditorStatus,
   MarkdownPlaygroundControllerOptions,
   ThrottledMarkdownUpdate,
 } from '@/components/milkdown/markdownEditorTypes'
-import { waitForMarkdownEditorMount } from '@/components/markdownEditorPerformance'
+import {
+  markdownEditorPerformancePolicy,
+  waitForMarkdownEditorMount,
+} from '@/components/markdownEditorPerformance'
 import { useMilkdownEditorContextMenu } from '@/components/milkdown/useMilkdownEditorContextMenu'
 import { useMarkdownPlaygroundSync } from '@/components/milkdown/useMarkdownPlaygroundSync'
 import { createMarkdownUpdateThrottle } from '@/components/milkdown/markdownUpdateThrottle'
 import * as snapshotBridge from '@/components/milkdown/markdownSnapshotBridge'
 import { useMarkdownEditorAccess } from '@/components/milkdown/useMarkdownEditorAccess'
 import { aiInlineCompletionPlugin } from '@/components/milkdown/aiInlineCompletionPlugin'
+import { useMarkdownDocumentPathBridge } from '@/components/milkdown/useMarkdownDocumentPathBridge'
 export const useMarkdownPlaygroundController = ({
   activePath,
   darkMode,
@@ -39,6 +43,7 @@ export const useMarkdownPlaygroundController = ({
   readOnly = false,
   value,
 }: MarkdownPlaygroundControllerOptions) => {
+  const largeDocumentMode = markdownEditorPerformancePolicy(value).largeDocumentMode
   const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
@@ -50,11 +55,12 @@ export const useMarkdownPlaygroundController = ({
   const throttledMarkdownUpdateRef = useRef<ThrottledMarkdownUpdate | null>(null)
   const markdownSnapshotSchedulerRef = useRef<snapshotBridge.MarkdownSnapshotScheduler | null>(null)
   const onCalendarFileCreateRef = useRef(onCalendarFileCreate)
-  const activePathRef = useRef(activePath)
-  const activePathListenersRef = useRef(new Set<() => void>())
+  const { activePathListenersRef, activePathRef, getDocumentPath, subscribeDocumentPath } =
+    useMarkdownDocumentPathBridge(activePath)
   const applyingExternalValueRef = useRef(false)
   const isComposingRef = useRef(false)
-  const pendingExternalValueRef = useRef<PendingExternalValue | null>(null)
+  const documentRevisionRef = useRef(0)
+  const pendingExternalValueRef = useRef<PendingRevisionExternalValue | null>(null)
   const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
   const [codeBlockTheme] = useState(createMarkdownCodeBlockTheme)
   const urlDialog = useSlashUrlDialog(activePath)
@@ -83,6 +89,7 @@ export const useMarkdownPlaygroundController = ({
     activePathRef,
     applyingExternalValueRef,
     crepeRef,
+    documentRevisionRef,
     latestValuePathRef,
     latestValueRef,
     markdownSnapshotSchedulerRef,
@@ -96,15 +103,6 @@ export const useMarkdownPlaygroundController = ({
     throttledMarkdownUpdateRef,
     value,
   })
-
-  const getDocumentPath = useCallback(() => activePathRef.current, [])
-
-  const subscribeDocumentPath = useCallback((listener: () => void) => {
-    activePathListenersRef.current.add(listener)
-    return () => {
-      activePathListenersRef.current.delete(listener)
-    }
-  }, [])
 
   const runSlashImageImport = useCallback(async () => false, [])
 
@@ -163,7 +161,11 @@ export const useMarkdownPlaygroundController = ({
 
     crepe.editor
       .config((ctx) => {
-        ctx.update(editorViewOptionsCtx, (options) => ({ ...options, editable: () => !readOnly }))
+        ctx.update(editorViewOptionsCtx, (options) => ({
+          ...options,
+          attributes: { ...options.attributes, spellcheck: largeDocumentMode ? 'false' : 'true' },
+          editable: () => !readOnly,
+        }))
         markdownSnapshotScheduler = snapshotBridge.createMarkdownSnapshotBridge(
           (document) =>
             pendingCrepe.editor.action((actionCtx) => actionCtx.get(serializerCtx)(document)),
@@ -183,6 +185,9 @@ export const useMarkdownPlaygroundController = ({
             acceptingMarkdownUpdates &&
             !applyingExternalValueRef.current,
           () => markdownSnapshotScheduler,
+          () => {
+            documentRevisionRef.current += 1
+          },
         ),
       )
 
@@ -198,7 +203,7 @@ export const useMarkdownPlaygroundController = ({
     crepe.editor.use(animatedCursor).use(typewriterScroll).use(shortcutPlugin)
 
     void pendingDestroyRef.current
-      .then(() => waitForMarkdownEditorMount(latestValueRef.current.length))
+      .then(() => waitForMarkdownEditorMount(latestValueRef.current))
       .then(() => {
         if (destroyed) return
         creationStarted = true
@@ -265,10 +270,12 @@ export const useMarkdownPlaygroundController = ({
       destroyCrepe()
     }
   }, [
+    activePathRef,
     codeBlockTheme,
     getDocumentPath,
     invalidateUrlDialog,
     inlineCompletionOptions,
+    largeDocumentMode,
     openUrlDialog,
     placeholder,
     runSlashCalendarFileCreate,
@@ -282,6 +289,7 @@ export const useMarkdownPlaygroundController = ({
   return {
     contextMenu,
     ...editorAccess,
+    largeDocumentMode,
     rootRef,
     scrollAreaRef,
     status,

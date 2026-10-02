@@ -9,7 +9,7 @@ import {
 
 const createState = (head: number) => ({
   selection: { empty: true, head },
-  doc: { eq: () => true },
+  doc: { eq: vi.fn(() => true) },
 })
 
 type TestView = {
@@ -148,6 +148,36 @@ describe('typewriterScrollPlugin', () => {
 
     expect(requestAnimationFrame).not.toHaveBeenCalled()
     expect(nextView.coordsAtPos).not.toHaveBeenCalled()
+  })
+
+  it('does not force caret geometry in large-document mode', () => {
+    const requestAnimationFrame = vi.fn(() => 1)
+    window.requestAnimationFrame = requestAnimationFrame
+    const { editor, shell, viewport } = createEditorDom()
+    shell.dataset.largeDocument = 'true'
+    const initialView = createView(editor, { state: createState(1) })
+    const nextView = createView(editor, { state: createState(2) })
+    const pluginView = createTypewriterScrollView(asEditorView(initialView))
+
+    pluginView.update(asEditorView(nextView))
+
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+    expect(nextView.coordsAtPos).not.toHaveBeenCalled()
+    expect(viewport.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('detects document changes by identity without deep comparison', () => {
+    const { editor } = createEditorDom()
+    const initialState = createState(1)
+    const nextState = createState(1)
+    const initialView = createView(editor, { state: initialState })
+    const nextView = createView(editor, { state: nextState })
+    const pluginView = createTypewriterScrollView(asEditorView(initialView))
+
+    pluginView.update(asEditorView(nextView), initialState as never)
+
+    expect(nextState.doc.eq).not.toHaveBeenCalled()
+    expect(nextView.coordsAtPos).toHaveBeenCalledOnce()
   })
 
   it('pauses typewriter scrolling until an IME composition ends', () => {

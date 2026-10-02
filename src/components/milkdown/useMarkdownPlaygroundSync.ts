@@ -8,7 +8,7 @@ import type {
   MarkdownEditorProps,
   ThrottledMarkdownUpdate,
 } from '@/components/milkdown/markdownEditorTypes'
-import type { PendingExternalValue } from '@/components/milkdown/editorActions'
+import type { PendingRevisionExternalValue } from '@/components/milkdown/editorActions'
 
 type UseMarkdownPlaygroundSyncOptions = Pick<
   MarkdownEditorProps,
@@ -18,13 +18,14 @@ type UseMarkdownPlaygroundSyncOptions = Pick<
   activePathRef: RefObject<string | null>
   applyingExternalValueRef: RefObject<boolean>
   crepeRef: RefObject<Crepe | null>
+  documentRevisionRef: RefObject<number>
   latestValuePathRef: RefObject<string | null>
   latestValueRef: RefObject<string>
   markdownSnapshotSchedulerRef: RefObject<{ flush: () => void } | null>
   isComposingRef: RefObject<boolean>
   onCalendarFileCreateRef: RefObject<MarkdownEditorProps['onCalendarFileCreate']>
   onChangeRef: RefObject<MarkdownEditorProps['onChange']>
-  pendingExternalValueRef: RefObject<PendingExternalValue | null>
+  pendingExternalValueRef: RefObject<PendingRevisionExternalValue | null>
   rootRef: RefObject<HTMLDivElement | null>
   throttledMarkdownUpdateRef: RefObject<ThrottledMarkdownUpdate | null>
 }
@@ -35,6 +36,7 @@ export const useMarkdownPlaygroundSync = ({
   activePathRef,
   applyingExternalValueRef,
   crepeRef,
+  documentRevisionRef,
   latestValuePathRef,
   latestValueRef,
   markdownSnapshotSchedulerRef,
@@ -48,7 +50,8 @@ export const useMarkdownPlaygroundSync = ({
   throttledMarkdownUpdateRef,
   value,
 }: UseMarkdownPlaygroundSyncOptions) => {
-  const compositionBaseValueRef = useRef<string | null>(null)
+  const compositionBaseRevisionRef = useRef(0)
+  const compositionChangedRef = useRef(false)
 
   useLayoutEffect(() => {
     if (onChangeRef.current === onChange) return
@@ -69,8 +72,7 @@ export const useMarkdownPlaygroundSync = ({
 
     if (!documentChanged && valueChanged && crepe && isComposingRef.current) {
       pendingExternalValueRef.current = {
-        baseValue:
-          compositionBaseValueRef.current ?? readPlaygroundMarkdown(crepe, latestValueRef.current),
+        baseRevision: compositionBaseRevisionRef.current,
         path: activePath,
         value,
       }
@@ -114,22 +116,22 @@ export const useMarkdownPlaygroundSync = ({
 
     const handleCompositionStart = () => {
       isComposingRef.current = true
-      const crepe = crepeRef.current
-      compositionBaseValueRef.current = crepe
-        ? readPlaygroundMarkdown(crepe, latestValueRef.current)
-        : latestValueRef.current
+      compositionChangedRef.current = false
+      compositionBaseRevisionRef.current = documentRevisionRef.current
+    }
+    const handleCompositionUpdate = () => {
+      compositionChangedRef.current = true
     }
     const handleCompositionEnd = () => {
       isComposingRef.current = false
-      compositionBaseValueRef.current = null
+      const compositionChanged = compositionChangedRef.current
+      compositionChangedRef.current = false
       queueMicrotask(() => {
-        markdownSnapshotSchedulerRef.current?.flush()
-        throttledMarkdownUpdateRef.current?.flush()
         const pending = pendingExternalValueRef.current
         pendingExternalValueRef.current = null
         const crepe = crepeRef.current
         if (!pending || pending.path !== activePathRef.current || !crepe) return
-        if (readPlaygroundMarkdown(crepe, latestValueRef.current) !== pending.baseValue) return
+        if (compositionChanged || documentRevisionRef.current !== pending.baseRevision) return
 
         applyingExternalValueRef.current = true
         try {
@@ -143,21 +145,22 @@ export const useMarkdownPlaygroundSync = ({
     }
 
     root.addEventListener('compositionstart', handleCompositionStart)
+    root.addEventListener('compositionupdate', handleCompositionUpdate)
     root.addEventListener('compositionend', handleCompositionEnd)
     return () => {
       root.removeEventListener('compositionstart', handleCompositionStart)
+      root.removeEventListener('compositionupdate', handleCompositionUpdate)
       root.removeEventListener('compositionend', handleCompositionEnd)
     }
   }, [
     activePathRef,
     applyingExternalValueRef,
     crepeRef,
+    documentRevisionRef,
     isComposingRef,
     latestValuePathRef,
     latestValueRef,
-    markdownSnapshotSchedulerRef,
     pendingExternalValueRef,
     rootRef,
-    throttledMarkdownUpdateRef,
   ])
 }

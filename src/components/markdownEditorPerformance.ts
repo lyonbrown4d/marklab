@@ -1,31 +1,54 @@
 export type MarkdownEditorPerformancePolicy = {
   diagnostics: 'full' | 'disabled'
   deferInitialMount: boolean
+  largeDocumentMode: boolean
   updateThrottleMs: number
+  virtualizeDocument: boolean
 }
 
 const FULL_DIAGNOSTICS_MAX_CHARS = 500_000
+const VIRTUALIZED_DOCUMENT_MIN_CHARS = 250_000
 const DEFERRED_MOUNT_MIN_CHARS = 750_000
 const VERY_LARGE_DOCUMENT_MIN_CHARS = 4_000_000
+const LARGE_DOCUMENT_MIN_LINES = 2_000
+const DEFERRED_MOUNT_MIN_LINES = 5_000
+const VERY_LARGE_DOCUMENT_MIN_LINES = 10_000
+
+const countLogicalLines = (content: string) => {
+  let lines = 1
+  for (let index = 0; index < content.length; index += 1) {
+    if (content.charCodeAt(index) === 10) lines += 1
+  }
+  return lines
+}
 
 export const markdownEditorPerformancePolicy = (
-  contentLength: number,
+  content: number | string,
 ): MarkdownEditorPerformancePolicy => {
-  const normalizedLength = Math.max(0, contentLength)
+  const normalizedLength = Math.max(0, typeof content === 'number' ? content : content.length)
+  const lineCount = typeof content === 'string' ? countLogicalLines(content) : 1
+  const largeDocumentMode =
+    normalizedLength >= DEFERRED_MOUNT_MIN_CHARS || lineCount >= LARGE_DOCUMENT_MIN_LINES
+  const deferInitialMount =
+    normalizedLength >= DEFERRED_MOUNT_MIN_CHARS || lineCount >= DEFERRED_MOUNT_MIN_LINES
+  const veryLargeDocument =
+    normalizedLength >= VERY_LARGE_DOCUMENT_MIN_CHARS || lineCount >= VERY_LARGE_DOCUMENT_MIN_LINES
+  const virtualizeDocument =
+    normalizedLength >= VIRTUALIZED_DOCUMENT_MIN_CHARS || lineCount >= LARGE_DOCUMENT_MIN_LINES
   return {
-    diagnostics: normalizedLength <= FULL_DIAGNOSTICS_MAX_CHARS ? 'full' : 'disabled',
-    deferInitialMount: normalizedLength >= DEFERRED_MOUNT_MIN_CHARS,
-    updateThrottleMs:
-      normalizedLength >= VERY_LARGE_DOCUMENT_MIN_CHARS
-        ? 650
-        : normalizedLength >= DEFERRED_MOUNT_MIN_CHARS
-          ? 350
-          : 200,
+    diagnostics:
+      normalizedLength <= FULL_DIAGNOSTICS_MAX_CHARS && lineCount < LARGE_DOCUMENT_MIN_LINES
+        ? 'full'
+        : 'disabled',
+    deferInitialMount,
+    largeDocumentMode,
+    updateThrottleMs: veryLargeDocument ? 650 : deferInitialMount ? 350 : 200,
+    virtualizeDocument,
   }
 }
 
-export const waitForMarkdownEditorMount = (contentLength: number): Promise<void> | undefined => {
-  if (!markdownEditorPerformancePolicy(contentLength).deferInitialMount) return undefined
+export const waitForMarkdownEditorMount = (content: number | string): Promise<void> | undefined => {
+  if (!markdownEditorPerformancePolicy(content).deferInitialMount) return undefined
   return new Promise((resolve) => globalThis.setTimeout(resolve, 0))
 }
 

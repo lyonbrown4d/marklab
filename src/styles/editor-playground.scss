@@ -2,6 +2,7 @@
 @use './editor-playground/ai-inline-completion';
 @use './editor-playground/slash-menu';
 @use './editor-playground/selection-toolbar';
+@use './editor-playground/virtualized-document';
 
 @keyframes editor-menu-surface-enter {
   from {

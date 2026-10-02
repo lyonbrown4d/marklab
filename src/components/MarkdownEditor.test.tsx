@@ -18,6 +18,7 @@ const controllerMock = vi.hoisted(() => ({
   })),
   getMarkdown: vi.fn(() => 'current markdown'),
   getEditorView: vi.fn(() => null),
+  largeDocumentMode: false,
   aiDefaultProviderId: 'openai-main',
   runContextMenuAction: vi.fn(),
   shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
@@ -32,6 +33,7 @@ vi.mock('@/components/milkdown/useMarkdownPlaygroundController', () => ({
     focusEditor: controllerMock.focusEditor,
     getEditorView: controllerMock.getEditorView,
     getMarkdown: controllerMock.getMarkdown,
+    largeDocumentMode: controllerMock.largeDocumentMode,
     rootRef: { current: null },
     scrollAreaRef: { current: null },
     status: { phase: 'ready' },
@@ -173,10 +175,18 @@ describe('MarkdownEditor playground baseline', () => {
 
   beforeEach(() => {
     inlineAiMock.isOpen = false
+    controllerMock.largeDocumentMode = false
     controllerMock.focusEditor.mockClear()
     controllerMock.getMarkdown.mockClear()
     controllerMock.getContextMenuCapabilities.mockClear()
     controllerMock.runContextMenuAction.mockClear()
+  })
+
+  it('exposes large-document rendering mode on the editor surface', () => {
+    controllerMock.largeDocumentMode = true
+    renderEditor()
+
+    expect(document.querySelector('.crepe')).toHaveAttribute('data-large-document', 'true')
   })
 
   it('mounts the transient AI companion against the editor bridge', () => {

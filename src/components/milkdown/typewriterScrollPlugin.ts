@@ -13,9 +13,12 @@ const prefersReducedMotion = () => {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches
 }
 
-const isTypewriterEnabled = () => {
+const isTypewriterEnabled = (view: EditorView) => {
   if (typeof document === 'undefined') return false
-  return document.documentElement.dataset.immersiveTypewriter === 'true'
+  return (
+    document.documentElement.dataset.immersiveTypewriter === 'true' &&
+    view.dom.closest<HTMLElement>('.crepe')?.dataset.largeDocument !== 'true'
+  )
 }
 
 const isSmoothScrollEnabled = () => {
@@ -57,7 +60,7 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
   const scrollToSelection = () => {
     animationFrame = null
     if (
-      !isTypewriterEnabled() ||
+      !isTypewriterEnabled(view) ||
       view.composing ||
       !view.hasFocus() ||
       !view.state.selection.empty ||
@@ -99,10 +102,10 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
     update(nextView: EditorView, previousState?: EditorState) {
       view = nextView
       const nextHead = view.state.selection.head
-      const docChanged = previousState ? !view.state.doc.eq(previousState.doc) : false
+      const docChanged = previousState ? view.state.doc !== previousState.doc : false
       if (nextHead === lastHead && !docChanged) return
       lastHead = nextHead
-      if (!isTypewriterEnabled()) return
+      if (!isTypewriterEnabled(view)) return
       scheduleScroll()
     },
     destroy() {
