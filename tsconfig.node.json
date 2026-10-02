@@ -27,6 +27,7 @@
     "tailwind.config.ts",
     "postcss.config.ts",
     "playwright.electron.config.ts",
+    "playwright.performance.config.ts",
     "eslint.config.ts"
   ]
 }
