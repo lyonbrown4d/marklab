@@ -92,7 +92,11 @@ describe('LocalHistoryTimeline', () => {
     const onRestoreContent = vi.fn()
     renderTimeline(onRestoreContent)
 
-    fireEvent.click(await screen.findByRole('button', { name: /Preview version/ }))
+    const previewButton = await screen.findByRole('button', { name: /Preview version/ })
+    expect(localHistoryApi.read).not.toHaveBeenCalled()
+    expect(fsApi.readFile).not.toHaveBeenCalled()
+
+    fireEvent.click(previewButton)
     expect(await screen.findByTestId('history-diff')).toHaveTextContent('# Earlier')
     expect(screen.getByTestId('history-diff')).toHaveTextContent('# Current')
 

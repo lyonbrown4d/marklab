@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Node } from '@xyflow/react'
-import { mergeGraphNodePositions } from '@/logic/graphViewState'
+import {
+  hasGraphInteractionSinceLayoutRequest,
+  mergeDeferredGraphLayout,
+  mergeGraphNodePositions,
+} from '@/logic/graphViewState'
 
 type TestNodeData = {
   label: string
@@ -51,5 +55,55 @@ describe('mergeGraphNodePositions', () => {
       x: 320,
       y: 240,
     })
+  })
+})
+
+describe('mergeDeferredGraphLayout', () => {
+  it('preserves a position changed by the user while layout was loading', () => {
+    const requestedNodes = [createNode('a', 0, 0)]
+    const currentNodes = [{ ...createNode('a', 160, 90), dragging: true }]
+    const layoutNodes = [createNode('a', 320, 180)]
+
+    expect(mergeDeferredGraphLayout(layoutNodes, currentNodes, requestedNodes)).toEqual([
+      {
+        ...layoutNodes[0],
+        position: { x: 160, y: 90 },
+        selected: undefined,
+        dragging: true,
+      },
+    ])
+  })
+
+  it('applies the deferred layout when the current position is unchanged', () => {
+    const requestedNodes = [createNode('a', 0, 0)]
+    const currentNodes = [{ ...createNode('a', 0, 0), selected: true }]
+    const layoutNodes = [createNode('a', 320, 180)]
+
+    expect(mergeDeferredGraphLayout(layoutNodes, currentNodes, requestedNodes)).toEqual([
+      {
+        ...layoutNodes[0],
+        selected: true,
+        dragging: undefined,
+      },
+    ])
+  })
+})
+
+describe('hasGraphInteractionSinceLayoutRequest', () => {
+  it('detects position changes and active dragging', () => {
+    const requestedNodes = [createNode('a', 0, 0)]
+
+    expect(hasGraphInteractionSinceLayoutRequest([createNode('a', 0, 0)], requestedNodes)).toBe(
+      false,
+    )
+    expect(hasGraphInteractionSinceLayoutRequest([createNode('a', 5, 0)], requestedNodes)).toBe(
+      true,
+    )
+    expect(
+      hasGraphInteractionSinceLayoutRequest(
+        [{ ...createNode('a', 0, 0), dragging: true }],
+        requestedNodes,
+      ),
+    ).toBe(true)
   })
 })

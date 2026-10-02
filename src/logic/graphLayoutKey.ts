@@ -1,6 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
-import { createGraphNodeLayoutSignature } from '@/logic/graphLayout'
+import { createGraphNodeLayoutSignature } from '@/logic/graphLayoutMetrics'
 
 type LayoutHash = {
   low: number

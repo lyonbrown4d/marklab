@@ -1,16 +1,16 @@
 tasks:
   typecheck:
-    script: pnpm exec tsc -b && pnpm exec tsc -p tsconfig.scripts.json
+    command: pnpm exec tsc -b
     inputs:
       - tsconfig*.json
       - src/**/*
       - electron/**/*
       - scripts/**/*
-      - vite.config.ts
+      - '*.ts'
       - package.json
       - pnpm-lock.yaml
     options:
-      cache: false
+      cache: true
 
   test:
     command: pnpm exec vitest run
@@ -75,7 +75,8 @@ tasks:
     command: node --experimental-strip-types scripts/generate-app-icons.ts
     inputs:
       - scripts/generate-app-icons.ts
-      - src/assets/**/*
+      - public/marklab-dark.svg
+      - public/marklab.svg
     outputs:
       - resources/icons/**/*
 
@@ -113,7 +114,12 @@ tasks:
     inputs:
       - src/**/*
       - electron/**/*
-      - vite.config.ts
+      - public/**/*
+      - index.html
+      - vite*.ts
+      - postcss.config.ts
+      - tailwind.config.ts
+      - tsconfig*.json
       - package.json
       - pnpm-lock.yaml
     outputs:

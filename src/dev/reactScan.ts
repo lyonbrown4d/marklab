@@ -2,6 +2,7 @@ export const shouldEnableReactScan = (development: boolean, flag?: string): bool
   development && flag !== 'false'
 
 export const initializeReactScan = (development: boolean, flag?: string): void => {
+  if (!import.meta.env.DEV) return
   if (!shouldEnableReactScan(development, flag)) return
 
   void import('react-scan')

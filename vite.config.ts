@@ -1,12 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { rmSync } from 'node:fs'
 import path from 'node:path'
-import { constants as zlibConstants } from 'node:zlib'
 import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
-import { compression, defineAlgorithm } from 'vite-plugin-compression2'
 import { visualizer } from 'rollup-plugin-visualizer'
 // eslint-disable-next-line no-restricted-imports -- Root Vite helpers are outside renderer aliases.
 import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development.ts'
@@ -31,7 +29,6 @@ const alias = {
   '@electron': path.resolve(import.meta.dirname, 'electron'),
 }
 
-const distKatexFontsDir = path.resolve(import.meta.dirname, 'dist/fonts')
 const distElectronDir = path.resolve(import.meta.dirname, 'dist-electron')
 const distDesignPreviewAssets = [
   'logo-preview.html',
@@ -41,32 +38,6 @@ const distDesignPreviewAssets = [
 ]
 const DEFAULT_DEV_SERVER_PORT = 5173
 const DEFAULT_DEV_SERVER_HOST = '127.0.0.1'
-
-const resolveKatexFontsDir = (): string | null => {
-  const hoistedFontsDir = path.resolve(import.meta.dirname, 'node_modules/katex/dist/fonts')
-  if (existsSync(hoistedFontsDir)) return hoistedFontsDir
-
-  const pnpmDir = path.resolve(import.meta.dirname, 'node_modules/.pnpm')
-  if (!existsSync(pnpmDir)) return null
-
-  const candidates = readdirSync(pnpmDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('katex@'))
-    .map((entry) => path.resolve(pnpmDir, entry.name, 'node_modules/katex/dist/fonts'))
-    .filter(existsSync)
-    .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
-
-  return candidates[0] ?? null
-}
-
-const copyKatexFontsPlugin = () => ({
-  name: 'copy-katex-fonts',
-  writeBundle() {
-    const source = resolveKatexFontsDir()
-    if (!source) return
-    mkdirSync(distKatexFontsDir, { recursive: true })
-    cpSync(source, distKatexFontsDir, { recursive: true })
-  },
-})
 
 const removeDesignPreviewAssetsPlugin = () => ({
   name: 'remove-design-preview-assets',
@@ -98,12 +69,8 @@ export default defineConfig(({ command, mode }) => {
   const isPerf = mode === 'perf'
   const isElectron = mode === 'electron'
   const shouldAnalyze = isBuild && (mode === 'analyze' || isEnabled(process.env.MARKLAB_ANALYZE))
-  const shouldCompress =
-    isBuild && !isElectron && (mode === 'compressed' || isEnabled(process.env.MARKLAB_COMPRESS))
   const shouldReportCompressedSize =
-    mode === 'analyze' ||
-    mode === 'compressed' ||
-    isEnabled(process.env.MARKLAB_REPORT_COMPRESSED_SIZE)
+    mode === 'analyze' || isEnabled(process.env.MARKLAB_REPORT_COMPRESSED_SIZE)
   const shouldUseReactCompiler =
     isBuild && (mode === 'compiler' || isEnabled(process.env.MARKLAB_REACT_COMPILER))
   const devServerPort = isServe
@@ -171,21 +138,6 @@ export default defineConfig(({ command, mode }) => {
             },
           },
         }),
-      shouldCompress &&
-        compression({
-          include: /\.(html|xml|css|json|js|mjs|svg|wasm)$/,
-          threshold: 10 * 1024,
-          deleteOriginalAssets: false,
-          skipIfLargerOrEqual: true,
-          algorithms: [
-            defineAlgorithm('gzip', { level: 9 }),
-            defineAlgorithm('brotliCompress', {
-              params: {
-                [zlibConstants.BROTLI_PARAM_QUALITY]: 11,
-              },
-            }),
-          ],
-        }),
       shouldAnalyze &&
         visualizer({
           brotliSize: true,
@@ -196,7 +148,6 @@ export default defineConfig(({ command, mode }) => {
         }),
       isServe && !isPerf && !process.env.VITEST && TurboConsole({/* options here */}),
       isBuild && removeDesignPreviewAssetsPlugin(),
-      isBuild && copyKatexFontsPlugin(),
     ].filter(Boolean),
     resolve: {
       alias,
@@ -237,7 +188,7 @@ export default defineConfig(({ command, mode }) => {
           manualChunks(id) {
             const normalizedId = id.replaceAll('\\', '/')
             if (!isNodeModule(normalizedId)) return undefined
-            if (normalizedId.includes('react-scan')) return 'dev-react-scan'
+            if (normalizedId.includes('/node_modules/lodash-es/')) return 'vendor-lodash'
             if (includesAny(normalizedId, ['reactflow', '@xyflow/react', '@xyflow/system'])) {
               return 'vendor-graph'
             }

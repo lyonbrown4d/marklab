@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
-import { getGraphNodeLayoutSize, layoutGraphWithElk } from '@/logic/graphLayout'
+import { layoutGraphWithElk } from '@/logic/graphLayout'
+import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 import type { GraphNodeData } from '@/logic/graph'
 
 const node = (

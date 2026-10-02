@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { CompletionList, Diagnostic, Position, Range } from 'vscode-languageserver-types'
+import type { CompletionList, Diagnostic } from 'vscode-languageserver-types'
 
 export const LANGUAGE_DOCUMENT_MAX_TEXT_LENGTH = 16 * 1024 * 1024
 export const LANGUAGE_DOCUMENT_MAX_CHANGE_TEXT_LENGTH = 4 * 1024 * 1024
@@ -83,9 +83,6 @@ export const languageDiagnosticsRequestSchema = z
   .strict()
 
 export type LanguageDocumentOpenRequest = z.infer<typeof languageDocumentOpenRequestSchema>
-export type LanguageDocumentIncrementalChange = z.infer<
-  typeof languageDocumentIncrementalChangeSchema
->
 export type LanguageDocumentChangeRequest = z.infer<typeof languageDocumentChangeRequestSchema>
 export type LanguageDocumentCloseRequest = z.infer<typeof languageDocumentCloseRequestSchema>
 export type LanguageCompletionRequest = z.infer<typeof languageCompletionRequestSchema>
@@ -101,6 +98,3 @@ export type LanguageIntelligenceApi = {
   completion: (request: LanguageCompletionRequest) => Promise<CompletionList>
   diagnostics: (request: LanguageDiagnosticsRequest) => Promise<Diagnostic[]>
 }
-
-export type LanguagePosition = Position
-export type LanguageRange = Range

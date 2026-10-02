@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, Clock3, History, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,11 +15,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import LocalHistoryPreviewBoundary from '@/components/local-history/LocalHistoryPreviewBoundary'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import LocalHistoryPreviewDialog from '@/components/local-history/LocalHistoryPreviewDialog'
 import { localHistoryApi, type LocalHistoryEntry } from '@/services/localHistoryApi'
+
+const createLocalHistoryPreviewDialog = () =>
+  lazy(() => import('@/components/local-history/LocalHistoryPreviewDialog'))
 
 type ConfirmRequest = { kind: 'restore' | 'delete'; entry: LocalHistoryEntry } | { kind: 'clear' }
 
@@ -33,6 +43,9 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(true)
   const [selectedEntry, setSelectedEntry] = useState<LocalHistoryEntry | null>(null)
+  const [LocalHistoryPreviewDialog, setLocalHistoryPreviewDialog] = useState(
+    createLocalHistoryPreviewDialog,
+  )
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
   const listQuery = useQuery({
     queryKey: ['local-history', path],
@@ -68,6 +81,10 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
   })
   const entries = listQuery.data ?? []
   const confirmLabels = getConfirmLabels(confirmRequest, t)
+  const closePreview = () => {
+    setSelectedEntry(null)
+    setLocalHistoryPreviewDialog(createLocalHistoryPreviewDialog)
+  }
 
   return (
     <>
@@ -161,16 +178,42 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
         </CollapsibleContent>
       </Collapsible>
 
-      <LocalHistoryPreviewDialog
-        entry={selectedEntry}
-        open={Boolean(selectedEntry)}
-        path={path}
-        onDelete={(entry) => setConfirmRequest({ kind: 'delete', entry })}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) setSelectedEntry(null)
-        }}
-        onRestore={(entry) => setConfirmRequest({ kind: 'restore', entry })}
-      />
+      {selectedEntry ? (
+        <LocalHistoryPreviewBoundary
+          closeLabel={t('actions.close')}
+          description={t('localHistory.previewDescription')}
+          errorTitle={t('localHistory.previewFailed')}
+          path={path}
+          retryLabel={t('actions.retry')}
+          onClose={closePreview}
+          onRetry={() => setLocalHistoryPreviewDialog(createLocalHistoryPreviewDialog)}
+        >
+          <Suspense
+            fallback={
+              <LocalHistoryPreviewFallback
+                path={path}
+                onOpenChange={(nextOpen) => {
+                  if (!nextOpen) closePreview()
+                }}
+                title={t('localHistory.previewTitle')}
+                description={t('localHistory.previewDescription')}
+                loadingLabel={t('localHistory.loading')}
+              />
+            }
+          >
+            <LocalHistoryPreviewDialog
+              entry={selectedEntry}
+              open
+              path={path}
+              onDelete={(entry) => setConfirmRequest({ kind: 'delete', entry })}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) closePreview()
+              }}
+              onRestore={(entry) => setConfirmRequest({ kind: 'restore', entry })}
+            />
+          </Suspense>
+        </LocalHistoryPreviewBoundary>
+      ) : null}
 
       <AlertDialog
         open={Boolean(confirmRequest)}
@@ -204,6 +247,38 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
     </>
   )
 }
+
+type LocalHistoryPreviewFallbackProps = {
+  description: string
+  loadingLabel: string
+  path: string
+  title: string
+  onOpenChange: (open: boolean) => void
+}
+
+const LocalHistoryPreviewFallback = ({
+  description,
+  loadingLabel,
+  path,
+  title,
+  onOpenChange,
+}: LocalHistoryPreviewFallbackProps) => (
+  <Dialog open onOpenChange={onOpenChange}>
+    <DialogContent className="flex h-[min(78vh,760px)] max-w-[min(94vw,1120px)] flex-col gap-0 overflow-hidden p-0">
+      <DialogHeader className="shrink-0 border-b border-border/70 px-5 py-4 pr-12">
+        <DialogTitle className="text-base">{title}</DialogTitle>
+        <DialogDescription className="truncate">
+          {description} · {path}
+        </DialogDescription>
+      </DialogHeader>
+      <div role="status" aria-label={loadingLabel} className="min-h-0 flex-1 space-y-3 p-6">
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    </DialogContent>
+  </Dialog>
+)
 
 const formatDate = (value: string, formatter: Intl.DateTimeFormat) => {
   const date = new Date(value)

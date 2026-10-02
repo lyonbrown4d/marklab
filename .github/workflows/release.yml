@@ -54,13 +54,13 @@ jobs:
         include:
           - name: linux
             os: ubuntu-22.04
-            command: pnpm build:desktop && pnpm exec electron-builder --linux --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
+            command: pnpm electron:build && pnpm exec electron-builder --linux --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
           - name: macos
             os: macos-latest
-            command: pnpm build:desktop && pnpm exec electron-builder --mac --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
+            command: pnpm electron:build && pnpm exec electron-builder --mac --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
           - name: windows
             os: windows-latest
-            command: pnpm build:desktop && pnpm exec electron-builder --win --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
+            command: pnpm electron:build && pnpm exec electron-builder --win --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
     steps:
       - name: Checkout
         uses: actions/checkout@v4

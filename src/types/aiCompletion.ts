@@ -27,7 +27,6 @@ export const aiInlineCompletionStartResultSchema = z
   .object({ requestId: z.string().min(1).max(128) })
   .strict()
 
-export type AiCompletionLanguage = z.infer<typeof aiCompletionLanguageSchema>
 export type AiCompletionLength = z.infer<typeof aiCompletionLengthSchema>
 export type AiInlineCompletionRequest = z.infer<typeof aiInlineCompletionRequestSchema>
 export type AiInlineCompletionStartResult = z.infer<typeof aiInlineCompletionStartResultSchema>

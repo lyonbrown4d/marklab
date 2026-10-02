@@ -1,8 +1,11 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { Node } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
-import { layoutGraphWithElk } from '@/logic/graphLayout'
-import { mergeGraphNodePositions } from '@/logic/graphViewState'
+import {
+  hasGraphInteractionSinceLayoutRequest,
+  mergeDeferredGraphLayout,
+  mergeGraphNodePositions,
+} from '@/logic/graphViewState'
 import type { GraphContentMode } from '@/store/appTypes'
 import { fitViewOptions, type GraphFlowInstance } from '@/pages/graph/graphPageConfig'
 
@@ -25,11 +28,12 @@ export const useGraphAutoLayout = ({
   onUpdateHeadingTitle,
   setNodes,
 }: UseGraphAutoLayoutOptions) => {
-  const layoutKeyRef = useRef<string | undefined>(undefined)
+  const requestedLayoutKeyRef = useRef<string | undefined>(undefined)
+  const appliedLayoutKeyRef = useRef<string | undefined>(undefined)
   const layoutRunRef = useRef(0)
 
   useEffect(() => {
-    const preservePositions = layoutKeyRef.current === graph.layoutKey
+    const preservePositions = requestedLayoutKeyRef.current === graph.layoutKey
     const nextNodes = graph.nodes.map((node) => ({
       ...node,
       data: {
@@ -41,20 +45,41 @@ export const useGraphAutoLayout = ({
       },
     }))
     setNodes((currentNodes) => mergeGraphNodePositions(nextNodes, currentNodes, preservePositions))
-    layoutKeyRef.current = graph.layoutKey
+    requestedLayoutKeyRef.current = graph.layoutKey
 
-    if (preservePositions) return undefined
+    if (preservePositions && appliedLayoutKeyRef.current === graph.layoutKey) return undefined
 
     const layoutRun = layoutRunRef.current + 1
     layoutRunRef.current = layoutRun
     let cancelled = false
+    const requestedViewport = flowInstance?.getViewport()
 
-    void layoutGraphWithElk(nextNodes, graph.edges)
+    void import('@/logic/graphLayout')
+      .then(({ layoutGraphWithElk }) => layoutGraphWithElk(nextNodes, graph.edges))
       .then((layoutNodes) => {
         if (cancelled || layoutRunRef.current !== layoutRun) return
-        setNodes((currentNodes) => mergeGraphLayoutMetadata(layoutNodes, currentNodes))
+        appliedLayoutKeyRef.current = graph.layoutKey
+        let graphInteractionChanged = hasGraphInteractionSinceLayoutRequest(
+          flowInstance?.getNodes() ?? [],
+          nextNodes,
+        )
+        setNodes((currentNodes) => {
+          graphInteractionChanged ||= hasGraphInteractionSinceLayoutRequest(currentNodes, nextNodes)
+          return mergeDeferredGraphLayout(layoutNodes, currentNodes, nextNodes)
+        })
         window.requestAnimationFrame(() => {
-          if (!cancelled && layoutRunRef.current === layoutRun) {
+          const currentViewport = flowInstance?.getViewport()
+          const viewportChanged =
+            Boolean(requestedViewport && currentViewport) &&
+            (requestedViewport?.x !== currentViewport?.x ||
+              requestedViewport?.y !== currentViewport?.y ||
+              requestedViewport?.zoom !== currentViewport?.zoom)
+          if (
+            !cancelled &&
+            layoutRunRef.current === layoutRun &&
+            !graphInteractionChanged &&
+            !viewportChanged
+          ) {
             flowInstance?.fitView(fitViewOptions)
           }
         })
@@ -77,15 +102,4 @@ export const useGraphAutoLayout = ({
     onUpdateHeadingTitle,
     setNodes,
   ])
-}
-
-const mergeGraphLayoutMetadata = (
-  layoutNodes: Node<GraphNodeData>[],
-  currentNodes: Node<GraphNodeData>[],
-) => {
-  const currentById = new Map(currentNodes.map((node) => [node.id, node]))
-  return layoutNodes.map((node) => {
-    const current = currentById.get(node.id)
-    return current ? { ...node, selected: current.selected, dragging: current.dragging } : node
-  })
 }

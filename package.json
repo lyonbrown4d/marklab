@@ -31,7 +31,6 @@
     "dev": "moon run desktop:electron-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
-    "build:compressed": "pnpm typecheck && vite build --mode compressed",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "icons:generate": "node --experimental-strip-types scripts/generate-app-icons.ts",
     "desktop:prepare": "moon run desktop:prepare",
@@ -54,7 +53,7 @@
     "test": "moon run desktop:test",
     "test:knowledge:integration": "moon run desktop:test-knowledge-integration",
     "test:ui": "vitest run .integration.test.",
-    "test:electron": "pnpm test:electron:build && node -e \"setTimeout(() => process.exit(0), 3000)\" && pnpm test:electron:run",
+    "test:electron": "pnpm test:electron:build && pnpm test:electron:run",
     "test:electron:build": "pnpm icons:generate && pnpm exec vite build --mode electron",
     "test:electron:run": "node --experimental-strip-types scripts/run-electron-e2e.ts",
     "test:integration": "pnpm test:ui && pnpm test:electron",
@@ -78,6 +77,10 @@
   "build": {
     "appId": "app.marklab.desktop",
     "productName": "Marklab",
+    "electronLanguages": [
+      "en-US",
+      "zh-CN"
+    ],
     "asar": true,
     "asarUnpack": [
       "node_modules/@parcel/watcher*/**/*",
@@ -113,6 +116,9 @@
       "node_modules/@node-llama-cpp/${os}-${arch}-metal/**/*",
       "node_modules/{@huggingface,@isaacs,@kwsites,@reflink,@simple-git,@tinyhttp}/**/*",
       "node_modules/{ansi-escapes,ansi-regex,ansi-styles,async-retry,bytes,chalk,chmodrp,chownr,ci-info,cli-cursor,cli-spinners,cliui,cmake-js,color-convert,color-name,commander,cross-spawn,debug,deep-extend,emoji-regex,env-var,escalade,eventemitter3,filename-reserved-regex,filenamify,fs-extra,get-caller-file,graceful-fs,ignore,ini,ipull,is-fullwidth-code-point,is-interactive,is-unicode-supported,isexe,jsonfile,lifecycle-utils,lodash.debounce,log-symbols,lowdb,mimic-function,minimist,minipass,minizlib,ms,nanoid,node-api-headers,onetime,ora,parse-ms,path-key,pretty-bytes,pretty-ms,proper-lockfile,rc,require-directory,restore-cursor,retry,semver,shebang-command,shebang-regex,signal-exit,simple-git,sleep-promise,slice-ansi,stdin-discarder,stdout-update,steno,string-width,strip-ansi,strip-json-comments,tar,universalify,url-join,validate-npm-package-name,which,wrap-ansi,y18n,yallist,yargs,yargs-parser,yoctocolors}/**/*",
+      "!dist/**/*.map",
+      "!dist-electron/**/*.map",
+      "!node_modules/node-llama-cpp/llama/**/*",
       "package.json"
     ],
     "npmRebuild": false,
@@ -225,7 +231,6 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@radix-ui/react-label": "^2.1.15",
-    "@radix-ui/react-menubar": "^1.1.24",
     "@radix-ui/react-popover": "^1.1.23",
     "@radix-ui/react-progress": "^1.1.16",
     "@radix-ui/react-scroll-area": "^1.2.18",
@@ -288,6 +293,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.3.0",
     "react-dropzone": "^20.1.2",
+    "react-error-boundary": "^6.1.6",
     "react-hook-form": "^7.89.0",
     "react-i18next": "^17.0.15",
     "react-pdf": "11.0.0",
@@ -359,7 +365,6 @@
     "typescript-eslint": "8.71.0",
     "unplugin-turbo-console": "^2.3.3",
     "vite": "8.3.1",
-    "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-electron": "^1.1.2",
     "vite-plugin-electron-renderer": "^1.0.0",
     "vitest": "^5.0.2"

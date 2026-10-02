@@ -7,7 +7,7 @@ import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
-import { getGraphNodeLayoutSize } from '@/logic/graphLayout'
+import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 
 export type GraphNodeData = Record<string, unknown> & {
   label: string
