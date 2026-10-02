@@ -101,6 +101,16 @@ describe('Markdown table editing', () => {
     expect(commands.addRowAfter).toHaveBeenCalledTimes(1)
   })
 
+  it('leaves table navigation keys to an active IME', () => {
+    const commands = createCommands()
+    const event = new KeyboardEvent('keydown', { key: 'Tab' })
+    Object.defineProperty(event, 'keyCode', { value: 229 })
+
+    expect(handleMarkdownTableKeydown(createView(), event, commands)).toBe(false)
+    expect(commands.goToNextCell).not.toHaveBeenCalled()
+    expect(commands.addRowAfter).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['add-row', 'addRowAfter'],
     ['delete-row', 'deleteRow'],

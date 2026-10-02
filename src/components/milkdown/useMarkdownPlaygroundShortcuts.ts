@@ -58,10 +58,28 @@ type PlaygroundShortcutState = ReturnType<typeof resolvePlaygroundShortcutBindin
   onUrlInsert: PlaygroundShortcutOptions['onUrlInsert']
 }
 
-export const createMarkdownPlaygroundShortcutPlugin = (getState: () => PlaygroundShortcutState) =>
-  new Plugin({
+const POST_COMPOSITION_ENTER_GUARD_MS = 500
+
+export const createMarkdownPlaygroundShortcutPlugin = (getState: () => PlaygroundShortcutState) => {
+  let compositionEndedAt = Number.NEGATIVE_INFINITY
+  let hasPendingCompositionEnter = false
+
+  return new Plugin({
     props: {
       handleDOMEvents: {
+        compositionend: (view, event) => {
+          const target = event.target
+          if (
+            view.editable &&
+            view.hasFocus() &&
+            target instanceof Element &&
+            view.dom.contains(target)
+          ) {
+            compositionEndedAt = Date.now()
+            hasPendingCompositionEnter = true
+          }
+          return false
+        },
         keydown: (view, event) => {
           const state = getState()
           const target = event.target
@@ -81,6 +99,18 @@ export const createMarkdownPlaygroundShortcutPlugin = (getState: () => Playgroun
           )
             return false
           if (state.crepe.editor.action((ctx) => ctx.get(editorViewCtx)) !== view) return false
+
+          if (hasPendingCompositionEnter) {
+            hasPendingCompositionEnter = false
+            if (
+              event.key === 'Enter' &&
+              Date.now() - compositionEndedAt <= POST_COMPOSITION_ENTER_GUARD_MS
+            ) {
+              event.preventDefault()
+              event.stopPropagation()
+              return true
+            }
+          }
 
           const match = state.bindings.find(({ hotkey }) =>
             matchesKeyboardEvent(event, hotkey, state.platform),
@@ -106,6 +136,7 @@ export const createMarkdownPlaygroundShortcutPlugin = (getState: () => Playgroun
       },
     },
   })
+}
 
 export const useMarkdownPlaygroundShortcuts = ({
   crepeRef,

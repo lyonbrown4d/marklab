@@ -235,4 +235,27 @@ describe('useMarkdownPlaygroundController', () => {
 
     expect(onChange).not.toHaveBeenCalled()
   })
+
+  it('does not replace an active IME composition with a controlled value update', async () => {
+    const onChange = vi.fn()
+    const { container, rerender } = render(
+      <Harness activePath="docs/first.md" onChange={onChange} value="Before" />,
+    )
+    await act(async () => {})
+    const root = container.firstElementChild as HTMLElement
+    const crepe = crepeMock.latestInstance()!
+
+    act(() => root.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true })))
+    crepe.markdown = '正在输入'
+    rerender(<Harness activePath="docs/first.md" onChange={onChange} value="Remote update" />)
+
+    expect(crepe.getMarkdown()).toBe('正在输入')
+
+    await act(async () => {
+      root.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }))
+      await Promise.resolve()
+    })
+
+    expect(crepe.getMarkdown()).toBe('正在输入')
+  })
 })

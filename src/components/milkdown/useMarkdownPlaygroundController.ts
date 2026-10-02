@@ -14,6 +14,7 @@ import {
   relocateFixedDropIndicatorToViewportRoot,
   replaceMarkdownLikePlayground,
 } from '@/components/milkdown/markdownPlaygroundActions'
+import type { PendingExternalValue } from '@/components/milkdown/editorActions'
 import type {
   MarkdownEditorStatus,
   MarkdownPlaygroundControllerOptions,
@@ -52,6 +53,8 @@ export const useMarkdownPlaygroundController = ({
   const activePathRef = useRef(activePath)
   const activePathListenersRef = useRef(new Set<() => void>())
   const applyingExternalValueRef = useRef(false)
+  const isComposingRef = useRef(false)
+  const pendingExternalValueRef = useRef<PendingExternalValue | null>(null)
   const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
   const [codeBlockTheme] = useState(createMarkdownCodeBlockTheme)
   const urlDialog = useSlashUrlDialog(activePath)
@@ -83,10 +86,13 @@ export const useMarkdownPlaygroundController = ({
     latestValuePathRef,
     latestValueRef,
     markdownSnapshotSchedulerRef,
+    isComposingRef,
     onCalendarFileCreate,
     onCalendarFileCreateRef,
     onChange,
     onChangeRef,
+    pendingExternalValueRef,
+    rootRef,
     throttledMarkdownUpdateRef,
     value,
   })

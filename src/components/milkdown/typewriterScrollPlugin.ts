@@ -58,6 +58,7 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
     animationFrame = null
     if (
       !isTypewriterEnabled() ||
+      view.composing ||
       !view.hasFocus() ||
       !view.state.selection.empty ||
       isTypewriterScrollLocked(view)
@@ -91,6 +92,9 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
     animationFrame = window.requestAnimationFrame(scrollToSelection)
   }
 
+  const handleCompositionEnd = () => scheduleScroll()
+  view.dom.addEventListener('compositionend', handleCompositionEnd)
+
   return {
     update(nextView: EditorView, previousState?: EditorState) {
       view = nextView
@@ -102,6 +106,7 @@ export const createTypewriterScrollView = (initialView: EditorView) => {
       scheduleScroll()
     },
     destroy() {
+      view.dom.removeEventListener('compositionend', handleCompositionEnd)
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame)
         animationFrame = null

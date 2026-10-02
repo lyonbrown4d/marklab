@@ -44,7 +44,7 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
   const updateCaret = () => {
     animationFrame = null
     const { selection } = view.state
-    if (!isAnimatedCursorEnabled() || !selection.empty || !view.hasFocus()) {
+    if (!isAnimatedCursorEnabled() || view.composing || !selection.empty || !view.hasFocus()) {
       setVisible(false)
       return
     }
@@ -71,11 +71,14 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
 
   const handleFocus = () => scheduleUpdate()
   const handleBlur = () => scheduleUpdate()
+  const handleComposition = () => scheduleUpdate()
   const handleScroll = () => scheduleUpdate()
   const handleResize = () => scheduleUpdate()
 
   view.dom.addEventListener('focus', handleFocus)
   view.dom.addEventListener('blur', handleBlur)
+  view.dom.addEventListener('compositionstart', handleComposition)
+  view.dom.addEventListener('compositionend', handleComposition)
   scrollHost?.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', handleResize)
   scheduleUpdate()
@@ -100,6 +103,8 @@ export const createAnimatedCursorView = (initialView: EditorView) => {
       view.dom.classList.remove('marklab-animated-cursor-host')
       view.dom.removeEventListener('focus', handleFocus)
       view.dom.removeEventListener('blur', handleBlur)
+      view.dom.removeEventListener('compositionstart', handleComposition)
+      view.dom.removeEventListener('compositionend', handleComposition)
       scrollHost?.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleResize)
       caret.remove()

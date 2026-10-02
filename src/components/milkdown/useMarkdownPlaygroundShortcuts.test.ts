@@ -176,6 +176,28 @@ describe('playground shortcuts with real ProseMirror keyboard events', () => {
     expect(view.dispatch).not.toHaveBeenCalled()
   })
 
+  it('consumes only the Enter that confirms a composition before native keymaps can split it', () => {
+    const compositionEnd = new CompositionEvent('compositionend', { bubbles: true })
+    Object.defineProperty(compositionEnd, 'target', { value: view.dom })
+    expect(plugin.props.handleDOMEvents?.compositionend?.call(plugin, view, compositionEnd)).toBe(
+      false,
+    )
+
+    const confirmation = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+    })
+    Object.defineProperty(confirmation, 'target', { value: view.dom })
+    expect(plugin.props.handleDOMEvents?.keydown?.call(plugin, view, confirmation)).toBe(true)
+    expect(confirmation.defaultPrevented).toBe(true)
+    expect(view.dispatch).not.toHaveBeenCalled()
+
+    const intentionalEnter = new KeyboardEvent('keydown', { cancelable: true, key: 'Enter' })
+    Object.defineProperty(intentionalEnter, 'target', { value: view.dom })
+    expect(plugin.props.handleDOMEvents?.keydown?.call(plugin, view, intentionalEnter)).toBe(false)
+  })
+
   it('does not act when the editor is unfocused or the bridge is disabled', () => {
     const input = document.createElement('input')
     root.append(input)

@@ -13,6 +13,7 @@ const createState = (head: number) => ({
 })
 
 type TestView = {
+  composing: boolean
   coordsAtPos: ReturnType<typeof vi.fn>
   dom: HTMLElement
   dragging?: unknown
@@ -24,6 +25,7 @@ const asEditorView = (view: TestView) => view as never
 
 const createView = (dom: HTMLElement, extra: Partial<TestView> = {}): TestView => {
   return {
+    composing: false,
     coordsAtPos: vi.fn(() => ({ bottom: 124, left: 40, right: 42, top: 104 })),
     dom,
     hasFocus: () => true,
@@ -146,5 +148,27 @@ describe('typewriterScrollPlugin', () => {
 
     expect(requestAnimationFrame).not.toHaveBeenCalled()
     expect(nextView.coordsAtPos).not.toHaveBeenCalled()
+  })
+
+  it('pauses typewriter scrolling until an IME composition ends', () => {
+    const callbacks: FrameRequestCallback[] = []
+    window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    const { editor, viewport } = createEditorDom()
+    const initialView = createView(editor, { state: createState(1) })
+    const nextView = createView(editor, { composing: true, state: createState(2) })
+    const pluginView = createTypewriterScrollView(asEditorView(initialView))
+
+    pluginView.update(asEditorView(nextView))
+    callbacks.shift()?.(0)
+    expect(viewport.scrollTo).not.toHaveBeenCalled()
+
+    nextView.composing = false
+    editor.dispatchEvent(new CompositionEvent('compositionend'))
+    callbacks.shift()?.(0)
+    expect(viewport.scrollTo).toHaveBeenCalledOnce()
+    pluginView.destroy()
   })
 })

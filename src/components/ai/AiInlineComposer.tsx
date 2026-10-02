@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 export type AiComposerPhase =
   'loading-provider' | 'prompt' | 'starting' | 'streaming' | 'proposal' | 'error'
@@ -99,14 +100,14 @@ export const AiInlineComposer = ({
   }
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter') return
+    if (event.key !== 'Enter' || isImeKeyboardEvent(event.nativeEvent)) return
     event.preventDefault()
     const nextInstruction = instruction.trim()
     if (nextInstruction && !inputDisabled) onSubmit(nextInstruction)
   }
 
   const handlePanelKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && !isImeKeyboardEvent(event.nativeEvent)) {
       event.preventDefault()
       event.stopPropagation()
       onDismiss()

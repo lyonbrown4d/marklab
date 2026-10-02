@@ -46,4 +46,30 @@ describe('animatedCursorPlugin', () => {
     expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
     pluginView.destroy()
   })
+
+  it('yields to the native caret while an IME composition is active', () => {
+    const callbacks: FrameRequestCallback[] = []
+    window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    window.cancelAnimationFrame = vi.fn()
+    const view = { ...createView(), composing: false }
+    const pluginView = createAnimatedCursorView(view as never)
+    const caret = document.querySelector('.marklab-animated-caret')
+
+    callbacks.shift()?.(0)
+    expect(caret).toHaveClass('is-visible')
+
+    view.composing = true
+    view.dom.dispatchEvent(new CompositionEvent('compositionstart'))
+    callbacks.shift()?.(0)
+    expect(caret).not.toHaveClass('is-visible')
+
+    view.composing = false
+    view.dom.dispatchEvent(new CompositionEvent('compositionend'))
+    callbacks.shift()?.(0)
+    expect(caret).toHaveClass('is-visible')
+    pluginView.destroy()
+  })
 })

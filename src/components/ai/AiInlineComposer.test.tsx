@@ -85,6 +85,30 @@ describe('AiInlineComposer', () => {
     expect(baseProps.onQuickAction).toHaveBeenCalledWith('concise')
   })
 
+  it('does not submit while Enter is confirming an IME composition', () => {
+    const onSubmit = vi.fn()
+    render(<AiInlineComposer {...baseProps} instruction="重写这一段" onSubmit={onSubmit} />)
+
+    const input = screen.getByRole('textbox', { name: labels.instruction })
+    fireEvent.compositionStart(input)
+    fireEvent.keyDown(input, { isComposing: true, key: 'Enter', keyCode: 229 })
+
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('does not dismiss while Escape is cancelling an IME candidate', () => {
+    const onDismiss = vi.fn()
+    render(<AiInlineComposer {...baseProps} instruction="重写这一段" onDismiss={onDismiss} />)
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: labels.instruction }), {
+      isComposing: true,
+      key: 'Escape',
+      keyCode: 229,
+    })
+
+    expect(onDismiss).not.toHaveBeenCalled()
+  })
+
   it('shows a visible stop action while output is streaming', () => {
     const onStop = vi.fn()
     render(

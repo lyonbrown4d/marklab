@@ -85,6 +85,24 @@ describe('slash URL dialog', () => {
     },
   )
 
+  it('does not submit a link while Enter is confirming IME text', async () => {
+    const request = createRequest()
+    const user = userEvent.setup()
+    render(<Harness request={request} />)
+    await user.click(screen.getByText('Open'))
+    const input = screen.getByLabelText(labels.linkUrlPrompt)
+    await user.type(input, './中文')
+
+    fireEvent.compositionStart(input)
+    await act(async () => {
+      fireEvent.keyDown(input, { isComposing: true, key: 'Enter', keyCode: 229 })
+      await Promise.resolve()
+    })
+
+    expect(request.insert).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   it('rejects whitespace, displays insertion errors, and allows retry', async () => {
     const request = createRequest()
     vi.mocked(request.insert).mockImplementationOnce(() => {

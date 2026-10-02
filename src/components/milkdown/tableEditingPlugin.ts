@@ -12,6 +12,7 @@ import {
 } from '@milkdown/kit/prose/tables'
 import i18n from '@/i18n/setup'
 import { createMarkdownTableToolbarScheduler } from '@/components/milkdown/tableToolbarScheduler'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 export { createMarkdownTableToolbarScheduler } from '@/components/milkdown/tableToolbarScheduler'
 
@@ -76,7 +77,8 @@ export const handleMarkdownTableKeydown = (
   event: KeyboardEvent,
   commands: MarkdownTableCommandSet = defaultCommands,
 ): boolean => {
-  if (!commands.isInTable(view.state) || event.defaultPrevented || event.isComposing) return false
+  if (!commands.isInTable(view.state) || event.defaultPrevented || isImeKeyboardEvent(event))
+    return false
 
   if (event.key === 'Tab') {
     const navigate = event.shiftKey ? commands.goToPreviousCell : commands.goToNextCell

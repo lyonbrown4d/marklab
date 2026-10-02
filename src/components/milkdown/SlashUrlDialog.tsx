@@ -25,6 +25,7 @@ import type { useSlashUrlDialog } from '@/components/milkdown/useSlashUrlDialog'
 import type { MarkdownLinkCompletionClient } from '@/components/milkdown/markdownLinkCompletionSession'
 import { useMarkdownLinkSuggestions } from '@/components/milkdown/useMarkdownLinkSuggestions'
 import { cn } from '@/lib/utils'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 type SlashUrlDialogProps = {
   activePath: string | null
@@ -113,7 +114,12 @@ export const SlashUrlDialog = ({
                   onBlur={field.onBlur}
                   onValueChange={field.onChange}
                   onKeyDown={(event) => {
-                    if (event.key !== 'Enter' || suggestions.length > 0) return
+                    if (
+                      event.key !== 'Enter' ||
+                      isImeKeyboardEvent(event.nativeEvent) ||
+                      suggestions.length > 0
+                    )
+                      return
                     event.preventDefault()
                     event.stopPropagation()
                     void submitForm()
