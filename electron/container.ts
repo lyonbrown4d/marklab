@@ -52,11 +52,13 @@ import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWeb
 import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
+import { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
 import type { AppLaunchInfo } from '@electron/types.js'
 
 export type ElectronRuntimeDependencies = {
   app: Electron.App
   BrowserWindow: typeof Electron.BrowserWindow
+  WebContentsView: typeof Electron.WebContentsView
   clipboard: Electron.Clipboard
   dialog: Electron.Dialog
   getLaunchInfo: () => AppLaunchInfo
@@ -84,6 +86,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   languageIntelligenceService: LanguageIntelligenceServiceContract
   linkPreviewService: LinkPreviewServiceContract
   terminalService: TerminalService
+  webTabManager: WebTabManager
   webDavProfileStore: WebDavProfileStore
   webDavSyncStateStore: FileLocalSyncStateStore
   workspaceSyncConfigStore: WorkspaceSyncConfigStore
@@ -109,6 +112,7 @@ export const createElectronContainer = (
   container.register({
     app: asValue(dependencies.app),
     BrowserWindow: asValue(dependencies.BrowserWindow),
+    WebContentsView: asValue(dependencies.WebContentsView),
     clipboard: asValue(dependencies.clipboard),
     dialog: asValue(dependencies.dialog),
     getLaunchInfo: asValue(dependencies.getLaunchInfo),
@@ -163,6 +167,9 @@ export const createElectronContainer = (
     }).singleton(),
     languageIntelligenceService: asFunction(() => new LanguageIntelligenceService()).singleton(),
     linkPreviewService: asFunction(() => new LinkPreviewService()).singleton(),
+    webTabManager: asFunction(({ WebContentsView }) => {
+      return new WebTabManager({ WebContentsView })
+    }).singleton(),
     workspaceSearchIndexFactory: asFunction(({ knowledgeEngineService }) => {
       return () =>
         new WorkspaceSearchIndex(new KnowledgeEngineWorkspaceSearchBackend(knowledgeEngineService))

@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Globe2, ImageIcon } from 'lucide-react'
+import { AppWindow, ExternalLink, Globe2, ImageIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react'
 
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { linkPreviewApi } from '@/services/linkPreviewApi'
+import { Button } from '@/components/ui/button'
+import { useOpenWebTab } from '@/app/useOpenWebTab'
+import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
 
 type ExternalLinkPreviewProps = {
   className?: string
@@ -22,6 +25,7 @@ const siteLabel = (url: string) => {
 
 export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPreviewProps) => {
   const { t } = useI18n()
+  const openWebTab = useOpenWebTab()
   const cardRef = useRef<HTMLElement | null>(null)
   const [requested, setRequested] = useState(false)
   const requestPreview = useCallback(() => setRequested(true), [])
@@ -50,6 +54,8 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
 
   const stopEditorEvent = useCallback((event: SyntheticEvent) => event.stopPropagation(), [])
   const result = query.data
+  const webpageUrl = result?.kind === 'webpage' ? result.url : url
+  const appUrl = normalizeNavigableWebUrl(webpageUrl)
 
   return (
     <article
@@ -81,42 +87,61 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
           />
         </a>
       ) : (
-        <a
-          className="flex min-h-24 items-stretch gap-3 p-3 no-underline"
-          href={result?.url ?? url}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <Globe2 aria-hidden className="size-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-              {result?.kind === 'webpage'
-                ? result.site_name || siteLabel(result.url)
-                : siteLabel(url)}
-              <ExternalLink aria-hidden className="size-3" />
+        <div className="flex min-h-24 items-stretch gap-3 p-3">
+          <a
+            className="flex min-w-0 flex-1 items-stretch gap-3 no-underline"
+            href={result?.url ?? url}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <Globe2 aria-hidden className="size-4" />
             </span>
-            <span className="mt-1 block truncate text-sm font-semibold">
-              {result?.kind === 'webpage' ? result.title || fallbackTitle : fallbackTitle}
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                {result?.kind === 'webpage'
+                  ? result.site_name || siteLabel(result.url)
+                  : siteLabel(url)}
+                <ExternalLink aria-hidden className="size-3" />
+              </span>
+              <span className="mt-1 block truncate text-sm font-semibold">
+                {result?.kind === 'webpage' ? result.title || fallbackTitle : fallbackTitle}
+              </span>
+              {result?.kind === 'webpage' && result.description ? (
+                <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                  {result.description}
+                </span>
+              ) : null}
+              {!requested || query.isPending ? (
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {requested ? t('preview.externalLoading') : t('preview.externalPending')}
+                </span>
+              ) : null}
+              {query.isError ? (
+                <span className="mt-1 block text-xs text-muted-foreground" role="alert">
+                  {t('preview.externalFailed')}
+                </span>
+              ) : null}
             </span>
-            {result?.kind === 'webpage' && result.description ? (
-              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">
-                {result.description}
-              </span>
-            ) : null}
-            {!requested || query.isPending ? (
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {requested ? t('preview.externalLoading') : t('preview.externalPending')}
-              </span>
-            ) : null}
-            {query.isError ? (
-              <span className="mt-1 block text-xs text-muted-foreground" role="alert">
-                {t('preview.externalFailed')}
-              </span>
-            ) : null}
-          </span>
-        </a>
+          </a>
+          {appUrl ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="self-start text-xs text-muted-foreground opacity-80 transition-opacity group-hover:opacity-100"
+              onClick={() =>
+                openWebTab(
+                  appUrl,
+                  result?.kind === 'webpage' ? result.title || fallbackTitle : fallbackTitle,
+                )
+              }
+            >
+              <AppWindow aria-hidden className="size-3.5" />
+              {t('preview.openInApp')}
+            </Button>
+          ) : null}
+        </div>
       )}
     </article>
   )

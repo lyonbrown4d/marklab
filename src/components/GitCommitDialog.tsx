@@ -17,6 +17,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 type GitCommitDialogProps = {
   open: boolean
@@ -52,6 +53,7 @@ export const GitCommitDialog = ({
   disabledReason,
 }: GitCommitDialogProps) => {
   const { t } = useI18n()
+  useNativeSurfaceOcclusion('git-commit-dialog', open)
   const messageId = useId()
   const messageDescriptionId = `${messageId}-description`
   const messageErrorId = `${messageId}-error`

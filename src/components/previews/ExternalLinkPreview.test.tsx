@@ -3,9 +3,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchLinkPreview = vi.hoisted(() => vi.fn())
+const openWebTab = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/linkPreviewApi', () => ({
   linkPreviewApi: { fetch: fetchLinkPreview },
+}))
+
+vi.mock('@/app/useOpenWebTab', () => ({
+  useOpenWebTab: () => openWebTab,
 }))
 
 import ExternalLinkPreview from '@/components/previews/ExternalLinkPreview'
@@ -22,6 +27,26 @@ const renderPreview = (url = 'https://example.com/article') => {
 describe('ExternalLinkPreview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('offers an explicit in-app action for webpages', async () => {
+    fetchLinkPreview.mockResolvedValue({
+      canonical: null,
+      description: 'Reference material',
+      favicon: null,
+      image: null,
+      kind: 'webpage',
+      site_name: 'Example Site',
+      title: 'Article title',
+      url: 'https://example.com/article',
+    })
+    renderPreview()
+
+    fireEvent.pointerEnter(screen.getByRole('article'))
+    await screen.findByText('Article title')
+    fireEvent.click(screen.getByRole('button', { name: 'Open in app' }))
+
+    expect(openWebTab).toHaveBeenCalledWith('https://example.com/article', 'Article title')
   })
 
   it('waits for hover or focus before fetching and renders webpage metadata as text', async () => {

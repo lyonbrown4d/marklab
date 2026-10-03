@@ -36,6 +36,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     shell,
     terminalService: container.cradle.terminalService,
     webDavProfileStore: container.cradle.webDavProfileStore,
+    webTabManager: container.cradle.webTabManager,
     workspaceSyncConfigStore: container.cradle.workspaceSyncConfigStore,
     workspaceWebDavSyncService: container.cradle.workspaceWebDavSyncService,
     updates: {

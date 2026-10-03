@@ -25,6 +25,12 @@ export type WorkspaceTab =
       path: string
       section: GitDiffSection
     }
+  | {
+      kind: 'web'
+      id: string
+      url: string
+      title: string
+    }
 
 export type FileEntry = {
   path: string

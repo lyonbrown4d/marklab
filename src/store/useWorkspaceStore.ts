@@ -3,6 +3,9 @@ import { persist } from 'zustand/middleware'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
 import {
   areWorkspaceTabsEqual,
+  getPersistableWorkspaceTabs,
+  getWorkspaceTabId,
+  normalizeRuntimeWorkspaceTabs,
   normalizeWorkspaceTabId,
   normalizeWorkspaceTabs,
 } from '@/logic/tabs'
@@ -48,7 +51,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state) => (areFileEntriesEqual(state.entries, entries) ? state : { entries })),
       setTabs: (tabs) =>
         set((state) => {
-          const normalizedTabs = normalizeWorkspaceTabs(tabs)
+          const normalizedTabs = normalizeRuntimeWorkspaceTabs(tabs)
           const activeTabId = normalizeWorkspaceTabId(state.activeTabId, normalizedTabs)
           return areWorkspaceTabsEqual(state.tabs, normalizedTabs) &&
             state.activeTabId === activeTabId
@@ -73,13 +76,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
-      partialize: (state): WorkspacePersistedState => ({
-        rootPath: state.rootPath,
-        rootKind: state.rootKind,
-        recentProjects: state.recentProjects,
-        tabs: state.tabs,
-        activeTabId: state.activeTabId,
-      }),
+      merge: (persisted, current) => {
+        const restored = (persisted ?? {}) as Partial<WorkspacePersistedState>
+        const tabs = normalizeWorkspaceTabs(restored.tabs)
+        return {
+          ...current,
+          ...restored,
+          tabs,
+          activeTabId: normalizeWorkspaceTabId(restored.activeTabId, tabs),
+        }
+      },
+      partialize: (state): WorkspacePersistedState => {
+        const tabs = getPersistableWorkspaceTabs(state.tabs)
+        const activeTabId = tabs.some((tab) => getWorkspaceTabId(tab) === state.activeTabId)
+          ? state.activeTabId
+          : tabs[0]
+            ? getWorkspaceTabId(tabs[0])
+            : null
+        return {
+          rootPath: state.rootPath,
+          rootKind: state.rootKind,
+          recentProjects: state.recentProjects,
+          tabs,
+          activeTabId,
+        }
+      },
     },
   ),
 )

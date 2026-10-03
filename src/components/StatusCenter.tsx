@@ -16,6 +16,7 @@ import {
   getTaskToneClass,
 } from '@/components/status-center/statusCenterModel'
 import { useStatusCenterEvents } from '@/components/status-center/useStatusCenterEvents'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
@@ -34,6 +35,7 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
   const statusCenterTitle = t('statusCenter.title')
   const desktopRuntime = isDesktopRuntime()
   const [open, setOpen] = useState(false)
+  useNativeSurfaceOcclusion('status-center', open)
   const { exportTasks, terminalEvents } = useStatusCenterEvents(desktopRuntime)
 
   const backgroundTasksQuery = useQuery({

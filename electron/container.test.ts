@@ -55,6 +55,7 @@ describe('Electron dependency container', () => {
       container.cradle.languageIntelligenceService,
     )
     expect(container.cradle.linkPreviewService).toBe(container.cradle.linkPreviewService)
+    expect(container.cradle.webTabManager).toBe(container.cradle.webTabManager)
     expect(safeStorage.isAsyncEncryptionAvailable).not.toHaveBeenCalled()
 
     await container.cradle.aiProviderStore.update({
@@ -79,6 +80,7 @@ const createRuntimeDependencies = (
     isPackaged: false,
   } as unknown as Electron.App,
   BrowserWindow: { fromWebContents: vi.fn() } as unknown as typeof Electron.BrowserWindow,
+  WebContentsView: vi.fn() as unknown as typeof Electron.WebContentsView,
   clipboard: {} as Electron.Clipboard,
   dialog: {} as Electron.Dialog,
   getLaunchInfo: vi.fn(() => ({ args: [], cwd: userDataPath, deepLinks: [] })),

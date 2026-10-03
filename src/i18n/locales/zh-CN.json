@@ -1017,5 +1017,20 @@
   "workspaceMap.loadFailed": "工作区地图加载失败",
   "workspaceMap.retry": "重试",
   "workspaceMap.refreshing": "正在刷新工作区地图…",
-  "workspaceMap.empty": "工作区地图为空。"
+  "workspaceMap.empty": "工作区地图为空。",
+  "preview.openInApp": "在应用内打开",
+  "webTab.navigation": "网页导航",
+  "webTab.back": "后退",
+  "webTab.forward": "前进",
+  "webTab.reload": "重新加载",
+  "webTab.stop": "停止加载",
+  "webTab.address": "网页地址",
+  "webTab.openSystem": "在系统浏览器中打开",
+  "webTab.loading": "正在加载网页",
+  "webTab.failed": "无法加载此网页",
+  "webTab.failedHint": "请检查地址和网络连接。",
+  "webTab.retry": "重试",
+  "webTab.newTab": "新网页标签",
+  "webTab.actionFailed": "浏览器操作失败",
+  "webTab.invalidUrl": "请输入有效的 HTTPS 地址"
 }

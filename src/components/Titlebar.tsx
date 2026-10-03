@@ -22,6 +22,7 @@ import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 const noop = () => undefined
@@ -80,6 +81,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     const [internalCommandOpen, setInternalCommandOpen] = useState(false)
     const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
+    useNativeSurfaceOcclusion('command-palette', commandOpen)
     const activeWorkspaceView =
       workspaceView ?? (activeTab?.kind === 'workspace-graph' ? 'map' : 'files')
     const commandDataReady = commandOpen
@@ -175,6 +177,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
         <ImmersiveTitlebarChrome
           activePath={activePath}
           activeWorkspaceView={activeWorkspaceView}
+          webTitle={activeTab?.kind === 'web' ? activeTab.title : undefined}
           searchLabel={t('sidebar.search')}
           localLibraryLabel={t('titlebar.localLibrary')}
           untitledLabel={t('titlebar.untitled')}

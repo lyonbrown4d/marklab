@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
+import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 
 const createProps = () => ({
   activePath: '随笔/与自己协作.md',
@@ -59,6 +60,7 @@ const createProps = () => ({
 })
 
 describe('ImmersiveTitlebarChrome', () => {
+  beforeEach(() => useNativeSurfaceOcclusionStore.setState({ reasons: {} }))
   it('keeps document context visible without a command bar', async () => {
     const props = createProps()
     render(<ImmersiveTitlebarChrome {...props} />)
@@ -110,6 +112,29 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(screen.queryByRole('menuitem', { name: '文档大纲' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: '搜索文件...' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: '设置' })).toBeInTheDocument()
+  })
+
+  it('shows the web title without document-only actions', () => {
+    render(<ImmersiveTitlebarChrome {...createProps()} activePath={null} webTitle="Example docs" />)
+
+    expect(screen.getByText('Example docs')).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: '所见即所得' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '导出' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '文档大纲' })).not.toBeInTheDocument()
+  })
+
+  it('occludes native web content while titlebar dropdowns are open', async () => {
+    const user = userEvent.setup()
+    render(<ImmersiveTitlebarChrome {...createProps()} />)
+
+    await user.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    expect(useNativeSurfaceOcclusionStore.getState().reasons).toHaveProperty('workspace-menu')
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '导出' }))
+    expect(useNativeSurfaceOcclusionStore.getState().reasons).toHaveProperty('export-menu')
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '更多操作' }))
+    expect(useNativeSurfaceOcclusionStore.getState().reasons).toHaveProperty('overflow-menu')
   })
 
   it('hides the workspace view switch in single-file mode', () => {

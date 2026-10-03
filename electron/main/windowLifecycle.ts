@@ -109,6 +109,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     if (managedMainWindows.has(main)) return
     managedMainWindows.add(main)
     options.getContainer().cradle.workspaceRegistry.registerWindow(main)
+    options.getContainer().cradle.webTabManager.registerWindow(main)
     installMainWindowCloseFlush(main)
     main.on('closed', () => {
       managedMainWindows.delete(main)

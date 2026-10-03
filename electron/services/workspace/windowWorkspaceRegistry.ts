@@ -46,6 +46,11 @@ export class WindowWorkspaceRegistry {
     return this.bindingForWebContents(webContents).service
   }
 
+  isManagedWebContents(webContents: WebContents): boolean {
+    const window = BrowserWindow.fromWebContents(webContents)
+    return Boolean(window && this.bindings.has(window.id))
+  }
+
   async resolveAssetCapability(token: string): Promise<WorkspaceOpenedAsset | null> {
     for (const binding of this.bindings.values()) {
       if (binding.detached || binding.pendingDisposal) continue

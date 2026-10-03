@@ -7,6 +7,7 @@ import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpeni
 import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle.js'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
 import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview.js'
+import { createWebTabsPreloadSurface } from '@electron/preload/webTabs.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -124,6 +125,7 @@ const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
 const windowCloseLifecycleSurface = createWindowCloseLifecyclePreloadSurface(ipcRenderer)
 const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
 const linkPreviewSurface = createLinkPreviewPreloadSurface(ipcRenderer)
+const webTabsSurface = createWebTabsPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   aiCompletion: {
@@ -240,6 +242,7 @@ const desktopApi: RendererSafeElectronApi = {
       }
     },
   },
+  webTabs: webTabsSurface,
   workspaceSync: {
     binding: {
       get: () => ipcRenderer.invoke(nativeIpcChannels.syncBindingGet),

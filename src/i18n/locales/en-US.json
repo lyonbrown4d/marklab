@@ -1017,5 +1017,20 @@
   "workspaceMap.loadFailed": "Failed to load workspace map",
   "workspaceMap.retry": "Retry",
   "workspaceMap.refreshing": "Refreshing workspace map…",
-  "workspaceMap.empty": "This workspace map is empty."
+  "workspaceMap.empty": "This workspace map is empty.",
+  "preview.openInApp": "Open in app",
+  "webTab.navigation": "Web navigation",
+  "webTab.back": "Back",
+  "webTab.forward": "Forward",
+  "webTab.reload": "Reload",
+  "webTab.stop": "Stop loading",
+  "webTab.address": "Web address",
+  "webTab.openSystem": "Open in system browser",
+  "webTab.loading": "Loading webpage",
+  "webTab.failed": "Could not load this page",
+  "webTab.failedHint": "Check the address and your network connection.",
+  "webTab.retry": "Try again",
+  "webTab.newTab": "New web tab",
+  "webTab.actionFailed": "The browser action failed",
+  "webTab.invalidUrl": "Enter a valid HTTPS address"
 }

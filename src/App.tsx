@@ -12,6 +12,7 @@ import {
   ALL_PAGES_ROUTE_PATTERN,
   PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
+  WEB_TAB_ROUTE_PATTERN,
 } from '@/logic/routing'
 
 const AllPagesPage = lazy(() => import('@/pages/AllPagesPage'))
@@ -22,6 +23,7 @@ const GitDiffRoutePage = lazy(() => import('@/pages/GitDiffRoutePage'))
 const SourceFilePage = lazy(() => import('@/pages/SourceFilePage'))
 const WorkspaceGraphPage = lazy(() => import('@/pages/WorkspaceGraphPage'))
 const WorkspaceHistoryPage = lazy(() => import('@/pages/WorkspaceHistoryPage'))
+const WebTabPage = lazy(() => import('@/pages/WebTabPage'))
 
 const lazyRoute = (Page: ComponentType) => (
   <Suspense fallback={<EditorPaneFallback />}>
@@ -41,6 +43,7 @@ const App = () => (
         <Route path={GRAPH_FILE_ROUTE_PATTERN} element={lazyRoute(FileGraphPage)} />
         <Route path={GRAPH_WORKSPACE_ROUTE_PATTERN} element={lazyRoute(WorkspaceGraphPage)} />
         <Route path={WORKSPACE_HISTORY_ROUTE_PATTERN} element={lazyRoute(WorkspaceHistoryPage)} />
+        <Route path={WEB_TAB_ROUTE_PATTERN} element={lazyRoute(WebTabPage)} />
         <Route path={FILE_ROUTE_PATTERN} element={lazyRoute(EditFilePage)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -52,6 +52,7 @@ const AppLayout = () => {
     current.setShowEditorStatusBar(!current.showEditorStatusBar)
   }, [stateRef])
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
+  const editorChromeVisible = !immersiveZenMode && state.activeTab?.kind !== 'web'
   const {
     closeTerminalArea,
     effectiveTerminalOpen,
@@ -67,10 +68,7 @@ const AppLayout = () => {
     shellGroupElementRef,
     terminalOpen: effectiveTerminalOpen,
   })
-  const handleMenuAction = useAppMenuAction({
-    stateRef,
-    openSettings,
-  })
+  const handleMenuAction = useAppMenuAction({ stateRef, openSettings })
   const {
     handleCreateFile,
     handleCreateFolder,
@@ -270,7 +268,7 @@ const AppLayout = () => {
         theme={state.theme}
         onCloseTerminalArea={closeTerminalArea}
       />
-      <AppStatusBarDock open={state.showEditorStatusBar && !immersiveZenMode}>
+      <AppStatusBarDock open={state.showEditorStatusBar && editorChromeVisible}>
         <AppStatusBar
           rootKind={state.rootKind}
           rootPath={state.rootPath}
@@ -290,7 +288,7 @@ const AppLayout = () => {
           restoreStatusBusy={state.isRestoringSession}
         />
       </AppStatusBarDock>
-      {!immersiveZenMode ? (
+      {editorChromeVisible ? (
         <AppStatusBarEdgeHandle open={state.showEditorStatusBar} onToggle={toggleStatusBar} />
       ) : null}
     </AppStatusBarProvider>

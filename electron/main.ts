@@ -7,6 +7,7 @@ import {
   nativeTheme,
   safeStorage,
   shell,
+  WebContentsView,
 } from 'electron'
 import { createElectronContainer, type ElectronContainer } from '@electron/container.js'
 import { configureAppIdentity } from '@electron/appIdentity.js'
@@ -54,6 +55,7 @@ const getContainer = (): ElectronContainer => {
   container ??= createElectronContainer({
     app,
     BrowserWindow,
+    WebContentsView,
     clipboard,
     dialog,
     getLaunchInfo,

@@ -1,5 +1,6 @@
 import { forwardRef, lazy, memo, Suspense, useCallback, useImperativeHandle, useState } from 'react'
 import SettingsDialogFallback from '@/components/SettingsDialogFallback'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 const SettingsDialog = lazy(() => import('@/components/SettingsDialog'))
 
@@ -9,6 +10,7 @@ export type SettingsDialogHostHandle = {
 
 const SettingsDialogHostView = forwardRef<SettingsDialogHostHandle>((_, ref) => {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  useNativeSurfaceOcclusion('settings-dialog', settingsOpen)
   const openSettings = useCallback(() => setSettingsOpen(true), [])
   useImperativeHandle(ref, () => ({ openSettings }), [openSettings])
 

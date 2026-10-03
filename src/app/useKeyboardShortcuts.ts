@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   useHotkeys,
   type RegisterableHotkey,
@@ -16,6 +16,7 @@ import { getWorkspaceTabId } from '@/logic/tabs'
 import { toggleSidebarFromShortcut } from '@/app/sidebarShortcut'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { requestFileSearchFocus } from '@/utils/appEvents'
+import { useWebTabShortcutBridge } from '@/app/useWebTabShortcutBridge'
 
 type UseKeyboardShortcutsArgs = {
   activeTabId: string | null
@@ -77,106 +78,11 @@ export const useKeyboardShortcuts = ({
   })
 
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
+  const execute = useCallback(
+    (action: ShortcutActionId) => executeShortcutAction(action, argsRef.current),
+    [argsRef],
+  )
   const definitions = useMemo<UseHotkeyDefinition[]>(() => {
-    const execute = (action: ShortcutActionId) => {
-      const {
-        activeTabId: currentActiveTabId,
-        tabs: currentTabs,
-        viewMode: currentViewMode,
-        onCloseActiveTab: closeActiveTab,
-        onCreateFile: createFile,
-        onOpenCommandPalette: openCommandPalette,
-        onOpenFile: openFile,
-        onOpenProject: openProject,
-        onOpenSettings: openSettings,
-        onOpenHistory: openHistory,
-        onOpenTab: openTab,
-        onSetViewMode: setViewMode,
-        onToggleRightSidebar: toggleRightSidebar,
-        onToggleSidebar: toggleSidebar,
-        onToggleTerminal: toggleTerminal,
-        onToggleReadOnly: toggleReadOnly,
-      } = argsRef.current
-
-      if (action === 'app.commandPalette') {
-        openCommandPalette()
-        return
-      }
-      if (action === 'app.settings') {
-        openSettings()
-        return
-      }
-      if (action === 'file.new') {
-        createFile()
-        return
-      }
-      if (action === 'file.openProject') {
-        openProject()
-        return
-      }
-      if (action === 'file.openFile') {
-        openFile()
-        return
-      }
-      if (action === 'tab.next' || action === 'tab.previous') {
-        openAdjacentTab(action, {
-          activeTabId: currentActiveTabId,
-          onOpenTab: openTab,
-          tabs: currentTabs,
-        })
-        return
-      }
-      if (action === 'tab.close') {
-        closeActiveTab()
-        return
-      }
-      if (action === 'view.wysiwyg') {
-        setViewMode('wysiwyg')
-        return
-      }
-      if (action === 'view.source') {
-        setViewMode('source')
-        return
-      }
-      if (action === 'view.graph') {
-        setViewMode('graph')
-        return
-      }
-      if (action === 'view.toggleSource') {
-        setViewMode(currentViewMode === 'source' ? 'wysiwyg' : 'source')
-        return
-      }
-      if (action === 'view.toggleSidebar') {
-        toggleSidebarFromShortcut({
-          isCollapsed: () => usePreferencesStore.getState().sidebarCollapsed,
-          toggleSidebar,
-          requestFocus: requestFileSearchFocus,
-          scheduleFocus: (callback) => window.requestAnimationFrame(callback),
-        })
-        return
-      }
-      if (action === 'view.toggleRightSidebar') {
-        toggleRightSidebar()
-        return
-      }
-      if (action === 'view.toggleTerminal') {
-        toggleTerminal()
-        return
-      }
-      if (action === 'view.toggleReadonly') {
-        toggleReadOnly()
-        return
-      }
-      if (action === 'view.toggleStatusBar') {
-        const preferences = usePreferencesStore.getState()
-        preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
-        return
-      }
-      if (action === 'workspace.openHistory') {
-        openHistory()
-      }
-    }
-
     return shortcutActions
       .filter((action) => action.scope === 'app')
       .flatMap((action) =>
@@ -188,13 +94,68 @@ export const useKeyboardShortcuts = ({
           },
         })),
       )
-  }, [argsRef, bindings])
+  }, [bindings, execute])
+
+  useWebTabShortcutBridge({ activeTabId, bindings, execute })
 
   useHotkeys(definitions, {
     conflictBehavior: 'replace',
     preventDefault: true,
     stopPropagation: true,
   })
+}
+
+const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortcutsArgs) => {
+  const {
+    activeTabId,
+    tabs,
+    viewMode,
+    onCloseActiveTab,
+    onCreateFile,
+    onOpenCommandPalette,
+    onOpenFile,
+    onOpenProject,
+    onOpenSettings,
+    onOpenHistory,
+    onOpenTab,
+    onSetViewMode,
+    onToggleRightSidebar,
+    onToggleSidebar,
+    onToggleTerminal,
+    onToggleReadOnly,
+  } = args
+
+  if (action === 'app.commandPalette') return onOpenCommandPalette()
+  if (action === 'app.settings') return onOpenSettings()
+  if (action === 'file.new') return onCreateFile()
+  if (action === 'file.openProject') return onOpenProject()
+  if (action === 'file.openFile') return onOpenFile()
+  if (action === 'tab.next' || action === 'tab.previous') {
+    return openAdjacentTab(action, { activeTabId, onOpenTab, tabs })
+  }
+  if (action === 'tab.close') return onCloseActiveTab()
+  if (action === 'view.wysiwyg') return onSetViewMode('wysiwyg')
+  if (action === 'view.source') return onSetViewMode('source')
+  if (action === 'view.graph') return onSetViewMode('graph')
+  if (action === 'view.toggleSource') {
+    return onSetViewMode(viewMode === 'source' ? 'wysiwyg' : 'source')
+  }
+  if (action === 'view.toggleSidebar') {
+    return toggleSidebarFromShortcut({
+      isCollapsed: () => usePreferencesStore.getState().sidebarCollapsed,
+      toggleSidebar: onToggleSidebar,
+      requestFocus: requestFileSearchFocus,
+      scheduleFocus: (callback) => window.requestAnimationFrame(callback),
+    })
+  }
+  if (action === 'view.toggleRightSidebar') return onToggleRightSidebar()
+  if (action === 'view.toggleTerminal') return onToggleTerminal()
+  if (action === 'view.toggleReadonly') return onToggleReadOnly()
+  if (action === 'view.toggleStatusBar') {
+    const preferences = usePreferencesStore.getState()
+    return preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
+  }
+  if (action === 'workspace.openHistory') return onOpenHistory()
 }
 
 const openAdjacentTab = (

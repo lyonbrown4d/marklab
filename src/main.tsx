@@ -14,9 +14,9 @@ import '@/i18n/setup'
 import App from '@/App.tsx'
 import { queryClient } from '@/app/queryClient'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
-import { Toaster } from '@/components/ui/sonner'
 import { initializeReactScan } from '@/dev/reactScan'
 import { scheduleEditorRuntimePreload } from '@/app/scheduleEditorRuntimePreload'
+import AppToaster from '@/app/AppToaster'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -52,7 +52,7 @@ createRoot(document.getElementById('root')!).render(
     <PlateDndProvider>
       <QueryClientProvider client={queryClient}>
         <App />
-        <Toaster richColors closeButton />
+        <AppToaster />
         {ReactQueryDevtools && (
           <Suspense fallback={null}>
             <ReactQueryDevtools initialIsOpen={false} />

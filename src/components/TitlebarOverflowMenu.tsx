@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   Code2,
   FileDown,
@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { ExportFormat } from '@/services/exportApi'
 import type { ViewMode } from '@/store/appTypes'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 type TitlebarOverflowMenuProps = {
   active: boolean
@@ -70,6 +71,8 @@ const TitlebarOverflowMenu = ({
   onOpenSettings,
   onToggleOutline,
 }: TitlebarOverflowMenuProps) => {
+  const [open, setOpen] = useState(false)
+  useNativeSurfaceOcclusion('overflow-menu', open)
   const pendingCloseActionRef = useRef<(() => void) | null>(null)
   const preventCloseAutoFocusRef = useRef(false)
   const runAfterMenuClose = useCallback((action: () => void) => {
@@ -77,6 +80,7 @@ const TitlebarOverflowMenu = ({
     preventCloseAutoFocusRef.current = true
   }, [])
   const handleOpenChange = useCallback((open: boolean) => {
+    setOpen(open)
     if (open) return
 
     const action = pendingCloseActionRef.current
@@ -96,7 +100,7 @@ const TitlebarOverflowMenu = ({
   }
 
   return (
-    <DropdownMenu onOpenChange={handleOpenChange}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"

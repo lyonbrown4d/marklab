@@ -38,6 +38,7 @@ const createHarness = () => {
     }),
     registerWindow: vi.fn(),
   }
+  const webTabManager = { registerWindow: vi.fn() }
   const requestRendererFlush = vi.fn(async (window: BrowserWindow): Promise<void> => {
     void window
   })
@@ -50,7 +51,7 @@ const createHarness = () => {
   }
   const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
   const options = {
-    getContainer: () => ({ cradle: { logger, workspaceRegistry: workspace } }),
+    getContainer: () => ({ cradle: { logger, webTabManager, workspaceRegistry: workspace } }),
     getNativeIpc: () => nativeIpc,
     getWindows: () => null,
     setWindows: vi.fn(),
@@ -68,7 +69,16 @@ const createHarness = () => {
       }
     }),
   })
-  return { gate, lifecycle, logger, requestRendererFlush, save, window, workspace }
+  return {
+    gate,
+    lifecycle,
+    logger,
+    requestRendererFlush,
+    save,
+    webTabManager,
+    window,
+    workspace,
+  }
 }
 
 describe('window persistence shutdown barrier', () => {
@@ -119,10 +129,11 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('keeps the window open on save failure and closes it only after a successful retry', async () => {
-    const { gate, lifecycle, logger, save, window } = createHarness()
+    const { gate, lifecycle, logger, save, webTabManager, window } = createHarness()
     lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
     lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
     expect(window.listenerCount('close')).toBe(1)
+    expect(webTabManager.registerWindow).toHaveBeenCalledExactlyOnceWith(window)
     save.mockRejectedValueOnce(new Error('EACCES: permission denied'))
     window.close()
     await vi.waitFor(() => expect(logger.error).toHaveBeenCalled())

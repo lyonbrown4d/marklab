@@ -3,6 +3,7 @@ import { PanelLeftOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useSidebarHoverPreview } from '@/components/useSidebarHoverPreview'
+import { useNativeSurfaceInsetsStore } from '@/app/nativeSurfaceInsets'
 
 type ImmersiveWorkspaceShellProps = {
   children: ReactNode
@@ -38,6 +39,11 @@ export const ImmersiveWorkspaceShell = ({
       onPinOpen: pinSidebarOpen,
     })
   const effectiveSidebarOpen = sidebarOpen || previewOpen
+  const setNativeDrawers = useNativeSurfaceInsetsStore((state) => state.setDrawers)
+  useEffect(() => {
+    setNativeDrawers(effectiveSidebarOpen, inspectorOpen)
+  }, [effectiveSidebarOpen, inspectorOpen, setNativeDrawers])
+  useEffect(() => () => setNativeDrawers(false, false), [setNativeDrawers])
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
       if (open) return

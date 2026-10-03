@@ -23,6 +23,7 @@ import { registerSettingsIpc } from '@electron/ipc/settings.js'
 import { registerShellIpc } from '@electron/ipc/shell.js'
 import { registerThemeIpc } from '@electron/ipc/themes.js'
 import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
+import { registerWebTabsIpc } from '@electron/ipc/webTabs.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
 import {
   registerWindowCloseLifecycleIpc,
@@ -49,6 +50,7 @@ import { getPlatformInfo } from '@electron/services/platform.js'
 import { setNativeMenuLocale } from '@electron/menu.js'
 import type { TerminalService } from '@electron/services/terminal/service.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import type { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
 import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types.js'
 import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
 import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
@@ -73,6 +75,7 @@ export type NativeIpcDependencies = {
   shell: Electron.Shell
   terminalService: TerminalService
   webDavProfileStore: WebDavProfileStoreContract
+  webTabManager: WebTabManager
   workspaceSyncConfigStore: WorkspaceSyncConfigStore
   workspaceWebDavSyncService: WorkspaceWebDavSyncService
   updates?: Pick<UpdaterIpcDependencies, 'onBeforeInstall'>
@@ -114,6 +117,11 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     ipcMain: dependencies.ipcMain,
     logger,
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
+  })
+  registerWebTabsIpc(dependencies.ipcMain, {
+    BrowserWindow: dependencies.BrowserWindow,
+    manager: dependencies.webTabManager,
+    workspaceRegistry: dependencies.workspaceRegistry,
   })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
   const windowClose = registerWindowCloseLifecycleIpc(dependencies.ipcMain)

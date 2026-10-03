@@ -13,6 +13,7 @@ import type { WorkspaceView } from '@/app/useEditorRoutes'
 type ImmersiveTitlebarChromeProps = {
   activePath: string | null
   activeWorkspaceView: WorkspaceView
+  webTitle?: string
   searchLabel: string
   localLibraryLabel: string
   untitledLabel: string
@@ -83,6 +84,7 @@ const getWorkspaceLabel = (
 export const ImmersiveTitlebarChrome = ({
   activePath,
   activeWorkspaceView,
+  webTitle,
   searchLabel,
   localLibraryLabel,
   untitledLabel,
@@ -126,10 +128,12 @@ export const ImmersiveTitlebarChrome = ({
   onSelectWorkspaceInNewWindow,
   workspaceWindowOpening,
 }: ImmersiveTitlebarChromeProps) => {
-  const documentActionsVisible = activeWorkspaceView !== 'map'
-  const documentTitle = documentActionsVisible
-    ? getDocumentTitle(activePath, untitledLabel)
-    : workspaceMapTitle
+  const documentActionsVisible = activeWorkspaceView !== 'map' && !webTitle
+  const documentTitle = webTitle
+    ? webTitle
+    : documentActionsVisible
+      ? getDocumentTitle(activePath, untitledLabel)
+      : workspaceMapTitle
   const workspaceLabel = getWorkspaceLabel(recentWorkspaces, localLibraryLabel)
   const logoUrl = new URL('marklab-light.svg', document.baseURI).toString()
   const darkLogoUrl = new URL('marklab-dark.svg', document.baseURI).toString()

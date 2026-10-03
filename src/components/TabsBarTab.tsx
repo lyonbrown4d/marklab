@@ -1,5 +1,5 @@
 import { memo, useCallback, type KeyboardEvent, type MouseEvent } from 'react'
-import { Code2, Eye, FileText, GitGraph, X } from 'lucide-react'
+import { Code2, Eye, FileText, GitGraph, Globe2, X } from 'lucide-react'
 import { DocumentAdapterIconView } from '@/components/documentAdapterIcons'
 import { Button } from '@/components/ui/button'
 import { createFileLabel } from '@/logic/paths'
@@ -16,6 +16,7 @@ export type TabLabelText = {
 
 export const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
   if (tab.kind === 'workspace-graph') return labels.workspaceGraph
+  if (tab.kind === 'web') return tab.title
   const label = createFileLabel(tab.path)
   if (tab.kind === 'file') {
     if (tab.view === 'source') return `${label} · ${labels.source}`
@@ -34,6 +35,9 @@ const renderTabIcon = (tab: WorkspaceTab) => {
   }
   if (tab.kind === 'git-diff') {
     return <GitGraph aria-hidden="true" className={iconClassName} />
+  }
+  if (tab.kind === 'web') {
+    return <Globe2 aria-hidden="true" className={iconClassName} />
   }
   if (tab.view === 'source') {
     return <Code2 aria-hidden="true" className={iconClassName} />
@@ -122,7 +126,7 @@ export const WorkspaceTabButton = memo(
         data-tab-id={id}
         className="tab-item group relative inline-flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground outline-none transition-[background-color,color,box-shadow] duration-150 hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm after:absolute after:bottom-0.5 after:left-3 after:right-3 after:hidden after:h-0.5 after:rounded-full after:bg-primary data-[state=active]:after:block motion-reduce:transition-none"
         style={{ width }}
-        title={tab.kind === 'workspace-graph' ? label : tab.path}
+        title={tab.kind === 'file' || tab.kind === 'git-diff' ? tab.path : label}
         onClick={openTab}
         onKeyDown={handleTabKeyDown}
       >

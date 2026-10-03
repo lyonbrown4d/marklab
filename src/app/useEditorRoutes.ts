@@ -10,6 +10,7 @@ import {
   PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
   WORKSPACE_HISTORY_ROUTE_PATTERN,
+  WEB_TAB_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
 
@@ -61,6 +62,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
   const graphWorkspaceMatch = useMatch(GRAPH_WORKSPACE_ROUTE_PATTERN)
   const allPagesMatch = useMatch(ALL_PAGES_ROUTE_PATTERN)
   const historyMatch = useMatch(WORKSPACE_HISTORY_ROUTE_PATTERN)
+  const webMatch = useMatch(WEB_TAB_ROUTE_PATTERN)
 
   const routeSegment = params['*']
   const gitDiffSection = gitDiffMatch?.params.section
@@ -88,7 +90,8 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     previewMatch ||
     graphWorkspaceMatch ||
     allPagesMatch ||
-    historyMatch,
+    historyMatch ||
+    webMatch,
   )
   const isRouteFile = useMemo(
     () =>
@@ -125,6 +128,7 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     graphWorkspaceMatch,
     allPagesMatch,
     historyMatch,
+    webMatch,
     gitDiffSection,
     gitDiffPath,
     routeFileView,

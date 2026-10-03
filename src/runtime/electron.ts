@@ -15,6 +15,7 @@ import type {
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import type { LinkPreviewResult } from '@/types/linkPreview'
+import type { WebTabsApi } from '@/types/webTabs'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -263,6 +264,7 @@ export type RendererSafeElectronApi = {
     install: () => Promise<ElectronUpdateResult>
     onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
   }
+  webTabs: WebTabsApi
   workspaceSync: {
     binding: {
       get: () => Promise<WorkspaceSyncBinding | null>

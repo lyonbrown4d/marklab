@@ -24,6 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useState } from 'react'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 export type RecentWorkspaceMenuData = {
   currentLabel: string
@@ -73,110 +75,114 @@ export const TitlebarWorkspaceMenu = ({
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
   workspaceWindowOpening,
-}: TitlebarWorkspaceMenuProps) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        type="button"
-        variant="ghost"
-        aria-label={`${workspaceMenuLabel}: ${section}`}
-        className="chrome-button h-8 min-w-0 max-w-28 gap-1 rounded-full px-2 text-xs font-normal text-muted-foreground lg:max-w-48"
-        data-no-drag
+}: TitlebarWorkspaceMenuProps) => {
+  const [open, setOpen] = useState(false)
+  useNativeSurfaceOcclusion('workspace-menu', open)
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label={`${workspaceMenuLabel}: ${section}`}
+          className="chrome-button h-8 min-w-0 max-w-28 gap-1 rounded-full px-2 text-xs font-normal text-muted-foreground lg:max-w-48"
+          data-no-drag
+        >
+          <span className="truncate">{section}</span>
+          <ChevronDown aria-hidden="true" className="size-3.5 shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className={menuSurfaceStyles({ className: 'w-64' })}
+        sideOffset={7}
       >
-        <span className="truncate">{section}</span>
-        <ChevronDown aria-hidden="true" className="size-3.5 shrink-0" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent
-      align="start"
-      className={menuSurfaceStyles({ className: 'w-64' })}
-      sideOffset={7}
-    >
-      <DropdownMenuLabel className="flex min-w-0 items-center gap-2 px-2 py-2 font-normal">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Folder aria-hidden="true" className="size-4" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[11px] text-muted-foreground">{workspaceMenuLabel}</span>
-          <span className="block truncate text-sm font-medium text-foreground">{section}</span>
-        </span>
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator className={menuSeparatorStyles} />
-      <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-        {recentWorkspaces.sectionLabel}
-      </DropdownMenuLabel>
-      <DropdownMenuGroup>
-        {recentWorkspaces.paths.length > 0 ? (
-          recentWorkspaces.paths.slice(0, 4).map((path) => {
-            const label = workspaceName(path)
-            const current =
-              recentWorkspaces.rootKind !== 'internal' && path === recentWorkspaces.rootPath
-            return (
-              <DropdownMenuItem
-                key={path}
-                aria-current={current ? 'page' : undefined}
-                aria-label={recentWorkspaces.openLabel.replace('{name}', label)}
-                className={menuItemStyles({ className: 'py-2' })}
-                disabled={workspaceWindowOpening}
-                onSelect={() => onOpenProject(path)}
-              >
-                <FolderOpen aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-medium">{label}</span>
-                  <span className="block truncate text-[10px] text-muted-foreground">{path}</span>
-                </span>
-                {current ? (
-                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-primary">
-                    <Check aria-hidden="true" className="size-3" />
-                    {recentWorkspaces.currentLabel}
+        <DropdownMenuLabel className="flex min-w-0 items-center gap-2 px-2 py-2 font-normal">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Folder aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[11px] text-muted-foreground">{workspaceMenuLabel}</span>
+            <span className="block truncate text-sm font-medium text-foreground">{section}</span>
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className={menuSeparatorStyles} />
+        <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          {recentWorkspaces.sectionLabel}
+        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          {recentWorkspaces.paths.length > 0 ? (
+            recentWorkspaces.paths.slice(0, 4).map((path) => {
+              const label = workspaceName(path)
+              const current =
+                recentWorkspaces.rootKind !== 'internal' && path === recentWorkspaces.rootPath
+              return (
+                <DropdownMenuItem
+                  key={path}
+                  aria-current={current ? 'page' : undefined}
+                  aria-label={recentWorkspaces.openLabel.replace('{name}', label)}
+                  className={menuItemStyles({ className: 'py-2' })}
+                  disabled={workspaceWindowOpening}
+                  onSelect={() => onOpenProject(path)}
+                >
+                  <FolderOpen aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium">{label}</span>
+                    <span className="block truncate text-[10px] text-muted-foreground">{path}</span>
                   </span>
-                ) : null}
-              </DropdownMenuItem>
-            )
-          })
-        ) : (
-          <DropdownMenuItem disabled className={menuItemStyles({ className: 'py-2 text-xs' })}>
-            {recentWorkspaces.emptyLabel}
+                  {current ? (
+                    <span className="flex shrink-0 items-center gap-1 text-[10px] text-primary">
+                      <Check aria-hidden="true" className="size-3" />
+                      {recentWorkspaces.currentLabel}
+                    </span>
+                  ) : null}
+                </DropdownMenuItem>
+              )
+            })
+          ) : (
+            <DropdownMenuItem disabled className={menuItemStyles({ className: 'py-2 text-xs' })}>
+              {recentWorkspaces.emptyLabel}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenHistory}>
+            <History aria-hidden="true" />
+            {historyLabel}
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenHistory}>
-          <History aria-hidden="true" />
-          {historyLabel}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator className={menuSeparatorStyles} />
-        <DropdownMenuItem
-          className={menuItemStyles()}
-          disabled={workspaceWindowOpening}
-          onSelect={onOpenCurrentWorkspaceInNewWindow}
-        >
-          <ExternalLink aria-hidden="true" />
-          {openCurrentWorkspaceInNewWindowLabel}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className={menuItemStyles()}
-          disabled={workspaceWindowOpening}
-          onSelect={onSelectWorkspaceInNewWindow}
-        >
-          <FolderOpen aria-hidden="true" />
-          {openWorkspaceInNewWindowLabel}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator className={menuSeparatorStyles} />
-        <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
-          <FolderPlus aria-hidden="true" />
-          {newWorkspaceLabel}
-        </DropdownMenuItem>
-        <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenFile}>
-          <FileText aria-hidden="true" />
-          {openFileLabel}
-        </DropdownMenuItem>
-        <DropdownMenuItem className={menuItemStyles()} onSelect={onCreateFile}>
-          <FilePlus2 aria-hidden="true" />
-          {newFileLabel}
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-    </DropdownMenuContent>
-  </DropdownMenu>
-)
+          <DropdownMenuSeparator className={menuSeparatorStyles} />
+          <DropdownMenuItem
+            className={menuItemStyles()}
+            disabled={workspaceWindowOpening}
+            onSelect={onOpenCurrentWorkspaceInNewWindow}
+          >
+            <ExternalLink aria-hidden="true" />
+            {openCurrentWorkspaceInNewWindowLabel}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className={menuItemStyles()}
+            disabled={workspaceWindowOpening}
+            onSelect={onSelectWorkspaceInNewWindow}
+          >
+            <FolderOpen aria-hidden="true" />
+            {openWorkspaceInNewWindowLabel}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className={menuSeparatorStyles} />
+          <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
+            <FolderPlus aria-hidden="true" />
+            {newWorkspaceLabel}
+          </DropdownMenuItem>
+          <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenFile}>
+            <FileText aria-hidden="true" />
+            {openFileLabel}
+          </DropdownMenuItem>
+          <DropdownMenuItem className={menuItemStyles()} onSelect={onCreateFile}>
+            <FilePlus2 aria-hidden="true" />
+            {newFileLabel}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 const workspaceName = (path: string) => {
   const parts = path

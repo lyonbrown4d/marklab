@@ -1,5 +1,5 @@
 import { generatePath } from 'react-router-dom'
-import type { FileViewKind, GitDiffSection } from '@/store/appTypes'
+import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
 const SIDEBAR_ACTIVITIES = new Set<string>(['explorer', 'search', 'scm', 'graph', 'projects'])
@@ -12,6 +12,7 @@ export const PREVIEW_ROUTE_PATTERN = '/files/preview/*'
 export const ALL_PAGES_ROUTE_PATTERN = '/workspace/pages'
 export const GRAPH_WORKSPACE_ROUTE_PATTERN = '/workspace/graph'
 export const WORKSPACE_HISTORY_ROUTE_PATTERN = '/workspace/history'
+export const WEB_TAB_ROUTE_PATTERN = '/web/:tabId'
 export const SIDEBAR_ACTIVITY_PARAM = 'sidebar'
 export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'projects'
 
@@ -47,6 +48,15 @@ export const pathToGraphFileRoute = (path: string) => {
 export const pathToWorkspaceGraphRoute = () => generatePath(GRAPH_WORKSPACE_ROUTE_PATTERN)
 
 export const pathToWorkspaceHistoryRoute = () => generatePath(WORKSPACE_HISTORY_ROUTE_PATTERN)
+
+export const pathToWebTabRoute = (tabId: string) => `/web/${encodeURIComponent(tabId)}`
+
+export const pathToWorkspaceTabRoute = (tab: WorkspaceTab) => {
+  if (tab.kind === 'file') return pathToFileViewRoute(tab.path, tab.view)
+  if (tab.kind === 'workspace-graph') return pathToWorkspaceGraphRoute()
+  if (tab.kind === 'git-diff') return pathToGitDiffRoute(tab.section, tab.path)
+  return pathToWebTabRoute(tab.id)
+}
 
 export const pathToAllPagesRoute = (collectionId?: string) => {
   const route = generatePath(ALL_PAGES_ROUTE_PATTERN)

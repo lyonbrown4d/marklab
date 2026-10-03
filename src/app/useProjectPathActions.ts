@@ -17,7 +17,7 @@ type Options = {
 }
 
 const remapTab = (tab: WorkspaceTab, from: string, to: string): WorkspaceTab => {
-  if (tab.kind === 'workspace-graph') return tab
+  if (tab.kind === 'workspace-graph' || tab.kind === 'web') return tab
   if (tab.path === from) return { ...tab, path: to }
   if (tab.path.startsWith(from + '/')) return { ...tab, path: to + tab.path.slice(from.length) }
   return tab

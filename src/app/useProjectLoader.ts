@@ -3,7 +3,7 @@ import { useLatest } from 'ahooks'
 import { useProjectPathActions } from '@/app/useProjectPathActions'
 import type { NavigateFunction } from 'react-router-dom'
 import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
-import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
+import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi } from '@/services/fsApi'
 import { openDialog } from '@/runtime/dialog'
@@ -112,6 +112,7 @@ export const useProjectLoader = ({
             options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
           const nextTabs = seedTabs.flatMap((tab) => {
             if (tab.kind === 'workspace-graph') return []
+            if (tab.kind === 'web') return [tab]
             if (!available.has(tab.path)) return []
             if (tab.kind === 'file') {
               return [createFileTab(tab.path, fileViewForOpenPath(tab.path, tab.view))]
@@ -143,12 +144,7 @@ export const useProjectLoader = ({
             setActiveTabId(nextActiveTabId)
           }
           if (options?.preserveCurrentRoute ?? preserveCurrentRouteRef.current) return
-          const nextRoute =
-            nextActiveTab.kind === 'file'
-              ? pathToFileViewRoute(nextActiveTab.path, nextActiveTab.view)
-              : nextActiveTab.kind === 'workspace-graph'
-                ? pathToWorkspaceGraphRoute()
-                : pathToGitDiffRoute(nextActiveTab.section, nextActiveTab.path)
+          const nextRoute = pathToWorkspaceTabRoute(nextActiveTab)
           if (locationPathnameRef.current !== nextRoute) {
             navigate(nextRoute, { replace: true })
           }

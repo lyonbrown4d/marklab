@@ -24,6 +24,8 @@ type UseRouteTabSyncArgs = {
   graphWorkspaceMatch: unknown
   allPagesMatch: unknown
   historyMatch: unknown
+  webMatch?: unknown
+  webTabRouteId?: string
   gitDiffSection: string | undefined
   gitDiffPath: string | null
   routeFileView: FileViewKind | null
@@ -50,6 +52,8 @@ export const useRouteTabSync = ({
   graphWorkspaceMatch,
   allPagesMatch,
   historyMatch,
+  webMatch,
+  webTabRouteId,
   gitDiffSection,
   gitDiffPath,
   routeFileView,
@@ -104,6 +108,28 @@ export const useRouteTabSync = ({
     setActiveTabId,
     setInspectedPath,
     sourceMatch,
+  ])
+
+  useEffect(() => {
+    if (!enabled || !webMatch || !webTabRouteId) return
+    if (lastHandledRouteRef.current === locationPathname) return
+    const tab = tabsRef.current.find((item) => item.kind === 'web' && item.id === webTabRouteId)
+    if (!tab) return
+    lastHandledRouteRef.current = locationPathname
+    onRouteHandled()
+    setActiveTabId(getWorkspaceTabId(tab))
+    if (inspectedPathRef.current) setInspectedPath(null)
+  }, [
+    enabled,
+    inspectedPathRef,
+    lastHandledRouteRef,
+    locationPathname,
+    onRouteHandled,
+    setActiveTabId,
+    setInspectedPath,
+    tabsRef,
+    webMatch,
+    webTabRouteId,
   ])
 
   useEffect(() => {

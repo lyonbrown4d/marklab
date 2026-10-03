@@ -103,16 +103,25 @@ export const createElectronSettingsJsonStorage = <S>(
 ): PersistStorage<S> | undefined => {
   const electronPersist = isElectronRuntime() ? getElectronRuntime().settings?.persist : undefined
   if (!electronPersist) return createIdleJsonStorage<S>(name)
+  const serializedValues = new Map<string, string>()
   return {
     getItem: async (key) => {
       const value = await electronPersist.getItem(key)
+      if (value !== null) serializedValues.set(key, JSON.stringify(value))
       return value as StorageValue<S> | null
     },
     setItem: async (key, value) => {
-      const result = await electronPersist.setItem(key, cloneJsonValue(value))
-      if (!result.ok) throw new Error(result.error ?? 'Unable to persist settings.')
+      const cloned = cloneJsonValue(value)
+      const serialized = JSON.stringify(cloned)
+      if (serializedValues.get(key) === serialized) return
+      serializedValues.set(key, serialized)
+      const result = await electronPersist.setItem(key, cloned)
+      if (result.ok) return
+      if (serializedValues.get(key) === serialized) serializedValues.delete(key)
+      throw new Error(result.error ?? 'Unable to persist settings.')
     },
     removeItem: async (key) => {
+      serializedValues.delete(key)
       const result = await electronPersist.removeItem(key)
       if (!result.ok) throw new Error(result.error ?? 'Unable to remove persisted settings.')
     },

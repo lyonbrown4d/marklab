@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 type GitInitDialogProps = {
   open: boolean
@@ -28,6 +29,7 @@ export const GitInitDialog = ({
   error,
 }: GitInitDialogProps) => {
   const { t } = useI18n()
+  useNativeSurfaceOcclusion('git-init-dialog', open)
   const errorMessage = error ? String(error) : ''
 
   return (

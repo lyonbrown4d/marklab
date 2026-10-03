@@ -1,6 +1,6 @@
 import { startTransition } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
-import { pathToFileViewRoute, pathToGitDiffRoute, pathToWorkspaceGraphRoute } from '@/logic/routing'
+import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { createFileTab, fileTabId, fileViewTabId, getWorkspaceTabId } from '@/logic/tabs'
 import type { FileViewKind, WorkspaceTab } from '@/store/appTypes'
 
@@ -24,19 +24,7 @@ export const navigateToTab = (
   currentPathname: string,
   navigate: NavigateFunction,
 ) => {
-  if (tab?.kind === 'file') {
-    navigateIfNeeded(currentPathname, pathToFileViewRoute(tab.path, tab.view), navigate)
-    return
-  }
-  if (tab?.kind === 'workspace-graph') {
-    navigateIfNeeded(currentPathname, pathToWorkspaceGraphRoute(), navigate)
-    return
-  }
-  if (tab?.kind === 'git-diff') {
-    navigateIfNeeded(currentPathname, pathToGitDiffRoute(tab.section, tab.path), navigate)
-    return
-  }
-  navigateIfNeeded(currentPathname, '/', navigate)
+  navigateIfNeeded(currentPathname, tab ? pathToWorkspaceTabRoute(tab) : '/', navigate)
 }
 
 export const openFileView = ({
