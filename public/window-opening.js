@@ -20,6 +20,8 @@ const labels = isChinese
 
 retry.textContent = labels.retry
 
+window.marklabElectron.window.onCloseRequested(() => {})
+
 window.marklabElectron.opening.onProgress((progress) => {
   stage.textContent = progress.error || labels[progress.stage]
   workspacePath.textContent = progress.workspacePath

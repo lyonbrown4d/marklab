@@ -38,6 +38,11 @@ type LocalHistoryTimelineProps = {
   onRestoreContent?: (content: string) => void
 }
 
+const afterDialogClosePaint = () =>
+  new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  })
+
 const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelineProps) => {
   const { locale, t } = useI18n()
   const queryClient = useQueryClient()
@@ -60,22 +65,25 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
     mutationFn: async (request: ConfirmRequest) => {
       if (request.kind === 'restore') {
         const snapshot = await localHistoryApi.restore(path, request.entry.id)
-        onRestoreContent?.(snapshot.content)
-        return request.kind
+        return { content: snapshot.content, kind: request.kind }
       }
       if (request.kind === 'delete') {
         await localHistoryApi.delete(path, request.entry.id)
-        return request.kind
+        return { kind: request.kind }
       }
       await localHistoryApi.clear(path)
-      return request.kind
+      return { kind: request.kind }
     },
-    onSuccess: async (kind) => {
+    onSuccess: async (result) => {
       setConfirmRequest(null)
       setSelectedEntry(null)
+      if (result.kind === 'restore' && result.content !== undefined) {
+        await afterDialogClosePaint()
+        onRestoreContent?.(result.content)
+      }
       await queryClient.invalidateQueries({ queryKey: ['local-history', path] })
       await queryClient.invalidateQueries({ queryKey: ['local-history-preview', path] })
-      toast.success(t(`localHistory.${kind}Success`))
+      toast.success(t(`localHistory.${result.kind}Success`))
     },
     onError: (error) => toast.error(t('localHistory.actionFailed'), { description: String(error) }),
   })

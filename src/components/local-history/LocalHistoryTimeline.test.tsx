@@ -133,7 +133,7 @@ describe('LocalHistoryTimeline', () => {
     await waitFor(() =>
       expect(localHistoryApi.restore).toHaveBeenCalledWith('README.md', 'snapshot-1'),
     )
-    expect(onRestoreContent).toHaveBeenCalledWith('# Earlier')
+    await waitFor(() => expect(onRestoreContent).toHaveBeenCalledWith('# Earlier'))
     await waitFor(() => expect(diffEditorMock.editor.setModel).toHaveBeenCalledWith(null))
     expect(diffEditorMock.original.dispose).toHaveBeenCalledOnce()
     expect(diffEditorMock.modified.dispose).toHaveBeenCalledOnce()

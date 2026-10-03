@@ -1,23 +1,23 @@
 import type { Value } from 'platejs'
 import { Plate, PlateContent, type PlateEditor, usePlateEditor } from 'platejs/react'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
   createPlateEditorPlugins,
   plateChunkingOptions,
+  renderPlateEditorChunk,
 } from '@/components/plate/plateEditorConfig'
-import { handlePlateEditorShortcut } from '@/components/plate/plateEditorShortcuts'
 import { syncPlateFocusActiveBlock } from '@/components/plate/plateFocusMode'
-import { setPlateMarkdownInputRulesComposing } from '@/components/plate/plateMarkdownInputRules'
 import { PlateEditorOverlays } from '@/components/plate/PlateEditorOverlays'
+import {
+  PlateExternalValueSyncController,
+  type PlateExternalValueSyncHandle,
+} from '@/components/plate/PlateExternalValueSyncController'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
-import {
-  usePlateAsyncInitialValue,
-  usePlateExternalValueSync,
-} from '@/components/plate/usePlateAsyncInitialValue'
+import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
 import { usePlateMarkdownSnapshot } from '@/components/plate/usePlateMarkdownSnapshot'
 import {
   capturePlateSlashUrlInsertion,
@@ -26,6 +26,7 @@ import {
 } from '@/components/plate/slash'
 import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateAnimatedCursor } from '@/components/plate/usePlateAnimatedCursor'
+import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import {
   loadPlateMarkdown,
   serializePlateMarkdown,
@@ -38,7 +39,7 @@ import type {
 
 export type { PlateEditorSurfaceHandle } from '@/components/plate/plateEditorSurfaceTypes'
 
-export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEditorSurfaceProps>(
+const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorSurfaceProps>(
   (
     {
       activePath,
@@ -67,6 +68,8 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
     const externalApplyRef = useRef(false)
     const latestExternalValueRef = useRef(value)
     const localEchoRef = useRef<string | null>(null)
+    const externalSyncRef = useRef<PlateExternalValueSyncHandle | null>(null)
+    const externalLoadingRef = useRef(false)
     const asyncInitialValue = shouldParsePlateMarkdownInWorker(value)
     const editor = usePlateEditor(
       {
@@ -78,10 +81,12 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
       },
       [activePath],
     )
+
     const ready = usePlateAsyncInitialValue({
       editor,
       enabled: asyncInitialValue,
       externalApplyRef,
+      latestExternalValueRef,
       onStatusChange,
       value,
     })
@@ -100,34 +105,25 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
     const {
       cancel: cancelSnapshot,
       flush: flushSnapshot,
+      markDirty: markSnapshotDirty,
       queue: enqueueSnapshot,
     } = usePlateMarkdownSnapshot({
       editor,
       onError: (error) => onStatusChange?.({ message: error.message, phase: 'error' }),
       onSnapshot: commitSnapshot,
     })
-    const applyPendingExternal = usePlateExternalValueSync({
-      cancelSnapshot,
-      changeRevisionRef,
-      composingRef,
-      editableRef,
-      editor,
-      externalApplyRef,
-      latestExternalValueRef,
-      localEchoRef,
-      onStatusChange,
-      ready,
-      value,
-    })
+    const isEditorReady = useCallback(() => ready && !externalLoadingRef.current, [ready])
     const { assetDrop, pickAndImportImage } = usePlateEditorAssets({
       activePath,
+      canEdit: isEditorReady,
       editor,
       getMarkdown,
-      readOnly,
+      readOnly: readOnly || !ready,
       shellRef,
       strategy: assetImportStrategy,
     })
     const slash = usePlateSlashCommands({
+      canEdit: isEditorReady,
       documentIdentity: activePath,
       editor,
       labels: slashLabels ?? ({} as PlateSlashCommandLabels),
@@ -188,59 +184,26 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
       }
     }, [className, editor, ready])
 
-    useEffect(() => {
-      const editable = editableRef.current
-      if (!editable) return
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (!ready || readOnly) return
-        if (!readOnly && completion.onKeyDown(event)) return
-        if (!readOnly && !onSlashKeyDown(event)) {
-          handlePlateEditorShortcut(editor, event, shortcutOverrides, {
-            onImageImport: () => void pickAndImportImage(),
-            onLinkInsert: () => openLinkDialog(),
-          })
-        }
-      }
-      const handleCompositionStart = () => {
-        composingRef.current = true
-        setPlateMarkdownInputRulesComposing(editor, true)
-        completion.onCompositionStart()
-      }
-      const handleCompositionEnd = () => {
-        composingRef.current = false
-        completion.onCompositionEnd()
-        if (!applyPendingExternal()) queueSnapshot()
-        queueMicrotask(() => setPlateMarkdownInputRulesComposing(editor, false))
-      }
-      const handleBlur = () => {
-        if (!applyPendingExternal()) flushSnapshot()
-      }
-      editable.addEventListener('keydown', handleKeyDown, { capture: true })
-      editable.addEventListener('compositionstart', handleCompositionStart, { capture: true })
-      editable.addEventListener('compositionend', handleCompositionEnd, { capture: true })
-      editable.addEventListener('blur', handleBlur)
-      return () => {
-        editable.removeEventListener('keydown', handleKeyDown, { capture: true })
-        editable.removeEventListener('compositionstart', handleCompositionStart, { capture: true })
-        editable.removeEventListener('compositionend', handleCompositionEnd, { capture: true })
-        editable.removeEventListener('blur', handleBlur)
-      }
-    }, [
-      applyPendingExternal,
+    usePlateEditorDomEvents({
+      applyPendingExternal: () => externalSyncRef.current?.applyPending() ?? false,
       completion,
+      composingRef,
+      editableRef,
       editor,
       flushSnapshot,
-      queueSnapshot,
-      readOnly,
-      ready,
-      shortcutOverrides,
       onSlashKeyDown,
       openLinkDialog,
       pickAndImportImage,
-    ])
+      queueSnapshot,
+      readOnly,
+      isReady: isEditorReady,
+      shortcutOverrides,
+    })
 
     useImperativeHandle(ref, () => ({
-      focus: () => editableRef.current?.focus(),
+      focus: () => {
+        if (isEditorReady()) editableRef.current?.focus()
+      },
       getEditor: () => editor,
       getMarkdown,
       openLinkDialog,
@@ -248,10 +211,11 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
 
     const handleValueChange = useCallback(() => {
       if (externalApplyRef.current) return
+      markSnapshotDirty()
       changeRevisionRef.current += 1
       completion.onEditorChange()
       queueSnapshot()
-    }, [completion, queueSnapshot])
+    }, [completion, markSnapshotDirty, queueSnapshot])
 
     const handleSelectionChange = useCallback(() => {
       completion.onSelectionChange()
@@ -271,11 +235,12 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
             editor={editor}
             onSelectionChange={handleSelectionChange}
             onValueChange={handleValueChange}
-            readOnly={readOnly || !ready}
+            readOnly={readOnly}
             renderLeaf={completion.renderLeaf}
           >
             <PlateContent
               aria-label={placeholder}
+              aria-busy={!ready}
               className={cn(
                 'markdown-editor__content min-h-full w-full outline-none',
                 readOnly && 'cursor-default',
@@ -285,15 +250,18 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
               data-readonly={readOnly ? 'true' : undefined}
               data-state={ready ? 'ready' : 'loading'}
               data-testid="markdown-editor"
+              inert={!ready ? true : undefined}
               placeholder={placeholder}
-              readOnly={readOnly || !ready}
+              readOnly={readOnly}
               ref={editableRef}
+              renderChunk={renderPlateEditorChunk}
               spellCheck
               tabIndex={readOnly ? 0 : undefined}
             />
             {slashLabels && (
               <PlateEditorOverlays
                 activePath={activePath}
+                canEdit={isEditorReady}
                 editableRef={editableRef}
                 labels={slashLabels}
                 onLink={openLinkDialog}
@@ -301,10 +269,29 @@ export const PlateEditorSurface = forwardRef<PlateEditorSurfaceHandle, PlateEdit
               />
             )}
           </Plate>
+          <PlateExternalValueSyncController
+            key={activePath}
+            cancelSnapshot={cancelSnapshot}
+            changeRevisionRef={changeRevisionRef}
+            composingRef={composingRef}
+            controllerRef={externalSyncRef}
+            editableRef={editableRef}
+            editor={editor}
+            externalApplyRef={externalApplyRef}
+            latestExternalValueRef={latestExternalValueRef}
+            loadingRef={externalLoadingRef}
+            localEchoRef={localEchoRef}
+            onStatusChange={onStatusChange}
+            readOnly={readOnly}
+            ready={ready}
+            value={value}
+          />
         </PlateDndProvider>
       </div>
     )
   },
 )
 
-PlateEditorSurface.displayName = 'PlateEditorSurface'
+PlateEditorSurfaceImpl.displayName = 'PlateEditorSurface'
+
+export const PlateEditorSurface = memo(PlateEditorSurfaceImpl)

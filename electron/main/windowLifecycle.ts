@@ -30,7 +30,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
   let allowAllMainWindowClose = false
   let quitFlushInProgress = false
 
-  const managedMainWindows = new WeakSet<BrowserWindow>()
+  const managedMainWindows = new Set<BrowserWindow>()
   const windowsAllowedToClose = new WeakSet<BrowserWindow>()
   const windowsFlushingBeforeClose = new WeakSet<BrowserWindow>()
 
@@ -40,6 +40,14 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     if (!nativeIpc) {
       throw new Error(`Workspace flush is unavailable during ${reason}`)
     }
+
+    await Promise.all(
+      Array.from(managedMainWindows, (window) =>
+        window.isDestroyed()
+          ? Promise.resolve()
+          : nativeIpc.windowClose.requestRendererFlush(window),
+      ),
+    )
 
     const workspaceRegistry = nativeIpc.commands.workspace
     const barrierId = await workspaceRegistry.beginShutdownBarrier(reason)
@@ -75,6 +83,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
           if (!workspaceRegistry) {
             throw new Error('Workspace flush is unavailable during window close')
           }
+          await options.getNativeIpc()?.windowClose.requestRendererFlush(main)
           await workspaceRegistry.flushWindowForClose(main)
           windowsAllowedToClose.add(main)
           if (!main.isDestroyed()) main.close()
@@ -102,6 +111,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     options.getContainer().cradle.workspaceRegistry.registerWindow(main)
     installMainWindowCloseFlush(main)
     main.on('closed', () => {
+      managedMainWindows.delete(main)
       if (options.getWindows()?.main === main) options.setWindows(null)
       logger.info('main window closed', { windowId: main.id })
     })

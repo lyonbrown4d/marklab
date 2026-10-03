@@ -23,6 +23,10 @@ import { registerShellIpc } from '@electron/ipc/shell.js'
 import { registerThemeIpc } from '@electron/ipc/themes.js'
 import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
 import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
+import {
+  registerWindowCloseLifecycleIpc,
+  type WindowCloseLifecycleIpcBridge,
+} from '@electron/ipc/windowCloseLifecycle.js'
 import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed.js'
 import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync.js'
 import {
@@ -78,6 +82,7 @@ export type NativeIpcRegistration = {
   commands: WorkspaceCommandServices
   gitTerminal: GitTerminalIpcBridge
   menu: MenuDispatchBridge
+  windowClose: WindowCloseLifecycleIpcBridge
 }
 export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIpcRegistration => {
   const logger = dependencies.logger.child('ipc')
@@ -103,6 +108,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
   })
   registerWindowControlsIpc(dependencies.ipcMain, dependencies.BrowserWindow)
+  const windowClose = registerWindowCloseLifecycleIpc(dependencies.ipcMain)
   registerGitNamedIpc(dependencies.ipcMain, {
     gitService: dependencies.gitService,
     workspaceRegistry: dependencies.workspaceRegistry,
@@ -158,7 +164,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     logger.child('command-invoke'),
   )
   logger.info('native IPC registered')
-  return { ai, aiCompletion, commands, gitTerminal, menu }
+  return { ai, aiCompletion, commands, gitTerminal, menu, windowClose }
 }
 const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,

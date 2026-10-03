@@ -74,4 +74,27 @@ describe('TabsBarViewModeControls', () => {
     await user.click(wysiwyg)
     expect(onChangeView).not.toHaveBeenCalled()
   })
+
+  it('uses measurable tooltip anchors without replacing toggle state', () => {
+    render(
+      <TabsBarViewModeControls
+        active
+        groupLabel="Editing Mode"
+        sourceLabel="Source"
+        viewMode="wysiwyg"
+        wysiwygLabel="WYSIWYG"
+        onChangeView={vi.fn()}
+      />,
+    )
+
+    const wysiwyg = screen.getByRole('radio', { name: 'WYSIWYG' })
+    const source = screen.getByRole('radio', { name: 'Source' })
+
+    expect(wysiwyg).toHaveAttribute('data-state', 'on')
+    expect(source).toHaveAttribute('data-state', 'off')
+    expect(wysiwyg.parentElement).toHaveClass('inline-flex')
+    expect(source.parentElement).toHaveClass('inline-flex')
+    expect(wysiwyg.closest('.contents')).toBeNull()
+    expect(source.closest('.contents')).toBeNull()
+  })
 })

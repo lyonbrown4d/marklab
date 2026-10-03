@@ -12,12 +12,14 @@ import {
 import { usePlateSelectionToolbar } from '@/components/plate/usePlateSelectionToolbar'
 
 type PlateSelectionToolbarOverlayProps = {
+  canEdit: () => boolean
   editableRef: RefObject<HTMLElement | null>
   labels: PlateSelectionToolbarLabels
   onLink?: Parameters<typeof usePlateSelectionToolbar>[0]['onLink']
 }
 
 export const PlateSelectionToolbarOverlay = ({
+  canEdit,
   editableRef,
   labels,
   onLink,
@@ -26,6 +28,6 @@ export const PlateSelectionToolbarOverlay = ({
   const readOnly = useEditorReadOnly()
   useEditorSelection()
   useEditorComposing()
-  const controller = usePlateSelectionToolbar({ editableRef, editor, onLink, readOnly })
+  const controller = usePlateSelectionToolbar({ canEdit, editableRef, editor, onLink, readOnly })
   return <PlateSelectionToolbar {...controller} labels={labels} />
 }

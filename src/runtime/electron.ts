@@ -281,6 +281,7 @@ export type RendererSafeElectronApi = {
     unmaximize: () => Promise<void>
     isMaximized: () => Promise<boolean>
     close: () => Promise<void>
+    onCloseRequested: (handler: () => Promise<void> | void) => () => void
     startDragging: () => Promise<void>
   }
 }

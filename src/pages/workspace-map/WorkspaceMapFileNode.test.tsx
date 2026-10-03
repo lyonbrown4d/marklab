@@ -87,6 +87,20 @@ beforeEach(() => {
 })
 
 describe('WorkspaceMapFileNode', () => {
+  it('renders a safe lightweight document summary while remaining draggable when inactive', () => {
+    renderNode({
+      content: 'Project goals and the next concrete milestone. <script>alert(1)</script>',
+      label: 'a',
+      path: 'notes/a.md',
+    })
+
+    const surface = screen.getByTestId('workspace-map-editor-surface')
+    expect(surface).not.toHaveClass('nodrag')
+    expect(screen.getByText(/Project goals and the next concrete milestone/)).toBeInTheDocument()
+    expect(document.querySelector('script')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
+  })
+
   it('keeps one page surface mounted and activates one native editor in place', async () => {
     const view = renderNode({ label: 'a', path: 'notes/a.md' })
     const surface = screen.getByTestId('workspace-map-editor-surface')
@@ -106,6 +120,7 @@ describe('WorkspaceMapFileNode', () => {
     const plateEditor = await screen.findByTestId('plate-editor')
     expect(plateEditor).not.toHaveAttribute('readonly')
     expect(surface).toHaveAttribute('data-editor-active', 'true')
+    expect(surface).toHaveClass('nodrag', 'nopan')
     await waitFor(() => expect(plateEditor).toHaveFocus())
   })
 

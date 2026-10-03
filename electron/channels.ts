@@ -49,6 +49,8 @@ export const nativeIpcChannels = {
   updatesGetState: 'marklab:updates:get-state',
   updatesInstall: 'marklab:updates:install',
   windowClose: 'marklab:window:close',
+  windowCloseFlushReady: 'marklab:window:close-flush-ready',
+  windowCloseFlushRequest: 'marklab:window:close-flush-request',
   windowIsMaximized: 'marklab:window:is-maximized',
   windowMaximize: 'marklab:window:maximize',
   windowMinimize: 'marklab:window:minimize',

@@ -13,6 +13,7 @@ import '@/styles/search.scss'
 import '@/i18n/setup'
 import App from '@/App.tsx'
 import { queryClient } from '@/app/queryClient'
+import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { Toaster } from '@/components/ui/sonner'
 import { initializeReactScan } from '@/dev/reactScan'
 
@@ -47,14 +48,16 @@ if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
 }
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      <Toaster richColors closeButton />
-      {ReactQueryDevtools && (
-        <Suspense fallback={null}>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </Suspense>
-      )}
-    </QueryClientProvider>
+    <PlateDndProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <Toaster richColors closeButton />
+        {ReactQueryDevtools && (
+          <Suspense fallback={null}>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </Suspense>
+        )}
+      </QueryClientProvider>
+    </PlateDndProvider>
   </StrictMode>,
 )

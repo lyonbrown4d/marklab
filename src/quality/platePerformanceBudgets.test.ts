@@ -35,7 +35,10 @@ describe('Plate performance budgets', () => {
       expect(budget.windowOpenToReadyMaxMs).toBeGreaterThan(0)
       expect(budget.inputFirstMs).toBeGreaterThan(0)
       expect(budget.inputP95Ms).toBeGreaterThan(0)
-      expect(budget.inputMaxMs).toBeGreaterThan(0)
+      expect(budget.inputCatastrophicMaxMs).toBeGreaterThan(budget.inputSlowSampleMs)
+      expect(budget.inputMaxSlowSampleCount).toBe(1)
+      expect(budget.loadingP95FrameMs).toBeLessThanOrEqual(60)
+      expect(budget.loadingMaxFrameMs).toBeLessThanOrEqual(120)
       expect(budget.minFrameCount).toBeGreaterThanOrEqual(2)
     },
   )

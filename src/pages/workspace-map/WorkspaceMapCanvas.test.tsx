@@ -14,6 +14,7 @@ import type { GraphData, GraphNodeData } from '@/logic/graph'
 type FlowProps = {
   elementsSelectable: boolean
   nodes: GraphData['nodes']
+  nodesDraggable: boolean
   nodesFocusable: boolean
   onlyRenderVisibleElements: boolean
   onInit?: (flow: FlowApi) => void
@@ -110,6 +111,12 @@ const graph: GraphData = {
       data: { label: 'B', path: 'notes/b.md' },
       position: { x: 240, y: 0 },
     },
+    {
+      id: 'preview:docs/brief.pdf',
+      type: 'preview',
+      data: { label: 'brief.pdf', path: 'docs/brief.pdf', previewKind: 'pdf' },
+      position: { x: 480, y: 0 },
+    },
   ],
   edges: [],
   layoutKey: 'map',
@@ -176,11 +183,19 @@ describe('WorkspaceMapCanvas', () => {
 
     expect(flowPropsRef.current?.onlyRenderVisibleElements).toBe(true)
     expect(flowPropsRef.current?.nodesFocusable).toBe(true)
+    expect(flowPropsRef.current?.nodesDraggable).toBe(true)
     expect(flowPropsRef.current?.elementsSelectable).toBe(false)
     expect(flowPropsRef.current?.nodes[0]).toMatchObject({
       ariaLabel: 'A',
       ariaRole: 'button',
       focusable: true,
+      draggable: true,
+    })
+    expect(flowPropsRef.current?.nodes[2]).toMatchObject({
+      ariaRole: 'group',
+      dragHandle: '.workspace-map-pdf-drag-handle',
+      draggable: true,
+      focusable: false,
     })
     expect(node).not.toBeNull()
 
@@ -199,6 +214,8 @@ describe('WorkspaceMapCanvas', () => {
     )
     expect(editorNodes).toHaveLength(1)
     expect(editorNodes?.[0].focusable).toBe(false)
+    expect(editorNodes?.[0].draggable).toBe(false)
+    expect(flowPropsRef.current?.nodes[1]?.draggable).toBe(true)
     expect(layoutArgsRef.current?.graph.layoutKey).toBe('map')
     expect(layoutArgsRef.current?.activePath).toBeNull()
   })

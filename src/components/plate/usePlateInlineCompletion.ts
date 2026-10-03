@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { PlateEditor } from 'platejs/react'
 import { PlateInlineCompletionLeaf } from '@/components/plate/completion/PlateInlineCompletionLeaf'
 import { createPlateInlineCompletionController } from '@/components/plate/completion/plateInlineCompletionController'
@@ -25,10 +25,21 @@ export const usePlateInlineCompletion = ({
     controller.getSnapshot,
     controller.getSnapshot,
   )
+  const syncFrameRef = useRef<number | null>(null)
+  const scheduleSync = useCallback(() => {
+    if (syncFrameRef.current !== null) cancelAnimationFrame(syncFrameRef.current)
+    syncFrameRef.current = requestAnimationFrame(() => {
+      syncFrameRef.current = null
+      controller.sync()
+    })
+  }, [controller])
 
   useEffect(() => {
     controller.activate()
-    return controller.destroy
+    return () => {
+      if (syncFrameRef.current !== null) cancelAnimationFrame(syncFrameRef.current)
+      controller.destroy()
+    }
   }, [controller])
 
   useEffect(() => controller.sync(), [controller, indexRevision, syncKey])
@@ -39,13 +50,13 @@ export const usePlateInlineCompletion = ({
         controller.decorate(entry),
       onCompositionEnd: controller.compositionEnd,
       onCompositionStart: controller.compositionStart,
-      onEditorChange: controller.sync,
+      onEditorChange: scheduleSync,
       onKeyDown: controller.keyDown,
       onSelectionChange: controller.sync,
       renderLeaf: PlateInlineCompletionLeaf,
       state,
     }),
-    [controller, state],
+    [controller, scheduleSync, state],
   )
 }
 

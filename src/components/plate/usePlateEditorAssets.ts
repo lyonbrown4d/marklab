@@ -10,6 +10,7 @@ import type { MarkdownAssetImportStrategy } from '@/store/appTypes'
 
 export const usePlateEditorAssets = ({
   activePath,
+  canEdit,
   editor,
   getMarkdown,
   readOnly,
@@ -17,6 +18,7 @@ export const usePlateEditorAssets = ({
   strategy,
 }: {
   activePath: string | null
+  canEdit: () => boolean
   editor: PlateEditor
   getMarkdown: () => Promise<string>
   readOnly: boolean
@@ -44,6 +46,7 @@ export const usePlateEditorAssets = ({
     [activePath, editor, getMarkdown, strategy],
   )
   const assetDrop = usePlateAssetDrop({
+    canEdit,
     className: 'relative flex h-full min-h-0 flex-1 flex-col',
     editor,
     enabled: !readOnly,
@@ -52,9 +55,10 @@ export const usePlateEditorAssets = ({
   })
   const { importImageSources } = assetDrop
   const pickAndImportImage = useCallback(async () => {
+    if (!canEdit()) return false
     const source = await pickMarkdownImageSource()
     return source ? importImageSources([source]) : false
-  }, [importImageSources])
+  }, [canEdit, importImageSources])
 
   return { assetDrop, pickAndImportImage }
 }

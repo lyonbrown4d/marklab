@@ -101,6 +101,20 @@ export const runPlateEditorShortcut = (
   }
 }
 
+export const handlePlateEditorBoundaryShortcut = (editor: PlateEditor, event: KeyboardEvent) => {
+  if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey) return false
+  const moveToStart =
+    (event.ctrlKey && event.key === 'Home') || (event.metaKey && event.key === 'ArrowUp')
+  const moveToEnd =
+    (event.ctrlKey && event.key === 'End') || (event.metaKey && event.key === 'ArrowDown')
+  if (!moveToStart && !moveToEnd) return false
+
+  editor.tf.select(moveToStart ? editor.api.start([]) : editor.api.end([]))
+  event.preventDefault()
+  event.stopPropagation()
+  return true
+}
+
 export const handlePlateEditorShortcut = (
   editor: PlateEditor,
   event: KeyboardEvent,
@@ -108,6 +122,7 @@ export const handlePlateEditorShortcut = (
   options: ShortcutOptions = {},
 ) => {
   if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return false
+  if (handlePlateEditorBoundaryShortcut(editor, event)) return true
   const platform = detectPlatform()
   const resolved = resolveShortcutBindings(overrides)
   const action =

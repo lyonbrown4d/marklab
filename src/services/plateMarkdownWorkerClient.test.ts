@@ -14,7 +14,7 @@ import {
 type WorkerMessage = {
   id: number
   markdown?: string
-  operation: 'parse' | 'serialize'
+  operation: 'cancel' | 'parse' | 'parse-next' | 'parse-stream' | 'serialize'
   value?: Value
 }
 
@@ -58,6 +58,33 @@ describe('Plate Markdown worker policy', () => {
 })
 
 describe('PlateMarkdownWorkerClient', () => {
+  it('cleans up a normal parse when worker construction fails', async () => {
+    const client = new PlateMarkdownWorkerClient(() => {
+      throw new Error('Worker construction failed')
+    })
+    const controller = new AbortController()
+    const removeEventListener = vi.spyOn(controller.signal, 'removeEventListener')
+
+    await expect(client.parse('Large', controller.signal)).rejects.toThrow(
+      'Worker construction failed',
+    )
+    expect(removeEventListener).toHaveBeenCalledWith('abort', expect.any(Function))
+    await expect(client.parse('Retry')).rejects.toThrow('Worker construction failed')
+  })
+
+  it('terminates and rejects normal requests when the worker channel throws', async () => {
+    const worker = new FakeWorker()
+    worker.postMessage.mockImplementation(() => {
+      throw new Error('Worker channel closed')
+    })
+    const client = new PlateMarkdownWorkerClient(() => worker)
+
+    await expect(client.serialize([{ type: 'p', children: [{ text: 'Large' }] }])).rejects.toThrow(
+      'Worker channel closed',
+    )
+    expect(worker.terminate).toHaveBeenCalledOnce()
+  })
+
   it('uses typed parse and serialize requests', async () => {
     const worker = new FakeWorker()
     const client = new PlateMarkdownWorkerClient(() => worker)

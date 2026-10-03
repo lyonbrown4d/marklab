@@ -9,8 +9,7 @@
 
 .markdown-editor-status-panel {
   align-items: center;
-  backdrop-filter: blur(14px);
-  background: color-mix(in srgb, hsl(var(--popover)) 92%, transparent);
+  background: color-mix(in srgb, hsl(var(--popover)) 98%, hsl(var(--background)));
   border: 1px solid color-mix(in srgb, hsl(var(--border)) 76%, transparent);
   border-radius: calc(var(--radius) + 0.25rem);
   box-shadow: 0 12px 32px color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);

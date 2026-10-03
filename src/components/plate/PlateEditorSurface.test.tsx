@@ -28,7 +28,7 @@ describe('PlateEditorSurface', () => {
   })
 
   it('provides the drag-and-drop runtime for editable top-level blocks', () => {
-    render(
+    const { container } = render(
       <PlateEditorSurface
         activePath="notes/example.md"
         onChange={vi.fn()}
@@ -37,7 +37,10 @@ describe('PlateEditorSurface', () => {
       />,
     )
 
-    expect(screen.getAllByRole('button', { name: 'Move block' })).toHaveLength(2)
+    const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
+    expect(blocks).toHaveLength(2)
+    fireEvent.pointerEnter(blocks[0])
+    expect(screen.getByRole('button', { name: 'Move block' })).toHaveAttribute('draggable', 'true')
   })
 
   it('keeps read-only mode non-editable', () => {

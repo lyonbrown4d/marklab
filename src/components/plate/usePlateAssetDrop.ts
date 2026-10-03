@@ -33,6 +33,7 @@ export type PlateAssetImporter = (
 ) => Promise<boolean>
 
 type UsePlateAssetDropOptions = {
+  canEdit?: () => boolean
   className?: string
   editor: PlateEditor
   enabled?: boolean
@@ -43,6 +44,7 @@ type UsePlateAssetDropOptions = {
 }
 
 export const usePlateAssetDrop = ({
+  canEdit = () => true,
   className,
   editor,
   enabled = true,
@@ -62,7 +64,7 @@ export const usePlateAssetDrop = ({
   )
   const importImageSources = useCallback(
     async (sources: readonly MarkdownImageImportSource[]) => {
-      if (!enabled || sources.length === 0 || !mountedRef.current) return false
+      if (!enabled || !canEdit() || sources.length === 0 || !mountedRef.current) return false
       const controller = new AbortController()
       controllersRef.current.add(controller)
       const target = captureInsertionTarget(editor)
@@ -70,7 +72,7 @@ export const usePlateAssetDrop = ({
       try {
         return await importSources(
           sources,
-          (url, alt) => insertPlateImage(editor, target, url, alt),
+          (url, alt) => canEdit() && insertPlateImage(editor, target, url, alt),
           controller.signal,
         )
       } catch (error) {
@@ -84,16 +86,17 @@ export const usePlateAssetDrop = ({
         if (mountedRef.current) setImportCount((count) => Math.max(0, count - 1))
       }
     },
-    [editor, enabled, importSources, onImportError],
+    [canEdit, editor, enabled, importSources, onImportError],
   )
 
   const importFiles = useCallback(
     async (files: File[], event: unknown) => {
+      if (!canEdit()) return
       if (hasClientPoint(event)) placeSelection(event.clientX, event.clientY)
       const sources = imageSourcesFromClipboardData({ files, getData: () => '' })
       await importImageSources(sources)
     },
-    [importImageSources, placeSelection],
+    [canEdit, importImageSources, placeSelection],
   )
 
   const { getRootProps, isDragAccept } = useDropzone({
@@ -107,7 +110,13 @@ export const usePlateAssetDrop = ({
 
   const handlePasteCapture = useCallback(
     (event: ClipboardEvent<HTMLDivElement>) => {
-      if (!enabled || isComposing(event.nativeEvent)) return
+      if (!enabled) return
+      if (!canEdit()) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+      if (isComposing(event.nativeEvent)) return
       if (handlePlatePasteLink(editor, event.nativeEvent)) {
         event.stopPropagation()
         return
@@ -126,12 +135,17 @@ export const usePlateAssetDrop = ({
         if (source && mountedRef.current) void importImageSources([source])
       })
     },
-    [editor, enabled, importImageSources],
+    [canEdit, editor, enabled, importImageSources],
   )
 
   const handleDropCapture = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       if (!enabled) return
+      if (!canEdit()) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       const sources = imagePathSourcesFromDropEvent(event)
       if (sources.length === 0) return
       event.preventDefault()
@@ -139,7 +153,7 @@ export const usePlateAssetDrop = ({
       placeSelection(event.clientX, event.clientY)
       void importImageSources(sources)
     },
-    [enabled, importImageSources, placeSelection],
+    [canEdit, enabled, importImageSources, placeSelection],
   )
 
   useRuntimeImageDrop({
@@ -164,7 +178,7 @@ export const usePlateAssetDrop = ({
   const rootProps = getRootProps({
     className: cn(className, enabled && isDragAccept && 'is-image-drop-target'),
     onDragOverCapture: (event: DragEvent<HTMLDivElement>) => {
-      if (enabled && hasImageDataTransfer(event.dataTransfer)) event.preventDefault()
+      if (enabled && canEdit() && hasImageDataTransfer(event.dataTransfer)) event.preventDefault()
     },
     onDropCapture: handleDropCapture,
     onPasteCapture: handlePasteCapture,

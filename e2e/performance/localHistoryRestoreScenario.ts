@@ -10,9 +10,11 @@ import {
   type ElectronPerformanceSession,
   type GraphicsMode,
 } from './electronPerformanceHarness.js'
-import { measureFrames } from './frameProbe.js'
-import { LARGE_DOCUMENT_FILE_NAME } from './largeDocumentFixture.js'
-import { writeLocalHistoryRestoreFixture } from './localHistoryRestoreFixture.js'
+import { measureFrames } from './frameMeasurement.js'
+import {
+  type LocalHistoryDocumentKind,
+  writeLocalHistoryRestoreFixture,
+} from './localHistoryRestoreFixture.js'
 import { measureInputLatency } from './plateInputLatencyMetrics.js'
 import {
   captureEditorState,
@@ -55,22 +57,24 @@ const markerRendered = (page: Page, marker: string) =>
   page.evaluate(
     ({ expectedMarker, selector }) =>
       document.querySelector<HTMLElement>(selector)?.textContent?.includes(expectedMarker) ?? false,
-    { expectedMarker: marker, selector: EDITABLE_PLATE_EDITOR_SELECTOR },
+    { expectedMarker: marker, selector: PLATE_EDITOR_SELECTOR },
   )
 
 const waitForRestoredMarker = (page: Page, marker: string) =>
   page.waitForFunction(
     ({ expectedMarker, selector }) =>
       document.querySelector<HTMLElement>(selector)?.textContent?.includes(expectedMarker) ?? false,
-    { expectedMarker: marker, selector: EDITABLE_PLATE_EDITOR_SELECTOR },
+    { expectedMarker: marker, selector: PLATE_EDITOR_SELECTOR },
     { timeout: RESTORE_TIMEOUT_MS },
   )
 
 export const runLocalHistoryRestoreSample = async ({
+  documentKind = 'text-heavy',
   graphicsMode,
   rendererUrl,
   testInfo,
 }: {
+  documentKind?: LocalHistoryDocumentKind
   graphicsMode: GraphicsMode
   rendererUrl: string
   testInfo: TestInfo
@@ -82,12 +86,13 @@ export const runLocalHistoryRestoreSample = async ({
     const fixture = await writeLocalHistoryRestoreFixture(
       session.runtimeRoot,
       session.isolation.userData,
+      documentKind,
     )
     const {
       initialization,
       page,
       result: openResult,
-    } = await openWorkspaceWindow(session, fixture.workspacePath, LARGE_DOCUMENT_FILE_NAME)
+    } = await openWorkspaceWindow(session, fixture.workspacePath, fixture.fileName)
     await resizeElectronWindow(session, page, { height: 960, width: 1440 })
     const viewport = page.locator(PLATE_EDITOR_SELECTOR)
     const activeEditor = page.locator(EDITABLE_PLATE_EDITOR_SELECTOR)
@@ -99,8 +104,14 @@ export const runLocalHistoryRestoreSample = async ({
     const restoreStartedAt = performance.now()
     const restoreFrames = await measureFrames(page, async () => {
       await ui.confirmRestore.click()
-      await waitForRestoredMarker(page, fixture.marker)
+      await expect(viewport).toHaveAttribute('data-state', 'loading', {
+        timeout: RESTORE_TIMEOUT_MS,
+      })
+      await expect(viewport).toHaveAttribute('data-state', 'ready', {
+        timeout: RESTORE_TIMEOUT_MS,
+      })
     })
+    await waitForRestoredMarker(page, fixture.marker)
     const restoreToMarkerMs = performance.now() - restoreStartedAt
     const restoredMarkerRendered = await markerRendered(page, fixture.marker)
     const restoredFileMatchedSnapshot =
@@ -134,6 +145,7 @@ export const runLocalHistoryRestoreSample = async ({
       finalState,
       fixture: {
         historyBytes: fixture.historyStats.bytes,
+        historyBlocks: fixture.historyStats.blockCount,
         historyEntryId: fixture.historyEntryId,
         historyLines: fixture.historyStats.lines,
         marker: fixture.marker,

@@ -3,9 +3,11 @@ import { useDesktopReadySignal } from '@/app/useDesktopReadySignal'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { listen } from '@/runtime/events'
+import { getElectronRuntime } from '@/runtime/electron'
 import type { ThemeMode } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isDarkThemeMode } from '@/logic/themes'
+import { flushEditorChangesForClose } from '@/app/editorCloseLifecycle'
 
 type UseAppDocumentSyncOptions = {
   theme: ThemeMode
@@ -85,6 +87,11 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
   }, [syncSystemAppearance, themeMode])
 
   useDesktopReadySignal()
+
+  useEffect(() => {
+    if (!isDesktopRuntime()) return
+    return getElectronRuntime().window.onCloseRequested(flushEditorChangesForClose)
+  }, [])
 
   useLayoutEffect(() => {
     applyDocumentTheme(theme)

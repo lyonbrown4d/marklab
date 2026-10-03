@@ -14,6 +14,7 @@ describe('window opening shell', () => {
     expect(html).toContain('./window-opening.js')
     expect(script).toContain('marklabElectron.opening.onProgress')
     expect(script).toContain('marklabElectron.opening.retry')
+    expect(script).toContain('marklabElectron.window.onCloseRequested')
     expect(html).not.toContain('main.tsx')
     expect(html).not.toContain('monaco')
     expect(html).not.toContain('milkdown')

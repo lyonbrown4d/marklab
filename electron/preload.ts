@@ -4,6 +4,7 @@ import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
 import { onFileDrop } from '@electron/preload/fileDrop.js'
 import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
+import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle.js'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
 import type {
   AppLaunchInfo,
@@ -119,6 +120,7 @@ const listenToRuntimeEvent = <T>(
 
 const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
 const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
+const windowCloseLifecycleSurface = createWindowCloseLifecyclePreloadSurface(ipcRenderer)
 const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
@@ -263,6 +265,7 @@ const desktopApi: RendererSafeElectronApi = {
     unmaximize: () => runWindowAction(nativeIpcChannels.windowUnmaximize),
     isMaximized: () => ipcRenderer.invoke(nativeIpcChannels.windowIsMaximized) as Promise<boolean>,
     close: () => runWindowAction(nativeIpcChannels.windowClose),
+    onCloseRequested: windowCloseLifecycleSurface.onCloseRequested,
     startDragging: () => runWindowAction(nativeIpcChannels.windowStartDrag),
   },
   commands: {

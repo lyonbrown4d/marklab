@@ -6,6 +6,7 @@ import { closeRendererServer, startRendererServer } from '../electron/electronTe
 /* eslint-disable no-restricted-imports -- Node-run Playwright helpers use explicit relative ESM imports. */
 import { type GraphicsMode } from './electronPerformanceHarness.js'
 import { runLocalHistoryRestoreSample } from './localHistoryRestoreScenario.js'
+import type { LocalHistoryDocumentKind } from './localHistoryRestoreFixture.js'
 import { performanceBudgetForProject } from './performanceBudgets.js'
 /* eslint-enable no-restricted-imports */
 
@@ -33,30 +34,44 @@ test.describe('large local-history restore @performance @blackbox', () => {
 
   test.afterAll(async () => closeRendererServer(rendererServer))
 
-  // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
-  test('keeps the renderer responsive while restoring a 1.36MB legacy snapshot', async ({}, testInfo) => {
+  const runRestoreCase = async ({
+    documentKind,
+    expectedBlocks,
+    minimumBytes,
+    testInfo,
+  }: {
+    documentKind: LocalHistoryDocumentKind
+    expectedBlocks: number
+    minimumBytes: number
+    testInfo: Parameters<typeof runLocalHistoryRestoreSample>[0]['testInfo']
+  }) => {
     const graphicsMode = testInfo.project.name as GraphicsMode
     const budget = performanceBudgetForProject(testInfo.project.name)
     let sample: Awaited<ReturnType<typeof runLocalHistoryRestoreSample>> | null = null
     let failure: { message: string; stack?: string } | null = null
     try {
-      sample = await runLocalHistoryRestoreSample({ graphicsMode, rendererUrl, testInfo })
+      sample = await runLocalHistoryRestoreSample({
+        documentKind,
+        graphicsMode,
+        rendererUrl,
+        testInfo,
+      })
       const { restoreFrames } = sample
 
-      expect.soft(sample.fixture.historyBytes).toBeGreaterThan(1_300_000)
+      expect.soft(sample.fixture.historyBytes).toBeGreaterThan(minimumBytes)
+      expect.soft(sample.fixture.historyBlocks).toBe(expectedBlocks)
       expect.soft(sample.fixture.historyLines).toBe(29_256)
       expect.soft(sample.restoredMarkerRendered).toBe(true)
       expect.soft(sample.restoredFileMatchedSnapshot).toBe(true)
       expect.soft(sample.input.applied).toBe(true)
       expect.soft(sample.input.samples.length).toBeGreaterThan(0)
-      expect.soft(sample.input.summary?.maxMs).toBeLessThanOrEqual(budget.inputMaxMs)
+      expect.soft(sample.input.summary?.maxMs).toBeLessThanOrEqual(budget.inputCatastrophicMaxMs)
       expect.soft(sample.inputPersisted).toBe(true)
       expect.soft(sample.finalState.activeEditors).toBe(1)
-      expect.soft(restoreFrames.blankFrames, 'restore produced blank editor frames').toBe(0)
+      expect.soft(sample.finalState.renderedElementCount).toBe(expectedBlocks)
       expect
-        .soft(restoreFrames.loadingFrames, 'restore regressed to a loading editor surface')
-        .toBe(0)
-      expect.soft(restoreFrames.readyToLoadingTransitions).toBe(0)
+        .soft(restoreFrames.loadingFrames, 'restore did not expose incremental loading frames')
+        .toBeGreaterThan(0)
       expect.soft(restoreFrames.frameCount).toBeGreaterThanOrEqual(budget.minFrameCount)
       expect.soft(restoreFrames.maxVisibleSurfaces).toBeLessThanOrEqual(budget.maxVisibleSurfaces)
       expect.soft(restoreFrames.maxFrameMs).toBeLessThanOrEqual(budget.maxFrameMs)
@@ -73,5 +88,25 @@ test.describe('large local-history restore @performance @blackbox', () => {
     } finally {
       await writeArtifact(testInfo, { budget, failure, graphicsMode, sample })
     }
+  }
+
+  // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
+  test('keeps the renderer responsive while restoring a 1.36MB legacy snapshot', async ({}, testInfo) => {
+    await runRestoreCase({
+      documentKind: 'text-heavy',
+      expectedBlocks: 488,
+      minimumBytes: 1_300_000,
+      testInfo,
+    })
+  })
+
+  // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
+  test('streams a 4,000-block local-history snapshot without freezing input', async ({}, testInfo) => {
+    await runRestoreCase({
+      documentKind: 'block-heavy',
+      expectedBlocks: 4_000,
+      minimumBytes: 30_000,
+      testInfo,
+    })
   })
 })

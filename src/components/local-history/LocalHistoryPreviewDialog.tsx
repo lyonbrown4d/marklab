@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { configureMonaco } from '@/lib/monaco'
+import { LocalHistoryLargeDiff } from '@/components/local-history/LocalHistoryLargeDiff'
 import { fsApi } from '@/services/fsApi'
 import { localHistoryApi, type LocalHistoryEntry } from '@/services/localHistoryApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -52,6 +53,33 @@ type LocalHistoryDiffEditorProps = {
   smoothScrolling: boolean
 }
 
+const LARGE_DIFF_LINE_THRESHOLD = 5000
+const exceedsLineThreshold = (value: string) => {
+  let lines = 1
+  for (const character of value) {
+    if (character === '\n' && ++lines > LARGE_DIFF_LINE_THRESHOLD) return true
+  }
+  return false
+}
+
+const disposeModelsWhenIdle = (models: ReturnType<MonacoDiffEditor['getModel']>) => {
+  if (!models) return
+  const schedule = (callback: () => void) => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+    }
+    if (idleWindow.requestIdleCallback) {
+      idleWindow.requestIdleCallback(callback, { timeout: 2000 })
+      return
+    }
+    window.setTimeout(callback, 0)
+  }
+  schedule(() => {
+    models.original.dispose()
+    schedule(() => models.modified.dispose())
+  })
+}
+
 const LocalHistoryDiffEditor = ({
   darkMode,
   entryId,
@@ -71,8 +99,7 @@ const LocalHistoryDiffEditor = ({
       const editor = editorRef.current
       const models = editor?.getModel()
       editor?.setModel(null)
-      models?.original.dispose()
-      models?.modified.dispose()
+      disposeModelsWhenIdle(models ?? null)
       editorRef.current = null
     },
     [],
@@ -87,6 +114,8 @@ const LocalHistoryDiffEditor = ({
       modified={modified}
       originalModelPath={`local-history://snapshot/${entryId}/${path}`}
       modifiedModelPath={`local-history://current/${entryId}/${path}`}
+      keepCurrentModifiedModel
+      keepCurrentOriginalModel
       onMount={handleMount}
       options={{
         readOnly: true,
@@ -127,9 +156,15 @@ const LocalHistoryPreviewDialog = ({
     },
     enabled: open && Boolean(entry),
   })
+  const previewData = previewQuery.data
+  const useLargeDiff = Boolean(
+    previewData &&
+    (exceedsLineThreshold(previewData.snapshot.content) ||
+      exceedsLineThreshold(previewData.current)),
+  )
 
   useEffect(() => {
-    if (!open || monacoReady || monacoError) return
+    if (!open || useLargeDiff || monacoReady || monacoError) return
     let cancelled = false
     void configureMonaco().then(
       () => {
@@ -142,7 +177,7 @@ const LocalHistoryPreviewDialog = ({
     return () => {
       cancelled = true
     }
-  }, [monacoError, monacoReady, open])
+  }, [monacoError, monacoReady, open, useLargeDiff])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,6 +215,11 @@ const LocalHistoryPreviewDialog = ({
                 {String(previewQuery.error ?? monacoError)}
               </AppAlert>
             </div>
+          ) : useLargeDiff ? (
+            <LocalHistoryLargeDiff
+              original={previewData?.snapshot.content ?? ''}
+              modified={previewData?.current ?? ''}
+            />
           ) : !monacoReady ? (
             <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
               <Spinner aria-hidden="true" role="presentation" />

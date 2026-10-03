@@ -1,4 +1,9 @@
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import {
+  parseMarkdownAst,
+  type MarkdownNode,
+  type MarkdownRoot,
+} from '@electron/services/workspace/markdown/ast.js'
 import { parseMarkdownBlocks } from '@electron/services/workspace/markdown/blocks.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
 import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
@@ -59,15 +64,25 @@ export const buildNodeWorkspaceGraph = (
   knownPaths: KnownPaths,
 ): FsGraph => {
   const indexed = documents
-    .map((document) => ({
-      document,
-      parsed: parseMarkdownDocument(normalizeWorkspacePath(document.path), document.content),
-    }))
+    .map((document) => {
+      const tree = parseMarkdownAst(document.content)
+      return {
+        document,
+        parsed: parseMarkdownDocument(
+          normalizeWorkspacePath(document.path),
+          document.content,
+          tree,
+        ),
+        tree,
+      }
+    })
     .sort((left, right) => left.parsed.path.localeCompare(right.parsed.path))
   const files = indexed.map((item) => item.parsed)
   const filesByPath = new Map(files.map((file) => [file.path, file]))
   const assetPaths = new Set(knownPaths.assetPaths.map(normalizeWorkspacePath))
-  const nodes: FsGraphNode[] = files.map((file) => fileNode(file.path))
+  const nodes: FsGraphNode[] = indexed.map(({ document, parsed, tree }) =>
+    fileNode(parsed.path, workspaceFileSummary(document.content, tree)),
+  )
   const nodeIds = new Set(nodes.map((node) => node.id))
   const edges: FsGraphEdge[] = []
   const contains = new Set<string>()
@@ -158,12 +173,146 @@ const graphTarget = (
 const fileNodeId = (path: string): string => `file:${path}`
 const headingNodeId = (path: string, slug: string): string => `heading:${path}:${slug}`
 
-const fileNode = (path: string): FsGraphNode => ({
+const fileNode = (path: string, content?: string): FsGraphNode => ({
   id: fileNodeId(path),
   kind: 'file',
   label: fileLabel(path),
   path,
+  ...(content ? { content } : {}),
 })
+
+const WORKSPACE_FILE_SUMMARY_BLOCKS = 3
+const WORKSPACE_FILE_SUMMARY_CHARACTERS = 420
+
+const workspaceFileSummary = (content: string, tree: MarkdownRoot): string => {
+  const frontmatterEndOffset = leadingFrontmatterEndOffset(content)
+  const excerpts: string[] = []
+
+  for (const node of tree.children) {
+    const excerpt = normalizedSummaryText(
+      markdownNodeSummaryText(node, content, frontmatterEndOffset),
+    )
+    if (!excerpt) continue
+    excerpts.push(excerpt)
+    if (excerpts.length === WORKSPACE_FILE_SUMMARY_BLOCKS) break
+  }
+
+  const summaryBlocks = excerpts.length
+    ? excerpts
+    : workspaceHeadingFallback(tree, content, frontmatterEndOffset)
+  const summary = summaryBlocks.join('\n\n')
+  if (summary.length <= WORKSPACE_FILE_SUMMARY_CHARACTERS) return summary
+  return `${summary.slice(0, WORKSPACE_FILE_SUMMARY_CHARACTERS - 3).trimEnd()}...`
+}
+
+const workspaceHeadingFallback = (
+  tree: MarkdownRoot,
+  content: string,
+  contentStartOffset: number,
+): string[] => {
+  const headings = tree.children.filter((node) => {
+    if (node.type !== 'heading') return false
+    const endOffset = node.position?.end.offset
+    return typeof endOffset !== 'number' || endOffset > contentStartOffset
+  })
+  const candidates = headings[0]?.depth === 1 ? headings.slice(1) : headings
+  const excerpts = new Map<string, string>()
+
+  for (const heading of candidates) {
+    const excerpt = normalizedSummaryText(
+      markdownNodeSummaryText(heading, content, contentStartOffset, true),
+    )
+    if (excerpt) excerpts.set(excerpt.toLocaleLowerCase(), excerpt)
+    if (excerpts.size === WORKSPACE_FILE_SUMMARY_BLOCKS) break
+  }
+
+  return [...excerpts.values()]
+}
+
+const leadingFrontmatterEndOffset = (content: string): number => {
+  const firstLine = markdownLineAtOffset(content, 0)
+  const delimiter = firstLine.text.trim()
+  if (delimiter !== '---' && delimiter !== '+++') return 0
+
+  let offset = firstLine.nextOffset
+  while (offset < content.length) {
+    const line = markdownLineAtOffset(content, offset)
+    if (line.text.trim() === delimiter) return line.nextOffset
+    offset = line.nextOffset
+  }
+
+  return 0
+}
+
+const markdownLineAtOffset = (
+  content: string,
+  startOffset: number,
+): { text: string; nextOffset: number } => {
+  let endOffset = startOffset
+  while (endOffset < content.length && content[endOffset] !== '\r' && content[endOffset] !== '\n') {
+    endOffset += 1
+  }
+
+  let nextOffset = endOffset
+  if (content[nextOffset] === '\r') nextOffset += 1
+  if (content[nextOffset] === '\n') nextOffset += 1
+  return { text: content.slice(startOffset, endOffset), nextOffset }
+}
+
+const SUMMARY_SKIPPED_NODE_TYPES = new Set([
+  'code',
+  'definition',
+  'heading',
+  'html',
+  'inlineCode',
+  'thematicBreak',
+])
+const SUMMARY_LINE_NODE_TYPES = new Set([
+  'blockquote',
+  'list',
+  'listItem',
+  'table',
+  'tableCell',
+  'tableRow',
+])
+
+const markdownNodeSummaryText = (
+  node: MarkdownNode,
+  content: string,
+  contentStartOffset: number,
+  includeHeading = false,
+): string => {
+  const nodeEndOffset = node.position?.end.offset
+  if (typeof nodeEndOffset === 'number' && nodeEndOffset <= contentStartOffset) return ''
+  if (SUMMARY_SKIPPED_NODE_TYPES.has(node.type) && !(includeHeading && node.type === 'heading'))
+    return ''
+  if (node.type === 'break') return '\n'
+  if (node.type === 'text') {
+    const startOffset = node.position?.start.offset
+    const endOffset = node.position?.end.offset
+    if (
+      typeof startOffset === 'number' &&
+      typeof endOffset === 'number' &&
+      startOffset < contentStartOffset
+    ) {
+      return content.slice(contentStartOffset, endOffset)
+    }
+    return node.value ?? ''
+  }
+  if (node.type === 'image') return node.alt ?? ''
+  const children =
+    node.children
+      ?.map((child) => markdownNodeSummaryText(child, content, contentStartOffset))
+      .filter(Boolean) ?? []
+  return children.join(SUMMARY_LINE_NODE_TYPES.has(node.type) ? '\n' : '')
+}
+
+const normalizedSummaryText = (value: string): string =>
+  value
+    .split(/\r\n?|\n/)
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n')
 
 const hasNonMarkdownExtension = (value: string): boolean => {
   const extension = value.split('/').at(-1)?.split('.').at(-1)?.toLocaleLowerCase()

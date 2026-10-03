@@ -38,6 +38,9 @@ const createHarness = () => {
     }),
     registerWindow: vi.fn(),
   }
+  const requestRendererFlush = vi.fn(async (window: BrowserWindow): Promise<void> => {
+    void window
+  })
   const logger = {
     child: vi.fn(),
     debug: vi.fn(),
@@ -45,7 +48,7 @@ const createHarness = () => {
     info: vi.fn(),
     warn: vi.fn(),
   }
-  const nativeIpc = { commands: { workspace } }
+  const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
   const options = {
     getContainer: () => ({ cradle: { logger, workspaceRegistry: workspace } }),
     getNativeIpc: () => nativeIpc,
@@ -65,12 +68,13 @@ const createHarness = () => {
       }
     }),
   })
-  return { gate, lifecycle, logger, save, window, workspace }
+  return { gate, lifecycle, logger, requestRendererFlush, save, window, workspace }
 }
 
 describe('window persistence shutdown barrier', () => {
   it('waits for admitted writes and keeps mutations frozen when quit continues', async () => {
-    const { gate, lifecycle, save } = createHarness()
+    const { gate, lifecycle, requestRendererFlush, save, window } = createHarness()
+    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
     let finishWrite!: () => void
     const pending = new Promise<void>((resolve) => {
       finishWrite = resolve
@@ -82,6 +86,7 @@ describe('window persistence shutdown barrier', () => {
     lifecycle.handleBeforeQuit(event, continueQuit)
     expect(event.preventDefault).toHaveBeenCalledTimes(2)
     expect(save).not.toHaveBeenCalled()
+    expect(requestRendererFlush).toHaveBeenCalledWith(window)
     expect(continueQuit).not.toHaveBeenCalled()
     finishWrite()
     await write
@@ -129,15 +134,36 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('flushes only the closing window and does not freeze other workspace sessions', async () => {
-    const { lifecycle, window, workspace } = createHarness()
+    const { lifecycle, requestRendererFlush, window, workspace } = createHarness()
     lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
 
     window.close()
     await vi.waitFor(() => expect(window.isDestroyed()).toBe(true))
 
+    expect(requestRendererFlush).toHaveBeenCalledWith(window)
     expect(workspace.flushWindowForClose).toHaveBeenCalledWith(window)
     expect(workspace.beginShutdownBarrier).not.toHaveBeenCalled()
     expect(workspace.flushBuffersForShutdown).not.toHaveBeenCalled()
+  })
+
+  it('waits for the renderer snapshot and buffer flush before closing the workspace', async () => {
+    const { lifecycle, requestRendererFlush, window, workspace } = createHarness()
+    let finishRendererFlush!: () => void
+    requestRendererFlush.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishRendererFlush = resolve
+      }),
+    )
+    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+
+    window.close()
+    await vi.waitFor(() => expect(requestRendererFlush).toHaveBeenCalledWith(window))
+    expect(workspace.flushWindowForClose).not.toHaveBeenCalled()
+    expect(window.isDestroyed()).toBe(false)
+
+    finishRendererFlush()
+    await vi.waitFor(() => expect(window.isDestroyed()).toBe(true))
+    expect(workspace.flushWindowForClose).toHaveBeenCalledWith(window)
   })
 
   it('rejects shutdown when buffers remain dirty despite a fulfilled save', async () => {

@@ -8,6 +8,8 @@ import { useI18n } from '@/i18n/useI18n'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { toast } from 'sonner'
 import { useEditorBufferChanges } from '@/app/useEditorBufferChanges'
+import { registerEditorBufferFlusher } from '@/app/editorCloseLifecycle'
+import { editorLoadGenerationFromState } from '@/app/editorLoadRouteState'
 import { useEditorBufferStatus } from '@/app/useEditorBufferStatus'
 import { useEditorBufferInvalidation } from '@/app/useEditorBufferInvalidation'
 import { usePersistedEditorBufferContent } from '@/app/usePersistedEditorBufferContent'
@@ -18,27 +20,10 @@ import {
   type SaveState,
 } from '@/app/useEditorBufferState'
 export type { SaveState } from '@/app/useEditorBufferState'
+export { editorLoadGenerationFromState, nextEditorLoadRouteState } from '@/app/editorLoadRouteState'
 
 const BUFFER_FLUSH_DEBOUNCE_MS = 800
 const BUFFER_ERROR_TOAST_ID_PREFIX = 'editor-buffer-error'
-const LOAD_GENERATION_KEY = 'editorLoadGeneration'
-const routeStateRecord = (state: unknown): Record<string, unknown> => {
-  return typeof state === 'object' && state !== null && !Array.isArray(state)
-    ? (state as Record<string, unknown>)
-    : {}
-}
-
-export const editorLoadGenerationFromState = (state: unknown) => {
-  const generation = routeStateRecord(state)[LOAD_GENERATION_KEY]
-  const valid =
-    typeof generation === 'number' && Number.isSafeInteger(generation) && generation >= 0
-  return valid ? generation : 0
-}
-
-export const nextEditorLoadRouteState = (state: unknown): Record<string, unknown> => ({
-  ...routeStateRecord(state),
-  [LOAD_GENERATION_KEY]: editorLoadGenerationFromState(state) + 1,
-})
 type UseEditorBufferArgs = {
   activePath: string | null
   workspaceKey: string
@@ -148,6 +133,8 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
       void flushNow().catch(reportFlushError)
     }, BUFFER_FLUSH_DEBOUNCE_MS)
   }, [flushNow, reportFlushError])
+
+  useEffect(() => registerEditorBufferFlusher(flushNow), [flushNow])
 
   useEffect(() => {
     if (workspaceSessionRef.current === workspaceKey) return

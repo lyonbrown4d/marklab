@@ -55,7 +55,7 @@ export const TabsBarViewModeControls = ({
           {controls.map(({ label, mode, Icon, onPreload }) => (
             <Tooltip key={mode}>
               <TooltipTrigger asChild>
-                <span className="contents">
+                <span className="inline-flex">
                   <ToggleGroupItem
                     value={mode}
                     className="size-6 rounded"

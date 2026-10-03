@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import type { Value } from 'platejs'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -27,6 +27,21 @@ vi.mock('@/services/plateMarkdownWorkerClient', () => ({
   shouldParsePlateMarkdownInWorker: () => true,
   loadPlateMarkdown: (_editor: unknown, markdown: string, signal?: AbortSignal) =>
     new Promise<Value>((resolve) => workerMock.requests.push({ markdown, resolve, signal })),
+  streamPlateMarkdown: (
+    _editor: unknown,
+    markdown: string,
+    onChunk: (value: Value) => Promise<void>,
+    signal?: AbortSignal,
+  ) =>
+    new Promise<void>((resolve) =>
+      workerMock.requests.push({
+        markdown,
+        resolve: (value) => {
+          void onChunk(value).then(resolve)
+        },
+        signal,
+      }),
+    ),
   serializePlateMarkdown: workerMock.workerSerialize,
 }))
 
@@ -40,6 +55,12 @@ import {
 } from '@/components/plate/PlateEditorSurface'
 
 const paragraph = (text: string): Value => [{ type: 'p', children: [{ text }] }]
+
+const resolveRequest = (request: (typeof workerMock.requests)[number] | undefined, text: string) =>
+  act(async () => {
+    request?.resolve(paragraph(text))
+    await Promise.resolve()
+  })
 
 beforeEach(() => {
   workerMock.requests.length = 0
@@ -60,16 +81,16 @@ describe('PlateEditorSurface async value lifecycle', () => {
 
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'loading')
 
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
 
-    expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'ready')
+    await waitFor(() =>
+      expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'ready'),
+    )
+    expect(workerMock.requests).toHaveLength(1)
     expect(workerMock.serialize).not.toHaveBeenCalled()
   })
 
-  it('applies only the latest external large value without making the editor read-only', async () => {
+  it('applies only the latest external large value while editing is disabled', async () => {
     const ref = createRef<PlateEditorSurfaceHandle>()
     const view = render(
       <PlateEditorSurface
@@ -80,10 +101,10 @@ describe('PlateEditorSurface async value lifecycle', () => {
         value="Initial"
       />,
     )
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
+    await waitFor(() =>
+      expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'ready'),
+    )
 
     view.rerender(
       <PlateEditorSurface
@@ -105,6 +126,14 @@ describe('PlateEditorSurface async value lifecycle', () => {
     )
 
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('contenteditable', 'true')
+    expect(screen.getByTestId('markdown-editor')).not.toHaveAttribute('inert')
+    const beforeInput = new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      data: 'blocked',
+      inputType: 'insertText',
+    })
+    expect(screen.getByTestId('markdown-editor').dispatchEvent(beforeInput)).toBe(false)
     expect((await ref.current?.getMarkdown())?.trim()).toBe('Initial')
     const firstExternal = workerMock.requests.find((request) => request.markdown === 'External one')
     const latestExternal = workerMock.requests.find(
@@ -142,10 +171,7 @@ describe('PlateEditorSurface async value lifecycle', () => {
       />,
     )
 
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('First'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'First')
     const second = workerMock.requests.find((request) => request.markdown === 'Second')
     expect(second).toBeDefined()
     await act(async () => {
@@ -153,6 +179,7 @@ describe('PlateEditorSurface async value lifecycle', () => {
       await Promise.resolve()
     })
 
+    expect(workerMock.requests.filter((request) => request.markdown === 'Second')).toHaveLength(1)
     expect((await ref.current?.getMarkdown())?.trim()).toBe('Second')
   })
 
@@ -165,10 +192,7 @@ describe('PlateEditorSurface async value lifecycle', () => {
         value="Initial"
       />,
     )
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
     workerMock.serialize.mockClear()
 
     view.rerender(
@@ -199,10 +223,7 @@ describe('PlateEditorSurface async value lifecycle', () => {
         value="Initial"
       />,
     )
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
 
     expect((await ref.current?.getMarkdown())?.trim()).toBe('Initial')
     expect(workerMock.workerSerialize).toHaveBeenCalledOnce()
@@ -220,10 +241,7 @@ describe('PlateEditorSurface async value lifecycle', () => {
         value="Initial"
       />,
     )
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
     onStatusChange.mockClear()
 
     view.rerender(
@@ -242,36 +260,53 @@ describe('PlateEditorSurface async value lifecycle', () => {
       restored?.resolve(paragraph('Restored'))
       await Promise.resolve()
     })
-    expect(onStatusChange).toHaveBeenLastCalledWith({ phase: 'ready' })
+    await waitFor(() => expect(onStatusChange).toHaveBeenLastCalledWith({ phase: 'ready' }))
   })
 
   it('does not overwrite a local edit made while an external value is parsing', async () => {
     const ref = createRef<PlateEditorSurfaceHandle>()
+    const onChange = vi.fn()
     const view = render(
       <PlateEditorSurface
         activePath="notes/large.md"
-        onChange={vi.fn()}
+        onChange={onChange}
         placeholder="Write"
         ref={ref}
         value="Initial"
       />,
     )
-    await act(async () => {
-      workerMock.requests[0]?.resolve(paragraph('Initial'))
-      await Promise.resolve()
-    })
+    await resolveRequest(workerMock.requests[0], 'Initial')
 
     view.rerender(
       <PlateEditorSurface
         activePath="notes/large.md"
-        onChange={vi.fn()}
+        onChange={onChange}
         placeholder="Write"
         ref={ref}
         value="Restored"
       />,
     )
     const restored = workerMock.requests.find((request) => request.markdown === 'Restored')
-    act(() => ref.current?.getEditor().tf.setValue(paragraph('Local edit')))
+    await act(async () => {
+      const editor = ref.current?.getEditor()
+      if (!editor) return
+      editor.tf.select({
+        anchor: { offset: 0, path: [0, 0] },
+        focus: { offset: 'Initial'.length, path: [0, 0] },
+      })
+      editor.tf.insertText('Local edit')
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
+    view.rerender(
+      <PlateEditorSurface
+        activePath="notes/large.md"
+        onChange={onChange}
+        placeholder="Write"
+        ref={ref}
+        value="Local edit"
+      />,
+    )
     await act(async () => {
       restored?.resolve(paragraph('Restored'))
       await Promise.resolve()

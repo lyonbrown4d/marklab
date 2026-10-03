@@ -5,9 +5,18 @@ import type http from 'node:http'
 import { closeRendererServer, startRendererServer } from '../electron/electronTestHarness.js'
 /* eslint-disable no-restricted-imports -- Node-run Playwright helpers use explicit relative ESM imports. */
 import { type GraphicsMode } from './electronPerformanceHarness.js'
+import {
+  BLOCK_HEAVY_DOCUMENT_EXPECTATIONS,
+  writeBlockHeavyDocumentWorkspace,
+} from './blockHeavyDocumentFixture.js'
 import type { FrameMetrics } from './frameProbe.js'
 import { runLargeDocumentSample, type PerformanceSample } from './largeDocumentScenario.js'
-import { LARGE_DOCUMENT_EXPECTATIONS } from './largeDocumentFixture.js'
+import {
+  LARGE_DOCUMENT_EXPECTATIONS,
+  type LargeDocumentFixture,
+  type LargeDocumentStats,
+  writeLargeDocumentWorkspace,
+} from './largeDocumentFixture.js'
 import { performanceBudgetForProject } from './performanceBudgets.js'
 import { PERFORMANCE_SAMPLE_PLAN, summarizeDurations } from './performanceStatistics.js'
 /* eslint-enable no-restricted-imports */
@@ -52,6 +61,8 @@ const assertFrameBudget = (
 const assertSample = (
   sample: PerformanceSample,
   budget: ReturnType<typeof performanceBudgetForProject>,
+  expectedStats: LargeDocumentStats,
+  minimumSelectionLength: number,
 ) => {
   const label = `run ${sample.runIndex}`
   expect
@@ -61,8 +72,34 @@ const assertSample = (
     .soft(sample.initialization.loadingObserved, `${label} did not observe Plate loading`)
     .toBe(true)
   expect
-    .soft(sample.sourceStats, `${label} fixture shape drifted`)
-    .toEqual(LARGE_DOCUMENT_EXPECTATIONS)
+    .soft(
+      sample.initialization.loadingFrameCount,
+      `${label} loading did not yield enough animation frames`,
+    )
+    .toBeGreaterThanOrEqual(budget.loadingMinFrameCount)
+  expect
+    .soft(sample.initialization.loadingMaxFrameMs, `${label} loading frame exceeded budget`)
+    .toBeLessThanOrEqual(budget.loadingMaxFrameMs)
+  expect
+    .soft(sample.initialization.loadingP95FrameMs, `${label} loading p95 frame exceeded budget`)
+    .toBeLessThanOrEqual(budget.loadingP95FrameMs)
+  if (sample.initialization.supportsLongTask) {
+    expect
+      .soft(
+        sample.initialization.loadingLongTaskCount,
+        `${label} loading long-task count exceeded budget`,
+      )
+      .toBeLessThanOrEqual(budget.loadingMaxLongTaskCount)
+    expect
+      .soft(
+        sample.initialization.loadingLongTaskDurationMs,
+        `${label} loading long-task duration exceeded budget`,
+      )
+      .toBeLessThanOrEqual(budget.loadingMaxLongTaskDurationMs)
+  }
+  expect.soft(sample.sourceStats, `${label} fixture shape drifted`).toEqual(expectedStats)
+  expect.soft(sample.hydration.allPresent, `${label} hydration lost a sentinel`).toBe(true)
+  expect.soft(sample.hydration.ordered, `${label} hydration reordered sentinels`).toBe(true)
   expect.soft(sample.initial.activeEditors, `${label} initial editor count`).toBe(1)
   expect.soft(sample.finalState.activeEditors, `${label} final editor count`).toBe(1)
   expect.soft(sample.firstInput.applied, `${label} first input was not applied`).toBe(true)
@@ -74,10 +111,12 @@ const assertSample = (
     .soft(sample.persistence.firstMarkerPersisted, `${label} first marker was not saved`)
     .toBe(true)
   expect.soft(sample.persistence.markerPersisted, `${label} typing marker was not saved`).toBe(true)
+  expect.soft(sample.persistence.sentinels.allPresent, `${label} save lost a sentinel`).toBe(true)
+  expect.soft(sample.persistence.sentinels.ordered, `${label} save reordered sentinels`).toBe(true)
   expect.soft(sample.selectAll.insideEditor, `${label} select-all escaped Plate`).toBe(true)
   expect
     .soft(sample.selectAll.textLength, `${label} select-all was incomplete`)
-    .toBeGreaterThan(500_000)
+    .toBeGreaterThan(minimumSelectionLength)
   expect.soft(sample.wheel.distance, `${label} wheel did not scroll`).toBeGreaterThan(0)
   expect
     .soft(
@@ -99,6 +138,9 @@ const assertSample = (
     .soft(sample.initial.renderedElementCount, `${label} Slate element budget`)
     .toBeLessThanOrEqual(budget.maxRenderedElementCount)
   expect
+    .soft(sample.initial.renderedElementCount, `${label} parsed block count`)
+    .toBe(expectedStats.blockCount)
+  expect
     .soft(sample.initial.chunkCount, `${label} minimum chunk count`)
     .toBeGreaterThanOrEqual(budget.minChunkCount)
   expect
@@ -115,6 +157,102 @@ const writeArtifact = async (testInfo: TestInfo, name: string, value: unknown) =
   await testInfo.attach(name, { contentType: 'application/json', path: artifactPath })
 }
 
+type DocumentGate = {
+  artifactName: string
+  createFixture: (runtimeRoot: string) => LargeDocumentFixture
+  expectedStats: LargeDocumentStats
+  minimumSelectionLength: number
+  name: string
+  samplePlan: { measuredRuns: number; warmupRuns: number }
+}
+
+const documentGates: DocumentGate[] = [
+  {
+    artifactName: 'text-heavy-document-metrics.json',
+    createFixture: writeLargeDocumentWorkspace,
+    expectedStats: LARGE_DOCUMENT_EXPECTATIONS,
+    minimumSelectionLength: 500_000,
+    name: 'text-heavy 1.36MB document',
+    samplePlan: PERFORMANCE_SAMPLE_PLAN,
+  },
+  {
+    artifactName: 'block-heavy-document-metrics.json',
+    createFixture: writeBlockHeavyDocumentWorkspace,
+    expectedStats: BLOCK_HEAVY_DOCUMENT_EXPECTATIONS,
+    minimumSelectionLength: 3_500,
+    name: 'block-heavy 4,000-block document',
+    samplePlan: { measuredRuns: 2, warmupRuns: 1 },
+  },
+]
+
+const runDocumentGate = async (gate: DocumentGate, rendererUrl: string, testInfo: TestInfo) => {
+  const graphicsMode = testInfo.project.name as GraphicsMode
+  const budget = performanceBudgetForProject(testInfo.project.name)
+  const samples: PerformanceSample[] = []
+  let summary: Record<string, unknown> | null = null
+  let failure: { message: string; stack?: string } | null = null
+  try {
+    const totalRuns = gate.samplePlan.warmupRuns + gate.samplePlan.measuredRuns
+    for (let runIndex = 0; runIndex < totalRuns; runIndex += 1) {
+      samples.push(
+        await runLargeDocumentSample({
+          createFixture: gate.createFixture,
+          graphicsMode,
+          rendererUrl,
+          runIndex,
+          testInfo,
+          warmup: runIndex < gate.samplePlan.warmupRuns,
+        }),
+      )
+    }
+    const measured = samples.filter((sample) => !sample.warmup)
+    const initialization = summarizeDurations(
+      measured.map((sample) => sample.initialization.windowOpenToReadyMs),
+    )
+    const inputDurations = measured.flatMap((sample) => [
+      ...sample.firstInput.samples.map((entry) => entry.inputToPaintMs),
+      ...sample.continuousInput.samples.map((entry) => entry.inputToPaintMs),
+    ])
+    const input = summarizeDurations(inputDurations)
+    const slowInputSampleCount = inputDurations.filter(
+      (duration) => duration > budget.inputSlowSampleMs,
+    ).length
+    summary = { initialization, input, measuredRuns: measured.length, slowInputSampleCount }
+
+    expect.soft(measured).toHaveLength(gate.samplePlan.measuredRuns)
+    measured.forEach((sample) =>
+      assertSample(sample, budget, gate.expectedStats, gate.minimumSelectionLength),
+    )
+    expect.soft(initialization.firstMs).toBeLessThanOrEqual(budget.windowOpenToReadyFirstMs)
+    expect.soft(initialization.p95Ms).toBeLessThanOrEqual(budget.windowOpenToReadyP95Ms)
+    expect.soft(initialization.maxMs).toBeLessThanOrEqual(budget.windowOpenToReadyMaxMs)
+    expect.soft(input.firstMs).toBeLessThanOrEqual(budget.inputFirstMs)
+    expect.soft(input.p95Ms).toBeLessThanOrEqual(budget.inputP95Ms)
+    expect.soft(input.maxMs).toBeLessThanOrEqual(budget.inputCatastrophicMaxMs)
+    expect.soft(slowInputSampleCount).toBeLessThanOrEqual(budget.inputMaxSlowSampleCount)
+  } catch (error) {
+    const normalized = error instanceof Error ? error : new Error(String(error))
+    failure = { message: normalized.message, stack: normalized.stack }
+    throw error
+  } finally {
+    await writeArtifact(testInfo, gate.artifactName, {
+      failure,
+      graphicsMode,
+      samplePlan: gate.samplePlan,
+      samples,
+      summary,
+    })
+    await writeArtifact(testInfo, 'performance-budget.json', budget)
+    const logPath = testInfo.outputPath('electron-performance.log')
+    const logs = samples.flatMap((sample) => sample.electronOutput)
+    fs.writeFileSync(logPath, `${logs.join('\n') || '(no completed sample output)'}\n`, 'utf8')
+    await testInfo.attach('electron-performance.log', {
+      contentType: 'text/plain',
+      path: logPath,
+    })
+  }
+}
+
 test.describe('large Markdown document @performance @blackbox', () => {
   let rendererServer: http.Server | undefined
   let rendererUrl = ''
@@ -127,78 +265,10 @@ test.describe('large Markdown document @performance @blackbox', () => {
 
   test.afterAll(async () => closeRendererServer(rendererServer))
 
-  // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
-  test('gates Plate with a warmup and three measured runs', async ({}, testInfo) => {
-    const graphicsMode = testInfo.project.name as GraphicsMode
-    const budget = performanceBudgetForProject(testInfo.project.name)
-    const samples: PerformanceSample[] = []
-    let summary: Record<string, unknown> | null = null
-    let failure: { message: string; stack?: string } | null = null
-    try {
-      const totalRuns = PERFORMANCE_SAMPLE_PLAN.warmupRuns + PERFORMANCE_SAMPLE_PLAN.measuredRuns
-      for (let runIndex = 0; runIndex < totalRuns; runIndex += 1) {
-        samples.push(
-          await runLargeDocumentSample({
-            graphicsMode,
-            rendererUrl,
-            runIndex,
-            testInfo,
-            warmup: runIndex < PERFORMANCE_SAMPLE_PLAN.warmupRuns,
-          }),
-        )
-      }
-      const measured = samples.filter((sample) => !sample.warmup)
-      const initialization = summarizeDurations(
-        measured.map((sample) => sample.initialization.windowOpenToReadyMs),
-      )
-      const input = summarizeDurations(
-        measured.flatMap((sample) => [
-          ...sample.firstInput.samples.map((entry) => entry.inputToPaintMs),
-          ...sample.continuousInput.samples.map((entry) => entry.inputToPaintMs),
-        ]),
-      )
-      summary = { initialization, input, measuredRuns: measured.length }
-
-      expect.soft(measured).toHaveLength(PERFORMANCE_SAMPLE_PLAN.measuredRuns)
-      measured.forEach((sample) => assertSample(sample, budget))
-      expect
-        .soft(initialization.firstMs, 'window-open→ready first sample exceeded budget')
-        .toBeLessThanOrEqual(budget.windowOpenToReadyFirstMs)
-      expect
-        .soft(initialization.p95Ms, 'window-open→ready p95 exceeded budget')
-        .toBeLessThanOrEqual(budget.windowOpenToReadyP95Ms)
-      expect
-        .soft(initialization.maxMs, 'window-open→ready max exceeded budget')
-        .toBeLessThanOrEqual(budget.windowOpenToReadyMaxMs)
-      expect
-        .soft(input.firstMs, 'input first latency exceeded budget')
-        .toBeLessThanOrEqual(budget.inputFirstMs)
-      expect
-        .soft(input.p95Ms, 'input p95 latency exceeded budget')
-        .toBeLessThanOrEqual(budget.inputP95Ms)
-      expect
-        .soft(input.maxMs, 'input max latency exceeded budget')
-        .toBeLessThanOrEqual(budget.inputMaxMs)
-    } catch (error) {
-      const normalized = error instanceof Error ? error : new Error(String(error))
-      failure = { message: normalized.message, stack: normalized.stack }
-      throw error
-    } finally {
-      await writeArtifact(testInfo, 'large-document-metrics.json', {
-        failure,
-        graphicsMode,
-        samplePlan: PERFORMANCE_SAMPLE_PLAN,
-        samples,
-        summary,
-      })
-      await writeArtifact(testInfo, 'performance-budget.json', budget)
-      const logPath = testInfo.outputPath('electron-performance.log')
-      const logs = samples.flatMap((sample) => sample.electronOutput)
-      fs.writeFileSync(logPath, `${logs.join('\n') || '(no completed sample output)'}\n`, 'utf8')
-      await testInfo.attach('electron-performance.log', {
-        contentType: 'text/plain',
-        path: logPath,
-      })
-    }
-  })
+  for (const gate of documentGates) {
+    // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
+    test(`gates Plate with ${gate.name}`, async ({}, testInfo) => {
+      await runDocumentGate(gate, rendererUrl, testInfo)
+    })
+  }
 })

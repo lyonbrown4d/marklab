@@ -39,7 +39,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const contextMenu = usePlateEditorContextMenu({
     getEditor,
     onLinkInsert: openLinkDialog,
-    readOnly: props.readOnly,
+    readOnly: props.readOnly || status.phase !== 'ready',
   })
   const aiLabels = useMemo<AiComposerLabels>(
     () => ({

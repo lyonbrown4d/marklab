@@ -45,4 +45,20 @@ describe('workspace map graph layout metrics', () => {
 
     expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 200, height: 96 })
   })
+
+  it('reserves the fixed rendered size for workspace map PDF previews', () => {
+    const preview: Node<GraphNodeData> = {
+      id: 'preview:docs/brief.pdf',
+      type: 'preview',
+      position: { x: 0, y: 0 },
+      data: {
+        label: 'brief.pdf',
+        path: 'docs/brief.pdf',
+        previewKind: 'pdf',
+        workspaceMap: true,
+      },
+    }
+
+    expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 360, height: 128 })
+  })
 })

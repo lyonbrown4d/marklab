@@ -5,6 +5,8 @@ import type { ThemeMode } from '@/store/appTypes'
 import { darkThemeValues, lightThemeValues } from '@/logic/themes'
 
 const mocks = vi.hoisted(() => ({
+  closeHandler: null as (() => Promise<void> | void) | null,
+  flushEditorChangesForClose: vi.fn().mockResolvedValue(undefined),
   flushBuffers: vi.fn().mockResolvedValue(0),
   preferences: {
     autoSystemThemeSync: false,
@@ -25,7 +27,20 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/app/useDesktopReadySignal', () => ({ useDesktopReadySignal: vi.fn() }))
 vi.mock('@/hooks/useUserThemeCss', () => ({ useUserThemeCss: vi.fn() }))
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/electron', () => ({
+  getElectronRuntime: () => ({
+    window: {
+      onCloseRequested: (handler: () => Promise<void> | void) => {
+        mocks.closeHandler = handler
+        return vi.fn()
+      },
+    },
+  }),
+}))
 vi.mock('@/runtime/events', () => ({ listen: vi.fn().mockResolvedValue(vi.fn()) }))
+vi.mock('@/app/editorCloseLifecycle', () => ({
+  flushEditorChangesForClose: mocks.flushEditorChangesForClose,
+}))
 vi.mock('@/services/fsApi', () => ({ fsApi: { flushBuffers: mocks.flushBuffers } }))
 vi.mock('@/store/usePreferencesStore', () => {
   const usePreferencesStore = (select: (state: typeof mocks.preferences) => unknown) =>
@@ -40,6 +55,8 @@ beforeEach(() => {
   mocks.preferences.theme = 'paper'
   mocks.preferences.themeMode = 'light'
   mocks.preferences.syncSystemTheme.mockClear()
+  mocks.flushEditorChangesForClose.mockClear()
+  mocks.closeHandler = null
   mocks.preferences.syncSystemTheme.mockImplementation((mode: 'light' | 'dark') => {
     if (mocks.preferences.themeMode !== 'system') return
     mocks.preferences.theme =
@@ -48,6 +65,15 @@ beforeEach(() => {
 })
 
 describe('document synchronization lifecycle', () => {
+  it('flushes pending editor snapshots and buffers when native close is requested', async () => {
+    renderHook(() => useAppDocumentSync({ theme: 'paper' }))
+
+    await act(async () => {
+      await mocks.closeHandler?.()
+    })
+
+    expect(mocks.flushEditorChangesForClose).toHaveBeenCalledOnce()
+  })
   it('leaves close-time persistence to the main-process shutdown barrier', () => {
     mocks.flushBuffers.mockClear()
     const { unmount } = renderHook(() => useAppDocumentSync({ theme: 'paper' }))

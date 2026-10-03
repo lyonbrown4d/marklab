@@ -10,11 +10,12 @@ import {
   type ElectronPerformanceSession,
   type GraphicsMode,
 } from './electronPerformanceHarness.js'
-import { measureFrames } from './frameProbe.js'
-import { LARGE_DOCUMENT_FILE_NAME, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
+import { measureFrames } from './frameMeasurement.js'
+import { type LargeDocumentFixture, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
 import { measureInputLatency } from './plateInputLatencyMetrics.js'
 import {
   captureEditorState,
+  captureSentinelOrder,
   dragNativeScrollbar,
   EDITABLE_PLATE_EDITOR_SELECTOR,
   exerciseWheel,
@@ -34,12 +35,14 @@ const captureScreenshot = async (page: Page, testInfo: TestInfo, name: string) =
 const endOfDocumentShortcut = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
 
 export const runLargeDocumentSample = async ({
+  createFixture = writeLargeDocumentWorkspace,
   graphicsMode,
   rendererUrl,
   runIndex,
   testInfo,
   warmup,
 }: {
+  createFixture?: (runtimeRoot: string) => LargeDocumentFixture
   graphicsMode: GraphicsMode
   rendererUrl: string
   runIndex: number
@@ -50,18 +53,19 @@ export const runLargeDocumentSample = async ({
   const electronOutput: string[] = []
   try {
     session = await launchPerformanceSession(rendererUrl, graphicsMode)
-    const fixture = writeLargeDocumentWorkspace(session.runtimeRoot)
+    const fixture = createFixture(session.runtimeRoot)
     const {
       initialization,
       page,
       result: openResult,
-    } = await openWorkspaceWindow(session, fixture.workspacePath, LARGE_DOCUMENT_FILE_NAME)
+    } = await openWorkspaceWindow(session, fixture.workspacePath, fixture.fileName)
     await resizeElectronWindow(session, page, { height: 960, width: 1440 })
     const viewport = page.locator(PLATE_EDITOR_SELECTOR)
     const activeEditor = page.locator(EDITABLE_PLATE_EDITOR_SELECTOR)
     await expect(viewport).toBeVisible()
     await expect(activeEditor).toBeVisible()
     const initial = await captureEditorState(page)
+    const hydration = await captureSentinelOrder(page, fixture.sentinels)
     if (!warmup) {
       await captureScreenshot(page, testInfo, `large-document-run-${runIndex}-initial`)
     }
@@ -109,6 +113,12 @@ export const runLargeDocumentSample = async ({
       )
       .toBe(true)
     const persistedContent = fs.readFileSync(fixture.filePath, 'utf8')
+    const persistedDocument = persistedContent
+      .replaceAll(firstMarker, '')
+      .replaceAll(continuousMarker, '')
+    const persistedPositions = fixture.sentinels.map((sentinel) =>
+      persistedDocument.indexOf(sentinel),
+    )
     const finalState = await captureEditorState(page)
     if (!warmup) {
       await captureScreenshot(page, testInfo, `large-document-run-${runIndex}-final`)
@@ -122,6 +132,7 @@ export const runLargeDocumentSample = async ({
       focusMs: Number(focusMs.toFixed(2)),
       gpuFeatureStatus: session.gpuFeatureStatus,
       graphicsMode,
+      hydration,
       initial,
       initialization,
       isolation: session.isolation,
@@ -131,6 +142,13 @@ export const runLargeDocumentSample = async ({
         flushCompleted: true,
         flushResult,
         markerPersisted: persistedContent.includes(continuousMarker),
+        sentinels: {
+          allPresent: persistedPositions.every((position) => position >= 0),
+          ordered: persistedPositions.every(
+            (position, index) => index === 0 || position > persistedPositions[index - 1],
+          ),
+          positions: persistedPositions,
+        },
       },
       runIndex,
       scrollbar: {

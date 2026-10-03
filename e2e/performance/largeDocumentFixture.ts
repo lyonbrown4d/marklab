@@ -5,6 +5,7 @@ import {
   createLargeMarkdown,
   inspectLargeMarkdown,
   LARGE_DOCUMENT_EXPECTATIONS,
+  LARGE_DOCUMENT_SENTINELS,
   type LargeDocumentStats,
 } from './largeDocumentFixtureContract.js'
 export * from './largeDocumentFixtureContract.js'
@@ -14,6 +15,8 @@ export const LARGE_DOCUMENT_FILE_NAME = 'large-document.md'
 
 export type LargeDocumentFixture = {
   filePath: string
+  fileName: string
+  sentinels: readonly string[]
   sourceStats: LargeDocumentStats
   workspacePath: string
 }
@@ -32,6 +35,8 @@ export const writeLargeDocumentWorkspace = (runtimeRoot: string): LargeDocumentF
   fs.writeFileSync(filePath, markdown, 'utf8')
   return {
     filePath,
+    fileName: LARGE_DOCUMENT_FILE_NAME,
+    sentinels: LARGE_DOCUMENT_SENTINELS,
     sourceStats,
     workspacePath,
   }

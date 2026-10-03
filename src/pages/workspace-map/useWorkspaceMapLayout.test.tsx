@@ -206,4 +206,28 @@ describe('useWorkspaceMapLayout', () => {
       layoutKey: nextGraph.layoutKey,
     })
   })
+
+  it('preserves existing node positions when a refreshed graph is laid out', async () => {
+    let currentNodes = createGraph(null).nodes
+    const setNodes = vi.fn((update: React.SetStateAction<GraphData['nodes']>) => {
+      currentNodes = typeof update === 'function' ? update(currentNodes) : update
+    })
+    const firstGraph = createGraph(null)
+    const { rerender } = renderHook(
+      ({ graph }) => useWorkspaceMapLayout({ activePath: null, flow: null, graph, setNodes }),
+      { initialProps: { graph: firstGraph } },
+    )
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    currentNodes = currentNodes.map((node) =>
+      node.id === 'file:notes/a.md' ? { ...node, position: { x: 640, y: 360 } } : node,
+    )
+    rerender({ graph: { ...createGraph(null), layoutKey: 'map:refreshed' } })
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    expect(currentNodes.find((node) => node.id === 'file:notes/a.md')?.position).toEqual({
+      x: 640,
+      y: 360,
+    })
+  })
 })

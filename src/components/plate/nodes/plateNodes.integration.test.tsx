@@ -125,13 +125,16 @@ describe('createPlateNodePlugins', () => {
 
   it('shows accessible drag handles for editable top-level blocks only', () => {
     const view = renderMarkdown(['First', '', '```ts', 'const value = 1', '```'].join('\n'), false)
+    const blocks = view.container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
 
-    const handles = screen.getAllByRole('button', { name: 'Move block' })
-    expect(handles).toHaveLength(2)
-    expect(handles[0]).toHaveAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown')
-    expect(handles[0]).toHaveAttribute('contenteditable', 'false')
-    expect(handles[0]).toHaveAttribute('data-block-id')
-    expect(handles[0]).toHaveAttribute('draggable', 'true')
+    expect(blocks).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Move block' })).not.toBeInTheDocument()
+    fireEvent.pointerEnter(blocks[0])
+    const handle = screen.getByRole('button', { name: 'Move block' })
+    expect(handle).toHaveAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown')
+    expect(handle).toHaveAttribute('contenteditable', 'false')
+    expect(handle).toHaveAttribute('data-block-id')
+    expect(handle).toHaveAttribute('draggable', 'true')
 
     view.unmount()
     renderMarkdown('Read-only block')
@@ -139,8 +142,10 @@ describe('createPlateNodePlugins', () => {
   })
 
   it('moves a top-level block with the drag handle keyboard controls', async () => {
-    const { editor } = renderMarkdown('First\n\nSecond\n\nThird', false)
-    const secondHandle = screen.getAllByRole('button', { name: 'Move block' })[1]
+    const { container, editor } = renderMarkdown('First\n\nSecond\n\nThird', false)
+    const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
+    fireEvent.pointerEnter(blocks[1])
+    const secondHandle = screen.getByRole('button', { name: 'Move block' })
 
     secondHandle.focus()
     fireEvent.keyDown(secondHandle, { key: 'ArrowUp' })
@@ -151,7 +156,7 @@ describe('createPlateNodePlugins', () => {
       'Third',
     ])
     await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getAllByRole('button', { name: 'Move block' })[0])
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move block' }))
     })
 
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })

@@ -179,14 +179,17 @@ export const openWorkspaceWindow = async (
   }, workspacePath)
 
   const deadline = Date.now() + 90_000
+  const revealedPages = new WeakSet<Page>()
   while (Date.now() < deadline) {
     for (const page of session.app.windows()) {
       if (!decodeURIComponent(page.url()).includes(`/files/edit/${fileName}`)) continue
       const tracked = session.pageTracking.get(page)
       await (tracked?.installTask ?? trackPerformancePage(session.pageTracking, page))
-      const editor = page.locator(
-        '[data-testid="markdown-editor"][data-editor-engine="plate"][contenteditable="true"]',
-      )
+      if (!revealedPages.has(page)) {
+        await revealElectronWindow(session.app, page)
+        revealedPages.add(page)
+      }
+      const editor = page.locator('[data-testid="markdown-editor"][data-editor-engine="plate"]')
       if (await editor.isVisible().catch(() => false)) {
         const probe = await waitForPlateReadyProbe(page, WINDOW_READY_TIMEOUT_MS)
         const windowOpenedAtEpochMs =
@@ -196,7 +199,6 @@ export const openWorkspaceWindow = async (
           openRequestToReadyMs: probe.readyAtEpochMs - openRequestedAtEpochMs,
           windowOpenToReadyMs: probe.readyAtEpochMs - windowOpenedAtEpochMs,
         }
-        await revealElectronWindow(session.app, page)
         return { initialization, page, result }
       }
     }

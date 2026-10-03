@@ -18,7 +18,6 @@ import {
 import type { Edge, Node, NodeTypes, ReactFlowInstance } from '@xyflow/react'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/logic/graph'
-import { getGraphNodeOpenPath } from '@/logic/graphViewModel'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -27,6 +26,10 @@ import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
+import {
+  getWorkspaceMapNodeOpenPath,
+  presentWorkspaceMapNode,
+} from '@/pages/workspace-map/workspaceMapNodePresentation'
 
 const nodeTypes: NodeTypes = {
   external: WorkspaceMapReferenceNode,
@@ -34,13 +37,6 @@ const nodeTypes: NodeTypes = {
   missing: WorkspaceMapReferenceNode,
   preview: WorkspaceMapReferenceNode,
 }
-
-const getWorkspaceMapNodeOpenPath = (node: Node<GraphNodeData>) => {
-  const path = node.data.path
-  if (node.type === 'file' && path && isMarkdownFilePath(path)) return path
-  return getGraphNodeOpenPath(node) ?? null
-}
-
 type WorkspaceMapCanvasProps = {
   activePath: string | null
   editorLoadState: WorkspaceMapEditorLoadState
@@ -70,17 +66,7 @@ export const WorkspaceMapCanvas = ({
   const { t } = useI18n()
   const [flow, setFlow] = useState<ReactFlowInstance<Node<GraphNodeData>, Edge> | null>(null)
   const baseNodes = useMemo(
-    () =>
-      graph.nodes.map((node) => {
-        const editorActive = node.type === 'file' && node.data.path === activePath
-        const openPath = getWorkspaceMapNodeOpenPath(node)
-        return {
-          ...node,
-          ariaLabel: node.data.label,
-          ariaRole: openPath ? ('button' as const) : ('group' as const),
-          focusable: Boolean(openPath) && !editorActive,
-        }
-      }),
+    () => graph.nodes.map((node) => presentWorkspaceMapNode(node, activePath)),
     [activePath, graph.nodes],
   )
   const presentedGraph = useMemo<GraphData>(() => {
@@ -175,7 +161,7 @@ export const WorkspaceMapCanvas = ({
         onActivateEditor(path)
         return
       }
-      const openPath = getGraphNodeOpenPath(node)
+      const openPath = getWorkspaceMapNodeOpenPath(node)
       if (openPath) onOpenFile(openPath)
     },
     [onActivateEditor, onOpenFile],
@@ -225,7 +211,7 @@ export const WorkspaceMapCanvas = ({
     (event: MouseEvent, node: Node<GraphNodeData>) => {
       event.preventDefault()
       if (node.type === 'file' && node.data.path && isMarkdownFilePath(node.data.path)) return
-      const path = getGraphNodeOpenPath(node)
+      const path = getWorkspaceMapNodeOpenPath(node)
       if (path) onOpenFile(path)
     },
     [onOpenFile],
@@ -259,7 +245,7 @@ export const WorkspaceMapCanvas = ({
       onKeyDown={handleCanvasKeyDown}
       onNodeClick={handleNodeClick}
       onNodeDoubleClick={handleNodeDoubleClick}
-      nodesDraggable={false}
+      nodesDraggable
       nodesConnectable={false}
       nodesFocusable
       elementsSelectable={false}

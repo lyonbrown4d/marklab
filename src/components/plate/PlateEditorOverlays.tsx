@@ -9,12 +9,14 @@ import {
 
 export const PlateEditorOverlays = ({
   activePath,
+  canEdit,
   editableRef,
   labels,
   onLink,
   slash,
 }: {
   activePath: string | null
+  canEdit: () => boolean
   editableRef: RefObject<HTMLElement | null>
   labels: PlateSlashCommandLabels
   onLink: (editor: PlateEditor) => void
@@ -22,6 +24,7 @@ export const PlateEditorOverlays = ({
 }) => (
   <>
     <PlateSelectionToolbarOverlay
+      canEdit={canEdit}
       editableRef={editableRef}
       labels={{
         bold: labels.bold,

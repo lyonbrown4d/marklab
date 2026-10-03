@@ -97,6 +97,13 @@ export type WindowActionResult = {
   error?: string
 }
 
+export type WindowCloseFlushRequest = {
+  requestId: number
+}
+
+export type WindowCloseFlushResult =
+  { ok: true; requestId: number } | { error: string; ok: false; requestId: number }
+
 export type PersistedWindowState = {
   height: number
   isMaximized: boolean

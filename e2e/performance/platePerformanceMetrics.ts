@@ -36,6 +36,22 @@ export const captureEditorState = (page: Page) =>
     }
   }, PLATE_EDITOR_SELECTOR)
 
+export const captureSentinelOrder = (page: Page, sentinels: readonly string[]) =>
+  page.evaluate(
+    ({ selector, values }) => {
+      const text = document.querySelector<HTMLElement>(selector)?.textContent ?? ''
+      const positions = values.map((value) => text.indexOf(value))
+      return {
+        allPresent: positions.every((position) => position >= 0),
+        ordered: positions.every(
+          (position, index) => index === 0 || position > positions[index - 1],
+        ),
+        positions,
+      }
+    },
+    { selector: PLATE_EDITOR_SELECTOR, values: [...sentinels] },
+  )
+
 export const selectionState = (page: Page) =>
   page.evaluate((selector) => {
     const editor = document.querySelector<HTMLElement>(selector)

@@ -1,6 +1,7 @@
 import { createPlateEditor } from 'platejs/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  handlePlateEditorBoundaryShortcut,
   handlePlateEditorShortcut,
   resolvePlateFormattingShortcut,
 } from '@/components/plate/plateEditorShortcuts'
@@ -51,5 +52,23 @@ describe('Plate formatting shortcut resolution', () => {
     expect(handlePlateEditorShortcut(editor, event)).toBe(false)
     expect(preventDefault).not.toHaveBeenCalled()
     expect(editor.children).toEqual([{ type: 'p', children: [{ text: 'text' }] }])
+  })
+
+  it('moves the Slate selection to document boundaries without DOM traversal', () => {
+    const editor = createPlateEditor({
+      value: [
+        { type: 'p', children: [{ text: 'first' }] },
+        { type: 'p', children: [{ text: 'last' }] },
+      ],
+    })
+    editor.tf.select(editor.api.start([]))
+    const endEvent = keyboardEvent('End')
+
+    expect(handlePlateEditorBoundaryShortcut(editor, endEvent)).toBe(true)
+    expect(editor.selection).toEqual({
+      anchor: { offset: 4, path: [1, 0] },
+      focus: { offset: 4, path: [1, 0] },
+    })
+    expect(endEvent.defaultPrevented).toBe(true)
   })
 })

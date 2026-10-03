@@ -1,8 +1,41 @@
 import type { Value } from 'platejs'
 import { describe, expect, it } from 'vitest'
-import { processPlateMarkdownWorkerRequest } from '@/workers/plateMarkdownWorker'
+import {
+  chunkPlateMarkdownValue,
+  processPlateMarkdownWorkerRequest,
+} from '@/workers/plateMarkdownWorker'
 
 describe('processPlateMarkdownWorkerRequest', () => {
+  it('splits parsed values into bounded top-level chunks without changing node order', () => {
+    const value: Value = Array.from({ length: 7 }, (_, index) => ({
+      type: 'p',
+      children: [{ text: String(index) }],
+    }))
+
+    const chunks = chunkPlateMarkdownValue(value, 3)
+
+    expect(chunks.map((chunk) => chunk.length)).toEqual([3, 3, 1])
+    expect(chunks.flat()).toEqual(value)
+  })
+
+  it('adapts chunks to both clone size and top-level node count', () => {
+    const textHeavy: Value = Array.from({ length: 3 }, (_, index) => ({
+      type: 'p',
+      children: [{ text: `${index}`.repeat(4) }],
+    }))
+    const nodeHeavy: Value = Array.from({ length: 1_200 }, (_, index) => ({
+      type: 'p',
+      children: [{ text: String(index) }],
+    }))
+
+    expect(chunkPlateMarkdownValue(textHeavy, 10, 6).map((chunk) => chunk.length)).toEqual([
+      1, 1, 1,
+    ])
+    expect(chunkPlateMarkdownValue(nodeHeavy).map((chunk) => chunk.length)).toEqual([
+      32, 256, 256, 256, 256, 144,
+    ])
+  })
+
   it('uses lossless serialization for document characters', () => {
     const value: Value = [{ type: 'p', children: [{ text: 'before\u200bafter' }] }]
 

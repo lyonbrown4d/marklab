@@ -23,6 +23,7 @@ type UsePlateSlashCommandsOptions = Pick<
   RunPlateSlashCommandOptions,
   'onCalendarFileCreate' | 'onError' | 'onImageImport'
 > & {
+  canEdit?: () => boolean
   documentIdentity: string | null | undefined
   editor: PlateEditor
   labels: PlateSlashCommandLabels
@@ -43,6 +44,7 @@ const captureAnchor = (): PlateSlashAnchor => {
 }
 
 export const usePlateSlashCommands = ({
+  canEdit,
   documentIdentity,
   editor,
   labels,
@@ -91,6 +93,11 @@ export const usePlateSlashCommands = ({
   }, [menuOpen, refreshAnchor])
 
   const syncFromEditor = useCallback(() => {
+    if (canEdit && !canEdit()) {
+      setActive(null)
+      setSelectedIndex(0)
+      return
+    }
     const trigger = getPlateSlashTrigger(editor)
     if (!trigger) {
       setActive(null)
@@ -99,7 +106,7 @@ export const usePlateSlashCommands = ({
     }
     setActive({ anchor: captureAnchor(), documentIdentity, editor, trigger })
     setSelectedIndex(0)
-  }, [documentIdentity, editor])
+  }, [canEdit, documentIdentity, editor])
 
   const dismiss = useCallback(() => {
     setActive(null)
@@ -108,6 +115,10 @@ export const usePlateSlashCommands = ({
 
   const selectCommand = useCallback(
     (command: PlateSlashCommand) => {
+      if (canEdit && !canEdit()) {
+        dismiss()
+        return false
+      }
       if (!currentActive) return false
       const { trigger } = currentActive
       const liveTrigger = getPlateSlashTrigger(editor)
@@ -127,7 +138,16 @@ export const usePlateSlashCommands = ({
       })
       return true
     },
-    [currentActive, dismiss, editor, onCalendarFileCreate, onError, onImageImport, urlDialog.open],
+    [
+      canEdit,
+      currentActive,
+      dismiss,
+      editor,
+      onCalendarFileCreate,
+      onError,
+      onImageImport,
+      urlDialog.open,
+    ],
   )
 
   const onKeyDown = useCallback(

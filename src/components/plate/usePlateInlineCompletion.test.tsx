@@ -87,4 +87,21 @@ describe('usePlateInlineCompletion', () => {
     act(() => usePreferencesStore.getState().setDocumentCompletionEnabled(false))
     expect(result.current.state).toBeNull()
   })
+
+  it('defers value-change completion work until after the next paint', async () => {
+    const editor = createEditor('I plan to')
+    const value = 'I plan to review notes.\n\nI plan to'
+    const { result } = renderHook(() =>
+      usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
+    )
+    await act(async () => vi.advanceTimersByTimeAsync(200))
+    expect(result.current.state).not.toBeNull()
+    editor.selection = null
+
+    act(() => result.current.onEditorChange())
+
+    expect(result.current.state).not.toBeNull()
+    await act(async () => vi.advanceTimersByTimeAsync(20))
+    expect(result.current.state).toBeNull()
+  })
 })

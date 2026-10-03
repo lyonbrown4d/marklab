@@ -1,4 +1,9 @@
 export const LARGE_DOCUMENT_LINE_COUNT = 29_256
+export const LARGE_DOCUMENT_SENTINELS = [
+  'MARKLAB_TEXT_START',
+  'MARKLAB_TEXT_MIDDLE',
+  'MARKLAB_TEXT_END',
+] as const
 
 export type LargeDocumentStats = {
   blockCount: number
@@ -11,8 +16,8 @@ export type LargeDocumentStats = {
 
 export const LARGE_DOCUMENT_EXPECTATIONS: LargeDocumentStats = Object.freeze({
   blockCount: 488,
-  bytes: 1_367_467,
-  characters: 1_367_467,
+  bytes: 1_367_429,
+  characters: 1_367_429,
   headingCount: 244,
   lines: LARGE_DOCUMENT_LINE_COUNT,
   nonEmptyLines: LARGE_DOCUMENT_LINE_COUNT,
@@ -21,6 +26,18 @@ export const LARGE_DOCUMENT_EXPECTATIONS: LargeDocumentStats = Object.freeze({
 export const createLargeMarkdown = () => {
   const lines: string[] = []
   for (let line = 0; line < LARGE_DOCUMENT_LINE_COUNT; line += 1) {
+    if (line === 0) {
+      lines.push(`## Section 0001 ${LARGE_DOCUMENT_SENTINELS[0]}`)
+      continue
+    }
+    if (line === Math.floor(LARGE_DOCUMENT_LINE_COUNT / 2)) {
+      lines.push(LARGE_DOCUMENT_SENTINELS[1])
+      continue
+    }
+    if (line === LARGE_DOCUMENT_LINE_COUNT - 1) {
+      lines.push(LARGE_DOCUMENT_SENTINELS[2])
+      continue
+    }
     if (line % 120 === 0) {
       lines.push(`## Section ${String(Math.floor(line / 120) + 1).padStart(4, '0')}`)
       continue

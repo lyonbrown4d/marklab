@@ -2,6 +2,7 @@ import type { Edge, Node } from '@xyflow/react'
 import { graphlib, layout as dagreLayout } from '@dagrejs/dagre'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
+import { graphNodeContent } from '@/logic/graphNodeContent'
 import type { PreviewFileKind } from '@/logic/fileTypes'
 import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { GraphContentMode } from '@/store/appTypes'
@@ -207,7 +208,7 @@ export const buildGraphFromKnowledgeGraph = (
       line: node.line ?? undefined,
       level: node.level ?? undefined,
       slug: node.slug ?? undefined,
-      content: includeContent ? (node.content ?? undefined) : undefined,
+      content: graphNodeContent(node, includeContent),
       contentBlocks: includeContent
         ? normalizeMarkdownBlocks(node.content_blocks ?? undefined)
         : undefined,

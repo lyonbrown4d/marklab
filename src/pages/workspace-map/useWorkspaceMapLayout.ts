@@ -22,6 +22,7 @@ type LayoutState = {
 
 export const useWorkspaceMapLayout = ({ activePath, flow, graph, setNodes }: Options) => {
   const runRef = useRef(0)
+  const hasCompletedLayoutRef = useRef(false)
   const fittedFlowRef = useRef<WorkspaceMapFlow>(null)
   const staleFlowRef = useRef<WorkspaceMapFlow>(null)
   const previousStatusRef = useRef<LayoutState['status']>('loading')
@@ -50,7 +51,20 @@ export const useWorkspaceMapLayout = ({ activePath, flow, graph, setNodes }: Opt
       .then((nodes) => {
         if (cancelled || runRef.current !== run) return
         laidOutNodesRef.current = nodes
-        setNodes(nodes)
+        if (hasCompletedLayoutRef.current) {
+          setNodes((current) => {
+            const currentById = new Map(current.map((node) => [node.id, node]))
+            return nodes.map((node) => {
+              const existing = currentById.get(node.id)
+              return existing
+                ? { ...node, measured: existing.measured, position: existing.position }
+                : node
+            })
+          })
+        } else {
+          hasCompletedLayoutRef.current = true
+          setNodes(nodes)
+        }
         setLayoutState({ key: layoutKey, status: 'ready' })
       })
       .catch((error: unknown) => {

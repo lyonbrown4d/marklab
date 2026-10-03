@@ -1,17 +1,19 @@
 import fs from 'node:fs'
 import { LocalHistoryService } from '@electron/services/localHistory/service.js'
 /* eslint-disable no-restricted-imports -- Performance fixture helpers are Node-run sibling modules. */
+import { inspectLargeMarkdown, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
 import {
-  inspectLargeMarkdown,
-  LARGE_DOCUMENT_FILE_NAME,
-  writeLargeDocumentWorkspace,
-} from './largeDocumentFixture.js'
+  BLOCK_HEAVY_DOCUMENT_SENTINELS,
+  inspectBlockHeavyMarkdown,
+  writeBlockHeavyDocumentWorkspace,
+} from './blockHeavyDocumentFixture.js'
 /* eslint-enable no-restricted-imports */
 
 export const LOCAL_HISTORY_RESTORED_MARKER = 'MARKLAB_HISTORY_RESTORED_7Q9X'
 
 const LEGACY_SNAPSHOT_LIMIT_BYTES = 2 * 1024 * 1024
 const FIRST_HEADING = '## Section 0001'
+export type LocalHistoryDocumentKind = 'block-heavy' | 'text-heavy'
 
 export type LocalHistoryRestoreFixture = ReturnType<typeof writeLargeDocumentWorkspace> & {
   historyContent: string
@@ -23,16 +25,23 @@ export type LocalHistoryRestoreFixture = ReturnType<typeof writeLargeDocumentWor
 export const writeLocalHistoryRestoreFixture = async (
   runtimeRoot: string,
   userDataPath: string,
+  documentKind: LocalHistoryDocumentKind = 'text-heavy',
 ): Promise<LocalHistoryRestoreFixture> => {
-  const fixture = writeLargeDocumentWorkspace(runtimeRoot)
+  const fixture =
+    documentKind === 'block-heavy'
+      ? writeBlockHeavyDocumentWorkspace(runtimeRoot)
+      : writeLargeDocumentWorkspace(runtimeRoot)
   const currentContent = fs.readFileSync(fixture.filePath, 'utf8')
-  if (!currentContent.includes(FIRST_HEADING)) {
-    throw new Error(`Large document fixture is missing ${JSON.stringify(FIRST_HEADING)}`)
+  const restoreTarget =
+    documentKind === 'block-heavy' ? BLOCK_HEAVY_DOCUMENT_SENTINELS[0] : FIRST_HEADING
+  const restoredMarker =
+    documentKind === 'block-heavy'
+      ? LOCAL_HISTORY_RESTORED_MARKER
+      : `## ${LOCAL_HISTORY_RESTORED_MARKER}`
+  if (!currentContent.includes(restoreTarget)) {
+    throw new Error(`Large document fixture is missing ${JSON.stringify(restoreTarget)}`)
   }
-  const historyContent = currentContent.replace(
-    FIRST_HEADING,
-    `## ${LOCAL_HISTORY_RESTORED_MARKER}`,
-  )
+  const historyContent = currentContent.replace(restoreTarget, restoredMarker)
   if (historyContent === currentContent || currentContent.includes(LOCAL_HISTORY_RESTORED_MARKER)) {
     throw new Error('Local-history fixture did not create a unique restored document')
   }
@@ -43,7 +52,7 @@ export const writeLocalHistoryRestoreFixture = async (
   })
   const captured = await history.capture(
     { kind: 'external', path: fixture.workspacePath },
-    LARGE_DOCUMENT_FILE_NAME,
+    fixture.fileName,
     historyContent,
   )
   if (captured.status === 'skipped') {
@@ -54,7 +63,10 @@ export const writeLocalHistoryRestoreFixture = async (
     ...fixture,
     historyContent,
     historyEntryId: captured.entry.id,
-    historyStats: inspectLargeMarkdown(historyContent),
+    historyStats:
+      documentKind === 'block-heavy'
+        ? inspectBlockHeavyMarkdown(historyContent)
+        : inspectLargeMarkdown(historyContent),
     marker: LOCAL_HISTORY_RESTORED_MARKER,
   }
 }

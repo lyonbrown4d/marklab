@@ -8,6 +8,7 @@ import {
 } from '@/components/plate/selection/selectionToolbarActions'
 
 type UsePlateSelectionToolbarOptions = {
+  canEdit?: () => boolean
   editableRef: RefObject<HTMLElement | null>
   editor: PlateEditor
   onLink?: (editor: PlateEditor) => void
@@ -48,6 +49,7 @@ const equalState = (left: ToolbarState, right: ToolbarState) =>
   equalMarks(left.activeMarks, right.activeMarks)
 
 export const usePlateSelectionToolbar = ({
+  canEdit,
   editableRef,
   editor,
   onLink,
@@ -67,6 +69,7 @@ export const usePlateSelectionToolbar = ({
     )
     if (
       readOnly ||
+      (canEdit && !canEdit()) ||
       composingRef.current ||
       !root ||
       !focusInside ||
@@ -91,7 +94,7 @@ export const usePlateSelectionToolbar = ({
       open: rect.width > 0 || rect.height > 0,
     }
     setState((current) => (equalState(current, next) ? current : next))
-  }, [editableRef, editor, readOnly])
+  }, [canEdit, editableRef, editor, readOnly])
 
   const scheduleSync = useCallback(() => {
     if (frameRef.current !== null) return
@@ -136,11 +139,12 @@ export const usePlateSelectionToolbar = ({
 
   const runAction = useCallback(
     (action: PlateSelectionToolbarAction) => {
+      if (canEdit && !canEdit()) return false
       const handled = runPlateSelectionToolbarAction(editor, action, { onLink })
       if (handled) queueMicrotask(sync)
       return handled
     },
-    [editor, onLink, sync],
+    [canEdit, editor, onLink, sync],
   )
 
   const setToolbarElement = useCallback((element: HTMLElement | null) => {

@@ -48,8 +48,8 @@ const WorkspaceMapEmbeddedEditor = ({
   return (
     <section
       className={cn(
-        'workspace-map-editor nodrag flex flex-col overflow-hidden rounded-lg',
-        editor && 'nopan',
+        'workspace-map-editor flex flex-col overflow-hidden rounded-lg',
+        editor && 'nodrag nopan',
         selected && 'workspace-map-editor--selected',
       )}
       aria-label={editor ? `${t('workspaceMap.editing')} ${data.label}` : data.label}
@@ -130,6 +130,13 @@ const WorkspaceMapEmbeddedEditor = ({
                 {t('workspaceMap.retry')}
               </Button>
             </div>
+          </div>
+        ) : data.content ? (
+          <div
+            className="h-full overflow-hidden bg-muted/10 px-8 py-7 text-sm leading-6 text-foreground/85"
+            data-testid="workspace-map-document-preview"
+          >
+            <p className="whitespace-pre-line break-words">{data.content}</p>
           </div>
         ) : (
           <div
