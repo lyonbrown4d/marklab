@@ -1,116 +1,16 @@
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import type http from 'node:http'
 // eslint-disable-next-line no-restricted-imports -- Performance E2E reuses the production-build renderer server.
 import { closeRendererServer, startRendererServer } from '../electron/electronTestHarness.js'
 /* eslint-disable no-restricted-imports -- Node-run Playwright helpers use explicit relative ESM imports. */
-import {
-  closePerformanceSession,
-  launchPerformanceSession,
-  openWorkspaceWindow,
-  resizeElectronWindow,
-  type ElectronPerformanceSession,
-  type GraphicsMode,
-} from './electronPerformanceHarness.js'
-import { measureFrames, waitForAnimationFrames, type FrameMetrics } from './frameProbe.js'
-import { LARGE_DOCUMENT_FILE_NAME, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
+import { type GraphicsMode } from './electronPerformanceHarness.js'
+import type { FrameMetrics } from './frameProbe.js'
+import { runLargeDocumentSample, type PerformanceSample } from './largeDocumentScenario.js'
+import { LARGE_DOCUMENT_EXPECTATIONS } from './largeDocumentFixture.js'
 import { performanceBudgetForProject } from './performanceBudgets.js'
+import { PERFORMANCE_SAMPLE_PLAN, summarizeDurations } from './performanceStatistics.js'
 /* eslint-enable no-restricted-imports */
-
-const captureEditorState = (page: Page) =>
-  page.evaluate(() => {
-    const paragraphStyle = (element: HTMLElement | null) => {
-      if (!element) return null
-      const style = getComputedStyle(element)
-      return {
-        fontFamily: style.fontFamily,
-        fontSize: style.fontSize,
-        lineHeight: style.lineHeight,
-        marginBottom: style.marginBottom,
-        marginTop: style.marginTop,
-        paddingBottom: style.paddingBottom,
-        paddingTop: style.paddingTop,
-      }
-    }
-    const viewport = document.querySelector<HTMLElement>('.crepe-playground > .milkdown')
-    return {
-      activeEditors: viewport?.querySelectorAll('.ProseMirror[contenteditable="true"]').length ?? 0,
-      activeParagraphStyle: paragraphStyle(
-        viewport?.querySelector<HTMLElement>('.ProseMirror[contenteditable="true"] p') ?? null,
-      ),
-      scrollHeight: viewport?.scrollHeight ?? 0,
-      usedJsHeapBytes:
-        'memory' in performance
-          ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory
-              .usedJSHeapSize
-          : null,
-      viewportHeight: viewport?.clientHeight ?? 0,
-    }
-  })
-
-const captureScreenshot = async (page: Page, testInfo: TestInfo, name: string) => {
-  const path = testInfo.outputPath(`${name}.png`)
-  await page.screenshot({ path })
-  await testInfo.attach(name, { contentType: 'image/png', path })
-}
-
-const dragNativeScrollbar = async (page: Page) => {
-  const viewport = page.locator('.crepe-playground > .milkdown')
-  const box = await viewport.boundingBox()
-  if (!box) throw new Error('Editor viewport has no bounding box')
-  const scroll = await viewport.evaluate((element) => {
-    const viewportElement = element as HTMLElement
-    return {
-      clientHeight: viewportElement.clientHeight,
-      clientWidth: viewportElement.clientWidth,
-      offsetWidth: viewportElement.offsetWidth,
-      scrollHeight: viewportElement.scrollHeight,
-      scrollTop: viewportElement.scrollTop,
-    }
-  })
-  const thumbHeight = Math.max(24, scroll.clientHeight ** 2 / scroll.scrollHeight)
-  const availableTrack = scroll.clientHeight - thumbHeight
-  const thumbTop =
-    scroll.scrollTop === 0
-      ? 0
-      : (scroll.scrollTop / (scroll.scrollHeight - scroll.clientHeight)) * availableTrack
-  const startY = box.y + thumbTop + thumbHeight / 2
-  const endY = box.y + box.height - 10
-  const scrollbarWidth = scroll.offsetWidth - scroll.clientWidth
-  const scrollbarCenterX =
-    scrollbarWidth > 0 ? box.x + scroll.clientWidth + scrollbarWidth / 2 : box.x + box.width - 6
-  const xCandidates = [
-    scrollbarCenterX,
-    box.x + box.width - 4,
-    box.x + box.width - 8,
-    box.x + box.width - 12,
-  ]
-  for (const x of [...new Set(xCandidates)]) {
-    await page.mouse.move(x, startY)
-    await page.mouse.down()
-    for (let step = 1; step <= 40; step += 1) {
-      await page.mouse.move(x, startY + ((endY - startY) * step) / 40)
-      await page.evaluate(
-        () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-      )
-    }
-    await page.mouse.up()
-    if ((await viewport.evaluate((element) => element.scrollTop)) > scroll.scrollTop) return
-  }
-}
-
-const exerciseWheel = async (page: Page) => {
-  const viewport = page.locator('.crepe-playground > .milkdown')
-  const box = await viewport.boundingBox()
-  if (!box) throw new Error('Editor viewport has no bounding box')
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  for (let index = 0; index < 36; index += 1) {
-    await page.mouse.wheel(0, 620)
-    await page.evaluate(
-      () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-    )
-  }
-}
 
 const assertFrameBudget = (
   label: string,
@@ -120,17 +20,99 @@ const assertFrameBudget = (
   expect.soft(metrics.blankFrames, `${label} produced blank editor frames`).toBe(0)
   expect.soft(metrics.loadingFrames, `${label} exposed a loading editor surface`).toBe(0)
   expect
-    .soft(metrics.layoutShift, `${label} layout shift exceeded its budget`)
-    .toBeLessThanOrEqual(budget.maxLayoutShift)
+    .soft(metrics.frameCount, `${label} produced too few frame samples`)
+    .toBeGreaterThanOrEqual(budget.minFrameCount)
+  expect
+    .soft(metrics.readyToLoadingTransitions, `${label} transitioned from ready back to loading`)
+    .toBe(0)
+  if (metrics.supportsLayoutShift) {
+    expect
+      .soft(metrics.layoutShift, `${label} layout shift exceeded its budget`)
+      .toBeLessThanOrEqual(budget.maxLayoutShift)
+  }
   expect
     .soft(metrics.maxVisibleSurfaces, `${label} exposed too many editor surfaces in one frame`)
     .toBeLessThanOrEqual(budget.maxVisibleSurfaces)
+  if (metrics.supportsLongTask) {
+    expect
+      .soft(metrics.longTaskCount, `${label} exceeded its long-task count budget`)
+      .toBeLessThanOrEqual(budget.maxLongTaskCount)
+    expect
+      .soft(metrics.longTaskDurationMs, `${label} exceeded its cumulative long-task budget`)
+      .toBeLessThanOrEqual(budget.maxLongTaskDurationMs)
+  }
   expect
     .soft(metrics.p95FrameMs, `${label} p95 frame time exceeded its budget`)
     .toBeLessThanOrEqual(budget.p95FrameMs)
   expect
     .soft(metrics.maxFrameMs, `${label} maximum frame time exceeded its budget`)
     .toBeLessThanOrEqual(budget.maxFrameMs)
+}
+
+const assertSample = (
+  sample: PerformanceSample,
+  budget: ReturnType<typeof performanceBudgetForProject>,
+) => {
+  const label = `run ${sample.runIndex}`
+  expect
+    .soft(sample.initialization.installedBeforeReady, `${label} probe installed too late`)
+    .toBe(true)
+  expect
+    .soft(sample.initialization.loadingObserved, `${label} did not observe Plate loading`)
+    .toBe(true)
+  expect
+    .soft(sample.sourceStats, `${label} fixture shape drifted`)
+    .toEqual(LARGE_DOCUMENT_EXPECTATIONS)
+  expect.soft(sample.initial.activeEditors, `${label} initial editor count`).toBe(1)
+  expect.soft(sample.finalState.activeEditors, `${label} final editor count`).toBe(1)
+  expect.soft(sample.firstInput.applied, `${label} first input was not applied`).toBe(true)
+  expect
+    .soft(sample.continuousInput.applied, `${label} continuous input was not applied`)
+    .toBe(true)
+  expect.soft(sample.persistence.flushCompleted, `${label} flush did not complete`).toBe(true)
+  expect
+    .soft(sample.persistence.firstMarkerPersisted, `${label} first marker was not saved`)
+    .toBe(true)
+  expect.soft(sample.persistence.markerPersisted, `${label} typing marker was not saved`).toBe(true)
+  expect.soft(sample.selectAll.insideEditor, `${label} select-all escaped Plate`).toBe(true)
+  expect
+    .soft(sample.selectAll.textLength, `${label} select-all was incomplete`)
+    .toBeGreaterThan(500_000)
+  expect.soft(sample.wheel.distance, `${label} wheel did not scroll`).toBeGreaterThan(0)
+  expect
+    .soft(
+      sample.scrollbar.native?.supported,
+      `${label} native scrollbar unsupported: ${sample.scrollbar.native?.reason ?? 'unknown'}`,
+    )
+    .toBe(true)
+  expect
+    .soft(
+      sample.scrollbar.native?.moved,
+      `${label} native scrollbar drag failed: ${sample.scrollbar.native?.reason ?? 'unknown'}`,
+    )
+    .toBe(true)
+  expect.soft(sample.focusMs, `${label} focus exceeded budget`).toBeLessThanOrEqual(budget.focusMs)
+  expect
+    .soft(sample.initial.domNodeCount, `${label} DOM node budget`)
+    .toBeLessThanOrEqual(budget.maxDomNodeCount)
+  expect
+    .soft(sample.initial.renderedElementCount, `${label} Slate element budget`)
+    .toBeLessThanOrEqual(budget.maxRenderedElementCount)
+  expect
+    .soft(sample.initial.chunkCount, `${label} minimum chunk count`)
+    .toBeGreaterThanOrEqual(budget.minChunkCount)
+  expect
+    .soft(sample.initial.chunkCount, `${label} maximum chunk count`)
+    .toBeLessThanOrEqual(budget.maxChunkCount)
+  assertFrameBudget(`${label} wheel`, sample.wheel, budget)
+  assertFrameBudget(`${label} native scrollbar`, sample.scrollbar, budget)
+  assertFrameBudget(`${label} typing`, sample.typing, budget)
+}
+
+const writeArtifact = async (testInfo: TestInfo, name: string, value: unknown) => {
+  const artifactPath = testInfo.outputPath(name)
+  fs.writeFileSync(artifactPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+  await testInfo.attach(name, { contentType: 'application/json', path: artifactPath })
 }
 
 test.describe('large Markdown document @performance @blackbox', () => {
@@ -146,115 +128,77 @@ test.describe('large Markdown document @performance @blackbox', () => {
   test.afterAll(async () => closeRendererServer(rendererServer))
 
   // eslint-disable-next-line no-empty-pattern -- Electron owns the browser lifecycle; Playwright still requires a destructured fixture argument.
-  test('captures rich-editor rendering and interaction regressions', async ({}, testInfo) => {
+  test('gates Plate with a warmup and three measured runs', async ({}, testInfo) => {
     const graphicsMode = testInfo.project.name as GraphicsMode
     const budget = performanceBudgetForProject(testInfo.project.name)
-    let session: ElectronPerformanceSession | undefined
+    const samples: PerformanceSample[] = []
+    let summary: Record<string, unknown> | null = null
+    let failure: { message: string; stack?: string } | null = null
     try {
-      session = await launchPerformanceSession(rendererUrl, graphicsMode)
-      const fixture = writeLargeDocumentWorkspace(session.runtimeRoot)
-      const loadStartedAt = performance.now()
-      const { page, result: openResult } = await openWorkspaceWindow(
-        session,
-        fixture.workspacePath,
-        LARGE_DOCUMENT_FILE_NAME,
-      )
-      await resizeElectronWindow(session, page, { height: 960, width: 1440 })
-      const viewport = page.locator('.crepe-playground > .milkdown')
-      const activeEditor = viewport.locator('.ProseMirror[contenteditable="true"]')
-      await expect(viewport).toBeVisible()
-      await expect(activeEditor).toBeVisible()
-      const loadMs = performance.now() - loadStartedAt
-      const initial = await captureEditorState(page)
-      await captureScreenshot(page, testInfo, 'large-document-initial')
-
-      const wheel = await measureFrames(page, () => exerciseWheel(page))
-      await viewport.evaluate((element) => {
-        element.scrollTop = element.scrollHeight * 0.1
-      })
-      await waitForAnimationFrames(page, 12)
-      const beforeDrag = await viewport.evaluate((element) => element.scrollTop)
-      const scrollbarDrag = await measureFrames(page, () => dragNativeScrollbar(page))
-      const afterDrag = await viewport.evaluate((element) => element.scrollTop)
-      await captureScreenshot(page, testInfo, 'large-document-after-scrollbar-drag')
-
-      const focusStartedAt = performance.now()
-      await activeEditor.click()
-      const focusMs = performance.now() - focusStartedAt
-      await page.keyboard.press('Control+A')
-      const selectAll = await page.evaluate(() => {
-        const editor = document.querySelector<HTMLElement>(
-          '.crepe-playground > .milkdown > .ProseMirror[contenteditable="true"]',
+      const totalRuns = PERFORMANCE_SAMPLE_PLAN.warmupRuns + PERFORMANCE_SAMPLE_PLAN.measuredRuns
+      for (let runIndex = 0; runIndex < totalRuns; runIndex += 1) {
+        samples.push(
+          await runLargeDocumentSample({
+            graphicsMode,
+            rendererUrl,
+            runIndex,
+            testInfo,
+            warmup: runIndex < PERFORMANCE_SAMPLE_PLAN.warmupRuns,
+          }),
         )
-        const selection = window.getSelection()
-        return {
-          insideEditor:
-            Boolean(selection?.anchorNode && editor?.contains(selection.anchorNode)) &&
-            Boolean(selection?.focusNode && editor?.contains(selection.focusNode)),
-          textLength: selection?.toString().length ?? 0,
-        }
-      })
-      await page.keyboard.press('Control+End')
-      const marker = ` responsive typing ${Date.now()}`
-      const typingStartedAt = performance.now()
-      const typing = await measureFrames(page, () =>
-        activeEditor.pressSequentially(marker, { delay: 10 }),
-      )
-      const typingMs = performance.now() - typingStartedAt
-      const renderedDocumentText = await viewport.textContent()
-      const typingApplied = renderedDocumentText?.includes(marker.trim()) ?? false
-      const activeEditorSurvived = (await activeEditor.count()) === 1
-      const finalState = await captureEditorState(page)
-      await captureScreenshot(page, testInfo, 'large-document-after-typing')
-
-      const results = {
-        finalState,
-        focusMs: Number(focusMs.toFixed(2)),
-        graphicsMode,
-        initial,
-        loadMs: Number(loadMs.toFixed(2)),
-        openResult,
-        scrollbarDrag: { ...scrollbarDrag, afterDrag, beforeDrag },
-        sourceStats: fixture.sourceStats,
-        selectAll,
-        typing: {
-          ...typing,
-          activeEditorSurvived,
-          applied: typingApplied,
-          durationMs: Number(typingMs.toFixed(2)),
-        },
-        wheel,
       }
-      const metricsPath = testInfo.outputPath('large-document-metrics.json')
-      fs.writeFileSync(metricsPath, JSON.stringify(results, null, 2))
-      await testInfo.attach('large-document-metrics', {
-        contentType: 'application/json',
-        path: metricsPath,
-      })
+      const measured = samples.filter((sample) => !sample.warmup)
+      const initialization = summarizeDurations(
+        measured.map((sample) => sample.initialization.windowOpenToReadyMs),
+      )
+      const input = summarizeDurations(
+        measured.flatMap((sample) => [
+          ...sample.firstInput.samples.map((entry) => entry.inputToPaintMs),
+          ...sample.continuousInput.samples.map((entry) => entry.inputToPaintMs),
+        ]),
+      )
+      summary = { initialization, input, measuredRuns: measured.length }
 
-      expect.soft(initial.activeEditors).toBe(1)
-      expect.soft(finalState.activeEditors).toBe(1)
-      expect.soft(selectAll.insideEditor, 'Ctrl+A selection escaped the editor').toBe(true)
+      expect.soft(measured).toHaveLength(PERFORMANCE_SAMPLE_PLAN.measuredRuns)
+      measured.forEach((sample) => assertSample(sample, budget))
       expect
-        .soft(selectAll.textLength, 'Ctrl+A did not select the complete large document')
-        .toBeGreaterThan(1_000)
+        .soft(initialization.firstMs, 'window-open→ready first sample exceeded budget')
+        .toBeLessThanOrEqual(budget.windowOpenToReadyFirstMs)
       expect
-        .soft(afterDrag, 'native scrollbar drag did not move the viewport')
-        .toBeGreaterThan(beforeDrag)
-      expect.soft(activeEditorSurvived, 'active editor was replaced while typing').toBe(true)
-      expect.soft(typingApplied, 'typed content was not applied to the editor').toBe(true)
+        .soft(initialization.p95Ms, 'window-open→ready p95 exceeded budget')
+        .toBeLessThanOrEqual(budget.windowOpenToReadyP95Ms)
       expect
-        .soft(loadMs, 'large document load exceeded its budget')
-        .toBeLessThanOrEqual(budget.loadMs)
-      expect.soft(focusMs, 'editor focus exceeded its budget').toBeLessThanOrEqual(budget.focusMs)
+        .soft(initialization.maxMs, 'window-open→ready max exceeded budget')
+        .toBeLessThanOrEqual(budget.windowOpenToReadyMaxMs)
       expect
-        .soft(typingMs, 'typing interaction exceeded its budget')
-        .toBeLessThanOrEqual(budget.typingMs)
-      assertFrameBudget('wheel scrolling', wheel, budget)
-      assertFrameBudget('native scrollbar dragging', scrollbarDrag, budget)
-      assertFrameBudget('typing', typing, budget)
+        .soft(input.firstMs, 'input first latency exceeded budget')
+        .toBeLessThanOrEqual(budget.inputFirstMs)
+      expect
+        .soft(input.p95Ms, 'input p95 latency exceeded budget')
+        .toBeLessThanOrEqual(budget.inputP95Ms)
+      expect
+        .soft(input.maxMs, 'input max latency exceeded budget')
+        .toBeLessThanOrEqual(budget.inputMaxMs)
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error))
+      failure = { message: normalized.message, stack: normalized.stack }
+      throw error
     } finally {
-      await closePerformanceSession(session)
+      await writeArtifact(testInfo, 'large-document-metrics.json', {
+        failure,
+        graphicsMode,
+        samplePlan: PERFORMANCE_SAMPLE_PLAN,
+        samples,
+        summary,
+      })
+      await writeArtifact(testInfo, 'performance-budget.json', budget)
+      const logPath = testInfo.outputPath('electron-performance.log')
+      const logs = samples.flatMap((sample) => sample.electronOutput)
+      fs.writeFileSync(logPath, `${logs.join('\n') || '(no completed sample output)'}\n`, 'utf8')
+      await testInfo.attach('electron-performance.log', {
+        contentType: 'text/plain',
+        path: logPath,
+      })
     }
   })
 })

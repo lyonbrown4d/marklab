@@ -95,6 +95,30 @@ const LoadingHarness = () => {
   )
 }
 
+const PersistedContentHarness = () => {
+  const buffer = useEditorBuffer({
+    activePath: 'notes/current.md',
+    workspaceKey: 'internal:/workspace',
+  })
+  const state = buffer.saveStates['notes/current.md']?.status ?? 'none'
+  const dirty = Boolean(buffer.dirtyPaths['notes/current.md'])
+
+  return (
+    <div>
+      <div data-testid="persisted-value">{buffer.editorValue}</div>
+      <div data-testid="persisted-state">
+        {state}:{String(dirty)}
+      </div>
+      <button
+        type="button"
+        onClick={() => buffer.onPersistedContentChange('notes/current.md', 'restored')}
+      >
+        restore persisted
+      </button>
+    </div>
+  )
+}
+
 beforeEach(() => {
   eventHandlers.clear()
   fsApiMock.flushBuffers.mockResolvedValue(0)
@@ -118,6 +142,23 @@ afterEach(() => {
 })
 
 describe('useEditorBuffer', () => {
+  it('applies persisted content without writing it back through the dirty buffer', async () => {
+    const user = userEvent.setup()
+    render(<PersistedContentHarness />)
+
+    expect(await screen.findByTestId('persisted-value')).toHaveTextContent('initial')
+    expect(screen.getByTestId('persisted-state')).toHaveTextContent('saved:false')
+    fsApiMock.updateBuffer.mockClear()
+    fsApiMock.flushBuffers.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'restore persisted' }))
+
+    expect(screen.getByTestId('persisted-value')).toHaveTextContent('restored')
+    expect(screen.getByTestId('persisted-state')).toHaveTextContent('saved:false')
+    expect(fsApiMock.updateBuffer).not.toHaveBeenCalled()
+    expect(fsApiMock.flushBuffers).not.toHaveBeenCalled()
+  })
+
   it('keeps a file dirty until the desktop buffer reports a clean flush', async () => {
     render(<Harness />)
 

@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-import path from 'node:path'
 import type { App, Shell } from 'electron'
 
 import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
@@ -16,7 +14,13 @@ import type {
 } from '@electron/services/workspace/types.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
+import {
+  workspaceChangeAffectsSearch,
+  workspaceSearchIndexPath,
+  workspaceSearchKey,
+} from '@electron/services/workspace/workspaceSearchIndexLifecycle.js'
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
 import {
   trySidecarOutlineGraph,
@@ -28,12 +32,6 @@ import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/work
 import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
 
 const SEARCH_INDEX_REBUILD_DELAY_MS = 600
-
-type SearchDocumentToIndex = {
-  path: string
-  title: string
-  content: string
-}
 
 export type WorkspaceSearchIndexFactory = () => WorkspaceSearchIndex
 
@@ -56,7 +54,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
   private readonly graphCache = new WorkspaceGraphCache()
   private readonly searchIndexUpdateQueue =
-    new WorkspaceSearchIndexUpdateQueue<SearchDocumentToIndex>({
+    new WorkspaceSearchIndexUpdateQueue<WorkspaceSearchDocument>({
       applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
       getDocumentPath: (document) => document.path,
@@ -181,18 +179,18 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   override async setRoot(value: unknown): Promise<FsRootInfo> {
-    const previousWorkspaceSearchKey = this.getWorkspaceSearchKey()
+    const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setRoot(value)
-    if (this.getWorkspaceSearchKey() === previousWorkspaceSearchKey) return result
+    if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
     this.graphCache.clear()
     return result
   }
 
   override async setSingleFile(value: unknown): Promise<FsRootInfo> {
-    const previousWorkspaceSearchKey = this.getWorkspaceSearchKey()
+    const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setSingleFile(value)
-    if (this.getWorkspaceSearchKey() === previousWorkspaceSearchKey) return result
+    if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
     this.graphCache.clear()
     return result
@@ -200,7 +198,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
     this.graphCache.clear()
-    if (!this.indexChangeAffectsSearch(_changedPath, event)) return
+    if (!workspaceChangeAffectsSearch(_changedPath, event)) return
     if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
       this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
       return
@@ -216,28 +214,18 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
 
-    void this.runSearchIndexTask(async () => {
-      await this.openWorkspaceSearchIndex()
-      const documents = await this.loadDocuments(markdownPaths)
-      const loadedPaths = new Set(documents.map((document) => document.path))
-      await this.workspaceSearchIndex.applySearchChanges({
-        removeDocuments: markdownPaths.filter((pathValue) => !loadedPaths.has(pathValue)),
-        removePrefixes: [],
-        upserts: documents,
-      })
-    }, 'search-index').catch((error) => {
-      this.logger.warn('search index update from flush failed; scheduling full rebuild', { error })
-      this.needsSearchIndexRebuild = true
-    })
+    for (const relativePath of markdownPaths) {
+      this.searchIndexUpdateQueue.schedulePathChange(relativePath, 'change')
+    }
   }
 
   private async openWorkspaceSearchIndex(): Promise<void> {
-    const workspaceSearchKey = this.getWorkspaceSearchKey()
-    const indexPath = this.getWorkspaceSearchIndexPath()
-    await this.workspaceSearchIndex.open(indexPath, workspaceSearchKey)
+    const searchKey = workspaceSearchKey(this.state)
+    const indexPath = workspaceSearchIndexPath(this.app.getPath('userData'), searchKey)
+    await this.workspaceSearchIndex.open(indexPath, searchKey)
 
-    if (this.activeWorkspaceSearchKey !== workspaceSearchKey) {
-      this.activeWorkspaceSearchKey = workspaceSearchKey
+    if (this.activeWorkspaceSearchKey !== searchKey) {
+      this.activeWorkspaceSearchKey = searchKey
       this.needsSearchIndexRebuild = !(await this.workspaceSearchIndex.hasDocuments())
     }
   }
@@ -251,43 +239,22 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   private async buildSearchIndexFromWorkspace(): Promise<boolean> {
     const generation = ++this.searchIndexBuildGeneration
-    const workspaceSearchKey = this.getWorkspaceSearchKey()
+    const searchKey = workspaceSearchKey(this.state)
     const documents = await this.workspaceDocuments()
-    if (!this.isCurrentSearchIndexBuild(generation, workspaceSearchKey)) return false
-    const indexable = documents.map<SearchDocumentToIndex>((document) => ({
+    if (!this.isCurrentSearchIndexBuild(generation, searchKey)) return false
+    const indexable = documents.map<WorkspaceSearchDocument>((document) => ({
       path: document.path,
       title: fileLabel(document.path),
       content: document.content,
     }))
     await this.workspaceSearchIndex.rebuild(indexable)
-    return this.isCurrentSearchIndexBuild(generation, workspaceSearchKey)
+    return this.isCurrentSearchIndexBuild(generation, searchKey)
   }
 
-  private isCurrentSearchIndexBuild(generation: number, workspaceSearchKey: string): boolean {
+  private isCurrentSearchIndexBuild(generation: number, searchKey: string): boolean {
     return (
-      generation === this.searchIndexBuildGeneration &&
-      workspaceSearchKey === this.getWorkspaceSearchKey()
+      generation === this.searchIndexBuildGeneration && searchKey === workspaceSearchKey(this.state)
     )
-  }
-
-  private getWorkspaceSearchIndexPath(): string {
-    return path.join(
-      this.app.getPath('userData'),
-      'cache',
-      'search-index',
-      this.getWorkspaceSearchKey(),
-    )
-  }
-
-  private getWorkspaceSearchKey(): string {
-    const raw = `${this.state.rootKind}|${this.state.rootPath}|${this.state.singleFile ?? ''}`
-    return createHash('sha256').update(raw).digest('hex')
-  }
-
-  private indexChangeAffectsSearch(pathValue: string | null, event?: WatchEventName): boolean {
-    if (!pathValue || !event) return true
-    if (event === 'addDir') return false
-    return event === 'unlinkDir' || isSearchIndexablePath(pathValue)
   }
 
   private resetSearchIndexState(): void {
@@ -300,8 +267,8 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     })
   }
 
-  private async loadDocuments(relativePaths: string[]): Promise<Array<SearchDocumentToIndex>> {
-    const documents: Array<SearchDocumentToIndex> = []
+  private async loadDocuments(relativePaths: string[]): Promise<WorkspaceSearchDocument[]> {
+    const documents: WorkspaceSearchDocument[] = []
     for (const relativePath of relativePaths) {
       try {
         const content = await this.readFile({ path: relativePath })

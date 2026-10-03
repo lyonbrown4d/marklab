@@ -16,33 +16,33 @@ the workspace into a proprietary database model.
 
 ## Near Term
 
-### 0. Markdown Editor Playground Baseline
+### 0. Plate Markdown Editor Baseline
 
-Goal: keep the WYSIWYG editor aligned with the official Milkdown Crepe playground
-baseline before adding MarkLab-specific editor features back.
+Goal: keep the WYSIWYG editor aligned with Plate and Slate primitives while
+preserving MarkLab's Markdown-first behavior.
 
 Scope:
 
-- Use the single-column Crepe editor as the active WYSIWYG baseline.
-- Keep official Crepe behavior for block handles, slash menu, toolbar, cursor,
-  tables, lists, code blocks, and link editing.
-- Scope local editor CSS under a dedicated playground root class instead of
-  writing broad `.crepe`, `.milkdown`, or `.ProseMirror` overrides.
+- Use the Plate editor as the active WYSIWYG baseline.
+- Compose Plate plugins for slash commands, selection controls, tables, lists,
+  code blocks, media, and link editing.
+- Scope local editor CSS under the dedicated Plate editor root instead of
+  writing broad Slate content-editable overrides.
 - Keep WYSIWYG editor route containers free of transform, contain, and animated
-  wrappers that can break fixed-position Milkdown overlays.
+  wrappers that can break fixed-position editor overlays.
 - Render fixed-position drag indicators in the viewport coordinate root so the
-  block drop line matches ProseMirror `getBoundingClientRect()` coordinates.
-- Keep previous MarkLab custom editor addons available in code only when they are
-  inactive or explicitly reintroduced behind a reviewed integration point.
+  block drop line matches Slate element `getBoundingClientRect()` coordinates.
+- Integrate MarkLab editor addons through explicit Plate plugins and focused
+  hooks so each capability remains testable and replaceable.
 
 Validation:
 
-- Regression tests must verify that only the playground baseline stylesheet is
-  imported at runtime.
+- Regression tests must verify that only the Plate editor stylesheet is imported
+  at runtime.
 - Regression tests must verify that WYSIWYG containers do not use app editor card
   shells or route cache motion transforms.
-- Regression tests must verify that Milkdown drop cursor overlays are attached to
-  the viewport coordinate root.
+- Regression tests must verify that editor overlays are attached to the correct
+  viewport coordinate root.
 - Any reintroduced editor customization must prove it does not offset block
   handles, slash menu placement, drag handles, or drop indicators.
 

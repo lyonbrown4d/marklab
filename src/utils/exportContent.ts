@@ -12,7 +12,7 @@ export const requestExportContent = (
     timeoutMs?: number
   },
 ): Promise<string> => {
-  const { expectedActivePath = null, timeoutMs = 150 } = options ?? {}
+  const { expectedActivePath = null, timeoutMs = 5_000 } = options ?? {}
   return new Promise((resolve) => {
     let resolved = false
     const respond = (content: string) => {

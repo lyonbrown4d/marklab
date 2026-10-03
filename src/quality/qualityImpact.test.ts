@@ -53,6 +53,24 @@ describe('quality impact rules', () => {
     expect(impacts.map((impact) => impact.area)).toContain('Build/package')
   })
 
+  it('routes performance gate changes to the Plate performance checks', () => {
+    const impacts = analyzeChangedFiles([
+      'e2e/performance/frameProbe.ts',
+      'playwright.performance.config.ts',
+      '.github/workflows/performance.yml',
+    ])
+
+    const plateImpact = impacts.find((impact) => impact.area === 'WYSIWYG / Plate')
+    expect(plateImpact?.files).toEqual(
+      expect.arrayContaining([
+        'e2e/performance/frameProbe.ts',
+        'playwright.performance.config.ts',
+        '.github/workflows/performance.yml',
+      ]),
+    )
+    expect(plateImpact?.checks).toContain('pnpm test:perf:software')
+  })
+
   it('compiles the shared rule data into runtime matchers', () => {
     expect(qualityImpactRules).toHaveLength(qualityImpactRulesData.length)
     expect(

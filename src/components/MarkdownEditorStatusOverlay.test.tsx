@@ -20,11 +20,11 @@ describe('MarkdownEditorStatusOverlay', () => {
       <MarkdownEditorStatusOverlay
         errorLabel="Editor failed"
         loadingLabel="Loading editor"
-        status={{ phase: 'error', message: 'Milkdown crashed' }}
+        status={{ phase: 'error', message: 'Editor crashed' }}
       />,
     )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Milkdown crashed')
+    expect(screen.getByRole('alert')).toHaveTextContent('Editor crashed')
   })
 
   it('does not render once editor is ready', () => {

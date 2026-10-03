@@ -16,12 +16,36 @@ describe('Vite production configuration', () => {
     expect(vite).not.toContain("mode === 'compressed'")
   })
 
-  it('keeps shared lodash code out of the broader Milkdown chunk', async () => {
+  it('keeps React separate from the coherent Plate editor chunk', async () => {
     const vite = await fs.readFile('vite.config.ts', 'utf8')
-    const lodashChunkRule = vite.indexOf("return 'vendor-lodash'")
-    const milkdownChunkRule = vite.indexOf("return 'vendor-milkdown-core'")
+    const reactChunkRule = vite.indexOf("return 'vendor-react'")
+    const plateChunkRule = vite.indexOf("return 'vendor-plate'")
 
-    expect(lodashChunkRule).toBeGreaterThan(-1)
-    expect(lodashChunkRule).toBeLessThan(milkdownChunkRule)
+    expect(reactChunkRule).toBeGreaterThan(-1)
+    expect(plateChunkRule).toBeGreaterThan(-1)
+    expect(reactChunkRule).toBeLessThan(plateChunkRule)
+    expect(vite).not.toMatch(/Milkdown|milkdown|ProseMirror|prosemirror/)
+  })
+
+  it('prebundles the Plate entry points used by the editor without legacy editor entries', async () => {
+    const development = await fs.readFile('vite.development.ts', 'utf8')
+
+    expect(development).toContain("'platejs'")
+    expect(development).toContain("'platejs/react'")
+    expect(development).toContain("'@platejs/markdown'")
+    expect(development).toContain("'@platejs/basic-nodes/react'")
+    expect(development).toContain("'@platejs/list-classic'")
+    expect(development).toContain("'@platejs/list-classic/react'")
+    expect(development).not.toContain("'@platejs/list'")
+    expect(development).not.toContain("'@platejs/list/react'")
+    expect(development).not.toMatch(/Milkdown|milkdown|ProseMirror|prosemirror/)
+  })
+
+  it('resolves worker-safe package exports for the Plate Markdown worker', async () => {
+    const vite = await fs.readFile('vite.config.ts', 'utf8')
+
+    expect(vite).toContain("import.meta.resolve('decode-named-character-reference')")
+    expect(vite).toContain("'decode-named-character-reference': workerCharacterReferencePath")
+    expect(vite).not.toContain('workerSafeMarkdownDependenciesPlugin')
   })
 })

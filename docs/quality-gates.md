@@ -12,7 +12,7 @@ non-trivial changes.
   not call Electron directly.
 - Monaco owns source-code editing behavior. App commands may bridge into Monaco actions, but
   native text accelerators should stay native.
-- Milkdown owns WYSIWYG editing behavior. Editor shortcuts should run through the Milkdown command
+- Plate owns WYSIWYG editing behavior. Editor shortcuts should run through the Plate command
   layer.
 - React Flow owns graph canvas interaction. Graph data must explicitly map to registered node
   renderers.
@@ -43,7 +43,7 @@ verification and CI use the same entry point.
 | -------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
 | Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm exec tsc -b`     |
 | Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                 |
-| WYSIWYG / Milkdown               | command mismatch, paste/drop regression, editor sync drift     | Milkdown command/paste/sync tests                       |
+| WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests          |
 | React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests    |
 | Settings / persisted preferences | default drift, missing partialize field, inaccessible controls | settings tests, affected component option tests         |
 | Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, graph/editor shortcut tests |
@@ -53,6 +53,33 @@ verification and CI use the same entry point.
 | Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks             |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests             |
 | Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`  |
+
+Changes under `e2e/performance/`, `playwright.performance.config.ts`, or the Plate performance
+workflow map to the WYSIWYG / Plate boundary and require `pnpm test:perf:software`.
+
+## Plate Large-Document Performance Gate
+
+The merge-gating profile is the independent GitHub Actions job named
+`Plate performance (software rendering)`. It builds the Electron production bundles, runs one
+warmup plus three measured sessions under Xvfb/software rendering, and uploads metrics, budgets,
+Electron logs, screenshots, and the HTML report even on failure. Repository administrators must add
+that exact job name as a required status check in the protected `main` branch rules; workflow files
+cannot make themselves required.
+
+The gate requires:
+
+- an initialization probe installed before Plate reaches ready, with window-open-to-ready timing;
+- DOM-mutation-to-next-paint first/p95/max input latency without artificial typing delay;
+- frame support flags, drained observer records, a minimum frame count, visible Slate content, and
+  no ready-to-loading transition;
+- a fixed 29,256 non-empty-line fixture with byte and block-scale assertions;
+- isolated runtime/userData/settings paths plus captured GPU feature status;
+- marker persistence after editor blur and an explicit workspace-buffer flush;
+- a real native scrollbar gutter; overlay-only environments fail with an explicit unsupported
+  reason instead of substituting a document-content drag.
+
+Budget changes need retained artifacts from one warmup and at least three measured runs. Use the
+software profile for the merge threshold; native-GPU samples are informative and hardware-specific.
 
 ## Regression Test Rule
 

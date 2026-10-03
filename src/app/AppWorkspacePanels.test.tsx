@@ -45,6 +45,7 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 const action = vi.fn()
+const persistedContentChange = vi.fn()
 const baseState = {
   activePath: '/notes/one.md',
   activeTabId: 'file:edit:/notes/one.md',
@@ -59,7 +60,7 @@ const baseState = {
   files: [],
   inspectedPath: '/notes/one.md',
   movePath: action,
-  onEditorChange: action,
+  onPersistedContentChange: persistedContentChange,
   onInspectPath: action,
   onOpenProject: action,
   onOpenWorkspaceGraph: action,
@@ -99,6 +100,7 @@ describe('AppWorkspacePanels render isolation', () => {
     renderSpies.inspector.mockClear()
     renderSpies.shell.mockClear()
     renderSpies.sidebar.mockClear()
+    persistedContentChange.mockClear()
   })
 
   it('does not rerender the sidebar for editor buffers while the inspector updates', () => {
@@ -126,6 +128,19 @@ describe('AppWorkspacePanels render isolation', () => {
     expect(nextProps.onToggleSidebar).toBe(firstProps.onToggleSidebar)
     expect(nextProps.onSidebarOpenChange).toBe(firstProps.onSidebarOpenChange)
     expect(nextProps.onToggleInspector).toBe(firstProps.onToggleInspector)
+  })
+
+  it('routes active history restores through the persisted-content callback', () => {
+    render(renderPanels(baseState))
+    const sidebarProps = renderSpies.sidebar.mock.calls.at(-1)?.[0] as {
+      onRestoreHistoryContent: (path: string, content: string) => void
+    }
+
+    sidebarProps.onRestoreHistoryContent('/notes/one.md', 'restored')
+    sidebarProps.onRestoreHistoryContent('/notes/other.md', 'ignored')
+
+    expect(persistedContentChange).toHaveBeenCalledOnce()
+    expect(persistedContentChange).toHaveBeenCalledWith('/notes/one.md', 'restored')
   })
 
   it('mounts the immersive tabs dock over the workspace content', () => {

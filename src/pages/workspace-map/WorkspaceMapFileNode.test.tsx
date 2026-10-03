@@ -16,7 +16,7 @@ const editorHarness = vi.hoisted(() => ({ recreateHandle: null as null | (() => 
 
 vi.mock('@/components/MarkdownEditor', () => ({
   default: forwardRef<
-    { focus: () => void; generation: number; getMarkdown: () => string },
+    { focus: () => void; generation: number; getMarkdown: () => Promise<string> },
     { autoFocus?: boolean; readOnly?: boolean; value: string }
   >(({ autoFocus, readOnly, value }, forwardedRef) => {
     const editorRef = useRef<HTMLTextAreaElement>(null)
@@ -27,7 +27,7 @@ vi.mock('@/components/MarkdownEditor', () => ({
       () => ({
         focus: () => editorRef.current?.focus(),
         generation: handleGeneration,
-        getMarkdown: () => value,
+        getMarkdown: () => Promise.resolve(value),
       }),
       [handleGeneration, value],
     )
@@ -37,7 +37,7 @@ vi.mock('@/components/MarkdownEditor', () => ({
     return (
       <>
         <textarea
-          data-testid="milkdown-editor"
+          data-testid="plate-editor"
           defaultValue={value}
           readOnly={readOnly}
           ref={editorRef}
@@ -48,8 +48,8 @@ vi.mock('@/components/MarkdownEditor', () => ({
   }),
 }))
 
-vi.mock('@/components/milkdown/useSlashCommandLabels', () => ({
-  useSlashCommandLabels: () => ({}),
+vi.mock('@/components/editor/useMarkdownEditorSlashLabels', () => ({
+  useMarkdownEditorSlashLabels: () => ({}),
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -91,7 +91,7 @@ describe('WorkspaceMapFileNode', () => {
     const view = renderNode({ label: 'a', path: 'notes/a.md' })
     const surface = screen.getByTestId('workspace-map-editor-surface')
 
-    expect(screen.queryByTestId('milkdown-editor')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
     expect(surface).toHaveAttribute('data-editor-active', 'false')
 
     view.rerender(
@@ -103,10 +103,10 @@ describe('WorkspaceMapFileNode', () => {
     )
 
     expect(screen.getByTestId('workspace-map-editor-surface')).toBe(surface)
-    const milkdown = await screen.findByTestId('milkdown-editor')
-    expect(milkdown).not.toHaveAttribute('readonly')
+    const plateEditor = await screen.findByTestId('plate-editor')
+    expect(plateEditor).not.toHaveAttribute('readonly')
     expect(surface).toHaveAttribute('data-editor-active', 'true')
-    await waitFor(() => expect(milkdown).toHaveFocus())
+    await waitFor(() => expect(plateEditor).toHaveFocus())
   })
 
   it('keeps the lightweight page surface mounted while the document loads', () => {
@@ -120,10 +120,10 @@ describe('WorkspaceMapFileNode', () => {
     })
 
     expect(screen.getByText('workspaceMap.loadingDocument')).toBeInTheDocument()
-    expect(screen.queryByTestId('milkdown-editor')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
   })
 
-  it('shows an actionable load error without mounting Milkdown', () => {
+  it('shows an actionable load error without mounting Plate', () => {
     renderNode({
       label: 'a',
       path: 'notes/a.md',
@@ -134,12 +134,12 @@ describe('WorkspaceMapFileNode', () => {
     })
 
     expect(screen.getByRole('alert')).toHaveTextContent('disk unavailable')
-    expect(screen.queryByTestId('milkdown-editor')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.retry' }))
     expect(editor.onRetry).toHaveBeenCalledOnce()
   })
 
-  it('mounts Milkdown for a successfully loaded empty document', async () => {
+  it('mounts Plate for a successfully loaded empty document', async () => {
     renderNode({
       label: 'empty',
       path: 'notes/empty.md',
@@ -149,7 +149,7 @@ describe('WorkspaceMapFileNode', () => {
       },
     })
 
-    expect(await screen.findByTestId('milkdown-editor')).toBeInTheDocument()
+    expect(await screen.findByTestId('plate-editor')).toBeInTheDocument()
   })
 
   it('closes or opens the full document only through explicit header buttons', () => {
@@ -200,10 +200,10 @@ describe('WorkspaceMapFileNode', () => {
     expect(parentHandlers.onWheel).toHaveBeenCalledOnce()
   })
 
-  it('does not steal focus when Milkdown recreates its imperative handle', async () => {
+  it('does not steal focus when Plate recreates its imperative handle', async () => {
     renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor })
-    const milkdown = await screen.findByTestId('milkdown-editor')
-    await waitFor(() => expect(milkdown).toHaveFocus())
+    const plateEditor = await screen.findByTestId('plate-editor')
+    await waitFor(() => expect(plateEditor).toHaveFocus())
     const dialogControl = screen.getByRole('button', { name: 'Dialog control' })
 
     dialogControl.focus()

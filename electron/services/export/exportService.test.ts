@@ -50,6 +50,7 @@ const nativeWindows = new Map<
   }
 >()
 let windowIds = [1]
+const pdfWindows: FakeBrowserWindow[] = []
 
 class FakeBrowserWindow {
   static getAllWindows = () =>
@@ -77,6 +78,9 @@ class FakeBrowserWindow {
       return window
     })
   destroyed = false
+  constructor() {
+    pdfWindows.push(this)
+  }
   isDestroyed = () => this.destroyed
   destroy = () => {
     this.destroyed = true
@@ -84,7 +88,9 @@ class FakeBrowserWindow {
   loadFile = vi.fn(async () => undefined)
   webContents = {
     executeJavaScript: vi.fn(async () => undefined),
+    on: vi.fn(),
     printToPDF: vi.fn(async () => Buffer.from('pdf')),
+    setWindowOpenHandler: vi.fn(),
   }
 }
 
@@ -93,6 +99,7 @@ describe('ExportService PDF lifecycle', () => {
     sent.length = 0
     sentByWindow.clear()
     nativeWindows.clear()
+    pdfWindows.length = 0
     windowIds = [1]
     electron.notificationInstances.length = 0
     electron.notificationSupported.mockReset()
@@ -129,6 +136,11 @@ describe('ExportService PDF lifecycle', () => {
       recursive: true,
     })
     expect(commitOutput).toHaveBeenCalledWith(Buffer.from('pdf'))
+    expect(pdfWindows[0]?.webContents.setWindowOpenHandler).toHaveBeenCalledOnce()
+    expect(pdfWindows[0]?.webContents.on).toHaveBeenCalledWith(
+      'will-navigate',
+      expect.any(Function),
+    )
   })
 
   it('reports cancellation for an active task', () => {

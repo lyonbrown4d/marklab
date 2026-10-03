@@ -19,7 +19,7 @@ describe('MarkdownCodeBlockView', () => {
     expect(onCommit).toHaveBeenCalledWith('const value = 2')
   })
 
-  it('renders a content ref target for Milkdown node views without owning the code text', () => {
+  it('renders a content ref target for editor node views without owning the code text', () => {
     const contentRef = vi.fn()
     const { container } = render(<MarkdownCodeBlockView contentRef={contentRef} selected />)
 

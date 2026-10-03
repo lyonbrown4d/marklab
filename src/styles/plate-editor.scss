@@ -1,0 +1,255 @@
+@use './plate-editor/completion';
+@use './plate-editor/cursor';
+@use './plate-editor/modes';
+@use './plate-editor/pdf-preview';
+@use './plate-editor/status';
+
+.markdown-editor {
+  --editor-prose-font: ui-sans-serif, system-ui, sans-serif;
+  --editor-code-font: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 100%;
+  overflow: auto;
+  overscroll-behavior: auto;
+  padding: clamp(2rem, 6vw, 4.75rem) clamp(1.25rem, 5vw, 4rem) 6rem;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, hsl(var(--primary)) 5%, transparent),
+      transparent 34rem
+    ),
+    hsl(var(--background));
+  caret-color: hsl(var(--primary));
+  color: hsl(var(--foreground));
+  cursor: text;
+  font-family: var(--editor-prose-font);
+  font-size: 1rem;
+  line-height: 1.76;
+  scroll-padding-block: 3rem;
+  transition:
+    box-shadow 160ms ease,
+    padding 180ms ease;
+}
+
+.markdown-editor:focus {
+  outline: none;
+}
+
+.markdown-editor:focus-visible {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--ring)) 12%, transparent);
+}
+
+.markdown-editor::selection,
+.markdown-editor *::selection {
+  background: color-mix(in srgb, hsl(var(--primary)) 22%, transparent);
+}
+
+.markdown-editor > [data-slate-node='element'],
+.markdown-editor > .plate-block-draggable,
+.markdown-editor > [data-slate-chunk='true'] {
+  width: min(100%, 780px);
+  margin-inline: auto;
+}
+
+.markdown-editor > [data-slate-chunk='true'] {
+  contain-intrinsic-block-size: auto 1800px;
+}
+
+.markdown-editor [data-slate-node='element'] {
+  overflow-wrap: anywhere;
+}
+
+.markdown-editor [data-slate-node='text'] {
+  white-space: break-spaces;
+}
+
+.markdown-editor [data-slate-placeholder='true'] {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.72;
+}
+
+.markdown-editor p {
+  min-height: 1.76em;
+  margin: 0.78rem 0;
+}
+
+.markdown-editor h1,
+.markdown-editor h2,
+.markdown-editor h3,
+.markdown-editor h4,
+.markdown-editor h5,
+.markdown-editor h6 {
+  margin: 1.6em 0 0.55em;
+  color: hsl(var(--foreground));
+  font-family: var(--editor-prose-font);
+  font-weight: 650;
+  line-height: 1.24;
+  letter-spacing: -0.018em;
+}
+
+.markdown-editor h1 {
+  font-size: clamp(2rem, 5vw, 2.7rem);
+}
+
+.markdown-editor h2 {
+  padding-bottom: 0.28rem;
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--border)) 70%, transparent);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.markdown-editor h3 {
+  font-size: 1.42rem;
+}
+
+.markdown-editor h4 {
+  font-size: 1.18rem;
+}
+
+.markdown-editor h5,
+.markdown-editor h6 {
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.markdown-editor blockquote {
+  margin: 1.35rem 0;
+  border-inline-start: 3px solid color-mix(in srgb, hsl(var(--primary)) 46%, hsl(var(--border)));
+  padding: 0.15rem 0 0.15rem 1rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.markdown-editor ul,
+.markdown-editor ol {
+  margin: 0.85rem 0;
+  padding-inline-start: 1.75rem;
+}
+
+.markdown-editor li {
+  margin: 0.24rem 0;
+  padding-inline-start: 0.2rem;
+}
+
+.markdown-editor li::marker {
+  color: color-mix(in srgb, hsl(var(--primary)) 72%, hsl(var(--muted-foreground)));
+}
+
+.markdown-editor hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.markdown-editor a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, hsl(var(--primary)) 42%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.markdown-editor a:hover {
+  text-decoration-color: currentColor;
+}
+
+.markdown-editor code {
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 74%, transparent);
+  border-radius: 0.3rem;
+  padding: 0.12em 0.34em;
+  background: color-mix(in srgb, hsl(var(--muted)) 72%, transparent);
+  color: hsl(var(--destructive));
+  font-family: var(--editor-code-font);
+  font-size: 0.88em;
+}
+
+.markdown-editor pre {
+  overflow: auto;
+  margin: 1.25rem 0;
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
+  border-radius: calc(var(--radius) + 0.2rem);
+  padding: 1rem 1.15rem;
+  background: color-mix(in srgb, hsl(var(--muted)) 64%, hsl(var(--background)));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, hsl(var(--background)) 80%, transparent);
+}
+
+.markdown-editor pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+}
+
+.markdown-editor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.25rem auto;
+  border-radius: calc(var(--radius) + 0.25rem);
+  box-shadow: 0 12px 30px color-mix(in srgb, hsl(var(--foreground)) 10%, transparent);
+}
+
+.markdown-editor table {
+  width: 100%;
+  margin: 1.35rem 0;
+  border: 1px solid hsl(var(--border));
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, hsl(var(--card)) 88%, transparent);
+}
+
+.markdown-editor th,
+.markdown-editor td {
+  border-inline-end: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.6rem 0.75rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.markdown-editor th {
+  background: color-mix(in srgb, hsl(var(--muted)) 72%, transparent);
+  font-weight: 650;
+}
+
+.markdown-editor tr:last-child > * {
+  border-bottom: 0;
+}
+
+.markdown-editor tr > *:last-child {
+  border-inline-end: 0;
+}
+
+.markdown-editor.is-readonly-editor {
+  cursor: default;
+  user-select: text;
+}
+
+.markdown-editor.is-typewriter-editor {
+  padding-block: 30vh 42vh;
+  scroll-padding-block: 30vh 42vh;
+}
+
+.markdown-editor--embedded {
+  padding: 1.25rem 1.5rem 2.5rem;
+  font-size: 0.94rem;
+}
+
+.markdown-editor--embedded > [data-slate-node='element'],
+.markdown-editor--embedded > .plate-block-draggable,
+.markdown-editor--embedded > [data-slate-chunk='true'] {
+  width: min(100%, 680px);
+}
+
+@media (max-width: 640px) {
+  .markdown-editor {
+    padding-inline: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-editor {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

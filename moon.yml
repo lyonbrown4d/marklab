@@ -33,6 +33,18 @@ tasks:
     options:
       cache: false
 
+  test-performance-software:
+    command: pnpm test:perf:software
+    inputs:
+      - e2e/performance/**/*
+      - electron/**/*
+      - src/**/*
+      - playwright.performance.config.ts
+      - package.json
+      - pnpm-lock.yaml
+    options:
+      cache: false
+
   test-knowledge-integration:
     command: pnpm exec vitest run electron/services/knowledgeEngine
     inputs:

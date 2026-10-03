@@ -10,8 +10,13 @@ type FrameProbeState = {
   longTasks: number
   maxVisibleSurfaces: number
   minVisibleSurfaces: number
-  observers: PerformanceObserver[]
+  observers: Array<{ kind: 'layout-shift' | 'longtask'; observer: PerformanceObserver }>
   raf: number
+  readySeen: boolean
+  readyToLoadingTransitions: number
+  supportsLayoutShift: boolean
+  supportsLongTask: boolean
+  wasReady: boolean
 }
 
 export type FrameMetrics = {
@@ -27,6 +32,9 @@ export type FrameMetrics = {
   maxVisibleSurfaces: number
   minVisibleSurfaces: number
   p95FrameMs: number
+  readyToLoadingTransitions: number
+  supportsLayoutShift: boolean
+  supportsLongTask: boolean
 }
 
 type ProbeWindow = Window & { __marklabFrameProbe?: FrameProbeState }
@@ -45,48 +53,78 @@ export const startFrameProbe = async (page: Page) => {
       minVisibleSurfaces: Number.POSITIVE_INFINITY,
       observers: [],
       raf: 0,
+      readySeen: false,
+      readyToLoadingTransitions: 0,
+      supportsLayoutShift: PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
+      supportsLongTask: PerformanceObserver.supportedEntryTypes.includes('longtask'),
+      wasReady: false,
+    }
+    const consumeEntries = (kind: 'layout-shift' | 'longtask', entries: PerformanceEntryList) => {
+      for (const entry of entries) {
+        if (kind === 'layout-shift') {
+          const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
+          if (!shift.hadRecentInput) state.layoutShift += shift.value ?? 0
+        } else {
+          state.longTasks += 1
+          state.longTaskDuration += entry.duration
+        }
+      }
     }
     const tick = (timestamp: number) => {
       const delta = timestamp - state.lastFrame
       state.lastFrame = timestamp
       state.deltas.push(delta)
-      const visible = [
-        ...document.querySelectorAll<HTMLElement>('.crepe-playground > .milkdown'),
+      const visibleSurfaces = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[data-testid="markdown-editor"][data-editor-engine="plate"]',
+        ),
       ].filter((element) => {
         const rect = element.getBoundingClientRect()
-        return rect.bottom > 0 && rect.top < innerHeight && rect.height > 0
+        const style = getComputedStyle(element)
+        return (
+          rect.bottom > 0 &&
+          rect.right > 0 &&
+          rect.top < innerHeight &&
+          rect.left < innerWidth &&
+          rect.height > 0 &&
+          rect.width > 0 &&
+          style.display !== 'none' &&
+          style.visibility === 'visible' &&
+          Number.parseFloat(style.opacity || '1') > 0
+        )
       })
-      const readySurfaceCount = visible.filter((element) =>
-        element.querySelector('.ProseMirror'),
+      const readySurfaceCount = visibleSurfaces.filter(
+        (element) =>
+          element.dataset.state === 'ready' &&
+          element.dataset.slateEditor === 'true' &&
+          element.querySelector('[data-slate-node="element"]') !== null &&
+          Boolean(element.textContent?.trim()),
       ).length
-      const loadingSurfaceCount = visible.filter(
+      const loadingSurfaceCount = visibleSurfaces.filter(
         (element) => element.dataset.state === 'loading',
       ).length
+      if (state.wasReady && loadingSurfaceCount > 0) state.readyToLoadingTransitions += 1
+      if (readySurfaceCount > 0) state.readySeen = true
+      state.wasReady = readySurfaceCount > 0
       state.minVisibleSurfaces = Math.min(state.minVisibleSurfaces, readySurfaceCount)
       state.maxVisibleSurfaces = Math.max(state.maxVisibleSurfaces, readySurfaceCount)
       if (readySurfaceCount === 0) state.blankFrames += 1
       if (loadingSurfaceCount > 0) state.loadingFrames += 1
       state.raf = requestAnimationFrame(tick)
     }
-    if (PerformanceObserver.supportedEntryTypes.includes('layout-shift')) {
+    if (state.supportsLayoutShift) {
       const layoutObserver = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
-          if (!shift.hadRecentInput) state.layoutShift += shift.value ?? 0
-        }
+        consumeEntries('layout-shift', list.getEntries())
       })
       layoutObserver.observe({ type: 'layout-shift' })
-      state.observers.push(layoutObserver)
+      state.observers.push({ kind: 'layout-shift', observer: layoutObserver })
     }
-    if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
+    if (state.supportsLongTask) {
       const longTaskObserver = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          state.longTasks += 1
-          state.longTaskDuration += entry.duration
-        }
+        consumeEntries('longtask', list.getEntries())
       })
       longTaskObserver.observe({ type: 'longtask' })
-      state.observers.push(longTaskObserver)
+      state.observers.push({ kind: 'longtask', observer: longTaskObserver })
     }
     state.raf = requestAnimationFrame(tick)
     ;(window as ProbeWindow).__marklabFrameProbe = state
@@ -112,6 +150,9 @@ const summarize = (state: Omit<FrameProbeState, 'lastFrame' | 'observers' | 'raf
     maxVisibleSurfaces: state.maxVisibleSurfaces,
     minVisibleSurfaces: Number.isFinite(state.minVisibleSurfaces) ? state.minVisibleSurfaces : 0,
     p95FrameMs: Number((sorted[percentileIndex] ?? 0).toFixed(2)),
+    readyToLoadingTransitions: state.readyToLoadingTransitions,
+    supportsLayoutShift: state.supportsLayoutShift,
+    supportsLongTask: state.supportsLongTask,
   } satisfies FrameMetrics
 }
 
@@ -121,7 +162,18 @@ export const stopFrameProbe = async (page: Page): Promise<FrameMetrics> => {
     const probe = holder.__marklabFrameProbe
     if (!probe) throw new Error('Frame probe was not started')
     cancelAnimationFrame(probe.raf)
-    probe.observers.forEach((observer) => observer.disconnect())
+    for (const { kind, observer } of probe.observers) {
+      for (const entry of observer.takeRecords()) {
+        if (kind === 'layout-shift') {
+          const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
+          if (!shift.hadRecentInput) probe.layoutShift += shift.value ?? 0
+        } else {
+          probe.longTasks += 1
+          probe.longTaskDuration += entry.duration
+        }
+      }
+      observer.disconnect()
+    }
     delete holder.__marklabFrameProbe
     return {
       blankFrames: probe.blankFrames,
@@ -132,6 +184,11 @@ export const stopFrameProbe = async (page: Page): Promise<FrameMetrics> => {
       longTasks: probe.longTasks,
       maxVisibleSurfaces: probe.maxVisibleSurfaces,
       minVisibleSurfaces: probe.minVisibleSurfaces,
+      readySeen: probe.readySeen,
+      readyToLoadingTransitions: probe.readyToLoadingTransitions,
+      supportsLayoutShift: probe.supportsLayoutShift,
+      supportsLongTask: probe.supportsLongTask,
+      wasReady: probe.wasReady,
     }
   })
   return summarize(state)
@@ -153,9 +210,13 @@ export const waitForAnimationFrames = async (page: Page, count: number) => {
   )
 }
 
-export const measureFrames = async (page: Page, interaction: () => Promise<void>) => {
+export const measureFrames = async (
+  page: Page,
+  interaction: () => Promise<void>,
+  minimumFrameCount = 12,
+) => {
   await startFrameProbe(page)
   await interaction()
-  await waitForAnimationFrames(page, 12)
+  await waitForAnimationFrames(page, minimumFrameCount)
   return stopFrameProbe(page)
 }

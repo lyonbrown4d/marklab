@@ -2,7 +2,7 @@ import { Suspense, lazy, memo, type SyntheticEvent, type WheelEvent } from 'reac
 import type { Node, NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { ExternalLink, FileText, X } from 'lucide-react'
-import { useSlashCommandLabels } from '@/components/milkdown/useSlashCommandLabels'
+import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import { Button } from '@/components/ui/button'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import type { GraphNodeData } from '@/logic/graph'
@@ -39,7 +39,7 @@ const WorkspaceMapEmbeddedEditor = ({
   selected,
 }: WorkspaceMapEmbeddedEditorProps) => {
   const { t } = useI18n()
-  const slashLabels = useSlashCommandLabels()
+  const slashLabels = useMarkdownEditorSlashLabels()
 
   const handleWheel = (event: WheelEvent<HTMLElement>) => {
     if (editor && !event.ctrlKey && !event.metaKey) event.stopPropagation()

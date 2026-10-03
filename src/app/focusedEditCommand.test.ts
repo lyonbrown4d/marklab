@@ -47,10 +47,11 @@ describe('executeFocusedEditCommand', () => {
     expect(execCommand).toHaveBeenCalledWith('copy')
   })
 
-  it('recognizes focused ProseMirror editor roots as editable targets', () => {
+  it('recognizes focused Slate editor roots as editable targets', () => {
     const execCommand = mockExecCommand()
     const editor = document.createElement('div')
-    editor.className = 'ProseMirror'
+    editor.dataset.slateEditor = 'true'
+    editor.setAttribute('contenteditable', 'true')
     editor.tabIndex = 0
     document.body.append(editor)
     editor.focus()

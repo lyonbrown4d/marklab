@@ -1,6 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import type { MarkdownEditorStatus } from '@/components/milkdown/markdownEditorTypes'
+import type { MarkdownEditorStatus } from '@/components/editor/markdownEditorTypes'
 
 type MarkdownEditorStatusOverlayProps = {
   errorLabel: string

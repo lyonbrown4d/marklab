@@ -9,7 +9,7 @@ const DocxPreviewSurface = lazy(() => import('@/components/previews/DocxPreviewS
 const DrawioEditorSurface = lazy(() => import('@/components/previews/DrawioEditorSurface'))
 const ExcalidrawEditorSurface = lazy(() => import('@/components/previews/ExcalidrawEditorSurface'))
 const PdfPreviewSurface = lazy(() =>
-  import('@/components/milkdown/MarkdownPdfPreview').then((module) => ({
+  import('@/components/previews/PdfPreviewSurface').then((module) => ({
     default: module.PdfPreviewSurface,
   })),
 )
@@ -58,10 +58,8 @@ const FilePreviewSurface = ({
   if (kind === 'pdf') {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-        <div className="crepe h-full">
-          <div className="milkdown h-full rounded-xl border border-border bg-background p-3">
-            <PdfPreviewSurface fileUrl={src} mode="modal" />
-          </div>
+        <div className="h-full rounded-xl border border-border bg-background p-3">
+          <PdfPreviewSurface fileUrl={src} mode="modal" />
         </div>
       </Suspense>
     )

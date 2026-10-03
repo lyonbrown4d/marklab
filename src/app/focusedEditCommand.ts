@@ -67,8 +67,7 @@ const isEditableTarget = (element: HTMLElement) => {
   if (isTextInput(element)) return true
   if (element.isContentEditable) return true
   if (element.contentEditable === 'true') return true
-  if (element.getAttribute('contenteditable') === 'true') return true
-  return element.classList.contains('ProseMirror')
+  return element.getAttribute('contenteditable') === 'true'
 }
 
 const isTextInput = (element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement => {

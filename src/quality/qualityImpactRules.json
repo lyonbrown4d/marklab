@@ -25,15 +25,20 @@
     "checks": ["source editor tests", "focused edit tests", "pnpm exec tsc -b"]
   },
   {
-    "area": "WYSIWYG / Milkdown",
+    "area": "WYSIWYG / Plate",
     "risk": "command mismatch, paste/drop regression, editor sync drift, or node-view breakage",
     "patterns": [
       "^src/components/MarkdownEditor",
-      "^src/components/milkdown/",
+      "^src/components/plate/",
+      "^src/components/editor/",
       "^src/components/markdown/",
-      "^src/styles/editor"
+      "^src/styles/plate-editor",
+      "^src/styles/source-editor",
+      "^e2e/performance/",
+      "^playwright\\.performance\\.config\\.ts$",
+      "^\\.github/workflows/performance\\.yml$"
     ],
-    "checks": ["Milkdown command/paste/sync tests", "pnpm exec tsc -b"]
+    "checks": ["Plate command/paste/sync tests", "pnpm test:perf:software", "pnpm exec tsc -b"]
   },
   {
     "area": "React Flow graph",
@@ -70,8 +75,8 @@
       "^src/pages/graphKeyboardActions",
       "^src/components/settings/Shortcut",
       "^src/components/settings/ShortcutsSettingsPage",
-      "^src/components/milkdown/editorCommandCatalog",
-      "^src/components/milkdown/editorShortcuts"
+      "^src/components/editor/editorCommandCatalog",
+      "^src/components/plate/plateEditorShortcuts"
     ],
     "checks": [
       "shortcut catalog tests",

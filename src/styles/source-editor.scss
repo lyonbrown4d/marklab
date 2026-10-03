@@ -1,0 +1,25 @@
+.markdown-source-editor.is-zen-editor {
+  background: color-mix(in srgb, hsl(var(--background)) 88%, hsl(var(--card)));
+}
+
+.markdown-source-editor .marklab-source-link-target {
+  background: color-mix(in srgb, hsl(var(--primary)) 8%, transparent);
+  border-radius: 0.2rem;
+  color: color-mix(in srgb, hsl(var(--primary)) 88%, hsl(var(--foreground)));
+  cursor: pointer;
+  text-decoration-color: color-mix(in srgb, hsl(var(--primary)) 62%, transparent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.2em;
+}
+
+.markdown-source-editor .marklab-source-link-target:hover {
+  background: color-mix(in srgb, hsl(var(--primary)) 14%, transparent);
+  text-decoration-thickness: 0.14em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-source-editor .marklab-source-link-target {
+    transition: none;
+  }
+}

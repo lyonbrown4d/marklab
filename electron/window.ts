@@ -1,5 +1,5 @@
 import { BrowserWindow, app, nativeTheme, screen } from 'electron'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { MARKLAB_APP_NAME } from '@electron/appIdentity.js'
 import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime.js'
@@ -10,6 +10,7 @@ import { createWindowIcon } from '@electron/windowIcon.js'
 import type { PersistedWindowState } from '@electron/types.js'
 import { resolveNativeWindowBackground } from '@electron/windowTheme.js'
 import type { WindowPoolAcquisition } from '@electron/windowPool.js'
+import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -38,9 +39,7 @@ type WindowBounds = {
   x: number
   y: number
 }
-const isDevMode = () => {
-  return !app.isPackaged
-}
+const isDevMode = () => !app.isPackaged
 const isMacOS = () => process.platform === 'darwin'
 const installDevelopmentDockIcon = (): void => {
   if (!isDevMode() || !isMacOS() || didInstallDevelopmentDockIcon) return
@@ -55,6 +54,10 @@ const getRendererUrl = (page = '') => {
     return new URL(page, devServerUrl.endsWith('/') ? devServerUrl : `${devServerUrl}/`).toString()
   }
   return path.join(projectRoot, 'dist', page || 'index.html')
+}
+const getRendererNavigationUrl = (page = '') => {
+  const rendererUrl = getRendererUrl(page)
+  return isDevMode() ? rendererUrl : pathToFileURL(rendererUrl).toString()
 }
 const mainWindowChromeOptions = (): Pick<
   Electron.BrowserWindowConstructorOptions,
@@ -78,11 +81,7 @@ const secureWebPreferences = () => {
     preload: preloadPath,
   } satisfies Electron.WebPreferences
 }
-const delay = (ms: number) => {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 const loadDevUrl = async (window: BrowserWindow, url: string) => {
   let lastError: unknown
   for (let attempt = 0; attempt < DEV_LOAD_RETRIES; attempt += 1) {
@@ -215,21 +214,19 @@ export const createSplashWindow = () => {
     backgroundColor: resolveNativeWindowBackground(nativeTheme.shouldUseDarkColors),
     webPreferences: secureWebPreferences(),
   })
+  installWindowNavigationGuard(splash, [getRendererNavigationUrl('splashscreen.html')])
 
   const showSplash = () => {
     if (isBackgroundElectronE2e()) return
     if (splash.isDestroyed() || splash.isVisible()) return
     splash.show()
   }
-
   const showFallbackTimer = setTimeout(showSplash, SPLASH_READY_FALLBACK_MS)
   const clearShowFallbackTimer = () => clearTimeout(showFallbackTimer)
-
   splash.once('ready-to-show', showSplash)
   splash.webContents.once('did-finish-load', showSplash)
   splash.once('show', clearShowFallbackTimer)
   splash.once('closed', clearShowFallbackTimer)
-
   return splash
 }
 export const createMainWindow = (logger: Logger = noopLogger) => {
@@ -251,6 +248,10 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
   if (isMacOS()) {
     main.setWindowButtonVisibility(true)
   }
+  installWindowNavigationGuard(main, [
+    getRendererNavigationUrl(),
+    getRendererNavigationUrl('window-opening.html'),
+  ])
   persistWindowState(main, logger)
   if (restored.isMaximized) main.maximize()
   return main

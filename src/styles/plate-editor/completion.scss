@@ -1,0 +1,17 @@
+.markdown-editor .marklab-ai-ghost-text {
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 72%, transparent);
+  font: inherit;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre-wrap;
+}
+
+.markdown-editor .marklab-ai-ghost-text[data-source='document'] {
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 62%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  .markdown-editor .marklab-ai-ghost-text {
+    color: hsl(var(--muted-foreground));
+  }
+}

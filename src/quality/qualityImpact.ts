@@ -3,7 +3,7 @@ import qualityImpactRulesData from '@/quality/qualityImpactRules.json'
 export type QualityImpactArea =
   | 'Electron menu/window/preload'
   | 'Source editor / Monaco'
-  | 'WYSIWYG / Milkdown'
+  | 'WYSIWYG / Plate'
   | 'React Flow graph'
   | 'Settings / persisted preferences'
   | 'Keyboard shortcuts'

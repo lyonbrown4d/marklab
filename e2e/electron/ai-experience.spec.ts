@@ -109,7 +109,7 @@ test.describe('Electron AI experience', () => {
       .click()
     await page.keyboard.press('Escape')
 
-    const editor = page.locator('.milkdown .ProseMirror').first()
+    const editor = page.getByTestId('markdown-editor')
     await expect(editor).toBeVisible({ timeout: 10_000 })
     await editor.click()
     await page.keyboard.type('Writing should return to the content itself.')

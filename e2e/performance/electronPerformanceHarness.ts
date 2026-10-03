@@ -1,20 +1,34 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 // eslint-disable-next-line no-restricted-imports -- Performance E2E reuses the production-build renderer server.
 import { repoRoot } from '../electron/electronTestHarness.js'
+// eslint-disable-next-line no-restricted-imports -- Performance E2E helpers are Node-run sibling modules.
+import {
+  trackPerformancePage,
+  waitForPlateReadyProbe,
+  type PageTracking,
+  type PlateInitializationMetrics,
+} from './plateReadyProbe.js'
+
+// eslint-disable-next-line no-restricted-imports -- Performance E2E helpers are Node-run sibling modules.
+export type { PlateInitializationMetrics } from './plateReadyProbe.js'
 
 export type GraphicsMode = 'native-gpu' | 'software-rendering'
 
 export type ElectronPerformanceSession = {
   app: ElectronApplication
+  gpuFeatureStatus: object
+  isolation: Record<string, string>
   launcherPage: Page
   output: string[]
+  pageTracking: Map<Page, PageTracking>
   runtimeRoot: string
 }
 
 const electronMain = path.join(repoRoot, 'dist-electron', 'main.js')
-const runtimeParent = path.join(repoRoot, '.tmp')
+const runtimeParent = path.join(os.tmpdir(), 'marklab-electron-performance')
 const APP_CLOSE_TIMEOUT_MS = 10_000
 const WINDOW_READY_TIMEOUT_MS = 90_000
 
@@ -30,7 +44,7 @@ const removeRuntimeRoot = (runtimeRoot: string) => {
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error(`Refusing to remove performance runtime outside ${runtimeParent}`)
   }
-  fs.rmSync(runtimeRoot, { force: true, recursive: true })
+  fs.rmSync(runtimeRoot, { force: true, maxRetries: 10, recursive: true, retryDelay: 100 })
 }
 
 const revealElectronWindow = async (app: ElectronApplication, page: Page) => {
@@ -67,7 +81,13 @@ const waitForLauncherPage = async (
     for (const page of app.windows()) {
       if (!page.url().startsWith(rendererUrl) || page.url().endsWith('window-opening.html'))
         continue
-      if ((await page.locator('#root > *').count()) > 0) return page
+      if (
+        (await page
+          .locator('#root > *')
+          .count()
+          .catch(() => 0)) > 0
+      )
+        return page
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
@@ -84,30 +104,50 @@ export const launchPerformanceSession = async (
   graphicsMode: GraphicsMode,
 ): Promise<ElectronPerformanceSession> => {
   fs.mkdirSync(runtimeParent, { recursive: true })
-  const runtimeRoot = fs.mkdtempSync(path.join(runtimeParent, 'electron-performance-'))
+  const runtimeRoot = fs.mkdtempSync(path.join(runtimeParent, 'run-'))
+  const isolation = {
+    appData: path.join(runtimeRoot, 'appdata'),
+    cache: path.join(runtimeRoot, 'cache'),
+    home: path.join(runtimeRoot, 'home'),
+    localAppData: path.join(runtimeRoot, 'localappdata'),
+    temp: path.join(runtimeRoot, 'temp'),
+    userData: path.join(runtimeRoot, 'user-data'),
+  }
+  Object.values(isolation).forEach((directory) => fs.mkdirSync(directory, { recursive: true }))
   const output: string[] = []
   const env = {
-    ...pickProcessEnv(['COMSPEC', 'Path', 'PATH', 'SystemRoot', 'TEMP', 'TMP', 'WINDIR']),
+    ...pickProcessEnv(['COMSPEC', 'Path', 'PATH', 'SystemRoot', 'WINDIR']),
+    APPDATA: isolation.appData,
     ELECTRON_ENABLE_LOGGING: '1',
+    HOME: isolation.home,
+    LOCALAPPDATA: isolation.localAppData,
+    TEMP: isolation.temp,
+    TMP: isolation.temp,
+    USERPROFILE: isolation.home,
     VITE_DEV_SERVER_URL: rendererUrl,
+    XDG_CACHE_HOME: isolation.cache,
+    XDG_CONFIG_HOME: isolation.appData,
     ...(graphicsMode === 'software-rendering' ? { MARKLAB_E2E: '1' } : {}),
   }
   const app = await electron.launch({
-    args: [
-      '--enable-precise-memory-info',
-      `--user-data-dir=${path.join(runtimeRoot, 'user-data')}`,
-      electronMain,
-    ],
+    args: ['--enable-precise-memory-info', `--user-data-dir=${isolation.userData}`, electronMain],
     cwd: repoRoot,
     env,
   })
   const collect = (chunk: Buffer) => output.push(chunk.toString('utf8').trim())
   app.process().stdout?.on('data', collect)
   app.process().stderr?.on('data', collect)
+  const pageTracking = new Map<Page, PageTracking>()
+  app.on('window', (page) => void trackPerformancePage(pageTracking, page))
+  app.windows().forEach((page) => void trackPerformancePage(pageTracking, page))
   try {
     const launcherPage = await waitForLauncherPage(app, rendererUrl, output)
+    await trackPerformancePage(pageTracking, launcherPage)
     await revealElectronWindow(app, launcherPage)
-    return { app, launcherPage, output, runtimeRoot }
+    const gpuFeatureStatus = await app.evaluate(({ app: electronApp }) =>
+      electronApp.getGPUFeatureStatus(),
+    )
+    return { app, gpuFeatureStatus, isolation, launcherPage, output, pageTracking, runtimeRoot }
   } catch (error) {
     await closeElectronApp(app)
     removeRuntimeRoot(runtimeRoot)
@@ -120,6 +160,10 @@ export const openWorkspaceWindow = async (
   workspacePath: string,
   fileName: string,
 ) => {
+  const openRequestedAtEpochMs = Date.now()
+  await Promise.all(
+    session.app.windows().map((page) => trackPerformancePage(session.pageTracking, page)),
+  )
   const result = await session.launcherPage.evaluate(async (targetPath) => {
     const api = (
       window as typeof window & {
@@ -138,12 +182,22 @@ export const openWorkspaceWindow = async (
   while (Date.now() < deadline) {
     for (const page of session.app.windows()) {
       if (!decodeURIComponent(page.url()).includes(`/files/edit/${fileName}`)) continue
+      const tracked = session.pageTracking.get(page)
+      await (tracked?.installTask ?? trackPerformancePage(session.pageTracking, page))
       const editor = page.locator(
-        '.crepe-playground > .milkdown > .ProseMirror[contenteditable="true"]',
+        '[data-testid="markdown-editor"][data-editor-engine="plate"][contenteditable="true"]',
       )
       if (await editor.isVisible().catch(() => false)) {
+        const probe = await waitForPlateReadyProbe(page, WINDOW_READY_TIMEOUT_MS)
+        const windowOpenedAtEpochMs =
+          session.pageTracking.get(page)?.windowOpenedAtEpochMs ?? openRequestedAtEpochMs
+        const initialization: PlateInitializationMetrics = {
+          ...probe,
+          openRequestToReadyMs: probe.readyAtEpochMs - openRequestedAtEpochMs,
+          windowOpenToReadyMs: probe.readyAtEpochMs - windowOpenedAtEpochMs,
+        }
         await revealElectronWindow(session.app, page)
-        return { page, result }
+        return { initialization, page, result }
       }
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -174,6 +228,21 @@ export const resizeElectronWindow = async (
     { ...size, targetUrl },
   )
 }
+
+export const flushWorkspaceBuffers = async (page: Page) =>
+  page.evaluate(async () => {
+    const api = (
+      window as typeof window & {
+        marklabElectron?: {
+          commands: {
+            invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>
+          }
+        }
+      }
+    ).marklabElectron
+    if (!api) throw new Error('Secure preload API is unavailable')
+    return api.commands.invoke('fs_flush_buffers')
+  })
 
 export const closePerformanceSession = async (session: ElectronPerformanceSession | undefined) => {
   if (session) await closeElectronApp(session.app)

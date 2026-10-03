@@ -17,7 +17,7 @@ the React editor and typed runtime boundary explicit.
 - React 19 + Vite + TypeScript
 - Electron desktop runtime
 - vite-plugin-electron for Electron main/preload integration
-- Milkdown, Monaco
+- Plate, Monaco
 - React Flow, Zustand, Radix UI, Tailwind CSS
 
 ## Development

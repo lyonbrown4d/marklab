@@ -1,17 +1,42 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LocalHistoryTimeline from '@/components/local-history/LocalHistoryTimeline'
 import { fsApi } from '@/services/fsApi'
 import { localHistoryApi } from '@/services/localHistoryApi'
 
+const diffEditorMock = vi.hoisted(() => {
+  const original = { dispose: vi.fn() }
+  const modified = { dispose: vi.fn() }
+  return {
+    editor: {
+      getModel: vi.fn(() => ({ modified, original })),
+      setModel: vi.fn(),
+    },
+    modified,
+    original,
+  }
+})
+
 vi.mock('@monaco-editor/react', () => ({
-  DiffEditor: ({ modified, original }: { modified: string; original: string }) => (
-    <div data-testid="history-diff">
-      <span>{original}</span>
-      <span>{modified}</span>
-    </div>
-  ),
+  DiffEditor: ({
+    modified,
+    onMount,
+    original,
+  }: {
+    modified: string
+    onMount?: (editor: typeof diffEditorMock.editor, monaco: object) => void
+    original: string
+  }) => {
+    useEffect(() => onMount?.(diffEditorMock.editor, {}), [onMount])
+    return (
+      <div data-testid="history-diff">
+        <span>{original}</span>
+        <span>{modified}</span>
+      </div>
+    )
+  },
 }))
 
 vi.mock('@/lib/monaco', () => ({ configureMonaco: vi.fn(() => Promise.resolve()) }))
@@ -80,6 +105,7 @@ const renderTimeline = (onRestoreContent = vi.fn()) =>
 
 describe('LocalHistoryTimeline', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(localHistoryApi.list).mockResolvedValue([entry])
     vi.mocked(localHistoryApi.read).mockResolvedValue({ ...entry, content: '# Earlier' })
     vi.mocked(localHistoryApi.restore).mockResolvedValue({ ...entry, content: '# Earlier' })
@@ -108,6 +134,9 @@ describe('LocalHistoryTimeline', () => {
       expect(localHistoryApi.restore).toHaveBeenCalledWith('README.md', 'snapshot-1'),
     )
     expect(onRestoreContent).toHaveBeenCalledWith('# Earlier')
+    await waitFor(() => expect(diffEditorMock.editor.setModel).toHaveBeenCalledWith(null))
+    expect(diffEditorMock.original.dispose).toHaveBeenCalledOnce()
+    expect(diffEditorMock.modified.dispose).toHaveBeenCalledOnce()
   })
 
   it('clears all versions only after confirmation', async () => {

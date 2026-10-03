@@ -17,8 +17,6 @@ const legacyOversizedFiles: string[] = [
   'src/app/useEditorBuffer.ts',
   'src/components/TabsBar.tsx',
   'src/components/Titlebar.tsx',
-  'src/components/milkdown/assetEvents.ts',
-  'src/components/milkdown/useMarkdownCrepeController.ts',
   'src/components/ui/sidebar.tsx',
   'src/components/useRightSidebarData.ts',
   'src/i18n/resources.ts',

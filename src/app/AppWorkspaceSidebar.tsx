@@ -22,7 +22,7 @@ type AppWorkspaceSidebarProps = {
   onCreateFolder: (path: string) => void
   onRenamePath: (from: string, to: string) => void
   onMovePath: (from: string, to: string) => void
-  onEditorChange: (content: string) => void
+  onPersistedContentChange: (path: string, content: string) => void
   onDeletePath: (path: string) => void
   onUseInternalRoot: () => void
   onOpenGitDiff: (request: GitDiffRequest) => void
@@ -47,7 +47,7 @@ const AppWorkspaceSidebarComponent = ({
   onCreateFolder,
   onRenamePath,
   onMovePath,
-  onEditorChange,
+  onPersistedContentChange,
   onDeletePath,
   onUseInternalRoot,
   onOpenGitDiff,
@@ -56,9 +56,9 @@ const AppWorkspaceSidebarComponent = ({
 }: AppWorkspaceSidebarProps) => {
   const restoreHistoryContent = useCallback(
     (path: string, content: string) => {
-      if (path === activeEditorPath) onEditorChange(content)
+      if (path === activeEditorPath) onPersistedContentChange(path, content)
     },
-    [activeEditorPath, onEditorChange],
+    [activeEditorPath, onPersistedContentChange],
   )
 
   return (

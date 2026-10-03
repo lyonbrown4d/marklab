@@ -121,11 +121,18 @@ export const useAppLayoutState = () => {
   const editorBufferPath =
     graphEditorPath ??
     (currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null)
-  const { fileContents, editorValue, dirtyPaths, loadingPaths, saveStates, onEditorChange } =
-    useEditorBuffer({
-      activePath: editorBufferPath,
-      workspaceKey,
-    })
+  const {
+    fileContents,
+    editorValue,
+    dirtyPaths,
+    loadingPaths,
+    saveStates,
+    onEditorChange,
+    onPersistedContentChange,
+  } = useEditorBuffer({
+    activePath: editorBufferPath,
+    workspaceKey,
+  })
 
   const {
     loadWorkspace,
@@ -254,6 +261,7 @@ export const useAppLayoutState = () => {
     isMaximized,
     setIsMaximized,
     onEditorChange,
+    onPersistedContentChange,
     onOpenFile,
     onOpenFileView,
     onOpenGitDiff,

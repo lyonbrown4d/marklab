@@ -30,7 +30,7 @@ type AppWorkspacePanelsState = Pick<
   | 'movePath'
   | 'onCloseTab'
   | 'onInspectPath'
-  | 'onEditorChange'
+  | 'onPersistedContentChange'
   | 'onOpenProject'
   | 'onOpenTab'
   | 'onOpenWorkspaceGraph'
@@ -102,7 +102,7 @@ export const AppWorkspacePanels = ({
       onCreateFolder={state.createFolder}
       onRenamePath={state.renamePath}
       onMovePath={state.movePath}
-      onEditorChange={state.onEditorChange}
+      onPersistedContentChange={state.onPersistedContentChange}
       onDeletePath={state.deletePath}
       onUseInternalRoot={state.onUseInternalRoot}
       rootKind={state.rootKind}

@@ -8,3 +8,6 @@ dist-ssr
 src-tauri/target
 target
 pnpm-lock.yaml
+.impeccable
+src/components/ui/checkbox.tsx
+src/components/ui/list-classic-node.tsx

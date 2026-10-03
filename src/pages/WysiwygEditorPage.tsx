@@ -2,8 +2,8 @@ import { lazy, memo, Suspense, useCallback, useEffect, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
-import type { MarkdownEditorHandle } from '@/components/milkdown/markdownEditorTypes'
-import { useSlashCommandLabels } from '@/components/milkdown/useSlashCommandLabels'
+import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
+import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import type { FileEntry } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { fsApi } from '@/services/fsApi'
@@ -100,7 +100,7 @@ const WysiwygEditorPage = ({
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
 
-  const slashLabels = useSlashCommandLabels()
+  const slashLabels = useMarkdownEditorSlashLabels()
   const onCalendarFileCreate = useCallback(async () => {
     if (!activePath) {
       return null
@@ -140,7 +140,15 @@ const WysiwygEditorPage = ({
     return onExportContentRequest(({ expectedActivePath, respond }) => {
       if (typeof respond !== 'function') return
       if (expectedActivePath != null && activePathRef.current !== expectedActivePath) return
-      respond(editorRef.current?.getMarkdown() ?? valueRef.current)
+      const editor = editorRef.current
+      if (!editor) {
+        respond(valueRef.current)
+        return
+      }
+      void editor.getMarkdown().then(respond, (error: unknown) => {
+        console.error('Failed to serialize Markdown for export', error)
+        respond(valueRef.current)
+      })
     })
   }, [activePathRef, valueRef])
   return (

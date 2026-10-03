@@ -18,6 +18,12 @@ type RendererWindow = Window & {
   require?: unknown
 }
 
+const captureDesignScreenshot = async (page: Page, fileName: string) => {
+  const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+  fs.mkdirSync(captureDirectory, { recursive: true })
+  await page.screenshot({ animations: 'disabled', path: path.join(captureDirectory, fileName) })
+}
+
 test.describe('Electron desktop shell', () => {
   let page: Page
   let rendererUrl = ''
@@ -99,12 +105,7 @@ test.describe('Electron desktop shell', () => {
     expect(Math.abs(dialogBox.x - expectedX)).toBeLessThanOrEqual(1)
     expect(Math.abs(dialogBox.y - expectedY)).toBeLessThanOrEqual(1)
 
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'settings-dialog-position.png'),
-    })
+    await captureDesignScreenshot(page, 'settings-dialog-position.png')
   })
 
   test('uses the shared contextual-menu surface for titlebar menus', async () => {
@@ -132,12 +133,7 @@ test.describe('Electron desktop shell', () => {
     })
     expect(itemStyle).toEqual({ borderRadius: '8px', fontSize: '13px' })
 
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'unified-titlebar-menu.png'),
-    })
+    await captureDesignScreenshot(page, 'unified-titlebar-menu.png')
   })
 
   test('toggles the bottom status bar from a click-only edge handle', async () => {
@@ -155,12 +151,7 @@ test.describe('Electron desktop shell', () => {
     await page.waitForTimeout(350)
     await expect(statusBar).toBeHidden()
 
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'collapsed-status-bar-handle.png'),
-    })
+    await captureDesignScreenshot(page, 'collapsed-status-bar-handle.png')
 
     await showHandle.click()
     await expect(statusBar).toBeVisible()
@@ -168,20 +159,17 @@ test.describe('Electron desktop shell', () => {
 
   test('makes the bottom read-only toggle visibly switch between unlocked and locked', async () => {
     const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
-    const editableToggle = statusBar.getByRole('button', {
-      name: /Enter read-only browsing|进入只读浏览/i,
-    })
+    const readOnlyToggle = statusBar.locator('button[data-read-only]')
 
-    await expect(editableToggle).toBeVisible()
-    await expect(editableToggle).toHaveAttribute('aria-pressed', 'false')
-    await expect(editableToggle).toHaveAttribute('data-read-only', 'false')
-    await expect(editableToggle).toContainText(/Editable|可编辑/i)
+    await expect(readOnlyToggle).toBeVisible()
+    await expect(readOnlyToggle).toHaveAccessibleName(/Enter read-only browsing|进入只读浏览/i)
+    await expect(readOnlyToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(readOnlyToggle).toHaveAttribute('data-read-only', 'false')
+    await expect(readOnlyToggle).toContainText(/Editable|可编辑/i)
 
-    await editableToggle.click()
+    await readOnlyToggle.click()
 
-    const readOnlyToggle = statusBar.getByRole('button', {
-      name: /Resume editing|退出只读浏览/i,
-    })
+    await expect(readOnlyToggle).toHaveAccessibleName(/Resume editing|退出只读浏览/i)
     await expect(readOnlyToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(readOnlyToggle).toHaveAttribute('data-read-only', 'true')
     await expect(readOnlyToggle).toContainText(/Read-only|只读/i)
@@ -194,11 +182,11 @@ test.describe('Electron desktop shell', () => {
     })
 
     await readOnlyToggle.click()
-    await expect(editableToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(readOnlyToggle).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('updates document statistics after normal rich-text typing', async () => {
-    const editor = page.locator('.milkdown .ProseMirror').first()
+    const editor = page.getByTestId('markdown-editor')
     const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
     await expect(editor).toBeVisible({ timeout: 10_000 })
 
@@ -276,7 +264,7 @@ test.describe('Electron desktop shell', () => {
     await editingModeGroup
       .getByRole('radio', { name: /^(WYSIWYG|Rich Text Editor|所见即所得)$/i })
       .click()
-    const activeCell = page.locator('.milkdown table:visible td').first()
+    const activeCell = page.getByTestId('markdown-editor').locator('table:visible td').first()
     await expect(activeCell).toBeVisible({ timeout: 10_000 })
     await activeCell.click()
 
@@ -298,11 +286,6 @@ test.describe('Electron desktop shell', () => {
       toolbarBox.y + toolbarBox.height <= cellBox.y || toolbarBox.y >= cellBox.y + cellBox.height,
     ).toBe(true)
 
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'markdown-table-toolbar.png'),
-    })
+    await captureDesignScreenshot(page, 'markdown-table-toolbar.png')
   })
 })

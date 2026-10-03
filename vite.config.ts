@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { rmSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import electron from 'vite-plugin-electron/simple'
 import TurboConsole from 'unplugin-turbo-console/vite'
@@ -24,9 +25,14 @@ const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
 
 const isEnabled = (value: string | undefined) => value === '1' || value === 'true'
 
+const workerCharacterReferencePath = fileURLToPath(
+  import.meta.resolve('decode-named-character-reference'),
+)
+
 const alias = {
   '@': path.resolve(import.meta.dirname, 'src'),
   '@electron': path.resolve(import.meta.dirname, 'electron'),
+  'decode-named-character-reference': workerCharacterReferencePath,
 }
 
 const distElectronDir = path.resolve(import.meta.dirname, 'dist-electron')
@@ -201,6 +207,14 @@ export default defineConfig(({ command, mode }) => {
             ) {
               return 'vendor-react'
             }
+            if (
+              packagePathMatches(
+                normalizedId,
+                /\/node_modules\/(platejs|@platejs\/[^/]+|@udecode\/[^/]+|slate(?:-[^/]+)?)\//,
+              )
+            ) {
+              return 'vendor-plate'
+            }
             if (includesAny(normalizedId, ['monaco-editor', '@monaco-editor'])) {
               return 'vendor-monaco'
             }
@@ -218,9 +232,6 @@ export default defineConfig(({ command, mode }) => {
             if (includesAny(normalizedId, ['@codemirror', 'style-mod', 'w3c-keyname'])) {
               return 'vendor-codemirror-core'
             }
-            if (normalizedId.includes('prosemirror')) return 'vendor-prosemirror'
-            if (normalizedId.includes('@milkdown/crepe')) return 'vendor-milkdown-crepe'
-            if (normalizedId.includes('@milkdown')) return 'vendor-milkdown-core'
             if (includesAny(normalizedId, ['katex', 'mhchem'])) return 'vendor-katex'
             if (includesAny(normalizedId, ['d3-', '/d3/'])) return 'vendor-d3'
             if (normalizedId.includes('elkjs')) return 'vendor-elk'

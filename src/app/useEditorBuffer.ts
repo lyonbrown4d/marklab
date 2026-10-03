@@ -10,30 +10,29 @@ import { toast } from 'sonner'
 import { useEditorBufferChanges } from '@/app/useEditorBufferChanges'
 import { useEditorBufferStatus } from '@/app/useEditorBufferStatus'
 import { useEditorBufferInvalidation } from '@/app/useEditorBufferInvalidation'
+import { usePersistedEditorBufferContent } from '@/app/usePersistedEditorBufferContent'
 import {
   createEditorBufferPersistence,
   editorBufferIdentity,
   useEditorBufferState,
   type SaveState,
 } from '@/app/useEditorBufferState'
-
 export type { SaveState } from '@/app/useEditorBufferState'
 
 const BUFFER_FLUSH_DEBOUNCE_MS = 800
 const BUFFER_ERROR_TOAST_ID_PREFIX = 'editor-buffer-error'
-
 const LOAD_GENERATION_KEY = 'editorLoadGeneration'
-
-const routeStateRecord = (state: unknown): Record<string, unknown> =>
-  typeof state === 'object' && state !== null && !Array.isArray(state)
+const routeStateRecord = (state: unknown): Record<string, unknown> => {
+  return typeof state === 'object' && state !== null && !Array.isArray(state)
     ? (state as Record<string, unknown>)
     : {}
+}
 
 export const editorLoadGenerationFromState = (state: unknown) => {
   const generation = routeStateRecord(state)[LOAD_GENERATION_KEY]
-  return typeof generation === 'number' && Number.isSafeInteger(generation) && generation >= 0
-    ? generation
-    : 0
+  const valid =
+    typeof generation === 'number' && Number.isSafeInteger(generation) && generation >= 0
+  return valid ? generation : 0
 }
 
 export const nextEditorLoadRouteState = (state: unknown): Record<string, unknown> => ({
@@ -61,10 +60,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     workspaceFileContentsRef,
     workspaceLoadingPathsRef,
   } = useEditorBufferState(workspaceKey)
-  const editorValue = useMemo(
-    () => (activePath ? (fileContents[activePath] ?? '') : ''),
-    [activePath, fileContents],
-  )
+  const editorValue = activePath ? (fileContents[activePath] ?? '') : ''
 
   const persistence = useMemo(() => createEditorBufferPersistence(), [])
   const fileContentsRef = useLatest(fileContents)
@@ -78,11 +74,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
   const latestContentsRef = useRef<Record<string, string>>({})
   const changeVersionRef = useRef<Record<string, number>>({})
   const loadToken = useRef(0)
-  const activeLoadRef = useRef<{
-    path: string
-    token: number
-    workspace: string
-  } | null>(null)
+  const activeLoadRef = useRef<{ path: string; token: number; workspace: string } | null>(null)
   const workspaceSessionRef = useRef(workspaceKey)
   const externalGeneration = useEditorBufferInvalidation(
     workspaceKey,
@@ -288,6 +280,14 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     scheduleFlush,
     updateErrorMessage,
   })
+  const onPersistedContentChange = usePersistedEditorBufferContent({
+    workspace: workspaceKey,
+    latestContentsRef,
+    changeVersionRef,
+    setWorkspaceFileContents,
+    markPathClean,
+    persistence,
+  })
   return {
     fileContents,
     editorValue,
@@ -295,5 +295,6 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     loadingPaths,
     saveStates,
     onEditorChange,
+    onPersistedContentChange,
   }
 }

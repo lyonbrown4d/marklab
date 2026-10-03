@@ -9,7 +9,7 @@ import {
   shortcutCategories,
 } from '@/logic/shortcuts'
 import { graphShortcutActions } from '@/pages/graphKeyboardActions'
-import { markdownEditorShortcutActionIds } from '@/components/milkdown/editorCommandCatalog'
+import { markdownEditorShortcutActionIds } from '@/components/editor/editorCommandCatalog'
 import enUS from '@/i18n/locales/en-US.json'
 
 describe('shortcuts', () => {

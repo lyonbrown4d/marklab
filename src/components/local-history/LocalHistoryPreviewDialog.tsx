@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { DiffEditor } from '@monaco-editor/react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { DiffEditor, type DiffOnMount, type MonacoDiffEditor } from '@monaco-editor/react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, History } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
@@ -40,6 +40,66 @@ const languageForPath = (path: string) => {
   if (extension === 'html') return 'html'
   if (extension === 'yml' || extension === 'yaml') return 'yaml'
   return 'plaintext'
+}
+
+type LocalHistoryDiffEditorProps = {
+  darkMode: boolean
+  entryId: string
+  language: string
+  modified: string
+  original: string
+  path: string
+  smoothScrolling: boolean
+}
+
+const LocalHistoryDiffEditor = ({
+  darkMode,
+  entryId,
+  language,
+  modified,
+  original,
+  path,
+  smoothScrolling,
+}: LocalHistoryDiffEditorProps) => {
+  const editorRef = useRef<MonacoDiffEditor | null>(null)
+  const handleMount = useCallback<DiffOnMount>((editor) => {
+    editorRef.current = editor
+  }, [])
+
+  useLayoutEffect(
+    () => () => {
+      const editor = editorRef.current
+      const models = editor?.getModel()
+      editor?.setModel(null)
+      models?.original.dispose()
+      models?.modified.dispose()
+      editorRef.current = null
+    },
+    [],
+  )
+
+  return (
+    <DiffEditor
+      height="100%"
+      language={language}
+      theme={darkMode ? 'vs-dark' : 'vs'}
+      original={original}
+      modified={modified}
+      originalModelPath={`local-history://snapshot/${entryId}/${path}`}
+      modifiedModelPath={`local-history://current/${entryId}/${path}`}
+      onMount={handleMount}
+      options={{
+        readOnly: true,
+        originalEditable: false,
+        renderSideBySide: true,
+        minimap: { enabled: false },
+        automaticLayout: true,
+        scrollBeyondLastLine: false,
+        smoothScrolling,
+        fontSize: 13,
+      }}
+    />
+  )
 }
 
 const LocalHistoryPreviewDialog = ({
@@ -126,24 +186,14 @@ const LocalHistoryPreviewDialog = ({
               {t('localHistory.loading')}
             </div>
           ) : (
-            <DiffEditor
-              height="100%"
+            <LocalHistoryDiffEditor
+              darkMode={darkMode}
+              entryId={entry?.id ?? 'unknown'}
               language={languageForPath(path)}
-              theme={darkMode ? 'vs-dark' : 'vs'}
               original={previewQuery.data?.snapshot.content ?? ''}
               modified={previewQuery.data?.current ?? ''}
-              originalModelPath={`local-history://snapshot/${entry?.id}/${path}`}
-              modifiedModelPath={`local-history://current/${path}`}
-              options={{
-                readOnly: true,
-                originalEditable: false,
-                renderSideBySide: true,
-                minimap: { enabled: false },
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                smoothScrolling: motionSmoothScrolling,
-                fontSize: 13,
-              }}
+              path={path}
+              smoothScrolling={motionSmoothScrolling}
             />
           )}
         </div>

@@ -1,8 +1,10 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { BrowserWindow } from 'electron'
 import { renderHtmlWithLocalImages } from '@electron/services/export/html.js'
+import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
 
 type RenderPdfOptions = {
   BrowserWindowClass: typeof BrowserWindow
@@ -29,6 +31,7 @@ export const renderPdfDocument = async ({
   })
   const tempDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'marklab-export-'))
   const tempHtmlPath = path.join(tempDirectory, 'document.html')
+  installWindowNavigationGuard(window, [pathToFileURL(tempHtmlPath).toString()])
   const destroyWindow = () => {
     if (!window.isDestroyed()) window.destroy()
   }

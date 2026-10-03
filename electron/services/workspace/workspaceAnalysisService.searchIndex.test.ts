@@ -21,6 +21,35 @@ afterEach(async () => {
 })
 
 describe('WorkspaceAnalysisService search rebuild lifecycle', () => {
+  it('does not start a buffer-flush index update after disposal', async () => {
+    vi.useFakeTimers()
+    const appData = await createTempDirectory('app-data')
+    const root = await createWorkspace('dispose', '# Before')
+    const index = createSearchIndexFake()
+    const service = new WorkspaceAnalysisService(
+      createApp(appData),
+      createShell(),
+      createLogger(),
+      createLocalHistoryService(),
+      () => index as unknown as WorkspaceSearchIndex,
+    )
+
+    try {
+      await service.setRoot({ path: root })
+      await service.readFile({ path: 'note.md' })
+      service.updateBuffer({ path: 'note.md', content: '# After' })
+      await service.flushBuffers()
+
+      service.dispose()
+      await vi.runAllTimersAsync()
+
+      expect(index.open).not.toHaveBeenCalled()
+    } finally {
+      service.dispose()
+      vi.useRealTimers()
+    }
+  })
+
   it('does not let an obsolete workspace rebuild mark the new workspace index ready', async () => {
     const appData = await createTempDirectory('app-data')
     const firstRoot = await createWorkspace('first', '# First\nold workspace')
