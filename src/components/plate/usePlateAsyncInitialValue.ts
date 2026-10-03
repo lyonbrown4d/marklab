@@ -74,7 +74,7 @@ export const usePlateAsyncInitialValue = ({
       async (chunk) => {
         for (const rendererChunk of splitPlateHydrationChunk(chunk)) {
           if (controller.signal.aborted) return
-          appendPlateEditorValue(editor, rendererChunk, firstChunk, externalApplyRef)
+          await appendPlateEditorValue(editor, rendererChunk, firstChunk, externalApplyRef)
           firstChunk = false
           await yieldToPlateHydrationTask()
         }

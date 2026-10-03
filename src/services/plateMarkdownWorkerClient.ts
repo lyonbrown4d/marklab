@@ -1,33 +1,20 @@
 import type { Value } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
-import { BoundedWorkerPool, type ReusableWorker } from '@/services/boundedWorkerPool'
+import {
+  PlateMarkdownStreamClient,
+  type PlateMarkdownWorkerPort,
+} from '@/services/plateMarkdownStreamClient'
 import {
   deserializePlateMarkdown,
   serializePlateMarkdown as serializePlateMarkdownValue,
 } from '@/components/plate/plateMarkdownSerialization'
 import PlateMarkdownWorker from '@/workers/plateMarkdownWorker?worker'
+import type {
+  PlateMarkdownWorkerRequest as WorkerRequest,
+  PlateMarkdownWorkerResponse as WorkerResponse,
+} from '@/workers/plateMarkdownWorkerProtocol'
 
-type WorkerRequest =
-  | { id: number; operation: 'cancel' }
-  | { id: number; markdown: string; operation: 'parse' }
-  | { id: number; markdown: string; operation: 'parse-stream' }
-  | { id: number; operation: 'parse-next' }
-  | { id: number; operation: 'serialize'; value: Value }
-
-type WorkerResponse =
-  | { id: number; ok: true; operation: 'parse'; value: Value }
-  | { done: boolean; id: number; ok: true; operation: 'parse-stream'; value: Value }
-  | { id: number; markdown: string; ok: true; operation: 'serialize' }
-  | {
-      error: string
-      id: number
-      ok: false
-      operation: 'parse' | 'parse-stream' | 'serialize'
-    }
-
-type WorkerPort = ReusableWorker & {
-  postMessage(message: WorkerRequest): void
-}
+type WorkerPort = PlateMarkdownWorkerPort
 
 type PendingBase = {
   cleanup: () => void
@@ -79,16 +66,15 @@ export const shouldSerializePlateValueInWorker = (value: Value) => {
 }
 
 export class PlateMarkdownWorkerClient {
-  private readonly activeStreamFailures = new Map<WorkerPort, (error: Error) => void>()
   private readonly createWorker: () => WorkerPort
   private nextId = 1
   private readonly pending = new Map<number, PendingRequest>()
-  private readonly streamWorkerPool: BoundedWorkerPool<WorkerPort>
+  private readonly streamClient: PlateMarkdownStreamClient
   private worker: WorkerPort | null = null
 
   constructor(createWorker: () => WorkerPort = () => new PlateMarkdownWorker()) {
     this.createWorker = createWorker
-    this.streamWorkerPool = new BoundedWorkerPool(createWorker, STREAM_WORKER_POOL_SIZE)
+    this.streamClient = new PlateMarkdownStreamClient(createWorker, STREAM_WORKER_POOL_SIZE)
   }
 
   parse(markdown: string, signal?: AbortSignal): Promise<Value> {
@@ -105,75 +91,15 @@ export class PlateMarkdownWorkerClient {
     onChunk: (value: Value) => Promise<void> | void,
     signal?: AbortSignal,
   ): Promise<void> {
-    if (signal?.aborted) return Promise.reject(createAbortError())
-    const id = this.nextId++
-    return new Promise((resolve, reject) => {
-      let worker: WorkerPort
-      try {
-        worker = this.streamWorkerPool.acquire()
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error('Markdown worker creation failed.'))
-        return
-      }
-      let settled = false
-      const cleanup = (reuseWorker: boolean) => {
-        signal?.removeEventListener('abort', onAbort)
-        this.activeStreamFailures.delete(worker)
-        this.streamWorkerPool.release(worker, reuseWorker)
-      }
-      const fail = (error: Error) => {
-        if (settled) return
-        settled = true
-        cleanup(false)
-        reject(error)
-      }
-      const onAbort = () => fail(createAbortError())
-      this.activeStreamFailures.set(worker, fail)
-      signal?.addEventListener('abort', onAbort, { once: true })
-      worker.onerror = (event) => fail(new Error(event.message || 'Markdown worker failed.'))
-      worker.onmessage = ({ data }) => {
-        const message = data as WorkerResponse
-        if (settled || message.id !== id) return
-        if (message.operation !== 'parse-stream') {
-          fail(new Error('Unexpected Markdown worker response.'))
-          return
-        }
-        if (!message.ok) {
-          fail(new Error(message.error))
-          return
-        }
-        let chunkTask: Promise<void>
-        try {
-          chunkTask = Promise.resolve(onChunk(message.value))
-        } catch (error) {
-          fail(error instanceof Error ? error : new Error('Markdown hydration failed.'))
-          return
-        }
-        void chunkTask.then(
-          () => {
-            if (settled) return
-            if (message.done) {
-              settled = true
-              cleanup(true)
-              resolve()
-              return
-            }
-            try {
-              worker.postMessage({ id, operation: 'parse-next' })
-            } catch (error) {
-              fail(error instanceof Error ? error : new Error('Markdown worker request failed.'))
-            }
-          },
-          (error: unknown) =>
-            fail(error instanceof Error ? error : new Error('Markdown hydration failed.')),
-        )
-      }
-      try {
-        worker.postMessage({ id, markdown, operation: 'parse-stream' })
-      } catch (error) {
-        fail(error instanceof Error ? error : new Error('Markdown worker request failed.'))
-      }
-    })
+    return this.streamClient.parse(markdown, onChunk, signal)
+  }
+
+  prepareStream(markdown: string, signal?: AbortSignal): Promise<void> {
+    return this.streamClient.prepare(markdown, signal)
+  }
+
+  preloadStreams(targetWorkerCount?: number): void {
+    this.streamClient.preload(targetWorkerCount)
   }
 
   serialize(value: Value, signal?: AbortSignal): Promise<string> {
@@ -194,8 +120,7 @@ export class PlateMarkdownWorkerClient {
       request.cleanup()
       request.reject(error)
     })
-    for (const fail of [...this.activeStreamFailures.values()]) fail(error)
-    this.streamWorkerPool.terminate()
+    this.streamClient.terminate(error)
   }
 
   private addPending(id: number, request: PendingRequestInput, signal?: AbortSignal) {
@@ -260,6 +185,17 @@ export class PlateMarkdownWorkerClient {
 }
 
 const workerClient = new PlateMarkdownWorkerClient()
+
+export const preloadPlateMarkdownWorkers = (targetWorkerCount?: number): void => {
+  if (typeof Worker === 'undefined') return
+  workerClient.preloadStreams(targetWorkerCount)
+}
+
+export const prewarmPlateMarkdown = (markdown: string, signal?: AbortSignal): Promise<void> => {
+  if (!shouldParsePlateMarkdownInWorker(markdown)) return Promise.resolve()
+  if (typeof Worker === 'undefined') return Promise.reject(new Error(WORKER_UNAVAILABLE_MESSAGE))
+  return workerClient.prepareStream(markdown, signal)
+}
 
 export const loadPlateMarkdown = (
   editor: PlateEditor,

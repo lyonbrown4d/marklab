@@ -16,6 +16,7 @@ import { queryClient } from '@/app/queryClient'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { Toaster } from '@/components/ui/sonner'
 import { initializeReactScan } from '@/dev/reactScan'
+import { scheduleEditorRuntimePreload } from '@/app/scheduleEditorRuntimePreload'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -61,3 +62,5 @@ createRoot(document.getElementById('root')!).render(
     </PlateDndProvider>
   </StrictMode>,
 )
+
+scheduleEditorRuntimePreload()

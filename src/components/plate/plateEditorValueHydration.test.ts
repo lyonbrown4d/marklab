@@ -2,6 +2,7 @@ import type { Value } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  appendPlateEditorValue,
   finalizePatchedPlateEditorValue,
   patchPlateEditorValue,
   reconcilePlateEditorValue,
@@ -50,6 +51,25 @@ const createEditor = (children: Value, onApply?: () => void) =>
   }) as unknown as PlateEditor
 
 describe('Plate editor value hydration patches', () => {
+  it('keeps external apply suppression active through streamed change microtasks', async () => {
+    const externalApplyRef = { current: false }
+    const observedSuppression: boolean[] = []
+    const editor = createEditor([], () => undefined)
+    editor.api.onChange = vi.fn(() =>
+      queueMicrotask(() => observedSuppression.push(externalApplyRef.current)),
+    )
+
+    await appendPlateEditorValue(
+      editor,
+      [paragraph('streamed', 'streamed-block')] as Value,
+      true,
+      externalApplyRef,
+    )
+
+    expect(observedSuppression).toEqual([true])
+    expect(externalApplyRef.current).toBe(false)
+  })
+
   it('reuses semantically equal nodes while ignoring generated ids', () => {
     const current = [paragraph('same', 'current')] as Value
     const next = [paragraph('same', 'parsed')] as Value

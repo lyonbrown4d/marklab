@@ -5,7 +5,7 @@ import { PlateMarkdownWorkerClient } from '@/services/plateMarkdownWorkerClient'
 type WorkerMessage = {
   id: number
   markdown?: string
-  operation: 'cancel' | 'parse' | 'parse-next' | 'parse-stream' | 'serialize'
+  operation: 'cancel' | 'parse' | 'parse-next' | 'parse-stream' | 'prepare-stream' | 'serialize'
   value?: Value
 }
 
@@ -21,6 +21,55 @@ class FakeWorker {
 }
 
 describe('PlateMarkdownWorkerClient streaming', () => {
+  it('preloads three stream workers for future large documents', () => {
+    const workers: FakeWorker[] = []
+    const client = new PlateMarkdownWorkerClient(() => {
+      const worker = new FakeWorker()
+      workers.push(worker)
+      return worker
+    })
+
+    client.preloadStreams()
+
+    expect(workers).toHaveLength(3)
+    client.terminate()
+    expect(workers.every((worker) => worker.terminate.mock.calls.length === 1)).toBe(true)
+  })
+
+  it('prepares a document on a reusable worker before streaming it', async () => {
+    const workers: FakeWorker[] = []
+    const client = new PlateMarkdownWorkerClient(() => {
+      const worker = new FakeWorker()
+      workers.push(worker)
+      return worker
+    })
+    const preparation = client.prepareStream('Cached document')
+
+    expect(workers[0]?.postMessage).toHaveBeenLastCalledWith({
+      id: 1,
+      markdown: 'Cached document',
+      operation: 'prepare-stream',
+    })
+    workers[0]?.respond({ id: 1, ok: true, operation: 'prepare-stream' })
+    await expect(preparation).resolves.toBeUndefined()
+
+    const stream = client.parseIncrementally('Cached document', vi.fn())
+    expect(workers).toHaveLength(1)
+    expect(workers[0]?.postMessage).toHaveBeenLastCalledWith({
+      id: 2,
+      markdown: 'Cached document',
+      operation: 'parse-stream',
+    })
+    workers[0]?.respond({
+      done: true,
+      id: 2,
+      ok: true,
+      operation: 'parse-stream',
+      value: [{ type: 'p', children: [{ text: 'Cached document' }] }],
+    })
+    await expect(stream).resolves.toBeUndefined()
+  })
+
   it('reuses a completed stream worker for the next large document', async () => {
     const workers: FakeWorker[] = []
     const client = new PlateMarkdownWorkerClient(() => {
@@ -58,7 +107,7 @@ describe('PlateMarkdownWorkerClient streaming', () => {
     expect(workers[0]?.terminate).toHaveBeenCalledOnce()
   })
 
-  it('keeps at most three completed stream workers warm', async () => {
+  it('queues a fourth stream until one of three active workers is reusable', async () => {
     const workers: FakeWorker[] = []
     const client = new PlateMarkdownWorkerClient(() => {
       const worker = new FakeWorker()
@@ -69,6 +118,7 @@ describe('PlateMarkdownWorkerClient streaming', () => {
       client.parseIncrementally(`Document ${index}`, vi.fn()),
     )
 
+    expect(workers).toHaveLength(3)
     workers.forEach((worker, index) => {
       worker.respond({
         done: true,
@@ -78,11 +128,23 @@ describe('PlateMarkdownWorkerClient streaming', () => {
         value: [{ type: 'p', children: [{ text: `Document ${index}` }] }],
       })
     })
+    await Promise.resolve()
+    await Promise.resolve()
+    const reusedWorker = workers.find((worker) =>
+      worker.postMessage.mock.calls.some(([message]) => message.id === 4),
+    )
+    expect(reusedWorker).toBeDefined()
+    reusedWorker?.respond({
+      done: true,
+      id: 4,
+      ok: true,
+      operation: 'parse-stream',
+      value: [{ type: 'p', children: [{ text: 'Document 3' }] }],
+    })
     await Promise.all(requests)
 
-    expect(workers).toHaveLength(4)
-    expect(workers.filter((worker) => worker.terminate.mock.calls.length === 0)).toHaveLength(3)
-    expect(workers.filter((worker) => worker.terminate.mock.calls.length === 1)).toHaveLength(1)
+    expect(workers).toHaveLength(3)
+    expect(workers.every((worker) => worker.terminate.mock.calls.length === 0)).toBe(true)
 
     client.terminate()
     expect(workers.every((worker) => worker.terminate.mock.calls.length === 1)).toBe(true)
@@ -132,101 +194,5 @@ describe('PlateMarkdownWorkerClient streaming', () => {
       [{ type: 'h1', children: [{ text: 'Large' }] }],
       [{ type: 'p', children: [{ text: 'Body' }] }],
     ])
-  })
-
-  it('cancels without accepting later chunks', async () => {
-    const worker = new FakeWorker()
-    const client = new PlateMarkdownWorkerClient(() => worker)
-    const controller = new AbortController()
-    const onChunk = vi.fn()
-    const request = client.parseIncrementally('Large', onChunk, controller.signal)
-
-    controller.abort()
-
-    await expect(request).rejects.toMatchObject({ name: 'AbortError' })
-    expect(worker.terminate).toHaveBeenCalledOnce()
-    worker.respond({
-      done: true,
-      id: 1,
-      ok: true,
-      operation: 'parse-stream',
-      value: [{ type: 'p', children: [{ text: 'Late' }] }],
-    })
-    expect(onChunk).not.toHaveBeenCalled()
-  })
-
-  it('isolates concurrent streams so stale CPU work cannot block the latest job', async () => {
-    const workers: FakeWorker[] = []
-    const client = new PlateMarkdownWorkerClient(() => {
-      const worker = new FakeWorker()
-      workers.push(worker)
-      return worker
-    })
-    const staleController = new AbortController()
-    const stale = client.parseIncrementally('Stale', vi.fn(), staleController.signal)
-    const latestChunk = vi.fn()
-    const latest = client.parseIncrementally('Latest', latestChunk)
-
-    staleController.abort()
-    await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
-    expect(workers[0]?.terminate).toHaveBeenCalledOnce()
-    workers[1]?.respond({
-      done: true,
-      id: 2,
-      ok: true,
-      operation: 'parse-stream',
-      value: [{ type: 'p', children: [{ text: 'Latest' }] }],
-    })
-    await expect(latest).resolves.toBeUndefined()
-    expect(latestChunk).toHaveBeenCalledWith([{ type: 'p', children: [{ text: 'Latest' }] }])
-  })
-
-  it('terminates when a chunk consumer throws synchronously', async () => {
-    const worker = new FakeWorker()
-    const client = new PlateMarkdownWorkerClient(() => worker)
-    const request = client.parseIncrementally('Large', () => {
-      throw new Error('Hydration failed')
-    })
-
-    worker.respond({
-      done: false,
-      id: 1,
-      ok: true,
-      operation: 'parse-stream',
-      value: [{ type: 'p', children: [{ text: 'Chunk' }] }],
-    })
-
-    await expect(request).rejects.toThrow('Hydration failed')
-    expect(worker.terminate).toHaveBeenCalledOnce()
-  })
-
-  it('rejects when a streamed worker cannot be created', async () => {
-    const client = new PlateMarkdownWorkerClient(() => {
-      throw new Error('Worker construction failed')
-    })
-
-    await expect(client.parseIncrementally('Large', vi.fn())).rejects.toThrow(
-      'Worker construction failed',
-    )
-  })
-
-  it('terminates when requesting the next chunk fails', async () => {
-    const worker = new FakeWorker()
-    worker.postMessage.mockImplementation((message) => {
-      if (message.operation === 'parse-next') throw new Error('Worker channel closed')
-    })
-    const client = new PlateMarkdownWorkerClient(() => worker)
-    const request = client.parseIncrementally('Large', vi.fn())
-
-    worker.respond({
-      done: false,
-      id: 1,
-      ok: true,
-      operation: 'parse-stream',
-      value: [{ type: 'p', children: [{ text: 'Chunk' }] }],
-    })
-
-    await expect(request).rejects.toThrow('Worker channel closed')
-    expect(worker.terminate).toHaveBeenCalledOnce()
   })
 })

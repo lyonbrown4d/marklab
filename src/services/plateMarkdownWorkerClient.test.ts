@@ -6,6 +6,7 @@ import { serializePlateMarkdown as serializePlateMarkdownValue } from '@/compone
 import {
   loadPlateMarkdown,
   PlateMarkdownWorkerClient,
+  prewarmPlateMarkdown,
   serializePlateMarkdown,
   shouldParsePlateMarkdownInWorker,
   shouldSerializePlateValueInWorker,
@@ -14,7 +15,7 @@ import {
 type WorkerMessage = {
   id: number
   markdown?: string
-  operation: 'cancel' | 'parse' | 'parse-next' | 'parse-stream' | 'serialize'
+  operation: 'cancel' | 'parse' | 'parse-next' | 'parse-stream' | 'prepare-stream' | 'serialize'
   value?: Value
 }
 
@@ -185,6 +186,16 @@ describe('serializePlateMarkdown fallback', () => {
 })
 
 describe('large document worker failures', () => {
+  it('does not require a worker to prewarm a small document', async () => {
+    await expect(prewarmPlateMarkdown('# Small')).resolves.toBeUndefined()
+  })
+
+  it('does not synchronously prewarm a large document when the worker is unavailable', async () => {
+    await expect(prewarmPlateMarkdown('line\n'.repeat(2_100))).rejects.toThrow(
+      'Markdown worker is unavailable',
+    )
+  })
+
   it('does not synchronously parse a large document when the worker is unavailable', async () => {
     const editor = createSlateEditor({ plugins: [...plateMarkdownPlugins] })
     const markdown = 'line\n'.repeat(2_100)

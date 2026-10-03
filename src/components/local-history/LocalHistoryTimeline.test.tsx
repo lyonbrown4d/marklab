@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LocalHistoryTimeline from '@/components/local-history/LocalHistoryTimeline'
 import { fsApi } from '@/services/fsApi'
 import { localHistoryApi } from '@/services/localHistoryApi'
+import { prewarmPlateMarkdown } from '@/services/plateMarkdownWorkerClient'
 
 const diffEditorMock = vi.hoisted(() => {
   const original = { dispose: vi.fn() }
@@ -51,6 +52,10 @@ vi.mock('@/services/localHistoryApi', () => ({
     delete: vi.fn(),
     clear: vi.fn(),
   },
+}))
+
+vi.mock('@/services/plateMarkdownWorkerClient', () => ({
+  prewarmPlateMarkdown: vi.fn(),
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -112,6 +117,7 @@ describe('LocalHistoryTimeline', () => {
     vi.mocked(localHistoryApi.delete).mockResolvedValue()
     vi.mocked(localHistoryApi.clear).mockResolvedValue(1)
     vi.mocked(fsApi.readFile).mockResolvedValue('# Current')
+    vi.mocked(prewarmPlateMarkdown).mockResolvedValue()
   })
 
   it('previews a saved version and restores it after confirmation', async () => {
@@ -134,9 +140,25 @@ describe('LocalHistoryTimeline', () => {
       expect(localHistoryApi.restore).toHaveBeenCalledWith('README.md', 'snapshot-1'),
     )
     await waitFor(() => expect(onRestoreContent).toHaveBeenCalledWith('# Earlier'))
+    expect(prewarmPlateMarkdown).toHaveBeenCalledWith('# Earlier')
     await waitFor(() => expect(diffEditorMock.editor.setModel).toHaveBeenCalledWith(null))
     expect(diffEditorMock.original.dispose).toHaveBeenCalledOnce()
     expect(diffEditorMock.modified.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('continues applying a restored version when cache prewarming fails', async () => {
+    const onRestoreContent = vi.fn()
+    vi.mocked(prewarmPlateMarkdown).mockRejectedValue(new Error('Worker unavailable'))
+    renderTimeline(onRestoreContent)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Preview version/ }))
+    await screen.findByTestId('history-diff')
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Restore' }),
+    )
+
+    await waitFor(() => expect(onRestoreContent).toHaveBeenCalledWith('# Earlier'))
   })
 
   it('clears all versions only after confirmation', async () => {

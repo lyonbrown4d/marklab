@@ -49,16 +49,12 @@ export const appendPlateEditorValue = (
   value: Value,
   firstChunk: boolean,
   externalApplyRef?: RefObject<boolean>,
-) => {
-  if (externalApplyRef) externalApplyRef.current = true
-  try {
+) =>
+  applyAsyncEditorValue(() => {
     if (firstChunk) editor.children = value
     else editor.children.push(...value)
     editor.api.onChange()
-  } finally {
-    if (externalApplyRef) externalApplyRef.current = false
-  }
-}
+  }, externalApplyRef)
 
 export const commitPlateEditorHydrationState = (
   editor: PlateEditor,

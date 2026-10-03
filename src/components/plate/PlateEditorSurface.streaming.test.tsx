@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import type { Value } from 'platejs'
+import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const streamMock = vi.hoisted(() => ({
@@ -35,6 +36,33 @@ beforeEach(() => {
 })
 
 describe('PlateEditorSurface streamed hydration', () => {
+  it('does not enter a nested update loop while hydrating many blocks in StrictMode', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const blocks: Value = Array.from({ length: 720 }, (_, index) => ({
+      type: 'p',
+      children: [{ text: `Block ${index}` }],
+    }))
+
+    render(
+      <StrictMode>
+        <PlateEditorSurface
+          activePath="notes/large.md"
+          onChange={vi.fn()}
+          placeholder="Write"
+          value="Initial"
+        />
+      </StrictMode>,
+    )
+
+    await act(async () => streamMock.emit?.(blocks))
+    await act(async () => streamMock.complete?.())
+
+    expect(
+      consoleError.mock.calls.some((call) => String(call[0]).includes('Maximum update depth')),
+    ).toBe(false)
+    consoleError.mockRestore()
+  })
+
   it('renders later chunks while editing remains disabled until completion', async () => {
     const onChange = vi.fn()
     render(

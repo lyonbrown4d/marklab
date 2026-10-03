@@ -15,18 +15,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import LocalHistoryPreviewBoundary from '@/components/local-history/LocalHistoryPreviewBoundary'
+import LocalHistoryPreviewFallback from '@/components/local-history/LocalHistoryPreviewFallback'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
+import { isMarkdownFilePath } from '@/logic/fileTypes'
 import { localHistoryApi, type LocalHistoryEntry } from '@/services/localHistoryApi'
+import { prewarmPlateMarkdown } from '@/services/plateMarkdownWorkerClient'
 
 const createLocalHistoryPreviewDialog = () =>
   lazy(() => import('@/components/local-history/LocalHistoryPreviewDialog'))
@@ -65,6 +61,9 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
     mutationFn: async (request: ConfirmRequest) => {
       if (request.kind === 'restore') {
         const snapshot = await localHistoryApi.restore(path, request.entry.id)
+        if (isMarkdownFilePath(path)) {
+          await prewarmPlateMarkdown(snapshot.content).catch(() => undefined)
+        }
         return { content: snapshot.content, kind: request.kind }
       }
       if (request.kind === 'delete') {
@@ -255,38 +254,6 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
     </>
   )
 }
-
-type LocalHistoryPreviewFallbackProps = {
-  description: string
-  loadingLabel: string
-  path: string
-  title: string
-  onOpenChange: (open: boolean) => void
-}
-
-const LocalHistoryPreviewFallback = ({
-  description,
-  loadingLabel,
-  path,
-  title,
-  onOpenChange,
-}: LocalHistoryPreviewFallbackProps) => (
-  <Dialog open onOpenChange={onOpenChange}>
-    <DialogContent className="flex h-[min(78vh,760px)] max-w-[min(94vw,1120px)] flex-col gap-0 overflow-hidden p-0">
-      <DialogHeader className="shrink-0 border-b border-border/70 px-5 py-4 pr-12">
-        <DialogTitle className="text-base">{title}</DialogTitle>
-        <DialogDescription className="truncate">
-          {description} · {path}
-        </DialogDescription>
-      </DialogHeader>
-      <div role="status" aria-label={loadingLabel} className="min-h-0 flex-1 space-y-3 p-6">
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="h-4 w-3/4" />
-      </div>
-    </DialogContent>
-  </Dialog>
-)
 
 const formatDate = (value: string, formatter: Intl.DateTimeFormat) => {
   const date = new Date(value)
