@@ -39,9 +39,14 @@ export const getPreviewFileKind = (value: string): PreviewFileKind | null => {
 
 export const isPreviewableFilePath = (value: string): boolean => getPreviewFileKind(value) !== null
 
-export const isTextFileViewPath = (value: string): boolean => !isPreviewableFilePath(value)
+export const isTextFileViewPath = (value: string): boolean => {
+  const adapter = documentAdapterForPath(value)
+  return !adapter || adapter.kind === 'source'
+}
 
 export const fileViewForOpenPath = (path: string, preferredView: FileViewKind): FileViewKind => {
-  if (isPreviewableFilePath(path)) return 'preview'
+  const adapter = documentAdapterForPath(path)
+  if (adapter?.kind === 'source') return preferredView === 'preview' ? 'preview' : 'source'
+  if (adapter) return 'preview'
   return preferredView === 'preview' ? 'edit' : preferredView
 }

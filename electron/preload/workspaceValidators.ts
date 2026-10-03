@@ -11,6 +11,7 @@ import type {
   WorkspaceSnapshot,
   WorkspaceSnapshotChangedEvent,
   WorkspaceSwitchToken,
+  WorkspaceTextPreview,
 } from '@electron/types.js'
 import type { WorkspacePathActionAck } from '@/types/workspaceSession'
 
@@ -70,6 +71,10 @@ export const isSwitchToken = (value: unknown): value is WorkspaceSwitchToken =>
   hasExactKeys(value, ['token']) && isNonEmptyString(value.token)
 export const isPathActionAck = (value: unknown): value is WorkspacePathActionAck =>
   hasExactKeys(value, ['ok']) && value.ok === true
+export const isTextPreview = (value: unknown): value is WorkspaceTextPreview =>
+  hasExactKeys(value, ['content', 'truncated']) &&
+  typeof value.content === 'string' &&
+  typeof value.truncated === 'boolean'
 
 export const isSnapshot = (value: unknown): value is WorkspaceSnapshot =>
   hasExactKeys(value, ['root', 'entries']) &&

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 
 export const fsRootInfoSchema = z.object({
   kind: z.enum(['internal', 'external', 'single']),
@@ -38,6 +39,19 @@ export const fsAssetBytesSchema = z.object({
   media_type: z.string().nullable().optional(),
   size_bytes: z.number(),
 })
+
+export const fsTextPreviewLimitSchema = z
+  .number()
+  .int()
+  .positive()
+  .max(MAX_WORKSPACE_TEXT_PREVIEW_BYTES)
+
+export const fsTextPreviewSchema = z
+  .object({
+    content: z.string(),
+    truncated: z.boolean(),
+  })
+  .strict()
 
 export const opaqueAssetUrlSchema = z
   .string()
@@ -220,16 +234,6 @@ export const fsMarkdownAssetResolveResultSchema = z.object({
   exists: z.boolean(),
 })
 
-export const fsLinkPreviewMetadataSchema = z.object({
-  url: z.string(),
-  title: z.string().nullable(),
-  description: z.string().nullable(),
-  image: z.string().nullable(),
-  favicon: z.string().nullable(),
-  canonical: z.string().nullable(),
-  site_name: z.string().nullable(),
-})
-
 export type FsRootKind = z.infer<typeof fsRootInfoSchema>['kind']
 export type FsEntry = z.infer<typeof fsEntrySchema>
 export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
@@ -237,6 +241,7 @@ export type FsSnapshot = z.infer<typeof fsSnapshotSchema>
 export type FsPathMetadata = z.infer<typeof fsPathMetadataSchema>
 export type FsAssetBytes = z.infer<typeof fsAssetBytesSchema>
 export type FsAssetCapability = z.infer<typeof fsAssetCapabilitySchema>
+export type FsTextPreview = z.infer<typeof fsTextPreviewSchema>
 export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
 export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
 export type FsMarkdownHeading = z.infer<typeof fsMarkdownHeadingSchema>
@@ -262,4 +267,3 @@ export type FsGraph = z.infer<typeof fsGraphSchema>
 export type MarkdownAssetImportStrategy = z.infer<typeof markdownAssetImportStrategySchema>
 export type FsMarkdownAssetImportResult = z.infer<typeof fsMarkdownAssetImportResultSchema>
 export type FsMarkdownAssetResolveResult = z.infer<typeof fsMarkdownAssetResolveResultSchema>
-export type FsLinkPreviewMetadata = z.infer<typeof fsLinkPreviewMetadataSchema>

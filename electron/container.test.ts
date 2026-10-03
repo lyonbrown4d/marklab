@@ -54,6 +54,7 @@ describe('Electron dependency container', () => {
     expect(container.cradle.languageIntelligenceService).toBe(
       container.cradle.languageIntelligenceService,
     )
+    expect(container.cradle.linkPreviewService).toBe(container.cradle.linkPreviewService)
     expect(safeStorage.isAsyncEncryptionAvailable).not.toHaveBeenCalled()
 
     await container.cradle.aiProviderStore.update({

@@ -137,6 +137,7 @@ export const createLinkElement = ({
     const title = elementText(props.element).trim() || target
     const { anchorRef, preview } = usePlateLinkPreviewPortal({
       documentPath,
+      externalUrl: externalHref,
       target,
       title,
     })
@@ -163,9 +164,9 @@ export const createLinkElement = ({
           as="a"
           attributes={attributes}
           className="text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary"
-          ref={localPreview ? anchorRef : undefined}
+          ref={localPreview || externalHref ? anchorRef : undefined}
         />
-        {localPreview ? preview : null}
+        {localPreview || externalHref ? preview : null}
       </>
     )
   }

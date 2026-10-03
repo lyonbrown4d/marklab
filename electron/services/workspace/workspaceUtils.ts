@@ -25,6 +25,15 @@ export type WorkspaceKnownPaths = { paths: string[]; assetPaths: string[] }
 export type WorkspacePathSnapshot = { entries: FsEntry[]; knownPaths: WorkspaceKnownPaths }
 type WorkspaceWalkOptions = { entries: boolean; knownPaths: boolean }
 
+const ignoredWorkspaceDirectoryNames = new Set([
+  '__pycache__',
+  'bower_components',
+  'jspm_packages',
+  'node_modules',
+  'site-packages',
+  'venv',
+])
+
 export const stringArg = (value: unknown, key: string): string => {
   const result =
     value && typeof value === 'object' && key in value
@@ -69,6 +78,12 @@ export const hasHiddenPathSegment = (value: string): boolean => {
   return normalizeRelativePath(value)
     .split('/')
     .some((segment) => segment.startsWith('.'))
+}
+
+export const isIgnoredWorkspaceDirectory = (value: string): boolean => {
+  const name = normalizeRelativePath(value).split('/').filter(Boolean).pop()?.toLowerCase()
+  if (!name) return false
+  return name.startsWith('.') || ignoredWorkspaceDirectoryNames.has(name)
 }
 
 export { stripWindowsNamespacePath }
@@ -159,6 +174,7 @@ const walkWorkspace = async (
     if (!(await pathExists(directory))) return
     for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
       if (dirent.name.startsWith('.')) continue
+      if (dirent.isDirectory() && isIgnoredWorkspaceDirectory(dirent.name)) continue
       const absolutePath = path.join(directory, dirent.name)
       const relativePath = toWorkspaceRelative(root, absolutePath)
       if (!relativePath) continue

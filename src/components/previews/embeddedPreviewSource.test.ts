@@ -84,9 +84,39 @@ describe('embeddedPreviewSource', () => {
     expect(toAssetUrl).toHaveBeenCalledWith('docs/brief.pdf')
   })
 
+  it('resolves source paths without issuing an unused asset capability', async () => {
+    resolveMarkdownAsset.mockResolvedValueOnce({
+      exists: true,
+      is_external: false,
+      media_type: 'text/typescript',
+      relative_path: 'src/example.ts',
+      source_path: 'notes/current.md',
+      target: '../src/example.ts',
+    })
+
+    await expect(
+      resolveEmbeddedPreviewTarget('notes/current.md', '../src/example.ts'),
+    ).resolves.toEqual({
+      external: false,
+      kind: 'source',
+      path: 'src/example.ts',
+      readonly: false,
+      src: '',
+    })
+    expect(toAssetUrl).not.toHaveBeenCalled()
+  })
+
   it('blocks external PDF targets without filesystem resolution', async () => {
     await expect(
       resolveEmbeddedPreviewTarget('notes/current.md', 'https://site.test/brief.pdf'),
+    ).resolves.toBeNull()
+    expect(resolveMarkdownAsset).not.toHaveBeenCalled()
+    expect(toAssetUrl).not.toHaveBeenCalled()
+  })
+
+  it('blocks external source targets that require workspace file access', async () => {
+    await expect(
+      resolveEmbeddedPreviewTarget('notes/current.md', 'https://site.test/example.ts'),
     ).resolves.toBeNull()
     expect(resolveMarkdownAsset).not.toHaveBeenCalled()
     expect(toAssetUrl).not.toHaveBeenCalled()

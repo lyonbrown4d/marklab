@@ -64,6 +64,23 @@ describe('MarkdownPdfPreview', () => {
     await waitFor(() => expect(screen.getAllByTestId('pdf-page')).toHaveLength(4))
   })
 
+  it('renders only the first page without thumbnail navigation in graph mode', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        disconnect = vi.fn()
+        observe = vi.fn()
+        unobserve = vi.fn()
+      },
+    )
+
+    render(<PdfPreviewSurface fileUrl="file:///docs/example.pdf" mode="graph" />)
+
+    expect(await screen.findByTestId('pdf-page')).toHaveTextContent('1')
+    expect(screen.getAllByTestId('pdf-page')).toHaveLength(1)
+    expect(screen.queryByRole('navigation', { name: 'PDF pages' })).not.toBeInTheDocument()
+  })
+
   it('uses localized PDF loading and failed states', async () => {
     render(
       <MarkdownPdfPreview

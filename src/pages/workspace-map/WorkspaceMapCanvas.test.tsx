@@ -10,7 +10,6 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
-
 type FlowProps = {
   elementsSelectable: boolean
   nodes: GraphData['nodes']
@@ -23,7 +22,6 @@ type FlowProps = {
   tabIndex: number
   zoomOnScroll: boolean
 }
-
 type FlowApi = {
   fitView: ReturnType<typeof vi.fn>
   zoomIn: ReturnType<typeof vi.fn>
@@ -33,6 +31,7 @@ type FlowApi = {
 const flowPropsRef = vi.hoisted(() => ({ current: null as FlowProps | null }))
 const layoutStatusRef = vi.hoisted(() => ({ current: 'ready' as 'error' | 'loading' | 'ready' }))
 const layoutRetry = vi.hoisted(() => vi.fn())
+const closeEditor = vi.hoisted(() => vi.fn())
 const layoutArgsRef = vi.hoisted(() => ({
   current: null as null | { activePath: string | null; graph: GraphData },
 }))
@@ -130,7 +129,7 @@ const renderCanvas = (activePath: string | null, onActivateEditor = vi.fn()) => 
       graph={graph}
       onActivateEditor={onActivateEditor}
       onChange={vi.fn()}
-      onCloseEditor={vi.fn()}
+      onCloseEditor={closeEditor}
       onOpenFile={vi.fn()}
       onRetryEditor={vi.fn()}
       readOnly={false}
@@ -145,6 +144,7 @@ describe('WorkspaceMapCanvas', () => {
     flowPropsRef.current = null
     layoutStatusRef.current = 'ready'
     layoutRetry.mockClear()
+    closeEditor.mockClear()
     layoutArgsRef.current = null
   })
 
@@ -188,12 +188,13 @@ describe('WorkspaceMapCanvas', () => {
     expect(flowPropsRef.current?.nodes[0]).toMatchObject({
       ariaLabel: 'A',
       ariaRole: 'button',
+      dragHandle: '.workspace-map-resource-drag-handle',
       focusable: true,
       draggable: true,
     })
     expect(flowPropsRef.current?.nodes[2]).toMatchObject({
       ariaRole: 'group',
-      dragHandle: '.workspace-map-pdf-drag-handle',
+      dragHandle: '.embedded-preview-drag-handle',
       draggable: true,
       focusable: false,
     })
@@ -218,6 +219,12 @@ describe('WorkspaceMapCanvas', () => {
     expect(flowPropsRef.current?.nodes[1]?.draggable).toBe(true)
     expect(layoutArgsRef.current?.graph.layoutKey).toBe('map')
     expect(layoutArgsRef.current?.activePath).toBeNull()
+  })
+
+  it('closes the active editor with Escape from the canvas', () => {
+    renderCanvas('notes/a.md')
+    fireEvent.keyDown(screen.getByTestId('flow'), { key: 'Escape' })
+    expect(closeEditor).toHaveBeenCalledOnce()
   })
 
   it('activates the clicked file node and presents only that node as the editor', () => {

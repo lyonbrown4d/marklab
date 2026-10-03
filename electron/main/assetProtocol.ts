@@ -1,5 +1,7 @@
 import { protocol } from 'electron'
 
+import { parseRemoteImageCapabilityUrl } from '@electron/services/linkPreview/remoteAsset.js'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
 import { parseWorkspaceAssetCapabilityUrl } from '@electron/services/workspace/workspaceAssetCapabilities.js'
 import type {
   WorkspaceAssetByteRange as AssetByteRange,
@@ -32,13 +34,40 @@ export const registerAssetProtocolPrivileges = (): void => {
 
 export const registerAssetProtocol = (
   getWorkspaceRegistry: () => WindowWorkspaceRegistry | null,
+  getLinkPreviewService: () => LinkPreviewServiceContract | null,
 ): void => {
   if (assetProtocolRegistered) return
   assetProtocolRegistered = true
 
-  protocol.handle(ASSET_PROTOCOL, async (request) => {
+  protocol.handle(
+    ASSET_PROTOCOL,
+    createAssetProtocolHandler(getWorkspaceRegistry, getLinkPreviewService),
+  )
+}
+
+export const createAssetProtocolHandler = (
+  getWorkspaceRegistry: () => WindowWorkspaceRegistry | null,
+  getLinkPreviewService: () => LinkPreviewServiceContract | null,
+) => {
+  return async (request: Request): Promise<Response> => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return notFoundResponse()
+    }
+
+    const remoteToken = parseRemoteImageCapabilityUrl(request.url)
+    if (remoteToken) {
+      const remoteAsset = getLinkPreviewService()?.resolveImageCapability(remoteToken) ?? null
+      if (!remoteAsset) return notFoundResponse()
+      const headers = new Headers({
+        'cache-control': 'no-store',
+        'content-length': String(remoteAsset.bytes.byteLength),
+        'content-type': remoteAsset.mediaType,
+        'x-content-type-options': 'nosniff',
+      })
+      return new Response(request.method === 'HEAD' ? null : Buffer.from(remoteAsset.bytes), {
+        headers,
+        status: 200,
+      })
     }
 
     const token = parseWorkspaceAssetCapabilityUrl(request.url)
@@ -75,7 +104,7 @@ export const registerAssetProtocol = (
       await asset?.close().catch(() => undefined)
       return notFoundResponse()
     }
-  })
+  }
 }
 
 const headResponse = (asset: WorkspaceOpenedAsset, range: AssetByteRange | null): Response => {

@@ -1,11 +1,10 @@
-import { ExternalLink, FileText, ImageIcon, Maximize2, Music, Video } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
-import AppAlert from '@/components/AppAlert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
-import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
+import {
+  EmbeddedPreviewBody,
+  type EmbeddedPreviewVariant,
+} from '@/components/previews/EmbeddedPreviewBody'
+import { EmbeddedPreviewDialog } from '@/components/previews/EmbeddedPreviewDialog'
+import { EmbeddedPreviewHeader } from '@/components/previews/EmbeddedPreviewHeader'
 import {
   embeddedPreviewKindForTarget,
   resolveEmbeddedPreviewTarget,
@@ -13,7 +12,6 @@ import {
 } from '@/components/previews/embeddedPreviewSource'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
-import type { PreviewFileKind } from '@/logic/fileTypes'
 import { createFileLabel } from '@/logic/paths'
 import { pathToFileViewRoute } from '@/logic/routing'
 import { cn } from '@/lib/utils'
@@ -24,6 +22,7 @@ type EmbeddedFilePreviewProps = {
   documentPath: string | null
   target: string
   title?: string
+  variant?: EmbeddedPreviewVariant
 }
 
 type ResolvedState = {
@@ -32,50 +31,13 @@ type ResolvedState = {
   target: EmbeddedPreviewResolvedTarget | null
 }
 
-const previewIcons: Record<PreviewFileKind, typeof FileText> = {
-  audio: Music,
-  docx: FileText,
-  drawio: FileText,
-  excalidraw: FileText,
-  image: ImageIcon,
-  pdf: FileText,
-  video: Video,
-}
-
 const sourceKey = (documentPath: string | null, target: string) =>
   `${documentPath ?? ''}\u0000${target}`
 
-const previewKindLabelKey = (kind: PreviewFileKind) => `preview.kind.${kind}`
+const previewKindLabelKey = (kind: string) => `preview.kind.${kind}`
 
 const navigateToPreviewTab = (path: string) => {
   window.location.hash = pathToFileViewRoute(path, 'preview')
-}
-
-const EmbeddedPreviewDialogFallback = ({
-  failed,
-  failedLabel,
-  loadingLabel,
-}: {
-  failed: boolean
-  failedLabel: string
-  loadingLabel: string
-}) => {
-  if (failed) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <AppAlert
-          aria-label={failedLabel}
-          className="w-full max-w-md"
-          descriptionClassName="text-sm"
-          tone="destructive"
-        >
-          {failedLabel}
-        </AppAlert>
-      </div>
-    )
-  }
-
-  return <PreviewLoadingFallback label={loadingLabel} />
 }
 
 export const EmbeddedFilePreview = ({
@@ -83,16 +45,16 @@ export const EmbeddedFilePreview = ({
   documentPath,
   target,
   title,
+  variant = 'document',
 }: EmbeddedFilePreviewProps) => {
   const { t } = useI18n()
   const cardRef = useRef<HTMLElement | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const expandedContentReady = useDeferredOpenContent(expanded)
   const [visible, setVisible] = useState(false)
   const [resolveRequested, setResolveRequested] = useState(false)
+  const expandedContentReady = useDeferredOpenContent(expanded)
   const key = sourceKey(documentPath, target)
   const kind = embeddedPreviewKindForTarget(target)
-  const Icon = kind ? previewIcons[kind] : FileText
   const displayTitle = title?.trim() || createFileLabel(target)
   const [resolvedState, setResolvedState] = useState<ResolvedState>({
     failed: false,
@@ -102,9 +64,6 @@ export const EmbeddedFilePreview = ({
   const resolved = resolvedState.key === key ? resolvedState.target : null
   const failed = resolvedState.key === key ? resolvedState.failed : false
   const shouldResolve = visible || resolveRequested || expanded
-  const stopEditorChromeEvent = useCallback((event: SyntheticEvent) => {
-    event.stopPropagation()
-  }, [])
   const status = useMemo(() => {
     if (failed) return t('preview.inlineFailed')
     if (!shouldResolve) return t('preview.inlinePending')
@@ -114,15 +73,38 @@ export const EmbeddedFilePreview = ({
     return t('preview.inlineReady', { path: resolved.path ?? target })
   }, [failed, resolved, shouldResolve, t, target])
 
+  const stopEditorChromeEvent = useCallback((event: SyntheticEvent) => {
+    event.stopPropagation()
+  }, [])
+  const handlePointerDown = useCallback(
+    (event: SyntheticEvent) => {
+      const targetElement = event.target instanceof Element ? event.target : null
+      const graphDragHandle = targetElement?.closest('.embedded-preview-drag-handle')
+      const interactiveControl = targetElement?.closest('.nodrag')
+      if (variant === 'graph' && graphDragHandle && !interactiveControl) return
+      event.stopPropagation()
+    },
+    [variant],
+  )
+  const requestResolve = useCallback(() => setResolveRequested(true), [])
+
+  const refreshTarget = useCallback(async () => {
+    try {
+      const nextTarget = await resolveEmbeddedPreviewTarget(documentPath, target)
+      setResolvedState({ failed: !nextTarget, key, target: nextTarget })
+      return nextTarget
+    } catch {
+      setResolvedState({ failed: true, key, target: null })
+      return null
+    }
+  }, [documentPath, key, target])
+
   useEffect(() => {
     const card = cardRef.current
-    if (!card) return
-    if (visible) return
+    if (!card || visible) return
     if (typeof IntersectionObserver !== 'function') {
       const fallbackTimer = window.setTimeout(() => setVisible(true), 0)
-      return () => {
-        window.clearTimeout(fallbackTimer)
-      }
+      return () => window.clearTimeout(fallbackTimer)
     }
 
     const observer = new IntersectionObserver(
@@ -134,28 +116,21 @@ export const EmbeddedFilePreview = ({
       { rootMargin: '180px' },
     )
     observer.observe(card)
-
-    return () => {
-      observer.disconnect()
-    }
+    return () => observer.disconnect()
   }, [visible])
 
   useEffect(() => {
     if (!shouldResolve) return
     let cancelled = false
 
-    void resolveEmbeddedPreviewTarget(documentPath, target)
-      .then((nextTarget) => {
-        if (!cancelled) {
-          setResolvedState({ failed: !nextTarget, key, target: nextTarget })
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResolvedState({ failed: true, key, target: null })
-        }
-      })
-
+    void resolveEmbeddedPreviewTarget(documentPath, target).then(
+      (nextTarget) => {
+        if (!cancelled) setResolvedState({ failed: !nextTarget, key, target: nextTarget })
+      },
+      () => {
+        if (!cancelled) setResolvedState({ failed: true, key, target: null })
+      },
+    )
     return () => {
       cancelled = true
     }
@@ -163,125 +138,78 @@ export const EmbeddedFilePreview = ({
 
   if (!kind) return null
 
-  const requestResolve = () => {
-    setResolveRequested(true)
-  }
-
   const openTab = () => {
-    if (!resolved?.path) return
-    navigateToPreviewTab(resolved.path)
+    if (resolved?.path) navigateToPreviewTab(resolved.path)
   }
-
   const openInSystem = () => {
-    if (!resolved?.path) return
-    void fsApi.openPathInSystem(resolved.path)
+    if (resolved?.path) void fsApi.openPathInSystem(resolved.path)
   }
-
-  const openEmbeddedPreview = () => {
+  const openExpanded = () => {
     requestResolve()
     setExpanded(true)
+    void refreshTarget()
   }
 
   return (
     <article
       ref={cardRef}
       className={cn(
-        'embedded-preview-card rounded-lg border border-border/80 bg-background/85 p-3 text-foreground shadow-sm transition-colors [contain-intrinsic-size:0_128px] [content-visibility:auto] hover:border-primary/35 hover:bg-card/85',
+        'embedded-preview-card group overflow-hidden rounded-lg border border-border/80 bg-background/85 text-foreground shadow-sm transition-colors [contain-intrinsic-size:0_320px] [content-visibility:auto] hover:border-primary/35',
+        variant === 'graph' && 'h-full min-h-0',
         className,
       )}
       contentEditable={false}
       data-marklab-editor-chrome="embedded-preview"
+      data-preview-variant={variant}
       onClick={stopEditorChromeEvent}
       onDoubleClick={stopEditorChromeEvent}
-      onPointerDown={stopEditorChromeEvent}
+      onFocusCapture={requestResolve}
+      onPointerDown={handlePointerDown}
+      onPointerEnter={requestResolve}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <button
-          type="button"
-          className="embedded-preview-trigger flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-md text-left transition-colors"
-          aria-label={`${t('preview.openEmbedded')}: ${displayTitle}`}
-          disabled={failed}
-          onClick={openEmbeddedPreview}
-          onFocus={requestResolve}
-          onPointerEnter={requestResolve}
-        >
-          <div className="rounded-md bg-secondary p-2 text-secondary-foreground ring-1 ring-border/60">
-            <Icon className="size-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <Badge variant="secondary" className="shrink-0">
-                {t(previewKindLabelKey(kind))}
-              </Badge>
-              <span className="truncate text-sm font-medium">{displayTitle}</span>
-            </div>
-            <div className="mt-1 truncate text-xs text-muted-foreground" title={status}>
-              {status}
-            </div>
-          </div>
-        </button>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-          {resolved?.path ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2"
-              onClick={openInSystem}
-            >
-              <ExternalLink data-icon="inline-start" />
-              {t('preview.openInSystem')}
-            </Button>
-          ) : null}
-          {resolved?.path ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2"
-              onClick={openTab}
-            >
-              {t('preview.openInTab')}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="h-7 px-2"
-            disabled={failed}
-            onClick={openEmbeddedPreview}
-          >
-            <Maximize2 data-icon="inline-start" />
-            {t('preview.openEmbedded')}
-          </Button>
-        </div>
-      </div>
-
-      <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="flex h-[92vh] max-w-[96vw] flex-col p-0">
-          <DialogHeader className="border-b border-border px-4 py-3">
-            <DialogTitle className="truncate text-sm">{displayTitle}</DialogTitle>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-auto p-4">
-            {resolved && expandedContentReady ? (
-              <FilePreviewSurface
-                kind={resolved.kind}
-                path={resolved.path ?? target}
-                readonly={resolved.readonly}
-                src={resolved.src}
-                title={displayTitle}
-              />
-            ) : (
-              <EmbeddedPreviewDialogFallback
-                failed={failed}
-                failedLabel={t('preview.inlineFailed')}
-                loadingLabel={t('preview.inlineLoading')}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EmbeddedPreviewHeader
+        dragHandle={variant === 'graph'}
+        failed={failed}
+        kind={kind}
+        labels={{
+          expand: `${t('preview.openEmbedded')}: ${displayTitle}`,
+          kind: t(previewKindLabelKey(kind)),
+          openInSystem: t('preview.openInSystem'),
+          openInTab: t('preview.openInTab'),
+        }}
+        onExpand={openExpanded}
+        onOpenInSystem={openInSystem}
+        onOpenInTab={openTab}
+        pathAvailable={Boolean(resolved?.path)}
+        title={displayTitle}
+      />
+      {!expanded ? (
+        <EmbeddedPreviewBody
+          displayTitle={displayTitle}
+          failed={failed}
+          failedLabel={t('preview.inlineFailed')}
+          graphPdfLoadLabel={t('preview.graphPdfLoad')}
+          loadingLabel={t('preview.inlineLoading')}
+          pendingLabel={t('preview.inlinePending')}
+          refreshTarget={refreshTarget}
+          resolved={resolved}
+          shouldResolve={shouldResolve}
+          status={status}
+          target={target}
+          variant={variant}
+        />
+      ) : null}
+      <EmbeddedPreviewDialog
+        failed={failed}
+        failedLabel={t('preview.inlineFailed')}
+        loadingLabel={t('preview.inlineLoading')}
+        onOpenChange={setExpanded}
+        open={expanded}
+        ready={expandedContentReady}
+        resolved={resolved}
+        target={target}
+        title={displayTitle}
+      />
     </article>
   )
 }

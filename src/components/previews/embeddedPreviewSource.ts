@@ -26,8 +26,10 @@ const issueAssetSource = async (relativePath: string, target: string) => {
   return `${capability.url}${targetFragment(target)}`
 }
 const isExternalTarget = (target: string) => externalProtocolPattern.test(target.trim())
-const isBlockedExternalPdf = (kind: PreviewFileKind, target: string) =>
-  kind === 'pdf' && blockedExternalPdfPattern.test(target.trim())
+const isBlockedExternalTarget = (kind: PreviewFileKind, target: string) =>
+  kind === 'source' || (kind === 'pdf' && blockedExternalPdfPattern.test(target.trim()))
+const sourceForResolvedPath = (kind: PreviewFileKind, relativePath: string, target: string) =>
+  kind === 'source' ? Promise.resolve('') : issueAssetSource(relativePath, target)
 
 export const embeddedPreviewKindForTarget = (target: string): PreviewFileKind | null =>
   documentAdapterForMarkdownEmbedPath(cleanEmbeddedPreviewTarget(target))?.kind ?? null
@@ -40,7 +42,7 @@ export const resolveEmbeddedPreviewTarget = async (
   const kind = embeddedPreviewKindForTarget(trimmed)
   if (!trimmed || !kind) return null
   if (isExternalTarget(trimmed)) {
-    if (isBlockedExternalPdf(kind, trimmed)) return null
+    if (isBlockedExternalTarget(kind, trimmed)) return null
     return { external: true, kind, path: null, readonly: true, src: trimmed }
   }
   if (!isDesktopRuntime()) return null
@@ -52,7 +54,7 @@ export const resolveEmbeddedPreviewTarget = async (
       kind,
       path: metadata.path,
       readonly: metadata.readonly,
-      src: await issueAssetSource(metadata.path, trimmed),
+      src: await sourceForResolvedPath(kind, metadata.path, trimmed),
     }
   }
 
@@ -64,6 +66,6 @@ export const resolveEmbeddedPreviewTarget = async (
     kind,
     path: withoutFragment(relativePath),
     readonly: false,
-    src: await issueAssetSource(relativePath, trimmed),
+    src: await sourceForResolvedPath(kind, relativePath, trimmed),
   }
 }

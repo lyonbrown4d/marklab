@@ -35,15 +35,15 @@ describe('workspace map graph layout metrics', () => {
     expect(createGraphNodeLayoutSignature(active)).toBe(createGraphNodeLayoutSignature(inactive))
   })
 
-  it('uses one compact size for every lightweight workspace map reference', () => {
+  it('reserves one stable rich-preview size for every workspace map resource', () => {
     const preview: Node<GraphNodeData> = {
       id: 'preview:image.png',
       type: 'preview',
       position: { x: 0, y: 0 },
-      data: { label: 'image.png', workspaceMap: true },
+      data: { label: 'image.png', previewKind: 'image', workspaceMap: true },
     }
 
-    expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 200, height: 96 })
+    expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 360, height: 220 })
   })
 
   it('reserves the fixed rendered size for workspace map PDF previews', () => {
@@ -59,6 +59,6 @@ describe('workspace map graph layout metrics', () => {
       },
     }
 
-    expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 360, height: 128 })
+    expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 360, height: 220 })
   })
 })

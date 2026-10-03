@@ -1,13 +1,22 @@
-import { Suspense, lazy, memo, type SyntheticEvent, type WheelEvent } from 'react'
+import {
+  Suspense,
+  lazy,
+  memo,
+  type KeyboardEvent,
+  type SyntheticEvent,
+  type WheelEvent,
+} from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { ExternalLink, FileText, X } from 'lucide-react'
+import { ExternalLink, FileText, GripVertical, X } from 'lucide-react'
 import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import { Button } from '@/components/ui/button'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import type { GraphNodeData } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
+import { isImeKeyboardEvent } from '@/logic/ime'
+import { WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS } from '@/pages/workspace-map/workspaceMapNodePresentation'
 
 type WorkspaceMapFileGraphNode = Node<GraphNodeData, 'file'>
 
@@ -44,6 +53,14 @@ const WorkspaceMapEmbeddedEditor = ({
   const handleWheel = (event: WheelEvent<HTMLElement>) => {
     if (editor && !event.ctrlKey && !event.metaKey) event.stopPropagation()
   }
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!editor) return
+    event.stopPropagation()
+    if (event.defaultPrevented || isImeKeyboardEvent(event.nativeEvent)) return
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    editor.onClose()
+  }
 
   return (
     <section
@@ -57,7 +74,7 @@ const WorkspaceMapEmbeddedEditor = ({
       data-testid="workspace-map-editor-surface"
       onClick={editor ? stopGraphEvent : undefined}
       onDoubleClick={stopGraphEvent}
-      onKeyDown={editor ? stopGraphEvent : undefined}
+      onKeyDown={handleKeyDown}
       onKeyUp={editor ? stopGraphEvent : undefined}
       onMouseDown={editor ? stopGraphEvent : undefined}
       onPointerDown={editor ? stopGraphEvent : undefined}
@@ -65,7 +82,14 @@ const WorkspaceMapEmbeddedEditor = ({
     >
       <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
       <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/70 bg-muted/30 px-3">
+      <header
+        className={cn(
+          WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
+          'flex h-11 shrink-0 cursor-grab items-center gap-2 border-b border-border/70 bg-muted/30 px-3 active:cursor-grabbing',
+        )}
+        data-testid="workspace-map-resource-drag-handle"
+      >
+        <GripVertical aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
         <FileText aria-hidden="true" className="size-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold text-foreground">{data.label}</div>

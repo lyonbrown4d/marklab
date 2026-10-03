@@ -31,6 +31,8 @@ import {
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
 import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
+import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview.js'
+import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
   private rootTransitionInProgress = false
@@ -111,6 +113,10 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     }
     const content = await fs.promises.readFile(absolutePath, 'utf8')
     return this.buffers.cacheCleanFile(relativePath, content)
+  }
+
+  readTextPreview(value: unknown): Promise<WorkspaceTextPreview> {
+    return readWorkspaceTextPreview(this.state, value)
   }
 
   updateBuffer(value: unknown): FsBufferStatus {

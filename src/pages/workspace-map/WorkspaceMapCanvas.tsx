@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -26,6 +19,7 @@ import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
+import { useWorkspaceMapKeyboard } from '@/pages/workspace-map/useWorkspaceMapKeyboard'
 import {
   getWorkspaceMapNodeOpenPath,
   presentWorkspaceMapNode,
@@ -175,38 +169,13 @@ export const WorkspaceMapCanvas = ({
     },
     [activateNode],
   )
-  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
-  const handleCanvasKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (!(event.target instanceof HTMLElement)) return
-      if (event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) {
-        return
-      }
-      if (event.key === '+' || event.key === '=') {
-        event.preventDefault()
-        void flow?.zoomIn({ duration: 0 })
-        return
-      }
-      if (event.key === '-') {
-        event.preventDefault()
-        void flow?.zoomOut({ duration: 0 })
-        return
-      }
-      if (event.key === '0') {
-        event.preventDefault()
-        void flow?.fitView({ duration: 0, maxZoom: 1, padding: 0.22 })
-        return
-      }
-      if (event.key !== 'Enter' && event.key !== ' ') return
-      const nodeElement = event.target.closest<HTMLElement>('.react-flow__node')
-      if (!nodeElement || event.target !== nodeElement) return
-      const node = nodesById.get(nodeElement.dataset.id ?? '')
-      if (!node || !getWorkspaceMapNodeOpenPath(node)) return
-      event.preventDefault()
-      activateNode(node)
-    },
-    [activateNode, flow, nodesById],
-  )
+  const handleCanvasKeyDown = useWorkspaceMapKeyboard({
+    activePath,
+    activateNode,
+    flow,
+    nodes,
+    onCloseEditor,
+  })
   const handleNodeDoubleClick = useCallback(
     (event: MouseEvent, node: Node<GraphNodeData>) => {
       event.preventDefault()

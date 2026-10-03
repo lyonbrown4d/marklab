@@ -2,7 +2,6 @@ import path from 'node:path'
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import type { ExportService } from '@electron/services/export/exportService.js'
-import { LinkPreviewService } from '@electron/services/linkPreview/service.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
@@ -51,7 +50,6 @@ const createWorkspaceCommandHandlers = (
   localHistory: LocalHistoryServiceContract,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
-  const linkPreviewService = new LinkPreviewService()
 
   return {
     fs_get_root_info: (_payload, event) => workspaceForEvent(event).rootInfo(),
@@ -121,7 +119,6 @@ const createWorkspaceCommandHandlers = (
       workspaceForEvent(event).importMarkdownAssetBase64(payload),
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
-    fs_fetch_link_preview: (payload) => linkPreviewService.fetch(payload),
     markdown_language_get_document_symbols: (payload, event) =>
       markdownLanguageService.getDocumentSymbols(workspaceForEvent(event), payload),
     markdown_language_get_definition: (payload, event) =>

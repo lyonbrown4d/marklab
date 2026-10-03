@@ -1,5 +1,5 @@
 export type DocumentAdapterKind =
-  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'video'
+  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'source' | 'video'
 export type DocumentAdapterMarkdownEmbedKind = 'document' | 'image' | 'media' | 'pdf'
 
 export type DocumentAdapterIcon = 'audio' | 'document' | 'image' | 'pdf' | 'video'
@@ -112,6 +112,69 @@ export const documentAdapters = [
     icon: 'document',
     kind: 'excalidraw',
   },
+  {
+    capabilities: {
+      edit: false,
+      externalOpenFallback: true,
+      markdownEmbed: true,
+      preview: true,
+      textExtraction: true,
+      thumbnail: false,
+    },
+    extensions: [
+      'bash',
+      'c',
+      'cc',
+      'conf',
+      'cpp',
+      'cs',
+      'css',
+      'csv',
+      'cts',
+      'cxx',
+      'go',
+      'h',
+      'hh',
+      'hpp',
+      'htm',
+      'html',
+      'hxx',
+      'ini',
+      'java',
+      'js',
+      'json',
+      'jsonc',
+      'jsx',
+      'kt',
+      'kts',
+      'less',
+      'lua',
+      'mjs',
+      'mts',
+      'php',
+      'ps1',
+      'py',
+      'rb',
+      'rs',
+      'scss',
+      'sh',
+      'sql',
+      'svelte',
+      'swift',
+      'toml',
+      'ts',
+      'tsv',
+      'tsx',
+      'txt',
+      'vue',
+      'xml',
+      'yaml',
+      'yml',
+      'zsh',
+    ],
+    icon: 'document',
+    kind: 'source',
+  },
 ] as const satisfies readonly DocumentAdapter[]
 
 export const DOCUMENT_ADAPTER_EXTENSIONS = documentAdapters.flatMap((adapter) => [
@@ -148,7 +211,12 @@ export const documentAdapterMarkdownEmbedKind = (
     return 'media'
   }
 
-  if (adapter.kind === 'docx' || adapter.kind === 'drawio' || adapter.kind === 'excalidraw') {
+  if (
+    adapter.kind === 'docx' ||
+    adapter.kind === 'drawio' ||
+    adapter.kind === 'excalidraw' ||
+    adapter.kind === 'source'
+  ) {
     return 'document'
   }
 

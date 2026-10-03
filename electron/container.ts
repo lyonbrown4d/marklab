@@ -33,6 +33,10 @@ import { KnowledgeEngineWorkspaceSearchBackend } from '@electron/services/knowle
 import { LocalHistoryService } from '@electron/services/localHistory/service.js'
 import { LanguageIntelligenceService } from '@electron/services/languageIntelligence/service.js'
 import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
+import {
+  LinkPreviewService,
+  type LinkPreviewServiceContract,
+} from '@electron/services/linkPreview/service.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { createElectronLogger, type Logger } from '@electron/services/logger.js'
 import {
@@ -78,6 +82,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
   languageIntelligenceService: LanguageIntelligenceServiceContract
+  linkPreviewService: LinkPreviewServiceContract
   terminalService: TerminalService
   webDavProfileStore: WebDavProfileStore
   webDavSyncStateStore: FileLocalSyncStateStore
@@ -157,6 +162,7 @@ export const createElectronContainer = (
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),
     languageIntelligenceService: asFunction(() => new LanguageIntelligenceService()).singleton(),
+    linkPreviewService: asFunction(() => new LinkPreviewService()).singleton(),
     workspaceSearchIndexFactory: asFunction(({ knowledgeEngineService }) => {
       return () =>
         new WorkspaceSearchIndex(new KnowledgeEngineWorkspaceSearchBackend(knowledgeEngineService))

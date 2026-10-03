@@ -6,6 +6,7 @@ import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.j
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
 import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle.js'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
+import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -122,6 +123,7 @@ const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
 const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
 const windowCloseLifecycleSurface = createWindowCloseLifecyclePreloadSurface(ipcRenderer)
 const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
+const linkPreviewSurface = createLinkPreviewPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   aiCompletion: {
@@ -146,6 +148,7 @@ const desktopApi: RendererSafeElectronApi = {
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,
   },
   languageIntelligence: languageIntelligenceSurface,
+  linkPreview: linkPreviewSurface,
   opening: windowOpeningSurface,
   platform: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.platformGet) as Promise<PlatformInfo>,

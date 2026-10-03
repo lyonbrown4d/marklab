@@ -13,6 +13,16 @@ describe('documentAdapters', () => {
     expect(documentAdapterForPath('docs/spec.pdf')?.kind).toBe('pdf')
     expect(documentAdapterForPath('docs/spec.docx')?.kind).toBe('docx')
     expect(documentAdapterForPath('diagrams/flow.dio')?.kind).toBe('drawio')
+    expect(documentAdapterForPath('src/widget.TSX')?.kind).toBe('source')
+    expect(documentAdapterForPath('data/report.csv')?.kind).toBe('source')
+    expect(documentAdapterForPath('data/report.tsv')?.kind).toBe('source')
+  })
+
+  it('keeps source preview support on a controlled extension allowlist', () => {
+    expect(documentAdapterForPath('scripts/build.py')?.kind).toBe('source')
+    expect(documentAdapterForPath('scripts/deploy.sh')?.kind).toBe('source')
+    expect(documentAdapterForPath('README.md')).toBeNull()
+    expect(documentAdapterForPath('payload.exe')).toBeNull()
   })
 
   it('keeps extension parsing query and hash safe', () => {
@@ -25,5 +35,8 @@ describe('documentAdapters', () => {
     expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('pdf')
     expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('drawio')
     expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('docx')
+    expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('tsx')
+    expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('csv')
+    expect(DOCUMENT_ADAPTER_EXTENSIONS).toContain('tsv')
   })
 })

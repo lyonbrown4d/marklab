@@ -13,6 +13,8 @@ import type {
   WorkspaceSyncResult,
 } from '@/types/workspaceSync'
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
+import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
+import type { LinkPreviewResult } from '@/types/linkPreview'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -21,7 +23,12 @@ type ElectronPlatformInfo = {
 export type ElectronWorkspacePathApi = {
   copyAbsolutePathToClipboard: (path: string) => Promise<void>
   openPathInSystem: (path: string) => Promise<void>
+  readTextPreview: (path: string, limitBytes: number) => Promise<WorkspaceTextPreview>
   revealPathInSystem: (path: string) => Promise<void>
+}
+
+export type ElectronLinkPreviewApi = {
+  fetch: (url: string) => Promise<LinkPreviewResult>
 }
 
 export type ElectronCommandArguments = Record<string, unknown> | undefined
@@ -174,6 +181,7 @@ export type RendererSafeElectronApi = {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>
   }
   languageIntelligence: LanguageIntelligenceApi
+  linkPreview: ElectronLinkPreviewApi
   commands: ElectronCommandBridgeApi
   events: ElectronEventBridgeApi
   git: ElectronGitApi

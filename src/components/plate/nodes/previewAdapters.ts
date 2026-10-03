@@ -2,9 +2,11 @@ import { embeddedPreviewKindForTarget } from '@/components/previews/embeddedPrev
 import type { PreviewFileKind } from '@/logic/fileTypes'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
+import { linkPreviewApi } from '@/services/linkPreviewApi'
 
 const MERMAID_LANGUAGES = new Set(['mermaid', 'mmd'])
-const SAFE_PREVIEW_PROTOCOLS = new Set(['http:', 'https:', 'blob:', 'marklab-asset:'])
+const SAFE_PREVIEW_PROTOCOLS = new Set(['blob:', 'marklab-asset:'])
+const REMOTE_IMAGE_PROTOCOLS = new Set(['http:', 'https:'])
 const SAFE_DATA_IMAGE = /^data:image\/(?:avif|gif|jpeg|png|webp);base64,/i
 const SCHEME = /^([a-z][a-z\d+.-]*):/i
 
@@ -87,8 +89,19 @@ export const resolvePlateImageSource = async (documentPath: string | null, sourc
   if (!target) return ''
   if (SAFE_DATA_IMAGE.test(target)) return target
 
+  const scheme = target.match(SCHEME)?.[1]?.toLowerCase()
+  if (scheme && REMOTE_IMAGE_PROTOCOLS.has(`${scheme}:`)) {
+    if (!isDesktopRuntime()) return ''
+    try {
+      const preview = await linkPreviewApi.fetch(target)
+      return preview.kind === 'image' ? preview.src : ''
+    } catch {
+      return ''
+    }
+  }
+
   const safeSource = safePreviewUrl(target)
-  if (safeSource && SCHEME.test(target)) return safeSource
+  if (safeSource && scheme) return safeSource
   if (!documentPath || !isDesktopRuntime() || SCHEME.test(target) || target.startsWith('//')) {
     return ''
   }

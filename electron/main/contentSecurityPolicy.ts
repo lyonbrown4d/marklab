@@ -24,7 +24,7 @@ export const installContentSecurityPolicy = (): void => {
   })
 }
 
-const createContentSecurityPolicy = (): string => {
+export const createContentSecurityPolicy = (): string => {
   const isDev = !app.isPackaged
   const scriptSources = ["'self'", 'blob:']
   const styleSources = ["'self'", "'unsafe-inline'"]
@@ -53,7 +53,7 @@ const createContentSecurityPolicy = (): string => {
     "object-src 'none'",
     `script-src ${scriptSources.join(' ')}`,
     `style-src ${styleSources.join(' ')}`,
-    "img-src 'self' data: blob: marklab-asset: http: https:",
+    "img-src 'self' data: blob: marklab-asset:",
     `font-src ${fontSources.join(' ')}`,
     `connect-src ${connectSources.join(' ')}`,
     "media-src 'self' data: blob: marklab-asset:",

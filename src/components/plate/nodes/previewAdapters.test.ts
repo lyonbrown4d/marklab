@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const resolveMarkdownAsset = vi.hoisted(() => vi.fn())
 const toAssetUrl = vi.hoisted(() => vi.fn())
+const fetchLinkPreview = vi.hoisted(() => vi.fn())
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
@@ -12,6 +13,10 @@ vi.mock('@/services/fsApi', () => ({
     resolveMarkdownAsset,
     toAssetUrl,
   },
+}))
+
+vi.mock('@/services/linkPreviewApi', () => ({
+  linkPreviewApi: { fetch: fetchLinkPreview },
 }))
 
 import {
@@ -55,7 +60,7 @@ describe('Plate preview adapters', () => {
   })
 
   it('allows inert preview URLs and rejects executable schemes', () => {
-    expect(safePreviewUrl('https://example.com/a.png')).toBe('https://example.com/a.png')
+    expect(safePreviewUrl('https://example.com/a.png')).toBe('')
     expect(safePreviewUrl('marklab-asset://local/v1/token')).toBe('marklab-asset://local/v1/token')
     expect(safePreviewUrl('javascript:alert(1)')).toBe('')
     expect(safePreviewUrl('data:text/html,<script>alert(1)</script>')).toBe('')
@@ -104,6 +109,35 @@ describe('Plate preview adapters', () => {
     )
     await expect(resolvePlateImageSource(null, './media/diagram.png')).resolves.toBe('')
     expect(toAssetUrl).not.toHaveBeenCalled()
+  })
+
+  it('resolves remote Markdown images through the named preview capability boundary', async () => {
+    fetchLinkPreview.mockResolvedValueOnce({
+      kind: 'image',
+      media_type: 'image/png',
+      src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      url: 'https://example.com/image.png',
+    })
+
+    await expect(resolvePlateImageSource(null, 'https://example.com/image.png')).resolves.toBe(
+      'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    )
+    expect(fetchLinkPreview).toHaveBeenCalledWith('https://example.com/image.png')
+  })
+
+  it('does not render a remote webpage as a Markdown image', async () => {
+    fetchLinkPreview.mockResolvedValueOnce({
+      canonical: null,
+      description: null,
+      favicon: null,
+      image: null,
+      kind: 'webpage',
+      site_name: null,
+      title: 'Page',
+      url: 'https://example.com/image.png',
+    })
+
+    await expect(resolvePlateImageSource(null, 'https://example.com/image.png')).resolves.toBe('')
   })
 
   it('only exposes safe external HTTP links', () => {

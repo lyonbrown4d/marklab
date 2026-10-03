@@ -1,7 +1,7 @@
 import path from 'node:path'
 
 export type WorkspaceDocumentAdapterKind =
-  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'video'
+  'audio' | 'docx' | 'drawio' | 'excalidraw' | 'image' | 'pdf' | 'source' | 'video'
 
 export type WorkspaceDocumentAdapter = {
   extensions: readonly string[]
@@ -47,6 +47,60 @@ export const workspaceDocumentAdapters = [
   {
     extensions: ['.excalidraw'],
     kind: 'excalidraw',
+  },
+  {
+    extensions: [
+      '.bash',
+      '.c',
+      '.cc',
+      '.conf',
+      '.cpp',
+      '.cs',
+      '.css',
+      '.csv',
+      '.cts',
+      '.cxx',
+      '.go',
+      '.h',
+      '.hh',
+      '.hpp',
+      '.htm',
+      '.html',
+      '.hxx',
+      '.ini',
+      '.java',
+      '.js',
+      '.json',
+      '.jsonc',
+      '.jsx',
+      '.kt',
+      '.kts',
+      '.less',
+      '.lua',
+      '.mjs',
+      '.mts',
+      '.php',
+      '.ps1',
+      '.py',
+      '.rb',
+      '.rs',
+      '.scss',
+      '.sh',
+      '.sql',
+      '.svelte',
+      '.swift',
+      '.toml',
+      '.ts',
+      '.tsv',
+      '.tsx',
+      '.txt',
+      '.vue',
+      '.xml',
+      '.yaml',
+      '.yml',
+      '.zsh',
+    ],
+    kind: 'source',
   },
 ] as const satisfies readonly WorkspaceDocumentAdapter[]
 

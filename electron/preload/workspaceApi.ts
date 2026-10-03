@@ -5,6 +5,7 @@ import {
   isAssetBytes,
   isAssetCapability,
   isPathActionAck,
+  isTextPreview,
   type Validator,
 } from '@electron/preload/workspaceValidators.js'
 import type { AssetApi } from '@electron/types.js'
@@ -68,6 +69,14 @@ export const createWorkspacePreloadSurfaces = (
         nativeIpcChannels.workspaceOpenPathInSystem,
         'workspace.openPathInSystem',
         path,
+      ),
+    readTextPreview: (path, limitBytes) =>
+      invokeValidated(
+        renderer,
+        nativeIpcChannels.workspaceReadTextPreview,
+        isTextPreview,
+        'workspace.readTextPreview',
+        { limit_bytes: limitBytes, path },
       ),
     revealPathInSystem: (path) =>
       invokePathAction(

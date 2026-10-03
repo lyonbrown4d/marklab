@@ -137,7 +137,10 @@ const bootstrap = async (): Promise<void> => {
   }
 
   installContentSecurityPolicy()
-  registerAssetProtocol(() => container?.cradle.workspaceRegistry ?? null)
+  registerAssetProtocol(
+    () => container?.cradle.workspaceRegistry ?? null,
+    () => container?.cradle.linkPreviewService ?? null,
+  )
   legacyShellIpc.register()
 
   didShowMain = false

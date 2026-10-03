@@ -1,5 +1,9 @@
 export { workspaceErrorCodes } from '@/types/workspaceSession'
 export type {
+  WorkspaceTextPreview,
+  WorkspaceTextPreviewRequest,
+} from '@/types/workspaceTextPreview'
+export type {
   AssetApi,
   AssetBytes,
   AssetCapability,

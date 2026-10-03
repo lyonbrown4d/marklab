@@ -10,8 +10,8 @@ const FILE_NODE_HEIGHT = 54
 const WORKSPACE_MAP_NODE_HEIGHT = 96
 const WORKSPACE_MAP_FILE_WIDTH = 520
 const WORKSPACE_MAP_FILE_HEIGHT = 640
-export const WORKSPACE_MAP_PDF_NODE_WIDTH = 360
-export const WORKSPACE_MAP_PDF_NODE_HEIGHT = 128
+export const WORKSPACE_MAP_RESOURCE_NODE_WIDTH = 360
+export const WORKSPACE_MAP_RESOURCE_NODE_HEIGHT = 220
 
 export const FULL_HEADING_NODE_MAX_HEIGHT = 360
 
@@ -20,8 +20,11 @@ export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
     if (node.type === 'file') {
       return { width: WORKSPACE_MAP_FILE_WIDTH, height: WORKSPACE_MAP_FILE_HEIGHT }
     }
-    if (node.type === 'preview' && node.data.previewKind === 'pdf') {
-      return { width: WORKSPACE_MAP_PDF_NODE_WIDTH, height: WORKSPACE_MAP_PDF_NODE_HEIGHT }
+    if (node.type === 'preview' && node.data.previewKind) {
+      return {
+        width: WORKSPACE_MAP_RESOURCE_NODE_WIDTH,
+        height: WORKSPACE_MAP_RESOURCE_NODE_HEIGHT,
+      }
     }
     return { width: FILE_NODE_WIDTH, height: WORKSPACE_MAP_NODE_HEIGHT }
   }

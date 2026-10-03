@@ -278,6 +278,7 @@
     "github-slugger": "^2.0.0",
     "i18next": "26.4.2",
     "immer": "^11.1.18",
+    "ipaddr.js": "^2.5.0",
     "is-extglob": "^2.1.1",
     "is-glob": "^4.0.3",
     "keepalive-for-react": "^6.0.0",

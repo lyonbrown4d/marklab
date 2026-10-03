@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import type { FsStateData } from '@electron/services/workspace/types.js'
 import {
+  isIgnoredWorkspaceDirectory,
   isPathInsideOrEqual,
   listWorkspaceEntries,
+  listWorkspacePathSnapshot,
   stripWindowsNamespacePath,
 } from '@electron/services/workspace/workspaceUtils.js'
 
@@ -58,6 +60,58 @@ describe('listWorkspaceEntries', () => {
       { kind: 'file', name: 'plan.md', path: 'notes/plan.md' },
       { kind: 'file', name: 'video.webm', path: 'notes/video.webm' },
     ])
+  })
+
+  it('skips hidden and dependency cache directories without hiding user-named folders', async () => {
+    const root = await createTempRoot()
+    const ignoredDirectories = ['.hidden', 'node_modules', '__pycache__']
+    await Promise.all(
+      ignoredDirectories.map(async (directory) => {
+        const target = path.join(root, directory)
+        await fs.mkdir(target)
+        await fs.writeFile(path.join(target, 'generated.ts'), 'export const generated = true')
+      }),
+    )
+    await fs.mkdir(path.join(root, 'src'))
+    await fs.mkdir(path.join(root, 'build'))
+    await fs.mkdir(path.join(root, 'vendor-notes'))
+    await fs.writeFile(path.join(root, 'build', 'release.md'), '# Release')
+    await fs.writeFile(path.join(root, 'src', 'main.ts'), 'export const main = true')
+    await fs.writeFile(path.join(root, 'vendor-notes', 'review.md'), '# Review')
+
+    const snapshot = await listWorkspacePathSnapshot(createWorkspaceState(root))
+
+    expect(snapshot.entries).toEqual([
+      { kind: 'folder', name: 'build', path: 'build' },
+      { kind: 'file', name: 'release.md', path: 'build/release.md' },
+      { kind: 'folder', name: 'src', path: 'src' },
+      { kind: 'file', name: 'main.ts', path: 'src/main.ts' },
+      { kind: 'folder', name: 'vendor-notes', path: 'vendor-notes' },
+      { kind: 'file', name: 'review.md', path: 'vendor-notes/review.md' },
+    ])
+    expect(snapshot.knownPaths.paths).toEqual([
+      'build',
+      'build/release.md',
+      'src',
+      'src/main.ts',
+      'vendor-notes',
+      'vendor-notes/review.md',
+    ])
+  })
+})
+
+describe('isIgnoredWorkspaceDirectory', () => {
+  it.each([
+    ['node_modules', true],
+    ['packages/node_modules', true],
+    [String.raw`packages\__PYCACHE__`, true],
+    ['apps/Dist', false],
+    ['.cache', true],
+    ['vendor-notes', false],
+    ['build-notes', false],
+    ['src', false],
+  ])('classifies %s without depending on the host path separator', (directory, expected) => {
+    expect(isIgnoredWorkspaceDirectory(directory)).toBe(expected)
   })
 })
 

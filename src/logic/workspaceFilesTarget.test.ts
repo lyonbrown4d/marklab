@@ -37,7 +37,7 @@ describe('getWorkspaceFilesTarget', () => {
     expect(getWorkspaceFilesTarget([], [entries[1]])).toEqual({
       kind: 'file',
       path: 'notes/data.json',
-      view: 'edit',
+      view: 'source',
     })
     expect(getWorkspaceFilesTarget([], [entries[0]])).toBeNull()
   })

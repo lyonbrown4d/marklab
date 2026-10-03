@@ -17,6 +17,11 @@ describe('native IPC channels', () => {
       'marklab:workspace:reveal-path-in-system',
     )
     expect(nativeIpcChannels.workspaceCopyAbsolutePath).toBe('marklab:workspace:copy-absolute-path')
+    expect(nativeIpcChannels.workspaceReadTextPreview).toBe('marklab:workspace:read-text-preview')
+  })
+
+  it('defines a dedicated link preview channel', () => {
+    expect(nativeIpcChannels.linkPreviewFetch).toBe('marklab:link-preview:fetch')
   })
 
   it('does not advertise the unimplemented workspace session protocol', () => {

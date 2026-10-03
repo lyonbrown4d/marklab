@@ -64,6 +64,18 @@
   height: 100%;
 }
 
+.marklab-pdf-viewer--graph {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.marklab-pdf-viewer--graph .marklab-pdf-viewer__document {
+  height: 100%;
+  overflow: hidden;
+  padding: 0.35rem;
+}
+
 .marklab-pdf-viewer__thumbs {
   align-content: start;
   background: color-mix(in srgb, hsl(var(--muted)) 82%, hsl(var(--background)));

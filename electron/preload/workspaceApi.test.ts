@@ -52,12 +52,37 @@ describe('workspace preload surfaces', () => {
     )
   })
 
+  it('uses a dedicated validated channel for bounded text previews', async () => {
+    const ipcRenderer = {
+      invoke: vi.fn(async () => ({ content: 'const value = 1', truncated: true })),
+    }
+    const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
+
+    await expect(surfaces.workspace.readTextPreview('src/example.ts', 16_384)).resolves.toEqual({
+      content: 'const value = 1',
+      truncated: true,
+    })
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(nativeIpcChannels.workspaceReadTextPreview, {
+      limit_bytes: 16_384,
+      path: 'src/example.ts',
+    })
+  })
+
   it('rejects malformed native responses', async () => {
     const ipcRenderer = { invoke: vi.fn(async () => ({ ok: false })) }
     const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
 
     await expect(surfaces.workspace.openPathInSystem('notes/today.md')).rejects.toThrow(
       'Invalid workspace.openPathInSystem response',
+    )
+  })
+
+  it('rejects malformed text preview responses', async () => {
+    const ipcRenderer = { invoke: vi.fn(async () => ({ content: 42, truncated: false })) }
+    const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
+
+    await expect(surfaces.workspace.readTextPreview('src/example.ts', 1024)).rejects.toThrow(
+      'Invalid workspace.readTextPreview response',
     )
   })
 })

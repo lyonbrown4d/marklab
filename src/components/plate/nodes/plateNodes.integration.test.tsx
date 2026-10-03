@@ -1,11 +1,30 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { plateMarkdownPlugin } from '@/components/plate/plateMarkdownConfig'
 import { deserializePlateMarkdown } from '@/components/plate/plateMarkdownSerialization'
 import { createPlateNodePlugins } from '@/components/plate/nodes/plateNodePlugins'
+
+const remoteImageCapability =
+  'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+
+vi.mock('@/services/linkPreviewApi', () => ({
+  linkPreviewApi: {
+    fetch: vi.fn(async (url: string) => ({
+      kind: 'image',
+      media_type: 'image/png',
+      src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      url,
+    })),
+  },
+}))
+
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+}))
 
 const renderMarkdown = (markdown: string, readOnly = true) => {
   const editor = createPlateEditor({
@@ -17,17 +36,21 @@ const renderMarkdown = (markdown: string, readOnly = true) => {
   return {
     editor,
     ...render(
-      <DndProvider backend={HTML5Backend}>
-        <Plate editor={editor} readOnly={readOnly}>
-          <PlateContent aria-label="Markdown document" readOnly={readOnly} />
-        </Plate>
-      </DndProvider>,
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <DndProvider backend={HTML5Backend}>
+          <Plate editor={editor} readOnly={readOnly}>
+            <PlateContent aria-label="Markdown document" readOnly={readOnly} />
+          </Plate>
+        </DndProvider>
+      </QueryClientProvider>,
     ),
   }
 }
 
 describe('createPlateNodePlugins', () => {
-  it('renders semantic Markdown blocks, marks, links, images, and code', () => {
+  it('renders semantic Markdown blocks, marks, links, images, and code', async () => {
     renderMarkdown(
       [
         '# Heading',
@@ -57,7 +80,10 @@ describe('createPlateNodePlugins', () => {
       'href',
       'https://example.com/',
     )
-    expect(screen.getByRole('img', { name: 'Diagram' })).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: 'Diagram' })).toHaveAttribute(
+      'src',
+      remoteImageCapability,
+    )
     expect(screen.getByText('const value = 1').closest('pre')).not.toBeNull()
   })
 
@@ -101,7 +127,7 @@ describe('createPlateNodePlugins', () => {
     expect(screen.getByText('plain').closest('li')?.querySelector('[role="checkbox"]')).toBeNull()
   })
 
-  it('renders reference links and images through the native interactive nodes', () => {
+  it('renders reference links and images through the native interactive nodes', async () => {
     renderMarkdown(
       [
         '[Guide][guide]',
@@ -117,9 +143,9 @@ describe('createPlateNodePlugins', () => {
       'href',
       'https://example.com/guide',
     )
-    expect(screen.getByRole('img', { name: 'Diagram' })).toHaveAttribute(
+    expect(await screen.findByRole('img', { name: 'Diagram' })).toHaveAttribute(
       'src',
-      'https://example.com/diagram.png',
+      remoteImageCapability,
     )
   })
 

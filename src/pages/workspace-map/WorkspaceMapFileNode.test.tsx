@@ -96,6 +96,7 @@ describe('WorkspaceMapFileNode', () => {
 
     const surface = screen.getByTestId('workspace-map-editor-surface')
     expect(surface).not.toHaveClass('nodrag')
+    expect(screen.getByTestId('workspace-map-resource-drag-handle')).toHaveTextContent('a')
     expect(screen.getByText(/Project goals and the next concrete milestone/)).toBeInTheDocument()
     expect(document.querySelector('script')).not.toBeInTheDocument()
     expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
@@ -175,6 +176,26 @@ describe('WorkspaceMapFileNode', () => {
 
     expect(editor.onClose).toHaveBeenCalledOnce()
     expect(editor.onOpenFull).toHaveBeenCalledOnce()
+  })
+
+  it('closes the active editor with Escape without bubbling to the graph', () => {
+    const onKeyDown = vi.fn()
+    renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor }, { onKeyDown })
+
+    fireEvent.keyDown(screen.getByTestId('workspace-map-editor-surface'), { key: 'Escape' })
+
+    expect(editor.onClose).toHaveBeenCalledOnce()
+    expect(onKeyDown).not.toHaveBeenCalled()
+  })
+
+  it('does not close the editor when Escape belongs to IME composition', () => {
+    renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor })
+    const surface = screen.getByTestId('workspace-map-editor-surface')
+
+    fireEvent.keyDown(surface, { isComposing: true, key: 'Escape' })
+    fireEvent.keyDown(surface, { key: 'Escape', keyCode: 229 })
+
+    expect(editor.onClose).not.toHaveBeenCalled()
   })
 
   it('keeps document scrolling local but lets modified wheel gestures reach canvas zoom', () => {

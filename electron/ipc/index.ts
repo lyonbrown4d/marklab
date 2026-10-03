@@ -16,6 +16,7 @@ import {
 } from '@electron/ipc/gitTerminalCommands.js'
 import { registerLifecycleIpc } from '@electron/ipc/lifecycle.js'
 import { registerLanguageIntelligenceIpc } from '@electron/ipc/languageIntelligence.js'
+import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview.js'
 import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
 import { registerPlatformIpc } from '@electron/ipc/platform.js'
 import { registerSettingsIpc } from '@electron/ipc/settings.js'
@@ -41,6 +42,7 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
 import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
 import type { Logger } from '@electron/services/logger.js'
 import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
 import { getPlatformInfo } from '@electron/services/platform.js'
@@ -63,6 +65,7 @@ export type NativeIpcDependencies = {
   gitService: GitService
   knowledgeEngineService: KnowledgeEngineService
   languageIntelligenceService: LanguageIntelligenceServiceContract
+  linkPreviewService: LinkPreviewServiceContract
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
   localAiService: LocalAiServiceContract
@@ -95,6 +98,11 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     dependencies.languageIntelligenceService,
     dependencies.workspaceRegistry,
     logger.child('language-intelligence'),
+  )
+  registerLinkPreviewIpc(
+    dependencies.ipcMain,
+    dependencies.linkPreviewService,
+    dependencies.workspaceRegistry,
   )
   registerPlatformIpc(dependencies.ipcMain)
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)

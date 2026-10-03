@@ -8,13 +8,14 @@ import {
   fsAssetCapabilitySchema,
   fsBufferStatusSchema,
   fsGraphSchema,
-  fsLinkPreviewMetadataSchema,
   fsMarkdownAssetImportResultSchema,
   fsMarkdownAssetResolveResultSchema,
   fsPathMetadataSchema,
   fsRootInfoSchema,
   fsSearchResultSchema,
   fsSnapshotSchema,
+  fsTextPreviewLimitSchema,
+  fsTextPreviewSchema,
   fsWorkspaceIndexSchema,
   opaqueAssetUrlSchema,
   workspaceRelativeAssetPathSchema,
@@ -41,6 +42,11 @@ export const fsApi = {
   },
   readFile(path: string) {
     return invoke<string>('fs_read_file', { path })
+  },
+  async readTextPreview(path: string, limitBytes: number) {
+    const limit = fsTextPreviewLimitSchema.parse(limitBytes)
+    const result = await getElectronRuntime().workspace.readTextPreview(path, limit)
+    return fsTextPreviewSchema.parse(result)
   },
   async getWorkspaceIndex() {
     const result = await invoke<unknown>('fs_get_workspace_index')
@@ -162,9 +168,5 @@ export const fsApi = {
       target,
     })
     return fsMarkdownAssetResolveResultSchema.parse(result)
-  },
-  async fetchLinkPreview(url: string) {
-    const result = await invoke<unknown>('fs_fetch_link_preview', { url })
-    return fsLinkPreviewMetadataSchema.parse(result)
   },
 }

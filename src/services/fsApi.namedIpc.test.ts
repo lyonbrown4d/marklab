@@ -10,6 +10,7 @@ const runtime = vi.hoisted(() => ({
   workspace: {
     copyAbsolutePathToClipboard: vi.fn(),
     openPathInSystem: vi.fn(),
+    readTextPreview: vi.fn(),
     revealPathInSystem: vi.fn(),
   },
 }))
@@ -43,5 +44,18 @@ describe('fsApi named IPC', () => {
     expect(runtime.workspace.openPathInSystem).toHaveBeenCalledWith('notes/today.md')
     expect(runtime.workspace.revealPathInSystem).toHaveBeenCalledWith('notes/today.md')
     expect(runtime.workspace.copyAbsolutePathToClipboard).toHaveBeenCalledWith('notes/today.md')
+  })
+
+  it('validates bounded text preview responses from the narrow workspace API', async () => {
+    runtime.workspace.readTextPreview.mockResolvedValue({ content: 'hello', truncated: true })
+
+    await expect(fsApi.readTextPreview('src/example.ts', 16_384)).resolves.toEqual({
+      content: 'hello',
+      truncated: true,
+    })
+    expect(runtime.workspace.readTextPreview).toHaveBeenCalledWith('src/example.ts', 16_384)
+
+    runtime.workspace.readTextPreview.mockResolvedValueOnce({ content: 'hello', truncated: 'yes' })
+    await expect(fsApi.readTextPreview('src/example.ts', 16_384)).rejects.toThrow()
   })
 })

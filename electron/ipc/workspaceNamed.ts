@@ -31,6 +31,9 @@ export const registerWorkspaceNamedIpc = (
   ipcMain.handle(nativeIpcChannels.assetsReadBytes, (event, request: unknown) =>
     workspaceFor(event).readAssetBytes(request),
   )
+  ipcMain.handle(nativeIpcChannels.workspaceReadTextPreview, (event, request: unknown) =>
+    workspaceFor(event).readTextPreview(request),
+  )
   ipcMain.handle(nativeIpcChannels.workspaceOpenPathInSystem, async (event, request: unknown) => {
     await workspaceFor(event).openPathInSystem({ path: workspacePath(request) })
     return { ok: true } as const

@@ -1,9 +1,11 @@
 import { useCallback, useRef, useState, type RefCallback } from 'react'
 import { createPortal } from 'react-dom'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
+import ExternalLinkPreview from '@/components/previews/ExternalLinkPreview'
 
 type PlateLinkPreviewPortalOptions = {
   documentPath: string | null
+  externalUrl?: string
   target: string
   title: string
 }
@@ -17,6 +19,12 @@ const createPreviewHost = (anchor: HTMLElement) => {
   host.dataset.plateLinkPreviewHost = 'true'
   host.dataset.slateIgnore = 'true'
 
+  const contentContainer = block.closest<HTMLElement>('li, td, th')
+  if (contentContainer) {
+    contentContainer.append(host)
+    return host
+  }
+
   let insertionPoint = block
   while (insertionPoint.nextElementSibling?.hasAttribute('data-plate-link-preview-host')) {
     insertionPoint = insertionPoint.nextElementSibling as HTMLElement
@@ -27,6 +35,7 @@ const createPreviewHost = (anchor: HTMLElement) => {
 
 export const usePlateLinkPreviewPortal = ({
   documentPath,
+  externalUrl,
   target,
   title,
 }: PlateLinkPreviewPortalOptions) => {
@@ -51,7 +60,11 @@ export const usePlateLinkPreviewPortal = ({
     anchorRef,
     preview: host
       ? createPortal(
-          <EmbeddedFilePreview documentPath={documentPath} target={target} title={title} />,
+          externalUrl ? (
+            <ExternalLinkPreview title={title} url={externalUrl} />
+          ) : (
+            <EmbeddedFilePreview documentPath={documentPath} target={target} title={title} />
+          ),
           host,
         )
       : null,

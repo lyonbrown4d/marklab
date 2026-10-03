@@ -59,6 +59,18 @@ describe('named workspace IPC', () => {
 
     expect(workspace.openPathInSystem).toHaveBeenCalledWith({ path: '../secret.md' })
   })
+
+  it('routes bounded text previews through the sender workspace', async () => {
+    const workspace = createWorkspace('C:/notes')
+    const dependencies = createDependencies([workspace])
+    const handlers = register(dependencies)
+    const request = { limit_bytes: 16_384, path: 'src/example.ts' }
+
+    await expect(
+      handlers.get(nativeIpcChannels.workspaceReadTextPreview)?.(event(1), request),
+    ).resolves.toEqual({ content: 'preview', truncated: false })
+    expect(workspace.readTextPreview).toHaveBeenCalledWith(request)
+  })
 })
 
 type Handler = (event: { sender: { id: number } }, payload: unknown) => unknown
@@ -81,6 +93,7 @@ const createWorkspace = (root: string) => ({
   })),
   openPathInSystem: vi.fn(async () => undefined),
   readAssetBytes: vi.fn(async () => ({ bytes: new ArrayBuffer(1), size_bytes: 1 })),
+  readTextPreview: vi.fn(async () => ({ content: 'preview', truncated: false })),
   resolveCoordinatorPath: vi.fn((relativePath: string) => path.resolve(root, relativePath)),
 })
 

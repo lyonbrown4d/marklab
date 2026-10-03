@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const resolveMarkdownAsset = vi.hoisted(() => vi.fn())
 const toAssetUrl = vi.hoisted(() => vi.fn())
+const fetchLinkPreview = vi.hoisted(() => vi.fn())
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
@@ -24,10 +25,22 @@ vi.mock('@/services/fsApi', () => ({
   },
 }))
 
+vi.mock('@/services/linkPreviewApi', () => ({
+  linkPreviewApi: { fetch: fetchLinkPreview },
+}))
+
 vi.mock('@/components/previews/EmbeddedFilePreview', () => ({
   default: ({ documentPath, target, title }: Record<string, string>) => (
     <article contentEditable={false} data-testid="embedded-file-preview">
       {documentPath}|{target}|{title}
+    </article>
+  ),
+}))
+
+vi.mock('@/components/previews/ExternalLinkPreview', () => ({
+  default: ({ title, url }: { title: string; url: string }) => (
+    <article contentEditable={false} data-testid="external-link-preview">
+      {url}|{title}
     </article>
   ),
 }))
@@ -120,6 +133,41 @@ describe('Plate media elements', () => {
     )
   })
 
+  it('never assigns a remote HTTP URL directly to an image element', async () => {
+    const remote = createDeferred<{
+      kind: 'image'
+      media_type: 'image/png'
+      src: string
+      url: string
+    }>()
+    fetchLinkPreview.mockReturnValue(remote.promise)
+    render(
+      <ResolvedPlateImage
+        alt="Remote diagram"
+        documentPath="notes/current.md"
+        src="https://example.com/diagram.png"
+      />,
+    )
+
+    expect(screen.queryByRole('img', { name: 'Remote diagram' })).toBeNull()
+    expect(document.querySelector('img[src^="http"]')).toBeNull()
+
+    await act(async () => {
+      remote.resolve({
+        kind: 'image',
+        media_type: 'image/png',
+        src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        url: 'https://example.com/diagram.png',
+      })
+      await remote.promise
+    })
+
+    expect(screen.getByRole('img', { name: 'Remote diagram' })).toHaveAttribute(
+      'src',
+      'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    )
+  })
+
   it('renders a standard local file link with an adjacent preview and editable link text', () => {
     renderLink('./brief.pdf')
 
@@ -144,6 +192,10 @@ describe('Plate media elements', () => {
       'noopener noreferrer',
     )
     expect(screen.getByRole('link', { name: 'Brief' })).toHaveAttribute('target', '_blank')
+    expect(screen.getByTestId('external-link-preview')).toHaveTextContent(
+      'https://example.com/guide|Brief',
+    )
+    expect(screen.getByTestId('external-link-preview').closest('p')).toBeNull()
     safe.unmount()
 
     renderLink('javascript:alert(1)')

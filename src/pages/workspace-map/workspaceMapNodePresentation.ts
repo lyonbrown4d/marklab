@@ -3,7 +3,8 @@ import { isMarkdownFilePath } from '@/logic/fileTypes'
 import type { GraphNodeData } from '@/logic/graph'
 import { getGraphNodeOpenPath } from '@/logic/graphViewModel'
 
-export const WORKSPACE_MAP_PDF_DRAG_HANDLE_CLASS = 'workspace-map-pdf-drag-handle'
+export const WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS = 'workspace-map-resource-drag-handle'
+const EMBEDDED_PREVIEW_DRAG_HANDLE_CLASS = 'embedded-preview-drag-handle'
 
 export const getWorkspaceMapNodeOpenPath = (node: Node<GraphNodeData>) => {
   const path = node.data.path
@@ -16,14 +17,19 @@ export const presentWorkspaceMapNode = (
   activePath: string | null,
 ): Node<GraphNodeData> => {
   const editorActive = node.type === 'file' && node.data.path === activePath
-  const pdfPreview = node.type === 'preview' && node.data.previewKind === 'pdf'
+  const resourceNode = node.type === 'file' || node.type === 'preview'
+  const resourcePreview = node.type === 'preview' && Boolean(node.data.previewKind)
   const openPath = getWorkspaceMapNodeOpenPath(node)
   return {
     ...node,
     ariaLabel: node.data.label,
-    ariaRole: pdfPreview ? 'group' : openPath ? 'button' : 'group',
-    dragHandle: pdfPreview ? `.${WORKSPACE_MAP_PDF_DRAG_HANDLE_CLASS}` : undefined,
+    ariaRole: resourcePreview ? 'group' : openPath ? 'button' : 'group',
+    dragHandle: resourcePreview
+      ? `.${EMBEDDED_PREVIEW_DRAG_HANDLE_CLASS}`
+      : resourceNode
+        ? `.${WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS}`
+        : undefined,
     draggable: !editorActive,
-    focusable: !pdfPreview && Boolean(openPath) && !editorActive,
+    focusable: !resourcePreview && Boolean(openPath) && !editorActive,
   }
 }

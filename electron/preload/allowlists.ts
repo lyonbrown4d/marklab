@@ -53,7 +53,6 @@ const allowedCommandNames = [
   'fs_import_markdown_asset',
   'fs_import_markdown_asset_base64',
   'fs_resolve_markdown_asset',
-  'fs_fetch_link_preview',
   'markdown_language_get_document_symbols',
   'markdown_language_get_definition',
   'markdown_language_get_references',
