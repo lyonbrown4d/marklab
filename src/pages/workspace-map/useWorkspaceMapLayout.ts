@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { useLatest } from 'ahooks'
 import type { Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
+import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 
 type WorkspaceMapFlow = Pick<
   ReactFlowInstance<Node<GraphNodeData>, GraphData['edges'][number]>,
@@ -56,9 +57,7 @@ export const useWorkspaceMapLayout = ({ activePath, flow, graph, setNodes }: Opt
             const currentById = new Map(current.map((node) => [node.id, node]))
             return nodes.map((node) => {
               const existing = currentById.get(node.id)
-              return existing
-                ? { ...node, measured: existing.measured, position: existing.position }
-                : node
+              return existing ? mergeWorkspaceMapNodeGeometry(node, existing) : node
             })
           })
         } else {

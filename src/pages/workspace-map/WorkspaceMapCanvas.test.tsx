@@ -10,6 +10,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
+import { workspaceMapTestGraph as graph } from '@/pages/workspace-map/workspaceMapTestGraph'
 type FlowProps = {
   elementsSelectable: boolean
   nodes: GraphData['nodes']
@@ -19,6 +20,7 @@ type FlowProps = {
   onInit?: (flow: FlowApi) => void
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>
   onNodeClick?: (event: ReactMouseEvent<HTMLDivElement>, node: GraphData['nodes'][number]) => void
+  onPaneClick?: () => void
   tabIndex: number
   zoomOnScroll: boolean
 }
@@ -95,31 +97,6 @@ vi.mock('@/pages/workspace-map/useWorkspaceMapLayout', () => ({
     return { retry: layoutRetry, status }
   },
 }))
-
-const graph: GraphData = {
-  nodes: [
-    {
-      id: 'file:notes/a.md',
-      type: 'file',
-      data: { label: 'A', path: 'notes/a.md' },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: 'file:notes/b.md',
-      type: 'file',
-      data: { label: 'B', path: 'notes/b.md' },
-      position: { x: 240, y: 0 },
-    },
-    {
-      id: 'preview:docs/brief.pdf',
-      type: 'preview',
-      data: { label: 'brief.pdf', path: 'docs/brief.pdf', previewKind: 'pdf' },
-      position: { x: 480, y: 0 },
-    },
-  ],
-  edges: [],
-  layoutKey: 'map',
-}
 
 const renderCanvas = (activePath: string | null, onActivateEditor = vi.fn()) => {
   const view = render(
@@ -219,6 +196,28 @@ describe('WorkspaceMapCanvas', () => {
     expect(flowPropsRef.current?.nodes[1]?.draggable).toBe(true)
     expect(layoutArgsRef.current?.graph.layoutKey).toBe('map')
     expect(layoutArgsRef.current?.activePath).toBeNull()
+  })
+
+  it('keeps the external node URL and single live preview state synchronized', async () => {
+    renderCanvas(null)
+    const external = flowPropsRef.current?.nodes.find((node) => node.type === 'external')
+
+    expect(external?.data).toMatchObject({
+      url: 'https://example.com/current',
+      webView: { active: false },
+    })
+    act(() => external?.data.webView?.activate(external.id))
+    await waitFor(() => {
+      const current = flowPropsRef.current?.nodes.find((node) => node.id === external?.id)
+      expect(current?.data.webView?.active).toBe(true)
+      expect(current?.data.url).toBe('https://example.com/current')
+    })
+
+    act(() => flowPropsRef.current?.onPaneClick?.())
+    await waitFor(() => {
+      const current = flowPropsRef.current?.nodes.find((node) => node.id === external?.id)
+      expect(current?.data.webView?.active).toBe(false)
+    })
   })
 
   it('closes the active editor with Escape from the canvas', () => {

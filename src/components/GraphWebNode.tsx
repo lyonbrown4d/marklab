@@ -1,16 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
-import { Globe2, LoaderCircle, MousePointer2, X } from 'lucide-react'
+import { MousePointer2, X } from 'lucide-react'
 import { useCallback, useMemo, type SyntheticEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { ExternalWebPreviewSurface } from '@/components/previews/ExternalWebPreviewSurface'
 import { useNativeSurfaceOccluded } from '@/app/nativeSurfaceOcclusion'
 import { useOpenWebTab } from '@/app/useOpenWebTab'
 import { useI18n } from '@/i18n/useI18n'
 import { useWebTabNativeView } from '@/pages/web/useWebTabNativeView'
-import { linkPreviewApi } from '@/services/linkPreviewApi'
+import { useWebTabActions } from '@/pages/web/useWebTabActions'
+import { WebTabStatusOverlay } from '@/pages/web/WebTabStatusOverlay'
 
 export type GraphWebNodeProps = {
   active: boolean
+  dragHandleClassName?: string
   id: string
   label: string
   onActivate: (nodeId: string) => void
@@ -22,12 +24,6 @@ export type GraphWebNodeProps = {
 
 export const GraphWebNode = (props: GraphWebNodeProps) => {
   const { t } = useI18n()
-  const capture = useQuery({
-    enabled: !props.active,
-    queryFn: () => linkPreviewApi.capture(props.url),
-    queryKey: ['link-preview-capture', props.url],
-    staleTime: 30 * 60 * 1000,
-  })
   const stopNodeEvent = useCallback((event: SyntheticEvent) => event.stopPropagation(), [])
 
   if (props.active) {
@@ -36,48 +32,34 @@ export const GraphWebNode = (props: GraphWebNodeProps) => {
 
   return (
     <div
-      className="flex size-full min-h-[180px] min-w-[300px] flex-col overflow-hidden"
+      className="size-full min-h-[180px] min-w-[300px] overflow-hidden"
       data-selected={props.selected}
     >
-      <GraphWebNodeHeader label={props.label} subtitle={props.subtitle} />
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-muted/25">
-        {capture.data ? (
-          <img
-            alt={props.label}
-            className="size-full object-cover"
-            draggable={false}
-            height={capture.data.height}
-            src={capture.data.src}
-            width={capture.data.width}
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-muted-foreground">
-            {capture.isPending ? (
-              <LoaderCircle
-                aria-hidden
-                className="size-4 animate-spin motion-reduce:animate-none"
-              />
-            ) : (
-              <Globe2 aria-hidden className="size-5" />
-            )}
-          </div>
-        )}
-        <Button
-          aria-label={t('graph.web.interact')}
-          className="nodrag nopan absolute bottom-2 right-2 h-7 gap-1.5 rounded-md bg-background/90 px-2 text-[11px] shadow-sm backdrop-blur"
-          size="sm"
-          type="button"
-          variant="outline"
-          onClick={(event) => {
-            stopNodeEvent(event)
-            props.onActivate(props.id)
-          }}
-          onPointerDown={stopNodeEvent}
-        >
-          <MousePointer2 aria-hidden className="size-3" />
-          {t('graph.web.interact')}
-        </Button>
-      </div>
+      <ExternalWebPreviewSurface
+        action={
+          <Button
+            aria-label={t('graph.web.interact')}
+            className="nodrag nopan absolute bottom-2 right-2 h-7 gap-1.5 rounded-md bg-background/90 px-2 text-[11px] shadow-sm backdrop-blur"
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={(event) => {
+              stopNodeEvent(event)
+              props.onActivate(props.id)
+            }}
+            onPointerDown={stopNodeEvent}
+          >
+            <MousePointer2 aria-hidden className="size-3" />
+            {t('graph.web.interact')}
+          </Button>
+        }
+        dragHandleClassName={props.dragHandleClassName}
+        interactionClassName="nodrag nopan"
+        requested
+        title={props.label}
+        url={props.url}
+        variant="graph"
+      />
     </div>
   )
 }
@@ -88,6 +70,7 @@ type LiveGraphWebNodeProps = GraphWebNodeProps & {
 
 const LiveGraphWebNode = ({
   label,
+  dragHandleClassName,
   onDeactivate,
   stopNodeEvent,
   subtitle,
@@ -95,6 +78,7 @@ const LiveGraphWebNode = ({
 }: LiveGraphWebNodeProps) => {
   const { t } = useI18n()
   const openWebTab = useOpenWebTab()
+  const actions = useWebTabActions('graph-web-node')
   const suspended = useNativeSurfaceOccluded()
   const tab = useMemo(
     () => ({ id: 'graph-web-node', kind: 'web' as const, title: label, url }),
@@ -109,13 +93,17 @@ const LiveGraphWebNode = ({
     suspended,
     tab,
   })
+  const loading = state.status === 'idle' || state.status === 'loading'
+  const failed = state.status === 'error' || state.status === 'crashed'
 
   return (
     <div
       className="flex size-full min-h-[180px] min-w-[300px] flex-col overflow-hidden"
       data-live-web-node="true"
     >
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/70 bg-background/95 px-2.5">
+      <div
+        className={`flex h-9 shrink-0 items-center gap-2 border-b border-border/70 bg-background/95 px-2.5 ${dragHandleClassName ?? ''}`}
+      >
         <span className="size-1.5 rounded-full bg-amber-500 shadow-[0_0_0_3px_color-mix(in_srgb,currentColor_12%,transparent)]" />
         <GraphWebNodeHeader label={label} subtitle={subtitle} compact />
         <Button
@@ -135,9 +123,17 @@ const LiveGraphWebNode = ({
       </div>
       <div
         ref={hostRef}
-        aria-busy={state.status === 'loading' || state.status === 'idle'}
-        className="nowheel m-2 min-h-0 flex-1 bg-muted/20"
-      />
+        aria-busy={loading}
+        className="nowheel relative m-2 min-h-0 flex-1 overflow-hidden bg-muted/20"
+      >
+        <WebTabStatusOverlay
+          errorDescription={state.error?.description}
+          failed={failed}
+          interactionClassName="nodrag nopan"
+          loading={loading}
+          onRetry={() => void Promise.resolve(actions.reload()).catch(() => undefined)}
+        />
+      </div>
     </div>
   )
 }

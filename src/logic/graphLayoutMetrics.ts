@@ -18,6 +18,9 @@ export const WORKSPACE_MAP_RESOURCE_NODE_HEIGHT = 220
 export const FULL_HEADING_NODE_MAX_HEIGHT = 360
 
 export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
+  const currentWidth = node.width ?? node.measured?.width
+  const currentHeight = node.height ?? node.measured?.height
+  if (currentWidth && currentHeight) return { width: currentWidth, height: currentHeight }
   if (node.data.workspaceMap) {
     if (node.type === 'file') {
       return { width: WORKSPACE_MAP_FILE_WIDTH, height: WORKSPACE_MAP_FILE_HEIGHT }
@@ -28,10 +31,13 @@ export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
         height: WORKSPACE_MAP_RESOURCE_NODE_HEIGHT,
       }
     }
+    if (node.type === 'external' && node.data.url) {
+      return {
+        width: WORKSPACE_MAP_RESOURCE_NODE_WIDTH,
+        height: WORKSPACE_MAP_RESOURCE_NODE_HEIGHT,
+      }
+    }
     return { width: FILE_NODE_WIDTH, height: WORKSPACE_MAP_NODE_HEIGHT }
-  }
-  if (node.measured?.width && node.measured.height) {
-    return { width: node.measured.width, height: node.measured.height }
   }
 
   if (node.id.startsWith('file:')) {

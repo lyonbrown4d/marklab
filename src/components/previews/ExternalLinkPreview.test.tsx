@@ -107,6 +107,18 @@ describe('ExternalLinkPreview', () => {
     )
   })
 
+  it('retries both metadata and visual capture from the failed card', async () => {
+    fetchLinkPreview.mockRejectedValue(new Error('offline'))
+    renderPreview()
+
+    fireEvent.pointerEnter(screen.getByRole('article'))
+    await waitFor(() => expect(screen.getByRole('alert')).toBeVisible())
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    await waitFor(() => expect(fetchLinkPreview).toHaveBeenCalledTimes(2))
+    expect(captureLinkPreview).toHaveBeenCalledTimes(2)
+  })
+
   it('progressively renders a native visual capture without delaying metadata', async () => {
     fetchLinkPreview.mockResolvedValue({
       canonical: null,

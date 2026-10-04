@@ -15,6 +15,7 @@ import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import { useGraphRenderedNodes } from '@/pages/graph/useGraphWebViewState'
 import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
@@ -22,6 +23,7 @@ import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayo
 import { useWorkspaceMapKeyboard } from '@/pages/workspace-map/useWorkspaceMapKeyboard'
 import {
   getWorkspaceMapNodeOpenPath,
+  mergeWorkspaceMapNodeGeometry,
   presentWorkspaceMapNode,
 } from '@/pages/workspace-map/workspaceMapNodePresentation'
 
@@ -100,7 +102,16 @@ export const WorkspaceMapCanvas = ({
     onRetryEditor,
     readOnly,
   ])
-  const [nodes, setNodes, onNodesChange] = useNodesState(presentedGraph.nodes)
+  const {
+    activate: activateWebView,
+    deactivate: deactivateWebView,
+    renderedNodes,
+  } = useGraphRenderedNodes(presentedGraph.nodes, presentedGraph.layoutKey)
+  const renderedGraph = useMemo<GraphData>(
+    () => ({ ...presentedGraph, nodes: renderedNodes }),
+    [presentedGraph, renderedNodes],
+  )
+  const [nodes, setNodes, onNodesChange] = useNodesState(renderedGraph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(presentedGraph.edges)
   const layoutFlow = useMemo(
     () =>
@@ -115,7 +126,7 @@ export const WorkspaceMapCanvas = ({
   const layout = useWorkspaceMapLayout({
     activePath: null,
     flow: layoutFlow,
-    graph: presentedGraph,
+    graph: renderedGraph,
     setNodes,
   })
   useEffect(() => {
@@ -137,19 +148,21 @@ export const WorkspaceMapCanvas = ({
   useEffect(() => {
     setNodes((current) => {
       const currentById = new Map(current.map((node) => [node.id, node]))
-      return presentedGraph.nodes.map((node) => {
+      return renderedGraph.nodes.map((node) => {
         const existing = currentById.get(node.id)
         if (existing?.data === node.data && existing.type === node.type) return existing
-        return existing
-          ? { ...node, position: existing.position, measured: existing.measured }
-          : node
+        return existing ? mergeWorkspaceMapNodeGeometry(node, existing) : node
       })
     })
-  }, [presentedGraph.nodes, setNodes])
+  }, [renderedGraph.nodes, setNodes])
   useEffect(() => setEdges(presentedGraph.edges), [presentedGraph.edges, setEdges])
 
   const activateNode = useCallback(
     (node: Node<GraphNodeData>) => {
+      if (node.type === 'external' && node.data.url) {
+        activateWebView(node.id)
+        return
+      }
       const path = node.data.path
       if (node.type === 'file' && path && isMarkdownFilePath(path)) {
         onActivateEditor(path)
@@ -158,7 +171,7 @@ export const WorkspaceMapCanvas = ({
       const openPath = getWorkspaceMapNodeOpenPath(node)
       if (openPath) onOpenFile(openPath)
     },
-    [onActivateEditor, onOpenFile],
+    [activateWebView, onActivateEditor, onOpenFile],
   )
 
   const handleNodeClick = useCallback(
@@ -179,11 +192,15 @@ export const WorkspaceMapCanvas = ({
   const handleNodeDoubleClick = useCallback(
     (event: MouseEvent, node: Node<GraphNodeData>) => {
       event.preventDefault()
+      if (node.type === 'external' && node.data.url) {
+        activateWebView(node.id)
+        return
+      }
       if (node.type === 'file' && node.data.path && isMarkdownFilePath(node.data.path)) return
       const path = getWorkspaceMapNodeOpenPath(node)
       if (path) onOpenFile(path)
     },
-    [onOpenFile],
+    [activateWebView, onOpenFile],
   )
 
   if (layout.status === 'loading') {
@@ -214,6 +231,7 @@ export const WorkspaceMapCanvas = ({
       onKeyDown={handleCanvasKeyDown}
       onNodeClick={handleNodeClick}
       onNodeDoubleClick={handleNodeDoubleClick}
+      onPaneClick={deactivateWebView}
       nodesDraggable
       nodesConnectable={false}
       nodesFocusable

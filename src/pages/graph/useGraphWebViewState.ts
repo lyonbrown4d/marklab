@@ -10,21 +10,26 @@ export const getGraphWebViewUrl = (node: Node<GraphNodeData>) =>
     : null
 
 export const useGraphWebViewState = (nodes: Node<GraphNodeData>[], layoutKey?: string) => {
+  const nodeMembershipKey = nodes.map((node) => node.id).join('\0')
+  const activationScope = useMemo(
+    () => Symbol(`graph-web-view:${layoutKey ?? ''}:${nodeMembershipKey.length}`),
+    [layoutKey, nodeMembershipKey],
+  )
   const [active, setActive] = useState<{
-    layoutKey?: string
     nodeId: string
+    scope: symbol
   } | null>(null)
   const hasCurrentActiveNode =
     active !== null &&
-    active.layoutKey === layoutKey &&
+    active.scope === activationScope &&
     nodes.some((node) => node.id === active.nodeId)
   const activeNodeId = hasCurrentActiveNode ? active.nodeId : null
   const activate = useCallback(
     (nodeId: string) => {
       const canActivate = nodes.some((node) => node.id === nodeId && getGraphWebViewUrl(node))
-      if (canActivate) setActive({ layoutKey, nodeId })
+      if (canActivate) setActive({ nodeId, scope: activationScope })
     },
-    [layoutKey, nodes],
+    [activationScope, nodes],
   )
   const deactivate = useCallback(() => setActive(null), [])
 

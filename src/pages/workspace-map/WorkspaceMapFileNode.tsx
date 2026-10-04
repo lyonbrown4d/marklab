@@ -17,6 +17,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { isImeKeyboardEvent } from '@/logic/ime'
 import { WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS } from '@/pages/workspace-map/workspaceMapNodePresentation'
+import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
 
 type WorkspaceMapFileGraphNode = Node<GraphNodeData, 'file'>
 
@@ -65,7 +66,7 @@ const WorkspaceMapEmbeddedEditor = ({
   return (
     <section
       className={cn(
-        'workspace-map-editor flex flex-col overflow-hidden rounded-lg',
+        'workspace-map-editor flex flex-col overflow-visible rounded-lg',
         editor && 'nodrag nopan',
         selected && 'workspace-map-editor--selected',
       )}
@@ -80,12 +81,13 @@ const WorkspaceMapEmbeddedEditor = ({
       onPointerDown={editor ? stopGraphEvent : undefined}
       onWheel={handleWheel}
     >
+      <WorkspaceMapNodeResizeControl minHeight={240} minWidth={320} />
       <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
       <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
       <header
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
-          'flex h-11 shrink-0 cursor-grab items-center gap-2 border-b border-border/70 bg-muted/30 px-3 active:cursor-grabbing',
+          'flex h-11 shrink-0 cursor-grab items-center gap-2 rounded-t-[inherit] border-b border-border/70 bg-muted/30 px-3 active:cursor-grabbing',
         )}
         data-testid="workspace-map-resource-drag-handle"
       >
@@ -122,7 +124,10 @@ const WorkspaceMapEmbeddedEditor = ({
           </>
         ) : null}
       </header>
-      <div className="relative min-h-0 flex-1 bg-background">
+      <div
+        className="relative min-h-0 flex-1 overflow-hidden rounded-b-[inherit] bg-background"
+        data-testid="workspace-map-editor-content"
+      >
         {editor?.loadState.status === 'ready' ? (
           <Suspense fallback={<EditorPaneFallback label={t('workspaceMap.loadingDocument')} />}>
             <MarkdownEditor

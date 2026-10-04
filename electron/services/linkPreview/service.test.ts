@@ -75,6 +75,34 @@ describe('LinkPreviewService', () => {
     )
   })
 
+  it('supports the all-address lookup contract requested by modern Node HTTP clients', async () => {
+    const get = vi.fn(async (_url: string, config: Record<string, unknown>) => {
+      const agent = config.httpsAgent as {
+        options: {
+          lookup: (
+            hostname: string,
+            options: { all?: boolean },
+            callback: (error: Error | null, addresses: unknown) => void,
+          ) => void
+        }
+      }
+      const addresses = await new Promise<unknown>((resolve, reject) => {
+        agent.options.lookup('example.com', { all: true }, (error, result) => {
+          if (error) reject(error)
+          else resolve(result)
+        })
+      })
+      expect(addresses).toEqual([{ address: '93.184.216.34', family: 4 }])
+      return response('<title>Modern lookup</title>', 'text/html')
+    })
+    const service = createService(get)
+
+    await expect(service.fetch('https://example.com/page')).resolves.toMatchObject({
+      kind: 'webpage',
+      title: 'Modern lookup',
+    })
+  })
+
   it('revalidates every redirect target', async () => {
     const get = vi.fn(async (url: string) => {
       if (url === 'https://example.com/start') {
@@ -159,49 +187,69 @@ describe('LinkPreviewService', () => {
     expect(capture).toHaveBeenCalledExactlyOnceWith('https://example.com/', owner)
   })
 
-  it('logs a sanitized capture failure without exposing the URL path', async () => {
+  it('logs a sanitized capture failure without attaching the raw error or URL path', async () => {
     const owner = { contentView: {}, isDestroyed: vi.fn(() => false) }
-    const failure = new Error('ERR_PROXY_CONNECTION_FAILED')
+    const failure = new Error(
+      'ERR_FAILED loading https://user:secret@example.com/private/path?token=secret',
+    )
     const warn = vi.fn()
+    const debug = vi.fn()
     const service = new LinkPreviewService({
       captureService: {
         capture: vi.fn(async () => Promise.reject(failure)),
         dispose: vi.fn(),
       },
       httpClient: { get: vi.fn() as LinkPreviewHttpClient['get'] },
-      logger: { warn },
+      logger: { debug, warn },
       lookup: publicLookup,
     } as never)
 
     await expect(
       service.capture({ url: 'https://example.com/private/path?token=secret' }, owner as never),
-    ).rejects.toThrow('ERR_PROXY_CONNECTION_FAILED')
-    expect(warn).toHaveBeenCalledWith('visual link preview failed', {
-      error: failure,
-      hostname: 'example.com',
-    })
+    ).rejects.toThrow('ERR_FAILED')
+    expect(warn).toHaveBeenCalledWith(
+      'visual link preview failed',
+      expect.objectContaining({
+        durationMs: expect.any(Number),
+        errorCode: 'ERR_LINK_PREVIEW_CAPTURE',
+        errorName: 'Error',
+        hostname: 'example.com',
+        operation: 'capture',
+        stage: 'capture',
+      }),
+    )
+    expect(warn.mock.calls[0]?.[1]).not.toHaveProperty('error')
     expect(JSON.stringify(warn.mock.calls)).not.toContain('private/path')
-    expect(JSON.stringify(warn.mock.calls)).not.toContain('token=secret')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret')
   })
 
   it('logs a sanitized metadata failure without exposing the URL path', async () => {
     const failure = new Error('ERR_PROXY_CONNECTION_FAILED')
     const warn = vi.fn()
+    const debug = vi.fn()
     const service = new LinkPreviewService({
       httpClient: {
         get: vi.fn(async () => Promise.reject(failure)) as LinkPreviewHttpClient['get'],
       },
-      logger: { warn },
+      logger: { debug, warn },
       lookup: publicLookup,
     })
 
     await expect(service.fetch('https://example.com/private/path?token=secret')).rejects.toThrow(
       'ERR_PROXY_CONNECTION_FAILED',
     )
-    expect(warn).toHaveBeenCalledWith('link preview metadata failed', {
-      error: failure,
-      hostname: 'example.com',
-    })
+    expect(warn).toHaveBeenCalledWith(
+      'link preview metadata failed',
+      expect.objectContaining({
+        durationMs: expect.any(Number),
+        errorCode: 'ERR_LINK_PREVIEW_REQUEST',
+        errorName: 'LinkPreviewOperationError',
+        hostname: 'example.com',
+        operation: 'metadata',
+        stage: 'request',
+      }),
+    )
+    expect(warn.mock.calls[0]?.[1]).not.toHaveProperty('error')
     expect(JSON.stringify(warn.mock.calls)).not.toContain('private/path')
     expect(JSON.stringify(warn.mock.calls)).not.toContain('token=secret')
   })
@@ -239,8 +287,10 @@ describe('LinkPreviewService', () => {
 
   it('applies the total timeout while DNS lookup is pending', async () => {
     vi.useFakeTimers()
+    const warn = vi.fn()
     const service = new LinkPreviewService({
       httpClient: { get: vi.fn() as LinkPreviewHttpClient['get'] },
+      logger: { debug: vi.fn(), warn },
       lookup: () => new Promise(() => undefined),
     })
     const preview = service.fetch('https://example.com/page')
@@ -249,6 +299,14 @@ describe('LinkPreviewService', () => {
     await vi.advanceTimersByTimeAsync(LINK_PREVIEW_TIMEOUT_MS)
 
     await timeoutExpectation
+    expect(warn).toHaveBeenCalledWith(
+      'link preview metadata failed',
+      expect.objectContaining({
+        errorCode: 'ERR_LINK_PREVIEW_VALIDATE',
+        errorName: 'LinkPreviewOperationError',
+        stage: 'validate',
+      }),
+    )
   })
 })
 

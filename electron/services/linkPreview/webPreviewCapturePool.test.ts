@@ -7,6 +7,8 @@ const createViewHarness = () => {
   const views: Array<{ options: unknown; webContents: ReturnType<typeof createWebContents> }> = []
   const createWebContents = () => {
     const image = {
+      crop: vi.fn(() => image),
+      getSize: vi.fn(() => ({ height: 1800, width: 2400 })),
       resize: vi.fn(() => image),
       toJPEG: vi.fn(() => Buffer.from([255, 216, 255])),
     }
@@ -20,6 +22,7 @@ const createViewHarness = () => {
       session: {
         clearStorageData: vi.fn(async () => undefined),
         on: vi.fn(),
+        protocol: { handle: vi.fn(), unhandle: vi.fn() },
         setDevicePermissionHandler: vi.fn(),
         setDisplayMediaRequestHandler: vi.fn(),
         setPermissionCheckHandler: vi.fn(),
@@ -78,10 +81,21 @@ describe('WebPreviewCapturePool', () => {
     expect(owner.contentView.addChildView).toHaveBeenCalledTimes(3)
     expect(owner.contentView.removeChildView).toHaveBeenCalledTimes(3)
     expect(cache.set).toHaveBeenCalledTimes(3)
+    expect(harness.views[0]?.webContents.capturePage).toHaveBeenCalledWith(undefined, {
+      stayHidden: true,
+    })
+    const image = await harness.views[0]?.webContents.capturePage.mock.results[0]?.value
+    expect(image?.crop).toHaveBeenCalledWith({ height: 1350, width: 2400, x: 0, y: 225 })
+    expect(image?.resize).toHaveBeenCalledWith({
+      height: 1080,
+      quality: 'best',
+      width: 1920,
+    })
     expect(harness.views[0]?.options).toMatchObject({
       webPreferences: expect.objectContaining({
         contextIsolation: true,
         nodeIntegration: false,
+        offscreen: true,
         sandbox: true,
       }),
     })
@@ -104,9 +118,9 @@ describe('WebPreviewCapturePool', () => {
       pool.capture('https://example.com/cached', createOwner() as never),
     ).resolves.toMatchObject({
       bytes: new Uint8Array([1, 2, 3]),
-      height: 360,
+      height: 1080,
       mediaType: 'image/jpeg',
-      width: 640,
+      width: 1920,
     })
     expect(harness.views).toHaveLength(0)
   })

@@ -26,6 +26,8 @@ describe('useGraphWebViewState', () => {
 
     view.rerender({ layoutKey: 'layout-b' })
     expect(view.result.current.activeNodeId).toBeNull()
+    view.rerender({ layoutKey: 'layout-a' })
+    expect(view.result.current.activeNodeId).toBeNull()
   })
 
   it('closes a live node that is no longer present', () => {

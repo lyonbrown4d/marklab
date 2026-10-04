@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest'
+import type { Node } from '@xyflow/react'
+import type { GraphNodeData } from '@/logic/graph'
+import {
+  mergeWorkspaceMapNodeGeometry,
+  presentWorkspaceMapNode,
+} from '@/pages/workspace-map/workspaceMapNodePresentation'
+
+const node = (
+  id: string,
+  type: string,
+  data: Partial<GraphNodeData> = {},
+): Node<GraphNodeData> => ({
+  data: { label: id, workspaceMap: true, ...data },
+  id,
+  position: { x: 0, y: 0 },
+  type,
+})
+
+describe('workspace map node presentation', () => {
+  it('keeps default layout dimensions out of mutable node geometry', () => {
+    const file = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', { path: 'notes/a.md' }),
+      null,
+    )
+    const webpage = presentWorkspaceMapNode(
+      node('ext:https://example.com', 'external', { url: 'https://example.com' }),
+      null,
+    )
+
+    expect(file.width).toBeUndefined()
+    expect(file.height).toBeUndefined()
+    expect(webpage.width).toBeUndefined()
+    expect(webpage.height).toBeUndefined()
+    expect(webpage.dragHandle).toBe('.workspace-map-web-drag-handle')
+  })
+
+  it('preserves user position and resized dimensions across graph refreshes', () => {
+    const incoming = node('preview:guide.pdf', 'preview', {
+      path: 'guide.pdf',
+      previewKind: 'pdf',
+    })
+    const current = {
+      ...incoming,
+      height: 510,
+      measured: { height: 510, width: 740 },
+      position: { x: 420, y: 180 },
+      width: 740,
+    }
+
+    expect(mergeWorkspaceMapNodeGeometry(incoming, current)).toMatchObject({
+      height: 510,
+      measured: { height: 510, width: 740 },
+      position: { x: 420, y: 180 },
+      width: 740,
+    })
+  })
+
+  it('does not promote measured dimensions into user-resized geometry', () => {
+    const incoming = node('file:notes/a.md', 'file', { path: 'notes/a.md' })
+    const current = {
+      ...incoming,
+      measured: { height: 240, width: 320 },
+      position: { x: 120, y: 80 },
+    }
+
+    const merged = mergeWorkspaceMapNodeGeometry(incoming, current)
+
+    expect(merged.measured).toEqual({ height: 240, width: 320 })
+    expect(merged.position).toEqual({ x: 120, y: 80 })
+    expect(merged.width).toBeUndefined()
+    expect(merged.height).toBeUndefined()
+  })
+})

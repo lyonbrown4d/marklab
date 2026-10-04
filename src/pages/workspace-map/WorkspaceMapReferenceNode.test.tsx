@@ -2,11 +2,15 @@ import { render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  WORKSPACE_MAP_RESOURCE_NODE_HEIGHT,
-  WORKSPACE_MAP_RESOURCE_NODE_WIDTH,
-} from '@/logic/graphLayoutMetrics'
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
+
+vi.mock('@/components/GraphWebNode', () => ({
+  GraphWebNode: ({ dragHandleClassName, label, url }: Record<string, string>) => (
+    <div className={dragHandleClassName} data-testid="graph-web-node" data-url={url}>
+      {label}
+    </div>
+  ),
+}))
 
 vi.mock('@/components/previews/EmbeddedFilePreview', () => ({
   default: ({ documentPath, target, title, variant }: Record<string, string | null>) => (
@@ -34,6 +38,30 @@ const renderNode = (type: 'external' | 'missing' | 'preview') => {
 }
 
 describe('WorkspaceMapReferenceNode', () => {
+  it('renders an external URL through the shared graph web preview with resize affordance', () => {
+    const props = {
+      id: 'ext:https://example.com/current',
+      type: 'external',
+      selected: false,
+      data: {
+        label: 'Current page',
+        subtitle: 'example.com',
+        url: 'https://example.com/current',
+        webView: { active: false, activate: vi.fn(), deactivate: vi.fn() },
+      },
+    } as unknown as ComponentProps<typeof WorkspaceMapReferenceNode>
+
+    render(<WorkspaceMapReferenceNode {...props} />, { wrapper: ReactFlowProvider })
+
+    expect(screen.getByTestId('graph-web-node')).toHaveAttribute(
+      'data-url',
+      'https://example.com/current',
+    )
+    expect(screen.getByTestId('graph-web-node')).toHaveClass('workspace-map-web-drag-handle')
+    expect(document.querySelector('.react-flow__resize-control')).not.toBeNull()
+    expect(screen.queryByText('example.com')).not.toBeInTheDocument()
+  })
+
   it.each(['external', 'missing'] as const)(
     'renders %s as the same lightweight workspace map card',
     (type) => {
@@ -42,7 +70,7 @@ describe('WorkspaceMapReferenceNode', () => {
       const node = screen.getByText('Target').closest('.workspace-map-node')
       expect(node).not.toBeNull()
       expect(node).toHaveClass('workspace-map-node')
-      expect(node).toHaveClass('h-24', 'w-[200px]')
+      expect(node).toHaveClass('size-full', 'min-h-20', 'min-w-44')
       expect(screen.getByText('Reference path')).toBeInTheDocument()
       expect(document.querySelector('[data-preview-kind]')).not.toBeInTheDocument()
     },
@@ -73,12 +101,10 @@ describe('WorkspaceMapReferenceNode', () => {
       expect(preview.parentElement).not.toHaveClass('nodrag', 'nopan')
       expect(preview).toHaveClass('embedded-preview-drag-handle')
       const node = preview.closest('section')
-      expect(node).toHaveStyle({
-        height: `${WORKSPACE_MAP_RESOURCE_NODE_HEIGHT}px`,
-        width: `${WORKSPACE_MAP_RESOURCE_NODE_WIDTH}px`,
-      })
+      expect(node).toHaveClass('size-full', 'min-h-[180px]', 'min-w-[280px]')
       expect(node).not.toHaveAttribute('role', 'button')
       expect(node).not.toHaveAttribute('tabindex')
+      expect(node?.querySelector('.react-flow__resize-control')).not.toBeNull()
     },
   )
 })

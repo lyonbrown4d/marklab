@@ -171,8 +171,10 @@ export const createElectronContainer = (
     languageIntelligenceService: asFunction(() => new LanguageIntelligenceService()).singleton(),
     linkPreviewService: asFunction(({ app, logger, WebContentsView }) => {
       const cache = new WebPreviewDiskCache({
+        logger: logger.child('web-preview-cache'),
         root: path.join(app.getPath('userData'), 'cache', 'web-previews'),
       })
+      cache.startMaintenance()
       const captureService = new WebPreviewCapturePool({
         WebContentsView,
         cache,

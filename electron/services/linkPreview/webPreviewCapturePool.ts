@@ -1,4 +1,4 @@
-import type { BrowserWindow, WebContentsView } from 'electron'
+import type { BrowserWindow, NativeImage, Rectangle, WebContentsView } from 'electron'
 import pLimit from 'p-limit'
 
 import { assertPublicLinkPreviewUrl } from '@electron/services/linkPreview/networkSecurity.js'
@@ -9,18 +9,20 @@ import type {
 import type { WebPreviewCacheContract } from '@electron/services/linkPreview/webPreviewDiskCache.js'
 import { installWebPreviewSessionSecurity } from '@electron/services/linkPreview/webPreviewSecurity.js'
 import type { LinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity.js'
+import { runLinkPreviewStage } from '@electron/services/linkPreview/diagnostics.js'
+import { installWebPreviewProtocol } from '@electron/services/linkPreview/webPreviewProtocol.js'
 import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
 
-const CAPTURE_HEIGHT = 720
-const CAPTURE_WIDTH = 1280
-const OUTPUT_HEIGHT = 360
-const OUTPUT_WIDTH = 640
+const CAPTURE_HEIGHT = 1080
+const CAPTURE_WIDTH = 1920
+const OUTPUT_HEIGHT = 1080
+const OUTPUT_WIDTH = 1920
 const DEFAULT_CONCURRENCY = 2
 const DEFAULT_IDLE_MS = 60_000
 const DEFAULT_TIMEOUT_MS = 10_000
 
 type ViewConstructor = new (options?: Electron.WebContentsViewConstructorOptions) => WebContentsView
-type CaptureWorker = { id: number; view: WebContentsView }
+type CaptureWorker = { disposeProtocol: () => void; id: number; view: WebContentsView }
 
 type CapturePoolOptions = {
   WebContentsView: ViewConstructor
@@ -66,14 +68,14 @@ export class WebPreviewCapturePool implements WebPreviewCaptureServiceContract {
     for (const worker of this.workers) this.destroyWorker(worker)
     this.available.length = 0
     this.workers.clear()
+    this.options.cache.dispose?.()
   }
 
   private async captureUncached(url: string, owner: BrowserWindow): Promise<CapturedWebPreview> {
     if (this.disposed) throw new Error('Web preview capture pool is disposed')
     if (owner.isDestroyed()) throw new Error('Web preview capture host is unavailable')
-    await withTimeout(
-      assertPublicLinkPreviewUrl(new URL(url), this.options.lookup),
-      this.timeoutMs(),
+    await runLinkPreviewStage('validate', () =>
+      withTimeout(assertPublicLinkPreviewUrl(new URL(url), this.options.lookup), this.timeoutMs()),
     )
     const worker = this.acquireWorker()
     const contents = worker.view.webContents
@@ -83,15 +85,12 @@ export class WebPreviewCapturePool implements WebPreviewCaptureServiceContract {
     try {
       owner.contentView.addChildView(worker.view)
       attached = true
-      await withTimeout(contents.loadURL(url), this.timeoutMs())
-      await (this.options.settle?.() ?? defaultSettle())
-      const image = await withTimeout(
-        contents.capturePage(undefined, { stayHidden: true }),
-        this.timeoutMs(),
+      await runLinkPreviewStage('load', () => withTimeout(contents.loadURL(url), this.timeoutMs()))
+      await runLinkPreviewStage('settle', () => this.options.settle?.() ?? defaultSettle())
+      const image = await runLinkPreviewStage('capture-page', () =>
+        withTimeout(contents.capturePage(undefined, { stayHidden: true }), this.timeoutMs()),
       )
-      const bytes = new Uint8Array(
-        image.resize({ height: OUTPUT_HEIGHT, quality: 'good', width: OUTPUT_WIDTH }).toJPEG(72),
-      )
+      const bytes = await runLinkPreviewStage('encode', async () => encodePreview(image))
       await this.options.cache.set(url, bytes).catch(() => undefined)
       return captureResult(bytes)
     } finally {
@@ -130,7 +129,9 @@ export class WebPreviewCapturePool implements WebPreviewCaptureServiceContract {
         contextIsolation: true,
         devTools: false,
         disableDialogs: true,
+        javascript: false,
         nodeIntegration: false,
+        offscreen: true,
         partition: `marklab-web-preview-${id}`,
         preload: undefined,
         sandbox: true,
@@ -143,8 +144,12 @@ export class WebPreviewCapturePool implements WebPreviewCaptureServiceContract {
     view.webContents.setAudioMuted(true)
     view.webContents.setBackgroundThrottling(true)
     view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-    installWebPreviewSessionSecurity(view.webContents.session, this.options.lookup)
-    const worker = { id, view }
+    installWebPreviewSessionSecurity(view.webContents.session)
+    const disposeProtocol = installWebPreviewProtocol(
+      view.webContents.session as never,
+      this.options.lookup,
+    )
+    const worker = { disposeProtocol, id, view }
     this.workers.add(worker)
     return worker
   }
@@ -171,6 +176,7 @@ export class WebPreviewCapturePool implements WebPreviewCaptureServiceContract {
   }
 
   private destroyWorker(worker: CaptureWorker): void {
+    worker.disposeProtocol()
     const contents = worker.view.webContents
     if (!contents.isDestroyed()) contents.close()
   }
@@ -186,6 +192,26 @@ const captureResult = (bytes: Uint8Array): CapturedWebPreview => ({
   mediaType: 'image/jpeg',
   width: OUTPUT_WIDTH,
 })
+
+const encodePreview = (image: NativeImage): Uint8Array => {
+  const cropped = image.crop(centerCrop(image.getSize(), OUTPUT_WIDTH / OUTPUT_HEIGHT))
+  return new Uint8Array(
+    cropped.resize({ height: OUTPUT_HEIGHT, quality: 'best', width: OUTPUT_WIDTH }).toJPEG(90),
+  )
+}
+
+const centerCrop = (size: { height: number; width: number }, targetAspect: number): Rectangle => {
+  if (size.height <= 0 || size.width <= 0) throw new Error('Captured web preview is empty')
+  const sourceAspect = size.width / size.height
+  const width = sourceAspect > targetAspect ? Math.round(size.height * targetAspect) : size.width
+  const height = sourceAspect > targetAspect ? size.height : Math.round(size.width / targetAspect)
+  return {
+    height,
+    width,
+    x: Math.max(0, Math.floor((size.width - width) / 2)),
+    y: Math.max(0, Math.floor((size.height - height) / 2)),
+  }
+}
 
 const defaultSettle = () => new Promise<void>((resolve) => setTimeout(resolve, 250))
 

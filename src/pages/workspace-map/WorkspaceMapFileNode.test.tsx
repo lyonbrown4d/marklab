@@ -96,7 +96,10 @@ describe('WorkspaceMapFileNode', () => {
 
     const surface = screen.getByTestId('workspace-map-editor-surface')
     expect(surface).not.toHaveClass('nodrag')
+    expect(surface).toHaveClass('overflow-visible')
     expect(screen.getByTestId('workspace-map-resource-drag-handle')).toHaveTextContent('a')
+    expect(surface.querySelector('.react-flow__resize-control')).not.toBeNull()
+    expect(screen.getByTestId('workspace-map-editor-content')).toHaveClass('overflow-hidden')
     expect(screen.getByText(/Project goals and the next concrete milestone/)).toBeInTheDocument()
     expect(document.querySelector('script')).not.toBeInTheDocument()
     expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()

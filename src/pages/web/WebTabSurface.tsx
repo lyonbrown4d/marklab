@@ -1,10 +1,9 @@
 import { useCallback } from 'react'
-import { AlertTriangle, Globe2, LoaderCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import type { WorkspaceTab } from '@/store/appTypes'
 import { useWebTabActions } from '@/pages/web/useWebTabActions'
 import { useWebTabNativeView } from '@/pages/web/useWebTabNativeView'
+import { WebTabStatusOverlay } from '@/pages/web/WebTabStatusOverlay'
 import { WebTabToolbar } from '@/pages/web/WebTabToolbar'
 import { useOpenWebTab } from '@/app/useOpenWebTab'
 import { useNativeSurfaceInsetsStore } from '@/app/nativeSurfaceInsets'
@@ -70,40 +69,12 @@ const WebTabSurface = ({ suspended, tab, onClose }: WebTabSurfaceProps) => {
           data-native-status={nativeState.status}
           data-testid="web-tab-native-host"
         >
-          {loading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-              <span className="relative flex size-10 items-center justify-center rounded-xl border border-border/70 bg-background shadow-sm">
-                <Globe2 aria-hidden className="size-4" />
-                <LoaderCircle
-                  aria-hidden
-                  className="absolute -right-1 -top-1 size-3.5 animate-spin text-primary motion-reduce:animate-none"
-                />
-              </span>
-              <span className="text-xs">{t('webTab.loading')}</span>
-            </div>
-          ) : null}
-          {failed ? (
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div
-                className="max-w-sm rounded-xl border border-destructive/25 bg-background p-5 text-center shadow-sm"
-                role="alert"
-              >
-                <AlertTriangle aria-hidden className="mx-auto size-5 text-destructive" />
-                <p className="mt-3 text-sm font-semibold">{t('webTab.failed')}</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {nativeState.error?.description ?? t('webTab.failedHint')}
-                </p>
-                <Button
-                  className="mt-4"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void Promise.resolve(actions.reload()).catch(() => undefined)}
-                >
-                  {t('webTab.retry')}
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <WebTabStatusOverlay
+            errorDescription={nativeState.error?.description}
+            failed={failed}
+            loading={loading}
+            onRetry={() => void Promise.resolve(actions.reload()).catch(() => undefined)}
+          />
         </div>
       </div>
     </section>

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache.js'
 
@@ -46,5 +46,19 @@ describe('WebPreviewDiskCache', () => {
     await expect(cache.get('https://example.com/second')).resolves.toEqual(
       new Uint8Array([4, 5, 6]),
     )
+  })
+
+  it('cleans expired rebuildable captures on startup and on a background schedule', async () => {
+    const { cache, root } = await createCache({ ttlMs: 1_000 })
+    await cache.set('https://example.com/stale', new Uint8Array([1, 2, 3]))
+    const cachedFile = (await fs.readdir(root)).find((file) => file.endsWith('.jpg'))
+    if (!cachedFile) throw new Error('Expected cached preview')
+    const staleTime = new Date(Date.now() - 2_000)
+    await fs.utimes(path.join(root, cachedFile), staleTime, staleTime)
+
+    cache.startMaintenance()
+
+    await vi.waitFor(async () => expect(await fs.readdir(root)).toEqual([]))
+    cache.dispose()
   })
 })

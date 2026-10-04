@@ -1,16 +1,22 @@
 import axios from 'axios'
-import http from 'node:http'
-import https from 'node:https'
-import net from 'node:net'
 import { LRUCache } from 'lru-cache'
 import type { BrowserWindow } from 'electron'
 
 import {
   assertPublicLinkPreviewUrl,
   defaultLinkPreviewLookup,
-  normalizeNetworkHostname,
   type LinkPreviewLookup,
 } from '@electron/services/linkPreview/networkSecurity.js'
+import { createPinnedAgents } from '@electron/services/linkPreview/pinnedAgents.js'
+import {
+  LinkPreviewOperationError,
+  linkPreviewFailureFields,
+  runLinkPreviewStage,
+} from '@electron/services/linkPreview/diagnostics.js'
+import {
+  normalizeHttpUrl,
+  parseLinkPreviewRequest,
+} from '@electron/services/linkPreview/request.js'
 import {
   createRemoteImageCapabilityUrl,
   parseRemoteImageCapabilityUrl,
@@ -18,13 +24,10 @@ import {
 } from '@electron/services/linkPreview/remoteAsset.js'
 import { headerValue, parseLinkPreviewResponse } from '@electron/services/linkPreview/response.js'
 import type { Logger } from '@electron/services/logger.js'
-import type {
-  LinkPreviewCapture,
-  LinkPreviewRequest,
-  LinkPreviewResult,
-} from '@/types/linkPreview.js'
+import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview.js'
 
 export { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata.js'
+export { parseLinkPreviewRequest } from '@electron/services/linkPreview/request.js'
 
 export const LINK_PREVIEW_TIMEOUT_MS = 5000
 export const LINK_PREVIEW_MAX_RESPONSE_BYTES = 256 * 1024
@@ -69,7 +72,7 @@ type LinkPreviewServiceOptions = {
   captureService?: WebPreviewCaptureServiceContract
   httpClient?: LinkPreviewHttpClient
   lookup?: LinkPreviewLookup
-  logger?: Pick<Logger, 'warn'>
+  logger?: Pick<Logger, 'debug' | 'warn'>
 }
 
 export class LinkPreviewService implements LinkPreviewServiceContract {
@@ -78,7 +81,7 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
   private readonly imageCache: LRUCache<string, RemoteImageAsset>
   private readonly httpClient: LinkPreviewHttpClient
   private readonly lookup: LinkPreviewLookup
-  private readonly logger?: Pick<Logger, 'warn'>
+  private readonly logger?: Pick<Logger, 'debug' | 'warn'>
   private readonly captureService?: WebPreviewCaptureServiceContract
 
   constructor(options: LinkPreviewServiceOptions = {}) {
@@ -103,16 +106,30 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
   async capture(payload: unknown, owner: BrowserWindow): Promise<LinkPreviewCapture> {
     const request = parseLinkPreviewRequest(payload)
     if (!this.captureService) throw new Error('Visual link preview is unavailable')
+    const startedAt = Date.now()
+    const hostname = new URL(request.url).hostname
+    this.logger?.debug('visual link preview started', { hostname, operation: 'capture' })
     let captured: CapturedWebPreview
     try {
       captured = await this.captureService.capture(request.url, owner)
     } catch (error) {
       this.logger?.warn('visual link preview failed', {
-        error,
-        hostname: new URL(request.url).hostname,
+        durationMs: Date.now() - startedAt,
+        ...linkPreviewFailureFields(error, {
+          errorCode: 'ERR_LINK_PREVIEW_CAPTURE',
+          stage: 'capture',
+        }),
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        hostname,
+        operation: 'capture',
       })
       throw error
     }
+    this.logger?.debug('visual link preview completed', {
+      durationMs: Date.now() - startedAt,
+      hostname,
+      operation: 'capture',
+    })
     return {
       height: captured.height,
       src: this.issueImageCapability(captured.bytes, captured.mediaType),
@@ -128,20 +145,37 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
   async fetch(payload: unknown): Promise<LinkPreviewResult> {
     const request = parseLinkPreviewRequest(payload)
     const cached = this.cache.get(request.url)
-    if (cached && this.isCachedResultAvailable(cached)) return cached
+    const hostname = new URL(request.url).hostname
+    if (cached && this.isCachedResultAvailable(cached)) {
+      this.logger?.debug('link preview metadata cache hit', { hostname, operation: 'metadata' })
+      return cached
+    }
     if (cached) this.cache.delete(request.url)
     const running = this.inflight.get(request.url)
     if (running) return running
 
+    const startedAt = Date.now()
+    this.logger?.debug('link preview metadata started', { hostname, operation: 'metadata' })
     const operation = this.fetchUncached(request.url)
       .then((result) => {
         this.cache.set(request.url, result)
+        this.logger?.debug('link preview metadata completed', {
+          durationMs: Date.now() - startedAt,
+          hostname,
+          operation: 'metadata',
+        })
         return result
       })
       .catch((error: unknown) => {
         this.logger?.warn('link preview metadata failed', {
-          error,
-          hostname: new URL(request.url).hostname,
+          durationMs: Date.now() - startedAt,
+          ...linkPreviewFailureFields(error, {
+            errorCode: 'ERR_LINK_PREVIEW_METADATA',
+            stage: 'request',
+          }),
+          errorName: error instanceof Error ? error.name : 'UnknownError',
+          hostname,
+          operation: 'metadata',
         })
         throw error
       })
@@ -168,29 +202,30 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
     try {
       for (let redirects = 0; ; redirects += 1) {
         const parsed = new URL(currentUrl)
-        const addresses = await withAbort(
-          assertPublicLinkPreviewUrl(parsed, this.lookup),
-          controller.signal,
+        const addresses = await runLinkPreviewStage('validate', () =>
+          withAbort(assertPublicLinkPreviewUrl(parsed, this.lookup), controller.signal),
         )
         const agents = createPinnedAgents(parsed.hostname, addresses)
         try {
-          const response = await this.httpClient.get<unknown>(currentUrl, {
-            headers: {
-              Accept: 'text/html,application/xhtml+xml,image/avif,image/webp,image/*;q=0.8',
-              'User-Agent': 'Marklab/0.2 link-preview',
-            },
-            httpAgent: agents.httpAgent,
-            httpsAgent: agents.httpsAgent,
-            maxBodyLength: LINK_PREVIEW_MAX_IMAGE_BYTES,
-            maxContentLength: LINK_PREVIEW_MAX_IMAGE_BYTES,
-            maxRedirects: 0,
-            proxy: false,
-            responseType: 'arraybuffer',
-            signal: controller.signal,
-            timeout: LINK_PREVIEW_TIMEOUT_MS,
-            transformResponse: [(data: unknown) => data],
-            validateStatus: () => true,
-          })
+          const response = await runLinkPreviewStage('request', () =>
+            this.httpClient.get<unknown>(currentUrl, {
+              headers: {
+                Accept: 'text/html,application/xhtml+xml,image/avif,image/webp,image/*;q=0.8',
+                'User-Agent': 'Marklab/0.2 link-preview',
+              },
+              httpAgent: agents.httpAgent,
+              httpsAgent: agents.httpsAgent,
+              maxBodyLength: LINK_PREVIEW_MAX_IMAGE_BYTES,
+              maxContentLength: LINK_PREVIEW_MAX_IMAGE_BYTES,
+              maxRedirects: 0,
+              proxy: false,
+              responseType: 'arraybuffer',
+              signal: controller.signal,
+              timeout: LINK_PREVIEW_TIMEOUT_MS,
+              transformResponse: [(data: unknown) => data],
+              validateStatus: () => true,
+            }),
+          )
           const status = response.status ?? 200
           if (status >= 300 && status < 400) {
             if (redirects >= LINK_PREVIEW_MAX_REDIRECTS) {
@@ -202,20 +237,22 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
             continue
           }
           if (status < 200 || status >= 300) throw new Error(`Link preview returned HTTP ${status}`)
-          return parseLinkPreviewResponse({
-            htmlLimitBytes: LINK_PREVIEW_MAX_RESPONSE_BYTES,
-            imageLimitBytes: LINK_PREVIEW_MAX_IMAGE_BYTES,
-            issueImage: (bytes, mediaType) => this.issueImageCapability(bytes, mediaType),
-            response,
-            url: currentUrl,
-          })
+          return runLinkPreviewStage('parse', async () =>
+            parseLinkPreviewResponse({
+              htmlLimitBytes: LINK_PREVIEW_MAX_RESPONSE_BYTES,
+              imageLimitBytes: LINK_PREVIEW_MAX_IMAGE_BYTES,
+              issueImage: (bytes, mediaType) => this.issueImageCapability(bytes, mediaType),
+              response,
+              url: currentUrl,
+            }),
+          )
         } finally {
           agents.httpAgent.destroy()
           agents.httpsAgent.destroy()
         }
       }
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (controller.signal.aborted && !(error instanceof LinkPreviewOperationError)) {
         throw controller.signal.reason instanceof Error
           ? controller.signal.reason
           : new Error('Link preview request timed out')
@@ -236,55 +273,6 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
     if (result.kind !== 'image') return true
     const token = parseRemoteImageCapabilityUrl(result.src)
     return Boolean(token && this.imageCache.has(token))
-  }
-}
-
-export const parseLinkPreviewRequest = (payload: unknown): LinkPreviewRequest => {
-  const rawUrl =
-    typeof payload === 'string'
-      ? payload
-      : payload && typeof payload === 'object' && 'url' in payload
-        ? (payload as Record<string, unknown>).url
-        : null
-  if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
-    throw new Error('Link preview URL must be a string')
-  }
-  return { url: normalizeHttpUrl(rawUrl) }
-}
-
-const normalizeHttpUrl = (value: string): string => {
-  let parsed: URL
-  try {
-    parsed = new URL(value.trim())
-  } catch {
-    throw new Error('Link preview URL must be absolute')
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('Only http and https URLs are supported')
-  }
-  if (parsed.username || parsed.password)
-    throw new Error('Link preview URLs cannot include credentials')
-  return parsed.toString()
-}
-
-const createPinnedAgents = (hostname: string, addresses: string[]) => {
-  let index = 0
-  const lookup = (
-    requestedHostname: string,
-    _options: unknown,
-    callback: (error: Error | null, address: string, family: number) => void,
-  ) => {
-    if (normalizeNetworkHostname(requestedHostname) !== normalizeNetworkHostname(hostname)) {
-      callback(new Error('Link preview hostname changed during request'), '', 0)
-      return
-    }
-    const address = addresses[index % addresses.length] ?? ''
-    index += 1
-    callback(null, address, net.isIP(address))
-  }
-  return {
-    httpAgent: new http.Agent({ lookup: lookup as never }),
-    httpsAgent: new https.Agent({ lookup: lookup as never }),
   }
 }
 

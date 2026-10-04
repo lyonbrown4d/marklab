@@ -41,6 +41,19 @@ describe('Vite production configuration', () => {
     expect(development).not.toMatch(/Milkdown|milkdown|ProseMirror|prosemirror/)
   })
 
+  it('prebundles and warms the lazy terminal without creating another React module graph', async () => {
+    const vite = await fs.readFile('vite.config.ts', 'utf8')
+    const development = await fs.readFile('vite.development.ts', 'utf8')
+
+    expect(development).toContain("'ahooks'")
+    expect(development).toContain("'@xterm/xterm'")
+    expect(development).toContain("'@xterm/addon-fit'")
+    expect(development).toContain("'@xterm/addon-unicode11'")
+    expect(development).toContain("'@xterm/addon-web-links'")
+    expect(development).toContain("'./src/components/TerminalPanel.tsx'")
+    expect(vite).toContain("dedupe: ['react', 'react-dom']")
+  })
+
   it('resolves worker-safe package exports for the Plate Markdown worker', async () => {
     const vite = await fs.readFile('vite.config.ts', 'utf8')
 

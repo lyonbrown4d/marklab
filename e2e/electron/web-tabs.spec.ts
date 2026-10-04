@@ -136,38 +136,37 @@ test.describe('Electron embedded web tabs', () => {
   test('captures an invisibly hosted WebContentsView through Electron capturePage', async () => {
     if (!session) throw new Error('Electron fixture was not started')
 
-    const capture = await session.app.evaluate(
-      async ({ BrowserWindow, WebContentsView }, ownerUrl) => {
-        const owner = BrowserWindow.getAllWindows().find(
-          (candidate) => candidate.webContents.getURL() === ownerUrl,
+    const capture = await session.app.evaluate(async ({ BrowserWindow, WebContentsView }) => {
+      const owner = BrowserWindow.getAllWindows().find((candidate) => candidate.isVisible())
+      if (!owner) throw new Error('Expected a visible capture host window')
+      const view = new WebContentsView({
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          offscreen: true,
+          sandbox: true,
+        },
+      })
+      view.setBounds({ height: 720, width: 1280, x: 0, y: 0 })
+      view.setVisible(false)
+      owner.contentView.addChildView(view)
+      try {
+        await view.webContents.loadURL(
+          'data:text/html,<main style="width:100vw;height:100vh;background:%231f6feb;color:white">Marklab</main>',
         )
-        if (!owner) throw new Error('Expected a managed capture host window')
-        const view = new WebContentsView({
-          webPreferences: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-          },
-        })
-        view.setBounds({ height: 720, width: 1280, x: 0, y: 0 })
-        view.setVisible(false)
-        owner.contentView.addChildView(view)
-        try {
-          await view.webContents.loadURL(
-            'data:text/html,<main style="width:100vw;height:100vh;background:%231f6feb;color:white">Marklab</main>',
-          )
-          const image = await view.webContents.capturePage(undefined, { stayHidden: true })
-          return { empty: image.isEmpty(), size: image.getSize() }
-        } finally {
-          owner.contentView.removeChildView(view)
-          if (!view.webContents.isDestroyed()) view.webContents.close()
+        const image = await view.webContents.capturePage(undefined, { stayHidden: true })
+        return {
+          empty: image.isEmpty(),
+          offscreen: view.webContents.isOffscreen(),
         }
-      },
-      page.url(),
-    )
+      } finally {
+        owner.contentView.removeChildView(view)
+        if (!view.webContents.isDestroyed()) view.webContents.close()
+      }
+    })
 
     expect(capture.empty).toBe(false)
-    expect(capture.size.width / capture.size.height).toBeCloseTo(16 / 9, 2)
+    expect(capture.offscreen).toBe(true)
   })
 })
 

@@ -5,6 +5,7 @@ import {
   closeElectronTestSession,
   closeRendererServer,
   launchElectronTestSession,
+  revealElectronWindow,
   startRendererServer,
   type ElectronTestSession,
 } from './electronTestHarness.js'
@@ -124,7 +125,15 @@ test.describe('Workspace map', () => {
     await expect(statusBar.getByText(/\d+\s+(words|词)$/i)).toHaveCount(1)
     await expect(statusBar.getByText(/\d+\s+(chars|字符)$/i)).toHaveCount(1)
 
-    await page.setViewportSize({ width: 720, height: 640 })
+    if (!session) throw new Error('Electron test session is unavailable')
+    await revealElectronWindow(session.app, page.url(), { width: 720, height: 640 })
+    await expect
+      .poll(async () => {
+        const inner = await readBox(editorSurface)
+        const outer = await readBox(canvas)
+        return inner.x + inner.width <= outer.x + outer.width + 1
+      })
+      .toBe(true)
     await expectBoxInside(await readBox(editorSurface), await readBox(canvas))
     await expectNoHorizontalOverflow(page)
   })

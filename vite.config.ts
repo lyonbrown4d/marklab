@@ -157,6 +157,9 @@ export default defineConfig(({ command, mode }) => {
     ].filter(Boolean),
     resolve: {
       alias,
+      // Keep lazy feature chunks on the renderer's React instances, including
+      // after Vite discovers and prebundles a dependency during development.
+      dedupe: ['react', 'react-dom'],
     },
     css: {
       preprocessorOptions: {

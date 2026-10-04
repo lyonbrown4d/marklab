@@ -2,7 +2,7 @@ import type { BrowserWindow } from 'electron'
 
 import { nativeIpcChannels } from '@electron/channels.js'
 import { createWebTabEntry } from '@electron/services/webTabs/webTabEntryFactory.js'
-import { installWebTabEvents } from '@electron/services/webTabs/webTabEvents.js'
+import { installManagedWebTabEvents } from '@electron/services/webTabs/webTabManagedEvents.js'
 import {
   clampWebTabBounds,
   attachWebTabView,
@@ -14,11 +14,17 @@ import {
   type WebTabViewConstructor,
   type WebTabWindowState,
 } from '@electron/services/webTabs/webTabManagerTypes.js'
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
 import {
-  compileWebTabShortcutBindings,
-  findWebTabShortcutAction,
-} from '@electron/services/webTabs/webTabShortcuts.js'
+  destroyWebTabEntry,
+  evictWebTabOverflow,
+  shouldReplaceWebTabEntry,
+} from '@electron/services/webTabs/webTabPool.js'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
+import { compileWebTabShortcutBindings } from '@electron/services/webTabs/webTabShortcuts.js'
+import {
+  disposeWebTabWindow,
+  installWebTabWindowListeners,
+} from '@electron/services/webTabs/webTabWindowLifecycle.js'
 import type {
   WebTabActivateRequest,
   WebTabIdRequest,
@@ -44,23 +50,14 @@ export class WebTabManager {
 
   registerWindow(owner: BrowserWindow): void {
     if (this.windows.has(owner.id)) return
-    const suspend = () => this.detachActive(owner.id)
-    const resume = () => this.attachActive(owner.id)
-    const close = () => this.disposeWindow(owner.id)
-    owner.on('hide', suspend)
-    owner.on('minimize', suspend)
-    owner.on('show', resume)
-    owner.on('restore', resume)
-    owner.once('closed', close)
+    const cleanup = installWebTabWindowListeners(owner, {
+      close: () => this.disposeWindow(owner.id),
+      resume: () => this.attachActive(owner.id),
+      suspend: () => this.detachActive(owner.id),
+    })
     this.windows.set(owner.id, {
       activeTabId: null,
-      cleanup: () => {
-        owner.removeListener('hide', suspend)
-        owner.removeListener('minimize', suspend)
-        owner.removeListener('show', resume)
-        owner.removeListener('restore', resume)
-        owner.removeListener('closed', close)
-      },
+      cleanup,
       entries: new Map(),
       owner,
       shortcuts: [],
@@ -74,6 +71,10 @@ export class WebTabManager {
     if (previous && previous.state.tabId !== request.tabId) this.detach(state, previous)
 
     let entry = state.entries.get(request.tabId)
+    if (entry && shouldReplaceWebTabEntry(entry)) {
+      this.destroyEntry(state, entry, false)
+      entry = undefined
+    }
     if (!entry) {
       entry = createWebTabEntry({
         WebContentsView: this.dependencies.WebContentsView,
@@ -91,7 +92,7 @@ export class WebTabManager {
     entry.view.setBounds(entry.bounds)
     state.activeTabId = request.tabId
     this.updateActiveStates(state)
-    if (entry.state.url !== url) this.load(state, entry, url)
+    if (entry.state.url !== url || entry.state.status === 'error') this.load(state, entry, url)
     else if (entry.ready) this.attach(state, entry)
     this.evictOverflow(state)
   }
@@ -154,44 +155,14 @@ export class WebTabManager {
   }
 
   private installEntryEvents(state: WebTabWindowState, entry: WebTabEntry): void {
-    const current = (work: () => void) => {
-      if (state.entries.get(entry.state.tabId) === entry) work()
-    }
-    entry.cleanupEvents = installWebTabEvents(entry.view.webContents, {
-      onCrashed: (description) => current(() => this.markFailed(state, entry, description)),
-      onFailed: (code, description) =>
-        current(() => this.markFailed(state, entry, description, code)),
-      onLoading: () => current(() => this.markLoading(state, entry)),
-      onInput: (event, input) =>
-        current(() => {
-          if (state.activeTabId !== entry.state.tabId || !entry.attached) return
-          const action = findWebTabShortcutAction(state.shortcuts, input)
-          if (!action) return
-          event.preventDefault()
-          if (action === 'app.commandPalette' || action === 'app.settings') {
-            this.detach(state, entry)
-          }
-          if (!state.owner.webContents.isDestroyed()) state.owner.webContents.focus()
-          this.emit(state, { action, tabId: entry.state.tabId, type: 'shortcut' })
-        }),
-      onNavigated: (url) => current(() => this.markNavigated(state, entry, url)),
-      onReady: () =>
-        current(() => {
-          if (entry.state.status === 'loading') this.markReady(state, entry)
-        }),
-      onTitle: (title) =>
-        current(() => {
-          entry.state.title = title
-          this.emitState(state, entry)
-        }),
-      onWindowOpen: (url) =>
-        current(() =>
-          this.emit(state, {
-            tabId: entry.state.tabId,
-            type: 'open-requested',
-            url,
-          }),
-        ),
+    entry.cleanupEvents = installManagedWebTabEvents(state, entry, {
+      detach: () => this.detach(state, entry),
+      emit: (event) => this.emit(state, event),
+      failed: (description, code) => this.markFailed(state, entry, description, code),
+      loading: () => this.markLoading(state, entry),
+      navigated: (url) => this.markNavigated(state, entry, url),
+      ready: () => this.markReady(state, entry),
+      stateChanged: () => this.emitState(state, entry),
     })
   }
 
@@ -281,34 +252,20 @@ export class WebTabManager {
   }
 
   private evictOverflow(state: WebTabWindowState): void {
-    while (state.entries.size > MAX_CACHED_VIEWS) {
-      const candidates = [...state.entries.values()].filter(
-        (entry) => entry.state.tabId !== state.activeTabId,
-      )
-      const oldest = candidates.sort((left, right) => left.lastUsed - right.lastUsed)[0]
-      if (!oldest) return
-      this.destroyEntry(state, oldest, true)
-    }
+    evictWebTabOverflow(state, MAX_CACHED_VIEWS, (entry) => this.emitState(state, entry))
   }
 
   private destroyEntry(state: WebTabWindowState, entry: WebTabEntry, emitClosed: boolean): void {
-    this.detach(state, entry)
-    entry.cleanupEvents()
-    state.entries.delete(entry.state.tabId)
-    if (state.activeTabId === entry.state.tabId) state.activeTabId = null
-    if (emitClosed) {
-      entry.state.active = false
-      entry.state.status = 'closed'
-      this.emitState(state, entry)
-    }
-    if (!entry.view.webContents.isDestroyed()) entry.view.webContents.close()
+    destroyWebTabEntry(state, entry, {
+      emitClosed,
+      onStateChanged: (changed) => this.emitState(state, changed),
+    })
   }
 
   private disposeWindow(windowId: number): void {
     const state = this.windows.get(windowId)
     if (!state) return
-    state.cleanup()
-    for (const entry of [...state.entries.values()]) this.destroyEntry(state, entry, false)
+    disposeWebTabWindow(state, (entry) => this.destroyEntry(state, entry, false))
     this.windows.delete(windowId)
   }
 

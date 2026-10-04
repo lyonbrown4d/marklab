@@ -21,7 +21,8 @@ export const installWebTabEvents = (
   contents: WebContents,
   callbacks: WebTabEventCallbacks,
 ): (() => void) => {
-  contents.setWindowOpenHandler(({ url }) => {
+  const denyWindowOpen = () => ({ action: 'deny' as const })
+  const handleWindowOpen = ({ url }: { url: string }) => {
     let safeUrl = ''
     try {
       safeUrl = normalizeWebTabUrl(url)
@@ -29,33 +30,53 @@ export const installWebTabEvents = (
       // Keep the URL hidden when it contains credentials or uses a denied scheme.
     }
     if (safeUrl) callbacks.onWindowOpen(safeUrl)
-    return { action: 'deny' }
-  })
+    return denyWindowOpen()
+  }
+  contents.setWindowOpenHandler(handleWindowOpen)
   const titleUpdates = createCoalescedUpdate(callbacks.onTitle, MAX_TITLE_LENGTH)
   const inPageUpdates = createCoalescedUpdate(callbacks.onNavigated, MAX_URL_LENGTH)
   const onInPageNavigation = (_event: Event, url: string) => {
     if (url.length <= MAX_URL_LENGTH) inPageUpdates.push(url)
   }
   const allowUnload = (event: Event) => event.preventDefault()
+  const onNavigation = (_event: Event, url: string) => callbacks.onNavigated(url)
+  const onTitle = (_event: Event, title: string) => titleUpdates.push(title)
+  const onFailed = (
+    _event: Event,
+    code: number,
+    description: string,
+    _url: string,
+    isMainFrame: boolean,
+  ) => {
+    if (isMainFrame && code !== -3) callbacks.onFailed(code, description)
+  }
+  const onCrashed = (_event: Event, details: { reason: string }) =>
+    callbacks.onCrashed(details.reason)
   contents.on('did-start-loading', callbacks.onLoading)
   contents.on('before-input-event', callbacks.onInput)
   contents.on('did-finish-load', callbacks.onReady)
   contents.on('did-stop-loading', callbacks.onReady)
-  contents.on('did-navigate', (_event, url) => callbacks.onNavigated(url))
+  contents.on('did-navigate', onNavigation)
   contents.on('did-navigate-in-page', onInPageNavigation)
-  contents.on('page-title-updated', (_event, title) => titleUpdates.push(title))
+  contents.on('page-title-updated', onTitle)
   contents.on('will-prevent-unload', allowUnload)
-  contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {
-    if (isMainFrame && code !== -3) callbacks.onFailed(code, description)
-  })
-  contents.on('render-process-gone', (_event, details) => callbacks.onCrashed(details.reason))
+  contents.on('did-fail-load', onFailed)
+  contents.on('render-process-gone', onCrashed)
   const cleanup = () => {
     titleUpdates.cleanup()
     inPageUpdates.cleanup()
+    contents.removeListener('did-start-loading', callbacks.onLoading)
     contents.removeListener('before-input-event', callbacks.onInput)
+    contents.removeListener('did-finish-load', callbacks.onReady)
+    contents.removeListener('did-stop-loading', callbacks.onReady)
+    contents.removeListener('did-navigate', onNavigation)
     contents.removeListener('did-navigate-in-page', onInPageNavigation)
+    contents.removeListener('page-title-updated', onTitle)
     contents.removeListener('will-prevent-unload', allowUnload)
+    contents.removeListener('did-fail-load', onFailed)
+    contents.removeListener('render-process-gone', onCrashed)
     contents.removeListener('destroyed', cleanup)
+    if (!contents.isDestroyed()) contents.setWindowOpenHandler(denyWindowOpen)
   }
   contents.once('destroyed', cleanup)
   return cleanup
