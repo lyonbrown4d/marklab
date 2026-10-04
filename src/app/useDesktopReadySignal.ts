@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { signalAppReady } from '@/runtime/app'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
 const READY_TIMEOUT_MS = 900
 
@@ -37,7 +38,7 @@ export const useDesktopReadySignal = () => {
         }
       })
       .catch((error) => {
-        console.error('emit app-ready failed', error)
+        rendererDiagnostics.error('app.lifecycle', 'ready-signal-failed', error)
       })
 
     return () => {

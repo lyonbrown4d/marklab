@@ -63,6 +63,7 @@ const allowedCommandNames = [
   'terminal_write',
   'terminal_resize',
   'terminal_close',
+  'diagnostics_renderer_report',
   'export_markdown',
   'export_cancel',
   'knowledge.engine.status',

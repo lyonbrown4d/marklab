@@ -115,15 +115,32 @@ export const useWebTabNativeView = ({
       void webTabs.setBounds({ bounds, tabId: tab.id })
     }
     const scheduleBounds = () => {
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
+      if (frameRef.current !== null) return
       frameRef.current = requestAnimationFrame(syncBounds)
     }
     const observer = new ResizeObserver(scheduleBounds)
     observer.observe(host)
+    const mutationObserver = new MutationObserver(scheduleBounds)
+    let ancestor = host.parentElement
+    while (ancestor) {
+      mutationObserver.observe(ancestor, {
+        attributeFilter: ['class', 'style'],
+        attributes: true,
+      })
+      ancestor = ancestor.parentElement
+    }
+    window.addEventListener('resize', scheduleBounds)
+    window.addEventListener('scroll', scheduleBounds, true)
     scheduleBounds()
     return () => {
       observer.disconnect()
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
+      mutationObserver.disconnect()
+      window.removeEventListener('resize', scheduleBounds)
+      window.removeEventListener('scroll', scheduleBounds, true)
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
     }
   }, [host, suspended, tab.id, tab.url])
 

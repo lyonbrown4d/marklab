@@ -17,6 +17,7 @@ import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { initializeReactScan } from '@/dev/reactScan'
 import { scheduleEditorRuntimePreload } from '@/app/scheduleEditorRuntimePreload'
 import AppToaster from '@/app/AppToaster'
+import { installRendererDiagnostics, reportReactError } from '@/services/rendererDiagnostics'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -26,6 +27,7 @@ const ReactQueryDevtools = import.meta.env.DEV
   : null
 
 initializeReactScan(import.meta.env.DEV, import.meta.env.VITE_REACT_SCAN)
+installRendererDiagnostics()
 
 if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
   const loadReactDevTools = () => {
@@ -47,7 +49,12 @@ if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
 
   loadReactDevTools()
 }
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  onCaughtError: (error, info) => reportReactError('caught-error', error, info.componentStack),
+  onRecoverableError: (error, info) =>
+    reportReactError('recoverable-error', error, info.componentStack),
+  onUncaughtError: (error, info) => reportReactError('uncaught-error', error, info.componentStack),
+}).render(
   <StrictMode>
     <PlateDndProvider>
       <QueryClientProvider client={queryClient}>

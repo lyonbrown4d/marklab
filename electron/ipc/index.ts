@@ -19,6 +19,7 @@ import { registerLanguageIntelligenceIpc } from '@electron/ipc/languageIntellige
 import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview.js'
 import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
 import { registerPlatformIpc } from '@electron/ipc/platform.js'
+import { createRendererDiagnosticsHandler } from '@electron/ipc/rendererDiagnostics.js'
 import { registerSettingsIpc } from '@electron/ipc/settings.js'
 import { registerShellIpc } from '@electron/ipc/shell.js'
 import { registerThemeIpc } from '@electron/ipc/themes.js'
@@ -177,6 +178,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
       dependencies.knowledgeEngineService.commandHandlers,
       dependencies.windowCommandHandlers,
       dependencies.onRendererReady,
+      logger.child('renderer'),
     ),
     logger.child('command-invoke'),
   )
@@ -191,6 +193,7 @@ const createRuntimeCommandHandlers = (
   knowledgeEngineCommandHandlers: NativeCommandHandlers,
   windowCommandHandlers: NativeCommandHandlers = {},
   onRendererReady?: () => void,
+  rendererLogger?: Logger,
 ): NativeCommandHandlers => {
   return {
     ...ai.commandHandlers,
@@ -198,6 +201,9 @@ const createRuntimeCommandHandlers = (
     ...gitTerminal.commandHandlers,
     ...knowledgeEngineCommandHandlers,
     ...windowCommandHandlers,
+    ...(rendererLogger
+      ? { diagnostics_renderer_report: createRendererDiagnosticsHandler(rendererLogger) }
+      : {}),
     'app-ready': () => {
       onRendererReady?.()
       return { ok: true }

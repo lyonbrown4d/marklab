@@ -6,6 +6,7 @@ import type * as Electron from 'electron'
 import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 import { Subject, bufferTime, filter, map, type Subscription } from 'rxjs'
 import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { resolveTerminalShell } from '@electron/services/terminal/shellResolver.js'
 import type {
   TerminalExitEvent,
   TerminalOutputEvent,
@@ -32,19 +33,21 @@ export class TerminalService {
   constructor(
     private readonly defaultCwd: string | CwdProvider = os.homedir(),
     private readonly logger: Logger = noopLogger,
+    private readonly resolveShell: (requestedPath?: string | null) => string = resolveTerminalShell,
   ) {}
   create(
     webContents: Electron.WebContents,
     rows: unknown,
     cols: unknown,
     cwdOverride?: unknown,
+    shellPath?: unknown,
   ): TerminalSessionInfo {
     const id = `terminal-${this.nextId}`
     this.nextId += 1
     const cwd = normalizeCwd(
       typeof cwdOverride === 'string' ? cwdOverride : resolveCwd(this.defaultCwd, webContents),
     )
-    const shell = defaultShell()
+    const shell = this.resolveShell(typeof shellPath === 'string' ? shellPath : undefined)
     const size = normalizedSize(rows, cols)
     const pty = this.loadPty()
     try {
@@ -181,8 +184,4 @@ const normalizeCwd = (cwd: string): string => {
   } catch {
     return os.homedir()
   }
-}
-const defaultShell = (): string => {
-  if (process.platform === 'win32') return process.env.COMSPEC || 'powershell.exe'
-  return process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh')
 }

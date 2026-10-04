@@ -1,3 +1,5 @@
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
+
 let sourceEditorPreload: Promise<unknown> | null = null
 let wysiwygEditorPreload: Promise<unknown> | null = null
 let graphViewPreload: Promise<unknown> | null = null
@@ -6,6 +8,7 @@ let allPagesPreload: Promise<unknown> | null = null
 const resetOnFailure = <T>(promise: Promise<T>, reset: () => void) => {
   return promise.catch((error: unknown) => {
     reset()
+    rendererDiagnostics.warn('app.preload', 'feature-preload-failed', error)
     if (import.meta.env.DEV) {
       console.warn('Feature preload failed', error)
     }

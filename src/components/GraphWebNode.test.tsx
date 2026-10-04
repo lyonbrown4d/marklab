@@ -95,6 +95,8 @@ describe('GraphWebNode', () => {
         }),
       }),
     )
+    expect(screen.getByText('Example').closest('.nodrag')).toBeNull()
+    expect(document.querySelector('[aria-busy]')).toHaveClass('m-2')
     fireEvent.click(screen.getByRole('button', { name: 'graph.web.stop' }))
     expect(onDeactivate).toHaveBeenCalledOnce()
   })

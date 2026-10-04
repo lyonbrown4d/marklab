@@ -30,7 +30,7 @@ import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
 import { MindmapGraphPage } from '@/pages/graph/MindmapGraphPage'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
-import { getGraphWebViewUrl, useGraphWebViewState } from '@/pages/graph/useGraphWebViewState'
+import { useGraphRenderedNodes } from '@/pages/graph/useGraphWebViewState'
 import {
   fitViewOptions,
   nodeTypes,
@@ -192,27 +192,9 @@ const KnowledgeGraphPage = ({
     () => hasActiveGraphFilters(deferredGraphFilters),
     [deferredGraphFilters],
   )
-  const webView = useGraphWebViewState(filteredGraph.nodes, graph.layoutKey)
-  const renderedNodes = useMemo(
-    () =>
-      filteredGraph.nodes.map((node) => {
-        const url = getGraphWebViewUrl(node)
-        return url
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                url,
-                webView: {
-                  active: webView.activeNodeId === node.id,
-                  activate: webView.activate,
-                  deactivate: webView.deactivate,
-                },
-              },
-            }
-          : node
-      }),
-    [filteredGraph.nodes, webView.activate, webView.activeNodeId, webView.deactivate],
+  const { activate, deactivate, renderedNodes } = useGraphRenderedNodes(
+    filteredGraph.nodes,
+    graph.layoutKey,
   )
   const resetGraphFilters = useCallback(() => {
     setGraphFilters(createDefaultGraphFilters())
@@ -251,16 +233,16 @@ const KnowledgeGraphPage = ({
         onEdgesChange={onEdgesChange}
         onSelectionChange={handleSelectionChange}
         onInit={setFlowInstance}
-        nodesDraggable={!webView.activeNodeId}
+        nodesDraggable
         nodesConnectable={false}
         deleteKeyCode={null}
         nodesFocusable={false}
         edgesFocusable={false}
         elementsSelectable
-        panOnDrag={!webView.activeNodeId}
-        zoomOnScroll={!webView.activeNodeId}
-        zoomOnPinch={!webView.activeNodeId}
-        zoomOnDoubleClick={!webView.activeNodeId}
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
+        zoomOnDoubleClick
         preventScrolling
         onlyRenderVisibleElements
         minZoom={0.15}
@@ -269,14 +251,12 @@ const KnowledgeGraphPage = ({
         onNodeDoubleClick={(event, node) => {
           if (node.type === 'external' && node.data.url) {
             event.preventDefault()
-            webView.activate(node.id)
+            activate(node.id)
             return
           }
           handleNodeDoubleClick(event, node)
         }}
-        onMoveStart={webView.deactivate}
-        onNodeDragStart={webView.deactivate}
-        onPaneClick={webView.deactivate}
+        onPaneClick={deactivate}
         fitView
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}

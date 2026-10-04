@@ -36,4 +36,8 @@ describe('settingsPersistKeys', () => {
     expect(preferenceStateKeys.has('aiCompletionCloudContextConsent')).toBe(true)
     expect(preferenceStateKeys.has('documentCompletionEnabled')).toBe(true)
   })
+
+  it('allows the terminal shell preference through the renderer persist boundary', () => {
+    expect(preferenceStateKeys.has('terminalShellPath')).toBe(true)
+  })
 })

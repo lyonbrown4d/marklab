@@ -1,5 +1,5 @@
 import type { Node } from '@xyflow/react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import type { GraphNodeData } from '@/logic/graph'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
@@ -29,4 +29,33 @@ export const useGraphWebViewState = (nodes: Node<GraphNodeData>[], layoutKey?: s
   const deactivate = useCallback(() => setActive(null), [])
 
   return { activate, activeNodeId, deactivate }
+}
+
+export const useGraphRenderedNodes = (nodes: Node<GraphNodeData>[], layoutKey?: string) => {
+  const webView = useGraphWebViewState(nodes, layoutKey)
+  const renderedNodes = useMemo(
+    () =>
+      nodes.map((node) => {
+        const url = getGraphWebViewUrl(node)
+        if (node.type === 'preview') {
+          return { ...node, data: { ...node.data, graphResizable: true } }
+        }
+        return url
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                url,
+                webView: {
+                  active: webView.activeNodeId === node.id,
+                  activate: webView.activate,
+                  deactivate: webView.deactivate,
+                },
+              },
+            }
+          : node
+      }),
+    [nodes, webView.activate, webView.activeNodeId, webView.deactivate],
+  )
+  return { ...webView, renderedNodes }
 }

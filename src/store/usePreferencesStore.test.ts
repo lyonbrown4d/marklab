@@ -48,11 +48,30 @@ describe('writing-first layout preferences', () => {
     expect(usePreferencesStore.getState().editorReadOnlyMode).toBe(true)
   })
 
-  it('starts new users on a distraction-free canvas', () => {
+  it('starts new users with focus mode disabled', () => {
     expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
     expect(usePreferencesStore.getState().rightSidebarCollapsed).toBe(true)
     expect(usePreferencesStore.getState().showEditorStatusBar).toBe(true)
+    expect(usePreferencesStore.getState().immersiveFocusMode).toBe(false)
+  })
+
+  it('preserves an existing explicit focus mode preference', async () => {
+    storage.getItem.mockReturnValue({ state: { immersiveFocusMode: true }, version: 2 })
+
+    await usePreferencesStore.persist.rehydrate()
+
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(true)
+  })
+
+  it('stores an optional terminal shell path', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.terminalShellPath).toBeNull()
+    store.setTerminalShellPath('C:\\Program Files\\PowerShell\\7\\pwsh.exe')
+
+    expect(usePreferencesStore.getState().terminalShellPath).toBe(
+      'C:\\Program Files\\PowerShell\\7\\pwsh.exe',
+    )
   })
 
   it('preserves an existing preference to keep the inspector open', async () => {

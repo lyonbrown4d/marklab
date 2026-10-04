@@ -7,6 +7,7 @@ import {
   SettingsSection,
   SettingsSwitchRow,
 } from '@/components/settings/SettingsRow'
+import TerminalSettingsSection from '@/components/settings/TerminalSettingsSection'
 
 const GeneralSettingsPage = () => {
   const { t } = useI18n()
@@ -23,6 +24,7 @@ const GeneralSettingsPage = () => {
           onCheckedChange={setShowEditorStatusBar}
         />
       </SettingsSection>
+      <TerminalSettingsSection />
       <MarkdownDefaultAppPrompt />
     </SettingsPageStack>
   )

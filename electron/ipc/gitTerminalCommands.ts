@@ -1,4 +1,5 @@
 import type * as Electron from 'electron'
+import { terminalCreateRequestSchema } from '@/types/terminal.js'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
 import { GitService } from '@electron/services/git/service.js'
 import type { Logger } from '@electron/services/logger.js'
@@ -31,13 +32,16 @@ export const registerGitTerminalIpc = (
 }
 const createTerminalCommandHandlers = (terminal: TerminalService): NativeCommandHandlers => {
   return {
-    terminal_create: (payload, event) =>
-      terminal.create(
+    terminal_create: (payload, event) => {
+      const request = terminalCreateRequestSchema.parse(payload)
+      return terminal.create(
         event.sender,
-        commandPayload(payload)?.rows,
-        commandPayload(payload)?.cols,
-        commandPayload(payload)?.cwd,
-      ),
+        request.rows,
+        request.cols,
+        request.cwd,
+        request.shellPath,
+      )
+    },
     terminal_write: (payload) => {
       terminal.write(commandPayload(payload)?.id, commandPayload(payload)?.data)
     },

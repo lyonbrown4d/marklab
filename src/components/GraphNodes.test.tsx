@@ -2,13 +2,22 @@ import { ReactFlowProvider } from '@xyflow/react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { ExternalNode, FileNode, HeadingNode, MissingNode } from '@/components/GraphNodes'
+import {
+  ExternalNode,
+  FileNode,
+  HeadingNode,
+  MissingNode,
+  PreviewNode,
+} from '@/components/GraphNodes'
 import { FULL_HEADING_NODE_MAX_HEIGHT } from '@/logic/graphLayoutMetrics'
 
 vi.mock('@/components/MarkdownBlockSurface', () => ({
   default: ({ blocks }: { blocks: Array<{ id: string }> }) => (
     <div data-testid="markdown-block-surface">{blocks.map((block) => block.id).join(',')}</div>
   ),
+}))
+vi.mock('@/components/GraphWebNode', () => ({
+  GraphWebNode: ({ label }: { label: string }) => <div>{label}</div>,
 }))
 
 const renderGraphNode = (node: ReactNode) => render(<ReactFlowProvider>{node}</ReactFlowProvider>)
@@ -24,6 +33,9 @@ const missingNodeProps = (props: Partial<ComponentProps<typeof MissingNode>>) =>
 
 const headingNodeProps = (props: Partial<ComponentProps<typeof HeadingNode>>) =>
   props as ComponentProps<typeof HeadingNode>
+
+const previewNodeProps = (props: Partial<ComponentProps<typeof PreviewNode>>) =>
+  props as ComponentProps<typeof PreviewNode>
 
 describe('GraphNodes', () => {
   it('renders file graph nodes with the themed shell instead of React Flow defaults', () => {
@@ -68,6 +80,74 @@ describe('GraphNodes', () => {
 
     const subtitle = screen.getByText('docs.example.com')
     expect(subtitle).toHaveClass('truncate', 'text-muted-foreground')
+  })
+
+  it('shows resize controls only for selected rich graph nodes', () => {
+    const { container, rerender } = renderGraphNode(
+      <ExternalNode
+        {...externalNodeProps({
+          id: 'ext:https://docs.example.com',
+          data: {
+            label: 'Docs',
+            url: 'https://docs.example.com',
+            webView: { active: false, activate: vi.fn(), deactivate: vi.fn() },
+          },
+          selected: true,
+        })}
+      />,
+    )
+
+    expect(container.querySelectorAll('.react-flow__resize-control')).not.toHaveLength(0)
+    const webShell = screen.getByRole('group', { name: 'Docs' })
+    const webContent = webShell.querySelector('[data-graph-node-content]')
+    expect(webShell).toHaveClass('overflow-visible')
+    expect(webContent).toHaveClass('overflow-hidden')
+    expect(webContent?.querySelector('.react-flow__resize-control')).toBeNull()
+
+    rerender(
+      <ReactFlowProvider>
+        <ExternalNode
+          {...externalNodeProps({
+            id: 'ext:https://docs.example.com',
+            data: {
+              label: 'Docs',
+              url: 'https://docs.example.com',
+              webView: { active: false, activate: vi.fn(), deactivate: vi.fn() },
+            },
+            selected: false,
+          })}
+        />
+      </ReactFlowProvider>,
+    )
+    expect(container.querySelectorAll('.react-flow__resize-control')).toHaveLength(0)
+  })
+
+  it('lets selected file preview nodes resize without adding controls to file cards', () => {
+    const { container } = renderGraphNode(
+      <PreviewNode
+        {...previewNodeProps({
+          data: { graphResizable: true, label: 'Guide', target: 'guide.pdf' },
+          selected: true,
+        })}
+      />,
+    )
+
+    expect(container.querySelectorAll('.react-flow__resize-control')).not.toHaveLength(0)
+    const previewShell = screen.getByRole('group', { name: 'Guide' })
+    const previewContent = previewShell.querySelector('[data-graph-node-content]')
+    expect(previewShell).toHaveClass('overflow-visible')
+    expect(previewContent).toHaveClass('overflow-hidden')
+    expect(previewContent?.querySelector('.react-flow__resize-control')).toBeNull()
+
+    const plainPreview = renderGraphNode(
+      <PreviewNode
+        {...previewNodeProps({
+          data: { label: 'Mindmap attachment', target: 'attachment.pdf' },
+          selected: true,
+        })}
+      />,
+    )
+    expect(plainPreview.container.querySelectorAll('.react-flow__resize-control')).toHaveLength(0)
   })
 
   it('renders missing graph nodes without selected announcement when inactive', () => {

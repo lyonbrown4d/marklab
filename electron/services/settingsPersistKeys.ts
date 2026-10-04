@@ -40,6 +40,7 @@ export const preferenceStateKeys = new Set([
   'sidebarCollapsed',
   'silentSave',
   'sourceCodeMiniMapEnabled',
+  'terminalShellPath',
   'theme',
   'themeMode',
   'lightTheme',

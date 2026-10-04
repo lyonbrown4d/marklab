@@ -35,7 +35,10 @@ export const GraphWebNode = (props: GraphWebNodeProps) => {
   }
 
   return (
-    <div className="flex h-[210px] flex-col overflow-hidden" data-selected={props.selected}>
+    <div
+      className="flex size-full min-h-[180px] min-w-[300px] flex-col overflow-hidden"
+      data-selected={props.selected}
+    >
       <GraphWebNodeHeader label={props.label} subtitle={props.subtitle} />
       <div className="relative min-h-0 flex-1 overflow-hidden bg-muted/25">
         {capture.data ? (
@@ -108,7 +111,10 @@ const LiveGraphWebNode = ({
   })
 
   return (
-    <div className="flex h-[210px] flex-col overflow-hidden" data-live-web-node="true">
+    <div
+      className="flex size-full min-h-[180px] min-w-[300px] flex-col overflow-hidden"
+      data-live-web-node="true"
+    >
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/70 bg-background/95 px-2.5">
         <span className="size-1.5 rounded-full bg-amber-500 shadow-[0_0_0_3px_color-mix(in_srgb,currentColor_12%,transparent)]" />
         <GraphWebNodeHeader label={label} subtitle={subtitle} compact />
@@ -130,7 +136,7 @@ const LiveGraphWebNode = ({
       <div
         ref={hostRef}
         aria-busy={state.status === 'loading' || state.status === 'idle'}
-        className="nowheel min-h-0 flex-1 bg-muted/20"
+        className="nowheel m-2 min-h-0 flex-1 bg-muted/20"
       />
     </div>
   )

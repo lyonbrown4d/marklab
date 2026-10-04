@@ -19,6 +19,7 @@ describe('TerminalSessionPane', () => {
       focusRequest: 0,
       onStateChange: vi.fn(),
       restartKey: 0,
+      shellPath: null,
       statusLabel: 'Unavailable',
       tabKey: 'terminal-tab-1',
       theme: 'paper' as const,

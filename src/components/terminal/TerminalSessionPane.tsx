@@ -28,6 +28,7 @@ type TerminalSessionPaneProps = {
   exitedLabel: string
   focusRequest: number
   restartKey: number
+  shellPath: string | null
   statusLabel: string
   tabKey: string
   theme: ThemeMode
@@ -45,6 +46,7 @@ const TerminalSessionPane = ({
   exitedLabel,
   focusRequest,
   restartKey,
+  shellPath,
   statusLabel,
   tabKey,
   theme,
@@ -196,7 +198,7 @@ const TerminalSessionPane = ({
     setStatus('connecting')
     primeTerminalEventListeners()
     void terminalApi
-      .create(terminal.rows, terminal.cols)
+      .create(terminal.rows, terminal.cols, shellPath)
       .then((nextSession) => {
         if (disposed) {
           void terminalApi.close(nextSession.id).catch(() => undefined)
@@ -248,7 +250,7 @@ const TerminalSessionPane = ({
       lastSizeRef.current = null
       terminalRef.current = null
     }
-  }, [activeRef, closeSession, exitedLabel, restartKey])
+  }, [activeRef, closeSession, exitedLabel, restartKey, shellPath])
 
   useEffect(() => {
     const terminal = terminalRef.current

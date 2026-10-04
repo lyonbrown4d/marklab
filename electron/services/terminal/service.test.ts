@@ -5,7 +5,7 @@ import { TerminalService } from '@electron/services/terminal/service.js'
 type DataHandler = (data: string) => void
 type ExitHandler = (event: { exitCode?: number | null; signal?: string | number | null }) => void
 
-const createService = () => {
+const createService = (resolveShell?: (requestedPath?: string | null) => string) => {
   let dataHandler: DataHandler = () => undefined
   let exitHandler: ExitHandler = () => undefined
   const terminal = {
@@ -24,7 +24,7 @@ const createService = () => {
   const ptyModule = {
     spawn: vi.fn(() => terminal),
   }
-  const service = new TerminalService(process.cwd())
+  const service = new TerminalService(process.cwd(), undefined, resolveShell)
   ;(service as unknown as { ptyModule: unknown }).ptyModule = ptyModule
   const send = vi.fn()
   const webContents = {
@@ -105,5 +105,19 @@ describe('TerminalService', () => {
       exit_code: 0,
       signal: null,
     })
+  })
+
+  it('resolves the requested shell and spawns it without command arguments', () => {
+    const resolveShell = vi.fn(() => 'C:\\Tools\\pwsh.exe')
+    const { ptyModule, service, webContents } = createService(resolveShell)
+
+    service.create(webContents, 28, 100, undefined, 'C:\\Tools\\pwsh.exe')
+
+    expect(resolveShell).toHaveBeenCalledWith('C:\\Tools\\pwsh.exe')
+    expect(ptyModule.spawn).toHaveBeenCalledWith(
+      'C:\\Tools\\pwsh.exe',
+      [],
+      expect.objectContaining({ cols: 100, rows: 28 }),
+    )
   })
 })

@@ -37,6 +37,7 @@ export type PreferencesPersistedState = Pick<
   | 'themeMode'
   | 'lightTheme'
   | 'darkTheme'
+  | 'terminalShellPath'
 >
 
 export const areStringArraysEqual = (left: string[], right: string[]) => {
@@ -81,5 +82,6 @@ export const selectPreferencesPersistedState = (
   immersiveFocusMode: state.immersiveFocusMode,
   immersiveTypewriterMode: state.immersiveTypewriterMode,
   editorReadOnlyMode: state.editorReadOnlyMode,
+  terminalShellPath: state.terminalShellPath,
   shortcutOverrides: state.shortcutOverrides,
 })

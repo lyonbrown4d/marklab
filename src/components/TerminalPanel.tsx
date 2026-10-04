@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n/useI18n'
 import type { ThemeMode } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/environment'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type TerminalPanelProps = {
   focusRequest?: number
@@ -25,18 +26,20 @@ type TerminalTab = TerminalRuntimeState & {
   index: number
   key: string
   restartKey: number
+  shellPath: string | null
 }
 
 const initialTerminalStatus = (): TerminalStatus => {
   return isDesktopRuntime() ? 'connecting' : 'unavailable'
 }
 
-const createTerminalTab = (index: number): TerminalTab => {
+const createTerminalTab = (index: number, shellPath: string | null): TerminalTab => {
   return {
     error: null,
     index,
     key: `terminal-tab-${index}`,
     restartKey: 0,
+    shellPath,
     session: null,
     status: initialTerminalStatus(),
   }
@@ -60,8 +63,9 @@ const TerminalStatusIcon = ({ status }: { status: TerminalStatus }) => {
 
 const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPanelProps) => {
   const { t } = useI18n()
+  const terminalShellPath = usePreferencesStore((state) => state.terminalShellPath)
   const nextTabIndexRef = useRef(2)
-  const [tabs, setTabs] = useState<TerminalTab[]>(() => [createTerminalTab(1)])
+  const [tabs, setTabs] = useState<TerminalTab[]>(() => [createTerminalTab(1, terminalShellPath)])
   const [activeTabKey, setActiveTabKey] = useState('terminal-tab-1')
 
   const statusLabel = useCallback(
@@ -87,10 +91,10 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
   const addTerminalTab = useCallback(() => {
     const index = nextTabIndexRef.current
     nextTabIndexRef.current += 1
-    const tab = createTerminalTab(index)
+    const tab = createTerminalTab(index, terminalShellPath)
     setTabs((currentTabs) => [...currentTabs, tab])
     setActiveTabKey(tab.key)
-  }, [])
+  }, [terminalShellPath])
 
   const closeTerminalTab = useCallback(
     (tabKey: string) => {
@@ -119,12 +123,13 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
               error: null,
               restartKey: tab.restartKey + 1,
               session: null,
+              shellPath: terminalShellPath,
               status: initialTerminalStatus(),
             }
           : tab,
       ),
     )
-  }, [activeTabKey])
+  }, [activeTabKey, terminalShellPath])
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.key === activeTabKey) ?? tabs[0],
@@ -255,6 +260,7 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
               exitedLabel={t('terminal.exited')}
               focusRequest={focusRequest}
               restartKey={tab.restartKey}
+              shellPath={tab.shellPath}
               statusLabel={statusLabel(tab.status)}
               tabKey={tab.key}
               theme={theme}

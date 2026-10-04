@@ -3,7 +3,7 @@ import type { Node } from '@xyflow/react'
 import { describe, expect, it } from 'vitest'
 
 import type { GraphNodeData } from '@/logic/graph'
-import { useGraphWebViewState } from '@/pages/graph/useGraphWebViewState'
+import { useGraphRenderedNodes, useGraphWebViewState } from '@/pages/graph/useGraphWebViewState'
 
 const externalNode = (id: string): Node<GraphNodeData> => ({
   data: { label: id, url: `https://${id}.example.com` },
@@ -61,5 +61,18 @@ describe('useGraphWebViewState', () => {
     act(() => view.result.current.activate('insecure'))
 
     expect(view.result.current.activeNodeId).toBeNull()
+  })
+
+  it('marks file previews as resizable only when preparing knowledge graph nodes', () => {
+    const preview: Node<GraphNodeData> = {
+      data: { label: 'Guide', target: 'guide.pdf' },
+      id: 'preview:guide.pdf',
+      position: { x: 0, y: 0 },
+      type: 'preview',
+    }
+    const view = renderHook(() => useGraphRenderedNodes([preview], 'layout-a'))
+
+    expect(view.result.current.renderedNodes[0]?.data.graphResizable).toBe(true)
+    expect(preview.data.graphResizable).toBeUndefined()
   })
 })

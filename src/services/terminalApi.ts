@@ -1,4 +1,5 @@
 import { invoke } from '@/runtime/ipc'
+import type { TerminalCreateRequest } from '@/types/terminal'
 import { z } from 'zod'
 
 export const terminalSessionSchema = z.object({
@@ -23,8 +24,13 @@ export type TerminalOutputEvent = z.infer<typeof terminalOutputEventSchema>
 export type TerminalExitEvent = z.infer<typeof terminalExitEventSchema>
 
 export const terminalApi = {
-  async create(rows: number, cols: number) {
-    const result = await invoke<unknown>('terminal_create', { rows, cols })
+  async create(
+    rows: TerminalCreateRequest['rows'],
+    cols: TerminalCreateRequest['cols'],
+    shellPath?: TerminalCreateRequest['shellPath'],
+  ) {
+    const request: TerminalCreateRequest = { rows, cols, shellPath }
+    const result = await invoke<unknown>('terminal_create', request)
     return terminalSessionSchema.parse(result)
   },
   write(id: string, data: string) {

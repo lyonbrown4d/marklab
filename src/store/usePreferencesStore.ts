@@ -18,6 +18,14 @@ import {
   type AiCompletionPreferencesState,
 } from '@/store/aiCompletionPreferences'
 import { preferencesSidebarGuards } from '@/store/preferencesSidebarGuards'
+import {
+  createImmersivePreferencesSlice,
+  type ImmersivePreferencesState,
+} from '@/store/immersivePreferences'
+import {
+  createTerminalPreferencesSlice,
+  type TerminalPreferencesState,
+} from '@/store/terminalPreferences'
 import type {
   AppLocale,
   DarkThemeMode,
@@ -30,66 +38,60 @@ import type {
   ThemeModePreference,
 } from '@/store/appTypes'
 
-export type PreferencesState = AiCompletionPreferencesState & {
-  theme: ThemeMode
-  themeMode: ThemeModePreference
-  lightTheme: LightThemeMode
-  darkTheme: DarkThemeMode
-  autoSystemThemeSync: boolean
-  customThemeId: string | null
-  aiDefaultProviderId: string | null
-  aiCustomModelDirectoryEnabled: boolean
-  aiModelDirectory: string | null
-  locale: AppLocale
-  sidebarCollapsed: boolean
-  rightSidebarCollapsed: boolean
-  silentSave: boolean
-  showEditorStatusBar: boolean
-  sourceCodeMiniMapEnabled: boolean
-  defaultFileView: FileViewKind
-  graphMiniMapEnabled: boolean
-  graphContentMode: GraphContentMode
-  hideMarkdownDefaultAppPrompt: boolean
-  markdownAssetImportStrategy: MarkdownAssetImportStrategy
-  motionSmoothScrolling: boolean
-  motionAnimatedCursor: boolean
-  motionAnimatedPanels: boolean
-  immersiveZenMode: boolean
-  immersiveFocusMode: boolean
-  immersiveTypewriterMode: boolean
-  editorReadOnlyMode: boolean
-  shortcutOverrides: ShortcutBindings
-  setTheme: (theme: ThemeMode) => void
-  setThemeMode: (mode: ThemeModePreference) => void
-  syncSystemTheme: (mode: ThemeColorMode) => void
-  setLightTheme: (theme: LightThemeMode) => void
-  setDarkTheme: (theme: DarkThemeMode) => void
-  setAutoSystemThemeSync: (enabled: boolean) => void
-  setCustomThemeId: (themeId: string | null) => void
-  setAiDefaultProviderId: (providerId: string | null) => void
-  setAiCustomModelDirectoryEnabled: (enabled: boolean) => void
-  setAiModelDirectory: (path: string | null) => void
-  setLocale: (locale: AppLocale) => void
-  setSilentSave: (silent: boolean) => void
-  setShowEditorStatusBar: (show: boolean) => void
-  setSourceCodeMiniMapEnabled: (enabled: boolean) => void
-  setDefaultFileView: (view: FileViewKind) => void
-  setGraphMiniMapEnabled: (enabled: boolean) => void
-  setGraphContentMode: (mode: GraphContentMode) => void
-  setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
-  setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
-  setMotionSmoothScrolling: (enabled: boolean) => void
-  setMotionAnimatedCursor: (enabled: boolean) => void
-  setMotionAnimatedPanels: (enabled: boolean) => void
-  setImmersiveZenMode: (enabled: boolean) => void
-  setImmersiveFocusMode: (enabled: boolean) => void
-  setImmersiveTypewriterMode: (enabled: boolean) => void
-  setEditorReadOnlyMode: (enabled: boolean) => void
-  setShortcutOverride: (action: ShortcutActionId, bindings: string[] | null) => void
-  resetShortcutOverrides: () => void
-  toggleSidebar: () => void
-  toggleRightSidebar: () => void
-}
+export type PreferencesState = AiCompletionPreferencesState &
+  ImmersivePreferencesState &
+  TerminalPreferencesState & {
+    theme: ThemeMode
+    themeMode: ThemeModePreference
+    lightTheme: LightThemeMode
+    darkTheme: DarkThemeMode
+    autoSystemThemeSync: boolean
+    customThemeId: string | null
+    aiDefaultProviderId: string | null
+    aiCustomModelDirectoryEnabled: boolean
+    aiModelDirectory: string | null
+    locale: AppLocale
+    sidebarCollapsed: boolean
+    rightSidebarCollapsed: boolean
+    silentSave: boolean
+    showEditorStatusBar: boolean
+    sourceCodeMiniMapEnabled: boolean
+    defaultFileView: FileViewKind
+    graphMiniMapEnabled: boolean
+    graphContentMode: GraphContentMode
+    hideMarkdownDefaultAppPrompt: boolean
+    markdownAssetImportStrategy: MarkdownAssetImportStrategy
+    motionSmoothScrolling: boolean
+    motionAnimatedCursor: boolean
+    motionAnimatedPanels: boolean
+    shortcutOverrides: ShortcutBindings
+    setTheme: (theme: ThemeMode) => void
+    setThemeMode: (mode: ThemeModePreference) => void
+    syncSystemTheme: (mode: ThemeColorMode) => void
+    setLightTheme: (theme: LightThemeMode) => void
+    setDarkTheme: (theme: DarkThemeMode) => void
+    setAutoSystemThemeSync: (enabled: boolean) => void
+    setCustomThemeId: (themeId: string | null) => void
+    setAiDefaultProviderId: (providerId: string | null) => void
+    setAiCustomModelDirectoryEnabled: (enabled: boolean) => void
+    setAiModelDirectory: (path: string | null) => void
+    setLocale: (locale: AppLocale) => void
+    setSilentSave: (silent: boolean) => void
+    setShowEditorStatusBar: (show: boolean) => void
+    setSourceCodeMiniMapEnabled: (enabled: boolean) => void
+    setDefaultFileView: (view: FileViewKind) => void
+    setGraphMiniMapEnabled: (enabled: boolean) => void
+    setGraphContentMode: (mode: GraphContentMode) => void
+    setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
+    setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
+    setMotionSmoothScrolling: (enabled: boolean) => void
+    setMotionAnimatedCursor: (enabled: boolean) => void
+    setMotionAnimatedPanels: (enabled: boolean) => void
+    setShortcutOverride: (action: ShortcutActionId, bindings: string[] | null) => void
+    resetShortcutOverrides: () => void
+    toggleSidebar: () => void
+    toggleRightSidebar: () => void
+  }
 
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
@@ -104,6 +106,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       aiCustomModelDirectoryEnabled: false,
       aiModelDirectory: null,
       ...createAiCompletionPreferencesSlice(set, get, store),
+      ...createImmersivePreferencesSlice(set, get, store),
+      ...createTerminalPreferencesSlice(set, get, store),
       locale: getInitialLocale(),
       sidebarCollapsed: true,
       rightSidebarCollapsed: true,
@@ -118,10 +122,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       motionSmoothScrolling: true,
       motionAnimatedCursor: true,
       motionAnimatedPanels: true,
-      immersiveZenMode: false,
-      immersiveFocusMode: true,
-      immersiveTypewriterMode: false,
-      editorReadOnlyMode: false,
       shortcutOverrides: {},
       setTheme: (theme) =>
         set((state) => {
@@ -238,24 +238,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       setMotionAnimatedPanels: (motionAnimatedPanels) =>
         set((state) =>
           state.motionAnimatedPanels === motionAnimatedPanels ? state : { motionAnimatedPanels },
-        ),
-      setImmersiveZenMode: (immersiveZenMode) =>
-        set((state) =>
-          state.immersiveZenMode === immersiveZenMode ? state : { immersiveZenMode },
-        ),
-      setImmersiveFocusMode: (immersiveFocusMode) =>
-        set((state) =>
-          state.immersiveFocusMode === immersiveFocusMode ? state : { immersiveFocusMode },
-        ),
-      setImmersiveTypewriterMode: (immersiveTypewriterMode) =>
-        set((state) =>
-          state.immersiveTypewriterMode === immersiveTypewriterMode
-            ? state
-            : { immersiveTypewriterMode },
-        ),
-      setEditorReadOnlyMode: (editorReadOnlyMode) =>
-        set((state) =>
-          state.editorReadOnlyMode === editorReadOnlyMode ? state : { editorReadOnlyMode },
         ),
       setShortcutOverride: (action, bindings) =>
         set((state) => {

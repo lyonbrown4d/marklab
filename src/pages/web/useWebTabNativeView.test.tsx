@@ -30,6 +30,7 @@ vi.mock('@/store/useWorkspaceStore', () => ({
 import { useWebTabNativeView } from '@/pages/web/useWebTabNativeView'
 
 let resize: ResizeObserverCallback
+let mutations: MutationCallback[]
 let stateHandler: ((event: WebTabEvent) => void) | undefined
 
 class ResizeObserverMock {
@@ -39,6 +40,15 @@ class ResizeObserverMock {
   disconnect = vi.fn()
   observe = vi.fn()
   unobserve = vi.fn()
+}
+
+class MutationObserverMock {
+  constructor(callback: MutationCallback) {
+    mutations.push(callback)
+  }
+  disconnect = vi.fn()
+  observe = vi.fn()
+  takeRecords = vi.fn(() => [])
 }
 
 const Harness = ({
@@ -65,15 +75,17 @@ beforeEach(() => {
   vi.clearAllMocks()
   workspace.tabs = [{ kind: 'web', id: 'web-id', title: 'Docs', url: 'https://example.com/docs' }]
   stateHandler = undefined
+  mutations = []
   webTabs.onState.mockImplementation((handler: (event: WebTabEvent) => void) => {
     stateHandler = handler
     return vi.fn()
   })
   vi.stubGlobal('ResizeObserver', ResizeObserverMock)
-  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-    callback(0)
-    return 1
-  })
+  vi.stubGlobal('MutationObserver', MutationObserverMock)
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) =>
+    window.setTimeout(() => callback(0), 0),
+  )
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => window.clearTimeout(id))
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
     bottom: 640,
     height: 600,
@@ -102,6 +114,59 @@ describe('useWebTabNativeView', () => {
     expect(webTabs.setBounds).not.toHaveBeenCalled()
   })
 
+  it('synchronizes bounds when an ancestor transform moves the native host', async () => {
+    render(<Harness />)
+    await waitFor(() => expect(webTabs.activate).toHaveBeenCalled())
+    expect(mutations.length).toBeGreaterThan(0)
+    webTabs.setBounds.mockClear()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      bottom: 690,
+      height: 600,
+      left: 135,
+      right: 935,
+      top: 90,
+      width: 800,
+      x: 135,
+      y: 90,
+      toJSON: () => ({}),
+    })
+
+    act(() => mutations.forEach((callback) => callback([], {} as MutationObserver)))
+
+    await waitFor(() =>
+      expect(webTabs.setBounds).toHaveBeenCalledWith({
+        bounds: { height: 600, width: 800, x: 135, y: 90 },
+        tabId: 'web-id',
+      }),
+    )
+  })
+
+  it('synchronizes bounds when a node resizer changes the native host size', async () => {
+    render(<Harness />)
+    await waitFor(() => expect(webTabs.activate).toHaveBeenCalled())
+    webTabs.setBounds.mockClear()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      bottom: 460,
+      height: 420,
+      left: 20,
+      right: 660,
+      top: 40,
+      width: 640,
+      x: 20,
+      y: 40,
+      toJSON: () => ({}),
+    })
+
+    act(() => resize([], {} as ResizeObserver))
+
+    await waitFor(() =>
+      expect(webTabs.setBounds).toHaveBeenCalledWith({
+        bounds: { height: 420, width: 640, x: 20, y: 40 },
+        tabId: 'web-id',
+      }),
+    )
+  })
+
   it('hides a previously active view when the host collapses to zero size', async () => {
     render(<Harness />)
     await waitFor(() => expect(webTabs.activate).toHaveBeenCalled())
@@ -120,7 +185,7 @@ describe('useWebTabNativeView', () => {
 
     act(() => resize([], {} as ResizeObserver))
 
-    expect(webTabs.hide).toHaveBeenCalledWith({ tabId: 'web-id' })
+    await waitFor(() => expect(webTabs.hide).toHaveBeenCalledWith({ tabId: 'web-id' }))
   })
 
   it('reflects native loading states and hides while suspended', async () => {
