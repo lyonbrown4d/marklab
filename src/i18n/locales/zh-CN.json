@@ -902,6 +902,8 @@
   "graph.kind.missing": "缺失",
   "graph.kind.preview": "预览",
   "graph.kind.unknown": "未知",
+  "graph.web.interact": "交互",
+  "graph.web.stop": "退出交互",
   "graph.feedback.addChild": "已新增子主题",
   "graph.feedback.addSibling": "已新增同级主题",
   "graph.feedback.addSiblingBefore": "已在前方新增主题",

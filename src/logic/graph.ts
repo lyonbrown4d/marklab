@@ -39,6 +39,11 @@ export type GraphNodeData = Record<string, unknown> & {
     readOnly: boolean
   }
   workspaceMap?: true
+  webView?: {
+    active: boolean
+    activate: (nodeId: string) => void
+    deactivate: () => void
+  }
 }
 
 export type WorkspaceMapEditorLoadState =

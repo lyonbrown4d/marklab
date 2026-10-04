@@ -7,6 +7,8 @@ const HEADING_NODE_WIDTH = 180
 const HEADING_NODE_HEIGHT = 56
 const FILE_NODE_WIDTH = 200
 const FILE_NODE_HEIGHT = 54
+const EXTERNAL_WEB_NODE_WIDTH = 340
+const EXTERNAL_WEB_NODE_HEIGHT = 210
 const WORKSPACE_MAP_NODE_HEIGHT = 96
 const WORKSPACE_MAP_FILE_WIDTH = 520
 const WORKSPACE_MAP_FILE_HEIGHT = 640
@@ -34,6 +36,9 @@ export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
 
   if (node.id.startsWith('file:')) {
     return { width: FILE_NODE_WIDTH, height: FILE_NODE_HEIGHT }
+  }
+  if (node.type === 'external' && node.data.url) {
+    return { width: EXTERNAL_WEB_NODE_WIDTH, height: EXTERNAL_WEB_NODE_HEIGHT }
   }
   if (node.type === 'heading' || node.id.startsWith('heading:')) {
     if (node.data.contentMode === 'full') {

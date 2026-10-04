@@ -902,6 +902,8 @@
   "graph.kind.missing": "Missing",
   "graph.kind.preview": "Preview",
   "graph.kind.unknown": "Unknown",
+  "graph.web.interact": "Interact",
+  "graph.web.stop": "Stop interacting",
   "graph.feedback.addChild": "Child topic added",
   "graph.feedback.addSibling": "Sibling topic added",
   "graph.feedback.addSiblingBefore": "Topic added before",

@@ -169,7 +169,7 @@ export const createElectronContainer = (
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),
     languageIntelligenceService: asFunction(() => new LanguageIntelligenceService()).singleton(),
-    linkPreviewService: asFunction(({ app, WebContentsView }) => {
+    linkPreviewService: asFunction(({ app, logger, WebContentsView }) => {
       const cache = new WebPreviewDiskCache({
         root: path.join(app.getPath('userData'), 'cache', 'web-previews'),
       })
@@ -179,7 +179,7 @@ export const createElectronContainer = (
         lookup: defaultLinkPreviewLookup,
         maxConcurrency: 2,
       })
-      return new LinkPreviewService({ captureService })
+      return new LinkPreviewService({ captureService, logger: logger.child('link-preview') })
     }).singleton(),
     webTabManager: asFunction(({ WebContentsView }) => {
       return new WebTabManager({ WebContentsView })

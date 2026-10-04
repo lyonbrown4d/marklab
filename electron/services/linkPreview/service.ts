@@ -17,6 +17,7 @@ import {
   type RemoteImageAsset,
 } from '@electron/services/linkPreview/remoteAsset.js'
 import { headerValue, parseLinkPreviewResponse } from '@electron/services/linkPreview/response.js'
+import type { Logger } from '@electron/services/logger.js'
 import type {
   LinkPreviewCapture,
   LinkPreviewRequest,
@@ -68,6 +69,7 @@ type LinkPreviewServiceOptions = {
   captureService?: WebPreviewCaptureServiceContract
   httpClient?: LinkPreviewHttpClient
   lookup?: LinkPreviewLookup
+  logger?: Pick<Logger, 'warn'>
 }
 
 export class LinkPreviewService implements LinkPreviewServiceContract {
@@ -76,6 +78,7 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
   private readonly imageCache: LRUCache<string, RemoteImageAsset>
   private readonly httpClient: LinkPreviewHttpClient
   private readonly lookup: LinkPreviewLookup
+  private readonly logger?: Pick<Logger, 'warn'>
   private readonly captureService?: WebPreviewCaptureServiceContract
 
   constructor(options: LinkPreviewServiceOptions = {}) {
@@ -93,13 +96,23 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
     })
     this.httpClient = options.httpClient ?? axios
     this.lookup = options.lookup ?? defaultLinkPreviewLookup
+    this.logger = options.logger
     this.captureService = options.captureService
   }
 
   async capture(payload: unknown, owner: BrowserWindow): Promise<LinkPreviewCapture> {
     const request = parseLinkPreviewRequest(payload)
     if (!this.captureService) throw new Error('Visual link preview is unavailable')
-    const captured = await this.captureService.capture(request.url, owner)
+    let captured: CapturedWebPreview
+    try {
+      captured = await this.captureService.capture(request.url, owner)
+    } catch (error) {
+      this.logger?.warn('visual link preview failed', {
+        error,
+        hostname: new URL(request.url).hostname,
+      })
+      throw error
+    }
     return {
       height: captured.height,
       src: this.issueImageCapability(captured.bytes, captured.mediaType),
@@ -120,10 +133,18 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
     const running = this.inflight.get(request.url)
     if (running) return running
 
-    const operation = this.fetchUncached(request.url).then((result) => {
-      this.cache.set(request.url, result)
-      return result
-    })
+    const operation = this.fetchUncached(request.url)
+      .then((result) => {
+        this.cache.set(request.url, result)
+        return result
+      })
+      .catch((error: unknown) => {
+        this.logger?.warn('link preview metadata failed', {
+          error,
+          hostname: new URL(request.url).hostname,
+        })
+        throw error
+      })
     this.inflight.set(request.url, operation)
     try {
       return await operation

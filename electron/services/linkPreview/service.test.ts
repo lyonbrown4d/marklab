@@ -159,6 +159,53 @@ describe('LinkPreviewService', () => {
     expect(capture).toHaveBeenCalledExactlyOnceWith('https://example.com/', owner)
   })
 
+  it('logs a sanitized capture failure without exposing the URL path', async () => {
+    const owner = { contentView: {}, isDestroyed: vi.fn(() => false) }
+    const failure = new Error('ERR_PROXY_CONNECTION_FAILED')
+    const warn = vi.fn()
+    const service = new LinkPreviewService({
+      captureService: {
+        capture: vi.fn(async () => Promise.reject(failure)),
+        dispose: vi.fn(),
+      },
+      httpClient: { get: vi.fn() as LinkPreviewHttpClient['get'] },
+      logger: { warn },
+      lookup: publicLookup,
+    } as never)
+
+    await expect(
+      service.capture({ url: 'https://example.com/private/path?token=secret' }, owner as never),
+    ).rejects.toThrow('ERR_PROXY_CONNECTION_FAILED')
+    expect(warn).toHaveBeenCalledWith('visual link preview failed', {
+      error: failure,
+      hostname: 'example.com',
+    })
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private/path')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('token=secret')
+  })
+
+  it('logs a sanitized metadata failure without exposing the URL path', async () => {
+    const failure = new Error('ERR_PROXY_CONNECTION_FAILED')
+    const warn = vi.fn()
+    const service = new LinkPreviewService({
+      httpClient: {
+        get: vi.fn(async () => Promise.reject(failure)) as LinkPreviewHttpClient['get'],
+      },
+      logger: { warn },
+      lookup: publicLookup,
+    })
+
+    await expect(service.fetch('https://example.com/private/path?token=secret')).rejects.toThrow(
+      'ERR_PROXY_CONNECTION_FAILED',
+    )
+    expect(warn).toHaveBeenCalledWith('link preview metadata failed', {
+      error: failure,
+      hostname: 'example.com',
+    })
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private/path')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('token=secret')
+  })
+
   it('keeps HTML at 256 KiB while allowing bounded raster images up to 8 MiB', async () => {
     const oversizedHtml = new Uint8Array(LINK_PREVIEW_MAX_RESPONSE_BYTES + 1)
     const htmlService = createService(

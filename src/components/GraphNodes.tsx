@@ -7,11 +7,12 @@ import { resolveHeadingSectionCommit } from '@/logic/markdownBlockCommits'
 import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic/markdownBlocks'
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
+import { GraphWebNode } from '@/components/GraphWebNode'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { CornerDownRight, Plus } from 'lucide-react'
 
-type ExternalGraphNode = Node<{ label: string; subtitle?: string; url: string }, 'external'>
+type ExternalGraphNode = Node<GraphNodeData, 'external'>
 type FileGraphNode = Node<GraphNodeData, 'file'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
 type HeadingGraphNode = Node<GraphNodeData, 'heading'>
@@ -34,7 +35,33 @@ const getGraphNodeA11yProps = (label: string, selected: boolean) => ({
   role: 'group' as const,
 })
 
-export const ExternalNode = memo(({ data, selected }: NodeProps<ExternalGraphNode>) => {
+export const ExternalNode = memo(({ id, data, selected }: NodeProps<ExternalGraphNode>) => {
+  if (data.url && data.webView) {
+    return (
+      <div
+        className={cn(
+          'graph-node-shell graph-node-shell--external w-[340px] overflow-hidden rounded-lg p-0',
+          selected && 'graph-node-shell--selected',
+        )}
+        data-graph-node-selected={selected}
+        data-graph-node-kind="external"
+        {...getGraphNodeA11yProps(data.label, selected)}
+      >
+        <Handle type="target" position={Position.Left} className={graphHandleClass} />
+        <Handle type="source" position={Position.Right} className={graphHandleClass} />
+        <GraphWebNode
+          active={data.webView.active}
+          id={id}
+          label={data.label}
+          onActivate={data.webView.activate}
+          onDeactivate={data.webView.deactivate}
+          selected={selected}
+          subtitle={data.subtitle}
+          url={data.url}
+        />
+      </div>
+    )
+  }
   return (
     <div
       className={cn(

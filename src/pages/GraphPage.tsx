@@ -30,6 +30,7 @@ import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
 import { MindmapGraphPage } from '@/pages/graph/MindmapGraphPage'
 import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import { getGraphWebViewUrl, useGraphWebViewState } from '@/pages/graph/useGraphWebViewState'
 import {
   fitViewOptions,
   nodeTypes,
@@ -191,6 +192,28 @@ const KnowledgeGraphPage = ({
     () => hasActiveGraphFilters(deferredGraphFilters),
     [deferredGraphFilters],
   )
+  const webView = useGraphWebViewState(filteredGraph.nodes, graph.layoutKey)
+  const renderedNodes = useMemo(
+    () =>
+      filteredGraph.nodes.map((node) => {
+        const url = getGraphWebViewUrl(node)
+        return url
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                url,
+                webView: {
+                  active: webView.activeNodeId === node.id,
+                  activate: webView.activate,
+                  deactivate: webView.deactivate,
+                },
+              },
+            }
+          : node
+      }),
+    [filteredGraph.nodes, webView.activate, webView.activeNodeId, webView.deactivate],
+  )
   const resetGraphFilters = useCallback(() => {
     setGraphFilters(createDefaultGraphFilters())
   }, [])
@@ -221,29 +244,39 @@ const KnowledgeGraphPage = ({
       <ReactFlow<Node<GraphNodeData>, Edge>
         colorMode={darkMode ? 'dark' : 'light'}
         className="h-full w-full"
-        nodes={filteredGraph.nodes}
+        nodes={renderedNodes}
         edges={filteredGraph.edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onSelectionChange={handleSelectionChange}
         onInit={setFlowInstance}
-        nodesDraggable
+        nodesDraggable={!webView.activeNodeId}
         nodesConnectable={false}
         deleteKeyCode={null}
         nodesFocusable={false}
         edgesFocusable={false}
         elementsSelectable
-        panOnDrag
-        zoomOnScroll
-        zoomOnPinch
-        zoomOnDoubleClick
+        panOnDrag={!webView.activeNodeId}
+        zoomOnScroll={!webView.activeNodeId}
+        zoomOnPinch={!webView.activeNodeId}
+        zoomOnDoubleClick={!webView.activeNodeId}
         preventScrolling
         onlyRenderVisibleElements
         minZoom={0.15}
         maxZoom={2.2}
         onNodeClick={handleNodeClick}
-        onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeDoubleClick={(event, node) => {
+          if (node.type === 'external' && node.data.url) {
+            event.preventDefault()
+            webView.activate(node.id)
+            return
+          }
+          handleNodeDoubleClick(event, node)
+        }}
+        onMoveStart={webView.deactivate}
+        onNodeDragStart={webView.deactivate}
+        onPaneClick={webView.deactivate}
         fitView
         fitViewOptions={fitViewOptions}
         proOptions={proOptions}
