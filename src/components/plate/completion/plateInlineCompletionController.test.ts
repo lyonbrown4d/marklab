@@ -189,6 +189,62 @@ describe('Plate inline completion controller', () => {
     controller.destroy()
   })
 
+  it('navigates visible candidates with the IDE arrow-key convention', async () => {
+    const editor = createEditor()
+    const controller = createPlateInlineCompletionController(editor, {
+      canComplete: () => true,
+      debounceMs: () => 100,
+      enabled: () => true,
+      getDocumentCompletions: () => [
+        { source: 'document', text: ' write notes' },
+        { source: 'document', text: ' review tasks' },
+      ],
+      requestCompletion: async () => null,
+    })
+    controller.sync()
+    await settleLocal()
+
+    const down = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' })
+    expect(controller.keyDown(down)).toBe(true)
+    expect(down.defaultPrevented).toBe(true)
+    expect(controller.getSnapshot()?.index).toBe(1)
+
+    const up = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowUp' })
+    expect(controller.keyDown(up)).toBe(true)
+    expect(up.defaultPrevented).toBe(true)
+    expect(controller.getSnapshot()?.index).toBe(0)
+    controller.destroy()
+  })
+
+  it('keeps the selected local candidate when an AI option arrives', async () => {
+    const editor = createEditor()
+    const controller = createPlateInlineCompletionController(editor, {
+      canComplete: () => true,
+      debounceMs: () => 20,
+      enabled: () => true,
+      getDocumentCompletions: () => [
+        { source: 'document', text: ' write notes' },
+        { source: 'document', text: ' review tasks' },
+      ],
+      requestCompletion: async () => ({ source: 'ai', text: ' plan tomorrow' }),
+    })
+    controller.sync()
+    await settleLocal()
+    controller.keyDown(new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' }))
+
+    await vi.advanceTimersByTimeAsync(20)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      index: 1,
+      candidates: [
+        { source: 'document', text: ' write notes' },
+        { source: 'document', text: ' review tasks' },
+        { source: 'ai', text: ' plan tomorrow' },
+      ],
+    })
+    controller.destroy()
+  })
+
   it('exposes a collapsed Slate decoration for ghost text rendering', async () => {
     const editor = createEditor()
     const controller = createPlateInlineCompletionController(editor, {
@@ -201,14 +257,20 @@ describe('Plate inline completion controller', () => {
     controller.sync()
     await settleLocal()
 
-    expect(controller.decorate([editor.children[0]!.children[0]!, [0, 0]])).toEqual([
+    const decorations = controller.decorate([editor.children[0]!.children[0]!, [0, 0]])
+    expect(decorations).toEqual([
       expect.objectContaining({
         anchor: { path: [0, 0], offset: 9 },
         focus: { path: [0, 0], offset: 9 },
+        plateInlineCompletionAccept: expect.any(Function),
+        plateInlineCompletionCandidates: [{ source: 'document', text: ' write notes' }],
+        plateInlineCompletionIndex: 0,
         plateInlineCompletion: ' write notes',
         plateInlineCompletionSource: 'document',
       }),
     ])
+    expect(decorations[0]?.plateInlineCompletionAccept(0)).toBe(true)
+    expect(editor.api.string([])).toBe('I plan to write notes')
     controller.destroy()
   })
 

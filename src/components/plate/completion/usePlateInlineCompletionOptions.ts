@@ -93,7 +93,9 @@ export const usePlateInlineCompletionOptions = ({
         return !config.readOnly && (config.documentEnabled || config.aiEnabled)
       },
       getDocumentCompletions: (context) =>
-        configurationRef.current.documentEnabled ? indexRef.current.query(context.before) : [],
+        configurationRef.current.documentEnabled
+          ? indexRef.current.query(context.before, undefined, { heading: context.heading })
+          : [],
       getDocumentKey: () => configurationRef.current.activePath,
       requestCompletion: async (context, excluded, signal) => {
         const config = configurationRef.current

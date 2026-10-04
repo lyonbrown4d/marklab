@@ -108,7 +108,9 @@ export const createPlateInlineCompletionController = (
       const additions = normalizePlateInlineCompletionCandidates(result, excluded, capacity, 'ai')
       if (!additions.length) return
       const retained = state?.candidates ?? []
-      setState({ anchor, candidates: [...retained, ...additions], index: 0 })
+      const candidates = [...retained, ...additions]
+      const index = Math.min(state?.index ?? 0, candidates.length - 1)
+      setState({ anchor, candidates, index })
     } catch (error) {
       if (!controller.signal.aborted) console.warn('Plate inline completion request failed', error)
     } finally {
@@ -167,6 +169,10 @@ export const createPlateInlineCompletionController = (
     editor.tf.insertText(text)
     return true
   }
+  const acceptAt = (index: number) => {
+    const candidate = state?.candidates[index]
+    return candidate ? accept(candidate.text) : false
+  }
 
   return {
     activate: () => {
@@ -195,6 +201,9 @@ export const createPlateInlineCompletionController = (
           anchor: state.anchor,
           focus: state.anchor,
           plateInlineCompletion: candidate.text,
+          plateInlineCompletionAccept: acceptAt,
+          plateInlineCompletionCandidates: state.candidates,
+          plateInlineCompletionIndex: state.index,
           plateInlineCompletionSource: candidate.source,
         },
       ]
@@ -220,6 +229,19 @@ export const createPlateInlineCompletionController = (
       if (event.key === 'ArrowRight' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault()
         return accept(nextWordPrefix(candidate.text))
+      }
+      if (
+        (event.key === 'ArrowDown' || event.key === 'ArrowUp') &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault()
+        const offset = event.key === 'ArrowUp' ? -1 : 1
+        const index = (state!.index + offset + state!.candidates.length) % state!.candidates.length
+        setState({ ...state!, index })
+        return true
       }
       if (event.altKey && (event.key === '[' || event.key === ']')) {
         event.preventDefault()

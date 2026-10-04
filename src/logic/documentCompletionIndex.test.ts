@@ -89,11 +89,71 @@ Continue with the nearby option.`
     expect(index.query('Continue with the', markdown.length)[0]?.text).toBe(' nearby option.')
   })
 
+  it('keeps continuations inside the active Markdown heading group', () => {
+    const index = new DocumentCompletionIndex()
+    index.rebuild(`Project plan includes setting up the workspace.
+
+# Work
+
+Project plan includes reviewing the release.
+
+# Personal
+
+Project plan includes buying groceries.`)
+
+    expect(index.query('Project plan includes', undefined, { heading: 'Work' })).toEqual([
+      expect.objectContaining({ text: ' reviewing the release.' }),
+    ])
+    expect(index.query('Project plan includes', undefined, { heading: null })).toEqual([
+      expect.objectContaining({ text: ' setting up the workspace.' }),
+    ])
+    expect(index.query('buying', undefined, { heading: 'Work' })).toEqual([])
+  })
+
+  it('infers the active Markdown group from the cursor offset', () => {
+    const markdown = `Preamble continues with setup notes.
+
+# Work
+
+Project plan includes reviewing the release.
+
+# Personal
+
+Project plan includes buying groceries.`
+    const index = new DocumentCompletionIndex()
+    index.rebuild(markdown)
+
+    expect(index.query('Project plan includes', markdown.indexOf('# Personal') - 1)[0]?.text).toBe(
+      ' reviewing the release.',
+    )
+    expect(index.query('Preamble continues', 10)[0]?.text).toBe(' with setup notes.')
+  })
+
+  it('searches the active section before applying the result limit', () => {
+    const unrelated = Array.from(
+      { length: 100 },
+      (_, item) => `Project plan includes unrelated option ${item}`,
+    ).join('\n')
+    const index = new DocumentCompletionIndex({ maxEntries: 200 })
+    index.rebuild(`# Other\n${unrelated}\n\n# Work\nProject plan includes the release checklist.`)
+
+    expect(index.query('Project plan includes', undefined, { heading: 'Work' })[0]?.text).toBe(
+      ' the release checklist.',
+    )
+  })
+
   it('returns no candidate when the trailing prefix does not match', () => {
     const index = new DocumentCompletionIndex()
     index.rebuild('A completely unrelated paragraph.')
 
     expect(index.query('量子火箭发射')).toEqual([])
+  })
+
+  it('does not turn a fuzzy phrase match into an unrelated continuation', () => {
+    const index = new DocumentCompletionIndex()
+    index.rebuild('The release check list may change later.')
+
+    expect(index.query('Release checklist')).toEqual([])
   })
 
   it('limits entry count, candidate count, and candidate length', () => {

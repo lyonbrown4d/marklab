@@ -32,6 +32,36 @@ describe('markdown source inline completion', () => {
     expect(harness.editor.addCommand).toHaveBeenCalledTimes(2)
   })
 
+  it('limits local candidates to the active Markdown heading group', () => {
+    const spacer = Array.from({ length: 40 }, (_, index) => `Work note ${index}`).join('\n')
+    const harness = createHarness(`# Work
+Project plan includes reviewing the release.
+${spacer}
+
+# Personal
+Project plan includes buying groceries.
+
+# Work
+Project plan includes`)
+    registerMarkdownSourceInlineCompletion({
+      editor: harness.editor as never,
+      getDocumentKey: () => 'notes/current.md',
+      getPreferences: () => ({
+        ...preferences(),
+        aiCompletionEnabled: false,
+        aiCompletionNearbyContextEnabled: false,
+      }),
+      monaco: harness.monaco as never,
+      requestCompletion: vi.fn(),
+    })
+
+    const result = harness
+      .provider()
+      .provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+
+    expect(result.items.map(({ insertText }) => insertText)).toEqual([' reviewing the release.'])
+  })
+
   it('appends a delayed AI candidate and uses a stable completion session id', async () => {
     const harness = createHarness()
     const requestCompletion = vi.fn().mockResolvedValue(' finish the draft')

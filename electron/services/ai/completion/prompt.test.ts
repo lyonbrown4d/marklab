@@ -9,8 +9,8 @@ const input = {
   providerId: 'openai-main',
   completionSessionId: 'editor-1',
   revision: 1,
-  prefix: '我今天打算',
-  suffix: '。',
+  prefix: '上一段介绍了今日安排。\n我今天打算',
+  suffix: '。\n下一段是复盘记录。',
   heading: '今日计划',
   language: 'zh-CN' as const,
   length: 'short' as const,
@@ -24,7 +24,10 @@ describe('inline completion prompt', () => {
     expect(request.system).toContain('untrusted')
     expect(request.system).not.toContain(input.prefix)
     expect(request.prompt).toContain('[UNTRUSTED_DOCUMENT_DATA_START]')
-    expect(request.prompt).toContain(JSON.stringify(input.prefix))
+    expect(request.prompt).toContain('"prefix":"我今天打算"')
+    expect(request.prompt).toContain('"contextBefore":"上一段介绍了今日安排。"')
+    expect(request.prompt).toContain('"suffix":"。"')
+    expect(request.prompt).toContain('"contextAfter":"下一段是复盘记录。"')
     expect(request.maxOutputTokens).toBe(48)
     expect(request.temperature).toBeLessThanOrEqual(0.5)
   })

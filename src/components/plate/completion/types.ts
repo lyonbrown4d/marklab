@@ -22,6 +22,9 @@ export type PlateInlineCompletionState = {
 
 export type PlateInlineCompletionDecoration = DecoratedRange & {
   plateInlineCompletion: string
+  plateInlineCompletionAccept: (index: number) => boolean
+  plateInlineCompletionCandidates: readonly PlateInlineCompletionCandidate[]
+  plateInlineCompletionIndex: number
   plateInlineCompletionSource: PlateInlineCompletionCandidate['source']
 }
 

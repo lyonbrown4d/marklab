@@ -21,11 +21,21 @@ export type DocumentCompletionIndexOptions = {
   rebuildDelayMs?: number
 }
 
+export type DocumentCompletionScope = {
+  heading?: string | null
+}
+
 type CompletionEntry = {
   frequency: number
   position: number
+  section: string | null
   text: string
   weight: number
+}
+
+type SectionBoundary = {
+  section: string | null
+  start: number
 }
 
 type RankedCandidate = DocumentCompletionCandidate & {
@@ -44,15 +54,35 @@ const cleanMarkdownText = (text: string) =>
     .replace(/[*_~`]+/g, '')
     .trim()
 
-const extractEntries = (markdown: string, maximum: number): CompletionEntry[] => {
+const normalizeSection = (heading: string | null | undefined) => {
+  const normalized = heading ? cleanMarkdownText(heading).toLocaleLowerCase() : ''
+  return normalized || null
+}
+
+const sentenceSegmenter =
+  typeof Intl.Segmenter === 'function'
+    ? new Intl.Segmenter(undefined, { granularity: 'sentence' })
+    : null
+
+const sentences = (text: string) =>
+  sentenceSegmenter
+    ? [...sentenceSegmenter.segment(text)].map(({ segment }) => segment)
+    : (text.match(/[^.!?。！？]+[.!?。！？]?/gu) ?? [])
+
+const extractEntries = (
+  markdown: string,
+  maximum: number,
+): { entries: CompletionEntry[]; sections: SectionBoundary[] } => {
   const entries = new Map<string, CompletionEntry>()
+  const sections: SectionBoundary[] = [{ section: null, start: 0 }]
   let fenced = false
   let position = 0
+  let section: string | null = null
 
   const add = (rawText: string, weight: number, entryPosition: number) => {
     const text = cleanMarkdownText(rawText)
     if (text.length < 3) return
-    const key = text.toLocaleLowerCase()
+    const key = `${section ?? ''}\u0000${text.toLocaleLowerCase()}`
     const existing = entries.get(key)
     if (existing) {
       existing.frequency += 1
@@ -61,7 +91,7 @@ const extractEntries = (markdown: string, maximum: number): CompletionEntry[] =>
       return
     }
     if (entries.size < maximum) {
-      entries.set(key, { frequency: 1, position: entryPosition, text, weight })
+      entries.set(key, { frequency: 1, position: entryPosition, section, text, weight })
     }
   }
 
@@ -76,10 +106,14 @@ const extractEntries = (markdown: string, maximum: number): CompletionEntry[] =>
 
     const heading = line.match(/^\s{0,3}#{1,6}\s+(.+)$/)
     const listItem = line.match(/^\s*(?:[-+*]|\d+[.)])\s+(.+)$/)
+    if (heading?.[1]) {
+      section = normalizeSection(heading[1])
+      sections.push({ section, start: linePosition })
+    }
     const body = heading?.[1] ?? listItem?.[1] ?? line
     add(body, listItem ? 6 : heading ? 5 : 2, linePosition)
 
-    for (const sentence of body.match(/[^.!?。！？]+[.!?。！？]?/gu) ?? []) {
+    for (const sentence of sentences(body)) {
       add(sentence, 3, linePosition)
     }
     for (const match of line.matchAll(/\[([^\]]+)\]\([^)]*\)/g))
@@ -88,7 +122,7 @@ const extractEntries = (markdown: string, maximum: number): CompletionEntry[] =>
       add(match[1] ?? '', 4, linePosition)
   }
 
-  return [...entries.values()]
+  return { entries: [...entries.values()], sections }
 }
 
 const trailingPrefix = (context: string) => {
@@ -110,21 +144,24 @@ const exactContinuation = (entry: CompletionEntry, prefix: string) => {
   }
 }
 
-const fuzzyContinuation = (
-  entry: CompletionEntry,
-  indices: readonly [number, number][] | undefined,
-) => {
-  const end = indices?.reduce((maximum, range) => Math.max(maximum, range[1]), -1) ?? -1
-  return end >= 0 ? entry.text.slice(end + 1) : ''
+const sectionAt = (sections: readonly SectionBoundary[], cursor: number) => {
+  for (let index = sections.length - 1; index >= 0; index -= 1) {
+    const boundary = sections[index]
+    if (boundary && boundary.start <= cursor) return boundary.section
+  }
+  return null
 }
 
 export class DocumentCompletionIndex {
   private readonly options: Required<DocumentCompletionIndexOptions>
   private entries: CompletionEntry[] = []
   private fuse = new Fuse<CompletionEntry>([], { keys: ['text'] })
+  private sectionFuses = new Map<string | null, Fuse<CompletionEntry>>()
+  private sections: SectionBoundary[] = []
   private latestVersion = -1
   private rebuildTimer: ReturnType<typeof setTimeout> | null = null
   private sourceLength = 0
+  private sourceStartOffset = 0
 
   constructor(options: DocumentCompletionIndexOptions = {}) {
     this.options = {
@@ -144,16 +181,29 @@ export class DocumentCompletionIndex {
     if (version < this.latestVersion) return false
     this.latestVersion = version
     const bounded = markdown.slice(-this.options.maxContextLength)
+    this.sourceStartOffset = markdown.length - bounded.length
     this.sourceLength = bounded.length
-    this.entries = extractEntries(bounded, this.options.maxEntries)
-    this.fuse = new Fuse(this.entries, {
+    const extracted = extractEntries(bounded, this.options.maxEntries)
+    this.entries = extracted.entries
+    this.sections = extracted.sections
+    const fuseOptions = {
       ignoreLocation: true,
-      includeMatches: true,
       includeScore: true,
       keys: ['text'],
       minMatchCharLength: 2,
       threshold: 0.32,
-    })
+    }
+    this.fuse = new Fuse(this.entries, fuseOptions)
+    this.sectionFuses = new Map()
+    const grouped = new Map<string | null, CompletionEntry[]>()
+    for (const entry of this.entries) {
+      const group = grouped.get(entry.section) ?? []
+      group.push(entry)
+      grouped.set(entry.section, group)
+    }
+    for (const [section, entries] of grouped) {
+      this.sectionFuses.set(section, new Fuse(entries, fuseOptions))
+    }
     return true
   }
 
@@ -167,26 +217,41 @@ export class DocumentCompletionIndex {
     }, this.options.rebuildDelayMs)
   }
 
-  query(contextBefore: string, cursorOffset = this.sourceLength): DocumentCompletionCandidate[] {
+  query(
+    contextBefore: string,
+    cursorOffset?: number,
+    scope: DocumentCompletionScope = {},
+  ): DocumentCompletionCandidate[] {
     const prefix = trailingPrefix(contextBefore)
     if (prefix.length < 2 || this.entries.length === 0) return []
 
     const ranked = new Map<string, RankedCandidate>()
-    for (const result of this.fuse.search(prefix, { limit: Math.min(this.entries.length, 80) })) {
+    const explicitSection = Object.hasOwn(scope, 'heading')
+    const localCursor =
+      cursorOffset === undefined
+        ? undefined
+        : Math.max(0, Math.min(this.sourceLength, cursorOffset - this.sourceStartOffset))
+    const inferredSection = localCursor === undefined ? null : sectionAt(this.sections, localCursor)
+    const section = explicitSection ? normalizeSection(scope.heading) : inferredSection
+    const sectionScoped = explicitSection || localCursor !== undefined
+    const search = sectionScoped ? this.sectionFuses.get(section) : this.fuse
+    if (!search) return []
+    const results = search.search(prefix, { limit: Math.min(search.getIndex().size(), 80) })
+    for (const result of results) {
+      if (sectionScoped && result.item.section !== section) continue
       const exact = exactContinuation(result.item, prefix)
-      const matchIndices = result.matches?.flatMap((match) => match.indices) as
-        readonly [number, number][] | undefined
-      const remainder = exact?.text ?? fuzzyContinuation(result.item, matchIndices)
-      const text = remainder.slice(0, this.options.maxCandidateLength)
+      if (!exact) continue
+      const text = exact.text.slice(0, this.options.maxCandidateLength)
       const dedupeKey = normalizeCandidateKey(text)
       if (!dedupeKey || text.trim().length < 1) continue
 
       const proximity = Math.min(
         1,
-        Math.abs(cursorOffset - result.item.position) / Math.max(1, this.sourceLength),
+        Math.abs((localCursor ?? this.sourceLength) - result.item.position) /
+          Math.max(1, this.sourceLength),
       )
       const score =
-        (exact ? exact.exactRank * 10 : 28 + (result.score ?? 1) * 20) -
+        exact.exactRank * 10 -
         result.item.weight * 2 -
         Math.min(result.item.frequency, 5) * 1.5 +
         proximity
@@ -205,6 +270,8 @@ export class DocumentCompletionIndex {
     if (this.rebuildTimer) clearTimeout(this.rebuildTimer)
     this.rebuildTimer = null
     this.entries = []
+    this.sections = []
+    this.sectionFuses.clear()
     this.fuse.setCollection([])
   }
 }

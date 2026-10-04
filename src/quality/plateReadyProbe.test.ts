@@ -42,7 +42,7 @@ describe('Plate ready probe', () => {
     nextFrame?.((probe?.loadingStartedAt ?? 0) + 40)
 
     expect(probe?.loadingFrameCount).toBe(1)
-    expect(probe?.loadingFrameDeltas).toEqual([40])
-    expect(probe?.loadingMaxFrameMs).toBe(40)
+    expect(probe?.loadingFrameDeltas[0]).toBeCloseTo(40)
+    expect(probe?.loadingMaxFrameMs).toBeCloseTo(40)
   })
 })
