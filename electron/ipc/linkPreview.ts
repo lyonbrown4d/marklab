@@ -1,4 +1,4 @@
-import type { IpcMain, IpcMainInvokeEvent } from 'electron'
+import type { BrowserWindow as BrowserWindowType, IpcMain, IpcMainInvokeEvent } from 'electron'
 
 import { nativeIpcChannels } from '@electron/channels.js'
 import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
@@ -9,7 +9,15 @@ export const registerLinkPreviewIpc = (
   ipcMain: Pick<IpcMain, 'handle'>,
   service: LinkPreviewServiceContract,
   workspaceRegistry: Pick<WindowWorkspaceRegistry, 'serviceForWebContents'>,
+  BrowserWindow: Pick<typeof BrowserWindowType, 'fromWebContents'>,
 ): void => {
+  ipcMain.handle(nativeIpcChannels.linkPreviewCapture, (event, payload: unknown) => {
+    validateSender(event, workspaceRegistry)
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    if (!owner || owner.isDestroyed()) throw new Error('No managed window owns the preview request')
+    const request = linkPreviewRequestSchema.parse(payload)
+    return service.capture(request, owner)
+  })
   ipcMain.handle(nativeIpcChannels.linkPreviewFetch, (event, payload: unknown) => {
     validateSender(event, workspaceRegistry)
     const request = linkPreviewRequestSchema.parse(payload)

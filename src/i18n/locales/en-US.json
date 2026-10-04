@@ -628,6 +628,7 @@
   "preview.externalPending": "Hover or focus to load preview",
   "preview.externalLoading": "Loading link preview…",
   "preview.externalFailed": "Preview unavailable · open link",
+  "preview.externalVisualAlt": "{{title}} preview",
   "preview.kind.audio": "Audio",
   "preview.kind.docx": "Word",
   "preview.kind.drawio": "Draw.io",

@@ -14,7 +14,7 @@ import type {
 } from '@/types/workspaceSync'
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
-import type { LinkPreviewResult } from '@/types/linkPreview'
+import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
 
 type ElectronPlatformInfo = {
@@ -29,6 +29,7 @@ export type ElectronWorkspacePathApi = {
 }
 
 export type ElectronLinkPreviewApi = {
+  capture: (url: string) => Promise<LinkPreviewCapture>
   fetch: (url: string) => Promise<LinkPreviewResult>
 }
 

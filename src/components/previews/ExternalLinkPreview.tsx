@@ -35,6 +35,12 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
     queryKey: ['link-preview', url],
     staleTime: 30 * 60 * 1000,
   })
+  const captureQuery = useQuery({
+    enabled: requested,
+    queryFn: () => linkPreviewApi.capture(url),
+    queryKey: ['link-preview-capture', url],
+    staleTime: 30 * 60 * 1000,
+  })
   const fallbackTitle = title?.trim() || siteLabel(url)
 
   useEffect(() => {
@@ -95,9 +101,20 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
             rel="noopener noreferrer"
             target="_blank"
           >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <Globe2 aria-hidden className="size-4" />
-            </span>
+            {captureQuery.data ? (
+              <img
+                alt={t('preview.externalVisualAlt', { title: fallbackTitle })}
+                className="aspect-video w-36 shrink-0 rounded-md border border-border/70 bg-muted/20 object-cover"
+                height={captureQuery.data.height}
+                loading="lazy"
+                src={captureQuery.data.src}
+                width={captureQuery.data.width}
+              />
+            ) : (
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <Globe2 aria-hidden className="size-4" />
+              </span>
+            )}
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 {result?.kind === 'webpage'
@@ -118,7 +135,7 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
                   {requested ? t('preview.externalLoading') : t('preview.externalPending')}
                 </span>
               ) : null}
-              {query.isError ? (
+              {query.isError && captureQuery.isError ? (
                 <span className="mt-1 block text-xs text-muted-foreground" role="alert">
                   {t('preview.externalFailed')}
                 </span>

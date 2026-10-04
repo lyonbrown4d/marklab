@@ -37,6 +37,9 @@ import {
   LinkPreviewService,
   type LinkPreviewServiceContract,
 } from '@electron/services/linkPreview/service.js'
+import { defaultLinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity.js'
+import { WebPreviewCapturePool } from '@electron/services/linkPreview/webPreviewCapturePool.js'
+import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache.js'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
 import { createElectronLogger, type Logger } from '@electron/services/logger.js'
 import {
@@ -166,7 +169,18 @@ export const createElectronContainer = (
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),
     languageIntelligenceService: asFunction(() => new LanguageIntelligenceService()).singleton(),
-    linkPreviewService: asFunction(() => new LinkPreviewService()).singleton(),
+    linkPreviewService: asFunction(({ app, WebContentsView }) => {
+      const cache = new WebPreviewDiskCache({
+        root: path.join(app.getPath('userData'), 'cache', 'web-previews'),
+      })
+      const captureService = new WebPreviewCapturePool({
+        WebContentsView,
+        cache,
+        lookup: defaultLinkPreviewLookup,
+        maxConcurrency: 2,
+      })
+      return new LinkPreviewService({ captureService })
+    }).singleton(),
     webTabManager: asFunction(({ WebContentsView }) => {
       return new WebTabManager({ WebContentsView })
     }).singleton(),

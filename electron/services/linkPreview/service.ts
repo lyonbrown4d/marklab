@@ -3,6 +3,7 @@ import http from 'node:http'
 import https from 'node:https'
 import net from 'node:net'
 import { LRUCache } from 'lru-cache'
+import type { BrowserWindow } from 'electron'
 
 import {
   assertPublicLinkPreviewUrl,
@@ -16,7 +17,11 @@ import {
   type RemoteImageAsset,
 } from '@electron/services/linkPreview/remoteAsset.js'
 import { headerValue, parseLinkPreviewResponse } from '@electron/services/linkPreview/response.js'
-import type { LinkPreviewRequest, LinkPreviewResult } from '@/types/linkPreview.js'
+import type {
+  LinkPreviewCapture,
+  LinkPreviewRequest,
+  LinkPreviewResult,
+} from '@/types/linkPreview.js'
 
 export { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata.js'
 
@@ -40,12 +45,27 @@ export type LinkPreviewHttpClient = {
 }
 
 export type LinkPreviewServiceContract = {
+  capture(payload: unknown, owner: BrowserWindow): Promise<LinkPreviewCapture>
+  dispose(): void
   fetch(payload: unknown): Promise<LinkPreviewResult>
   resolveImageCapability(token: string): RemoteImageAsset | null
 }
 
+export type CapturedWebPreview = {
+  bytes: Uint8Array
+  height: number
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp'
+  width: number
+}
+
+export type WebPreviewCaptureServiceContract = {
+  capture(url: string, owner: BrowserWindow): Promise<CapturedWebPreview>
+  dispose(): void
+}
+
 type LinkPreviewServiceOptions = {
   cacheTtlMs?: number
+  captureService?: WebPreviewCaptureServiceContract
   httpClient?: LinkPreviewHttpClient
   lookup?: LinkPreviewLookup
 }
@@ -56,6 +76,7 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
   private readonly imageCache: LRUCache<string, RemoteImageAsset>
   private readonly httpClient: LinkPreviewHttpClient
   private readonly lookup: LinkPreviewLookup
+  private readonly captureService?: WebPreviewCaptureServiceContract
 
   constructor(options: LinkPreviewServiceOptions = {}) {
     const cacheTtlMs = options.cacheTtlMs ?? LINK_PREVIEW_CACHE_TTL_MS
@@ -72,6 +93,23 @@ export class LinkPreviewService implements LinkPreviewServiceContract {
     })
     this.httpClient = options.httpClient ?? axios
     this.lookup = options.lookup ?? defaultLinkPreviewLookup
+    this.captureService = options.captureService
+  }
+
+  async capture(payload: unknown, owner: BrowserWindow): Promise<LinkPreviewCapture> {
+    const request = parseLinkPreviewRequest(payload)
+    if (!this.captureService) throw new Error('Visual link preview is unavailable')
+    const captured = await this.captureService.capture(request.url, owner)
+    return {
+      height: captured.height,
+      src: this.issueImageCapability(captured.bytes, captured.mediaType),
+      url: request.url,
+      width: captured.width,
+    }
+  }
+
+  dispose(): void {
+    this.captureService?.dispose()
   }
 
   async fetch(payload: unknown): Promise<LinkPreviewResult> {

@@ -21,6 +21,7 @@ describe('native IPC channels', () => {
   })
 
   it('defines a dedicated link preview channel', () => {
+    expect(nativeIpcChannels.linkPreviewCapture).toBe('marklab:link-preview:capture')
     expect(nativeIpcChannels.linkPreviewFetch).toBe('marklab:link-preview:fetch')
   })
 

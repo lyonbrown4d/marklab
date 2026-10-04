@@ -197,5 +197,6 @@ app.on('before-quit', (event) => {
 
 app.once('will-quit', () => {
   container?.cradle.knowledgeEngineService.dispose()
+  container?.cradle.linkPreviewService.dispose()
   void container?.cradle.localAiService.dispose()
 })

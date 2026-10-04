@@ -30,6 +30,7 @@ export const nativeIpcChannels = {
   languageDocumentChange: 'marklab:language:document-change',
   languageDocumentClose: 'marklab:language:document-close',
   languageDocumentOpen: 'marklab:language:document-open',
+  linkPreviewCapture: 'marklab:link-preview:capture',
   linkPreviewFetch: 'marklab:link-preview:fetch',
   menuCommand: 'marklab:menu:command',
   menuRendererReady: 'marklab:menu:renderer-ready',

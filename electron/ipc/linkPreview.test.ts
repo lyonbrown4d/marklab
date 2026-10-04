@@ -20,6 +20,7 @@ describe('link preview IPC', () => {
       } as never,
       service,
       workspaceRegistry as never,
+      {} as never,
     )
 
     await handlers.get(nativeIpcChannels.linkPreviewFetch)?.(
@@ -29,6 +30,41 @@ describe('link preview IPC', () => {
 
     expect(workspaceRegistry.serviceForWebContents).toHaveBeenCalledExactlyOnceWith(sender)
     expect(service.fetch).toHaveBeenCalledExactlyOnceWith({ url: 'https://example.com/' })
+  })
+
+  it('registers a separate visual capture handler at the same trusted boundary', async () => {
+    const handlers = new Map<string, (...args: unknown[]) => unknown>()
+    const sender = { id: 7, mainFrame: { routingId: 1 } }
+    const workspaceRegistry = { serviceForWebContents: vi.fn(() => ({})) }
+    const owner = { id: 4, isDestroyed: vi.fn(() => false) }
+    const BrowserWindow = { fromWebContents: vi.fn(() => owner) }
+    const service = {
+      capture: vi.fn(async () => ({
+        height: 360,
+        src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        url: 'https://example.com/',
+        width: 640,
+      })),
+      fetch: vi.fn(),
+    } as unknown as LinkPreviewServiceContract
+    registerLinkPreviewIpc(
+      {
+        handle: (channel: string, handler: (...args: unknown[]) => unknown) => {
+          handlers.set(channel, handler)
+        },
+      } as never,
+      service,
+      workspaceRegistry as never,
+      BrowserWindow as never,
+    )
+
+    await handlers.get(nativeIpcChannels.linkPreviewCapture)?.(
+      { sender, senderFrame: sender.mainFrame },
+      { url: 'https://example.com' },
+    )
+
+    expect(workspaceRegistry.serviceForWebContents).toHaveBeenCalledExactlyOnceWith(sender)
+    expect(service.capture).toHaveBeenCalledExactlyOnceWith({ url: 'https://example.com/' }, owner)
   })
 
   it('rejects non-web URLs at the named IPC boundary', async () => {
@@ -43,6 +79,7 @@ describe('link preview IPC', () => {
       } as never,
       service,
       workspaceRegistry as never,
+      {} as never,
     )
 
     expect(() =>
@@ -67,6 +104,7 @@ describe('link preview IPC', () => {
       } as never,
       service,
       workspaceRegistry as never,
+      {} as never,
     )
 
     expect(() =>
@@ -96,6 +134,7 @@ describe('link preview IPC', () => {
       } as never,
       service,
       workspaceRegistry as never,
+      {} as never,
     )
 
     expect(() =>

@@ -106,6 +106,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     dependencies.ipcMain,
     dependencies.linkPreviewService,
     dependencies.workspaceRegistry,
+    dependencies.BrowserWindow,
   )
   registerPlatformIpc(dependencies.ipcMain)
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)

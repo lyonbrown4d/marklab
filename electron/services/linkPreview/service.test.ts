@@ -136,6 +136,29 @@ describe('LinkPreviewService', () => {
     expect(get).toHaveBeenCalledOnce()
   })
 
+  it('issues a bounded capability for a separately captured webpage preview', async () => {
+    const owner = { contentView: {}, isDestroyed: vi.fn(() => false) }
+    const capture = vi.fn(async () => ({
+      bytes: new Uint8Array([255, 216, 255]),
+      height: 360,
+      mediaType: 'image/jpeg' as const,
+      width: 640,
+    }))
+    const service = new LinkPreviewService({
+      captureService: { capture, dispose: vi.fn() },
+      httpClient: { get: vi.fn() as LinkPreviewHttpClient['get'] },
+      lookup: publicLookup,
+    } as never)
+
+    await expect(service.capture({ url: 'https://example.com' }, owner as never)).resolves.toEqual({
+      height: 360,
+      src: expect.stringMatching(/^marklab-asset:\/\/remote\/v1\/[A-Za-z0-9_-]{43}$/),
+      url: 'https://example.com/',
+      width: 640,
+    })
+    expect(capture).toHaveBeenCalledExactlyOnceWith('https://example.com/', owner)
+  })
+
   it('keeps HTML at 256 KiB while allowing bounded raster images up to 8 MiB', async () => {
     const oversizedHtml = new Uint8Array(LINK_PREVIEW_MAX_RESPONSE_BYTES + 1)
     const htmlService = createService(

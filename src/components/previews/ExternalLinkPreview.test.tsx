@@ -3,10 +3,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchLinkPreview = vi.hoisted(() => vi.fn())
+const captureLinkPreview = vi.hoisted(() => vi.fn())
 const openWebTab = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/linkPreviewApi', () => ({
-  linkPreviewApi: { fetch: fetchLinkPreview },
+  linkPreviewApi: { capture: captureLinkPreview, fetch: fetchLinkPreview },
 }))
 
 vi.mock('@/app/useOpenWebTab', () => ({
@@ -27,6 +28,7 @@ const renderPreview = (url = 'https://example.com/article') => {
 describe('ExternalLinkPreview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    captureLinkPreview.mockRejectedValue(new Error('capture unavailable'))
   })
 
   it('offers an explicit in-app action for webpages', async () => {
@@ -103,5 +105,34 @@ describe('ExternalLinkPreview', () => {
       'href',
       'https://example.com/article',
     )
+  })
+
+  it('progressively renders a native visual capture without delaying metadata', async () => {
+    fetchLinkPreview.mockResolvedValue({
+      canonical: null,
+      description: 'Reference material',
+      favicon: null,
+      image: null,
+      kind: 'webpage',
+      site_name: 'Example Site',
+      title: 'Article title',
+      url: 'https://example.com/article',
+    })
+    captureLinkPreview.mockResolvedValue({
+      height: 360,
+      src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      url: 'https://example.com/article',
+      width: 640,
+    })
+    renderPreview()
+
+    fireEvent.pointerEnter(screen.getByRole('article'))
+
+    expect(await screen.findByText('Article title')).toBeVisible()
+    expect(await screen.findByRole('img', { name: 'Article preview' })).toHaveAttribute(
+      'src',
+      'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    )
+    expect(captureLinkPreview).toHaveBeenCalledExactlyOnceWith('https://example.com/article')
   })
 })

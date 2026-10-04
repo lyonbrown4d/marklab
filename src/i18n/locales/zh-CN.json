@@ -628,6 +628,7 @@
   "preview.externalPending": "悬停或聚焦后加载预览",
   "preview.externalLoading": "正在加载链接预览…",
   "preview.externalFailed": "预览不可用 · 打开链接",
+  "preview.externalVisualAlt": "{{title}} 网页预览",
   "preview.kind.audio": "音频",
   "preview.kind.docx": "Word",
   "preview.kind.drawio": "Draw.io",

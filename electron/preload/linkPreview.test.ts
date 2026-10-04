@@ -33,4 +33,20 @@ describe('link preview preload surface', () => {
       'Invalid linkPreview.fetch response',
     )
   })
+
+  it('captures a visual preview through a separate validated channel', async () => {
+    const result = {
+      height: 360,
+      src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      url: 'https://example.com/',
+      width: 640,
+    }
+    const invoke = vi.fn(async () => result)
+    const surface = createLinkPreviewPreloadSurface({ invoke } as never)
+
+    await expect(surface.capture('https://example.com')).resolves.toEqual(result)
+    expect(invoke).toHaveBeenCalledWith(nativeIpcChannels.linkPreviewCapture, {
+      url: 'https://example.com',
+    })
+  })
 })
