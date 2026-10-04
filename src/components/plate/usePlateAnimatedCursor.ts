@@ -41,6 +41,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
       if (
         !enabledByPreference ||
         composing ||
+        !document.hasFocus() ||
         !focusInside ||
         !selection?.isCollapsed ||
         selection.rangeCount === 0 ||
@@ -79,6 +80,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
       composing = false
       scheduleUpdate()
     }
+    const handleWindowBlur = () => setVisible(false)
     const handleScroll = () => {
       caret.classList.add('is-tracking-scroll')
       if (scrollTimer) view.clearTimeout(scrollTimer)
@@ -100,6 +102,8 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     root.addEventListener('compositionstart', handleCompositionStart)
     root.addEventListener('compositionend', handleCompositionEnd)
     root.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+    view.addEventListener('blur', handleWindowBlur)
+    view.addEventListener('focus', scheduleUpdate)
     view.addEventListener('resize', scheduleUpdate)
     motionPreference.addEventListener('change', scheduleUpdate)
     scheduleUpdate()
@@ -114,6 +118,8 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
       root.removeEventListener('compositionstart', handleCompositionStart)
       root.removeEventListener('compositionend', handleCompositionEnd)
       root.removeEventListener('scroll', handleScroll, true)
+      view.removeEventListener('blur', handleWindowBlur)
+      view.removeEventListener('focus', scheduleUpdate)
       view.removeEventListener('resize', scheduleUpdate)
       motionPreference.removeEventListener('change', scheduleUpdate)
       root.classList.remove('marklab-animated-cursor-host')
