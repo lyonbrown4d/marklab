@@ -17,6 +17,8 @@ export type PreferencesPersistedState = Pick<
   | 'defaultFileView'
   | 'graphContentMode'
   | 'graphMiniMapEnabled'
+  | 'graphMiniMapPosition'
+  | 'graphMiniMapSize'
   | 'hideMarkdownDefaultAppPrompt'
   | 'immersiveFocusMode'
   | 'immersiveTypewriterMode'
@@ -72,6 +74,8 @@ export const selectPreferencesPersistedState = (
   sourceCodeMiniMapEnabled: state.sourceCodeMiniMapEnabled,
   defaultFileView: state.defaultFileView,
   graphMiniMapEnabled: state.graphMiniMapEnabled,
+  graphMiniMapPosition: state.graphMiniMapPosition,
+  graphMiniMapSize: state.graphMiniMapSize,
   graphContentMode: state.graphContentMode,
   hideMarkdownDefaultAppPrompt: state.hideMarkdownDefaultAppPrompt,
   markdownAssetImportStrategy: state.markdownAssetImportStrategy,

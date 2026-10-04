@@ -49,7 +49,7 @@ describe('buildWorkspaceMapGraph', () => {
     ])
   })
 
-  it('removes self-loops and unknown endpoints and deduplicates by endpoints and kind', () => {
+  it('removes self-loops and unknown endpoints and coalesces repeated visual connections', () => {
     const graph = createGraph()
     graph.edges = [
       {
@@ -61,13 +61,19 @@ describe('buildWorkspaceMapGraph', () => {
       graph.edges[0],
       { ...graph.edges[0], id: 'duplicate' },
       { ...graph.edges[0], id: 'different-kind', data: { kind: 'links_to' } },
+      {
+        id: 'reciprocal',
+        source: 'file:notes/b.md',
+        target: 'file:notes/a.md',
+        data: { kind: 'links_to' },
+      },
       { id: 'unknown', source: 'file:notes/a.md', target: 'unknown', data: { kind: 'links_to' } },
     ]
 
     const result = buildWorkspaceMapGraph(graph)
 
-    expect(result.edges).toHaveLength(2)
-    expect(result.edges.map((edge) => edge.data?.kind)).toEqual(['references_heading', 'links_to'])
+    expect(result.edges).toHaveLength(1)
+    expect(result.edges[0]?.data?.kind).toBe('references_heading')
   })
 
   it('keeps preview, missing, and external nodes', () => {
@@ -117,6 +123,35 @@ describe('buildWorkspaceMapGraph', () => {
 
     expect(reordered.layoutKey).toBe(base.layoutKey)
     expect(buildWorkspaceMapGraph(changedGraph).layoutKey).not.toBe(base.layoutKey)
+  })
+
+  it('normalizes reference direction so reciprocal input ordering cannot destabilize layout', () => {
+    const forward = createGraph()
+    const reverse = createGraph()
+    reverse.edges[0] = {
+      ...reverse.edges[0],
+      source: 'heading:notes/b.md:topic',
+      target: 'file:notes/a.md',
+    }
+
+    const forwardMap = buildWorkspaceMapGraph(forward)
+    const reverseMap = buildWorkspaceMapGraph(reverse)
+
+    expect(reverseMap.edges).toEqual(forwardMap.edges)
+    expect(reverseMap.layoutKey).toBe(forwardMap.layoutKey)
+  })
+
+  it('chooses duplicate edge semantics deterministically instead of using input order', () => {
+    const forward = createGraph()
+    forward.edges.push({
+      id: 'plain-link',
+      source: 'file:notes/a.md',
+      target: 'file:notes/b.md',
+      data: { kind: 'links_to' },
+    })
+    const reversed = { ...forward, edges: [...forward.edges].reverse() }
+
+    expect(buildWorkspaceMapGraph(reversed).edges).toEqual(buildWorkspaceMapGraph(forward).edges)
   })
 
   it('returns a stable empty graph', () => {

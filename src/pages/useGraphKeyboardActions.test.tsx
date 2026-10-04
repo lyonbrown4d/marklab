@@ -6,7 +6,11 @@ import type { GraphData } from '@/logic/graph'
 import type { ShortcutBindings } from '@/logic/shortcuts'
 import { useGraphKeyboardActions } from '@/pages/useGraphKeyboardActions'
 
-const preferences = vi.hoisted(() => ({ shortcutOverrides: {} as ShortcutBindings }))
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  setLocale: vi.fn(),
+  shortcutOverrides: {} as ShortcutBindings,
+}))
 vi.mock('@/store/usePreferencesStore', () => ({
   usePreferencesStore: (selector: (state: typeof preferences) => unknown) => selector(preferences),
 }))
@@ -76,6 +80,15 @@ const Harness = ({
               {node.data.label}
             </div>
           </div>
+          {node.data.graphBranch ? (
+            <button
+              type="button"
+              data-testid={`toggle-${node.id}`}
+              onClick={() => node.data.graphBranch?.toggle(node.id)}
+            >
+              Toggle
+            </button>
+          ) : null}
         </div>
       ))}
       <button type="button" data-testid="button">
@@ -157,6 +170,15 @@ describe('graph keyboard actions', () => {
     expect(screen.getByTestId('selection')).toHaveTextContent('child')
     press('ArrowLeft')
     expect(screen.getByTestId('selection')).toHaveTextContent('root')
+  })
+
+  it('moves a selected descendant to its ancestor when pointer collapse hides it', () => {
+    render(<Harness initialSelection="child" />)
+
+    fireEvent.click(screen.getByTestId('toggle-root'))
+
+    expect(screen.getByTestId('selection')).toHaveTextContent('root')
+    expect(screen.queryByTestId('child')).not.toBeInTheDocument()
   })
 
   it('skips collapsed descendants and stays at the final heading', () => {

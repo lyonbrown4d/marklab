@@ -25,6 +25,11 @@
     0 18px 42px -30px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
 }
 
+.workspace-map-editor[data-workspace-map-collapsed='true'] {
+  min-width: 220px;
+  min-height: 72px;
+}
+
 .workspace-map-node__resize-control {
   right: -10px !important;
   bottom: -10px !important;
@@ -45,6 +50,25 @@
     border-color var(--motion-duration-fast) ease,
     opacity var(--motion-duration-fast) ease,
     transform var(--motion-duration-fast) ease;
+}
+
+.workspace-map-node__disclosure {
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  background: color-mix(in srgb, hsl(var(--card)) 90%, transparent);
+  color: hsl(var(--muted-foreground));
+  box-shadow: 0 5px 14px -11px hsl(var(--foreground) / 45%);
+  backdrop-filter: blur(8px);
+}
+
+.workspace-map-node__disclosure:hover,
+.workspace-map-node__disclosure:focus-visible {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 44%, hsl(var(--border)));
+  color: hsl(var(--foreground));
+}
+
+.workspace-map-node__disclosure svg {
+  width: 14px;
+  height: 14px;
 }
 
 .workspace-map-node:hover .workspace-map-node__resize-control,

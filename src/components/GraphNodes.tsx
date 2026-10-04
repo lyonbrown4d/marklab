@@ -8,7 +8,7 @@ import { createHeadingSectionViewModel, type MarkdownBlockCommit } from '@/logic
 import MarkdownBlockSurface from '@/components/MarkdownBlockSurface'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { CornerDownRight, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, CornerDownRight, Plus } from 'lucide-react'
 
 type FileGraphNode = Node<GraphNodeData, 'file'>
 type MissingGraphNode = Node<{ label: string; subtitle?: string }, 'missing'>
@@ -18,8 +18,6 @@ export type MindmapNodeActions = {
   addChild?: (nodeId: string) => void
   addSibling?: (nodeId: string) => void
   edit?: (nodeId: string) => void
-  hiddenCount?: number
-  toggleFold?: (nodeId: string) => void
 }
 
 const graphHandleClass = 'graph-node-handle'
@@ -31,7 +29,38 @@ const getGraphNodeA11yProps = (label: string, selected: boolean) => ({
   role: 'group' as const,
 })
 
-export const FileNode = memo(({ data, selected }: NodeProps<FileGraphNode>) => {
+const GraphBranchToggle = ({
+  id,
+  branch,
+}: {
+  id: string
+  branch?: GraphNodeData['graphBranch']
+}) => {
+  if (!branch) return null
+  return (
+    <button
+      type="button"
+      className="graph-branch-toggle nodrag nopan"
+      aria-expanded={!branch.collapsed}
+      aria-label={branch.label}
+      title={branch.title}
+      onClick={(event) => {
+        event.stopPropagation()
+        branch.toggle(id)
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      {branch.collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+      {branch.collapsed ? (
+        <span className="graph-branch-toggle__count" aria-hidden="true">
+          {branch.descendantCount}
+        </span>
+      ) : null}
+    </button>
+  )
+}
+
+export const FileNode = memo(({ id, data, selected }: NodeProps<FileGraphNode>) => {
   return (
     <div
       className={cn(
@@ -53,6 +82,7 @@ export const FileNode = memo(({ data, selected }: NodeProps<FileGraphNode>) => {
           {data.subtitle}
         </Badge>
       ) : null}
+      <GraphBranchToggle id={id} branch={data.graphBranch} />
     </div>
   )
 })
@@ -187,16 +217,7 @@ export const HeadingNode = memo(({ id, data, selected }: NodeProps<HeadingGraphN
           ) : null}
         </div>
       ) : null}
-      {mindmap?.hiddenCount ? (
-        <button
-          type="button"
-          className="mindmap-hidden-count nodrag nopan"
-          aria-label={`Show ${mindmap.hiddenCount} hidden topics`}
-          onClick={() => mindmap.toggleFold?.(id)}
-        >
-          +{mindmap.hiddenCount}
-        </button>
-      ) : null}
+      <GraphBranchToggle id={id} branch={data.graphBranch} />
     </div>
   )
 })

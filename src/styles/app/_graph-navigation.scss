@@ -1,0 +1,83 @@
+.graph-minimap {
+  margin: 16px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 82%, transparent);
+  border-radius: calc(var(--radius) + 2px);
+  background: color-mix(in srgb, hsl(var(--card)) 94%, transparent);
+  box-shadow: 0 12px 28px -20px hsl(var(--foreground) / 42%);
+  backdrop-filter: blur(12px);
+}
+
+.graph-minimap .react-flow__minimap-mask {
+  fill: hsl(var(--background) / 68%);
+}
+
+.graph-edge--reference .react-flow__edge-path {
+  stroke-dasharray: 5 5;
+  stroke-opacity: 0.66;
+}
+
+.graph-edge--hierarchy .react-flow__edge-path {
+  stroke-opacity: 0.88;
+}
+
+.graph-branch-toggle {
+  position: absolute;
+  right: -18px;
+  bottom: -18px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 24%, hsl(var(--border)));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  box-shadow: 0 8px 18px -13px hsl(var(--foreground) / 48%);
+  opacity: 0.82;
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    color var(--motion-duration-fast) ease,
+    opacity var(--motion-duration-fast) ease,
+    transform var(--motion-duration-fast) ease;
+}
+
+.graph-node-shell:hover .graph-branch-toggle,
+.graph-branch-toggle:hover,
+.graph-branch-toggle:focus-visible,
+.graph-branch-toggle[aria-expanded='false'] {
+  border-color: hsl(var(--primary) / 55%);
+  color: hsl(var(--foreground));
+  opacity: 1;
+}
+
+.graph-branch-toggle:hover,
+.graph-branch-toggle:focus-visible {
+  outline: none;
+  transform: scale(1.04);
+}
+
+.graph-branch-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.graph-branch-toggle__count {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-branch-toggle {
+    transition: none;
+  }
+}

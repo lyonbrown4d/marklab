@@ -35,7 +35,7 @@
 .mindmap-branch-dock {
   position: absolute;
   top: 50%;
-  right: -34px;
+  right: -62px;
   display: flex;
   translate: 0 -50%;
   flex-direction: column;
@@ -84,36 +84,11 @@
   opacity: 0;
 }
 
-.mindmap-hidden-count {
-  position: absolute;
-  right: -13px;
-  bottom: -10px;
-  min-width: 25px;
-  height: 19px;
-  padding: 0 6px;
-  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 28%, hsl(var(--border)));
-  border-radius: 999px;
-  background: hsl(var(--card));
-  color: hsl(var(--muted-foreground));
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  line-height: 17px;
-  box-shadow: 0 5px 14px -11px hsl(var(--foreground) / 45%);
-}
-
-.mindmap-hidden-count:hover,
-.mindmap-hidden-count:focus-visible {
-  border-color: hsl(var(--primary) / 55%);
-  color: hsl(var(--foreground));
-  outline: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mindmap-canvas .graph-node-shell,
   .mindmap-canvas .react-flow__edge-path,
   .mindmap-branch-dock,
-  .mindmap-branch-dock button,
-  .mindmap-hidden-count {
+  .mindmap-branch-dock button {
     animation: none;
     scroll-behavior: auto;
     transition: none;

@@ -25,6 +25,8 @@ export const preferenceStateKeys = new Set([
   'editorReadOnlyMode',
   'graphContentMode',
   'graphMiniMapEnabled',
+  'graphMiniMapPosition',
+  'graphMiniMapSize',
   'hideMarkdownDefaultAppPrompt',
   'immersiveFocusMode',
   'immersiveTypewriterMode',

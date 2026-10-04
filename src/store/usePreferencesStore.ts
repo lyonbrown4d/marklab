@@ -30,15 +30,16 @@ import type {
   AppLocale,
   DarkThemeMode,
   FileViewKind,
-  GraphContentMode,
   LightThemeMode,
   MarkdownAssetImportStrategy,
   ThemeColorMode,
   ThemeMode,
   ThemeModePreference,
 } from '@/store/appTypes'
+import { createGraphPreferencesSlice, type GraphPreferencesState } from '@/store/graphPreferences'
 
 export type PreferencesState = AiCompletionPreferencesState &
+  GraphPreferencesState &
   ImmersivePreferencesState &
   TerminalPreferencesState & {
     theme: ThemeMode
@@ -57,8 +58,6 @@ export type PreferencesState = AiCompletionPreferencesState &
     showEditorStatusBar: boolean
     sourceCodeMiniMapEnabled: boolean
     defaultFileView: FileViewKind
-    graphMiniMapEnabled: boolean
-    graphContentMode: GraphContentMode
     hideMarkdownDefaultAppPrompt: boolean
     markdownAssetImportStrategy: MarkdownAssetImportStrategy
     motionSmoothScrolling: boolean
@@ -80,8 +79,6 @@ export type PreferencesState = AiCompletionPreferencesState &
     setShowEditorStatusBar: (show: boolean) => void
     setSourceCodeMiniMapEnabled: (enabled: boolean) => void
     setDefaultFileView: (view: FileViewKind) => void
-    setGraphMiniMapEnabled: (enabled: boolean) => void
-    setGraphContentMode: (mode: GraphContentMode) => void
     setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
     setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
     setMotionSmoothScrolling: (enabled: boolean) => void
@@ -106,6 +103,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       aiCustomModelDirectoryEnabled: false,
       aiModelDirectory: null,
       ...createAiCompletionPreferencesSlice(set, get, store),
+      ...createGraphPreferencesSlice(set, get, store),
       ...createImmersivePreferencesSlice(set, get, store),
       ...createTerminalPreferencesSlice(set, get, store),
       locale: getInitialLocale(),
@@ -115,8 +113,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       showEditorStatusBar: true,
       sourceCodeMiniMapEnabled: true,
       defaultFileView: 'edit',
-      graphMiniMapEnabled: true,
-      graphContentMode: 'summary',
       hideMarkdownDefaultAppPrompt: false,
       markdownAssetImportStrategy: 'copy-to-document-assets',
       motionSmoothScrolling: true,
@@ -207,14 +203,6 @@ export const usePreferencesStore = create<PreferencesState>()(
         ),
       setDefaultFileView: (defaultFileView) =>
         set((state) => (state.defaultFileView === defaultFileView ? state : { defaultFileView })),
-      setGraphMiniMapEnabled: (graphMiniMapEnabled) =>
-        set((state) =>
-          state.graphMiniMapEnabled === graphMiniMapEnabled ? state : { graphMiniMapEnabled },
-        ),
-      setGraphContentMode: (graphContentMode) =>
-        set((state) =>
-          state.graphContentMode === graphContentMode ? state : { graphContentMode },
-        ),
       setHideMarkdownDefaultAppPrompt: (hideMarkdownDefaultAppPrompt) =>
         set((state) =>
           state.hideMarkdownDefaultAppPrompt === hideMarkdownDefaultAppPrompt

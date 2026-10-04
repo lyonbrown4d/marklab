@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildContainsChildrenMap,
+  buildDescendantCountMap,
   getDescendants,
   getHiddenNodeIds,
   getVisibleGraphElements,
   isContainsEdge,
+  getSelectionAfterBranchCollapse,
 } from '@/logic/graphVisibility'
 
 const createNode = (id: string): Parameters<typeof getHiddenNodeIds>[0][number] =>
@@ -45,6 +47,51 @@ describe('graphVisibility', () => {
     expect(getDescendants(['heading:root'], childrenByParent)).toEqual(
       new Set(['heading:child', 'heading:grandchild']),
     )
+  })
+
+  it('computes branch sizes once and protects against accidental cycles', () => {
+    const children = new Map([
+      ['root', ['child']],
+      ['child', ['leaf']],
+      ['leaf', ['root']],
+    ])
+
+    expect(buildDescendantCountMap(children)).toEqual(
+      new Map([
+        ['root', 2],
+        ['child', 2],
+        ['leaf', 2],
+      ]),
+    )
+  })
+
+  it('counts unique descendants for duplicate edges and shared DAG children', () => {
+    const children = buildContainsChildrenMap([
+      createEdge('root-a', 'root', 'a', 'contains'),
+      createEdge('root-a-again', 'root', 'a', 'contains'),
+      createEdge('root-b', 'root', 'b', 'contains'),
+      createEdge('a-leaf', 'a', 'leaf', 'contains'),
+      createEdge('b-leaf', 'b', 'leaf', 'contains'),
+    ])
+
+    expect(children.get('root')).toEqual(['a', 'b'])
+    expect(buildDescendantCountMap(children)).toEqual(
+      new Map([
+        ['root', 3],
+        ['a', 1],
+        ['b', 1],
+      ]),
+    )
+  })
+
+  it('moves a hidden descendant selection to the collapsed branch', () => {
+    const children = new Map([
+      ['root', ['child']],
+      ['child', ['leaf']],
+    ])
+
+    expect(getSelectionAfterBranchCollapse('leaf', 'root', children)).toBe('root')
+    expect(getSelectionAfterBranchCollapse('sibling', 'root', children)).toBe('sibling')
   })
 
   it('hides only descendants of a collapsed node and keeps the collapsed node visible', () => {

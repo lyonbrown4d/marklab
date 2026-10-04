@@ -1,13 +1,7 @@
-import { useCallback, useMemo, useState, type MouseEvent, type RefObject } from 'react'
+import { useCallback, useMemo, type MouseEvent, type RefObject } from 'react'
 import { useHotkeys } from '@tanstack/react-hotkeys'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
-import {
-  buildContainsChildrenMap,
-  getDescendants,
-  getHiddenNodeIds,
-  getVisibleGraphElements,
-} from '@/logic/graphVisibility'
 import {
   createGraphHotkeyBindings,
   getInitialKeyboardNavigationTarget,
@@ -22,6 +16,7 @@ import {
   fitVisibleGraph as fitVisibleGraphViewport,
 } from '@/pages/graphViewportActions'
 import { useGraphTitleFocus } from '@/pages/useGraphTitleFocus'
+import { useGraphCollapseState } from '@/pages/useGraphCollapseState'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type UseGraphKeyboardActionsArgs = {
@@ -56,20 +51,12 @@ export const useGraphKeyboardActions = ({
   selectHeading,
 }: UseGraphKeyboardActionsArgs) => {
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
-  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set())
   const { focusHeadingTitle, focusHeadingTitleSoon } = useGraphTitleFocus(graphShellRef)
-
-  const containsChildrenByNode = useMemo(() => buildContainsChildrenMap(edges), [edges])
-
-  const hiddenNodeIds = useMemo(
-    () => getHiddenNodeIds(nodes, collapsedNodeIds, containsChildrenByNode),
-    [collapsedNodeIds, containsChildrenByNode, nodes],
-  )
-
-  const { visibleEdges, visibleNodes } = useMemo(
-    () => getVisibleGraphElements(nodes, edges, hiddenNodeIds),
-    [edges, hiddenNodeIds, nodes],
-  )
+  const { collapsedNodeIds, collapseNode, expandNode, visibleEdges, visibleNodes } =
+    useGraphCollapseState(nodes, edges, {
+      onSelectionChange: selectHeading,
+      selectedNodeId: selectedHeadingId,
+    })
 
   const focusSelectedHeadingTitle = useCallback(() => {
     focusHeadingTitle(selectedHeadingId)
@@ -99,46 +86,16 @@ export const useGraphKeyboardActions = ({
 
   const collapseSelectedHeading = useCallback(
     (includeDescendants: boolean) => {
-      if (!selectedHeadingId || !containsChildrenByNode.has(selectedHeadingId)) return
-      const descendants = includeDescendants
-        ? getDescendants([selectedHeadingId], containsChildrenByNode)
-        : new Set<string>()
-
-      setCollapsedNodeIds((current) => {
-        const alreadyCollapsed =
-          current.has(selectedHeadingId) &&
-          Array.from(descendants).every((nodeId) => current.has(nodeId))
-        if (alreadyCollapsed) return current
-
-        const next = new Set(current)
-        next.add(selectedHeadingId)
-        descendants.forEach((nodeId) => next.add(nodeId))
-        return next
-      })
+      if (selectedHeadingId) collapseNode(selectedHeadingId, includeDescendants)
     },
-    [containsChildrenByNode, selectedHeadingId],
+    [collapseNode, selectedHeadingId],
   )
 
   const expandSelectedHeading = useCallback(
     (includeDescendants: boolean) => {
-      if (!selectedHeadingId) return
-      const descendants = includeDescendants
-        ? getDescendants([selectedHeadingId], containsChildrenByNode)
-        : new Set<string>()
-
-      setCollapsedNodeIds((current) => {
-        const hasCollapsedNode =
-          current.has(selectedHeadingId) ||
-          Array.from(descendants).some((nodeId) => current.has(nodeId))
-        if (!hasCollapsedNode) return current
-
-        const next = new Set(current)
-        next.delete(selectedHeadingId)
-        descendants.forEach((nodeId) => next.delete(nodeId))
-        return next
-      })
+      if (selectedHeadingId) expandNode(selectedHeadingId, includeDescendants)
     },
-    [containsChildrenByNode, selectedHeadingId],
+    [expandNode, selectedHeadingId],
   )
 
   const executeGraphHotkey = useCallback(

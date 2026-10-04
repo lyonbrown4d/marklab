@@ -93,4 +93,33 @@ describe('graphLayout', () => {
       })
     })
   })
+
+  it('sends duplicate endpoint pairs to the layout worker only once', async () => {
+    const nodes = [node('file:root', {}, 'file'), node('heading:child')]
+    const edges: Edge[] = [
+      { id: 'first', source: 'file:root', target: 'heading:child' },
+      { id: 'duplicate', source: 'file:root', target: 'heading:child' },
+    ]
+
+    await layoutGraphWithElk(nodes, edges)
+
+    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as { edges: Edge[] }
+    expect(workerGraph.edges).toHaveLength(1)
+  })
+
+  it('asks ELK to minimize crossings and favor straighter routed edges', async () => {
+    await layoutGraphWithElk(
+      [node('root'), node('child')],
+      [{ id: 'edge', source: 'root', target: 'child' }],
+    )
+
+    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as {
+      layoutOptions: Record<string, string>
+    }
+    expect(workerGraph.layoutOptions).toMatchObject({
+      'elk.edgeRouting': 'ORTHOGONAL',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      'elk.layered.nodePlacement.favorStraightEdges': 'true',
+    })
+  })
 })

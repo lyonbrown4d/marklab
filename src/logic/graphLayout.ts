@@ -32,22 +32,32 @@ const cacheLayout = (layoutKey: string, positions: GraphLayoutPosition[]) => {
 
 const createWorkerGraph = (nodes: Node<GraphNodeData>[], edges: Edge[]): GraphLayoutWorkerGraph => {
   const knownNodeIds = new Set(nodes.map((node) => node.id))
+  const endpointPairs = new Set<string>()
   return {
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': 'RIGHT',
       'elk.edgeRouting': 'ORTHOGONAL',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      'elk.layered.mergeEdges': 'true',
+      'elk.layered.nodePlacement.favorStraightEdges': 'true',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.spacing.edgeNodeBetweenLayers': '48',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '220',
-      'elk.spacing.edgeEdge': '24',
-      'elk.spacing.edgeNode': '36',
-      'elk.spacing.nodeNode': '72',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '36',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '168',
+      'elk.spacing.edgeEdge': '18',
+      'elk.spacing.edgeNode': '28',
+      'elk.spacing.nodeNode': '52',
     },
     children: nodes.map((node) => ({ id: node.id, ...getGraphNodeLayoutSize(node) })),
     edges: edges
-      .filter((edge) => knownNodeIds.has(edge.source) && knownNodeIds.has(edge.target))
+      .filter((edge) => {
+        if (!knownNodeIds.has(edge.source) || !knownNodeIds.has(edge.target)) return false
+        const pair = `${edge.source.length}:${edge.source}${edge.target}`
+        if (endpointPairs.has(pair)) return false
+        endpointPairs.add(pair)
+        return true
+      })
       .map((edge) => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
   }
 }

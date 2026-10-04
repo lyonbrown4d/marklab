@@ -55,6 +55,34 @@ describe('writing-first layout preferences', () => {
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(false)
   })
 
+  it('stores the graph minimap corner and compact size', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.graphMiniMapPosition).toBe('bottom-right')
+    expect(store.graphMiniMapSize).toBe('regular')
+    store.setGraphMiniMapPosition('top-left')
+    store.setGraphMiniMapSize('compact')
+
+    expect(usePreferencesStore.getState()).toMatchObject({
+      graphMiniMapPosition: 'top-left',
+      graphMiniMapSize: 'compact',
+    })
+  })
+
+  it('rehydrates graph minimap presentation preferences', async () => {
+    storage.getItem.mockReturnValue({
+      state: { graphMiniMapPosition: 'top-right', graphMiniMapSize: 'compact' },
+      version: 2,
+    })
+
+    await usePreferencesStore.persist.rehydrate()
+
+    expect(usePreferencesStore.getState()).toMatchObject({
+      graphMiniMapPosition: 'top-right',
+      graphMiniMapSize: 'compact',
+    })
+  })
+
   it('preserves an existing explicit focus mode preference', async () => {
     storage.getItem.mockReturnValue({ state: { immersiveFocusMode: true }, version: 2 })
 

@@ -81,6 +81,22 @@ describe('graphViewModel', () => {
     expect(queried.edges).toEqual([])
   })
 
+  it('coalesces repeated visual connections without changing node details', () => {
+    const repeatedEdges: Edge[] = [
+      ...edges,
+      { id: 'file-external-again', source: edges[1].source, target: edges[1].target },
+    ]
+
+    const filtered = filterGraphElements(nodes, repeatedEdges, createDefaultGraphFilters())
+
+    expect(filtered.edges.filter((edge) => edge.target === 'ext:https://example.com')).toHaveLength(
+      1,
+    )
+    expect(
+      buildGraphNodeDetails(nodes, repeatedEdges, 'file:notes/current.md')?.outgoing,
+    ).toHaveLength(3)
+  })
+
   it('builds selected node details from graph connections', () => {
     const details = buildGraphNodeDetails(nodes, edges, 'file:notes/current.md')
 

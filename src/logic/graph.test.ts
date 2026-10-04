@@ -109,7 +109,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
         }),
       ]),
     )
-    expect(graph.edges[0]).toEqual(expect.objectContaining({ type: 'smoothstep' }))
+    expect(graph.edges[0]).toMatchObject({ className: 'graph-edge--hierarchy', type: 'smoothstep' })
   })
 
   it('omits heading content from graph nodes when content mode is none', () => {

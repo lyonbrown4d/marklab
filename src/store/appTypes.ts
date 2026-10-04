@@ -9,6 +9,8 @@ export type DarkThemeMode = 'ink' | 'graphite' | 'nord' | 'obsidian'
 export type ThemeMode = LightThemeMode | DarkThemeMode
 export type GitDiffSection = 'staged' | 'unstaged' | 'untracked' | 'conflicts'
 export type GraphContentMode = 'none' | 'summary' | 'full'
+export type GraphMiniMapPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type GraphMiniMapSize = 'compact' | 'regular'
 export type MarkdownAssetImportStrategy = 'copy-to-document-assets' | 'preserve-path'
 
 export type WorkspaceTab =

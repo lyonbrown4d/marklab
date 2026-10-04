@@ -7,7 +7,9 @@ import { isDesktopRuntime } from '@/runtime/environment'
 import { toast } from 'sonner'
 import { useI18n } from '@/i18n/useI18n'
 
-const INDEX_INVALIDATION_DELAY_MS = 120
+// The desktop buffer normally auto-flushes after 700 ms. Waiting slightly longer lets the
+// clean notification collapse a dirty typing burst into one index/graph refresh.
+const INDEX_INVALIDATION_DELAY_MS = 900
 
 export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()

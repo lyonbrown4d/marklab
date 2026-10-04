@@ -71,6 +71,7 @@ vi.mock('@xyflow/react', () => ({
     const [value, setValue] = useState(initial)
     return [value, setValue as Dispatch<SetStateAction<T[]>>, vi.fn()] as const
   },
+  useStore: (selector: (state: { width: number }) => unknown) => selector({ width: 1_000 }),
 }))
 
 vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))

@@ -30,7 +30,7 @@ export class WorkspaceGraphCache {
     documents: WorkspaceGraphDocument[],
     knownPaths: WorkspaceGraphKnownPaths,
   ): FsGraph | undefined {
-    return this.getGraph(this.workspaceGraphs, this.workspaceGraphKey(documents, knownPaths))
+    return this.getWorkspaceGraphByKey(this.createWorkspaceGraphKey(documents, knownPaths))
   }
 
   setWorkspaceGraph(
@@ -38,7 +38,22 @@ export class WorkspaceGraphCache {
     knownPaths: WorkspaceGraphKnownPaths,
     graph: FsGraph,
   ): void {
-    this.setGraph(this.workspaceGraphs, this.workspaceGraphKey(documents, knownPaths), graph)
+    this.setWorkspaceGraphByKey(this.createWorkspaceGraphKey(documents, knownPaths), graph)
+  }
+
+  createWorkspaceGraphKey(
+    documents: WorkspaceGraphDocument[],
+    knownPaths: WorkspaceGraphKnownPaths,
+  ): string {
+    return this.workspaceGraphKey(documents, knownPaths)
+  }
+
+  getWorkspaceGraphByKey(key: string): FsGraph | undefined {
+    return this.getGraph(this.workspaceGraphs, key)
+  }
+
+  setWorkspaceGraphByKey(key: string, graph: FsGraph): void {
+    this.setGraph(this.workspaceGraphs, key, graph)
   }
 
   getOutlineGraph(path: string, content: string): FsGraph | undefined {

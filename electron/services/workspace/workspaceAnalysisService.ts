@@ -22,6 +22,7 @@ import {
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
 import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
+import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache.js'
 import {
   trySidecarOutlineGraph,
   trySidecarMarkdownDiagnostics,
@@ -53,6 +54,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   )
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
   private readonly graphCache = new WorkspaceGraphCache()
+  private readonly analysisCache = new WorkspaceAnalysisCache()
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<WorkspaceSearchDocument>({
       applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
@@ -75,6 +77,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   override dispose(): void {
     this.searchIndexBuildGeneration += 1
     this.searchIndexUpdateQueue.dispose()
+    this.analysisCache.invalidate()
     this.graphCache.clear()
     void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
@@ -82,34 +85,47 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async workspaceIndex(): Promise<FsWorkspaceIndex> {
-    return this.runSearchIndexTask(async () => {
-      const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
-      return this.runWorkerTask(
-        () =>
-          this.analysisWorker.run<FsWorkspaceIndex>({
-            type: 'workspace-index',
-            documents,
-            knownPaths,
-          }),
-        'workspace-index',
-      )
-    })
+    return this.runSearchIndexTask(
+      () =>
+        this.analysisCache.getIndex(async () => {
+          const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
+          return this.runWorkerTask(
+            () =>
+              this.analysisWorker.run<FsWorkspaceIndex>({
+                type: 'workspace-index',
+                documents,
+                knownPaths,
+              }),
+            'workspace-index',
+          )
+        }),
+      'workspace-index',
+    )
   }
 
   async workspaceGraph(): Promise<FsGraph> {
-    const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths()
-    const cachedGraph = this.graphCache.getWorkspaceGraph(documents, knownPaths)
-    if (cachedGraph) return cachedGraph
+    return this.analysisCache.getGraph(async () => {
+      const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
+      const graphKey = this.graphCache.createWorkspaceGraphKey(documents, knownPaths)
+      const cachedGraph = this.graphCache.getWorkspaceGraphByKey(graphKey)
+      if (cachedGraph) return cachedGraph
 
-    const graph = await trySidecarWorkspaceGraph({
-      documents,
-      knowledgeEngineService: this.analysisKnowledgeEngineService,
-      knownPaths,
-      logger: this.logger,
-      state: this.state,
+      const graph = await trySidecarWorkspaceGraph({
+        documents,
+        knowledgeEngineService: this.analysisKnowledgeEngineService,
+        knownPaths,
+        logger: this.logger,
+        state: this.state,
+      })
+      this.graphCache.setWorkspaceGraphByKey(graphKey, graph)
+      return graph
     })
-    this.graphCache.setWorkspaceGraph(documents, knownPaths, graph)
-    return graph
+  }
+
+  override updateBuffer(value: unknown): ReturnType<WorkspaceFileService['updateBuffer']> {
+    const status = super.updateBuffer(value)
+    this.analysisCache.invalidate()
+    return status
   }
 
   async outlineGraph(value: unknown): Promise<FsGraph> {
@@ -183,6 +199,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const result = await super.setRoot(value)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
+    this.analysisCache.invalidate()
     this.graphCache.clear()
     return result
   }
@@ -192,12 +209,13 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const result = await super.setSingleFile(value)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
+    this.analysisCache.invalidate()
     this.graphCache.clear()
     return result
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
-    this.graphCache.clear()
+    this.analysisCache.invalidate()
     if (!workspaceChangeAffectsSearch(_changedPath, event)) return
     if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
       this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
@@ -209,7 +227,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
   protected override onBuffersFlushed(relativePaths: string[]): void {
     if (relativePaths.length > 0) {
-      this.graphCache.clear()
+      this.analysisCache.invalidate()
     }
     const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
@@ -228,6 +246,10 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       this.activeWorkspaceSearchKey = searchKey
       this.needsSearchIndexRebuild = !(await this.workspaceSearchIndex.hasDocuments())
     }
+  }
+
+  private getWorkspaceAnalysisInput() {
+    return this.analysisCache.getInput(() => this.workspaceDocumentsAndKnownPaths())
   }
 
   private async rebuildSearchIndexIfNeeded(): Promise<void> {

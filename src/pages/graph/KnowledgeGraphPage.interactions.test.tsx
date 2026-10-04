@@ -27,6 +27,7 @@ vi.mock('@xyflow/react', () => ({
   },
   useEdgesState: (initial: Edge[]) => [initial, vi.fn(), vi.fn()],
   useNodesState: (initial: Node<GraphNodeData>[]) => [initial, vi.fn(), vi.fn()],
+  useStore: (selector: (state: { width: number }) => unknown) => selector({ width: 1_000 }),
 }))
 vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))

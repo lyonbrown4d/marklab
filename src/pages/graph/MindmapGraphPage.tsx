@@ -6,16 +6,21 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
-import { Controls, MiniMap, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react'
+import { Controls, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react'
 import type { Edge, Node, NodeChange, OnNodeDrag } from '@xyflow/react'
 import { useLatest } from 'ahooks'
 import type { GraphNodeData } from '@/logic/graph'
+import { buildDescendantCountMap, getSelectionAfterBranchCollapse } from '@/logic/graphVisibility'
 import { buildGraphNodeDetails } from '@/logic/graphViewModel'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { useGraphAutoLayout } from '@/pages/useGraphAutoLayout'
 import { MindmapToolbar } from '@/pages/graph/MindmapToolbar'
-import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import {
+  GraphMiniMap,
+  mindmapMiniMapFallbacks,
+  mindmapMiniMapOffsets,
+} from '@/pages/graph/GraphMiniMapView'
 import {
   fitViewOptions,
   nodeTypes,
@@ -131,31 +136,74 @@ export const MindmapGraphPage = (props: GraphPageProps) => {
     shellRef,
     undo: props.onUndo,
   })
+  const descendantCounts = useMemo(
+    () => buildDescendantCountMap(model.childrenById),
+    [model.childrenById],
+  )
+  const toggleMindmapFold = interactions.toggleFold
+  const collapsedIdsRef = useLatest(collapsedIds)
+  const childrenByIdRef = useLatest(model.childrenById)
+  const selectRef = useLatest(select)
+  const selectedIdRef = useLatest(selectedId)
+  const toggleMindmapFoldRef = useLatest(toggleMindmapFold)
+  const toggleBranch = useCallback(
+    (id: string) => {
+      const currentSelection = selectedIdRef.current
+      if (!collapsedIdsRef.current.has(id)) {
+        const nextSelection = getSelectionAfterBranchCollapse(
+          currentSelection,
+          id,
+          childrenByIdRef.current,
+        )
+        if (nextSelection !== currentSelection) selectRef.current(nextSelection)
+      }
+      toggleMindmapFoldRef.current(id)
+    },
+    [childrenByIdRef, collapsedIdsRef, selectRef, selectedIdRef, toggleMindmapFoldRef],
+  )
   const renderedNodes = useMemo(
     () =>
       visibility.visibleNodes.map((node) => {
-        const hiddenCount = visibility.hiddenCountById.get(node.id)
-        if (node.id !== selectedId && !hiddenCount) return node
-        const mindmap: MindmapNodeActions = {
-          edit: interactions.edit,
-          hiddenCount,
-          toggleFold: interactions.toggleFold,
-          ...(node.id === selectedId && props.editable
+        const descendantCount = descendantCounts.get(node.id) ?? 0
+        const selected = node.id === selectedId
+        if (!selected && descendantCount === 0) return node
+        const mindmap: MindmapNodeActions | undefined = selected
+          ? {
+              edit: interactions.edit,
+              ...(props.editable
+                ? {
+                    addChild: interactions.addChild,
+                    addSibling: interactions.addSibling,
+                  }
+                : {}),
+            }
+          : undefined
+        const graphBranch =
+          descendantCount > 0
             ? {
-                addChild: interactions.addChild,
-                addSibling: interactions.addSibling,
+                collapsed: collapsedIds.has(node.id),
+                descendantCount,
+                label: collapsedIds.has(node.id)
+                  ? t('graph.expandDescendants', { count: descendantCount })
+                  : t('graph.collapseDescendants', { count: descendantCount }),
+                title: collapsedIds.has(node.id)
+                  ? t('graph.expandBranch')
+                  : t('graph.collapseBranch'),
+                toggle: toggleBranch,
               }
-            : {}),
-        }
-        return { ...node, data: { ...node.data, mindmap } }
+            : undefined
+        return { ...node, data: { ...node.data, graphBranch, mindmap } }
       }),
     [
       interactions.addChild,
       interactions.addSibling,
       interactions.edit,
-      interactions.toggleFold,
+      collapsedIds,
+      descendantCounts,
       props.editable,
       selectedId,
+      t,
+      toggleBranch,
       visibility,
     ],
   )
@@ -237,9 +285,12 @@ export const MindmapGraphPage = (props: GraphPageProps) => {
         proOptions={proOptions}
       >
         <Controls showInteractive={false} />
-        {shouldRenderGraphMiniMap(props.showMiniMap, renderedNodes.length) ? (
-          <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
-        ) : null}
+        <GraphMiniMap
+          narrowFallbacks={mindmapMiniMapFallbacks}
+          nodeCount={renderedNodes.length}
+          offsets={mindmapMiniMapOffsets}
+          show={props.showMiniMap}
+        />
       </ReactFlow>
     </div>
   )

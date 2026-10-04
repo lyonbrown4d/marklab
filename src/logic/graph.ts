@@ -26,6 +26,13 @@ export type GraphNodeData = Record<string, unknown> & {
   sourcePath?: string
   target?: string
   editable?: boolean
+  graphBranch?: {
+    collapsed: boolean
+    descendantCount: number
+    label: string
+    title: string
+    toggle: (nodeId: string) => void
+  }
   onUpdateTitle?: (nodeId: string, title: string) => void
   onUpdateContent?: (nodeId: string, content: string, contentBlocks?: MarkdownBlock[]) => void
   workspaceMapEditor?: {
@@ -36,6 +43,10 @@ export type GraphNodeData = Record<string, unknown> & {
     onOpenFull: () => void
     onRetry: () => void
     readOnly: boolean
+  }
+  workspaceMapDisclosure?: {
+    collapsed: boolean
+    toggle: (nodeId: string) => void
   }
   workspaceMap?: true
   webView?: {
@@ -225,7 +236,8 @@ export const buildGraphFromKnowledgeGraph = (
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: edge.kind === 'contains' ? 'smoothstep' : undefined,
+    type: 'smoothstep',
+    className: edge.kind === 'contains' ? 'graph-edge--hierarchy' : 'graph-edge--reference',
     data: { kind: edge.kind },
   }))
 

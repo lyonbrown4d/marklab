@@ -9,7 +9,16 @@ import type { LocalHistoryServiceContract } from '@electron/services/localHistor
 import type { Logger } from '@electron/services/logger.js'
 import type { FsGraph } from '@electron/services/workspace/types.js'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
-import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
+
+vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient.js', () => ({
+  WorkspaceAnalysisWorkerClient: class {
+    run() {
+      return Promise.resolve({ files: [], paths: [], asset_paths: [] })
+    }
+
+    terminate() {}
+  },
+}))
 
 const tempRoots: string[] = []
 
@@ -19,49 +28,40 @@ afterEach(async () => {
   )
 })
 
-describe('WorkspaceGraphCache', () => {
-  it('keys workspace graphs by document path, content hash, and known file and asset paths', () => {
-    const cache = new WorkspaceGraphCache()
-    const graph = createGraph('mindmap')
-    const documents = [{ path: 'alpha.md', content: '# Alpha' }]
-    const knownPaths = { paths: ['alpha.md'], assetPaths: [] }
-
-    cache.setWorkspaceGraph(documents, knownPaths, graph)
-
-    expect(cache.getWorkspaceGraph(documents, { paths: ['alpha.md'], assetPaths: [] })).toBe(graph)
-    expect(
-      cache.getWorkspaceGraph([{ path: 'alpha.md', content: '# Changed' }], knownPaths),
-    ).toBeUndefined()
-    expect(
-      cache.getWorkspaceGraph(documents, { paths: ['alpha.md', 'beta.md'], assetPaths: [] }),
-    ).toBeUndefined()
-    expect(
-      cache.getWorkspaceGraph(documents, { paths: ['alpha.md'], assetPaths: ['logo.png'] }),
-    ).toBeUndefined()
-  })
-
-  it('evicts the least recently used workspace graph when the cache is full', () => {
-    const cache = new WorkspaceGraphCache(2)
-    const firstGraph = createGraph('mindmap')
-    const secondGraph = createGraph('mindmap')
-    const thirdGraph = createGraph('mindmap')
-    const firstDocuments = [{ path: 'first.md', content: '# First' }]
-    const secondDocuments = [{ path: 'second.md', content: '# Second' }]
-    const thirdDocuments = [{ path: 'third.md', content: '# Third' }]
-
-    cache.setWorkspaceGraph(firstDocuments, createKnownPaths('first.md'), firstGraph)
-    cache.setWorkspaceGraph(secondDocuments, createKnownPaths('second.md'), secondGraph)
-    expect(cache.getWorkspaceGraph(firstDocuments, createKnownPaths('first.md'))).toBe(firstGraph)
-
-    cache.setWorkspaceGraph(thirdDocuments, createKnownPaths('third.md'), thirdGraph)
-
-    expect(cache.getWorkspaceGraph(secondDocuments, createKnownPaths('second.md'))).toBeUndefined()
-    expect(cache.getWorkspaceGraph(firstDocuments, createKnownPaths('first.md'))).toBe(firstGraph)
-    expect(cache.getWorkspaceGraph(thirdDocuments, createKnownPaths('third.md'))).toBe(thirdGraph)
-  })
-})
-
 describe('WorkspaceAnalysisService sidecar graph', () => {
+  it('shares one workspace snapshot across concurrent index and graph analysis', async () => {
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(service, [{ path: 'alpha.md', content: '# Alpha' }])
+
+    try {
+      await Promise.all([workspace.workspaceIndex(), workspace.workspaceGraph()])
+
+      expect(service.readWorkspaceFile).toHaveBeenCalledOnce()
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+    } finally {
+      await workspace.flushBuffers()
+      workspace.dispose()
+    }
+  })
+
+  it('deduplicates concurrent workspace graph builds', async () => {
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(service, [{ path: 'alpha.md', content: '# Alpha' }])
+
+    try {
+      const [first, second] = await Promise.all([
+        workspace.workspaceGraph(),
+        workspace.workspaceGraph(),
+      ])
+
+      expect(first).toBe(second)
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+    } finally {
+      await workspace.flushBuffers()
+      workspace.dispose()
+    }
+  })
+
   it('passes markdown documents and known paths to the sidecar workspace graph builder', async () => {
     const graph = createGraph('mindmap')
     const service = createKnowledgeServiceMock({ workspaceGraph: graph })
@@ -124,6 +124,10 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
 
       await expect(workspace.workspaceGraph()).resolves.toBe(secondGraph)
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2)
+
+      workspace.updateBuffer({ path: 'alpha.md', content: '# Alpha' })
+      await expect(workspace.workspaceGraph()).resolves.toBe(firstGraph)
       expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2)
     } finally {
       await workspace.flushBuffers()
@@ -269,11 +273,6 @@ const createGraph = (mode: FsGraph['mode']): FsGraph => ({
   edges: [],
   mode,
   nodes: [{ id: 'file:alpha.md', kind: 'file', label: 'alpha.md', path: 'alpha.md' }],
-})
-
-const createKnownPaths = (pathValue: string): { paths: string[]; assetPaths: string[] } => ({
-  paths: [pathValue],
-  assetPaths: [],
 })
 
 const createLogger = (): Logger & { error: ReturnType<typeof vi.fn> } => {

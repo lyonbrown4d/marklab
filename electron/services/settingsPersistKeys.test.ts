@@ -40,4 +40,9 @@ describe('settingsPersistKeys', () => {
   it('allows the terminal shell preference through the renderer persist boundary', () => {
     expect(preferenceStateKeys.has('terminalShellPath')).toBe(true)
   })
+
+  it('allows graph minimap presentation preferences through the renderer persist boundary', () => {
+    expect(preferenceStateKeys.has('graphMiniMapPosition')).toBe(true)
+    expect(preferenceStateKeys.has('graphMiniMapSize')).toBe(true)
+  })
 })

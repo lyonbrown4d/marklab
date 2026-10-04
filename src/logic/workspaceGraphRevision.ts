@@ -71,3 +71,23 @@ export const createWorkspaceGraphRevision = (index: FsWorkspaceIndex): string =>
 
   return `${(first >>> 0).toString(36)}-${(second >>> 0).toString(36)}`
 }
+
+export const createWorkspaceGraphStructureRevision = (index: FsWorkspaceIndex): string => {
+  let hash = FNV_OFFSET
+  const write = (value: string) => {
+    const framed = `${value.length}:${value}`
+    for (let position = 0; position < framed.length; position += 1) {
+      hash = Math.imul(hash ^ framed.charCodeAt(position), FNV_PRIME)
+    }
+  }
+
+  index.files
+    .map((file) => file.path)
+    .sort()
+    .forEach(write)
+  const paths = [...(index.paths ?? [])].sort()
+  const assetPaths = [...(index.asset_paths ?? [])].sort()
+  paths.forEach(write)
+  assetPaths.forEach(write)
+  return (hash >>> 0).toString(36)
+}

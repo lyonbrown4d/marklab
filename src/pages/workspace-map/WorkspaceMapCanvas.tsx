@@ -3,7 +3,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -14,13 +13,14 @@ import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/lo
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import { GraphMiniMap, workspaceMiniMapOffsets } from '@/pages/graph/GraphMiniMapView'
 import { useGraphRenderedNodes } from '@/pages/graph/useGraphWebViewState'
 import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
 import { useWorkspaceMapKeyboard } from '@/pages/workspace-map/useWorkspaceMapKeyboard'
+import { useWorkspaceMapNodeDisclosure } from '@/pages/workspace-map/useWorkspaceMapNodeDisclosure'
 import {
   getWorkspaceMapNodeOpenPath,
   mergeWorkspaceMapNodeGeometry,
@@ -113,6 +113,11 @@ export const WorkspaceMapCanvas = ({
   )
   const [nodes, setNodes, onNodesChange] = useNodesState(renderedGraph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(presentedGraph.edges)
+  const { nodes: disclosedNodes } = useWorkspaceMapNodeDisclosure({
+    activePath,
+    nodes,
+    setNodes,
+  })
   const layoutFlow = useMemo(
     () =>
       flow
@@ -222,7 +227,7 @@ export const WorkspaceMapCanvas = ({
       tabIndex={0}
       colorMode={darkMode ? 'dark' : 'light'}
       className={cn('workspace-map-canvas h-full w-full', activePath && 'is-editing')}
-      nodes={nodes}
+      nodes={disclosedNodes}
       edges={edges}
       nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
@@ -259,15 +264,7 @@ export const WorkspaceMapCanvas = ({
         showInteractive={false}
         fitViewOptions={{ maxZoom: 1, padding: 0.22 }}
       />
-      {shouldRenderGraphMiniMap(showMiniMap, nodes.length) ? (
-        <MiniMap
-          position="bottom-left"
-          pannable
-          zoomable
-          className="!bg-card/90"
-          nodeColor={getMiniMapNodeColor}
-        />
-      ) : null}
+      <GraphMiniMap nodeCount={nodes.length} offsets={workspaceMiniMapOffsets} show={showMiniMap} />
     </ReactFlow>
   )
 }

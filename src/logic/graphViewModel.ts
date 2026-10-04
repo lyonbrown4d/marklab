@@ -86,9 +86,15 @@ export const filterGraphElements = (
     return getGraphNodeSearchText(node).includes(query)
   })
   const visibleNodeIds = new Set(visibleNodes.map((node) => node.id))
-  const visibleEdges = edges.filter(
-    (edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
-  )
+  const connectionKeys = new Set<string>()
+  const visibleEdges = edges.filter((edge) => {
+    if (!visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target)) return false
+    const kind = typeof edge.data?.kind === 'string' ? edge.data.kind : 'reference'
+    const key = JSON.stringify([edge.source, edge.target, kind])
+    if (connectionKeys.has(key)) return false
+    connectionKeys.add(key)
+    return true
+  })
 
   return { nodes: visibleNodes, edges: visibleEdges }
 }

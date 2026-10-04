@@ -1,6 +1,10 @@
 import type { Node } from '@xyflow/react'
 import { describe, expect, it } from 'vitest'
-import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import {
+  getGraphMiniMapSize,
+  getMiniMapNodeColor,
+  shouldRenderGraphMiniMap,
+} from '@/pages/graph/graphMiniMap'
 
 const node = (type?: string): Node => ({
   id: type ?? 'file',
@@ -24,5 +28,10 @@ describe('graphMiniMap', () => {
     expect(getMiniMapNodeColor(node('missing'))).toBe('hsl(var(--destructive))')
     expect(getMiniMapNodeColor(node('external'))).toBe('hsl(var(--status-warning))')
     expect(getMiniMapNodeColor(node())).toBe('hsl(var(--muted-foreground))')
+  })
+
+  it('offers an explicit compact minimap size for smaller canvases', () => {
+    expect(getGraphMiniMapSize('compact')).toEqual({ height: 90, width: 128 })
+    expect(getGraphMiniMapSize('regular')).toEqual({ height: 120, width: 168 })
   })
 })

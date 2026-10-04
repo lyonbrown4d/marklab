@@ -175,7 +175,7 @@ describe('useWorkspaceIndex', () => {
       })
 
       expect(invalidateQueries).not.toHaveBeenCalled()
-      act(() => vi.advanceTimersByTime(150))
+      act(() => vi.advanceTimersByTime(950))
       expect(invalidateQueries).toHaveBeenCalledTimes(2)
       expect(invalidateQueries).toHaveBeenNthCalledWith(1, {
         queryKey: ['workspace-index', 'directory:D:/notes'],
@@ -212,7 +212,7 @@ describe('useWorkspaceIndex', () => {
       })
 
       expect(invalidateQueries).toHaveBeenCalledTimes(2)
-      act(() => vi.advanceTimersByTime(150))
+      act(() => vi.advanceTimersByTime(950))
       expect(invalidateQueries).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()

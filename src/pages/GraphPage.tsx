@@ -1,13 +1,6 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
-import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
-  useEdgesState,
-  useNodesState,
-} from '@xyflow/react'
+import { Background, Controls, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react'
 import type { Edge, Node, OnSelectionChangeParams } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
@@ -29,7 +22,11 @@ import { GraphFeedbackToast } from '@/pages/graph/GraphFeedbackToast'
 import { GraphInspector } from '@/pages/graph/GraphInspector'
 import { GraphToolbar } from '@/pages/graph/GraphToolbar'
 import { MindmapGraphPage } from '@/pages/graph/MindmapGraphPage'
-import { getMiniMapNodeColor, shouldRenderGraphMiniMap } from '@/pages/graph/graphMiniMap'
+import {
+  GraphMiniMap,
+  knowledgeGraphMiniMapFallbacks,
+  knowledgeGraphMiniMapOffsets,
+} from '@/pages/graph/GraphMiniMapView'
 import { useGraphRenderedNodes } from '@/pages/graph/useGraphWebViewState'
 import {
   fitViewOptions,
@@ -263,9 +260,12 @@ const KnowledgeGraphPage = ({
       >
         <Background gap={16} size={1} />
         <Controls showInteractive />
-        {shouldRenderGraphMiniMap(showMiniMap, filteredGraph.nodes.length) && (
-          <MiniMap pannable zoomable className="!bg-card/90" nodeColor={getMiniMapNodeColor} />
-        )}
+        <GraphMiniMap
+          narrowFallbacks={knowledgeGraphMiniMapFallbacks}
+          nodeCount={filteredGraph.nodes.length}
+          offsets={knowledgeGraphMiniMapOffsets}
+          show={showMiniMap}
+        />
       </ReactFlow>
       {filteredGraph.nodes.length === 0 && (
         <GraphEmptyState

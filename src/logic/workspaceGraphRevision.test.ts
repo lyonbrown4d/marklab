@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createWorkspaceGraphRevision } from '@/logic/workspaceGraphRevision'
+import {
+  createWorkspaceGraphRevision,
+  createWorkspaceGraphStructureRevision,
+} from '@/logic/workspaceGraphRevision'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
 
 const createIndex = (): FsWorkspaceIndex => ({
@@ -83,5 +86,22 @@ describe('createWorkspaceGraphRevision', () => {
     after[field] = [value]
 
     expect(createWorkspaceGraphRevision(after)).not.toBe(createWorkspaceGraphRevision(before))
+  })
+})
+
+describe('createWorkspaceGraphStructureRevision', () => {
+  it('changes for path topology but ignores document-only semantic changes', () => {
+    const before = createIndex()
+    const contentOnly = createIndex()
+    contentOnly.files[0].headings[0].text = 'Changed title'
+    const renamed = createIndex()
+    renamed.files[0].path = 'docs/renamed.md'
+
+    expect(createWorkspaceGraphStructureRevision(contentOnly)).toBe(
+      createWorkspaceGraphStructureRevision(before),
+    )
+    expect(createWorkspaceGraphStructureRevision(renamed)).not.toBe(
+      createWorkspaceGraphStructureRevision(before),
+    )
   })
 })

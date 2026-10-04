@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -38,6 +38,45 @@ const renderNode = (type: 'external' | 'missing' | 'preview') => {
 }
 
 describe('WorkspaceMapReferenceNode', () => {
+  it('unmounts a rich web preview while its node is collapsed', () => {
+    const toggle = vi.fn()
+    const parentClick = vi.fn()
+    const parentMouseDown = vi.fn()
+    const parentPointerDown = vi.fn()
+    const props = {
+      id: 'ext:https://example.com/current',
+      type: 'external',
+      selected: false,
+      data: {
+        label: 'Current page',
+        subtitle: 'example.com',
+        url: 'https://example.com/current',
+        webView: { active: false, activate: vi.fn(), deactivate: vi.fn() },
+        workspaceMapDisclosure: { collapsed: true, toggle },
+      },
+    } as unknown as ComponentProps<typeof WorkspaceMapReferenceNode>
+
+    render(
+      <div onClick={parentClick} onMouseDown={parentMouseDown} onPointerDown={parentPointerDown}>
+        <WorkspaceMapReferenceNode {...props} />
+      </div>,
+      { wrapper: ReactFlowProvider },
+    )
+
+    expect(screen.queryByTestId('graph-web-node')).not.toBeInTheDocument()
+    expect(screen.getByText('Current page')).toBeInTheDocument()
+    expect(document.querySelector('.react-flow__resize-control')).toBeNull()
+
+    const disclosure = screen.getByRole('button', { name: 'Expand node content' })
+    fireEvent.pointerDown(disclosure)
+    fireEvent.mouseDown(disclosure)
+    fireEvent.click(disclosure)
+    expect(toggle).toHaveBeenCalledExactlyOnceWith('ext:https://example.com/current')
+    expect(parentClick).not.toHaveBeenCalled()
+    expect(parentMouseDown).not.toHaveBeenCalled()
+    expect(parentPointerDown).not.toHaveBeenCalled()
+  })
+
   it('renders an external URL through the shared graph web preview with resize affordance', () => {
     const props = {
       id: 'ext:https://example.com/current',

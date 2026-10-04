@@ -242,7 +242,14 @@ describe('GraphNodes', () => {
           data: {
             label: 'Topic',
             contentMode: 'none',
-            mindmap: { addChild, addSibling, edit: vi.fn(), hiddenCount: 3, toggleFold },
+            graphBranch: {
+              collapsed: true,
+              descendantCount: 3,
+              label: 'Expand 3 descendants',
+              title: 'Expand branch',
+              toggle: toggleFold,
+            },
+            mindmap: { addChild, addSibling, edit: vi.fn() },
           },
           selected: true,
         })}
@@ -251,10 +258,37 @@ describe('GraphNodes', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add child topic' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add sibling topic' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Show 3 hidden topics' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand 3 descendants' }))
     expect(addChild).toHaveBeenCalledWith('heading:topic')
     expect(addSibling).toHaveBeenCalledWith('heading:topic')
     expect(toggleFold).toHaveBeenCalledWith('heading:topic')
+  })
+
+  it('lets pointer users collapse and expand a graph branch directly from its node', () => {
+    const toggle = vi.fn()
+    renderGraphNode(
+      <FileNode
+        {...fileNodeProps({
+          id: 'file:notes/current.md',
+          data: {
+            label: 'current.md',
+            graphBranch: {
+              collapsed: false,
+              descendantCount: 4,
+              label: 'Collapse 4 descendants',
+              title: 'Collapse branch',
+              toggle,
+            },
+          },
+          selected: false,
+        })}
+      />,
+    )
+
+    const disclosure = screen.getByRole('button', { name: 'Collapse 4 descendants' })
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(disclosure)
+    expect(toggle).toHaveBeenCalledWith('file:notes/current.md')
   })
 
   it('enters title editing on a mindmap topic double click', () => {

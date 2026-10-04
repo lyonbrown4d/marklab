@@ -87,6 +87,32 @@ beforeEach(() => {
 })
 
 describe('WorkspaceMapFileNode', () => {
+  it('unmounts document content and keeps disclosure events inside a collapsed node', () => {
+    const toggle = vi.fn()
+    const parentClick = vi.fn()
+    const parentPointerDown = vi.fn()
+    renderNode(
+      {
+        content: 'Heavy document content',
+        label: 'a',
+        path: 'notes/a.md',
+        workspaceMapDisclosure: { collapsed: true, toggle },
+      },
+      { onClick: parentClick, onPointerDown: parentPointerDown },
+    )
+
+    expect(screen.queryByText('Heavy document content')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('workspace-map-editor-content')).not.toBeInTheDocument()
+    expect(document.querySelector('.react-flow__resize-control')).toBeNull()
+
+    const disclosure = screen.getByRole('button', { name: 'workspaceMap.expandNode' })
+    fireEvent.pointerDown(disclosure)
+    fireEvent.click(disclosure)
+    expect(toggle).toHaveBeenCalledExactlyOnceWith('file:notes/a.md')
+    expect(parentClick).not.toHaveBeenCalled()
+    expect(parentPointerDown).not.toHaveBeenCalled()
+  })
+
   it('renders a safe lightweight document summary while remaining draggable when inactive', () => {
     renderNode({
       content: 'Project goals and the next concrete milestone. <script>alert(1)</script>',
@@ -169,6 +195,20 @@ describe('WorkspaceMapFileNode', () => {
     })
 
     expect(await screen.findByTestId('plate-editor')).toBeInTheDocument()
+  })
+
+  it('keeps an active editor expanded even if stale disclosure state says collapsed', async () => {
+    renderNode({
+      label: 'a',
+      path: 'notes/a.md',
+      workspaceMapDisclosure: { collapsed: true, toggle: vi.fn() },
+      workspaceMapEditor: editor,
+    })
+
+    expect(await screen.findByTestId('plate-editor')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'workspaceMap.expandNode' }),
+    ).not.toBeInTheDocument()
   })
 
   it('closes or opens the full document only through explicit header buttons', () => {
