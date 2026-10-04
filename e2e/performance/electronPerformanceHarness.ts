@@ -50,9 +50,12 @@ const removeRuntimeRoot = (runtimeRoot: string) => {
 const revealElectronWindow = async (app: ElectronApplication, page: Page) => {
   const targetUrl = page.url()
   await app.evaluate(({ BrowserWindow }, url) => {
-    const window = BrowserWindow.getAllWindows().find(
-      (candidate) => candidate.webContents.getURL() === url,
+    const windows = BrowserWindow.getAllWindows()
+    const exact = windows.find((candidate) => candidate.webContents.getURL() === url)
+    const sameDocument = windows.filter(
+      (candidate) => candidate.webContents.getURL().split('#')[0] === url.split('#')[0],
     )
+    const window = exact ?? (sameDocument.length === 1 ? sameDocument[0] : undefined)
     if (!window) throw new Error(`Unable to reveal Electron window for ${url}`)
     window.setOpacity(1)
     window.show()
@@ -102,6 +105,7 @@ const waitForLauncherPage = async (
 export const launchPerformanceSession = async (
   rendererUrl: string,
   graphicsMode: GraphicsMode,
+  options: { trustedCertificateSpki?: string } = {},
 ): Promise<ElectronPerformanceSession> => {
   fs.mkdirSync(runtimeParent, { recursive: true })
   const runtimeRoot = fs.mkdtempSync(path.join(runtimeParent, 'run-'))
@@ -130,7 +134,14 @@ export const launchPerformanceSession = async (
     ...(graphicsMode === 'software-rendering' ? { MARKLAB_E2E: '1' } : {}),
   }
   const app = await electron.launch({
-    args: ['--enable-precise-memory-info', `--user-data-dir=${isolation.userData}`, electronMain],
+    args: [
+      ...(options.trustedCertificateSpki
+        ? [`--ignore-certificate-errors-spki-list=${options.trustedCertificateSpki}`]
+        : []),
+      '--enable-precise-memory-info',
+      `--user-data-dir=${isolation.userData}`,
+      electronMain,
+    ],
     cwd: repoRoot,
     env,
   })

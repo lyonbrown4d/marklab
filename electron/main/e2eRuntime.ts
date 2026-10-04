@@ -5,7 +5,7 @@ export const isBackgroundElectronE2e = (): boolean => {
 }
 
 export const installElectronE2eRuntimeFlags = (): void => {
-  if (process.env.MARKLAB_E2E !== '1') return
+  if (!isBackgroundElectronE2e()) return
 
   app.disableHardwareAcceleration()
   app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor')

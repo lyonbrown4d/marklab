@@ -60,7 +60,11 @@ describe('WebTabSurface', () => {
     )
 
     expect(screen.getByRole('toolbar', { name: 'Web navigation' })).toBeVisible()
-    expect(screen.getByTestId('web-tab-native-host')).toHaveClass('ml-5')
+    const nativeHost = screen.getByTestId('web-tab-native-host')
+    expect(nativeHost).toHaveClass('ml-5')
+    expect(nativeHost).toHaveAttribute('data-native-status', 'loading')
+    expect(nativeHost).toHaveAttribute('data-native-active', 'true')
+    expect(nativeHost).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByText('Loading webpage')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     fireEvent.click(screen.getByRole('button', { name: 'Stop loading' }))
@@ -90,6 +94,25 @@ describe('WebTabSurface', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Network unavailable')
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(actions.reload).toHaveBeenCalled()
+  })
+
+  it('exposes when a ready native surface is inactive', () => {
+    native.state = {
+      ...native.state,
+      active: false,
+      status: 'ready',
+    }
+    render(
+      <WebTabSurface
+        suspended={false}
+        tab={{ kind: 'web', id: 'web-id', title: 'Docs', url: 'https://example.com/docs' }}
+      />,
+    )
+
+    const nativeHost = screen.getByTestId('web-tab-native-host')
+    expect(nativeHost).toHaveAttribute('data-native-status', 'ready')
+    expect(nativeHost).toHaveAttribute('data-native-active', 'false')
+    expect(nativeHost).toHaveAttribute('aria-busy', 'false')
   })
 
   it('rejects an unsafe address with inline feedback', () => {

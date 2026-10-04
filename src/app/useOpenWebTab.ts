@@ -19,7 +19,17 @@ export const useOpenWebTab = () => {
         (tab): tab is WebTab => tab.kind === 'web' && tab.url === safeUrl,
       )
       const tab = existing ?? createWebTab(safeUrl, title)
-      if (!existing) state.setTabs([...state.tabs, tab])
+      if (!existing) {
+        const activeIndex = state.tabs.findIndex(
+          (item) => getWorkspaceTabId(item) === state.activeTabId,
+        )
+        const insertionIndex = activeIndex < 0 ? state.tabs.length : activeIndex + 1
+        state.setTabs([
+          ...state.tabs.slice(0, insertionIndex),
+          tab,
+          ...state.tabs.slice(insertionIndex),
+        ])
+      }
       state.setActiveTabId(getWorkspaceTabId(tab))
       navigate(pathToWebTabRoute(tab.id))
     },

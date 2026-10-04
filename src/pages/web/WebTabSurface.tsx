@@ -64,7 +64,10 @@ const WebTabSurface = ({ suspended, tab, onClose }: WebTabSurfaceProps) => {
       >
         <div
           ref={hostRef}
+          aria-busy={loading}
           className="relative ml-5 h-full min-h-0 overflow-hidden bg-muted/15"
+          data-native-active={nativeState.active}
+          data-native-status={nativeState.status}
           data-testid="web-tab-native-host"
         >
           {loading ? (

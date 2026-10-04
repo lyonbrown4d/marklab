@@ -133,12 +133,16 @@ const waitForRendererAppShell = async (page: Page, output: string[]) => {
 
 export const launchElectronTestSession = async (
   rendererUrl: string,
+  options: { trustedCertificateSpki?: string } = {},
 ): Promise<ElectronTestSession> => {
   const testRunRoot = path.join(e2eOutputRoot, `${Date.now()}-${process.pid}`)
   fs.mkdirSync(testRunRoot, { recursive: true })
   const output: string[] = []
   const app = await electron.launch({
     args: [
+      ...(options.trustedCertificateSpki
+        ? [`--ignore-certificate-errors-spki-list=${options.trustedCertificateSpki}`]
+        : []),
       '--disable-dev-shm-usage',
       '--disable-features=VizDisplayCompositor',
       '--disable-gpu',
@@ -175,6 +179,65 @@ export const launchElectronTestSession = async (
     throw error
   }
 }
+
+export const revealElectronWindow = (
+  app: ElectronApplication,
+  mainWindowUrl: string,
+  contentSize?: { width: number; height: number },
+) =>
+  app.evaluate(
+    ({ BrowserWindow }, { url, contentSize }) => {
+      const window = BrowserWindow.getAllWindows().find(
+        (candidate) => candidate.webContents.getURL() === url,
+      )
+      if (!window) throw new Error('Main renderer window was not found')
+      if (window.isMinimized()) window.restore()
+      if (contentSize) window.setContentSize(contentSize.width, contentSize.height)
+      window.show()
+      window.focus()
+    },
+    { url: mainWindowUrl, contentSize },
+  )
+
+export const snapshotWebContentsViews = (app: ElectronApplication, mainWindowUrl: string) =>
+  app.evaluate(({ BrowserWindow, WebContentsView }, url) => {
+    const window = BrowserWindow.getAllWindows().find(
+      (candidate) => candidate.webContents.getURL() === url,
+    )
+    if (!window) throw new Error('Main renderer window was not found')
+    return window.contentView.children
+      .filter((child): child is Electron.WebContentsView => child instanceof WebContentsView)
+      .map((view) => ({
+        bounds: view.getBounds(),
+        title: view.webContents.getTitle(),
+        url: view.webContents.getURL(),
+        visible: view.getVisible(),
+        webContentsId: view.webContents.id,
+      }))
+  }, mainWindowUrl)
+
+export const snapshotWebTabContents = (app: ElectronApplication, mainWindowUrl: string) =>
+  app.evaluate(({ BrowserWindow, WebContentsView, webContents, session }, url) => {
+    const window = BrowserWindow.getAllWindows().find(
+      (candidate) => candidate.webContents.getURL() === url,
+    )
+    if (!window) throw new Error('Main renderer window was not found')
+    const attachedIds = new Set(
+      window.contentView.children
+        .filter((child): child is Electron.WebContentsView => child instanceof WebContentsView)
+        .map((view) => view.webContents.id),
+    )
+    const tabSession = session.fromPartition(`marklab-web-tabs-${window.id}`)
+    return webContents
+      .getAllWebContents()
+      .filter((contents) => contents.session === tabSession)
+      .map((contents) => ({
+        attached: attachedIds.has(contents.id),
+        url: contents.getURL(),
+        webContentsId: contents.id,
+      }))
+      .sort((left, right) => left.url.localeCompare(right.url))
+  }, mainWindowUrl)
 
 export const closeElectronTestSession = async (session: ElectronTestSession | undefined) => {
   await session?.app.close().catch(() => undefined)

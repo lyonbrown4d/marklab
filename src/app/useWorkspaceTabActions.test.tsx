@@ -39,17 +39,19 @@ describe('useWorkspaceTabActions workspace map', () => {
     expect(setActiveTabId).not.toHaveBeenCalled()
   })
 
-  it('creates a web tab once and activates its opaque route', () => {
+  it('creates a web tab after the active tab and activates its opaque route', () => {
     const navigate = vi.fn()
     const setActiveTabId = vi.fn()
     const setTabs = vi.fn()
-    const tabs: WorkspaceTab[] = []
+    const editTab: WorkspaceTab = { kind: 'file', path: 'notes/current.md', view: 'edit' }
+    const sourceTab: WorkspaceTab = { kind: 'file', path: 'notes/current.md', view: 'source' }
+    const tabs: WorkspaceTab[] = [editTab, sourceTab]
     const { result, rerender } = renderHook(() =>
       useWorkspaceTabActions({
-        activeTabIdRef: { current: null },
-        currentFilePathRef: { current: null },
-        inspectedPathRef: { current: null },
-        locationPathnameRef: { current: '/' },
+        activeTabIdRef: { current: 'file:edit:notes/current.md' },
+        currentFilePathRef: { current: 'notes/current.md' },
+        inspectedPathRef: { current: 'notes/current.md' },
+        locationPathnameRef: { current: '/files/edit/notes/current.md' },
         tabsRef: { current: tabs },
         navigate,
         setTabViewModes: vi.fn(),
@@ -62,13 +64,17 @@ describe('useWorkspaceTabActions workspace map', () => {
 
     act(() => result.current.onOpenWebTab('https://example.com/docs', 'Docs', 'web-id'))
 
-    expect(setTabs).toHaveBeenCalledWith([
-      { kind: 'web', id: 'web-id', url: 'https://example.com/docs', title: 'Docs' },
-    ])
+    const webTab: WorkspaceTab = {
+      kind: 'web',
+      id: 'web-id',
+      url: 'https://example.com/docs',
+      title: 'Docs',
+    }
+    expect(setTabs).toHaveBeenCalledWith([editTab, webTab, sourceTab])
     expect(setActiveTabId).toHaveBeenCalledWith('web:web-id')
     expect(navigate).toHaveBeenCalledWith('/web/web-id')
 
-    tabs.push({ kind: 'web', id: 'web-id', url: 'https://example.com/docs', title: 'Docs' })
+    tabs.splice(1, 0, webTab)
     rerender()
     setTabs.mockClear()
     act(() => result.current.onOpenWebTab('https://example.com/docs', 'Docs', 'web-id'))

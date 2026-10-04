@@ -186,12 +186,30 @@ export const useWorkspaceTabActions = ({
       )
       const tab = existing ?? createWebTab(safeUrl, title, id)
       const tabId = getWorkspaceTabId(tab)
-      if (!existing) setTabs([...currentTabs, tab])
+      if (!existing) {
+        const activeIndex = currentTabs.findIndex(
+          (item) => getWorkspaceTabId(item) === activeTabIdRef.current,
+        )
+        const insertionIndex = activeIndex < 0 ? currentTabs.length : activeIndex + 1
+        setTabs([
+          ...currentTabs.slice(0, insertionIndex),
+          tab,
+          ...currentTabs.slice(insertionIndex),
+        ])
+      }
       setActiveTabId(tabId)
       setInspectedPath(null)
       navigateIfNeeded(locationPathnameRef.current, pathToWebTabRoute(tab.id), navigate)
     },
-    [locationPathnameRef, navigate, setActiveTabId, setInspectedPath, setTabs, tabsRef],
+    [
+      activeTabIdRef,
+      locationPathnameRef,
+      navigate,
+      setActiveTabId,
+      setInspectedPath,
+      setTabs,
+      tabsRef,
+    ],
   )
 
   const onCloseTab = useCallback(

@@ -42,7 +42,8 @@ describe('ExternalLinkPreview', () => {
     })
     renderPreview()
 
-    fireEvent.pointerEnter(screen.getByRole('article'))
+    const preview = screen.getByRole('article', { name: 'Article' })
+    fireEvent.pointerEnter(preview)
     await screen.findByText('Article title')
     fireEvent.click(screen.getByRole('button', { name: 'Open in app' }))
 

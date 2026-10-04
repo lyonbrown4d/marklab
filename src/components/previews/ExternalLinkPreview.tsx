@@ -60,6 +60,7 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
   return (
     <article
       ref={cardRef}
+      aria-label={fallbackTitle}
       className={cn(
         'group my-3 overflow-hidden rounded-lg border border-border/80 bg-background/85 text-foreground shadow-sm transition-colors hover:border-primary/35',
         className,
