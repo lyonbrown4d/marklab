@@ -6,12 +6,13 @@ import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTyp
 import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import type { FileEntry } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
-import { fsApi } from '@/services/fsApi'
+import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
+import { resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
@@ -19,7 +20,9 @@ type WysiwygEditorPageProps = {
   activePath: string | null
   value: string
   onChange: (value: string) => void
+  onOpenFile: (path: string) => void
   files: FileEntry[]
+  workspaceIndex?: FsWorkspaceIndex | null
   showStatusBar: boolean
   readOnly: boolean
 }
@@ -90,7 +93,9 @@ const WysiwygEditorPage = ({
   activePath,
   value,
   onChange,
+  onOpenFile,
   files,
+  workspaceIndex,
   showStatusBar,
   readOnly,
 }: WysiwygEditorPageProps) => {
@@ -99,6 +104,13 @@ const WysiwygEditorPage = ({
   const activePathRef = useLatest(activePath)
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
+  const handleWorkspaceLink = useCallback(
+    (target: string, documentPath: string | null) => {
+      const path = resolveLinkedFilePath(documentPath ?? activePath, target, files, workspaceIndex)
+      if (path) onOpenFile(path)
+    },
+    [activePath, files, onOpenFile, workspaceIndex],
+  )
 
   const slashLabels = useMarkdownEditorSlashLabels()
   const onCalendarFileCreate = useCallback(async () => {
@@ -164,6 +176,7 @@ const WysiwygEditorPage = ({
               placeholder={t('editor.placeholder')}
               slashLabels={slashLabels}
               onCalendarFileCreate={readOnly ? undefined : onCalendarFileCreate}
+              onWorkspaceLink={handleWorkspaceLink}
               readOnly={readOnly}
             />
           </Suspense>

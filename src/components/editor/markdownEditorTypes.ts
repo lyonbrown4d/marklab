@@ -62,6 +62,7 @@ export type MarkdownEditorProps = {
   placeholder: string
   slashLabels: MarkdownEditorSlashLabels
   onCalendarFileCreate?: () => Promise<string | null>
+  onWorkspaceLink?: (target: string, documentPath: string | null) => void
   readOnly?: boolean
   variant?: MarkdownEditorVariant
 }

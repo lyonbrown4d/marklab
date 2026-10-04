@@ -57,6 +57,33 @@ describe('PlateEditorSurface', () => {
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('contenteditable', 'false')
   })
 
+  it('forwards modifier-clicked workspace links to the navigation callback', () => {
+    const ref = createRef<PlateEditorSurfaceHandle>()
+    const initialOnWorkspaceLink = vi.fn()
+    const nextOnWorkspaceLink = vi.fn()
+    const props = {
+      activePath: 'notes/example.md',
+      onChange: vi.fn(),
+      placeholder: 'Write',
+      value: '[Guide](../docs/guide.md)',
+    }
+    const { rerender } = render(
+      <PlateEditorSurface {...props} onWorkspaceLink={initialOnWorkspaceLink} ref={ref} />,
+    )
+    const editor = ref.current?.getEditor()
+
+    rerender(<PlateEditorSurface {...props} onWorkspaceLink={nextOnWorkspaceLink} ref={ref} />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }), { ctrlKey: true })
+
+    expect(ref.current?.getEditor()).toBe(editor)
+    expect(initialOnWorkspaceLink).not.toHaveBeenCalled()
+    expect(nextOnWorkspaceLink).toHaveBeenCalledExactlyOnceWith(
+      '../docs/guide.md',
+      'notes/example.md',
+    )
+  })
+
   it('switches an existing editor between editable and read-only modes', () => {
     const props = {
       activePath: 'notes/example.md',

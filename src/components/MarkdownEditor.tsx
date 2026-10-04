@@ -109,6 +109,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           )}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
+          onWorkspaceLink={props.onWorkspaceLink}
           onStatusChange={setStatus}
           placeholder={props.placeholder}
           readOnly={props.readOnly}

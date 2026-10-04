@@ -1,0 +1,136 @@
+.markdown-editor .hljs-comment,
+.markdown-editor .hljs-code,
+.markdown-editor .hljs-formula,
+.markdown-editor .hljs-quote {
+  color: #6e7781;
+}
+
+.markdown-editor .hljs-keyword,
+.markdown-editor .hljs-doctag,
+.markdown-editor .hljs-template-tag,
+.markdown-editor .hljs-template-variable,
+.markdown-editor .hljs-type,
+.markdown-editor .hljs-variable.language_ {
+  color: #cf222e;
+}
+
+.markdown-editor .hljs-string,
+.markdown-editor .hljs-regexp,
+.markdown-editor .hljs-meta .hljs-string {
+  color: #0a3069;
+}
+
+.markdown-editor .hljs-number,
+.markdown-editor .hljs-literal,
+.markdown-editor .hljs-attr,
+.markdown-editor .hljs-attribute,
+.markdown-editor .hljs-meta,
+.markdown-editor .hljs-operator,
+.markdown-editor .hljs-selector-attr,
+.markdown-editor .hljs-selector-class,
+.markdown-editor .hljs-selector-id,
+.markdown-editor .hljs-variable {
+  color: #0550ae;
+}
+
+.markdown-editor .hljs-title,
+.markdown-editor .hljs-title.class_,
+.markdown-editor .hljs-title.function_,
+.markdown-editor .hljs-section {
+  color: #8250df;
+}
+
+.markdown-editor .hljs-name,
+.markdown-editor .hljs-selector-tag,
+.markdown-editor .hljs-selector-pseudo,
+.markdown-editor .hljs-subst {
+  color: #116329;
+}
+
+.markdown-editor .hljs-built_in,
+.markdown-editor .hljs-bullet,
+.markdown-editor .hljs-symbol {
+  color: #953800;
+}
+
+.markdown-editor .hljs-addition {
+  background: color-mix(in srgb, #2da44e 14%, transparent);
+  color: #116329;
+}
+
+.markdown-editor .hljs-deletion {
+  background: color-mix(in srgb, #cf222e 14%, transparent);
+  color: #82071e;
+}
+
+.markdown-editor .hljs-emphasis {
+  font-style: italic;
+}
+
+.markdown-editor .hljs-section,
+.markdown-editor .hljs-strong {
+  font-weight: 700;
+}
+
+.dark .markdown-editor .hljs-comment,
+.dark .markdown-editor .hljs-code,
+.dark .markdown-editor .hljs-formula,
+.dark .markdown-editor .hljs-quote {
+  color: #8b949e;
+}
+
+.dark .markdown-editor .hljs-keyword,
+.dark .markdown-editor .hljs-doctag,
+.dark .markdown-editor .hljs-template-tag,
+.dark .markdown-editor .hljs-template-variable,
+.dark .markdown-editor .hljs-type,
+.dark .markdown-editor .hljs-variable.language_ {
+  color: #ff7b72;
+}
+
+.dark .markdown-editor .hljs-string,
+.dark .markdown-editor .hljs-regexp,
+.dark .markdown-editor .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+.dark .markdown-editor .hljs-number,
+.dark .markdown-editor .hljs-literal,
+.dark .markdown-editor .hljs-attr,
+.dark .markdown-editor .hljs-attribute,
+.dark .markdown-editor .hljs-meta,
+.dark .markdown-editor .hljs-operator,
+.dark .markdown-editor .hljs-selector-attr,
+.dark .markdown-editor .hljs-selector-class,
+.dark .markdown-editor .hljs-selector-id,
+.dark .markdown-editor .hljs-variable {
+  color: #79c0ff;
+}
+
+.dark .markdown-editor .hljs-title,
+.dark .markdown-editor .hljs-title.class_,
+.dark .markdown-editor .hljs-title.function_,
+.dark .markdown-editor .hljs-section {
+  color: #d2a8ff;
+}
+
+.dark .markdown-editor .hljs-name,
+.dark .markdown-editor .hljs-selector-tag,
+.dark .markdown-editor .hljs-selector-pseudo,
+.dark .markdown-editor .hljs-subst {
+  color: #7ee787;
+}
+
+.dark .markdown-editor .hljs-built_in,
+.dark .markdown-editor .hljs-bullet,
+.dark .markdown-editor .hljs-symbol {
+  color: #ffa657;
+}
+
+.dark .markdown-editor .hljs-addition {
+  color: #aff5b4;
+}
+
+.dark .markdown-editor .hljs-deletion {
+  color: #ffdcd7;
+}

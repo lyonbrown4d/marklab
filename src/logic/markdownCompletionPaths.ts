@@ -1,7 +1,7 @@
 import { dirname, relative } from 'pathe'
 import type { FileEntry } from '@/store/appTypes'
 import type { FsWorkspaceIndex } from '@/services/fsApi'
-import { createFileLabel, normalizePath, resolveRelativePath } from '@/logic/paths'
+import { createFileLabel, normalizePath, resolveRelativePath, splitLinkTarget } from '@/logic/paths'
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 const WORKSPACE_LINK_TARGET_EXTENSIONS =
@@ -76,16 +76,29 @@ export const resolveLinkedFilePath = (
   if (!activePath) return null
   if (!target.trim()) return activePath
 
-  const normalized = resolveRelativePath(activePath, target)
+  const normalized = resolveRelativePath(activePath, localLinkPath(target))
   const candidates = [
     normalized,
     MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.md`,
     MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.markdown`,
   ].map(normalizePath)
   const existing = new Set(
-    workspaceIndex
-      ? workspaceIndex.files.map((file) => file.path)
-      : files.filter((file) => file.kind === 'file').map((file) => file.path),
+    [
+      ...files.filter((file) => file.kind === 'file').map((file) => file.path),
+      ...(workspaceIndex?.files.map((file) => file.path) ?? []),
+      ...(workspaceIndex?.asset_paths ?? []),
+    ].map(normalizePath),
   )
-  return candidates.find((candidate) => existing.has(candidate)) ?? candidates[0]
+  return candidates.find((candidate) => existing.has(candidate)) ?? null
+}
+
+const localLinkPath = (target: string) => {
+  const { path } = splitLinkTarget(target.trim())
+  const queryIndex = path.indexOf('?')
+  const pathWithoutQuery = queryIndex === -1 ? path : path.slice(0, queryIndex)
+  try {
+    return decodeURIComponent(pathWithoutQuery)
+  } catch {
+    return pathWithoutQuery
+  }
 }

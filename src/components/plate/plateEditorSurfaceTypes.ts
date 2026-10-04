@@ -20,6 +20,7 @@ export type PlateEditorSurfaceProps = {
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>
   onStatusChange?: (status: MarkdownEditorStatus) => void
+  onWorkspaceLink?: (target: string, documentPath: string | null) => void
   placeholder: string
   readOnly?: boolean
   slashLabels?: PlateSlashCommandLabels

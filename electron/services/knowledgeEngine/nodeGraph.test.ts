@@ -97,6 +97,27 @@ describe('Node outline graph content blocks', () => {
 })
 
 describe('Node workspace graph file summaries', () => {
+  it('resolves extensionless Markdown links against indexed files in the same directory', () => {
+    const graph = buildNodeWorkspaceGraph(
+      [
+        { path: 'docs/current.md', content: '[架构总览](architecture-overview)' },
+        { path: 'docs/architecture-overview.md', content: '# 架构总览' },
+      ],
+      {
+        paths: ['docs/current.md', 'docs/architecture-overview.md'],
+        assetPaths: [],
+      },
+    )
+
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        source: 'file:docs/current.md',
+        target: 'file:docs/architecture-overview.md',
+      }),
+    )
+    expect(graph.nodes.some((node) => node.kind === 'missing')).toBe(false)
+  })
+
   it('parses each Markdown document exactly once while building summaries', () => {
     vi.mocked(parseMarkdownAst).mockClear()
 

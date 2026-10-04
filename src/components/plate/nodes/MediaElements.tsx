@@ -143,6 +143,7 @@ export const createLinkElement = ({
     })
     const handleClick = workspaceTarget
       ? (event: MouseEvent<HTMLAnchorElement>) => {
+          if (!event.ctrlKey && !event.metaKey) return
           event.preventDefault()
           onWorkspaceLink?.(target, documentPath)
         }

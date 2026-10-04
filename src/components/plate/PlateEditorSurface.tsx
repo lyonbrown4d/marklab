@@ -1,5 +1,6 @@
 import type { Value } from 'platejs'
 import { Plate, PlateContent, type PlateEditor, usePlateEditor } from 'platejs/react'
+import { useLatest } from 'ahooks'
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
@@ -50,6 +51,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onChange,
       onImageImport,
       onStatusChange,
+      onWorkspaceLink,
       placeholder,
       readOnly = false,
       shortcutOverrides,
@@ -70,11 +72,16 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const localEchoRef = useRef<string | null>(null)
     const externalSyncRef = useRef<PlateExternalValueSyncHandle | null>(null)
     const externalLoadingRef = useRef(false)
+    const onWorkspaceLinkRef = useLatest(onWorkspaceLink)
     const asyncInitialValue = shouldParsePlateMarkdownInWorker(value)
     const editor = usePlateEditor(
       {
         chunking: plateChunkingOptions,
-        plugins: createPlateEditorPlugins({ getDocumentPath: () => activePath }),
+        plugins: createPlateEditorPlugins({
+          getDocumentPath: () => activePath,
+          onWorkspaceLink: (target, documentPath) =>
+            onWorkspaceLinkRef.current?.(target, documentPath),
+        }),
         value: asyncInitialValue
           ? [{ type: 'p', children: [{ text: '' }] }]
           : (instance) => loadPlateMarkdown(instance, value),

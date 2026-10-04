@@ -204,7 +204,7 @@ describe('Plate media elements', () => {
     })
   })
 
-  it('keeps fragments native and handles workspace links without browser navigation', () => {
+  it('keeps fragments native and opens workspace links only with Ctrl or Cmd', () => {
     const fragment = renderLink('#summary')
     const fragmentLink = screen.getByRole('link', { name: 'Brief' })
     expect(fragmentLink).toHaveAttribute('href', '#summary')
@@ -238,6 +238,15 @@ describe('Plate media elements', () => {
     expect(workspaceLink).not.toHaveAttribute('href')
 
     fireEvent.click(workspaceLink)
+
+    expect(onWorkspaceLink).not.toHaveBeenCalled()
+
+    fireEvent.click(workspaceLink, { ctrlKey: true })
+
+    expect(onWorkspaceLink).toHaveBeenCalledExactlyOnceWith('../other.md', 'notes/current.md')
+
+    onWorkspaceLink.mockClear()
+    fireEvent.click(workspaceLink, { metaKey: true })
 
     expect(onWorkspaceLink).toHaveBeenCalledExactlyOnceWith('../other.md', 'notes/current.md')
   })

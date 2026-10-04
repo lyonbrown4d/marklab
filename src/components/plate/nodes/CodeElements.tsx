@@ -1,4 +1,4 @@
-import type { TElement } from 'platejs'
+import type { TCodeSyntaxLeaf, TElement } from 'platejs'
 import {
   PlateElement,
   PlateLeaf,
@@ -55,4 +55,6 @@ export const CodeLineElement = (props: PlateElementProps) => (
   <PlateElement {...props} as="div" className="min-h-[1.25rem]" />
 )
 
-export const CodeSyntaxLeaf = (props: PlateLeafProps) => <PlateLeaf {...props} as="span" />
+export const CodeSyntaxLeaf = (props: PlateLeafProps<TCodeSyntaxLeaf>) => (
+  <PlateLeaf {...props} as="span" className={props.leaf.className as string} />
+)

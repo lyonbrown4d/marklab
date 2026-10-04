@@ -24,6 +24,7 @@ import {
   TaskListPlugin,
 } from '@platejs/list-classic/react'
 import { ImagePlugin } from '@platejs/media/react'
+import { all, createLowlight } from 'lowlight'
 import {
   onKeyDownTable,
   TableCellHeaderPlugin,
@@ -86,6 +87,8 @@ import { plateClassicListCompatibilityPlugin } from '@/components/plate/plateCla
 import { blockDraggableWrapper } from '@/components/plate/nodes/BlockDraggable'
 import { BulletedListElement } from '@/components/ui/list-classic-node'
 
+const codeBlockLowlight = createLowlight({ ...all, shell: all.bash })
+
 export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {}) => [
   ParagraphPlugin.withComponent(ParagraphElement),
   BlockquotePlugin.configure({
@@ -115,6 +118,7 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
   plateClassicListCompatibilityPlugin,
   CodeBlockPlugin.configure({
     inputRules: plateCodeBlockMarkdownInputRules,
+    options: { lowlight: codeBlockLowlight },
   }).withComponent(CodeBlockElement),
   CodeLinePlugin.withComponent(CodeLineElement),
   CodeSyntaxPlugin.withComponent(CodeSyntaxLeaf),

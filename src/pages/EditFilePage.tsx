@@ -38,6 +38,7 @@ const EditFilePage = () => {
         onOpenFileView: state.onOpenFileView,
         saveState: path ? state.saveStates[path] : undefined,
         showEditorStatusBar: state.showEditorStatusBar,
+        workspaceIndex: state.workspaceIndex,
       }
     }),
   )
@@ -146,9 +147,11 @@ const EditFilePage = () => {
         activePath={activePath}
         value={loadState.content}
         onChange={context.onEditorChange}
+        onOpenFile={context.onOpenFile}
         files={context.files}
         showStatusBar={context.showEditorStatusBar}
         readOnly={context.editorReadOnlyMode}
+        workspaceIndex={context.workspaceIndex}
       />
     </Suspense>
   )

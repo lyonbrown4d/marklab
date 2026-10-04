@@ -12,6 +12,26 @@ import { createPlateNodePlugins } from '@/components/plate/nodes/plateNodePlugin
 const remoteImageCapability =
   'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
+const syntaxAliasCases = [
+  ['js', 'const value = 1'],
+  ['javascript', 'const value = 1'],
+  ['ts', 'const value: number = 1'],
+  ['typescript', 'const value: number = 1'],
+  ['sh', 'if true; then echo ok; fi'],
+  ['bash', 'if true; then echo ok; fi'],
+  ['shell', 'if true; then echo ok; fi'],
+  ['py', 'def hello():\n  return True'],
+  ['python', 'def hello():\n  return True'],
+  ['kt', 'fun main() = println("hello")'],
+  ['kotlin', 'fun main() = println("hello")'],
+  ['yml', 'name: value'],
+  ['yaml', 'name: value'],
+  ['haskell', 'main = putStrLn "hello"'],
+  ['dart', 'void main() { print("hello"); }'],
+  ['powershell', '$value = Write-Output "hello"'],
+  ['fortran', 'program hello\nend program hello'],
+] as const
+
 vi.mock('@/services/linkPreviewApi', () => ({
   linkPreviewApi: {
     fetch: vi.fn(async (url: string) => ({
@@ -87,7 +107,37 @@ describe('createPlateNodePlugins', () => {
       'src',
       remoteImageCapability,
     )
-    expect(screen.getByText('const value = 1').closest('pre')).not.toBeNull()
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === 'CODE' && element.textContent === 'const value = 1',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('decorates fenced code with syntax token classes', () => {
+    renderMarkdown(['```ts', 'const value = 1', '```'].join('\n'))
+
+    expect(screen.getByText('const').closest('.hljs-keyword')).not.toBeNull()
+    expect(screen.getByText('1').closest('.hljs-number')).not.toBeNull()
+  })
+
+  it.each(syntaxAliasCases)('supports the %s fenced-code language alias', (language, source) => {
+    const { container } = renderMarkdown(['```' + language, source, '```'].join('\n'))
+
+    expect(container.querySelector('[class*="hljs-"]')).not.toBeNull()
+  })
+
+  it('falls back to plain text for an unknown fenced-code language', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { container } = renderMarkdown(['```madeup', 'alpha beta', '```'].join('\n'))
+
+    expect(container.querySelector('code')).toHaveTextContent('alpha beta')
+    expect(container.querySelector('[class*="hljs-"]')).toBeNull()
+    expect(warning).toHaveBeenCalledWith(
+      'Language "madeup" is not registered. Falling back to plaintext',
+      undefined,
+    )
+    warning.mockRestore()
   })
 
   it('renders GFM lists, tasks, and accessible tables', () => {

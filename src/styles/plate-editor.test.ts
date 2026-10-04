@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const stylePath = 'src/styles/plate-editor.scss'
+const codeHighlightStylePath = 'src/styles/plate-editor/code-highlight.scss'
 const modesStylePath = 'src/styles/plate-editor/modes.scss'
 const mainSource = readFileSync('src/main.tsx', 'utf8') as string
 
@@ -21,10 +22,20 @@ describe('Plate editor styles', () => {
     expect(styles).toContain('.markdown-editor')
     expect(styles).toContain("[data-slate-node='element']")
     expect(styles).toContain("[data-slate-chunk='true']")
+    expect(styles).toContain("@use './plate-editor/code-highlight';")
     expect(styles).toContain("@use './plate-editor/completion';")
     expect(styles).toContain("@use './plate-editor/pdf-preview';")
     expect(styles).not.toContain('.milkdown')
     expect(styles).not.toContain('.ProseMirror')
+  })
+
+  it('styles lowlight syntax tokens within the Plate editor', () => {
+    const styles = readFileSync(codeHighlightStylePath, 'utf8') as string
+
+    expect(styles).toContain('.markdown-editor .hljs-keyword')
+    expect(styles).toContain('.markdown-editor .hljs-string')
+    expect(styles).toContain('.markdown-editor .hljs-comment')
+    expect(styles).toContain('.markdown-editor .hljs-number')
   })
 
   it('keeps readonly typewriter snapping and focus mode compatible with chunks', () => {

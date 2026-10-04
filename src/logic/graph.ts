@@ -1,5 +1,4 @@
 import type { Edge, Node } from '@xyflow/react'
-import { graphlib, layout as dagreLayout } from '@dagrejs/dagre'
 import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel } from '@/logic/paths'
 import { graphNodeContent } from '@/logic/graphNodeContent'
@@ -7,8 +6,8 @@ import type { PreviewFileKind } from '@/logic/fileTypes'
 import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
+import { applyDagreLayout } from '@/logic/graphDagreLayout'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
-import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 
 export type GraphNodeData = Record<string, unknown> & {
   label: string
@@ -57,7 +56,6 @@ export type GraphData = {
   layoutKey?: string
 }
 
-const DAGRE_MARGIN = 120
 export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData => {
   const edges: Edge[] = []
   const fileNodes = new Map<string, Node<GraphNodeData>>()
@@ -253,49 +251,5 @@ const applyGraphLayout = (nodes: Node<GraphNodeData>[], edges: Edge[]) => {
     ranksep: 180,
     nodesep: 54,
     edgesep: 24,
-  })
-}
-
-type DagreLayoutOptions = {
-  rankdir: 'TB' | 'BT' | 'LR' | 'RL'
-  ranksep: number
-  nodesep: number
-  edgesep?: number
-}
-
-const applyDagreLayout = (
-  nodes: Node<GraphNodeData>[],
-  edges: Edge[],
-  options: DagreLayoutOptions,
-) => {
-  const graph = new graphlib.Graph({ multigraph: true })
-  graph.setDefaultEdgeLabel(() => ({}))
-  graph.setGraph({
-    ...options,
-    marginx: DAGRE_MARGIN,
-    marginy: DAGRE_MARGIN,
-  })
-
-  nodes.forEach((node) => {
-    const size = getGraphNodeLayoutSize(node)
-    graph.setNode(node.id, size)
-  })
-  edges.forEach((edge) => {
-    if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) return
-    graph.setEdge(edge.source, edge.target, {}, edge.id)
-  })
-
-  dagreLayout(graph)
-
-  nodes.forEach((node) => {
-    const layoutNode = graph.node(node.id) as
-      ({ x: number; y: number } & ReturnType<typeof getGraphNodeLayoutSize>) | undefined
-    const size = getGraphNodeLayoutSize(node)
-    node.position = layoutNode
-      ? {
-          x: layoutNode.x - size.width / 2,
-          y: layoutNode.y - size.height / 2,
-        }
-      : { x: 0, y: 0 }
   })
 }
