@@ -11,6 +11,8 @@ import type { PersistedWindowState } from '@electron/types.js'
 import { resolveNativeWindowBackground } from '@electron/windowTheme.js'
 import type { WindowPoolAcquisition } from '@electron/windowPool.js'
 import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
+import { showSplashWithoutActivation } from '@electron/splashLifecycle.js'
+import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore.js'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -69,7 +71,6 @@ const mainWindowChromeOptions = (): Pick<
       trafficLightPosition: { x: 16, y: 16 },
     }
   }
-
   return { frame: false }
 }
 const secureWebPreferences = () => {
@@ -200,14 +201,13 @@ const persistWindowState = (window: BrowserWindow, logger: Logger): void => {
 export const createSplashWindow = () => {
   installDevelopmentDockIcon()
   const splash = new BrowserWindow({
-    width: 420,
-    height: 280,
+    width: 360,
+    height: 220,
     title: MARKLAB_APP_NAME,
     icon: appIcon,
     resizable: false,
     fullscreen: false,
     frame: false,
-    alwaysOnTop: true,
     center: true,
     show: false,
     skipTaskbar: true,
@@ -219,7 +219,7 @@ export const createSplashWindow = () => {
   const showSplash = () => {
     if (isBackgroundElectronE2e()) return
     if (splash.isDestroyed() || splash.isVisible()) return
-    splash.show()
+    showSplashWithoutActivation(splash)
   }
   const showFallbackTimer = setTimeout(showSplash, SPLASH_READY_FALLBACK_MS)
   const clearShowFallbackTimer = () => clearTimeout(showFallbackTimer)
@@ -253,7 +253,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     getRendererNavigationUrl('window-opening.html'),
   ])
   persistWindowState(main, logger)
-  if (restored.isMaximized) main.maximize()
+  restoreMaximizedOnFirstShow(main, restored.isMaximized)
   return main
 }
 export const loadSplashWindow = async (splash: BrowserWindow) => {

@@ -29,6 +29,7 @@ import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle.js'
 import type { MarklabWindows } from '@electron/window.js'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion.js'
+import { dismissSplashWindow } from '@electron/splashLifecycle.js'
 import { syncNativeWindowBackgrounds } from '@electron/windowTheme.js'
 
 const APP_READY_FALLBACK_MS = 5000
@@ -77,10 +78,7 @@ const showMainWindow = (): void => {
     showWindowWithMotion(windows.main, { focus: true })
   }
   if (!windows.splash.isDestroyed()) {
-    const splash = windows.splash
-    hideWindowWithMotion(splash, () => {
-      if (!splash.isDestroyed()) splash.close()
-    })
+    dismissSplashWindow(windows.splash, hideWindowWithMotion)
   }
 }
 

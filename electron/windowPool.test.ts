@@ -27,7 +27,7 @@ vi.mock('@electron/window.js', () => ({
   loadWindowOpeningShell: vi.fn(),
 }))
 
-const createWindow = (id: number) => {
+const createWindow = (id: number, visible = false) => {
   let destroyed = false
   const webContents = Object.assign(new EventEmitter(), {
     isDestroyed: () => destroyed,
@@ -39,13 +39,15 @@ const createWindow = (id: number) => {
       destroyed = true
       window.emit('closed')
     }),
+    hide: vi.fn(),
     isDestroyed: () => destroyed,
+    isVisible: () => visible,
   })
   return window as unknown as BrowserWindow
 }
 
-const createHarness = (memoryHeadroom = true) => {
-  const windows = [createWindow(1), createWindow(2), createWindow(3)]
+const createHarness = (memoryHeadroom = true, visible = false) => {
+  const windows = [createWindow(1, visible), createWindow(2, visible), createWindow(3, visible)]
   const createMainWindow = vi.fn(() => windows.shift()!)
   const loadMainWindow = vi.fn(async () => undefined)
   const loadOpeningWindow = vi.fn(async () => undefined)
@@ -70,6 +72,14 @@ describe('MarklabWindowPool', () => {
     expect(loadOpeningWindow).toHaveBeenCalledTimes(1)
     expect(loadMainWindow).not.toHaveBeenCalled()
     expect(pool.stats()).toMatchObject({ idleMainWindows: 1, openingShellLoads: 1 })
+  })
+
+  it('hides a prewarmed renderer if the platform exposes it during loading', async () => {
+    const { createMainWindow, pool } = createHarness(true, true)
+
+    await pool.prewarmMainWindow()
+
+    expect(createMainWindow.mock.results[0]?.value.hide).toHaveBeenCalledOnce()
   })
 
   it('records a pool hit and avoids constructor and shell-load work on the user path', async () => {

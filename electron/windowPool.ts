@@ -138,6 +138,7 @@ export const createMarklabWindowPool = (
 
     prewarmInFlight = (async () => {
       const window = await createOpeningWindow()
+      if (window.isVisible()) window.hide()
       if (!isUsableWindow(window) || idleMainWindows.length >= maxIdleMainWindows) {
         destroyWindow(window)
         return
