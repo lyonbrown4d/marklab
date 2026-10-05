@@ -48,6 +48,7 @@ import {
 } from '@electron/services/settingsStore.js'
 import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore.js'
 import { TerminalService } from '@electron/services/terminal/service.js'
+import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
 import { WebDavProfileStore } from '@electron/services/sync/webdav/profileStore.js'
 import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore.js'
 import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
@@ -93,6 +94,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   webDavProfileStore: WebDavProfileStore
   webDavSyncStateStore: FileLocalSyncStateStore
   workspaceSyncConfigStore: WorkspaceSyncConfigStore
+  workspaceSyncCoordinator: WorkspaceSyncCoordinator
   workspaceWebDavSyncService: WorkspaceWebDavSyncService
   workspaceRegistry: WindowWorkspaceRegistry
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
@@ -232,10 +234,17 @@ export const createElectronContainer = (
     workspaceSyncConfigStore: asFunction(({ app }) => {
       return new WorkspaceSyncConfigStore(app.getPath('userData'))
     }).singleton(),
+    workspaceSyncCoordinator: asFunction(() => new WorkspaceSyncCoordinator()).singleton(),
     workspaceWebDavSyncService: asFunction(
-      ({ webDavProfileStore, webDavSyncStateStore, workspaceSyncConfigStore }) => {
+      ({
+        webDavProfileStore,
+        webDavSyncStateStore,
+        workspaceSyncConfigStore,
+        workspaceSyncCoordinator,
+      }) => {
         return new WorkspaceWebDavSyncService({
           configStore: workspaceSyncConfigStore,
+          coordinator: workspaceSyncCoordinator,
           profileStore: webDavProfileStore,
           stateStore: webDavSyncStateStore,
         })

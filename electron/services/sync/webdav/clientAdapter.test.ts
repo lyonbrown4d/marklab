@@ -73,6 +73,26 @@ describe('WebDavClientAdapter', () => {
     ).rejects.toMatchObject({ code: 'precondition_failed' })
   })
 
+  it('quotes opaque entity tags while preserving the If-Match wildcard', async () => {
+    const library = createLibraryClient()
+    const adapter = createAdapter(library)
+
+    await adapter.upload('objects/hash', Buffer.from('content'), {
+      headers: { 'If-Match': 'etag-from-propfind' },
+    })
+    await adapter.delete('objects/hash', { headers: { 'If-Match': '*' } })
+
+    expect(library.putFileContents).toHaveBeenCalledWith(
+      '/objects/hash',
+      expect.any(Buffer),
+      expect.objectContaining({ headers: { 'If-Match': '"etag-from-propfind"' } }),
+    )
+    expect(library.deleteFile).toHaveBeenCalledWith(
+      '/objects/hash',
+      expect.objectContaining({ headers: { 'If-Match': '*' } }),
+    )
+  })
+
   it('rejects cross-origin custom responses and caller-supplied authorization', async () => {
     const library = createLibraryClient()
     library.customRequest.mockResolvedValueOnce(response('https://evil.example/file'))

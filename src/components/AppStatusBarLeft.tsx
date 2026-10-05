@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import { AlertTriangle, GitBranch, RotateCcw, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -16,6 +16,7 @@ type AppStatusBarLeftProps = {
   restoreStatusMessage: string | null
   terminalOpen: boolean
   workspaceLabel: string
+  syncControl?: ReactNode
   onOpenScmPanel: () => void
   onRestoreSession: () => void
   onToggleTerminal: () => void
@@ -32,6 +33,7 @@ const AppStatusBarLeftView = ({
   restoreStatusMessage,
   terminalOpen,
   workspaceLabel,
+  syncControl,
   onOpenScmPanel,
   onRestoreSession,
   onToggleTerminal,
@@ -72,6 +74,7 @@ const AppStatusBarLeftView = ({
           </div>
         </TooltipContent>
       </Tooltip>
+      {syncControl}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

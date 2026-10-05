@@ -74,8 +74,9 @@ export class WorkspaceWebDavSyncService {
     return this.coordinator.runSync(
       root,
       async (signal) => {
-        const binding = await this.dependencies.configStore.get(root)
-        if (!binding || binding.provider !== 'webdav') {
+        assertWorkspaceRoot(workspace, root)
+        const binding = (await this.dependencies.configStore.getChannels(root)).webdav
+        if (!binding) {
           throw new Error('WebDAV sync is not configured for this workspace')
         }
         const profile = await this.requiredProfile(binding.profileId)
@@ -83,6 +84,7 @@ export class WorkspaceWebDavSyncService {
         const client = await this.createRemoteClient(profile, password)
         const remote = this.createRemoteStore(client, binding.remoteRoot)
         const deviceId = await this.dependencies.configStore.getOrCreateDeviceId()
+        assertWorkspaceRoot(workspace, root)
         const engine = this.createEngine({
           deviceId,
           remote,
@@ -90,25 +92,39 @@ export class WorkspaceWebDavSyncService {
           flushWorkspace: async (candidateRoot, _reason, flushSignal) => {
             assertSameRoot(root, candidateRoot)
             flushSignal.throwIfAborted()
-            await workspace.flushBuffers()
+            assertWorkspaceRoot(workspace, root)
           },
-          mutationBoundary: ({ root: candidateRoot, relativePaths, work }) => {
+          mutationBoundary: async ({ root: candidateRoot, relativePaths, work }) => {
             assertSameRoot(root, candidateRoot)
-            return workspace.runExternalPathMutation(relativePaths, work)
+            assertWorkspaceRoot(workspace, root)
+            return workspace.runExternalPathMutation(relativePaths, async () => {
+              assertWorkspaceRoot(workspace, root)
+              const result = await work()
+              assertWorkspaceRoot(workspace, root)
+              return result
+            })
           },
           invalidateWorkspace: (candidateRoot, changedPaths) => {
             assertSameRoot(root, candidateRoot)
+            assertWorkspaceRoot(workspace, root)
             workspace.invalidateExternalPaths(changedPaths)
           },
         })
-        return engine.sync(root, { signal, onProgress: options.onProgress })
+        signal.throwIfAborted()
+        assertWorkspaceRoot(workspace, root)
+        await workspace.flushBuffers()
+        signal.throwIfAborted()
+        assertWorkspaceRoot(workspace, root)
+        const result = await engine.sync(root, { signal, onProgress: options.onProgress })
+        assertWorkspaceRoot(workspace, root)
+        return result
       },
       { signal: options.signal },
     )
   }
 
-  cancel(workspace: WorkspaceTarget): boolean {
-    return this.coordinator.cancel(workspaceRoot(workspace))
+  cancel(root: string): boolean {
+    return this.coordinator.cancel(root)
   }
 
   async testConnection(profileId: string, signal?: AbortSignal): Promise<WebDavConnectionResult> {
@@ -132,11 +148,20 @@ const workspaceRoot = (workspace: WorkspaceTarget): string => {
 }
 
 const assertSameRoot = (expected: string, actual: string): void => {
-  const normalize = (value: string) => {
-    const resolved = path.resolve(value)
-    return process.platform === 'win32' || process.platform === 'darwin'
-      ? resolved.toLowerCase()
-      : resolved
+  if (normalizeRoot(expected) !== normalizeRoot(actual))
+    throw new Error('Workspace sync root changed')
+}
+
+const assertWorkspaceRoot = (workspace: WorkspaceTarget, expected: string): void => {
+  const current = workspace.rootInfo()
+  if (current.kind === 'single' || normalizeRoot(current.path) !== normalizeRoot(expected)) {
+    throw new Error('Workspace sync root changed')
   }
-  if (normalize(expected) !== normalize(actual)) throw new Error('Workspace sync root changed')
+}
+
+const normalizeRoot = (value: string): string => {
+  const resolved = path.resolve(value).normalize('NFC')
+  return process.platform === 'win32' || process.platform === 'darwin'
+    ? resolved.toLowerCase()
+    : resolved
 }

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { of, Subject, switchMap, timer } from 'rxjs'
 import { fsApi, fsBufferStatusSchema, type FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 import { listen } from '@/runtime/events'
@@ -14,7 +15,6 @@ const INDEX_INVALIDATION_DELAY_MS = 900
 export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], enabled: boolean) => {
   const queryClient = useQueryClient()
   const { t } = useI18n()
-  const invalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const desktopAvailable = isDesktopRuntime()
   const entriesKey = useMemo(
     () => entries.map((entry) => `${entry.kind}:${entry.path}`).join('\n'),
@@ -33,7 +33,6 @@ export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], en
     let cancelled = false
     let unlisten: (() => void) | undefined
     const invalidateWorkspaceData = () => {
-      invalidationTimerRef.current = null
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workspace-index', workspaceKey] }),
         queryClient.invalidateQueries({ queryKey: ['workspace-graph', workspaceKey] }),
@@ -43,23 +42,14 @@ export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], en
         })
       })
     }
+    const bufferStatus = new Subject<boolean>()
+    const invalidation = bufferStatus
+      .pipe(switchMap((dirty) => (dirty ? timer(INDEX_INVALIDATION_DELAY_MS) : of(0))))
+      .subscribe(invalidateWorkspaceData)
     void listen<unknown>('fs-buffer-status', (event) => {
       const parsed = fsBufferStatusSchema.safeParse(event.payload)
       if (!parsed.success) return
-      if (!parsed.data.dirty) {
-        if (invalidationTimerRef.current != null) {
-          clearTimeout(invalidationTimerRef.current)
-        }
-        invalidateWorkspaceData()
-        return
-      }
-      if (invalidationTimerRef.current != null) {
-        clearTimeout(invalidationTimerRef.current)
-      }
-      invalidationTimerRef.current = setTimeout(
-        invalidateWorkspaceData,
-        INDEX_INVALIDATION_DELAY_MS,
-      )
+      bufferStatus.next(parsed.data.dirty)
     }).then((nextUnlisten) => {
       if (cancelled) {
         nextUnlisten()
@@ -70,10 +60,8 @@ export const useWorkspaceIndex = (workspaceKey: string, entries: FileEntry[], en
 
     return () => {
       cancelled = true
-      if (invalidationTimerRef.current != null) {
-        clearTimeout(invalidationTimerRef.current)
-        invalidationTimerRef.current = null
-      }
+      invalidation.unsubscribe()
+      bufferStatus.complete()
       unlisten?.()
     }
   }, [desktopAvailable, enabled, queryClient, t, workspaceKey])

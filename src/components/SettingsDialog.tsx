@@ -1,5 +1,6 @@
 import {
   Bot,
+  CloudCog,
   FileText,
   GitGraph,
   Keyboard,
@@ -28,6 +29,7 @@ import GeneralSettingsPage from '@/components/settings/GeneralSettingsPage'
 import GraphSettingsPage from '@/components/settings/GraphSettingsPage'
 import SavingSettingsPage from '@/components/settings/SavingSettingsPage'
 import ShortcutsSettingsPage from '@/components/settings/ShortcutsSettingsPage'
+import WorkspaceSyncSettingsPage from '@/components/settings/WorkspaceSyncSettingsPage'
 import {
   SettingsDialogLoadingPanel,
   settingsDialogContentClassName,
@@ -80,6 +82,12 @@ const settingsRoutes = [
     labelKey: 'settings.ai',
     icon: Bot,
     render: () => <AiSettingsPage />,
+  },
+  {
+    value: 'sync',
+    labelKey: 'settings.syncAndStorage',
+    icon: CloudCog,
+    render: () => <WorkspaceSyncSettingsPage />,
   },
   {
     value: 'shortcuts',

@@ -3,8 +3,18 @@ import path from 'node:path'
 type RunOptions = { signal?: AbortSignal }
 type ActiveSync = { controller: AbortController; promise: Promise<unknown> }
 
+export class WorkspaceSyncBusyError extends Error {
+  readonly code = 'workspace_sync_busy' as const
+
+  constructor() {
+    super('A workspace sync is already running')
+    this.name = 'WorkspaceSyncBusyError'
+  }
+}
+
 export class WorkspaceSyncCoordinator {
   private readonly activeSyncs = new Map<string, ActiveSync>()
+  private configurationTail: Promise<void> = Promise.resolve()
   private readonly mutationTails = new Map<string, Promise<void>>()
 
   runSync<T>(
@@ -14,11 +24,8 @@ export class WorkspaceSyncCoordinator {
   ): Promise<T> {
     const key = canonicalRoot(root)
     const active = this.activeSyncs.get(key)
-    if (active) {
-      const promise = active.promise as Promise<T>
-      return options.signal ? raceAbort(promise, options.signal) : promise
-    }
     if (options.signal?.aborted) return Promise.reject(abortError())
+    if (active) return Promise.reject(new WorkspaceSyncBusyError())
     const controller = new AbortController()
     const run = this.runMutation(root, () => {
       if (controller.signal.aborted) return Promise.reject(abortError())
@@ -41,6 +48,15 @@ export class WorkspaceSyncCoordinator {
     return true
   }
 
+  runConfigurationMutation<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.configurationTail.then(work, work)
+    this.configurationTail = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    return run
+  }
+
   runMutation<T>(root: string, work: () => Promise<T>): Promise<T> {
     const key = canonicalRoot(root)
     const previous = this.mutationTails.get(key) ?? Promise.resolve()
@@ -59,9 +75,7 @@ export class WorkspaceSyncCoordinator {
 
 const canonicalRoot = (root: string): string => {
   const normalized = path.resolve(root).normalize('NFC').replaceAll('\\', '/')
-  return process.platform === 'win32' || process.platform === 'darwin'
-    ? normalized.toLowerCase()
-    : normalized
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
 }
 
 const abortError = (): Error =>

@@ -5,13 +5,7 @@ import type {
   AiInlineCompletionRequest,
   AiInlineCompletionStartResult,
 } from '@/types/aiCompletion'
-import type {
-  WebDavProfile,
-  WebDavProfileInput,
-  WorkspaceSyncBinding,
-  WorkspaceSyncProgressEvent,
-  WorkspaceSyncResult,
-} from '@/types/workspaceSync'
+import type { WorkspaceSyncApi } from '@/runtime/workspaceSync'
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
@@ -266,22 +260,7 @@ export type RendererSafeElectronApi = {
     onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
   }
   webTabs: WebTabsApi
-  workspaceSync: {
-    binding: {
-      get: () => Promise<WorkspaceSyncBinding | null>
-      remove: () => Promise<{ ok: true }>
-      set: (binding: WorkspaceSyncBinding) => Promise<WorkspaceSyncBinding>
-    }
-    cancel: () => Promise<{ ok: true; cancelled: boolean }>
-    onProgress: (handler: (event: WorkspaceSyncProgressEvent) => void) => () => void
-    start: (requestId: string) => Promise<WorkspaceSyncResult>
-    webDavProfiles: {
-      delete: (id: string) => Promise<{ ok: true }>
-      list: () => Promise<WebDavProfile[]>
-      test: (id: string) => Promise<{ ok: true } | { ok: false; code: string; message: string }>
-      update: (input: WebDavProfileInput) => Promise<WebDavProfile>
-    }
-  }
+  workspaceSync: WorkspaceSyncApi
   webview: {
     onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => () => void
   }

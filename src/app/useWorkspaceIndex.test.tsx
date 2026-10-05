@@ -218,4 +218,31 @@ describe('useWorkspaceIndex', () => {
       vi.useRealTimers()
     }
   })
+
+  it('cancels a pending dirty refresh when the workspace subscription unmounts', async () => {
+    const queryClient = createQueryClient()
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    vi.useFakeTimers()
+    try {
+      const { unmount } = renderHook(
+        () => useWorkspaceIndex('directory:D:/notes', [...ENTRIES], true),
+        { wrapper: createWrapper(queryClient) },
+      )
+      await act(async () => Promise.resolve())
+      act(() => {
+        bufferStatusHandler?.({
+          payload: { path: 'D:/notes/today.md', revision: 1, dirty: true },
+        })
+      })
+
+      unmount()
+      act(() => vi.advanceTimersByTime(950))
+
+      expect(invalidateQueries).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

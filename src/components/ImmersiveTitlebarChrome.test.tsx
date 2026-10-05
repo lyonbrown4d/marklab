@@ -1,8 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render as renderTestingLibrary, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
+const render = (ui: Parameters<typeof renderTestingLibrary>[0]) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return renderTestingLibrary(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
 
 const createProps = () => ({
   activePath: '随笔/与自己协作.md',

@@ -245,12 +245,23 @@ class WebDavClientAdapter implements WebDavRemoteClient {
 const safeHeaders = (headers: Record<string, string> | undefined): Record<string, string> => {
   const result: Record<string, string> = {}
   for (const [name, value] of Object.entries(headers ?? {})) {
-    if (forbiddenHeaders.has(name.toLowerCase()) || /[\r\n]/.test(name + value)) {
+    const normalizedName = name.toLowerCase()
+    if (forbiddenHeaders.has(normalizedName) || /[\r\n]/.test(name + value)) {
       throw new WebDavError('INVALID_REQUEST')
     }
-    result[name] = value
+    result[name] = normalizedName === 'if-match' ? quotedEntityTag(value) : value
   }
   return result
+}
+
+const quotedEntityTag = (value: string): string => {
+  const normalized = value.trim()
+  if (normalized === '*') return normalized
+  if (/^(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*"$/.test(normalized)) return normalized
+  if (!/^[\x21\x23-\x7e\x80-\xff]+$/.test(normalized)) {
+    throw new WebDavError('INVALID_REQUEST')
+  }
+  return `"${normalized}"`
 }
 
 const toEntry = (entry: WebDavLibraryFileStat): WebDavEntry => ({

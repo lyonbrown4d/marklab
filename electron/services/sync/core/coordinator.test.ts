@@ -12,16 +12,17 @@ const deferred = <T>() => {
 }
 
 describe('WorkspaceSyncCoordinator', () => {
-  it('reuses one active sync for canonical aliases of the same workspace', async () => {
+  it('rejects a duplicate sync for canonical aliases of the same workspace', async () => {
     const coordinator = new WorkspaceSyncCoordinator()
     const gate = deferred<string>()
     const work = vi.fn(() => gate.promise)
     const root = path.resolve('workspace-a')
 
     const first = coordinator.runSync(root, work)
-    const second = coordinator.runSync(path.join(root, 'notes', '..'), work)
+    await expect(coordinator.runSync(path.join(root, 'notes', '..'), work)).rejects.toMatchObject({
+      code: 'workspace_sync_busy',
+    })
 
-    expect(second).toBe(first)
     await vi.waitFor(() => expect(work).toHaveBeenCalledOnce())
     gate.resolve('done')
     await expect(first).resolves.toBe('done')
@@ -46,17 +47,18 @@ describe('WorkspaceSyncCoordinator', () => {
     expect(order).toEqual(['a1-start', 'b1', 'a1-end', 'a2'])
   })
 
-  it('lets a waiting caller abort without cancelling the shared sync', async () => {
+  it('rejects an already-aborted request before checking workspace availability', async () => {
     const coordinator = new WorkspaceSyncCoordinator()
     const gate = deferred<string>()
     const shared = coordinator.runSync('workspace-a', () => gate.promise)
     const controller = new AbortController()
-    const waiting = coordinator.runSync('workspace-a', () => Promise.resolve('other'), {
+    controller.abort()
+
+    const aborted = coordinator.runSync('workspace-a', () => Promise.resolve('other'), {
       signal: controller.signal,
     })
 
-    controller.abort()
-    await expect(waiting).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(aborted).rejects.toMatchObject({ name: 'AbortError' })
     gate.resolve('done')
     await expect(shared).resolves.toBe('done')
   })
@@ -80,5 +82,25 @@ describe('WorkspaceSyncCoordinator', () => {
 
     await expect(sync).rejects.toMatchObject({ name: 'AbortError' })
     expect(coordinator.cancel('workspace-a')).toBe(false)
+  })
+
+  it('serializes cross-store configuration mutations globally', async () => {
+    const coordinator = new WorkspaceSyncCoordinator()
+    const firstGate = deferred<void>()
+    const order: string[] = []
+    const first = coordinator.runConfigurationMutation(async () => {
+      order.push('delete-start')
+      await firstGate.promise
+      order.push('delete-end')
+    })
+    const second = coordinator.runConfigurationMutation(async () => {
+      order.push('bind')
+    })
+
+    await vi.waitFor(() => expect(order).toEqual(['delete-start']))
+    firstGate.resolve()
+    await Promise.all([first, second])
+
+    expect(order).toEqual(['delete-start', 'delete-end', 'bind'])
   })
 })

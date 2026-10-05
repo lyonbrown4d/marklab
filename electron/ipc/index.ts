@@ -54,6 +54,7 @@ import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windo
 import type { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
 import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types.js'
 import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
+import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
 import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
 export type NativeIpcDependencies = {
   aiService: AiServiceContract
@@ -78,6 +79,7 @@ export type NativeIpcDependencies = {
   webDavProfileStore: WebDavProfileStoreContract
   webTabManager: WebTabManager
   workspaceSyncConfigStore: WorkspaceSyncConfigStore
+  workspaceSyncCoordinator: WorkspaceSyncCoordinator
   workspaceWebDavSyncService: WorkspaceWebDavSyncService
   updates?: Pick<UpdaterIpcDependencies, 'onBeforeInstall'>
   workspaceRegistry: WindowWorkspaceRegistry
@@ -129,6 +131,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   const windowClose = registerWindowCloseLifecycleIpc(dependencies.ipcMain)
   registerGitNamedIpc(dependencies.ipcMain, {
     gitService: dependencies.gitService,
+    workspaceMutationCoordinator: dependencies.workspaceSyncCoordinator,
     workspaceRegistry: dependencies.workspaceRegistry,
   })
   registerWorkspaceNamedIpc(dependencies.ipcMain, {
@@ -138,8 +141,10 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   })
   registerWorkspaceSyncIpc(dependencies.ipcMain, {
     configStore: dependencies.workspaceSyncConfigStore,
+    gitService: dependencies.gitService,
     profileStore: dependencies.webDavProfileStore,
     syncService: dependencies.workspaceWebDavSyncService,
+    workspaceMutationCoordinator: dependencies.workspaceSyncCoordinator,
     workspaceRegistry: dependencies.workspaceRegistry,
   })
   const ai = registerAiIpc(

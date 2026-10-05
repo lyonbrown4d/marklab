@@ -8,6 +8,7 @@ import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/wind
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
 import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview.js'
 import { createWebTabsPreloadSurface } from '@electron/preload/webTabs.js'
+import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync.js'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -31,7 +32,6 @@ import type {
   AiInlineCompletionRequest,
   AiInlineCompletionStartResult,
 } from '@/types/aiCompletion'
-import type { WorkspaceSyncProgressEvent } from '@/types/workspaceSync'
 
 type MenuActionHandler = (id: string) => void
 type RuntimeEventHandler<T = unknown> = (event: RuntimeEventEnvelope<T>) => void
@@ -126,6 +126,7 @@ const windowCloseLifecycleSurface = createWindowCloseLifecyclePreloadSurface(ipc
 const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
 const linkPreviewSurface = createLinkPreviewPreloadSurface(ipcRenderer)
 const webTabsSurface = createWebTabsPreloadSurface(ipcRenderer)
+const workspaceSyncSurface = createWorkspaceSyncPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   aiCompletion: {
@@ -243,28 +244,7 @@ const desktopApi: RendererSafeElectronApi = {
     },
   },
   webTabs: webTabsSurface,
-  workspaceSync: {
-    binding: {
-      get: () => ipcRenderer.invoke(nativeIpcChannels.syncBindingGet),
-      remove: () => ipcRenderer.invoke(nativeIpcChannels.syncBindingRemove),
-      set: (binding) => ipcRenderer.invoke(nativeIpcChannels.syncBindingSet, binding),
-    },
-    cancel: () => ipcRenderer.invoke(nativeIpcChannels.syncCancel),
-    onProgress: (handler) => {
-      const listener = (_event: IpcRendererEvent, payload: WorkspaceSyncProgressEvent) => {
-        handler(payload)
-      }
-      ipcRenderer.on(nativeIpcChannels.syncProgress, listener)
-      return () => ipcRenderer.removeListener(nativeIpcChannels.syncProgress, listener)
-    },
-    start: (requestId) => ipcRenderer.invoke(nativeIpcChannels.syncStart, { requestId }),
-    webDavProfiles: {
-      delete: (id) => ipcRenderer.invoke(nativeIpcChannels.webDavProfileDelete, { id }),
-      list: () => ipcRenderer.invoke(nativeIpcChannels.webDavProfileList),
-      test: (id) => ipcRenderer.invoke(nativeIpcChannels.webDavProfileTest, { id }),
-      update: (input) => ipcRenderer.invoke(nativeIpcChannels.webDavProfileUpdate, input),
-    },
-  },
+  workspaceSync: workspaceSyncSurface,
   window: {
     minimize: () => runWindowAction(nativeIpcChannels.windowMinimize),
     maximize: () => runWindowAction(nativeIpcChannels.windowMaximize),

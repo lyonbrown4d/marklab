@@ -3,6 +3,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import { z } from 'zod'
+import { validateBranchName, validateRemoteName } from '@electron/services/git/validation.js'
+import type {
+  WorkspaceSyncChannel,
+  WorkspaceSyncChannels,
+  WorkspaceSyncProvider,
+} from '@/types/workspaceSync'
 
 const identifierSchema = z
   .string()
@@ -11,7 +17,7 @@ const identifierSchema = z
   .max(128)
   .regex(/^[\w.-]+$/u)
 
-const gitBindingSchema = z
+const gitChannelSchema = z
   .object({
     provider: z.literal('git'),
     remote: identifierSchema,
@@ -20,7 +26,7 @@ const gitBindingSchema = z
   })
   .strict()
 
-const webDavBindingSchema = z
+const webDavChannelSchema = z
   .object({
     provider: z.literal('webdav'),
     profileId: identifierSchema,
@@ -29,34 +35,38 @@ const webDavBindingSchema = z
   })
   .strict()
 
-export const workspaceSyncBindingSchema = z.discriminatedUnion('provider', [
-  gitBindingSchema,
-  webDavBindingSchema,
+export const workspaceSyncChannelSchema = z.discriminatedUnion('provider', [
+  gitChannelSchema,
+  webDavChannelSchema,
 ])
 
-export type WorkspaceSyncBinding = z.infer<typeof workspaceSyncBindingSchema>
-
-export type WorkspaceSyncBindingRecord = {
+export type WorkspaceSyncChannelsRecord = {
   workspacePath: string
-  binding: WorkspaceSyncBinding
+  channels: WorkspaceSyncChannels
 }
 
 const storedRecordSchema = z
   .object({
     workspacePath: z.string().min(1),
-    binding: workspaceSyncBindingSchema,
+    channels: z
+      .object({
+        git: gitChannelSchema.optional(),
+        webdav: webDavChannelSchema.optional(),
+      })
+      .strict(),
   })
   .strict()
 
 const storedFileSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     deviceId: z.string().uuid().optional(),
     workspaces: z.array(storedRecordSchema),
   })
   .strict()
 
 type StoredFile = z.infer<typeof storedFileSchema>
+type StoredChannels = StoredFile['workspaces'][number]['channels']
 
 export class WorkspaceSyncConfigStore {
   private readonly filePath: string
@@ -69,21 +79,17 @@ export class WorkspaceSyncConfigStore {
     this.filePath = path.join(path.resolve(userDataPath), 'sync', 'workspace-bindings.json')
   }
 
-  get(workspacePath: string): Promise<WorkspaceSyncBinding | null> {
+  getChannels(workspacePath: string): Promise<WorkspaceSyncChannels> {
     return this.serialized(async () => {
-      const canonical = canonicalWorkspacePath(workspacePath)
-      const record = (await this.readFile()).workspaces.find(
-        (candidate) => workspaceKey(candidate.workspacePath) === workspaceKey(canonical),
-      )
-      return record ? cloneBinding(record.binding) : null
+      return channelsFor(await this.readFile(), workspacePath)
     })
   }
 
-  list(): Promise<WorkspaceSyncBindingRecord[]> {
+  listChannels(): Promise<WorkspaceSyncChannelsRecord[]> {
     return this.serialized(async () =>
       (await this.readFile()).workspaces.map((record) => ({
         workspacePath: record.workspacePath,
-        binding: cloneBinding(record.binding),
+        channels: publicChannels(record.channels),
       })),
     )
   }
@@ -98,38 +104,55 @@ export class WorkspaceSyncConfigStore {
     })
   }
 
-  set(workspacePath: string, value: WorkspaceSyncBinding): Promise<WorkspaceSyncBinding> {
+  setChannel(workspacePath: string, value: WorkspaceSyncChannel): Promise<WorkspaceSyncChannels> {
     return this.serialized(async () => {
       const canonical = canonicalWorkspacePath(workspacePath)
-      const binding = parseBinding(value)
+      const channel = parseChannel(value)
       const data = await this.readFile()
       const key = workspaceKey(canonical)
+      const existing = data.workspaces.find((record) => workspaceKey(record.workspacePath) === key)
+      const channels = { ...existing?.channels, [channel.provider]: channel }
       data.workspaces = [
         ...data.workspaces.filter((record) => workspaceKey(record.workspacePath) !== key),
-        { workspacePath: canonical, binding },
+        { workspacePath: canonical, channels },
       ].sort((left, right) => left.workspacePath.localeCompare(right.workspacePath))
       await this.writeFile(data)
-      return cloneBinding(binding)
+      return publicChannels(channels)
     })
   }
 
-  remove(workspacePath: string): Promise<{ ok: true }> {
+  removeChannel(
+    workspacePath: string,
+    provider: WorkspaceSyncProvider,
+  ): Promise<WorkspaceSyncChannels> {
     return this.serialized(async () => {
-      const key = workspaceKey(canonicalWorkspacePath(workspacePath))
+      const canonical = canonicalWorkspacePath(workspacePath)
+      const key = workspaceKey(canonical)
       const data = await this.readFile()
+      const existing = data.workspaces.find((record) => workspaceKey(record.workspacePath) === key)
+      if (!existing) return emptyChannels()
+      const channels = { ...existing.channels }
+      delete channels[provider]
       data.workspaces = data.workspaces.filter(
         (record) => workspaceKey(record.workspacePath) !== key,
       )
+      if (channels.git || channels.webdav) {
+        data.workspaces.push({ workspacePath: canonical, channels })
+        data.workspaces.sort((left, right) => left.workspacePath.localeCompare(right.workspacePath))
+      }
       await this.writeFile(data)
-      return { ok: true }
+      return publicChannels(channels)
     })
   }
 
   private async readFile(): Promise<StoredFile> {
     try {
-      return storedFileSchema.parse(JSON.parse(await fs.readFile(this.filePath, 'utf8')))
+      const parsed = JSON.parse(await fs.readFile(this.filePath, 'utf8'))
+      assertSupportedVersion(parsed)
+      return storedFileSchema.parse(parsed)
     } catch (error) {
-      if (isMissing(error)) return { version: 1, workspaces: [] }
+      if (isMissing(error)) return { version: 2, workspaces: [] }
+      if (error instanceof UnsupportedSyncConfigVersionError) throw error
       throw new Error('Workspace sync configuration could not be read', { cause: error })
     }
   }
@@ -159,11 +182,14 @@ export class WorkspaceSyncConfigStore {
   }
 }
 
-const parseBinding = (value: WorkspaceSyncBinding): WorkspaceSyncBinding => {
-  const binding = workspaceSyncBindingSchema.parse(value)
-  if (binding.provider === 'webdav') validateRemoteRoot(binding.remoteRoot)
-  if (binding.provider === 'git') rejectControlCharacters(binding.branch ?? binding.remote)
-  return binding
+const parseChannel = (value: WorkspaceSyncChannel): WorkspaceSyncChannel => {
+  const channel = workspaceSyncChannelSchema.parse(value)
+  if (channel.provider === 'webdav') validateRemoteRoot(channel.remoteRoot)
+  if (channel.provider === 'git') {
+    validateRemoteName(channel.remote)
+    if (channel.branch) validateBranchName(channel.branch)
+  }
+  return channel
 }
 
 const validateRemoteRoot = (value: string): void => {
@@ -189,7 +215,33 @@ const canonicalWorkspacePath = (value: string): string => {
 const workspaceKey = (value: string): string =>
   process.platform === 'win32' ? value.toLocaleLowerCase('en-US') : value
 
-const cloneBinding = (binding: WorkspaceSyncBinding): WorkspaceSyncBinding => ({ ...binding })
+const emptyChannels = (): WorkspaceSyncChannels => ({ git: null, webdav: null })
+
+const publicChannels = (channels: StoredChannels): WorkspaceSyncChannels => ({
+  git: channels.git ? { ...channels.git } : null,
+  webdav: channels.webdav ? { ...channels.webdav } : null,
+})
+
+const channelsFor = (data: StoredFile, workspacePath: string): WorkspaceSyncChannels => {
+  const canonical = canonicalWorkspacePath(workspacePath)
+  const record = data.workspaces.find(
+    (candidate) => workspaceKey(candidate.workspacePath) === workspaceKey(canonical),
+  )
+  return record ? publicChannels(record.channels) : emptyChannels()
+}
 
 const isMissing = (error: unknown): boolean =>
   Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+
+class UnsupportedSyncConfigVersionError extends Error {
+  constructor() {
+    super('Unsupported workspace sync configuration version')
+    this.name = 'UnsupportedSyncConfigVersionError'
+  }
+}
+
+const assertSupportedVersion = (value: unknown): void => {
+  if (!value || typeof value !== 'object' || !('version' in value) || value.version !== 2) {
+    throw new UnsupportedSyncConfigVersionError()
+  }
+}

@@ -1,12 +1,16 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
+import path from 'node:path'
 import { z } from 'zod'
 
 import { nativeIpcChannels } from '@electron/channels.js'
 import type { GitService } from '@electron/services/git/service.js'
+import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
+import type { FsRootInfo } from '@electron/services/workspace/types.js'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
 
 type GitNamedIpcDependencies = {
   gitService: GitService
+  workspaceMutationCoordinator: Pick<WorkspaceSyncCoordinator, 'runMutation'>
   workspaceRegistry: WindowWorkspaceRegistry
 }
 
@@ -29,6 +33,12 @@ const pushSchema = z
   })
   .strict()
 
+type GitMutationOptions = {
+  flush?: boolean
+  invalidate?: boolean
+  lockWorkspace?: boolean
+}
+
 export const registerGitNamedIpc = (
   ipcMain: IpcMain,
   dependencies: GitNamedIpcDependencies,
@@ -39,9 +49,43 @@ export const registerGitNamedIpc = (
     return root.path
   }
   const git = dependencies.gitService
+  const mutateWorkspace = async <T>(
+    event: IpcMainInvokeEvent,
+    work: (root: string) => Promise<T>,
+    options: GitMutationOptions = {},
+  ): Promise<T> => {
+    const workspace = dependencies.workspaceRegistry.serviceForWebContents(event.sender)
+    const initialRoot = workspace.rootInfo()
+    if (initialRoot.kind === 'single') throw new Error('Git is unavailable in single-file mode')
+    return dependencies.workspaceMutationCoordinator.runMutation(initialRoot.path, async () => {
+      const activeRoot = workspace.rootInfo()
+      if (!hasWorkspaceRoot(activeRoot, initialRoot.path)) {
+        throw new Error('Workspace changed before the Git operation started')
+      }
+      if (options.flush) await workspace.flushBuffers()
+      if (!hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
+        throw new Error('Workspace changed before the Git operation started')
+      }
+      try {
+        const result = options.lockWorkspace
+          ? await workspace.runExternalWorkspaceMutation(() => work(initialRoot.path))
+          : await work(initialRoot.path)
+        if (!hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
+          throw new Error('Workspace changed during the Git operation')
+        }
+        return result
+      } finally {
+        if (options.invalidate && hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
+          workspace.invalidateAllExternalPaths()
+        }
+      }
+    })
+  }
 
   ipcMain.handle(nativeIpcChannels.gitDiscover, (event) => git.discover(rootFor(event)))
-  ipcMain.handle(nativeIpcChannels.gitInit, (event) => git.init(rootFor(event)))
+  ipcMain.handle(nativeIpcChannels.gitInit, (event) =>
+    mutateWorkspace(event, (root) => git.init(root)),
+  )
   ipcMain.handle(nativeIpcChannels.gitStatus, (event) => git.status(rootFor(event)))
   ipcMain.handle(nativeIpcChannels.gitRemoteStatus, (event) => git.remoteStatus(rootFor(event)))
   ipcMain.handle(nativeIpcChannels.gitFileDiff, async (event, payload: unknown) => {
@@ -50,37 +94,42 @@ export const registerGitNamedIpc = (
   })
   ipcMain.handle(nativeIpcChannels.gitCommitAll, async (event, payload: unknown) => {
     const input = commitSchema.parse(payload)
-    const workspace = dependencies.workspaceRegistry.serviceForWebContents(event.sender)
-    const root = workspace.rootInfo()
-    if (root.kind === 'single') throw new Error('Git is unavailable in single-file mode')
-    await workspace.flushBuffers()
-    return workspace.runExternalWorkspaceMutation(() => git.commitAll(root.path, input.message))
+    return mutateWorkspace(event, (root) => git.commitAll(root, input.message), {
+      flush: true,
+      lockWorkspace: true,
+    })
   })
   ipcMain.handle(nativeIpcChannels.gitRemoteSet, async (event, payload: unknown) => {
     const input = remoteSchema.parse(payload)
-    return git.setRemote(rootFor(event), input.name, input.url)
+    return mutateWorkspace(event, (root) => git.setRemote(root, input.name, input.url))
   })
   ipcMain.handle(nativeIpcChannels.gitRemoteRemove, async (event, payload: unknown) => {
     const input = remoteNameSchema.parse(payload)
-    return git.removeRemote(rootFor(event), input.name)
+    return mutateWorkspace(event, (root) => git.removeRemote(root, input.name))
   })
   ipcMain.handle(nativeIpcChannels.gitFetch, async (event, payload: unknown) => {
     const input = optionalRemoteSchema.parse(payload ?? {})
-    return git.fetch(rootFor(event), input.remote)
+    return mutateWorkspace(event, (root) => git.fetch(root, input.remote))
   })
   ipcMain.handle(nativeIpcChannels.gitPull, async (event) => {
-    const workspace = dependencies.workspaceRegistry.serviceForWebContents(event.sender)
-    const root = workspace.rootInfo()
-    if (root.kind === 'single') throw new Error('Git is unavailable in single-file mode')
-    await workspace.flushBuffers()
-    try {
-      return await workspace.runExternalWorkspaceMutation(() => git.pull(root.path))
-    } finally {
-      workspace.invalidateAllExternalPaths()
-    }
+    return mutateWorkspace(event, (root) => git.pull(root), {
+      flush: true,
+      invalidate: true,
+      lockWorkspace: true,
+    })
   })
   ipcMain.handle(nativeIpcChannels.gitPush, async (event, payload: unknown) => {
     const input = pushSchema.parse(payload ?? {})
-    return git.push(rootFor(event), input)
+    return mutateWorkspace(event, (root) => git.push(root, input))
   })
 }
+
+const canonicalRoot = (value: string): string => {
+  const resolved = path.resolve(value).normalize('NFC')
+  return process.platform === 'win32' || process.platform === 'darwin'
+    ? resolved.toLowerCase()
+    : resolved
+}
+
+const hasWorkspaceRoot = (root: FsRootInfo, expected: string): boolean =>
+  root.kind !== 'single' && canonicalRoot(root.path) === canonicalRoot(expected)

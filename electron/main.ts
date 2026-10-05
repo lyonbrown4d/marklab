@@ -31,6 +31,7 @@ import type { MarklabWindows } from '@electron/window.js'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion.js'
 import { dismissSplashWindow } from '@electron/splashLifecycle.js'
 import { syncNativeWindowBackgrounds } from '@electron/windowTheme.js'
+import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor.js'
 
 const APP_READY_FALLBACK_MS = 5000
 
@@ -85,22 +86,22 @@ const showMainWindow = (): void => {
 const handleRendererReady = (): void => {
   rendererReady = true
   showMainWindow()
+  systemThemeMonitor.announceCurrent()
 }
 
 const runtimeEvents = createRuntimeEventQueue(() => windows?.main ?? null)
 
-const currentSystemThemePayload = () =>
-  ({
-    colorMode: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
-  }) as const
-
-nativeTheme.on('updated', () => {
-  syncNativeWindowBackgrounds(windows, nativeTheme.shouldUseDarkColors)
-  runtimeEvents.queueOrSendRuntimeEvent({
-    eventName: 'system-theme-changed',
-    payload: currentSystemThemePayload(),
-  })
+const systemThemeMonitor = createSystemThemeMonitor({
+  nativeTheme,
+  onChange: (payload) => {
+    syncNativeWindowBackgrounds(windows, payload.colorMode === 'dark')
+    runtimeEvents.queueOrSendRuntimeEvent({
+      eventName: 'system-theme-changed',
+      payload,
+    })
+  },
 })
+systemThemeMonitor.start()
 
 const windowLifecycle = createWindowLifecycle({
   getContainer,
@@ -194,6 +195,7 @@ app.on('before-quit', (event) => {
 })
 
 app.once('will-quit', () => {
+  systemThemeMonitor.dispose()
   container?.cradle.knowledgeEngineService.dispose()
   container?.cradle.linkPreviewService.dispose()
   void container?.cradle.localAiService.dispose()

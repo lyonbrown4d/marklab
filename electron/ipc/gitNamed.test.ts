@@ -39,6 +39,7 @@ describe('named Git IPC', () => {
     expect(fixture.gitService.commitAll).toHaveBeenCalledWith('D:/notes', 'save notes')
     expect(fixture.workspace.flushBuffers).toHaveBeenCalledOnce()
     expect(fixture.workspace.runExternalWorkspaceMutation).toHaveBeenCalledOnce()
+    expect(fixture.workspaceMutationCoordinator.runMutation).toHaveBeenCalledTimes(3)
     expect(fixture.gitService.setRemote).toHaveBeenCalledWith(
       'D:/notes',
       'origin',
@@ -71,7 +72,66 @@ describe('named Git IPC', () => {
 
     expect(fixture.workspace.flushBuffers).toHaveBeenCalledOnce()
     expect(fixture.workspace.runExternalWorkspaceMutation).toHaveBeenCalledOnce()
+    expect(fixture.workspaceMutationCoordinator.runMutation).toHaveBeenCalledOnce()
     expect(fixture.workspace.invalidateAllExternalPaths).toHaveBeenCalledOnce()
+  })
+
+  it('serializes push without flushing or invalidating workspace content', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+
+    await handlers.get(nativeIpcChannels.gitPush)?.(event(11), { remote: 'origin' })
+
+    expect(fixture.workspace.flushBuffers).not.toHaveBeenCalled()
+    expect(fixture.workspace.runExternalWorkspaceMutation).not.toHaveBeenCalled()
+    expect(fixture.workspaceMutationCoordinator.runMutation).toHaveBeenCalledOnce()
+    expect(fixture.gitService.push).toHaveBeenCalledWith('D:/notes', { remote: 'origin' })
+  })
+
+  it('serializes every command that mutates Git metadata', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+    const sender = event(12)
+
+    await handlers.get(nativeIpcChannels.gitInit)?.(sender)
+    await handlers.get(nativeIpcChannels.gitRemoteSet)?.(sender, {
+      name: 'origin',
+      url: 'https://example.test/notes.git',
+    })
+    await handlers.get(nativeIpcChannels.gitRemoteRemove)?.(sender, { name: 'origin' })
+    await handlers.get(nativeIpcChannels.gitFetch)?.(sender, { remote: 'origin' })
+
+    expect(fixture.workspaceMutationCoordinator.runMutation).toHaveBeenCalledTimes(4)
+    expect(fixture.workspace.flushBuffers).not.toHaveBeenCalled()
+    expect(fixture.workspace.invalidateAllExternalPaths).not.toHaveBeenCalled()
+  })
+
+  it('does not invalidate a replacement workspace after pull changes the active root', async () => {
+    const fixture = createFixture()
+    fixture.gitService.pull.mockImplementationOnce(async () => {
+      fixture.workspace.rootInfo.mockReturnValue({ kind: 'external', path: 'D:/other' })
+      return {}
+    })
+    const handlers = register(fixture)
+
+    await expect(handlers.get(nativeIpcChannels.gitPull)?.(event(13))).rejects.toThrow(
+      'Workspace changed during the Git operation',
+    )
+    expect(fixture.workspace.invalidateAllExternalPaths).not.toHaveBeenCalled()
+  })
+
+  it('rejects before Git work when the workspace changes while buffers flush', async () => {
+    const fixture = createFixture()
+    fixture.workspace.flushBuffers.mockImplementationOnce(async () => {
+      fixture.workspace.rootInfo.mockReturnValue({ kind: 'external', path: 'D:/other' })
+    })
+    const handlers = register(fixture)
+
+    await expect(handlers.get(nativeIpcChannels.gitPull)?.(event(14))).rejects.toThrow(
+      'Workspace changed before the Git operation started',
+    )
+    expect(fixture.gitService.pull).not.toHaveBeenCalled()
+    expect(fixture.workspace.runExternalWorkspaceMutation).not.toHaveBeenCalled()
   })
 })
 
@@ -110,6 +170,9 @@ const createFixture = () => {
       status: vi.fn(async () => ({})),
     },
     workspace,
+    workspaceMutationCoordinator: {
+      runMutation: vi.fn(async (_root: string, work: () => Promise<unknown>) => work()),
+    },
     workspaceRegistry: { serviceForWebContents: vi.fn(() => workspace) },
   }
 }

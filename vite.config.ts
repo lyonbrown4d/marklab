@@ -186,6 +186,9 @@ export default defineConfig(({ command, mode }) => {
         '**/coverage/**',
       ],
       environment: 'jsdom',
+      // Native Git processes, workspace workers, and jsdom are resource-heavy when combined.
+      // A fixed cap avoids Windows worker crashes and locked temporary repositories.
+      maxWorkers: 4,
       setupFiles: './src/test/setup.ts',
       testTimeout: 10_000,
     },

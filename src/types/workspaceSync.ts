@@ -22,9 +22,55 @@ export type WebDavProfileInput = {
   sessionOnly?: boolean
 }
 
-export type WorkspaceSyncBinding =
-  | { provider: 'git'; remote: string; branch?: string; autoFetch: boolean }
-  | { provider: 'webdav'; profileId: string; remoteRoot: string; autoSync: boolean }
+export type GitWorkspaceSyncChannel = {
+  provider: 'git'
+  remote: string
+  branch?: string
+  autoFetch: boolean
+}
+
+export type WebDavWorkspaceSyncChannel = {
+  provider: 'webdav'
+  profileId: string
+  remoteRoot: string
+  autoSync: boolean
+}
+
+export type WorkspaceSyncChannel = GitWorkspaceSyncChannel | WebDavWorkspaceSyncChannel
+
+export type WorkspaceSyncProvider = WorkspaceSyncChannel['provider']
+
+export type WorkspaceSyncChannels = {
+  git: GitWorkspaceSyncChannel | null
+  webdav: WebDavWorkspaceSyncChannel | null
+}
+
+export type WorkspaceGitRemoteSummary = {
+  name: string
+  fetchUrl: string | null
+  pushUrl: string | null
+}
+
+export type WorkspaceGitSummary =
+  | { status: 'not_repository' }
+  | {
+      status: 'ready'
+      branch: string | null
+      head: string | null
+      upstream: string | null
+      ahead: number
+      behind: number
+      detached: boolean
+      clean: boolean
+      changeCount: number
+      conflictCount: number
+      remotes: WorkspaceGitRemoteSummary[]
+    }
+  | {
+      status: 'error'
+      code: 'git_detection_failed'
+      message: string
+    }
 
 export type WorkspaceSyncProgress = {
   stage:
@@ -59,6 +105,12 @@ export type WorkspaceSyncResult = {
   deleted: number
   retries: number
 }
+
+export type WorkspaceSyncStartOutcome =
+  | { status: 'completed'; result: WorkspaceSyncResult }
+  | { status: 'cancelled' }
+  | { status: 'busy' }
+  | { status: 'failed'; message: string }
 
 export type WorkspaceSyncProgressEvent = {
   requestId: string

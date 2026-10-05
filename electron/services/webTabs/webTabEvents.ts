@@ -1,4 +1,5 @@
 import type { Event, Input, WebContents } from 'electron'
+import { debounceTime, distinctUntilChanged, map, Subject, type Subscription } from 'rxjs'
 
 import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
 
@@ -83,31 +84,17 @@ export const installWebTabEvents = (
 }
 
 const createCoalescedUpdate = (emit: (value: string) => void, maxLength: number) => {
-  let lastValue: string | null = null
-  let pendingValue: string | null = null
-  let timer: ReturnType<typeof setTimeout> | null = null
-  const push = (value: string): void => {
-    const bounded = value.slice(0, maxLength)
-    if (bounded === pendingValue) return
-    pendingValue = bounded
-    if (timer) clearTimeout(timer)
-    if (bounded === lastValue) {
-      timer = null
-      pendingValue = null
-      return
-    }
-    timer = setTimeout(() => {
-      timer = null
-      if (pendingValue === null) return
-      lastValue = pendingValue
-      pendingValue = null
-      emit(lastValue)
-    }, UPDATE_COALESCE_MS)
+  const updates = new Subject<string>()
+  const subscription: Subscription = updates
+    .pipe(
+      map((value) => value.slice(0, maxLength)),
+      distinctUntilChanged(),
+      debounceTime(UPDATE_COALESCE_MS),
+      distinctUntilChanged(),
+    )
+    .subscribe(emit)
+  return {
+    cleanup: () => subscription.unsubscribe(),
+    push: (value: string) => updates.next(value),
   }
-  const cleanup = (): void => {
-    if (timer) clearTimeout(timer)
-    timer = null
-    pendingValue = null
-  }
-  return { cleanup, push }
 }

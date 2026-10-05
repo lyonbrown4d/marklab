@@ -2,6 +2,15 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import pLimit from 'p-limit'
+import {
+  asyncScheduler,
+  exhaustMap,
+  from,
+  Observable,
+  type SchedulerLike,
+  type Subscription,
+  timer,
+} from 'rxjs'
 
 import type { Logger } from '@electron/services/logger.js'
 
@@ -20,7 +29,8 @@ export type WebPreviewCacheContract = {
 export class WebPreviewDiskCache implements WebPreviewCacheContract {
   private readonly maxBytes: number
   private maintenancePromise: Promise<void> | null = null
-  private maintenanceTimer: ReturnType<typeof setInterval> | null = null
+  private readonly maintenanceScheduler: SchedulerLike
+  private maintenanceSubscription: Subscription | null = null
   private readonly maintenanceIntervalMs: number
   private readonly logger?: Pick<Logger, 'warn'>
   private readonly root: string
@@ -29,29 +39,34 @@ export class WebPreviewDiskCache implements WebPreviewCacheContract {
   constructor(options: {
     logger?: Pick<Logger, 'warn'>
     maintenanceIntervalMs?: number
+    maintenanceScheduler?: SchedulerLike
     maxBytes?: number
     root: string
     ttlMs?: number
   }) {
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES
     this.maintenanceIntervalMs = options.maintenanceIntervalMs ?? DEFAULT_MAINTENANCE_INTERVAL_MS
+    this.maintenanceScheduler = options.maintenanceScheduler ?? asyncScheduler
     this.logger = options.logger
     this.root = options.root
     this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS
   }
 
   dispose(): void {
-    if (this.maintenanceTimer) clearInterval(this.maintenanceTimer)
-    this.maintenanceTimer = null
+    this.maintenanceSubscription?.unsubscribe()
+    this.maintenanceSubscription = null
   }
 
   startMaintenance(): void {
-    if (this.maintenanceTimer) return
+    if (this.maintenanceSubscription) return
     void this.runMaintenance()
-    this.maintenanceTimer = setInterval(() => {
-      void this.runMaintenance()
-    }, this.maintenanceIntervalMs)
-    this.maintenanceTimer.unref?.()
+    const ticks: Observable<unknown> =
+      this.maintenanceScheduler === asyncScheduler
+        ? unrefInterval(this.maintenanceIntervalMs)
+        : timer(this.maintenanceIntervalMs, this.maintenanceIntervalMs, this.maintenanceScheduler)
+    this.maintenanceSubscription = ticks
+      .pipe(exhaustMap(() => from(this.runMaintenance())))
+      .subscribe()
   }
 
   async get(url: string): Promise<Uint8Array | null> {
@@ -135,6 +150,13 @@ export class WebPreviewDiskCache implements WebPreviewCacheContract {
     return operation
   }
 }
+
+const unrefInterval = (intervalMs: number): Observable<void> =>
+  new Observable((subscriber) => {
+    const handle = setInterval(() => subscriber.next(), intervalMs)
+    handle.unref?.()
+    return () => clearInterval(handle)
+  })
 
 const isMissingFile = (error: unknown): boolean =>
   Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')

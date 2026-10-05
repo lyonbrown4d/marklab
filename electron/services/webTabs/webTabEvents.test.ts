@@ -79,6 +79,22 @@ describe('installWebTabEvents', () => {
       action: 'deny',
     })
   })
+
+  it('cancels pending coalesced updates when a pooled view is released', () => {
+    vi.useFakeTimers()
+    const contents = Object.assign(new EventEmitter(), {
+      isDestroyed: vi.fn(() => false),
+      setWindowOpenHandler: vi.fn(),
+    })
+    const onTitle = vi.fn()
+    const cleanup = installWebTabEvents(contents as never, callbacks({ onTitle }))
+
+    contents.emit('page-title-updated', {}, 'pending')
+    cleanup()
+    vi.advanceTimersByTime(250)
+
+    expect(onTitle).not.toHaveBeenCalled()
+  })
 })
 
 const callbacks = (overrides: Record<string, unknown>) => ({

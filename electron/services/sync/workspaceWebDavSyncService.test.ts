@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { WebDavSyncEngineOptions } from '@electron/services/sync/webdavSync/engine.js'
 import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
+import type { WorkspaceSyncChannels } from '@/types/workspaceSync'
 
 const emptyResult = {
   changedPaths: [],
@@ -50,6 +51,7 @@ describe('WorkspaceWebDavSyncService', () => {
     )
     expect(engineOptions?.deviceId).toBe('device-1')
     expect(fixture.workspace.flushBuffers).toHaveBeenCalledOnce()
+    expect(fixture.workspace.runExternalWorkspaceMutation).not.toHaveBeenCalled()
     expect(fixture.workspace.runExternalPathMutation).toHaveBeenCalledWith(
       ['note.md'],
       expect.any(Function),
@@ -60,7 +62,10 @@ describe('WorkspaceWebDavSyncService', () => {
 
   it('fails before network access when the workspace has no WebDAV binding', async () => {
     const fixture = createFixture()
-    fixture.dependencies.configStore.get.mockResolvedValueOnce(null as never)
+    fixture.dependencies.configStore.getChannels.mockResolvedValueOnce({
+      git: null,
+      webdav: null,
+    })
 
     await expect(fixture.service.sync(fixture.workspace as never)).rejects.toThrow('not configured')
     expect(fixture.dependencies.createRemoteClient).not.toHaveBeenCalled()
@@ -74,6 +79,70 @@ describe('WorkspaceWebDavSyncService', () => {
     await expect(fixture.service.testConnection('dav-main')).resolves.toEqual({ ok: true })
     expect(testConnection).toHaveBeenCalledOnce()
   })
+
+  it('rejects before flushing when the workspace changes during sync setup', async () => {
+    const fixture = createFixture()
+    fixture.dependencies.createRemoteClient.mockImplementationOnce(() => {
+      fixture.workspace.rootInfo.mockReturnValue({ kind: 'external', path: 'D:/other' })
+      return { testConnection: vi.fn() }
+    })
+
+    await expect(fixture.service.sync(fixture.workspace as never)).rejects.toThrow(
+      'Workspace sync root changed',
+    )
+
+    expect(fixture.workspace.flushBuffers).not.toHaveBeenCalled()
+    expect(fixture.dependencies.createEngine).not.toHaveBeenCalled()
+  })
+
+  it('does not apply a local mutation after the workspace changes', async () => {
+    const fixture = createFixture()
+    fixture.dependencies.createEngine = vi.fn((options: WebDavSyncEngineOptions) => ({
+      sync: vi.fn(async (root: string) => {
+        fixture.workspace.rootInfo.mockReturnValue({ kind: 'external', path: 'D:/other' })
+        await options.mutationBoundary({
+          root,
+          relativePaths: ['note.md'],
+          work: async () => undefined,
+        })
+        return emptyResult
+      }),
+    }))
+    const service = new WorkspaceWebDavSyncService(fixture.dependencies as never)
+
+    await expect(service.sync(fixture.workspace as never)).rejects.toThrow(
+      'Workspace sync root changed',
+    )
+    expect(fixture.workspace.runExternalPathMutation).not.toHaveBeenCalled()
+    expect(fixture.workspace.invalidateExternalPaths).not.toHaveBeenCalled()
+  })
+
+  it('rejects a completed sync result when the workspace changed during remote work', async () => {
+    const fixture = createFixture()
+    fixture.dependencies.createEngine = vi.fn(() => ({
+      sync: vi.fn(async () => {
+        fixture.workspace.rootInfo.mockReturnValue({ kind: 'external', path: 'D:/other' })
+        return emptyResult
+      }),
+    }))
+    const service = new WorkspaceWebDavSyncService(fixture.dependencies as never)
+
+    await expect(service.sync(fixture.workspace as never)).rejects.toThrow(
+      'Workspace sync root changed',
+    )
+  })
+
+  it('cancels by the initiating root rather than the mutable workspace root', () => {
+    const fixture = createFixture()
+    const cancel = vi.fn(() => true)
+    const service = new WorkspaceWebDavSyncService({
+      ...fixture.dependencies,
+      coordinator: { cancel } as never,
+    } as never)
+
+    expect(service.cancel('D:/notes')).toBe(true)
+    expect(cancel).toHaveBeenCalledWith('D:/notes')
+  })
 })
 
 const createFixture = () => {
@@ -84,6 +153,7 @@ const createFixture = () => {
     runExternalPathMutation: vi.fn(async (_paths: string[], work: () => Promise<unknown>) =>
       work(),
     ),
+    runExternalWorkspaceMutation: vi.fn(async (work: () => Promise<unknown>) => work()),
   }
   const profile = {
     id: 'dav-main',
@@ -99,11 +169,14 @@ const createFixture = () => {
   }
   const dependencies = {
     configStore: {
-      get: vi.fn(async () => ({
-        provider: 'webdav' as const,
-        profileId: 'dav-main',
-        remoteRoot: '/documents',
-        autoSync: true,
+      getChannels: vi.fn(async (): Promise<WorkspaceSyncChannels> => ({
+        git: null,
+        webdav: {
+          provider: 'webdav' as const,
+          profileId: 'dav-main',
+          remoteRoot: '/documents',
+          autoSync: true,
+        },
       })),
       getOrCreateDeviceId: vi.fn(async () => 'device-1'),
     },

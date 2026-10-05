@@ -19,55 +19,111 @@ const createRoot = async () => {
 }
 
 describe('WorkspaceSyncConfigStore', () => {
-  it('persists one typed sync binding per canonical workspace', async () => {
+  it('rejects unsupported legacy configuration without overwriting it', async () => {
     const userData = await createRoot()
-    const workspace = path.join(userData, 'notes')
-    await fs.mkdir(workspace)
+    const workspace = path.join(userData, 'legacy-notes')
+    const configDirectory = path.join(userData, 'sync')
+    const configPath = path.join(configDirectory, 'workspace-bindings.json')
+    await fs.mkdir(configDirectory)
+    const legacy = JSON.stringify({ version: 1, workspaces: [] })
+    await fs.writeFile(configPath, legacy)
+
+    await expect(new WorkspaceSyncConfigStore(userData).getChannels(workspace)).rejects.toThrow(
+      'Unsupported workspace sync configuration version',
+    )
+    await expect(fs.readFile(configPath, 'utf8')).resolves.toBe(legacy)
+  })
+
+  it('persists Git and WebDAV as independent channels for the same workspace', async () => {
+    const userData = await createRoot()
+    const workspace = path.join(userData, 'multi-channel-notes')
     const store = new WorkspaceSyncConfigStore(userData)
 
-    await store.set(workspace, {
+    await store.setChannel(workspace, {
+      provider: 'git',
+      remote: 'origin',
+      branch: 'main',
+      autoFetch: true,
+    })
+    await store.setChannel(workspace, {
       provider: 'webdav',
       profileId: 'personal-dav',
       remoteRoot: '/Marklab/notes',
-      autoSync: true,
+      autoSync: false,
     })
 
-    const reopened = new WorkspaceSyncConfigStore(userData)
-    await expect(reopened.get(workspace)).resolves.toEqual({
-      provider: 'webdav',
-      profileId: 'personal-dav',
-      remoteRoot: '/Marklab/notes',
-      autoSync: true,
+    await expect(new WorkspaceSyncConfigStore(userData).getChannels(workspace)).resolves.toEqual({
+      git: {
+        provider: 'git',
+        remote: 'origin',
+        branch: 'main',
+        autoFetch: true,
+      },
+      webdav: {
+        provider: 'webdav',
+        profileId: 'personal-dav',
+        remoteRoot: '/Marklab/notes',
+        autoSync: false,
+      },
     })
   })
 
-  it('replaces a provider binding atomically and can disable sync', async () => {
+  it('removes one channel without disabling the other channel', async () => {
+    const userData = await createRoot()
+    const workspace = path.join(userData, 'notes')
+    const store = new WorkspaceSyncConfigStore(userData)
+    await store.setChannel(workspace, {
+      provider: 'git',
+      remote: 'origin',
+      autoFetch: false,
+    })
+    await store.setChannel(workspace, {
+      provider: 'webdav',
+      profileId: 'personal-dav',
+      remoteRoot: '/notes',
+      autoSync: true,
+    })
+
+    await expect(store.removeChannel(workspace, 'webdav')).resolves.toEqual({
+      git: { provider: 'git', remote: 'origin', autoFetch: false },
+      webdav: null,
+    })
+  })
+
+  it('updates one channel atomically without replacing another channel', async () => {
     const userData = await createRoot()
     const workspace = path.join(userData, 'notes')
     await fs.mkdir(workspace)
     const store = new WorkspaceSyncConfigStore(userData)
 
-    await store.set(workspace, {
+    await store.setChannel(workspace, {
       provider: 'webdav',
       profileId: 'personal-dav',
-      remoteRoot: '/notes',
+      remoteRoot: '/Marklab/notes',
+      autoSync: true,
+    })
+    await store.setChannel(workspace, {
+      provider: 'git',
+      remote: 'origin',
+      branch: 'main',
+      autoFetch: true,
+    })
+    await store.setChannel(workspace, {
+      provider: 'webdav',
+      profileId: 'personal-dav',
+      remoteRoot: '/updated',
       autoSync: false,
     })
-    await store.set(workspace, {
-      provider: 'git',
-      remote: 'origin',
-      branch: 'main',
-      autoFetch: true,
-    })
 
-    await expect(store.get(workspace)).resolves.toEqual({
-      provider: 'git',
-      remote: 'origin',
-      branch: 'main',
-      autoFetch: true,
+    await expect(store.getChannels(workspace)).resolves.toEqual({
+      git: { provider: 'git', remote: 'origin', branch: 'main', autoFetch: true },
+      webdav: {
+        provider: 'webdav',
+        profileId: 'personal-dav',
+        remoteRoot: '/updated',
+        autoSync: false,
+      },
     })
-    await expect(store.remove(workspace)).resolves.toEqual({ ok: true })
-    await expect(store.get(workspace)).resolves.toBeNull()
   })
 
   it('rejects unsafe workspace and remote paths', async () => {
@@ -75,7 +131,7 @@ describe('WorkspaceSyncConfigStore', () => {
     const store = new WorkspaceSyncConfigStore(userData)
 
     await expect(
-      store.set('relative/workspace', {
+      store.setChannel('relative/workspace', {
         provider: 'git',
         remote: 'origin',
         branch: 'main',
@@ -83,13 +139,21 @@ describe('WorkspaceSyncConfigStore', () => {
       }),
     ).rejects.toThrow('absolute')
     await expect(
-      store.set(path.join(userData, 'notes'), {
+      store.setChannel(path.join(userData, 'notes'), {
         provider: 'webdav',
         profileId: 'personal-dav',
         remoteRoot: '/../escape',
         autoSync: false,
       }),
     ).rejects.toThrow('remote root')
+    await expect(
+      store.setChannel(path.join(userData, 'notes'), {
+        provider: 'git',
+        remote: '..',
+        branch: 'bad..branch',
+        autoFetch: false,
+      }),
+    ).rejects.toThrow('remote name')
   })
 
   it('fails closed when persisted configuration is corrupted', async () => {
@@ -98,7 +162,9 @@ describe('WorkspaceSyncConfigStore', () => {
     await fs.mkdir(configDirectory)
     await fs.writeFile(path.join(configDirectory, 'workspace-bindings.json'), '{bad json')
 
-    await expect(new WorkspaceSyncConfigStore(userData).list()).rejects.toThrow('could not be read')
+    await expect(new WorkspaceSyncConfigStore(userData).listChannels()).rejects.toThrow(
+      'could not be read',
+    )
   })
 
   it('creates one stable device identity for all workspace bindings', async () => {
