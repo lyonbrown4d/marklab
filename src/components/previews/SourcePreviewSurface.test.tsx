@@ -94,6 +94,39 @@ describe('SourcePreviewSurface', () => {
     expect(screen.getByRole('button', { name: 'Copied source' })).toBeInTheDocument()
   })
 
+  it('syntax highlights known languages without interpreting source as HTML', async () => {
+    vi.mocked(fsApi.readTextPreview).mockResolvedValue({
+      content: 'const value = "<img src=x onerror=alert(1)>"',
+      truncated: false,
+    })
+
+    const { container } = renderPreview()
+
+    await waitFor(() => {
+      expect(container.querySelector('.hljs-keyword')).toHaveTextContent('const')
+    })
+    expect(container.querySelector('.hljs-string')).toHaveTextContent(
+      '"<img src=x onerror=alert(1)>"',
+    )
+    expect(container.querySelector('img')).toBeNull()
+  })
+
+  it('keeps all bounded lines readable while limiting expensive highlighting work', async () => {
+    const content = Array.from(
+      { length: 600 },
+      (_, index) => `const value${index} = ${index}`,
+    ).join('\n')
+    vi.mocked(fsApi.readTextPreview).mockResolvedValue({ content, truncated: false })
+
+    renderPreview()
+
+    const items = await screen.findAllByRole('listitem')
+    await waitFor(() => expect(items[0]?.querySelector('.hljs-keyword')).not.toBeNull())
+    expect(items).toHaveLength(600)
+    expect(items.at(-1)).toHaveTextContent('const value599 = 599')
+    expect(items.at(-1)?.querySelector('.hljs-keyword')).toBeNull()
+  })
+
   it('reports read failures', async () => {
     vi.mocked(fsApi.readTextPreview).mockRejectedValue(new Error('unreadable'))
 

@@ -15,6 +15,15 @@ const graphNodes: GraphData['nodes'] = [
     position: { x: 0, y: 0 },
   },
   {
+    id: 'file:notes/b.md',
+    type: 'file',
+    data: { label: 'B', path: 'notes/b.md' },
+    height: 640,
+    measured: { height: 640, width: 520 },
+    width: 520,
+    position: { x: 560, y: 0 },
+  },
+  {
     id: 'ext:https://example.com',
     type: 'external',
     data: {
@@ -29,9 +38,19 @@ const graphNodes: GraphData['nodes'] = [
   },
 ]
 
-const useHarness = (activePath: string | null) => {
+const useHarness = (
+  activePath: string | null,
+  defaultCollapsed = false,
+  graphIdentity = 'workspace:a',
+) => {
   const [nodes, setNodes] = useState(graphNodes)
-  return useWorkspaceMapNodeDisclosure({ activePath, nodes, setNodes })
+  return useWorkspaceMapNodeDisclosure({
+    activePath,
+    defaultCollapsed,
+    graphIdentity,
+    nodes,
+    setNodes,
+  })
 }
 
 describe('useWorkspaceMapNodeDisclosure', () => {
@@ -75,6 +94,46 @@ describe('useWorkspaceMapNodeDisclosure', () => {
   it('does not offer collapse while the native web view is active', () => {
     const { result } = renderHook(() => useHarness(null))
 
-    expect(result.current.nodes[1]?.data.workspaceMapDisclosure).toBeUndefined()
+    expect(result.current.nodes[2]?.data.workspaceMapDisclosure).toBeUndefined()
+  })
+
+  it('collapses every rich node when a stable graph crosses the compact threshold', async () => {
+    const { result, rerender } = renderHook(
+      ({ compact }) => useHarness(null, compact, 'workspace:a'),
+      { initialProps: { compact: false } },
+    )
+    expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(false)
+
+    rerender({ compact: true })
+
+    await waitFor(() => {
+      expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(true)
+      expect(result.current.nodes[1]?.data.workspaceMapDisclosure?.collapsed).toBe(true)
+    })
+  })
+
+  it('resets default disclosure for a new workspace but preserves expansion in one workspace', async () => {
+    const { result, rerender } = renderHook(({ identity }) => useHarness(null, true, identity), {
+      initialProps: { identity: 'workspace:a' },
+    })
+    act(() => result.current.nodes[0]?.data.workspaceMapDisclosure?.toggle('file:notes/a.md'))
+    expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(false)
+
+    rerender({ identity: 'workspace:a' })
+    expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(false)
+
+    rerender({ identity: 'workspace:b' })
+    await waitFor(() =>
+      expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(true),
+    )
+  })
+
+  it('keeps unaffected node references stable when another node is toggled', () => {
+    const { result } = renderHook(() => useHarness(null))
+    const unaffected = result.current.nodes[1]
+
+    act(() => result.current.nodes[0]?.data.workspaceMapDisclosure?.toggle('file:notes/a.md'))
+
+    expect(result.current.nodes[1]).toBe(unaffected)
   })
 })

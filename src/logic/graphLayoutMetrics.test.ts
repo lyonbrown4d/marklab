@@ -61,4 +61,16 @@ describe('workspace map graph layout metrics', () => {
 
     expect(getGraphNodeLayoutSize(preview)).toEqual({ width: 360, height: 220 })
   })
+
+  it('uses compact geometry for collapsed workspace map documents', () => {
+    const collapsed = {
+      ...fileNode(false),
+      data: {
+        ...fileNode(false).data,
+        workspaceMapDisclosure: { collapsed: true, toggle: () => undefined },
+      },
+    }
+
+    expect(getGraphNodeLayoutSize(collapsed)).toEqual({ width: 220, height: 72 })
+  })
 })

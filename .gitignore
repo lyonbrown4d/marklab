@@ -100,6 +100,7 @@ web_modules/
 .tmp/
 playwright-report/
 test-results/
+output/playwright/
 .next
 out
 .nuxt

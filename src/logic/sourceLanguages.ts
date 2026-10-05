@@ -1,4 +1,4 @@
-import { fileExtension } from '@/logic/documentAdapters'
+import { fileExtension, fileName } from '@/logic/documentAdapters'
 
 export type SourceLanguage = {
   id: string
@@ -16,7 +16,10 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
   csv: { id: 'plaintext', label: 'CSV' },
   cts: { id: 'typescript', label: 'TypeScript' },
   cxx: { id: 'cpp', label: 'C++' },
+  gql: { id: 'graphql', label: 'GraphQL' },
   go: { id: 'go', label: 'Go' },
+  gradle: { id: 'gradle', label: 'Gradle' },
+  graphql: { id: 'graphql', label: 'GraphQL' },
   h: { id: 'c', label: 'C header' },
   hh: { id: 'cpp', label: 'C++ header' },
   hpp: { id: 'cpp', label: 'C++ header' },
@@ -36,6 +39,8 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
   mjs: { id: 'javascript', label: 'JavaScript' },
   mts: { id: 'typescript', label: 'TypeScript' },
   php: { id: 'php', label: 'PHP' },
+  properties: { id: 'properties', label: 'Properties' },
+  proto: { id: 'protobuf', label: 'Protocol Buffers' },
   ps1: { id: 'powershell', label: 'PowerShell' },
   py: { id: 'python', label: 'Python' },
   rb: { id: 'ruby', label: 'Ruby' },
@@ -59,5 +64,16 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
 
 const plainTextLanguage: SourceLanguage = { id: 'plaintext', label: 'Plain text' }
 
-export const sourceLanguageForPath = (path: string): SourceLanguage =>
-  languagesByExtension[fileExtension(path)] ?? plainTextLanguage
+const languagesByFileName: Readonly<Record<string, SourceLanguage>> = {
+  '.editorconfig': { id: 'ini', label: 'EditorConfig' },
+  '.gitignore': { id: 'plaintext', label: 'Git ignore' },
+  '.npmrc': { id: 'properties', label: 'npm config' },
+  dockerfile: { id: 'dockerfile', label: 'Dockerfile' },
+  justfile: { id: 'makefile', label: 'Justfile' },
+  makefile: { id: 'makefile', label: 'Makefile' },
+}
+
+export const sourceLanguageForPath = (path: string): SourceLanguage => {
+  const namedLanguage = languagesByFileName[fileName(path).toLowerCase()]
+  return namedLanguage ?? languagesByExtension[fileExtension(path)] ?? plainTextLanguage
+}

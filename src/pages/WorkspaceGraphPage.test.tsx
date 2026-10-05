@@ -105,6 +105,8 @@ beforeEach(() => {
       { kind: 'file', path: 'notes/b.md' },
     ],
     graph,
+    rootKind: 'directory',
+    rootPath: 'C:/workspace',
     graphEditorPath: null,
     graphError: null,
     graphLoading: false,

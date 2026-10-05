@@ -25,6 +25,27 @@ describe('documentAdapters', () => {
     expect(documentAdapterForPath('payload.exe')).toBeNull()
   })
 
+  it('previews common source files whose names do not have a normal extension', () => {
+    expect(documentAdapterForPath('services/api/Dockerfile')?.kind).toBe('source')
+    expect(documentAdapterForPath('Makefile')?.kind).toBe('source')
+    expect(documentAdapterForPath('tools/Justfile')?.kind).toBe('source')
+    expect(documentAdapterForPath('.gitignore')?.kind).toBe('source')
+    expect(documentAdapterForPath('.editorconfig')?.kind).toBe('source')
+    expect(documentAdapterForPath('.npmrc')?.kind).toBe('source')
+  })
+
+  it('supports common build, schema, and configuration source extensions', () => {
+    for (const path of [
+      'build.gradle',
+      'gradle.properties',
+      'schema/events.proto',
+      'schema/api.graphql',
+      'schema/api.gql',
+    ]) {
+      expect(documentAdapterForPath(path)?.kind).toBe('source')
+    }
+  })
+
   it('keeps extension parsing query and hash safe', () => {
     expect(fileExtension('Docs/Spec.PDF#page=2')).toBe('pdf')
     expect(fileExtension('images/photo.large.WEBP?size=full')).toBe('webp')

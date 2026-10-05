@@ -18,6 +18,8 @@ const WorkspaceGraphPage = () => {
       fileContents: state.fileContents,
       files: state.files,
       graph: state.graph,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
       graphEditorPath: state.graphEditorPath,
       graphError: state.graphError,
       graphLoading: state.graphLoading,
@@ -85,6 +87,7 @@ const WorkspaceGraphPage = () => {
           activePath={context.graphEditorPath}
           editorLoadState={editorLoadState}
           graph={mapGraph}
+          graphIdentity={`${context.rootKind}:${context.rootPath}`}
           onActivateEditor={openEditor}
           onChange={context.onEditorChange}
           onCloseEditor={closeEditor}

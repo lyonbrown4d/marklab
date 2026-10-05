@@ -65,6 +65,7 @@ describe('WorkspaceMapReferenceNode', () => {
 
     expect(screen.queryByTestId('graph-web-node')).not.toBeInTheDocument()
     expect(screen.getByText('Current page')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current page' })).toBeInTheDocument()
     expect(document.querySelector('.react-flow__resize-control')).toBeNull()
 
     const disclosure = screen.getByRole('button', { name: 'Expand node content' })
@@ -97,6 +98,7 @@ describe('WorkspaceMapReferenceNode', () => {
       'https://example.com/current',
     )
     expect(screen.getByTestId('graph-web-node')).toHaveClass('workspace-map-web-drag-handle')
+    expect(screen.getByRole('region', { name: 'Current page' })).toBeInTheDocument()
     expect(document.querySelector('.react-flow__resize-control')).not.toBeNull()
     expect(screen.queryByText('example.com')).not.toBeInTheDocument()
   })
@@ -140,6 +142,7 @@ describe('WorkspaceMapReferenceNode', () => {
       expect(preview.parentElement).not.toHaveClass('nodrag', 'nopan')
       expect(preview).toHaveClass('embedded-preview-drag-handle')
       const node = preview.closest('section')
+      expect(node).toHaveAccessibleName(`resource.${previewKind}`)
       expect(node).toHaveClass('size-full', 'min-h-[180px]', 'min-w-[280px]')
       expect(node).not.toHaveAttribute('role', 'button')
       expect(node).not.toHaveAttribute('tabindex')

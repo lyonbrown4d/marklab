@@ -4,6 +4,7 @@ import path from 'node:path'
 const isOpenTargetCandidate = (value: string): boolean => {
   const trimmed = value.trim()
   if (!trimmed || trimmed.startsWith('-')) return false
+  if (path.isAbsolute(trimmed) || path.win32.isAbsolute(trimmed)) return true
   try {
     const parsed = new URL(trimmed)
     if (parsed.protocol) return false

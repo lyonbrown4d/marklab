@@ -42,6 +42,32 @@ describe('getWorkspaceFilesTarget', () => {
     expect(getWorkspaceFilesTarget([], [entries[0]])).toBeNull()
   })
 
+  it('prefers root knowledge-base entry files before other Markdown files', () => {
+    const workspaceEntries: FileEntry[] = [
+      { kind: 'file', path: 'architecture.svg' },
+      { kind: 'file', path: 'docs/Home.md' },
+      { kind: 'file', path: 'notes/first.md' },
+      { kind: 'file', path: 'readme.MD' },
+      { kind: 'file', path: 'HOME.md' },
+    ]
+
+    expect(getWorkspaceFilesTarget([], workspaceEntries)).toEqual({
+      kind: 'file',
+      path: 'HOME.md',
+      view: 'edit',
+    })
+    expect(getWorkspaceFilesTarget([], workspaceEntries.slice(0, -1))).toEqual({
+      kind: 'file',
+      path: 'readme.MD',
+      view: 'edit',
+    })
+    expect(getWorkspaceFilesTarget([], workspaceEntries.slice(0, -2))).toEqual({
+      kind: 'file',
+      path: 'docs/Home.md',
+      view: 'edit',
+    })
+  })
+
   it('uses the configured default view and normalizes preview-only fallback files', () => {
     expect(getWorkspaceFilesTarget([], [entries[2]], null, 'source')).toEqual({
       kind: 'file',

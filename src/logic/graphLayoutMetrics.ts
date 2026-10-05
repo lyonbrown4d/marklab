@@ -10,14 +10,22 @@ const FILE_NODE_HEIGHT = 54
 const EXTERNAL_WEB_NODE_WIDTH = 340
 const EXTERNAL_WEB_NODE_HEIGHT = 210
 const WORKSPACE_MAP_NODE_HEIGHT = 96
-const WORKSPACE_MAP_FILE_WIDTH = 520
-const WORKSPACE_MAP_FILE_HEIGHT = 640
+export const WORKSPACE_MAP_COMPACT_NODE_WIDTH = 220
+export const WORKSPACE_MAP_COMPACT_NODE_HEIGHT = 72
+export const WORKSPACE_MAP_FILE_WIDTH = 520
+export const WORKSPACE_MAP_FILE_HEIGHT = 640
 export const WORKSPACE_MAP_RESOURCE_NODE_WIDTH = 360
 export const WORKSPACE_MAP_RESOURCE_NODE_HEIGHT = 220
 
 export const FULL_HEADING_NODE_MAX_HEIGHT = 360
 
 export const getGraphNodeLayoutSize = (node: Node<GraphNodeData>) => {
+  if (node.data.workspaceMapDisclosure?.collapsed) {
+    return {
+      width: WORKSPACE_MAP_COMPACT_NODE_WIDTH,
+      height: WORKSPACE_MAP_COMPACT_NODE_HEIGHT,
+    }
+  }
   const currentWidth = node.width ?? node.measured?.width
   const currentHeight = node.height ?? node.measured?.height
   if (currentWidth && currentHeight) return { width: currentWidth, height: currentHeight }

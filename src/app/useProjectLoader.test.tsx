@@ -142,6 +142,37 @@ describe('useProjectLoader', () => {
     expect(setTabs).toHaveBeenCalledWith([{ kind: 'file', path: 'Untitled.md', view: 'edit' }])
   })
 
+  it('opens the root Home document instead of the first sorted asset without a restorable session', async () => {
+    vi.mocked(fsApi.getSnapshot).mockResolvedValue({
+      entries: [
+        { kind: 'file', path: 'architecture.svg' },
+        { kind: 'file', path: 'docs/overview.md' },
+        { kind: 'file', path: 'Home.md' },
+      ],
+      root: { kind: 'external', path: 'D:/wiki' },
+    })
+    const setTabs = vi.fn()
+    const setActiveTabId = vi.fn()
+    const navigate = vi.fn()
+    const { result } = renderHook(() =>
+      useProjectLoader(
+        createProps({
+          navigate,
+          setActiveTabId,
+          setTabs,
+        }) as never,
+      ),
+    )
+
+    await act(async () => {
+      await result.current.loadWorkspace()
+    })
+
+    expect(setTabs).toHaveBeenCalledWith([{ kind: 'file', path: 'Home.md', view: 'edit' }])
+    expect(setActiveTabId).toHaveBeenCalledWith('file:edit:Home.md')
+    expect(navigate).toHaveBeenCalledWith('/files/edit/Home.md', { replace: true })
+  })
+
   it('coalesces repeated internal workspace switches while the IPC call is pending', async () => {
     let resolveSetRoot: (value: { kind: 'internal'; path: string }) => void = () => undefined
     vi.mocked(fsApi.setRoot).mockReturnValue(

@@ -45,6 +45,7 @@ describe('workspace map node presentation', () => {
       height: 510,
       measured: { height: 510, width: 740 },
       position: { x: 420, y: 180 },
+      style: { height: 510, width: 740 },
       width: 740,
     }
 
@@ -52,7 +53,31 @@ describe('workspace map node presentation', () => {
       height: 510,
       measured: { height: 510, width: 740 },
       position: { x: 420, y: 180 },
+      style: { height: 510, width: 740 },
       width: 740,
+    })
+  })
+
+  it('keeps expanded style dimensions when compact graph data refreshes', () => {
+    const incoming = {
+      ...node('file:notes/a.md', 'file', { path: 'notes/a.md' }),
+      height: 72,
+      style: { height: 72, width: 220 },
+      width: 220,
+    }
+    const current = {
+      ...incoming,
+      height: 640,
+      measured: { height: 640, width: 520 },
+      style: { height: 640, width: 520 },
+      width: 520,
+    }
+
+    expect(mergeWorkspaceMapNodeGeometry(incoming, current)).toMatchObject({
+      height: 640,
+      measured: { height: 640, width: 520 },
+      style: { height: 640, width: 520 },
+      width: 520,
     })
   })
 

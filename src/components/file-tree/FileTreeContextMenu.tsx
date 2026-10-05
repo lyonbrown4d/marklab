@@ -35,7 +35,7 @@ import {
 } from '@/components/file-tree/fileTreeActions'
 import type { SidebarFileTreeActions } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
-import { isPreviewableFilePath } from '@/logic/fileTypes'
+import { isPreviewOnlyFilePath, isSourcePreviewFilePath } from '@/logic/fileTypes'
 
 type FileTreeContextMenuProps = Omit<
   SidebarFileTreeActions,
@@ -70,7 +70,8 @@ export const FileTreeContextMenu = ({
   const renameRequested = useRef(false)
   const item = node.data
   const isFolder = item.type === 'folder'
-  const textViewsAvailable = !isFolder && !isPreviewableFilePath(item.path)
+  const sourceViewAvailable = !isFolder && !isPreviewOnlyFilePath(item.path)
+  const graphViewAvailable = sourceViewAvailable && !isSourcePreviewFilePath(item.path)
   const hasChildren = isFolder && (item.children?.length ?? 0) > 0
   const HeaderIcon = isFolder
     ? hasChildren
@@ -147,23 +148,23 @@ export const FileTreeContextMenu = ({
           >
             {labels.open}
           </MenuItem>
-          {textViewsAvailable ? (
-            <>
-              <MenuItem
-                className={menuItemStyles()}
-                icon={Code2}
-                onSelect={() => onOpenFileView(item.path, 'source')}
-              >
-                {labels.openSource}
-              </MenuItem>
-              <MenuItem
-                className={menuItemStyles()}
-                icon={ScanSearch}
-                onSelect={() => onOpenFileView(item.path, 'graph')}
-              >
-                {labels.openGraph}
-              </MenuItem>
-            </>
+          {sourceViewAvailable ? (
+            <MenuItem
+              className={menuItemStyles()}
+              icon={Code2}
+              onSelect={() => onOpenFileView(item.path, 'source')}
+            >
+              {labels.openSource}
+            </MenuItem>
+          ) : null}
+          {graphViewAvailable ? (
+            <MenuItem
+              className={menuItemStyles()}
+              icon={ScanSearch}
+              onSelect={() => onOpenFileView(item.path, 'graph')}
+            >
+              {labels.openGraph}
+            </MenuItem>
           ) : null}
         </>
       ) : null}

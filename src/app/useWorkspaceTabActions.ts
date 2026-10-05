@@ -8,7 +8,7 @@ import {
   pathToWorkspaceGraphRoute,
 } from '@/logic/routing'
 import { createGitDiffTab, createWebTab, getWorkspaceTabId, gitDiffTabId } from '@/logic/tabs'
-import { fileViewForOpenPath, isPreviewableFilePath } from '@/logic/fileTypes'
+import { fileViewForOpenPath } from '@/logic/fileTypes'
 import {
   navigateIfNeeded,
   navigateToTab,
@@ -18,6 +18,7 @@ import {
 import type { FileViewKind, GitDiffSection, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
 import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { fileViewForMode, resolveWorkspaceFileViewMode } from '@/app/workspaceFileViewMode'
 
 type UseWorkspaceTabActionsArgs = {
   activeTabIdRef: LatestRef<string | null>
@@ -53,18 +54,12 @@ export const useWorkspaceTabActions = ({
       const tab = tabsRef.current.find((item) => getWorkspaceTabId(item) === activeTabIdRef.current)
       const path = currentFilePathRef.current ?? (tab?.kind === 'file' ? tab.path : null)
       if (!path && mode !== 'graph') return
-      if (path && isPreviewableFilePath(path) && mode !== 'preview') return
-      const fileView: FileViewKind =
-        mode === 'source'
-          ? 'source'
-          : mode === 'graph' && path
-            ? 'graph'
-            : mode === 'preview'
-              ? 'preview'
-              : 'edit'
+      const nextMode = path ? resolveWorkspaceFileViewMode(path, mode) : mode
+      if (!nextMode) return
+      const fileView = fileViewForMode(nextMode, Boolean(path))
 
       if (path) {
-        setTabViewModes((prev) => (prev[path] === mode ? prev : { ...prev, [path]: mode }))
+        setTabViewModes((prev) => (prev[path] === nextMode ? prev : { ...prev, [path]: nextMode }))
         openFileView({
           path,
           view: fileView,
@@ -77,7 +72,7 @@ export const useWorkspaceTabActions = ({
       }
 
       const nextRoute =
-        mode === 'graph' && !path
+        nextMode === 'graph' && !path
           ? pathToWorkspaceGraphRoute()
           : path
             ? pathToFileViewRoute(path, fileView)

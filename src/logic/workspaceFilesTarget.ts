@@ -9,6 +9,17 @@ const normalizeFileTab = (tab: FileTab): FileTab => ({
   view: fileViewForOpenPath(tab.path, tab.view),
 })
 
+const rootFileName = (path: string) => {
+  const normalized = path.replaceAll('\\', '/')
+  return normalized.includes('/') ? null : normalized.toLowerCase()
+}
+
+const preferredWorkspaceEntry = (files: FileEntry[]) =>
+  files.find((entry) => rootFileName(entry.path) === 'home.md') ??
+  files.find((entry) => rootFileName(entry.path) === 'readme.md') ??
+  files.find((entry) => isMarkdownFilePath(entry.path)) ??
+  files[0]
+
 export const getWorkspaceFilesTarget = (
   tabs: WorkspaceTab[],
   entries: FileEntry[],
@@ -29,7 +40,7 @@ export const getWorkspaceFilesTarget = (
   if (lastFileTab) return normalizeFileTab(lastFileTab)
 
   const files = entries.filter((entry) => entry.kind === 'file')
-  const fallback = files.find((entry) => isMarkdownFilePath(entry.path)) ?? files[0]
+  const fallback = preferredWorkspaceEntry(files)
   return fallback
     ? {
         kind: 'file',

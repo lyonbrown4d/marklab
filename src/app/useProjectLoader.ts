@@ -9,6 +9,7 @@ import { fsApi } from '@/services/fsApi'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
+import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
 import {
   MARKLAB_DOCUMENT_EXTENSIONS,
   fileViewForOpenPath,
@@ -106,7 +107,6 @@ export const useProjectLoader = ({
 
         if (filesOnly.length > 0) {
           const available = new Set(filesOnly.map((file) => file.path))
-          const defaultPath = filesOnly[0].path
           const seedTabs = options?.tabs ?? tabsRef.current
           const seedActiveTabId =
             options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
@@ -119,15 +119,14 @@ export const useProjectLoader = ({
             }
             return [tab]
           })
-          const finalTabs =
-            nextTabs.length > 0
-              ? nextTabs
-              : [
-                  createFileTab(
-                    defaultPath,
-                    fileViewForOpenPath(defaultPath, defaultFileViewRef.current),
-                  ),
-                ]
+          const defaultTab = getWorkspaceFilesTarget(
+            [],
+            filesOnly,
+            null,
+            defaultFileViewRef.current,
+          )
+          if (!defaultTab) return
+          const finalTabs = nextTabs.length > 0 ? nextTabs : [defaultTab]
           if (!areWorkspaceTabListsEqual(tabsRef.current, finalTabs)) {
             setTabs(finalTabs)
           }
@@ -135,10 +134,7 @@ export const useProjectLoader = ({
           const currentActiveTab = finalTabs.find(
             (tab) => getWorkspaceTabId(tab) === currentActiveTabId,
           )
-          const nextActiveTab =
-            currentActiveTab ??
-            finalTabs[0] ??
-            createFileTab(defaultPath, fileViewForOpenPath(defaultPath, defaultFileViewRef.current))
+          const nextActiveTab = currentActiveTab ?? finalTabs[0] ?? defaultTab
           const nextActiveTabId = getWorkspaceTabId(nextActiveTab)
           if (nextActiveTabId !== activeTabIdRef.current) {
             setActiveTabId(nextActiveTabId)

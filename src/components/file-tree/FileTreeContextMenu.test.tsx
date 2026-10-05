@@ -37,19 +37,23 @@ const labels: ContextLabels = {
 }
 
 const Harness = ({
+  path = 'README.md',
   onEdit = vi.fn(),
   onSubmit = vi.fn(),
   onRowActivate = vi.fn(),
   onInspect = vi.fn(),
+  onOpenFileView = vi.fn(),
 }: {
+  path?: string
   onEdit?: () => void
   onSubmit?: (name: string) => void
   onRowActivate?: () => void
   onInspect?: (path: string) => void
+  onOpenFileView?: (path: string, view: 'source' | 'graph') => void
 }) => {
   const [editing, setEditing] = useState(false)
   const node = {
-    data: { name: 'README.md', path: 'README.md', type: 'file' },
+    data: { name: path.split('/').at(-1) ?? path, path, type: 'file' },
     edit: async () => {
       onEdit()
       setEditing(true)
@@ -67,7 +71,7 @@ const Harness = ({
     <div onClick={onRowActivate}>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <button>README.md</button>
+          <button>{path}</button>
         </ContextMenuTrigger>
         <FileTreeContextMenu
           labels={labels}
@@ -75,7 +79,7 @@ const Harness = ({
           readonlyTree={false}
           onInspectPath={onInspect}
           onOpenFile={vi.fn()}
-          onOpenFileView={vi.fn()}
+          onOpenFileView={onOpenFileView}
           onRequestCreate={vi.fn()}
           onRequestDelete={vi.fn()}
         />
@@ -86,6 +90,32 @@ const Harness = ({
 }
 
 describe('FileTreeContextMenu', () => {
+  it.each(['build.gradle', 'Dockerfile'])(
+    'offers the source editor for previewable source file %s',
+    async (path) => {
+      const user = userEvent.setup()
+      const onOpenFileView = vi.fn()
+      render(<Harness onOpenFileView={onOpenFileView} path={path} />)
+      fireEvent.contextMenu(screen.getByRole('button', { name: path }))
+
+      await user.click(screen.getByRole('menuitem', { name: 'Open source' }))
+
+      expect(onOpenFileView).toHaveBeenCalledExactlyOnceWith(path, 'source')
+    },
+  )
+
+  it('keeps binary files preview-only while preserving Markdown text views', () => {
+    const { unmount } = render(<Harness path="docs/spec.pdf" />)
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'docs/spec.pdf' }))
+    expect(screen.queryByRole('menuitem', { name: 'Open source' })).not.toBeInTheDocument()
+    unmount()
+
+    render(<Harness />)
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'README.md' }))
+    expect(screen.getByRole('menuitem', { name: 'Open source' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Open graph' })).toBeInTheDocument()
+  })
+
   it('uses the shared application menu surface and item geometry', () => {
     render(<Harness />)
     fireEvent.contextMenu(screen.getByRole('button', { name: 'README.md' }))

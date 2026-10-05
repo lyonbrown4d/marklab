@@ -143,14 +143,50 @@
 }
 
 .workspace-map-canvas .react-flow__edge-path {
-  stroke: color-mix(in srgb, hsl(var(--primary)) 30%, hsl(var(--muted-foreground)));
-  stroke-width: 1.15;
+  stroke: color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--muted-foreground)));
+  stroke-width: 0.9;
+  opacity: 0.34;
+  transition:
+    stroke var(--motion-duration-fast) ease,
+    stroke-width var(--motion-duration-fast) ease,
+    opacity var(--motion-duration-fast) ease;
 }
 
 .workspace-map-canvas.is-editing
   .react-flow__node:not(:has(.workspace-map-editor[data-editor-active='true'])) {
   opacity: 0.58;
   transition: opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-canvas .react-flow__edge.workspace-map-flow-edge--connected .react-flow__edge-path {
+  stroke: color-mix(in srgb, hsl(var(--primary)) 74%, hsl(var(--foreground)));
+  stroke-width: 1.55;
+  opacity: 0.92;
+}
+
+.workspace-map-canvas .react-flow__edge.workspace-map-flow-edge--muted .react-flow__edge-path {
+  opacity: 0.09;
+}
+
+.workspace-map-canvas .react-flow__node.workspace-map-flow-node--dimmed,
+.workspace-map-canvas.is-editing .react-flow__node.workspace-map-flow-node--dimmed {
+  opacity: 0.32;
+  transition: opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-canvas
+  .react-flow__node.workspace-map-flow-node--neighbor
+  :is(.workspace-map-editor, .workspace-map-node) {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 34%, hsl(var(--border)));
+}
+
+.workspace-map-canvas
+  .react-flow__node.workspace-map-flow-node--spotlight
+  :is(.workspace-map-editor, .workspace-map-node) {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 62%, hsl(var(--border)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 14%, transparent),
+    0 12px 28px -20px color-mix(in srgb, hsl(var(--foreground)) 46%, transparent);
 }
 
 .workspace-map-canvas .react-flow__controls {
@@ -169,6 +205,11 @@
 
   .workspace-map-canvas.is-editing
     .react-flow__node:not(:has(.workspace-map-editor[data-editor-active='true'])) {
+    transition: none;
+  }
+
+  .workspace-map-canvas .react-flow__edge-path,
+  .workspace-map-canvas .react-flow__node.workspace-map-flow-node--dimmed {
     transition: none;
   }
 }

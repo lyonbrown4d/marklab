@@ -14,6 +14,7 @@ import type {
 } from '@electron/services/workspace/types.js'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
+import { WorkspaceSearchIndexBuildCoordinator } from '@electron/services/workspace/workspaceSearchIndexBuildCoordinator.js'
 import {
   workspaceChangeAffectsSearch,
   workspaceSearchIndexPath,
@@ -71,11 +72,11 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       runTask: (work, taskName) => this.runSearchIndexTask(work, taskName),
     })
   private activeWorkspaceSearchKey = ''
-  private searchIndexBuildGeneration = 0
+  private readonly searchIndexBuildCoordinator = new WorkspaceSearchIndexBuildCoordinator()
   private needsSearchIndexRebuild = true
 
   override dispose(): void {
-    this.searchIndexBuildGeneration += 1
+    this.searchIndexBuildCoordinator.invalidate()
     this.searchIndexUpdateQueue.dispose()
     this.analysisCache.invalidate()
     this.graphCache.clear()
@@ -182,6 +183,11 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       await this.rebuildSearchIndexIfNeeded()
 
       const indexedResult = await this.workspaceSearchIndex.search(query, limit)
+      this.logger.info('workspace search completed', {
+        queryLength: query.length,
+        resultCount: indexedResult.length,
+        searchKey: this.activeWorkspaceSearchKey.slice(0, 12),
+      })
       return indexedResult
     }, 'search-documents')
   }
@@ -244,7 +250,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
 
     if (this.activeWorkspaceSearchKey !== searchKey) {
       this.activeWorkspaceSearchKey = searchKey
-      this.needsSearchIndexRebuild = !(await this.workspaceSearchIndex.hasDocuments())
+      const hasDocuments = await this.workspaceSearchIndex.hasDocuments()
+      this.needsSearchIndexRebuild = !hasDocuments
+      this.logger.info('workspace search index opened', {
+        hasDocuments,
+        searchKey: searchKey.slice(0, 12),
+      })
     }
   }
 
@@ -260,27 +271,26 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   private async buildSearchIndexFromWorkspace(): Promise<boolean> {
-    const generation = ++this.searchIndexBuildGeneration
     const searchKey = workspaceSearchKey(this.state)
-    const documents = await this.workspaceDocuments()
-    if (!this.isCurrentSearchIndexBuild(generation, searchKey)) return false
-    const indexable = documents.map<WorkspaceSearchDocument>((document) => ({
-      path: document.path,
-      title: fileLabel(document.path),
-      content: document.content,
-    }))
-    await this.workspaceSearchIndex.rebuild(indexable)
-    return this.isCurrentSearchIndexBuild(generation, searchKey)
-  }
-
-  private isCurrentSearchIndexBuild(generation: number, searchKey: string): boolean {
-    return (
-      generation === this.searchIndexBuildGeneration && searchKey === workspaceSearchKey(this.state)
-    )
+    return this.searchIndexBuildCoordinator.run(searchKey, async (isCurrent) => {
+      const documents = await this.workspaceDocuments()
+      if (!isCurrent() || searchKey !== workspaceSearchKey(this.state)) return false
+      const indexable = documents.map<WorkspaceSearchDocument>((document) => ({
+        path: document.path,
+        title: fileLabel(document.path),
+        content: document.content,
+      }))
+      this.logger.info('workspace search index rebuild started', {
+        documentCount: indexable.length,
+        searchKey: searchKey.slice(0, 12),
+      })
+      await this.workspaceSearchIndex.rebuild(indexable)
+      return isCurrent() && searchKey === workspaceSearchKey(this.state)
+    })
   }
 
   private resetSearchIndexState(): void {
-    this.searchIndexBuildGeneration += 1
+    this.searchIndexBuildCoordinator.invalidate()
     this.searchIndexUpdateQueue.clear()
     this.activeWorkspaceSearchKey = ''
     this.needsSearchIndexRebuild = true

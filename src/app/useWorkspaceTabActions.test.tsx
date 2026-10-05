@@ -11,6 +11,111 @@ vi.mock('@/runtime/electron', () => ({
 }))
 
 describe('useWorkspaceTabActions workspace map', () => {
+  it.each(['build.gradle', 'Dockerfile'])('switches %s from preview to source', (path) => {
+    const navigate = vi.fn()
+    const setTabs = vi.fn()
+    const setTabViewModes = vi.fn()
+    const previewTab: WorkspaceTab = { kind: 'file', path, view: 'preview' }
+    const { result } = renderHook(() =>
+      useWorkspaceTabActions({
+        activeTabIdRef: { current: `file:preview:${path}` },
+        currentFilePathRef: { current: path },
+        inspectedPathRef: { current: path },
+        locationPathnameRef: { current: `/files/preview/${path}` },
+        tabsRef: { current: [previewTab] },
+        navigate,
+        setTabViewModes,
+        setTabs,
+        setActiveTabId: vi.fn(),
+        setInspectedPath: vi.fn(),
+        defaultFileView: 'preview',
+      }),
+    )
+
+    act(() => result.current.setViewMode('source'))
+
+    expect(setTabViewModes).toHaveBeenCalled()
+    expect(setTabs).toHaveBeenCalledWith([previewTab, { kind: 'file', path, view: 'source' }])
+    expect(navigate).toHaveBeenCalledWith(`/files/source/${path}`)
+  })
+
+  it.each(['build.gradle', 'Dockerfile'])(
+    'returns %s from source to its rendered preview',
+    (path) => {
+      const navigate = vi.fn()
+      const setTabs = vi.fn()
+      const sourceTab: WorkspaceTab = { kind: 'file', path, view: 'source' }
+      const { result } = renderHook(() =>
+        useWorkspaceTabActions({
+          activeTabIdRef: { current: `file:source:${path}` },
+          currentFilePathRef: { current: path },
+          inspectedPathRef: { current: path },
+          locationPathnameRef: { current: `/files/source/${path}` },
+          tabsRef: { current: [sourceTab] },
+          navigate,
+          setTabViewModes: vi.fn(),
+          setTabs,
+          setActiveTabId: vi.fn(),
+          setInspectedPath: vi.fn(),
+          defaultFileView: 'source',
+        }),
+      )
+
+      act(() => result.current.setViewMode('wysiwyg'))
+
+      expect(setTabs).toHaveBeenCalledWith([sourceTab, { kind: 'file', path, view: 'preview' }])
+      expect(navigate).toHaveBeenCalledWith(`/files/preview/${path}`)
+    },
+  )
+
+  it('keeps binary previews preview-only', () => {
+    const navigate = vi.fn()
+    const setTabs = vi.fn()
+    const { result } = renderHook(() =>
+      useWorkspaceTabActions({
+        activeTabIdRef: { current: 'file:preview:docs/spec.pdf' },
+        currentFilePathRef: { current: 'docs/spec.pdf' },
+        inspectedPathRef: { current: 'docs/spec.pdf' },
+        locationPathnameRef: { current: '/files/preview/docs/spec.pdf' },
+        tabsRef: { current: [{ kind: 'file', path: 'docs/spec.pdf', view: 'preview' }] },
+        navigate,
+        setTabViewModes: vi.fn(),
+        setTabs,
+        setActiveTabId: vi.fn(),
+        setInspectedPath: vi.fn(),
+        defaultFileView: 'preview',
+      }),
+    )
+
+    act(() => result.current.setViewMode('source'))
+
+    expect(setTabs).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('keeps Markdown on its editor route when preview is the default file view', () => {
+    const navigate = vi.fn()
+    const { result } = renderHook(() =>
+      useWorkspaceTabActions({
+        activeTabIdRef: { current: null },
+        currentFilePathRef: { current: null },
+        inspectedPathRef: { current: null },
+        locationPathnameRef: { current: '/' },
+        tabsRef: { current: [] },
+        navigate,
+        setTabViewModes: vi.fn(),
+        setTabs: vi.fn(),
+        setActiveTabId: vi.fn(),
+        setInspectedPath: vi.fn(),
+        defaultFileView: 'preview',
+      }),
+    )
+
+    act(() => result.current.onOpenFile('README.md'))
+
+    expect(navigate).toHaveBeenCalledWith('/files/edit/README.md')
+  })
+
   it('navigates to the map without creating or activating a document tab', () => {
     const navigate = vi.fn()
     const setActiveTabId = vi.fn()

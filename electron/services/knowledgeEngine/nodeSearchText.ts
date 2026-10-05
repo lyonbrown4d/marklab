@@ -33,11 +33,9 @@ export const resultForSearchDocument = (
   const foldedTitle = foldSearchText(document.title)
   const foldedPath = foldSearchText(document.path)
   const foldedContent = foldSearchText(document.content)
-  const titleMatches = highlightTerms.some((term) => foldedTitle.includes(term))
+  const titleMatches = exactTerms.every((term) => foldedTitle.includes(term))
   const lines = document.content.split(/\r?\n/)
-  const lineIndex = titleMatches
-    ? -1
-    : lines.findIndex((line) => highlightTerms.some((term) => foldSearchText(line).includes(term)))
+  const lineIndex = titleMatches ? -1 : bestSnippetLineIndex(lines, exactTerms, highlightTerms)
   const snippet = titleMatches ? document.title : (lines[lineIndex] ?? document.title)
   const highlights = highlightsForSnippet(snippet, highlightTerms)
   const firstHighlight = highlights[0]
@@ -62,6 +60,19 @@ const documentText = (document: WorkspaceSearchDocument): string =>
   `${document.title}\n${document.path}\n${document.content}`
 
 const uniqueTerms = (terms: string[]): string[] => [...new Set(terms.filter(Boolean))]
+
+const bestSnippetLineIndex = (
+  lines: string[],
+  exactTerms: string[],
+  highlightTerms: string[],
+): number => {
+  const foldedLines = lines.map(foldSearchText)
+  const completeMatch = foldedLines.findIndex((line) =>
+    exactTerms.every((term) => line.includes(term)),
+  )
+  if (completeMatch >= 0) return completeMatch
+  return foldedLines.findIndex((line) => highlightTerms.some((term) => line.includes(term)))
+}
 
 const highlightsForSnippet = (
   snippet: string,

@@ -33,28 +33,44 @@ export type WorkspaceSearchIndexBackend = {
 
 export class WorkspaceSearchIndex {
   private indexPath: string | null = null
+  private lifecycleQueue: Promise<void> = Promise.resolve()
   private workspaceId: string | null = null
 
   constructor(private readonly backend: WorkspaceSearchIndexBackend = createUnavailableBackend()) {}
 
   async open(indexPath: string, workspaceId = indexPath): Promise<void> {
     const normalizedPath = path.resolve(indexPath)
-    if (normalizedPath === this.indexPath && workspaceId === this.workspaceId) return
+    await this.enqueueLifecycle(async () => {
+      if (normalizedPath === this.indexPath && workspaceId === this.workspaceId) return
 
-    await this.close()
-    await mkdir(normalizedPath, { recursive: true })
-    this.workspaceId = workspaceId
-    await this.backend.open(this.workspaceId, normalizedPath)
-    this.indexPath = normalizedPath
+      await this.closeCurrent()
+      await mkdir(normalizedPath, { recursive: true })
+      await this.backend.open(workspaceId, normalizedPath)
+      this.workspaceId = workspaceId
+      this.indexPath = normalizedPath
+    })
   }
 
   async close(): Promise<void> {
+    await this.enqueueLifecycle(() => this.closeCurrent())
+  }
+
+  private async closeCurrent(): Promise<void> {
     const workspaceId = this.workspaceId
     this.indexPath = null
     this.workspaceId = null
     if (workspaceId) {
       await this.backend.close(workspaceId)
     }
+  }
+
+  private enqueueLifecycle<T>(work: () => Promise<T>): Promise<T> {
+    const operation = this.lifecycleQueue.then(work)
+    this.lifecycleQueue = operation.then(
+      () => undefined,
+      () => undefined,
+    )
+    return operation
   }
 
   async hasDocuments(): Promise<boolean> {

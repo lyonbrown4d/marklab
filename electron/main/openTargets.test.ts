@@ -24,6 +24,33 @@ const createTempRoot = async (): Promise<string> => {
 }
 
 describe('native open targets', () => {
+  it('preserves absolute filesystem paths before filtering urls', () => {
+    const cwd = path.resolve('workspace')
+    const windowsDrivePath = String.raw`D:\Projects\third-party-integration.wiki`
+    const windowsUncPath = String.raw`\\server\share\project`
+    const unixPath = '/tmp/project'
+
+    expect(
+      collectOpenTargetCandidates(
+        [
+          windowsDrivePath,
+          windowsUncPath,
+          unixPath,
+          'https://example.com/note.md',
+          'http://example.com/note.md',
+          'marklab://open?id=1',
+          '--inspect',
+          '   ',
+        ],
+        cwd,
+      ),
+    ).toEqual([
+      path.resolve(cwd, windowsDrivePath),
+      path.resolve(cwd, windowsUncPath),
+      path.resolve(cwd, unixPath),
+    ])
+  })
+
   it('collects unique path-like arguments and filters flags and urls', () => {
     const cwd = '/workspace'
 

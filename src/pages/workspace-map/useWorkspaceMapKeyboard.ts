@@ -45,7 +45,7 @@ export const useWorkspaceMapKeyboard = ({
       }
       if (event.key === '0') {
         event.preventDefault()
-        void flow?.fitView({ duration: 0, maxZoom: 1, padding: 0.22 })
+        void flow?.fitView({ duration: 0, maxZoom: 1, minZoom: 0.35, padding: 0.22 })
         return
       }
       if (event.key !== 'Enter' && event.key !== ' ') return

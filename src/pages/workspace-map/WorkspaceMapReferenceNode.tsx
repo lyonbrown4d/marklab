@@ -31,6 +31,7 @@ export const WorkspaceMapReferenceNode = memo(
     if (disclosure?.collapsed) {
       return (
         <section
+          aria-label={data.label}
           className={cn(
             'workspace-map-node flex h-[72px] w-[220px] items-center gap-2 overflow-visible rounded-lg px-3',
             selected && 'workspace-map-node--selected',
@@ -57,6 +58,7 @@ export const WorkspaceMapReferenceNode = memo(
     if (kind === 'external' && data.url && data.webView) {
       return (
         <section
+          aria-label={data.label}
           className={cn(
             'workspace-map-node size-full min-h-[180px] min-w-[300px] overflow-visible rounded-xl',
             selected && 'workspace-map-node--selected',
@@ -95,6 +97,7 @@ export const WorkspaceMapReferenceNode = memo(
     if (kind === 'preview' && data.previewKind && data.path) {
       return (
         <section
+          aria-label={data.label}
           className={cn(
             'workspace-map-node flex size-full min-h-[180px] min-w-[280px] flex-col overflow-visible rounded-lg',
             selected && 'workspace-map-node--selected',

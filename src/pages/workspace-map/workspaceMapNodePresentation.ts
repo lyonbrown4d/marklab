@@ -46,5 +46,6 @@ export const mergeWorkspaceMapNodeGeometry = (
   height: current.height ?? incoming.height,
   measured: current.measured,
   position: current.position,
+  style: current.style ? { ...incoming.style, ...current.style } : incoming.style,
   width: current.width ?? incoming.width,
 })

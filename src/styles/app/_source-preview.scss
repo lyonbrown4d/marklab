@@ -1,0 +1,118 @@
+.source-preview-code .hljs-comment,
+.source-preview-code .hljs-code,
+.source-preview-code .hljs-formula,
+.source-preview-code .hljs-quote {
+  color: #6e7781;
+}
+
+.source-preview-code .hljs-keyword,
+.source-preview-code .hljs-doctag,
+.source-preview-code .hljs-template-tag,
+.source-preview-code .hljs-template-variable,
+.source-preview-code .hljs-type,
+.source-preview-code .hljs-variable.language_ {
+  color: #cf222e;
+}
+
+.source-preview-code .hljs-string,
+.source-preview-code .hljs-regexp,
+.source-preview-code .hljs-meta .hljs-string {
+  color: #0a3069;
+}
+
+.source-preview-code .hljs-number,
+.source-preview-code .hljs-literal,
+.source-preview-code .hljs-attr,
+.source-preview-code .hljs-attribute,
+.source-preview-code .hljs-meta,
+.source-preview-code .hljs-operator,
+.source-preview-code .hljs-selector-attr,
+.source-preview-code .hljs-selector-class,
+.source-preview-code .hljs-selector-id,
+.source-preview-code .hljs-variable {
+  color: #0550ae;
+}
+
+.source-preview-code .hljs-title,
+.source-preview-code .hljs-title.class_,
+.source-preview-code .hljs-title.function_,
+.source-preview-code .hljs-section {
+  color: #8250df;
+}
+
+.source-preview-code .hljs-name,
+.source-preview-code .hljs-selector-tag,
+.source-preview-code .hljs-selector-pseudo,
+.source-preview-code .hljs-subst {
+  color: #116329;
+}
+
+.source-preview-code .hljs-built_in,
+.source-preview-code .hljs-bullet,
+.source-preview-code .hljs-symbol {
+  color: #953800;
+}
+
+.source-preview-code .hljs-emphasis {
+  font-style: italic;
+}
+
+.source-preview-code .hljs-section,
+.source-preview-code .hljs-strong {
+  font-weight: 700;
+}
+
+.dark .source-preview-code .hljs-comment,
+.dark .source-preview-code .hljs-code,
+.dark .source-preview-code .hljs-formula,
+.dark .source-preview-code .hljs-quote {
+  color: #8b949e;
+}
+
+.dark .source-preview-code .hljs-keyword,
+.dark .source-preview-code .hljs-doctag,
+.dark .source-preview-code .hljs-template-tag,
+.dark .source-preview-code .hljs-template-variable,
+.dark .source-preview-code .hljs-type,
+.dark .source-preview-code .hljs-variable.language_ {
+  color: #ff7b72;
+}
+
+.dark .source-preview-code .hljs-string,
+.dark .source-preview-code .hljs-regexp,
+.dark .source-preview-code .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+.dark .source-preview-code .hljs-number,
+.dark .source-preview-code .hljs-literal,
+.dark .source-preview-code .hljs-attr,
+.dark .source-preview-code .hljs-attribute,
+.dark .source-preview-code .hljs-meta,
+.dark .source-preview-code .hljs-operator,
+.dark .source-preview-code .hljs-selector-attr,
+.dark .source-preview-code .hljs-selector-class,
+.dark .source-preview-code .hljs-selector-id,
+.dark .source-preview-code .hljs-variable {
+  color: #79c0ff;
+}
+
+.dark .source-preview-code .hljs-title,
+.dark .source-preview-code .hljs-title.class_,
+.dark .source-preview-code .hljs-title.function_,
+.dark .source-preview-code .hljs-section {
+  color: #d2a8ff;
+}
+
+.dark .source-preview-code .hljs-name,
+.dark .source-preview-code .hljs-selector-tag,
+.dark .source-preview-code .hljs-selector-pseudo,
+.dark .source-preview-code .hljs-subst {
+  color: #7ee787;
+}
+
+.dark .source-preview-code .hljs-built_in,
+.dark .source-preview-code .hljs-bullet,
+.dark .source-preview-code .hljs-symbol {
+  color: #ffa657;
+}

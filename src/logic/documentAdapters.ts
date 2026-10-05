@@ -132,7 +132,10 @@ export const documentAdapters = [
       'csv',
       'cts',
       'cxx',
+      'gql',
       'go',
+      'gradle',
+      'graphql',
       'h',
       'hh',
       'hpp',
@@ -152,6 +155,8 @@ export const documentAdapters = [
       'mjs',
       'mts',
       'php',
+      'properties',
+      'proto',
       'ps1',
       'py',
       'rb',
@@ -187,11 +192,24 @@ const adapterByExtension = new Map<string, DocumentAdapter>(
   ),
 )
 
+const sourceAdapter = documentAdapters.find((adapter) => adapter.kind === 'source') ?? null
+const sourceFileNames = new Set([
+  '.editorconfig',
+  '.gitignore',
+  '.npmrc',
+  'dockerfile',
+  'justfile',
+  'makefile',
+])
+
 export const documentAdapterForExtension = (extension: string): DocumentAdapter | null =>
   adapterByExtension.get(extension.toLowerCase()) ?? null
 
-export const documentAdapterForPath = (value: string): DocumentAdapter | null =>
-  documentAdapterForExtension(fileExtension(value))
+export const documentAdapterForPath = (value: string): DocumentAdapter | null => {
+  const adapter = documentAdapterForExtension(fileExtension(value))
+  if (adapter) return adapter
+  return sourceFileNames.has(fileName(value).toLowerCase()) ? sourceAdapter : null
+}
 
 export const documentAdapterExtensionsForKind = (kind: DocumentAdapterKind) =>
   documentAdapters.find((adapter) => adapter.kind === kind)?.extensions ?? []
@@ -232,10 +250,13 @@ export const documentAdapterMarkdownEmbedKindForPath = (value: string) =>
   documentAdapterMarkdownEmbedKind(documentAdapterForPath(value))
 
 export const fileExtension = (value: string): string => {
-  const name = cleanPath(value).split(/[\\/]/).filter(Boolean).pop() ?? ''
+  const name = fileName(value)
   const index = name.lastIndexOf('.')
   if (index <= 0 || index === name.length - 1) return ''
   return name.slice(index + 1).toLowerCase()
 }
+
+export const fileName = (value: string): string =>
+  cleanPath(value).split(/[\\/]/).filter(Boolean).pop() ?? ''
 
 const cleanPath = (value: string) => value.trim().split('#')[0]?.split('?')[0] ?? value.trim()

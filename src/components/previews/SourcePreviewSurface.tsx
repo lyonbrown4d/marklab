@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
+import { SourceCodeLines } from '@/components/previews/SourceCodeLines'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
@@ -160,16 +161,11 @@ const SourcePreviewSurface = ({
       </header>
       {data.content ? (
         <div className="min-h-0 flex-1 overflow-auto bg-muted/20 p-3">
-          <ol
-            aria-label={t('preview.sourceLines')}
-            className="list-decimal space-y-0 pl-12 font-mono text-xs leading-5 marker:select-none marker:text-muted-foreground"
-          >
-            {data.lines.map((line, index) => (
-              <li key={index} className="min-w-max pl-3">
-                <code className="select-text whitespace-pre">{line || '\u00a0'}</code>
-              </li>
-            ))}
-          </ol>
+          <SourceCodeLines
+            label={t('preview.sourceLines')}
+            languageId={language.id}
+            lines={data.lines}
+          />
         </div>
       ) : (
         <div className="flex min-h-64 items-center justify-center p-6 text-sm text-muted-foreground">

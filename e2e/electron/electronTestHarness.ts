@@ -131,9 +131,14 @@ const waitForRendererAppShell = async (page: Page, output: string[]) => {
   }
 }
 
+type ElectronTestLaunchOptions = {
+  openTargets?: string[]
+  trustedCertificateSpki?: string
+}
+
 export const launchElectronTestSession = async (
   rendererUrl: string,
-  options: { trustedCertificateSpki?: string } = {},
+  options: ElectronTestLaunchOptions = {},
 ): Promise<ElectronTestSession> => {
   const testRunRoot = path.join(e2eOutputRoot, `${Date.now()}-${process.pid}`)
   fs.mkdirSync(testRunRoot, { recursive: true })
@@ -152,6 +157,7 @@ export const launchElectronTestSession = async (
       '--use-angle=swiftshader',
       `--user-data-dir=${path.join(testRunRoot, 'user-data')}`,
       electronMain,
+      ...(options.openTargets ?? []),
     ],
     cwd: repoRoot,
     env: {
@@ -238,6 +244,22 @@ export const snapshotWebTabContents = (app: ElectronApplication, mainWindowUrl: 
       }))
       .sort((left, right) => left.url.localeCompare(right.url))
   }, mainWindowUrl)
+
+export const snapshotStartupOpenTargetState = (page: Page) =>
+  page.evaluate(async () => {
+    const rendererWindow = window as Window & {
+      marklabElectron?: {
+        commands?: { invoke: (command: string) => Promise<unknown> }
+        lifecycle?: { getLaunchInfo: () => Promise<{ args: string[]; cwd: string }> }
+      }
+    }
+    const bridge = rendererWindow.marklabElectron
+    const [launchInfo, rootInfo] = await Promise.all([
+      bridge?.lifecycle?.getLaunchInfo(),
+      bridge?.commands?.invoke('fs_get_root_info'),
+    ])
+    return { launchInfo, rootInfo }
+  })
 
 export const closeElectronTestSession = async (session: ElectronTestSession | undefined) => {
   await session?.app.close().catch(() => undefined)

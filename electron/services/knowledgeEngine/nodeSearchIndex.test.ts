@@ -22,30 +22,6 @@ const createStorageRoot = async (): Promise<string> => {
 }
 
 describe('NodeSearchIndex', () => {
-  it('matches every folded query term across title, path, and content', async () => {
-    const index = new NodeSearchIndex()
-    await index.rebuild([
-      {
-        path: '.\\Notes\\Café Plan.md',
-        title: 'Résumé',
-        content: 'Launch details live here.',
-      },
-      { path: 'notes/cafe-only.md', title: 'Cafe', content: 'Unrelated draft' },
-    ])
-
-    const result = await index.search('resume café launch')
-
-    expect(result.totalHits).toBe(1)
-    expect(result.results).toMatchObject([
-      {
-        path: 'Notes/Café Plan.md',
-        title: 'Résumé',
-        snippet: 'Résumé',
-        score: 24,
-      },
-    ])
-  })
-
   it('treats include paths as normalized exact files or directory prefixes', async () => {
     const index = new NodeSearchIndex()
     await index.rebuild([

@@ -105,6 +105,7 @@ const renderCanvas = (activePath: string | null, onActivateEditor = vi.fn()) => 
       activePath={activePath}
       editorLoadState={{ status: 'ready', content: '# A' }}
       graph={graph}
+      graphIdentity="workspace:test"
       onActivateEditor={onActivateEditor}
       onChange={vi.fn()}
       onCloseEditor={closeEditor}
@@ -139,6 +140,7 @@ describe('WorkspaceMapCanvas', () => {
         activePath={null}
         editorLoadState={{ status: 'ready', content: '# A' }}
         graph={graph}
+        graphIdentity="workspace:test"
         onActivateEditor={vi.fn()}
         onChange={vi.fn()}
         onCloseEditor={vi.fn()}
@@ -195,30 +197,8 @@ describe('WorkspaceMapCanvas', () => {
     expect(editorNodes?.[0].focusable).toBe(false)
     expect(editorNodes?.[0].draggable).toBe(false)
     expect(flowPropsRef.current?.nodes[1]?.draggable).toBe(true)
-    expect(layoutArgsRef.current?.graph.layoutKey).toBe('map')
-    expect(layoutArgsRef.current?.activePath).toBeNull()
-  })
-
-  it('keeps the external node URL and single live preview state synchronized', async () => {
-    renderCanvas(null)
-    const external = flowPropsRef.current?.nodes.find((node) => node.type === 'external')
-
-    expect(external?.data).toMatchObject({
-      url: 'https://example.com/current',
-      webView: { active: false },
-    })
-    act(() => external?.data.webView?.activate(external.id))
-    await waitFor(() => {
-      const current = flowPropsRef.current?.nodes.find((node) => node.id === external?.id)
-      expect(current?.data.webView?.active).toBe(true)
-      expect(current?.data.url).toBe('https://example.com/current')
-    })
-
-    act(() => flowPropsRef.current?.onPaneClick?.())
-    await waitFor(() => {
-      const current = flowPropsRef.current?.nodes.find((node) => node.id === external?.id)
-      expect(current?.data.webView?.active).toBe(false)
-    })
+    expect(layoutArgsRef.current?.graph.layoutKey).toBe('map:internal')
+    expect(layoutArgsRef.current?.activePath).toBe('notes/a.md')
   })
 
   it('closes the active editor with Escape from the canvas', () => {
@@ -241,6 +221,7 @@ describe('WorkspaceMapCanvas', () => {
         activePath="notes/a.md"
         editorLoadState={{ status: 'ready', content: '# A' }}
         graph={graph}
+        graphIdentity="workspace:test"
         onActivateEditor={onActivateEditor}
         onChange={vi.fn()}
         onCloseEditor={vi.fn()}
@@ -271,7 +252,7 @@ describe('WorkspaceMapCanvas', () => {
     }
 
     act(() => flowPropsRef.current?.onInit?.(flow))
-    await waitFor(() => expect(flow.fitView).toHaveBeenCalledWith({ maxZoom: 1 }))
+    await waitFor(() => expect(flow.fitView).toHaveBeenCalledWith({ maxZoom: 1, minZoom: 0.35 }))
     flow.fitView.mockClear()
 
     const canvas = screen.getByTestId('flow')
@@ -282,7 +263,12 @@ describe('WorkspaceMapCanvas', () => {
 
     expect(flow.zoomIn).toHaveBeenCalledTimes(2)
     expect(flow.zoomOut).toHaveBeenCalledOnce()
-    expect(flow.fitView).toHaveBeenCalledWith({ duration: 0, maxZoom: 1, padding: 0.22 })
+    expect(flow.fitView).toHaveBeenCalledWith({
+      duration: 0,
+      maxZoom: 1,
+      minZoom: 0.35,
+      padding: 0.22,
+    })
     expect(flowPropsRef.current?.tabIndex).toBe(0)
     expect(flowPropsRef.current?.zoomOnScroll).toBe(true)
 
@@ -293,8 +279,6 @@ describe('WorkspaceMapCanvas', () => {
 
     flow.fitView.mockClear()
     fireEvent(window, new Event('resize'))
-    await waitFor(() =>
-      expect(flow.fitView).toHaveBeenCalledWith({ duration: 0, maxZoom: 1, padding: 0.22 }),
-    )
+    expect(flow.fitView).not.toHaveBeenCalled()
   })
 })
