@@ -32,11 +32,12 @@ describe('MermaidPreview', () => {
     expect(screen.getByText('Diagram')).toHaveTextContent('Diagram')
     expect(mermaid.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
-        flowchart: { htmlLabels: false },
+        htmlLabels: false,
         securityLevel: 'strict',
         startOnLoad: false,
       }),
     )
+    expect(mermaid.initialize.mock.calls[0]?.[0]).not.toHaveProperty('flowchart.htmlLabels')
   })
 
   it('shows a text-only error without injecting rejected content', async () => {

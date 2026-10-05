@@ -158,6 +158,7 @@ test.describe('Real workspace rendering integrity', () => {
         `Rendered ${sources.size}/${expectedCount} Mermaid blocks; snapshots=${JSON.stringify(await visibleMermaidSnapshots(page))}`,
       )
     }
+    await expect(previews.first().locator('svg')).toContainText('业务应用或框架集成')
 
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: false })
     await testInfo.attach('mermaid-rendering.png', { body: screenshot, contentType: 'image/png' })

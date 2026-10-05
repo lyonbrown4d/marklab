@@ -72,7 +72,7 @@ export const useMermaidPreview = (
         .then((mermaid) => {
           if (request !== requestRef.current) return null
           mermaid.initialize({
-            flowchart: { htmlLabels: false },
+            htmlLabels: false,
             securityLevel: 'strict',
             startOnLoad: false,
             theme,
