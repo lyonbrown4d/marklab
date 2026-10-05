@@ -224,7 +224,7 @@ test.describe('Workspace core product journeys', () => {
       await expect(page.getByTestId('markdown-editor')).toHaveAttribute('data-readonly', 'true')
 
       if (!session) throw new Error('Electron test session is unavailable')
-      await revealElectronWindow(session.app, page.url(), { width: 720, height: 640 })
+      await revealElectronWindow(session.app, page, { width: 720, height: 640 })
       await expectNoHorizontalOverflow(page)
     })
 

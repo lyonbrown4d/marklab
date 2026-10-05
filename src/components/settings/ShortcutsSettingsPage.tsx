@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Keyboard, Search, RotateCcw, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Keyboard, RotateCcw } from 'lucide-react'
+import AppSearchField from '@/components/AppSearchField'
 import { useI18n } from '@/i18n/useI18n'
 import {
   defaultShortcutBindings,
@@ -14,7 +14,6 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
   SettingsActionButton,
   SettingsEmptyState,
-  SettingsIconButton,
   SettingsPageStack,
   SettingsSection,
 } from '@/components/settings/SettingsRow'
@@ -108,36 +107,20 @@ const ShortcutsSettingsPage = () => {
         icon={Keyboard}
         bodyClassName="gap-4"
       >
-        <div className="settings-shortcuts-search relative">
-          <Search
-            className="settings-shortcuts-search-icon size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={keyword}
-            aria-label={t('shortcuts.searchPlaceholder')}
-            onChange={(event) => setKeyword(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                setKeyword('')
-              }
-            }}
-            placeholder={t('shortcuts.searchPlaceholder')}
-            className="settings-shortcuts-search-input h-9 pl-8"
-          />
-          {keyword.trim().length > 0 && (
-            <SettingsIconButton
-              type="button"
-              variant="ghost"
-              className="settings-shortcuts-search-clear size-7 rounded-md"
-              aria-label={t('shortcuts.clearSearch')}
-              onClick={() => setKeyword('')}
-            >
-              <X />
-            </SettingsIconButton>
-          )}
-        </div>
+        <AppSearchField
+          value={keyword}
+          aria-label={t('shortcuts.searchPlaceholder')}
+          onChange={(event) => setKeyword(event.target.value)}
+          onClear={() => setKeyword('')}
+          clearLabel={t('shortcuts.clearSearch')}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              setKeyword('')
+            }
+          }}
+          placeholder={t('shortcuts.searchPlaceholder')}
+        />
         <div className="settings-shortcuts-toolbar flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs text-muted-foreground">

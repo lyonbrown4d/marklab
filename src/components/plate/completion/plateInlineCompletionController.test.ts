@@ -292,4 +292,31 @@ describe('Plate inline completion controller', () => {
     expect(controller.getSnapshot()?.candidates[0]?.text).toBe(' write notes')
     controller.destroy()
   })
+
+  it('deactivates without discarding subscribers and can resume later', async () => {
+    const editor = createEditor()
+    const listener = vi.fn()
+    const controller = createPlateInlineCompletionController(editor, {
+      canComplete: () => true,
+      debounceMs: () => 100,
+      enabled: () => true,
+      getDocumentCompletions: () => [{ source: 'document', text: ' write notes' }],
+      requestCompletion: async () => null,
+    })
+    controller.subscribe(listener)
+    controller.sync()
+    await settleLocal()
+    expect(controller.getSnapshot()).not.toBeNull()
+
+    controller.deactivate()
+    expect(controller.getSnapshot()).toBeNull()
+    const notificationsAfterDeactivate = listener.mock.calls.length
+
+    controller.activate()
+    controller.sync()
+    await settleLocal()
+    expect(controller.getSnapshot()).not.toBeNull()
+    expect(listener.mock.calls.length).toBeGreaterThan(notificationsAfterDeactivate)
+    controller.destroy()
+  })
 })

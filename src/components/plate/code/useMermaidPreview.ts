@@ -69,9 +69,14 @@ export const useMermaidPreview = (
     const timer = window.setTimeout(() => {
       setState(initialState)
       void loadMermaid()
-        .then(async (mermaid) => {
+        .then((mermaid) => {
           if (request !== requestRef.current) return null
-          mermaid.initialize({ securityLevel: 'strict', startOnLoad: false, theme })
+          mermaid.initialize({
+            flowchart: { htmlLabels: false },
+            securityLevel: 'strict',
+            startOnLoad: false,
+            theme,
+          })
           return mermaid.render(`marklab-plate-mermaid-${++renderSequence}`, source)
         })
         .then((result) => {

@@ -54,6 +54,12 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(options[1]).toHaveTextContent('review tasks')
     expect(options[1]).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('status')).toHaveTextContent('review tasks')
+    expect(screen.getByRole('listbox').parentElement).toHaveClass('rounded-xl', 'bg-popover/98')
+    expect(options[0]?.querySelector('[data-completion-meta]')).toHaveClass(
+      'opacity-0',
+      'group-hover:opacity-100',
+    )
+    expect(document.querySelector('[data-completion-footer]')).toBeNull()
   })
 
   it('accepts a candidate with the mouse without moving the editor selection', () => {

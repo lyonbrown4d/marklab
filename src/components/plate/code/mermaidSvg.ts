@@ -24,9 +24,13 @@ const hasUnsafeStyleReference = (value: string): boolean => {
 }
 
 export const createSafeMermaidSvgNode = (svg: string): SVGSVGElement | null => {
-  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml')
-  const root = parsed.documentElement
-  if (root.localName.toLowerCase() !== 'svg' || parsed.querySelector('parsererror')) return null
+  const sanitized = DOMPurify.sanitize(svg, {
+    FORBID_TAGS: Array.from(DISALLOWED_ELEMENTS),
+    USE_PROFILES: { svg: true, svgFilters: true },
+  })
+  const parsed = new DOMParser().parseFromString(String(sanitized), 'text/html')
+  const root = parsed.querySelector('svg')
+  if (!root) return null
 
   for (const element of [root, ...Array.from(root.querySelectorAll('*'))]) {
     if (DISALLOWED_ELEMENTS.has(element.localName.toLowerCase())) {
@@ -56,3 +60,4 @@ export const createSafeMermaidSvgNode = (svg: string): SVGSVGElement | null => {
 
   return root as unknown as SVGSVGElement
 }
+import DOMPurify from 'dompurify'

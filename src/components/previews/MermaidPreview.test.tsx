@@ -31,7 +31,11 @@ describe('MermaidPreview', () => {
 
     expect(screen.getByText('Diagram')).toHaveTextContent('Diagram')
     expect(mermaid.initialize).toHaveBeenCalledWith(
-      expect.objectContaining({ securityLevel: 'strict', startOnLoad: false }),
+      expect.objectContaining({
+        flowchart: { htmlLabels: false },
+        securityLevel: 'strict',
+        startOnLoad: false,
+      }),
     )
   })
 
@@ -47,5 +51,37 @@ describe('MermaidPreview', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('<img src=x onerror=alert(1)>')
     expect(document.querySelector('img')).toBeNull()
+  })
+
+  it('reports Mermaid output that cannot be safely parsed instead of leaving a blank preview', async () => {
+    mermaid.render.mockResolvedValueOnce({
+      svg: '<html><body>not an svg</body></html>',
+    })
+    render(<MermaidPreview source="flowchart TD\nA --> B" />)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(document.querySelector('[data-plate-preview="mermaid"] svg')).toBeNull()
+  })
+
+  it('delegates concurrent rendering to the Mermaid execution queue', async () => {
+    render(
+      <>
+        <MermaidPreview source={'graph TD\nA --> B'} />
+        <MermaidPreview source={'sequenceDiagram\nA->>B: Hello'} />
+      </>,
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(mermaid.render).toHaveBeenCalledTimes(2)
+    expect(mermaid.initialize).toHaveBeenCalledTimes(2)
   })
 })

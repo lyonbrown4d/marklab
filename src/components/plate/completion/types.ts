@@ -49,6 +49,7 @@ export type PlateInlineCompletionController = {
   activate: () => void
   compositionEnd: () => void
   compositionStart: () => void
+  deactivate: () => void
   decorate: (entry: NodeEntry) => PlateInlineCompletionDecoration[]
   destroy: () => void
   getSnapshot: () => PlateInlineCompletionState | null

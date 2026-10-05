@@ -218,6 +218,9 @@ importers:
       docx-preview:
         specifier: ^0.4.1
         version: 0.4.1
+      dompurify:
+        specifier: 3.4.16
+        version: 3.4.16
       electron-log:
         specifier: ^5.4.4
         version: 5.4.4
@@ -7528,8 +7531,8 @@ packages:
   oxc-resolver@11.24.2:
     resolution: {integrity: sha512-FY91FiDBj7ls5MsFS9jN3tjz2o0/zsdSsymlakySaBwVJZorHhkWyICLZMKxlu1R9vYo+sd3z1jwb4J8x7bNDw==}
 
-  oxlint-plugin-react-doctor@0.9.14:
-    resolution: {integrity: sha512-YGdwFmQXGQulT63SnVD9JI1hV2EwGnZHrgSlUMQaOkvnhYA200QwDeb7DfVT8UBt34lBvbkjtz8VRFJugHjsRQ==}
+  oxlint-plugin-react-doctor@0.9.16:
+    resolution: {integrity: sha512-CCmccua6irEeMXHKkD9KB92We2dZLGN4S6juGb4NkDgfKFbBz/Rpk9Bfwf7EC3TEVspagyY0pMnCVdfiv9n2xw==}
     engines: {node: ^20.19.0 || >=22.13.0}
 
   oxlint@1.81.0:
@@ -7951,8 +7954,8 @@ packages:
       '@types/react':
         optional: true
 
-  react-doctor@0.9.14:
-    resolution: {integrity: sha512-JzOwAY/hoSxHa4Siyqgfxr/KCNak0SB9pSTseFVStFHAnWS+XxR6RsWU6Q5Ho+J5Jmyb9LZRXc6ZK5jt3cfcQQ==}
+  react-doctor@0.9.16:
+    resolution: {integrity: sha512-3mfplMpTbTqlooxXFDuuaooe2Mk8aHgjH0cb4ioMvBMTIM9F7RzhYMBiWe2ktgpgtdZ8ZXbFVK90aosMqtoTDw==}
     engines: {node: ^20.19.0 || >=22.13.0}
     hasBin: true
 
@@ -16829,7 +16832,7 @@ snapshots:
       '@oxc-resolver/binding-win32-arm64-msvc': 11.24.2
       '@oxc-resolver/binding-win32-x64-msvc': 11.24.2
 
-  oxlint-plugin-react-doctor@0.9.14:
+  oxlint-plugin-react-doctor@0.9.16:
     dependencies:
       '@shaderfrog/glsl-parser': 7.0.1
       '@typescript-eslint/types': 8.71.0
@@ -17252,7 +17255,7 @@ snapshots:
       '@types/node': 26.6.3
       '@types/react': 19.3.0
 
-  react-doctor@0.9.14(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(eslint@10.11.0(jiti@2.7.0))(react@19.3.0):
+  react-doctor@0.9.16(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(eslint@10.11.0(jiti@2.7.0))(react@19.3.0):
     dependencies:
       '@astrojs/compiler': 4.0.0
       '@sentry/node': 10.75.3(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
@@ -17267,7 +17270,7 @@ snapshots:
       oxc-parser: 0.148.0
       oxc-resolver: 11.24.2
       oxlint: 1.81.0
-      oxlint-plugin-react-doctor: 0.9.14
+      oxlint-plugin-react-doctor: 0.9.16
       playwright-core: 1.63.0
       prompts: 2.4.2
       typescript: 5.9.3
@@ -17397,7 +17400,7 @@ snapshots:
       preact: 10.29.8
       prompts: 2.4.2
       react: 19.3.0
-      react-doctor: 0.9.14(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(eslint@10.11.0(jiti@2.7.0))(react@19.3.0)
+      react-doctor: 0.9.16(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(eslint@10.11.0(jiti@2.7.0))(react@19.3.0)
       react-dom: 19.3.0(react@19.3.0)
       react-grab: 0.1.37(react@19.3.0)
     optionalDependencies:

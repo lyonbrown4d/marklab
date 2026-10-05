@@ -37,7 +37,7 @@ test.describe('Electron embedded web tab UI', () => {
       trustedCertificateSpki: fixture.spkiFingerprint,
     })
     page = session.page
-    await revealElectronWindow(session.app, page.url(), { width: 1280, height: 900 })
+    await revealElectronWindow(session.app, page, { width: 1280, height: 900 })
   })
 
   test.afterEach(async () => {

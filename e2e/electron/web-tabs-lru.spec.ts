@@ -38,7 +38,7 @@ test.describe('Electron web tab view pool', () => {
       trustedCertificateSpki: fixture.spkiFingerprint,
     })
     page = session.page
-    await revealElectronWindow(session.app, page.url())
+    await revealElectronWindow(session.app, page)
   })
 
   test.afterEach(async () => {

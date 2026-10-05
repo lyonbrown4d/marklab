@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import type { PlateEditor } from 'platejs/react'
 import { PlateInlineCompletionLeaf } from '@/components/plate/completion/PlateInlineCompletionLeaf'
 import { createPlateInlineCompletionController } from '@/components/plate/completion/plateInlineCompletionController'
@@ -11,6 +12,8 @@ export const usePlateInlineCompletion = ({
   readOnly,
   value,
 }: UsePlateInlineCompletionOptions) => {
+  const routeCache = useKeepAliveContext()
+  const routeActive = !routeCache.cacheKey || routeCache.active
   const { indexRevision, options, syncKey } = usePlateInlineCompletionOptions({
     activePath,
     readOnly,
@@ -35,14 +38,24 @@ export const usePlateInlineCompletion = ({
   }, [controller])
 
   useEffect(() => {
-    controller.activate()
     return () => {
       if (syncFrameRef.current !== null) cancelAnimationFrame(syncFrameRef.current)
       controller.destroy()
     }
   }, [controller])
 
-  useEffect(() => controller.sync(), [controller, indexRevision, syncKey])
+  useEffect(() => {
+    if (!routeActive) {
+      controller.deactivate()
+      return
+    }
+    controller.activate()
+    controller.sync()
+  }, [controller, routeActive])
+
+  useEffect(() => {
+    if (routeActive) controller.sync()
+  }, [controller, indexRevision, routeActive, syncKey])
 
   return useMemo(
     () => ({

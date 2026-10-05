@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { createSafeMermaidSvgNode } from '@/components/plate/code/mermaidSvg'
 import { useMermaidPreview } from '@/components/plate/code/useMermaidPreview'
 import { useI18n } from '@/i18n/useI18n'
@@ -12,15 +12,17 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
   const containerRef = useRef<HTMLElement | null>(null)
   const outputRef = useRef<HTMLDivElement | null>(null)
   const state = useMermaidPreview(source, containerRef)
+  const safeSvg = useMemo(
+    () => (state.status === 'ready' ? createSafeMermaidSvgNode(state.svg) : null),
+    [state],
+  )
 
   useEffect(() => {
     const output = outputRef.current
     if (!output) return
     output.replaceChildren()
-    if (state.status !== 'ready') return
-    const svg = createSafeMermaidSvgNode(state.svg)
-    if (svg) output.append(document.importNode(svg, true))
-  }, [state])
+    if (safeSvg) output.append(document.importNode(safeSvg, true))
+  }, [safeSvg])
 
   return (
     <aside
@@ -36,6 +38,11 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
         <pre role="alert" className="whitespace-pre-wrap text-destructive">
           {state.error}
         </pre>
+      ) : null}
+      {state.status === 'ready' && !safeSvg ? (
+        <div role="alert" className="text-destructive">
+          {t('preview.mermaidInvalidSvg')}
+        </div>
       ) : null}
       <div ref={outputRef} className="[&_svg]:mx-auto [&_svg]:max-w-full" />
     </aside>

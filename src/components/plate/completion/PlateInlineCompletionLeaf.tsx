@@ -2,6 +2,7 @@ import type { TText } from 'platejs'
 import type { HTMLAttributes, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
 import type { PlateInlineCompletionCandidate } from '@/components/plate/completion/types'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -50,7 +51,7 @@ const CompletionCandidates = ({
       <PopoverAnchor asChild>{ghost}</PopoverAnchor>
       <PopoverContent
         align="start"
-        className="w-[min(28rem,calc(100vw-2rem))] p-1"
+        className={cn(menuSurfaceStyles(), 'w-[min(28rem,calc(100vw-2rem))]')}
         contentEditable={false}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onOpenAutoFocus={(event) => event.preventDefault()}
@@ -64,9 +65,10 @@ const CompletionCandidates = ({
           {candidates.map((candidate, index) => (
             <Button
               aria-selected={index === activeIndex}
+              data-active={index === activeIndex ? 'true' : undefined}
               className={cn(
-                'h-auto w-full justify-start gap-3 px-2.5 py-2 text-left font-normal',
-                index === activeIndex && 'bg-accent text-accent-foreground',
+                menuItemStyles(),
+                'group h-auto w-full justify-start text-left font-normal',
               )}
               key={`${candidate.source}:${candidate.text}`}
               onMouseDown={(event) => {
@@ -80,7 +82,10 @@ const CompletionCandidates = ({
               <span className="min-w-0 flex-1 truncate">
                 {candidate.text.replace(/\s+/gu, ' ').trim()}
               </span>
-              <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
+              <span
+                className="shrink-0 text-[0.6875rem] text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+                data-completion-meta=""
+              >
                 {t(
                   candidate.source === 'ai'
                     ? 'editor.completionSourceAi'
@@ -89,9 +94,6 @@ const CompletionCandidates = ({
               </span>
             </Button>
           ))}
-        </div>
-        <div className="border-t px-2.5 py-1.5 text-[0.6875rem] text-muted-foreground">
-          {t('editor.completionHint')}
         </div>
       </PopoverContent>
     </Popover>

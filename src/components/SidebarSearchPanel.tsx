@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import SidebarPanelFrame from '@/components/SidebarPanelFrame'
-import { Input } from '@/components/ui/input'
+import AppSearchField from '@/components/AppSearchField'
 import FullTextSearchPanel from '@/components/FullTextSearchPanel'
 import type { SidebarSearchPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
@@ -30,13 +30,15 @@ const SidebarSearchPanel = ({
       icon={Search}
       title={t('sidebar.searchAction')}
     >
-      <Input
+      <AppSearchField
         ref={inputRef}
         aria-label={t('search.fullText')}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
+        onClear={() => setQuery('')}
+        clearLabel={t('search.clear')}
         placeholder={t('search.fullText')}
-        className="h-8 border-sidebar-border bg-transparent text-xs shadow-none focus-visible:ring-sidebar-ring"
+        className="border-sidebar-border bg-sidebar/70 focus-visible:ring-sidebar-ring/25"
       />
       <FullTextSearchPanel
         query={query}

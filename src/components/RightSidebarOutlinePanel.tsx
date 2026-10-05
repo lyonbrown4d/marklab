@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import AppSearchField from '@/components/AppSearchField'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import { ListTree, Search } from 'lucide-react'
@@ -53,17 +53,14 @@ export const RightSidebarOutlinePanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-1.5">
-      <div className="relative px-1">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
+      <div className="px-1">
+        <AppSearchField
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onClear={() => setQuery('')}
+          clearLabel={t('search.clear')}
           aria-label={t('inspector.outlineSearchPlaceholder')}
           placeholder={t('inspector.outlineSearchPlaceholder')}
-          className="h-8 rounded-none border-0 border-b border-border/50 bg-transparent pl-7 text-xs shadow-none focus-visible:ring-1"
         />
       </div>
 

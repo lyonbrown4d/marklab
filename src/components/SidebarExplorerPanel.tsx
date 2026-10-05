@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react'
 import { FilePlus2, Files, FolderPlus, Search } from 'lucide-react'
 import AppEmptyState from '@/components/AppEmptyState'
+import AppSearchField from '@/components/AppSearchField'
 import SidebarPanelFrame, { sidebarPanelControlClassName } from '@/components/SidebarPanelFrame'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import SidebarFileTree from '@/components/SidebarFileTree'
 import LocalHistoryTimeline from '@/components/local-history/LocalHistoryTimeline'
@@ -192,29 +192,25 @@ const SidebarExplorerPanel = ({
           </div>
         )}
         {filterOpen && (
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              id={filterId}
-              ref={filterInputRef}
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder={t('sidebar.search')}
-              aria-label={t('sidebar.search')}
-              className="h-8 border-sidebar-border bg-transparent pl-7 text-xs shadow-none"
-              onKeyDown={(event) => {
-                if (event.key !== 'Escape') return
-                event.preventDefault()
-                event.stopPropagation()
-                setFilter('')
-                setFilterOpen(false)
-                filterButtonRef.current?.focus()
-              }}
-            />
-          </div>
+          <AppSearchField
+            id={filterId}
+            ref={filterInputRef}
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            onClear={() => setFilter('')}
+            clearLabel={t('search.clear')}
+            placeholder={t('sidebar.search')}
+            aria-label={t('sidebar.search')}
+            className="border-sidebar-border bg-sidebar/70 focus-visible:ring-sidebar-ring/25"
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return
+              event.preventDefault()
+              event.stopPropagation()
+              setFilter('')
+              setFilterOpen(false)
+              filterButtonRef.current?.focus()
+            }}
+          />
         )}
         <div className="min-h-0 flex-1 overflow-hidden pr-1">
           {!hasVisibleFiles ? (

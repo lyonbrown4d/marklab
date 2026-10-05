@@ -126,7 +126,7 @@ test.describe('Workspace map', () => {
     await expect(statusBar.getByText(/\d+\s+(chars|字符)$/i)).toHaveCount(1)
 
     if (!session) throw new Error('Electron test session is unavailable')
-    await revealElectronWindow(session.app, page.url(), { width: 720, height: 640 })
+    await revealElectronWindow(session.app, page, { width: 720, height: 640 })
     await expect
       .poll(async () => {
         const inner = await readBox(editorSurface)

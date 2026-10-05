@@ -186,6 +186,10 @@ export const createPlateInlineCompletionController = (
       composing = true
       cancel(true)
     },
+    deactivate: () => {
+      destroyed = true
+      cancel(true)
+    },
     decorate: ([node, path]: NodeEntry) => {
       const candidate = state?.candidates[state.index]
       if (

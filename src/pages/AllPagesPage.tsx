@@ -1,12 +1,12 @@
-import { FileText, Filter, ListFilter, Search } from 'lucide-react'
+import { FileText, Filter, ListFilter } from 'lucide-react'
 import { useCallback, useDeferredValue, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import AppSearchField from '@/components/AppSearchField'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -186,16 +186,14 @@ const AllPagesPage = () => {
               <CardDescription>{t('allPages.filtersDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 p-4 pt-0 md:grid-cols-[minmax(220px,1fr)_180px_150px_150px_auto]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  aria-label={t('allPages.searchPlaceholder')}
-                  className="pl-8"
-                  placeholder={t('allPages.searchPlaceholder')}
-                  value={filters.query}
-                  onChange={(event) => updateFilter('query', event.target.value)}
-                />
-              </div>
+              <AppSearchField
+                aria-label={t('allPages.searchPlaceholder')}
+                clearLabel={t('search.clear')}
+                placeholder={t('allPages.searchPlaceholder')}
+                value={filters.query}
+                onChange={(event) => updateFilter('query', event.target.value)}
+                onClear={() => updateFilter('query', '')}
+              />
               <Select
                 value={filters.folder}
                 onValueChange={(value) => updateFilter('folder', value)}

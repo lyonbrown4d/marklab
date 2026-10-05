@@ -14,12 +14,10 @@ describe('ShortcutsSettingsPage', () => {
   it('uses compact shadcn sizing for shortcut search affordances and clears search text', () => {
     render(<ShortcutsSettingsPage />)
 
-    const searchIcon = document.querySelector('.settings-shortcuts-search-icon')
-    expect(searchIcon).toHaveClass('size-4')
-    expect(searchIcon).not.toHaveClass('h-4')
-    expect(searchIcon).not.toHaveClass('w-4')
+    const searchField = document.querySelector('[data-slot="app-search-field"]')
+    expect(searchField).toBeInTheDocument()
 
-    const searchInput = screen.getByRole('textbox', { name: 'Search shortcuts' })
+    const searchInput = screen.getByRole('searchbox', { name: 'Search shortcuts' })
     fireEvent.change(searchInput, { target: { value: 'unlikely shortcut query' } })
 
     const clearButton = screen.getByRole('button', { name: 'Clear search' })

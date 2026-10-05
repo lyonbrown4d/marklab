@@ -186,24 +186,23 @@ export const launchElectronTestSession = async (
   }
 }
 
-export const revealElectronWindow = (
+export const revealElectronWindow = async (
   app: ElectronApplication,
-  mainWindowUrl: string,
+  page: Page,
   contentSize?: { width: number; height: number },
-) =>
-  app.evaluate(
-    ({ BrowserWindow }, { url, contentSize }) => {
-      const window = BrowserWindow.getAllWindows().find(
-        (candidate) => candidate.webContents.getURL() === url,
-      )
-      if (!window) throw new Error('Main renderer window was not found')
+) => {
+  const windowHandle = await app.browserWindow(page)
+  try {
+    await windowHandle.evaluate((window, size) => {
       if (window.isMinimized()) window.restore()
-      if (contentSize) window.setContentSize(contentSize.width, contentSize.height)
+      if (size) window.setContentSize(size.width, size.height)
       window.show()
       window.focus()
-    },
-    { url: mainWindowUrl, contentSize },
-  )
+    }, contentSize)
+  } finally {
+    await windowHandle.dispose()
+  }
+}
 
 export const snapshotWebContentsViews = (app: ElectronApplication, mainWindowUrl: string) =>
   app.evaluate(({ BrowserWindow, WebContentsView }, url) => {

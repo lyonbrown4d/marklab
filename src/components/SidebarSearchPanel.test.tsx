@@ -69,8 +69,8 @@ describe('SidebarSearchPanel', () => {
       'text-xs',
       'font-medium',
     )
-    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveClass(
-      'focus-visible:ring-sidebar-ring',
+    expect(screen.getByRole('searchbox', { name: 'Full text search' })).toHaveClass(
+      'focus-visible:ring-sidebar-ring/25',
     )
   })
 
@@ -85,7 +85,7 @@ describe('SidebarSearchPanel', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Search' })).toBeTruthy()
-    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveAttribute(
+    expect(screen.getByRole('searchbox', { name: 'Full text search' })).toHaveAttribute(
       'placeholder',
       'Full text search',
     )
@@ -106,7 +106,7 @@ describe('SidebarSearchPanel', () => {
       />,
     )
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Full text search' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Full text search' }), {
       target: { value: 'notes' },
     })
 
@@ -126,9 +126,9 @@ describe('SidebarSearchPanel', () => {
     }
     const { rerender } = render(<SidebarSearchPanel {...props} />)
 
-    expect(screen.getByRole('textbox', { name: 'Full text search' })).not.toHaveFocus()
+    expect(screen.getByRole('searchbox', { name: 'Full text search' })).not.toHaveFocus()
     rerender(<SidebarSearchPanel {...props} focusWorkspaceSearchRequest={1} />)
 
-    expect(screen.getByRole('textbox', { name: 'Full text search' })).toHaveFocus()
+    expect(screen.getByRole('searchbox', { name: 'Full text search' })).toHaveFocus()
   })
 })

@@ -8,6 +8,12 @@ describe('createSafeMermaidSvgNode', () => {
     expect(node?.querySelector('text')?.textContent).toBe('Diagram')
   })
 
+  it('normalizes HTML entities emitted by Mermaid labels', () => {
+    const node = createSafeMermaidSvgNode('<svg><text>First&nbsp;line</text></svg>')
+
+    expect(node?.querySelector('text')?.textContent).toBe('First line')
+  })
+
   it('removes executable SVG content and unsafe links', () => {
     const node = createSafeMermaidSvgNode(
       '<svg onload="alert(1)"><script>alert(1)</script><a href="javascript:alert(1)">x</a></svg>',
@@ -22,7 +28,7 @@ describe('createSafeMermaidSvgNode', () => {
     const node = createSafeMermaidSvgNode(`
       <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
         <defs><linearGradient id="fade" /></defs>
-        <use id="safe" href="#fade" xlink:href="#fade" style="fill:url(#fade)" />
+        <a id="safe" href="#fade" xlink:href="#fade" style="fill:url(#fade)"><text>x</text></a>
         <image id="external" href="https://example.com/a.png" src="data:image/png;base64,AA==" />
       </svg>
     `)

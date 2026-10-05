@@ -241,7 +241,7 @@ test.describe('Workspace product readiness', () => {
           .toBeGreaterThan(beforeDrag.x + 8)
       }
 
-      await revealElectronWindow(session.app, page.url(), { width: 720, height: 640 })
+      await revealElectronWindow(session.app, page, { width: 720, height: 640 })
       await expectNoHorizontalOverflow(page)
 
       const auditDirectory = path.resolve('output/playwright/product-audit')

@@ -5,6 +5,12 @@ import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompl
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
+const routeCache = vi.hoisted(() => ({ active: true, cacheKey: '' }))
+
+vi.mock('keepalive-for-react', () => ({
+  useKeepAliveContext: () => routeCache,
+}))
+
 vi.mock('@/services/aiInlineCompletionRequest', () => ({
   requestAiInlineCompletion: vi.fn(async () => ' tomorrow'),
 }))
@@ -23,6 +29,8 @@ const createEditor = (text: string) => {
 describe('usePlateInlineCompletion', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    routeCache.active = true
+    routeCache.cacheKey = ''
     usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
     vi.mocked(requestAiInlineCompletion).mockClear()
   })
@@ -103,5 +111,29 @@ describe('usePlateInlineCompletion', () => {
     expect(result.current.state).not.toBeNull()
     await act(async () => vi.advanceTimersByTimeAsync(20))
     expect(result.current.state).toBeNull()
+  })
+
+  it('clears suggestions while its cached route is inactive and resumes on return', async () => {
+    const editor = createEditor('I plan to')
+    const value = 'I plan to review notes.\n\nI plan to'
+    const { result, rerender } = renderHook(() =>
+      usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
+    )
+    await act(async () => vi.advanceTimersByTimeAsync(200))
+    expect(result.current.state).not.toBeNull()
+
+    act(() => {
+      routeCache.cacheKey = 'cache:note.md'
+      routeCache.active = false
+      rerender()
+    })
+    expect(result.current.state).toBeNull()
+
+    act(() => {
+      routeCache.active = true
+      rerender()
+    })
+    await act(async () => vi.advanceTimersByTimeAsync(200))
+    expect(result.current.state).not.toBeNull()
   })
 })

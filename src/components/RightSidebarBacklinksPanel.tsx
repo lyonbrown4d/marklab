@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import AppSearchField from '@/components/AppSearchField'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'
 import type { BacklinkReference } from '@/logic/backlinks'
@@ -119,12 +119,13 @@ export const RightSidebarBacklinksPanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-1.5 p-1">
-      <Input
+      <AppSearchField
         value={query}
         onChange={(event) => setQuery(event.target.value)}
+        onClear={() => setQuery('')}
+        clearLabel={t('search.clear')}
         placeholder={t('inspector.backlinksSearchPlaceholder')}
         aria-label={t('inspector.backlinksSearchPlaceholder')}
-        className="h-8 text-xs"
       />
 
       <ScrollArea className="min-h-0 flex-1" viewportClassName="pr-1">

@@ -128,7 +128,7 @@ describe('RightSidebar', () => {
         }),
       )
 
-      const filterInput = await screen.findByRole('textbox', {
+      const filterInput = await screen.findByRole('searchbox', {
         name: /filter headings or slugs/i,
       })
 
@@ -242,7 +242,7 @@ describe('RightSidebar', () => {
       screen.getByText('See [Indexed Detail](target.md#indexed-detail) from index'),
     ).toBeInTheDocument()
 
-    const filterInput = screen.getByRole('textbox', {
+    const filterInput = screen.getByRole('searchbox', {
       name: /filter backlinks/i,
     })
 
