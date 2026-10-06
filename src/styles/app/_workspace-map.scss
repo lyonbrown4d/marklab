@@ -145,11 +145,16 @@
 .workspace-map-canvas .react-flow__edge-path {
   stroke: color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--muted-foreground)));
   stroke-width: 0.9;
-  opacity: 0.34;
+  opacity: 0.22;
   transition:
     stroke var(--motion-duration-fast) ease,
     stroke-width var(--motion-duration-fast) ease,
     opacity var(--motion-duration-fast) ease;
+}
+
+.workspace-map-canvas .graph-edge--reference .react-flow__edge-path {
+  stroke-dasharray: none;
+  stroke-opacity: 1;
 }
 
 .workspace-map-canvas.is-editing
@@ -159,18 +164,18 @@
 }
 
 .workspace-map-canvas .react-flow__edge.workspace-map-flow-edge--connected .react-flow__edge-path {
-  stroke: color-mix(in srgb, hsl(var(--primary)) 74%, hsl(var(--foreground)));
-  stroke-width: 1.55;
-  opacity: 0.92;
+  stroke: color-mix(in srgb, hsl(var(--primary)) 38%, hsl(var(--muted-foreground)));
+  stroke-width: 1.1;
+  opacity: 0.62;
 }
 
 .workspace-map-canvas .react-flow__edge.workspace-map-flow-edge--muted .react-flow__edge-path {
-  opacity: 0.09;
+  opacity: 0.03;
 }
 
 .workspace-map-canvas .react-flow__node.workspace-map-flow-node--dimmed,
 .workspace-map-canvas.is-editing .react-flow__node.workspace-map-flow-node--dimmed {
-  opacity: 0.32;
+  opacity: 0.18;
   transition: opacity var(--motion-duration-fast) ease;
 }
 

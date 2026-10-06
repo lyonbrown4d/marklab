@@ -93,7 +93,11 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
           </Button>
         </div>
       ) : null}
-      <div ref={outputRef} className="overflow-auto [&_svg]:mx-auto [&_svg]:max-w-full" />
+      <div
+        ref={outputRef}
+        className="overflow-auto [&_svg]:mx-auto [&_svg]:max-w-full"
+        data-plate-mermaid-output
+      />
       {safeSvg ? (
         <DiagramPreviewDialog
           labels={{

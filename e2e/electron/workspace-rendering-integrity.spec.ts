@@ -27,6 +27,9 @@ const openTreeFile = async (page: Page, fileName: string) => {
 }
 
 type MermaidRenderSnapshot = {
+  className: string
+  computedHeight: string
+  computedWidth: string
   busy: boolean
   containerHeight: number
   containerWidth: number
@@ -36,17 +39,24 @@ type MermaidRenderSnapshot = {
   source: string
   svg: boolean
   width: number
+  svgHeight: string | null
+  svgStyle: string | null
+  svgWidth: string | null
 }
 
 const visibleMermaidSnapshots = async (page: Page): Promise<MermaidRenderSnapshot[]> => {
   return page.locator('[data-plate-preview="mermaid"]').evaluateAll((previews) =>
     previews.map((preview) => {
       const block = preview.parentElement
-      const svg = preview.querySelector('svg')
+      const svg = preview.querySelector('[data-plate-mermaid-output] > svg')
       const box = svg?.getBoundingClientRect()
+      const computed = svg ? window.getComputedStyle(svg) : null
       const containerBox = preview.getBoundingClientRect()
       return {
         busy: preview.getAttribute('aria-busy') === 'true',
+        className: svg?.getAttribute('class') ?? '',
+        computedHeight: computed?.height ?? '',
+        computedWidth: computed?.width ?? '',
         containerHeight: containerBox.height,
         containerWidth: containerBox.width,
         error: preview.querySelector('[role="alert"]')?.textContent?.trim() || null,
@@ -54,6 +64,9 @@ const visibleMermaidSnapshots = async (page: Page): Promise<MermaidRenderSnapsho
         nearViewport: containerBox.bottom >= -360 && containerBox.top <= window.innerHeight + 360,
         source: block?.querySelector('code[data-language]')?.textContent?.trim() ?? '',
         svg: Boolean(svg),
+        svgHeight: svg?.getAttribute('height') ?? null,
+        svgStyle: svg?.getAttribute('style') ?? null,
+        svgWidth: svg?.getAttribute('width') ?? null,
         width: box?.width ?? 0,
       }
     }),
@@ -158,7 +171,9 @@ test.describe('Real workspace rendering integrity', () => {
         `Rendered ${sources.size}/${expectedCount} Mermaid blocks; snapshots=${JSON.stringify(await visibleMermaidSnapshots(page))}`,
       )
     }
-    await expect(previews.first().locator('svg')).toContainText('业务应用或框架集成')
+    await expect(previews.first().locator('[data-plate-mermaid-output] > svg')).toContainText(
+      '业务应用或框架集成',
+    )
 
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: false })
     await testInfo.attach('mermaid-rendering.png', { body: screenshot, contentType: 'image/png' })

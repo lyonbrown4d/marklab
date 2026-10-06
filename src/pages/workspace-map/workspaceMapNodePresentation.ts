@@ -35,6 +35,7 @@ export const presentWorkspaceMapNode = (
           : undefined,
     draggable: !editorActive,
     focusable: !resourcePreview && Boolean(openPath) && !editorActive,
+    zIndex: editorActive ? 10 : node.zIndex,
   }
 }
 

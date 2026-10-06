@@ -6,6 +6,7 @@ const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url),
 
 describe('graph interaction styles', () => {
   const graphStyles = readStyle('./app/_graph.scss')
+  const workspaceMapStyles = readStyle('./app/_workspace-map.scss')
 
   it('keeps graph node hover feedback from moving the React Flow drag target', () => {
     const hoverRule = graphStyles.match(
@@ -21,5 +22,13 @@ describe('graph interaction styles', () => {
   it('themes file graph nodes through the shared graph node shell', () => {
     expect(graphStyles).toContain('.graph-node-shell--file')
     expect(graphStyles).toContain('--graph-node-accent: hsl(var(--primary));')
+  })
+
+  it('keeps workspace relationships quiet until a node is engaged', () => {
+    expect(workspaceMapStyles).toContain(
+      '.workspace-map-canvas .graph-edge--reference .react-flow__edge-path',
+    )
+    expect(workspaceMapStyles).toContain('stroke-dasharray: none;')
+    expect(workspaceMapStyles).toMatch(/workspace-map-flow-edge--muted[\s\S]*?opacity: 0\.03;/)
   })
 })

@@ -31,6 +31,7 @@ describe('MermaidPreview', () => {
     })
 
     expect(screen.getByText('Diagram')).toHaveTextContent('Diagram')
+    expect(document.querySelector('[data-plate-mermaid-output] > svg')).not.toBeNull()
     expect(mermaid.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         htmlLabels: false,

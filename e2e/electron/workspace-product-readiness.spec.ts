@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import type http from 'node:http'
 import path from 'node:path'
@@ -12,6 +12,12 @@ import {
   startRendererServer,
   type ElectronTestSession,
 } from './electronTestHarness.js'
+// eslint-disable-next-line no-restricted-imports -- Electron E2E helpers are colocated outside application aliases.
+import {
+  assertNoRuntimeErrors,
+  attachDiagnostics,
+  monitorRuntime,
+} from './electronRuntimeDiagnostics.js'
 // eslint-disable-next-line no-restricted-imports -- Product fixtures must stay outside production bundles.
 import {
   removeWorkspaceProductFixture,
@@ -19,48 +25,7 @@ import {
   type WorkspaceProductFixture,
 } from './workspaceProductFixture.js'
 
-type RuntimeDiagnostics = { consoleErrors: string[]; pageErrors: string[] }
-
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-const monitorRuntime = (session: ElectronTestSession): RuntimeDiagnostics => {
-  const diagnostics: RuntimeDiagnostics = { consoleErrors: [], pageErrors: [] }
-  const monitorPage = (page: Page) => {
-    page.on('console', (message) => {
-      if (message.type() === 'error') diagnostics.consoleErrors.push(message.text())
-    })
-    page.on('pageerror', (error) => diagnostics.pageErrors.push(error.stack ?? error.message))
-  }
-  session.app.windows().forEach(monitorPage)
-  session.app.on('window', monitorPage)
-  return diagnostics
-}
-
-const attachDiagnostics = async (
-  session: ElectronTestSession,
-  diagnostics: RuntimeDiagnostics,
-  testInfo: TestInfo,
-) => {
-  await testInfo.attach('electron-output.txt', {
-    body: session.output.join('\n') || '(no Electron process output)',
-    contentType: 'text/plain',
-  })
-  await testInfo.attach('renderer-errors.json', {
-    body: JSON.stringify(diagnostics, null, 2),
-    contentType: 'application/json',
-  })
-}
-
-const assertNoRuntimeErrors = (diagnostics: RuntimeDiagnostics) => {
-  expect(
-    diagnostics.pageErrors,
-    `Uncaught renderer errors:\n${diagnostics.pageErrors.join('\n')}`,
-  ).toHaveLength(0)
-  expect(
-    diagnostics.consoleErrors,
-    `Console errors:\n${diagnostics.consoleErrors.join('\n')}`,
-  ).toHaveLength(0)
-}
 
 const readScale = (canvas: Locator) =>
   canvas.evaluate((element) => {
@@ -179,6 +144,18 @@ test.describe('Workspace product readiness', () => {
       const homeNode = canvas.getByLabel(/^Home$/i).first()
       await expect(homeNode).toBeVisible()
       expect(await readScale(canvas)).toBeGreaterThanOrEqual(0.35)
+      await expect
+        .poll(() =>
+          homeNode.evaluate((node) => {
+            const bounds = node.getBoundingClientRect()
+            const target = document.elementFromPoint(
+              bounds.x + bounds.width / 2,
+              bounds.y + bounds.height / 2,
+            )
+            return target === node || Boolean(target && node.contains(target))
+          }),
+        )
+        .toBe(true)
 
       await homeNode.click()
       const embeddedEditor = canvas.getByLabel(/^(Editing|正在编辑) Home$/i)
