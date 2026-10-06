@@ -7,14 +7,7 @@ import AiSettingsPage from '@/components/settings/AiSettingsPage'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const api = vi.hoisted(() => ({
-  cancelLocalModelDownload: vi.fn(),
-  deleteLocalModel: vi.fn(),
-  downloadLocalModel: vi.fn(),
   listProviders: vi.fn(),
-  localStatus: vi.fn(),
-  onLocalModelProgress: vi.fn(),
-  onLocalModelDirectoryProgress: vi.fn(),
-  setActiveLocalModel: vi.fn(),
   updateProvider: vi.fn(),
   deleteProvider: vi.fn(),
   testProvider: vi.fn(),
@@ -76,9 +69,6 @@ describe('AI completion settings', () => {
     vi.clearAllMocks()
     usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
     api.listProviders.mockResolvedValue([localProvider, cloudProvider])
-    api.localStatus.mockResolvedValue({ runtime: 'unavailable', activeModelId: null, models: [] })
-    api.onLocalModelProgress.mockResolvedValue(() => undefined)
-    api.onLocalModelDirectoryProgress.mockResolvedValue(() => undefined)
   })
 
   it('toggles completion and updates provider, trigger, length, and nearby context preferences', async () => {

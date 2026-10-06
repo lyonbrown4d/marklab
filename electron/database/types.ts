@@ -149,16 +149,6 @@ export type SyncConflictsTable = {
   created_at: Generated<string>
 }
 
-export type LocalAiStateTable = {
-  id: Generated<number>
-  active_model_id: string | null
-  model_directory_enabled: SqliteBoolean
-  model_directory_path: string | null
-  model_directory_device_id: string | null
-  migration_json: string | null
-  updated_at: Generated<string>
-}
-
 export type DatabaseSchema = {
   settings: SettingsTable
   recent_workspaces: RecentWorkspacesTable
@@ -174,7 +164,6 @@ export type DatabaseSchema = {
   webdav_sync_state: WebDavSyncStateTable
   webdav_sync_entries: WebDavSyncEntriesTable
   sync_conflicts: SyncConflictsTable
-  local_ai_state: LocalAiStateTable
 }
 
 export type DatabaseConnection = Kysely<DatabaseSchema> | Transaction<DatabaseSchema>

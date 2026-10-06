@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AiInlineCompletionService } from '@electron/services/ai/completion/service'
 import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
 import type { AiServiceContract } from '@electron/services/ai/types'
 
 const request = (session: string, providerId = 'openai-main') => ({
@@ -52,85 +51,6 @@ describe('AiInlineCompletionService', () => {
     await vi.waitFor(() => expect(controllers).toHaveLength(2))
 
     expect(controllers.every((signal) => !signal.aborted)).toBe(true)
-  })
-
-  it('aggregates and sanitizes local-model deltas before exposing one candidate', async () => {
-    let emitLocal:
-      | ((event: Parameters<Parameters<LocalAiServiceContract['startGeneration']>[2]>[0]) => void)
-      | undefined
-    const localAiService = {
-      startGeneration: vi.fn(async (_ownerId, _input, emit) => {
-        emitLocal = emit
-        return { requestId: '00000000-0000-4000-8000-000000000001' }
-      }),
-      cancelGeneration: vi.fn(async () => ({ ok: true as const })),
-    } as unknown as LocalAiServiceContract
-    const service = new AiInlineCompletionService({
-      aiService: {} as AiServiceContract,
-      localAiService,
-      policy: allowPolicy,
-    })
-    const emit = vi.fn()
-    const started = await service.start(7, request('editor-1', 'marklab-local'), emit)
-
-    emitLocal?.({ requestId: started.requestId, type: 'delta', delta: '```text\n"I plan to' })
-    emitLocal?.({ requestId: started.requestId, type: 'delta', delta: ' write"\n```' })
-    emitLocal?.({
-      requestId: started.requestId,
-      type: 'finish',
-      finishReason: 'stop',
-      usage: {},
-      warnings: [],
-    })
-
-    expect(emit).toHaveBeenNthCalledWith(1, {
-      requestId: started.requestId,
-      type: 'delta',
-      delta: ' write',
-    })
-    expect(emit).toHaveBeenNthCalledWith(2, expect.objectContaining({ type: 'finish' }))
-  })
-
-  it('keeps only the latest of three delayed local starts for one session', async () => {
-    const starts: Array<{
-      emit: Parameters<LocalAiServiceContract['startGeneration']>[2]
-      resolve: (value: { requestId: string }) => void
-    }> = []
-    const localAiService = {
-      startGeneration: vi.fn(
-        (_ownerId, _input, emit: Parameters<LocalAiServiceContract['startGeneration']>[2]) =>
-          new Promise<{ requestId: string }>((resolve) => starts.push({ emit, resolve })),
-      ),
-      cancelGeneration: vi.fn(async () => ({ ok: true as const })),
-    } as unknown as LocalAiServiceContract
-    const service = createService({} as AiServiceContract, { localAiService })
-    const events = [vi.fn(), vi.fn(), vi.fn()]
-
-    const pending: Array<Promise<unknown>> = []
-    for (const [index, revision] of [1, 2, 3].entries()) {
-      pending.push(
-        service
-          .start(7, { ...request('editor-1', 'marklab-local'), revision }, events[index]!)
-          .catch((error: unknown) => error),
-      )
-      await vi.waitFor(() => expect(starts).toHaveLength(index + 1))
-    }
-    starts[2]!.resolve({ requestId: '00000000-0000-4000-8000-000000000003' })
-    starts[0]!.resolve({ requestId: '00000000-0000-4000-8000-000000000001' })
-    starts[1]!.resolve({ requestId: '00000000-0000-4000-8000-000000000002' })
-    await Promise.all(pending)
-
-    for (const [index, start] of starts.entries()) {
-      const requestId = `00000000-0000-4000-8000-00000000000${index + 1}`
-      start.emit({ requestId, type: 'delta', delta: `candidate-${index}` })
-      start.emit({ requestId, type: 'finish', finishReason: 'stop', usage: {}, warnings: [] })
-    }
-    expect(events[0]).not.toHaveBeenCalled()
-    expect(events[1]).not.toHaveBeenCalled()
-    expect(events[2]).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'delta', delta: 'candidate-2' }),
-    )
-    expect(localAiService.cancelGeneration).toHaveBeenCalledTimes(2)
   })
 
   it('bounds pending and active work per owner and globally, then releases capacity', async () => {
@@ -186,7 +106,6 @@ const createService = (
   let id = 0
   return new AiInlineCompletionService({
     aiService,
-    localAiService: {} as LocalAiServiceContract,
     policy: allowPolicy,
     requestIdFactory: () => `request-${++id}`,
     schedule: (task) => task(),

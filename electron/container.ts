@@ -13,16 +13,6 @@ import {
   AiInlineCompletionPolicy,
   type AiInlineCompletionPolicyContract,
 } from '@electron/services/ai/completion/policy'
-import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog'
-import { LocalAiDirectoryStore } from '@electron/services/ai/local/directoryStore'
-import { LocalAiModelManager } from '@electron/services/ai/local/modelManager'
-import { LocalAiService } from '@electron/services/ai/local/service'
-import type {
-  LocalAiModelManagerContract,
-  LocalAiRuntimeContract,
-  LocalAiServiceContract,
-} from '@electron/services/ai/local/types'
-import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime'
 import { AiProviderStore } from '@electron/services/ai/providerStore'
 import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver'
 import type {
@@ -81,10 +71,6 @@ export type ElectronRuntimeDependencies = {
 
 export type ElectronCradle = Omit<ElectronRuntimeDependencies, 'lifecycleTasks'> & {
   aiModelResolver: AiModelResolverContract
-  localAiModelManager: LocalAiModelManagerContract
-  localAiDirectoryStore: LocalAiDirectoryStore
-  localAiRuntime: LocalAiRuntimeContract
-  localAiService: LocalAiServiceContract
   aiProviderStore: AiProviderStoreContract
   aiService: AiServiceContract
   aiInlineCompletionService: AiInlineCompletionServiceContract
@@ -147,7 +133,6 @@ export const createElectronContainer = (
             configureSettingsStore,
             getKnowledgeEngineService: () => cradle.knowledgeEngineService,
             getLinkPreviewService: () => cradle.linkPreviewService,
-            getLocalAiService: () => cradle.localAiService,
             getLocalHistoryService: () => cradle.localHistoryService,
             getSettingsStore: () => cradle.settingsStore,
             localDatabaseService: cradle.localDatabaseService,
@@ -166,40 +151,15 @@ export const createElectronContainer = (
     aiService: asFunction(({ aiModelResolver, aiProviderStore }) => {
       return new AiService({ resolver: aiModelResolver, store: aiProviderStore })
     }).singleton(),
-    localAiDirectoryStore: asFunction(({ localDatabaseService }) => {
-      return new LocalAiDirectoryStore(localDatabaseService)
-    }).singleton(),
-    localAiModelManager: asFunction(({ app, localAiDirectoryStore }) => {
-      return new LocalAiModelManager({
-        catalog: LOCAL_AI_MODEL_CATALOG,
-        forbiddenModelDirectories: packagedApplicationDirectories(app),
-        initialDirectoryPreference: localAiDirectoryStore.getConfig(),
-        initialDeviceId: localAiDirectoryStore.getDeviceId(),
-        initialMigration: localAiDirectoryStore.getMigration(),
-        userDataPath: app.getPath('userData'),
-      })
-    }).singleton(),
-    localAiRuntime: asFunction(() => new UtilityLocalAiRuntime()).singleton(),
-    localAiService: asFunction(({ localAiDirectoryStore, localAiModelManager, localAiRuntime }) => {
-      return new LocalAiService({
-        modelManager: localAiModelManager,
-        persistMigration: (migration) => localAiDirectoryStore.recordMigration(migration),
-        persistModelDirectory: (config) => localAiDirectoryStore.commit(config),
-        runtime: localAiRuntime,
-      })
-    }).singleton(),
     aiInlineCompletionPolicy: asFunction(({ aiProviderStore }) => {
       return new AiInlineCompletionPolicy({ providerStore: aiProviderStore })
     }).singleton(),
-    aiInlineCompletionService: asFunction(
-      ({ aiInlineCompletionPolicy, aiService, localAiService }) => {
-        return new AiInlineCompletionService({
-          aiService,
-          localAiService,
-          policy: aiInlineCompletionPolicy,
-        })
-      },
-    ).singleton(),
+    aiInlineCompletionService: asFunction(({ aiInlineCompletionPolicy, aiService }) => {
+      return new AiInlineCompletionService({
+        aiService,
+        policy: aiInlineCompletionPolicy,
+      })
+    }).singleton(),
     localHistoryService: asFunction(({ app }) => {
       return new LocalHistoryService({ userDataPath: app.getPath('userData') })
     }).singleton(),
@@ -289,16 +249,4 @@ export const createElectronContainer = (
   })
 
   return container
-}
-
-const packagedApplicationDirectories = (app: Electron.App): string[] => {
-  if (!app.isPackaged) return []
-  const directories = [app.getAppPath(), path.dirname(app.getPath('exe'))]
-  if (process.platform !== 'darwin') return directories
-  let current = path.resolve(app.getPath('exe'))
-  while (path.dirname(current) !== current) {
-    if (current.toLowerCase().endsWith('.app')) return [...directories, current]
-    current = path.dirname(current)
-  }
-  return directories
 }

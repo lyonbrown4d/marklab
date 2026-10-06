@@ -1,6 +1,16 @@
-import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types'
+export type AiInlineCompletionEvent =
+  | { requestId: string; type: 'delta'; delta: string }
+  | {
+      requestId: string
+      type: 'finish'
+      finishReason: string
+      usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
+      warnings: string[]
+    }
+  | { requestId: string; type: 'error'; message: string }
+  | { requestId: string; type: 'cancelled' }
 
-export type AiInlineCompletionEventHandler = (event: LocalAiGenerationEvent) => void
+export type AiInlineCompletionEventHandler = (event: AiInlineCompletionEvent) => void
 
 export type AiInlineCompletionServiceContract = {
   start: (

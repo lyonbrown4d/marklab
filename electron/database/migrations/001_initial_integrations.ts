@@ -1,7 +1,5 @@
 import { sql, type Kysely } from 'kysely'
 
-import { LOCAL_AI_STATE_SINGLETON_ID } from '@electron/database/schema'
-
 const now = sql`CURRENT_TIMESTAMP`
 
 export const createIntegrationTables = async (db: Kysely<unknown>): Promise<void> => {
@@ -179,28 +177,9 @@ export const createIntegrationTables = async (db: Kysely<unknown>): Promise<void
       sql`collapsed in (0, 1) and pinned in (0, 1) and user_modified in (0, 1)`,
     )
     .execute()
-
-  await db.schema
-    .createTable('local_ai_state')
-    .addColumn('id', 'integer', (column) =>
-      column.primaryKey().defaultTo(LOCAL_AI_STATE_SINGLETON_ID),
-    )
-    .addColumn('active_model_id', 'text')
-    .addColumn('model_directory_enabled', 'integer', (column) => column.notNull().defaultTo(0))
-    .addColumn('model_directory_path', 'text')
-    .addColumn('model_directory_device_id', 'text')
-    .addColumn('migration_json', 'text')
-    .addColumn('updated_at', 'text', (column) => column.notNull().defaultTo(now))
-    .addCheckConstraint(
-      'local_ai_state_singleton_check',
-      sql`id = ${sql.lit(LOCAL_AI_STATE_SINGLETON_ID)}`,
-    )
-    .addCheckConstraint('local_ai_state_enabled_check', sql`model_directory_enabled in (0, 1)`)
-    .execute()
 }
 
 export const dropIntegrationTables = async (db: Kysely<unknown>): Promise<void> => {
-  await db.schema.dropTable('local_ai_state').ifExists().execute()
   await db.schema.dropTable('sync_conflicts').ifExists().execute()
   await db.schema.dropTable('webdav_sync_entries').ifExists().execute()
   await db.schema.dropTable('webdav_sync_state').ifExists().execute()

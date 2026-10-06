@@ -9,9 +9,7 @@ export type PreferencesPersistedState = Pick<
   | 'aiCompletionProviderId'
   | 'aiCompletionTriggerMode'
   | 'documentCompletionEnabled'
-  | 'aiCustomModelDirectoryEnabled'
   | 'aiDefaultProviderId'
-  | 'aiModelDirectory'
   | 'autoSystemThemeSync'
   | 'customThemeId'
   | 'defaultFileView'
@@ -63,9 +61,7 @@ export const selectPreferencesPersistedState = (
   aiCompletionProviderId: state.aiCompletionProviderId,
   aiCompletionTriggerMode: state.aiCompletionTriggerMode,
   documentCompletionEnabled: state.documentCompletionEnabled,
-  aiCustomModelDirectoryEnabled: state.aiCustomModelDirectoryEnabled,
   aiDefaultProviderId: state.aiDefaultProviderId,
-  aiModelDirectory: state.aiModelDirectory,
   locale: state.locale,
   sidebarCollapsed: state.sidebarCollapsed,
   rightSidebarCollapsed: state.rightSidebarCollapsed,

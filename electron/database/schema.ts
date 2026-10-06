@@ -5,7 +5,6 @@ export const DATABASE_SETTING_KEYS = {
   syncDeviceId: 'sync.deviceId',
 } as const
 export const DATABASE_BUSY_TIMEOUT_MS = 5_000
-export const LOCAL_AI_STATE_SINGLETON_ID = 1
 
 export const DATABASE_TABLE_NAMES = [
   'settings',
@@ -22,5 +21,4 @@ export const DATABASE_TABLE_NAMES = [
   'webdav_sync_state',
   'webdav_sync_entries',
   'sync_conflicts',
-  'local_ai_state',
 ] as const

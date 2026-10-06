@@ -50,8 +50,6 @@ export type PreferencesState = AiCompletionPreferencesState &
     autoSystemThemeSync: boolean
     customThemeId: string | null
     aiDefaultProviderId: string | null
-    aiCustomModelDirectoryEnabled: boolean
-    aiModelDirectory: string | null
     locale: AppLocale
     sidebarCollapsed: boolean
     rightSidebarCollapsed: boolean
@@ -73,8 +71,6 @@ export type PreferencesState = AiCompletionPreferencesState &
     setAutoSystemThemeSync: (enabled: boolean) => void
     setCustomThemeId: (themeId: string | null) => void
     setAiDefaultProviderId: (providerId: string | null) => void
-    setAiCustomModelDirectoryEnabled: (enabled: boolean) => void
-    setAiModelDirectory: (path: string | null) => void
     setLocale: (locale: AppLocale) => void
     setSilentSave: (silent: boolean) => void
     setShowEditorStatusBar: (show: boolean) => void
@@ -101,8 +97,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       autoSystemThemeSync: true,
       customThemeId: null,
       aiDefaultProviderId: null,
-      aiCustomModelDirectoryEnabled: false,
-      aiModelDirectory: null,
       ...createAiCompletionPreferencesSlice(set, get, store),
       ...createGraphPreferencesSlice(set, get, store),
       ...createImmersivePreferencesSlice(set, get, store),
@@ -178,16 +172,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       setAiDefaultProviderId: (aiDefaultProviderId) =>
         set((state) =>
           state.aiDefaultProviderId === aiDefaultProviderId ? state : { aiDefaultProviderId },
-        ),
-      setAiCustomModelDirectoryEnabled: (aiCustomModelDirectoryEnabled) =>
-        set((state) =>
-          state.aiCustomModelDirectoryEnabled === aiCustomModelDirectoryEnabled
-            ? state
-            : { aiCustomModelDirectoryEnabled },
-        ),
-      setAiModelDirectory: (aiModelDirectory) =>
-        set((state) =>
-          state.aiModelDirectory === aiModelDirectory ? state : { aiModelDirectory },
         ),
       setLocale: (locale) => set((state) => (state.locale === locale ? state : { locale })),
       setSilentSave: (silentSave) =>

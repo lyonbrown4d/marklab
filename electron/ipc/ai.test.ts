@@ -57,4 +57,40 @@ describe('AI IPC commands', () => {
     expect(bridge.service).toBe(service)
     expect(handlers.has('ai_list_providers')).toBe(true)
   })
+
+  it('adapts configured providers to the streaming event contract', async () => {
+    const service = {
+      generateText: vi.fn(async () => ({
+        text: 'provider result',
+        finishReason: 'stop',
+        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+        warnings: [],
+      })),
+    } as unknown as AiServiceContract
+    const handlers = createAiCommandHandlers(service)
+    const sender = {
+      id: 12,
+      isDestroyed: vi.fn(() => false),
+      once: vi.fn(),
+      send: vi.fn(),
+    }
+
+    const started = await handlers.ai_start_generation(
+      { providerId: 'openai-main', prompt: 'hello' },
+      { sender } as never,
+    )
+
+    expect(started).toEqual({ requestId: expect.any(String) })
+    await vi.waitFor(() => expect(sender.send).toHaveBeenCalledTimes(2))
+    expect(sender.send).toHaveBeenNthCalledWith(
+      1,
+      'ai-generation-event',
+      expect.objectContaining({ delta: 'provider result', type: 'delta' }),
+    )
+    expect(sender.send).toHaveBeenNthCalledWith(
+      2,
+      'ai-generation-event',
+      expect.objectContaining({ finishReason: 'stop', type: 'finish' }),
+    )
+  })
 })

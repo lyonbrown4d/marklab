@@ -7,7 +7,6 @@ import {
 } from '@/components/settings/SettingsRow'
 import { isAiProviderUsable, isLoopbackHttpUrl } from '@/components/settings/aiProviderUtils'
 import { useAiProviders } from '@/components/settings/useAiProviders'
-import { MARKLAB_LOCAL_PROVIDER_ID } from '@/components/settings/aiSettingsTypes'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiCompletionLength, AiCompletionTriggerMode } from '@/store/aiCompletionPreferences'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -44,16 +43,12 @@ export const AiCompletionSettingsSection = () => {
   const usableProviders = providers.filter(isAiProviderUsable)
   const effectiveProviderId = completionProviderId ?? defaultProviderId
   const effectiveProvider = usableProviders.find((provider) => provider.id === effectiveProviderId)
-  const hasEffectiveProvider =
-    effectiveProviderId === MARKLAB_LOCAL_PROVIDER_ID || Boolean(effectiveProvider)
+  const hasEffectiveProvider = Boolean(effectiveProvider)
   const usesLocalProvider =
-    effectiveProviderId === MARKLAB_LOCAL_PROVIDER_ID ||
-    (effectiveProvider?.kind === 'openai-compatible' &&
-      isLoopbackHttpUrl(effectiveProvider.baseUrl))
+    effectiveProvider?.kind === 'openai-compatible' && isLoopbackHttpUrl(effectiveProvider.baseUrl)
   const usesCloudProvider = hasEffectiveProvider && !usesLocalProvider
   const providerOptions = [
     { value: FOLLOW_DEFAULT_PROVIDER, label: t('settings.aiCompletionFollowDefault') },
-    { value: MARKLAB_LOCAL_PROVIDER_ID, label: t('settings.aiCompletionBuiltInProvider') },
     ...usableProviders.map((provider) => ({ value: provider.id, label: provider.label })),
   ]
 

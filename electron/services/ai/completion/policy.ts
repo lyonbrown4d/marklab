@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types'
 import { isLoopbackProviderUrl } from '@electron/services/ai/schemas'
 import type { AiProviderStoreContract } from '@electron/services/ai/types'
 import { getRendererPersistValue } from '@electron/services/settingsStore'
@@ -28,7 +27,6 @@ export class AiInlineCompletionPolicy implements AiInlineCompletionPolicyContrac
   }
 
   async assertProviderAllowed(providerId: string): Promise<void> {
-    if (providerId === LOCAL_AI_PROVIDER_ID) return
     const provider = await this.options.providerStore.get(providerId)
     if (!provider) throw new Error('AI provider was not found')
     if (provider.kind === 'openai-compatible' && isLoopbackProviderUrl(provider.baseUrl)) {

@@ -15,8 +15,6 @@ export const preferenceStateKeys = new Set([
   'aiCompletionTriggerMode',
   'documentCompletionEnabled',
   'aiDefaultProviderId',
-  'aiCustomModelDirectoryEnabled',
-  'aiModelDirectory',
   'customThemeId',
   'defaultFileView',
   'editorReadOnlyMode',

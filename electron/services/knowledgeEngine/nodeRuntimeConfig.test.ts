@@ -22,6 +22,6 @@ describe('Node knowledge runtime build configuration', () => {
     expect(mise).not.toMatch(/^rust\s*=/m)
     expect(vite).toContain('entry: electronMainEntry')
     expect(electronVite).toContain('knowledgeSidecarEntry')
-    expect(electronVite).toContain('localAiUtilityEntry')
+    expect(electronVite).not.toContain('localAiUtilityEntry')
   })
 })

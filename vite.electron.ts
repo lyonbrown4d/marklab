@@ -13,7 +13,6 @@ export const electronMainExternal = [
   '@homebridge/node-pty-prebuilt-multiarch',
   '@parcel/watcher',
   'better-sqlite3',
-  'node-llama-cpp',
 ]
 
 export const electronMainEntry = {
@@ -21,7 +20,6 @@ export const electronMainEntry = {
     import.meta.dirname,
     'electron/sidecar/knowledgeSidecarEntry.ts',
   ),
-  localAiUtilityEntry: path.resolve(import.meta.dirname, 'electron/localAiUtilityEntry.ts'),
   main: path.resolve(import.meta.dirname, 'electron/main.ts'),
   marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
   mermaidValidationWorkerEntry: path.resolve(

@@ -2,8 +2,6 @@ import { isAiProviderUsable, isLoopbackHttpUrl } from '@/components/settings/aiP
 import { aiApi } from '@/services/aiApi'
 import type { SourceProviderLocality } from '@/components/markdownSourceInlineCompletionTypes'
 
-const MARKLAB_LOCAL_PROVIDER_ID = 'marklab-local'
-
 export const createSourceCompletionSessionId = () => {
   const randomUuid = globalThis.crypto?.randomUUID
   if (typeof randomUuid === 'function') return randomUuid.call(globalThis.crypto)
@@ -13,7 +11,6 @@ export const createSourceCompletionSessionId = () => {
 export const resolveSourceProviderLocality = async (
   providerId: string,
 ): Promise<SourceProviderLocality> => {
-  if (providerId === MARKLAB_LOCAL_PROVIDER_ID) return 'local'
   try {
     const provider = await aiApi.getProvider(providerId)
     if (!isAiProviderUsable(provider)) return 'unavailable'

@@ -1,7 +1,6 @@
 import type * as Electron from 'electron'
 import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai'
 import { registerAiCompletionIpc, type AiCompletionIpcBridge } from '@electron/ipc/aiCompletion'
-import { createLocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory'
 import { registerAppReadyIpc } from '@electron/ipc/appReady'
 import { registerClipboardIpc } from '@electron/ipc/clipboard'
 import { registerCommandInvokeIpc, type NativeCommandHandlers } from '@electron/ipc/commandInvoke'
@@ -40,7 +39,6 @@ import type { GitService } from '@electron/services/git/service'
 import type { GraphLayoutStore } from '@electron/services/graphLayout/graphLayoutStore'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
 import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service'
 import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
 import type { Logger } from '@electron/services/logger'
@@ -71,7 +69,6 @@ export type NativeIpcDependencies = {
   linkPreviewService: LinkPreviewServiceContract
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
-  localAiService: LocalAiServiceContract
   onRendererReady?: () => void
   shell: Electron.Shell
   terminalService: TerminalService
@@ -146,13 +143,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     workspaceMutationCoordinator: dependencies.workspaceSyncCoordinator,
     workspaceRegistry: dependencies.workspaceRegistry,
   })
-  const ai = registerAiIpc(
-    dependencies.ipcMain,
-    dependencies.aiService,
-    logger.child('ai'),
-    dependencies.localAiService,
-    createLocalAiDirectoryPicker(dependencies.dialog, dependencies.BrowserWindow),
-  )
+  const ai = registerAiIpc(dependencies.ipcMain, dependencies.aiService, logger.child('ai'))
   const aiCompletion = registerAiCompletionIpc(
     dependencies.ipcMain,
     dependencies.aiInlineCompletionService,

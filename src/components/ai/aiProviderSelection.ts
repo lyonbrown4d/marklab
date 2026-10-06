@@ -1,4 +1,4 @@
-import type { LocalAiStatus, PublicAiProvider } from '@/services/aiApi'
+import type { PublicAiProvider } from '@/services/aiApi'
 
 export type InlineAiProvider = {
   id: string
@@ -28,18 +28,8 @@ const toInlineProvider = (provider: PublicAiProvider): InlineAiProvider => ({
 export const resolveInlineAiProvider = (
   defaultProviderId: string | null,
   providers: PublicAiProvider[],
-  localStatus: LocalAiStatus | null,
 ): InlineAiProvider | null => {
-  const activeLocalModel = localStatus?.models.find(
-    (model) => model.id === localStatus.activeModelId && model.active && model.installed,
-  )
-  const localProvider =
-    localStatus?.runtime === 'ready' && activeLocalModel
-      ? { id: 'marklab-local', label: `Marklab Local · ${activeLocalModel.label}` }
-      : null
-
   if (defaultProviderId !== null) {
-    if (defaultProviderId === 'marklab-local') return localProvider
     const explicitProvider = providers.find(
       (provider) => provider.id === defaultProviderId && isUsableProvider(provider),
     )
@@ -47,5 +37,5 @@ export const resolveInlineAiProvider = (
   }
 
   const firstConfigured = providers.find(isUsableProvider)
-  return firstConfigured ? toInlineProvider(firstConfigured) : localProvider
+  return firstConfigured ? toInlineProvider(firstConfigured) : null
 }

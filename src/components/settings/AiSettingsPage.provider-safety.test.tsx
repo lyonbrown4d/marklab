@@ -7,14 +7,7 @@ import AiSettingsPage from '@/components/settings/AiSettingsPage'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const api = vi.hoisted(() => ({
-  cancelLocalModelDownload: vi.fn(),
-  deleteLocalModel: vi.fn(),
-  downloadLocalModel: vi.fn(),
   listProviders: vi.fn(),
-  localStatus: vi.fn(),
-  onLocalModelProgress: vi.fn(),
-  onLocalModelDirectoryProgress: vi.fn(),
-  setActiveLocalModel: vi.fn(),
   updateProvider: vi.fn(),
   deleteProvider: vi.fn(),
   testProvider: vi.fn(),
@@ -63,9 +56,6 @@ describe('AiSettingsPage provider safety', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
-    api.localStatus.mockResolvedValue({ runtime: 'unavailable', activeModelId: null, models: [] })
-    api.onLocalModelProgress.mockResolvedValue(() => undefined)
-    api.onLocalModelDirectoryProgress.mockResolvedValue(() => undefined)
     api.listProviders.mockResolvedValue([])
     api.updateProvider.mockImplementation(async (value) => ({
       ...value,

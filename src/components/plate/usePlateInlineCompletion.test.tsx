@@ -55,9 +55,10 @@ describe('usePlateInlineCompletion', () => {
   it('uses the configured provider and AI request preferences', async () => {
     usePreferencesStore.setState({
       aiCompletionEnabled: true,
+      aiCompletionCloudContextConsent: true,
       aiCompletionLength: 'long',
       aiCompletionNearbyContextEnabled: false,
-      aiCompletionProviderId: 'marklab-local',
+      aiCompletionProviderId: 'openai-main',
       documentCompletionEnabled: false,
     })
     const editor = createEditor('I plan to')
@@ -77,7 +78,7 @@ describe('usePlateInlineCompletion', () => {
         completionSessionId: expect.any(String),
         length: 'long',
         prefix: 'I plan to',
-        providerId: 'marklab-local',
+        providerId: 'openai-main',
       }),
       expect.any(AbortSignal),
     )

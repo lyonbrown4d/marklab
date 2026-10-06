@@ -51,13 +51,6 @@ describe('main lifecycle tasks', () => {
         order: 30,
         phase: 'services',
       },
-      {
-        critical: true,
-        dependencies: ['local-database'],
-        name: 'local-ai',
-        order: 40,
-        phase: 'services',
-      },
     ])
   })
 
@@ -72,7 +65,6 @@ describe('main lifecycle tasks', () => {
     expect(dependencies.configureSettingsStore).toHaveBeenCalledWith(dependencies.settingsStore)
     expect(dependencies.knowledgeEngineService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.initialize).toHaveBeenCalledOnce()
-    expect(dependencies.localAiService.dispose).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.dispose).toHaveBeenCalledOnce()
     expect(dependencies.linkPreviewService.dispose).toHaveBeenCalledOnce()
     expect(dependencies.knowledgeEngineService.dispose).toHaveBeenCalledOnce()
@@ -102,7 +94,6 @@ const createDependencies = () => {
     initialize: initializeKnowledgeEngine,
   }
   const linkPreviewService = { dispose: vi.fn() }
-  const localAiService = { dispose: vi.fn(async () => undefined) }
   const localHistoryService = {
     dispose: vi.fn(async () => undefined),
     initialize: vi.fn(async () => undefined),
@@ -112,12 +103,10 @@ const createDependencies = () => {
     configureSettingsStore: vi.fn(),
     getKnowledgeEngineService: vi.fn(() => knowledgeEngineService),
     getLinkPreviewService: vi.fn(() => linkPreviewService),
-    getLocalAiService: vi.fn(() => localAiService),
     getLocalHistoryService: vi.fn(() => localHistoryService),
     getSettingsStore: vi.fn(() => settingsStore),
     knowledgeEngineService,
     linkPreviewService,
-    localAiService,
     localDatabaseService: {
       close: vi.fn(async () => undefined),
       initialize: vi.fn(async () => undefined),

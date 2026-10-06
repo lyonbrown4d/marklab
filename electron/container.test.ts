@@ -49,9 +49,6 @@ describe('Electron dependency container', () => {
     expect(container.cradle.aiInlineCompletionPolicy).toBe(
       container.cradle.aiInlineCompletionPolicy,
     )
-    expect(container.cradle.localAiModelManager).toBe(container.cradle.localAiModelManager)
-    expect(container.cradle.localAiRuntime).toBe(container.cradle.localAiRuntime)
-    expect(container.cradle.localAiService).toBe(container.cradle.localAiService)
     expect(container.cradle.lifecycleCoordinator).toBe(container.cradle.lifecycleCoordinator)
     expect(container.cradle.languageIntelligenceService).toBe(
       container.cradle.languageIntelligenceService,

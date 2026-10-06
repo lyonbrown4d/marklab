@@ -15,7 +15,6 @@ const expectedTables = [
   'ai_providers',
   'graph_layouts',
   'graph_node_layouts',
-  'local_ai_state',
   'recent_workspaces',
   'session_tabs',
   'settings',
@@ -52,6 +51,7 @@ describe('LocalDatabaseService', () => {
     expect(names).toEqual(expect.arrayContaining([...expectedTables]))
     expect(names).toContain('kysely_migration')
     expect(names).toContain('kysely_migration_lock')
+    expect(names).not.toContain('local_ai_state')
 
     await service.close()
   })

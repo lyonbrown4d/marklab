@@ -88,6 +88,7 @@ export const providerUpdateSchema = providerMetadataSchema
   })
 
 export const providerIdRequestSchema = z.object({ id: providerIdSchema }).strict()
+export const generationCancelSchema = z.object({ requestId: z.string().uuid() }).strict()
 
 export const generateTextRequestSchema = z
   .object({

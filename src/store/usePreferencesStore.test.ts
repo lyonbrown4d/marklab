@@ -21,22 +21,9 @@ describe('writing-first layout preferences', () => {
     const store = usePreferencesStore.getState()
 
     expect(store.aiDefaultProviderId).toBeNull()
-    store.setAiDefaultProviderId('marklab-local')
+    store.setAiDefaultProviderId('ollama-local')
 
-    expect(usePreferencesStore.getState().aiDefaultProviderId).toBe('marklab-local')
-  })
-
-  it('stores an opt-in custom AI model directory without losing the selected path', () => {
-    const store = usePreferencesStore.getState()
-
-    expect(store.aiCustomModelDirectoryEnabled).toBe(false)
-    expect(store.aiModelDirectory).toBeNull()
-    store.setAiModelDirectory('D:\\MarkLab Models')
-    store.setAiCustomModelDirectoryEnabled(true)
-    store.setAiCustomModelDirectoryEnabled(false)
-
-    expect(usePreferencesStore.getState().aiCustomModelDirectoryEnabled).toBe(false)
-    expect(usePreferencesStore.getState().aiModelDirectory).toBe('D:\\MarkLab Models')
+    expect(usePreferencesStore.getState().aiDefaultProviderId).toBe('ollama-local')
   })
 
   it('toggles the editor read-only browsing mode', () => {

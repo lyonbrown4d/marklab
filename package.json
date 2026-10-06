@@ -24,8 +24,7 @@
       "electron",
       "electron-winstaller",
       "esbuild",
-      "msgpackr-extract",
-      "node-llama-cpp"
+      "msgpackr-extract"
     ]
   },
   "scripts": {
@@ -99,8 +98,6 @@
       "node_modules/picomatch/**/*",
       "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
       "node_modules/better-sqlite3/prebuilds/**/*",
-      "node_modules/@node-llama-cpp/${os}-${arch}/**/*",
-      "node_modules/@node-llama-cpp/${os}-${arch}-metal/**/*",
       "node_modules/@reflink/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
@@ -123,14 +120,10 @@
       "node_modules/is-glob/**/*",
       "node_modules/node-addon-api/**/*",
       "node_modules/picomatch/**/*",
-      "node_modules/node-llama-cpp/**/*",
-      "node_modules/@node-llama-cpp/${os}-${arch}/**/*",
-      "node_modules/@node-llama-cpp/${os}-${arch}-metal/**/*",
       "node_modules/{@huggingface,@isaacs,@kwsites,@reflink,@simple-git,@tinyhttp}/**/*",
       "node_modules/{ansi-escapes,ansi-regex,ansi-styles,async-retry,bytes,chalk,chmodrp,chownr,ci-info,cli-cursor,cli-spinners,cliui,cmake-js,color-convert,color-name,commander,cross-spawn,debug,deep-extend,emoji-regex,env-var,escalade,eventemitter3,filename-reserved-regex,filenamify,fs-extra,get-caller-file,graceful-fs,ignore,ini,ipull,is-fullwidth-code-point,is-interactive,is-unicode-supported,isexe,jsonfile,lifecycle-utils,lodash.debounce,log-symbols,lowdb,mimic-function,minimist,minipass,minizlib,ms,nanoid,node-api-headers,onetime,ora,parse-ms,path-key,pretty-bytes,pretty-ms,proper-lockfile,rc,require-directory,restore-cursor,retry,semver,shebang-command,shebang-regex,signal-exit,simple-git,sleep-promise,slice-ansi,stdin-discarder,stdout-update,steno,string-width,strip-ansi,strip-json-comments,tar,universalify,url-join,validate-npm-package-name,which,wrap-ansi,y18n,yallist,yargs,yargs-parser,yoctocolors}/**/*",
       "!dist/**/*.map",
       "!dist-electron/**/*.map",
-      "!node_modules/node-llama-cpp/llama/**/*",
       "package.json"
     ],
     "npmRebuild": false,
@@ -303,7 +296,6 @@
     "mitt": "3.0.1",
     "monaco-editor": "^0.57.0",
     "node-addon-api": "^8.9.2",
-    "node-llama-cpp": "3.22.1",
     "p-limit": "^7.3.3",
     "pathe": "^2.0.3",
     "pdfjs-dist": "6.3.289",

@@ -122,20 +122,13 @@ export const usePlateInlineAiComposer = ({
     setProvider(null)
     setPhase('loading-provider')
     const openingVersion = requestVersionRef.current
-    const [providersResult, localResult] = await Promise.allSettled([
-      aiApi.listProviders(),
-      aiApi.localStatus(),
-    ])
+    const providers = await aiApi.listProviders().catch(() => [])
     if (!mountedRef.current || openingVersion !== requestVersionRef.current) return
     if (readOnly || !ready || !isPlateAiSelectionCaptureUsable(getEditor(), nextCapture)) {
       reset(false)
       return
     }
-    const nextProvider = resolveInlineAiProvider(
-      defaultProviderId,
-      providersResult.status === 'fulfilled' ? providersResult.value : [],
-      localResult.status === 'fulfilled' ? localResult.value : null,
-    )
+    const nextProvider = resolveInlineAiProvider(defaultProviderId, providers)
     setProvider(nextProvider)
     if (!nextProvider) {
       setError(

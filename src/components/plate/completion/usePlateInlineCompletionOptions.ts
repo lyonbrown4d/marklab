@@ -26,8 +26,9 @@ const createSessionId = () => {
 }
 
 const canUseProvider = async (providerId: string, cloudConsent: boolean) => {
-  if (providerId === 'marklab-local' || cloudConsent) return true
+  if (cloudConsent) return true
   const provider = await aiApi.getProvider(providerId)
+  // Loopback OpenAI-compatible providers such as Ollama remain local and do not require consent.
   return provider.kind === 'openai-compatible' && isLoopbackHttpUrl(provider.baseUrl)
 }
 

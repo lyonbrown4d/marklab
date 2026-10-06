@@ -12,16 +12,6 @@ describe('settingsPersistKeys', () => {
     expect(drawioStateKeys.has('drawioEmbedUrl')).toBe(true)
   })
 
-  it('allows local AI directory preferences through the renderer persist boundary', () => {
-    expect(preferenceStateKeys).toEqual(
-      expect.objectContaining({
-        has: expect.any(Function),
-      }),
-    )
-    expect(preferenceStateKeys.has('aiCustomModelDirectoryEnabled')).toBe(true)
-    expect(preferenceStateKeys.has('aiModelDirectory')).toBe(true)
-  })
-
   it('allows AI completion preferences through the renderer persist boundary', () => {
     expect(preferenceStateKeys).toEqual(
       expect.objectContaining({

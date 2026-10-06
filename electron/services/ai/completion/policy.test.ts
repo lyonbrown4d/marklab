@@ -26,7 +26,6 @@ describe('AiInlineCompletionPolicy', () => {
   })
 
   it.each([
-    ['marklab-local', remoteProvider],
     [
       'ollama',
       {
@@ -45,7 +44,7 @@ describe('AiInlineCompletionPolicy', () => {
         baseUrl: 'https://localhost:11434/v1',
       },
     ],
-  ])('allows local provider %s without cloud-context consent', async (providerId, provider) => {
+  ])('allows loopback provider %s without cloud-context consent', async (providerId, provider) => {
     const policy = createPolicy(provider, false)
 
     await expect(policy.assertProviderAllowed(providerId)).resolves.toBeUndefined()

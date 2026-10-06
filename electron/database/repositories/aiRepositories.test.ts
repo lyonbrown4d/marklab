@@ -5,7 +5,6 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { AiProviderRepository } from '@electron/database/repositories/aiProviderRepository'
-import { LocalAiStateRepository } from '@electron/database/repositories/localAiStateRepository'
 import { LocalDatabaseService } from '@electron/database/service'
 
 const roots: string[] = []
@@ -42,26 +41,6 @@ describe('AI repositories', () => {
 
     await repository.deleteById(provider.id)
     await expect(repository.findById(provider.id)).resolves.toBeUndefined()
-  })
-
-  it('owns synchronous local_ai_state persistence using compiled Kysely queries', async () => {
-    const service = await createService()
-    const repository = new LocalAiStateRepository(service.database, service.sqlite)
-
-    repository.upsertDirectoryConfig({
-      deviceId: '42',
-      enabled: true,
-      path: 'C:/models',
-      updatedAt: '2026-10-06T00:00:00.000Z',
-    })
-    repository.upsertMigrationJson('{"state":"copying"}', '2026-10-06T01:00:00.000Z')
-
-    expect(repository.find()).toMatchObject({
-      migrationJson: '{"state":"copying"}',
-      modelDirectoryDeviceId: '42',
-      modelDirectoryEnabled: true,
-      modelDirectoryPath: 'C:/models',
-    })
   })
 })
 

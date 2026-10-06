@@ -1,7 +1,7 @@
 import type * as Electron from 'electron'
 
 import { nativeIpcChannels } from '@electron/channels'
-import { localAiGenerationCancelSchema } from '@electron/services/ai/local/schemas'
+import { generationCancelSchema } from '@electron/services/ai/schemas'
 import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
 import type { Logger } from '@electron/services/logger'
 import { aiInlineCompletionRequestSchema } from '@/types/aiCompletion'
@@ -35,7 +35,7 @@ export const createAiCompletionIpcHandlers = (
   const subscribedSenders = new WeakSet<object>()
   return {
     cancel: async (payload, event) => {
-      const { requestId } = localAiGenerationCancelSchema.parse({ requestId: payload })
+      const { requestId } = generationCancelSchema.parse({ requestId: payload })
       await service.cancelGeneration(event.sender.id, requestId)
       return { ok: true }
     },

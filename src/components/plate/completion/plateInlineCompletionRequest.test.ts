@@ -28,7 +28,7 @@ describe('Plate inline completion request policy', () => {
       excluded: [' first', ' second', ' third'],
       includeNearbyContext: true,
       length: 'long',
-      providerId: 'marklab-local',
+      providerId: 'ollama-local',
       revision: 2,
     })
 
@@ -38,7 +38,7 @@ describe('Plate inline completion request policy', () => {
       heading: 'Plans',
       length: 'long',
       prefix: 'before block\nprefix',
-      providerId: 'marklab-local',
+      providerId: 'ollama-local',
       revision: 2,
       suffix: 'suffix\nafter block',
     })

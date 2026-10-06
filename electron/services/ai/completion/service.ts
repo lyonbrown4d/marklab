@@ -1,11 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
 import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy'
-import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types'
-import type {
-  LocalAiGenerationEvent,
-  LocalAiServiceContract,
-} from '@electron/services/ai/local/types'
 import type { AiServiceContract } from '@electron/services/ai/types'
 import {
   buildInlineCompletionGenerationRequest,
@@ -38,7 +33,6 @@ type CompletionJob = {
 
 type AiInlineCompletionServiceOptions = {
   aiService: AiServiceContract
-  localAiService: LocalAiServiceContract
   policy: AiInlineCompletionPolicyContract
   maxGlobalJobs?: number
   maxOwnerJobs?: number
@@ -52,7 +46,6 @@ const DEFAULT_MAX_OWNER_JOBS = 3
 export class AiInlineCompletionService implements AiInlineCompletionServiceContract {
   private readonly attemptsBySession = new Map<string, CompletionAttempt>()
   private readonly jobs = new Map<string, CompletionJob>()
-  private readonly localBuffers = new Map<string, string>()
   private readonly ownerSlotCounts = new Map<number, number>()
   private readonly requestIdFactory: () => string
   private readonly schedule: (task: () => void) => void
@@ -79,9 +72,6 @@ export class AiInlineCompletionService implements AiInlineCompletionServiceContr
       await previousCancellation
       await this.options.policy.assertProviderAllowed(input.providerId)
       this.assertCurrent(attempt)
-      if (input.providerId === LOCAL_AI_PROVIDER_ID) {
-        return await this.startLocal(attempt, input, emit)
-      }
       return this.startCloud(attempt, input, emit)
     } catch (error) {
       this.releaseAttempt(attempt)
@@ -146,52 +136,6 @@ export class AiInlineCompletionService implements AiInlineCompletionServiceContr
     }
   }
 
-  private async startLocal(
-    attempt: CompletionAttempt,
-    input: AiInlineCompletionRequest,
-    emit: AiInlineCompletionEventHandler,
-  ): Promise<{ requestId: string }> {
-    const pendingEvents: LocalAiGenerationEvent[] = []
-    let ready = false
-    const handleEvent = (event: LocalAiGenerationEvent) => {
-      if (!ready) pendingEvents.push(event)
-      else this.handleLocalEvent(event)
-    }
-    const result = await this.options.localAiService.startGeneration(
-      attempt.ownerId,
-      { ...buildInlineCompletionGenerationRequest(input), providerId: LOCAL_AI_PROVIDER_ID },
-      handleEvent,
-    )
-    if (!this.isCurrent(attempt)) {
-      await this.options.localAiService.cancelGeneration(attempt.ownerId, result.requestId)
-      throw new Error('AI inline completion request was superseded')
-    }
-    attempt.requestId = result.requestId
-    this.jobs.set(result.requestId, { attempt, emit, input })
-    ready = true
-    pendingEvents.forEach((event) => this.handleLocalEvent(event))
-    return result
-  }
-
-  private handleLocalEvent(event: LocalAiGenerationEvent): void {
-    const job = this.jobs.get(event.requestId)
-    if (!job || !this.isCurrentJob(job)) return
-    if (event.type === 'delta') {
-      const current = this.localBuffers.get(event.requestId) ?? ''
-      this.localBuffers.set(event.requestId, current + event.delta)
-      return
-    }
-    if (event.type === 'finish') {
-      const suggestion = cleanInlineCompletion(
-        this.localBuffers.get(event.requestId) ?? '',
-        job.input,
-      )
-      if (suggestion) job.emit({ requestId: event.requestId, type: 'delta', delta: suggestion })
-    }
-    job.emit(event)
-    this.releaseAttempt(job.attempt)
-  }
-
   private reserveAttempt(
     ownerId: number,
     sessionKey: string,
@@ -227,9 +171,6 @@ export class AiInlineCompletionService implements AiInlineCompletionServiceContr
     this.releaseAttempt(attempt)
     job?.controller?.abort()
     if (emitCancelled && job && requestId) job.emit({ requestId, type: 'cancelled' })
-    if (job && requestId && job.input.providerId === LOCAL_AI_PROVIDER_ID) {
-      return this.options.localAiService.cancelGeneration(attempt.ownerId, requestId)
-    }
     return Promise.resolve()
   }
 
@@ -242,7 +183,6 @@ export class AiInlineCompletionService implements AiInlineCompletionServiceContr
     else this.ownerSlotCounts.delete(attempt.ownerId)
     if (attempt.requestId) {
       this.jobs.delete(attempt.requestId)
-      this.localBuffers.delete(attempt.requestId)
     }
     if (this.attemptsBySession.get(attempt.sessionKey) === attempt) {
       this.attemptsBySession.delete(attempt.sessionKey)

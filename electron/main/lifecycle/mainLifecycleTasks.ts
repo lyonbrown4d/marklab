@@ -14,7 +14,6 @@ type MainLifecycleDependencies<TSettings> = {
     initialize: () => Promise<{ error?: string; ok: boolean }>
   }
   getLinkPreviewService: () => Disposable
-  getLocalAiService: () => Disposable
   getLocalHistoryService: () => InitializableDisposable
   getSettingsStore: () => TSettings
   localDatabaseService: {
@@ -48,7 +47,6 @@ export const createMainLifecycleTasks = <TSettings>(
   knowledgeEngineTask(dependencies.getKnowledgeEngineService),
   disposalTask('link-preview', 20, dependencies.getLinkPreviewService),
   initializedDisposalTask('local-history', 30, dependencies.getLocalHistoryService),
-  disposalTask('local-ai', 40, dependencies.getLocalAiService),
 ]
 
 const knowledgeEngineTask = (
