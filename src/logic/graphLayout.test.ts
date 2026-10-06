@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
+import Elk from 'elkjs/lib/elk.bundled.js'
 import { layoutGraphWithElk } from '@/logic/graphLayout'
 import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 import type { GraphNodeData } from '@/logic/graph'
+import type {
+  GraphLayoutNodeResult,
+  GraphLayoutPosition,
+  GraphLayoutWorkerGraph,
+} from '@/logic/graphLayoutWorkerMessages'
 
 const workerState = vi.hoisted(() => ({
   layout: vi.fn(async (graph: { children: Array<{ id: string }> }) =>
@@ -38,6 +44,30 @@ const overlaps = (left: Node<GraphNodeData>, right: Node<GraphNodeData>) => {
     left.position.y + leftSize.height <= right.position.y ||
     right.position.y + rightSize.height <= left.position.y
   )
+}
+
+const collectPositions = (
+  nodes: GraphLayoutNodeResult[],
+  parentX = 0,
+  parentY = 0,
+): GraphLayoutPosition[] =>
+  nodes.flatMap((current) => {
+    const x = parentX + (current.x ?? 0)
+    const y = parentY + (current.y ?? 0)
+    const own = current.x == null || current.y == null ? [] : [{ id: current.id, x, y }]
+    return [...own, ...collectPositions(current.children ?? [], x, y)]
+  })
+
+const getBounds = (nodes: Node<GraphNodeData>[]) => {
+  const left = Math.min(...nodes.map((current) => current.position.x))
+  const top = Math.min(...nodes.map((current) => current.position.y))
+  const right = Math.max(
+    ...nodes.map((current) => current.position.x + getGraphNodeLayoutSize(current).width),
+  )
+  const bottom = Math.max(
+    ...nodes.map((current) => current.position.y + getGraphNodeLayoutSize(current).height),
+  )
+  return { height: bottom - top, width: right - left }
 }
 
 describe('graphLayout', () => {
@@ -120,6 +150,85 @@ describe('graphLayout', () => {
       'elk.edgeRouting': 'ORTHOGONAL',
       'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
       'elk.layered.nodePlacement.favorStraightEdges': 'true',
+    })
+  })
+
+  it('uses compound ELK groups that keep overview cards separated', async () => {
+    await layoutGraphWithElk(
+      [
+        node('file:docs/a.md', {
+          workspaceMap: true,
+          workspaceMapMode: 'overview',
+          workspaceGroup: { key: 'docs', label: 'Documentation', source: 'semantic' },
+        }),
+        node('file:docs/b.md', {
+          workspaceMap: true,
+          workspaceMapMode: 'overview',
+          workspaceGroup: { key: 'docs', label: 'Documentation', source: 'semantic' },
+        }),
+        node('file:ops/a.md', {
+          workspaceMap: true,
+          workspaceMapMode: 'overview',
+          workspaceGroup: { key: 'ops', label: 'Operations', source: 'frontmatter' },
+        }),
+      ],
+      [],
+    )
+
+    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as {
+      children: Array<{ children?: Array<{ id: string }>; id: string }>
+      edges: Edge[]
+      layoutOptions: Record<string, string>
+    }
+    expect(workerGraph.layoutOptions).toMatchObject({
+      'elk.algorithm': 'box',
+      'elk.aspectRatio': '3',
+      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+    })
+    expect(workerGraph.children.map((child) => child.id)).toEqual(
+      expect.arrayContaining(['workspace-group:docs', 'workspace-group:ops']),
+    )
+    expect(
+      workerGraph.children.find((child) => child.id === 'workspace-group:docs')?.children,
+    ).toHaveLength(2)
+    expect(workerGraph.edges).toHaveLength(0)
+  })
+
+  it('packs several overview groups across a wide canvas', async () => {
+    const elk = new Elk()
+    workerState.layout.mockImplementationOnce(async (input) => {
+      const result = await elk.layout(input as unknown as GraphLayoutWorkerGraph)
+      return collectPositions(result.children ?? [])
+    })
+    const nodes = Array.from({ length: 6 }, (_, groupIndex) =>
+      Array.from({ length: groupIndex % 2 === 0 ? 2 : 3 }, (_, nodeIndex) =>
+        node(`file:group-${groupIndex}/page-${nodeIndex}.md`, {
+          workspaceMap: true,
+          workspaceMapMode: 'overview',
+          workspaceGroup: {
+            key: `group-${groupIndex}`,
+            label: `Group ${groupIndex}`,
+            source: 'semantic',
+          },
+        }),
+      ),
+    ).flat()
+
+    const layoutNodes = await layoutGraphWithElk(nodes, [])
+    const bounds = getBounds(layoutNodes)
+    const distinctGroupColumns = new Set(
+      Array.from({ length: 6 }, (_, groupIndex) => {
+        const firstMember = layoutNodes.find((current) =>
+          current.id.startsWith(`file:group-${groupIndex}/`),
+        )
+        return Math.round((firstMember?.position.x ?? 0) / 100)
+      }),
+    )
+
+    expect(distinctGroupColumns.size).toBeGreaterThanOrEqual(3)
+    expect(bounds.width).toBeGreaterThan(bounds.height)
+    layoutNodes.forEach((current, index) => {
+      layoutNodes.slice(index + 1).forEach((next) => expect(overlaps(current, next)).toBe(false))
     })
   })
 })

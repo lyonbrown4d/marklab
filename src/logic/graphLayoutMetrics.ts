@@ -10,10 +10,10 @@ const FILE_NODE_HEIGHT = 54
 const EXTERNAL_WEB_NODE_WIDTH = 340
 const EXTERNAL_WEB_NODE_HEIGHT = 210
 const WORKSPACE_MAP_NODE_HEIGHT = 96
-export const WORKSPACE_MAP_COMPACT_NODE_WIDTH = 220
-export const WORKSPACE_MAP_COMPACT_NODE_HEIGHT = 72
-export const WORKSPACE_MAP_FILE_WIDTH = 520
-export const WORKSPACE_MAP_FILE_HEIGHT = 640
+export const WORKSPACE_MAP_COMPACT_NODE_WIDTH = 248
+export const WORKSPACE_MAP_COMPACT_NODE_HEIGHT = 112
+export const WORKSPACE_MAP_FILE_WIDTH = 420
+export const WORKSPACE_MAP_FILE_HEIGHT = 480
 export const WORKSPACE_MAP_RESOURCE_NODE_WIDTH = 360
 export const WORKSPACE_MAP_RESOURCE_NODE_HEIGHT = 220
 
@@ -75,6 +75,7 @@ export const createGraphNodeLayoutSignature = (node: Node<GraphNodeData>): strin
     node.id,
     node.type ?? '',
     node.data.contentMode ?? '',
+    node.data.workspaceGroup?.key ?? '',
     width,
     height,
     node.data.label.length,

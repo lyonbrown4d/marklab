@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -8,27 +8,25 @@ import {
   useNodesState,
 } from '@xyflow/react'
 import type { Edge, Node, NodeTypes, ReactFlowInstance } from '@xyflow/react'
-import { isMarkdownFilePath } from '@/logic/fileTypes'
 import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/logic/graph'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { GraphMiniMap, workspaceMiniMapOffsets } from '@/pages/graph/GraphMiniMapView'
 import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
+import { WorkspaceMapGroupRegions } from '@/pages/workspace-map/WorkspaceMapGroupRegions'
 import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { WorkspaceMapToolbar } from '@/pages/workspace-map/WorkspaceMapToolbar'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
-import { useWorkspaceMapKeyboard } from '@/pages/workspace-map/useWorkspaceMapKeyboard'
+import { useWorkspaceMapInteractions } from '@/pages/workspace-map/useWorkspaceMapInteractions'
 import { useWorkspaceMapNodeDisclosure } from '@/pages/workspace-map/useWorkspaceMapNodeDisclosure'
 import { useWorkspaceMapNeighborhood } from '@/pages/workspace-map/useWorkspaceMapNeighborhood'
 import { useWorkspaceMapPresentedGraph } from '@/pages/workspace-map/useWorkspaceMapPresentedGraph'
 import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/workspaceMapNeighborhood'
-import {
-  getWorkspaceMapNodeOpenPath,
-  mergeWorkspaceMapNodeGeometry,
-} from '@/pages/workspace-map/workspaceMapNodePresentation'
+import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
+import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 
 const nodeTypes: NodeTypes = {
   external: WorkspaceMapReferenceNode,
@@ -54,7 +52,11 @@ type WorkspaceMapCanvasProps = {
   showMiniMap: boolean
 }
 
-export const WorkspaceMapCanvas = ({
+export const WorkspaceMapCanvas = (props: WorkspaceMapCanvasProps) => (
+  <WorkspaceMapCanvasContent key={props.graphIdentity} {...props} />
+)
+
+const WorkspaceMapCanvasContent = ({
   activePath,
   editorLoadState,
   graph,
@@ -76,11 +78,17 @@ export const WorkspaceMapCanvas = ({
   })
   const showExternalResources =
     externalState.graphIdentity === graphIdentity && externalState.showExternalResources
+  const [modeState, setModeState] = useState<{ graphIdentity: string; mode: WorkspaceMapMode }>({
+    graphIdentity,
+    mode: 'overview',
+  })
+  const mode = modeState.graphIdentity === graphIdentity ? modeState.mode : 'overview'
   const { compact, presentedGraph, renderedGraph, totalExternalCount, webViews } =
     useWorkspaceMapPresentedGraph({
       activePath,
       editorLoadState,
       graph,
+      mode,
       onChange,
       onCloseEditor,
       onOpenFile,
@@ -131,9 +139,12 @@ export const WorkspaceMapCanvas = ({
     [renderedGraph],
   )
   const layout = useWorkspaceMapLayout({
-    activePath: activePath ?? initialFocusPath,
+    activePath,
     flow: layoutFlow,
+    focusPath: activePath ?? initialFocusPath,
     graph: renderedGraph,
+    mode,
+    nodes,
     setNodes,
   })
   useEffect(() => {
@@ -148,68 +159,17 @@ export const WorkspaceMapCanvas = ({
     })
   }, [neighborhood, renderedGraph.nodes, setNodes])
   useEffect(() => setEdges(presentedGraph.edges), [presentedGraph.edges, setEdges])
-  const focusNode = useCallback(
-    (node: Node<GraphNodeData>) => {
-      if (!flow) return
-      focusNeighborhoodNode(node.id)
-      void flow.fitView({
-        duration: 0,
-        maxZoom: 1,
-        minZoom: 0.35,
-        nodes: [node],
-        padding: 0.32,
-      })
-    },
-    [flow, focusNeighborhoodNode],
-  )
-  const activateNode = useCallback(
-    (node: Node<GraphNodeData>) => {
-      if (node.type === 'external' && node.data.url) {
-        webViews.activate(node.id)
-        return
-      }
-      const path = node.data.path
-      if (node.type === 'file' && path && isMarkdownFilePath(path)) {
-        onActivateEditor(path)
-        return
-      }
-      const openPath = getWorkspaceMapNodeOpenPath(node)
-      if (openPath) onOpenFile(openPath)
-    },
-    [onActivateEditor, onOpenFile, webViews],
-  )
-  const handleNodeClick = useCallback(
-    (_event: MouseEvent, node: Node<GraphNodeData>) => {
-      if (node.type === 'file' && node.data.path && isMarkdownFilePath(node.data.path)) {
-        activateNode(node)
-      }
-    },
-    [activateNode],
-  )
-  const handlePaneClick = useCallback(() => {
-    clearNeighborhood()
-    webViews.deactivate()
-  }, [clearNeighborhood, webViews])
-  const handleCanvasKeyDown = useWorkspaceMapKeyboard({
+  const interactions = useWorkspaceMapInteractions({
     activePath,
-    activateNode,
+    clearNeighborhood,
     flow,
+    focusNeighborhoodNode,
     nodes,
+    onActivateEditor,
     onCloseEditor,
+    onOpenFile,
+    webViews,
   })
-  const handleNodeDoubleClick = useCallback(
-    (event: MouseEvent, node: Node<GraphNodeData>) => {
-      event.preventDefault()
-      if (node.type === 'external' && node.data.url) {
-        webViews.activate(node.id)
-        return
-      }
-      if (node.type === 'file' && node.data.path && isMarkdownFilePath(node.data.path)) return
-      const path = getWorkspaceMapNodeOpenPath(node)
-      if (path) onOpenFile(path)
-    },
-    [onOpenFile, webViews],
-  )
 
   if (layout.status === 'loading') {
     return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
@@ -230,21 +190,25 @@ export const WorkspaceMapCanvas = ({
         aria-label={t('workspaceMap.canvas')}
         tabIndex={0}
         colorMode={darkMode ? 'dark' : 'light'}
-        className={cn('workspace-map-canvas h-full w-full', activePath && 'is-editing')}
+        className={cn(
+          'workspace-map-canvas h-full w-full',
+          mode === 'overview' && 'is-overview',
+          activePath && 'is-editing',
+        )}
         nodes={disclosedNodes}
         edges={presentedEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={setFlow}
-        onKeyDown={handleCanvasKeyDown}
+        onKeyDown={interactions.onKeyDown}
         onBlurCapture={onBlurCapture}
         onFocusCapture={onFocusCapture}
-        onNodeClick={handleNodeClick}
-        onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeClick={interactions.onNodeClick}
+        onNodeDoubleClick={interactions.onNodeDoubleClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
-        onPaneClick={handlePaneClick}
+        onPaneClick={interactions.onPaneClick}
         nodesDraggable
         nodesConnectable={false}
         nodesFocusable
@@ -267,6 +231,7 @@ export const WorkspaceMapCanvas = ({
           size={1}
           color="hsl(var(--muted-foreground) / 0.22)"
         />
+        {mode === 'overview' ? <WorkspaceMapGroupRegions nodes={disclosedNodes} /> : null}
         <Controls
           position="bottom-right"
           showInteractive={false}
@@ -280,8 +245,11 @@ export const WorkspaceMapCanvas = ({
       </ReactFlow>
       <WorkspaceMapToolbar
         externalCount={totalExternalCount}
+        mode={mode}
         nodes={disclosedNodes}
-        onFocusNode={focusNode}
+        onArrange={layout.arrange}
+        onFocusNode={interactions.focusNode}
+        onModeChange={(nextMode) => setModeState({ graphIdentity, mode: nextMode })}
         onToggleExternalResources={() =>
           setExternalState((current) => ({
             graphIdentity,

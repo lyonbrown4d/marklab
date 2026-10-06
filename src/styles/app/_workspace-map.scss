@@ -30,26 +30,29 @@
   min-height: 72px;
 }
 
-.workspace-map-node__resize-control {
-  right: -10px !important;
-  bottom: -10px !important;
+.workspace-map-node__resize-handle {
   z-index: 4;
-  display: flex !important;
-  width: 22px !important;
-  height: 22px !important;
-  align-items: center;
-  justify-content: center;
-  color: hsl(var(--muted-foreground));
+  width: 10px !important;
+  height: 10px !important;
   background: color-mix(in srgb, hsl(var(--card)) 92%, transparent) !important;
-  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 40%, hsl(var(--border))) !important;
-  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 62%, hsl(var(--border))) !important;
+  border-radius: 3px;
   box-shadow: 0 3px 10px -5px color-mix(in srgb, hsl(var(--foreground)) 48%, transparent);
-  opacity: 0.72;
+  opacity: 0.78;
   transition:
-    color var(--motion-duration-fast) ease,
     border-color var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
     opacity var(--motion-duration-fast) ease,
     transform var(--motion-duration-fast) ease;
+}
+
+.workspace-map-node__resize-line {
+  z-index: 3;
+  border-color: color-mix(in srgb, hsl(var(--primary)) 42%, transparent) !important;
+  opacity: 0.55;
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    opacity var(--motion-duration-fast) ease;
 }
 
 .workspace-map-node__disclosure {
@@ -71,13 +74,19 @@
   height: 14px;
 }
 
-.workspace-map-node:hover .workspace-map-node__resize-control,
-.workspace-map-editor:hover .workspace-map-node__resize-control,
-.workspace-map-node__resize-control:hover {
-  color: hsl(var(--primary));
+.workspace-map-node:hover .workspace-map-node__resize-handle,
+.workspace-map-editor:hover .workspace-map-node__resize-handle,
+.workspace-map-node__resize-handle:hover {
+  background: hsl(var(--primary)) !important;
   border-color: hsl(var(--primary)) !important;
   opacity: 1;
-  transform: scale(1.06);
+  transform: scale(1.18);
+}
+
+.workspace-map-node:hover .workspace-map-node__resize-line,
+.workspace-map-editor:hover .workspace-map-node__resize-line {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 76%, transparent) !important;
+  opacity: 0.9;
 }
 
 .workspace-map-editor[data-editor-active='true'],
@@ -152,6 +161,10 @@
     opacity var(--motion-duration-fast) ease;
 }
 
+.workspace-map-canvas.is-overview .react-flow__edge-path {
+  opacity: 0.08;
+}
+
 .workspace-map-canvas .graph-edge--reference .react-flow__edge-path {
   stroke-dasharray: none;
   stroke-opacity: 1;
@@ -169,8 +182,20 @@
   opacity: 0.62;
 }
 
+.workspace-map-canvas.is-overview
+  .react-flow__edge.workspace-map-flow-edge--connected
+  .react-flow__edge-path {
+  opacity: 0.28;
+}
+
 .workspace-map-canvas .react-flow__edge.workspace-map-flow-edge--muted .react-flow__edge-path {
   opacity: 0.03;
+}
+
+.workspace-map-canvas.is-overview
+  .react-flow__edge.workspace-map-flow-edge--muted
+  .react-flow__edge-path {
+  opacity: 0.01;
 }
 
 .workspace-map-canvas .react-flow__node.workspace-map-flow-node--dimmed,
@@ -204,7 +229,8 @@
     transition: none;
   }
 
-  .workspace-map-node__resize-control {
+  .workspace-map-node__resize-handle,
+  .workspace-map-node__resize-line {
     transition: none;
   }
 

@@ -3,6 +3,33 @@ import type { PropsWithChildren } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@xyflow/react', () => ({
+  NodeResizer: ({
+    handleClassName,
+    lineClassName,
+    maxHeight,
+    maxWidth,
+    minHeight,
+    minWidth,
+  }: Record<string, unknown>) => (
+    <div
+      data-max-height={maxHeight}
+      data-max-width={maxWidth}
+      data-min-height={minHeight}
+      data-min-width={minWidth}
+      data-testid="node-resizer"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <div className={String(lineClassName)} data-testid="resize-line" key={`line-${index}`} />
+      ))}
+      {Array.from({ length: 4 }, (_, index) => (
+        <div
+          className={String(handleClassName)}
+          data-testid="resize-handle"
+          key={`handle-${index}`}
+        />
+      ))}
+    </div>
+  ),
   NodeResizeControl: ({
     children,
     className,
@@ -29,16 +56,18 @@ vi.mock('@xyflow/react', () => ({
 import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
 
 describe('WorkspaceMapNodeResizeControl', () => {
-  it('provides one visible bottom-right handle isolated from node drag and canvas pan', () => {
+  it('provides four edge lines and four corner handles isolated from drag and pan', () => {
     render(<WorkspaceMapNodeResizeControl minHeight={180} minWidth={300} />)
 
-    const control = screen.getByTestId('resize-control')
-    expect(control).toHaveClass('nodrag', 'nopan', 'workspace-map-node__resize-control')
-    expect(control).toHaveAttribute('data-position', 'bottom-right')
-    expect(control).toHaveAttribute('data-min-height', '180')
-    expect(control).toHaveAttribute('data-min-width', '300')
-    expect(control).toHaveAttribute('data-max-height', '960')
-    expect(control).toHaveAttribute('data-max-width', '1200')
-    expect(control.querySelector('svg')).not.toBeNull()
+    const resizer = screen.getByTestId('node-resizer')
+    expect(screen.getAllByTestId('resize-line')).toHaveLength(4)
+    expect(screen.getAllByTestId('resize-handle')).toHaveLength(4)
+    screen.getAllByTestId(/resize-(line|handle)/).forEach((control) => {
+      expect(control).toHaveClass('nodrag', 'nopan')
+    })
+    expect(resizer).toHaveAttribute('data-min-height', '180')
+    expect(resizer).toHaveAttribute('data-min-width', '300')
+    expect(resizer).toHaveAttribute('data-max-height', '960')
+    expect(resizer).toHaveAttribute('data-max-width', '1200')
   })
 })

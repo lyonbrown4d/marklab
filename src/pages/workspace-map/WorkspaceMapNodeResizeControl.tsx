@@ -1,5 +1,4 @@
-import { NodeResizeControl } from '@xyflow/react'
-import { Scaling } from 'lucide-react'
+import { NodeResizer } from '@xyflow/react'
 
 type WorkspaceMapNodeResizeControlProps = {
   maxHeight?: number
@@ -14,14 +13,12 @@ export const WorkspaceMapNodeResizeControl = ({
   minHeight,
   minWidth,
 }: WorkspaceMapNodeResizeControlProps) => (
-  <NodeResizeControl
-    className="nodrag nopan workspace-map-node__resize-control"
+  <NodeResizer
+    handleClassName="nodrag nopan workspace-map-node__resize-handle"
+    lineClassName="nodrag nopan workspace-map-node__resize-line"
     maxHeight={maxHeight}
     maxWidth={maxWidth}
     minHeight={minHeight}
     minWidth={minWidth}
-    position="bottom-right"
-  >
-    <Scaling aria-hidden="true" className="size-3" />
-  </NodeResizeControl>
+  />
 )

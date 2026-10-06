@@ -148,6 +148,36 @@ describe('useWorkspaceMapLayout', () => {
     })
   })
 
+  it('reflows neighboring nodes when an editor activates without changing the graph key', async () => {
+    let currentNodes = createGraph(null).nodes
+    const setNodes = vi.fn((update: React.SetStateAction<GraphData['nodes']>) => {
+      currentNodes = typeof update === 'function' ? update(currentNodes) : update
+    })
+    vi.mocked(layoutGraphWithElk)
+      .mockImplementationOnce(async (nodes) =>
+        nodes.map((node, index) => ({ ...node, position: { x: index * 280, y: 0 } })),
+      )
+      .mockImplementationOnce(async (nodes) =>
+        nodes.map((node, index) => ({ ...node, position: { x: index * 720, y: 0 } })),
+      )
+    const inactiveGraph = { ...createGraph(null), layoutKey: 'map:stable' }
+    const { rerender } = renderHook(
+      ({ activePath, graph }) => useWorkspaceMapLayout({ activePath, flow: null, graph, setNodes }),
+      { initialProps: { activePath: null as string | null, graph: inactiveGraph } },
+    )
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    expect(currentNodes[1]?.position.x).toBe(280)
+
+    rerender({
+      activePath: 'notes/a.md',
+      graph: { ...createGraph('notes/a.md'), layoutKey: 'map:stable' },
+    })
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    expect(currentNodes[1]?.position.x).toBe(720)
+  })
+
   it('fits only the new flow instance after a loading remount', async () => {
     let resolveLayout: (nodes: GraphData['nodes']) => void = () => undefined
     const fitViewA = vi.fn<WorkspaceMapFlow['fitView']>().mockResolvedValue(true)
@@ -202,9 +232,9 @@ describe('useWorkspaceMapLayout', () => {
 
     await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
     expect(firstSignal?.aborted).toBe(true)
-    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[2]).toMatchObject({
-      layoutKey: nextGraph.layoutKey,
-    })
+    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[2]?.layoutKey).toMatch(
+      new RegExp(`^${nextGraph.layoutKey}:runtime:`),
+    )
   })
 
   it('preserves existing node positions when a refreshed graph is laid out', async () => {
@@ -228,6 +258,39 @@ describe('useWorkspaceMapLayout', () => {
     expect(currentNodes.find((node) => node.id === 'file:notes/a.md')?.position).toEqual({
       x: 640,
       y: 360,
+    })
+  })
+
+  it('preserves pinned interaction state when a mode change forces new positions', async () => {
+    let currentNodes = createGraph(null).nodes
+    const setNodes = vi.fn((update: React.SetStateAction<GraphData['nodes']>) => {
+      currentNodes = typeof update === 'function' ? update(currentNodes) : update
+    })
+    const graph = { ...createGraph(null), layoutKey: 'map:stable' }
+    const { rerender } = renderHook(
+      ({ mode }) => useWorkspaceMapLayout({ activePath: null, flow: null, graph, mode, setNodes }),
+      { initialProps: { mode: 'focus' as 'focus' | 'overview' } },
+    )
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    currentNodes = currentNodes.map((node) =>
+      node.id === 'file:notes/a.md'
+        ? {
+            ...node,
+            data: { ...node.data, workspaceMapPinned: true },
+            draggable: false,
+            position: { x: 640, y: 360 },
+          }
+        : node,
+    )
+
+    rerender({ mode: 'overview' as 'focus' | 'overview' })
+
+    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    expect(currentNodes.find((node) => node.id === 'file:notes/a.md')).toMatchObject({
+      data: { workspaceMapPinned: true },
+      draggable: false,
+      position: { x: 640, y: 360 },
     })
   })
 })

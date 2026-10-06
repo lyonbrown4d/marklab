@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
+import { createWorkspaceMapProductTestGraph } from '@/pages/workspace-map/workspaceMapProductTestGraph'
 
 type FlowProps = {
   minZoom: number
@@ -14,6 +15,7 @@ type FlowProps = {
   onNodeMouseEnter?: (event: MouseEvent, node: Node<GraphNodeData>) => void
   onNodeMouseLeave?: (event: MouseEvent, node: Node<GraphNodeData>) => void
   onPaneClick?: () => void
+  children?: React.ReactNode
 }
 
 type FlowApi = {
@@ -35,6 +37,7 @@ vi.mock('@xyflow/react', () => ({
     flowPropsRef.current = props
     return (
       <div data-testid="flow" onFocusCapture={props.onFocusCapture}>
+        {props.children}
         {props.nodes.map((node) => (
           <button
             className="react-flow__node"
@@ -50,6 +53,7 @@ vi.mock('@xyflow/react', () => ({
       </div>
     )
   },
+  ViewportPortal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useEdgesState: <T,>(initial: T[]) => {
     const [value, setValue] = useState(initial)
     return [value, setValue, vi.fn()] as const
@@ -74,40 +78,12 @@ vi.mock('@/pages/workspace-map/useWorkspaceMapLayout', () => ({
   },
 }))
 
-const createGraph = (): GraphData => {
-  const files = Array.from({ length: 14 }, (_, index) => ({
-    id: `file:notes/${index === 0 ? 'Home' : `note-${index}`}.md`,
-    type: 'file' as const,
-    data: {
-      label: index === 0 ? 'Home' : `Note ${index}`,
-      path: `notes/${index === 0 ? 'Home' : `note-${index}`}.md`,
-    },
-    position: { x: index * 240, y: 0 },
-  }))
-  return {
-    nodes: [
-      ...files,
-      {
-        id: 'ext:https://example.com/docs',
-        type: 'external',
-        data: { label: 'External docs', url: 'https://example.com/docs' },
-        position: { x: 0, y: 200 },
-      },
-    ],
-    edges: [
-      { id: 'internal', source: files[0].id, target: files[1].id },
-      { id: 'external', source: files[0].id, target: 'ext:https://example.com/docs' },
-    ],
-    layoutKey: 'large-map',
-  }
-}
-
 const renderCanvas = (activePath: string | null = null, graphIdentity = 'workspace:a') =>
   render(
     <WorkspaceMapCanvas
       activePath={activePath}
       editorLoadState={{ status: 'ready', content: '# Home' }}
-      graph={createGraph()}
+      graph={createWorkspaceMapProductTestGraph()}
       graphIdentity={graphIdentity}
       onActivateEditor={vi.fn()}
       onChange={vi.fn()}
@@ -129,8 +105,8 @@ describe('WorkspaceMapCanvas product readiness', () => {
     renderCanvas()
 
     await waitFor(() => expect(flowPropsRef.current?.nodes).toHaveLength(14))
-    expect(flowPropsRef.current?.nodes.every((node) => node.width === 220)).toBe(true)
-    expect(flowPropsRef.current?.nodes.every((node) => node.height === 72)).toBe(true)
+    expect(flowPropsRef.current?.nodes.every((node) => node.width === 248)).toBe(true)
+    expect(flowPropsRef.current?.nodes.every((node) => node.height === 112)).toBe(true)
     expect(flowPropsRef.current?.edges).toHaveLength(1)
     expect(layoutGraphRef.current?.nodes).toHaveLength(14)
     expect(
@@ -158,6 +134,15 @@ describe('WorkspaceMapCanvas product readiness', () => {
       const current = flowPropsRef.current?.nodes.find((node) => node.id === external?.id)
       expect(current?.data.webView?.active).toBe(false)
     })
+  })
+
+  it('renders AST-derived semantic groups as canvas backgrounds', async () => {
+    renderCanvas()
+
+    expect(await screen.findByTestId('workspace-map-group-documentation')).toHaveTextContent(
+      'Documentation',
+    )
+    expect(screen.getByTestId('workspace-map-group-libraries')).toHaveTextContent('Libraries')
   })
 
   it('focuses a searched node at a readable zoom and keeps the canvas minimum readable', async () => {
@@ -195,7 +180,7 @@ describe('WorkspaceMapCanvas product readiness', () => {
       <WorkspaceMapCanvas
         activePath={null}
         editorLoadState={{ status: 'ready', content: '# Home' }}
-        graph={createGraph()}
+        graph={createWorkspaceMapProductTestGraph()}
         graphIdentity="workspace:b"
         onActivateEditor={vi.fn()}
         onChange={vi.fn()}
@@ -214,14 +199,14 @@ describe('WorkspaceMapCanvas product readiness', () => {
   it('temporarily expands the active editor and returns it to the compact map state when closed', async () => {
     const view = renderCanvas()
     await waitFor(() =>
-      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 72, width: 220 }),
+      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 112, width: 248 }),
     )
 
     view.rerender(
       <WorkspaceMapCanvas
         activePath="notes/Home.md"
         editorLoadState={{ status: 'ready', content: '# Home' }}
-        graph={createGraph()}
+        graph={createWorkspaceMapProductTestGraph()}
         graphIdentity="workspace:a"
         onActivateEditor={vi.fn()}
         onChange={vi.fn()}
@@ -234,14 +219,14 @@ describe('WorkspaceMapCanvas product readiness', () => {
     )
 
     await waitFor(() =>
-      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 640, width: 520 }),
+      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 480, width: 420 }),
     )
 
     view.rerender(
       <WorkspaceMapCanvas
         activePath={null}
         editorLoadState={{ status: 'ready', content: '# Home' }}
-        graph={createGraph()}
+        graph={createWorkspaceMapProductTestGraph()}
         graphIdentity="workspace:a"
         onActivateEditor={vi.fn()}
         onChange={vi.fn()}
@@ -254,7 +239,7 @@ describe('WorkspaceMapCanvas product readiness', () => {
     )
 
     await waitFor(() =>
-      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 72, width: 220 }),
+      expect(flowPropsRef.current?.nodes[0]).toMatchObject({ height: 112, width: 248 }),
     )
   })
 

@@ -35,7 +35,7 @@ const layoutStatusRef = vi.hoisted(() => ({ current: 'ready' as 'error' | 'loadi
 const layoutRetry = vi.hoisted(() => vi.fn())
 const closeEditor = vi.hoisted(() => vi.fn())
 const layoutArgsRef = vi.hoisted(() => ({
-  current: null as null | { activePath: string | null; graph: GraphData },
+  current: null as null | { activePath: string | null; focusPath: string | null; graph: GraphData },
 }))
 
 vi.mock('@xyflow/react', () => ({
@@ -84,14 +84,16 @@ vi.mock('@/pages/workspace-map/useWorkspaceMapLayout', () => ({
   useWorkspaceMapLayout: ({
     activePath,
     flow,
+    focusPath,
     graph,
   }: {
     activePath: string | null
     flow: { fitView: () => Promise<boolean> } | null
+    focusPath: string | null
     graph: GraphData
   }) => {
     const status = layoutStatusRef.current
-    layoutArgsRef.current = { activePath, graph }
+    layoutArgsRef.current = { activePath, focusPath, graph }
     useEffect(() => {
       if (status === 'ready' && flow) void flow.fitView()
     }, [flow, status])
@@ -195,7 +197,7 @@ describe('WorkspaceMapCanvas', () => {
     )
     expect(editorNodes).toHaveLength(1)
     expect(editorNodes?.[0].focusable).toBe(false)
-    expect(editorNodes?.[0].draggable).toBe(false)
+    expect(editorNodes?.[0].draggable).toBe(true)
     expect(flowPropsRef.current?.nodes[1]?.draggable).toBe(true)
     expect(layoutArgsRef.current?.graph.layoutKey).toBe('map:internal')
     expect(layoutArgsRef.current?.activePath).toBe('notes/a.md')
@@ -213,6 +215,10 @@ describe('WorkspaceMapCanvas', () => {
     const node = document.querySelector<HTMLElement>('[data-id="file:notes/a.md"]')
 
     expect(node).not.toBeNull()
+    expect(layoutArgsRef.current).toMatchObject({
+      activePath: null,
+      focusPath: 'notes/a.md',
+    })
     fireEvent.click(node!)
     expect(onActivateEditor).toHaveBeenCalledWith('notes/a.md')
 

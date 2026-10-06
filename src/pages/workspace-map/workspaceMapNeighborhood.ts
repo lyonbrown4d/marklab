@@ -10,6 +10,7 @@ const EDGE_PRESENTATION_CLASSES = new Set([
   'workspace-map-flow-edge--connected',
   'workspace-map-flow-edge--muted',
 ])
+const MAX_EMPHASIZED_EDGES = 12
 
 export type WorkspaceMapNeighborhood = {
   edgeIds: Set<string>
@@ -27,7 +28,7 @@ export const createWorkspaceMapNeighborhood = (
 
   for (const edge of edges) {
     if (edge.source !== engagedNodeId && edge.target !== engagedNodeId) continue
-    edgeIds.add(edge.id)
+    if (edgeIds.size < MAX_EMPHASIZED_EDGES) edgeIds.add(edge.id)
     nodeIds.add(edge.source)
     nodeIds.add(edge.target)
   }

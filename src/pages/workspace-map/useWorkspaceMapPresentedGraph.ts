@@ -7,11 +7,13 @@ import {
   createWorkspaceMapViewGraph,
   shouldCompactWorkspaceMap,
 } from '@/pages/workspace-map/workspaceMapViewModel'
+import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 
 type Options = {
   activePath: string | null
   editorLoadState: WorkspaceMapEditorLoadState
   graph: GraphData
+  mode: WorkspaceMapMode
   onChange: (value: string) => void
   onCloseEditor: () => void
   onOpenFile: (path: string) => void
@@ -24,6 +26,7 @@ export const useWorkspaceMapPresentedGraph = ({
   activePath,
   editorLoadState,
   graph,
+  mode,
   onChange,
   onCloseEditor,
   onOpenFile,
@@ -38,14 +41,15 @@ export const useWorkspaceMapPresentedGraph = ({
   const compact = useMemo(() => shouldCompactWorkspaceMap(viewGraph.nodes), [viewGraph.nodes])
   const baseNodes = useMemo(
     () =>
-      viewGraph.nodes.map((node) =>
-        applyWorkspaceMapCompactGeometry(
-          presentWorkspaceMapNode(node, activePath),
+      viewGraph.nodes.map((node) => {
+        const presented = presentWorkspaceMapNode(node, activePath)
+        return applyWorkspaceMapCompactGeometry(
+          { ...presented, data: { ...presented.data, workspaceMapMode: mode } },
           compact,
           activePath,
-        ),
-      ),
-    [activePath, compact, viewGraph.nodes],
+        )
+      }),
+    [activePath, compact, mode, viewGraph.nodes],
   )
   const presentedGraph = useMemo<GraphData>(() => {
     const activeIndex = baseNodes.findIndex(
@@ -71,7 +75,11 @@ export const useWorkspaceMapPresentedGraph = ({
         },
       }
     }
-    return { edges: viewGraph.edges, layoutKey: viewGraph.layoutKey ?? 'workspace-map', nodes }
+    const edges = viewGraph.edges.map((edge) => ({
+      ...edge,
+      type: mode === 'overview' ? 'default' : 'smoothstep',
+    }))
+    return { edges, layoutKey: viewGraph.layoutKey ?? 'workspace-map', nodes }
   }, [
     activePath,
     baseNodes,
@@ -81,6 +89,7 @@ export const useWorkspaceMapPresentedGraph = ({
     onOpenFile,
     onRetryEditor,
     readOnly,
+    mode,
     viewGraph.edges,
     viewGraph.layoutKey,
   ])

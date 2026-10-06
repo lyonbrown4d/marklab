@@ -69,6 +69,16 @@ const expandedNode = (node: Node<GraphNodeData>): Node<GraphNodeData> => {
   }
 }
 
+const hasCompactGeometry = (node: Node<GraphNodeData>) =>
+  node.width === WORKSPACE_MAP_COMPACT_NODE_WIDTH &&
+  node.height === WORKSPACE_MAP_COMPACT_NODE_HEIGHT
+
+const presentNodeGeometry = (node: Node<GraphNodeData>, active: boolean, collapsed: boolean) => {
+  if (!collapsed) return node
+  if (!active) return compactNode(node)
+  return hasCompactGeometry(node) ? expandedNode(node) : node
+}
+
 const createDisclosureState = (
   graphIdentity: string,
   defaultCollapsed: boolean,
@@ -136,7 +146,7 @@ const createNodePresenter = () => {
         nextCache.set(node.id, cached)
         return cached.renderedNode
       }
-      const presentedNode = active && collapsed ? expandedNode(node) : node
+      const presentedNode = presentNodeGeometry(node, active, collapsed)
       const renderedNode =
         active && presentedNode.data.workspaceMapDisclosure === undefined
           ? presentedNode

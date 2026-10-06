@@ -6,6 +6,7 @@ import {
 } from '@electron/services/workspace/markdown/ast.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
 import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
+import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups.js'
 import type {
   FsGraph,
   FsGraphEdge,
@@ -72,6 +73,14 @@ export const buildNodeWorkspaceGraph = (
       })
     }
   }
+  const groups = deriveWorkspaceGraphGroups(
+    indexed.map(({ parsed, tree }) => ({ id: fileNodeId(parsed.path), path: parsed.path, tree })),
+    edges,
+  )
+  nodes.forEach((node) => {
+    const group = groups.get(node.id)
+    if (group) node.group = group
+  })
   return { edges, mode: 'mindmap', nodes }
 }
 

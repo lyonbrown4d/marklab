@@ -1,5 +1,6 @@
 import { unified } from 'unified'
 import remarkGfm from 'remark-gfm'
+import remarkFrontmatter from 'remark-frontmatter'
 import remarkParse from 'remark-parse'
 
 import { charLength, sliceChars } from '@electron/services/workspace/markdown/text.js'
@@ -42,7 +43,10 @@ export type MarkdownParent = MarkdownNode & {
   children: MarkdownNode[]
 }
 
-const markdownProcessor = unified().use(remarkParse).use(remarkGfm)
+const markdownProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkFrontmatter, ['yaml', 'toml'])
 
 export const parseMarkdownAst = (content: string): MarkdownRoot => {
   return markdownProcessor.parse(content) as MarkdownRoot

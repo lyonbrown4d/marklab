@@ -26,12 +26,12 @@ const fileNode = (active: boolean): Node<GraphNodeData> => ({
 })
 
 describe('workspace map graph layout metrics', () => {
-  it('uses one stable page size and layout signature before and during editing', () => {
+  it('uses one stable editing surface size and layout signature', () => {
     const inactive = fileNode(false)
     const active = fileNode(true)
 
-    expect(getGraphNodeLayoutSize(inactive)).toEqual({ width: 520, height: 640 })
-    expect(getGraphNodeLayoutSize(active)).toEqual({ width: 520, height: 640 })
+    expect(getGraphNodeLayoutSize(inactive)).toEqual({ width: 420, height: 480 })
+    expect(getGraphNodeLayoutSize(active)).toEqual({ width: 420, height: 480 })
     expect(createGraphNodeLayoutSignature(active)).toBe(createGraphNodeLayoutSignature(inactive))
   })
 
@@ -71,6 +71,35 @@ describe('workspace map graph layout metrics', () => {
       },
     }
 
-    expect(getGraphNodeLayoutSize(collapsed)).toEqual({ width: 220, height: 72 })
+    expect(getGraphNodeLayoutSize(collapsed)).toEqual({ width: 248, height: 112 })
+  })
+
+  it('invalidates the layout signature when the semantic group changes', () => {
+    const operations = {
+      ...fileNode(false),
+      data: {
+        ...fileNode(false).data,
+        workspaceGroup: {
+          key: 'frontmatter:operations:one',
+          label: 'Operations',
+          source: 'frontmatter',
+        },
+      },
+    } satisfies Node<GraphNodeData>
+    const platform = {
+      ...operations,
+      data: {
+        ...operations.data,
+        workspaceGroup: {
+          key: 'frontmatter:platform:two',
+          label: 'Platform',
+          source: 'frontmatter',
+        },
+      },
+    } satisfies Node<GraphNodeData>
+
+    expect(createGraphNodeLayoutSignature(operations)).not.toBe(
+      createGraphNodeLayoutSignature(platform),
+    )
   })
 })

@@ -104,16 +104,24 @@ export const createElectronSettingsJsonStorage = <S>(
   const electronPersist = isElectronRuntime() ? getElectronRuntime().settings?.persist : undefined
   if (!electronPersist) return createIdleJsonStorage<S>(name)
   const serializedValues = new Map<string, string>()
+  const mutationEpochs = new Map<string, number>()
+  const bumpMutationEpoch = (key: string) => {
+    mutationEpochs.set(key, (mutationEpochs.get(key) ?? 0) + 1)
+  }
   return {
     getItem: async (key) => {
+      const mutationEpoch = mutationEpochs.get(key) ?? 0
       const value = await electronPersist.getItem(key)
-      if (value !== null) serializedValues.set(key, JSON.stringify(value))
+      if (value !== null && (mutationEpochs.get(key) ?? 0) === mutationEpoch) {
+        serializedValues.set(key, JSON.stringify(value))
+      }
       return value as StorageValue<S> | null
     },
     setItem: async (key, value) => {
       const cloned = cloneJsonValue(value)
       const serialized = JSON.stringify(cloned)
       if (serializedValues.get(key) === serialized) return
+      bumpMutationEpoch(key)
       serializedValues.set(key, serialized)
       const result = await electronPersist.setItem(key, cloned)
       if (result.ok) return
@@ -121,6 +129,7 @@ export const createElectronSettingsJsonStorage = <S>(
       throw new Error(result.error ?? 'Unable to persist settings.')
     },
     removeItem: async (key) => {
+      bumpMutationEpoch(key)
       serializedValues.delete(key)
       const result = await electronPersist.removeItem(key)
       if (!result.ok) throw new Error(result.error ?? 'Unable to remove persisted settings.')

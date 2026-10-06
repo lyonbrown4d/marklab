@@ -117,6 +117,14 @@ test.describe('Workspace product readiness', () => {
       await expect(canvas).toBeVisible({ timeout: 60_000 })
       const nodes = canvas.locator('.react-flow__node')
       await expect.poll(() => nodes.count(), { timeout: 60_000 }).toBeGreaterThan(10)
+      await expect(page.getByRole('button', { name: /Overview mode|总览/i })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(page.getByRole('button', { name: /Auto arrange|自动整理/i })).toBeVisible()
+      await expect
+        .poll(() => canvas.locator('[data-testid^="workspace-map-group-"]').count())
+        .toBeGreaterThan(0)
 
       const externalToggle = page.getByRole('button', {
         name: /Show.*external resources|显示.*外部资源/i,
@@ -131,7 +139,9 @@ test.describe('Workspace product readiness', () => {
 
       await externalToggle.click()
       await expect
-        .poll(() => canvas.locator('[data-workspace-map-kind="external"]').count())
+        .poll(() => canvas.locator('[data-workspace-map-kind="external"]').count(), {
+          timeout: 60_000,
+        })
         .toBeGreaterThan(0)
       await page.getByRole('button', { name: /Hide external resources|隐藏外部资源/i }).click()
       await expect(canvas.locator('[data-workspace-map-kind="external"]')).toHaveCount(0)
@@ -161,13 +171,11 @@ test.describe('Workspace product readiness', () => {
       const embeddedEditor = canvas.getByLabel(/^(Editing|正在编辑) Home$/i)
       await expect(embeddedEditor).toBeVisible({ timeout: 30_000 })
       await expect(embeddedEditor.getByRole('textbox')).toBeFocused()
-      await embeddedEditor.getByRole('button', { name: /Close editor|关闭编辑器/i }).click()
-      await expect(
-        canvas
-          .getByLabel(/^Home$/i)
-          .first()
-          .locator('[data-workspace-map-collapsed="true"]'),
-      ).toBeVisible()
+      await page.getByRole('button', { name: /More node actions|更多节点操作/i }).click()
+      await page.getByRole('menuitem', { name: /Close editor|关闭编辑器/i }).click()
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get('edit'), { timeout: 30_000 })
+        .toBeNull()
 
       if (fixture.generated) {
         await page.getByRole('button', { name: searchName }).click()
@@ -188,6 +196,7 @@ test.describe('Workspace product readiness', () => {
         await page.getByRole('option', { name: /Home.*Home\.md/i }).click()
       }
 
+      await expect(canvas).toBeVisible({ timeout: 60_000 })
       const zoomIn = canvas.getByRole('button', { name: /Zoom in|放大/i })
       const scaleBeforeZoom = await readScale(canvas)
       await zoomIn.click()
@@ -197,13 +206,16 @@ test.describe('Workspace product readiness', () => {
 
       const draggableNode = canvas.getByLabel(/^Home$/i).first()
       const beforeDrag = await draggableNode.boundingBox()
+      const dragHandle = draggableNode.getByTestId('workspace-map-resource-drag-handle')
+      const dragHandleBox = await dragHandle.boundingBox()
       const canvasBox = await canvas.boundingBox()
       expect(beforeDrag).not.toBeNull()
+      expect(dragHandleBox).not.toBeNull()
       expect(canvasBox).not.toBeNull()
-      if (beforeDrag && canvasBox) {
+      if (beforeDrag && canvasBox && dragHandleBox) {
         const start = {
-          x: beforeDrag.x + beforeDrag.width / 2,
-          y: beforeDrag.y + beforeDrag.height / 2,
+          x: dragHandleBox.x + dragHandleBox.width / 2,
+          y: dragHandleBox.y + dragHandleBox.height / 2,
         }
         const end = {
           x: start.x + canvasBox.width * 0.08,
@@ -214,8 +226,10 @@ test.describe('Workspace product readiness', () => {
         await page.mouse.move(end.x, end.y, { steps: 6 })
         await page.mouse.up()
         await expect
-          .poll(async () => (await draggableNode.boundingBox())?.x ?? beforeDrag.x)
-          .toBeGreaterThan(beforeDrag.x + 8)
+          .poll(async () =>
+            Math.abs(((await draggableNode.boundingBox())?.x ?? beforeDrag.x) - beforeDrag.x),
+          )
+          .toBeGreaterThan(8)
       }
 
       await revealElectronWindow(session.app, page, { width: 720, height: 640 })

@@ -118,7 +118,9 @@ test.describe('Workspace map', () => {
     await expect(editor).toHaveAttribute('contenteditable', 'true')
     await expect(editor).toBeFocused()
     expectStableBox(canvasBeforeActivation, await readBox(canvas))
-    expectStableBox(editorBeforeActivation, await readBox(editorSurface))
+    const editorAfterActivation = await readBox(editorSurface)
+    expect(editorAfterActivation.width).toBeGreaterThan(editorBeforeActivation.width)
+    expect(editorAfterActivation.height).toBeGreaterThan(editorBeforeActivation.height)
 
     const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
     await expect(statusBar.getByText(/\d+\s+(lines|行)$/i)).toHaveCount(1)

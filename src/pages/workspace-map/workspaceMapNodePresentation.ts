@@ -33,7 +33,7 @@ export const presentWorkspaceMapNode = (
         : resourceNode
           ? `.${WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS}`
           : undefined,
-    draggable: !editorActive,
+    draggable: !node.data.workspaceMapPinned,
     focusable: !resourcePreview && Boolean(openPath) && !editorActive,
     zIndex: editorActive ? 10 : node.zIndex,
   }
@@ -42,11 +42,16 @@ export const presentWorkspaceMapNode = (
 export const mergeWorkspaceMapNodeGeometry = (
   incoming: Node<GraphNodeData>,
   current: Node<GraphNodeData>,
-): Node<GraphNodeData> => ({
-  ...incoming,
-  height: current.height ?? incoming.height,
-  measured: current.measured,
-  position: current.position,
-  style: current.style ? { ...incoming.style, ...current.style } : incoming.style,
-  width: current.width ?? incoming.width,
-})
+): Node<GraphNodeData> => {
+  const pinned = Boolean(current.data.workspaceMapPinned)
+  return {
+    ...incoming,
+    data: pinned ? { ...incoming.data, workspaceMapPinned: true } : incoming.data,
+    draggable: pinned ? false : incoming.draggable,
+    height: current.height ?? incoming.height,
+    measured: current.measured,
+    position: current.position,
+    style: current.style ? { ...incoming.style, ...current.style } : incoming.style,
+    width: current.width ?? incoming.width,
+  }
+}

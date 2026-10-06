@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Node } from '@xyflow/react'
-import { Globe2, Search } from 'lucide-react'
+import { Globe2, LayoutTemplate, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -12,19 +12,26 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useI18n } from '@/i18n/useI18n'
 import type { GraphNodeData } from '@/logic/graph'
+import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 
 type WorkspaceMapToolbarProps = {
   externalCount: number
+  mode: WorkspaceMapMode
   nodes: Node<GraphNodeData>[]
+  onArrange: () => void
   onFocusNode: (node: Node<GraphNodeData>) => void
+  onModeChange: (mode: WorkspaceMapMode) => void
   onToggleExternalResources: () => void
   showExternalResources: boolean
 }
 
 export const WorkspaceMapToolbar = ({
   externalCount,
+  mode,
   nodes,
+  onArrange,
   onFocusNode,
+  onModeChange,
   onToggleExternalResources,
   showExternalResources,
 }: WorkspaceMapToolbarProps) => {
@@ -78,6 +85,37 @@ export const WorkspaceMapToolbar = ({
           </Command>
         </PopoverContent>
       </Popover>
+      <div
+        aria-label={t('workspaceMap.viewMode')}
+        className="flex h-8 items-center rounded-md border border-input bg-card/95 p-0.5 shadow-sm backdrop-blur"
+        role="group"
+      >
+        {(['focus', 'overview'] as const).map((item) => (
+          <Button
+            key={item}
+            type="button"
+            aria-label={t(`workspaceMap.${item}Mode`)}
+            aria-pressed={mode === item}
+            className="h-6 px-2 text-[11px]"
+            onClick={() => onModeChange(item)}
+            size="sm"
+            variant={mode === item ? 'secondary' : 'ghost'}
+          >
+            {t(`workspaceMap.${item}Mode`)}
+          </Button>
+        ))}
+      </div>
+      <Button
+        type="button"
+        aria-label={t('workspaceMap.autoArrange')}
+        className="h-8 gap-2 bg-card/95 px-2.5 shadow-sm backdrop-blur"
+        onClick={onArrange}
+        size="sm"
+        variant="outline"
+      >
+        <LayoutTemplate aria-hidden="true" className="size-3.5" />
+        <span className="hidden md:inline">{t('workspaceMap.autoArrange')}</span>
+      </Button>
       {externalCount > 0 ? (
         <Button
           type="button"

@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { ExternalLink, FileText, GripVertical, X } from 'lucide-react'
+import { FileText, GripVertical } from 'lucide-react'
 import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import { Button } from '@/components/ui/button'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
@@ -19,6 +19,8 @@ import { isImeKeyboardEvent } from '@/logic/ime'
 import { WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
 import { WorkspaceMapNodeDisclosure } from '@/pages/workspace-map/WorkspaceMapNodeDisclosure'
+import { WorkspaceMapNodeToolbar } from '@/pages/workspace-map/WorkspaceMapNodeToolbar'
+import { useWorkspaceMapNodeTools } from '@/pages/workspace-map/useWorkspaceMapNodeTools'
 
 type WorkspaceMapFileGraphNode = Node<GraphNodeData, 'file'>
 
@@ -28,13 +30,24 @@ const stopGraphEvent = (event: SyntheticEvent) => event.stopPropagation()
 
 export const WorkspaceMapFileNode = memo(
   ({ data, id, selected }: NodeProps<WorkspaceMapFileGraphNode>) => {
+    const tools = useWorkspaceMapNodeTools(id, Boolean(data.workspaceMapPinned))
     return (
-      <WorkspaceMapEmbeddedEditor
-        data={data}
-        editor={data.workspaceMapEditor}
-        nodeId={id}
-        selected={selected}
-      />
+      <>
+        <WorkspaceMapNodeToolbar
+          onClose={data.workspaceMapEditor?.onClose}
+          onFocusRelations={tools.focusRelations}
+          onOpenFull={data.workspaceMapEditor?.onOpenFull}
+          onTogglePin={tools.togglePinned}
+          pinned={tools.pinned}
+          visible={selected || Boolean(data.workspaceMapEditor)}
+        />
+        <WorkspaceMapEmbeddedEditor
+          data={data}
+          editor={data.workspaceMapEditor}
+          nodeId={id}
+          selected={selected}
+        />
+      </>
     )
   },
 )
@@ -61,7 +74,7 @@ const WorkspaceMapEmbeddedEditor = ({
       <section
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
-          'workspace-map-editor flex h-[72px] w-[220px] cursor-grab items-center gap-2 overflow-visible rounded-lg px-3 active:cursor-grabbing',
+          'workspace-map-editor flex h-[112px] w-[248px] cursor-grab flex-col overflow-visible rounded-lg px-3 py-2.5 active:cursor-grabbing',
           selected && 'workspace-map-editor--selected',
         )}
         aria-label={data.label}
@@ -71,14 +84,21 @@ const WorkspaceMapEmbeddedEditor = ({
       >
         <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
         <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
-        <FileText aria-hidden="true" className="size-4 shrink-0 text-primary" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-foreground">{data.label}</div>
-          <div className="truncate text-[11px] text-muted-foreground" title={data.path}>
-            {data.subtitle ?? data.path}
+        <div className="flex w-full items-center gap-2">
+          <FileText aria-hidden="true" className="size-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-foreground">{data.label}</div>
+            <div className="truncate text-[11px] text-muted-foreground" title={data.path}>
+              {data.subtitle ?? data.path}
+            </div>
           </div>
+          <WorkspaceMapNodeDisclosure collapsed nodeId={nodeId} onToggle={disclosure.toggle} />
         </div>
-        <WorkspaceMapNodeDisclosure collapsed nodeId={nodeId} onToggle={disclosure.toggle} />
+        {data.content ? (
+          <p className="line-clamp-2 w-full text-xs leading-5 text-muted-foreground">
+            {data.content}
+          </p>
+        ) : null}
       </section>
     )
   }
@@ -99,21 +119,13 @@ const WorkspaceMapEmbeddedEditor = ({
     <section
       className={cn(
         'workspace-map-editor flex flex-col overflow-visible rounded-lg',
-        editor && 'nodrag nopan',
         selected && 'workspace-map-editor--selected',
       )}
       aria-label={editor ? `${t('workspaceMap.editing')} ${data.label}` : data.label}
       data-editor-active={editor ? 'true' : 'false'}
       data-testid="workspace-map-editor-surface"
-      onClick={editor ? stopGraphEvent : undefined}
-      onDoubleClick={stopGraphEvent}
-      onKeyDown={handleKeyDown}
-      onKeyUp={editor ? stopGraphEvent : undefined}
-      onMouseDown={editor ? stopGraphEvent : undefined}
-      onPointerDown={editor ? stopGraphEvent : undefined}
-      onWheel={handleWheel}
     >
-      <WorkspaceMapNodeResizeControl minHeight={240} minWidth={320} />
+      {editor ? <WorkspaceMapNodeResizeControl minHeight={240} minWidth={320} /> : null}
       <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
       <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
       <header
@@ -131,30 +143,7 @@ const WorkspaceMapEmbeddedEditor = ({
             {data.subtitle ?? data.path}
           </div>
         </div>
-        {editor ? (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t('workspaceMap.openFullDocument')}
-              title={t('workspaceMap.openFullDocument')}
-              onClick={editor.onOpenFull}
-            >
-              <ExternalLink aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t('workspaceMap.closeEditor')}
-              title={t('workspaceMap.closeEditor')}
-              onClick={editor.onClose}
-            >
-              <X aria-hidden="true" />
-            </Button>
-          </>
-        ) : disclosure ? (
+        {!editor && disclosure ? (
           <WorkspaceMapNodeDisclosure
             collapsed={false}
             nodeId={nodeId}
@@ -163,8 +152,18 @@ const WorkspaceMapEmbeddedEditor = ({
         ) : null}
       </header>
       <div
-        className="relative min-h-0 flex-1 overflow-hidden rounded-b-[inherit] bg-background"
+        className={cn(
+          'relative min-h-0 flex-1 overflow-hidden rounded-b-[inherit] bg-background',
+          editor && 'nodrag nopan',
+        )}
         data-testid="workspace-map-editor-content"
+        onClick={editor ? stopGraphEvent : undefined}
+        onDoubleClick={stopGraphEvent}
+        onKeyDown={handleKeyDown}
+        onKeyUp={editor ? stopGraphEvent : undefined}
+        onMouseDown={editor ? stopGraphEvent : undefined}
+        onPointerDown={editor ? stopGraphEvent : undefined}
+        onWheel={handleWheel}
       >
         {editor?.loadState.status === 'ready' ? (
           <Suspense fallback={<EditorPaneFallback label={t('workspaceMap.loadingDocument')} />}>

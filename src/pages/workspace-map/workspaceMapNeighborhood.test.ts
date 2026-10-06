@@ -63,6 +63,18 @@ describe('workspace map neighborhood presentation', () => {
     expect(presentWorkspaceMapNeighborhoodEdges(edges, neighborhood)).toBe(edges)
   })
 
+  it('limits emphasized edges for high-degree hub documents', () => {
+    const hubEdges = Array.from({ length: 20 }, (_, index) => ({
+      id: `hub-${index}`,
+      source: 'hub',
+      target: `leaf-${index}`,
+    }))
+    const neighborhood = createWorkspaceMapNeighborhood(hubEdges, 'hub')
+
+    expect(neighborhood.nodeIds.size).toBe(21)
+    expect(neighborhood.edgeIds.size).toBe(12)
+  })
+
   it('removes only neighborhood classes when engagement clears', () => {
     const engaged = createWorkspaceMapNeighborhood(edges, 'a')
     const presentedNodes = presentWorkspaceMapNeighborhoodNodes(nodes, engaged)

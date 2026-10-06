@@ -101,7 +101,7 @@ describe('WorkspaceMapFileNode', () => {
       { onClick: parentClick, onPointerDown: parentPointerDown },
     )
 
-    expect(screen.queryByText('Heavy document content')).not.toBeInTheDocument()
+    expect(screen.getByText('Heavy document content')).toBeInTheDocument()
     expect(screen.queryByTestId('workspace-map-editor-content')).not.toBeInTheDocument()
     expect(document.querySelector('.react-flow__resize-control')).toBeNull()
 
@@ -124,7 +124,7 @@ describe('WorkspaceMapFileNode', () => {
     expect(surface).not.toHaveClass('nodrag')
     expect(surface).toHaveClass('overflow-visible')
     expect(screen.getByTestId('workspace-map-resource-drag-handle')).toHaveTextContent('a')
-    expect(surface.querySelector('.react-flow__resize-control')).not.toBeNull()
+    expect(surface.querySelector('.react-flow__resize-control')).toBeNull()
     expect(screen.getByTestId('workspace-map-editor-content')).toHaveClass('overflow-hidden')
     expect(screen.getByText(/Project goals and the next concrete milestone/)).toBeInTheDocument()
     expect(document.querySelector('script')).not.toBeInTheDocument()
@@ -150,7 +150,9 @@ describe('WorkspaceMapFileNode', () => {
     const plateEditor = await screen.findByTestId('plate-editor')
     expect(plateEditor).not.toHaveAttribute('readonly')
     expect(surface).toHaveAttribute('data-editor-active', 'true')
-    expect(surface).toHaveClass('nodrag', 'nopan')
+    expect(surface).not.toHaveClass('nodrag', 'nopan')
+    expect(screen.getByTestId('workspace-map-editor-content')).toHaveClass('nodrag', 'nopan')
+    expect(surface.querySelector('.react-flow__resize-control')).not.toBeNull()
     await waitFor(() => expect(plateEditor).toHaveFocus())
   })
 
@@ -211,21 +213,22 @@ describe('WorkspaceMapFileNode', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('closes or opens the full document only through explicit header buttons', () => {
+  it('uses the filename strip only for dragging while the document body stays directly editable', () => {
     renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor })
 
-    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.closeEditor' }))
-    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.openFullDocument' }))
-
-    expect(editor.onClose).toHaveBeenCalledOnce()
-    expect(editor.onOpenFull).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('workspace-map-resource-drag-handle')).toHaveTextContent('a')
+    expect(screen.queryByRole('button', { name: 'workspaceMap.closeEditor' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'workspaceMap.openFullDocument' })).toBeNull()
+    expect(screen.getByTestId('workspace-map-editor-content')).toContainElement(
+      screen.getByTestId('plate-editor'),
+    )
   })
 
   it('closes the active editor with Escape without bubbling to the graph', () => {
     const onKeyDown = vi.fn()
     renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor }, { onKeyDown })
 
-    fireEvent.keyDown(screen.getByTestId('workspace-map-editor-surface'), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByTestId('workspace-map-editor-content'), { key: 'Escape' })
 
     expect(editor.onClose).toHaveBeenCalledOnce()
     expect(onKeyDown).not.toHaveBeenCalled()
@@ -249,20 +252,19 @@ describe('WorkspaceMapFileNode', () => {
       onWheel: vi.fn(),
     }
     renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor }, parentHandlers)
-    const surface = screen.getByTestId('workspace-map-editor-surface')
-
-    fireEvent.click(surface)
-    fireEvent.doubleClick(surface)
-    fireEvent.keyDown(surface, { key: 'b' })
-    fireEvent.wheel(surface, { deltaY: 40 })
+    const content = screen.getByTestId('workspace-map-editor-content')
+    fireEvent.click(content)
+    fireEvent.doubleClick(content)
+    fireEvent.keyDown(content, { key: 'b' })
+    fireEvent.wheel(content, { deltaY: 40 })
 
     expect(parentHandlers.onClick).not.toHaveBeenCalled()
     expect(parentHandlers.onDoubleClick).not.toHaveBeenCalled()
     expect(parentHandlers.onKeyDown).not.toHaveBeenCalled()
     expect(parentHandlers.onWheel).not.toHaveBeenCalled()
 
-    fireEvent.wheel(surface, { ctrlKey: true, deltaY: -40 })
-    fireEvent.wheel(surface, { deltaY: -40, metaKey: true })
+    fireEvent.wheel(content, { ctrlKey: true, deltaY: -40 })
+    fireEvent.wheel(content, { deltaY: -40, metaKey: true })
     expect(parentHandlers.onWheel).toHaveBeenCalledTimes(2)
   })
 

@@ -1,6 +1,8 @@
 export type GraphLayoutNodeInput = {
+  children?: GraphLayoutNodeInput[]
   height: number
   id: string
+  layoutOptions?: Record<string, string>
   width: number
 }
 
@@ -24,5 +26,11 @@ export type GraphLayoutPosition = {
 }
 
 export type GraphLayoutEngineResult = Omit<GraphLayoutWorkerGraph, 'children'> & {
-  children?: Array<GraphLayoutNodeInput & { x?: number; y?: number }>
+  children?: GraphLayoutNodeResult[]
+}
+
+export type GraphLayoutNodeResult = Omit<GraphLayoutNodeInput, 'children'> & {
+  children?: GraphLayoutNodeResult[]
+  x?: number
+  y?: number
 }

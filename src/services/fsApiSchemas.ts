@@ -198,6 +198,14 @@ export const fsGraphNodeSchema = z.object({
   content_blocks: z.array(fsMarkdownBlockSchema).nullable().optional(),
   content_start_line: z.number().nullable().optional(),
   content_end_line: z.number().nullable().optional(),
+  group: z
+    .object({
+      key: z.string(),
+      label: z.string(),
+      source: z.enum(['frontmatter', 'path', 'semantic', 'workspace']),
+    })
+    .nullable()
+    .optional(),
 })
 
 export const fsGraphEdgeSchema = z.object({

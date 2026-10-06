@@ -1,0 +1,62 @@
+.workspace-map-groups {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.workspace-map-group-region {
+  --workspace-group-color: 211 92% 58%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px solid hsl(var(--workspace-group-color) / 8%);
+  border-radius: 40px;
+  background: hsl(var(--workspace-group-color) / 5.5%);
+}
+
+.workspace-map-group-region[data-color='1'] {
+  --workspace-group-color: 154 54% 42%;
+}
+
+.workspace-map-group-region[data-color='2'] {
+  --workspace-group-color: 354 74% 58%;
+}
+
+.workspace-map-group-region[data-color='3'] {
+  --workspace-group-color: 268 64% 62%;
+}
+
+.workspace-map-group-region[data-color='4'] {
+  --workspace-group-color: 34 86% 54%;
+}
+
+.workspace-map-group-region[data-color='5'] {
+  --workspace-group-color: 184 62% 43%;
+}
+
+.workspace-map-group-region__label {
+  position: absolute;
+  top: 22px;
+  left: 30px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: hsl(var(--workspace-group-color) / 82%);
+}
+
+.workspace-map-group-region__label strong {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.workspace-map-group-region__label span {
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .workspace-map-group-region {
+  border-color: hsl(var(--workspace-group-color) / 14%);
+  background: hsl(var(--workspace-group-color) / 8%);
+}

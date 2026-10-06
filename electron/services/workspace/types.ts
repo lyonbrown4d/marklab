@@ -141,6 +141,13 @@ export type FsGraphNode = {
   content_blocks?: FsMarkdownBlock[] | null
   content_start_line?: number | null
   content_end_line?: number | null
+  group?: FsGraphGroup | null
+}
+
+export type FsGraphGroup = {
+  key: string
+  label: string
+  source: 'frontmatter' | 'path' | 'semantic' | 'workspace'
 }
 
 export type FsGraphEdge = {

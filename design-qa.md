@@ -1,40 +1,41 @@
-# AI interaction design QA
+# Workspace Map Design QA
 
-## Comparison target
+## Evidence
 
-- Source visual truth: `C:\Users\12783\.codex\generated_images\01a0ec98-36a6-7d52-8af7-b9ea0d998f93\exec-a8aa4df6-7904-4309-817b-0a7ae9043eb6.png`
-- Implementation screenshot: `.tmp/design-qa/ai-inline-companion.png`
-- Settings screenshot: `.tmp/design-qa/ai-settings.png`
-- Combined comparison: `.tmp/design-qa/ai-inline-comparison.png`
-- Viewport: `1440 × 1024` desktop viewport at 1× density.
-- State: light system theme, Markdown text selected, contextual AI proposal visible with word-level additions and removals.
+- Design source: `C:\Users\12783\.codex\generated_images\01a0ec98-36a6-7d52-8af7-b9ea0d998f93\exec-ff257ddf-fe43-4eaf-8758-819a8e21d029.png`
+- Implementation screenshot: `F:\Projects\marklab\output\playwright\product-audit\real-workspace-map.png`
+- Design pixels: 1536 × 1024
+- Implementation pixels: 1440 × 960
+- CSS viewport: 1440 × 960
+- Application state: Windows Electron build, light theme, `D:\Projects\third-party-integration.wiki`, workspace map overview mode, Home document editing directly on the canvas, external resources hidden after toggle verification.
 
-## Full-view comparison evidence
+## Comparison
 
-- The selected interaction remains anchored to the active writing context instead of opening a permanent right sidebar.
-- The proposal keeps the original document visible, presents word-level differences in place, and exposes Accept, Abandon, and Try again as a compact decision row.
-- The implementation deliberately follows MarkLab's current monochrome token system instead of copying the concept image's blue accent color.
-- The implementation uses a short deterministic E2E document, while the concept image uses a longer editorial sample; this changes surrounding whitespace but not the interaction geometry.
+### Full view
 
-## Focused interaction evidence
+- The implementation preserves the existing Marklab titlebar, bottom status bar, canvas controls, and compact toolbar rather than introducing a separate dashboard shell.
+- Overview/focus switching, automatic arrangement, search, and the external-resource count occupy the same compact top-left control area as the approved design.
+- AST-derived communities render as low-contrast colored canvas regions with stable labels and counts.
+- Compact Markdown cards use the approved title, path, and excerpt hierarchy. The active Markdown card expands into the native Plate editor without opening a side panel.
+- The real Wiki contains substantially more nodes and links than the illustrative design. ELK compound group packing prevents card overlap; high-degree links remain visible as low-emphasis context and only twelve incident links are emphasized at once.
 
-- A local loopback OpenAI-compatible test provider was configured through Settings without an API key.
-- The renderer invoked the typed preload API, Electron main called the provider, and the returned replacement travelled through the generation event channel into the proposal diff.
-- Accept applied the replacement in one editor transaction and closed the companion.
-- The Settings AI page exposes the built-in runtime state, cross-platform model directory, custom-directory switch, migration explanation, model metadata, explicit download action, and external provider configuration.
-- No model download starts automatically during settings or editor tests.
+### Focused regions
 
-## Findings
+- Active editor: filename strip remains the drag handle, the document body is directly editable, and four-edge/four-corner resize plus relationship/pin/more actions remain available without covering document content.
+- Group regions: padding, rounded corners, tint strength, labels, and counts remain legible behind cards in both light and dark theme tokens.
+- Navigation: minimap, zoom, fit-view, search-to-node, node dragging, and responsive 720 × 640 overflow checks passed in the Electron black-box test.
 
-- No actionable P0, P1, or P2 visual or interaction issues remain in the tested AI flow.
-- The previously mixed English Qwen model description in the Chinese settings page was localized before the final capture.
-- Direct Computer Use inspection was attempted, but the available integration returned no controllable application surfaces. Electron Playwright was used for rendered visual evidence and interaction verification instead.
+## Iteration history
 
-## Verification
+1. Initial stress-layout capture failed visual QA because large real-world communities overlapped and high-degree links formed a dark bundle.
+2. Replaced overview stress placement with ELK compound group packing and recursive worker-position flattening.
+3. Reduced overview edge prominence and capped emphasized hub edges while retaining all relationships in the graph.
+4. Re-ran the complete real-workspace flow; no node overlap, layout exception, horizontal overflow, or runtime error remained.
+5. Replaced the edge-less overview root layout with wide ELK box packing. Six-group geometry now produces at least three columns, a landscape bounding box, and no card overlap while focus mode retains relationship-oriented layered layout.
 
-- Electron Playwright: 4/4 tests passed, including provider configuration, proposal generation, diff actions, accepted editor mutation, secure preload, and modal first paint.
-- Vitest: 328 files and 1555 tests passed with four workers.
-- TypeScript typecheck, ESLint, renderer/main/preload Electron build, and `git diff --check` passed.
-- The built-in 429 MB model was not downloaded during QA; downloads remain explicit by design. Native runtime packaging and load rules were verified separately, while macOS/Linux native packaging still requires their respective platform CI runners.
+## Residual differences
+
+- Community names and sizes are data-derived (`frontmatter` → Markdown headings/tokens → internal-link communities → path fallback), so the real Wiki shows groups such as `Libs` rather than the illustrative `Documentation`, `Operations`, and `Libraries` labels.
+- The approved mockup shows a deliberately small graph. The implementation keeps the same interaction and visual hierarchy while fitting the larger production dataset at the configured readable minimum zoom.
 
 final result: passed

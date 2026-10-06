@@ -49,6 +49,13 @@ export type GraphNodeData = Record<string, unknown> & {
     toggle: (nodeId: string) => void
   }
   workspaceMap?: true
+  workspaceMapMode?: 'focus' | 'overview'
+  workspaceMapPinned?: boolean
+  workspaceGroup?: {
+    key: string
+    label: string
+    source: 'frontmatter' | 'path' | 'semantic' | 'workspace'
+  }
   webView?: {
     active: boolean
     activate: (nodeId: string) => void
@@ -229,6 +236,7 @@ export const buildGraphFromKnowledgeGraph = (
       contentStartLine: includeContent ? (node.content_start_line ?? undefined) : undefined,
       contentEndLine: includeContent ? (node.content_end_line ?? undefined) : undefined,
       contentMode,
+      workspaceGroup: node.group ?? undefined,
     },
     position: { x: 0, y: 0 },
   }))

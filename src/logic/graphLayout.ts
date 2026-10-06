@@ -2,7 +2,11 @@ import type { Edge, Node } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
 import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 import { graphLayoutWorkerClient } from '@/logic/graphLayoutWorkerClient'
-import type { GraphLayoutPosition, GraphLayoutWorkerGraph } from '@/logic/graphLayoutWorkerMessages'
+import type {
+  GraphLayoutNodeInput,
+  GraphLayoutPosition,
+  GraphLayoutWorkerGraph,
+} from '@/logic/graphLayoutWorkerMessages'
 
 type GraphLayoutOptions = {
   layoutKey?: string
@@ -30,35 +34,88 @@ const cacheLayout = (layoutKey: string, positions: GraphLayoutPosition[]) => {
   }
 }
 
+const layeredLayoutOptions = {
+  'elk.algorithm': 'layered',
+  'elk.direction': 'RIGHT',
+  'elk.edgeRouting': 'ORTHOGONAL',
+  'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+  'elk.layered.mergeEdges': 'true',
+  'elk.layered.nodePlacement.favorStraightEdges': 'true',
+  'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '36',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '168',
+  'elk.spacing.edgeEdge': '18',
+  'elk.spacing.edgeNode': '28',
+  'elk.spacing.nodeNode': '52',
+}
+
+const overviewLayoutOptions = {
+  'elk.algorithm': 'box',
+  'elk.aspectRatio': '3',
+  'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+  'elk.padding': '[top=24,left=24,bottom=24,right=24]',
+  'elk.spacing.nodeNode': '120',
+}
+
+const overviewGroupLayoutOptions = {
+  'elk.algorithm': 'box',
+  'elk.aspectRatio': '1.6',
+  'elk.padding': '[top=72,left=56,bottom=48,right=56]',
+  'elk.spacing.nodeNode': '56',
+}
+
+const groupOverviewNodes = (nodes: Node<GraphNodeData>[]) => {
+  const groups = new Map<string, Node<GraphNodeData>[]>()
+  nodes.forEach((node) => {
+    const key = node.data.workspaceGroup?.key ?? ''
+    const members = groups.get(key)
+    if (members) {
+      members.push(node)
+    } else {
+      groups.set(key, [node])
+    }
+  })
+  return groups
+}
+
 const createWorkerGraph = (nodes: Node<GraphNodeData>[], edges: Edge[]): GraphLayoutWorkerGraph => {
+  const overview = nodes.some((node) => node.data.workspaceMapMode === 'overview')
   const knownNodeIds = new Set(nodes.map((node) => node.id))
   const endpointPairs = new Set<string>()
+  const groupedNodes = groupOverviewNodes(nodes)
+  const children: GraphLayoutNodeInput[] = overview
+    ? [...groupedNodes.entries()].flatMap<GraphLayoutNodeInput>(([key, members]) =>
+        key
+          ? [
+              {
+                children: members.map((node) => ({
+                  id: node.id,
+                  ...getGraphNodeLayoutSize(node),
+                })),
+                height: 1,
+                id: `workspace-group:${key}`,
+                layoutOptions: overviewGroupLayoutOptions,
+                width: 1,
+              },
+            ]
+          : members.map((node) => ({ id: node.id, ...getGraphNodeLayoutSize(node) })),
+      )
+    : nodes.map((node) => ({ id: node.id, ...getGraphNodeLayoutSize(node) }))
   return {
     id: 'root',
-    layoutOptions: {
-      'elk.algorithm': 'layered',
-      'elk.direction': 'RIGHT',
-      'elk.edgeRouting': 'ORTHOGONAL',
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.mergeEdges': 'true',
-      'elk.layered.nodePlacement.favorStraightEdges': 'true',
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.spacing.edgeNodeBetweenLayers': '36',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '168',
-      'elk.spacing.edgeEdge': '18',
-      'elk.spacing.edgeNode': '28',
-      'elk.spacing.nodeNode': '52',
-    },
-    children: nodes.map((node) => ({ id: node.id, ...getGraphNodeLayoutSize(node) })),
-    edges: edges
-      .filter((edge) => {
-        if (!knownNodeIds.has(edge.source) || !knownNodeIds.has(edge.target)) return false
-        const pair = `${edge.source.length}:${edge.source}${edge.target}`
-        if (endpointPairs.has(pair)) return false
-        endpointPairs.add(pair)
-        return true
-      })
-      .map((edge) => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
+    layoutOptions: overview ? overviewLayoutOptions : layeredLayoutOptions,
+    children,
+    edges: overview
+      ? []
+      : edges
+          .filter((edge) => {
+            if (!knownNodeIds.has(edge.source) || !knownNodeIds.has(edge.target)) return false
+            const pair = `${edge.source.length}:${edge.source}${edge.target}`
+            if (endpointPairs.has(pair)) return false
+            endpointPairs.add(pair)
+            return true
+          })
+          .map((edge) => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
   }
 }
 

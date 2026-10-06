@@ -33,6 +33,7 @@ describe('workspace map node presentation', () => {
     expect(webpage.width).toBeUndefined()
     expect(webpage.height).toBeUndefined()
     expect(webpage.dragHandle).toBe('.workspace-map-web-drag-handle')
+    expect(webpage.draggable).toBe(true)
   })
 
   it('preserves user position and resized dimensions across graph refreshes', () => {
@@ -95,5 +96,22 @@ describe('workspace map node presentation', () => {
     expect(merged.position).toEqual({ x: 120, y: 80 })
     expect(merged.width).toBeUndefined()
     expect(merged.height).toBeUndefined()
+  })
+
+  it('keeps a pinned node immovable across graph refreshes', () => {
+    const incoming = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', { path: 'notes/a.md' }),
+      null,
+    )
+    const current = {
+      ...incoming,
+      data: { ...incoming.data, workspaceMapPinned: true },
+      draggable: false,
+    }
+
+    expect(mergeWorkspaceMapNodeGeometry(incoming, current)).toMatchObject({
+      data: { workspaceMapPinned: true },
+      draggable: false,
+    })
   })
 })

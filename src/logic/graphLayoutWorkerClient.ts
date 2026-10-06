@@ -2,6 +2,7 @@ import Elk from 'elkjs/lib/elk-api'
 import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url'
 import type {
   GraphLayoutEngineResult,
+  GraphLayoutNodeResult,
   GraphLayoutPosition,
   GraphLayoutWorkerGraph,
 } from '@/logic/graphLayoutWorkerMessages'
@@ -19,6 +20,18 @@ export type GraphLayoutEngineLike = {
 }
 
 type FatalWorkerErrorHandler = (error: Error) => void
+
+const collectPositions = (
+  nodes: GraphLayoutNodeResult[],
+  parentX = 0,
+  parentY = 0,
+): GraphLayoutPosition[] =>
+  nodes.flatMap((node) => {
+    const x = parentX + (node.x ?? 0)
+    const y = parentY + (node.y ?? 0)
+    const ownPosition = node.x == null || node.y == null ? [] : [{ id: node.id, x, y }]
+    return [...ownPosition, ...collectPositions(node.children ?? [], x, y)]
+  })
 
 const createAbortError = () => new DOMException('Graph layout was cancelled.', 'AbortError')
 
@@ -103,11 +116,7 @@ export class GraphLayoutWorkerClient {
   private resolveTask(task: PendingLayout, result: GraphLayoutEngineResult): void {
     if (!this.pending.delete(task)) return
     task.removeAbortListener()
-    task.resolve(
-      (result.children ?? []).flatMap((node) =>
-        node.x == null || node.y == null ? [] : [{ id: node.id, x: node.x, y: node.y }],
-      ),
-    )
+    task.resolve(collectPositions(result.children ?? []))
   }
 
   private rejectTask(task: PendingLayout, error: unknown): void {
