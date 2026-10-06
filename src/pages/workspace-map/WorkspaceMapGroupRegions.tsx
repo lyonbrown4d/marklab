@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { ViewportPortal } from '@xyflow/react'
 import type { Node } from '@xyflow/react'
 import type { GraphNodeData } from '@/logic/graph'
@@ -9,7 +9,18 @@ type WorkspaceMapGroupRegionsProps = {
 }
 
 export const WorkspaceMapGroupRegions = memo(({ nodes }: WorkspaceMapGroupRegionsProps) => {
-  const regions = useMemo(() => createWorkspaceMapGroupRegions(nodes), [nodes])
+  const groupMemberDragging = nodes.some(
+    (node) => node.dragging && Boolean(node.data.workspaceGroup),
+  )
+  const liveRegions = useMemo(
+    () => (groupMemberDragging ? null : createWorkspaceMapGroupRegions(nodes)),
+    [groupMemberDragging, nodes],
+  )
+  const settledRegionsRef = useRef(liveRegions ?? [])
+  useEffect(() => {
+    if (liveRegions) settledRegionsRef.current = liveRegions
+  }, [liveRegions])
+  const regions = liveRegions ?? settledRegionsRef.current
   if (regions.length === 0) return null
 
   return (
@@ -23,7 +34,8 @@ export const WorkspaceMapGroupRegions = memo(({ nodes }: WorkspaceMapGroupRegion
             key={region.key}
             style={{
               height: region.height,
-              transform: `translate(${region.x}px, ${region.y}px)`,
+              left: region.x,
+              top: region.y,
               width: region.width,
             }}
           >

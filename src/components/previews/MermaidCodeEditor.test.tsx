@@ -1,5 +1,6 @@
 import { EditorView } from '@codemirror/view'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import MermaidCodeEditor from '@/components/previews/MermaidCodeEditor'
 
@@ -128,5 +129,29 @@ describe('MermaidCodeEditor', () => {
     const firstUri = intelligence.create.mock.calls[0]?.[0].uri
     const secondUri = intelligence.create.mock.calls[1]?.[0].uri
     expect(firstUri).not.toBe(secondUri)
+  })
+
+  it('uses a fresh language document URI when Strict Mode replays the editor effect', () => {
+    intelligence.create.mockClear()
+    intelligence.create.mockReturnValue({
+      dispose: intelligence.dispose,
+      extensions: intelligence.extensions,
+    })
+
+    const view = render(
+      <StrictMode>
+        <MermaidCodeEditor
+          onBlur={vi.fn()}
+          onChange={vi.fn()}
+          uri="marklab-embedded://plate/strict.mermaid"
+          value="flowchart TD"
+        />
+      </StrictMode>,
+    )
+
+    const openedUris = intelligence.create.mock.calls.map(([options]) => options.uri)
+    expect(openedUris).toHaveLength(2)
+    expect(new Set(openedUris)).toHaveLength(openedUris.length)
+    view.unmount()
   })
 })

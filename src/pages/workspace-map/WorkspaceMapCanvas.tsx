@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -28,6 +28,7 @@ import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/work
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
+import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
 
 const nodeTypes: NodeTypes = {
   external: WorkspaceMapReferenceNode,
@@ -72,6 +73,7 @@ const WorkspaceMapCanvasContent = ({
 }: WorkspaceMapCanvasProps) => {
   const darkMode = useDarkMode()
   const { t } = useI18n()
+  const canvasRef = useRef<HTMLDivElement>(null)
   const [flow, setFlow] = useState<ReactFlowInstance<Node<GraphNodeData>, Edge> | null>(null)
   const [externalState, setExternalState] = useState({
     graphIdentity,
@@ -171,6 +173,9 @@ const WorkspaceMapCanvasContent = ({
     onOpenFile,
     webViews,
   })
+  const handleViewportMove = useCallback(() => {
+    notifyAnimatedCursorViewport(canvasRef.current)
+  }, [])
 
   if (layout.status === 'loading') {
     return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
@@ -186,7 +191,7 @@ const WorkspaceMapCanvasContent = ({
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" data-marklab-cursor-viewport ref={canvasRef}>
       <ReactFlow<Node<GraphNodeData>, Edge>
         aria-label={t('workspaceMap.canvas')}
         tabIndex={0}
@@ -209,6 +214,7 @@ const WorkspaceMapCanvasContent = ({
         onNodeDoubleClick={interactions.onNodeDoubleClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
+        onMove={handleViewportMove}
         onPaneClick={interactions.onPaneClick}
         nodesDraggable
         nodesConnectable={false}

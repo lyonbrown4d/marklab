@@ -6,6 +6,7 @@ const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url),
 
 describe('graph interaction styles', () => {
   const graphStyles = readStyle('./app/_graph.scss')
+  const workspaceMapGroupStyles = readStyle('./app/_workspace-map-groups.scss')
   const workspaceMapStyles = readStyle('./app/_workspace-map.scss')
 
   it('keeps graph node hover feedback from moving the React Flow drag target', () => {
@@ -30,5 +31,15 @@ describe('graph interaction styles', () => {
     )
     expect(workspaceMapStyles).toContain('stroke-dasharray: none;')
     expect(workspaceMapStyles).toMatch(/workspace-map-flow-edge--muted[\s\S]*?opacity: 0\.03;/)
+  })
+
+  it('keeps workspace group surfaces opaque inside the transformed canvas', () => {
+    const regionRule = workspaceMapGroupStyles.match(
+      /\.workspace-map-group-region\s*\{[\s\S]*?\n}/,
+    )?.[0]
+
+    expect(regionRule).toContain('contain: layout paint style;')
+    expect(regionRule).toContain('background: color-mix(')
+    expect(regionRule).not.toMatch(/background:[^;]*\/\s*[\d.]+%/)
   })
 })

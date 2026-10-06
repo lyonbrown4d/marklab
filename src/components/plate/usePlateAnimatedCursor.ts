@@ -1,4 +1,5 @@
 import { type RefObject, useEffect } from 'react'
+import { ANIMATED_CURSOR_VIEWPORT_EVENT } from '@/components/plate/animatedCursorViewport'
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const SCROLL_TRANSITION_DELAY_MS = 80
@@ -16,6 +17,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     if (!enabled || !root || !view) return
 
     const document = root.ownerDocument
+    const cursorViewport = root.closest<HTMLElement>('[data-marklab-cursor-viewport]')
     const motionPreference = view.matchMedia(REDUCED_MOTION_QUERY)
     const caret = document.createElement('span')
     caret.className = 'marklab-animated-caret'
@@ -102,6 +104,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     root.addEventListener('compositionstart', handleCompositionStart)
     root.addEventListener('compositionend', handleCompositionEnd)
     root.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+    cursorViewport?.addEventListener(ANIMATED_CURSOR_VIEWPORT_EVENT, scheduleUpdate)
     view.addEventListener('blur', handleWindowBlur)
     view.addEventListener('focus', scheduleUpdate)
     view.addEventListener('resize', scheduleUpdate)
@@ -118,6 +121,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
       root.removeEventListener('compositionstart', handleCompositionStart)
       root.removeEventListener('compositionend', handleCompositionEnd)
       root.removeEventListener('scroll', handleScroll, true)
+      cursorViewport?.removeEventListener(ANIMATED_CURSOR_VIEWPORT_EVENT, scheduleUpdate)
       view.removeEventListener('blur', handleWindowBlur)
       view.removeEventListener('focus', scheduleUpdate)
       view.removeEventListener('resize', scheduleUpdate)

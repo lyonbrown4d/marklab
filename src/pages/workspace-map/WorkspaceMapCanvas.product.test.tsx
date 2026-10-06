@@ -140,9 +140,11 @@ describe('WorkspaceMapCanvas product readiness', () => {
   it('renders AST-derived semantic groups as canvas backgrounds', async () => {
     renderCanvas()
 
-    expect(await screen.findByTestId('workspace-map-group-documentation')).toHaveTextContent(
-      'Documentation',
-    )
+    const documentation = await screen.findByTestId('workspace-map-group-documentation')
+    expect(documentation).toHaveTextContent('Documentation')
+    expect(documentation.style.left).toMatch(/px$/)
+    expect(documentation.style.top).toMatch(/px$/)
+    expect(documentation.style.transform).toBe('')
     expect(screen.getByTestId('workspace-map-group-libraries')).toHaveTextContent('Libraries')
   })
 

@@ -1,6 +1,11 @@
 .workspace-map-groups {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.workspace-map-canvas .react-flow__viewport-portal {
   z-index: -1;
   pointer-events: none;
 }
@@ -8,11 +13,11 @@
 .workspace-map-group-region {
   --workspace-group-color: 211 92% 58%;
   position: absolute;
-  top: 0;
-  left: 0;
-  border: 1px solid hsl(var(--workspace-group-color) / 8%);
+  contain: layout paint style;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, hsl(var(--workspace-group-color)) 8%, hsl(var(--border)));
   border-radius: 40px;
-  background: hsl(var(--workspace-group-color) / 5.5%);
+  background: color-mix(in srgb, hsl(var(--workspace-group-color)) 5.5%, hsl(var(--background)));
 }
 
 .workspace-map-group-region[data-color='1'] {
@@ -57,6 +62,6 @@
 }
 
 .dark .workspace-map-group-region {
-  border-color: hsl(var(--workspace-group-color) / 14%);
-  background: hsl(var(--workspace-group-color) / 8%);
+  border-color: color-mix(in srgb, hsl(var(--workspace-group-color)) 14%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--workspace-group-color)) 8%, hsl(var(--background)));
 }

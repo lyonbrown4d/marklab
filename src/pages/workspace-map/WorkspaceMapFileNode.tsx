@@ -163,7 +163,7 @@ const WorkspaceMapEmbeddedEditor = ({
         onKeyUp={editor ? stopGraphEvent : undefined}
         onMouseDown={editor ? stopGraphEvent : undefined}
         onPointerDown={editor ? stopGraphEvent : undefined}
-        onWheel={handleWheel}
+        onWheelCapture={handleWheel}
       >
         {editor?.loadState.status === 'ready' ? (
           <Suspense fallback={<EditorPaneFallback label={t('workspaceMap.loadingDocument')} />}>

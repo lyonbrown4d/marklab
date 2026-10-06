@@ -175,5 +175,20 @@ test.describe('Workspace map', () => {
     expect(embeddedGeometry.plateShellHeight).toBeCloseTo(embeddedGeometry.viewportHeight, 0)
     expect(embeddedGeometry.scrollClientHeight).toBeCloseTo(embeddedGeometry.viewportHeight, 0)
     expect(embeddedGeometry.scrollHeight).toBeGreaterThan(embeddedGeometry.scrollClientHeight)
+
+    const scrollSurface = embeddedViewport.getByTestId('markdown-editor')
+    const flowViewport = page.locator('.react-flow__viewport')
+    await expect
+      .poll(async () => flowViewport.getAttribute('style'))
+      .not.toBe('transform: translate(0px, 0px) scale(1);')
+    const canvasTransformBeforeScroll = await flowViewport.getAttribute('style')
+    const scrollTopBefore = await scrollSurface.evaluate((element) => element.scrollTop)
+    await scrollSurface.hover()
+    await page.mouse.wheel(0, 480)
+
+    await expect
+      .poll(async () => scrollSurface.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(scrollTopBefore)
+    expect(await flowViewport.getAttribute('style')).toBe(canvasTransformBeforeScroll)
   })
 })

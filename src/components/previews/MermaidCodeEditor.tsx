@@ -86,7 +86,6 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
   const onChangeRef = useRef(onChange)
   const setupRef = useRef({ darkMode, value })
   const themeCompartment = useMemo(() => new Compartment(), [])
-  const sessionUri = useMemo(() => nextSessionUri(uri), [uri])
 
   useEffect(() => {
     onBlurRef.current = onBlur
@@ -98,6 +97,7 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
     const root = rootRef.current
     if (!root) return
     const setup = setupRef.current
+    const sessionUri = nextSessionUri(uri)
     const intelligence = createMermaidCodeMirrorIntelligence({
       uri: sessionUri,
       value: setup.value,
@@ -154,7 +154,7 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
       view.destroy()
       intelligence.dispose()
     }
-  }, [sessionUri, t, themeCompartment])
+  }, [t, themeCompartment, uri])
 
   useEffect(() => {
     viewRef.current?.dispatch({ effects: themeCompartment.reconfigure(editorTheme(darkMode)) })
