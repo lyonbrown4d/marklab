@@ -244,4 +244,17 @@ describe('WebTabManager', () => {
       expect.objectContaining({ type: 'shortcut' }),
     )
   })
+
+  it('disposes cached views for every registered window', () => {
+    const fixture = createFixture()
+    const secondWindow = createFakeWindow(8)
+    fixture.manager.activate(fixture.window as never, request('first'))
+    fixture.manager.activate(secondWindow as never, request('second'))
+
+    fixture.manager.dispose()
+
+    expect(fixture.views).toHaveLength(2)
+    expect(fixture.views[0].webContents.close).toHaveBeenCalledOnce()
+    expect(fixture.views[1].webContents.close).toHaveBeenCalledOnce()
+  })
 })

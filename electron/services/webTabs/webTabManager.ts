@@ -64,6 +64,10 @@ export class WebTabManager {
     })
   }
 
+  dispose(): void {
+    for (const windowId of [...this.windows.keys()]) this.disposeWindow(windowId)
+  }
+
   activate(owner: BrowserWindow, request: WebTabActivateRequest): void {
     const url = normalizeWebTabUrl(request.url)
     const state = this.stateFor(owner)

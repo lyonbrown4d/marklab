@@ -2,10 +2,11 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
+import { asValue } from 'awilix'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createElectronContainer } from '@electron/container'
+import { createElectronContainer, shutdownElectronContainer } from '@electron/container'
 import type { Logger } from '@electron/services/logger'
 
 const logger = vi.hoisted(() => {
@@ -68,6 +69,80 @@ describe('Electron dependency container', () => {
     expect(safeStorage.isAsyncEncryptionAvailable).toHaveBeenCalledOnce()
     expect(safeStorage.encryptStringAsync).toHaveBeenCalledWith('secret')
     await container.cradle.lifecycleCoordinator.shutdown()
+  })
+
+  it('disposes container-owned runtime resources', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-dispose-'))
+    roots.push(root)
+    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
+    await container.cradle.lifecycleCoordinator.startup()
+    const terminalDispose = vi.spyOn(container.cradle.terminalService, 'dispose')
+    const webTabDispose = vi.spyOn(container.cradle.webTabManager, 'dispose')
+
+    await container.cradle.lifecycleCoordinator.shutdown()
+    await container.dispose()
+
+    expect(terminalDispose).toHaveBeenCalledOnce()
+    expect(webTabDispose).toHaveBeenCalledOnce()
+  })
+
+  it('allows tests to inject a dependency before it is resolved', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-injection-'))
+    roots.push(root)
+    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
+    const injectedLogger = { ...logger, info: vi.fn() }
+
+    container.register({ logger: asValue(injectedLogger) })
+
+    expect(container.cradle.logger).toBe(injectedLogger)
+    await container.dispose()
+  })
+
+  it('uses the lifecycle disposer when a test disposes the container directly', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-lifecycle-'))
+    roots.push(root)
+    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
+    const coordinator = container.cradle.lifecycleCoordinator
+    await coordinator.startup()
+    const shutdown = vi.spyOn(coordinator, 'shutdown')
+
+    try {
+      await container.dispose()
+      expect(shutdown).toHaveBeenCalledOnce()
+    } finally {
+      await coordinator.shutdown()
+    }
+  })
+
+  it('shuts down lifecycle resources before container-owned resources', async () => {
+    const order: string[] = []
+    const container = {
+      cradle: {
+        lifecycleCoordinator: {
+          shutdown: vi.fn(async () => {
+            order.push('lifecycle')
+          }),
+        },
+      },
+      dispose: vi.fn(async () => {
+        order.push('container')
+      }),
+    }
+
+    await shutdownElectronContainer(container)
+
+    expect(order).toEqual(['lifecycle', 'container'])
+  })
+
+  it('still disposes container-owned resources when lifecycle shutdown fails', async () => {
+    const failure = new Error('lifecycle failed')
+    const container = {
+      cradle: { lifecycleCoordinator: { shutdown: vi.fn(async () => Promise.reject(failure)) } },
+      dispose: vi.fn(async () => undefined),
+    }
+
+    await expect(shutdownElectronContainer(container)).rejects.toThrow('lifecycle failed')
+    expect(container.dispose).toHaveBeenCalledOnce()
   })
 })
 

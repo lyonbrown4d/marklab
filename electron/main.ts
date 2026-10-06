@@ -9,9 +9,13 @@ import {
   shell,
   WebContentsView,
 } from 'electron'
-import { createElectronContainer, type ElectronContainer } from '@electron/container'
+import {
+  createElectronContainer,
+  shutdownElectronContainer,
+  type ElectronContainer,
+} from '@electron/container'
 import { configureAppIdentity } from '@electron/appIdentity'
-import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { NativeIpcRegistration } from '@electron/ipc'
 import {
   registerAssetProtocol,
   registerAssetProtocolPrivileges,
@@ -197,7 +201,7 @@ app.on('before-quit', (event) => {
     () => app.quit(),
     async () => {
       clearFallbackTimer()
-      await container?.cradle.lifecycleCoordinator.shutdown()
+      if (container) await shutdownElectronContainer(container)
     },
   )
 })
