@@ -292,16 +292,6 @@ export class KnowledgeEngineService {
     return sidecars.buildWorkspaceGraph(workspaceId, documents, knownPaths)
   }
 
-  async buildOutlineGraph(
-    workspaceId: string,
-    workspaceRoot: string,
-    path: string,
-    content: string,
-  ): Promise<KnowledgeWorkspaceGraph> {
-    const sidecars = await this.getSidecars()
-    await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
-    return sidecars.buildOutlineGraph(workspaceId, path, content)
-  }
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return (await this.getSidecars()).search(workspaceId, query, limit)
   }

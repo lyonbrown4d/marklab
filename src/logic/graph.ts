@@ -241,20 +241,8 @@ export const buildGraphFromKnowledgeGraph = (
     data: { kind: edge.kind },
   }))
 
-  if (nodes.length > 0 && graph.mode === 'outline') {
-    applyOutlineLayout(nodes, edges)
-  } else if (nodes.length > 0) {
-    applyGraphLayout(nodes, edges)
-  }
+  if (nodes.length > 0) applyGraphLayout(nodes, edges)
   return { nodes, edges, layoutKey: createGraphLayoutKey(graph.mode, nodes, edges) }
-}
-
-const applyOutlineLayout = (nodes: Node<GraphNodeData>[], edges: Edge[]) => {
-  applyDagreLayout(nodes, edges, {
-    rankdir: 'LR',
-    ranksep: 140,
-    nodesep: 34,
-  })
 }
 
 const applyGraphLayout = (nodes: Node<GraphNodeData>[], edges: Edge[]) => {

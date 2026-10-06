@@ -7,20 +7,16 @@ import type { WorkspaceTab } from '@/store/appTypes'
 import { cn } from '@/lib/utils'
 
 export type TabLabelText = {
-  workspaceGraph: string
   source: string
-  graph: string
   preview: string
   diff: string
 }
 
 export const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
-  if (tab.kind === 'workspace-graph') return labels.workspaceGraph
   if (tab.kind === 'web') return tab.title
   const label = createFileLabel(tab.path)
   if (tab.kind === 'file') {
     if (tab.view === 'source') return `${label} · ${labels.source}`
-    if (tab.view === 'graph') return `${label} · ${labels.graph}`
     if (tab.view === 'preview') return `${label} · ${labels.preview}`
     return label
   }
@@ -30,9 +26,6 @@ export const getTabLabel = (tab: WorkspaceTab, labels: TabLabelText) => {
 const renderTabIcon = (tab: WorkspaceTab) => {
   const iconClassName = 'size-3.5 shrink-0'
 
-  if (tab.kind === 'workspace-graph') {
-    return <GitGraph aria-hidden="true" className={iconClassName} />
-  }
   if (tab.kind === 'git-diff') {
     return <GitGraph aria-hidden="true" className={iconClassName} />
   }
@@ -41,9 +34,6 @@ const renderTabIcon = (tab: WorkspaceTab) => {
   }
   if (tab.view === 'source') {
     return <Code2 aria-hidden="true" className={iconClassName} />
-  }
-  if (tab.view === 'graph') {
-    return <GitGraph aria-hidden="true" className={iconClassName} />
   }
   if (tab.view === 'preview') {
     return (

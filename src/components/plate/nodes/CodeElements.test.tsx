@@ -34,18 +34,18 @@ vi.mock('@/components/previews/MermaidPreview', () => ({
   default: () => <div>Mermaid preview</div>,
 }))
 
-const renderCodeBlock = () => {
+const renderCodeBlock = ({ language = 'mermaid', source = 'fl' } = {}) => {
   const editor = createPlateEditor({
     plugins: createPlateNodePlugins(),
     value: [
       {
         type: 'code_block',
-        lang: 'mermaid',
-        children: [{ type: 'code_line', children: [{ text: 'fl' }] }],
+        lang: language,
+        children: [{ type: 'code_line', children: [{ text: source }] }],
       },
     ],
   })
-  editor.tf.select({ path: [0, 0, 0], offset: 2 })
+  editor.tf.select({ path: [0, 0, 0], offset: source.length })
   const result = render(
     <DndProvider backend={HTML5Backend}>
       <Plate editor={editor}>
@@ -99,5 +99,19 @@ describe('CodeBlockElement language intelligence', () => {
     fireEvent.keyDown(code, { key: 'Enter', keyCode: 229 })
 
     expect(editor.api.string([0, 0])).toBe('fl')
+  })
+
+  it('shows only the rendered diagram for Mermaid blocks in the WYSIWYG editor', () => {
+    const { container } = renderCodeBlock({ source: 'flowchart TD\nA --> B' })
+
+    expect(screen.getByText('Mermaid preview')).toBeVisible()
+    expect(container.querySelector('code[data-language="mermaid"]')).not.toBeVisible()
+  })
+
+  it('keeps ordinary code blocks visible in the WYSIWYG editor', () => {
+    const { container } = renderCodeBlock({ language: 'typescript', source: 'const ready = true' })
+
+    expect(container.querySelector('code[data-language="typescript"]')).toBeVisible()
+    expect(screen.queryByText('Mermaid preview')).not.toBeInTheDocument()
   })
 })

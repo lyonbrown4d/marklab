@@ -65,7 +65,7 @@ describe('AppCachedOutlet cache policy', () => {
   })
 
   it('uses a stable allowlist that excludes lightweight routes', () => {
-    const { props } = renderOutlet('/workspace/history')
+    const { props } = renderOutlet('/workspace/pages')
 
     const include = props.include as RegExp[]
     expect(include.some((matcher) => matcher.test(props.activeCacheKey as string))).toBe(false)
@@ -76,7 +76,7 @@ describe('AppCachedOutlet cache policy', () => {
     const paths = [
       '/files/edit/a.md',
       '/files/source/b.md',
-      '/files/graph/c.md',
+      '/files/source/c.md',
       '/workspace/graph',
       '/files/source/d.md',
     ]

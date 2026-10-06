@@ -61,7 +61,6 @@ const createWorkspaceCommandHandlers = (
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
     fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
-    fs_get_outline_graph: (payload, event) => workspaceForEvent(event).outlineGraph(payload),
     fs_search_workspace: (payload, event) => workspaceForEvent(event).searchWorkspace(payload),
     fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
     fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),

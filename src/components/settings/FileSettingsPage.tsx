@@ -1,5 +1,5 @@
 import { useState, type ElementType } from 'react'
-import { Code2, FileText, GitGraph } from 'lucide-react'
+import { Code2, FileText } from 'lucide-react'
 import { normalizeDrawioEmbedUrl } from '@/logic/drawioEmbed'
 import { useI18n } from '@/i18n/useI18n'
 import type { FileViewKind, MarkdownAssetImportStrategy } from '@/store/appTypes'
@@ -20,7 +20,6 @@ type DefaultFileViewKind = Exclude<FileViewKind, 'preview'>
 const fileViews: Array<{ value: DefaultFileViewKind; labelKey: string; icon: ElementType }> = [
   { value: 'edit', labelKey: 'editor.modeWysiwyg', icon: FileText },
   { value: 'source', labelKey: 'editor.modeSource', icon: Code2 },
-  { value: 'graph', labelKey: 'tabs.graph', icon: GitGraph },
 ]
 
 const assetImportStrategies: Array<{ value: MarkdownAssetImportStrategy; labelKey: string }> = [
@@ -36,8 +35,7 @@ const drawioEditorModes = [
 const FileSettingsPage = () => {
   const { t } = useI18n()
   const defaultFileView = usePreferencesStore((state) => state.defaultFileView)
-  const safeDefaultFileView: DefaultFileViewKind =
-    defaultFileView === 'preview' ? 'edit' : defaultFileView
+  const safeDefaultFileView: DefaultFileViewKind = defaultFileView === 'source' ? 'source' : 'edit'
   const setDefaultFileView = usePreferencesStore((state) => state.setDefaultFileView)
   const markdownAssetImportStrategy = usePreferencesStore(
     (state) => state.markdownAssetImportStrategy,
@@ -72,7 +70,7 @@ const FileSettingsPage = () => {
         title={t('settings.defaultFileView')}
         description={t('settings.defaultFileViewDescription')}
       >
-        <SettingsChoiceGrid columns={3} aria-label={t('settings.defaultFileView')}>
+        <SettingsChoiceGrid columns={2} aria-label={t('settings.defaultFileView')}>
           {fileViews.map((item) => {
             const Icon = item.icon
             return (

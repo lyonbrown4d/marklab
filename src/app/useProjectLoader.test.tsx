@@ -122,26 +122,6 @@ describe('useProjectLoader', () => {
     expect(navigate).toHaveBeenCalledWith('/files/edit/Untitled.md', { replace: true })
   })
 
-  it('drops legacy workspace graph tabs while loading a workspace', async () => {
-    const setTabs = vi.fn()
-    const { result } = renderHook(() =>
-      useProjectLoader(
-        createProps({
-          activeTabId: 'file:edit:Untitled.md',
-          entries: [{ kind: 'file', path: 'Untitled.md' }],
-          setTabs,
-          tabs: [{ kind: 'file', path: 'Untitled.md', view: 'edit' }, { kind: 'workspace-graph' }],
-        }) as never,
-      ),
-    )
-
-    await act(async () => {
-      await result.current.loadWorkspace({ preserveCurrentRoute: true })
-    })
-
-    expect(setTabs).toHaveBeenCalledWith([{ kind: 'file', path: 'Untitled.md', view: 'edit' }])
-  })
-
   it('opens the root Home document instead of the first sorted asset without a restorable session', async () => {
     vi.mocked(fsApi.getSnapshot).mockResolvedValue({
       entries: [

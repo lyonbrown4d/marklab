@@ -58,10 +58,10 @@ describe('buildGraphFromWorkspaceIndex', () => {
     )
   })
 
-  it('maps Rust outline graph nodes to React Flow nodes', () => {
+  it('maps workspace graph nodes to React Flow nodes', () => {
     const graph = buildGraphFromKnowledgeGraph(
       {
-        mode: 'outline',
+        mode: 'mindmap',
         nodes: [
           {
             id: 'file:notes/current.md',
@@ -114,7 +114,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
 
   it('omits heading content from graph nodes when content mode is none', () => {
     const graph = buildGraphFromKnowledgeGraph({
-      mode: 'outline',
+      mode: 'mindmap',
       nodes: [
         {
           id: 'heading:notes/current.md:intro',
@@ -146,7 +146,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
 
   it('creates the same compact layout key for equivalent knowledge graph structures', () => {
     const graph = buildGraphFromKnowledgeGraph({
-      mode: 'outline',
+      mode: 'mindmap',
       nodes: [
         {
           id: 'file:notes/current.md',
@@ -188,7 +188,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
     } satisfies FsGraph)
 
     const reorderedGraph = buildGraphFromKnowledgeGraph({
-      mode: 'outline',
+      mode: 'mindmap',
       nodes: [...graph.nodes].reverse().map((node) => ({
         id: node.id,
         kind: node.type === 'heading' ? 'heading' : 'file',
@@ -211,7 +211,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
 
   it('changes the layout key when knowledge graph structure or mode changes', () => {
     const baseGraph = {
-      mode: 'outline',
+      mode: 'mindmap',
       nodes: [
         {
           id: 'file:notes/current.md',
@@ -277,7 +277,7 @@ describe('buildGraphFromWorkspaceIndex', () => {
 
   it('changes the layout key when heading content changes node layout size', () => {
     const baseGraph = {
-      mode: 'outline',
+      mode: 'mindmap',
       nodes: [
         {
           id: 'heading:notes/current.md:intro',

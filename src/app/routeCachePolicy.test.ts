@@ -17,7 +17,6 @@ describe('route cache policy', () => {
   it.each([
     ['/files/edit/notes/readme.md', 'edit', 2, 600],
     ['/files/source/notes/readme.md', 'source', 3, 600],
-    ['/files/graph/notes/readme.md', 'file-graph', 3, 600],
     ['/workspace/graph', 'workspace-graph', 4, 300],
   ] as const)('classifies %s as a cacheable heavy route', (pathname, kind, weight, ttlSeconds) => {
     expect(getRouteCachePolicy(pathname)).toEqual({
@@ -30,13 +29,13 @@ describe('route cache policy', () => {
 
   it.each([
     '/',
-    '/workspace/history',
     '/workspace/pages',
     '/_diff/staged/notes/readme.md',
     '/files/preview/diagram.pdf',
     '/files/edit/',
     '/files/source',
     '/files/graph',
+    '/files/graph/notes/readme.md',
     '/workspace/graph/extra',
     '/missing',
   ])('does not cache %s', (pathname) => {
@@ -67,14 +66,14 @@ describe('getRouteCacheEvictionKeys', () => {
 
   it('evicts non-cacheable entries that predate the allow-list', () => {
     const entries = [
-      entry('history', '/workspace/history', 20),
+      entry('pages', '/workspace/pages', 20),
       entry('preview', '/files/preview/image.png', 10),
       entry('edit', '/files/edit/kept.md', 0),
     ]
 
     expect(getRouteCacheEvictionKeys(entries, { activeCacheKey: 'edit', nowMs: 100 })).toEqual([
       'preview',
-      'history',
+      'pages',
     ])
   })
 
@@ -82,7 +81,7 @@ describe('getRouteCacheEvictionKeys', () => {
     const entries = [
       entry('active-graph', '/workspace/graph', 500),
       entry('old-source', '/files/source/old.md', 100),
-      entry('middle-file-graph', '/files/graph/middle.md', 200),
+      entry('middle-source', '/files/source/middle.md', 200),
       entry('new-edit', '/files/edit/new.md', 300),
       entry('newest-edit', '/files/edit/newest.md', 400),
     ]
@@ -111,7 +110,7 @@ describe('getRouteCacheEvictionKeys', () => {
     const entries = [
       entry('active-workspace-graph', '/workspace/graph', 0),
       entry('old-edit', '/files/edit/old.md', 100),
-      entry('middle-graph', '/files/graph/middle.md', 200),
+      entry('middle-source', '/files/source/middle.md', 200),
       entry('new-edit', '/files/edit/new.md', 300),
       entry('newest-edit', '/files/edit/newest.md', 400),
     ]

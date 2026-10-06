@@ -7,6 +7,7 @@ import { EditorStatusBarSlot } from '@/components/EditorStatusBar'
 import { SIDEBAR_ACTIVITY_PARAM } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { SyncCenterPopover } from '@/features/workspace-sync/SyncCenterPopover'
 import { useWorkspaceSyncStatus } from '@/features/workspace-sync/useWorkspaceSyncStatus'
@@ -60,6 +61,9 @@ const AppStatusBar = ({
   const workspaceSync = useWorkspaceSyncStatus({ rootKind, rootPath })
 
   const openScmPanel = useCallback(() => {
+    usePreferencesStore.setState((current) =>
+      current.sidebarCollapsed ? { sidebarCollapsed: false } : current,
+    )
     setSearchParams(
       (params) => {
         const next = new URLSearchParams(params)

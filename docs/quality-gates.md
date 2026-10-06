@@ -39,20 +39,20 @@ pnpm check
 `pnpm check` runs the quality impact helper as part of the project-level gate, so local
 verification and CI use the same entry point.
 
-| Impact area                      | Common risk                                                    | Required checks                                         |
-| -------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
-| Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm exec tsc -b`     |
-| Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                 |
-| WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests          |
-| React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests    |
-| Settings / persisted preferences | default drift, missing partialize field, inaccessible controls | settings tests, affected component option tests         |
-| Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, graph/editor shortcut tests |
-| IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                  |
-| Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                |
-| Knowledge engine / Node runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Node runtime tests, typecheck, Electron build           |
-| Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks             |
-| i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests             |
-| Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`  |
+| Impact area                      | Common risk                                                    | Required checks                                                 |
+| -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
+| Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm exec tsc -b`             |
+| Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                         |
+| WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests                  |
+| React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests            |
+| Settings / persisted preferences | default drift, missing partialize field, inaccessible controls | settings tests, affected component option tests                 |
+| Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, workspace map/editor shortcut tests |
+| IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                          |
+| Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                        |
+| Knowledge engine / Node runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Node runtime tests, typecheck, Electron build                   |
+| Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks                     |
+| i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests                     |
+| Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`          |
 
 Changes under `e2e/performance/`, `playwright.performance.config.ts`, or the Plate performance
 workflow map to the WYSIWYG / Plate boundary and require `pnpm test:perf:software`.

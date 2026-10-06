@@ -45,7 +45,6 @@ const createClient = (): WorkspaceSidecarClient => ({
     acknowledged: { documentId: 'alpha.md', version: '0' },
   })),
   closeWorkspace: vi.fn(async () => undefined),
-  buildOutlineGraph: vi.fn(async () => ({ edges: [], mode: 'outline' as const, nodes: [] })),
   buildWorkspaceGraph: vi.fn(async () => ({ edges: [], mode: 'mindmap' as const, nodes: [] })),
   createWorkspaceDirectory: vi.fn(async () => ({ changed: true, kind: 'folder' as const })),
   createWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),

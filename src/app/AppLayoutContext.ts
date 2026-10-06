@@ -30,6 +30,9 @@ export type LayoutContext = {
   files: FileEntry[]
   fileContents: Record<string, string>
   workspaceIndex: FsWorkspaceIndex | null
+  workspaceIndexLoading: boolean
+  workspaceIndexError: unknown
+  onRetryWorkspaceIndex: () => Promise<unknown>
   saveStates: Record<string, SaveState>
   loadingPaths: Record<string, true>
   currentView: ViewMode

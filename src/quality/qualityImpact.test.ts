@@ -71,6 +71,32 @@ describe('quality impact rules', () => {
     expect(plateImpact?.checks).toContain('pnpm test:perf:software')
   })
 
+  it.each([
+    'src/pages/WorkspaceGraphPage.tsx',
+    'src/components/GraphRichNodes.tsx',
+    'src/components/GraphWebNode.tsx',
+    'src/logic/workspaceMapGraph.ts',
+    'src/logic/workspaceGraphRevision.ts',
+  ])('routes the retained workspace graph file %s to React Flow checks', (file) => {
+    const impacts = analyzeChangedFiles([file])
+
+    expect(impacts.map((impact) => impact.area)).toContain('React Flow graph')
+  })
+
+  it('routes current workspace-map keyboard changes without legacy graph shortcut paths', () => {
+    const impacts = analyzeChangedFiles(['src/pages/workspace-map/useWorkspaceMapKeyboard.ts'])
+    const shortcuts = impacts.find((impact) => impact.area === 'Keyboard shortcuts')
+    const shortcutRule = qualityImpactRulesData.find((rule) => rule.area === 'Keyboard shortcuts')
+
+    expect(shortcuts?.checks).toContain('workspace map/editor shortcut tests')
+    expect(shortcutRule?.patterns).not.toEqual(
+      expect.arrayContaining([
+        '^src/pages/useGraphKeyboardActions',
+        '^src/pages/graphKeyboardActions',
+      ]),
+    )
+  })
+
   it('compiles the shared rule data into runtime matchers', () => {
     expect(qualityImpactRules).toHaveLength(qualityImpactRulesData.length)
     expect(

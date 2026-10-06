@@ -9,9 +9,7 @@ vi.mock('@/i18n/useI18n', () => ({
         'scm.title': 'Source Control',
         'sidebar.files': 'Files',
         'sidebar.localWorkspace': 'Local Workspace',
-        'sidebar.recentProjects': 'Recent Projects',
         'sidebar.searchAction': 'Search',
-        'tabs.workspaceGraph': 'Workspace Graph',
       }
 
       return labels[key] ?? key
@@ -22,12 +20,7 @@ vi.mock('@/i18n/useI18n', () => ({
 describe('SidebarActivityRail', () => {
   it('marks the active activity for assistive technology', () => {
     render(
-      <SidebarActivityRail
-        activeActivity="search"
-        fileCount={135}
-        recentProjectCount={0}
-        onSelectActivity={vi.fn()}
-      />,
+      <SidebarActivityRail activeActivity="search" fileCount={135} onSelectActivity={vi.fn()} />,
     )
 
     const searchButton = screen.getByRole('button', { name: 'Search' })
@@ -39,23 +32,24 @@ describe('SidebarActivityRail', () => {
     expect(screen.getByText('99')).toBeInTheDocument()
   })
 
-  it('keeps activity actions clickable without exposing a workspace overview', () => {
+  it('keeps only file, search, and source-control destinations in the collapsed rail', () => {
     const onSelectActivity = vi.fn()
 
     render(
       <SidebarActivityRail
         activeActivity="explorer"
         fileCount={1}
-        recentProjectCount={2}
         onSelectActivity={onSelectActivity}
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Recent Projects' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Source Control' }))
 
     expect(screen.queryByRole('button', { name: 'Workspace Overview' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Workspace Graph' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Recent Projects' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Files' })).toHaveAttribute('aria-current', 'page')
-    expect(onSelectActivity).toHaveBeenCalledWith('projects')
+    expect(onSelectActivity).toHaveBeenCalledWith('scm')
   })
 
   it('uses one workspace menu when expanded while preserving every destination', async () => {
@@ -66,7 +60,6 @@ describe('SidebarActivityRail', () => {
         rootPath="D:\\Notes\\Marklab\\"
         activeActivity="explorer"
         fileCount={1}
-        recentProjectCount={2}
         onSelectActivity={onSelectActivity}
       />,
     )
@@ -75,8 +68,10 @@ describe('SidebarActivityRail', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     const search = await screen.findByRole('menuitem', { name: 'Search' })
-    expect(screen.getAllByRole('menuitem')).toHaveLength(5)
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3)
     expect(screen.queryByRole('menuitem', { name: 'Workspace Overview' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Workspace Graph' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Recent Projects' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /Files/ })).toHaveAttribute('aria-current', 'page')
     fireEvent.click(search)
     expect(onSelectActivity).toHaveBeenCalledWith('search')
@@ -89,7 +84,6 @@ describe('SidebarActivityRail', () => {
         rootPath="/home/writer/Notes/"
         activeActivity="explorer"
         fileCount={0}
-        recentProjectCount={0}
         onSelectActivity={vi.fn()}
       />,
     )

@@ -4,7 +4,6 @@ import {
   type MarkdownNode,
   type MarkdownRoot,
 } from '@electron/services/workspace/markdown/ast.js'
-import { parseMarkdownBlocks } from '@electron/services/workspace/markdown/blocks.js'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
 import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
 import type {
@@ -16,48 +15,6 @@ import type {
 
 type GraphDocument = { path: string; title?: string; content: string }
 type KnownPaths = { paths: string[]; assetPaths: string[] }
-
-export const buildNodeOutlineGraph = (filePath: string, content: string): FsGraph => {
-  const normalizedPath = normalizeWorkspacePath(filePath)
-  const parsed = parseMarkdownDocument(normalizedPath, content)
-  const lines = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n')
-  const nodes: FsGraphNode[] = [fileNode(normalizedPath)]
-  const edges: FsGraphEdge[] = []
-  const stack: Array<{ level: number; id: string }> = []
-
-  parsed.headings.forEach((heading, index) => {
-    const id = headingNodeId(normalizedPath, heading.slug)
-    const nextLine = parsed.headings[index + 1]?.line ?? lines.length + 1
-    const contentStartLine = Math.min(heading.line + 1, nextLine)
-    const headingContent = lines
-      .slice(contentStartLine - 1, nextLine - 1)
-      .join('\n')
-      .trim()
-    while ((stack.at(-1)?.level ?? 0) >= heading.level) stack.pop()
-    const parent = stack.at(-1)?.id ?? fileNodeId(normalizedPath)
-    nodes.push({
-      content: headingContent,
-      content_blocks: blocksForHeading(id, headingContent),
-      content_end_line: nextLine,
-      content_start_line: contentStartLine,
-      id,
-      kind: 'heading',
-      label: heading.text,
-      level: heading.level,
-      line: heading.line,
-      path: normalizedPath,
-      slug: heading.slug,
-    })
-    edges.push({
-      id: `${parent}->${id}-${edges.length}`,
-      kind: 'contains',
-      source: parent,
-      target: id,
-    })
-    stack.push({ id, level: heading.level })
-  })
-  return { edges, mode: 'outline', nodes }
-}
 
 export const buildNodeWorkspaceGraph = (
   documents: GraphDocument[],
@@ -318,8 +275,3 @@ const hasNonMarkdownExtension = (value: string): boolean => {
   const extension = value.split('/').at(-1)?.split('.').at(-1)?.toLocaleLowerCase()
   return Boolean(extension && extension !== value && extension !== 'md' && extension !== 'markdown')
 }
-
-const blocksForHeading = (
-  baseId: string,
-  content: string,
-): NonNullable<FsGraphNode['content_blocks']> => parseMarkdownBlocks(baseId, content)

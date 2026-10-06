@@ -12,11 +12,10 @@ describe('getWorkspaceFilesTarget', () => {
   it('restores the last existing file tab with its view', () => {
     const tabs: WorkspaceTab[] = [
       { kind: 'file', path: 'notes/readme.md', view: 'source' },
-      { kind: 'workspace-graph' },
       { kind: 'file', path: 'notes/data.json', view: 'source' },
     ]
 
-    expect(getWorkspaceFilesTarget(tabs, entries)).toEqual(tabs[2])
+    expect(getWorkspaceFilesTarget(tabs, entries)).toEqual(tabs[1])
   })
 
   it('keeps the active file selected when returning from the workspace map', () => {

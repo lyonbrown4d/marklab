@@ -113,7 +113,7 @@ test.describe('Real workspace rendering integrity', () => {
       editor
         .locator('code[data-language="mermaid"]')
         .filter({ hasText: 'App[业务应用或框架集成]' }),
-    ).toBeAttached({ timeout: 45_000 })
+    ).toBeHidden({ timeout: 45_000 })
     const sources = new Set<string>()
     const previews = page.locator('[data-plate-preview="mermaid"]')
     await expect(previews).toHaveCount(expectedCount)

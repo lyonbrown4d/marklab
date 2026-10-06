@@ -44,6 +44,9 @@ export const useAppLayoutOutlet = ({
       files: state.files,
       fileContents: state.fileContents,
       workspaceIndex: state.workspaceIndex,
+      workspaceIndexLoading: state.workspaceIndexLoading,
+      workspaceIndexError: state.workspaceIndexError,
+      onRetryWorkspaceIndex: state.onRetryWorkspaceIndex,
       saveStates: state.saveStates,
       loadingPaths: state.loadingPaths,
       currentView: state.viewMode,
@@ -94,6 +97,9 @@ export const useAppLayoutOutlet = ({
     state.theme,
     state.viewMode,
     state.workspaceIndex,
+    state.workspaceIndexError,
+    state.workspaceIndexLoading,
+    state.onRetryWorkspaceIndex,
   ])
   const routeCacheKey = useMemo(
     () => `${state.rootKind}:${state.rootPath}:${location.pathname}`,

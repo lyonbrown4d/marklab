@@ -43,7 +43,6 @@ vi.mock('@/i18n/useI18n', () => ({
         'context.newFolder': 'New folder',
         'context.newFolderPrompt': 'New folder name',
         'context.open': 'Open',
-        'context.openGraph': 'Open graph',
         'context.openInSystem': 'Open in system',
         'context.openSource': 'Open source',
         'context.properties': 'Properties',
@@ -55,7 +54,6 @@ vi.mock('@/i18n/useI18n', () => ({
         'sidebar.newFolder': 'New folder',
         'sidebar.noProjectLoaded': 'No project loaded.',
         'sidebar.noSearchResults': 'No matching files.',
-        'sidebar.recentProjects': 'Recent projects',
         'sidebar.search': 'Search files...',
         'sidebar.singleFileMode': 'Single-file mode',
         'sidebar.singleFileReadonlyHint':

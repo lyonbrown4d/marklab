@@ -30,12 +30,6 @@ type WorkspaceSidecarGraphService = KnowledgeEngineService & {
     documents: Array<{ path: string; title?: string; content: string }>,
     knownPaths: { paths: string[]; assetPaths: string[] },
   ) => Promise<FsGraph>
-  buildOutlineGraph?: (
-    workspaceId: string,
-    workspaceRoot: string,
-    path: string,
-    content: string,
-  ) => Promise<FsGraph>
 }
 type WorkspaceSidecarDiagnosticsService = KnowledgeEngineService & {
   getMarkdownDiagnostics?: (
@@ -160,33 +154,6 @@ export const trySidecarWorkspaceGraph = async (
     )
   } catch (error) {
     options.logger.error('workspace graph sidecar failed', { error })
-    throw error
-  }
-}
-
-export const trySidecarOutlineGraph = async (
-  options: SidecarPathOptions & { content: string },
-): Promise<FsGraph> => {
-  const runtime = requireSidecarRuntime(options, 'outline graph')
-  const buildOutlineGraph = (
-    options.knowledgeEngineService as WorkspaceSidecarGraphService | undefined
-  )?.buildOutlineGraph
-  if (typeof buildOutlineGraph !== 'function') {
-    throw new Error('Knowledge sidecar outline graph bridge is not available')
-  }
-  try {
-    return await buildOutlineGraph.call(
-      options.knowledgeEngineService,
-      runtime.workspaceId,
-      runtime.workspaceRoot,
-      options.path,
-      options.content,
-    )
-  } catch (error) {
-    options.logger.error('outline graph sidecar failed', {
-      error,
-      path: options.path,
-    })
     throw error
   }
 }

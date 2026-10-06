@@ -53,10 +53,10 @@ export const useWorkspaceTabActions = ({
     (mode: ViewMode) => {
       const tab = tabsRef.current.find((item) => getWorkspaceTabId(item) === activeTabIdRef.current)
       const path = currentFilePathRef.current ?? (tab?.kind === 'file' ? tab.path : null)
-      if (!path && mode !== 'graph') return
-      const nextMode = path ? resolveWorkspaceFileViewMode(path, mode) : mode
+      if (!path) return
+      const nextMode = resolveWorkspaceFileViewMode(path, mode)
       if (!nextMode) return
-      const fileView = fileViewForMode(nextMode, Boolean(path))
+      const fileView = fileViewForMode(nextMode)
 
       if (path) {
         setTabViewModes((prev) => (prev[path] === nextMode ? prev : { ...prev, [path]: nextMode }))
@@ -71,12 +71,7 @@ export const useWorkspaceTabActions = ({
         })
       }
 
-      const nextRoute =
-        nextMode === 'graph' && !path
-          ? pathToWorkspaceGraphRoute()
-          : path
-            ? pathToFileViewRoute(path, fileView)
-            : '/'
+      const nextRoute = pathToFileViewRoute(path, fileView)
       navigateIfNeeded(locationPathnameRef.current, nextRoute, navigate)
     },
     [
@@ -164,11 +159,9 @@ export const useWorkspaceTabActions = ({
 
   const onOpenAllPages = useCallback(
     (collectionId?: string) => {
-      setActiveTabId(null)
-      setInspectedPath(null)
       navigateIfNeeded(locationPathnameRef.current, pathToAllPagesRoute(collectionId), navigate)
     },
-    [locationPathnameRef, navigate, setActiveTabId, setInspectedPath],
+    [locationPathnameRef, navigate],
   )
 
   const onOpenWebTab = useCallback(
@@ -251,13 +244,6 @@ export const useWorkspaceTabActions = ({
       if (!tab) return
       if (tab.kind === 'file') {
         onOpenFileView(tab.path, tab.view)
-        return
-      }
-      if (tab.kind === 'workspace-graph') {
-        if (activeTabIdRef.current !== tabId) {
-          setActiveTabId(tabId)
-        }
-        navigateIfNeeded(locationPathnameRef.current, pathToWorkspaceGraphRoute(), navigate)
         return
       }
       if (tab.kind === 'web') {

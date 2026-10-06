@@ -29,7 +29,6 @@ type UseKeyboardShortcutsArgs = {
   onOpenFile: () => void
   onOpenProject: () => void
   onOpenSettings: () => void
-  onOpenHistory: () => void
   onOpenTab: (id: string) => void
   onSetViewMode: (mode: ViewMode) => void
   onToggleRightSidebar: () => void
@@ -49,7 +48,6 @@ export const useKeyboardShortcuts = ({
   onOpenFile,
   onOpenProject,
   onOpenSettings,
-  onOpenHistory,
   onOpenTab,
   onSetViewMode,
   onToggleRightSidebar,
@@ -68,7 +66,6 @@ export const useKeyboardShortcuts = ({
     onOpenFile,
     onOpenProject,
     onOpenSettings,
-    onOpenHistory,
     onOpenTab,
     onSetViewMode,
     onToggleRightSidebar,
@@ -116,7 +113,6 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
     onOpenFile,
     onOpenProject,
     onOpenSettings,
-    onOpenHistory,
     onOpenTab,
     onSetViewMode,
     onToggleRightSidebar,
@@ -136,7 +132,6 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
   if (action === 'tab.close') return onCloseActiveTab()
   if (action === 'view.wysiwyg') return onSetViewMode('wysiwyg')
   if (action === 'view.source') return onSetViewMode('source')
-  if (action === 'view.graph') return onSetViewMode('graph')
   if (action === 'view.toggleSource') {
     return onSetViewMode(viewMode === 'source' ? 'wysiwyg' : 'source')
   }
@@ -155,7 +150,6 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
     const preferences = usePreferencesStore.getState()
     return preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
   }
-  if (action === 'workspace.openHistory') return onOpenHistory()
 }
 
 const openAdjacentTab = (

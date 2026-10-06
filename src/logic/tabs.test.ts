@@ -10,7 +10,7 @@ import {
 } from '@/logic/tabs'
 
 describe('normalizeWorkspaceTabs', () => {
-  it('drops malformed and legacy workspace graph tabs while deduplicating valid tabs', () => {
+  it('drops malformed tabs while deduplicating valid tabs', () => {
     const tabs = normalizeRuntimeWorkspaceTabs([
       { kind: 'git-diff' },
       { kind: 'git-diff', path: undefined, section: undefined },
@@ -19,6 +19,7 @@ describe('normalizeWorkspaceTabs', () => {
       { kind: 'file', path: 'README.md' },
       { kind: 'file', path: 'README.md', view: 'source' },
       { kind: 'workspace-graph' },
+      { kind: 'file', path: 'legacy.md', view: 'graph' },
       { kind: 'file', path: '' },
     ])
 
@@ -46,6 +47,15 @@ describe('normalizeWorkspaceTabId', () => {
     const tabs = normalizeWorkspaceTabs([{ kind: 'file', path: 'README.md' }])
 
     expect(normalizeWorkspaceTabId('file:README.md', tabs)).toBe('file:edit:README.md')
+  })
+
+  it('falls back when the active id references a removed graph file view', () => {
+    const tabs = normalizeRuntimeWorkspaceTabs([
+      { kind: 'file', path: 'README.md', view: 'edit' },
+      { kind: 'file', path: 'legacy.md', view: 'graph' },
+    ])
+
+    expect(normalizeWorkspaceTabId('file:graph:legacy.md', tabs)).toBe('file:edit:README.md')
   })
 })
 

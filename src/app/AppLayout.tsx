@@ -104,7 +104,6 @@ const AppLayout = () => {
     onOpenFile: () => handleMenuAction('file.open_file'),
     onOpenProject: () => handleMenuAction('file.open_project'),
     onOpenSettings: openSettings,
-    onOpenHistory: state.onOpenWorkspaceHistory,
     onOpenTab: state.onOpenTab,
     onSetViewMode: state.setViewMode,
     onToggleRightSidebar: state.toggleRightSidebar,
@@ -132,12 +131,7 @@ const AppLayout = () => {
       onCloseTab: state.onCloseTab,
       onPersistedContentChange: state.onPersistedContentChange,
       onInspectPath: state.onInspectPath,
-      onOpenProject: state.onOpenProject,
       onOpenTab: state.onOpenTab,
-      onOpenWorkspaceGraph: state.onOpenWorkspaceGraph,
-      onSelectProject: state.onSelectProject,
-      onUseInternalRoot: state.onUseInternalRoot,
-      recentProjects: state.recentProjects,
       renamePath: state.renamePath,
       rightSidebarCollapsed: state.rightSidebarCollapsed,
       rootKind: state.rootKind,
@@ -167,12 +161,7 @@ const AppLayout = () => {
       state.onCloseTab,
       state.onPersistedContentChange,
       state.onInspectPath,
-      state.onOpenProject,
       state.onOpenTab,
-      state.onOpenWorkspaceGraph,
-      state.onSelectProject,
-      state.onUseInternalRoot,
-      state.recentProjects,
       state.renamePath,
       state.rightSidebarCollapsed,
       state.rootKind,
@@ -230,10 +219,10 @@ const AppLayout = () => {
         onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
         onOpenWorkspaceFiles={state.onOpenWorkspaceFiles}
         onOpenAllPages={state.onOpenAllPages}
-        onOpenHistory={state.onOpenWorkspaceHistory}
         onOpenProject={state.onOpenProject}
         onOpenCurrentWorkspaceInNewWindow={state.onOpenCurrentWorkspaceInNewWindow}
         onSelectWorkspaceInNewWindow={state.onSelectWorkspaceInNewWindow}
+        onUseInternalRoot={state.onUseInternalRoot}
         onToggleReadOnly={toggleReadOnly}
         onCloseActiveTab={state.onCloseActiveTab}
         onOpenTerminal={openTerminalArea}

@@ -80,7 +80,6 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       }
       if (id === 'view.wysiwyg') currentState.setViewMode('wysiwyg')
       if (id === 'view.source') currentState.setViewMode('source')
-      if (id === 'view.graph') currentState.setViewMode('graph')
       if (id === 'view.toggle_sidebar') currentState.toggleSidebar()
       if (id === 'view.toggle_right_sidebar') currentState.toggleRightSidebar()
       if (id === 'view.toggle_zen_mode') {

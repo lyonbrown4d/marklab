@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, PropsWithChildren } from 'react'
 import AppStatusBar from '@/components/AppStatusBar'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { AppStatusBarProvider, EditorStatusBar } from '@/components/EditorStatusBar'
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -79,6 +80,7 @@ const renderStatusBar = (props: AppStatusBarProps) =>
 beforeEach(() => {
   localStorage.clear()
   useMarkdownAssetSyncStore.setState({ failed: 0, lastError: null, pending: 0 })
+  usePreferencesStore.setState({ sidebarCollapsed: true })
 })
 
 describe('AppStatusBar', () => {
@@ -109,6 +111,14 @@ describe('AppStatusBar', () => {
 
     expect(onToggleTerminal).toHaveBeenCalledTimes(1)
     expect(onToggleReadOnly).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the workspace drawer when source control is requested', () => {
+    renderStatusBar(createProps())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Source Control' }))
+
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
   })
 
   it('makes read-only browsing visibly locked and keeps the escape action available', () => {

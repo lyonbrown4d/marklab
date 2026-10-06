@@ -43,8 +43,6 @@ export const preloadGraphView = () => {
   if (typeof window === 'undefined') return
   graphViewPreload ??= resetOnFailure(
     Promise.all([
-      import('@/pages/GraphViewPage'),
-      import('@/pages/FileGraphPage'),
       import('@/pages/WorkspaceGraphPage'),
       import('@/logic/graphLayout').then(({ preloadGraphLayout }) => preloadGraphLayout()),
     ]),

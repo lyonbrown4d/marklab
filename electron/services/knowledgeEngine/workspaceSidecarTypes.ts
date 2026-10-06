@@ -63,7 +63,6 @@ export type WorkspaceSidecarClient = {
     documentId: string,
     documentVersion: number | string,
   ) => Promise<KnowledgeMarkdownLink[]>
-  buildOutlineGraph: (path: string, content: string) => Promise<KnowledgeWorkspaceGraph>
   buildWorkspaceGraph: (
     documents: Array<{ path: string; title?: string; content: string }>,
     knownPaths: { paths: string[]; assetPaths: string[] },

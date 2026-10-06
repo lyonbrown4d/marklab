@@ -185,12 +185,6 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
       ...args,
     )
   }
-  buildOutlineGraph(...args: Parameters<WorkspaceSidecarClient['buildOutlineGraph']>) {
-    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['buildOutlineGraph']>>>(
-      'buildOutlineGraph',
-      ...args,
-    )
-  }
   shutdown(reason: string) {
     return this.request<void>('shutdown', reason)
   }

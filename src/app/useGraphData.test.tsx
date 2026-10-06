@@ -12,7 +12,6 @@ vi.mock('@/services/fsApi', async () => {
     ...actual,
     fsApi: {
       ...actual.fsApi,
-      getOutlineGraph: vi.fn(),
       getWorkspaceGraph: vi.fn(),
     },
   }
@@ -70,7 +69,7 @@ describe('useGraphData', () => {
       .mockResolvedValueOnce(graph('second'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      ({ workspaceKey }) => useGraphData('workspace', workspaceKey, INDEX, null, 'none'),
+      ({ workspaceKey }) => useGraphData('workspace', workspaceKey, INDEX, 'none'),
       { initialProps: { workspaceKey: 'directory:C:/one' }, wrapper: createWrapper(queryClient) },
     )
     await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('first'))
@@ -85,7 +84,7 @@ describe('useGraphData', () => {
     vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('early'))
     const queryClient = createQueryClient()
     const { result } = renderHook(
-      () => useGraphData('workspace', 'directory:C:/one', null, null, 'none'),
+      () => useGraphData('workspace', 'directory:C:/one', null, 'none'),
       { wrapper: createWrapper(queryClient) },
     )
 
@@ -97,7 +96,7 @@ describe('useGraphData', () => {
     vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('stable'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, null, 'none'),
+      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, 'none'),
       {
         initialProps: { index: null as FsWorkspaceIndex | null },
         wrapper: createWrapper(queryClient),
@@ -125,7 +124,7 @@ describe('useGraphData', () => {
       .mockResolvedValueOnce(graph('after'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, null, 'none'),
+      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, 'none'),
       { initialProps: { index: INDEX }, wrapper: createWrapper(queryClient) },
     )
     await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('before'))
@@ -141,59 +140,53 @@ describe('useGraphData', () => {
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledTimes(2)
   })
 
-  it.each(['file', 'workspace'] as const)(
-    'exposes errors and a stable retry for %s graphs',
-    async (mode) => {
-      const load = mode === 'file' ? fsApi.getOutlineGraph : fsApi.getWorkspaceGraph
-      vi.mocked(load)
-        .mockRejectedValueOnce(new Error('graph unavailable'))
-        .mockResolvedValueOnce(graph('ok'))
-      const queryClient = createQueryClient()
-      const { result, rerender } = renderHook(
-        () => useGraphData(mode, 'directory:C:/one', INDEX, 'notes/a.md', 'none'),
-        { wrapper: createWrapper(queryClient) },
-      )
-      await waitFor(() => expect(result.current.error).toEqual(new Error('graph unavailable')))
-      const retry = result.current.retry
+  it('exposes errors and a stable retry for workspace graphs', async () => {
+    vi.mocked(fsApi.getWorkspaceGraph)
+      .mockRejectedValueOnce(new Error('graph unavailable'))
+      .mockResolvedValueOnce(graph('ok'))
+    const queryClient = createQueryClient()
+    const { result, rerender } = renderHook(
+      () => useGraphData('workspace', 'directory:C:/one', INDEX, 'none'),
+      { wrapper: createWrapper(queryClient) },
+    )
+    await waitFor(() => expect(result.current.error).toEqual(new Error('graph unavailable')))
+    const retry = result.current.retry
 
-      rerender()
-      expect(result.current.retry).toBe(retry)
-      await act(async () => {
-        await result.current.retry()
+    rerender()
+    expect(result.current.retry).toBe(retry)
+    await act(async () => {
+      await result.current.retry()
+    })
+
+    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('ok'))
+    expect(result.current.error).toBeNull()
+  })
+
+  it('distinguishes initial loading from background refresh for workspace graphs', async () => {
+    const first = deferred<FsGraph>()
+    const second = deferred<FsGraph>()
+    vi.mocked(fsApi.getWorkspaceGraph)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const queryClient = createQueryClient()
+    const { result } = renderHook(
+      () => useGraphData('workspace', 'directory:C:/one', INDEX, 'none'),
+      { wrapper: createWrapper(queryClient) },
+    )
+    expect(result.current.loading).toBe(true)
+    expect(result.current.refreshing).toBe(false)
+    act(() => first.resolve(graph('cached')))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    act(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ['workspace-graph', 'directory:C:/one'],
       })
-
-      await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('ok'))
-      expect(result.current.error).toBeNull()
-    },
-  )
-
-  it.each(['file', 'workspace'] as const)(
-    'distinguishes initial loading from background refresh for %s graphs',
-    async (mode) => {
-      const first = deferred<FsGraph>()
-      const second = deferred<FsGraph>()
-      const load = mode === 'file' ? fsApi.getOutlineGraph : fsApi.getWorkspaceGraph
-      vi.mocked(load).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-      const queryClient = createQueryClient()
-      const { result } = renderHook(
-        () => useGraphData(mode, 'directory:C:/one', INDEX, 'notes/a.md', 'none'),
-        { wrapper: createWrapper(queryClient) },
-      )
-      expect(result.current.loading).toBe(true)
-      expect(result.current.refreshing).toBe(false)
-      act(() => first.resolve(graph('cached')))
-      await waitFor(() => expect(result.current.loading).toBe(false))
-
-      act(() => {
-        void queryClient.invalidateQueries({
-          queryKey: [mode === 'file' ? 'outline-graph' : 'workspace-graph', 'directory:C:/one'],
-        })
-      })
-      await waitFor(() => expect(result.current.refreshing).toBe(true))
-      expect(result.current.loading).toBe(false)
-      expect(result.current.graph.nodes[0]?.data.label).toBe('cached')
-      act(() => second.resolve(graph('fresh')))
-      await waitFor(() => expect(result.current.refreshing).toBe(false))
-    },
-  )
+    })
+    await waitFor(() => expect(result.current.refreshing).toBe(true))
+    expect(result.current.loading).toBe(false)
+    expect(result.current.graph.nodes[0]?.data.label).toBe('cached')
+    act(() => second.resolve(graph('fresh')))
+    await waitFor(() => expect(result.current.refreshing).toBe(false))
+  })
 })

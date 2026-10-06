@@ -1,7 +1,7 @@
 import type { Locale } from '@/i18n/resources'
 
-export type ViewMode = 'wysiwyg' | 'source' | 'graph' | 'preview'
-export type FileViewKind = 'edit' | 'source' | 'graph' | 'preview'
+export type ViewMode = 'wysiwyg' | 'source' | 'preview'
+export type FileViewKind = 'edit' | 'source' | 'preview'
 export type ThemeColorMode = 'light' | 'dark'
 export type ThemeModePreference = 'system' | ThemeColorMode
 export type LightThemeMode = 'paper' | 'ivory' | 'sepia' | 'github' | 'solarized' | 'mist'
@@ -18,9 +18,6 @@ export type WorkspaceTab =
       kind: 'file'
       view: FileViewKind
       path: string
-    }
-  | {
-      kind: 'workspace-graph'
     }
   | {
       kind: 'git-diff'

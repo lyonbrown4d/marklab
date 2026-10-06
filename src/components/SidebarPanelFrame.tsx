@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode, SVGProps } from 'react'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 
-type SidebarPanelId = 'explorer' | 'graph' | 'projects' | 'search'
+type SidebarPanelId = 'explorer' | 'search'
 
 export const sidebarPanelControlClassName =
   'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring active:bg-sidebar-accent active:text-sidebar-accent-foreground'

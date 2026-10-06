@@ -16,12 +16,10 @@ export const commandActionShortcutIds = {
   closeTab: 'tab.close',
   viewWysiwyg: 'view.wysiwyg',
   viewSource: 'view.source',
-  viewGraph: 'view.graph',
   toggleSidebar: 'view.toggleSidebar',
   toggleRightSidebar: 'view.toggleRightSidebar',
   toggleReadonly: 'view.toggleReadonly',
   toggleStatusBar: 'view.toggleStatusBar',
-  openWorkspaceHistory: 'workspace.openHistory',
 } as const satisfies Record<string, ShortcutActionId>
 
 const shortcutActionIds = Object.values(commandActionShortcutIds)

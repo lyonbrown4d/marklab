@@ -46,14 +46,12 @@ export const webTabShortcutActionSchema = z.enum([
   'tab.close',
   'view.wysiwyg',
   'view.source',
-  'view.graph',
   'view.toggleSource',
   'view.toggleSidebar',
   'view.toggleRightSidebar',
   'view.toggleTerminal',
   'view.toggleReadonly',
   'view.toggleStatusBar',
-  'workspace.openHistory',
 ])
 
 export const webTabShortcutBindingsRequestSchema = z.object({

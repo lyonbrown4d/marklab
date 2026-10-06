@@ -10,7 +10,6 @@ const messages: Record<string, string> = {
   'actions.openWorkspaceGraph': 'Open Workspace Graph',
   'actions.rebuildSearchIndex': 'Rebuild Search Index',
   'actions.rebuildingSearchIndex': 'Rebuilding Search Index…',
-  'workspace.history': 'Workspace History',
   'collection.all': 'All pages',
   'command.singleFileWorkspaceUnavailable':
     'Project graph, collections, and indexing commands are available after opening a folder.',
@@ -71,12 +70,10 @@ describe('CommandWorkspaceSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open All Pages' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open Terminal' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Workspace History' }))
     fireEvent.click(screen.getByRole('button', { name: 'All pages3' }))
 
     expect(onAction).toHaveBeenCalledWith('workspace.open_pages')
     expect(onAction).toHaveBeenCalledWith('terminal.open')
-    expect(onAction).toHaveBeenCalledWith('workspace.open_history')
     expect(onAction).toHaveBeenCalledWith('collection.open:all')
   })
 

@@ -25,7 +25,6 @@ import type { WorkspaceSearchDocument } from '@electron/services/workspace/works
 import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache.js'
 import {
-  trySidecarOutlineGraph,
   trySidecarMarkdownDiagnostics,
   trySidecarWorkspaceGraph,
 } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
@@ -127,23 +126,6 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const status = super.updateBuffer(value)
     this.analysisCache.invalidate()
     return status
-  }
-
-  async outlineGraph(value: unknown): Promise<FsGraph> {
-    const relativePath = stringArg(value, 'path')
-    const content = await this.readFile({ path: relativePath })
-    const cachedGraph = this.graphCache.getOutlineGraph(relativePath, content)
-    if (cachedGraph) return cachedGraph
-
-    const graph = await trySidecarOutlineGraph({
-      content,
-      knowledgeEngineService: this.analysisKnowledgeEngineService,
-      logger: this.logger,
-      path: relativePath,
-      state: this.state,
-    })
-    this.graphCache.setOutlineGraph(relativePath, content, graph)
-    return graph
   }
 
   async analyzeMarkdownBuffer(value: unknown): Promise<FsMarkdownDiagnostic[]> {

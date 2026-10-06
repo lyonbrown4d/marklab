@@ -3,10 +3,8 @@ import {
   ChevronDown,
   FileSearch,
   Files,
-  FolderClock,
   FolderOpen,
   GitBranch,
-  GitGraph,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +32,6 @@ type SidebarActivityRailProps = {
   rootPath?: string
   activeActivity: SidebarActivityId
   fileCount: number
-  recentProjectCount: number
   onSelectActivity: (activity: SidebarActivityId) => void
 }
 
@@ -97,7 +94,6 @@ const SidebarActivityRail = ({
   rootPath = '',
   activeActivity,
   fileCount,
-  recentProjectCount,
   onSelectActivity,
 }: SidebarActivityRailProps) => {
   const { t } = useI18n()
@@ -117,17 +113,6 @@ const SidebarActivityRail = ({
       id: 'scm',
       label: t('scm.title'),
       icon: GitBranch,
-    },
-    {
-      id: 'graph',
-      label: t('tabs.workspaceGraph'),
-      icon: GitGraph,
-    },
-    {
-      id: 'projects',
-      label: t('sidebar.recentProjects'),
-      icon: FolderClock,
-      badge: recentProjectCount,
     },
   ]
 

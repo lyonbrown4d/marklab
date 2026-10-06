@@ -25,7 +25,7 @@ describe('TabsBarViewModeControls', () => {
     expect(onChangeView).toHaveBeenCalledWith('source')
   })
 
-  it.each(['graph', 'preview'] as const)(
+  it.each(['preview'] as const)(
     'leaves editor toggles unselected for %s and allows switching to WYSIWYG',
     async (viewMode) => {
       const onChangeView = vi.fn()

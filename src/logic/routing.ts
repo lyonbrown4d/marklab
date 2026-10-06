@@ -2,23 +2,20 @@ import { generatePath } from 'react-router-dom'
 import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
-const SIDEBAR_ACTIVITIES = new Set<string>(['explorer', 'search', 'scm', 'graph', 'projects'])
+const SIDEBAR_ACTIVITIES = new Set<string>(['explorer', 'search', 'scm'])
 
 export const FILE_ROUTE_PATTERN = '/files/edit/*'
 export const GIT_DIFF_ROUTE_PATTERN = '/_diff/:section/*'
 export const SOURCE_ROUTE_PATTERN = '/files/source/*'
-export const GRAPH_FILE_ROUTE_PATTERN = '/files/graph/*'
 export const PREVIEW_ROUTE_PATTERN = '/files/preview/*'
 export const ALL_PAGES_ROUTE_PATTERN = '/workspace/pages'
 export const GRAPH_WORKSPACE_ROUTE_PATTERN = '/workspace/graph'
-export const WORKSPACE_HISTORY_ROUTE_PATTERN = '/workspace/history'
 export const WEB_TAB_ROUTE_PATTERN = '/web/:tabId'
 export const SIDEBAR_ACTIVITY_PARAM = 'sidebar'
-export type SidebarActivityId = 'explorer' | 'search' | 'scm' | 'graph' | 'projects'
+export type SidebarActivityId = 'explorer' | 'search' | 'scm'
 
 export const fileViewToRoutePattern = (view: FileViewKind) => {
   if (view === 'source') return SOURCE_ROUTE_PATTERN
-  if (view === 'graph') return GRAPH_FILE_ROUTE_PATTERN
   if (view === 'preview') return PREVIEW_ROUTE_PATTERN
   return FILE_ROUTE_PATTERN
 }
@@ -41,19 +38,12 @@ export const pathToSourceRoute = (path: string) => {
   return pathToFileViewRoute(path, 'source')
 }
 
-export const pathToGraphFileRoute = (path: string) => {
-  return pathToFileViewRoute(path, 'graph')
-}
-
 export const pathToWorkspaceGraphRoute = () => generatePath(GRAPH_WORKSPACE_ROUTE_PATTERN)
-
-export const pathToWorkspaceHistoryRoute = () => generatePath(WORKSPACE_HISTORY_ROUTE_PATTERN)
 
 export const pathToWebTabRoute = (tabId: string) => `/web/${encodeURIComponent(tabId)}`
 
 export const pathToWorkspaceTabRoute = (tab: WorkspaceTab) => {
   if (tab.kind === 'file') return pathToFileViewRoute(tab.path, tab.view)
-  if (tab.kind === 'workspace-graph') return pathToWorkspaceGraphRoute()
   if (tab.kind === 'git-diff') return pathToGitDiffRoute(tab.section, tab.path)
   return pathToWebTabRoute(tab.id)
 }

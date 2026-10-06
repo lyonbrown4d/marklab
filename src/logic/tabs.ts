@@ -2,31 +2,26 @@ import uniqBy from 'lodash-es/uniqBy'
 import type { FileViewKind, GitDiffSection, WorkspaceTab } from '@/store/appTypes'
 
 const GIT_DIFF_SECTIONS = new Set<string>(['staged', 'unstaged', 'untracked', 'conflicts'])
-const FILE_VIEWS = new Set<string>(['edit', 'source', 'graph', 'preview'])
+const FILE_VIEWS = new Set<string>(['edit', 'source', 'preview'])
 
 export const fileViewTabId = (path: string, view: FileViewKind) => `file:${view}:${path}`
 export const fileTabId = (path: string) => fileViewTabId(path, 'edit')
 
 export const gitDiffTabId = (section: GitDiffSection, path: string) => `git-diff:${section}:${path}`
-export const workspaceGraphTabId = () => 'workspace-graph'
 export const webTabId = (id: string) => `web:${id}`
 
 export const getWorkspaceTabId = (tab: WorkspaceTab) =>
   tab.kind === 'file'
     ? fileViewTabId(tab.path, tab.view)
-    : tab.kind === 'workspace-graph'
-      ? workspaceGraphTabId()
-      : tab.kind === 'git-diff'
-        ? gitDiffTabId(tab.section, tab.path)
-        : webTabId(tab.id)
+    : tab.kind === 'git-diff'
+      ? gitDiffTabId(tab.section, tab.path)
+      : webTabId(tab.id)
 
 export const createFileTab = (path: string, view: FileViewKind = 'edit'): WorkspaceTab => ({
   kind: 'file',
   view,
   path,
 })
-
-export const createWorkspaceGraphTab = (): WorkspaceTab => ({ kind: 'workspace-graph' })
 
 export const createGitDiffTab = (path: string, section: GitDiffSection): WorkspaceTab => ({
   kind: 'git-diff',
@@ -49,7 +44,7 @@ export const getWorkspaceTabPath = (tab: WorkspaceTab | null | undefined) =>
   tab?.kind === 'file' || tab?.kind === 'git-diff' ? tab.path : null
 
 export const getWorkspaceTabLabelPath = (tab: WorkspaceTab) =>
-  tab.kind === 'workspace-graph' ? 'Workspace Graph' : tab.kind === 'web' ? tab.title : tab.path
+  tab.kind === 'web' ? tab.title : tab.path
 
 export const areWorkspaceTabsEqual = (left: WorkspaceTab[], right: WorkspaceTab[]) => {
   if (left === right) return true
@@ -88,9 +83,9 @@ const normalizeTabs = (value: unknown, allowWeb: boolean): WorkspaceTab[] => {
     if (!item || typeof item !== 'object') return []
     const tab = item as Partial<WorkspaceTab>
     if (tab.kind === 'file' && isNonEmptyString(tab.path)) {
-      return [createFileTab(tab.path, isFileView(tab.view) ? tab.view : 'edit')]
+      if (tab.view !== undefined && !isFileView(tab.view)) return []
+      return [createFileTab(tab.path, tab.view ?? 'edit')]
     }
-    if (tab.kind === 'workspace-graph') return []
     if (tab.kind === 'git-diff' && isNonEmptyString(tab.path) && isGitDiffSection(tab.section)) {
       return [createGitDiffTab(tab.path, tab.section)]
     }
@@ -122,7 +117,6 @@ export const normalizeWorkspaceTabId = (value: unknown, tabs: WorkspaceTab[]) =>
     value.startsWith('file:') &&
     !value.startsWith('file:edit:') &&
     !value.startsWith('file:source:') &&
-    !value.startsWith('file:graph:') &&
     !value.startsWith('file:preview:')
       ? `file:edit:${value.slice('file:'.length)}`
       : value

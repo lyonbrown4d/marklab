@@ -151,7 +151,7 @@ export type FsGraphEdge = {
 }
 
 export type FsGraph = {
-  mode: 'outline' | 'mindmap'
+  mode: 'mindmap'
   nodes: FsGraphNode[]
   edges: FsGraphEdge[]
 }

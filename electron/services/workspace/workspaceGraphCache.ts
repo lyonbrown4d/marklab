@@ -19,11 +19,9 @@ const DEFAULT_MAX_CACHE_ENTRIES = 8
 
 export class WorkspaceGraphCache {
   private readonly workspaceGraphs: GraphCache
-  private readonly outlineGraphs: GraphCache
 
   constructor(private readonly maxEntries = DEFAULT_MAX_CACHE_ENTRIES) {
     this.workspaceGraphs = createGraphCache(maxEntries)
-    this.outlineGraphs = createGraphCache(maxEntries)
   }
 
   getWorkspaceGraph(
@@ -56,17 +54,8 @@ export class WorkspaceGraphCache {
     this.setGraph(this.workspaceGraphs, key, graph)
   }
 
-  getOutlineGraph(path: string, content: string): FsGraph | undefined {
-    return this.getGraph(this.outlineGraphs, this.outlineGraphKey(path, content))
-  }
-
-  setOutlineGraph(path: string, content: string, graph: FsGraph): void {
-    this.setGraph(this.outlineGraphs, this.outlineGraphKey(path, content), graph)
-  }
-
   clear(): void {
     this.workspaceGraphs.clear()
-    this.outlineGraphs.clear()
   }
 
   private workspaceGraphKey(
@@ -87,14 +76,6 @@ export class WorkspaceGraphCache {
     appendKnownPaths(hash, 'paths', knownPaths.paths)
     appendKnownPaths(hash, 'assetPaths', knownPaths.assetPaths)
 
-    return hash.digest('hex')
-  }
-
-  private outlineGraphKey(path: string, content: string): string {
-    const hash = createHash('sha256')
-    appendPart(hash, 'outline')
-    appendPart(hash, path)
-    appendPart(hash, contentHash(content))
     return hash.digest('hex')
   }
 

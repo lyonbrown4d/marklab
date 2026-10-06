@@ -172,7 +172,7 @@ describe('AppCachedOutlet render isolation', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/workspace/history']}>
+      <MemoryRouter initialEntries={['/workspace/pages']}>
         <Routes>
           <Route element={<CacheShell />}>
             <Route path="*" element={<LifecycleProbe />} />
@@ -183,7 +183,7 @@ describe('AppCachedOutlet render isolation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open editor' }))
 
-    await waitFor(() => expect(unmounts).toHaveBeenCalledWith('/workspace/history'))
+    await waitFor(() => expect(unmounts).toHaveBeenCalledWith('/workspace/pages'))
   })
 
   it('evicts the oldest real editor node when the cache exceeds its weight budget', async () => {

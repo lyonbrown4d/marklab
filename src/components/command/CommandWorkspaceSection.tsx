@@ -1,4 +1,4 @@
-import { GitGraph, History, Layers3, RefreshCw, Terminal } from 'lucide-react'
+import { GitGraph, Layers3, RefreshCw, Terminal } from 'lucide-react'
 import { CommandGroup, CommandItem, CommandShortcut } from '@/components/ui/command'
 import { useI18n } from '@/i18n/useI18n'
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
@@ -9,7 +9,6 @@ type CommandWorkspaceSectionProps = {
   projectWorkspace: boolean
   searchIndexRebuilding: boolean
   onAction: (id: string) => void
-  historyShortcut?: string
 }
 
 const CommandWorkspaceSection = ({
@@ -17,7 +16,6 @@ const CommandWorkspaceSection = ({
   projectWorkspace,
   searchIndexRebuilding,
   onAction,
-  historyShortcut,
 }: CommandWorkspaceSectionProps) => {
   const { t } = useI18n()
 
@@ -48,14 +46,6 @@ const CommandWorkspaceSection = ({
           >
             <GitGraph className="size-4" />
             {t('actions.openWorkspaceGraph')}
-          </CommandItem>
-          <CommandItem
-            value="workspace history versions timeline git commits"
-            onSelect={() => onAction('workspace.open_history')}
-          >
-            <History className="size-4" />
-            <span className="truncate">{t('workspace.history')}</span>
-            {historyShortcut ? <CommandShortcut>{historyShortcut}</CommandShortcut> : null}
           </CommandItem>
           {collections.map((collection) => (
             <CommandItem

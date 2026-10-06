@@ -4,7 +4,6 @@ import {
   FilePlus2,
   FolderPlus,
   FolderOpen,
-  GitGraph,
   Monitor,
   Moon,
   LockKeyhole,
@@ -29,7 +28,7 @@ import {
 } from '@/components/command/CommandActionHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
-import { preloadGraphView, preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
+import { preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 import { cn } from '@/lib/utils'
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -143,7 +142,6 @@ const CommandActionSections = ({
         projectWorkspace={canCreateWorkspaceEntries}
         searchIndexRebuilding={searchIndexRebuilding}
         onAction={onAction}
-        historyShortcut={shortcutLabels[commandActionShortcutIds.openWorkspaceHistory]}
       />
       <CommandSeparator />
       <CommandGroup heading={t('menu.view')}>
@@ -182,16 +180,6 @@ const CommandActionSections = ({
           <FileText className="size-4" />
           <span className="truncate">{t('editor.modeSource')}</span>
           <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewSource]} />
-        </CommandItem>
-        <CommandItem
-          onFocus={preloadGraphView}
-          onMouseEnter={preloadGraphView}
-          value="graph view mindmap react flow workspace graph"
-          onSelect={() => onAction('view.graph')}
-        >
-          <GitGraph className="size-4" />
-          <span className="truncate">{t('tabs.graph')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewGraph]} />
         </CommandItem>
         <CommandItem
           value="toggle left sidebar explorer"

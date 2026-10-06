@@ -1,6 +1,5 @@
 import {
   FILE_ROUTE_PATTERN,
-  GRAPH_FILE_ROUTE_PATTERN,
   GRAPH_WORKSPACE_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
 } from '@/logic/routing'
@@ -15,7 +14,7 @@ export const ROUTE_CACHE_TTL_SECONDS = {
   workspaceGraph: 300,
 } as const
 
-export type CacheableRouteKind = 'edit' | 'source' | 'file-graph' | 'workspace-graph'
+export type CacheableRouteKind = 'edit' | 'source' | 'workspace-graph'
 
 export type RouteCachePolicy =
   | Readonly<{
@@ -52,12 +51,6 @@ const CACHEABLE_POLICIES = {
     ttlSeconds: ROUTE_CACHE_TTL_SECONDS.editor,
     weight: 3,
   },
-  fileGraph: {
-    cacheable: true,
-    kind: 'file-graph',
-    ttlSeconds: ROUTE_CACHE_TTL_SECONDS.editor,
-    weight: 3,
-  },
   workspaceGraph: {
     cacheable: true,
     kind: 'workspace-graph',
@@ -76,7 +69,6 @@ const matchesWildcardRoute = (pathname: string, pattern: string) => {
 export const getRouteCachePolicy = (pathname: string): RouteCachePolicy => {
   if (matchesWildcardRoute(pathname, FILE_ROUTE_PATTERN)) return CACHEABLE_POLICIES.edit
   if (matchesWildcardRoute(pathname, SOURCE_ROUTE_PATTERN)) return CACHEABLE_POLICIES.source
-  if (matchesWildcardRoute(pathname, GRAPH_FILE_ROUTE_PATTERN)) return CACHEABLE_POLICIES.fileGraph
   if (pathname === GRAPH_WORKSPACE_ROUTE_PATTERN) return CACHEABLE_POLICIES.workspaceGraph
   return NON_CACHEABLE_POLICY
 }

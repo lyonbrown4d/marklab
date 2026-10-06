@@ -24,10 +24,11 @@ describe('useEditorRoutes workspace view', () => {
     expect(result.current.viewMode).toBe('wysiwyg')
   })
 
-  it('uses graph editor mode only for a file graph route', () => {
+  it('does not recognize the removed file graph route as an editor mode', () => {
     const { result } = renderRoutes('/files/graph/notes/active.md')
 
     expect(result.current.workspaceView).toBe('files')
-    expect(result.current.viewMode).toBe('graph')
+    expect(result.current.viewMode).toBe('wysiwyg')
+    expect(result.current.internalRouteActive).toBe(false)
   })
 })

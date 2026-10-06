@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-hotkeys'
 
 export type ShortcutPlatform = 'mac' | 'windows' | 'linux'
-export type ShortcutScope = 'app' | 'editor' | 'graph'
+export type ShortcutScope = 'app' | 'editor'
 
 export const shortcutActions = [
   { id: 'app.commandPalette', scope: 'app', labelKey: 'shortcuts.commandPalette' },
@@ -20,14 +20,12 @@ export const shortcutActions = [
   { id: 'tab.close', scope: 'app', labelKey: 'shortcuts.closeTab' },
   { id: 'view.wysiwyg', scope: 'app', labelKey: 'shortcuts.viewWysiwyg' },
   { id: 'view.source', scope: 'app', labelKey: 'shortcuts.viewSource' },
-  { id: 'view.graph', scope: 'app', labelKey: 'shortcuts.viewGraph' },
   { id: 'view.toggleSource', scope: 'app', labelKey: 'shortcuts.toggleSource' },
   { id: 'view.toggleSidebar', scope: 'app', labelKey: 'shortcuts.toggleSidebar' },
   { id: 'view.toggleRightSidebar', scope: 'app', labelKey: 'shortcuts.toggleRightSidebar' },
   { id: 'view.toggleTerminal', scope: 'app', labelKey: 'shortcuts.toggleTerminal' },
   { id: 'view.toggleReadonly', scope: 'app', labelKey: 'shortcuts.toggleReadonly' },
   { id: 'view.toggleStatusBar', scope: 'app', labelKey: 'shortcuts.toggleStatusBar' },
-  { id: 'workspace.openHistory', scope: 'app', labelKey: 'shortcuts.openWorkspaceHistory' },
   { id: 'editor.paragraph', scope: 'editor', labelKey: 'shortcuts.paragraph' },
   { id: 'editor.heading1', scope: 'editor', labelKey: 'shortcuts.heading1' },
   { id: 'editor.heading2', scope: 'editor', labelKey: 'shortcuts.heading2' },
@@ -47,28 +45,6 @@ export const shortcutActions = [
   { id: 'editor.bulletList', scope: 'editor', labelKey: 'shortcuts.bulletList' },
   { id: 'editor.table', scope: 'editor', labelKey: 'shortcuts.table' },
   { id: 'editor.clearFormat', scope: 'editor', labelKey: 'shortcuts.clearFormat' },
-  { id: 'graph.addSibling', scope: 'graph', labelKey: 'shortcuts.graphAddSibling' },
-  { id: 'graph.addSiblingBefore', scope: 'graph', labelKey: 'shortcuts.graphAddSiblingBefore' },
-  { id: 'graph.addChild', scope: 'graph', labelKey: 'shortcuts.graphAddChild' },
-  { id: 'graph.delete', scope: 'graph', labelKey: 'shortcuts.graphDelete' },
-  { id: 'graph.editTitle', scope: 'graph', labelKey: 'shortcuts.graphEditTitle' },
-  { id: 'graph.selectPrevious', scope: 'graph', labelKey: 'shortcuts.graphSelectPrevious' },
-  { id: 'graph.selectNext', scope: 'graph', labelKey: 'shortcuts.graphSelectNext' },
-  { id: 'graph.selectParent', scope: 'graph', labelKey: 'shortcuts.graphSelectParent' },
-  { id: 'graph.selectChild', scope: 'graph', labelKey: 'shortcuts.graphSelectChild' },
-  { id: 'graph.clearSelection', scope: 'graph', labelKey: 'shortcuts.graphClearSelection' },
-  { id: 'graph.focusSelection', scope: 'graph', labelKey: 'shortcuts.graphFocusSelection' },
-  { id: 'graph.fitView', scope: 'graph', labelKey: 'shortcuts.graphFitView' },
-  { id: 'graph.zoomIn', scope: 'graph', labelKey: 'shortcuts.graphZoomIn' },
-  { id: 'graph.zoomOut', scope: 'graph', labelKey: 'shortcuts.graphZoomOut' },
-  { id: 'graph.collapse', scope: 'graph', labelKey: 'shortcuts.graphCollapse' },
-  { id: 'graph.expand', scope: 'graph', labelKey: 'shortcuts.graphExpand' },
-  {
-    id: 'graph.collapseSubtree',
-    scope: 'graph',
-    labelKey: 'shortcuts.graphCollapseSubtree',
-  },
-  { id: 'graph.expandSubtree', scope: 'graph', labelKey: 'shortcuts.graphExpandSubtree' },
 ] as const
 
 export type ShortcutActionId = (typeof shortcutActions)[number]['id']
@@ -89,14 +65,12 @@ export const shortcutCategories = [
       'tab.close',
       'view.wysiwyg',
       'view.source',
-      'view.graph',
       'view.toggleSource',
       'view.toggleSidebar',
       'view.toggleRightSidebar',
       'view.toggleTerminal',
       'view.toggleReadonly',
       'view.toggleStatusBar',
-      'workspace.openHistory',
     ],
   },
   {
@@ -124,30 +98,6 @@ export const shortcutCategories = [
       'editor.clearFormat',
     ],
   },
-  {
-    id: 'graph',
-    labelKey: 'shortcuts.graphCategory',
-    actions: [
-      'graph.addSibling',
-      'graph.addSiblingBefore',
-      'graph.addChild',
-      'graph.delete',
-      'graph.editTitle',
-      'graph.selectPrevious',
-      'graph.selectNext',
-      'graph.selectParent',
-      'graph.selectChild',
-      'graph.clearSelection',
-      'graph.focusSelection',
-      'graph.fitView',
-      'graph.zoomIn',
-      'graph.zoomOut',
-      'graph.collapse',
-      'graph.expand',
-      'graph.collapseSubtree',
-      'graph.expandSubtree',
-    ],
-  },
 ] as const satisfies ReadonlyArray<{
   id: string
   labelKey: string
@@ -165,14 +115,12 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'tab.close': ['Mod+W'],
   'view.wysiwyg': ['Mod+Alt+E'],
   'view.source': ['Mod+Alt+S'],
-  'view.graph': ['Mod+Alt+G'],
   'view.toggleSource': ['Mod+/'],
   'view.toggleSidebar': ['Mod+Shift+L'],
   'view.toggleRightSidebar': ['Mod+Shift+R'],
   'view.toggleTerminal': ['Mod+J'],
   'view.toggleReadonly': ['Mod+Shift+E'],
   'view.toggleStatusBar': ['Mod+Shift+B'],
-  'workspace.openHistory': ['Mod+Shift+H'],
   'editor.paragraph': ['Mod+0'],
   'editor.heading1': ['Mod+1'],
   'editor.heading2': ['Mod+2'],
@@ -192,24 +140,6 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'editor.bulletList': ['Control+Shift+]', 'Meta+Alt+U'],
   'editor.table': ['Control+T', 'Meta+Alt+T'],
   'editor.clearFormat': ['Mod+\\'],
-  'graph.addSibling': ['Enter'],
-  'graph.addSiblingBefore': ['Shift+Enter'],
-  'graph.addChild': ['Tab'],
-  'graph.delete': ['Delete', 'Backspace'],
-  'graph.editTitle': ['F2'],
-  'graph.selectPrevious': ['ArrowUp'],
-  'graph.selectNext': ['ArrowDown'],
-  'graph.selectParent': ['ArrowLeft'],
-  'graph.selectChild': ['ArrowRight'],
-  'graph.clearSelection': ['Escape'],
-  'graph.focusSelection': ['Space'],
-  'graph.fitView': ['Home', 'Mod+0'],
-  'graph.zoomIn': ['=', 'NumpadAdd'],
-  'graph.zoomOut': ['-', 'NumpadSubtract'],
-  'graph.collapse': ['['],
-  'graph.expand': [']'],
-  'graph.collapseSubtree': ['Shift+['],
-  'graph.expandSubtree': ['Shift+]'],
 }
 
 const shortcutActionIdSet = new Set<ShortcutActionId>(shortcutActions.map((action) => action.id))

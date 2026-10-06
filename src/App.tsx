@@ -6,9 +6,7 @@ import WorkspaceRootPage from '@/pages/WorkspaceRootPage'
 import {
   FILE_ROUTE_PATTERN,
   GIT_DIFF_ROUTE_PATTERN,
-  GRAPH_FILE_ROUTE_PATTERN,
   GRAPH_WORKSPACE_ROUTE_PATTERN,
-  WORKSPACE_HISTORY_ROUTE_PATTERN,
   ALL_PAGES_ROUTE_PATTERN,
   PREVIEW_ROUTE_PATTERN,
   SOURCE_ROUTE_PATTERN,
@@ -18,11 +16,9 @@ import {
 const AllPagesPage = lazy(() => import('@/pages/AllPagesPage'))
 const EditFilePage = lazy(() => import('@/pages/EditFilePage'))
 const FilePreviewPage = lazy(() => import('@/pages/FilePreviewPage'))
-const FileGraphPage = lazy(() => import('@/pages/FileGraphPage'))
 const GitDiffRoutePage = lazy(() => import('@/pages/GitDiffRoutePage'))
 const SourceFilePage = lazy(() => import('@/pages/SourceFilePage'))
 const WorkspaceGraphPage = lazy(() => import('@/pages/WorkspaceGraphPage'))
-const WorkspaceHistoryPage = lazy(() => import('@/pages/WorkspaceHistoryPage'))
 const WebTabPage = lazy(() => import('@/pages/WebTabPage'))
 
 const lazyRoute = (Page: ComponentType) => (
@@ -40,9 +36,7 @@ const App = () => (
         <Route path={GIT_DIFF_ROUTE_PATTERN} element={lazyRoute(GitDiffRoutePage)} />
         <Route path={PREVIEW_ROUTE_PATTERN} element={lazyRoute(FilePreviewPage)} />
         <Route path={SOURCE_ROUTE_PATTERN} element={lazyRoute(SourceFilePage)} />
-        <Route path={GRAPH_FILE_ROUTE_PATTERN} element={lazyRoute(FileGraphPage)} />
         <Route path={GRAPH_WORKSPACE_ROUTE_PATTERN} element={lazyRoute(WorkspaceGraphPage)} />
-        <Route path={WORKSPACE_HISTORY_ROUTE_PATTERN} element={lazyRoute(WorkspaceHistoryPage)} />
         <Route path={WEB_TAB_ROUTE_PATTERN} element={lazyRoute(WebTabPage)} />
         <Route path={FILE_ROUTE_PATTERN} element={lazyRoute(EditFilePage)} />
         <Route path="*" element={<Navigate to="/" replace />} />

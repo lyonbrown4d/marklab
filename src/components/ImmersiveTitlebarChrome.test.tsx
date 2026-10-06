@@ -29,7 +29,6 @@ const createProps = () => ({
   workspaceMapTitle: '工作区地图',
   workspaceViewLabel: '工作区视图',
   moreLabel: '更多操作',
-  historyLabel: '工作区历史',
   recentWorkspaces: {
     currentLabel: '当前',
     emptyLabel: '没有最近工作区',
@@ -57,10 +56,10 @@ const createProps = () => ({
   onOpenFile: vi.fn(),
   onCreateFile: vi.fn(),
   onExport: vi.fn(),
-  onOpenHistory: vi.fn(),
   onOpenProject: vi.fn(),
   onOpenCurrentWorkspaceInNewWindow: vi.fn(),
   onSelectWorkspaceInNewWindow: vi.fn(),
+  onUseInternalRoot: vi.fn(),
   workspaceWindowOpening: false,
   openCurrentWorkspaceInNewWindowLabel: 'Open Current Workspace in New Window',
   openWorkspaceInNewWindowLabel: 'Open Workspace in New Window…',
@@ -211,16 +210,6 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(props.onExport).toHaveBeenNthCalledWith(2, 'docx')
   })
 
-  it('exposes all recent workspaces from the primary chrome', async () => {
-    const props = createProps()
-    render(<ImmersiveTitlebarChrome {...props} />)
-
-    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: '工作区历史' }))
-
-    expect(props.onOpenHistory).toHaveBeenCalledOnce()
-  })
-
   it('offers semantic actions through the compact overflow menu', async () => {
     const props = createProps()
     const user = userEvent.setup()
@@ -255,7 +244,7 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(screen.queryByRole('button', { name: '只读浏览' })).not.toBeInTheDocument()
   })
 
-  it('shows at most four recent workspaces, marks current, and opens an MRU item', async () => {
+  it('lists all recent workspaces directly without a standalone history page', async () => {
     const props = createProps()
     render(<ImmersiveTitlebarChrome {...props} />)
 
@@ -264,8 +253,9 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(current).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('menuitem', { name: '在新窗口打开工作区：研究' })).toBeInTheDocument()
     expect(
-      screen.queryByRole('menuitem', { name: '在新窗口打开工作区：不会显示' }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('menuitem', { name: '在新窗口打开工作区：不会显示' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '工作区历史' })).not.toBeInTheDocument()
 
     await userEvent.click(current)
     expect(props.onOpenProject).toHaveBeenCalledWith('D:/随笔')

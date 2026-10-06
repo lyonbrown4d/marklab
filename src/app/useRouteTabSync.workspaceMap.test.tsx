@@ -5,6 +5,39 @@ import { useRouteTabSync } from '@/app/useRouteTabSync'
 import type { WorkspaceTab } from '@/store/appTypes'
 
 describe('useRouteTabSync workspace map', () => {
+  it('keeps the current file context while the workspace library is open', async () => {
+    const setActiveTabId = vi.fn()
+    const setInspectedPath = vi.fn()
+
+    renderHook(() =>
+      useRouteTabSync({
+        enabled: true,
+        gitDiffMatch: null,
+        sourceMatch: null,
+        previewMatch: null,
+        graphWorkspaceMatch: null,
+        allPagesMatch: {},
+        gitDiffSection: undefined,
+        gitDiffPath: null,
+        routeFileView: null,
+        routeFilePath: null,
+        routePath: null,
+        isRouteFile: false,
+        locationPathname: '/workspace/pages',
+        lastHandledRouteRef: createRef<string | null>(),
+        inspectedPathRef: { current: 'notes/current.md' },
+        tabsRef: { current: [{ kind: 'file', path: 'notes/current.md', view: 'edit' }] },
+        onRouteHandled: vi.fn(),
+        setTabs: vi.fn(),
+        setActiveTabId,
+        setInspectedPath,
+      }),
+    )
+
+    await waitFor(() => expect(setActiveTabId).not.toHaveBeenCalled())
+    expect(setInspectedPath).not.toHaveBeenCalled()
+  })
+
   it('marks the route handled without changing the current file tab', async () => {
     const onRouteHandled = vi.fn()
     const setActiveTabId = vi.fn()
@@ -13,15 +46,12 @@ describe('useRouteTabSync workspace map', () => {
 
     renderHook(() =>
       useRouteTabSync({
-        activeTabId: 'file:edit:notes/current.md',
         enabled: true,
         gitDiffMatch: null,
         sourceMatch: null,
-        graphFileMatch: null,
         previewMatch: null,
         graphWorkspaceMatch: {},
         allPagesMatch: null,
-        historyMatch: null,
         gitDiffSection: undefined,
         gitDiffPath: null,
         routeFileView: null,
@@ -52,15 +82,12 @@ describe('useRouteTabSync workspace map', () => {
 
     renderHook(() =>
       useRouteTabSync({
-        activeTabId: 'file:edit:notes/current.md',
         enabled: true,
         gitDiffMatch: null,
         sourceMatch: null,
-        graphFileMatch: null,
         previewMatch: null,
         graphWorkspaceMatch: null,
         allPagesMatch: null,
-        historyMatch: null,
         gitDiffSection: undefined,
         gitDiffPath: null,
         routeFileView: null,

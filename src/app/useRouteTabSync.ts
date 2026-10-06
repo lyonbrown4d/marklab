@@ -15,15 +15,12 @@ type LatestRef<T> = {
 }
 
 type UseRouteTabSyncArgs = {
-  activeTabId: string | null
   enabled: boolean
   gitDiffMatch: unknown
   sourceMatch: unknown
-  graphFileMatch: unknown
   previewMatch: unknown
   graphWorkspaceMatch: unknown
   allPagesMatch: unknown
-  historyMatch: unknown
   webMatch?: unknown
   webTabRouteId?: string
   gitDiffSection: string | undefined
@@ -43,15 +40,12 @@ type UseRouteTabSyncArgs = {
 }
 
 export const useRouteTabSync = ({
-  activeTabId,
   enabled,
   gitDiffMatch,
   sourceMatch,
-  graphFileMatch,
   previewMatch,
   graphWorkspaceMatch,
   allPagesMatch,
-  historyMatch,
   webMatch,
   webTabRouteId,
   gitDiffSection,
@@ -71,44 +65,12 @@ export const useRouteTabSync = ({
 }: UseRouteTabSyncArgs) => {
   useEffect(() => {
     if (!enabled) return
-    if (locationPathname !== '/' && !allPagesMatch && !historyMatch) return
-    if (
-      gitDiffMatch ||
-      sourceMatch ||
-      graphFileMatch ||
-      previewMatch ||
-      graphWorkspaceMatch ||
-      isRouteFile
-    ) {
-      return
-    }
+    if (locationPathname !== '/' && !allPagesMatch) return
     if (lastHandledRouteRef.current !== locationPathname) {
       lastHandledRouteRef.current = locationPathname
       onRouteHandled()
     }
-    if (locationPathname === '/') return
-    if (!activeTabId && !inspectedPathRef.current) return
-
-    setActiveTabId(null)
-    setInspectedPath(null)
-  }, [
-    activeTabId,
-    allPagesMatch,
-    enabled,
-    gitDiffMatch,
-    graphFileMatch,
-    graphWorkspaceMatch,
-    historyMatch,
-    previewMatch,
-    inspectedPathRef,
-    isRouteFile,
-    lastHandledRouteRef,
-    locationPathname,
-    onRouteHandled,
-    setActiveTabId,
-    setInspectedPath,
-    sourceMatch,
-  ])
+  }, [allPagesMatch, enabled, lastHandledRouteRef, locationPathname, onRouteHandled])
 
   useEffect(() => {
     if (!enabled || !webMatch || !webTabRouteId) return
@@ -166,7 +128,7 @@ export const useRouteTabSync = ({
 
   useEffect(() => {
     if (!enabled) return
-    if (!sourceMatch && !graphFileMatch && !previewMatch && !graphWorkspaceMatch) return
+    if (!sourceMatch && !previewMatch && !graphWorkspaceMatch) return
     if (lastHandledRouteRef.current === locationPathname) return
     lastHandledRouteRef.current = locationPathname
     onRouteHandled()
@@ -186,7 +148,6 @@ export const useRouteTabSync = ({
     })
   }, [
     enabled,
-    graphFileMatch,
     graphWorkspaceMatch,
     previewMatch,
     inspectedPathRef,

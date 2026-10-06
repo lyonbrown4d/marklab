@@ -16,15 +16,12 @@ describe('useRouteTabSync web tabs', () => {
 
     renderHook(() =>
       useRouteTabSync({
-        activeTabId: 'file:edit:notes/current.md',
         enabled: true,
         gitDiffMatch: null,
         sourceMatch: null,
-        graphFileMatch: null,
         previewMatch: null,
         graphWorkspaceMatch: null,
         allPagesMatch: null,
-        historyMatch: null,
         webMatch: {},
         webTabRouteId: 'docs',
         gitDiffSection: undefined,

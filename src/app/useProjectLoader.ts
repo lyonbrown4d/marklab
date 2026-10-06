@@ -111,7 +111,6 @@ export const useProjectLoader = ({
           const seedActiveTabId =
             options && 'activeTabId' in options ? options.activeTabId : activeTabIdRef.current
           const nextTabs = seedTabs.flatMap((tab) => {
-            if (tab.kind === 'workspace-graph') return []
             if (tab.kind === 'web') return [tab]
             if (!available.has(tab.path)) return []
             if (tab.kind === 'file') {

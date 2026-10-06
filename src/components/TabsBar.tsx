@@ -34,9 +34,7 @@ const TabsBarComponent = ({
   const disclosure = useTabsDockDisclosure()
   const labels = useMemo<TabLabelText>(
     () => ({
-      workspaceGraph: t('tabs.workspaceGraph'),
       source: t('editor.modeSource'),
-      graph: t('tabs.graph'),
       preview: t('editor.modePreview'),
       diff: t('scm.diffTitle'),
     }),

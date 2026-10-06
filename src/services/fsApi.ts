@@ -56,10 +56,6 @@ export const fsApi = {
     const result = await invoke<unknown>('fs_get_workspace_graph')
     return fsGraphSchema.parse(result)
   },
-  async getOutlineGraph(path: string) {
-    const result = await invoke<unknown>('fs_get_outline_graph', { path })
-    return fsGraphSchema.parse(result)
-  },
   async searchWorkspace(query: string, limit = 20) {
     const result = await invoke<unknown>('fs_search_workspace', { query, limit })
     return z.array(fsSearchResultSchema).parse(result)

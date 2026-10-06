@@ -94,7 +94,6 @@ const SidebarExplorerPanel = ({
     () => ({
       open: t('context.open'),
       openSource: t('context.openSource'),
-      openGraph: t('context.openGraph'),
       openInSystem: t('context.openInSystem'),
       revealInFolder: t('context.revealInFolder'),
       copyPath: t('context.copyPath'),

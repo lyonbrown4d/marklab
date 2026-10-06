@@ -158,56 +158,6 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       workspace.dispose()
     }
   })
-
-  it('reuses cached outline graphs until active content changes', async () => {
-    const firstGraph = createGraph('outline')
-    const secondGraph = createGraph('outline')
-    const service = createKnowledgeServiceMock()
-    service.buildOutlineGraph.mockResolvedValueOnce(firstGraph).mockResolvedValueOnce(secondGraph)
-    const { workspace } = await createWorkspace(service, [
-      { path: 'alpha.md', content: '# Persisted Alpha' },
-    ])
-
-    try {
-      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(firstGraph)
-      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(firstGraph)
-      expect(service.buildOutlineGraph).toHaveBeenCalledTimes(1)
-
-      workspace.updateBuffer({ path: 'alpha.md', content: '# Dirty Alpha' })
-
-      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(secondGraph)
-      expect(service.buildOutlineGraph).toHaveBeenCalledTimes(2)
-    } finally {
-      await workspace.flushBuffers()
-      workspace.dispose()
-    }
-  })
-
-  it('routes outline graph calculation with the active buffer content', async () => {
-    const graph = createGraph('outline')
-    const service = createKnowledgeServiceMock({ outlineGraph: graph })
-    const { root, workspace } = await createWorkspace(service, [
-      { path: 'alpha.md', content: '# Persisted Alpha' },
-    ])
-
-    try {
-      await workspace.readFile({ path: 'alpha.md' })
-      workspace.updateBuffer({ path: 'alpha.md', content: '# Dirty Alpha' })
-
-      await expect(workspace.outlineGraph({ path: 'alpha.md' })).resolves.toBe(graph)
-
-      const [sessionToken, workspaceRoot, relativePath, content] = service.buildOutlineGraph.mock
-        .calls[0] as [string, string, string, string]
-
-      expect(sessionToken).toEqual(expect.stringMatching(/^vfs:/))
-      expect(workspaceRoot).toBe(root)
-      expect(relativePath).toBe('alpha.md')
-      expect(content).toBe('# Dirty Alpha')
-    } finally {
-      await workspace.flushBuffers()
-      workspace.dispose()
-    }
-  })
 })
 
 type WorkspaceFixture = {
@@ -250,15 +200,13 @@ const createLocalHistoryService = (): LocalHistoryServiceContract =>
 
 type KnowledgeGraphServiceMock = KnowledgeEngineService & {
   readWorkspaceFile: ReturnType<typeof vi.fn>
-  buildOutlineGraph: ReturnType<typeof vi.fn>
   buildWorkspaceGraph: ReturnType<typeof vi.fn>
 }
 
 const createKnowledgeServiceMock = (
-  graphs: { outlineGraph?: FsGraph; workspaceGraph?: FsGraph } = {},
+  graphs: { workspaceGraph?: FsGraph } = {},
 ): KnowledgeGraphServiceMock =>
   ({
-    buildOutlineGraph: vi.fn(async () => graphs.outlineGraph ?? createGraph('outline')),
     buildWorkspaceGraph: vi.fn(async () => graphs.workspaceGraph ?? createGraph('mindmap')),
     readWorkspaceFile: vi.fn(),
   }) as unknown as KnowledgeGraphServiceMock

@@ -208,7 +208,7 @@ export const fsGraphEdgeSchema = z.object({
 })
 
 export const fsGraphSchema = z.object({
-  mode: z.enum(['outline', 'mindmap']),
+  mode: z.literal('mindmap'),
   nodes: z.array(fsGraphNodeSchema),
   edges: z.array(fsGraphEdgeSchema),
 })

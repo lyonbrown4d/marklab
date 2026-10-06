@@ -144,6 +144,33 @@ describe('useWorkspaceTabActions workspace map', () => {
     expect(setActiveTabId).not.toHaveBeenCalled()
   })
 
+  it('opens the workspace library without clearing the active document context', () => {
+    const navigate = vi.fn()
+    const setActiveTabId = vi.fn()
+    const setInspectedPath = vi.fn()
+    const { result } = renderHook(() =>
+      useWorkspaceTabActions({
+        activeTabIdRef: { current: 'file:edit:notes/current.md' },
+        currentFilePathRef: { current: 'notes/current.md' },
+        inspectedPathRef: { current: 'notes/current.md' },
+        locationPathnameRef: { current: '/files/edit/notes/current.md' },
+        tabsRef: { current: [{ kind: 'file', path: 'notes/current.md', view: 'edit' }] },
+        navigate,
+        setTabViewModes: vi.fn(),
+        setTabs: vi.fn(),
+        setActiveTabId,
+        setInspectedPath,
+        defaultFileView: 'edit',
+      }),
+    )
+
+    act(() => result.current.onOpenAllPages())
+
+    expect(navigate).toHaveBeenCalledWith('/workspace/pages')
+    expect(setActiveTabId).not.toHaveBeenCalled()
+    expect(setInspectedPath).not.toHaveBeenCalled()
+  })
+
   it('creates a web tab after the active tab and activates its opaque route', () => {
     const navigate = vi.fn()
     const setActiveTabId = vi.fn()

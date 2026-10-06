@@ -1,8 +1,5 @@
 import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
-import {
-  buildNodeOutlineGraph,
-  buildNodeWorkspaceGraph,
-} from '@electron/services/knowledgeEngine/nodeGraph.js'
+import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph.js'
 import { NodeMarkdownOverlay } from '@electron/services/knowledgeEngine/nodeMarkdownOverlay.js'
 import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
 import { NodeWorkspaceVfs } from '@electron/services/knowledgeEngine/nodeWorkspaceVfs.js'
@@ -30,7 +27,6 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         'workspace-search',
         'markdown-overlay',
         'workspace-graph',
-        'outline-graph',
         'markdown-reference-diagnostics',
       ],
       engineVersion: 'node',
@@ -202,10 +198,6 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
     knownPaths: Parameters<typeof buildNodeWorkspaceGraph>[1],
   ) {
     return buildNodeWorkspaceGraph(documents, knownPaths)
-  }
-
-  async buildOutlineGraph(path: string, content: string) {
-    return buildNodeOutlineGraph(path, content)
   }
 
   async shutdown(): Promise<void> {

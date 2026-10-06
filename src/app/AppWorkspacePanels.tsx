@@ -31,12 +31,7 @@ type AppWorkspacePanelsState = Pick<
   | 'onCloseTab'
   | 'onInspectPath'
   | 'onPersistedContentChange'
-  | 'onOpenProject'
   | 'onOpenTab'
-  | 'onOpenWorkspaceGraph'
-  | 'onSelectProject'
-  | 'onUseInternalRoot'
-  | 'recentProjects'
   | 'renamePath'
   | 'rightSidebarCollapsed'
   | 'rootKind'
@@ -90,21 +85,16 @@ export const AppWorkspacePanels = ({
     <AppWorkspaceSidebar
       activeEditorPath={state.activePath}
       activeResourcePath={state.activeResourcePath}
-      recentProjects={state.recentProjects}
       files={state.files}
       fileTree={state.fileTree}
       onOpenFile={onOpenFile}
       onOpenFileView={onOpenFileView}
-      onOpenProject={state.onOpenProject}
-      onSelectProject={state.onSelectProject}
-      onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
       onCreateFile={state.createFile}
       onCreateFolder={state.createFolder}
       onRenamePath={state.renamePath}
       onMovePath={state.movePath}
       onPersistedContentChange={state.onPersistedContentChange}
       onDeletePath={state.deletePath}
-      onUseInternalRoot={state.onUseInternalRoot}
       rootKind={state.rootKind}
       rootPath={state.rootPath}
       onOpenGitDiff={onOpenGitDiff}

@@ -26,6 +26,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
   const path = usePath()
   const language = props.element.lang?.trim() ?? ''
   const source = props.element.children.map(nodeText).join('\n')
+  const showMermaidPreview = isMermaidLanguage(language) && Boolean(source.trim())
   const completion = usePlateCodeCompletion({
     editor: props.editor,
     language,
@@ -37,6 +38,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
     <PlateElement {...props} as="div" className="relative my-4">
       <pre
         className="overflow-x-auto rounded-lg border border-border bg-muted/50 p-4 font-mono text-sm"
+        hidden={showMermaidPreview}
         onCompositionEnd={completion.onCompositionEnd}
         onCompositionStart={completion.onCompositionStart}
         onInput={completion.onInput}
@@ -46,7 +48,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
         <code data-language={language || undefined}>{props.children}</code>
       </pre>
       <PlateCodeCompletionMenu {...completion} label={t('editor.codeSuggestions')} />
-      {isMermaidLanguage(language) && source.trim() ? <MermaidPreview source={source} /> : null}
+      {showMermaidPreview ? <MermaidPreview source={source} /> : null}
     </PlateElement>
   )
 }

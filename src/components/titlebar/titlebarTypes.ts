@@ -2,14 +2,6 @@ import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry, RootKind, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { WorkspaceView } from '@/app/useEditorRoutes'
 
-export type TabLabelText = {
-  workspaceGraph: string
-  source: string
-  graph: string
-  preview: string
-  diff: string
-}
-
 export type TitlebarMenuItem = {
   id: string
   label: string
@@ -49,10 +41,10 @@ export type TitlebarProps = {
   onOpenWorkspaceGraph: () => void
   onOpenWorkspaceFiles?: () => void
   onOpenAllPages: (collectionId?: string) => void
-  onOpenHistory: () => void
   onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
+  onUseInternalRoot: () => void
   onToggleReadOnly: () => void
   onCloseActiveTab: () => void
   onOpenTerminal: () => void

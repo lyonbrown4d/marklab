@@ -3,7 +3,6 @@ import type { FileTreeNode } from '@/logic/fileTree'
 export type ContextLabels = {
   open: string
   openSource: string
-  openGraph: string
   openInSystem: string
   revealInFolder: string
   copyPath: string
@@ -30,7 +29,7 @@ export type SidebarFileTreeActions = {
   readonlyTree: boolean
   labels: ContextLabels
   onOpenFile: (path: string) => void
-  onOpenFileView: (path: string, view: 'source' | 'graph') => void
+  onOpenFileView: (path: string, view: 'source') => void
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
   onRenamePath: (from: string, to: string) => void

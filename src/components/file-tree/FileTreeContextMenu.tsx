@@ -15,7 +15,6 @@ import {
   Info,
   Link2,
   Pencil,
-  ScanSearch,
   Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,7 +34,7 @@ import {
 } from '@/components/file-tree/fileTreeActions'
 import type { SidebarFileTreeActions } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
-import { isPreviewOnlyFilePath, isSourcePreviewFilePath } from '@/logic/fileTypes'
+import { isPreviewOnlyFilePath } from '@/logic/fileTypes'
 
 type FileTreeContextMenuProps = Omit<
   SidebarFileTreeActions,
@@ -71,7 +70,6 @@ export const FileTreeContextMenu = ({
   const item = node.data
   const isFolder = item.type === 'folder'
   const sourceViewAvailable = !isFolder && !isPreviewOnlyFilePath(item.path)
-  const graphViewAvailable = sourceViewAvailable && !isSourcePreviewFilePath(item.path)
   const hasChildren = isFolder && (item.children?.length ?? 0) > 0
   const HeaderIcon = isFolder
     ? hasChildren
@@ -155,15 +153,6 @@ export const FileTreeContextMenu = ({
               onSelect={() => onOpenFileView(item.path, 'source')}
             >
               {labels.openSource}
-            </MenuItem>
-          ) : null}
-          {graphViewAvailable ? (
-            <MenuItem
-              className={menuItemStyles()}
-              icon={ScanSearch}
-              onSelect={() => onOpenFileView(item.path, 'graph')}
-            >
-              {labels.openGraph}
             </MenuItem>
           ) : null}
         </>

@@ -44,14 +44,18 @@
     "area": "React Flow graph",
     "risk": "default node renderer fallback, drag/selection conflict, or graph model drift",
     "patterns": [
-      "^src/components/GraphNodes",
+      "^src/components/GraphRichNodes",
+      "^src/components/GraphWebNode",
       "^src/logic/graph",
-      "^src/pages/GraphPage",
+      "^src/logic/workspaceGraphRevision",
+      "^src/logic/workspaceMapGraph",
+      "^src/pages/WorkspaceGraphPage",
       "^src/pages/graph",
+      "^src/pages/workspace-map",
       "^src/styles/app/_graph",
       "^src/styles/graph"
     ],
-    "checks": ["graph logic tests", "graph node tests", "graph interaction style tests"]
+    "checks": ["graph logic tests", "workspace map tests", "graph interaction style tests"]
   },
   {
     "area": "Settings / persisted preferences",
@@ -71,8 +75,7 @@
     "patterns": [
       "^src/logic/shortcuts",
       "^src/app/useKeyboardShortcuts",
-      "^src/pages/useGraphKeyboardActions",
-      "^src/pages/graphKeyboardActions",
+      "^src/pages/workspace-map/useWorkspaceMapKeyboard",
       "^src/components/settings/Shortcut",
       "^src/components/settings/ShortcutsSettingsPage",
       "^src/components/editor/editorCommandCatalog",
@@ -81,7 +84,7 @@
     "checks": [
       "shortcut catalog tests",
       "shortcut settings tests",
-      "graph/editor shortcut tests",
+      "workspace map/editor shortcut tests",
       "pnpm exec tsc -b"
     ]
   },

@@ -14,9 +14,8 @@ export const resolveWorkspaceFileViewMode = (
   return mode
 }
 
-export const fileViewForMode = (mode: ViewMode, hasPath: boolean): FileViewKind => {
+export const fileViewForMode = (mode: ViewMode): FileViewKind => {
   if (mode === 'source') return 'source'
-  if (mode === 'graph' && hasPath) return 'graph'
   if (mode === 'preview') return 'preview'
   return 'edit'
 }

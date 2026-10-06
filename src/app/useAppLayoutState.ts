@@ -11,7 +11,6 @@ import { useRouteTabSync } from '@/app/useRouteTabSync'
 import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
 import { useWorkspaceRestore } from '@/app/useWorkspaceRestore'
 import { isTextFileViewPath } from '@/logic/fileTypes'
-import { pathToWorkspaceHistoryRoute } from '@/logic/routing'
 import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
 import { useWorkspaceMapEditorRoute } from '@/app/useWorkspaceMapEditorRoute'
@@ -67,11 +66,9 @@ export const useAppLayoutState = () => {
   const {
     gitDiffMatch,
     sourceMatch,
-    graphFileMatch,
     previewMatch,
     graphWorkspaceMatch,
     allPagesMatch,
-    historyMatch,
     webMatch,
     gitDiffSection,
     gitDiffPath,
@@ -171,11 +168,6 @@ export const useAppLayoutState = () => {
       rootKind,
       loadWorkspace,
     })
-  const onOpenWorkspaceHistory = useCallback(() => {
-    if (activeTabIdRef.current) setActiveTabId(null)
-    if (inspectedPathRef.current) setInspectedPath(null)
-    navigate(pathToWorkspaceHistoryRoute(), { replace: false })
-  }, [activeTabIdRef, inspectedPathRef, navigate, setActiveTabId])
   const onOpenWorkspaceFiles = useCallback(() => {
     const target = getWorkspaceFilesTarget(
       tabsRef.current,
@@ -191,15 +183,12 @@ export const useAppLayoutState = () => {
     (location.pathname !== '/' || !activeTabId || tabs.length === 0 || hasHandledRoute)
 
   useRouteTabSync({
-    activeTabId,
     enabled: routeSyncEnabled,
     gitDiffMatch,
     sourceMatch,
-    graphFileMatch,
     previewMatch,
     graphWorkspaceMatch,
     allPagesMatch,
-    historyMatch,
     webMatch,
     webTabRouteId: webMatch?.params.tabId,
     gitDiffSection,
@@ -218,10 +207,8 @@ export const useAppLayoutState = () => {
     setInspectedPath,
   })
   const graphState = useAppLayoutGraphState({
-    currentFilePath,
     entries,
     graphContentMode,
-    graphFile: Boolean(graphFileMatch),
     graphWorkspace: Boolean(graphWorkspaceMatch),
     workspaceKey,
   })
@@ -271,7 +258,6 @@ export const useAppLayoutState = () => {
     onOpenWorkspaceGraph,
     onOpenAllPages,
     onOpenWorkspaceFiles,
-    onOpenWorkspaceHistory,
     onOpenTab,
     onCloseTab,
     onCloseActiveTab,

@@ -221,16 +221,8 @@ describe('Node workspace client', () => {
     ])
   })
 
-  it('builds outline and workspace graphs in Node', async () => {
+  it('builds workspace graphs in Node', async () => {
     const { client } = await createWorkspace()
-    const outline = await client.buildOutlineGraph('alpha.md', '# Alpha\nIntro\n## Details\nBody')
-    expect(outline.mode).toBe('outline')
-    expect(outline.nodes.map((node) => node.id)).toEqual([
-      'file:alpha.md',
-      'heading:alpha.md:alpha',
-      'heading:alpha.md:details',
-    ])
-
     const graph = await client.buildWorkspaceGraph(
       [
         { path: 'alpha.md', content: '# Alpha\n[Beta](beta.md)' },

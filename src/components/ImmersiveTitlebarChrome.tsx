@@ -29,7 +29,6 @@ type ImmersiveTitlebarChromeProps = {
   workspaceMapTitle: string
   workspaceViewLabel: string
   moreLabel: string
-  historyLabel: string
   recentWorkspaces: RecentWorkspaceMenuData
   workspaceMenuLabel: string
   newWorkspaceLabel: string
@@ -40,6 +39,7 @@ type ImmersiveTitlebarChromeProps = {
   exportDocxLabel: string
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
+  onUseInternalRoot: () => void
   onOpenSearch: () => void
   onOpenWorkspaceFiles: () => void
   onOpenWorkspaceGraph: () => void
@@ -47,7 +47,6 @@ type ImmersiveTitlebarChromeProps = {
   onToggleOutline: () => void
   onOpenSettings: () => void
   onChangeView: (mode: ViewMode) => void
-  onOpenHistory: () => void
   onOpenProject: (path: string) => void
   onNewWorkspace: () => void
   onOpenFile: () => void
@@ -100,7 +99,6 @@ export const ImmersiveTitlebarChrome = ({
   workspaceMapTitle,
   workspaceViewLabel,
   moreLabel,
-  historyLabel,
   recentWorkspaces,
   workspaceMenuLabel,
   newWorkspaceLabel,
@@ -111,6 +109,7 @@ export const ImmersiveTitlebarChrome = ({
   exportDocxLabel,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
+  onUseInternalRoot,
   onOpenSearch,
   onOpenWorkspaceFiles,
   onOpenWorkspaceGraph,
@@ -118,7 +117,6 @@ export const ImmersiveTitlebarChrome = ({
   onToggleOutline,
   onOpenSettings,
   onChangeView,
-  onOpenHistory,
   onOpenProject,
   onNewWorkspace,
   onOpenFile,
@@ -178,17 +176,17 @@ export const ImmersiveTitlebarChrome = ({
           newWorkspaceLabel={newWorkspaceLabel}
           openFileLabel={openFileLabel}
           newFileLabel={newFileLabel}
-          historyLabel={historyLabel}
           recentWorkspaces={recentWorkspaces}
           openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
           openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
+          localLibraryLabel={localLibraryLabel}
           onNewWorkspace={onNewWorkspace}
           onOpenFile={onOpenFile}
           onCreateFile={onCreateFile}
-          onOpenHistory={onOpenHistory}
           onOpenProject={onOpenProject}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
+          onUseInternalRoot={onUseInternalRoot}
           workspaceWindowOpening={workspaceWindowOpening}
         />
         {recentWorkspaces.rootKind !== 'single' ? (

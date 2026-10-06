@@ -36,7 +36,6 @@ const messages: Record<string, string> = {
   'sidebar.newFile': 'New File',
   'sidebar.newFolder': 'New Folder',
   'sidebar.searchAction': 'Search Files',
-  'tabs.graph': 'Graph',
   'theme.ink': 'Ink',
   'theme.paper': 'Paper',
   'themeMode.dark': 'Dark',
@@ -65,7 +64,6 @@ vi.mock('@/logic/themes', () => ({
 }))
 
 vi.mock('@/lib/preloadFeatures', () => ({
-  preloadGraphView: vi.fn(),
   preloadSourceEditor: vi.fn(),
   preloadWysiwygEditor: vi.fn(),
 }))
@@ -102,7 +100,6 @@ vi.mock('@/components/command/CommandActionHelpers', () => ({
     settings: 'settings',
     toggleRightSidebar: 'toggleRightSidebar',
     toggleSidebar: 'toggleSidebar',
-    viewGraph: 'viewGraph',
     viewSource: 'viewSource',
     viewWysiwyg: 'viewWysiwyg',
   },
@@ -115,7 +112,6 @@ vi.mock('@/components/command/CommandActionHelpers', () => ({
     settings: 'Ctrl+,',
     toggleRightSidebar: 'Ctrl+Shift+R',
     toggleSidebar: 'Ctrl+B',
-    viewGraph: 'Ctrl+3',
     viewSource: 'Ctrl+2',
     viewWysiwyg: 'Ctrl+1',
   }),

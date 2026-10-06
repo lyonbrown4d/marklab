@@ -7,7 +7,7 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
-  History,
+  Library,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,17 +45,17 @@ type TitlebarWorkspaceMenuProps = {
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
-  historyLabel: string
   recentWorkspaces: RecentWorkspaceMenuData
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
+  localLibraryLabel: string
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
-  onOpenHistory: () => void
   onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
+  onUseInternalRoot: () => void
   workspaceWindowOpening: boolean
 }
 
@@ -65,17 +65,17 @@ export const TitlebarWorkspaceMenu = ({
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
-  historyLabel,
   recentWorkspaces,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
+  localLibraryLabel,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
-  onOpenHistory,
   onOpenProject,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
+  onUseInternalRoot,
   workspaceWindowOpening,
 }: TitlebarWorkspaceMenuProps) => {
   const [open, setOpen] = useState(false)
@@ -134,7 +134,7 @@ export const TitlebarWorkspaceMenu = ({
           </DropdownMenuLabel>
           <DropdownMenuGroup>
             {recentWorkspaces.paths.length > 0 ? (
-              recentWorkspaces.paths.slice(0, 4).map((path) => {
+              recentWorkspaces.paths.map((path) => {
                 const label = workspaceName(path)
                 const current =
                   recentWorkspaces.rootKind !== 'internal' && path === recentWorkspaces.rootPath
@@ -168,10 +168,6 @@ export const TitlebarWorkspaceMenu = ({
                 {recentWorkspaces.emptyLabel}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenHistory}>
-              <History aria-hidden="true" />
-              {historyLabel}
-            </DropdownMenuItem>
             <DropdownMenuSeparator className={menuSeparatorStyles} />
             <DropdownMenuItem
               className={menuItemStyles()}
@@ -190,6 +186,10 @@ export const TitlebarWorkspaceMenu = ({
               {openWorkspaceInNewWindowLabel}
             </DropdownMenuItem>
             <DropdownMenuSeparator className={menuSeparatorStyles} />
+            <DropdownMenuItem className={menuItemStyles()} onSelect={onUseInternalRoot}>
+              <Library aria-hidden="true" />
+              {localLibraryLabel}
+            </DropdownMenuItem>
             <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
               <FolderPlus aria-hidden="true" />
               {newWorkspaceLabel}

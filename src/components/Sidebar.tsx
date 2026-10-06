@@ -12,22 +12,17 @@ import { onFileSearchFocusRequest, onWorkspaceSearchFocusRequest } from '@/utils
 
 type SidebarProps = {
   collapsed: boolean
-  recentProjects: string[]
   files: FileEntry[]
   fileTree: FileTreeNode[]
   activePath: string | null
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
-  onOpenProject: (path: string) => void
-  onSelectProject: () => void
-  onOpenWorkspaceGraph: () => void
   onCreateFile: (path: string) => void
   onCreateFolder: (path: string) => void
   onRenamePath: (from: string, to: string) => void
   onMovePath: (from: string, to: string) => void
   onRestoreHistoryContent: (path: string, content: string) => void
   onDeletePath: (path: string) => void
-  onUseInternalRoot: () => void
   rootKind: 'internal' | 'external' | 'single'
   rootPath: string
   onOpenGitDiff: (request: GitDiffRequest) => void
@@ -37,22 +32,17 @@ type SidebarProps = {
 
 const SidebarComponent = ({
   collapsed,
-  recentProjects,
   files,
   fileTree,
   activePath,
   onOpenFile,
   onOpenFileView,
-  onOpenProject,
-  onSelectProject,
-  onOpenWorkspaceGraph,
   onCreateFile,
   onCreateFolder,
   onRenamePath,
   onMovePath,
   onRestoreHistoryContent,
   onDeletePath,
-  onUseInternalRoot,
   rootKind,
   rootPath,
   onOpenGitDiff,
@@ -113,7 +103,6 @@ const SidebarComponent = ({
         rootPath={rootPath}
         activeActivity={activeActivity}
         fileCount={fileCount}
-        recentProjectCount={recentProjects.length}
         onSelectActivity={selectActivity}
       />
       {!collapsed && (
@@ -132,15 +121,10 @@ const SidebarComponent = ({
             onOpenFile={onOpenFile}
             onOpenFileView={onOpenFileView}
             onOpenGitDiff={onOpenGitDiff}
-            onOpenProject={onOpenProject}
-            onSelectProject={onSelectProject}
             onOpenSearchResult={onOpenSearchResult}
-            onOpenWorkspaceGraph={onOpenWorkspaceGraph}
             onRenamePath={onRenamePath}
             onMovePath={onMovePath}
             onRestoreHistoryContent={onRestoreHistoryContent}
-            onUseInternalRoot={onUseInternalRoot}
-            recentProjects={recentProjects}
             rootKind={rootKind}
             rootPath={rootPath}
           />

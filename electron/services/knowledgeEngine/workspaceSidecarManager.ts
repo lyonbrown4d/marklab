@@ -248,14 +248,6 @@ export class WorkspaceSidecarManager {
     return this.requireReady(workspaceId).client.buildWorkspaceGraph(documents, knownPaths)
   }
 
-  async buildOutlineGraph(
-    workspaceId: string,
-    path: string,
-    content: string,
-  ): Promise<KnowledgeWorkspaceGraph> {
-    return this.requireReady(workspaceId).client.buildOutlineGraph(path, content)
-  }
-
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return this.requireReady(workspaceId).client.search(query, limit)
   }

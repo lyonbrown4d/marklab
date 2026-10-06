@@ -8,7 +8,6 @@ import {
   shortcutActions,
   shortcutCategories,
 } from '@/logic/shortcuts'
-import { graphShortcutActions } from '@/pages/graphKeyboardActions'
 import { markdownEditorShortcutActionIds } from '@/components/editor/editorCommandCatalog'
 import enUS from '@/i18n/locales/en-US.json'
 
@@ -44,11 +43,10 @@ describe('shortcuts', () => {
     )
   })
 
-  it('provides quick workspace history and read-only browsing shortcuts', () => {
-    expect(defaultShortcutBindings['workspace.openHistory']).toEqual(['Mod+Shift+H'])
+  it('provides a quick read-only browsing shortcut', () => {
     expect(defaultShortcutBindings['view.toggleReadonly']).toEqual(['Mod+Shift+E'])
     expect(shortcutCategories.find((category) => category.id === 'workspace')?.actions).toEqual(
-      expect.arrayContaining(['workspace.openHistory', 'view.toggleReadonly']),
+      expect.arrayContaining(['view.toggleReadonly']),
     )
   })
 
@@ -57,16 +55,11 @@ describe('shortcuts', () => {
   })
 
   it('keeps scoped shortcut consumers aligned with the action catalog', () => {
-    const graphActionIds = shortcutActions
-      .filter((action) => action.scope === 'graph')
-      .map((action) => action.id)
-      .sort()
     const editorActionIds = shortcutActions
       .filter((action) => action.scope === 'editor')
       .map((action) => action.id)
       .sort()
 
-    expect(graphShortcutActions.map(([action]) => action).sort()).toEqual(graphActionIds)
     expect([...markdownEditorShortcutActionIds].sort()).toEqual(editorActionIds)
   })
 

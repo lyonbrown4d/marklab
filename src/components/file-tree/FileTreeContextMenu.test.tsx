@@ -27,7 +27,6 @@ const labels: ContextLabels = {
   newFolder: 'New folder',
   newFolderPrompt: 'New folder name',
   open: 'Open',
-  openGraph: 'Open graph',
   openInSystem: 'Open in system',
   openSource: 'Open source',
   properties: 'Properties',
@@ -49,7 +48,7 @@ const Harness = ({
   onSubmit?: (name: string) => void
   onRowActivate?: () => void
   onInspect?: (path: string) => void
-  onOpenFileView?: (path: string, view: 'source' | 'graph') => void
+  onOpenFileView?: (path: string, view: 'source') => void
 }) => {
   const [editing, setEditing] = useState(false)
   const node = {
@@ -113,7 +112,7 @@ describe('FileTreeContextMenu', () => {
     render(<Harness />)
     fireEvent.contextMenu(screen.getByRole('button', { name: 'README.md' }))
     expect(screen.getByRole('menuitem', { name: 'Open source' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: 'Open graph' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Open graph' })).not.toBeInTheDocument()
   })
 
   it('uses the shared application menu surface and item geometry', () => {

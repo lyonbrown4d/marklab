@@ -10,10 +10,9 @@ import type { GraphContentMode } from '@/store/appTypes'
 const EMPTY_GRAPH: GraphData = { nodes: [], edges: [], layoutKey: 'empty' }
 
 export const useGraphData = (
-  mode: 'file' | 'workspace' | null,
+  mode: 'workspace' | null,
   workspaceKey: string,
   workspaceIndex: FsWorkspaceIndex | null,
-  activePath: string | null,
   contentMode: GraphContentMode,
 ) => {
   const queryClient = useQueryClient()
@@ -25,13 +24,6 @@ export const useGraphData = (
   )
   const previousStructureRef = useRef({ revision: '', workspaceKey })
 
-  const outlineQuery = useQuery<FsGraph>({
-    queryKey: ['outline-graph', workspaceKey, activePath],
-    queryFn: () => fsApi.getOutlineGraph(activePath ?? ''),
-    enabled: mode === 'file' && desktopAvailable && Boolean(activePath),
-    staleTime: 2_000,
-  })
-
   const workspaceGraphQuery = useQuery<FsGraph>({
     queryKey: ['workspace-graph', workspaceKey],
     queryFn: () => fsApi.getWorkspaceGraph(),
@@ -40,7 +32,6 @@ export const useGraphData = (
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === workspaceKey ? previousData : undefined,
   })
-  const { refetch: refetchOutline } = outlineQuery
   const { refetch: refetchWorkspaceGraph } = workspaceGraphQuery
 
   useEffect(() => {
@@ -60,60 +51,25 @@ export const useGraphData = (
   const graph = useMemo(() => {
     if (!enabled) return EMPTY_GRAPH
 
-    const graphContentMode = mode === 'file' ? 'full' : contentMode
-
-    if (mode === 'file') {
-      return outlineQuery.data
-        ? appendPreviewNodesFromWorkspaceIndex(
-            buildGraphFromKnowledgeGraph(outlineQuery.data, graphContentMode),
-            workspaceIndex,
-            activePath,
-          )
-        : EMPTY_GRAPH
-    }
-
     if (mode === 'workspace' && workspaceGraphQuery.data) {
       return appendPreviewNodesFromWorkspaceIndex(
-        buildGraphFromKnowledgeGraph(workspaceGraphQuery.data, graphContentMode),
+        buildGraphFromKnowledgeGraph(workspaceGraphQuery.data, contentMode),
         workspaceIndex,
       )
     }
 
     return EMPTY_GRAPH
-  }, [
-    activePath,
-    contentMode,
-    enabled,
-    mode,
-    outlineQuery.data,
-    workspaceGraphQuery.data,
-    workspaceIndex,
-  ])
+  }, [contentMode, enabled, mode, workspaceGraphQuery.data, workspaceIndex])
 
   const loading =
-    mode === 'file'
-      ? outlineQuery.isFetching && !outlineQuery.data
-      : mode === 'workspace'
-        ? workspaceGraphQuery.isFetching && !workspaceGraphQuery.data
-        : false
-
+    mode === 'workspace' && workspaceGraphQuery.isFetching && !workspaceGraphQuery.data
   const refreshing =
-    mode === 'file'
-      ? outlineQuery.isFetching && Boolean(outlineQuery.data)
-      : mode === 'workspace'
-        ? workspaceGraphQuery.isFetching && Boolean(workspaceGraphQuery.data)
-        : false
-  const error =
-    mode === 'file'
-      ? (outlineQuery.error ?? null)
-      : mode === 'workspace'
-        ? (workspaceGraphQuery.error ?? null)
-        : null
+    mode === 'workspace' && workspaceGraphQuery.isFetching && Boolean(workspaceGraphQuery.data)
+  const error = mode === 'workspace' ? (workspaceGraphQuery.error ?? null) : null
   const retry = useCallback(() => {
-    if (mode === 'file') return refetchOutline()
     if (mode === 'workspace') return refetchWorkspaceGraph()
     return Promise.resolve()
-  }, [mode, refetchOutline, refetchWorkspaceGraph])
+  }, [mode, refetchWorkspaceGraph])
 
   return { graph, loading, error, retry, refreshing }
 }

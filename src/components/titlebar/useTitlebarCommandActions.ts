@@ -25,7 +25,6 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'onOpenHeading'
   | 'onOpenSearchResult'
   | 'onOpenAllPages'
-  | 'onOpenHistory'
   | 'onToggleReadOnly'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
@@ -52,7 +51,6 @@ export const useTitlebarCommandActions = ({
   onOpenHeading,
   onOpenSearchResult,
   onOpenAllPages,
-  onOpenHistory,
   onToggleReadOnly,
   setTheme,
   canCreateWorkspaceEntries,
@@ -85,10 +83,6 @@ export const useTitlebarCommandActions = ({
       }
       if (id === 'view.source') {
         onChangeView('source')
-        return
-      }
-      if (id === 'view.graph') {
-        onChangeView('graph')
         return
       }
       if (id === 'view.toggle_readonly') {
@@ -148,10 +142,6 @@ export const useTitlebarCommandActions = ({
         onOpenAllPages()
         return
       }
-      if (id === 'workspace.open_history') {
-        onOpenHistory()
-        return
-      }
       if (id.startsWith('collection.open:')) {
         onOpenAllPages(id.replace('collection.open:', ''))
         return
@@ -189,7 +179,6 @@ export const useTitlebarCommandActions = ({
       onOpenSettings,
       onOpenTerminal,
       onOpenAllPages,
-      onOpenHistory,
       onToggleReadOnly,
       onOpenWorkspaceGraph,
       onRebuildSearchIndex,

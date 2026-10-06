@@ -22,7 +22,6 @@ export const MENU_ACTION_IDS = [
   'edit.select_all',
   'view.wysiwyg',
   'view.source',
-  'view.graph',
   'view.toggle_sidebar',
   'view.toggle_right_sidebar',
   'view.toggle_zen_mode',
@@ -171,7 +170,6 @@ export const installNativeMenu = (mainWindow: BrowserWindow, dispatch?: MenuActi
     submenu: [
       actionItem(mainWindow, 'view.wysiwyg', labels.view.wysiwyg, undefined, dispatch),
       actionItem(mainWindow, 'view.source', labels.view.source, undefined, dispatch),
-      actionItem(mainWindow, 'view.graph', labels.view.graph, undefined, dispatch),
       { type: 'separator' },
       actionItem(mainWindow, 'view.toggle_sidebar', labels.view.sidebar, undefined, dispatch),
       actionItem(

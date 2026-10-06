@@ -6,19 +6,15 @@ import { combineGraphAsyncState } from '@/app/combineGraphAsyncState'
 import type { FileEntry, GraphContentMode } from '@/store/appTypes'
 
 type Options = {
-  currentFilePath: string | null
   entries: FileEntry[]
   graphContentMode: GraphContentMode
-  graphFile: boolean
   graphWorkspace: boolean
   workspaceKey: string
 }
 
 export const useAppLayoutGraphState = ({
-  currentFilePath,
   entries,
   graphContentMode,
-  graphFile,
   graphWorkspace,
   workspaceKey,
 }: Options) => {
@@ -29,10 +25,9 @@ export const useAppLayoutGraphState = ({
     entries.some((entry) => entry.kind === 'file'),
   )
   const graphState = useGraphData(
-    graphWorkspace ? 'workspace' : graphFile ? 'file' : null,
+    graphWorkspace ? 'workspace' : null,
     workspaceKey,
     indexState.data,
-    currentFilePath,
     graphContentMode,
   )
   const asyncState = combineGraphAsyncState(graphWorkspace, indexState, graphState)
@@ -44,5 +39,8 @@ export const useAppLayoutGraphState = ({
     graphRefreshing: asyncState.refreshing,
     graphRetry: asyncState.retry,
     workspaceIndex: indexState.data,
+    workspaceIndexLoading: indexState.loading,
+    workspaceIndexError: indexState.error,
+    onRetryWorkspaceIndex: indexState.retry,
   }
 }

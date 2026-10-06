@@ -14,7 +14,7 @@ const boundaryContractTests = [
   '../app/focusedEditCommand.test.ts',
   '../components/MarkdownSourceEditorSurface.test.tsx',
   '../components/settings/EditingSettingsPage.test.tsx',
-  '../components/GraphNodes.test.tsx',
+  '../pages/WorkspaceGraphPage.test.tsx',
   './i18nResourceBoundary.test.ts',
   './shortcutBoundary.test.ts',
   './settingsPersistBoundary.test.ts',

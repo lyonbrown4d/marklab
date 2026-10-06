@@ -25,17 +25,21 @@ describe('SyncCenterPopover', () => {
   })
   it('opens a compact dual-channel summary and starts WebDAV sync', async () => {
     const onStart = vi.fn()
+    const onOpenGit = vi.fn()
     render(
       <SyncCenterPopover
         git={{ status: 'ready', branch: 'main', ahead: 0, behind: 1, changeCount: 0 }}
         webdav={{ status: 'idle', label: 'Home cloud' }}
         onCancel={vi.fn()}
+        onOpenGit={onOpenGit}
         onStart={onStart}
       />,
     )
     await userEvent.click(screen.getByRole('button', { name: 'sync.center.open' }))
     expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.getByText('Home cloud')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'sync.center.openGit' }))
+    expect(onOpenGit).toHaveBeenCalledOnce()
     await userEvent.click(screen.getByRole('button', { name: 'sync.center.syncNow' }))
     expect(onStart).toHaveBeenCalledTimes(1)
   })

@@ -49,10 +49,10 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenWorkspaceGraph,
       onOpenWorkspaceFiles = noop,
       onOpenAllPages,
-      onOpenHistory,
       onOpenProject,
       onOpenCurrentWorkspaceInNewWindow,
       onSelectWorkspaceInNewWindow,
+      onUseInternalRoot,
       onToggleReadOnly,
       onCloseActiveTab,
       onOpenTerminal,
@@ -82,8 +82,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
     useNativeSurfaceOcclusion('command-palette', commandOpen)
-    const activeWorkspaceView =
-      workspaceView ?? (activeTab?.kind === 'workspace-graph' ? 'map' : 'files')
+    const activeWorkspaceView = workspaceView ?? 'files'
     const commandDataReady = commandOpen
     const setCommandOpen = useCallback(
       (open: boolean) => {
@@ -138,7 +137,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenSettings,
       onOpenWorkspaceGraph,
       onOpenAllPages,
-      onOpenHistory,
       onToggleReadOnly,
       onOpenTerminal,
       onRebuildSearchIndex,
@@ -193,7 +191,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           workspaceMapTitle={t('titlebar.workspaceMapTitle')}
           workspaceViewLabel={t('titlebar.workspaceView')}
           moreLabel={t('actions.more')}
-          historyLabel={t('workspace.viewAllRecent')}
           recentWorkspaces={{
             currentLabel: t('workspace.current'),
             emptyLabel: t('workspace.noRecent'),
@@ -219,7 +216,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onToggleOutline={onToggleRightSidebar}
           onOpenSettings={onOpenSettings}
           onChangeView={onChangeView}
-          onOpenHistory={onOpenHistory}
           onOpenProject={onOpenProject}
           onNewWorkspace={onSelectProject}
           onOpenFile={onSelectSingleFile}
@@ -227,6 +223,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onExport={(format) => onMenuAction(`file.export_${format}`)}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
+          onUseInternalRoot={onUseInternalRoot}
           workspaceWindowOpening={workspaceWindowOpening}
         />
         {commandOpen && (

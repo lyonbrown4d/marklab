@@ -3,7 +3,6 @@ import { memo, useMemo } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import type { AllPagesRow } from '@/logic/allPages'
 import { groupAllPagesRowsByFolder, type AllPagesViewMode } from '@/logic/allPagesViews'
@@ -30,7 +29,7 @@ const AllPagesResultsComponent = ({
   t,
   viewMode,
 }: AllPagesResultsProps) => (
-  <Card className="min-h-[420px] gap-0 overflow-hidden py-0">
+  <section className="min-h-[420px] overflow-hidden rounded-lg border border-border/70 bg-card/40">
     {rows.length === 0 ? (
       <AllPagesEmpty hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} t={t} />
     ) : viewMode === 'cards' ? (
@@ -40,7 +39,7 @@ const AllPagesResultsComponent = ({
     ) : (
       <AllPagesTable onOpenFile={onOpenFile} rows={rows} t={t} />
     )}
-  </Card>
+  </section>
 )
 
 export const AllPagesResults = memo(AllPagesResultsComponent)

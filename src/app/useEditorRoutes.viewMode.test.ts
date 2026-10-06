@@ -5,7 +5,6 @@ import type { ViewMode, WorkspaceTab } from '@/store/appTypes'
 type ResolveOverrides = {
   activeTab?: WorkspaceTab | null
   currentFilePath?: string | null
-  graphFileRouteActive?: boolean
   previewRouteActive?: boolean
   sourceRouteActive?: boolean
   tabViewModes?: Record<string, ViewMode>
@@ -15,7 +14,6 @@ const resolveMode = (overrides: ResolveOverrides = {}) =>
   resolveEditorViewMode({
     activeTab: null,
     currentFilePath: 'notes/active.md',
-    graphFileRouteActive: false,
     previewRouteActive: false,
     sourceRouteActive: false,
     tabViewModes: {},
@@ -23,19 +21,17 @@ const resolveMode = (overrides: ResolveOverrides = {}) =>
   })
 
 describe('resolveEditorViewMode', () => {
-  it('prioritizes source, graph-file, and preview routes in that order', () => {
+  it('prioritizes source and preview routes in that order', () => {
     expect(
       resolveMode({
         sourceRouteActive: true,
-        graphFileRouteActive: true,
         previewRouteActive: true,
       }),
     ).toBe('source')
-    expect(resolveMode({ graphFileRouteActive: true, previewRouteActive: true })).toBe('graph')
     expect(resolveMode({ previewRouteActive: true })).toBe('preview')
   })
 
-  it.each(['source', 'graph', 'preview'] as const)(
+  it.each(['source', 'preview'] as const)(
     'uses the active file tab %s view before a cached tab mode',
     (view) => {
       expect(
@@ -59,7 +55,7 @@ describe('resolveEditorViewMode', () => {
   it('uses WYSIWYG when there is no current file', () => {
     expect(
       resolveMode({
-        activeTab: { kind: 'file', path: 'notes/active.md', view: 'graph' },
+        activeTab: { kind: 'file', path: 'notes/active.md', view: 'source' },
         currentFilePath: null,
         tabViewModes: { 'notes/active.md': 'source' },
       }),

@@ -1,9 +1,7 @@
 import { SidebarContent } from '@/components/ui/sidebar'
 import ScmPanel from '@/components/ScmPanel'
 import SidebarExplorerPanel from '@/components/SidebarExplorerPanel'
-import SidebarProjectsPanel from '@/components/SidebarProjectsPanel'
 import SidebarSearchPanel from '@/components/SidebarSearchPanel'
-import SidebarWorkspaceGraphPanel from '@/components/SidebarWorkspaceGraphPanel'
 import type { SidebarToolPanelProps } from '@/components/sidebarPanelTypes'
 
 const SidebarToolPanel = ({
@@ -20,15 +18,10 @@ const SidebarToolPanel = ({
   onOpenFile,
   onOpenFileView,
   onOpenGitDiff,
-  onOpenProject,
-  onSelectProject,
   onOpenSearchResult,
-  onOpenWorkspaceGraph,
   onRenamePath,
   onMovePath,
   onRestoreHistoryContent,
-  onUseInternalRoot,
-  recentProjects,
   rootKind,
   rootPath,
 }: SidebarToolPanelProps) => {
@@ -47,20 +40,6 @@ const SidebarToolPanel = ({
           rootKind={rootKind}
           rootPath={rootPath}
           onOpenDiff={onOpenGitDiff}
-        />
-      ) : activeActivity === 'graph' ? (
-        <SidebarWorkspaceGraphPanel
-          fileCount={fileCount}
-          recentProjects={recentProjects}
-          rootPath={rootPath}
-          onOpenWorkspaceGraph={onOpenWorkspaceGraph}
-        />
-      ) : activeActivity === 'projects' ? (
-        <SidebarProjectsPanel
-          recentProjects={recentProjects}
-          onOpenProject={onOpenProject}
-          onSelectProject={onSelectProject}
-          onUseInternalRoot={onUseInternalRoot}
         />
       ) : (
         <SidebarExplorerPanel
