@@ -5,8 +5,8 @@ import type {
   UpdateProgressInfo,
   UpdateResult,
   UpdateState,
-} from '@electron/types.js'
-import type { Logger } from '@electron/services/logger.js'
+} from '@electron/types'
+import type { Logger } from '@electron/services/logger'
 
 export type UpdateServiceOptions = {
   isPackaged: boolean

@@ -1,4 +1,4 @@
-import type { MermaidValidationIssue } from '@electron/services/mermaidLanguage/types.js'
+import type { MermaidValidationIssue } from '@electron/services/mermaidLanguage/types'
 
 type MermaidParser = Pick<(typeof import('mermaid'))['default'], 'parse'>
 

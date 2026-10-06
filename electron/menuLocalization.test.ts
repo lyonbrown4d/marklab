@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getNativeMenuLabels, normalizeNativeMenuLocale } from '@electron/menuLocalization.js'
+import { getNativeMenuLabels, normalizeNativeMenuLocale } from '@electron/menuLocalization'
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 

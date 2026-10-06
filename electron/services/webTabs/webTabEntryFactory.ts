@@ -1,14 +1,14 @@
 import {
   configureWebTabSession,
   installNavigationGuard,
-} from '@electron/services/webTabs/webTabSecurity.js'
+} from '@electron/services/webTabs/webTabSecurity'
 import {
   clampWebTabBounds,
   type WebTabEntry,
   type WebTabViewConstructor,
   type WebTabWindowState,
-} from '@electron/services/webTabs/webTabManagerTypes.js'
-import type { WebTabActivateRequest } from '@/types/webTabs.js'
+} from '@electron/services/webTabs/webTabManagerTypes'
+import type { WebTabActivateRequest } from '@/types/webTabs'
 
 export const createWebTabEntry = (options: {
   WebContentsView: WebTabViewConstructor

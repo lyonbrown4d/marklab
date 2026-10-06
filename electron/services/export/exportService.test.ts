@@ -3,8 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BrowserWindow, Shell } from 'electron'
-import { ExportService } from '@electron/services/export/exportService.js'
-import type { ExportTaskPayload } from '@electron/types.js'
+import { ExportService } from '@electron/services/export/exportService'
+import type { ExportTaskPayload } from '@electron/types'
 
 const electron = vi.hoisted(() => ({
   notificationInstances: [] as Array<{ click?: () => void; show: ReturnType<typeof vi.fn> }>,

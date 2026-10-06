@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const createHost = (files: Record<string, string>) => {
   const buffers = new Map(Object.entries(files))

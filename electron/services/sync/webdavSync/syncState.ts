@@ -2,9 +2,9 @@ import type {
   SyncConflict,
   SyncManifest,
   SyncManifestEntry,
-} from '@electron/services/sync/core/types.js'
-import type { SyncOperation } from '@electron/services/sync/webdavSync/planner.js'
-import { parseSyncManifest } from '@electron/services/sync/webdavSync/manifest.js'
+} from '@electron/services/sync/core/types'
+import type { SyncOperation } from '@electron/services/sync/webdavSync/planner'
+import { parseSyncManifest } from '@electron/services/sync/webdavSync/manifest'
 
 export const createSyncManifest = (
   entries: SyncManifestEntry[],

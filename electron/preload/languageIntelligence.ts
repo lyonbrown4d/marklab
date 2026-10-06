@@ -1,11 +1,11 @@
 import { ipcRenderer, type IpcRenderer } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 import type {
   LanguageDocumentAck,
   LanguageDocumentCloseAck,
   LanguageIntelligenceApi,
-} from '@/types/languageIntelligence.js'
+} from '@/types/languageIntelligence'
 import type { CompletionList } from 'vscode-languageserver-types'
 import type { Diagnostic } from 'vscode-languageserver-types'
 

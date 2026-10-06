@@ -1,9 +1,9 @@
 import type * as Electron from 'electron'
-import { terminalCreateRequestSchema } from '@/types/terminal.js'
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import { GitService } from '@electron/services/git/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import { TerminalService } from '@electron/services/terminal/service.js'
+import { terminalCreateRequestSchema } from '@/types/terminal'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import { GitService } from '@electron/services/git/service'
+import type { Logger } from '@electron/services/logger'
+import { TerminalService } from '@electron/services/terminal/service'
 type CommandPayload = Record<string, unknown> | undefined
 export type GitTerminalIpcBridge = {
   commandHandlers: NativeCommandHandlers

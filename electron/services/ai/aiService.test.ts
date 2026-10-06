@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LanguageModel } from 'ai'
 
-import { AiService } from '@electron/services/ai/aiService.js'
-import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types.js'
+import { AiService } from '@electron/services/ai/aiService'
+import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types'
 
 const storedProvider = {
   id: 'openai-main',

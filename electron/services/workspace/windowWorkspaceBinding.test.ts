@@ -1,16 +1,16 @@
 import { EventEmitter } from 'node:events'
 import type { App, BrowserWindow, Shell } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding.js'
-import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding'
+import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose'
 
 const state = vi.hoisted(() => ({
   constructorArgs: [] as unknown[][],
   dirty: true,
   flush: vi.fn<() => Promise<void>>(),
 }))
-vi.mock('@electron/services/workspace/workspaceService.js', () => ({
+vi.mock('@electron/services/workspace/workspaceService', () => ({
   WorkspaceService: class {
     constructor(...args: unknown[]) {
       state.constructorArgs.push(args)
@@ -39,12 +39,12 @@ vi.mock('@electron/services/workspace/workspaceService.js', () => ({
     dispose = vi.fn()
   },
 }))
-vi.mock('@electron/services/nativeWindowDocument.js', () => ({
+vi.mock('@electron/services/nativeWindowDocument', () => ({
   applyAppRecentDocument: vi.fn(),
   applyWindowDocumentStatus: vi.fn(),
   createNativeRecentDocumentState: () => ({}),
 }))
-vi.mock('@electron/services/nativeWindowStatus.js', () => ({
+vi.mock('@electron/services/nativeWindowStatus', () => ({
   applyWindowTaskAttention: vi.fn(),
   applyWindowTaskProgress: vi.fn(),
   clearWindowTaskAttention: vi.fn(),

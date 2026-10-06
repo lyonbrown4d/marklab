@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron'
-import type { NativeIpcRegistration } from '@electron/ipc/index.js'
+import type { NativeIpcRegistration } from '@electron/ipc/index'
 
 type LegacyShellIpcOptions = {
   getMainWindow: () => BrowserWindow | null

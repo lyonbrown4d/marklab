@@ -1,4 +1,4 @@
-import type { AiEnvironment, AiProviderKind } from '@electron/services/ai/types.js'
+import type { AiEnvironment, AiProviderKind } from '@electron/services/ai/types'
 
 const environmentVariables: Record<AiProviderKind, string> = {
   openai: 'OPENAI_API_KEY',

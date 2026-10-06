@@ -33,7 +33,7 @@ vi.mock('electron', () => ({
 import {
   notifyExportFailed,
   notifyExportFinished,
-} from '@electron/services/export/exportNotifications.js'
+} from '@electron/services/export/exportNotifications'
 
 describe('export notifications', () => {
   beforeEach(() => {

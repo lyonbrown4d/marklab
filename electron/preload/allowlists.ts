@@ -30,6 +30,8 @@ const allowedCommandNames = [
   'fs_read_file',
   'fs_get_workspace_index',
   'fs_get_workspace_graph',
+  'fs_get_workspace_graph_layout',
+  'fs_save_workspace_graph_layout',
   'fs_search_workspace',
   'fs_rebuild_search_index',
   'fs_update_buffer',

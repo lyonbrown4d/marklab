@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const workspaceIndex = {
   files: [

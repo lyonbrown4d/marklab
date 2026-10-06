@@ -5,8 +5,8 @@ import type * as Electron from 'electron'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createElectronContainer } from '@electron/container.js'
-import type { Logger } from '@electron/services/logger.js'
+import { createElectronContainer } from '@electron/container'
+import type { Logger } from '@electron/services/logger'
 
 const logger = vi.hoisted(() => {
   const instance = {
@@ -20,7 +20,7 @@ const logger = vi.hoisted(() => {
   return instance
 })
 
-vi.mock('@electron/services/logger.js', () => ({
+vi.mock('@electron/services/logger', () => ({
   createElectronLogger: () => logger,
   noopLogger: logger,
 }))
@@ -37,6 +37,7 @@ describe('Electron dependency container', () => {
     roots.push(root)
     const safeStorage = createSafeStorage()
     const container = createElectronContainer(createRuntimeDependencies(root, safeStorage))
+    await container.cradle.lifecycleCoordinator.startup()
 
     expect(container.cradle.localHistoryService).toBe(container.cradle.localHistoryService)
     expect(container.cradle.aiProviderStore).toBe(container.cradle.aiProviderStore)
@@ -51,6 +52,7 @@ describe('Electron dependency container', () => {
     expect(container.cradle.localAiModelManager).toBe(container.cradle.localAiModelManager)
     expect(container.cradle.localAiRuntime).toBe(container.cradle.localAiRuntime)
     expect(container.cradle.localAiService).toBe(container.cradle.localAiService)
+    expect(container.cradle.lifecycleCoordinator).toBe(container.cradle.lifecycleCoordinator)
     expect(container.cradle.languageIntelligenceService).toBe(
       container.cradle.languageIntelligenceService,
     )
@@ -68,6 +70,7 @@ describe('Electron dependency container', () => {
 
     expect(safeStorage.isAsyncEncryptionAvailable).toHaveBeenCalledOnce()
     expect(safeStorage.encryptStringAsync).toHaveBeenCalledWith('secret')
+    await container.cradle.lifecycleCoordinator.shutdown()
   })
 })
 

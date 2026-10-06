@@ -1,12 +1,12 @@
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions.js'
-import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
-import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
-import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols.js'
-import { getMarkdownHover } from '@electron/services/markdownLanguage/hover.js'
-import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames.js'
-import { getMarkdownReferences } from '@electron/services/markdownLanguage/references.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types'
+import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions'
+import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions'
+import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions'
+import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols'
+import { getMarkdownHover } from '@electron/services/markdownLanguage/hover'
+import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames'
+import { getMarkdownReferences } from '@electron/services/markdownLanguage/references'
 import type {
   CompletionRequest,
   DiagnosticsRequest,
@@ -19,7 +19,7 @@ import type {
   MarkdownLanguageReference,
   MarkdownLanguageRenameResult,
   RenameRequest,
-} from '@electron/services/markdownLanguage/types.js'
+} from '@electron/services/markdownLanguage/types'
 
 type WorkspaceIndexCacheEntry = {
   version: number

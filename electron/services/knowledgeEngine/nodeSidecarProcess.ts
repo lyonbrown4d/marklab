@@ -3,10 +3,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ForkOptions } from 'electron'
 
-import { NodeSidecarRpcClient } from '@electron/services/knowledgeEngine/nodeSidecarRpcClient.js'
-import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
-import type { StartedWorkspaceSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
-import type { Logger } from '@electron/services/logger.js'
+import { NodeSidecarRpcClient } from '@electron/services/knowledgeEngine/nodeSidecarRpcClient'
+import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
+import type { StartedWorkspaceSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
+import type { Logger } from '@electron/services/logger'
 
 type ForkUtilityProcess = (
   modulePath: string,

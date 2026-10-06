@@ -1,8 +1,8 @@
 import type { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container.js'
-import type { NativeIpcRegistration } from '@electron/ipc/index.js'
-import type { MarklabWindows } from '@electron/window.js'
-import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool.js'
+import type { ElectronContainer } from '@electron/container'
+import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { MarklabWindows } from '@electron/window'
+import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool'
 
 type Logger = ElectronContainer['cradle']['logger']
 
@@ -14,13 +14,18 @@ type WindowLifecycleOptions = {
   getContainer: () => ElectronContainer
   getNativeIpc: () => NativeIpcRegistration | null
   getWindows: () => MarklabWindows | null
+  persistWindowState: (window: BrowserWindow) => Promise<void> | void
   setWindows: (windows: MarklabWindows | null) => void
 }
 
 export type WindowLifecycle = {
   ensureWindowPool: () => MarklabWindowPool
   flushWorkspaceBuffers: (reason: string) => Promise<void>
-  handleBeforeQuit: (event: PreventableEvent, continueQuit: () => void) => void
+  handleBeforeQuit: (
+    event: PreventableEvent,
+    continueQuit: () => void,
+    shutdownApplication?: () => Promise<void>,
+  ) => void
   installManagedMainWindowLifecycle: (main: BrowserWindow, logger?: Logger) => void
 }
 
@@ -124,15 +129,20 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     return windowPool
   }
 
-  const handleBeforeQuit = (event: PreventableEvent, continueQuit: () => void): void => {
+  const handleBeforeQuit = (
+    event: PreventableEvent,
+    continueQuit: () => void,
+    shutdownApplication: () => Promise<void> = () => Promise.resolve(),
+  ): void => {
     if (allowAppQuit || !options.getNativeIpc()) return
     event.preventDefault()
     if (quitFlushInProgress) return
 
     quitFlushInProgress = true
     void (async () => {
+      let releaseBarrier: () => void
       try {
-        await flushWorkspaceBuffersWithBarrier('quit')
+        releaseBarrier = await flushWorkspaceBuffersWithBarrier('quit')
       } catch (error) {
         quitFlushInProgress = false
         options
@@ -140,6 +150,22 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
           .cradle.logger.error('app quit cancelled because workspace buffers could not be saved', {
             error,
           })
+        return
+      }
+
+      try {
+        await Promise.all(
+          Array.from(managedMainWindows, (window) =>
+            window.isDestroyed() ? Promise.resolve() : options.persistWindowState(window),
+          ),
+        )
+        await shutdownApplication()
+      } catch (error) {
+        releaseBarrier()
+        quitFlushInProgress = false
+        options
+          .getContainer()
+          .cradle.logger.error('app quit cancelled because application shutdown failed', { error })
         return
       }
 

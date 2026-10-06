@@ -1,7 +1,7 @@
 import type { WebContents } from 'electron'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { Logger } from '@electron/services/logger'
+import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 
 type WorkspaceRendererEventPayloads = {
   'fs-changed': FsSnapshot

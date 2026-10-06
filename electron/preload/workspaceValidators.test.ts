@@ -13,7 +13,7 @@ import {
   isSnapshotChanged,
   isSwitchToken,
   isWorkspaceDescriptor,
-} from '@electron/preload/workspaceValidators.js'
+} from '@electron/preload/workspaceValidators'
 
 const session = { session_id: 'session-1', generation: 1 }
 const root = { kind: 'external', path: 'D:/notes' }

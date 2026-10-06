@@ -6,7 +6,7 @@ import type {
   MermaidValidationIssue,
   MermaidValidationOptions,
   MermaidValidator,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 
 const MAX_DIAGNOSTICS = 100
 const MAX_MESSAGE_LENGTH = 500

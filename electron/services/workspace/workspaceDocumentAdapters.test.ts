@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters'
 
 describe('workspace document adapters', () => {
   it('recognizes Excalidraw whiteboard documents', () => {

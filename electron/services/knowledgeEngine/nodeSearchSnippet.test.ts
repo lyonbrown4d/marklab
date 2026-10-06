@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
 
 describe('NodeSearchIndex result snippets', () => {
   it('keeps terms distributed across title, path, and content visible to result filtering', async () => {

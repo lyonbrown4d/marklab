@@ -4,7 +4,7 @@ import {
   assertPublicLinkPreviewUrl,
   normalizeNetworkHostname,
   validatePublicAddress,
-} from '@electron/services/linkPreview/networkSecurity.js'
+} from '@electron/services/linkPreview/networkSecurity'
 
 describe('link preview network security', () => {
   it.each([

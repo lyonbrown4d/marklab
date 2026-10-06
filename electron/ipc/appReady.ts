@@ -1,5 +1,5 @@
 import type { App, IpcMain } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 export const registerAppReadyIpc = (
   ipcMain: IpcMain,
   app: App,

@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { scanWorkspace } from '@electron/services/sync/webdavSync/localScanner.js'
+import { scanWorkspace } from '@electron/services/sync/webdavSync/localScanner'
 
 const roots: string[] = []
 afterEach(async () => {

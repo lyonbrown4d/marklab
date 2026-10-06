@@ -1,24 +1,24 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { guessMediaType, normalizeMarkdownTarget } from '@electron/services/workspace/markdown.js'
+import { guessMediaType, normalizeMarkdownTarget } from '@electron/services/workspace/markdown'
 import {
   isExternalTarget,
   normalizeRelativePath,
   stripAssetQueryAndHash,
   toWorkspaceRelative,
   workspaceRootForAssets,
-} from '@electron/services/workspace/path.js'
+} from '@electron/services/workspace/path'
 import type {
   FsMarkdownAssetImportResult,
   FsMarkdownAssetResolveResult,
   FsStateData,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 import {
   decodeURIComponentSafe,
   pathExists,
   sanitizeFileStem,
-} from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceUtils'
 
 export const preserveAssetPath = (
   state: FsStateData,

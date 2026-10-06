@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerWebTabsIpc } from '@electron/ipc/webTabs.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerWebTabsIpc } from '@electron/ipc/webTabs'
 
 describe('web tabs IPC', () => {
   it('accepts main-frame requests from managed windows', () => {

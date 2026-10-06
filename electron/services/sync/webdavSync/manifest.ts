@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
-import type { SyncManifest, SyncManifestEntry } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
+import type { SyncManifest, SyncManifestEntry } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
 import {
   normalizeSyncPath,
   portableSyncPathKey,
-} from '@electron/services/sync/webdavSync/pathSafety.js'
+} from '@electron/services/sync/webdavSync/pathSafety'
 
 const entrySchema = z
   .object({

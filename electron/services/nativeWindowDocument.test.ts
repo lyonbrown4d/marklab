@@ -6,8 +6,8 @@ import {
   createNativeRecentDocumentState,
   recentDocumentPathForRoot,
   representedFilenameForRoot,
-} from '@electron/services/nativeWindowDocument.js'
-import type { FsRootInfo } from '@electron/services/workspace/types.js'
+} from '@electron/services/nativeWindowDocument'
+import type { FsRootInfo } from '@electron/services/workspace/types'
 
 const root = (kind: FsRootInfo['kind'], path: string): FsRootInfo => ({ kind, path })
 

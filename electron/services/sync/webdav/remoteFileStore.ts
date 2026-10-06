@@ -6,14 +6,14 @@ import type {
   RemoteFileStore,
   RemoteWriteCondition,
   SyncManifest,
-} from '@electron/services/sync/core/types.js'
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
-import { normalizeRemotePath } from '@electron/services/sync/webdav/remotePath.js'
+} from '@electron/services/sync/core/types'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
+import { normalizeRemotePath } from '@electron/services/sync/webdav/remotePath'
 import type {
   WebDavEntry,
   WebDavOperationOptions,
   WebDavRemoteClient,
-} from '@electron/services/sync/webdav/types.js'
+} from '@electron/services/sync/webdav/types'
 
 const MANIFEST_PATH = '.marklab-sync/manifest.json'
 const MAX_MANIFEST_BYTES = 4 * 1024 * 1024

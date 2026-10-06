@@ -2,9 +2,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceService } from '@electron/services/workspace/workspaceService'
 
 vi.mock('@parcel/watcher', () => ({
   default: { subscribe: vi.fn(async () => ({ unsubscribe: vi.fn(async () => undefined) })) },

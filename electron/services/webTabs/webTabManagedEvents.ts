@@ -1,10 +1,7 @@
-import type { WebTabEvent } from '@/types/webTabs.js'
-import { installWebTabEvents } from '@electron/services/webTabs/webTabEvents.js'
-import type {
-  WebTabEntry,
-  WebTabWindowState,
-} from '@electron/services/webTabs/webTabManagerTypes.js'
-import { findWebTabShortcutAction } from '@electron/services/webTabs/webTabShortcuts.js'
+import type { WebTabEvent } from '@/types/webTabs'
+import { installWebTabEvents } from '@electron/services/webTabs/webTabEvents'
+import type { WebTabEntry, WebTabWindowState } from '@electron/services/webTabs/webTabManagerTypes'
+import { findWebTabShortcutAction } from '@electron/services/webTabs/webTabShortcuts'
 
 const MAX_TITLE_LENGTH = 512
 

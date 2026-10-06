@@ -1,9 +1,9 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createUpdateService, type UpdateService } from '@electron/services/updater/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgress.js'
-import type { UpdateEventPayload } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createUpdateService, type UpdateService } from '@electron/services/updater/service'
+import type { Logger } from '@electron/services/logger'
+import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgress'
+import type { UpdateEventPayload } from '@electron/types'
 
 export type UpdaterIpcDependencies = {
   app: Electron.App

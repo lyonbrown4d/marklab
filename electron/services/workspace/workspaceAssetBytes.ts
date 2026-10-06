@@ -1,6 +1,6 @@
-import { workspaceAssetNotFoundError } from '@electron/services/workspace/workspaceAssetCapabilities.js'
-import type { FsAssetBytes } from '@electron/services/workspace/types.js'
-import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset.js'
+import { workspaceAssetNotFoundError } from '@electron/services/workspace/workspaceAssetCapabilities'
+import type { FsAssetBytes } from '@electron/services/workspace/types'
+import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset'
 
 const ASSET_READ_CONCURRENCY = 2
 const ASSET_READ_CHUNK_BYTES = 1024 * 1024

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  guessMediaType,
-  looksLikeAssetTarget,
-} from '@electron/services/workspace/markdown/media.js'
+import { guessMediaType, looksLikeAssetTarget } from '@electron/services/workspace/markdown/media'
 
 describe('markdown media targets', () => {
   it('recognizes calendar files as linkable asset targets', () => {

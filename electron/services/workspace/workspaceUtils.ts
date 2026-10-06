@@ -4,7 +4,7 @@ import {
   isNativePathInsideOrEqual,
   normalizeNativePath,
   stripWindowsNamespacePath,
-} from '@electron/services/nativePath.js'
+} from '@electron/services/nativePath'
 
 import {
   isAudioPath,
@@ -17,9 +17,9 @@ import {
   isWorkspaceDocumentPath,
   normalizeRelativePath,
   toWorkspaceRelative,
-} from '@electron/services/workspace/path.js'
-import type { FsEntry, FsStateData } from '@electron/services/workspace/types.js'
-import { isWorkspaceSourceDotFileName } from '@electron/services/workspace/documentAdapters.js'
+} from '@electron/services/workspace/path'
+import type { FsEntry, FsStateData } from '@electron/services/workspace/types'
+import { isWorkspaceSourceDotFileName } from '@electron/services/workspace/documentAdapters'
 
 export type WatchEventName = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
 export type WorkspaceKnownPaths = { paths: string[]; assetPaths: string[] }

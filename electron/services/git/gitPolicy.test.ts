@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSafeGitArgs } from '@electron/services/git/gitPolicy.js'
+import { buildSafeGitArgs } from '@electron/services/git/gitPolicy'
 
 describe('safe Git command policy', () => {
   it('disables executable repository features and restricts transports', async () => {

@@ -2,11 +2,11 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import path from 'node:path'
 import { z } from 'zod'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { GitService } from '@electron/services/git/service.js'
-import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
-import type { FsRootInfo } from '@electron/services/workspace/types.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { GitService } from '@electron/services/git/service'
+import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
+import type { FsRootInfo } from '@electron/services/workspace/types'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 
 type GitNamedIpcDependencies = {
   gitService: GitService

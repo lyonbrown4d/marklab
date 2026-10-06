@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
 
 describe('workspace preload surfaces', () => {
   it('uses dedicated channels for workspace assets', async () => {

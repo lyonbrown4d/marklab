@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 
-import type { RemoteFileStore, SyncManifestEntry } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
-import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry.js'
-import type { UploadSnapshot } from '@electron/services/sync/webdavSync/uploadSnapshot.js'
+import type { RemoteFileStore, SyncManifestEntry } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
+import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry'
+import type { UploadSnapshot } from '@electron/services/sync/webdavSync/uploadSnapshot'
 
 export const ensureRemoteObject = async (
   remote: RemoteFileStore,

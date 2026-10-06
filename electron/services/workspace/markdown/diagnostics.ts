@@ -2,10 +2,10 @@ import type {
   FsMarkdownDiagnostic,
   FsMarkdownLink,
   FsWorkspaceIndex,
-} from '@electron/services/workspace/types.js'
-import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
-import { charLength } from '@electron/services/workspace/markdown/text.js'
-import { normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
+} from '@electron/services/workspace/types'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets'
+import { charLength } from '@electron/services/workspace/markdown/text'
+import { normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils'
 
 export const diagnosticsForFile = (
   index: FsWorkspaceIndex,

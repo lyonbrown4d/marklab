@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { renderHtmlWithLocalImages } from '@electron/services/export/html.js'
+import { renderHtmlWithLocalImages } from '@electron/services/export/html'
 
 describe('renderHtml export resources', () => {
   it('embeds a relative image returned by the workspace reader', async () => {

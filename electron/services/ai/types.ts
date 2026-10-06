@@ -4,7 +4,7 @@ import type {
   AiGenerateTextRequest,
   AiProviderUpdate,
   aiProviderKindSchema,
-} from '@electron/services/ai/schemas.js'
+} from '@electron/services/ai/schemas'
 import type { z } from 'zod'
 
 export type AiProviderKind = z.infer<typeof aiProviderKindSchema>

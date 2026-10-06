@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   flushEditorChangesForClose,
   registerEditorBufferFlusher,
+  registerEditorPersistenceFlusher,
   registerEditorSnapshotFlusher,
 } from '@/app/editorCloseLifecycle'
 
@@ -16,12 +17,16 @@ describe('editor close lifecycle', () => {
     const removeBuffer = registerEditorBufferFlusher(async () => {
       order.push('buffer')
     })
+    const removePersistence = registerEditorPersistenceFlusher(async () => {
+      order.push('persistence')
+    })
 
     await flushEditorChangesForClose()
 
-    expect(order).toEqual(['snapshot:start', 'snapshot:done', 'buffer'])
+    expect(order).toEqual(['snapshot:start', 'snapshot:done', 'buffer', 'persistence'])
     removeSnapshot()
     removeBuffer()
+    removePersistence()
   })
 
   it('unregisters lifecycle participants when their owner unmounts', async () => {

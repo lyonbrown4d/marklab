@@ -1,36 +1,36 @@
 import type { App, Shell } from 'electron'
 
-import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { fileLabel } from '@electron/services/workspace/markdown/utils.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { fileLabel } from '@electron/services/workspace/markdown/utils'
 import type {
   FsGraph,
   FsMarkdownDiagnostic,
   FsRootInfo,
   FsSearchResult,
   FsWorkspaceIndex,
-} from '@electron/services/workspace/types.js'
-import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
-import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
-import { WorkspaceSearchIndexBuildCoordinator } from '@electron/services/workspace/workspaceSearchIndexBuildCoordinator.js'
+} from '@electron/services/workspace/types'
+import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
+import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
+import { WorkspaceSearchIndexBuildCoordinator } from '@electron/services/workspace/workspaceSearchIndexBuildCoordinator'
 import {
   workspaceChangeAffectsSearch,
   workspaceSearchIndexPath,
   workspaceSearchKey,
-} from '@electron/services/workspace/workspaceSearchIndexLifecycle.js'
-import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
-import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
-import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache.js'
+} from '@electron/services/workspace/workspaceSearchIndexLifecycle'
+import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache'
+import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
 import {
   trySidecarMarkdownDiagnostics,
   trySidecarWorkspaceGraph,
-} from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import { mergeMarkdownDiagnostics } from '@electron/services/workspace/markdown/diagnostics.js'
-import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient.js'
-import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceSidecarFileBridge'
+import { mergeMarkdownDiagnostics } from '@electron/services/workspace/markdown/diagnostics'
+import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient'
+import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils'
 
 const SEARCH_INDEX_REBUILD_DELAY_MS = 600
 

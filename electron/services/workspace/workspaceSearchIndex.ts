@@ -1,14 +1,14 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
-import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes.js'
+import type { FsSearchResult } from '@electron/services/workspace/types'
+import { isSearchIndexablePath } from '@electron/services/workspace/path'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
-} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+} from '@electron/services/knowledgeEngine/knowledgeSearch'
 
 const MAX_SEARCH_LIMIT = 100
 

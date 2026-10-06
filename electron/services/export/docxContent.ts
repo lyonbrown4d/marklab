@@ -4,13 +4,13 @@ import {
   plainTextFromInlines,
   type MarkdownBlock,
   type MarkdownInline,
-} from '@electron/services/export/markdown.js'
-import type { DocxImageMap } from '@electron/services/export/docxImages.js'
+} from '@electron/services/export/markdown'
+import type { DocxImageMap } from '@electron/services/export/docxImages'
 import {
   inlineChildren,
   paragraphFromInlines,
   textRuns,
-} from '@electron/services/export/docxInlines.js'
+} from '@electron/services/export/docxInlines'
 
 type HeadingLevelValue = (typeof HeadingLevel)[keyof typeof HeadingLevel]
 const orderedListReference = 'marklab-ordered-list'

@@ -1,7 +1,7 @@
 import type { Event, Input, WebContents } from 'electron'
 import { debounceTime, distinctUntilChanged, map, Subject, type Subscription } from 'rxjs'
 
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
 
 type WebTabEventCallbacks = {
   onCrashed: (description: string) => void

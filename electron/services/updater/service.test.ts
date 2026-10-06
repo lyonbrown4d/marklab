@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Logger } from '@electron/services/logger.js'
+import type { Logger } from '@electron/services/logger'
 
 const updaterEvents = vi.hoisted(() => new Map<string, (...args: unknown[]) => void>())
 const autoUpdaterMock = vi.hoisted(() => ({
@@ -32,7 +32,7 @@ describe('createUpdateService', () => {
   })
 
   it('reports unavailable outside packaged builds', async () => {
-    const { createUpdateService } = await import('@electron/services/updater/service.js')
+    const { createUpdateService } = await import('@electron/services/updater/service')
     const events: unknown[] = []
     const service = createUpdateService({
       isPackaged: false,
@@ -54,7 +54,7 @@ describe('createUpdateService', () => {
   })
 
   it('emits available updates from updater events', async () => {
-    const { createUpdateService } = await import('@electron/services/updater/service.js')
+    const { createUpdateService } = await import('@electron/services/updater/service')
     const events: unknown[] = []
     const service = createUpdateService({
       isPackaged: true,
@@ -83,7 +83,7 @@ describe('createUpdateService', () => {
   })
 
   it('flushes before installing downloaded updates', async () => {
-    const { createUpdateService } = await import('@electron/services/updater/service.js')
+    const { createUpdateService } = await import('@electron/services/updater/service')
     const onBeforeInstall = vi.fn(async () => undefined)
     const service = createUpdateService({
       isPackaged: true,

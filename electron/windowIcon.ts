@@ -1,6 +1,6 @@
 import { nativeImage } from 'electron'
 import fs from 'node:fs'
-import { resolveWindowIconPaths, type WindowIconProjectRoots } from '@electron/windowIconPaths.js'
+import { resolveWindowIconPaths, type WindowIconProjectRoots } from '@electron/windowIconPaths'
 
 const createNativeImageFromPath = (iconPath: string): Electron.NativeImage | null => {
   try {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { applyWindowExportProgress } from '@electron/services/nativeExportProgress.js'
-import type { ExportTaskPayload } from '@electron/types.js'
+import { applyWindowExportProgress } from '@electron/services/nativeExportProgress'
+import type { ExportTaskPayload } from '@electron/types'
 
 const task = (overrides: Partial<ExportTaskPayload>): ExportTaskPayload => ({
   format: 'pdf',

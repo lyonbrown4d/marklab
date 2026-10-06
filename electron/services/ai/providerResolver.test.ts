@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver.js'
-import type { StoredAiProvider } from '@electron/services/ai/types.js'
+import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver'
+import type { StoredAiProvider } from '@electron/services/ai/types'
 
 describe('VercelAiProviderResolver', () => {
   it.each([

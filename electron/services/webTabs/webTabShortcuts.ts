@@ -1,6 +1,6 @@
 import type { Input } from 'electron'
 
-import type { WebTabShortcutAction, WebTabShortcutBindingsRequest } from '@/types/webTabs.js'
+import type { WebTabShortcutAction, WebTabShortcutBindingsRequest } from '@/types/webTabs'
 
 export type CompiledWebTabShortcut = {
   action: WebTabShortcutAction

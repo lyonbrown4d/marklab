@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseMarkdown } from '@electron/services/export/markdown.js'
+import { parseMarkdown } from '@electron/services/export/markdown'
 
 describe('parseMarkdown for rich document export', () => {
   it('preserves GFM deletion as an explicit inline style', () => {

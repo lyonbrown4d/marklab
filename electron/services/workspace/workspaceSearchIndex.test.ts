@@ -4,12 +4,12 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type { FsSearchResult } from '@electron/services/workspace/types'
 import {
   WorkspaceSearchIndex,
   type WorkspaceSearchIndexBackend,
-} from '@electron/services/workspace/workspaceSearchIndex.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+} from '@electron/services/workspace/workspaceSearchIndex'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
 
 const tempDirs: string[] = []
 

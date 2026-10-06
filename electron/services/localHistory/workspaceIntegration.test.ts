@@ -5,17 +5,19 @@ import type { App, Shell } from 'electron'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { LocalHistoryService } from '@electron/services/localHistory/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
+import { LocalHistoryService } from '@electron/services/localHistory/service'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 
 vi.mock('@parcel/watcher', () => ({
   default: { subscribe: vi.fn(async () => ({ unsubscribe: vi.fn(async () => undefined) })) },
 }))
 
 const roots: string[] = []
+const services: LocalHistoryService[] = []
 
 afterEach(async () => {
+  await Promise.all(services.splice(0).map((service) => service.dispose()))
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })))
 })
 
@@ -28,6 +30,7 @@ describe('workspace local history integration', () => {
     await fs.mkdir(workspacePath, { recursive: true })
     await fs.writeFile(path.join(workspacePath, 'guide.md'), '# Before\n')
     const history = new LocalHistoryService({ userDataPath })
+    services.push(history)
     const capture = vi.spyOn(history, 'capture')
     const workspace = new WorkspaceFileService(
       createApp(userDataPath),

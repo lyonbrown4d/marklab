@@ -1,14 +1,14 @@
 import { ipcRenderer, type IpcRenderer } from 'electron'
 
-import { nativeIpcChannels, type NativeIpcChannel } from '@electron/channels.js'
+import { nativeIpcChannels, type NativeIpcChannel } from '@electron/channels'
 import {
   isAssetBytes,
   isAssetCapability,
   isPathActionAck,
   isTextPreview,
   type Validator,
-} from '@electron/preload/workspaceValidators.js'
-import type { AssetApi } from '@electron/types.js'
+} from '@electron/preload/workspaceValidators'
+import type { AssetApi } from '@electron/types'
 import type { ElectronWorkspacePathApi } from '@/runtime/electron'
 
 type WorkspaceIpcRenderer = Pick<IpcRenderer, 'invoke'>

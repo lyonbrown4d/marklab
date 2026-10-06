@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   NodeSidecarRpcClient,
   type NodeSidecarProcessPort,
-} from '@electron/services/knowledgeEngine/nodeSidecarRpcClient.js'
+} from '@electron/services/knowledgeEngine/nodeSidecarRpcClient'
 
 describe('NodeSidecarRpcClient cancellation', () => {
   it('drops the cancelled response and keeps subsequent diagnostics requests usable', async () => {

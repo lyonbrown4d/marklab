@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import type { BrowserWindow } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { dismissSplashWindow, showSplashWithoutActivation } from '@electron/splashLifecycle.js'
+import { dismissSplashWindow, showSplashWithoutActivation } from '@electron/splashLifecycle'
 
 const createSplash = () => {
   let destroyed = false

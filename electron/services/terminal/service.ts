@@ -5,13 +5,13 @@ import path from 'node:path'
 import type * as Electron from 'electron'
 import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 import { Subject, bufferTime, filter, map, type Subscription } from 'rxjs'
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { resolveTerminalShell } from '@electron/services/terminal/shellResolver.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { resolveTerminalShell } from '@electron/services/terminal/shellResolver'
 import type {
   TerminalExitEvent,
   TerminalOutputEvent,
   TerminalSessionInfo,
-} from '@electron/services/terminal/types.js'
+} from '@electron/services/terminal/types'
 type NodePtyModule = typeof import('@homebridge/node-pty-prebuilt-multiarch')
 type CwdProvider = (webContents?: Electron.WebContents) => string
 type TerminalSession = {

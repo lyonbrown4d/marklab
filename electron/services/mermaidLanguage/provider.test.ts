@@ -4,7 +4,7 @@ import { CompletionItemKind, InsertTextFormat, Position, Range } from 'vscode-la
 import {
   MermaidLanguageProvider,
   type MermaidTextDocument,
-} from '@electron/services/mermaidLanguage/provider.js'
+} from '@electron/services/mermaidLanguage/provider'
 
 const document = (text: string): MermaidTextDocument => ({
   languageId: 'mermaid',

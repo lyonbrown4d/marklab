@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { PersistedWindowState } from '@electron/types.js'
+import type { PersistedWindowState } from '@electron/types'
 
 export type PersistedRendererValue = {
   state?: Record<string, unknown>

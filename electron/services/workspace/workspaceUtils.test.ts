@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import type { FsStateData } from '@electron/services/workspace/types'
 import {
   isIgnoredWorkspaceDirectory,
   isPathInsideOrEqual,
   listWorkspaceEntries,
   listWorkspacePathSnapshot,
   stripWindowsNamespacePath,
-} from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceUtils'
 
 const tempRoots: string[] = []
 

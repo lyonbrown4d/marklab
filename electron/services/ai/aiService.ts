@@ -1,14 +1,14 @@
 import { generateText as vercelGenerateText } from 'ai'
 import pLimit, { type LimitFunction } from 'p-limit'
 
-import { readAiEnvironment } from '@electron/services/ai/environment.js'
+import { readAiEnvironment } from '@electron/services/ai/environment'
 import {
   generateTextRequestSchema,
   isLoopbackHttpUrl,
   providerIdRequestSchema,
   providerUpdateSchema,
   type AiGenerateTextRequest,
-} from '@electron/services/ai/schemas.js'
+} from '@electron/services/ai/schemas'
 import type {
   AiEnvironment,
   AiGenerateAdapter,
@@ -19,7 +19,7 @@ import type {
   AiServiceContract,
   PublicAiProvider,
   StoredAiProvider,
-} from '@electron/services/ai/types.js'
+} from '@electron/services/ai/types'
 
 const GENERATION_TIMEOUT_MS = 120_000
 const DEFAULT_MAX_OUTPUT_TOKENS = 4_096

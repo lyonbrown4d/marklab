@@ -9,11 +9,11 @@ import type {
 } from 'vscode-languageserver-types'
 import { DiagnosticSeverity } from 'vscode-languageserver-types'
 
-import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
-import { MAX_FILE_COMPLETIONS } from '@electron/services/markdownLanguage/completions.js'
-import { MermaidLanguageProvider } from '@electron/services/mermaidLanguage/provider.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import { markdownSnippetCompletions } from '@electron/services/languageIntelligence/markdownSnippets.js'
+import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service'
+import { MAX_FILE_COMPLETIONS } from '@electron/services/markdownLanguage/completions'
+import { MermaidLanguageProvider } from '@electron/services/mermaidLanguage/provider'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import { markdownSnippetCompletions } from '@electron/services/languageIntelligence/markdownSnippets'
 
 type MarkdownProviderContext = {
   document: TextDocument

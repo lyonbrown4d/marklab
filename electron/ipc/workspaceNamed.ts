@@ -1,7 +1,7 @@
 import type { Clipboard, IpcMain, IpcMainInvokeEvent, Shell } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 
 type WorkspaceNamedIpcDependencies = {
   clipboard: Pick<Clipboard, 'writeText'>

@@ -3,8 +3,8 @@ import {
   getNativeMenuLabels,
   normalizeNativeMenuLocale,
   type NativeMenuLocale,
-} from '@electron/menuLocalization.js'
-import { getRendererPersistValue } from '@electron/services/settingsStore.js'
+} from '@electron/menuLocalization'
+import { getRendererPersistValue } from '@electron/services/settingsStore'
 
 export const MENU_ACTION_IDS = [
   'file.new',

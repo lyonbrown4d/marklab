@@ -5,24 +5,24 @@ import type {
   RemoteFileStore,
   SyncProgress,
   WorkspaceSyncResult,
-} from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
+} from '@electron/services/sync/core/types'
+import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
 import {
   createWebDavRemoteClient,
   createWebDavRemoteFileStore,
-} from '@electron/services/sync/webdav/index.js'
+} from '@electron/services/sync/webdav/index'
 import type {
   WebDavConnectionResult,
   WebDavProfile,
   WebDavProfileStoreContract,
   WebDavRemoteClient,
-} from '@electron/services/sync/webdav/types.js'
+} from '@electron/services/sync/webdav/types'
 import {
   WebDavSyncEngine,
   type WebDavSyncEngineOptions,
-} from '@electron/services/sync/webdavSync/engine.js'
-import type { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
-import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
+} from '@electron/services/sync/webdavSync/engine'
+import type { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
+import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
 
 type WorkspaceTarget = Pick<
   WorkspaceFileService,

@@ -1,6 +1,6 @@
 import Fuse from 'fuse.js'
 
-import { createFileLabel } from '@electron/services/markdownLanguage/linkTargets.js'
+import { createFileLabel } from '@electron/services/markdownLanguage/linkTargets'
 
 type FileCompletionCandidate = {
   path: string

@@ -3,8 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { BrowserWindow } from 'electron'
-import { renderHtmlWithLocalImages } from '@electron/services/export/html.js'
-import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
+import { renderHtmlWithLocalImages } from '@electron/services/export/html'
+import { installWindowNavigationGuard } from '@electron/windowNavigation'
 
 type RenderPdfOptions = {
   BrowserWindowClass: typeof BrowserWindow

@@ -6,8 +6,8 @@ import type { Readable } from 'node:stream'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
-import { resolveSafeWorkspaceTarget } from '@electron/services/sync/webdavSync/pathSafety.js'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
+import { resolveSafeWorkspaceTarget } from '@electron/services/sync/webdavSync/pathSafety'
 
 type AtomicDownloadOptions = {
   beforePublish?: () => Promise<void>

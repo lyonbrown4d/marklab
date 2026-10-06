@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview.js'
-import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
 
 describe('link preview IPC', () => {
   it('registers a named handler and forwards a validated URL', async () => {

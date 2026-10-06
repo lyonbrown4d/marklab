@@ -20,6 +20,7 @@ import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapRef
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { WorkspaceMapToolbar } from '@/pages/workspace-map/WorkspaceMapToolbar'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
+import { useWorkspaceMapCanvasPersistence } from '@/pages/workspace-map/useWorkspaceMapCanvasPersistence'
 import { useWorkspaceMapInteractions } from '@/pages/workspace-map/useWorkspaceMapInteractions'
 import { useWorkspaceMapNodeDisclosure } from '@/pages/workspace-map/useWorkspaceMapNodeDisclosure'
 import { useWorkspaceMapNeighborhood } from '@/pages/workspace-map/useWorkspaceMapNeighborhood'
@@ -133,6 +134,7 @@ const WorkspaceMapCanvasContent = ({
                 maxZoom: Math.min(options?.maxZoom ?? 1, 1),
                 minZoom: Math.max(options?.minZoom ?? 0.35, 0.35),
               }),
+            setViewport: flow.setViewport,
           }
         : null,
     [flow],
@@ -148,6 +150,15 @@ const WorkspaceMapCanvasContent = ({
     graph: renderedGraph,
     mode,
     nodes,
+    setNodes,
+  })
+  const persistence = useWorkspaceMapCanvasPersistence({
+    disclosedNodes,
+    enabled: layout.status === 'ready',
+    flow,
+    nodes,
+    onNodesChange,
+    request: layout.persistenceRequest,
     setNodes,
   })
   useEffect(() => {
@@ -204,7 +215,7 @@ const WorkspaceMapCanvasContent = ({
         nodes={disclosedNodes}
         edges={presentedEdges}
         nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
+        onNodesChange={persistence.handleNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={setFlow}
         onKeyDown={interactions.onKeyDown}
@@ -215,6 +226,7 @@ const WorkspaceMapCanvasContent = ({
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onMove={handleViewportMove}
+        onMoveEnd={() => persistence.scheduleViewportSave()}
         onPaneClick={interactions.onPaneClick}
         nodesDraggable
         nodesConnectable={false}

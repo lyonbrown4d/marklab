@@ -1,12 +1,12 @@
 import type {
   BufferRecord,
   WorkspaceBufferStoreOptions,
-} from '@electron/services/workspace/workspaceBufferTypes.js'
+} from '@electron/services/workspace/workspaceBufferTypes'
 import {
   canonicalWorkspaceWriteIdentity,
   commitWorkspaceWrite,
   writeWorkspaceFileAtomically,
-} from '@electron/services/workspace/workspaceWriteCoordinator.js'
+} from '@electron/services/workspace/workspaceWriteCoordinator'
 
 type FlushEntry = { key: string; record: BufferRecord }
 type FlushContext = {

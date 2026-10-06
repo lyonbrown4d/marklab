@@ -1,18 +1,18 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { GitService } from '@electron/services/git/service.js'
-import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
-import { webDavProfileInputSchema } from '@electron/services/sync/webdav/profileSchemas.js'
-import { readWorkspaceGitSummary } from '@electron/services/sync/workspaceGitSummary.js'
-import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { GitService } from '@electron/services/git/service'
+import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
+import { webDavProfileInputSchema } from '@electron/services/sync/webdav/profileSchemas'
+import { readWorkspaceGitSummary } from '@electron/services/sync/workspaceGitSummary'
+import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types'
 import {
   workspaceSyncChannelSchema,
   type WorkspaceSyncConfigStore,
-} from '@electron/services/sync/workspaceSyncConfig.js'
-import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+} from '@electron/services/sync/workspaceSyncConfig'
+import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { WorkspaceSyncStartOutcome } from '@/types/workspaceSync'
 
 type WorkspaceSyncIpcDependencies = {

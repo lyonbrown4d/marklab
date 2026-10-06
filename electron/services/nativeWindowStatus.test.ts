@@ -7,8 +7,8 @@ import {
   clearWindowTaskAttention,
   createNativeTaskAttentionState,
   summarizeNativeTasks,
-} from '@electron/services/nativeWindowStatus.js'
-import type { BackgroundTaskStatus } from '@electron/services/workspace/types.js'
+} from '@electron/services/nativeWindowStatus'
+import type { BackgroundTaskStatus } from '@electron/services/workspace/types'
 
 const task = (
   id: string,

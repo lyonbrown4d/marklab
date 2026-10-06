@@ -1,9 +1,9 @@
-import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 import type {
   NodeSidecarMethod,
   NodeSidecarRequest,
-} from '@electron/services/knowledgeEngine/nodeSidecarProtocol.js'
-import { isNodeSidecarResponse } from '@electron/services/knowledgeEngine/nodeSidecarProtocol.js'
+} from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
+import { isNodeSidecarResponse } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 
 export type NodeSidecarProcessPort = {
   on(event: 'exit', listener: (code: number) => void): unknown

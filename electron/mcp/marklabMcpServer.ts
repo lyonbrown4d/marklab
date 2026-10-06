@@ -5,7 +5,7 @@ import type {
   MarklabMcpSearchResultSet,
   MarklabMcpWorkspaceAdapter,
   MarklabMcpWorkspaceStatus,
-} from '@electron/mcp/marklabMcpTypes.js'
+} from '@electron/mcp/marklabMcpTypes'
 
 export const MARKLAB_WORKSPACE_STATUS_TOOL = 'marklab_workspace_status'
 export const MARKLAB_SEARCH_WORKSPACE_TOOL = 'marklab_search_workspace'

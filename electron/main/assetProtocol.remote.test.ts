@@ -7,8 +7,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { createAssetProtocolHandler } from '@electron/main/assetProtocol.js'
-import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
+import { createAssetProtocolHandler } from '@electron/main/assetProtocol'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
 
 const capability = 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 

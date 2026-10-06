@@ -1,6 +1,6 @@
-import type { Logger } from '@electron/services/logger.js'
-import type { BackgroundTaskStatus } from '@electron/services/workspace/types.js'
-import { errorMessage } from '@electron/services/workspace/workspaceUtils.js'
+import type { Logger } from '@electron/services/logger'
+import type { BackgroundTaskStatus } from '@electron/services/workspace/types'
+import { errorMessage } from '@electron/services/workspace/workspaceUtils'
 
 type SetTask = (
   id: string,

@@ -3,9 +3,9 @@ import { EventEmitter } from 'node:events'
 import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createMarklabWindowPool } from '@electron/windowPool.js'
+import { createMarklabWindowPool } from '@electron/windowPool'
 
-vi.mock('@electron/services/logger.js', () => {
+vi.mock('@electron/services/logger', () => {
   const noopLogger = {
     child: () => noopLogger,
     debug: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('electron', () => ({
   nativeTheme: { shouldUseDarkColors: false },
   screen: { getAllDisplays: vi.fn(() => []) },
 }))
-vi.mock('@electron/window.js', () => ({
+vi.mock('@electron/window', () => ({
   createMainWindow: vi.fn(),
   loadMainWindow: vi.fn(),
   loadWindowOpeningShell: vi.fn(),

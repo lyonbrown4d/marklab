@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assetMediaTypeForExtension, isAssetMediaExtension } from '@electron/services/mediaTypes.js'
+import { assetMediaTypeForExtension, isAssetMediaExtension } from '@electron/services/mediaTypes'
 
 describe('asset media types', () => {
   it('normalizes common image extensions', () => {

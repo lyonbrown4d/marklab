@@ -12,7 +12,7 @@ import type {
   WorkspaceSnapshotChangedEvent,
   WorkspaceSwitchToken,
   WorkspaceTextPreview,
-} from '@electron/types.js'
+} from '@electron/types'
 import type { WorkspacePathActionAck } from '@/types/workspaceSession'
 
 type RecordValue = Record<string, unknown>

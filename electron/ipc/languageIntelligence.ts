@@ -1,16 +1,16 @@
 import type * as Electron from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service'
+import type { Logger } from '@electron/services/logger'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import {
   languageCompletionRequestSchema,
   languageDocumentChangeRequestSchema,
   languageDocumentCloseRequestSchema,
   languageDocumentOpenRequestSchema,
   languageDiagnosticsRequestSchema,
-} from '@/types/languageIntelligence.js'
+} from '@/types/languageIntelligence'
 
 type WorkspaceRegistryContract = Pick<WindowWorkspaceRegistry, 'serviceForWebContents'>
 

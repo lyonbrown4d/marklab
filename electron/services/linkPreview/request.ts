@@ -1,4 +1,4 @@
-import type { LinkPreviewRequest } from '@/types/linkPreview.js'
+import type { LinkPreviewRequest } from '@/types/linkPreview'
 
 export const parseLinkPreviewRequest = (payload: unknown): LinkPreviewRequest => {
   const rawUrl = readRawUrl(payload)

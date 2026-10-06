@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime.js'
+import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime'
 
 const SHOW_DURATION_MS = 140
 const HIDE_DURATION_MS = 110

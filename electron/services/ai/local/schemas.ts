@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types.js'
+import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types'
 
 const idSchema = z.string().min(1).max(128)
 

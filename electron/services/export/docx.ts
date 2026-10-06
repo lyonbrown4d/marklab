@@ -3,10 +3,10 @@ import {
   parseMarkdown,
   plainTextFromInlines,
   type MarkdownBlock,
-} from '@electron/services/export/markdown.js'
-import { blocksToDocxChildren } from '@electron/services/export/docxContent.js'
-import { loadDocxImages } from '@electron/services/export/docxImages.js'
-import type { LocalImageOptions } from '@electron/services/export/docxImages.js'
+} from '@electron/services/export/markdown'
+import { blocksToDocxChildren } from '@electron/services/export/docxContent'
+import { loadDocxImages } from '@electron/services/export/docxImages'
+import type { LocalImageOptions } from '@electron/services/export/docxImages'
 
 const orderedListReference = 'marklab-ordered-list'
 type RenderDocxOptions = LocalImageOptions

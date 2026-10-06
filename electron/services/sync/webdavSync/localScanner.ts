@@ -3,14 +3,14 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { SyncManifestEntry, SyncSkippedFile } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
+import type { SyncManifestEntry, SyncSkippedFile } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
 import {
   assertWorkspaceRealPathContained,
   isProtectedSyncSegment,
   normalizeSyncPath,
   portableSyncPathKey,
-} from '@electron/services/sync/webdavSync/pathSafety.js'
+} from '@electron/services/sync/webdavSync/pathSafety'
 
 type ScanOptions = {
   deviceId: string

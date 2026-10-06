@@ -6,19 +6,19 @@ import type {
   SyncConflict,
   SyncManifestEntry,
   SyncSkippedFile,
-} from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
-import { writeDownloadAtomically } from '@electron/services/sync/webdavSync/atomicDownload.js'
-import { availableConflictPath } from '@electron/services/sync/webdavSync/conflictPath.js'
-import type { ExecuteOptions, ExecuteResult } from '@electron/services/sync/webdavSync/executor.js'
-import { entriesByPath } from '@electron/services/sync/webdavSync/manifest.js'
-import type { SyncOperation } from '@electron/services/sync/webdavSync/planner.js'
+} from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
+import { writeDownloadAtomically } from '@electron/services/sync/webdavSync/atomicDownload'
+import { availableConflictPath } from '@electron/services/sync/webdavSync/conflictPath'
+import type { ExecuteOptions, ExecuteResult } from '@electron/services/sync/webdavSync/executor'
+import { entriesByPath } from '@electron/services/sync/webdavSync/manifest'
+import type { SyncOperation } from '@electron/services/sync/webdavSync/planner'
 import {
   assertWorkspaceRealPathContained,
   resolveSafeWorkspaceTarget,
-} from '@electron/services/sync/webdavSync/pathSafety.js'
-import { remoteContentPath } from '@electron/services/sync/webdavSync/remoteObject.js'
-import { withRemoteRetry } from '@electron/services/sync/webdavSync/retry.js'
+} from '@electron/services/sync/webdavSync/pathSafety'
+import { remoteContentPath } from '@electron/services/sync/webdavSync/remoteObject'
+import { withRemoteRetry } from '@electron/services/sync/webdavSync/retry'
 
 type ConflictTarget = { path: string; existing: boolean }
 type Totals = { uploaded: number; downloaded: number; deleted: number }

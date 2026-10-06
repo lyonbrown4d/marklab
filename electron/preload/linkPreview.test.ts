@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview'
 
 describe('link preview preload surface', () => {
   it('uses the named channel and validates the result', async () => {

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
-import { createWebDavRemoteFileStore } from '@electron/services/sync/webdav/remoteFileStore.js'
-import type { WebDavRemoteClient } from '@electron/services/sync/webdav/types.js'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
+import { createWebDavRemoteFileStore } from '@electron/services/sync/webdav/remoteFileStore'
+import type { WebDavRemoteClient } from '@electron/services/sync/webdav/types'
 
 describe('WebDAV sync metadata detection', () => {
   it('detects an empty internal metadata directory', async () => {

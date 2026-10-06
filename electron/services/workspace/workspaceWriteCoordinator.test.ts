@@ -13,7 +13,7 @@ import {
   runWorkspacePathMutation,
   WorkspaceWriteConflictError,
   writeWorkspaceFileAtomically,
-} from '@electron/services/workspace/workspaceWriteCoordinator.js'
+} from '@electron/services/workspace/workspaceWriteCoordinator'
 
 let root = ''
 const owners: string[] = []

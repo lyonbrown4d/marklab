@@ -1,9 +1,9 @@
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
-import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes.js'
-import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
-import type { WorkspaceSearchIndexBackend } from '@electron/services/workspace/workspaceSearchIndex.js'
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
+import type { FsSearchResult } from '@electron/services/workspace/types'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes'
+import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch'
+import type { WorkspaceSearchIndexBackend } from '@electron/services/workspace/workspaceSearchIndex'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
 
 export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchIndexBackend {
   constructor(private readonly knowledgeEngine: KnowledgeEngineService) {}

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types.js'
-import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents.js'
+import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types'
+import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
 
 const snapshot = {
   root: { kind: 'internal', path: '/workspace' },

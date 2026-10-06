@@ -5,7 +5,7 @@ import {
   createFixture,
   keyInput,
   request,
-} from '@electron/services/webTabs/webTabManager.testHarness.js'
+} from '@electron/services/webTabs/webTabManager.testHarness'
 
 describe('WebTabManager', () => {
   it('creates a hardened temporary view and clamps it to the content area', () => {

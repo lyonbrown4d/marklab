@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache.js'
-import type { FsGraph, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
+import type { FsGraph, FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const input = {
   documents: [{ path: 'note.md', content: '# Note' }],

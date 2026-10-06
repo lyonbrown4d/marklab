@@ -1,13 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { isWorkspaceDocumentPath } from '@electron/services/workspace/path.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import { isWorkspaceDocumentPath } from '@electron/services/workspace/path'
+import type { FsStateData } from '@electron/services/workspace/types'
 import {
   isSameExternalRoot,
   isSameInternalRoot,
   isSameSingleFileRoot,
-} from '@electron/services/workspace/workspaceRootState.js'
-import { ensureDefaultFile, stringArg } from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceRootState'
+import { ensureDefaultFile, stringArg } from '@electron/services/workspace/workspaceUtils'
 
 export const selectWorkspaceRoot = async (
   state: FsStateData,

@@ -1,21 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import type * as Electron from 'electron'
 
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import type { LocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory.js'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import type { LocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory'
 import {
   localAiDirectoryConfigSchema,
   localAiDownloadTaskRequestSchema,
   localAiGenerationCancelSchema,
   localAiModelRequestSchema,
-} from '@electron/services/ai/local/schemas.js'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
-import {
-  generateTextRequestSchema,
-  providerIdRequestSchema,
-} from '@electron/services/ai/schemas.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
-import type { Logger } from '@electron/services/logger.js'
+} from '@electron/services/ai/local/schemas'
+import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
+import { generateTextRequestSchema, providerIdRequestSchema } from '@electron/services/ai/schemas'
+import type { AiServiceContract } from '@electron/services/ai/types'
+import type { Logger } from '@electron/services/logger'
 
 export type AiIpcBridge = {
   commandHandlers: NativeCommandHandlers

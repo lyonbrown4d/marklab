@@ -1,11 +1,11 @@
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
+import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions'
 import type {
   CompletionRequest,
   MarkdownLanguageReference,
-} from '@electron/services/markdownLanguage/types.js'
-import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
+} from '@electron/services/markdownLanguage/types'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext'
 
 type ReferenceTarget = {
   path: string

@@ -6,22 +6,22 @@ import type {
   FsMarkdownAssetImportResult,
   FsMarkdownAssetResolveResult,
   FsRootInfo,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 import {
   WorkspaceAssetCapabilities,
   workspaceAssetIdentity,
-} from '@electron/services/workspace/workspaceAssetCapabilities.js'
-import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset.js'
-import { readWorkspaceAssetBytes } from '@electron/services/workspace/workspaceAssetBytes.js'
+} from '@electron/services/workspace/workspaceAssetCapabilities'
+import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset'
+import { readWorkspaceAssetBytes } from '@electron/services/workspace/workspaceAssetBytes'
 import {
   copyAssetToDocumentAssets,
   preserveAssetPath,
   resolveMarkdownAssetTarget,
   writeAssetBytes,
-} from '@electron/services/workspace/workspaceAssetOperations.js'
-import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
-import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils.js'
-import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset.js'
+} from '@electron/services/workspace/workspaceAssetOperations'
+import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
+import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils'
+import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset'
 
 export class WorkspaceAssetService extends WorkspaceAnalysisService {
   private readonly assetCapabilities = new WorkspaceAssetCapabilities(() => this.state)

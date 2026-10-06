@@ -4,11 +4,13 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient.js'
+import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient'
 
 const tempRoots: string[] = []
+const clients: Array<ReturnType<typeof createNodeWorkspaceClient>> = []
 
 afterEach(async () => {
+  await Promise.all(clients.splice(0).map((client) => client.shutdown('test cleanup')))
   await Promise.all(
     tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })),
   )
@@ -19,7 +21,9 @@ const createWorkspace = async () => {
   tempRoots.push(root)
   const engineDataDir = path.join(root, '.engine-data')
   await fs.writeFile(path.join(root, 'alpha.md'), '# Alpha\nLocal knowledge engine')
-  return { client: createNodeWorkspaceClient(root, engineDataDir), engineDataDir, root }
+  const client = createNodeWorkspaceClient(root, engineDataDir)
+  clients.push(client)
+  return { client, engineDataDir, root }
 }
 
 describe('Node workspace client', () => {
@@ -66,12 +70,14 @@ describe('Node workspace client', () => {
       index: {
         metadataDocuments: '2',
         ready: true,
+        searchIndex: 'sqlite-fts5',
         searchableDocuments: '2',
         updatedAt: expect.any(String),
         lastBuildDurationMs: expect.any(Number),
       },
       storage: {
         metadataDocuments: '2',
+        searchIndex: 'sqlite-fts5',
         searchIndexBytes: expect.stringMatching(/^[1-9]\d*$/),
       },
     })
@@ -94,38 +100,11 @@ describe('Node workspace client', () => {
     ])
 
     const restarted = createNodeWorkspaceClient(root, engineDataDir)
+    clients.push(restarted)
 
     await expect(restarted.search('restart-safe', 10)).resolves.toMatchObject([
       { path: 'alpha.md' },
     ])
-  })
-
-  it('reports snapshot recovery failures through workspace status without becoming unusable', async () => {
-    const { client, engineDataDir, root } = await createWorkspace()
-    await client.rebuildIndex([{ path: 'alpha.md', title: 'Alpha', content: 'first' }])
-    await client.upsertDocument({ path: 'beta.md', title: 'Beta', content: 'second' })
-    await fs.writeFile(path.join(engineDataDir, 'search-index-v2.json'), '{broken-primary')
-    await fs.writeFile(path.join(engineDataDir, 'search-index-v2.backup.json'), '{broken-backup')
-
-    const restarted = createNodeWorkspaceClient(root, engineDataDir)
-
-    await expect(restarted.getWorkspaceStatus()).resolves.toMatchObject({
-      health: {
-        ok: false,
-        state: 'degraded',
-        warnings: [expect.stringMatching(/snapshot/i)],
-      },
-      index: {
-        lastError: expect.stringMatching(/snapshot/i),
-        ready: false,
-        searchableDocuments: '0',
-      },
-      storage: { searchIndexBytes: expect.stringMatching(/^\d+$/) },
-    })
-    await expect(
-      restarted.rebuildIndex([{ path: 'recovered.md', title: 'Recovered', content: 'healthy' }]),
-    ).resolves.toBeUndefined()
-    await expect(restarted.search('healthy', 10)).resolves.toMatchObject([{ path: 'recovered.md' }])
   })
 
   it('applies a mixed search mutation batch through the sidecar boundary', async () => {
@@ -152,6 +131,7 @@ describe('Node workspace client', () => {
       capabilities: expect.arrayContaining(['markdown-reference-diagnostics']),
       engineVersion: 'node',
       protocolVersion: 'utility-process-v1',
+      storage: { searchIndex: 'sqlite-fts5' },
     })
   })
 

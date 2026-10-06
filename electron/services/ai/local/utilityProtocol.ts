@@ -2,7 +2,7 @@ import type {
   LocalAiGenerationEvent,
   LocalAiRuntimeRequest,
   LocalAiRuntimeStatus,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 export type LocalAiUtilityRequest =
   | { type: 'generate'; request: LocalAiRuntimeRequest }

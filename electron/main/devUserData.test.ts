@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { configureDevUserDataPath } from '@electron/main/devUserData.js'
+import { configureDevUserDataPath } from '@electron/main/devUserData'
 
 describe('configureDevUserDataPath', () => {
   it('sets an absolute isolated userData path in development when explicitly configured', () => {

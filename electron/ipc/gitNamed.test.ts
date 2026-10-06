@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerGitNamedIpc } from '@electron/ipc/gitNamed.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerGitNamedIpc } from '@electron/ipc/gitNamed'
 
 describe('named Git IPC', () => {
   it('always operates on the workspace owned by the sender', async () => {

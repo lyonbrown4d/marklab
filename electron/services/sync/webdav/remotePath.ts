@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
 
 export const normalizeRemotePath = (value: string): string => {
   if (typeof value !== 'string' || /[\0\r\n\\]/.test(value) || value.startsWith('/')) {

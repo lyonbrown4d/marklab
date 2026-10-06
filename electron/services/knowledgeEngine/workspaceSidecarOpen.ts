@@ -2,16 +2,16 @@ import type {
   StartedWorkspaceSidecar,
   WorkspaceSidecarManagerOptions,
   WorkspaceSidecarRuntime,
-} from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 import {
   createWorkspaceSidecarIdentity,
   type WorkspaceSidecarIdentity,
-} from '@electron/services/knowledgeEngine/workspaceIdentity.js'
-import { startNodeSidecar } from '@electron/services/knowledgeEngine/nodeSidecarProcess.js'
+} from '@electron/services/knowledgeEngine/workspaceIdentity'
+import { startNodeSidecar } from '@electron/services/knowledgeEngine/nodeSidecarProcess'
 import {
   createWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
-} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan'
 
 type OpenWorkspaceSidecarRuntimeInput = {
   workspaceId: string

@@ -1,12 +1,12 @@
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import { headingAnchorSlug } from '@electron/services/workspace/markdown/slugs.js'
-import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import { headingAnchorSlug } from '@electron/services/workspace/markdown/slugs'
+import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import type {
   MarkdownLanguageRenameResult,
   MarkdownLanguageTextEdit,
   RenameRequest,
-} from '@electron/services/markdownLanguage/types.js'
-import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
+} from '@electron/services/markdownLanguage/types'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext'
 
 export const renameMarkdownReferences = async (
   workspace: WorkspaceService,

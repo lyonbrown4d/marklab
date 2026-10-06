@@ -1,4 +1,4 @@
-import type { FsRootKind } from '@electron/services/workspace/types.js'
+import type { FsRootKind } from '@electron/services/workspace/types'
 
 export type LocalHistoryWorkspace = {
   kind: FsRootKind
@@ -31,6 +31,8 @@ export type LocalHistoryServiceOptions = {
 }
 
 export type LocalHistoryServiceContract = {
+  initialize?: () => Promise<void>
+  dispose?: () => Promise<void>
   capture: (
     workspace: LocalHistoryWorkspace,
     filePath: unknown,

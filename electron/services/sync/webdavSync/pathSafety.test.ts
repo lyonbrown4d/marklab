@@ -7,7 +7,7 @@ import {
   assertWorkspaceRealPathContained,
   normalizeSyncPath,
   portableSyncPathKey,
-} from '@electron/services/sync/webdavSync/pathSafety.js'
+} from '@electron/services/sync/webdavSync/pathSafety'
 
 const roots: string[] = []
 afterEach(async () => {

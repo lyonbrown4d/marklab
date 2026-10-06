@@ -13,19 +13,19 @@ import {
   erAttributeStatements,
   statementCatalog,
   type MermaidCompletionTemplate,
-} from '@electron/services/mermaidLanguage/completionCatalog.js'
-import { mermaidCompletionContext } from '@electron/services/mermaidLanguage/completionContext.js'
-import { validateMermaidSyntax } from '@electron/services/mermaidLanguage/defaultValidator.js'
+} from '@electron/services/mermaidLanguage/completionCatalog'
+import { mermaidCompletionContext } from '@electron/services/mermaidLanguage/completionContext'
+import { validateMermaidSyntax } from '@electron/services/mermaidLanguage/defaultValidator'
 import {
   documentTooLargeDiagnostic,
   mermaidDiagnostics,
-} from '@electron/services/mermaidLanguage/diagnostics.js'
+} from '@electron/services/mermaidLanguage/diagnostics'
 import type {
   MermaidLanguageProviderOptions,
   MermaidTextDocument,
   MermaidValidationOptions,
   MermaidValidator,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 
 export type {
   MermaidDiagramKind,
@@ -34,7 +34,7 @@ export type {
   MermaidValidationIssue,
   MermaidValidationOptions,
   MermaidValidator,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 
 export const DEFAULT_MAX_MERMAID_DOCUMENT_LENGTH = 128 * 1024
 

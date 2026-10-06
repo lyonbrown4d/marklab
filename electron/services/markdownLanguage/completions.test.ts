@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { createMarkdownCompletions } from '@electron/services/markdownLanguage/completions'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const workspaceIndex = {
   files: [

@@ -2,9 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import watcher, { type AsyncSubscription, type Event as ParcelWatchEvent } from '@parcel/watcher'
 
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { normalizeRelativePath } from '@electron/services/workspace/path.js'
-import type { BackgroundTaskStatus, FsStateData } from '@electron/services/workspace/types.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { normalizeRelativePath } from '@electron/services/workspace/path'
+import type { BackgroundTaskStatus, FsStateData } from '@electron/services/workspace/types'
 import {
   errorMessage,
   hasHiddenPathSegment,
@@ -13,7 +13,7 @@ import {
   type WatchEventName,
   normalizeAbsolutePath,
   safeStatSync,
-} from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceUtils'
 
 type WorkspaceWatcherOptions = {
   getState: () => FsStateData

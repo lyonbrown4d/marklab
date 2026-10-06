@@ -3,10 +3,10 @@ import fs, { type FileHandle } from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 
-import { assetMediaTypeForExtension } from '@electron/services/mediaTypes.js'
-import { isNativePathInsideOrEqual } from '@electron/services/nativePath.js'
-import { resolveWorkspaceAssetPath } from '@electron/services/workspace/path.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import { assetMediaTypeForExtension } from '@electron/services/mediaTypes'
+import { isNativePathInsideOrEqual } from '@electron/services/nativePath'
+import { resolveWorkspaceAssetPath } from '@electron/services/workspace/path'
+import type { FsStateData } from '@electron/services/workspace/types'
 
 const MAX_SAFE_FILE_SIZE = BigInt(Number.MAX_SAFE_INTEGER)
 

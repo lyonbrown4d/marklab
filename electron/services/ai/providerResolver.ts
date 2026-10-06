@@ -3,7 +3,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 
-import type { AiModelResolverContract, StoredAiProvider } from '@electron/services/ai/types.js'
+import type { AiModelResolverContract, StoredAiProvider } from '@electron/services/ai/types'
 
 export class VercelAiProviderResolver implements AiModelResolverContract {
   resolve(provider: StoredAiProvider, apiKey: string) {

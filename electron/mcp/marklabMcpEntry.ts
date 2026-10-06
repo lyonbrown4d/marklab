@@ -1,8 +1,8 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
-import { parseMarklabMcpRuntimeConfig } from '@electron/mcp/marklabMcpConfig.js'
-import { createMarklabMcpServer } from '@electron/mcp/marklabMcpServer.js'
-import { NodeMcpWorkspaceAdapter } from '@electron/mcp/nodeMcpWorkspaceAdapter.js'
+import { parseMarklabMcpRuntimeConfig } from '@electron/mcp/marklabMcpConfig'
+import { createMarklabMcpServer } from '@electron/mcp/marklabMcpServer'
+import { NodeMcpWorkspaceAdapter } from '@electron/mcp/nodeMcpWorkspaceAdapter'
 
 const main = async (): Promise<void> => {
   const config = parseMarklabMcpRuntimeConfig(process.argv.slice(2))

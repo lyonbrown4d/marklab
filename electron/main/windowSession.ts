@@ -1,8 +1,8 @@
 import type { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container.js'
-import { installNativeMenu } from '@electron/menu.js'
-import { createMarklabWindows, type MarklabWindows } from '@electron/window.js'
-import type { MarklabWindowPool } from '@electron/windowPool.js'
+import type { ElectronContainer } from '@electron/container'
+import { installNativeMenu } from '@electron/menu'
+import { createMarklabWindows, type MarklabWindows } from '@electron/window'
+import type { MarklabWindowPool } from '@electron/windowPool'
 
 type Logger = ElectronContainer['cradle']['logger']
 type NativeMenuDispatcher = Parameters<typeof installNativeMenu>[1]

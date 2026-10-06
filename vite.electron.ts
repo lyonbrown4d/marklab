@@ -12,6 +12,7 @@ export const electronMainRequireBanner = [
 export const electronMainExternal = [
   '@homebridge/node-pty-prebuilt-multiarch',
   '@parcel/watcher',
+  'better-sqlite3',
   'node-llama-cpp',
 ]
 
@@ -26,10 +27,6 @@ export const electronMainEntry = {
   mermaidValidationWorkerEntry: path.resolve(
     import.meta.dirname,
     'electron/services/mermaidLanguage/mermaidValidationWorkerEntry.ts',
-  ),
-  nodeSearchWorkerEntry: path.resolve(
-    import.meta.dirname,
-    'electron/services/knowledgeEngine/nodeSearchWorkerEntry.ts',
   ),
   workspaceAnalysisWorkerEntry: path.resolve(
     import.meta.dirname,
@@ -112,7 +109,7 @@ export const electronMainManualChunks = (id: string) => {
   ) {
     return 'main-markdown-vendor'
   }
-  if (includesAny(normalizedId, ['electron-log', 'electron-store', 'electron-updater'])) {
+  if (includesAny(normalizedId, ['electron-log', 'electron-updater'])) {
     return 'main-electron-runtime'
   }
   if (includesAny(normalizedId, ['simple-git', 'diff', '@kwsites/'])) return 'main-git'

@@ -1,5 +1,5 @@
-import type { NativeCommandHandler } from '@electron/ipc/commandInvoke.js'
-import type { Logger } from '@electron/services/logger.js'
+import type { NativeCommandHandler } from '@electron/ipc/commandInvoke'
+import type { Logger } from '@electron/services/logger'
 import type {
   RendererDiagnosticError,
   RendererDiagnosticLevel,

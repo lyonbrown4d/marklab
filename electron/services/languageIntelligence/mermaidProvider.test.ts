@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 
-import { MermaidLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/mermaidProvider.js'
+import { MermaidLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/mermaidProvider'
 
 describe('MermaidLanguageIntelligenceProvider', () => {
   it('adapts the cached TextDocument to Mermaid diagnostics', async () => {

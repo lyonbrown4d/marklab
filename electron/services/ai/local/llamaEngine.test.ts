@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { LlamaEngine } from '@electron/services/ai/local/llamaEngine.js'
+import { LlamaEngine } from '@electron/services/ai/local/llamaEngine'
 
 describe('LlamaEngine', () => {
   it('streams text from node-llama-cpp and reports bounded usage', async () => {

@@ -5,9 +5,9 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
-import { normalizeHtmlBreaks } from '@electron/services/export/markdownText.js'
-import { parseMarkdown } from '@electron/services/export/markdown.js'
-import { loadLocalImages, type LocalImageMap } from '@electron/services/export/docxImages.js'
+import { normalizeHtmlBreaks } from '@electron/services/export/markdownText'
+import { parseMarkdown } from '@electron/services/export/markdown'
+import { loadLocalImages, type LocalImageMap } from '@electron/services/export/docxImages'
 type RenderHtmlOptions = {
   embeddedImages?: LocalImageMap
   readImage?: (url: string) => Promise<Buffer | null>

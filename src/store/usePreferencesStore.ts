@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
 import { persist } from 'zustand/middleware'
 import { getInitialLocale } from '@/i18n/utils'
 import {
@@ -261,8 +262,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
     }),
     {
-      name: 'marklab.preferences',
-      storage: createElectronSettingsJsonStorage<PreferencesPersistedState>('marklab.preferences'),
+      name: RENDERER_PERSIST_KEYS.preferences,
+      storage: createElectronSettingsJsonStorage<PreferencesPersistedState>(
+        RENDERER_PERSIST_KEYS.preferences,
+      ),
       version: 2,
       partialize: selectPreferencesPersistedState,
     },

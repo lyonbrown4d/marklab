@@ -4,7 +4,7 @@ import {
   validateBranchName,
   validateRemoteName,
   validateRemoteUrl,
-} from '@electron/services/git/validation.js'
+} from '@electron/services/git/validation'
 
 describe('git remote validation', () => {
   it.each(['origin', 'upstream-2', 'work.backup', 'team_remote'])(

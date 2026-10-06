@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { DiagnosticSeverity } from 'vscode-languageserver-types'
 
-import { MarkdownLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/markdownProvider.js'
+import { MarkdownLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/markdownProvider'
 
 describe('MarkdownLanguageIntelligenceProvider', () => {
   it('merges source-only Markdown syntax snippets into completion results', async () => {

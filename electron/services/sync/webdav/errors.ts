@@ -1,4 +1,4 @@
-import type { WebDavErrorCode } from '@electron/services/sync/webdav/types.js'
+import type { WebDavErrorCode } from '@electron/services/sync/webdav/types'
 
 const messages: Record<WebDavErrorCode, string> = {
   ABORTED: 'WebDAV request was cancelled.',

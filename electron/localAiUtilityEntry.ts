@@ -1,9 +1,9 @@
-import { LlamaEngine } from '@electron/services/ai/local/llamaEngine.js'
-import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types.js'
+import { LlamaEngine } from '@electron/services/ai/local/llamaEngine'
+import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types'
 import {
   isLocalAiUtilityRequest,
   type LocalAiUtilityResponse,
-} from '@electron/services/ai/local/utilityProtocol.js'
+} from '@electron/services/ai/local/utilityProtocol'
 
 if (!process.parentPort) throw new Error('Local AI utility parent port is unavailable')
 
@@ -26,7 +26,7 @@ process.parentPort.on('message', (message) => {
 })
 
 const runGeneration = async (
-  request: Extract<import('@electron/services/ai/local/types.js').LocalAiRuntimeRequest, object>,
+  request: Extract<import('@electron/services/ai/local/types').LocalAiRuntimeRequest, object>,
 ): Promise<void> => {
   const controller = new AbortController()
   controllers.set(request.requestId, controller)

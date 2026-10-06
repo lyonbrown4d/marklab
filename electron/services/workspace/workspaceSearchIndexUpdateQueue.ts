@@ -1,6 +1,6 @@
-import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path'
+import type { Logger } from '@electron/services/logger'
+import type { WatchEventName } from '@electron/services/workspace/workspaceUtils'
 import { Subject, type Subscription, switchMap, takeUntil, timer } from 'rxjs'
 
 type SearchIndexChangeKind = 'remove-file' | 'remove-prefix' | 'upsert'

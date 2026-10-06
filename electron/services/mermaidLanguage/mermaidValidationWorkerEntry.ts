@@ -1,11 +1,11 @@
 import { parentPort } from 'node:worker_threads'
 
-import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser.js'
+import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser'
 import type {
   MermaidValidationError,
   MermaidValidationWorkerRequest,
   MermaidValidationWorkerResponse,
-} from '@electron/services/mermaidLanguage/validationWorkerMessages.js'
+} from '@electron/services/mermaidLanguage/validationWorkerMessages'
 
 const cancelled = new Set<number>()
 const running = new Set<number>()

@@ -1,15 +1,15 @@
-import { parseMarkdownAst, type MarkdownRoot } from '@electron/services/workspace/markdown/ast.js'
-import { extractHeadingEntries } from '@electron/services/workspace/markdown/headings.js'
-import { extractMarkdownReferences } from '@electron/services/workspace/markdown/references.js'
-import type { FsIndexedMarkdownFile } from '@electron/services/workspace/types.js'
+import { parseMarkdownAst, type MarkdownRoot } from '@electron/services/workspace/markdown/ast'
+import { extractHeadingEntries } from '@electron/services/workspace/markdown/headings'
+import { extractMarkdownReferences } from '@electron/services/workspace/markdown/references'
+import type { FsIndexedMarkdownFile } from '@electron/services/workspace/types'
 
-export { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
+export { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics'
 export {
   fileLabel,
   normalizeMarkdownTarget,
   targetIsMarkdown,
-} from '@electron/services/workspace/markdown/utils.js'
-export { guessMediaType } from '@electron/services/workspace/markdown/media.js'
+} from '@electron/services/workspace/markdown/utils'
+export { guessMediaType } from '@electron/services/workspace/markdown/media'
 
 export const parseMarkdownDocument = (
   sourcePath: string,

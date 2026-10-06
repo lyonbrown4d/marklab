@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher'
+import type { FsStateData } from '@electron/services/workspace/types'
 
 const watcherMock = vi.hoisted(() => ({
   subscribe: vi.fn(),

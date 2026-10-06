@@ -1,14 +1,14 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { allowedCommands, allowedEvents } from '@electron/preload/allowlists.js'
-import { onFileDrop } from '@electron/preload/fileDrop.js'
-import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi.js'
-import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
-import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle.js'
-import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
-import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview.js'
-import { createWebTabsPreloadSurface } from '@electron/preload/webTabs.js'
-import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { allowedCommands, allowedEvents } from '@electron/preload/allowlists'
+import { onFileDrop } from '@electron/preload/fileDrop'
+import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
+import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
+import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle'
+import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence'
+import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview'
+import { createWebTabsPreloadSurface } from '@electron/preload/webTabs'
+import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -25,7 +25,7 @@ import type {
   UpdateResult,
   UpdateState,
   WindowActionResult,
-} from '@electron/types.js'
+} from '@electron/types'
 import type { RendererSafeElectronApi } from '@/runtime/electron'
 import type {
   AiInlineCompletionEvent,

@@ -57,6 +57,27 @@ const useHarness = (
 }
 
 describe('useWorkspaceMapNodeDisclosure', () => {
+  it('restores persisted collapsed state when layout hydration arrives', async () => {
+    const { result } = renderHook(() => useHarness(null))
+
+    act(() =>
+      result.current.setNodes((current) =>
+        current.map((node) =>
+          node.id === 'file:notes/a.md'
+            ? {
+                ...node,
+                data: { ...node.data, workspaceMapPersistedCollapsed: true },
+              }
+            : node,
+        ),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(result.current.nodes[0]?.data.workspaceMapDisclosure?.collapsed).toBe(true),
+    )
+  })
+
   it('collapses rich content geometry and restores it when expanded', () => {
     const { result } = renderHook(() => useHarness(null))
     const disclosure = result.current.nodes[0]?.data.workspaceMapDisclosure

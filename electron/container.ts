@@ -2,62 +2,68 @@ import { asFunction, asValue, createContainer, InjectionMode, type AwilixContain
 import type * as Electron from 'electron'
 import path from 'node:path'
 
-import { AiService } from '@electron/services/ai/aiService.js'
-import { AiInlineCompletionService } from '@electron/services/ai/completion/service.js'
-import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
+import { LocalDatabaseService } from '@electron/database/service'
+import { LifecycleCoordinator } from '@electron/main/lifecycle/lifecycleCoordinator'
+import { createMainLifecycleTasks } from '@electron/main/lifecycle/mainLifecycleTasks'
+import type { LifecycleTask } from '@electron/main/lifecycle/types'
+import { AiService } from '@electron/services/ai/aiService'
+import { AiInlineCompletionService } from '@electron/services/ai/completion/service'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
 import {
   AiInlineCompletionPolicy,
   type AiInlineCompletionPolicyContract,
-} from '@electron/services/ai/completion/policy.js'
-import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog.js'
-import { LocalAiDirectoryStore } from '@electron/services/ai/local/directoryStore.js'
-import { LocalAiModelManager } from '@electron/services/ai/local/modelManager.js'
-import { LocalAiService } from '@electron/services/ai/local/service.js'
+} from '@electron/services/ai/completion/policy'
+import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog'
+import { LocalAiDirectoryStore } from '@electron/services/ai/local/directoryStore'
+import { LocalAiModelManager } from '@electron/services/ai/local/modelManager'
+import { LocalAiService } from '@electron/services/ai/local/service'
 import type {
   LocalAiModelManagerContract,
   LocalAiRuntimeContract,
   LocalAiServiceContract,
-} from '@electron/services/ai/local/types.js'
-import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime.js'
-import { AiProviderStore } from '@electron/services/ai/providerStore.js'
-import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver.js'
+} from '@electron/services/ai/local/types'
+import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime'
+import { AiProviderStore } from '@electron/services/ai/providerStore'
+import { VercelAiProviderResolver } from '@electron/services/ai/providerResolver'
 import type {
   AiModelResolverContract,
   AiProviderStoreContract,
   AiServiceContract,
-} from '@electron/services/ai/types.js'
-import { ExportService } from '@electron/services/export/exportService.js'
-import { GitService } from '@electron/services/git/service.js'
-import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import { KnowledgeEngineWorkspaceSearchBackend } from '@electron/services/knowledgeEngine/workspaceSearchBackend.js'
-import { LocalHistoryService } from '@electron/services/localHistory/service.js'
-import { LanguageIntelligenceService } from '@electron/services/languageIntelligence/service.js'
-import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
+} from '@electron/services/ai/types'
+import { ExportService } from '@electron/services/export/exportService'
+import { GitService } from '@electron/services/git/service'
+import { GraphLayoutStore } from '@electron/services/graphLayout/graphLayoutStore'
+import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import { KnowledgeEngineWorkspaceSearchBackend } from '@electron/services/knowledgeEngine/workspaceSearchBackend'
+import { LocalHistoryService } from '@electron/services/localHistory/service'
+import { LanguageIntelligenceService } from '@electron/services/languageIntelligence/service'
+import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service'
 import {
   LinkPreviewService,
   type LinkPreviewServiceContract,
-} from '@electron/services/linkPreview/service.js'
-import { defaultLinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity.js'
-import { WebPreviewCapturePool } from '@electron/services/linkPreview/webPreviewCapturePool.js'
-import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import { createElectronLogger, type Logger } from '@electron/services/logger.js'
+} from '@electron/services/linkPreview/service'
+import { defaultLinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity'
+import { WebPreviewCapturePool } from '@electron/services/linkPreview/webPreviewCapturePool'
+import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import { createElectronLogger, type Logger } from '@electron/services/logger'
 import {
-  configureSettingsStoreLogger,
+  configureSettingsStore,
   removeRendererSession,
-} from '@electron/services/settingsStore.js'
-import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore.js'
-import { TerminalService } from '@electron/services/terminal/service.js'
-import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
-import { WebDavProfileStore } from '@electron/services/sync/webdav/profileStore.js'
-import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore.js'
-import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
-import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
-import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
-import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex.js'
-import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
-import { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
-import type { AppLaunchInfo } from '@electron/types.js'
+  SettingsStore,
+} from '@electron/services/settingsStore'
+import { configureUserThemeStoreLogger } from '@electron/services/userThemeStore'
+import { TerminalService } from '@electron/services/terminal/service'
+import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
+import { WebDavProfileStore } from '@electron/services/sync/webdav/profileStore'
+import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore'
+import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
+import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
+import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import { WebTabManager } from '@electron/services/webTabs/webTabManager'
+import type { AppLaunchInfo } from '@electron/types'
 
 export type ElectronRuntimeDependencies = {
   app: Electron.App
@@ -67,12 +73,13 @@ export type ElectronRuntimeDependencies = {
   dialog: Electron.Dialog
   getLaunchInfo: () => AppLaunchInfo
   ipcMain: Electron.IpcMain
+  lifecycleTasks?: readonly LifecycleTask[]
   onRendererReady?: () => void
   safeStorage: Electron.SafeStorage
   shell: Electron.Shell
 }
 
-export type ElectronCradle = ElectronRuntimeDependencies & {
+export type ElectronCradle = Omit<ElectronRuntimeDependencies, 'lifecycleTasks'> & {
   aiModelResolver: AiModelResolverContract
   localAiModelManager: LocalAiModelManagerContract
   localAiDirectoryStore: LocalAiDirectoryStore
@@ -84,11 +91,14 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   aiInlineCompletionPolicy: AiInlineCompletionPolicyContract
   exportService: ExportService
   gitService: GitService
+  graphLayoutStore: GraphLayoutStore
   knowledgeEngineService: KnowledgeEngineService
+  lifecycleCoordinator: LifecycleCoordinator
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
   languageIntelligenceService: LanguageIntelligenceServiceContract
   linkPreviewService: LinkPreviewServiceContract
+  localDatabaseService: LocalDatabaseService
   terminalService: TerminalService
   webTabManager: WebTabManager
   webDavProfileStore: WebDavProfileStore
@@ -98,6 +108,7 @@ export type ElectronCradle = ElectronRuntimeDependencies & {
   workspaceWebDavSyncService: WorkspaceWebDavSyncService
   workspaceRegistry: WindowWorkspaceRegistry
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
+  settingsStore: SettingsStore
 }
 
 export type ElectronContainer = AwilixContainer<ElectronCradle>
@@ -106,7 +117,6 @@ export const createElectronContainer = (
   dependencies: ElectronRuntimeDependencies,
 ): ElectronContainer => {
   const logger = createElectronLogger({ isPackaged: dependencies.app.isPackaged }).child('main')
-  configureSettingsStoreLogger(logger.child('settings'))
   configureUserThemeStoreLogger(logger.child('themes'))
 
   const container = createContainer<ElectronCradle>({
@@ -126,15 +136,38 @@ export const createElectronContainer = (
     safeStorage: asValue(dependencies.safeStorage),
     shell: asValue(dependencies.shell),
     logger: asValue(logger),
-    aiProviderStore: asFunction(({ app, safeStorage }) => {
-      return new AiProviderStore(app.getPath('userData'), safeStorage)
+    localDatabaseService: asFunction(({ app }) => {
+      return new LocalDatabaseService({ userDataPath: app.getPath('userData') })
+    }).singleton(),
+    lifecycleCoordinator: asFunction((cradle) => {
+      return new LifecycleCoordinator({
+        logger: cradle.logger,
+        tasks: [
+          ...createMainLifecycleTasks({
+            configureSettingsStore,
+            getKnowledgeEngineService: () => cradle.knowledgeEngineService,
+            getLinkPreviewService: () => cradle.linkPreviewService,
+            getLocalAiService: () => cradle.localAiService,
+            getLocalHistoryService: () => cradle.localHistoryService,
+            getSettingsStore: () => cradle.settingsStore,
+            localDatabaseService: cradle.localDatabaseService,
+          }),
+          ...(dependencies.lifecycleTasks ?? []),
+        ],
+      })
+    }).singleton(),
+    settingsStore: asFunction(({ localDatabaseService }) => {
+      return new SettingsStore(localDatabaseService)
+    }).singleton(),
+    aiProviderStore: asFunction(({ localDatabaseService, safeStorage }) => {
+      return new AiProviderStore(localDatabaseService, safeStorage)
     }).singleton(),
     aiModelResolver: asFunction(() => new VercelAiProviderResolver()).singleton(),
     aiService: asFunction(({ aiModelResolver, aiProviderStore }) => {
       return new AiService({ resolver: aiModelResolver, store: aiProviderStore })
     }).singleton(),
-    localAiDirectoryStore: asFunction(({ app }) => {
-      return new LocalAiDirectoryStore(app.getPath('userData'))
+    localAiDirectoryStore: asFunction(({ localDatabaseService }) => {
+      return new LocalAiDirectoryStore(localDatabaseService)
     }).singleton(),
     localAiModelManager: asFunction(({ app, localAiDirectoryStore }) => {
       return new LocalAiModelManager({
@@ -215,6 +248,9 @@ export const createElectronContainer = (
     gitService: asFunction(({ logger }) => {
       return new GitService(logger.child('git'))
     }).singleton(),
+    graphLayoutStore: asFunction(({ localDatabaseService }) => {
+      return new GraphLayoutStore(localDatabaseService)
+    }).singleton(),
     knowledgeEngineService: asFunction(({ app, logger }) => {
       return new KnowledgeEngineService({ app, logger: logger.child('knowledge-engine') })
     }).singleton(),
@@ -225,14 +261,14 @@ export const createElectronContainer = (
         logger.child('terminal'),
       )
     }).singleton(),
-    webDavProfileStore: asFunction(({ app, safeStorage }) => {
-      return new WebDavProfileStore(app.getPath('userData'), safeStorage)
+    webDavProfileStore: asFunction(({ localDatabaseService, safeStorage }) => {
+      return new WebDavProfileStore(localDatabaseService, safeStorage)
     }).singleton(),
-    webDavSyncStateStore: asFunction(({ app }) => {
-      return new FileLocalSyncStateStore(app.getPath('userData'))
+    webDavSyncStateStore: asFunction(({ localDatabaseService }) => {
+      return new FileLocalSyncStateStore(localDatabaseService)
     }).singleton(),
-    workspaceSyncConfigStore: asFunction(({ app }) => {
-      return new WorkspaceSyncConfigStore(app.getPath('userData'))
+    workspaceSyncConfigStore: asFunction(({ localDatabaseService }) => {
+      return new WorkspaceSyncConfigStore(localDatabaseService)
     }).singleton(),
     workspaceSyncCoordinator: asFunction(() => new WorkspaceSyncCoordinator()).singleton(),
     workspaceWebDavSyncService: asFunction(

@@ -1,4 +1,4 @@
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import type { FsStateData } from '@electron/services/workspace/types'
 
 export const isSameExternalRoot = (state: FsStateData, rootPath: string): boolean => {
   return state.rootKind === 'external' && state.rootPath === rootPath && !state.singleFile

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { AiInlineCompletionPolicy } from '@electron/services/ai/completion/policy.js'
-import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types.js'
+import { AiInlineCompletionPolicy } from '@electron/services/ai/completion/policy'
+import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types'
 
 const remoteProvider: StoredAiProvider = {
   id: 'remote-openai',

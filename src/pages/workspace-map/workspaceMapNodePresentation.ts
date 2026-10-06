@@ -70,9 +70,18 @@ export const mergeWorkspaceMapNodeGeometry = (
     currentHeight === WORKSPACE_MAP_COMPACT_NODE_HEIGHT
   const hasUserSizedGeometry = Boolean(currentWidth && currentHeight && !currentIsCompact)
   const preserveCurrentGeometry = !activatingEditor || hasUserSizedGeometry
+  const persistedCollapsed = current.data.workspaceMapPersistedCollapsed
+  const userModified = current.data.workspaceMapUserModified
   return {
     ...incoming,
-    data: pinned ? { ...incoming.data, workspaceMapPinned: true } : incoming.data,
+    data: {
+      ...incoming.data,
+      ...(pinned ? { workspaceMapPinned: true } : {}),
+      ...(typeof persistedCollapsed === 'boolean'
+        ? { workspaceMapPersistedCollapsed: persistedCollapsed }
+        : {}),
+      ...(typeof userModified === 'boolean' ? { workspaceMapUserModified: userModified } : {}),
+    },
     draggable: pinned ? false : incoming.draggable,
     height: preserveCurrentGeometry ? (current.height ?? incoming.height) : incoming.height,
     measured: preserveCurrentGeometry ? current.measured : incoming.measured,

@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 
-import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
-import type { WatchEventName } from '@electron/services/workspace/workspaceUtils.js'
+import { isSearchIndexablePath } from '@electron/services/workspace/path'
+import type { FsStateData } from '@electron/services/workspace/types'
+import type { WatchEventName } from '@electron/services/workspace/workspaceUtils'
 
 export const workspaceSearchKey = (state: FsStateData): string => {
   const raw = `${state.rootKind}|${state.rootPath}|${state.singleFile ?? ''}`

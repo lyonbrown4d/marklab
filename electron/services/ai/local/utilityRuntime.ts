@@ -8,11 +8,11 @@ import type {
   LocalAiRuntimeContract,
   LocalAiRuntimeRequest,
   LocalAiRuntimeStatus,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 import {
   isLocalAiUtilityResponse,
   type LocalAiUtilityRequest,
-} from '@electron/services/ai/local/utilityProtocol.js'
+} from '@electron/services/ai/local/utilityProtocol'
 
 type UtilityProcessLike = {
   kill: () => boolean

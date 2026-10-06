@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { registerGitTerminalIpc } from '@electron/ipc/gitTerminalCommands.js'
+import { registerGitTerminalIpc } from '@electron/ipc/gitTerminalCommands'
 
 describe('terminal command IPC', () => {
   it('forwards the optional shell path to the terminal service', async () => {

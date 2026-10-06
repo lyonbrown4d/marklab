@@ -2,7 +2,7 @@ import { Agent as HttpAgent, type ClientRequestArgs } from 'node:http'
 import { Agent as HttpsAgent, type RequestOptions as HttpsRequestOptions } from 'node:https'
 import type { Duplex } from 'node:stream'
 
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
 
 type RequestAgent = HttpAgent | HttpsAgent
 

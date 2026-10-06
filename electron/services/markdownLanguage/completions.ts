@@ -1,22 +1,22 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { CompletionItemKind } from 'vscode-languageserver-types'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 import {
   createFileLabel,
   createRelativeLinkTarget,
-} from '@electron/services/markdownLanguage/linkTargets.js'
+} from '@electron/services/markdownLanguage/linkTargets'
 import {
   fileCompletionSortText,
   rankFileCompletionPaths,
-} from '@electron/services/markdownLanguage/completionRanking.js'
+} from '@electron/services/markdownLanguage/completionRanking'
 import type {
   CompletionRequest,
   MarkdownLanguageCompletionItem,
-} from '@electron/services/markdownLanguage/types.js'
+} from '@electron/services/markdownLanguage/types'
 import {
   getHeadingCompletions,
   getWikiHeadingCompletions,
-} from '@electron/services/markdownLanguage/headingCompletions.js'
+} from '@electron/services/markdownLanguage/headingCompletions'
 
 const LANGUAGE_COMPLETIONS = [
   'bash',

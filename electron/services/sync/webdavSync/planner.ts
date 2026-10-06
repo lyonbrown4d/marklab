@@ -1,5 +1,5 @@
-import type { SyncManifestEntry } from '@electron/services/sync/core/types.js'
-import { entriesByPath } from '@electron/services/sync/webdavSync/manifest.js'
+import type { SyncManifestEntry } from '@electron/services/sync/core/types'
+import { entriesByPath } from '@electron/services/sync/webdavSync/manifest'
 
 export type SyncOperation = {
   kind: 'upload' | 'download' | 'deleteRemote' | 'deleteLocal' | 'conflict' | 'noop' | 'skip'

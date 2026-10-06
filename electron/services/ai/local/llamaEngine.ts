@@ -1,9 +1,6 @@
 import type { Llama, LlamaContext, LlamaModel } from 'node-llama-cpp'
 
-import type {
-  LocalAiEventHandler,
-  LocalAiRuntimeRequest,
-} from '@electron/services/ai/local/types.js'
+import type { LocalAiEventHandler, LocalAiRuntimeRequest } from '@electron/services/ai/local/types'
 
 type NodeLlamaBindings = typeof import('node-llama-cpp')
 type LlamaEngineOptions = { loadBindings?: () => Promise<NodeLlamaBindings> }

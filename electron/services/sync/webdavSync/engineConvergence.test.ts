@@ -8,7 +8,7 @@ import {
   manifest,
   remoteEntry,
   state,
-} from '@electron/services/sync/webdavSync/engineTestSupport.js'
+} from '@electron/services/sync/webdavSync/engineTestSupport'
 
 afterEach(cleanupFixtures)
 

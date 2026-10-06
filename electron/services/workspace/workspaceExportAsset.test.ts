@@ -2,8 +2,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { FsStateData } from '@electron/services/workspace/types.js'
-import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset.js'
+import type { FsStateData } from '@electron/services/workspace/types'
+import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset'
 
 let root = ''
 let state: FsStateData

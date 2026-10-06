@@ -1,6 +1,6 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { WindowCloseFlushRequest, WindowCloseFlushResult } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { WindowCloseFlushRequest, WindowCloseFlushResult } from '@electron/types'
 
 const RENDERER_FLUSH_TIMEOUT_MS = 15_000
 

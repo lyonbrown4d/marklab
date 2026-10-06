@@ -1,7 +1,7 @@
 import type { BrowserWindow, IpcMain } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerWindowCloseLifecycleIpc } from '@electron/ipc/windowCloseLifecycle.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerWindowCloseLifecycleIpc } from '@electron/ipc/windowCloseLifecycle'
 
 const createHarness = () => {
   const listeners = new Map<string, (...args: unknown[]) => void>()

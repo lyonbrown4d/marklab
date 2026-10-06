@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgress.js'
-import type { UpdateEventPayload } from '@electron/types.js'
+import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgress'
+import type { UpdateEventPayload } from '@electron/types'
 
 const update = (overrides: Partial<UpdateEventPayload>): UpdateEventPayload => ({
   event: 'checking',

@@ -1,139 +1,161 @@
-import { randomUUID } from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
-
-import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint.js'
 import {
-  webDavProfileFileSchema,
+  WebDavProfileRepository,
+  type WebDavProfileRow,
+} from '@electron/database/repositories/webDavProfileRepository'
+import type { LocalDatabaseService } from '@electron/database/localDatabaseService'
+import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint'
+import {
+  storedWebDavProfileSchema,
   webDavProfileInputSchema,
   type StoredWebDavProfile,
-  type WebDavProfileFile,
-} from '@electron/services/sync/webdav/profileSchemas.js'
+} from '@electron/services/sync/webdav/profileSchemas'
 import type {
   WebDavProfile,
   WebDavProfileInput,
   WebDavProfileStoreContract,
   WebDavProfileStoreOptions,
   WebDavSafeStorage,
-} from '@electron/services/sync/webdav/types.js'
+} from '@electron/services/sync/webdav/types'
 
 export class WebDavProfileStore implements WebDavProfileStoreContract {
-  private readonly filePath: string
+  private readonly profiles: WebDavProfileRepository
   private readonly sessionPasswords = new Map<string, string>()
   private readonly platform: NodeJS.Platform
-  private tail: Promise<void> = Promise.resolve()
 
   constructor(
-    userDataPath: string,
+    private readonly localDatabase: LocalDatabaseService,
     private readonly safeStorage: WebDavSafeStorage,
     options: WebDavProfileStoreOptions = {},
   ) {
-    if (!path.isAbsolute(userDataPath)) {
-      throw new Error('WebDAV profile storage path must be absolute')
-    }
-    this.filePath = path.join(path.resolve(userDataPath), 'sync', 'webdav-profiles.json')
     this.platform = options.platform ?? process.platform
+    this.profiles = new WebDavProfileRepository()
   }
 
-  list(): Promise<WebDavProfile[]> {
-    return this.serialized(async () =>
-      (await this.readFile()).profiles.map((profile) => this.toPublic(profile)),
+  async list(): Promise<WebDavProfile[]> {
+    const profiles = await this.readProfiles()
+    return profiles.map((profile) => this.toPublic(profile))
+  }
+
+  async get(id: string): Promise<WebDavProfile | null> {
+    const profile = await this.readProfile(id)
+    return profile ? this.toPublic(profile) : null
+  }
+
+  async update(input: WebDavProfileInput): Promise<WebDavProfile> {
+    const parsed = webDavProfileInputSchema.parse(input)
+    const allowInsecureLocal = parsed.allowInsecureLocal ?? false
+    const sessionOnly = parsed.sessionOnly ?? false
+    const location = validateWebDavEndpoint(parsed.endpoint, allowInsecureLocal, parsed.basePath)
+    await this.localDatabase.initialize()
+    const currentRow = await this.profiles.get(this.localDatabase.database, parsed.id)
+    const current = currentRow ? parseStoredProfile(currentRow) : undefined
+    const passwordUpdate = await this.preparePasswordUpdate(
+      parsed.id,
+      parsed.password,
+      sessionOnly,
+      current,
     )
+    const now = new Date().toISOString()
+    const next: StoredWebDavProfile = {
+      id: parsed.id,
+      label: parsed.label,
+      endpoint: location.endpoint,
+      basePath: location.basePath,
+      username: parsed.username,
+      allowInsecureLocal,
+      sessionOnly,
+      createdAt: current?.createdAt ?? now,
+      updatedAt: now,
+      ...(passwordUpdate.encryptedPassword
+        ? { encryptedPassword: passwordUpdate.encryptedPassword }
+        : {}),
+    }
+    await this.profiles.upsert(this.localDatabase.database, profileValues(next))
+    this.applySessionPasswordUpdate(parsed.id, passwordUpdate.sessionPassword)
+    return this.toPublic(next)
   }
 
-  get(id: string): Promise<WebDavProfile | null> {
-    return this.serialized(async () => {
-      const profile = (await this.readFile()).profiles.find((candidate) => candidate.id === id)
-      return profile ? this.toPublic(profile) : null
-    })
+  async delete(id: string): Promise<{ ok: true }> {
+    await this.localDatabase.initialize()
+    await this.profiles.remove(this.localDatabase.database, id)
+    this.sessionPasswords.delete(id)
+    return { ok: true }
   }
 
-  update(input: WebDavProfileInput): Promise<WebDavProfile> {
-    return this.serialized(async () => {
-      const parsed = webDavProfileInputSchema.parse(input)
-      const allowInsecureLocal = parsed.allowInsecureLocal ?? false
-      const sessionOnly = parsed.sessionOnly ?? false
-      const location = validateWebDavEndpoint(parsed.endpoint, allowInsecureLocal, parsed.basePath)
-      const data = await this.readFile()
-      const current = data.profiles.find((profile) => profile.id === parsed.id)
-      const encryptedPassword = await this.updatedPassword(
-        parsed.id,
-        parsed.password,
-        sessionOnly,
-        current,
-      )
-      const now = new Date().toISOString()
-      const next: StoredWebDavProfile = {
-        id: parsed.id,
-        label: parsed.label,
-        endpoint: location.endpoint,
-        basePath: location.basePath,
-        username: parsed.username,
-        allowInsecureLocal,
-        sessionOnly,
-        createdAt: current?.createdAt ?? now,
-        updatedAt: now,
-        ...(encryptedPassword ? { encryptedPassword } : {}),
-      }
-      data.profiles = [...data.profiles.filter((profile) => profile.id !== next.id), next].sort(
-        compareProfiles,
-      )
-      await this.writeFile(data)
-      return this.toPublic(next)
-    })
+  async resolvePassword(id: string): Promise<string | null> {
+    const profile = await this.readProfile(id)
+    if (!profile) return null
+    if (profile.sessionOnly) return this.sessionPasswords.get(id) ?? null
+    if (!profile.encryptedPassword) return null
+    return this.decrypt(profile)
   }
 
-  delete(id: string): Promise<{ ok: true }> {
-    return this.serialized(async () => {
-      const data = await this.readFile()
-      data.profiles = data.profiles.filter((profile) => profile.id !== id)
-      this.sessionPasswords.delete(id)
-      await this.writeFile(data)
-      return { ok: true }
-    })
+  private async readProfiles(): Promise<StoredWebDavProfile[]> {
+    await this.localDatabase.initialize()
+    try {
+      const rows = await this.profiles.list(this.localDatabase.database)
+      return rows.map(parseStoredProfile)
+    } catch (error) {
+      throw new Error('WebDAV profile configuration could not be read', { cause: error })
+    }
   }
 
-  resolvePassword(id: string): Promise<string | null> {
-    return this.serialized(async () => {
-      const profile = (await this.readFile()).profiles.find((candidate) => candidate.id === id)
-      if (!profile) return null
-      if (profile.sessionOnly) return this.sessionPasswords.get(id) ?? null
-      if (!profile.encryptedPassword) return null
-      return this.decrypt(profile)
-    })
+  private async readProfile(id: string): Promise<StoredWebDavProfile | null> {
+    await this.localDatabase.initialize()
+    try {
+      const row = await this.profiles.get(this.localDatabase.database, id)
+      return row ? parseStoredProfile(row) : null
+    } catch (error) {
+      throw new Error('WebDAV profile configuration could not be read', { cause: error })
+    }
   }
 
-  private async updatedPassword(
+  private async preparePasswordUpdate(
     id: string,
     password: string | null | undefined,
     sessionOnly: boolean,
     current: StoredWebDavProfile | undefined,
-  ): Promise<string | undefined> {
+  ): Promise<PreparedPasswordUpdate> {
     if (password === null) {
-      this.sessionPasswords.delete(id)
-      return undefined
+      return { sessionPassword: { kind: 'delete' } }
     }
     if (password !== undefined) {
       if (sessionOnly) {
-        this.sessionPasswords.set(id, password)
-        return undefined
+        return { sessionPassword: { kind: 'set', value: password } }
       }
-      this.sessionPasswords.delete(id)
-      return this.encrypt(password)
+      return {
+        encryptedPassword: await this.encrypt(password),
+        sessionPassword: { kind: 'delete' },
+      }
     }
-    if (!current) return undefined
+    if (!current) return { sessionPassword: { kind: 'delete' } }
     if (sessionOnly) {
       if (!current.sessionOnly && current.encryptedPassword) {
-        this.sessionPasswords.set(id, await this.decrypt(current))
+        return {
+          sessionPassword: {
+            kind: 'set',
+            value: await this.decryptValue(current.encryptedPassword),
+          },
+        }
       }
-      return undefined
+      return { sessionPassword: { kind: 'preserve' } }
     }
     if (current.sessionOnly) {
       const memoryPassword = this.sessionPasswords.get(id)
-      this.sessionPasswords.delete(id)
-      return memoryPassword ? this.encrypt(memoryPassword) : undefined
+      return {
+        ...(memoryPassword ? { encryptedPassword: await this.encrypt(memoryPassword) } : {}),
+        sessionPassword: { kind: 'delete' },
+      }
     }
-    return current.encryptedPassword
+    return {
+      ...(current.encryptedPassword ? { encryptedPassword: current.encryptedPassword } : {}),
+      sessionPassword: { kind: 'delete' },
+    }
+  }
+
+  private applySessionPasswordUpdate(id: string, update: SessionPasswordUpdate): void {
+    if (update.kind === 'set') this.sessionPasswords.set(id, update.value)
+    if (update.kind === 'delete') this.sessionPasswords.delete(id)
   }
 
   private async encrypt(password: string): Promise<string> {
@@ -146,20 +168,24 @@ export class WebDavProfileStore implements WebDavProfileStoreContract {
   }
 
   private async decrypt(profile: StoredWebDavProfile): Promise<string> {
+    const decrypted = await this.decryptStored(profile.encryptedPassword!)
+    if (decrypted.shouldReEncrypt) {
+      const encryptedPassword = await this.encrypt(decrypted.result)
+      await this.profiles.update(this.localDatabase.database, profile.id, {
+        encrypted_password: encryptedBuffer(encryptedPassword),
+      })
+    }
+    return decrypted.result
+  }
+
+  private async decryptValue(encryptedPassword: string): Promise<string> {
+    return (await this.decryptStored(encryptedPassword)).result
+  }
+
+  private async decryptStored(encryptedPassword: string) {
     await this.assertPersistentEncryption()
     try {
-      const decrypted = await this.safeStorage.decryptStringAsync(
-        Buffer.from(profile.encryptedPassword!, 'base64'),
-      )
-      if (decrypted.shouldReEncrypt) {
-        profile.encryptedPassword = await this.encrypt(decrypted.result)
-        const data = await this.readFile()
-        data.profiles = data.profiles.map((candidate) =>
-          candidate.id === profile.id ? profile : candidate,
-        )
-        await this.writeFile(data)
-      }
-      return decrypted.result
+      return await this.safeStorage.decryptStringAsync(Buffer.from(encryptedPassword, 'base64'))
     } catch {
       throw new Error('Stored WebDAV credential could not be decrypted')
     }
@@ -197,63 +223,56 @@ export class WebDavProfileStore implements WebDavProfileStoreContract {
       updatedAt: profile.updatedAt,
     }
   }
-
-  private async readFile(): Promise<WebDavProfileFile> {
-    let contents: string
-    try {
-      contents = await fs.readFile(this.filePath, 'utf8')
-    } catch (error) {
-      if (isMissing(error)) return { version: 1, profiles: [] }
-      throw new Error('WebDAV profile configuration could not be read', {
-        cause: error,
-      })
-    }
-    try {
-      const data = webDavProfileFileSchema.parse(JSON.parse(contents))
-      for (const profile of data.profiles) {
-        const location = validateWebDavEndpoint(
-          profile.endpoint,
-          profile.allowInsecureLocal,
-          profile.basePath,
-        )
-        if (location.endpoint !== profile.endpoint || location.basePath !== profile.basePath) {
-          throw new Error('Stored WebDAV endpoint is not canonical')
-        }
-      }
-      return data
-    } catch {
-      throw new Error('WebDAV profile configuration could not be read')
-    }
-  }
-
-  private async writeFile(data: WebDavProfileFile): Promise<void> {
-    const directory = path.dirname(this.filePath)
-    await fs.mkdir(directory, { recursive: true })
-    const temporary = `${this.filePath}.tmp-${randomUUID()}`
-    try {
-      await fs.writeFile(temporary, JSON.stringify(data, null, 2), {
-        encoding: 'utf8',
-        flag: 'wx',
-        mode: 0o600,
-      })
-      await fs.rename(temporary, this.filePath)
-    } finally {
-      await fs.rm(temporary, { force: true }).catch(() => undefined)
-    }
-  }
-
-  private serialized<T>(work: () => Promise<T>): Promise<T> {
-    const run = this.tail.then(work, work)
-    this.tail = run.then(
-      () => undefined,
-      () => undefined,
-    )
-    return run
-  }
 }
 
-const compareProfiles = (left: StoredWebDavProfile, right: StoredWebDavProfile): number =>
-  left.label.localeCompare(right.label) || left.id.localeCompare(right.id)
+type SessionPasswordUpdate =
+  { kind: 'delete' } | { kind: 'preserve' } | { kind: 'set'; value: string }
 
-const isMissing = (error: unknown): boolean =>
-  Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+type PreparedPasswordUpdate = {
+  encryptedPassword?: string
+  sessionPassword: SessionPasswordUpdate
+}
+
+const profileValues = (profile: StoredWebDavProfile) => ({
+  id: profile.id,
+  label: profile.label,
+  endpoint: profile.endpoint,
+  base_path: profile.basePath,
+  username: profile.username,
+  encrypted_password: encryptedBuffer(profile.encryptedPassword),
+  allow_insecure_local: booleanInteger(profile.allowInsecureLocal),
+  session_only: booleanInteger(profile.sessionOnly),
+  created_at: profile.createdAt,
+  updated_at: profile.updatedAt,
+})
+
+const parseStoredProfile = (row: WebDavProfileRow): StoredWebDavProfile => {
+  const profile = storedWebDavProfileSchema.parse({
+    id: row.id,
+    label: row.label,
+    endpoint: row.endpoint,
+    basePath: row.base_path,
+    username: row.username,
+    allowInsecureLocal: Boolean(row.allow_insecure_local),
+    sessionOnly: Boolean(row.session_only),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(row.encrypted_password
+      ? { encryptedPassword: row.encrypted_password.toString('base64') }
+      : {}),
+  })
+  const location = validateWebDavEndpoint(
+    profile.endpoint,
+    profile.allowInsecureLocal,
+    profile.basePath,
+  )
+  if (location.endpoint !== profile.endpoint || location.basePath !== profile.basePath) {
+    throw new Error('Stored WebDAV endpoint is not canonical')
+  }
+  return profile
+}
+
+const encryptedBuffer = (value: string | undefined): Buffer | null =>
+  value ? Buffer.from(value, 'base64') : null
+
+const booleanInteger = (value: boolean): 0 | 1 => (value ? 1 : 0)

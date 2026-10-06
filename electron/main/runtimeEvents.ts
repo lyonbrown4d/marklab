@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import type { DeepLinkPayload, SingleInstancePayload, SystemThemePayload } from '@electron/types.js'
+import type { DeepLinkPayload, SingleInstancePayload, SystemThemePayload } from '@electron/types'
 
 export type PendingRuntimeEvent =
   | { eventName: 'single-instance'; payload: SingleInstancePayload }

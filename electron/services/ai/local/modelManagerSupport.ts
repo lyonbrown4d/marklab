@@ -1,11 +1,11 @@
 import path from 'node:path'
 
-import { normalizeCustomModelDirectory } from '@electron/services/ai/local/modelDirectoryPaths.js'
+import { normalizeCustomModelDirectory } from '@electron/services/ai/local/modelDirectoryPaths'
 import type {
   LocalAiCatalogEntry,
   LocalAiDirectoryConfig,
   LocalAiModel,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 export const resolveInitialModelDirectory = (
   config: LocalAiDirectoryConfig | undefined,

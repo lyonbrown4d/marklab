@@ -1,5 +1,5 @@
-import type { AiGenerateTextRequest } from '@electron/services/ai/schemas.js'
-import type { AiInlineCompletionRequest } from '@/types/aiCompletion.js'
+import type { AiGenerateTextRequest } from '@electron/services/ai/schemas'
+import type { AiInlineCompletionRequest } from '@/types/aiCompletion'
 
 const MAX_OUTPUT_CHARACTERS = 512
 const TOKEN_BUDGETS = { short: 48, medium: 96, long: 160 } as const

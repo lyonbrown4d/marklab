@@ -1,24 +1,24 @@
 import { BrowserWindow, type App, type Shell, type WebContents } from 'electron'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { applyAppTaskBadge } from '@electron/services/nativeWindowStatus.js'
-import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { applyAppTaskBadge } from '@electron/services/nativeWindowStatus'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
 import {
   createWindowWorkspaceBinding,
   detachWindowWorkspaceBinding,
   disposeWindowWorkspaceBinding,
   type WindowWorkspaceBinding,
-} from '@electron/services/workspace/windowWorkspaceBinding.js'
-import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose.js'
+} from '@electron/services/workspace/windowWorkspaceBinding'
+import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose'
 import {
   WorkspaceShutdownBarrier,
   type WorkspaceShutdownParticipant,
-} from '@electron/services/workspace/workspaceShutdownBarrier.js'
-import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import type { BackgroundTaskStatus, FsRootInfo } from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/workspaceShutdownBarrier'
+import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import type { BackgroundTaskStatus, FsRootInfo } from '@electron/services/workspace/types'
 
 type WindowWorkspaceRegistryOptions = {
   knowledgeEngineService?: KnowledgeEngineService

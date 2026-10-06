@@ -4,40 +4,30 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
+import { LocalDatabaseService } from '@electron/database/localDatabaseService'
+import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
 
 const roots: string[] = []
+const databases: LocalDatabaseService[] = []
 
 afterEach(async () => {
+  await Promise.all(databases.splice(0).map((database) => database.close()))
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })))
 })
 
-const createRoot = async () => {
+const createFixture = async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-sync-config-'))
   roots.push(root)
-  return root
+  const database = new LocalDatabaseService({ userDataPath: root })
+  await database.initialize()
+  databases.push(database)
+  return { database, root, store: new WorkspaceSyncConfigStore(database) }
 }
 
 describe('WorkspaceSyncConfigStore', () => {
-  it('rejects unsupported legacy configuration without overwriting it', async () => {
-    const userData = await createRoot()
-    const workspace = path.join(userData, 'legacy-notes')
-    const configDirectory = path.join(userData, 'sync')
-    const configPath = path.join(configDirectory, 'workspace-bindings.json')
-    await fs.mkdir(configDirectory)
-    const legacy = JSON.stringify({ version: 1, workspaces: [] })
-    await fs.writeFile(configPath, legacy)
-
-    await expect(new WorkspaceSyncConfigStore(userData).getChannels(workspace)).rejects.toThrow(
-      'Unsupported workspace sync configuration version',
-    )
-    await expect(fs.readFile(configPath, 'utf8')).resolves.toBe(legacy)
-  })
-
   it('persists Git and WebDAV as independent channels for the same workspace', async () => {
-    const userData = await createRoot()
-    const workspace = path.join(userData, 'multi-channel-notes')
-    const store = new WorkspaceSyncConfigStore(userData)
+    const { database, root, store } = await createFixture()
+    const workspace = path.join(root, 'multi-channel-notes')
 
     await store.setChannel(workspace, {
       provider: 'git',
@@ -52,7 +42,7 @@ describe('WorkspaceSyncConfigStore', () => {
       autoSync: false,
     })
 
-    await expect(new WorkspaceSyncConfigStore(userData).getChannels(workspace)).resolves.toEqual({
+    await expect(new WorkspaceSyncConfigStore(database).getChannels(workspace)).resolves.toEqual({
       git: {
         provider: 'git',
         remote: 'origin',
@@ -66,12 +56,16 @@ describe('WorkspaceSyncConfigStore', () => {
         autoSync: false,
       },
     })
+    await expect(fs.stat(path.join(root, 'sync', 'workspace-bindings.json'))).rejects.toMatchObject(
+      {
+        code: 'ENOENT',
+      },
+    )
   })
 
   it('removes one channel without disabling the other channel', async () => {
-    const userData = await createRoot()
-    const workspace = path.join(userData, 'notes')
-    const store = new WorkspaceSyncConfigStore(userData)
+    const { root, store } = await createFixture()
+    const workspace = path.join(root, 'notes')
     await store.setChannel(workspace, {
       provider: 'git',
       remote: 'origin',
@@ -91,10 +85,8 @@ describe('WorkspaceSyncConfigStore', () => {
   })
 
   it('updates one channel atomically without replacing another channel', async () => {
-    const userData = await createRoot()
-    const workspace = path.join(userData, 'notes')
-    await fs.mkdir(workspace)
-    const store = new WorkspaceSyncConfigStore(userData)
+    const { root, store } = await createFixture()
+    const workspace = path.join(root, 'notes')
 
     await store.setChannel(workspace, {
       provider: 'webdav',
@@ -127,8 +119,7 @@ describe('WorkspaceSyncConfigStore', () => {
   })
 
   it('rejects unsafe workspace and remote paths', async () => {
-    const userData = await createRoot()
-    const store = new WorkspaceSyncConfigStore(userData)
+    const { root, store } = await createFixture()
 
     await expect(
       store.setChannel('relative/workspace', {
@@ -139,7 +130,7 @@ describe('WorkspaceSyncConfigStore', () => {
       }),
     ).rejects.toThrow('absolute')
     await expect(
-      store.setChannel(path.join(userData, 'notes'), {
+      store.setChannel(path.join(root, 'notes'), {
         provider: 'webdav',
         profileId: 'personal-dav',
         remoteRoot: '/../escape',
@@ -147,7 +138,7 @@ describe('WorkspaceSyncConfigStore', () => {
       }),
     ).rejects.toThrow('remote root')
     await expect(
-      store.setChannel(path.join(userData, 'notes'), {
+      store.setChannel(path.join(root, 'notes'), {
         provider: 'git',
         remote: '..',
         branch: 'bad..branch',
@@ -156,25 +147,19 @@ describe('WorkspaceSyncConfigStore', () => {
     ).rejects.toThrow('remote name')
   })
 
-  it('fails closed when persisted configuration is corrupted', async () => {
-    const userData = await createRoot()
-    const configDirectory = path.join(userData, 'sync')
-    await fs.mkdir(configDirectory)
-    await fs.writeFile(path.join(configDirectory, 'workspace-bindings.json'), '{bad json')
-
-    await expect(new WorkspaceSyncConfigStore(userData).listChannels()).rejects.toThrow(
-      'could not be read',
-    )
-  })
-
-  it('creates one stable device identity for all workspace bindings', async () => {
-    const userData = await createRoot()
-    const first = new WorkspaceSyncConfigStore(userData)
-    const deviceId = await first.getOrCreateDeviceId()
+  it('creates one stable device identity in the shared settings table', async () => {
+    const { database, store } = await createFixture()
+    const deviceId = await store.getOrCreateDeviceId()
 
     expect(deviceId).toMatch(/^[0-9a-f-]{36}$/)
-    await expect(new WorkspaceSyncConfigStore(userData).getOrCreateDeviceId()).resolves.toBe(
+    await expect(new WorkspaceSyncConfigStore(database).getOrCreateDeviceId()).resolves.toBe(
       deviceId,
     )
+    const setting = await database.database
+      .selectFrom('settings')
+      .select('value_json')
+      .where('key', '=', 'sync.deviceId')
+      .executeTakeFirstOrThrow()
+    expect(JSON.parse(setting.value_json)).toBe(deviceId)
   })
 })

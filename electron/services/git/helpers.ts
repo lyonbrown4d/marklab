@@ -4,9 +4,9 @@ import path from 'node:path'
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff'
 import { simpleGit } from 'simple-git'
 
-import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors.js'
-import { buildSafeGitArgs, SAFE_SIMPLE_GIT_OPTIONS } from '@electron/services/git/gitPolicy.js'
-import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types.js'
+import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors'
+import { buildSafeGitArgs, SAFE_SIMPLE_GIT_OPTIONS } from '@electron/services/git/gitPolicy'
+import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types'
 
 type GitExecResult = {
   stdout: string

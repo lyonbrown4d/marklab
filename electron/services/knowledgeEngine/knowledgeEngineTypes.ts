@@ -3,7 +3,7 @@ import type {
   FsGraph,
   FsPathMetadata,
   FsSnapshot,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 
 export type KnowledgeDocumentVersion = number | string
 

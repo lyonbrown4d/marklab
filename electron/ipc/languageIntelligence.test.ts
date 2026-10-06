@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createLanguageIntelligenceIpcHandlers } from '@electron/ipc/languageIntelligence.js'
-import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
+import { createLanguageIntelligenceIpcHandlers } from '@electron/ipc/languageIntelligence'
+import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service'
 
 const completionRequest = {
   uri: 'marklab:///notes/today.md',

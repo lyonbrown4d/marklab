@@ -1,12 +1,9 @@
 import fs from 'node:fs/promises'
 import { constants } from 'node:fs'
 
-import { atomicInstallFile } from '@electron/services/ai/local/atomicFile.js'
-import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles.js'
-import type {
-  LocalAiCatalogEntry,
-  LocalAiProgressHandler,
-} from '@electron/services/ai/local/types.js'
+import { atomicInstallFile } from '@electron/services/ai/local/atomicFile'
+import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles'
+import type { LocalAiCatalogEntry, LocalAiProgressHandler } from '@electron/services/ai/local/types'
 
 type DownloadModelOptions = {
   entry: LocalAiCatalogEntry

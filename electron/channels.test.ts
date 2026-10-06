@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 
 describe('native IPC channels', () => {
   it('defines a dedicated AI inline completion surface', () => {

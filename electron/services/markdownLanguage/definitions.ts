@@ -1,23 +1,23 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
 import {
   hasChildren,
   isLinkNode,
   isTextNode,
   parseMarkdownAst,
   type MarkdownNode,
-} from '@electron/services/workspace/markdown/ast.js'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/markdown/ast'
+import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import {
   createFileLabel,
   normalizeHeadingAnchor,
   resolveLinkedFilePath,
-} from '@electron/services/markdownLanguage/linkTargets.js'
+} from '@electron/services/markdownLanguage/linkTargets'
 import type {
   CompletionRequest,
   MarkdownLanguageDefinition,
-} from '@electron/services/markdownLanguage/types.js'
-import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
+} from '@electron/services/markdownLanguage/types'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters'
 
 type LinkTarget =
   | {

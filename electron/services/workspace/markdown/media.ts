@@ -3,10 +3,10 @@ import path from 'node:path'
 import {
   ASSET_MEDIA_EXTENSIONS,
   ASSET_MEDIA_TYPES_BY_EXTENSION,
-} from '@electron/services/mediaTypes.js'
-import { stripAssetQueryAndHash } from '@electron/services/workspace/path.js'
-import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text.js'
-import { unwrapLinkDestination } from '@electron/services/workspace/markdown/utils.js'
+} from '@electron/services/mediaTypes'
+import { stripAssetQueryAndHash } from '@electron/services/workspace/path'
+import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text'
+import { unwrapLinkDestination } from '@electron/services/workspace/markdown/utils'
 
 const assetMediaTypes = ASSET_MEDIA_TYPES_BY_EXTENSION
 const assetExtensions = ASSET_MEDIA_EXTENSIONS

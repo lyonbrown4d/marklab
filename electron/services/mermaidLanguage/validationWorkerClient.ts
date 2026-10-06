@@ -6,12 +6,12 @@ import type {
   MermaidTextDocument,
   MermaidValidationIssue,
   MermaidValidationOptions,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 import type {
   MermaidValidationError,
   MermaidValidationWorkerRequest,
   MermaidValidationWorkerResponse,
-} from '@electron/services/mermaidLanguage/validationWorkerMessages.js'
+} from '@electron/services/mermaidLanguage/validationWorkerMessages'
 
 export type MermaidValidationWorker = {
   on(event: 'message', listener: (message: MermaidValidationWorkerResponse) => void): unknown

@@ -8,7 +8,7 @@ import {
   consumeSavePathCapability,
   issueSavePathCapability,
   verifySavePathCapability,
-} from '@electron/ipc/savePathCapabilities.js'
+} from '@electron/ipc/savePathCapabilities'
 
 let root = ''
 

@@ -3,7 +3,7 @@ import http from 'node:http'
 import https from 'node:https'
 import net from 'node:net'
 
-import { normalizeNetworkHostname } from '@electron/services/linkPreview/networkSecurity.js'
+import { normalizeNetworkHostname } from '@electron/services/linkPreview/networkSecurity'
 
 type LookupCallback = (
   error: NodeJS.ErrnoException | null,

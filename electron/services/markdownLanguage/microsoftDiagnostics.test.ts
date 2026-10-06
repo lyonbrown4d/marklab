@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeMicrosoftReferenceDiagnostics } from '@electron/services/markdownLanguage/microsoftDiagnostics.js'
+import { computeMicrosoftReferenceDiagnostics } from '@electron/services/markdownLanguage/microsoftDiagnostics'
 
 describe('computeMicrosoftReferenceDiagnostics', () => {
   it('reports missing, unused, and duplicate reference definitions only', async () => {

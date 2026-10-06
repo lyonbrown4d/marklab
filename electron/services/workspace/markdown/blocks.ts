@@ -1,10 +1,10 @@
-import type { FsMarkdownBlock } from '@electron/services/workspace/types.js'
+import type { FsMarkdownBlock } from '@electron/services/workspace/types'
 import {
   parseMarkdownAst,
   rawNodeText,
   type MarkdownNode,
-} from '@electron/services/workspace/markdown/ast.js'
-import { trimLineBreaks } from '@electron/services/workspace/markdown/text.js'
+} from '@electron/services/workspace/markdown/ast'
+import { trimLineBreaks } from '@electron/services/workspace/markdown/text'
 
 export const parseMarkdownBlocks = (baseId: string, markdown: string): FsMarkdownBlock[] => {
   const blocks: FsMarkdownBlock[] = []

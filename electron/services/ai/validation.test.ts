@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { generateTextRequestSchema, providerUpdateSchema } from '@electron/services/ai/schemas.js'
+import { generateTextRequestSchema, providerUpdateSchema } from '@electron/services/ai/schemas'
 
 const provider = {
   id: 'local-model',

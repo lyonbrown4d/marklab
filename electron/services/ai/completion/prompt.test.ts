@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildInlineCompletionGenerationRequest,
   cleanInlineCompletion,
-} from '@electron/services/ai/completion/prompt.js'
+} from '@electron/services/ai/completion/prompt'
 
 const input = {
   providerId: 'openai-main',

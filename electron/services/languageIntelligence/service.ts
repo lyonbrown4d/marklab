@@ -1,9 +1,9 @@
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import type { CompletionList, Diagnostic, Position } from 'vscode-languageserver-types'
 
-import { MarkdownLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/markdownProvider.js'
-import { MermaidLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/mermaidProvider.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import { MarkdownLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/markdownProvider'
+import { MermaidLanguageIntelligenceProvider } from '@electron/services/languageIntelligence/mermaidProvider'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import {
   LANGUAGE_DOCUMENT_MAX_TEXT_LENGTH,
   type LanguageCompletionRequest,
@@ -13,7 +13,7 @@ import {
   type LanguageDocumentCloseRequest,
   type LanguageDocumentOpenRequest,
   type LanguageDiagnosticsRequest,
-} from '@/types/languageIntelligence.js'
+} from '@/types/languageIntelligence'
 
 const MAX_DOCUMENTS_PER_CLIENT = 128
 const MAX_DOCUMENT_TEXT_PER_CLIENT = 64 * 1024 * 1024

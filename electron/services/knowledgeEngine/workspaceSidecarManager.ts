@@ -3,24 +3,24 @@ import type {
   WorkspaceSidecarManagerOptions,
   WorkspaceSidecarRuntime,
   WorkspaceSidecarRuntimeSummary,
-} from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
-import { openWorkspaceSidecarRuntime } from '@electron/services/knowledgeEngine/workspaceSidecarOpen.js'
-import { summarizeWorkspaceSidecarRuntimes } from '@electron/services/knowledgeEngine/workspaceSidecarRuntimeSummary.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
+import { openWorkspaceSidecarRuntime } from '@electron/services/knowledgeEngine/workspaceSidecarOpen'
+import { summarizeWorkspaceSidecarRuntimes } from '@electron/services/knowledgeEngine/workspaceSidecarRuntimeSummary'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
-} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+} from '@electron/services/knowledgeEngine/knowledgeSearch'
 import type {
   FsEntry,
   FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
-} from '@electron/services/workspace/workspaceSearchTypes.js'
+} from '@electron/services/workspace/workspaceSearchTypes'
 import {
   KnowledgeCloseDocumentInput,
   KnowledgeDocumentChangeInput,
@@ -32,13 +32,13 @@ import {
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes'
 
 export type {
   WorkspaceSidecarClient,
   StartedWorkspaceSidecar,
   WorkspaceSidecarRuntimeSummary,
-} from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 
 export class WorkspaceSidecarManager {
   private readonly runtimes = new Map<string, WorkspaceSidecarRuntime>()

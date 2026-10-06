@@ -1,10 +1,10 @@
 import type * as Electron from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { localAiGenerationCancelSchema } from '@electron/services/ai/local/schemas.js'
-import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { aiInlineCompletionRequestSchema } from '@/types/aiCompletion.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { localAiGenerationCancelSchema } from '@electron/services/ai/local/schemas'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
+import type { Logger } from '@electron/services/logger'
+import { aiInlineCompletionRequestSchema } from '@/types/aiCompletion'
 
 export type AiCompletionIpcBridge = {
   service: AiInlineCompletionServiceContract

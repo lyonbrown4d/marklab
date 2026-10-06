@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { GitOperationCoordinator } from '@electron/services/git/coordinator.js'
+import { GitOperationCoordinator } from '@electron/services/git/coordinator'
 
 const roots: string[] = []
 

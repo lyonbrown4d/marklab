@@ -1,8 +1,8 @@
 import type { IpcMain } from 'electron'
 import { Blob, Buffer } from 'node:buffer'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerClipboardIpc } from '@electron/ipc/clipboard.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerClipboardIpc } from '@electron/ipc/clipboard'
 
 const image = vi.hoisted(() => ({
   createFromBuffer: vi.fn(),

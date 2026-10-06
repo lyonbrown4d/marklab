@@ -1,19 +1,25 @@
 import path from 'node:path'
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import type { ExportService } from '@electron/services/export/exportService.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import type { ExportService } from '@electron/services/export/exportService'
+import type { Logger } from '@electron/services/logger'
+import type { GraphLayoutStore } from '@electron/services/graphLayout/graphLayoutStore'
+import {
+  graphLayoutRequestSchema,
+  graphLayoutSaveSchema,
+} from '@electron/services/graphLayout/graphLayoutSchemas'
+import { createGraphLayoutWorkspaceKey } from '@electron/services/graphLayout/workspaceIdentity'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import {
   commitSavePathCapability,
   consumeSavePathCapability,
   releaseSavePathCapability,
-} from '@electron/ipc/savePathCapabilities.js'
-import { validateExportOutputPath } from '@electron/services/export/exportRequest.js'
-import { maxLocalImageBytes } from '@electron/services/export/docxImages.js'
+} from '@electron/ipc/savePathCapabilities'
+import { validateExportOutputPath } from '@electron/services/export/exportRequest'
+import { maxLocalImageBytes } from '@electron/services/export/docxImages'
 
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
@@ -23,6 +29,7 @@ export type WorkspaceCommandServices = {
 
 type WorkspaceIpcDependencies = {
   exportService: ExportService
+  graphLayoutStore: GraphLayoutStore
   localHistoryService: LocalHistoryServiceContract
   logger: Logger
   workspaceRegistry: WindowWorkspaceRegistry
@@ -32,11 +39,18 @@ type WorkspaceForEvent = (event: IpcMainInvokeEvent) => WorkspaceService
 
 export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
-  { exportService, localHistoryService, logger, workspaceRegistry }: WorkspaceIpcDependencies,
+  {
+    exportService,
+    graphLayoutStore,
+    localHistoryService,
+    logger,
+    workspaceRegistry,
+  }: WorkspaceIpcDependencies,
 ): WorkspaceCommandServices => {
   const commandHandlers = createWorkspaceCommandHandlers(
     (event) => workspaceRegistry.serviceForWebContents(event.sender),
     exportService,
+    graphLayoutStore,
     localHistoryService,
   )
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
@@ -47,6 +61,7 @@ export const registerWorkspaceCommandsIpc = (
 const createWorkspaceCommandHandlers = (
   workspaceForEvent: WorkspaceForEvent,
   exportService: ExportService,
+  graphLayoutStore: GraphLayoutStore,
   localHistory: LocalHistoryServiceContract,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
@@ -61,6 +76,20 @@ const createWorkspaceCommandHandlers = (
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
     fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
+    fs_get_workspace_graph_layout: async (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      return graphLayoutStore.get(
+        createGraphLayoutWorkspaceKey(workspace.rootInfo()),
+        graphLayoutRequestSchema.parse(payload),
+      )
+    },
+    fs_save_workspace_graph_layout: async (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      await graphLayoutStore.save(
+        createGraphLayoutWorkspaceKey(workspace.rootInfo()),
+        graphLayoutSaveSchema.parse(payload),
+      )
+    },
     fs_search_workspace: (payload, event) => workspaceForEvent(event).searchWorkspace(payload),
     fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
     fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),

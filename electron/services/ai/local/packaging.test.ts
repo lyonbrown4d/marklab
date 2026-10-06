@@ -3,7 +3,7 @@ import fs from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 // eslint-disable-next-line no-restricted-imports -- Root Vite helpers are outside Electron aliases.
-import { electronMainExternal } from '../../../../vite.electron.js'
+import { electronMainExternal } from '../../../../vite.electron'
 
 describe('local AI packaging', () => {
   it('externalizes node-llama-cpp and ships its native packages outside ASAR', async () => {

@@ -1,8 +1,8 @@
 import { ipcRenderer, type IpcRenderer } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { ElectronLinkPreviewApi } from '@/runtime/electron.js'
-import { linkPreviewCaptureSchema, linkPreviewResultSchema } from '@/types/linkPreview.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { ElectronLinkPreviewApi } from '@/runtime/electron'
+import { linkPreviewCaptureSchema, linkPreviewResultSchema } from '@/types/linkPreview'
 
 type LinkPreviewIpcRenderer = Pick<IpcRenderer, 'invoke'>
 

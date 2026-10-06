@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
 
 describe('normalizeWebTabUrl', () => {
   it('normalizes HTTPS URLs', () => {

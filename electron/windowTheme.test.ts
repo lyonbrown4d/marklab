@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  resolveNativeWindowBackground,
-  syncNativeWindowBackgrounds,
-} from '@electron/windowTheme.js'
+import { resolveNativeWindowBackground, syncNativeWindowBackgrounds } from '@electron/windowTheme'
 
 describe('native window theme backgrounds', () => {
   it('uses editor-compatible light and dark colors', () => {

@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 
 import { z } from 'zod'
-import { validateBranchName, validateRemoteName } from '@electron/services/git/validation.js'
+
+import type { LocalDatabaseService } from '@electron/database/localDatabaseService'
+import { SettingsRepository } from '@electron/database/repositories/settingsRepository'
+import { WorkspaceRepository } from '@electron/database/repositories/workspaceRepository'
+import { WorkspaceSyncChannelRepository } from '@electron/database/repositories/workspaceSyncChannelRepository'
+import { DATABASE_SETTING_KEYS } from '@electron/database/schema'
+import { validateBranchName, validateRemoteName } from '@electron/services/git/validation'
+import { canonicalWorkspacePath } from '@electron/services/workspace/workspaceIdentity'
 import type {
   WorkspaceSyncChannel,
   WorkspaceSyncChannels,
@@ -16,7 +21,6 @@ const identifierSchema = z
   .min(1)
   .max(128)
   .regex(/^[\w.-]+$/u)
-
 const gitChannelSchema = z
   .object({
     provider: z.literal('git'),
@@ -25,7 +29,6 @@ const gitChannelSchema = z
     autoFetch: z.boolean(),
   })
   .strict()
-
 const webDavChannelSchema = z
   .object({
     provider: z.literal('webdav'),
@@ -45,140 +48,136 @@ export type WorkspaceSyncChannelsRecord = {
   channels: WorkspaceSyncChannels
 }
 
-const storedRecordSchema = z
-  .object({
-    workspacePath: z.string().min(1),
-    channels: z
-      .object({
-        git: gitChannelSchema.optional(),
-        webdav: webDavChannelSchema.optional(),
-      })
-      .strict(),
-  })
-  .strict()
-
-const storedFileSchema = z
-  .object({
-    version: z.literal(2),
-    deviceId: z.string().uuid().optional(),
-    workspaces: z.array(storedRecordSchema),
-  })
-  .strict()
-
-type StoredFile = z.infer<typeof storedFileSchema>
-type StoredChannels = StoredFile['workspaces'][number]['channels']
-
 export class WorkspaceSyncConfigStore {
-  private readonly filePath: string
-  private tail: Promise<void> = Promise.resolve()
+  private readonly channels = new WorkspaceSyncChannelRepository()
+  private readonly settings: SettingsRepository
+  private readonly workspaces = new WorkspaceRepository()
 
-  constructor(userDataPath: string) {
-    if (!path.isAbsolute(userDataPath)) {
-      throw new Error('Workspace sync userData path must be absolute')
-    }
-    this.filePath = path.join(path.resolve(userDataPath), 'sync', 'workspace-bindings.json')
+  constructor(private readonly localDatabase: LocalDatabaseService) {
+    this.settings = new SettingsRepository(localDatabase)
   }
 
-  getChannels(workspacePath: string): Promise<WorkspaceSyncChannels> {
-    return this.serialized(async () => {
-      return channelsFor(await this.readFile(), workspacePath)
-    })
+  async getChannels(workspacePath: string): Promise<WorkspaceSyncChannels> {
+    const canonical = canonicalWorkspacePath(workspacePath)
+    await this.localDatabase.initialize()
+    return this.localDatabase.sqlite.transaction(() => {
+      const workspace = this.workspaces.findByCanonicalPath(this.localDatabase, canonical)
+      if (!workspace) return emptyChannels()
+      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspace.id))
+    })()
   }
 
-  listChannels(): Promise<WorkspaceSyncChannelsRecord[]> {
-    return this.serialized(async () =>
-      (await this.readFile()).workspaces.map((record) => ({
-        workspacePath: record.workspacePath,
-        channels: publicChannels(record.channels),
-      })),
+  async listChannels(): Promise<WorkspaceSyncChannelsRecord[]> {
+    await this.localDatabase.initialize()
+    const snapshot = this.localDatabase.sqlite.transaction(() => ({
+      channels: this.channels.listAll(this.localDatabase),
+      workspaces: this.workspaces.list(this.localDatabase),
+    }))()
+    const workspacePaths = new Map(
+      snapshot.workspaces.map((workspace) => [workspace.id, workspace.path]),
     )
-  }
-
-  getOrCreateDeviceId(): Promise<string> {
-    return this.serialized(async () => {
-      const data = await this.readFile()
-      if (data.deviceId) return data.deviceId
-      data.deviceId = randomUUID()
-      await this.writeFile(data)
-      return data.deviceId
+    const records = new Map<number, WorkspaceSyncChannels>()
+    for (const row of snapshot.channels) {
+      const channels = records.get(row.workspace_id) ?? emptyChannels()
+      assignChannel(channels, row)
+      records.set(row.workspace_id, channels)
+    }
+    return [...records].map(([workspaceId, channels]) => {
+      const workspacePath = workspacePaths.get(workspaceId)
+      if (!workspacePath) throw new Error('Workspace sync channel has no workspace')
+      return { workspacePath, channels }
     })
   }
 
-  setChannel(workspacePath: string, value: WorkspaceSyncChannel): Promise<WorkspaceSyncChannels> {
-    return this.serialized(async () => {
-      const canonical = canonicalWorkspacePath(workspacePath)
-      const channel = parseChannel(value)
-      const data = await this.readFile()
-      const key = workspaceKey(canonical)
-      const existing = data.workspaces.find((record) => workspaceKey(record.workspacePath) === key)
-      const channels = { ...existing?.channels, [channel.provider]: channel }
-      data.workspaces = [
-        ...data.workspaces.filter((record) => workspaceKey(record.workspacePath) !== key),
-        { workspacePath: canonical, channels },
-      ].sort((left, right) => left.workspacePath.localeCompare(right.workspacePath))
-      await this.writeFile(data)
-      return publicChannels(channels)
-    })
+  async getOrCreateDeviceId(): Promise<string> {
+    await this.localDatabase.initialize()
+    return this.localDatabase.sqlite.transaction(() => {
+      const current = this.settings.get(DATABASE_SETTING_KEYS.syncDeviceId)
+      if (current) return parseDeviceId(current.value_json)
+      const deviceId = randomUUID()
+      this.settings.upsert(DATABASE_SETTING_KEYS.syncDeviceId, JSON.stringify(deviceId), null)
+      const stored = this.settings.get(DATABASE_SETTING_KEYS.syncDeviceId)
+      if (!stored) throw new Error('Workspace sync device identity could not be created')
+      return parseDeviceId(stored.value_json)
+    })()
   }
 
-  removeChannel(
+  async setChannel(
+    workspacePath: string,
+    value: WorkspaceSyncChannel,
+  ): Promise<WorkspaceSyncChannels> {
+    const canonical = canonicalWorkspacePath(workspacePath)
+    const channel = parseChannel(value)
+    await this.localDatabase.initialize()
+    return this.localDatabase.sqlite.transaction(() => {
+      const workspaceId = this.workspaces.findOrCreate(this.localDatabase, canonical, canonical)
+      this.channels.upsert(this.localDatabase, channelValues(workspaceId, channel))
+      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspaceId))
+    })()
+  }
+
+  async removeChannel(
     workspacePath: string,
     provider: WorkspaceSyncProvider,
   ): Promise<WorkspaceSyncChannels> {
-    return this.serialized(async () => {
-      const canonical = canonicalWorkspacePath(workspacePath)
-      const key = workspaceKey(canonical)
-      const data = await this.readFile()
-      const existing = data.workspaces.find((record) => workspaceKey(record.workspacePath) === key)
-      if (!existing) return emptyChannels()
-      const channels = { ...existing.channels }
-      delete channels[provider]
-      data.workspaces = data.workspaces.filter(
-        (record) => workspaceKey(record.workspacePath) !== key,
-      )
-      if (channels.git || channels.webdav) {
-        data.workspaces.push({ workspacePath: canonical, channels })
-        data.workspaces.sort((left, right) => left.workspacePath.localeCompare(right.workspacePath))
+    const canonical = canonicalWorkspacePath(workspacePath)
+    await this.localDatabase.initialize()
+    return this.localDatabase.sqlite.transaction(() => {
+      const workspace = this.workspaces.findByCanonicalPath(this.localDatabase, canonical)
+      if (!workspace) return emptyChannels()
+      this.channels.remove(this.localDatabase, workspace.id, provider)
+      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspace.id))
+    })()
+  }
+}
+
+type ChannelRow = Awaited<ReturnType<WorkspaceSyncChannelRepository['listForWorkspace']>>[number]
+
+const channelValues = (workspaceId: number, channel: WorkspaceSyncChannel) =>
+  channel.provider === 'git'
+    ? {
+        workspace_id: workspaceId,
+        provider: channel.provider,
+        remote: channel.remote,
+        branch: channel.branch ?? null,
+        auto_fetch: booleanInteger(channel.autoFetch),
+        profile_id: null,
+        remote_root: null,
+        auto_sync: null,
       }
-      await this.writeFile(data)
-      return publicChannels(channels)
-    })
-  }
+    : {
+        workspace_id: workspaceId,
+        provider: channel.provider,
+        remote: null,
+        branch: null,
+        auto_fetch: null,
+        profile_id: channel.profileId,
+        remote_root: channel.remoteRoot,
+        auto_sync: booleanInteger(channel.autoSync),
+      }
 
-  private async readFile(): Promise<StoredFile> {
-    try {
-      const parsed = JSON.parse(await fs.readFile(this.filePath, 'utf8'))
-      assertSupportedVersion(parsed)
-      return storedFileSchema.parse(parsed)
-    } catch (error) {
-      if (isMissing(error)) return { version: 2, workspaces: [] }
-      if (error instanceof UnsupportedSyncConfigVersionError) throw error
-      throw new Error('Workspace sync configuration could not be read', { cause: error })
+const channelsFromRows = (rows: ChannelRow[]): WorkspaceSyncChannels => {
+  const channels = emptyChannels()
+  rows.forEach((row) => assignChannel(channels, row))
+  return channels
+}
+
+const assignChannel = (channels: WorkspaceSyncChannels, row: ChannelRow): void => {
+  if (row.provider === 'git' && row.remote && row.auto_fetch !== null) {
+    channels.git = {
+      provider: 'git',
+      remote: row.remote,
+      ...(row.branch ? { branch: row.branch } : {}),
+      autoFetch: Boolean(row.auto_fetch),
     }
   }
-
-  private async writeFile(data: StoredFile): Promise<void> {
-    const directory = path.dirname(this.filePath)
-    await fs.mkdir(directory, { recursive: true })
-    const temporary = `${this.filePath}.tmp-${randomUUID()}`
-    try {
-      await fs.writeFile(temporary, JSON.stringify(data, null, 2), {
-        encoding: 'utf8',
-        flag: 'wx',
-      })
-      await fs.rename(temporary, this.filePath)
-    } finally {
-      await fs.rm(temporary, { force: true }).catch(() => undefined)
+  if (row.provider === 'webdav' && row.profile_id && row.remote_root && row.auto_sync !== null) {
+    channels.webdav = {
+      provider: 'webdav',
+      profileId: row.profile_id,
+      remoteRoot: row.remote_root,
+      autoSync: Boolean(row.auto_sync),
     }
-  }
-
-  private serialized<T>(work: () => Promise<T>): Promise<T> {
-    const run = this.tail.then(work, work)
-    this.tail = run.then(
-      () => undefined,
-      () => undefined,
-    )
-    return run
   }
 }
 
@@ -195,8 +194,7 @@ const parseChannel = (value: WorkspaceSyncChannel): WorkspaceSyncChannel => {
 const validateRemoteRoot = (value: string): void => {
   rejectControlCharacters(value)
   if (!value.startsWith('/')) throw new Error('WebDAV remote root must be absolute')
-  const segments = value.split('/')
-  if (segments.some((segment) => segment === '..' || segment === '.')) {
+  if (value.split('/').some((segment) => segment === '..' || segment === '.')) {
     throw new Error('WebDAV remote root cannot escape its configured directory')
   }
 }
@@ -207,41 +205,13 @@ const rejectControlCharacters = (value: string): void => {
   }
 }
 
-const canonicalWorkspacePath = (value: string): string => {
-  if (!path.isAbsolute(value)) throw new Error('Workspace sync path must be absolute')
-  return path.resolve(value)
-}
-
-const workspaceKey = (value: string): string =>
-  process.platform === 'win32' ? value.toLocaleLowerCase('en-US') : value
-
+const booleanInteger = (value: boolean): 0 | 1 => (value ? 1 : 0)
 const emptyChannels = (): WorkspaceSyncChannels => ({ git: null, webdav: null })
 
-const publicChannels = (channels: StoredChannels): WorkspaceSyncChannels => ({
-  git: channels.git ? { ...channels.git } : null,
-  webdav: channels.webdav ? { ...channels.webdav } : null,
-})
-
-const channelsFor = (data: StoredFile, workspacePath: string): WorkspaceSyncChannels => {
-  const canonical = canonicalWorkspacePath(workspacePath)
-  const record = data.workspaces.find(
-    (candidate) => workspaceKey(candidate.workspacePath) === workspaceKey(canonical),
-  )
-  return record ? publicChannels(record.channels) : emptyChannels()
-}
-
-const isMissing = (error: unknown): boolean =>
-  Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
-
-class UnsupportedSyncConfigVersionError extends Error {
-  constructor() {
-    super('Unsupported workspace sync configuration version')
-    this.name = 'UnsupportedSyncConfigVersionError'
-  }
-}
-
-const assertSupportedVersion = (value: unknown): void => {
-  if (!value || typeof value !== 'object' || !('version' in value) || value.version !== 2) {
-    throw new UnsupportedSyncConfigVersionError()
+const parseDeviceId = (valueJson: string): string => {
+  try {
+    return z.string().uuid().parse(JSON.parse(valueJson))
+  } catch (error) {
+    throw new Error('Workspace sync device identity could not be read', { cause: error })
   }
 }

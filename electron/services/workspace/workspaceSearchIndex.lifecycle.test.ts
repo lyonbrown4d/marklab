@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   WorkspaceSearchIndex,
   type WorkspaceSearchIndexBackend,
-} from '@electron/services/workspace/workspaceSearchIndex.js'
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/workspaceSearchIndex'
+import type { FsSearchResult } from '@electron/services/workspace/types'
 
 const tempDirs: string[] = []
 

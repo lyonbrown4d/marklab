@@ -1,7 +1,7 @@
 import { ExternalHyperlink, ImageRun, Paragraph, TextRun } from 'docx'
 import type { IParagraphOptions, ParagraphChild } from 'docx'
-import type { MarkdownInline } from '@electron/services/export/markdown.js'
-import type { DocxImageMap } from '@electron/services/export/docxImages.js'
+import type { MarkdownInline } from '@electron/services/export/markdown'
+import type { DocxImageMap } from '@electron/services/export/docxImages'
 
 export type InlineStyle = {
   bold?: boolean

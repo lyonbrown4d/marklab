@@ -12,7 +12,7 @@ import {
   timer,
 } from 'rxjs'
 
-import type { Logger } from '@electron/services/logger.js'
+import type { Logger } from '@electron/services/logger'
 
 const DEFAULT_MAX_BYTES = 200 * 1024 * 1024
 const DEFAULT_MAINTENANCE_INTERVAL_MS = 6 * 60 * 60 * 1000

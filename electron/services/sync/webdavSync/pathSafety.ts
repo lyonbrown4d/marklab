@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
 
 const PROTECTED_SEGMENTS = new Set(['.git', '.marklab-sync', 'node_modules'])
 const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i

@@ -1,4 +1,4 @@
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
+import type { FsSearchResult } from '@electron/services/workspace/types'
 
 export type KnowledgeSearchOrder = 'score' | 'path' | 'title' | 'pathThenScore'
 

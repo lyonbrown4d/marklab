@@ -1,8 +1,8 @@
 import type { BrowserWindow } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWebTabEntry } from '@electron/services/webTabs/webTabEntryFactory.js'
-import { installManagedWebTabEvents } from '@electron/services/webTabs/webTabManagedEvents.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWebTabEntry } from '@electron/services/webTabs/webTabEntryFactory'
+import { installManagedWebTabEvents } from '@electron/services/webTabs/webTabManagedEvents'
 import {
   clampWebTabBounds,
   attachWebTabView,
@@ -13,25 +13,25 @@ import {
   type WebTabEntry,
   type WebTabViewConstructor,
   type WebTabWindowState,
-} from '@electron/services/webTabs/webTabManagerTypes.js'
+} from '@electron/services/webTabs/webTabManagerTypes'
 import {
   destroyWebTabEntry,
   evictWebTabOverflow,
   shouldReplaceWebTabEntry,
-} from '@electron/services/webTabs/webTabPool.js'
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
-import { compileWebTabShortcutBindings } from '@electron/services/webTabs/webTabShortcuts.js'
+} from '@electron/services/webTabs/webTabPool'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
+import { compileWebTabShortcutBindings } from '@electron/services/webTabs/webTabShortcuts'
 import {
   disposeWebTabWindow,
   installWebTabWindowListeners,
-} from '@electron/services/webTabs/webTabWindowLifecycle.js'
+} from '@electron/services/webTabs/webTabWindowLifecycle'
 import type {
   WebTabActivateRequest,
   WebTabIdRequest,
   WebTabNavigateRequest,
   WebTabSetBoundsRequest,
   WebTabShortcutBindingsRequest,
-} from '@/types/webTabs.js'
+} from '@/types/webTabs'
 
 const MAX_CACHED_VIEWS = 3
 const MAX_ERROR_DESCRIPTION_LENGTH = 1024

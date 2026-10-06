@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors.js'
+import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors'
 
 describe('git credential redaction', () => {
   it('redacts URL user info from messages', () => {

@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { createWorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
+import { createWorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
 
 describe('createWorkspaceSidecarIdentity', () => {
   it('creates stable workspace ids and sidecar environment values', () => {

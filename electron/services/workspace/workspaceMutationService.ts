@@ -1,6 +1,6 @@
-import { WorkspaceBase } from '@electron/services/workspace/workspaceBase.js'
-import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
-import { runWorkspacePathMutation } from '@electron/services/workspace/workspaceWriteCoordinator.js'
+import { WorkspaceBase } from '@electron/services/workspace/workspaceBase'
+import { stringArg } from '@electron/services/workspace/workspaceUtils'
+import { runWorkspacePathMutation } from '@electron/services/workspace/workspaceWriteCoordinator'
 
 export class WorkspaceMutationService extends WorkspaceBase {
   writeCoordinatorOwnerId(): string {

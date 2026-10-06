@@ -2,6 +2,7 @@ type EditorCloseFlusher = () => Promise<void> | void
 
 const snapshotFlushers = new Set<EditorCloseFlusher>()
 const bufferFlushers = new Set<EditorCloseFlusher>()
+const persistenceFlushers = new Set<EditorCloseFlusher>()
 let activeCloseFlush: Promise<void> | null = null
 
 const registerFlusher = (flushers: Set<EditorCloseFlusher>, flusher: EditorCloseFlusher) => {
@@ -22,9 +23,14 @@ export const registerEditorSnapshotFlusher = (flusher: EditorCloseFlusher) =>
 export const registerEditorBufferFlusher = (flusher: EditorCloseFlusher) =>
   registerFlusher(bufferFlushers, flusher)
 
+export const registerEditorPersistenceFlusher = (flusher: EditorCloseFlusher) =>
+  registerFlusher(persistenceFlushers, flusher)
+
 export const flushEditorChangesForClose = (): Promise<void> => {
   if (activeCloseFlush) return activeCloseFlush
-  const task = runFlushers(snapshotFlushers).then(() => runFlushers(bufferFlushers))
+  const task = runFlushers(snapshotFlushers)
+    .then(() => runFlushers(bufferFlushers))
+    .then(() => runFlushers(persistenceFlushers))
   const tracked = task.finally(() => {
     if (activeCloseFlush === tracked) activeCloseFlush = null
   })

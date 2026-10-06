@@ -1,9 +1,9 @@
-import type { Logger } from '@electron/services/logger.js'
-import { GitOperationCoordinator } from '@electron/services/git/coordinator.js'
-import { GitOperationError, redactGitUrl } from '@electron/services/git/errors.js'
-import { parsePorcelainStatus, runGit } from '@electron/services/git/helpers.js'
-import type { GitPushOptions, GitRemote, GitRemoteStatus } from '@electron/services/git/types.js'
-import { validateRemoteName, validateRemoteUrl } from '@electron/services/git/validation.js'
+import type { Logger } from '@electron/services/logger'
+import { GitOperationCoordinator } from '@electron/services/git/coordinator'
+import { GitOperationError, redactGitUrl } from '@electron/services/git/errors'
+import { parsePorcelainStatus, runGit } from '@electron/services/git/helpers'
+import type { GitPushOptions, GitRemote, GitRemoteStatus } from '@electron/services/git/types'
+import { validateRemoteName, validateRemoteUrl } from '@electron/services/git/validation'
 
 type ParsedPushOptions = { remote: string | null; setUpstream: boolean }
 

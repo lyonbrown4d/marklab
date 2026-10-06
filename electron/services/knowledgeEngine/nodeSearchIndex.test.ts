@@ -4,12 +4,20 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
-import { NodeSearchSnapshot } from '@electron/services/knowledgeEngine/nodeSearchSnapshot.js'
+import { NodeSearchDocumentRepository } from '@electron/services/knowledgeEngine/nodeSearchDocumentRepository'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
 
 const tempRoots: string[] = []
+const indexes: NodeSearchIndex[] = []
+
+const createIndex = (...args: ConstructorParameters<typeof NodeSearchIndex>): NodeSearchIndex => {
+  const index = new NodeSearchIndex(...args)
+  indexes.push(index)
+  return index
+}
 
 afterEach(async () => {
+  await Promise.all(indexes.splice(0).map((index) => index.close()))
   await Promise.all(
     tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })),
   )
@@ -23,7 +31,7 @@ const createStorageRoot = async (): Promise<string> => {
 
 describe('NodeSearchIndex', () => {
   it('treats include paths as normalized exact files or directory prefixes', async () => {
-    const index = new NodeSearchIndex()
+    const index = createIndex()
     await index.rebuild([
       { path: 'notes/project.md', title: 'Project', content: 'alpha' },
       { path: 'notes/deep/project.md', title: 'Deep', content: 'alpha' },
@@ -48,7 +56,7 @@ describe('NodeSearchIndex', () => {
   })
 
   it('applies deterministic ordering before offset and limit', async () => {
-    const index = new NodeSearchIndex()
+    const index = createIndex()
     await index.rebuild([
       { path: 'zeta/readme.md', title: 'Readme', content: 'alpha' },
       { path: 'alpha/readme.md', title: 'Readme', content: 'alpha' },
@@ -68,12 +76,12 @@ describe('NodeSearchIndex', () => {
 
   it('restores persisted documents after the sidecar restarts', async () => {
     const storageRoot = await createStorageRoot()
-    const first = new NodeSearchIndex(storageRoot)
+    const first = createIndex(storageRoot)
     await first.rebuild([
       { path: 'notes/persisted.md', title: 'Persisted', content: 'durable needle' },
     ])
 
-    const restarted = new NodeSearchIndex(storageRoot)
+    const restarted = createIndex(storageRoot)
 
     await expect(restarted.hasDocuments()).resolves.toBe(true)
     await expect(restarted.search('durable needle')).resolves.toMatchObject({
@@ -82,46 +90,9 @@ describe('NodeSearchIndex', () => {
     })
   })
 
-  it('recovers the previous atomic snapshot when the primary snapshot is corrupt', async () => {
-    const storageRoot = await createStorageRoot()
-    const first = new NodeSearchIndex(storageRoot)
-    await first.rebuild([{ path: 'notes/stable.md', title: 'Stable', content: 'recoverable' }])
-    await first.upsert({ path: 'notes/new.md', title: 'New', content: 'latest' })
-    await fs.writeFile(path.join(storageRoot, 'search-index-v2.json'), '{broken')
-
-    const restarted = new NodeSearchIndex(storageRoot)
-
-    await expect(restarted.search('recoverable')).resolves.toMatchObject({
-      totalHits: 1,
-      results: [{ path: 'notes/stable.md' }],
-    })
-    await expect(restarted.search('latest')).resolves.toMatchObject({ totalHits: 0 })
-  })
-
-  it('falls back to an empty rebuildable index when primary and backup are both corrupt', async () => {
-    const storageRoot = await createStorageRoot()
-    const first = new NodeSearchIndex(storageRoot, 'workspace-a')
-    await first.rebuild([{ path: 'stable.md', title: 'Stable', content: 'first' }])
-    await first.upsert({ path: 'second.md', title: 'Second', content: 'second' })
-    await fs.writeFile(path.join(storageRoot, 'search-index-v2.json'), '{broken-primary')
-    await fs.writeFile(path.join(storageRoot, 'search-index-v2.backup.json'), '{broken-backup')
-
-    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
-
-    await expect(restarted.hasDocuments()).resolves.toBe(false)
-    await expect(restarted.getStats()).resolves.toMatchObject({
-      documentCount: 0,
-      lastError: expect.stringMatching(/snapshot/i),
-    })
-    await restarted.rebuild([
-      { path: 'recovered.md', title: 'Recovered', content: 'healthy again' },
-    ])
-    await expect(restarted.search('healthy')).resolves.toMatchObject({ totalHits: 1 })
-  })
-
   it('persists normalized upsert and prefix removals', async () => {
     const storageRoot = await createStorageRoot()
-    const first = new NodeSearchIndex(storageRoot)
+    const first = createIndex(storageRoot)
     await first.rebuild([
       { path: 'notes/one.md', title: 'One', content: 'alpha' },
       { path: 'notes-old/two.md', title: 'Two', content: 'alpha' },
@@ -129,15 +100,35 @@ describe('NodeSearchIndex', () => {
     await first.upsert({ path: '.\\notes\\deep\\three.md', title: 'Three', content: 'alpha' })
     await first.removePrefix('.\\notes\\')
 
-    const restarted = new NodeSearchIndex(storageRoot)
+    const restarted = createIndex(storageRoot)
     const result = await restarted.search('alpha', { order: 'path' })
 
     expect(result.results.map((entry) => entry.path)).toEqual(['notes-old/two.md'])
   })
 
+  it('rejects an invalid mutation asynchronously and rolls back the complete batch', async () => {
+    const index = createIndex()
+    await index.rebuild([{ path: 'stable.md', title: 'Stable', content: 'committed value' }])
+    let operation: Promise<void> | undefined
+
+    expect(() => {
+      operation = index.applyBatch({
+        removeDocuments: ['stable.md'],
+        removePrefixes: [],
+        upserts: [{ path: './', title: 'Invalid', content: 'broken' }],
+      })
+    }).not.toThrow()
+    await expect(operation).rejects.toThrow(/workspace file/i)
+
+    await expect(index.search('committed')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'stable.md' }],
+    })
+  })
+
   it('keeps CJK, path, and fuzzy retrieval correct across incremental replacement and restart', async () => {
     const storageRoot = await createStorageRoot()
-    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
+    const index = createIndex(storageRoot, 'workspace-a')
     await index.rebuild([
       { path: 'drafts/roadmap.md', title: 'Old roadmap', content: 'obsolete content' },
       { path: 'archive/remove.md', title: 'Remove', content: 'remove marker' },
@@ -160,7 +151,7 @@ describe('NodeSearchIndex', () => {
       ],
     })
 
-    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
+    const restarted = createIndex(storageRoot, 'workspace-a')
     await expect(restarted.search('全文搜索')).resolves.toMatchObject({
       totalHits: 1,
       results: [{ path: '规划/路线图.md' }],
@@ -174,8 +165,8 @@ describe('NodeSearchIndex', () => {
     await expect(restarted.search('remove marker')).resolves.toMatchObject({ totalHits: 0 })
   })
 
-  it('uses MiniSearch for AND, prefix, fuzzy, and CJK retrieval while preserving substrings', async () => {
-    const index = new NodeSearchIndex()
+  it('uses FTS5 for AND, prefix, fuzzy, and CJK retrieval while preserving substrings', async () => {
+    const index = createIndex()
     await index.rebuild([
       {
         path: 'notes/collaboration.md',
@@ -212,8 +203,27 @@ describe('NodeSearchIndex', () => {
     })
   })
 
+  it('falls back to bounded fuzzy matching when the typo and candidate share no trigrams', async () => {
+    const unboundedList = vi.spyOn(NodeSearchDocumentRepository.prototype, 'list')
+    const index = createIndex()
+    await index.rebuild([
+      {
+        path: 'notes/fuzzy.md',
+        title: 'ABCDE',
+        content: 'A zero-shared-trigram fuzzy-search fixture.',
+      },
+      { path: 'notes/other.md', title: 'Other', content: 'unrelated content' },
+    ])
+
+    await expect(index.search('abxde')).resolves.toMatchObject({
+      totalHits: 1,
+      results: [{ path: 'notes/fuzzy.md', title: 'ABCDE' }],
+    })
+    expect(unboundedList).not.toHaveBeenCalled()
+  })
+
   it('maps folded matches back to UTF-16 snippet offsets and editor columns', async () => {
-    const index = new NodeSearchIndex()
+    const index = createIndex()
     await index.rebuild([{ path: 'unicode.md', title: 'Unicode', content: '🙂 Café 搜索' }])
 
     const result = await index.search('cafe')
@@ -227,67 +237,14 @@ describe('NodeSearchIndex', () => {
     })
   })
 
-  it('persists one versioned MiniSearch snapshot envelope for a mutation batch', async () => {
+  it('rejects a SQLite index from another workspace so the caller can rebuild safely', async () => {
     const storageRoot = await createStorageRoot()
-    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
-    await index.rebuild([
-      { path: 'remove.md', title: 'Remove', content: 'old' },
-      { path: 'folder/remove.md', title: 'Nested', content: 'old' },
-    ])
-    const write = vi.spyOn(NodeSearchSnapshot.prototype, 'write')
-
-    await index.applyBatch({
-      removeDocuments: ['remove.md'],
-      removePrefixes: ['folder'],
-      upserts: [{ path: 'added.md', title: 'Added', content: 'new searchable text' }],
-    })
-
-    expect(write).toHaveBeenCalledTimes(1)
-    const envelope = JSON.parse(
-      await fs.readFile(path.join(storageRoot, 'search-index-v2.json'), 'utf8'),
-    ) as Record<string, unknown>
-    expect(envelope).toMatchObject({
-      schemaVersion: 2,
-      engine: 'minisearch',
-      options: expect.objectContaining({ fields: ['title', 'path', 'content'] }),
-      workspace: { identity: 'workspace-a' },
-      source: expect.objectContaining({ documentCount: 1 }),
-      index: expect.any(Object),
-    })
-    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
-    await expect(restarted.search('searchable')).resolves.toMatchObject({
-      totalHits: 1,
-      results: [{ path: 'added.md' }],
-    })
-  })
-
-  it('rejects a snapshot from another workspace so the caller can rebuild safely', async () => {
-    const storageRoot = await createStorageRoot()
-    const first = new NodeSearchIndex(storageRoot, 'workspace-a')
+    const first = createIndex(storageRoot, 'workspace-a')
     await first.rebuild([{ path: 'secret.md', title: 'Secret', content: 'workspace A only' }])
 
-    const moved = new NodeSearchIndex(storageRoot, 'workspace-b')
+    const moved = createIndex(storageRoot, 'workspace-b')
 
     await expect(moved.hasDocuments()).resolves.toBe(false)
     await expect(moved.search('workspace')).resolves.toMatchObject({ totalHits: 0 })
-  })
-
-  it('loads legacy v1 document snapshots by rebuilding the in-memory index', async () => {
-    const storageRoot = await createStorageRoot()
-    await fs.writeFile(
-      path.join(storageRoot, 'search-index-v1.json'),
-      JSON.stringify({
-        version: 1,
-        documents: [{ path: 'legacy.md', title: 'Legacy', content: 'migrated safely' }],
-        metadata: { documentCount: 1, updatedAt: new Date().toISOString() },
-      }),
-    )
-
-    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
-
-    await expect(index.search('migrated')).resolves.toMatchObject({
-      totalHits: 1,
-      results: [{ path: 'legacy.md' }],
-    })
   })
 })

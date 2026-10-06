@@ -1,18 +1,18 @@
 import { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container.js'
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import type { NativeIpcRegistration } from '@electron/ipc/index.js'
+import type { ElectronContainer } from '@electron/container'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import type { NativeIpcRegistration } from '@electron/ipc/index'
 import {
   createAppWindowCommandHandlers,
   createNativeMenuActionDispatcher,
-} from '@electron/main/windowCommands.js'
-import type { MenuActionDispatcher } from '@electron/menu.js'
-import type { Logger } from '@electron/services/logger.js'
+} from '@electron/main/windowCommands'
+import type { MenuActionDispatcher } from '@electron/menu'
+import type { Logger } from '@electron/services/logger'
 import {
   copyRendererPersistSession,
   writeRendererPersistSession,
-} from '@electron/services/settingsStore.js'
-import type { MarklabWindowPool } from '@electron/windowPool.js'
+} from '@electron/services/settingsStore'
+import type { MarklabWindowPool } from '@electron/windowPool'
 
 type WindowCommandSetupArgs = {
   getContainer: () => ElectronContainer

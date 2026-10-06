@@ -2,8 +2,8 @@ import { EventEmitter } from 'node:events'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime.js'
-import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types.js'
+import { UtilityLocalAiRuntime } from '@electron/services/ai/local/utilityRuntime'
+import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types'
 
 describe('UtilityLocalAiRuntime', () => {
   it('lazily forks the isolated process and forwards streaming events', async () => {

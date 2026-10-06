@@ -50,6 +50,7 @@ export type MarklabMcpSearchResultSet = {
 }
 
 export type MarklabMcpWorkspaceAdapter = {
+  close?: () => Promise<void>
   getWorkspaceStatus: () => Promise<MarklabMcpWorkspaceStatus>
   searchWorkspace: (query: string, limit: number) => Promise<MarklabMcpSearchResultSet>
 }

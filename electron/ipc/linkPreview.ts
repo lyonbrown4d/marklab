@@ -1,9 +1,9 @@
 import type { BrowserWindow as BrowserWindowType, IpcMain, IpcMainInvokeEvent } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
-import { linkPreviewRequestSchema } from '@/types/linkPreview.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import { linkPreviewRequestSchema } from '@/types/linkPreview'
 
 export const registerLinkPreviewIpc = (
   ipcMain: Pick<IpcMain, 'handle'>,

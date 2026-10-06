@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { renameMarkdownReferences } from '@electron/services/markdownLanguage/renames'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const workspaceIndex = {
   files: [

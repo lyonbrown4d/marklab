@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { configureAppIdentity, MARKLAB_APP_NAME } from '@electron/appIdentity.js'
+import { configureAppIdentity, MARKLAB_APP_NAME } from '@electron/appIdentity'
 
 describe('app identity', () => {
   it('sets the native app name used by macOS menus in development', () => {

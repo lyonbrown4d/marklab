@@ -10,6 +10,7 @@ import {
   WORKSPACE_MAP_RESOURCE_NODE_HEIGHT,
   WORKSPACE_MAP_RESOURCE_NODE_WIDTH,
 } from '@/logic/graphLayoutMetrics'
+import { readWorkspaceMapNodePersistedCollapsed } from '@/pages/workspace-map/workspaceMapLayoutPersistence'
 
 type Options = {
   activePath: string | null
@@ -83,10 +84,21 @@ const createDisclosureState = (
   graphIdentity: string,
   defaultCollapsed: boolean,
   nodes: Node<GraphNodeData>[],
+  usePersistedState = true,
 ): DisclosureState => {
-  const richNodeIds = nodes.filter(isRichWorkspaceNode).map((node) => node.id)
+  const richNodes = nodes.filter(isRichWorkspaceNode)
+  const richNodeIds = richNodes.map((node) => node.id)
+  const collapsedNodeIds = new Set(
+    richNodes
+      .filter(
+        (node) =>
+          (usePersistedState ? readWorkspaceMapNodePersistedCollapsed(node) : undefined) ??
+          defaultCollapsed,
+      )
+      .map((node) => node.id),
+  )
   return {
-    collapsedNodeIds: new Set(defaultCollapsed ? richNodeIds : []),
+    collapsedNodeIds,
     defaultCollapsed,
     graphIdentity,
     knownNodeIds: new Set(richNodeIds),
@@ -100,18 +112,32 @@ const normalizeDisclosureState = (
   nodes: Node<GraphNodeData>[],
 ): DisclosureState => {
   if (state.graphIdentity !== graphIdentity) {
-    return createDisclosureState(graphIdentity, defaultCollapsed, nodes)
+    return createDisclosureState(graphIdentity, defaultCollapsed, nodes, false)
   }
 
   const richNodeIds = nodes.filter(isRichWorkspaceNode).map((node) => node.id)
   const newlyCompact = defaultCollapsed && !state.defaultCollapsed
   const newNodeIds = richNodeIds.filter((nodeId) => !state.knownNodeIds.has(nodeId))
-  if (!newlyCompact && newNodeIds.length === 0 && state.defaultCollapsed === defaultCollapsed) {
+  const persistedChanges = nodes.some((node) => {
+    const persisted = readWorkspaceMapNodePersistedCollapsed(node)
+    return persisted !== undefined && state.collapsedNodeIds.has(node.id) !== persisted
+  })
+  if (
+    !newlyCompact &&
+    newNodeIds.length === 0 &&
+    state.defaultCollapsed === defaultCollapsed &&
+    !persistedChanges
+  ) {
     return state
   }
 
   const collapsedNodeIds = newlyCompact ? new Set(richNodeIds) : new Set(state.collapsedNodeIds)
   if (defaultCollapsed) newNodeIds.forEach((nodeId) => collapsedNodeIds.add(nodeId))
+  nodes.forEach((node) => {
+    const persisted = readWorkspaceMapNodePersistedCollapsed(node)
+    if (persisted === true) collapsedNodeIds.add(node.id)
+    if (persisted === false) collapsedNodeIds.delete(node.id)
+  })
   return {
     collapsedNodeIds,
     defaultCollapsed,
@@ -200,12 +226,24 @@ export const useWorkspaceMapNodeDisclosure = ({
             style: node.style,
             width: node.width ?? node.measured?.width,
           })
-          return compactNode(node)
+          return compactNode({
+            ...node,
+            data: { ...node.data, workspaceMapPersistedCollapsed: true },
+          })
         }
         const geometry = expandedGeometryRef.current.get(geometryKey)
-        if (!geometry) return expandedNode(node)
+        if (!geometry) {
+          return expandedNode({
+            ...node,
+            data: { ...node.data, workspaceMapPersistedCollapsed: false },
+          })
+        }
         expandedGeometryRef.current.delete(geometryKey)
-        return { ...node, ...geometry }
+        return {
+          ...node,
+          ...geometry,
+          data: { ...node.data, workspaceMapPersistedCollapsed: false },
+        }
       }),
     )
     setDisclosureState((current) => {

@@ -1,21 +1,21 @@
-import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import { isExternalTarget } from '@electron/services/workspace/path.js'
-import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions.js'
+import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types'
+import { isExternalTarget } from '@electron/services/workspace/path'
+import { getMarkdownDefinition } from '@electron/services/markdownLanguage/definitions'
 import type {
   CompletionRequest,
   MarkdownLanguageHover,
-} from '@electron/services/markdownLanguage/types.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
+} from '@electron/services/markdownLanguage/types'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets'
 import {
   normalizeWorkspacePath,
   resolveRelativeWorkspacePath,
   splitLinkTarget,
   stripQuery,
   unwrapLinkDestination,
-} from '@electron/services/workspace/markdown/utils.js'
-import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text.js'
-import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
+} from '@electron/services/workspace/markdown/utils'
+import { decodeURIComponentSafe } from '@electron/services/workspace/markdown/text'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext'
 
 export const getMarkdownHover = async (
   request: CompletionRequest,

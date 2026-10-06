@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { planThreeWaySync } from '@electron/services/sync/webdavSync/planner.js'
-import type { SyncManifestEntry } from '@electron/services/sync/core/types.js'
+import { planThreeWaySync } from '@electron/services/sync/webdavSync/planner'
+import type { SyncManifestEntry } from '@electron/services/sync/core/types'
 
 const entry = (path: string, hash: string, deletedAt?: string): SyncManifestEntry => ({
   path,

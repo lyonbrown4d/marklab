@@ -2,12 +2,12 @@ import os from 'node:os'
 
 import type { BrowserWindow } from 'electron'
 
-import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
 import {
   createMainWindow as createDefaultMainWindow,
   loadMainWindow as loadDefaultMainWindow,
   loadWindowOpeningShell as loadDefaultOpeningWindow,
-} from '@electron/window.js'
+} from '@electron/window'
 
 const DEFAULT_MAX_IDLE_MAIN_WINDOWS = 1
 const DEFAULT_MINIMUM_FREE_MEMORY_BYTES = 512 * 1024 * 1024

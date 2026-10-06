@@ -1,7 +1,7 @@
 import { nativeImage, type Clipboard, type IpcMain } from 'electron'
 import { Buffer } from 'node:buffer'
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { ClipboardImage } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { ClipboardImage } from '@electron/types'
 export const registerClipboardIpc = (
   ipcMain: Pick<IpcMain, 'handle'>,
   clipboard: Pick<Clipboard, 'read' | 'readText' | 'writeText'>,

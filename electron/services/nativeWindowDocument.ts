@@ -1,6 +1,6 @@
 import type { App, BrowserWindow } from 'electron'
 
-import type { FsRootInfo } from '@electron/services/workspace/types.js'
+import type { FsRootInfo } from '@electron/services/workspace/types'
 
 type NativeDocumentWindow = Pick<
   BrowserWindow,

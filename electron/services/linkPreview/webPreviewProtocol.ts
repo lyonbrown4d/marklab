@@ -3,9 +3,9 @@ import axios from 'axios'
 import {
   assertPublicLinkPreviewUrl,
   type LinkPreviewLookup,
-} from '@electron/services/linkPreview/networkSecurity.js'
-import { createPinnedAgents } from '@electron/services/linkPreview/pinnedAgents.js'
-import { headerValue } from '@electron/services/linkPreview/response.js'
+} from '@electron/services/linkPreview/networkSecurity'
+import { createPinnedAgents } from '@electron/services/linkPreview/pinnedAgents'
+import { headerValue } from '@electron/services/linkPreview/response'
 
 const MAX_RESOURCE_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT_MS = 10_000

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { writeDownloadAtomically } from '@electron/services/sync/webdavSync/atomicDownload.js'
+import { writeDownloadAtomically } from '@electron/services/sync/webdavSync/atomicDownload'
 
 const roots: string[] = []
 afterEach(async () => {

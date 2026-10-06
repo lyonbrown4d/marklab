@@ -1,7 +1,7 @@
 import type * as Electron from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import type { CommandInvokePayload } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import type { CommandInvokePayload } from '@electron/types'
 
 export type NativeCommandHandler = (
   payload: unknown,

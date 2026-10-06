@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync.js'
-import type { WorkspaceSyncChannelsRecord } from '@electron/services/sync/workspaceSyncConfig.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync'
+import type { WorkspaceSyncChannelsRecord } from '@electron/services/sync/workspaceSyncConfig'
 
 describe('workspace sync IPC', () => {
   it('stores and removes one channel without replacing the other channel', async () => {

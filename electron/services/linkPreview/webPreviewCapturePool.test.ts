@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { WebPreviewCapturePool } from '@electron/services/linkPreview/webPreviewCapturePool.js'
+import { WebPreviewCapturePool } from '@electron/services/linkPreview/webPreviewCapturePool'
 
 const createViewHarness = () => {
   const pendingCaptures: Array<() => void> = []

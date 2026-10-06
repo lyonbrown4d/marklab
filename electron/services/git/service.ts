@@ -1,12 +1,12 @@
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { cloneRepository } from '@electron/services/git/clone.js'
-import { GitOperationCoordinator } from '@electron/services/git/coordinator.js'
-import { GitDiffReader } from '@electron/services/git/diff.js'
-import { GitRemoteOperations } from '@electron/services/git/remoteOperations.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { cloneRepository } from '@electron/services/git/clone'
+import { GitOperationCoordinator } from '@electron/services/git/coordinator'
+import { GitDiffReader } from '@electron/services/git/diff'
+import { GitRemoteOperations } from '@electron/services/git/remoteOperations'
 import {
   resolveCanonicalDirectory,
   resolveExactRepositoryRoot,
-} from '@electron/services/git/repository.js'
+} from '@electron/services/git/repository'
 import type {
   GitCloneResult,
   GitFileDiff,
@@ -14,7 +14,7 @@ import type {
   GitRemoteStatus,
   GitRepoInfo,
   GitStatusSnapshot,
-} from '@electron/services/git/types.js'
+} from '@electron/services/git/types'
 import {
   allCommitChanges,
   compareChanges,
@@ -22,7 +22,7 @@ import {
   emptyStatusSnapshot,
   parsePorcelainStatus,
   runGit,
-} from '@electron/services/git/helpers.js'
+} from '@electron/services/git/helpers'
 
 export class GitService {
   private readonly coordinator = new GitOperationCoordinator()

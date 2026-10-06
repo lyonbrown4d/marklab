@@ -1,12 +1,12 @@
 import { ipcRenderer, type IpcRenderer, type IpcRendererEvent } from 'electron'
 
-import { nativeIpcChannels, type NativeIpcChannel } from '@electron/channels.js'
+import { nativeIpcChannels, type NativeIpcChannel } from '@electron/channels'
 import {
   webTabActionResultSchema,
   webTabEventSchema,
   type WebTabActionResult,
   type WebTabsApi,
-} from '@/types/webTabs.js'
+} from '@/types/webTabs'
 
 type WebTabsIpcRenderer = Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>
 

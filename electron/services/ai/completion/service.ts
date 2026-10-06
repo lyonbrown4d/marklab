@@ -1,24 +1,24 @@
 import { randomUUID } from 'node:crypto'
 
-import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy.js'
-import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types.js'
+import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy'
+import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types'
 import type {
   LocalAiGenerationEvent,
   LocalAiServiceContract,
-} from '@electron/services/ai/local/types.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
+} from '@electron/services/ai/local/types'
+import type { AiServiceContract } from '@electron/services/ai/types'
 import {
   buildInlineCompletionGenerationRequest,
   cleanInlineCompletion,
-} from '@electron/services/ai/completion/prompt.js'
+} from '@electron/services/ai/completion/prompt'
 import type {
   AiInlineCompletionEventHandler,
   AiInlineCompletionServiceContract,
-} from '@electron/services/ai/completion/types.js'
+} from '@electron/services/ai/completion/types'
 import {
   aiInlineCompletionRequestSchema,
   type AiInlineCompletionRequest,
-} from '@/types/aiCompletion.js'
+} from '@/types/aiCompletion'
 
 type CompletionAttempt = {
   generation: number

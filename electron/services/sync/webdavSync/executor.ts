@@ -5,12 +5,12 @@ import type {
   SyncProgress,
   SyncSkippedFile,
   WorkspaceMutationBoundary,
-} from '@electron/services/sync/core/types.js'
-import { applyLocalSyncOperations } from '@electron/services/sync/webdavSync/localExecutor.js'
-import { entriesByPath } from '@electron/services/sync/webdavSync/manifest.js'
-import type { SyncOperation } from '@electron/services/sync/webdavSync/planner.js'
-import { ensureRemoteObject } from '@electron/services/sync/webdavSync/remoteObject.js'
-import { createUploadSnapshot } from '@electron/services/sync/webdavSync/uploadSnapshot.js'
+} from '@electron/services/sync/core/types'
+import { applyLocalSyncOperations } from '@electron/services/sync/webdavSync/localExecutor'
+import { entriesByPath } from '@electron/services/sync/webdavSync/manifest'
+import type { SyncOperation } from '@electron/services/sync/webdavSync/planner'
+import { ensureRemoteObject } from '@electron/services/sync/webdavSync/remoteObject'
+import { createUploadSnapshot } from '@electron/services/sync/webdavSync/uploadSnapshot'
 
 export type ExecuteOptions = {
   baseline: SyncManifestEntry[]

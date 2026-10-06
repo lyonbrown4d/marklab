@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
-import type { ElectronContainer } from '@electron/container.js'
-import { registerNativeIpc, type NativeIpcRegistration } from '@electron/ipc/index.js'
-import { getLaunchInfo } from '@electron/main/deepLinks.js'
+import type { ElectronContainer } from '@electron/container'
+import { registerNativeIpc, type NativeIpcRegistration } from '@electron/ipc/index'
+import { getLaunchInfo } from '@electron/main/deepLinks'
 
 type RegisterNativeIpcOptions = Parameters<typeof registerNativeIpc>[0]
 
@@ -24,6 +24,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     dialog,
     exportService: container.cradle.exportService,
     gitService: container.cradle.gitService,
+    graphLayoutStore: container.cradle.graphLayoutStore,
     knowledgeEngineService: container.cradle.knowledgeEngineService,
     languageIntelligenceService: container.cradle.languageIntelligenceService,
     linkPreviewService: container.cradle.linkPreviewService,

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import {
   localAiDirectoryConfigSchema,
   localAiGenerationInputSchema,
-} from '@electron/services/ai/local/schemas.js'
+} from '@electron/services/ai/local/schemas'
 import type {
   LocalAiDirectoryConfig,
   LocalAiDirectoryProgressHandler,
@@ -14,7 +14,7 @@ import type {
   LocalAiRuntimeContract,
   LocalAiServiceContract,
   LocalAiStatus,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 type LocalAiServiceOptions = {
   modelManager: LocalAiModelManagerContract
@@ -22,7 +22,7 @@ type LocalAiServiceOptions = {
   requestIdFactory?: () => string
   maxQueuedGenerations?: number
   persistModelDirectory?: (config: LocalAiDirectoryConfig) => Promise<void> | void
-  persistMigration?: (migration: import('./types.js').LocalAiDirectoryMigration) => void
+  persistMigration?: (migration: import('./types').LocalAiDirectoryMigration) => void
   switchDrainTimeoutMs?: number
 }
 

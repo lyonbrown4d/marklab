@@ -1,4 +1,4 @@
-import type { LinkPreviewWebpage } from '@/types/linkPreview.js'
+import type { LinkPreviewWebpage } from '@/types/linkPreview'
 
 type ParsedHtmlMetadata = Omit<LinkPreviewWebpage, 'kind' | 'url'>
 

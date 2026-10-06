@@ -1,11 +1,11 @@
 import type { BrowserWindow } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createMainWindowSession } from '@electron/main/windowSession.js'
-import { createMarklabWindows } from '@electron/window.js'
+import { createMainWindowSession } from '@electron/main/windowSession'
+import { createMarklabWindows } from '@electron/window'
 
-vi.mock('@electron/menu.js', () => ({ installNativeMenu: vi.fn() }))
-vi.mock('@electron/window.js', () => ({ createMarklabWindows: vi.fn() }))
+vi.mock('@electron/menu', () => ({ installNativeMenu: vi.fn() }))
+vi.mock('@electron/window', () => ({ createMarklabWindows: vi.fn() }))
 
 describe('createMainWindowSession', () => {
   beforeEach(() => vi.clearAllMocks())

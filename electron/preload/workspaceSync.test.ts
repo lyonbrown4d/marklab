@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync'
 
 describe('workspace sync preload surface', () => {
   it('uses only the named multi-channel IPC contract', async () => {

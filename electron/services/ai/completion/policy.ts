@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
-import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types.js'
-import { isLoopbackProviderUrl } from '@electron/services/ai/schemas.js'
-import type { AiProviderStoreContract } from '@electron/services/ai/types.js'
-import { getRendererPersistValue } from '@electron/services/settingsStore.js'
+import { LOCAL_AI_PROVIDER_ID } from '@electron/services/ai/local/types'
+import { isLoopbackProviderUrl } from '@electron/services/ai/schemas'
+import type { AiProviderStoreContract } from '@electron/services/ai/types'
+import { getRendererPersistValue } from '@electron/services/settingsStore'
 
 export type AiInlineCompletionPolicyContract = {
   assertProviderAllowed: (providerId: string) => Promise<void>

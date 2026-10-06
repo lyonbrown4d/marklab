@@ -2,8 +2,8 @@ import { EventEmitter } from 'node:events'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
 
 describe('window opening preload surface', () => {
   it('delivers validated progress and removes its listener', () => {

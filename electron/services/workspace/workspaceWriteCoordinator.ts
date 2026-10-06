@@ -6,13 +6,13 @@ import {
   canonicalWorkspaceWriteIdentity,
   isMissingError,
   type CanonicalWriteIdentity,
-} from '@electron/services/workspace/workspaceWriteIdentity.js'
+} from '@electron/services/workspace/workspaceWriteIdentity'
 
 export {
   canonicalWorkspaceAbsoluteKey,
   canonicalWorkspaceRelativeKey,
   canonicalWorkspaceWriteIdentity,
-} from '@electron/services/workspace/workspaceWriteIdentity.js'
+} from '@electron/services/workspace/workspaceWriteIdentity'
 
 export type WorkspaceMutationPath = { absolutePath: string; includeDescendants?: boolean }
 

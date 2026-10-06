@@ -1,17 +1,17 @@
 import path from 'node:path'
 
-import { isExternalTarget } from '@electron/services/workspace/path.js'
+import { isExternalTarget } from '@electron/services/workspace/path'
 import type {
   FsIndexedMarkdownFile,
   FsMarkdownAsset,
   FsMarkdownLink,
-} from '@electron/services/workspace/types.js'
-import { guessMediaType } from '@electron/services/workspace/markdown/media.js'
-import { headingAnchorSlug } from '@electron/services/workspace/markdown/slugs.js'
+} from '@electron/services/workspace/types'
+import { guessMediaType } from '@electron/services/workspace/markdown/media'
+import { headingAnchorSlug } from '@electron/services/workspace/markdown/slugs'
 import {
   decodeURIComponentSafe,
   normalizeContext,
-} from '@electron/services/workspace/markdown/text.js'
+} from '@electron/services/workspace/markdown/text'
 import {
   ensureMarkdownTarget,
   fileLabel,
@@ -20,7 +20,7 @@ import {
   splitLinkTarget,
   stripQuery,
   unwrapLinkDestination,
-} from '@electron/services/workspace/markdown/utils.js'
+} from '@electron/services/workspace/markdown/utils'
 
 export type ParsedLinkTarget = {
   targetPath: string | null

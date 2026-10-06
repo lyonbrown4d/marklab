@@ -2,13 +2,13 @@ import { type WorkerOptions, Worker } from 'node:worker_threads'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { Logger } from '@electron/services/logger.js'
+import type { Logger } from '@electron/services/logger'
 import type {
   WorkspaceAnalysisResult,
   WorkspaceAnalysisTask,
   WorkspaceAnalysisWorkerRequest,
   WorkspaceAnalysisWorkerResponse,
-} from '@electron/services/workspace/workspaceAnalysisWorkerMessages.js'
+} from '@electron/services/workspace/workspaceAnalysisWorkerMessages'
 
 type PendingTask = {
   reject: (error: Error) => void

@@ -5,12 +5,12 @@ import path from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles.js'
-import { atomicInstallFile } from '@electron/services/ai/local/atomicFile.js'
+import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles'
+import { atomicInstallFile } from '@electron/services/ai/local/atomicFile'
 import type {
   LocalAiCatalogEntry,
   LocalAiDirectoryMigration,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 type CopyModelsOptions = {
   activeModelId: string | null

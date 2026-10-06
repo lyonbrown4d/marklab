@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, it, vi } from 'vitest'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle'
 
 describe('window close lifecycle preload surface', () => {
   it('acknowledges only after the renderer flush handler settles', async () => {

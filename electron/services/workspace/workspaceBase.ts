@@ -2,13 +2,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
 
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { resolveWorkspacePath } from '@electron/services/workspace/path.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { resolveWorkspacePath } from '@electron/services/workspace/path'
 import {
   currentSingleFileName,
   isCurrentSingleFilePath,
   relativePathsForAbsolutePaths,
-} from '@electron/services/workspace/workspacePathInvalidation.js'
+} from '@electron/services/workspace/workspacePathInvalidation'
 import type {
   BackgroundTaskStatus,
   FsBufferStatus,
@@ -16,21 +16,21 @@ import type {
   FsRootInfo,
   FsSnapshot,
   FsStateData,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 import {
   type WorkspaceBufferWriteFile,
   WorkspaceBufferStore,
-} from '@electron/services/workspace/workspaceBuffers.js'
+} from '@electron/services/workspace/workspaceBuffers'
 import {
   loadWorkspaceDocuments,
   type WorkspaceDocument,
-} from '@electron/services/workspace/workspaceDocumentLoader.js'
+} from '@electron/services/workspace/workspaceDocumentLoader'
 import {
   initializeWorkspaceBackgroundTasks,
   runSearchIndexTask as runSearchIndexTaskWithStatus,
   runWorkerTask as runWorkerTaskRequired,
   type SearchIndexTaskState,
-} from '@electron/services/workspace/workspaceTaskUtils.js'
+} from '@electron/services/workspace/workspaceTaskUtils'
 import {
   ensureDefaultFile,
   errorMessage,
@@ -39,8 +39,8 @@ import {
   listWorkspacePathSnapshot,
   type WorkspaceKnownPaths,
   type WatchEventName,
-} from '@electron/services/workspace/workspaceUtils.js'
-import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher.js'
+} from '@electron/services/workspace/workspaceUtils'
+import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher'
 
 type SnapshotListener = (snapshot: FsSnapshot) => void
 type BackgroundTasksListener = (tasks: BackgroundTaskStatus[]) => void

@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 
-import type { ExportTaskPayload } from '@electron/types.js'
+import type { ExportTaskPayload } from '@electron/types'
 
 export const applyWindowExportProgress = (
   window: Pick<BrowserWindow, 'isDestroyed' | 'setProgressBar'>,

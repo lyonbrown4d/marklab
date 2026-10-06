@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   compileWebTabShortcutBindings,
   findWebTabShortcutAction,
-} from '@electron/services/webTabs/webTabShortcuts.js'
+} from '@electron/services/webTabs/webTabShortcuts'
 
 describe('web tab shortcut matching', () => {
   it('resolves Mod to Control on Windows and Linux', () => {

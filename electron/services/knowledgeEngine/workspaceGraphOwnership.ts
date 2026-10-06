@@ -1,4 +1,4 @@
-import type { FsGraphEdge } from '@electron/services/workspace/types.js'
+import type { FsGraphEdge } from '@electron/services/workspace/types'
 
 export const createWorkspaceNodeOwnerResolver = (knownIds: Set<string>, edges: FsGraphEdge[]) => {
   const parents = new Map<string, string>()

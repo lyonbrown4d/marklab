@@ -13,7 +13,7 @@ import {
   type Token,
 } from 'vscode-markdown-languageservice'
 
-import type { FsMarkdownDiagnostic } from '@electron/services/workspace/types.js'
+import type { FsMarkdownDiagnostic } from '@electron/services/workspace/types'
 
 type MicrosoftDiagnosticsRequest = {
   path: string

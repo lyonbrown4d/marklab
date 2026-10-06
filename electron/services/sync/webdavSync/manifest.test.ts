@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   assertCompatibleSyncPaths,
   parseSyncManifest,
-} from '@electron/services/sync/webdavSync/manifest.js'
-import { createSyncManifest } from '@electron/services/sync/webdavSync/syncState.js'
+} from '@electron/services/sync/webdavSync/manifest'
+import { createSyncManifest } from '@electron/services/sync/webdavSync/syncState'
 
 const manifest = {
   version: 1,

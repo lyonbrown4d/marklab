@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog.js'
+import { LOCAL_AI_MODEL_CATALOG } from '@electron/services/ai/local/catalog'
 
 describe('local AI model catalog', () => {
   it('pins the lightweight Qwen artifact and its integrity metadata', () => {

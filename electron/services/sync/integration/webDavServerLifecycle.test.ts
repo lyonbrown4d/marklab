@@ -5,7 +5,7 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { openWebDavServerLifecycle } from '@electron/services/sync/integration/webDavServerLifecycle.js'
+import { openWebDavServerLifecycle } from '@electron/services/sync/integration/webDavServerLifecycle'
 
 const fallbackRoots: string[] = []
 

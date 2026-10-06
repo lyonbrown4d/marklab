@@ -1,4 +1,4 @@
-import type { SystemThemePayload } from '@electron/types.js'
+import type { SystemThemePayload } from '@electron/types'
 
 const WINDOWS_THEME_CALIBRATION_MS = 5000
 

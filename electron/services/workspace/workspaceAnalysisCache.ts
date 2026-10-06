@@ -1,6 +1,6 @@
-import type { FsGraph, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import type { WorkspaceDocument } from '@electron/services/workspace/workspaceDocumentLoader.js'
-import type { WorkspaceKnownPaths } from '@electron/services/workspace/workspaceUtils.js'
+import type { FsGraph, FsWorkspaceIndex } from '@electron/services/workspace/types'
+import type { WorkspaceDocument } from '@electron/services/workspace/workspaceDocumentLoader'
+import type { WorkspaceKnownPaths } from '@electron/services/workspace/workspaceUtils'
 
 export type WorkspaceAnalysisInput = {
   documents: WorkspaceDocument[]

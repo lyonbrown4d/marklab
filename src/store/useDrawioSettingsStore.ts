@@ -6,6 +6,7 @@ import {
   type DrawioEditorMode,
 } from '@/logic/drawioEmbed'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
 
 type DrawioSettingsState = {
   drawioEditorMode: DrawioEditorMode
@@ -33,8 +34,10 @@ export const useDrawioSettingsStore = create<DrawioSettingsState>()(
       },
     }),
     {
-      name: 'marklab.drawio',
-      storage: createElectronSettingsJsonStorage<DrawioSettingsPersistedState>('marklab.drawio'),
+      name: RENDERER_PERSIST_KEYS.drawio,
+      storage: createElectronSettingsJsonStorage<DrawioSettingsPersistedState>(
+        RENDERER_PERSIST_KEYS.drawio,
+      ),
       version: 1,
       partialize: (state): DrawioSettingsPersistedState => ({
         drawioEditorMode: state.drawioEditorMode,

@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
+import { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void

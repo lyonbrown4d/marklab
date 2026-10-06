@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint.js'
+import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint'
 
 describe('validateWebDavEndpoint', () => {
   it('normalizes an HTTPS origin and fixed base path', () => {

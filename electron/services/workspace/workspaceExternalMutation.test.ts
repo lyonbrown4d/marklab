@@ -5,9 +5,9 @@ import path from 'node:path'
 import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 
 vi.mock('@parcel/watcher', () => ({
   default: {

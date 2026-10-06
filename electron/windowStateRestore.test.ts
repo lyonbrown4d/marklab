@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
-import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore.js'
+import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore'
 
 describe('restoreMaximizedOnFirstShow', () => {
   it('keeps prewarmed windows hidden until their first explicit show', () => {

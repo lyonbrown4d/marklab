@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { prepareCloneDestination } from '@electron/services/git/cloneTarget.js'
+import { prepareCloneDestination } from '@electron/services/git/cloneTarget'
 
 const roots: string[] = []
 

@@ -6,10 +6,10 @@ import watcher from '@parcel/watcher'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 
 vi.mock('@parcel/watcher', () => ({
   default: {

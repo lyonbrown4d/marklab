@@ -1,10 +1,7 @@
-import type { RendererPersistKey } from '@electron/types.js'
+import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
+import type { RendererPersistKey } from '@electron/types'
 
-export const rendererPersistKeys = new Set<RendererPersistKey>([
-  'marklab.drawio',
-  'marklab.preferences',
-  'marklab.workspace',
-])
+export const rendererPersistKeys = new Set<RendererPersistKey>(Object.values(RENDERER_PERSIST_KEYS))
 
 export const drawioStateKeys = new Set(['drawioEditorMode', 'drawioEmbedUrl'])
 
@@ -50,8 +47,8 @@ export const preferenceStateKeys = new Set([
 ])
 
 export const rendererSettingsStateKeys: Partial<Record<RendererPersistKey, Set<string>>> = {
-  'marklab.drawio': drawioStateKeys,
-  'marklab.preferences': preferenceStateKeys,
+  [RENDERER_PERSIST_KEYS.drawio]: drawioStateKeys,
+  [RENDERER_PERSIST_KEYS.preferences]: preferenceStateKeys,
 }
 
 export const workspaceSessionStateKeys = new Set(['activeTabId', 'rootKind', 'rootPath', 'tabs'])

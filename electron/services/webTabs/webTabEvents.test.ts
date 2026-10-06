@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { installWebTabEvents } from '@electron/services/webTabs/webTabEvents.js'
+import { installWebTabEvents } from '@electron/services/webTabs/webTabEvents'
 
 afterEach(() => vi.useRealTimers())
 

@@ -1,20 +1,20 @@
 import { randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ModelDownloadTasks } from '@electron/services/ai/local/modelDownloadTasks.js'
-import { fileExistsWithSize, normalizeError } from '@electron/services/ai/local/modelFiles.js'
-import { runModelDirectoryMigration } from '@electron/services/ai/local/modelDirectoryMigration.js'
+import { ModelDownloadTasks } from '@electron/services/ai/local/modelDownloadTasks'
+import { fileExistsWithSize, normalizeError } from '@electron/services/ai/local/modelFiles'
+import { runModelDirectoryMigration } from '@electron/services/ai/local/modelDirectoryMigration'
 import {
   normalizeCustomModelDirectory,
   validateExistingModelDirectory,
-} from '@electron/services/ai/local/modelDirectoryPaths.js'
-import { writeActiveModelId } from '@electron/services/ai/local/modelMigration.js'
+} from '@electron/services/ai/local/modelDirectoryPaths'
+import { writeActiveModelId } from '@electron/services/ai/local/modelMigration'
 import {
   isSameOrChildPath,
   mapLocalAiModels,
   resolveInitialModelDirectory,
   validateModelCatalog,
-} from '@electron/services/ai/local/modelManagerSupport.js'
+} from '@electron/services/ai/local/modelManagerSupport'
 import type {
   LocalAiCatalogEntry,
   LocalAiDirectoryConfig,
@@ -23,7 +23,7 @@ import type {
   LocalAiModelManagerContract,
   LocalAiModelManagerStatus,
   LocalAiProgressHandler,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 type FileSystemStats = { bavail: bigint | number; bsize: bigint | number }
 type LocalAiModelManagerOptions = {
   userDataPath: string

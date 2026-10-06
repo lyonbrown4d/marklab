@@ -1,18 +1,18 @@
 import { CompletionItemKind } from 'vscode-languageserver-types'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
+import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import {
   createFileLabel,
   resolveLinkedFilePath,
-} from '@electron/services/markdownLanguage/linkTargets.js'
+} from '@electron/services/markdownLanguage/linkTargets'
 import {
   headingCompletionSortText,
   rankHeadingCompletionItems,
-} from '@electron/services/markdownLanguage/completionRanking.js'
+} from '@electron/services/markdownLanguage/completionRanking'
 import type {
   CompletionRequest,
   MarkdownLanguageCompletionItem,
-} from '@electron/services/markdownLanguage/types.js'
+} from '@electron/services/markdownLanguage/types'
 
 export const getWikiHeadingCompletions = ({
   request,

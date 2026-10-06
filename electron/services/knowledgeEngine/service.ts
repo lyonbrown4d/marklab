@@ -1,6 +1,6 @@
 import type { App } from 'electron'
 
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import type {
   KnowledgeCloseDocumentInput,
   KnowledgeDocumentChangeInput,
@@ -12,29 +12,29 @@ import type {
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes'
 import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
-} from '@electron/services/knowledgeEngine/types.js'
-import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
-import type { Logger } from '@electron/services/logger.js'
+} from '@electron/services/knowledgeEngine/types'
+import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager'
+import type { Logger } from '@electron/services/logger'
 import type {
   FsEntry,
   FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
-} from '@electron/services/workspace/workspaceSearchTypes.js'
+} from '@electron/services/workspace/workspaceSearchTypes'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
-} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
-import { workspaceStatusWorkspaceId } from '@electron/services/knowledgeEngine/workspaceStatusPayload.js'
+} from '@electron/services/knowledgeEngine/knowledgeSearch'
+import { workspaceStatusWorkspaceId } from '@electron/services/knowledgeEngine/workspaceStatusPayload'
 
 type KnowledgeEngineServiceOptions = {
   app: App
@@ -317,7 +317,7 @@ export class KnowledgeEngineService {
     if (this.sidecars) return this.sidecars
 
     const { WorkspaceSidecarManager } =
-      await import('@electron/services/knowledgeEngine/workspaceSidecarManager.js')
+      await import('@electron/services/knowledgeEngine/workspaceSidecarManager')
     this.sidecars = new WorkspaceSidecarManager({
       appDataDir: this.options.app.getPath('userData'),
       logger: this.options.logger,

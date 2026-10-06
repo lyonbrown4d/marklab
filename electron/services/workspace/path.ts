@@ -1,7 +1,7 @@
 import path from 'node:path'
 
-import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters'
+import type { FsStateData } from '@electron/services/workspace/types'
 
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 

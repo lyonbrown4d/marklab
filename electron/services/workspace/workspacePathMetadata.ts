@@ -1,8 +1,8 @@
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsPathMetadata, FsStateData } from '@electron/services/workspace/types.js'
-import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata.js'
-import { trySidecarPathMetadata } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { Logger } from '@electron/services/logger'
+import type { FsPathMetadata, FsStateData } from '@electron/services/workspace/types'
+import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata'
+import { trySidecarPathMetadata } from '@electron/services/workspace/workspaceSidecarFileBridge'
 
 type WorkspacePathMetadataOptions = {
   absolutePath: string

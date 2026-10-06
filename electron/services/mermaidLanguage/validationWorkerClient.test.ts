@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   MermaidValidationWorkerClient,
   type MermaidValidationWorker,
-} from '@electron/services/mermaidLanguage/validationWorkerClient.js'
+} from '@electron/services/mermaidLanguage/validationWorkerClient'
 import type {
   MermaidValidationWorkerRequest,
   MermaidValidationWorkerResponse,
-} from '@electron/services/mermaidLanguage/validationWorkerMessages.js'
+} from '@electron/services/mermaidLanguage/validationWorkerMessages'
 
 class FakeWorker extends EventEmitter implements MermaidValidationWorker {
   readonly postMessage = vi.fn<(message: MermaidValidationWorkerRequest) => void>()

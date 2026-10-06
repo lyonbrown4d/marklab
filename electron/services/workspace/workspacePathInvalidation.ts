@@ -1,8 +1,8 @@
 import path from 'node:path'
 
-import { toWorkspaceRelative, workspaceRootForAssets } from '@electron/services/workspace/path.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
-import { samePath } from '@electron/services/workspace/workspaceUtils.js'
+import { toWorkspaceRelative, workspaceRootForAssets } from '@electron/services/workspace/path'
+import type { FsStateData } from '@electron/services/workspace/types'
+import { samePath } from '@electron/services/workspace/workspaceUtils'
 
 export const currentSingleFileName = (state: FsStateData): string | null => {
   return state.singleFile ? path.basename(state.singleFile) : null

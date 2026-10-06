@@ -1,13 +1,13 @@
 import path from 'node:path'
 
-import type { Logger } from '@electron/services/logger.js'
-import { prepareCloneDestination } from '@electron/services/git/cloneTarget.js'
-import { GitOperationCoordinator } from '@electron/services/git/coordinator.js'
-import { GitOperationError } from '@electron/services/git/errors.js'
-import { runGit } from '@electron/services/git/helpers.js'
-import { assertSafeRepositoryConfig } from '@electron/services/git/repository.js'
-import type { GitCloneResult, GitRepoInfo } from '@electron/services/git/types.js'
-import { validateBranchName, validateRemoteUrl } from '@electron/services/git/validation.js'
+import type { Logger } from '@electron/services/logger'
+import { prepareCloneDestination } from '@electron/services/git/cloneTarget'
+import { GitOperationCoordinator } from '@electron/services/git/coordinator'
+import { GitOperationError } from '@electron/services/git/errors'
+import { runGit } from '@electron/services/git/helpers'
+import { assertSafeRepositoryConfig } from '@electron/services/git/repository'
+import type { GitCloneResult, GitRepoInfo } from '@electron/services/git/types'
+import { validateBranchName, validateRemoteUrl } from '@electron/services/git/validation'
 
 const cloneRepoInfo = async (root: string): Promise<GitRepoInfo> => {
   const value = async (args: string[]) =>

@@ -4,8 +4,8 @@ import { DiagnosticSeverity, Position, Range } from 'vscode-languageserver-types
 import {
   MermaidLanguageProvider,
   type MermaidTextDocument,
-} from '@electron/services/mermaidLanguage/provider.js'
-import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser.js'
+} from '@electron/services/mermaidLanguage/provider'
+import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser'
 
 const document = (text: string): MermaidTextDocument => ({
   languageId: 'mermaid',

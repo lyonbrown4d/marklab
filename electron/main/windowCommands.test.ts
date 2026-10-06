@@ -6,13 +6,13 @@ import path from 'node:path'
 import { BrowserWindow } from 'electron'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createAppWindowCommandHandlers } from '@electron/main/windowCommands.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createAppWindowCommandHandlers } from '@electron/main/windowCommands'
 
 vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: vi.fn(), getFocusedWindow: vi.fn() },
 }))
-vi.mock('@electron/windowMotion.js', () => ({ showWindowWithMotion: vi.fn() }))
+vi.mock('@electron/windowMotion', () => ({ showWindowWithMotion: vi.fn() }))
 
 const temporaryRoots: string[] = []
 

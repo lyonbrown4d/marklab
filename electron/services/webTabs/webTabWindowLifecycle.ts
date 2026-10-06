@@ -1,9 +1,6 @@
 import type { BrowserWindow } from 'electron'
 
-import type {
-  WebTabEntry,
-  WebTabWindowState,
-} from '@electron/services/webTabs/webTabManagerTypes.js'
+import type { WebTabEntry, WebTabWindowState } from '@electron/services/webTabs/webTabManagerTypes'
 
 export const installWebTabWindowListeners = (
   owner: BrowserWindow,

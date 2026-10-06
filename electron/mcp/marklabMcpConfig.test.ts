@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { parseMarklabMcpRuntimeConfig } from '@electron/mcp/marklabMcpConfig.js'
+import { parseMarklabMcpRuntimeConfig } from '@electron/mcp/marklabMcpConfig'
 
 describe('parseMarklabMcpRuntimeConfig', () => {
   it('parses required paths and a bounded default search limit', () => {

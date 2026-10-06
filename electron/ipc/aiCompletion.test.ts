@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createAiCompletionIpcHandlers } from '@electron/ipc/aiCompletion.js'
-import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
+import { createAiCompletionIpcHandlers } from '@electron/ipc/aiCompletion'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
 
 describe('AI inline completion IPC', () => {
   it('validates the renderer payload before starting a completion', async () => {

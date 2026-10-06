@@ -1,4 +1,4 @@
-import type { BackgroundTaskStatus, FsBufferStatus } from '@electron/services/workspace/types.js'
+import type { BackgroundTaskStatus, FsBufferStatus } from '@electron/services/workspace/types'
 import {
   assertWorkspaceClaimMutationAllowed,
   canonicalWorkspaceRelativeKey,
@@ -6,17 +6,17 @@ import {
   releaseWorkspaceWriteOwner,
   replaceWorkspaceWriteClaims,
   type WorkspaceWriteClaim,
-} from '@electron/services/workspace/workspaceWriteCoordinator.js'
-import { flushWorkspaceBufferPass } from '@electron/services/workspace/workspaceBufferFlush.js'
+} from '@electron/services/workspace/workspaceWriteCoordinator'
+import { flushWorkspaceBufferPass } from '@electron/services/workspace/workspaceBufferFlush'
 import type {
   BufferRecord,
   WorkspaceBufferStoreOptions,
   WorkspaceBufferTarget,
-} from '@electron/services/workspace/workspaceBufferTypes.js'
+} from '@electron/services/workspace/workspaceBufferTypes'
 export type {
   WorkspaceBufferTarget,
   WorkspaceBufferWriteFile,
-} from '@electron/services/workspace/workspaceBufferTypes.js'
+} from '@electron/services/workspace/workspaceBufferTypes'
 
 const AUTO_FLUSH_DELAY_MS = 700
 const AUTO_FLUSH_RETRY_MS = 1_500

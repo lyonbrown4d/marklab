@@ -1,6 +1,6 @@
 import type { BrowserWindow, Rectangle, WebContentsView } from 'electron'
-import type { CompiledWebTabShortcut } from '@electron/services/webTabs/webTabShortcuts.js'
-import type { WebTabBounds, WebTabEvent, WebTabState } from '@/types/webTabs.js'
+import type { CompiledWebTabShortcut } from '@electron/services/webTabs/webTabShortcuts'
+import type { WebTabBounds, WebTabEvent, WebTabState } from '@/types/webTabs'
 
 export type WebTabViewConstructor = new (
   options?: Electron.WebContentsViewConstructorOptions,

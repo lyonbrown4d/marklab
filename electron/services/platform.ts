@@ -1,5 +1,5 @@
 import os from 'node:os'
-import type { MarklabPlatform, PlatformInfo } from '@electron/types.js'
+import type { MarklabPlatform, PlatformInfo } from '@electron/types'
 const toMarklabPlatform = (platform: string): MarklabPlatform => {
   if (platform === 'win32') return 'windows'
   if (platform === 'darwin') return 'macos'

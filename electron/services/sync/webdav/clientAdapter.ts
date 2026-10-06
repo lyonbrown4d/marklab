@@ -2,11 +2,11 @@ import { PassThrough, type Readable } from 'node:stream'
 
 import { createClient } from 'webdav'
 
-import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint.js'
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
-import { createOriginLockedAgents } from '@electron/services/sync/webdav/originLockedAgent.js'
-import { normalizeRemotePath, webDavServerUrl } from '@electron/services/sync/webdav/remotePath.js'
-import { createWebDavRequestControl } from '@electron/services/sync/webdav/requestControl.js'
+import { validateWebDavEndpoint } from '@electron/services/sync/webdav/endpoint'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
+import { createOriginLockedAgents } from '@electron/services/sync/webdav/originLockedAgent'
+import { normalizeRemotePath, webDavServerUrl } from '@electron/services/sync/webdav/remotePath'
+import { createWebDavRequestControl } from '@electron/services/sync/webdav/requestControl'
 import type {
   WebDavCustomRequest,
   WebDavCustomResponse,
@@ -18,7 +18,7 @@ import type {
   WebDavProfile,
   WebDavRemoteClient,
   WebDavClientAdapterOptions,
-} from '@electron/services/sync/webdav/types.js'
+} from '@electron/services/sync/webdav/types'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const allowedCustomMethods = new Set([

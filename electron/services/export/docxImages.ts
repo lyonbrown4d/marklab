@@ -1,6 +1,6 @@
 import path from 'node:path'
 import pLimit from 'p-limit'
-import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdown.js'
+import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdown'
 
 export type LocalImage = {
   data: Buffer

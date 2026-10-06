@@ -1,7 +1,7 @@
 import { toString } from 'mdast-util-to-string'
 import { visit } from 'unist-util-visit'
 
-import type { FsMarkdownAsset, FsMarkdownLink } from '@electron/services/workspace/types.js'
+import type { FsMarkdownAsset, FsMarkdownLink } from '@electron/services/workspace/types'
 import {
   hasChildren,
   isDefinitionNode,
@@ -15,13 +15,13 @@ import {
   textOffsetPoint,
   type MarkdownNode,
   type MarkdownRoot,
-} from '@electron/services/workspace/markdown/ast.js'
-import { looksLikeAssetTarget } from '@electron/services/workspace/markdown/media.js'
+} from '@electron/services/workspace/markdown/ast'
+import { looksLikeAssetTarget } from '@electron/services/workspace/markdown/media'
 import {
   createMarkdownAsset,
   createMarkdownLink,
-} from '@electron/services/workspace/markdown/targets.js'
-import { normalizeReferenceLabel } from '@electron/services/workspace/markdown/utils.js'
+} from '@electron/services/workspace/markdown/targets'
+import { normalizeReferenceLabel } from '@electron/services/workspace/markdown/utils'
 
 type ReferenceDefinition = {
   target: string

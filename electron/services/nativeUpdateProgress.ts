@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 
-import type { UpdateEventPayload } from '@electron/types.js'
+import type { UpdateEventPayload } from '@electron/types'
 
 export const applyWindowUpdateProgress = (
   window: Pick<BrowserWindow, 'isDestroyed' | 'setProgressBar'>,

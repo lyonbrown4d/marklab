@@ -4,13 +4,13 @@ import type { App, Shell } from 'electron'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsGraph } from '@electron/services/workspace/types.js'
-import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import type { FsGraph } from '@electron/services/workspace/types'
+import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
 
-vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient.js', () => ({
+vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient', () => ({
   WorkspaceAnalysisWorkerClient: class {
     run() {
       return Promise.resolve({ files: [], paths: [], asset_paths: [] })

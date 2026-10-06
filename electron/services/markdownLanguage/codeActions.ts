@@ -1,10 +1,10 @@
-import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
-import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets'
+import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import type {
   CompletionRequest,
   MarkdownLanguageCodeAction,
-} from '@electron/services/markdownLanguage/types.js'
-import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
+} from '@electron/services/markdownLanguage/types'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext'
 
 type IndexedHeading = FsWorkspaceIndex['files'][number]['headings'][number]
 

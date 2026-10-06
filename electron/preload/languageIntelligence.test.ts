@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence'
 
 describe('language intelligence preload surface', () => {
   it('uses a dedicated diagnostics channel without sending document content', async () => {

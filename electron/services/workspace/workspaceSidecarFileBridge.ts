@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { KnowledgeWorkspacePathMutation } from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
-import { fileLabel } from '@electron/services/workspace/markdown.js'
-import type { Logger } from '@electron/services/logger.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { KnowledgeWorkspacePathMutation } from '@electron/services/knowledgeEngine/knowledgeEngineTypes'
+import { fileLabel } from '@electron/services/workspace/markdown'
+import type { Logger } from '@electron/services/logger'
 import type {
   FsGraph,
   FsMarkdownDiagnostic,
@@ -11,7 +11,7 @@ import type {
   FsRootInfo,
   FsSnapshot,
   FsStateData,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 
 type WorkspaceSidecarRuntime = { workspaceId: string; workspaceRoot: string }
 

@@ -4,10 +4,7 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import {
-  collectOpenTargetCandidates,
-  resolveExistingOpenTargets,
-} from '@electron/main/openTargets.js'
+import { collectOpenTargetCandidates, resolveExistingOpenTargets } from '@electron/main/openTargets'
 
 const tempRoots: string[] = []
 

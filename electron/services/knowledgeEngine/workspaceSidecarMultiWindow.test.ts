@@ -4,9 +4,9 @@ import path from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient.js'
-import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
-import type { Logger } from '@electron/services/logger.js'
+import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient'
+import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager'
+import type { Logger } from '@electron/services/logger'
 
 describe('WorkspaceSidecarManager multi-window isolation', () => {
   it('keeps another window searchable when one workspace runtime closes', async () => {

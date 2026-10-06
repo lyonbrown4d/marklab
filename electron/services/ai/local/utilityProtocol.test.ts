@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   isLocalAiUtilityRequest,
   isLocalAiUtilityResponse,
-} from '@electron/services/ai/local/utilityProtocol.js'
+} from '@electron/services/ai/local/utilityProtocol'
 
 describe('local AI utility protocol', () => {
   it('accepts only bounded protocol message shapes', () => {

@@ -1,8 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import type {
   FsBufferStatus,
   FsEntry,
@@ -11,27 +11,27 @@ import type {
   FsSnapshot,
   FsStateData,
   FsWorkspaceIndex,
-} from '@electron/services/workspace/types.js'
-import { WorkspaceMutationService } from '@electron/services/workspace/workspaceMutationService.js'
-import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences.js'
-import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers.js'
-import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations.js'
-import { workspaceTerminalCwd } from '@electron/services/workspace/workspaceAssetAccess.js'
-import { toPathMetadataResult } from '@electron/services/workspace/workspaceNodePathMetadata.js'
-import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata.js'
-import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile.js'
+} from '@electron/services/workspace/types'
+import { WorkspaceMutationService } from '@electron/services/workspace/workspaceMutationService'
+import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences'
+import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers'
+import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations'
+import { workspaceTerminalCwd } from '@electron/services/workspace/workspaceAssetAccess'
+import { toPathMetadataResult } from '@electron/services/workspace/workspaceNodePathMetadata'
+import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata'
+import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile'
 import {
   selectWorkspaceRoot,
   selectSingleFileWorkspace,
-} from '@electron/services/workspace/workspaceRootSelection.js'
+} from '@electron/services/workspace/workspaceRootSelection'
 import {
   trySidecarPathMutation,
   trySidecarReadFile,
   trySidecarSnapshot,
   trySidecarWriteFile,
-} from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
-import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview.js'
+} from '@electron/services/workspace/workspaceSidecarFileBridge'
+import { stringArg } from '@electron/services/workspace/workspaceUtils'
+import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 
 export class WorkspaceFileService extends WorkspaceMutationService {

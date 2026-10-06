@@ -8,8 +8,8 @@ import {
   createMarklabMcpServer,
   MARKLAB_SEARCH_WORKSPACE_TOOL,
   MARKLAB_WORKSPACE_STATUS_TOOL,
-} from '@electron/mcp/marklabMcpServer.js'
-import type { MarklabMcpWorkspaceAdapter } from '@electron/mcp/marklabMcpTypes.js'
+} from '@electron/mcp/marklabMcpServer'
+import type { MarklabMcpWorkspaceAdapter } from '@electron/mcp/marklabMcpTypes'
 
 type JsonRpcResponse = {
   id: number

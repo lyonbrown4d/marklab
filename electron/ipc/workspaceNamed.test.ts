@@ -2,8 +2,8 @@ import path from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed'
 
 describe('named workspace IPC', () => {
   it('routes each request through the workspace owned by the sender', async () => {

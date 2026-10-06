@@ -1,13 +1,13 @@
 import { EventEmitter } from 'node:events'
 import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
-import { createWindowLifecycle } from '@electron/main/windowLifecycle.js'
+import { createWindowLifecycle } from '@electron/main/windowLifecycle'
 import {
   WorkspaceMutationGate,
   WorkspaceShutdownBarrier,
-} from '@electron/services/workspace/workspaceShutdownBarrier.js'
+} from '@electron/services/workspace/workspaceShutdownBarrier'
 
-vi.mock('@electron/windowPool.js', () => ({ createMarklabWindowPool: vi.fn() }))
+vi.mock('@electron/windowPool', () => ({ createMarklabWindowPool: vi.fn() }))
 
 const createHarness = () => {
   const gate = new WorkspaceMutationGate()
@@ -42,6 +42,7 @@ const createHarness = () => {
   const requestRendererFlush = vi.fn(async (window: BrowserWindow): Promise<void> => {
     void window
   })
+  const persistWindowState = vi.fn(async () => undefined)
   const logger = {
     child: vi.fn(),
     debug: vi.fn(),
@@ -53,6 +54,7 @@ const createHarness = () => {
   const options = {
     getContainer: () => ({ cradle: { logger, webTabManager, workspaceRegistry: workspace } }),
     getNativeIpc: () => nativeIpc,
+    persistWindowState,
     getWindows: () => null,
     setWindows: vi.fn(),
   } as unknown as Parameters<typeof createWindowLifecycle>[0]
@@ -73,6 +75,7 @@ const createHarness = () => {
     gate,
     lifecycle,
     logger,
+    persistWindowState,
     requestRendererFlush,
     save,
     webTabManager,
@@ -106,6 +109,53 @@ describe('window persistence shutdown barrier', () => {
     await expect(gate.runAsync('late write', async () => undefined)).rejects.toMatchObject({
       code: 'workspace_mutation_frozen',
     })
+  })
+
+  it('awaits application shutdown once and lets the recursive quit pass through', async () => {
+    const { lifecycle } = createHarness()
+    let finishShutdown!: () => void
+    const shutdown = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishShutdown = resolve
+        }),
+    )
+    const continueQuit = vi.fn()
+    const firstEvent = { preventDefault: vi.fn() }
+    const repeatedEvent = { preventDefault: vi.fn() }
+
+    lifecycle.handleBeforeQuit(firstEvent, continueQuit, shutdown)
+    lifecycle.handleBeforeQuit(repeatedEvent, continueQuit, shutdown)
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
+    expect(firstEvent.preventDefault).toHaveBeenCalledOnce()
+    expect(repeatedEvent.preventDefault).toHaveBeenCalledOnce()
+    expect(continueQuit).not.toHaveBeenCalled()
+
+    finishShutdown()
+    await vi.waitFor(() => expect(continueQuit).toHaveBeenCalledOnce())
+
+    const recursiveEvent = { preventDefault: vi.fn() }
+    lifecycle.handleBeforeQuit(recursiveEvent, continueQuit, shutdown)
+    expect(recursiveEvent.preventDefault).not.toHaveBeenCalled()
+    expect(shutdown).toHaveBeenCalledOnce()
+    expect(continueQuit).toHaveBeenCalledOnce()
+  })
+
+  it('persists managed window state before application services shut down', async () => {
+    const { lifecycle, persistWindowState, window } = createHarness()
+    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    const order: string[] = []
+    persistWindowState.mockImplementationOnce(async () => {
+      order.push('window-state')
+    })
+    const shutdown = vi.fn(async () => {
+      order.push('shutdown')
+    })
+
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, vi.fn(), shutdown)
+
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
+    expect(order).toEqual(['window-state', 'shutdown'])
   })
 
   it('cancels quit on a real save failure, unfreezes, and permits a later retry', async () => {

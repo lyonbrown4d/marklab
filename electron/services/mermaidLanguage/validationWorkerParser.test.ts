@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser.js'
+import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser'
 
 describe('validateWithOfficialMermaidParser', () => {
   it('accepts valid syntax with the official Mermaid parser', async () => {

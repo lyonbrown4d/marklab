@@ -1,6 +1,6 @@
 import type * as Electron from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TerminalService } from '@electron/services/terminal/service.js'
+import { TerminalService } from '@electron/services/terminal/service'
 
 type DataHandler = (data: string) => void
 type ExitHandler = (event: { exitCode?: number | null; signal?: string | number | null }) => void

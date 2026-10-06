@@ -16,7 +16,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { installElectronE2eRuntimeFlags } from '@electron/main/e2eRuntime.js'
+import { installElectronE2eRuntimeFlags } from '@electron/main/e2eRuntime'
 
 const originalMarklabE2e = process.env.MARKLAB_E2E
 

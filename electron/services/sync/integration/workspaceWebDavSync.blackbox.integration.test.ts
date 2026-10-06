@@ -4,11 +4,12 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore.js'
-import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
-import { startWebDavServer } from '@electron/services/sync/integration/webDavServerFixture.js'
-import type { WebDavProfile } from '@electron/services/sync/webdav/types.js'
-import { parseSyncManifest } from '@electron/services/sync/webdavSync/manifest.js'
+import { LocalDatabaseService } from '@electron/database/localDatabaseService'
+import { FileLocalSyncStateStore } from '@electron/services/sync/webdavSync/stateStore'
+import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
+import { startWebDavServer } from '@electron/services/sync/integration/webDavServerFixture'
+import type { WebDavProfile } from '@electron/services/sync/webdav/types'
+import { parseSyncManifest } from '@electron/services/sync/webdavSync/manifest'
 
 const temporaryRoots: string[] = []
 const serverClosers: Array<() => Promise<void>> = []
@@ -100,6 +101,9 @@ const createWorkspace = async (name: string, endpoint: string, password = 'secre
     rootInfo: () => ({ kind: 'external' as const, path: root }),
     runExternalPathMutation: async <T>(_paths: string[], work: () => Promise<T>) => work(),
   }
+  const localDatabase = new LocalDatabaseService({ userDataPath: userData })
+  await localDatabase.initialize()
+  serverClosers.push(() => localDatabase.close())
   const service = new WorkspaceWebDavSyncService({
     configStore: {
       getChannels: async () => ({
@@ -117,7 +121,7 @@ const createWorkspace = async (name: string, endpoint: string, password = 'secre
       get: async () => profile,
       resolvePassword: async () => password,
     } as never,
-    stateStore: new FileLocalSyncStateStore(userData),
+    stateStore: new FileLocalSyncStateStore(localDatabase),
   })
   return { root, service, workspace }
 }

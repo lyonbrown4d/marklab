@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols.js'
+import { getMarkdownDocumentSymbols } from '@electron/services/markdownLanguage/documentSymbols'
 
 describe('getMarkdownDocumentSymbols', () => {
   it('builds nested document symbols from markdown headings', () => {

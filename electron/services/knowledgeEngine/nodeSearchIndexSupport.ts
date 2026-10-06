@@ -1,57 +1,6 @@
-import MiniSearch, { type SearchResult } from 'minisearch'
-
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
-import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
-import { createMiniSearch } from '@electron/services/knowledgeEngine/nodeSearchConfig.js'
-
-export type IndexedCandidate = {
-  matches: string[]
-  score: number
-}
-
-export const indexedSearchCandidates = (
-  miniSearch: MiniSearch<WorkspaceSearchDocument>,
-  query: string,
-  searchOptions: Parameters<MiniSearch<WorkspaceSearchDocument>['search']>[1],
-): Map<string, IndexedCandidate> => {
-  const candidates = new Map<string, IndexedCandidate>()
-  for (const result of miniSearch.search(query, searchOptions)) {
-    const documentPath = searchResultPath(result)
-    if (!documentPath) continue
-    candidates.set(documentPath, {
-      matches: Object.keys(result.match),
-      score: result.score,
-    })
-  }
-  return candidates
-}
-
-export const applyIncrementalIndexChanges = (
-  miniSearch: MiniSearch<WorkspaceSearchDocument>,
-  previous: Map<string, WorkspaceSearchDocument>,
-  current: Map<string, WorkspaceSearchDocument>,
-): void => {
-  for (const [documentPath, document] of previous) {
-    const next = current.get(documentPath)
-    if (!next) {
-      miniSearch.discard(documentPath)
-    } else if (!sameSearchDocument(document, next)) {
-      miniSearch.replace(next)
-    }
-  }
-  for (const [documentPath, document] of current) {
-    if (!previous.has(documentPath)) miniSearch.add(document)
-  }
-}
-
-export const rebuildMiniSearch = (
-  documents: Iterable<WorkspaceSearchDocument>,
-): MiniSearch<WorkspaceSearchDocument> => {
-  const next = createMiniSearch()
-  next.addAll([...documents])
-  return next
-}
+import type { FsSearchResult } from '@electron/services/workspace/types'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch'
 
 export const normalizeSearchDocument = (
   document: WorkspaceSearchDocument,
@@ -63,39 +12,8 @@ export const normalizeSearchDocument = (
   return { ...document, path: normalizedPath }
 }
 
-export const storeSearchDocument = (
-  documents: Map<string, WorkspaceSearchDocument>,
-  document: WorkspaceSearchDocument,
-): void => {
-  const normalized = normalizeSearchDocument(document)
-  documents.set(normalized.path, normalized)
-}
-
-export const removeSearchPathPrefix = (
-  documents: Map<string, WorkspaceSearchDocument>,
-  prefix: string,
-): void => {
-  const normalizedPrefix = normalizeSearchPath(prefix)
-  for (const documentPath of documents.keys()) {
-    if (pathMatchesInclude(documentPath, normalizedPrefix)) documents.delete(documentPath)
-  }
-}
-
-export const sameSearchDocument = (
-  left: WorkspaceSearchDocument,
-  right: WorkspaceSearchDocument,
-): boolean => left.title === right.title && left.content === right.content
-
-export const serializedIndexBytes = (serializedIndex: unknown): number =>
-  Buffer.byteLength(JSON.stringify(serializedIndex))
-
 export const searchErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
-
-export const searchResultPath = (result: SearchResult): string | null => {
-  const pathValue = typeof result.path === 'string' ? result.path : result.id
-  return typeof pathValue === 'string' ? normalizeSearchPath(pathValue) : null
-}
 
 export const normalizeSearchPath = (value: string): string => {
   let normalized = value

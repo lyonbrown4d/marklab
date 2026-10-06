@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { registerWorkspaceCommandsIpc } from '@electron/ipc/workspaceCommands.js'
+import { registerWorkspaceCommandsIpc } from '@electron/ipc/workspaceCommands'
 
 describe('workspace local history IPC', () => {
   it('uses the injected application-scoped local history service', async () => {
@@ -22,6 +22,7 @@ describe('workspace local history IPC', () => {
 
     registerWorkspaceCommandsIpc(ipcMain as never, {
       exportService: {} as never,
+      graphLayoutStore: {} as never,
       localHistoryService: localHistoryService as never,
       logger: logger as never,
       workspaceRegistry: workspaceRegistry as never,

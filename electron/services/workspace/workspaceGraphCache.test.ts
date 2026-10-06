@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { FsGraph } from '@electron/services/workspace/types.js'
-import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache.js'
+import type { FsGraph } from '@electron/services/workspace/types'
+import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache'
 
 const graph: FsGraph = { edges: [], mode: 'mindmap', nodes: [] }
 const knownPaths = (path: string) => ({ paths: [path], assetPaths: [] })

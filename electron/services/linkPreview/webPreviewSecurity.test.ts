@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { installWebPreviewSessionSecurity } from '@electron/services/linkPreview/webPreviewSecurity.js'
+import { installWebPreviewSessionSecurity } from '@electron/services/linkPreview/webPreviewSecurity'
 
 describe('web preview capture session security', () => {
   it('denies browser capabilities and downloads', () => {

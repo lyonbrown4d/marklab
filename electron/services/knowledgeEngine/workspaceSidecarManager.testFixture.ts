@@ -6,9 +6,9 @@ import { vi } from 'vitest'
 import {
   WorkspaceSidecarManager,
   type WorkspaceSidecarClient,
-} from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { WorkspaceSidecarProcess } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarManager'
+import type { Logger } from '@electron/services/logger'
+import type { WorkspaceSidecarProcess } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 
 export const createManager = () => {
   const child = createChild()

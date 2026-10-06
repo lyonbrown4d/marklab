@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createAiCommandHandlers, registerAiIpc } from '@electron/ipc/ai.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
+import { createAiCommandHandlers, registerAiIpc } from '@electron/ipc/ai'
+import type { AiServiceContract } from '@electron/services/ai/types'
 
 describe('AI IPC commands', () => {
   it('forwards provider CRUD and generation payloads without widening the contract', async () => {

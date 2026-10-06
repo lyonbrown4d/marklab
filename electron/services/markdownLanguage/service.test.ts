@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 
 const workspaceIndex = {
   files: [

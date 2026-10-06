@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { GitService } from '@electron/services/git/service.js'
-import { readWorkspaceGitSummary } from '@electron/services/sync/workspaceGitSummary.js'
+import type { GitService } from '@electron/services/git/service'
+import { readWorkspaceGitSummary } from '@electron/services/sync/workspaceGitSummary'
 
 describe('readWorkspaceGitSummary', () => {
   it('returns a structured non-repository result without requesting repository status', async () => {

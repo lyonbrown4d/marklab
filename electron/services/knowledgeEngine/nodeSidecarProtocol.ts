@@ -1,4 +1,4 @@
-import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 
 export type NodeSidecarMethod = keyof WorkspaceSidecarClient
 

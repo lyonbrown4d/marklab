@@ -4,12 +4,16 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { NodeMcpWorkspaceAdapter } from '@electron/mcp/nodeMcpWorkspaceAdapter.js'
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
+import { NodeMcpWorkspaceAdapter } from '@electron/mcp/nodeMcpWorkspaceAdapter'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
 
 const temporaryRoots: string[] = []
+const adapters: NodeMcpWorkspaceAdapter[] = []
+const indexes: NodeSearchIndex[] = []
 
 afterEach(async () => {
+  await Promise.all(adapters.splice(0).map((adapter) => adapter.close()))
+  await Promise.all(indexes.splice(0).map((index) => index.close()))
   await Promise.all(
     temporaryRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })),
   )
@@ -26,6 +30,7 @@ describe('NodeMcpWorkspaceAdapter', () => {
       fs.mkdir(engineDataDir, { recursive: true }),
     ])
     const index = new NodeSearchIndex(engineDataDir)
+    indexes.push(index)
     await index.rebuild([
       {
         content: 'alpha context lives here',
@@ -33,7 +38,10 @@ describe('NodeMcpWorkspaceAdapter', () => {
         title: 'Project',
       },
     ])
+    await index.close()
+    indexes.splice(indexes.indexOf(index), 1)
     const adapter = await NodeMcpWorkspaceAdapter.open({ engineDataDir, workspaceRoot })
+    adapters.push(adapter)
 
     const result = await adapter.searchWorkspace('alpha', 5)
     const status = await adapter.getWorkspaceStatus()
@@ -52,7 +60,7 @@ describe('NodeMcpWorkspaceAdapter', () => {
     expect(status).toMatchObject({
       engineDataDir: await fs.realpath(engineDataDir),
       health: { ok: true, searchableDocuments: '1' },
-      index: { ready: true, searchIndex: 'node-json' },
+      index: { ready: true, searchIndex: 'sqlite-fts5' },
       workspaceRoot: await fs.realpath(workspaceRoot),
     })
     expect(Number(status.storage.searchIndexBytes)).toBeGreaterThan(0)
@@ -89,18 +97,20 @@ describe('NodeMcpWorkspaceAdapter', () => {
         fs.mkdir(directory, { recursive: true }),
       ),
     )
+    const indexA = new NodeSearchIndex(engineA)
+    const indexB = new NodeSearchIndex(engineB)
+    indexes.push(indexA, indexB)
     await Promise.all([
-      new NodeSearchIndex(engineA).rebuild([
-        { content: 'alpha only', path: 'alpha.md', title: 'Alpha' },
-      ]),
-      new NodeSearchIndex(engineB).rebuild([
-        { content: 'beta only', path: 'beta.md', title: 'Beta' },
-      ]),
+      indexA.rebuild([{ content: 'alpha only', path: 'alpha.md', title: 'Alpha' }]),
+      indexB.rebuild([{ content: 'beta only', path: 'beta.md', title: 'Beta' }]),
     ])
+    await Promise.all([indexA.close(), indexB.close()])
+    indexes.length = 0
     const [adapterA, adapterB] = await Promise.all([
       NodeMcpWorkspaceAdapter.open({ engineDataDir: engineA, workspaceRoot: workspaceA }),
       NodeMcpWorkspaceAdapter.open({ engineDataDir: engineB, workspaceRoot: workspaceB }),
     ])
+    adapters.push(adapterA, adapterB)
 
     const [alphaInA, alphaInB, statusA, statusB] = await Promise.all([
       adapterA.searchWorkspace('alpha', 10),

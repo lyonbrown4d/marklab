@@ -1,10 +1,10 @@
 import { SymbolKind } from 'vscode-languageserver-types'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import { charLength } from '@electron/services/workspace/markdown/text.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
+import { charLength } from '@electron/services/workspace/markdown/text'
 import type {
   DocumentSymbolsRequest,
   MarkdownLanguageDocumentSymbol,
-} from '@electron/services/markdownLanguage/types.js'
+} from '@electron/services/markdownLanguage/types'
 
 export const getMarkdownDocumentSymbols = ({
   content,

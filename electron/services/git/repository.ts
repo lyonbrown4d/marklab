@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { GitOperationError } from '@electron/services/git/errors.js'
-import { runGit, validateRootPath } from '@electron/services/git/helpers.js'
+import { GitOperationError } from '@electron/services/git/errors'
+import { runGit, validateRootPath } from '@electron/services/git/helpers'
 
 const UNSAFE_CONFIG_PATTERNS = [
   /^alias\./,

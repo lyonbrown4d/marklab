@@ -1,8 +1,8 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { WebTabManager } from '@electron/services/webTabs/webTabManager'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import {
   webTabActivateRequestSchema,
   webTabIdRequestSchema,
@@ -10,7 +10,7 @@ import {
   webTabSetBoundsRequestSchema,
   webTabShortcutBindingsRequestSchema,
   type WebTabActionResult,
-} from '@/types/webTabs.js'
+} from '@/types/webTabs'
 
 type WebTabsIpcDependencies = {
   BrowserWindow: typeof BrowserWindow

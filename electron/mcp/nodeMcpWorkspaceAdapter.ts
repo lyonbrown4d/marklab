@@ -1,23 +1,17 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
 import type {
   MarklabMcpSearchResultSet,
   MarklabMcpWorkspaceAdapter,
   MarklabMcpWorkspaceStatus,
-} from '@electron/mcp/marklabMcpTypes.js'
+} from '@electron/mcp/marklabMcpTypes'
 
 type NodeMcpWorkspaceAdapterOptions = {
   workspaceRoot: string
   engineDataDir: string
 }
-
-const SEARCH_SNAPSHOT_FILES = [
-  'search-index-v2.json',
-  'search-index-v2.backup.json',
-  'search-index-v1.json',
-]
 
 export class NodeMcpWorkspaceAdapter implements MarklabMcpWorkspaceAdapter {
   private readonly searchIndex: NodeSearchIndex
@@ -36,8 +30,9 @@ export class NodeMcpWorkspaceAdapter implements MarklabMcpWorkspaceAdapter {
   }
 
   async getWorkspaceStatus(): Promise<MarklabMcpWorkspaceStatus> {
-    const documentCount = String(await this.searchIndex.getSize())
-    const searchIndexBytes = String(await totalSnapshotBytes(this.engineDataDir))
+    const stats = await this.searchIndex.getStats()
+    const documentCount = String(stats.documentCount)
+    const searchIndexBytes = String(stats.indexBytes)
     return {
       workspaceRoot: this.workspaceRoot,
       engineDataDir: this.engineDataDir,
@@ -50,15 +45,15 @@ export class NodeMcpWorkspaceAdapter implements MarklabMcpWorkspaceAdapter {
         warnings: [],
       },
       index: {
-        searchIndex: 'node-json',
+        searchIndex: 'sqlite-fts5',
         ready: true,
         metadataDocuments: documentCount,
         searchableDocuments: documentCount,
         pendingOutboxEvents: '0',
       },
       storage: {
-        metadataStore: 'node-json',
-        searchIndex: 'node-json',
+        metadataStore: 'sqlite',
+        searchIndex: 'sqlite-fts5',
         metadataBytes: '0',
         searchIndexBytes,
         totalBytes: searchIndexBytes,
@@ -91,6 +86,10 @@ export class NodeMcpWorkspaceAdapter implements MarklabMcpWorkspaceAdapter {
       results,
     }
   }
+
+  close(): Promise<void> {
+    return this.searchIndex.close()
+  }
 }
 
 const canonicalDirectory = async (input: string, label: string): Promise<string> => {
@@ -99,20 +98,3 @@ const canonicalDirectory = async (input: string, label: string): Promise<string>
   if (!metadata.isDirectory()) throw new Error(`MarkLab MCP ${label} must be a directory.`)
   return canonicalPath
 }
-
-const totalSnapshotBytes = async (engineDataDir: string): Promise<number> => {
-  const sizes = await Promise.all(
-    SEARCH_SNAPSHOT_FILES.map(async (fileName) => {
-      try {
-        return (await fs.stat(path.join(engineDataDir, fileName))).size
-      } catch (error) {
-        if (isErrorCode(error, 'ENOENT')) return 0
-        throw error
-      }
-    }),
-  )
-  return sizes.reduce((total, size) => total + size, 0)
-}
-
-const isErrorCode = (error: unknown, code: string): boolean =>
-  error instanceof Error && 'code' in error && error.code === code

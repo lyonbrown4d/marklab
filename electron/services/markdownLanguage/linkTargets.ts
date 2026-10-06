@@ -1,4 +1,4 @@
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 const DOCUMENT_LABEL_EXTENSIONS = /\.(md|markdown|ics)$/i

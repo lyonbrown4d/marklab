@@ -1,136 +1,104 @@
-import path from 'node:path'
-
-import MiniSearch from 'minisearch'
-
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
-} from '@electron/services/workspace/workspaceSearchTypes.js'
+} from '@electron/services/workspace/workspaceSearchTypes'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
-} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
-import { searchLimitValue } from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+} from '@electron/services/knowledgeEngine/knowledgeSearch'
+import { searchLimitValue } from '@electron/services/knowledgeEngine/knowledgeSearch'
 import {
-  createMiniSearch,
-  nodeSearchMiniSearchOptions,
-  nodeSearchQueryOptions,
-} from '@electron/services/knowledgeEngine/nodeSearchConfig.js'
-import { NodeSearchSnapshot } from '@electron/services/knowledgeEngine/nodeSearchSnapshot.js'
-import {
-  documentContainsAllTerms,
-  queryTerms,
-  resultForSearchDocument,
-} from '@electron/services/knowledgeEngine/nodeSearchText.js'
-import {
-  buildNodeSearchIndex,
+  buildNodeSearchDocuments,
   type NodeSearchBuildOptions,
-} from '@electron/services/knowledgeEngine/nodeSearchBuild.js'
+} from '@electron/services/knowledgeEngine/nodeSearchBuild'
+import { NodeSearchDatabase } from '@electron/services/knowledgeEngine/nodeSearchDatabase'
 import {
-  applyIncrementalIndexChanges,
   includeDocumentPath,
-  indexedSearchCandidates,
   normalizeSearchDocument,
   normalizeSearchOffset,
   normalizeSearchPath,
-  rebuildMiniSearch,
-  removeSearchPathPrefix,
   searchErrorMessage,
-  serializedIndexBytes,
-  storeSearchDocument,
   sortSearchResults,
-} from '@electron/services/knowledgeEngine/nodeSearchIndexSupport.js'
+} from '@electron/services/knowledgeEngine/nodeSearchIndexSupport'
 import {
   emptyNodeSearchIndexStats,
   type NodeSearchIndexStats,
-} from '@electron/services/knowledgeEngine/nodeSearchStats.js'
+} from '@electron/services/knowledgeEngine/nodeSearchStats'
+import {
+  queryTerms,
+  resultForSearchDocument,
+} from '@electron/services/knowledgeEngine/nodeSearchText'
 
-export type { NodeSearchIndexStats } from '@electron/services/knowledgeEngine/nodeSearchStats.js'
+export type { NodeSearchIndexStats } from '@electron/services/knowledgeEngine/nodeSearchStats'
 
 export class NodeSearchIndex {
-  private documents = new Map<string, WorkspaceSearchDocument>()
-  private miniSearch = createMiniSearch()
-  private readonly snapshot?: NodeSearchSnapshot
+  private closePromise?: Promise<void>
+  private closed = false
+  private database: NodeSearchDatabase | null = null
   private loadPromise?: Promise<void>
   private mutationQueue: Promise<void> = Promise.resolve()
+  private readonly readOperations = new Set<Promise<unknown>>()
   private rebuildGeneration = 0
-  private activeBuildAbortController: AbortController | null = null
   private stats: NodeSearchIndexStats = emptyNodeSearchIndexStats()
 
   constructor(
-    storageDirectory?: string,
+    private readonly storageDirectory?: string,
     private readonly workspaceIdentity = '',
     private readonly buildOptions: NodeSearchBuildOptions = {},
-  ) {
-    this.snapshot = storageDirectory
-      ? new NodeSearchSnapshot(path.resolve(storageDirectory), workspaceIdentity)
-      : undefined
-  }
+  ) {}
 
   get size(): number {
-    return this.documents.size
+    return this.stats.documentCount
   }
 
-  async getSize(): Promise<number> {
-    await this.readyForRead()
-    return this.documents.size
+  getSize(): Promise<number> {
+    return this.runRead(async () => {
+      await this.readyForRead()
+      return this.stats.documentCount
+    })
   }
 
   async hasDocuments(): Promise<boolean> {
     return (await this.getSize()) > 0
   }
 
-  async getStats(): Promise<NodeSearchIndexStats> {
-    await this.ensureLoaded()
-    return { ...this.stats, documentCount: this.documents.size }
+  getStats(): Promise<NodeSearchIndexStats> {
+    return this.runRead(async () => {
+      await this.readyForRead()
+      return { ...this.stats }
+    })
   }
 
   cancelPendingRebuild(): void {
     this.rebuildGeneration += 1
-    this.activeBuildAbortController?.abort()
     this.stats = { ...this.stats, building: false }
   }
 
   rebuild(documents: WorkspaceSearchDocument[]): Promise<void> {
-    this.activeBuildAbortController?.abort()
+    if (this.closed) return Promise.reject(this.closedError())
     const generation = ++this.rebuildGeneration
-    const abortController = new AbortController()
-    this.stats = {
-      ...this.stats,
-      building: true,
-      lastBuildError: null,
-      lastError: null,
-    }
+    this.stats = { ...this.stats, building: true, lastBuildError: null, lastError: null }
     const operation = this.mutationQueue.then(async () => {
       const startedAt = performance.now()
       try {
         await this.ensureLoaded()
-        if (generation !== this.rebuildGeneration) return
-        this.activeBuildAbortController = abortController
-        const built = await buildNodeSearchIndex(
+        const normalized = await buildNodeSearchDocuments(
           documents,
           normalizeSearchDocument,
-          {
-            ...this.buildOptions,
-            abortSignal: abortController.signal,
-            workspaceIdentity: this.workspaceIdentity,
-          },
+          this.buildOptions,
           () => generation === this.rebuildGeneration,
         )
-        if (!built) return
-        const serializedIndex = built.serializedIndex ?? built.miniSearch.toJSON()
-        const persisted = await this.persist(
-          built.documents,
-          serializedIndex,
+        if (!normalized || generation !== this.rebuildGeneration) return
+        const persisted = await this.getDatabase().replaceAll(
+          normalized,
           () => generation === this.rebuildGeneration,
         )
         if (!persisted.committed || generation !== this.rebuildGeneration) return
-        this.documents = built.documents
-        this.miniSearch = built.miniSearch
+        const databaseStats = await this.getDatabase().stats()
         this.stats = {
           building: false,
-          documentCount: built.documents.size,
-          indexBytes: built.indexBytes ?? serializedIndexBytes(serializedIndex),
+          documentCount: normalized.length,
+          indexBytes: databaseStats.indexBytes,
           lastBuildDurationMs: performance.now() - startedAt,
           lastBuildError: null,
           lastError: null,
@@ -148,10 +116,6 @@ export class NodeSearchIndex {
           }
         }
         throw error
-      } finally {
-        if (this.activeBuildAbortController === abortController) {
-          this.activeBuildAbortController = null
-        }
       }
     })
     this.mutationQueue = operation.catch(() => undefined)
@@ -163,11 +127,7 @@ export class NodeSearchIndex {
   }
 
   remove(documentPath: string): Promise<void> {
-    return this.applyBatch({
-      removeDocuments: [documentPath],
-      removePrefixes: [],
-      upserts: [],
-    })
+    return this.applyBatch({ removeDocuments: [documentPath], removePrefixes: [], upserts: [] })
   }
 
   removePrefix(prefix: string): Promise<void> {
@@ -175,44 +135,43 @@ export class NodeSearchIndex {
   }
 
   applyBatch(batch: WorkspaceSearchMutationBatch): Promise<void> {
-    return this.mutate(() => {
-      for (const documentPath of batch.removeDocuments) {
-        this.documents.delete(normalizeSearchPath(documentPath))
-      }
-      for (const prefix of batch.removePrefixes) removeSearchPathPrefix(this.documents, prefix)
-      for (const document of batch.upserts) storeSearchDocument(this.documents, document)
-    })
+    return this.mutate(batch)
   }
 
-  async search(
+  search(query: string, options: KnowledgeSearchOptions = {}): Promise<KnowledgeSearchResultSet> {
+    return this.runRead(() => this.performSearch(query, options))
+  }
+
+  private async performSearch(
     query: string,
-    options: KnowledgeSearchOptions = {},
+    options: KnowledgeSearchOptions,
   ): Promise<KnowledgeSearchResultSet> {
+    this.assertOpen()
     const startedAt = performance.now()
     await this.readyForRead()
     const terms = queryTerms(query)
     const limit = searchLimitValue(options.limit)
     const offset = normalizeSearchOffset(options.offset)
     if (terms.length === 0) return { results: [], totalHits: 0 }
-
     const includes = (options.includePaths ?? []).map(normalizeSearchPath)
-    const candidates = indexedSearchCandidates(this.miniSearch, query, nodeSearchQueryOptions())
-    for (const document of this.documents.values()) {
-      if (documentContainsAllTerms(document, terms) && !candidates.has(document.path)) {
-        candidates.set(document.path, { matches: terms, score: 0 })
-      }
+    const retained = []
+    let totalHits = 0
+    const retainCount = offset + limit
+    for await (const batch of this.getDatabase().searchBatches(terms)) {
+      const matches = batch
+        .filter((document) => includeDocumentPath(document.path, includes))
+        .map((document) =>
+          resultForSearchDocument(document, query, document.score, document.indexedMatches),
+        )
+      totalHits += matches.length
+      retained.push(...matches)
+      sortSearchResults(retained, options.order)
+      if (retained.length > retainCount) retained.length = retainCount
     }
-    const matches = [...candidates.entries()].flatMap(([documentPath, candidate]) => {
-      const document = this.documents.get(documentPath)
-      if (!document || !includeDocumentPath(document.path, includes)) return []
-      return [resultForSearchDocument(document, query, candidate.score, candidate.matches)]
-    })
-    sortSearchResults(matches, options.order)
-    const results = matches.slice(offset, offset + limit)
-
+    const results = retained.slice(offset, offset + limit)
     return {
       results,
-      totalHits: matches.length,
+      totalHits,
       ...(options.includeDiagnostics
         ? {
             diagnostics: {
@@ -220,11 +179,18 @@ export class NodeSearchIndex {
               limit,
               offset,
               returnedHits: results.length,
-              totalHits: matches.length,
+              totalHits,
             },
           }
         : {}),
     }
+  }
+
+  async close(): Promise<void> {
+    if (this.closePromise) return this.closePromise
+    this.closed = true
+    this.closePromise = this.finishClose()
+    return this.closePromise
   }
 
   private async readyForRead(): Promise<void> {
@@ -233,73 +199,36 @@ export class NodeSearchIndex {
   }
 
   private ensureLoaded(): Promise<void> {
-    this.loadPromise ??= this.load()
+    this.loadPromise ??= Promise.resolve().then(async () => {
+      this.database = new NodeSearchDatabase(this.storageDirectory, this.workspaceIdentity)
+      await this.database.initialize()
+      const databaseStats = await this.database.stats()
+      this.stats = {
+        ...this.stats,
+        documentCount: await this.database.count(),
+        indexBytes: databaseStats.indexBytes,
+        lastError: null,
+        updatedAt: databaseStats.updatedAt,
+      }
+    })
     return this.loadPromise
   }
 
-  private async load(): Promise<void> {
-    if (!this.snapshot) return
-    const loaded = await this.snapshot.load()
-    for (const document of loaded.documents) storeSearchDocument(this.documents, document)
-    this.stats = {
-      ...this.stats,
-      documentCount: this.documents.size,
-      lastError: loaded.recoveryError ?? null,
-      updatedAt: loaded.updatedAt ?? null,
-    }
-    if (loaded.serializedIndex && this.tryRestoreMiniSearch(loaded.serializedIndex)) {
-      this.stats = {
-        ...this.stats,
-        indexBytes: serializedIndexBytes(loaded.serializedIndex),
-      }
-      return
-    }
-    const built = await buildNodeSearchIndex(
-      [...this.documents.values()],
-      normalizeSearchDocument,
-      { ...this.buildOptions, workspaceIdentity: this.workspaceIdentity },
-      () => true,
-    )
-    if (built) this.miniSearch = built.miniSearch
-    this.stats = {
-      ...this.stats,
-      indexBytes: serializedIndexBytes(this.miniSearch.toJSON()),
-    }
-  }
-
-  private tryRestoreMiniSearch(serializedIndex: unknown): boolean {
-    try {
-      const restored = MiniSearch.loadJSON<WorkspaceSearchDocument>(
-        JSON.stringify(serializedIndex),
-        nodeSearchMiniSearchOptions(),
-      )
-      if (restored.documentCount !== this.documents.size) return false
-      this.miniSearch = restored
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  private mutate(change: () => void): Promise<void> {
+  private mutate(batch: WorkspaceSearchMutationBatch): Promise<void> {
+    if (this.closed) return Promise.reject(this.closedError())
     const operation = this.mutationQueue.then(async () => {
       await this.ensureLoaded()
-      const previous = new Map(this.documents)
       try {
-        change()
-        applyIncrementalIndexChanges(this.miniSearch, previous, this.documents)
-        const serializedIndex = this.miniSearch.toJSON()
-        const persisted = await this.persist(this.documents, serializedIndex)
+        const updatedAt = await this.getDatabase().applyBatch(batch)
+        const databaseStats = await this.getDatabase().stats()
         this.stats = {
           ...this.stats,
-          documentCount: this.documents.size,
-          indexBytes: serializedIndexBytes(serializedIndex),
+          documentCount: await this.getDatabase().count(),
+          indexBytes: databaseStats.indexBytes,
           lastError: null,
-          updatedAt: persisted.updatedAt,
+          updatedAt,
         }
       } catch (error) {
-        this.documents = previous
-        this.miniSearch = rebuildMiniSearch(this.documents.values())
         this.stats = { ...this.stats, lastError: searchErrorMessage(error) }
         throw error
       }
@@ -308,16 +237,35 @@ export class NodeSearchIndex {
     return operation
   }
 
-  private async persist(
-    documents: Map<string, WorkspaceSearchDocument>,
-    serializedIndex: unknown,
-    shouldCommit: () => boolean = () => true,
-  ): Promise<{ committed: boolean; updatedAt: string }> {
-    const written = await this.snapshot?.write(
-      [...documents.values()],
-      serializedIndex,
-      shouldCommit,
-    )
-    return written ?? { committed: shouldCommit(), updatedAt: new Date().toISOString() }
+  private getDatabase(): NodeSearchDatabase {
+    if (!this.database) throw new Error('Node search database is not initialized.')
+    return this.database
+  }
+
+  private assertOpen(): void {
+    if (this.closed) throw this.closedError()
+  }
+
+  private closedError(): Error {
+    return new Error('Node search index is closed.')
+  }
+
+  private async finishClose(): Promise<void> {
+    this.cancelPendingRebuild()
+    await this.loadPromise?.catch(() => undefined)
+    await this.mutationQueue.catch(() => undefined)
+    await Promise.allSettled([...this.readOperations])
+    const database = this.database
+    this.database = null
+    this.loadPromise = undefined
+    await database?.close()
+  }
+
+  private runRead<Value>(work: () => Promise<Value>): Promise<Value> {
+    if (this.closed) return Promise.reject(this.closedError())
+    const operation = Promise.resolve().then(work)
+    this.readOperations.add(operation)
+    void operation.finally(() => this.readOperations.delete(operation)).catch(() => undefined)
+    return operation
   }
 }

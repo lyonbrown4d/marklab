@@ -4,13 +4,13 @@ import path from 'node:path'
 import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
-import { trySidecarMarkdownDiagnostics } from '@electron/services/workspace/workspaceSidecarFileBridge.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
+import { trySidecarMarkdownDiagnostics } from '@electron/services/workspace/workspaceSidecarFileBridge'
 
-vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient.js', () => ({
+vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient', () => ({
   WorkspaceAnalysisWorkerClient: class {
     run = vi.fn(async () => [
       {

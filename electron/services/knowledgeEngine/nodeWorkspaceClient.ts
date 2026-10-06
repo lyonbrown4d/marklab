@@ -1,9 +1,9 @@
-import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
-import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph.js'
-import { NodeMarkdownOverlay } from '@electron/services/knowledgeEngine/nodeMarkdownOverlay.js'
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
-import { NodeWorkspaceVfs } from '@electron/services/knowledgeEngine/nodeWorkspaceVfs.js'
-import { computeMicrosoftReferenceDiagnostics } from '@electron/services/markdownLanguage/microsoftDiagnostics.js'
+import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
+import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph'
+import { NodeMarkdownOverlay } from '@electron/services/knowledgeEngine/nodeMarkdownOverlay'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
+import { NodeWorkspaceVfs } from '@electron/services/knowledgeEngine/nodeWorkspaceVfs'
+import { computeMicrosoftReferenceDiagnostics } from '@electron/services/markdownLanguage/microsoftDiagnostics'
 
 export const createNodeWorkspaceClient = (
   workspaceRoot: string,
@@ -34,7 +34,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
       storage: {
         blobStore: false,
         metadataStore: 'node-json',
-        searchIndex: 'minisearch-json',
+        searchIndex: 'sqlite-fts5',
       },
     }
   }
@@ -45,7 +45,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
   }
 
   async closeWorkspace(): Promise<void> {
-    this.searchIndex.cancelPendingRebuild()
+    await this.searchIndex.close()
     this.markdown.clear()
   }
 
@@ -71,7 +71,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         pendingOutboxEvents: '0',
         ready: !stats.building && !latestError,
         searchableDocuments: documents,
-        searchIndex: 'minisearch-json',
+        searchIndex: 'sqlite-fts5',
         building: stats.building,
         updatedAt: stats.updatedAt,
         lastBuildDurationMs: stats.lastBuildDurationMs,
@@ -85,7 +85,7 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
         metadataDocuments: documents,
         metadataStore: 'node-json',
         pendingOutboxEvents: '0',
-        searchIndex: 'minisearch-json',
+        searchIndex: 'sqlite-fts5',
         searchIndexBytes: String(stats.indexBytes),
         totalBytes: String(stats.indexBytes),
       },
@@ -201,11 +201,12 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
   }
 
   async shutdown(): Promise<void> {
-    this.searchIndex.cancelPendingRebuild()
+    await this.searchIndex.close()
     this.markdown.clear()
   }
 
   close(): void {
+    void this.searchIndex.close()
     this.markdown.clear()
   }
 }

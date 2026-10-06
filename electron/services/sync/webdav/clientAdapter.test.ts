@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createWebDavClientAdapter } from '@electron/services/sync/webdav/clientAdapter.js'
-import type { WebDavLibraryClient } from '@electron/services/sync/webdav/types.js'
+import { createWebDavClientAdapter } from '@electron/services/sync/webdav/clientAdapter'
+import type { WebDavLibraryClient } from '@electron/services/sync/webdav/types'
 
 describe('WebDavClientAdapter', () => {
   it('locks requests to the configured base path and rejects traversal', async () => {

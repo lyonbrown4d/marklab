@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { WebDavSyncEngineOptions } from '@electron/services/sync/webdavSync/engine.js'
-import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
+import type { WebDavSyncEngineOptions } from '@electron/services/sync/webdavSync/engine'
+import { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
 import type { WorkspaceSyncChannels } from '@/types/workspaceSync'
 
 const emptyResult = {

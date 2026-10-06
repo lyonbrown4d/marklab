@@ -3,8 +3,8 @@ import {
   readUtf8RepoFile,
   runGit,
   syntheticUnifiedDiff,
-} from '@electron/services/git/helpers.js'
-import type { GitFileDiff } from '@electron/services/git/types.js'
+} from '@electron/services/git/helpers'
+import type { GitFileDiff } from '@electron/services/git/types'
 
 export class GitDiffReader {
   async fileDiff(rootPath: unknown, filePath: unknown, section: unknown): Promise<GitFileDiff> {

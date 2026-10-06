@@ -14,7 +14,7 @@ const electronLog = vi.hoisted(() => ({
 
 vi.mock('electron-log/main', () => ({ default: electronLog }))
 
-import { createElectronLogger } from '@electron/services/logger.js'
+import { createElectronLogger } from '@electron/services/logger'
 
 describe('Electron logger', () => {
   beforeEach(() => {

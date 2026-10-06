@@ -3,12 +3,12 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { GitService } from '@electron/services/git/service.js'
+import { GitService } from '@electron/services/git/service'
 import {
   createRemoteFixture,
   removeRemoteFixture,
   type RemoteFixture,
-} from '@electron/services/git/testSupport.js'
+} from '@electron/services/git/testSupport'
 
 const fixtures: RemoteFixture[] = []
 

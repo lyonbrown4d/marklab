@@ -1,8 +1,8 @@
-import { redactWorkspaceSidecarSpawnPlan } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
+import { redactWorkspaceSidecarSpawnPlan } from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan'
 import type {
   WorkspaceSidecarRuntime,
   WorkspaceSidecarRuntimeSummary,
-} from '@electron/services/knowledgeEngine/workspaceSidecarTypes.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 
 export const summarizeWorkspaceSidecarRuntimes = (
   runtimes: Iterable<WorkspaceSidecarRuntime>,

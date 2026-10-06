@@ -9,8 +9,8 @@ import type {
   RemoteFileStore,
   SyncManifestEntry,
   WorkspaceMutationBoundary,
-} from '@electron/services/sync/core/types.js'
-import { executeSyncPlan } from '@electron/services/sync/webdavSync/executor.js'
+} from '@electron/services/sync/core/types'
+import { executeSyncPlan } from '@electron/services/sync/webdavSync/executor'
 
 const roots: string[] = []
 afterEach(async () => {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph.js'
-import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups.js'
-import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast.js'
+import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph'
+import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast'
 
 describe('workspace graph groups', () => {
   it('derives groups from Markdown metadata and link communities', () => {

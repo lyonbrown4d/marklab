@@ -8,7 +8,7 @@ vi.mock('electron', () => ({
   webUtils: { getPathForFile },
 }))
 
-import { onFileDrop } from '@electron/preload/fileDrop.js'
+import { onFileDrop } from '@electron/preload/fileDrop'
 
 const fileList = (...files: File[]) => files as unknown as FileList
 

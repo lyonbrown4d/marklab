@@ -1,6 +1,6 @@
-import type { SyncProgress } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
-import { remoteErrorCode } from '@electron/services/sync/webdavSync/retry.js'
+import type { SyncProgress } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
+import { remoteErrorCode } from '@electron/services/sync/webdavSync/retry'
 
 export const reportSyncProgress = (
   handler: ((progress: SyncProgress) => void) | undefined,

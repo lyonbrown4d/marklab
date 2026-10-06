@@ -1,12 +1,12 @@
 import { app } from 'electron'
 
-import { noopLogger, type Logger } from '@electron/services/logger.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
 import type {
   AppLaunchInfo,
   AppLaunchSource,
   DeepLinkPayload,
   SingleInstancePayload,
-} from '@electron/types.js'
+} from '@electron/types'
 
 const DEEP_LINK_SCHEME = 'marklab'
 const SUPPORTED_DEEP_LINK_SCHEMES = new Set([DEEP_LINK_SCHEME])

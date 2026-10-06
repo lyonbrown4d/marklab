@@ -4,10 +4,10 @@ import path from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.js'
-import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient.js'
-import { createManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.testFixture.js'
-import type { Logger } from '@electron/services/logger.js'
+import { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager'
+import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient'
+import { createManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager.testFixture'
+import type { Logger } from '@electron/services/logger'
 
 describe('WorkspaceSidecarManager', () => {
   it('opens a workspace with the built-in Node runtime and no binary resolver', async () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createRemoteImageCapabilityUrl,
   parseRemoteImageCapabilityUrl,
-} from '@electron/services/linkPreview/remoteAsset.js'
+} from '@electron/services/linkPreview/remoteAsset'
 
 describe('remote image capabilities', () => {
   it('creates and parses a strict opaque capability URL', () => {

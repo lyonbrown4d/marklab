@@ -1,10 +1,10 @@
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
-import { normalizeHtmlBreaks } from '@electron/services/export/markdownText.js'
-import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes.js'
+import { normalizeHtmlBreaks } from '@electron/services/export/markdownText'
+import type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes'
 
-export type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes.js'
+export type { MarkdownBlock, MarkdownInline } from '@electron/services/export/markdownTypes'
 
 type MdastNode = {
   type: string

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   resolveTerminalShell,
   type TerminalShellResolverDependencies,
-} from '@electron/services/terminal/shellResolver.js'
+} from '@electron/services/terminal/shellResolver'
 
 const createDependencies = (
   overrides: Partial<TerminalShellResolverDependencies> = {},

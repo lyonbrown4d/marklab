@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allowedCommands } from '@electron/preload/allowlists.js'
+import { allowedCommands } from '@electron/preload/allowlists'
 import { fsApi } from '@/services/fsApi'
 import { markdownLanguageApi } from '@/services/markdownLanguageApi'
 

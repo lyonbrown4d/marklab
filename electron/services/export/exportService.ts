@@ -1,19 +1,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { BrowserWindow, Shell } from 'electron'
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import type { ExportTaskPayload } from '@electron/types.js'
-import { validateExistingLocalPath } from '@electron/services/pathValidation.js'
-import { renderDocx } from '@electron/services/export/docx.js'
-import { ExportQueue } from '@electron/services/export/exportQueue.js'
-import { renderHtmlWithLocalImages } from '@electron/services/export/html.js'
-import { applyWindowExportProgress } from '@electron/services/nativeExportProgress.js'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import type { ExportTaskPayload } from '@electron/types'
+import { validateExistingLocalPath } from '@electron/services/pathValidation'
+import { renderDocx } from '@electron/services/export/docx'
+import { ExportQueue } from '@electron/services/export/exportQueue'
+import { renderHtmlWithLocalImages } from '@electron/services/export/html'
+import { applyWindowExportProgress } from '@electron/services/nativeExportProgress'
 import {
   notifyExportFailed,
   notifyExportFinished,
-} from '@electron/services/export/exportNotifications.js'
-import { revealFinishedExport } from '@electron/services/export/exportResultAction.js'
-import { renderPdfDocument } from '@electron/services/export/pdf.js'
+} from '@electron/services/export/exportNotifications'
+import { revealFinishedExport } from '@electron/services/export/exportResultAction'
+import { renderPdfDocument } from '@electron/services/export/pdf'
 import {
   createExportTaskId,
   parseExportFormat,
@@ -21,7 +21,7 @@ import {
   validateExportOutputExtension,
   validateExportOutputPath,
   type ExportFormat,
-} from '@electron/services/export/exportRequest.js'
+} from '@electron/services/export/exportRequest'
 type ActiveExport = {
   controller: AbortController
   format: ExportFormat

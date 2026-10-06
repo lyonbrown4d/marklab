@@ -4,7 +4,7 @@ import path from 'node:path'
 import { type SchedulerLike, VirtualTimeScheduler } from 'rxjs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache.js'
+import { WebPreviewDiskCache } from '@electron/services/linkPreview/webPreviewDiskCache'
 
 const roots: string[] = []
 

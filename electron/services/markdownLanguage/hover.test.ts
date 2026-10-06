@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
-import { getMarkdownHover } from '@electron/services/markdownLanguage/hover.js'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
+import { getMarkdownHover } from '@electron/services/markdownLanguage/hover'
 
 const workspaceIndex = {
   files: [

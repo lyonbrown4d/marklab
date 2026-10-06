@@ -165,7 +165,7 @@ describe('useWorkspaceMapLayout geometry', () => {
     expect(result.current.nodes[0]).toMatchObject({ height: 620, width: 760 })
   })
 
-  it('fits a remounted viewport to the applied pinned position after forced layout', async () => {
+  it('fits a remounted viewport to the arranged position while preserving pin state', async () => {
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
       callback(0)
       return 1
@@ -215,7 +215,8 @@ describe('useWorkspaceMapLayout geometry', () => {
 
     await waitFor(() => expect(fitViewB).toHaveBeenCalledOnce())
     expect(fitViewB.mock.calls[0]?.[0]?.nodes?.[0]).toMatchObject({
-      position: { x: 120, y: 80 },
+      data: { workspaceMapPinned: true },
+      position: { x: 900, y: 700 },
     })
   })
 })

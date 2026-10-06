@@ -1,7 +1,7 @@
 import type {
   MermaidTextDocument,
   MermaidValidationIssue,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 
 export type MermaidValidationWorkerRequest =
   | {

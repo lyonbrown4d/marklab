@@ -1,18 +1,19 @@
 import { BrowserWindow, app, nativeTheme, screen } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
-import { MARKLAB_APP_NAME } from '@electron/appIdentity.js'
-import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime.js'
-import { noopLogger, type Logger } from '@electron/services/logger.js'
-import { getWindowState, setWindowState } from '@electron/services/settingsStore.js'
-import { resolveElectronProjectRoots } from '@electron/windowIconPaths.js'
-import { createWindowIcon } from '@electron/windowIcon.js'
-import type { PersistedWindowState } from '@electron/types.js'
-import { resolveNativeWindowBackground } from '@electron/windowTheme.js'
-import type { WindowPoolAcquisition } from '@electron/windowPool.js'
-import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
-import { showSplashWithoutActivation } from '@electron/splashLifecycle.js'
-import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore.js'
+import { MARKLAB_APP_NAME } from '@electron/appIdentity'
+import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime'
+import { noopLogger, type Logger } from '@electron/services/logger'
+import { getWindowState, setWindowState } from '@electron/services/settingsStore'
+import { resolveElectronProjectRoots } from '@electron/windowIconPaths'
+import { createWindowIcon } from '@electron/windowIcon'
+import type { PersistedWindowState } from '@electron/types'
+import { resolveNativeWindowBackground } from '@electron/windowTheme'
+import type { WindowPoolAcquisition } from '@electron/windowPool'
+import { installWindowNavigationGuard } from '@electron/windowNavigation'
+import { showSplashWithoutActivation } from '@electron/splashLifecycle'
+import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore'
+import { installWindowStatePersistence } from '@electron/windowStatePersistence'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -179,25 +180,6 @@ const restoredWindowBounds = (logger: Logger) => {
     isMaximized: state.isMaximized,
   }
 }
-const persistWindowState = (window: BrowserWindow, logger: Logger): void => {
-  let saveTimer: ReturnType<typeof setTimeout> | null = null
-  const saveNow = () => {
-    if (saveTimer) {
-      clearTimeout(saveTimer)
-      saveTimer = null
-    }
-    if (!window.isDestroyed()) writeWindowState(window, logger)
-  }
-  const scheduleSave = () => {
-    if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(saveNow, WINDOW_STATE_SAVE_DELAY_MS)
-  }
-  window.on('resize', scheduleSave)
-  window.on('move', scheduleSave)
-  window.on('maximize', scheduleSave)
-  window.on('unmaximize', scheduleSave)
-  window.on('close', saveNow)
-}
 export const createSplashWindow = () => {
   installDevelopmentDockIcon()
   const splash = new BrowserWindow({
@@ -252,7 +234,11 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     getRendererNavigationUrl(),
     getRendererNavigationUrl('window-opening.html'),
   ])
-  persistWindowState(main, logger)
+  installWindowStatePersistence(
+    main,
+    () => writeWindowState(main, logger),
+    WINDOW_STATE_SAVE_DELAY_MS,
+  )
   restoreMaximizedOnFirstShow(main, restored.isMaximized)
   return main
 }

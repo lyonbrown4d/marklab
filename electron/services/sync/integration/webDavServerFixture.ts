@@ -7,7 +7,7 @@ import path from 'node:path'
 import {
   openWebDavServerLifecycle,
   type WebDavServerLifecycleOptions,
-} from '@electron/services/sync/integration/webDavServerLifecycle.js'
+} from '@electron/services/sync/integration/webDavServerLifecycle'
 
 const BASE_PATH = '/dav'
 const AUTHORIZATION = `Basic ${Buffer.from('marklab:secret').toString('base64')}`

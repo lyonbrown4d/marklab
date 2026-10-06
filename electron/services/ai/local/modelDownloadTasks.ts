@@ -1,11 +1,8 @@
 import fs from 'node:fs/promises'
 
-import { downloadModel } from '@electron/services/ai/local/modelDownload.js'
-import { normalizeError } from '@electron/services/ai/local/modelFiles.js'
-import type {
-  LocalAiCatalogEntry,
-  LocalAiProgressHandler,
-} from '@electron/services/ai/local/types.js'
+import { downloadModel } from '@electron/services/ai/local/modelDownload'
+import { normalizeError } from '@electron/services/ai/local/modelFiles'
+import type { LocalAiCatalogEntry, LocalAiProgressHandler } from '@electron/services/ai/local/types'
 
 type FileSystemStats = { bavail: bigint | number; bsize: bigint | number }
 type ActiveDownload = { controller: AbortController; done: Promise<void>; modelId: string }

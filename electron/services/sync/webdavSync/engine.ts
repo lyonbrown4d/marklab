@@ -8,32 +8,32 @@ import type {
   SyncSkippedFile,
   WorkspaceMutationBoundary,
   WorkspaceSyncResult,
-} from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
+} from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
 import {
   applyPreparedSyncPlan,
   prepareSyncPlan,
   projectRemoteEntries,
-} from '@electron/services/sync/webdavSync/executor.js'
+} from '@electron/services/sync/webdavSync/executor'
 import {
   linkSyncAbort,
   normalizeSyncError,
   raceSyncAbort,
   reportSyncProgress,
   workspaceSyncKey,
-} from '@electron/services/sync/webdavSync/engineRuntime.js'
+} from '@electron/services/sync/webdavSync/engineRuntime'
 import {
   assertCompatibleSyncPaths,
   parseSyncManifest,
-} from '@electron/services/sync/webdavSync/manifest.js'
-import { scanWorkspace } from '@electron/services/sync/webdavSync/localScanner.js'
-import { planThreeWaySync } from '@electron/services/sync/webdavSync/planner.js'
-import { scanRemoteStore } from '@electron/services/sync/webdavSync/remoteScanner.js'
-import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry.js'
+} from '@electron/services/sync/webdavSync/manifest'
+import { scanWorkspace } from '@electron/services/sync/webdavSync/localScanner'
+import { planThreeWaySync } from '@electron/services/sync/webdavSync/planner'
+import { scanRemoteStore } from '@electron/services/sync/webdavSync/remoteScanner'
+import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry'
 import {
   createSyncManifest,
   reconcileConflicts,
-} from '@electron/services/sync/webdavSync/syncState.js'
+} from '@electron/services/sync/webdavSync/syncState'
 
 export type WebDavSyncEngineOptions = {
   deviceId: string

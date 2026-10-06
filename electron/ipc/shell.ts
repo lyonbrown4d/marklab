@@ -1,7 +1,7 @@
 import type { IpcMain, Shell } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import { validateExistingLocalPath } from '@electron/services/pathValidation.js'
-import type { ShellPathResult } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { validateExistingLocalPath } from '@electron/services/pathValidation'
+import type { ShellPathResult } from '@electron/types'
 export const registerShellIpc = (ipcMain: IpcMain, shell: Shell): void => {
   ipcMain.handle(nativeIpcChannels.shellRevealPath, (_event, value: unknown): ShellPathResult => {
     const validated = validateExistingLocalPath(value)

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import { createWebTabsPreloadSurface } from '@electron/preload/webTabs.js'
+import { nativeIpcChannels } from '@electron/channels'
+import { createWebTabsPreloadSurface } from '@electron/preload/webTabs'
 
 describe('web tabs preload surface', () => {
   it('uses named channels and validates command results', async () => {

@@ -1,61 +1,59 @@
 import type * as Electron from 'electron'
-import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai.js'
-import { registerAiCompletionIpc, type AiCompletionIpcBridge } from '@electron/ipc/aiCompletion.js'
-import { createLocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory.js'
-import { registerAppReadyIpc } from '@electron/ipc/appReady.js'
-import { registerClipboardIpc } from '@electron/ipc/clipboard.js'
-import {
-  registerCommandInvokeIpc,
-  type NativeCommandHandlers,
-} from '@electron/ipc/commandInvoke.js'
-import { registerDialogIpc } from '@electron/ipc/dialogs.js'
-import { registerGitNamedIpc } from '@electron/ipc/gitNamed.js'
+import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai'
+import { registerAiCompletionIpc, type AiCompletionIpcBridge } from '@electron/ipc/aiCompletion'
+import { createLocalAiDirectoryPicker } from '@electron/ipc/aiLocalDirectory'
+import { registerAppReadyIpc } from '@electron/ipc/appReady'
+import { registerClipboardIpc } from '@electron/ipc/clipboard'
+import { registerCommandInvokeIpc, type NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import { registerDialogIpc } from '@electron/ipc/dialogs'
+import { registerGitNamedIpc } from '@electron/ipc/gitNamed'
 import {
   registerGitTerminalIpc,
   type GitTerminalIpcBridge,
-} from '@electron/ipc/gitTerminalCommands.js'
-import { registerLifecycleIpc } from '@electron/ipc/lifecycle.js'
-import { registerLanguageIntelligenceIpc } from '@electron/ipc/languageIntelligence.js'
-import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview.js'
-import { registerMenuDispatchIpc } from '@electron/ipc/menu.js'
-import { registerPlatformIpc } from '@electron/ipc/platform.js'
-import { createRendererDiagnosticsHandler } from '@electron/ipc/rendererDiagnostics.js'
-import { registerSettingsIpc } from '@electron/ipc/settings.js'
-import { registerShellIpc } from '@electron/ipc/shell.js'
-import { registerThemeIpc } from '@electron/ipc/themes.js'
-import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates.js'
-import { registerWebTabsIpc } from '@electron/ipc/webTabs.js'
-import { registerWindowControlsIpc } from '@electron/ipc/windowControls.js'
+} from '@electron/ipc/gitTerminalCommands'
+import { registerLifecycleIpc } from '@electron/ipc/lifecycle'
+import { registerLanguageIntelligenceIpc } from '@electron/ipc/languageIntelligence'
+import { registerLinkPreviewIpc } from '@electron/ipc/linkPreview'
+import { registerMenuDispatchIpc } from '@electron/ipc/menu'
+import { registerPlatformIpc } from '@electron/ipc/platform'
+import { createRendererDiagnosticsHandler } from '@electron/ipc/rendererDiagnostics'
+import { registerSettingsIpc } from '@electron/ipc/settings'
+import { registerShellIpc } from '@electron/ipc/shell'
+import { registerThemeIpc } from '@electron/ipc/themes'
+import { registerUpdatesIpc, type UpdaterIpcDependencies } from '@electron/ipc/updates'
+import { registerWebTabsIpc } from '@electron/ipc/webTabs'
+import { registerWindowControlsIpc } from '@electron/ipc/windowControls'
 import {
   registerWindowCloseLifecycleIpc,
   type WindowCloseLifecycleIpcBridge,
-} from '@electron/ipc/windowCloseLifecycle.js'
-import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed.js'
-import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync.js'
+} from '@electron/ipc/windowCloseLifecycle'
+import { registerWorkspaceNamedIpc } from '@electron/ipc/workspaceNamed'
+import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync'
 import {
   registerWorkspaceCommandsIpc,
   type WorkspaceCommandServices,
-} from '@electron/ipc/workspaceCommands.js'
-import type { ExportService } from '@electron/services/export/exportService.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
-import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types.js'
-import type { GitService } from '@electron/services/git/service.js'
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
-import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service.js'
-import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { MenuDispatchBridge } from '@electron/services/menuDispatch.js'
-import { getPlatformInfo } from '@electron/services/platform.js'
-import { setNativeMenuLocale } from '@electron/menu.js'
-import type { TerminalService } from '@electron/services/terminal/service.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
-import type { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
-import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types.js'
-import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig.js'
-import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator.js'
-import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService.js'
+} from '@electron/ipc/workspaceCommands'
+import type { ExportService } from '@electron/services/export/exportService'
+import type { AiServiceContract } from '@electron/services/ai/types'
+import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
+import type { GitService } from '@electron/services/git/service'
+import type { GraphLayoutStore } from '@electron/services/graphLayout/graphLayoutStore'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
+import type { LanguageIntelligenceServiceContract } from '@electron/services/languageIntelligence/service'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
+import type { Logger } from '@electron/services/logger'
+import type { MenuDispatchBridge } from '@electron/services/menuDispatch'
+import { getPlatformInfo } from '@electron/services/platform'
+import { setNativeMenuLocale } from '@electron/menu'
+import type { TerminalService } from '@electron/services/terminal/service'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import type { WebTabManager } from '@electron/services/webTabs/webTabManager'
+import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types'
+import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
+import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
+import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
 export type NativeIpcDependencies = {
   aiService: AiServiceContract
   aiInlineCompletionService: AiInlineCompletionServiceContract
@@ -64,9 +62,10 @@ export type NativeIpcDependencies = {
   clipboard: Electron.Clipboard
   dialog: Electron.Dialog
   ipcMain: Electron.IpcMain
-  getLaunchInfo: () => import('@electron/types.js').AppLaunchInfo
+  getLaunchInfo: () => import('@electron/types').AppLaunchInfo
   exportService: ExportService
   gitService: GitService
+  graphLayoutStore: GraphLayoutStore
   knowledgeEngineService: KnowledgeEngineService
   languageIntelligenceService: LanguageIntelligenceServiceContract
   linkPreviewService: LinkPreviewServiceContract
@@ -161,6 +160,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   )
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
     exportService: dependencies.exportService,
+    graphLayoutStore: dependencies.graphLayoutStore,
     localHistoryService: dependencies.localHistoryService,
     logger: logger.child('workspace'),
     workspaceRegistry: dependencies.workspaceRegistry,

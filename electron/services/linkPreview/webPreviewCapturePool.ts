@@ -1,17 +1,17 @@
 import type { BrowserWindow, NativeImage, Rectangle, WebContentsView } from 'electron'
 import pLimit from 'p-limit'
 
-import { assertPublicLinkPreviewUrl } from '@electron/services/linkPreview/networkSecurity.js'
+import { assertPublicLinkPreviewUrl } from '@electron/services/linkPreview/networkSecurity'
 import type {
   CapturedWebPreview,
   WebPreviewCaptureServiceContract,
-} from '@electron/services/linkPreview/service.js'
-import type { WebPreviewCacheContract } from '@electron/services/linkPreview/webPreviewDiskCache.js'
-import { installWebPreviewSessionSecurity } from '@electron/services/linkPreview/webPreviewSecurity.js'
-import type { LinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity.js'
-import { runLinkPreviewStage } from '@electron/services/linkPreview/diagnostics.js'
-import { installWebPreviewProtocol } from '@electron/services/linkPreview/webPreviewProtocol.js'
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
+} from '@electron/services/linkPreview/service'
+import type { WebPreviewCacheContract } from '@electron/services/linkPreview/webPreviewDiskCache'
+import { installWebPreviewSessionSecurity } from '@electron/services/linkPreview/webPreviewSecurity'
+import type { LinkPreviewLookup } from '@electron/services/linkPreview/networkSecurity'
+import { runLinkPreviewStage } from '@electron/services/linkPreview/diagnostics'
+import { installWebPreviewProtocol } from '@electron/services/linkPreview/webPreviewProtocol'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
 
 const CAPTURE_HEIGHT = 1080
 const CAPTURE_WIDTH = 1920

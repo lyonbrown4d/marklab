@@ -1,4 +1,4 @@
-import type { WindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding.js'
+import type { WindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding'
 
 export const flushWindowWorkspaceBindingForClose = async (
   binding: WindowWorkspaceBinding,

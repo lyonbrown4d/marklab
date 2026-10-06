@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { App } from 'electron'
 
-import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { Logger } from '@electron/services/logger.js'
+import { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { Logger } from '@electron/services/logger'
 
 describe('KnowledgeEngineService Node runtime', () => {
   it('initializes without resolving or building a native binary', async () => {

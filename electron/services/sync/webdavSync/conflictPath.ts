@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 
-import type { SyncManifestEntry } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
-import { resolveSafeWorkspaceTarget } from '@electron/services/sync/webdavSync/pathSafety.js'
+import type { SyncManifestEntry } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
+import { resolveSafeWorkspaceTarget } from '@electron/services/sync/webdavSync/pathSafety'
 
 export const stableConflictPath = (entry: SyncManifestEntry): string => {
   const parsed = path.posix.parse(entry.path)

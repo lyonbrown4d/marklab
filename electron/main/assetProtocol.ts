@@ -1,13 +1,13 @@
 import { protocol } from 'electron'
 
-import { parseRemoteImageCapabilityUrl } from '@electron/services/linkPreview/remoteAsset.js'
-import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service.js'
-import { parseWorkspaceAssetCapabilityUrl } from '@electron/services/workspace/workspaceAssetCapabilities.js'
+import { parseRemoteImageCapabilityUrl } from '@electron/services/linkPreview/remoteAsset'
+import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
+import { parseWorkspaceAssetCapabilityUrl } from '@electron/services/workspace/workspaceAssetCapabilities'
 import type {
   WorkspaceAssetByteRange as AssetByteRange,
   WorkspaceOpenedAsset,
-} from '@electron/services/workspace/workspaceOpenedAsset.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
+} from '@electron/services/workspace/workspaceOpenedAsset'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 
 const ASSET_PROTOCOL = 'marklab-asset'
 

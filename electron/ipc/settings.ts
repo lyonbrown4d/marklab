@@ -1,12 +1,12 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 import {
   getRendererPersistValue,
   removeRendererPersistValue,
   setRendererPersistValue,
-} from '@electron/services/settingsStore.js'
-import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry.js'
-import type { SettingsPersistResult } from '@electron/types.js'
+} from '@electron/services/settingsStore'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import type { SettingsPersistResult } from '@electron/types'
 
 const toSettingsPersistResult = (action: () => void): SettingsPersistResult => {
   try {

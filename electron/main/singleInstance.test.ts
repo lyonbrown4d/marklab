@@ -34,20 +34,20 @@ const electronState = vi.hoisted(() => {
 const launchState = vi.hoisted(() => ({ args: [] as string[], cwd: 'C:\\notes' }))
 
 vi.mock('electron', () => ({ app: electronState.app }))
-vi.mock('@electron/main/deepLinks.js', () => ({
+vi.mock('@electron/main/deepLinks', () => ({
   createSingleInstancePayload: (args: string[], cwd: string) => ({ args, cwd }),
   launchInfo: launchState,
   publishDeepLinksFromArgs: vi.fn(),
   publishDeepLinkUrl: vi.fn(),
   registerDeepLinkProtocol: vi.fn(),
 }))
-vi.mock('@electron/main/openTargets.js', () => ({
+vi.mock('@electron/main/openTargets', () => ({
   resolveExistingOpenTargets: vi.fn(async (args: readonly unknown[]) =>
     args.filter((value): value is string => typeof value === 'string'),
   ),
 }))
 
-import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance.js'
+import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance'
 
 type FakeWindow = {
   focus: ReturnType<typeof vi.fn>

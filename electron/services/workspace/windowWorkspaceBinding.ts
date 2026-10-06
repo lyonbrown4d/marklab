@@ -1,27 +1,27 @@
 import {
   runWorkspacePathMutation,
   type WorkspaceMutationPath,
-} from '@electron/services/workspace/workspaceWriteCoordinator.js'
+} from '@electron/services/workspace/workspaceWriteCoordinator'
 import type { App, BrowserWindow, Shell } from 'electron'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
 import {
   applyAppRecentDocument,
   applyWindowDocumentStatus,
   createNativeRecentDocumentState,
-} from '@electron/services/nativeWindowDocument.js'
+} from '@electron/services/nativeWindowDocument'
 import {
   applyWindowTaskAttention,
   applyWindowTaskProgress,
   clearWindowTaskAttention,
   createNativeTaskAttentionState,
-} from '@electron/services/nativeWindowStatus.js'
-import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService.js'
-import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier.js'
-import { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
-import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents.js'
+} from '@electron/services/nativeWindowStatus'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier'
+import { WorkspaceService } from '@electron/services/workspace/workspaceService'
+import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
 
 export type WindowWorkspaceBinding = {
   detach: () => void

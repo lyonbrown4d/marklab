@@ -3,7 +3,7 @@ import { Position, Range } from 'vscode-languageserver-types'
 import type {
   MermaidCompletionContext,
   MermaidDiagramKind,
-} from '@electron/services/mermaidLanguage/types.js'
+} from '@electron/services/mermaidLanguage/types'
 
 const declarations = new Map<string, MermaidDiagramKind>([
   ['flowchart', 'flowchart'],

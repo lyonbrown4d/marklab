@@ -1,14 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import type { Logger } from '@electron/services/logger'
+import type { FsStateData } from '@electron/services/workspace/types'
 import {
   trySidecarPathMutation,
   trySidecarWriteFile,
-} from '@electron/services/workspace/workspaceSidecarFileBridge.js'
-import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/workspaceSidecarFileBridge'
+import { stringArg } from '@electron/services/workspace/workspaceUtils'
 
 export class WorkspaceCreateFileConflictError extends Error {
   readonly code = 'workspace_file_exists' as const

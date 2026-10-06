@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 
-import type { FsPathMetadata, FsPathMetadataResult } from '@electron/services/workspace/types.js'
+import type { FsPathMetadata, FsPathMetadataResult } from '@electron/services/workspace/types'
 
 export const readNodePathMetadata = async (
   relativePath: string,

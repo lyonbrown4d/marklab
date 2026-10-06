@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import { useLatest } from 'ahooks'
 import type { Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
@@ -8,12 +16,20 @@ import {
   WORKSPACE_MAP_COMPACT_NODE_WIDTH,
 } from '@/logic/graphLayoutMetrics'
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
+import {
+  applyStoredWorkspaceMapLayout,
+  createWorkspaceMapLayoutSave,
+  mergeWorkspaceMapArrangementOverrides,
+} from '@/pages/workspace-map/workspaceMapLayoutPersistence'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
+import { graphLayoutApi, type GraphLayoutViewport } from '@/services/graphLayoutApi'
 
-type WorkspaceMapFlow = Pick<
-  ReactFlowInstance<Node<GraphNodeData>, GraphData['edges'][number]>,
-  'fitView'
-> | null
+type WorkspaceMapFlow =
+  | (Pick<ReactFlowInstance<Node<GraphNodeData>, GraphData['edges'][number]>, 'fitView'> &
+      Partial<
+        Pick<ReactFlowInstance<Node<GraphNodeData>, GraphData['edges'][number]>, 'setViewport'>
+      >)
+  | null
 
 type Options = {
   activePath: string | null
@@ -66,6 +82,8 @@ export const createWorkspaceMapRuntimeLayoutKey = (
   nodes: Node<GraphNodeData>[],
 ) => `${requestKey}:${createGraphLayoutKey('runtime', nodes, [])}`
 
+export const WORKSPACE_MAP_LAYOUT_ENGINE_VERSION = 'elk-workspace-map-v1'
+
 export const useWorkspaceMapLayout = ({
   activePath,
   flow,
@@ -81,6 +99,7 @@ export const useWorkspaceMapLayout = ({
   const staleFlowRef = useRef<WorkspaceMapFlow>(null)
   const previousStatusRef = useRef<LayoutState['status']>('loading')
   const laidOutNodesRef = useRef<Node<GraphNodeData>[]>([])
+  const restoredViewportRef = useRef<GraphLayoutViewport | null>(null)
   const graphRef = useLatest(graph)
   const nodesRef = useLatest(nodes)
   const [retryGeneration, setRetryGeneration] = useState(0)
@@ -97,7 +116,20 @@ export const useWorkspaceMapLayout = ({
       ? baseLayoutKey
       : `${baseLayoutKey}:${mode}:${arrangeGeneration}`
   const requestKey = activePath ? `${arrangementKey}:active:${activePath}` : arrangementKey
+  const persistenceScopeKey = activePath
+    ? `${baseLayoutKey}:${mode}:active:${activePath}`
+    : `${baseLayoutKey}:${mode}`
   const stateKey = `${requestKey}:retry:${retryGeneration}`
+  const persistenceRequest = useMemo(
+    () =>
+      ({
+        engineVersion: WORKSPACE_MAP_LAYOUT_ENGINE_VERSION,
+        graphRevision: createWorkspaceMapRuntimeLayoutKey(persistenceScopeKey, graph.nodes),
+        layoutKey: `workspace-map:${mode}`,
+        mode,
+      }) as const,
+    [graph.nodes, mode, persistenceScopeKey],
+  )
 
   useEffect(() => {
     const run = runRef.current + 1
@@ -106,26 +138,55 @@ export const useWorkspaceMapLayout = ({
     const layoutGraph = graphRef.current
     const layoutNodes = mergeRuntimeLayoutGeometry(layoutGraph.nodes, nodesRef.current)
     const layoutKey = createWorkspaceMapRuntimeLayoutKey(requestKey, layoutNodes)
+    const layoutPersistenceRequest = {
+      engineVersion: WORKSPACE_MAP_LAYOUT_ENGINE_VERSION,
+      graphRevision: createWorkspaceMapRuntimeLayoutKey(persistenceScopeKey, layoutGraph.nodes),
+      layoutKey: `workspace-map:${mode}`,
+      mode,
+    } as const
     const layoutStateKey = stateKey
     const forcePositions =
-      previousActivePathRef.current !== activePath ||
-      previousModeRef.current !== mode ||
-      previousArrangeGenerationRef.current !== arrangeGeneration
+      previousActivePathRef.current !== activePath || previousModeRef.current !== mode
+    const forceArrange = previousArrangeGenerationRef.current !== arrangeGeneration
     previousActivePathRef.current = activePath
     previousModeRef.current = mode
     previousArrangeGenerationRef.current = arrangeGeneration
     const controller = new AbortController()
 
-    void import('@/logic/graphLayout')
-      .then(({ layoutGraphWithElk }) =>
-        layoutGraphWithElk(layoutNodes, layoutGraph.edges, {
-          layoutKey,
-          signal: controller.signal,
-        }),
-      )
-      .then((nodes) => {
+    const runLayout = async () => {
+      const stored = await graphLayoutApi
+        .get(layoutPersistenceRequest)
+        .catch(() => ({ match: 'miss' as const, nodes: [], viewport: null }))
+      if (stored.match === 'exact' && !forceArrange) {
+        const restored = applyStoredWorkspaceMapLayout(layoutNodes, stored)
+        restoredViewportRef.current = stored.viewport
+        return { nodes: restored, persisted: true }
+      }
+      const { layoutGraphWithElk } = await import('@/logic/graphLayout')
+      const arranged = await layoutGraphWithElk(layoutNodes, layoutGraph.edges, {
+        layoutKey,
+        signal: controller.signal,
+      })
+      const nodes = forceArrange
+        ? mergeWorkspaceMapArrangementOverrides(arranged, nodesRef.current)
+        : stored.match === 'miss'
+          ? arranged
+          : applyStoredWorkspaceMapLayout(arranged, stored)
+      restoredViewportRef.current = null
+      void graphLayoutApi
+        .save(createWorkspaceMapLayoutSave(layoutPersistenceRequest, nodes, null))
+        .catch(() => undefined)
+      return { nodes, persisted: false }
+    }
+
+    void runLayout()
+      .then(({ nodes, persisted }) => {
         if (cancelled || runRef.current !== run) return
-        if (hasCompletedLayoutRef.current && !forcePositions) {
+        if (persisted) {
+          hasCompletedLayoutRef.current = true
+          laidOutNodesRef.current = nodes
+          setNodes(nodes)
+        } else if (hasCompletedLayoutRef.current && !forcePositions && !forceArrange) {
           setNodes((current) => {
             const currentById = new Map(current.map((node) => [node.id, node]))
             const mergedNodes = nodes.map((node) => {
@@ -136,7 +197,7 @@ export const useWorkspaceMapLayout = ({
             return mergedNodes
           })
         } else {
-          const preserveInteractionState = hasCompletedLayoutRef.current
+          const preserveInteractionState = hasCompletedLayoutRef.current && !forceArrange
           hasCompletedLayoutRef.current = true
           if (preserveInteractionState) {
             setNodes((current) => {
@@ -171,6 +232,7 @@ export const useWorkspaceMapLayout = ({
     graphRef,
     mode,
     nodesRef,
+    persistenceScopeKey,
     requestKey,
     retryGeneration,
     setNodes,
@@ -190,6 +252,12 @@ export const useWorkspaceMapLayout = ({
     let cancelled = false
     const frame = window.requestAnimationFrame(() => {
       if (cancelled) return
+      const restoredViewport = restoredViewportRef.current
+      if (restoredViewport && flow.setViewport) {
+        restoredViewportRef.current = null
+        void flow.setViewport(restoredViewport)
+        return
+      }
       const nodes = laidOutNodesRef.current
       const activeNode = focusPath ? nodes.find((node) => node.data.path === focusPath) : undefined
       if (activeNode) {
@@ -205,5 +273,5 @@ export const useWorkspaceMapLayout = ({
     }
   }, [flow, focusPath, status])
 
-  return { arrange, retry, status }
+  return { arrange, persistenceRequest, retry, status }
 }

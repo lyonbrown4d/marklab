@@ -1,6 +1,6 @@
 import type { IpcRenderer, IpcRendererEvent } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 import type { WorkspaceSyncApi } from '@/runtime/workspaceSync'
 import type { WorkspaceSyncProgressEvent } from '@/types/workspaceSync'
 

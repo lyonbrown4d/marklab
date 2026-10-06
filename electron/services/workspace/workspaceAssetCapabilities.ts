@@ -1,12 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 
-import type { FsAssetCapability, FsStateData } from '@electron/services/workspace/types.js'
+import type { FsAssetCapability, FsStateData } from '@electron/services/workspace/types'
 import {
   openWorkspaceAsset,
   validateWorkspaceAssetTarget,
   WorkspaceOpenedAsset,
-} from '@electron/services/workspace/workspaceOpenedAsset.js'
+} from '@electron/services/workspace/workspaceOpenedAsset'
 
 const ASSET_CAPABILITY_PREFIX = 'marklab-asset://local/v1/'
 const ASSET_CAPABILITY_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/

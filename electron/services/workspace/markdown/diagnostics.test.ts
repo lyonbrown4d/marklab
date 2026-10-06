@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const markdownFile = {
   path: 'notes/current.md',

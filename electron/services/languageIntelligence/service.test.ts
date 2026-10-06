@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   LanguageIntelligenceService,
   type LanguageIntelligenceProvider,
-} from '@electron/services/languageIntelligence/service.js'
+} from '@electron/services/languageIntelligence/service'
 
 const uri = 'marklab:///notes/today.md'
 

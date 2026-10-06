@@ -1,16 +1,16 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { resolveWorkspacePath } from '@electron/services/workspace/path.js'
+import { resolveWorkspacePath } from '@electron/services/workspace/path'
 import type {
   FsEntry,
   FsPathMetadata,
   FsRootInfo,
   FsSnapshot,
   FsStateData,
-} from '@electron/services/workspace/types.js'
-import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata.js'
-import { listWorkspaceEntries as walkWorkspaceEntries } from '@electron/services/workspace/workspaceUtils.js'
+} from '@electron/services/workspace/types'
+import { readNodePathMetadata } from '@electron/services/workspace/workspaceNodePathMetadata'
+import { listWorkspaceEntries as walkWorkspaceEntries } from '@electron/services/workspace/workspaceUtils'
 
 export class NodeWorkspaceVfs {
   private rootPath: string

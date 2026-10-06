@@ -19,6 +19,20 @@ const node = (
 })
 
 describe('workspace map node presentation', () => {
+  it('preserves persisted layout markers across graph refreshes', () => {
+    const incoming = node('file:notes/a.md', 'file', { path: 'notes/a.md' })
+    const current = node('file:notes/a.md', 'file', {
+      path: 'notes/a.md',
+      workspaceMapPersistedCollapsed: true,
+      workspaceMapUserModified: true,
+    })
+
+    expect(mergeWorkspaceMapNodeGeometry(incoming, current).data).toMatchObject({
+      workspaceMapPersistedCollapsed: true,
+      workspaceMapUserModified: true,
+    })
+  })
+
   it('keeps default layout dimensions out of mutable node geometry', () => {
     const file = presentWorkspaceMapNode(
       node('file:notes/a.md', 'file', { path: 'notes/a.md' }),

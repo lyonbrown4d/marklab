@@ -3,9 +3,9 @@ import { StringDecoder } from 'node:string_decoder'
 import {
   openWorkspaceAsset,
   validateWorkspaceAssetTarget,
-} from '@electron/services/workspace/workspaceOpenedAsset.js'
-import { stringArg } from '@electron/services/workspace/workspaceUtils.js'
-import type { FsStateData } from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/workspaceOpenedAsset'
+import { stringArg } from '@electron/services/workspace/workspaceUtils'
+import type { FsStateData } from '@electron/services/workspace/types'
 import {
   MAX_WORKSPACE_TEXT_PREVIEW_BYTES,
   type WorkspaceTextPreview,

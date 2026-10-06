@@ -1,7 +1,7 @@
 import pLimit from 'p-limit'
 
-import type { FsEntry } from '@electron/services/workspace/types.js'
-import { isSearchIndexablePath } from '@electron/services/workspace/path.js'
+import type { FsEntry } from '@electron/services/workspace/types'
+import { isSearchIndexablePath } from '@electron/services/workspace/path'
 
 export type WorkspaceDocument = {
   path: string

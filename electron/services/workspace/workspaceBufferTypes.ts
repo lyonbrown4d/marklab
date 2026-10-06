@@ -1,5 +1,5 @@
-import type { Logger } from '@electron/services/logger.js'
-import type { BackgroundTaskStatus, FsStateData } from '@electron/services/workspace/types.js'
+import type { Logger } from '@electron/services/logger'
+import type { BackgroundTaskStatus, FsStateData } from '@electron/services/workspace/types'
 
 export type WorkspaceBufferTarget = { absolutePath: string; state: FsStateData | null }
 export type WorkspaceBufferWriteFile = (args: {

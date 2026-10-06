@@ -2,9 +2,9 @@ import { EventEmitter } from 'node:events'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { startNodeSidecar } from '@electron/services/knowledgeEngine/nodeSidecarProcess.js'
-import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
-import type { Logger } from '@electron/services/logger.js'
+import { startNodeSidecar } from '@electron/services/knowledgeEngine/nodeSidecarProcess'
+import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
+import type { Logger } from '@electron/services/logger'
 
 describe('Node knowledge sidecar process', () => {
   it('forks a Node utility process and routes client requests over messages', async () => {

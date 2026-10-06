@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createRendererDiagnosticsHandler } from '@electron/ipc/rendererDiagnostics.js'
-import type { Logger } from '@electron/services/logger.js'
+import { createRendererDiagnosticsHandler } from '@electron/ipc/rendererDiagnostics'
+import type { Logger } from '@electron/services/logger'
 
 const createLogger = (): Logger => {
   const logger = {

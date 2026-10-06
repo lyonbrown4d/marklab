@@ -6,28 +6,25 @@ import {
   assertPublicLinkPreviewUrl,
   defaultLinkPreviewLookup,
   type LinkPreviewLookup,
-} from '@electron/services/linkPreview/networkSecurity.js'
-import { createPinnedAgents } from '@electron/services/linkPreview/pinnedAgents.js'
+} from '@electron/services/linkPreview/networkSecurity'
+import { createPinnedAgents } from '@electron/services/linkPreview/pinnedAgents'
 import {
   LinkPreviewOperationError,
   linkPreviewFailureFields,
   runLinkPreviewStage,
-} from '@electron/services/linkPreview/diagnostics.js'
-import {
-  normalizeHttpUrl,
-  parseLinkPreviewRequest,
-} from '@electron/services/linkPreview/request.js'
+} from '@electron/services/linkPreview/diagnostics'
+import { normalizeHttpUrl, parseLinkPreviewRequest } from '@electron/services/linkPreview/request'
 import {
   createRemoteImageCapabilityUrl,
   parseRemoteImageCapabilityUrl,
   type RemoteImageAsset,
-} from '@electron/services/linkPreview/remoteAsset.js'
-import { headerValue, parseLinkPreviewResponse } from '@electron/services/linkPreview/response.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview.js'
+} from '@electron/services/linkPreview/remoteAsset'
+import { headerValue, parseLinkPreviewResponse } from '@electron/services/linkPreview/response'
+import type { Logger } from '@electron/services/logger'
+import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 
-export { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata.js'
-export { parseLinkPreviewRequest } from '@electron/services/linkPreview/request.js'
+export { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata'
+export { parseLinkPreviewRequest } from '@electron/services/linkPreview/request'
 
 export const LINK_PREVIEW_TIMEOUT_MS = 5000
 export const LINK_PREVIEW_MAX_RESPONSE_BYTES = 256 * 1024

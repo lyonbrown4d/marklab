@@ -4,15 +4,15 @@ import path from 'node:path'
 import {
   hasCanonicalDirectoryIdentity,
   prepareModelDirectoryTarget,
-} from '@electron/services/ai/local/modelDirectoryPaths.js'
-import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles.js'
-import { copyInstalledModels } from '@electron/services/ai/local/modelMigration.js'
+} from '@electron/services/ai/local/modelDirectoryPaths'
+import { fileExistsWithSize, sha256File } from '@electron/services/ai/local/modelFiles'
+import { copyInstalledModels } from '@electron/services/ai/local/modelMigration'
 import type {
   LocalAiCatalogEntry,
   LocalAiDirectoryConfig,
   LocalAiDirectoryMigration,
   LocalAiDirectoryMigrationHooks,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 type MigrationOptions = {
   catalog: readonly LocalAiCatalogEntry[]

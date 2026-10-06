@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { createMarkdownRequestContext } from '@electron/services/markdownLanguage/requestContext'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const workspaceIndex = {
   paths: ['notes/current.md', 'notes/other.md'],

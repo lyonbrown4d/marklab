@@ -1,15 +1,15 @@
 import { app, type BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container.js'
+import type { ElectronContainer } from '@electron/container'
 import {
   createSingleInstancePayload,
   launchInfo,
   publishDeepLinksFromArgs,
   publishDeepLinkUrl,
   registerDeepLinkProtocol,
-} from '@electron/main/deepLinks.js'
-import { resolveExistingOpenTargets } from '@electron/main/openTargets.js'
-import type { RuntimeEventQueue } from '@electron/main/runtimeEvents.js'
-import type { DeepLinkPayload } from '@electron/types.js'
+} from '@electron/main/deepLinks'
+import { resolveExistingOpenTargets } from '@electron/main/openTargets'
+import type { RuntimeEventQueue } from '@electron/main/runtimeEvents'
+import type { DeepLinkPayload } from '@electron/types'
 
 type SingleInstanceOptions = Pick<
   RuntimeEventQueue,

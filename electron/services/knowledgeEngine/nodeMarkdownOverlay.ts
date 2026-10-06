@@ -5,8 +5,8 @@ import type {
   KnowledgeOpenDocumentInput,
   KnowledgeResyncDocumentInput,
   KnowledgeSyncResponse,
-} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
 
 type OpenDocument = {
   content: string

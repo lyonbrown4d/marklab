@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSingleInstancePayload, registerDeepLinkProtocol } from '@electron/main/deepLinks.js'
+import { createSingleInstancePayload, registerDeepLinkProtocol } from '@electron/main/deepLinks'
 
 const electronApp = vi.hoisted(() => ({
   isPackaged: false,
   setAsDefaultProtocolClient: vi.fn(),
 }))
 vi.mock('electron', () => ({ app: electronApp }))
-vi.mock('@electron/services/logger.js', () => ({ noopLogger: { warn: vi.fn() } }))
+vi.mock('@electron/services/logger', () => ({ noopLogger: { warn: vi.fn() } }))
 
 const originalArgv = process.argv
 const entry = 'D:/Projects/marklab/dist-electron/main.js'
@@ -70,7 +70,7 @@ describe('Electron launch arguments', () => {
   it('uses the same parser for cold startup and second-instance launches', async () => {
     process.argv = ['electron', '--user-data-dir=TEMP/user-data', entry]
     vi.resetModules()
-    const { getLaunchInfo } = await import('@electron/main/deepLinks.js')
+    const { getLaunchInfo } = await import('@electron/main/deepLinks')
     expect(getLaunchInfo().args).toEqual([])
     expect(createSingleInstancePayload(process.argv, process.cwd()).args).toEqual([])
   })

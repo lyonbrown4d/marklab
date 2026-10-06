@@ -1,18 +1,18 @@
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
 import {
   parseMarkdownAst,
   type MarkdownNode,
   type MarkdownRoot,
-} from '@electron/services/workspace/markdown/ast.js'
-import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets.js'
-import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils.js'
-import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups.js'
+} from '@electron/services/workspace/markdown/ast'
+import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets'
+import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils'
+import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups'
 import type {
   FsGraph,
   FsGraphEdge,
   FsGraphNode,
   FsIndexedMarkdownFile,
-} from '@electron/services/workspace/types.js'
+} from '@electron/services/workspace/types'
 
 type GraphDocument = { path: string; title?: string; content: string }
 type KnownPaths = { paths: string[]; assetPaths: string[] }

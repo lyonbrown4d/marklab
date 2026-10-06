@@ -8,7 +8,7 @@ import {
   createRemoteFixture,
   removeRemoteFixture,
   type RemoteFixture,
-} from '@electron/services/git/testSupport.js'
+} from '@electron/services/git/testSupport'
 
 describe('Git remote fixture lifecycle', () => {
   it('removes its temporary root when repository creation fails', async () => {

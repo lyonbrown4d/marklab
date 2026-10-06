@@ -5,7 +5,7 @@ import {
   resolveElectronProjectRoots,
   resolveWindowIconPath,
   resolveWindowIconPaths,
-} from '@electron/windowIconPaths.js'
+} from '@electron/windowIconPaths'
 
 const createIcon = async (root: string, relativePath: string): Promise<string> => {
   const target = path.join(root, relativePath)

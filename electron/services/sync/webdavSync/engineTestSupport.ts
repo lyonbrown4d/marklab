@@ -11,8 +11,8 @@ import type {
   RemoteFileStore,
   SyncManifest,
   WorkspaceMutationBoundary,
-} from '@electron/services/sync/core/types.js'
-import { WebDavSyncEngine } from '@electron/services/sync/webdavSync/engine.js'
+} from '@electron/services/sync/core/types'
+import { WebDavSyncEngine } from '@electron/services/sync/webdavSync/engine'
 
 const roots: string[] = []
 

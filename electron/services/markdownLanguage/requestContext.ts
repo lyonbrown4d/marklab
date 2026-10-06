@@ -1,6 +1,6 @@
-import type { CompletionRequest } from '@electron/services/markdownLanguage/types.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { CompletionRequest } from '@electron/services/markdownLanguage/types'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
+import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 export type MarkdownRequestContext = {
   currentFile: FsIndexedMarkdownFile | null

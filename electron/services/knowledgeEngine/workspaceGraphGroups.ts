@@ -3,9 +3,9 @@ import louvain from 'graphology-communities-louvain'
 import { parse as parseToml } from 'smol-toml'
 import { parseDocument as parseYamlDocument } from 'yaml'
 
-import type { MarkdownNode, MarkdownRoot } from '@electron/services/workspace/markdown/ast.js'
-import type { FsGraphEdge, FsGraphGroup } from '@electron/services/workspace/types.js'
-import { createWorkspaceNodeOwnerResolver } from '@electron/services/knowledgeEngine/workspaceGraphOwnership.js'
+import type { MarkdownNode, MarkdownRoot } from '@electron/services/workspace/markdown/ast'
+import type { FsGraphEdge, FsGraphGroup } from '@electron/services/workspace/types'
+import { createWorkspaceNodeOwnerResolver } from '@electron/services/knowledgeEngine/workspaceGraphOwnership'
 
 export type WorkspaceGroupDocument = {
   id: string

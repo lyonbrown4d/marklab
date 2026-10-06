@@ -1,5 +1,5 @@
-import { toWebDavError } from '@electron/services/sync/webdav/errors.js'
-import type { WebDavOperationOptions } from '@electron/services/sync/webdav/types.js'
+import { toWebDavError } from '@electron/services/sync/webdav/errors'
+import type { WebDavOperationOptions } from '@electron/services/sync/webdav/types'
 
 export type WebDavRequestControl = {
   signal: AbortSignal

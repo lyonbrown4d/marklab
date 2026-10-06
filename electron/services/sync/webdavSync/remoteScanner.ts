@@ -4,8 +4,8 @@ import type {
   RemoteFileStore,
   SyncManifestEntry,
   SyncSkippedFile,
-} from '@electron/services/sync/core/types.js'
-import { normalizeSyncPath } from '@electron/services/sync/webdavSync/pathSafety.js'
+} from '@electron/services/sync/core/types'
+import { normalizeSyncPath } from '@electron/services/sync/webdavSync/pathSafety'
 
 export const scanRemoteStore = async (
   remote: RemoteFileStore,

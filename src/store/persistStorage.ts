@@ -1,4 +1,5 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
+import { RENDERER_PERSIST_KEYS, type RendererPersistKey } from '@/types/persistenceKeys'
 import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
 type IdleHandle =
   | {
@@ -34,7 +35,7 @@ const cloneJsonValue = <T>(value: T): T => {
 }
 
 export const createIdleJsonStorage = <S>(
-  name = 'marklab.preferences',
+  name: RendererPersistKey = RENDERER_PERSIST_KEYS.preferences,
 ): PersistStorage<S> | undefined => {
   if (typeof window === 'undefined') return undefined
   let storage: Storage
@@ -99,7 +100,7 @@ export const createIdleJsonStorage = <S>(
   }
 }
 export const createElectronSettingsJsonStorage = <S>(
-  name = 'marklab.preferences',
+  name: RendererPersistKey = RENDERER_PERSIST_KEYS.preferences,
 ): PersistStorage<S> | undefined => {
   const electronPersist = isElectronRuntime() ? getElectronRuntime().settings?.persist : undefined
   if (!electronPersist) return createIdleJsonStorage<S>(name)

@@ -1,4 +1,4 @@
-import type { GitErrorCode } from '@electron/services/git/types.js'
+import type { GitErrorCode } from '@electron/services/git/types'
 
 const URL_IN_TEXT_PATTERN = /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s'")]+/g
 

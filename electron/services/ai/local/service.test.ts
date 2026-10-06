@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { LocalAiService } from '@electron/services/ai/local/service.js'
+import { LocalAiService } from '@electron/services/ai/local/service'
 import type {
   LocalAiGenerationEvent,
   LocalAiModelManagerContract,
   LocalAiRuntimeContract,
-} from '@electron/services/ai/local/types.js'
+} from '@electron/services/ai/local/types'
 
 describe('LocalAiService', () => {
   it('creates trusted request ids and begins streaming after the start call resolves', async () => {

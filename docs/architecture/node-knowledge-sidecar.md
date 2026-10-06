@@ -46,12 +46,10 @@ workspace. Close requests clear the child state and terminate the process. A
 process crash changes only that workspace runtime and rejects its outstanding
 RPC requests; it does not execute knowledge work on the Electron main thread.
 
-The search index is held in utility-process memory while active and persisted
-as a versioned JSON snapshot below the workspace's engine-data directory.
-Rebuild, upsert, remove, and prefix-removal mutations write a same-directory
-temporary file, flush it, and then replace the primary snapshot. The previous
-valid primary becomes a backup. On restart, the sidecar loads the primary and
-falls back to the backup if a write was interrupted or the primary is invalid.
+Each workspace search index is persisted as `search.sqlite3` below its isolated
+engine-data directory. SQLite FTS5 owns retrieval and ranking while mutations
+run in bounded transactions. The database uses WAL mode and can be deleted and
+rebuilt from workspace files when its schema or contents are invalid.
 
 ## Build and packaging
 
@@ -64,7 +62,7 @@ is included by the existing `dist-electron/**/*` packaging rule. No
 Runtime dependencies for the sidecar must have an active release history,
 documented compatibility and a stable public API. Prefer maintainers that own
 the relevant protocol or editor implementation over thin community wrappers.
-The current implementation therefore uses MiniSearch for the local in-memory
+The current implementation uses SQLite FTS5 for the persistent local search
 index, Microsoft's `vscode-markdown-languageservice` for embedded Markdown
 language features and the official `@modelcontextprotocol/sdk` for MCP.
 
@@ -83,9 +81,8 @@ The former Rust `marklab-mcp` binary is replaced by
 Protocol SDK over stdio and exposes only two read-only tools:
 
 - `marklab_workspace_status` reads workspace, health, index, and storage status.
-- `marklab_search_workspace` reads the same persisted Node/MiniSearch snapshot
-  used by the knowledge sidecar. It accepts a required query and a limit from
-  1 through 50.
+- `marklab_search_workspace` reads the same persisted SQLite FTS5 index used by
+  the knowledge sidecar. It accepts a required query and a limit from 1 through 50.
 
 The MCP process does not expose workspace mutation or command execution. Pass
 the canonical workspace and engine-data paths explicitly:

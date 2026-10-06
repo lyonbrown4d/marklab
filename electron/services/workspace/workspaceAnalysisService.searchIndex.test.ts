@@ -5,16 +5,16 @@ import type { App, Shell } from 'electron'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types.js'
-import type { Logger } from '@electron/services/logger.js'
-import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService.js'
-import type { WorkspaceDocument } from '@electron/services/workspace/workspaceDocumentLoader.js'
+import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { Logger } from '@electron/services/logger'
+import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceDocument } from '@electron/services/workspace/workspaceDocumentLoader'
 import {
   WorkspaceSearchIndex,
   type WorkspaceSearchIndexBackend,
-} from '@electron/services/workspace/workspaceSearchIndex.js'
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
+} from '@electron/services/workspace/workspaceSearchIndex'
+import type { FsSearchResult } from '@electron/services/workspace/types'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
 
 const tempRoots: string[] = []
 

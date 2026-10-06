@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
 import {
   areWorkspaceTabsEqual,
   getPersistableWorkspaceTabs,
@@ -70,8 +71,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }),
     }),
     {
-      name: 'marklab.workspace',
-      storage: createElectronSettingsJsonStorage<WorkspacePersistedState>('marklab.workspace'),
+      name: RENDERER_PERSIST_KEYS.workspace,
+      storage: createElectronSettingsJsonStorage<WorkspacePersistedState>(
+        RENDERER_PERSIST_KEYS.workspace,
+      ),
       version: 1,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)

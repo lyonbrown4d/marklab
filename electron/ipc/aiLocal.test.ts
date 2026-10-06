@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createAiCommandHandlers } from '@electron/ipc/ai.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
+import { createAiCommandHandlers } from '@electron/ipc/ai'
+import type { AiServiceContract } from '@electron/services/ai/types'
+import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
 
 describe('local AI IPC ownership', () => {
   it('adapts existing cloud providers to the streaming event contract', async () => {

@@ -2,7 +2,7 @@ import {
   detachWebTabView,
   type WebTabEntry,
   type WebTabWindowState,
-} from '@electron/services/webTabs/webTabManagerTypes.js'
+} from '@electron/services/webTabs/webTabManagerTypes'
 
 export const shouldReplaceWebTabEntry = (entry: WebTabEntry): boolean =>
   entry.state.status === 'crashed' || entry.view.webContents.isDestroyed()

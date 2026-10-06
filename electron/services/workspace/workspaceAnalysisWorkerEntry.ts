@@ -1,12 +1,12 @@
 import { parentPort } from 'node:worker_threads'
 
-import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics.js'
-import { parseMarkdownDocument } from '@electron/services/workspace/markdown.js'
+import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics'
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
 import type {
   WorkspaceAnalysisResult,
   WorkspaceAnalysisTask,
   WorkspaceAnalysisWorkerRequest,
-} from '@electron/services/workspace/workspaceAnalysisWorkerMessages.js'
+} from '@electron/services/workspace/workspaceAnalysisWorkerMessages'
 
 const runWorkspaceBuildIndex = ({
   documents,

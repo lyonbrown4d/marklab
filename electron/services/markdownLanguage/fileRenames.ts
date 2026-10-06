@@ -1,9 +1,9 @@
-import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsMarkdownLink, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import {
   createFileLabel,
   createRelativeLinkTarget,
-} from '@electron/services/markdownLanguage/linkTargets.js'
-import type { MarkdownLanguageTextEdit } from '@electron/services/markdownLanguage/types.js'
+} from '@electron/services/markdownLanguage/linkTargets'
+import type { MarkdownLanguageTextEdit } from '@electron/services/markdownLanguage/types'
 
 type RewriteHost = {
   readFile(value: { path: string }): Promise<string>

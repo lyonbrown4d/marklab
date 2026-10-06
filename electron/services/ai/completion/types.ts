@@ -1,4 +1,4 @@
-import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types.js'
+import type { LocalAiGenerationEvent } from '@electron/services/ai/local/types'
 
 export type AiInlineCompletionEventHandler = (event: LocalAiGenerationEvent) => void
 

@@ -3,8 +3,8 @@ import { Readable } from 'node:stream'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { RemoteFileStore } from '@electron/services/sync/core/types.js'
-import { scanRemoteStore } from '@electron/services/sync/webdavSync/remoteScanner.js'
+import type { RemoteFileStore } from '@electron/services/sync/core/types'
+import { scanRemoteStore } from '@electron/services/sync/webdavSync/remoteScanner'
 
 describe('scanRemoteStore', () => {
   it('filters the internal manifest before applying the protected path policy', async () => {

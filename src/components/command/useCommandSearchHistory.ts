@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from 'react'
 import { useLocalStorageState } from 'ahooks'
 
-const COMMAND_SEARCH_HISTORY_KEY = 'marklab.command.searchHistory'
+import { LOCAL_STORAGE_KEYS } from '@/types/persistenceKeys'
+
+const COMMAND_SEARCH_HISTORY_KEY = LOCAL_STORAGE_KEYS.commandSearchHistory
 const MAX_SEARCH_HISTORY = 8
 const MIN_SEARCH_HISTORY_LENGTH = 2
 

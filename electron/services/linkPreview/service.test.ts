@@ -7,7 +7,7 @@ import {
   LinkPreviewService,
   parseLinkPreviewHtml,
   type LinkPreviewHttpClient,
-} from '@electron/services/linkPreview/service.js'
+} from '@electron/services/linkPreview/service'
 
 const publicLookup = vi.fn(async () => ['93.184.216.34'])
 

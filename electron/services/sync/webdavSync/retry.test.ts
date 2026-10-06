@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry.js'
+import { remoteErrorCode, withRemoteRetry } from '@electron/services/sync/webdavSync/retry'
 
 describe('withRemoteRetry', () => {
   it('retries network failures with bounded backoff', async () => {

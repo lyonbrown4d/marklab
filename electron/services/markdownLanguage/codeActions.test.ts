@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions.js'
-import type { MarkdownLanguageCodeAction } from '@electron/services/markdownLanguage/types.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { getMarkdownCodeActions } from '@electron/services/markdownLanguage/codeActions'
+import type { MarkdownLanguageCodeAction } from '@electron/services/markdownLanguage/types'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 const workspaceIndex = {
   files: [

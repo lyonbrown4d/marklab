@@ -1,6 +1,6 @@
 import type { IpcRenderer, IpcRendererEvent } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { WindowCloseFlushRequest, WindowCloseFlushResult } from '@electron/types.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { WindowCloseFlushRequest, WindowCloseFlushResult } from '@electron/types'
 
 export type WindowCloseLifecyclePreloadSurface = {
   onCloseRequested: (handler: () => Promise<void> | void) => () => void

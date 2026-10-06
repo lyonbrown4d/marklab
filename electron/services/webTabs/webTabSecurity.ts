@@ -1,6 +1,6 @@
 import type { Event, Session, WebContents } from 'electron'
 
-import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl.js'
+import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
 
 const configuredSessions = new WeakSet<Session>()
 

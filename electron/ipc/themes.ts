@@ -1,18 +1,18 @@
 import type { IpcMain, Shell } from 'electron'
-import { nativeIpcChannels } from '@electron/channels.js'
+import { nativeIpcChannels } from '@electron/channels'
 import {
   getUserThemesDir,
   importUserThemeCss,
   listUserThemes,
   readUserThemeCss,
   removeUserTheme,
-} from '@electron/services/userThemeStore.js'
+} from '@electron/services/userThemeStore'
 import type {
   SettingsPersistResult,
   UserThemeCssResult,
   UserThemeImportResult,
   UserThemeListResult,
-} from '@electron/types.js'
+} from '@electron/types'
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'Theme operation failed.'

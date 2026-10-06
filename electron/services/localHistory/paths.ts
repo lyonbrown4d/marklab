@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto'
 import path from 'node:path'
 
-import type { LocalHistoryWorkspace } from '@electron/services/localHistory/types.js'
+import type { LocalHistoryWorkspace } from '@electron/services/localHistory/types'
+import { canonicalWorkspacePath } from '@electron/services/workspace/workspaceIdentity'
 
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 const entryIdPattern =
@@ -14,11 +14,7 @@ export const normalizeLocalHistoryWorkspace = (workspace: LocalHistoryWorkspace)
   if (typeof workspace.path !== 'string' || !workspace.path.trim()) {
     throw new Error('Local history workspace path is required')
   }
-  if (workspace.path.includes('\0') || !path.isAbsolute(workspace.path)) {
-    throw new Error('Local history workspace path must be absolute')
-  }
-  const resolved = path.resolve(workspace.path)
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved
+  return canonicalWorkspacePath(workspace.path)
 }
 
 export const normalizeLocalHistoryPath = (value: unknown): string => {
@@ -53,15 +49,3 @@ export const validateLocalHistoryEntryId = (value: unknown): string => {
   }
   return value
 }
-
-export const localHistoryFileDirectory = (
-  storageRoot: string,
-  workspace: LocalHistoryWorkspace,
-  filePath: string,
-): string => {
-  const workspaceKey = hash(`${workspace.kind}\0${normalizeLocalHistoryWorkspace(workspace)}`)
-  const fileKey = hash(normalizeLocalHistoryPath(filePath))
-  return path.join(storageRoot, workspaceKey, fileKey)
-}
-
-const hash = (value: string): string => createHash('sha256').update(value).digest('hex')

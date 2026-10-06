@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events'
 import type { BrowserWindow, HandlerDetails } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 
-import { installWindowNavigationGuard } from '@electron/windowNavigation.js'
+import { installWindowNavigationGuard } from '@electron/windowNavigation'
 
 const openExternal = vi.hoisted(() => vi.fn(async () => undefined))
 

@@ -1,26 +1,25 @@
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
-
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex.js'
-import { NodeSearchSnapshot } from '@electron/services/knowledgeEngine/nodeSearchSnapshot.js'
-import type { NodeSearchWorkerBuildResult } from '@electron/services/knowledgeEngine/nodeSearchWorkerMessages.js'
+import { NodeSearchIndex } from '@electron/services/knowledgeEngine/nodeSearchIndex'
+import { NodeSearchDatabase } from '@electron/services/knowledgeEngine/nodeSearchDatabase'
 
-const tempRoots: string[] = []
+const indexes: NodeSearchIndex[] = []
+
+const createIndex = (...args: ConstructorParameters<typeof NodeSearchIndex>): NodeSearchIndex => {
+  const index = new NodeSearchIndex(...args)
+  indexes.push(index)
+  return index
+}
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await Promise.all(
-    tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })),
-  )
+  await Promise.all(indexes.splice(0).map((index) => index.close()))
 })
 
 describe('NodeSearchIndex rebuild lifecycle', () => {
   it('rebuilds large indexes in bounded chunks that yield to the event loop', async () => {
     const yieldControl = vi.fn(async () => undefined)
-    const index = new NodeSearchIndex(undefined, '', { chunkSize: 2, yieldControl })
+    const index = createIndex(undefined, '', { chunkSize: 2, yieldControl })
     const documents = Array.from({ length: 5 }, (_, index) => ({
       path: `notes/${index}.md`,
       title: `Note ${index}`,
@@ -40,7 +39,7 @@ describe('NodeSearchIndex rebuild lifecycle', () => {
       releaseFirstYield = resolve
     })
     const yieldControl = vi.fn(() => (blockFirstYield ? firstYield : Promise.resolve()))
-    const index = new NodeSearchIndex(undefined, '', { chunkSize: 1, yieldControl })
+    const index = createIndex(undefined, '', { chunkSize: 1, yieldControl })
     const stale = index.rebuild([
       { path: 'stale-a.md', title: 'Stale A', content: 'obsolete' },
       { path: 'stale-b.md', title: 'Stale B', content: 'obsolete' },
@@ -67,7 +66,7 @@ describe('NodeSearchIndex rebuild lifecycle', () => {
       releaseYield = resolve
     })
     const yieldControl = vi.fn(() => blockedYield)
-    const index = new NodeSearchIndex(undefined, '', { chunkSize: 1, yieldControl })
+    const index = createIndex(undefined, '', { chunkSize: 1, yieldControl })
     await index.rebuild([{ path: 'stable.md', title: 'Stable', content: 'committed value' }])
     const stale = index.rebuild([
       { path: 'stale-a.md', title: 'Stale A', content: 'obsolete' },
@@ -87,73 +86,8 @@ describe('NodeSearchIndex rebuild lifecycle', () => {
     await expect(index.getStats()).resolves.toMatchObject({ building: false, documentCount: 1 })
   })
 
-  it('does not commit a rebuild snapshot that is cancelled during persistence', async () => {
-    const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-search-cancel-'))
-    tempRoots.push(storageRoot)
-    const index = new NodeSearchIndex(storageRoot, 'workspace-a')
-    await index.rebuild([{ path: 'stable.md', title: 'Stable', content: 'committed value' }])
-    const originalWrite = NodeSearchSnapshot.prototype.write
-    let releaseWrite!: () => void
-    const blockedWrite = new Promise<void>((resolve) => {
-      releaseWrite = resolve
-    })
-    const write = vi
-      .spyOn(NodeSearchSnapshot.prototype, 'write')
-      .mockImplementationOnce(async function (this: NodeSearchSnapshot, ...args) {
-        await blockedWrite
-        return originalWrite.apply(this, args)
-      })
-    const stale = index.rebuild([{ path: 'stale.md', title: 'Stale', content: 'obsolete' }])
-    await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(1))
-
-    index.cancelPendingRebuild()
-    releaseWrite()
-    await stale
-
-    const restarted = new NodeSearchIndex(storageRoot, 'workspace-a')
-    await expect(restarted.search('committed')).resolves.toMatchObject({ totalHits: 1 })
-    await expect(restarted.search('obsolete')).resolves.toMatchObject({ totalHits: 0 })
-  })
-
-  it('aborts the active worker when a large rebuild is cancelled', async () => {
-    let markWorkerStarted!: () => void
-    const workerStarted = new Promise<void>((resolve) => {
-      markWorkerStarted = resolve
-    })
-    const workerRunner = {
-      available: true,
-      run: vi.fn(
-        (_request: unknown, signal: AbortSignal) =>
-          new Promise<NodeSearchWorkerBuildResult>((_resolve, reject) => {
-            markWorkerStarted()
-            signal.addEventListener('abort', () => {
-              const error = new Error('aborted')
-              error.name = 'AbortError'
-              reject(error)
-            })
-          }),
-      ),
-    }
-    const index = new NodeSearchIndex(undefined, 'workspace-a', {
-      workerDocumentThreshold: 2,
-      workerRunner,
-    })
-    await index.rebuild([{ path: 'stable.md', title: 'Stable', content: 'committed' }])
-    const stale = index.rebuild([
-      { path: 'stale-a.md', title: 'Stale A', content: 'obsolete' },
-      { path: 'stale-b.md', title: 'Stale B', content: 'obsolete' },
-    ])
-    await workerStarted
-
-    index.cancelPendingRebuild()
-
-    await expect(stale).resolves.toBeUndefined()
-    await expect(index.search('committed')).resolves.toMatchObject({ totalHits: 1 })
-    expect(workerRunner.run.mock.calls[0]?.[1].aborted).toBe(true)
-  })
-
   it('reports real index statistics and the most recent build error', async () => {
-    const index = new NodeSearchIndex()
+    const index = createIndex()
     await index.rebuild([
       { path: 'notes/a.md', title: 'A', content: 'alpha' },
       { path: 'notes/b.md', title: 'B', content: 'beta' },
@@ -176,5 +110,47 @@ describe('NodeSearchIndex rebuild lifecycle', () => {
       documentCount: 2,
       lastBuildError: expect.stringMatching(/workspace file/i),
     })
+  })
+
+  it('treats close as terminal and rejects work that could reopen the database', async () => {
+    const index = createIndex()
+    await index.upsert({ path: 'notes/a.md', title: 'A', content: 'alpha' })
+
+    await index.close()
+
+    await expect(index.upsert({ path: 'notes/b.md', title: 'B', content: 'beta' })).rejects.toThrow(
+      'closed',
+    )
+    await expect(index.search('alpha')).rejects.toThrow('closed')
+  })
+
+  it('waits for an admitted search before destroying the database', async () => {
+    let enterSearch!: () => void
+    let releaseSearch!: () => void
+    const entered = new Promise<void>((resolve) => {
+      enterSearch = resolve
+    })
+    const blocked = new Promise<void>((resolve) => {
+      releaseSearch = resolve
+    })
+    vi.spyOn(NodeSearchDatabase.prototype, 'searchBatches').mockImplementation(async function* () {
+      enterSearch()
+      await blocked
+      yield []
+    })
+    const index = createIndex()
+    const search = index.search('alpha')
+    await entered
+    let didClose = false
+
+    const close = index.close().then(() => {
+      didClose = true
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(didClose).toBe(false)
+    releaseSearch()
+    await Promise.all([search, close])
+    expect(didClose).toBe(true)
   })
 })

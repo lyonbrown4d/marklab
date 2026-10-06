@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { vi } from 'vitest'
 
-import { WebTabManager } from '@electron/services/webTabs/webTabManager.js'
+import { WebTabManager } from '@electron/services/webTabs/webTabManager'
 
 export const keyInput = (key: string): Electron.Input => ({
   alt: false,

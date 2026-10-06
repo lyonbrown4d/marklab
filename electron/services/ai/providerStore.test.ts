@@ -4,18 +4,23 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { AiProviderStore } from '@electron/services/ai/providerStore.js'
+import { LocalDatabaseService } from '@electron/database/service'
+import { SettingsRepository } from '@electron/database/repositories/settingsRepository'
+import { AiProviderStore } from '@electron/services/ai/providerStore'
 
 const roots: string[] = []
+const databases: LocalDatabaseService[] = []
 
 afterEach(async () => {
+  await Promise.all(databases.splice(0).map((database) => database.close()))
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })))
 })
 
 describe('AiProviderStore', () => {
-  it('encrypts API keys and atomically persists provider metadata', async () => {
+  it('encrypts API keys and persists provider metadata in SQLite', async () => {
     const root = await createRoot()
-    const store = new AiProviderStore(root, createSafeStorage())
+    const database = await createDatabase(root)
+    const store = new AiProviderStore(database, createSafeStorage())
     const apiKey = 'sk-super-secret-value'
 
     await store.update({
@@ -26,12 +31,15 @@ describe('AiProviderStore', () => {
       apiKey,
     })
 
-    const persisted = await fs.readFile(path.join(root, 'ai', 'providers.json'), 'utf8')
-    expect(persisted).not.toContain(apiKey)
-    expect(persisted).toContain(Buffer.from(`encrypted:${apiKey}`).toString('base64'))
-    expect((await fs.readdir(path.join(root, 'ai'))).some((name) => name.includes('.tmp-'))).toBe(
-      false,
-    )
+    const persisted = database.sqlite
+      .prepare<[string], { encrypted_api_key: Buffer }>(
+        'select encrypted_api_key from ai_providers where id = ?',
+      )
+      .get('openai-main')
+    expect(persisted?.encrypted_api_key).toEqual(Buffer.from(`encrypted:${apiKey}`))
+    await expect(fs.stat(path.join(root, 'ai', 'providers.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
     await expect(store.resolveApiKey('openai-main')).resolves.toBe(apiKey)
   })
 
@@ -54,7 +62,8 @@ describe('AiProviderStore', () => {
         throw new Error('sync decryption must not be used')
       }),
     }
-    const store = new AiProviderStore(root, safeStorage)
+    const database = await createDatabase(root)
+    const store = new AiProviderStore(database, safeStorage)
 
     await store.update({
       id: 'openai-async',
@@ -71,7 +80,8 @@ describe('AiProviderStore', () => {
 
   it('preserves, clears, and deletes credentials without ever returning plaintext in records', async () => {
     const root = await createRoot()
-    const store = new AiProviderStore(root, createSafeStorage())
+    const database = await createDatabase(root)
+    const store = new AiProviderStore(database, createSafeStorage())
     const input = {
       id: 'anthropic-main',
       label: 'Claude',
@@ -93,9 +103,10 @@ describe('AiProviderStore', () => {
 
   it('refuses to persist a secret when OS encryption is unavailable', async () => {
     const root = await createRoot()
+    const database = await createDatabase(root)
     const safeStorage = createSafeStorage()
     safeStorage.isEncryptionAvailable = () => false
-    const store = new AiProviderStore(root, safeStorage)
+    const store = new AiProviderStore(database, safeStorage)
 
     await expect(
       store.update({
@@ -108,28 +119,76 @@ describe('AiProviderStore', () => {
     ).rejects.toThrow(/encryption/i)
   })
 
+  it('returns validation failures as promise rejections', async () => {
+    const root = await createRoot()
+    const database = await createDatabase(root)
+    const store = new AiProviderStore(database, createSafeStorage())
+
+    await expect(
+      store.update({
+        id: 'invalid-provider',
+        kind: 'openai',
+        label: '',
+        model: 'gpt-5-mini',
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('does not enlist unrelated synchronous settings writes in a failed encryption request', async () => {
+    const root = await createRoot()
+    const database = await createDatabase(root)
+    let rejectEncryption: (error: Error) => void = () => undefined
+    let resolveEncryptionStarted: () => void = () => undefined
+    const encryptionStarted = new Promise<void>((resolve) => {
+      resolveEncryptionStarted = resolve
+    })
+    const store = new AiProviderStore(database, {
+      ...createSafeStorage(),
+      isAsyncEncryptionAvailable: async () => true,
+      encryptStringAsync: async () => {
+        resolveEncryptionStarted()
+        return new Promise<Buffer>((_resolve, reject) => {
+          rejectEncryption = reject
+        })
+      },
+      decryptStringAsync: async () => ({ result: '', shouldReEncrypt: false }),
+    })
+
+    const update = store.update({
+      apiKey: 'secret',
+      id: 'failing-provider',
+      kind: 'openai',
+      label: 'Failing provider',
+      model: 'gpt-5-mini',
+    })
+    await encryptionStarted
+    new SettingsRepository(database).upsert('concurrent-setting', '"preserved"', null)
+    rejectEncryption(new Error('encryption failed'))
+
+    await expect(update).rejects.toThrow(/encrypted|encryption/i)
+    expect(new SettingsRepository(database).get('concurrent-setting')?.value_json).toBe(
+      '"preserved"',
+    )
+  })
+
   it('rejects tampered compatible-provider records without a base URL', async () => {
     const root = await createRoot()
-    const directory = path.join(root, 'ai')
-    await fs.mkdir(directory, { recursive: true })
-    await fs.writeFile(
-      path.join(directory, 'providers.json'),
-      JSON.stringify({
-        version: 1,
-        providers: [
-          {
-            id: 'compatible',
-            label: 'Compatible',
-            kind: 'openai-compatible',
-            model: 'custom-model',
-            createdAt: '2026-09-30T00:00:00.000Z',
-            updatedAt: '2026-09-30T00:00:00.000Z',
-          },
-        ],
-      }),
-    )
+    const database = await createDatabase(root)
+    await database.database
+      .insertInto('ai_providers')
+      .values({
+        base_url: null,
+        created_at: '2026-09-30T00:00:00.000Z',
+        encrypted_api_key: null,
+        id: 'compatible',
+        kind: 'openai-compatible',
+        label: 'Compatible',
+        model: 'custom-model',
+        updated_at: '2026-09-30T00:00:00.000Z',
+      })
+      .execute()
 
-    await expect(new AiProviderStore(root, createSafeStorage()).list()).rejects.toThrow(
+    await expect(new AiProviderStore(database, createSafeStorage()).list()).rejects.toThrow(
       'AI provider configuration could not be read',
     )
   })
@@ -139,6 +198,13 @@ const createRoot = async (): Promise<string> => {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'marklab-ai-store-'))
   roots.push(root)
   return root
+}
+
+const createDatabase = async (root: string): Promise<LocalDatabaseService> => {
+  const database = new LocalDatabaseService({ userDataPath: root })
+  await database.initialize()
+  databases.push(database)
+  return database
 }
 
 const createSafeStorage = () => ({

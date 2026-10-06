@@ -1,9 +1,9 @@
-import { MermaidLanguageProvider } from '@electron/services/mermaidLanguage/provider.js'
+import { MermaidLanguageProvider } from '@electron/services/mermaidLanguage/provider'
 import type {
   LanguageCompletionContext,
   LanguageDiagnosticsContext,
   LanguageIntelligenceProvider,
-} from '@electron/services/languageIntelligence/service.js'
+} from '@electron/services/languageIntelligence/service'
 
 export class MermaidLanguageIntelligenceProvider implements LanguageIntelligenceProvider {
   readonly languageIds = ['mermaid']

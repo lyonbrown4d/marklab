@@ -2,13 +2,10 @@ import { Readable } from 'node:stream'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { createWebDavClientAdapter } from '@electron/services/sync/webdav/clientAdapter.js'
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
-import { createWebDavRemoteFileStore } from '@electron/services/sync/webdav/remoteFileStore.js'
-import type {
-  WebDavLibraryClient,
-  WebDavRemoteClient,
-} from '@electron/services/sync/webdav/types.js'
+import { createWebDavClientAdapter } from '@electron/services/sync/webdav/clientAdapter'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
+import { createWebDavRemoteFileStore } from '@electron/services/sync/webdav/remoteFileStore'
+import type { WebDavLibraryClient, WebDavRemoteClient } from '@electron/services/sync/webdav/types'
 
 describe('WebDAV RemoteFileStore', () => {
   it('recursively lists files below the scoped remote root', async () => {

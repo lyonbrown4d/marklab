@@ -2,7 +2,7 @@ import type { RequestOptions } from 'node:https'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { createOriginLockedAgents } from '@electron/services/sync/webdav/originLockedAgent.js'
+import { createOriginLockedAgents } from '@electron/services/sync/webdav/originLockedAgent'
 
 describe('origin-locked WebDAV agents', () => {
   it('rejects a cross-origin redirect before a request is sent', () => {

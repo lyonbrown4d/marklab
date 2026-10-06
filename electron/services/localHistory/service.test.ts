@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import Database from 'better-sqlite3'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -9,9 +10,10 @@ import {
   DEFAULT_LOCAL_HISTORY_MAX_FILE_SIZE_BYTES,
   DEFAULT_LOCAL_HISTORY_MERGE_WINDOW_MS,
   LocalHistoryService,
-} from '@electron/services/localHistory/service.js'
+} from '@electron/services/localHistory/service'
 
 const roots: string[] = []
+const services: LocalHistoryService[] = []
 
 const createFixture = async (options: { maxEntriesPerFile?: number; now?: () => number } = {}) => {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'marklab-local-history-'))
@@ -19,16 +21,20 @@ const createFixture = async (options: { maxEntriesPerFile?: number; now?: () => 
   const userDataPath = path.join(root, 'user-data')
   const workspacePath = path.join(root, 'workspace')
   await fs.mkdir(workspacePath, { recursive: true })
+  const service = new LocalHistoryService({ ...options, userDataPath })
+  services.push(service)
   return {
-    service: new LocalHistoryService({ ...options, userDataPath }),
-    storagePath: path.join(userDataPath, 'local-history-v1'),
+    service,
+    databasePath: path.join(userDataPath, 'storage', 'history.sqlite3'),
     workspace: { kind: 'external' as const, path: workspacePath },
     workspacePath,
   }
 }
 
 afterEach(async () => {
+  await Promise.all(services.splice(0).map((service) => service.dispose()))
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })))
+  vi.restoreAllMocks()
 })
 
 describe('LocalHistoryService', () => {
@@ -84,8 +90,9 @@ describe('LocalHistoryService', () => {
     await expect(service.list(workspace, 'large.md')).resolves.toEqual([])
   })
 
-  it('stores atomic snapshots below userData without touching the workspace', async () => {
-    const { service, storagePath, workspace, workspacePath } = await createFixture()
+  it('stores snapshots in a dedicated migrated SQLite database without touching the workspace', async () => {
+    const pragma = vi.spyOn(Database.prototype, 'pragma')
+    const { databasePath, service, workspace, workspacePath } = await createFixture()
     await fs.mkdir(path.join(workspacePath, 'notes'), { recursive: true })
     await fs.writeFile(path.join(workspacePath, 'notes', 'guide.md'), '# Workspace\n')
 
@@ -94,10 +101,20 @@ describe('LocalHistoryService', () => {
     expect(await fs.readFile(path.join(workspacePath, 'notes', 'guide.md'), 'utf8')).toBe(
       '# Workspace\n',
     )
-    const storageFiles = await recursiveFiles(storagePath)
-    expect(storageFiles).toHaveLength(1)
-    expect(storageFiles[0]).toMatch(/\.json$/)
-    expect(storageFiles.some((file) => file.includes('.tmp-'))).toBe(false)
+    const database = new Database(databasePath, { readonly: true })
+    try {
+      const tables = database
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('history_documents', 'history_entries') ORDER BY name",
+        )
+        .all() as Array<{ name: string }>
+      expect(tables.map(({ name }) => name)).toEqual(['history_documents', 'history_entries'])
+      expect(database.pragma('journal_mode', { simple: true })).toBe('wal')
+      expect(pragma).toHaveBeenCalledWith('foreign_keys = ON')
+      expect(pragma).toHaveBeenCalledWith('busy_timeout = 3000')
+    } finally {
+      database.close()
+    }
   })
 
   it('restores through the supplied atomic workspace writer', async () => {
@@ -138,14 +155,3 @@ describe('LocalHistoryService', () => {
     )
   })
 })
-
-const recursiveFiles = async (root: string): Promise<string[]> => {
-  const entries = await fs.readdir(root, { withFileTypes: true })
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const target = path.join(root, entry.name)
-      return entry.isDirectory() ? recursiveFiles(target) : [target]
-    }),
-  )
-  return files.flat()
-}

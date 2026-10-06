@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { AiInlineCompletionService } from '@electron/services/ai/completion/service.js'
-import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy.js'
-import type { LocalAiServiceContract } from '@electron/services/ai/local/types.js'
-import type { AiServiceContract } from '@electron/services/ai/types.js'
+import { AiInlineCompletionService } from '@electron/services/ai/completion/service'
+import type { AiInlineCompletionPolicyContract } from '@electron/services/ai/completion/policy'
+import type { LocalAiServiceContract } from '@electron/services/ai/local/types'
+import type { AiServiceContract } from '@electron/services/ai/types'
 
 const request = (session: string, providerId = 'openai-main') => ({
   providerId,

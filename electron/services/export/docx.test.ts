@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { renderDocx } from '@electron/services/export/docx.js'
+import { renderDocx } from '@electron/services/export/docx'
 
 describe('renderDocx local images', () => {
   it('embeds a relative image returned by the workspace reader', async () => {

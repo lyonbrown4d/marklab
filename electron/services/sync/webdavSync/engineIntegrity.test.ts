@@ -2,14 +2,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { WebDavError } from '@electron/services/sync/webdav/errors.js'
+import { WebDavError } from '@electron/services/sync/webdav/errors'
 import {
   cleanupFixtures,
   createFixture,
   manifest,
   remoteEntry,
   state,
-} from '@electron/services/sync/webdavSync/engineTestSupport.js'
+} from '@electron/services/sync/webdavSync/engineTestSupport'
 
 afterEach(cleanupFixtures)
 

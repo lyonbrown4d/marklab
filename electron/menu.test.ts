@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installNativeMenu } from '@electron/menu.js'
+import { installNativeMenu } from '@electron/menu'
 
 const electronMock = vi.hoisted(() => ({
   buildFromTemplate: vi.fn((template: MenuItemConstructorOptions[]) => template),
@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@electron/services/settingsStore.js', () => ({
+vi.mock('@electron/services/settingsStore', () => ({
   getRendererPersistValue: vi.fn(() => null),
 }))
 

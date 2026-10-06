@@ -1,7 +1,7 @@
 import { createHash, type Hash } from 'node:crypto'
 import { LRUCache } from 'lru-cache'
 
-import type { FsGraph } from '@electron/services/workspace/types.js'
+import type { FsGraph } from '@electron/services/workspace/types'
 
 type WorkspaceGraphDocument = {
   path: string

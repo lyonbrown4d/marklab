@@ -5,8 +5,8 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { LocalAiModelManager } from '@electron/services/ai/local/modelManager.js'
-import type { LocalAiCatalogEntry } from '@electron/services/ai/local/types.js'
+import { LocalAiModelManager } from '@electron/services/ai/local/modelManager'
+import type { LocalAiCatalogEntry } from '@electron/services/ai/local/types'
 
 const roots: string[] = []
 

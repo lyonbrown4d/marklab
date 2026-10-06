@@ -1,6 +1,6 @@
-import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import { rewriteMarkdownFileReferencesForRename } from '@electron/services/markdownLanguage/fileRenames'
+import type { Logger } from '@electron/services/logger'
+import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 type RenameHost = Parameters<typeof rewriteMarkdownFileReferencesForRename>[0]['host']
 

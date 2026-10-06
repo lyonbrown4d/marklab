@@ -1,5 +1,5 @@
-import { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata.js'
-import type { LinkPreviewResult } from '@/types/linkPreview.js'
+import { parseLinkPreviewHtml } from '@electron/services/linkPreview/metadata'
+import type { LinkPreviewResult } from '@/types/linkPreview'
 
 const RASTER_MEDIA_TYPES = new Set([
   'image/avif',

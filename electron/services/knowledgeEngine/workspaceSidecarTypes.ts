@@ -9,28 +9,28 @@ import type {
   KnowledgeWorkspaceGraph,
   KnowledgeWorkspaceStatus,
   KnowledgeWorkspacePathMutation,
-} from '@electron/services/knowledgeEngine/knowledgeEngineTypes.js'
+} from '@electron/services/knowledgeEngine/knowledgeEngineTypes'
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResultSet,
-} from '@electron/services/knowledgeEngine/knowledgeSearch.js'
+} from '@electron/services/knowledgeEngine/knowledgeSearch'
 import {
   redactWorkspaceSidecarSpawnPlan,
   type WorkspaceSidecarSpawnPlan,
-} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.js'
+} from '@electron/services/knowledgeEngine/workspaceSidecarSpawnPlan'
 import type {
   FsEntry,
   FsMarkdownDiagnostic,
   FsPathMetadata,
   FsSearchResult,
   FsSnapshot,
-} from '@electron/services/workspace/types.js'
-import type { Logger } from '@electron/services/logger.js'
+} from '@electron/services/workspace/types'
+import type { Logger } from '@electron/services/logger'
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
-} from '@electron/services/workspace/workspaceSearchTypes.js'
-import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity.js'
+} from '@electron/services/workspace/workspaceSearchTypes'
+import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
 
 export type WorkspaceSidecarRuntimeState = 'opening' | 'ready' | 'closing' | 'error'
 

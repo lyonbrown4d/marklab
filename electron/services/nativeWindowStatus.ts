@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 
-import type { BackgroundTaskStatus } from '@electron/services/workspace/types.js'
+import type { BackgroundTaskStatus } from '@electron/services/workspace/types'
 
 const PROGRESS_TASK_IDS = new Set(['buffer-flush', 'search-index'])
 

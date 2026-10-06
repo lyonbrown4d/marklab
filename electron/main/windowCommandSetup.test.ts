@@ -1,8 +1,8 @@
 import { BrowserWindow } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createWindowCommandSetup } from '@electron/main/windowCommandSetup.js'
-import { createAppWindowCommandHandlers } from '@electron/main/windowCommands.js'
-import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands.js'
+import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
+import { createAppWindowCommandHandlers } from '@electron/main/windowCommands'
+import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands'
 
 const commandHandlers = vi.hoisted(() => ({
   open_path_in_current_window: vi.fn(),
@@ -10,11 +10,11 @@ const commandHandlers = vi.hoisted(() => ({
 }))
 
 vi.mock('electron', () => ({ BrowserWindow: { getFocusedWindow: vi.fn() } }))
-vi.mock('@electron/main/windowCommands.js', () => ({
+vi.mock('@electron/main/windowCommands', () => ({
   createAppWindowCommandHandlers: vi.fn(() => commandHandlers),
   createNativeMenuActionDispatcher: vi.fn(() => vi.fn()),
 }))
-vi.mock('@electron/services/settingsStore.js', () => ({
+vi.mock('@electron/services/settingsStore', () => ({
   copyRendererPersistSession: vi.fn(),
   writeRendererPersistSession: vi.fn(),
 }))

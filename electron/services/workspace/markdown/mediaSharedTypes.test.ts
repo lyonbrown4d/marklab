@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  guessMediaType,
-  looksLikeAssetTarget,
-} from '@electron/services/workspace/markdown/media.js'
+import { guessMediaType, looksLikeAssetTarget } from '@electron/services/workspace/markdown/media'
 
 describe('markdown media shared MIME table', () => {
   it('uses data URI media types before extension inference', () => {

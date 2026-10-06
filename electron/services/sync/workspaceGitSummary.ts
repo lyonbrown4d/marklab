@@ -1,4 +1,4 @@
-import type { GitService } from '@electron/services/git/service.js'
+import type { GitService } from '@electron/services/git/service'
 import type { WorkspaceGitSummary } from '@/types/workspaceSync'
 
 type GitSummaryService = Pick<GitService, 'discover' | 'remoteStatus' | 'status'>

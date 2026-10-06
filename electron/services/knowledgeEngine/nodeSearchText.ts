@@ -1,6 +1,6 @@
-import type { FsSearchResult } from '@electron/services/workspace/types.js'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes.js'
-import { foldSearchText } from '@electron/services/knowledgeEngine/nodeSearchConfig.js'
+import type { FsSearchResult } from '@electron/services/workspace/types'
+import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import { foldSearchText } from '@electron/services/knowledgeEngine/nodeSearchNormalization'
 
 type FoldedTextMap = {
   text: string
@@ -22,7 +22,7 @@ export const documentContainsAllTerms = (
 export const resultForSearchDocument = (
   document: WorkspaceSearchDocument,
   query: string,
-  miniSearchScore = 0,
+  indexedScore = 0,
   indexedMatches: string[] = [],
 ): FsSearchResult => {
   const exactTerms = queryTerms(query)
@@ -49,7 +49,7 @@ export const resultForSearchDocument = (
     end_column: (firstHighlight?.end ?? 0) + 1,
     line: lineIndex >= 0 ? lineIndex + 1 : 1,
     path: document.path,
-    score: exactScore || miniSearchScore,
+    score: exactScore || indexedScore,
     snippet,
     snippet_highlights: highlights,
     title: document.title,

@@ -1,6 +1,6 @@
 import { CompletionItemKind } from 'vscode-languageserver-types'
 
-import type { MermaidDiagramKind } from '@electron/services/mermaidLanguage/types.js'
+import type { MermaidDiagramKind } from '@electron/services/mermaidLanguage/types'
 
 export type MermaidCompletionTemplate = {
   label: string

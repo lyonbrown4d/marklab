@@ -3,16 +3,16 @@ import path from 'node:path'
 
 import { BrowserWindow } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels.js'
-import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke.js'
-import type { NativeIpcRegistration } from '@electron/ipc/index.js'
-import type { MenuActionDispatcher } from '@electron/menu.js'
-import type { Logger } from '@electron/services/logger.js'
-import type { FsRootInfo } from '@electron/services/workspace/types.js'
-import type { WorkspaceService } from '@electron/services/workspace/workspaceService.js'
+import { nativeIpcChannels } from '@electron/channels'
+import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
+import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { MenuActionDispatcher } from '@electron/menu'
+import type { Logger } from '@electron/services/logger'
+import type { FsRootInfo } from '@electron/services/workspace/types'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import type { WindowOpeningProgress } from '@/types/windowOpening'
-import { showWindowWithMotion } from '@electron/windowMotion.js'
-import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool.js'
+import { showWindowWithMotion } from '@electron/windowMotion'
+import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool'
 
 type WorkspaceSessionSeed = {
   state?: Record<string, unknown>

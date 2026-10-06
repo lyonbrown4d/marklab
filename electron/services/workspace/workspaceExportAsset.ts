@@ -1,9 +1,9 @@
-import type { FsStateData } from '@electron/services/workspace/types.js'
-import { resolveMarkdownAssetTarget } from '@electron/services/workspace/workspaceAssetOperations.js'
+import type { FsStateData } from '@electron/services/workspace/types'
+import { resolveMarkdownAssetTarget } from '@electron/services/workspace/workspaceAssetOperations'
 import {
   openWorkspaceAsset,
   validateWorkspaceAssetTarget,
-} from '@electron/services/workspace/workspaceOpenedAsset.js'
+} from '@electron/services/workspace/workspaceOpenedAsset'
 
 export const readWorkspaceExportAsset = async (
   state: FsStateData,

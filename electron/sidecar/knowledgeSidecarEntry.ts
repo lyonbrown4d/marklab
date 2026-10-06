@@ -1,8 +1,8 @@
-import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient.js'
+import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient'
 import {
   isNodeSidecarRequest,
   type NodeSidecarResponse,
-} from '@electron/services/knowledgeEngine/nodeSidecarProtocol.js'
+} from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 
 const workspaceRoot = process.argv[2]
 if (!workspaceRoot) throw new Error('Knowledge sidecar workspace root is required.')

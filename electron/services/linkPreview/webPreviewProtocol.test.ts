@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createWebPreviewProtocolHandler,
   installWebPreviewProtocol,
-} from '@electron/services/linkPreview/webPreviewProtocol.js'
+} from '@electron/services/linkPreview/webPreviewProtocol'
 
 describe('createWebPreviewProtocolHandler', () => {
   afterEach(() => vi.useRealTimers())

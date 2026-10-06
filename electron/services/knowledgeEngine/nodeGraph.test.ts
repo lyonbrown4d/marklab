@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@electron/services/workspace/markdown/ast.js', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@electron/services/workspace/markdown/ast.js')>()
+vi.mock('@electron/services/workspace/markdown/ast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@electron/services/workspace/markdown/ast')>()
 
   return { ...actual, parseMarkdownAst: vi.fn(actual.parseMarkdownAst) }
 })
 
-import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph.js'
-import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast.js'
+import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/nodeGraph'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast'
 
 describe('Node workspace graph file summaries', () => {
   it('resolves extensionless Markdown links against indexed files in the same directory', () => {

@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { Notification } from 'electron'
-import type { ExportFormat } from '@electron/services/export/exportRequest.js'
+import type { ExportFormat } from '@electron/services/export/exportRequest'
 
 const showNotification = (title: string, body: string, onClick?: () => void): void => {
   if (!Notification.isSupported()) return

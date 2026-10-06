@@ -1,5 +1,5 @@
-import type { MermaidValidator } from '@electron/services/mermaidLanguage/types.js'
-import { MermaidValidationWorkerClient } from '@electron/services/mermaidLanguage/validationWorkerClient.js'
+import type { MermaidValidator } from '@electron/services/mermaidLanguage/types'
+import { MermaidValidationWorkerClient } from '@electron/services/mermaidLanguage/validationWorkerClient'
 
 const validationWorker = new MermaidValidationWorkerClient()
 

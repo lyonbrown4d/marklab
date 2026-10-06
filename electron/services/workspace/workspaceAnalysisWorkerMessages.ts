@@ -1,4 +1,4 @@
-import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types.js'
+import type { FsMarkdownDiagnostic, FsWorkspaceIndex } from '@electron/services/workspace/types'
 
 export type MarkdownDocument = {
   path: string

@@ -4,12 +4,12 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import type { SyncManifestEntry } from '@electron/services/sync/core/types.js'
-import { WorkspaceSyncError } from '@electron/services/sync/core/types.js'
+import type { SyncManifestEntry } from '@electron/services/sync/core/types'
+import { WorkspaceSyncError } from '@electron/services/sync/core/types'
 import {
   assertWorkspaceRealPathContained,
   resolveSafeWorkspaceTarget,
-} from '@electron/services/sync/webdavSync/pathSafety.js'
+} from '@electron/services/sync/webdavSync/pathSafety'
 
 export type UploadSnapshot = {
   open: () => ReturnType<typeof createReadStream>

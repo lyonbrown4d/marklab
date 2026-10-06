@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor.js'
+import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
 
 type UpdatedListener = () => void
 

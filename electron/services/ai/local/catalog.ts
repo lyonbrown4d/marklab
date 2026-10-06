@@ -1,4 +1,4 @@
-import type { LocalAiCatalogEntry } from '@electron/services/ai/local/types.js'
+import type { LocalAiCatalogEntry } from '@electron/services/ai/local/types'
 
 export const LOCAL_AI_MODEL_CATALOG: readonly LocalAiCatalogEntry[] = [
   {

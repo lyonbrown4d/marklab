@@ -5,7 +5,7 @@ vi.mock('electron', () => ({
   session: { defaultSession: { webRequest: { onHeadersReceived: vi.fn() } } },
 }))
 
-import { createContentSecurityPolicy } from '@electron/main/contentSecurityPolicy.js'
+import { createContentSecurityPolicy } from '@electron/main/contentSecurityPolicy'
 
 describe('renderer image CSP', () => {
   it('allows opaque asset capabilities and blocks direct remote images', () => {
