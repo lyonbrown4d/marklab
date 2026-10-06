@@ -1,10 +1,12 @@
 .markdown-editor-status-overlay {
+  align-items: center;
+  background: hsl(var(--background));
   display: flex;
-  inset-inline: 0;
+  inset: 0;
   justify-content: center;
   pointer-events: none;
   position: absolute;
-  top: clamp(1rem, 3vw, 2rem);
+  z-index: 20;
 }
 
 .markdown-editor-status-panel {

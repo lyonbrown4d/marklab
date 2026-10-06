@@ -16,6 +16,7 @@ export type PlateEditorSurfaceProps = {
   assetImportStrategy?: MarkdownAssetImportStrategy
   autoFocus?: boolean
   className?: string
+  contentVisible?: boolean
   onChange: (value: string) => void
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>

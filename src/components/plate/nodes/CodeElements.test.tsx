@@ -31,10 +31,35 @@ vi.mock('@/components/editor/language/embeddedLanguageClient', () => ({
   embeddedLanguageClient: languageClient,
 }))
 vi.mock('@/components/previews/MermaidPreview', () => ({
-  default: () => <div>Mermaid preview</div>,
+  default: ({ onActivateEdit }: { onActivateEdit?: () => void }) => (
+    <div data-testid="mermaid-preview" onClick={onActivateEdit}>
+      <span>Mermaid preview</span>
+      <button onClick={(event) => event.stopPropagation()} type="button">
+        Expand mock
+      </button>
+    </div>
+  ),
+}))
+vi.mock('@/components/previews/MermaidCodeEditor', () => ({
+  default: ({
+    onBlur,
+    onChange,
+    value,
+  }: {
+    onBlur: () => void
+    onChange: (value: string) => void
+    value: string
+  }) => (
+    <textarea
+      aria-label="Mermaid source editor"
+      onBlur={onBlur}
+      onChange={(event) => onChange(event.currentTarget.value)}
+      value={value}
+    />
+  ),
 }))
 
-const renderCodeBlock = ({ language = 'mermaid', source = 'fl' } = {}) => {
+const renderCodeBlock = ({ language = 'mermaid', readOnly = false, source = 'fl' } = {}) => {
   const editor = createPlateEditor({
     plugins: createPlateNodePlugins(),
     value: [
@@ -48,8 +73,8 @@ const renderCodeBlock = ({ language = 'mermaid', source = 'fl' } = {}) => {
   editor.tf.select({ path: [0, 0, 0], offset: source.length })
   const result = render(
     <DndProvider backend={HTML5Backend}>
-      <Plate editor={editor}>
-        <PlateContent aria-label="Markdown document" />
+      <Plate editor={editor} readOnly={readOnly}>
+        <PlateContent aria-label="Markdown document" readOnly={readOnly} />
       </Plate>
     </DndProvider>,
   )
@@ -106,6 +131,45 @@ describe('CodeBlockElement language intelligence', () => {
 
     expect(screen.getByText('Mermaid preview')).toBeVisible()
     expect(container.querySelector('code[data-language="mermaid"]')).not.toBeVisible()
+  })
+
+  it('mounts a dedicated Mermaid editor on activation and writes changes back to Plate', async () => {
+    const { container, editor } = renderCodeBlock({ source: 'flowchart TD\nA --> B' })
+    const source = container.querySelector('code[data-language="mermaid"]')
+
+    expect(source).not.toBeVisible()
+    fireEvent.click(screen.getByTestId('mermaid-preview'))
+    const mermaidEditor = await screen.findByRole('textbox', { name: 'Mermaid source editor' })
+    expect(source).not.toBeVisible()
+
+    fireEvent.change(mermaidEditor, { target: { value: 'flowchart LR\nA --> C' } })
+    expect(editor.api.string([0])).toBe('flowchart LRA --> C')
+    expect(editor.selection).not.toBeNull()
+    expect(editor.api.node(editor.selection!.focus.path)).not.toBeNull()
+
+    fireEvent.change(mermaidEditor, { target: { value: '' } })
+    expect(editor.api.string([0])).toBe('')
+    expect(screen.getByRole('textbox', { name: 'Mermaid source editor' })).toBeInTheDocument()
+
+    fireEvent.blur(mermaidEditor)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: 'Mermaid source editor' }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it('does not activate Mermaid source from read-only previews or preview controls', () => {
+    const editable = renderCodeBlock({ source: 'flowchart TD\nA --> B' })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand mock' }))
+    expect(editable.container.querySelector('code[data-language="mermaid"]')).not.toBeVisible()
+    expect(screen.queryByRole('textbox', { name: 'Mermaid source editor' })).not.toBeInTheDocument()
+    editable.unmount()
+
+    const readOnly = renderCodeBlock({ readOnly: true, source: 'flowchart TD\nA --> B' })
+    fireEvent.click(screen.getByTestId('mermaid-preview'))
+    expect(readOnly.container.querySelector('code[data-language="mermaid"]')).not.toBeVisible()
+    expect(screen.queryByRole('textbox', { name: 'Mermaid source editor' })).not.toBeInTheDocument()
   })
 
   it('keeps ordinary code blocks visible in the WYSIWYG editor', () => {

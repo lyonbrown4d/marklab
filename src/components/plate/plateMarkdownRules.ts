@@ -14,6 +14,10 @@ import {
   type SerializeMdOptions,
 } from '@platejs/markdown'
 import { KEYS, type Descendant, type TElement, type TText } from 'platejs'
+import {
+  plateHtmlMarkdownRules,
+  serializeHtmlCommentParagraph,
+} from '@/components/plate/html/plateHtmlMarkdownRules'
 import { tableMarkdownAlignmentRules } from '@/components/plate/nodes/tableMarkdownAlignmentRules'
 import { CALLOUT_MARKER_PROPERTY } from '@/components/plate/remarkCalloutMarker'
 
@@ -113,6 +117,7 @@ const serializeClassicList = (node: TElement & { start?: number }, options: Seri
 
 const preservationRules = {
   ...tableMarkdownAlignmentRules,
+  ...plateHtmlMarkdownRules,
   a: {
     ...defaultRules.a,
     deserialize: (node: MdLink, decoration: MdDecoration, options: DeserializeMdOptions) => ({
@@ -183,6 +188,8 @@ const preservationRules = {
       if (preservedNode.preservedMarkdownKind === 'yaml') {
         return { type: 'yaml', value: readText(preservedNode) }
       }
+      const htmlComment = serializeHtmlCommentParagraph(node)
+      if (htmlComment) return htmlComment
       if (
         node.children.length > 0 &&
         node.children.every(

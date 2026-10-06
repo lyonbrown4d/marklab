@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import type http from 'node:http'
 import path from 'node:path'
+import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 // eslint-disable-next-line no-restricted-imports -- Electron E2E helpers are colocated outside application aliases.
 import {
   closeElectronTestSession,
@@ -174,6 +175,32 @@ test.describe('Real workspace rendering integrity', () => {
     await expect(previews.first().locator('[data-plate-mermaid-output] > svg')).toContainText(
       '业务应用或框架集成',
     )
+    await previews.first().click()
+    const mermaidEditor = page.locator('[data-mermaid-code-editor]')
+    await expect(mermaidEditor).toBeVisible()
+    await expect(mermaidEditor.locator('.cm-focused')).toBeVisible()
+    const completionLabels = await page.evaluate(async () => {
+      const language = (
+        window as typeof window & {
+          marklabElectron?: { languageIntelligence: LanguageIntelligenceApi }
+        }
+      ).marklabElectron?.languageIntelligence
+      if (!language) throw new Error('Language intelligence preload API is unavailable')
+      const uri = 'marklab-e2e://mermaid/completion.mermaid'
+      const text = 'flowchart LR\n  '
+      await language.openDocument({ languageId: 'mermaid', path: null, text, uri, version: 1 })
+      try {
+        const result = await language.completion({
+          position: { character: 2, line: 1 },
+          uri,
+          version: 1,
+        })
+        return result.items.map((item) => item.label)
+      } finally {
+        await language.closeDocument({ uri })
+      }
+    })
+    expect(completionLabels).toEqual(expect.arrayContaining(['node', 'edge', 'subgraph']))
 
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: false })
     await testInfo.attach('mermaid-rendering.png', { body: screenshot, contentType: 'image/png' })

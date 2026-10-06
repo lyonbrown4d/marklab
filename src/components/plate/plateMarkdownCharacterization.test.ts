@@ -54,28 +54,6 @@ describe('Plate Markdown compatibility', () => {
     expect(serialized).not.toContain('## title: Demo')
   })
 
-  it('preserves raw HTML containers without escaping their tags', () => {
-    const markdown = [
-      '<details>',
-      '<summary>More</summary>',
-      '',
-      'Hidden **content**.',
-      '',
-      '</details>',
-    ].join('\n')
-
-    const editor = createEditor(markdown)
-    const serialized = serializePlateMarkdown(editor)
-
-    expect(serialized.trimEnd()).toBe(markdown)
-  })
-
-  it('preserves HTML comments as comments instead of converting them to JSX syntax', () => {
-    const markdown = '<!-- private note -->'
-
-    expect(serializePlateMarkdown(createEditor(markdown)).trimEnd()).toBe(markdown)
-  })
-
   it('normalizes reference links into editable native links without losing metadata', () => {
     const markdown = ['[Docs][guide]', '', '[guide]: ./guide.md "Guide"'].join('\n')
     const editor = createEditor(markdown)

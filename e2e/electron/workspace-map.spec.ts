@@ -139,4 +139,41 @@ test.describe('Workspace map', () => {
     await expectBoxInside(await readBox(editorSurface), await readBox(canvas))
     await expectNoHorizontalOverflow(page)
   })
+
+  test('keeps a long embedded document inside the React Flow node viewport', async () => {
+    const pageEditor = page.getByTestId('markdown-editor')
+    const longDocument = Array.from(
+      { length: 180 },
+      (_, index) => `Workspace map viewport regression line ${index + 1}`,
+    ).join('\n')
+    await pageEditor.click()
+    await page.keyboard.press('ControlOrMeta+A')
+    await page.keyboard.insertText(longDocument)
+    await expect(pageEditor).toContainText('Workspace map viewport regression line 180')
+
+    await page.getByRole('radio', { name: /^(Map|地图)$/i }).click()
+    const editorSurface = page.getByTestId('workspace-map-editor-surface')
+    await expect(editorSurface).toBeVisible({ timeout: 15_000 })
+    await editorSurface.click()
+    await expect(editorSurface).toHaveAttribute('data-editor-active', 'true')
+    const embeddedViewport = editorSurface.getByTestId('workspace-map-editor-viewport')
+    const embeddedGeometry = await embeddedViewport.evaluate((viewport) => {
+      const editorRoot = viewport.firstElementChild
+      const plateShell = editorRoot?.firstElementChild
+      const scrollSurface = viewport.querySelector<HTMLElement>('[data-testid="markdown-editor"]')
+      return {
+        contain: getComputedStyle(viewport).contain,
+        editorRootHeight: editorRoot?.getBoundingClientRect().height ?? 0,
+        plateShellHeight: plateShell?.getBoundingClientRect().height ?? 0,
+        scrollClientHeight: scrollSurface?.clientHeight ?? 0,
+        scrollHeight: scrollSurface?.scrollHeight ?? 0,
+        viewportHeight: viewport.getBoundingClientRect().height,
+      }
+    })
+    expect(embeddedGeometry.contain).toBe('strict')
+    expect(embeddedGeometry.editorRootHeight).toBeCloseTo(embeddedGeometry.viewportHeight, 0)
+    expect(embeddedGeometry.plateShellHeight).toBeCloseTo(embeddedGeometry.viewportHeight, 0)
+    expect(embeddedGeometry.scrollClientHeight).toBeCloseTo(embeddedGeometry.viewportHeight, 0)
+    expect(embeddedGeometry.scrollHeight).toBeGreaterThan(embeddedGeometry.scrollClientHeight)
+  })
 })

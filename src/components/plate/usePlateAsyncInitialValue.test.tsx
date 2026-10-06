@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { Value } from 'platejs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -106,7 +106,7 @@ describe('usePlateAsyncInitialValue', () => {
     expect(editor.api.onChange).toHaveBeenCalledTimes(2)
 
     await act(async () => workerMock.streams[0]?.resolve())
-    expect(result.current).toBe(true)
+    await waitFor(() => expect(result.current).toBe(true))
     expect(editor.selection).toBeNull()
     expect(editor.operations).toEqual([])
     expect(editor.marks).toBeNull()
@@ -180,7 +180,7 @@ describe('usePlateAsyncInitialValue', () => {
       await latestStream?.emit([{ type: 'p', children: [{ text: 'B end' }] }])
       latestStream?.resolve()
     })
-    expect(result.current).toBe(true)
+    await waitFor(() => expect(result.current).toBe(true))
     expect(editor.children).toEqual([
       { type: 'p', children: [{ text: 'B prefix' }] },
       { type: 'p', children: [{ text: 'B end' }] },
@@ -211,7 +211,7 @@ describe('usePlateAsyncInitialValue', () => {
       await workerMock.streams.at(-1)?.emit([{ type: 'p', children: [{ text: 'Initial' }] }])
       workerMock.streams.at(-1)?.resolve()
     })
-    expect(result.current).toBe(true)
+    await waitFor(() => expect(result.current).toBe(true))
     expect(editor.api.onChange).toHaveBeenCalledOnce()
 
     rerender({ value: 'Local echo' })

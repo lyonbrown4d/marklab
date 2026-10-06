@@ -32,6 +32,7 @@ export type MermaidLanguageProviderOptions = {
 }
 
 export type MermaidCompletionContext = {
+  declarationRecognized: boolean
   diagram: MermaidDiagramKind | null
   insideBody: boolean
   position: Position

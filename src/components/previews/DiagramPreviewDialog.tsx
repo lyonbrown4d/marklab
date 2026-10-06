@@ -37,7 +37,7 @@ export const DiagramPreviewDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex h-[92vh] max-w-[96vw] flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[92vh] max-w-[96vw] flex-col gap-0 overflow-hidden p-0 will-change-auto"
         onClick={stopEditorEvent}
         onCloseAutoFocus={(event) => {
           event.preventDefault()

@@ -23,6 +23,10 @@ export const electronMainEntry = {
   localAiUtilityEntry: path.resolve(import.meta.dirname, 'electron/localAiUtilityEntry.ts'),
   main: path.resolve(import.meta.dirname, 'electron/main.ts'),
   marklabMcpEntry: path.resolve(import.meta.dirname, 'electron/mcp/marklabMcpEntry.ts'),
+  mermaidValidationWorkerEntry: path.resolve(
+    import.meta.dirname,
+    'electron/services/mermaidLanguage/mermaidValidationWorkerEntry.ts',
+  ),
   nodeSearchWorkerEntry: path.resolve(
     import.meta.dirname,
     'electron/services/knowledgeEngine/nodeSearchWorkerEntry.ts',

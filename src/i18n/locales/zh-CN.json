@@ -633,6 +633,7 @@
   "preview.mermaidLoading": "正在加载图表...",
   "preview.mermaidInvalidSvg": "图表输出无法安全显示。",
   "preview.mermaidExpand": "放大图表",
+  "preview.mermaidEditSource": "编辑 Mermaid 源码",
   "preview.mermaidDialogTitle": "Mermaid 图表预览",
   "preview.mermaidZoomIn": "放大",
   "preview.mermaidZoomOut": "缩小",

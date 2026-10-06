@@ -37,6 +37,52 @@ export const readPlateCodeSource = (editor: PlateEditor, blockPath: Path) => {
   return entry[0].children.map((child) => nodeText(child as TElement | TText)).join('\n')
 }
 
+export const replacePlateCodeSource = (
+  editor: PlateEditor,
+  blockPath: Path,
+  nextSource: string,
+) => {
+  const entry = editor.api.node<TElement>(blockPath)
+  if (!entry) return false
+  const currentSource = entry[0].children
+    .map((child) => nodeText(child as TElement | TText))
+    .join('\n')
+  if (currentSource === nextSource) return false
+  const nextLines = nextSource.split('\n').map((text) => ({
+    type: 'code_line',
+    children: [{ text }],
+  }))
+  const selection = editor.selection
+  const selectionInBlock =
+    selection &&
+    [selection.anchor, selection.focus].every(
+      (point) =>
+        point.path.length >= blockPath.length + 2 &&
+        blockPath.every((part, index) => point.path[index] === part),
+    )
+  editor.tf.withoutNormalizing(() => {
+    for (let index = entry[0].children.length - 1; index >= 0; index -= 1) {
+      editor.tf.removeNodes({ at: [...blockPath, index] })
+    }
+    editor.tf.insertNodes(nextLines, { at: [...blockPath, 0] })
+  })
+  if (selectionInBlock) {
+    const restorePoint = (point: Point): Point => {
+      const requestedLine = point.path[blockPath.length] ?? 0
+      const line = Math.min(Math.max(requestedLine, 0), nextLines.length - 1)
+      return {
+        path: [...blockPath, line, 0],
+        offset: Math.min(point.offset, nextLines[line]?.children[0]?.text.length ?? 0),
+      }
+    }
+    editor.tf.select({
+      anchor: restorePoint(selection.anchor),
+      focus: restorePoint(selection.focus),
+    })
+  }
+  return true
+}
+
 const positionToOffset = (lines: readonly string[], position: Position) => {
   if (position.line < 0 || position.line >= lines.length) return null
   const line = lines[position.line] ?? ''

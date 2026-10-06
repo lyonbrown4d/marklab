@@ -32,6 +32,7 @@ vi.mock('@xyflow/react', () => ({
   Controls: () => null,
   Handle: () => null,
   MiniMap: () => null,
+  PanOnScrollMode: { Free: 'free' },
   Position: { Left: 'left', Right: 'right' },
   ReactFlow: (props: FlowProps) => {
     flowPropsRef.current = props

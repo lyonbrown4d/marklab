@@ -117,11 +117,10 @@ describe('MarkdownLanguageIntelligenceProvider', () => {
 
     expect(diagnostics).toEqual([
       expect.objectContaining({
-        code: 'unknown-diagram',
-        severity: DiagnosticSeverity.Hint,
+        severity: DiagnosticSeverity.Error,
         range: {
           start: { line: 2, character: 0 },
-          end: { line: 2, character: 8 },
+          end: { line: 2, character: 1 },
         },
       }),
     ])

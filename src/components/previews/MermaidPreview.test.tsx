@@ -21,7 +21,8 @@ describe('MermaidPreview', () => {
   })
 
   it('lazily renders with strict security after the debounce', async () => {
-    render(<MermaidPreview source={'graph TD\nA --> B'} />)
+    const onActivateEdit = vi.fn()
+    render(<MermaidPreview onActivateEdit={onActivateEdit} source={'graph TD\nA --> B'} />)
 
     expect(screen.getByText(/Loading diagram/)).toBeInTheDocument()
     await act(async () => {
@@ -40,9 +41,12 @@ describe('MermaidPreview', () => {
       }),
     )
     expect(mermaid.initialize.mock.calls[0]?.[0]).not.toHaveProperty('flowchart.htmlLabels')
+    fireEvent.click(screen.getByText('Diagram'))
+    expect(onActivateEdit).toHaveBeenCalledOnce()
   })
 
   it('opens one sanitized render in a large dialog without re-rendering Mermaid', async () => {
+    const onActivateEdit = vi.fn()
     const parentEvents = {
       click: vi.fn(),
       mouseDown: vi.fn(),
@@ -57,7 +61,7 @@ describe('MermaidPreview', () => {
         onMouseDown={parentEvents.mouseDown}
         onPointerDown={parentEvents.pointerDown}
       >
-        <MermaidPreview source={'graph TD\nA --> B'} />
+        <MermaidPreview onActivateEdit={onActivateEdit} source={'graph TD\nA --> B'} />
       </div>,
     )
 
@@ -82,6 +86,7 @@ describe('MermaidPreview', () => {
     expect(document.querySelectorAll('script')).toHaveLength(0)
     expect(document.querySelectorAll('svg[onclick]')).toHaveLength(0)
     expect(mermaid.render).toHaveBeenCalledTimes(1)
+    expect(onActivateEdit).not.toHaveBeenCalled()
     expect(parentEvents.pointerDown).not.toHaveBeenCalled()
     expect(parentEvents.mouseDown).not.toHaveBeenCalled()
     expect(parentEvents.click).not.toHaveBeenCalled()
@@ -106,37 +111,43 @@ describe('MermaidPreview', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Mermaid diagram preview' })
     const svg = dialog.querySelector<SVGSVGElement>('svg[viewBox="0 0 1200 600"]')
-    const zoomSurface = svg?.parentElement as HTMLDivElement
-    const scrollSurface = zoomSurface.parentElement as HTMLDivElement
+    const transformSurface = svg?.parentElement as HTMLDivElement
+    const spacer = transformSurface.parentElement as HTMLDivElement
+    const scrollSurface = spacer.parentElement as HTMLDivElement
     expect(svg).not.toHaveAttribute('width')
     expect(svg).toHaveStyle({ height: '600px', maxWidth: '', width: '1200px' })
     expect(scrollSurface).toHaveClass('overflow-auto')
 
-    const plainWheel = createEvent.wheel(scrollSurface, { deltaY: -100 })
+    const plainWheel = createEvent.wheel(scrollSurface, { cancelable: true, deltaY: 100 })
     fireEvent(scrollSurface, plainWheel)
-    expect(screen.getByText('125%')).toBeInTheDocument()
+    expect(plainWheel.defaultPrevented).toBe(true)
+    expect(scrollSurface.scrollTop).toBe(100)
+    expect(screen.getByText('100%')).toBeInTheDocument()
 
     const zoomWheel = createEvent.wheel(scrollSurface, { ctrlKey: true, deltaY: -100 })
     fireEvent(scrollSurface, zoomWheel)
-    expect(screen.getByText('150%')).toBeInTheDocument()
-    expect(zoomSurface).toHaveStyle({ zoom: '1.5' })
-    expect(Number.parseFloat(svg?.style.width ?? '') * Number(zoomSurface.style.zoom)).toBe(1800)
+    const pinchZoom = Number(transformSurface.style.transform.match(/scale\(([^)]+)\)/)?.[1])
+    expect(pinchZoom).toBeCloseTo(Math.exp(0.25))
+    expect(screen.getByText('128%')).toBeInTheDocument()
+    expect(Number.parseFloat(svg?.style.width ?? '') * pinchZoom).toBeCloseTo(1200 * Math.exp(0.25))
 
     for (let step = 0; step < 10; step += 1) {
-      fireEvent.wheel(scrollSurface, { deltaY: -100 })
+      fireEvent.wheel(scrollSurface, { ctrlKey: true, deltaY: -100 })
     }
     expect(screen.getByText('200%')).toBeInTheDocument()
     for (let step = 0; step < 10; step += 1) {
-      fireEvent.wheel(scrollSurface, { deltaY: 100 })
+      fireEvent.wheel(scrollSurface, { ctrlKey: true, deltaY: 100 })
     }
     expect(screen.getByText('50%')).toBeInTheDocument()
     expect(handleWheel).not.toHaveBeenCalled()
 
+    const scrollLeftBeforeDrag = scrollSurface.scrollLeft
+    const scrollTopBeforeDrag = scrollSurface.scrollTop
     fireEvent.pointerDown(scrollSurface, { button: 0, clientX: 100, clientY: 100, pointerId: 1 })
     fireEvent.pointerMove(scrollSurface, { clientX: 40, clientY: 30, pointerId: 1 })
     fireEvent.pointerUp(scrollSurface, { pointerId: 1 })
-    expect(scrollSurface.scrollLeft).toBe(60)
-    expect(scrollSurface.scrollTop).toBe(70)
+    expect(scrollSurface.scrollLeft).toBe(scrollLeftBeforeDrag + 60)
+    expect(scrollSurface.scrollTop).toBe(scrollTopBeforeDrag + 70)
   })
 
   it('supports zooming and resetting the expanded diagram', async () => {

@@ -27,7 +27,10 @@ describe('DiagramPreviewDialog', () => {
       </div>,
     )
 
-    expect(screen.getByRole('dialog', { name: 'Diagram preview' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Diagram preview' })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveClass('transform-gpu', 'will-change-auto')
+    expect(dialog).not.toHaveClass('will-change-transform')
     expect(screen.getByRole('img', { name: 'System map' })).toHaveAttribute(
       'src',
       'asset://map.png',

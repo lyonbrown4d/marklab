@@ -15,7 +15,7 @@ import {
   type MermaidCompletionTemplate,
 } from '@electron/services/mermaidLanguage/completionCatalog.js'
 import { mermaidCompletionContext } from '@electron/services/mermaidLanguage/completionContext.js'
-import { validateMermaidDeclaration } from '@electron/services/mermaidLanguage/defaultValidator.js'
+import { validateMermaidSyntax } from '@electron/services/mermaidLanguage/defaultValidator.js'
 import {
   documentTooLargeDiagnostic,
   mermaidDiagnostics,
@@ -36,7 +36,7 @@ export type {
   MermaidValidator,
 } from '@electron/services/mermaidLanguage/types.js'
 
-export const DEFAULT_MAX_MERMAID_DOCUMENT_LENGTH = 512 * 1024
+export const DEFAULT_MAX_MERMAID_DOCUMENT_LENGTH = 128 * 1024
 
 export class MermaidLanguageProvider {
   private readonly maxDocumentLength: number
@@ -44,7 +44,7 @@ export class MermaidLanguageProvider {
 
   constructor(options: MermaidLanguageProviderOptions = {}) {
     this.maxDocumentLength = normalizeDocumentLimit(options.maxDocumentLength)
-    this.validator = options.validator ?? validateMermaidDeclaration
+    this.validator = options.validator ?? validateMermaidSyntax
   }
 
   provideCompletions(document: MermaidTextDocument, position: Position): CompletionList {
@@ -59,7 +59,9 @@ export class MermaidLanguageProvider {
         : context.insideBody && context.diagram === 'er'
           ? erAttributeStatements
           : statementCatalog[context.diagram]
-      : diagramDeclarations
+      : context.declarationRecognized
+        ? []
+        : diagramDeclarations
     const items = templates.map((template, index) =>
       completionItem(template, context.replacementRange, index),
     )

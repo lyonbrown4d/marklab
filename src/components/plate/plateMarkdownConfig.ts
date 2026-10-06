@@ -8,6 +8,7 @@ import { BaseTablePlugin } from '@platejs/table'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import { plateMarkdownRules } from '@/components/plate/plateMarkdownRules'
+import { remarkPlateHtml } from '@/components/plate/html/remarkPlateHtml'
 import { remarkCalloutMarker } from '@/components/plate/remarkCalloutMarker'
 import { remarkInlineLinksPreservingDefinitions } from '@/components/plate/remarkInlineLinksPreservingDefinitions'
 
@@ -18,6 +19,7 @@ export const plateMarkdownPlugin = MarkdownPlugin.configure({
       remarkFrontmatter,
       remarkInlineLinksPreservingDefinitions,
       remarkCalloutMarker,
+      remarkPlateHtml,
     ],
     remarkStringifyOptions: {
       bullet: '-',

@@ -7,7 +7,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from 'react'
-import { Maximize2 } from 'lucide-react'
+import { Maximize2, Pencil } from 'lucide-react'
 import { createSafeMermaidSvgNode } from '@/components/plate/code/mermaidSvg'
 import { useMermaidPreview } from '@/components/plate/code/useMermaidPreview'
 import { DiagramPreviewDialog } from '@/components/previews/DiagramPreviewDialog'
@@ -15,10 +15,11 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 
 type MermaidPreviewProps = {
+  onActivateEdit?: () => void
   source: string
 }
 
-const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
+const MermaidPreview = memo(({ onActivateEdit, source }: MermaidPreviewProps) => {
   const { t } = useI18n()
   const containerRef = useRef<HTMLElement | null>(null)
   const expandButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -55,6 +56,17 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
     event.stopPropagation()
     setExpandedSource(source)
   }
+  const handleActivateEdit = (event: MouseEvent<HTMLElement>) => {
+    if (!onActivateEdit) return
+    const target = event.target
+    if (target instanceof Element && target.closest('button, a, input, select, textarea')) return
+    event.stopPropagation()
+    onActivateEdit()
+  }
+  const handleEditButton = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onActivateEdit?.()
+  }
   const handleExpandedOpenChange = (open: boolean) => setExpandedSource(open ? source : null)
 
   return (
@@ -62,9 +74,10 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
       ref={containerRef}
       aria-label={t('slash.mermaid')}
       aria-busy={state.status === 'loading'}
-      className="mt-3 overflow-hidden rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground"
+      className={`mt-3 overflow-hidden rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground ${onActivateEdit ? 'cursor-text' : ''}`}
       contentEditable={false}
       data-plate-preview="mermaid"
+      onClick={handleActivateEdit}
     >
       {state.status === 'loading' ? <div>{t('preview.mermaidLoading')}</div> : null}
       {state.status === 'error' ? (
@@ -79,6 +92,21 @@ const MermaidPreview = memo(({ source }: MermaidPreviewProps) => {
       ) : null}
       {state.status === 'ready' && safeSvg ? (
         <div className="flex justify-end pb-2">
+          {onActivateEdit ? (
+            <Button
+              aria-label={t('preview.mermaidEditSource')}
+              onClick={handleEditButton}
+              onMouseDown={stopButtonMouseEvent}
+              onPointerDown={stopButtonPointerEvent}
+              size="sm"
+              title={t('preview.mermaidEditSource')}
+              type="button"
+              variant="ghost"
+            >
+              <Pencil data-icon="inline-start" />
+              {t('preview.mermaidEditSource')}
+            </Button>
+          ) : null}
           <Button
             ref={expandButtonRef}
             onClick={handleExpand}

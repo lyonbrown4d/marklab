@@ -19,6 +19,11 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
+type ScopedEditorStatus = {
+  activePath: string | null
+  status: MarkdownEditorStatus
+}
+
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
@@ -32,7 +37,20 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const surfaceRef = useRef<PlateEditorSurfaceHandle | null>(null)
-  const [status, setStatus] = useState<MarkdownEditorStatus>({ phase: 'loading' })
+  const [scopedStatus, setScopedStatus] = useState<ScopedEditorStatus>({
+    activePath: props.activePath,
+    status: { phase: 'loading' },
+  })
+  const status =
+    scopedStatus.activePath === props.activePath
+      ? scopedStatus.status
+      : ({ phase: 'loading' } as const)
+  const handleStatusChange = useCallback(
+    (nextStatus: MarkdownEditorStatus) => {
+      setScopedStatus({ activePath: props.activePath, status: nextStatus })
+    },
+    [props.activePath],
+  )
   const getEditor = useCallback(() => surfaceRef.current?.getEditor() ?? null, [])
   usePlateFocusHeading(props.activePath, getEditor)
   const openLinkDialog = useCallback(() => surfaceRef.current?.openLinkDialog(), [])
@@ -107,10 +125,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             !props.readOnly && immersiveZenMode && 'is-zen-editor',
             motionSmoothScrolling && 'is-smooth-editor',
           )}
+          contentVisible={status.phase === 'ready'}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
           onWorkspaceLink={props.onWorkspaceLink}
-          onStatusChange={setStatus}
+          onStatusChange={handleStatusChange}
           placeholder={props.placeholder}
           readOnly={props.readOnly}
           ref={surfaceRef}

@@ -18,6 +18,29 @@ const declarations = new Map<string, MermaidDiagramKind>([
   ['timeline', 'timeline'],
 ])
 
+const recognizedDeclarations = new Set([
+  ...declarations.keys(),
+  'architecture-beta',
+  'block-beta',
+  'c4component',
+  'c4container',
+  'c4context',
+  'c4deployment',
+  'gitgraph',
+  'journey',
+  'kanban',
+  'packet-beta',
+  'pie',
+  'quadrantchart',
+  'radar-beta',
+  'requirementdiagram',
+  'sankey-beta',
+  'treemap',
+  'usecase-beta',
+  'xychart-beta',
+  'zenuml',
+])
+
 export const mermaidCompletionContext = (
   text: string,
   position: Position,
@@ -25,23 +48,30 @@ export const mermaidCompletionContext = (
   const lines = text.split('\n')
   if (!validPosition(lines, position)) return null
 
-  const diagram = detectDiagram(lines, position.line)
+  const declaration = detectDeclaration(lines, position.line)
   return {
-    diagram,
-    insideBody: diagram === 'class' || diagram === 'er' ? hasUnclosedBrace(lines, position) : false,
+    declarationRecognized: declaration.recognized,
+    diagram: declaration.diagram,
+    insideBody:
+      declaration.diagram === 'class' || declaration.diagram === 'er'
+        ? hasUnclosedBrace(lines, position)
+        : false,
     position,
     replacementRange: replacementRange(lines[position.line] ?? '', position),
   }
 }
 
-const detectDiagram = (lines: readonly string[], cursorLine: number): MermaidDiagramKind | null => {
+const detectDeclaration = (lines: readonly string[], cursorLine: number) => {
   for (let line = 0; line <= cursorLine; line += 1) {
     const value = (lines[line] ?? '').trimStart()
     if (!value || value.startsWith('%%')) continue
     const token = firstToken(value).toLowerCase()
-    return declarations.get(token) ?? null
+    return {
+      diagram: declarations.get(token) ?? null,
+      recognized: recognizedDeclarations.has(token),
+    }
   }
-  return null
+  return { diagram: null, recognized: false }
 }
 
 const firstToken = (value: string): string => {

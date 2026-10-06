@@ -5,6 +5,7 @@ import {
   mergeWorkspaceMapNodeGeometry,
   presentWorkspaceMapNode,
 } from '@/pages/workspace-map/workspaceMapNodePresentation'
+import { WORKSPACE_MAP_FILE_HEIGHT, WORKSPACE_MAP_FILE_WIDTH } from '@/logic/graphLayoutMetrics'
 
 const node = (
   id: string,
@@ -56,6 +57,90 @@ describe('workspace map node presentation', () => {
       position: { x: 420, y: 180 },
       style: { height: 510, width: 740 },
       width: 740,
+    })
+  })
+
+  it('gives an activated editor explicit geometry instead of measuring Plate content', () => {
+    const active = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', { path: 'notes/a.md' }),
+      'notes/a.md',
+    )
+
+    expect(active).toMatchObject({
+      height: WORKSPACE_MAP_FILE_HEIGHT,
+      style: { height: WORKSPACE_MAP_FILE_HEIGHT, width: WORKSPACE_MAP_FILE_WIDTH },
+      width: WORKSPACE_MAP_FILE_WIDTH,
+    })
+  })
+
+  it('replaces incidental inactive measurements when an editor activates', () => {
+    const inactive = {
+      ...presentWorkspaceMapNode(node('file:notes/a.md', 'file', { path: 'notes/a.md' }), null),
+      measured: { height: 240, width: 320 },
+    }
+    const active = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', {
+        path: 'notes/a.md',
+        workspaceMapEditor: {} as GraphNodeData['workspaceMapEditor'],
+      }),
+      'notes/a.md',
+    )
+
+    expect(mergeWorkspaceMapNodeGeometry(active, inactive)).toMatchObject({
+      height: WORKSPACE_MAP_FILE_HEIGHT,
+      measured: undefined,
+      width: WORKSPACE_MAP_FILE_WIDTH,
+    })
+  })
+
+  it('preserves an inactive node user resize when its editor activates', () => {
+    const inactive = {
+      ...presentWorkspaceMapNode(node('file:notes/a.md', 'file', { path: 'notes/a.md' }), null),
+      height: 680,
+      style: { height: 680, width: 760 },
+      width: 760,
+    }
+    const active = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', {
+        path: 'notes/a.md',
+        workspaceMapEditor: {} as GraphNodeData['workspaceMapEditor'],
+      }),
+      'notes/a.md',
+    )
+
+    expect(mergeWorkspaceMapNodeGeometry(active, inactive)).toMatchObject({
+      height: 680,
+      style: { height: 680, width: 760 },
+      width: 760,
+    })
+  })
+
+  it('expands a pinned compact node when its editor activates', () => {
+    const inactive = {
+      ...presentWorkspaceMapNode(
+        node('file:notes/a.md', 'file', {
+          path: 'notes/a.md',
+          workspaceMapPinned: true,
+        }),
+        null,
+      ),
+      height: 112,
+      style: { height: 112, width: 248 },
+      width: 248,
+    }
+    const active = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', {
+        path: 'notes/a.md',
+        workspaceMapEditor: {} as GraphNodeData['workspaceMapEditor'],
+      }),
+      'notes/a.md',
+    )
+
+    expect(mergeWorkspaceMapNodeGeometry(active, inactive)).toMatchObject({
+      data: { workspaceMapPinned: true },
+      draggable: false,
+      height: WORKSPACE_MAP_FILE_HEIGHT,
+      width: WORKSPACE_MAP_FILE_WIDTH,
     })
   })
 

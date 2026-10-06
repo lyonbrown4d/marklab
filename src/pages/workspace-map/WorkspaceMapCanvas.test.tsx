@@ -17,11 +17,15 @@ type FlowProps = {
   nodesDraggable: boolean
   nodesFocusable: boolean
   onlyRenderVisibleElements: boolean
+  panOnScroll: boolean
+  panOnScrollMode: string
+  preventScrolling: boolean
   onInit?: (flow: FlowApi) => void
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>
   onNodeClick?: (event: ReactMouseEvent<HTMLDivElement>, node: GraphData['nodes'][number]) => void
   onPaneClick?: () => void
   tabIndex: number
+  zoomOnPinch: boolean
   zoomOnScroll: boolean
 }
 type FlowApi = {
@@ -44,6 +48,7 @@ vi.mock('@xyflow/react', () => ({
   Controls: () => null,
   Handle: () => null,
   MiniMap: () => null,
+  PanOnScrollMode: { Free: 'free' },
   Position: { Left: 'left', Right: 'right' },
   ReactFlow: (props: FlowProps) => {
     flowPropsRef.current = props
@@ -276,8 +281,13 @@ describe('WorkspaceMapCanvas', () => {
       padding: 0.22,
     })
     expect(flowPropsRef.current?.tabIndex).toBe(0)
-    expect(flowPropsRef.current?.zoomOnScroll).toBe(true)
-
+    expect(flowPropsRef.current).toMatchObject({
+      panOnScroll: true,
+      panOnScrollMode: 'free',
+      preventScrolling: true,
+      zoomOnPinch: true,
+      zoomOnScroll: false,
+    })
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'file:notes/a.md child' }), {
       key: '+',
     })

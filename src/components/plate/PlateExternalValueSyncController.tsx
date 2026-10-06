@@ -6,11 +6,13 @@ export type PlateExternalValueSyncHandle = {
 }
 
 type PlateExternalValueSyncControllerProps = Parameters<typeof usePlateExternalValueSync>[0] & {
+  contentReady: boolean
   controllerRef: RefObject<PlateExternalValueSyncHandle | null>
   loadingRef: RefObject<boolean>
 }
 
 export const PlateExternalValueSyncController = ({
+  contentReady,
   controllerRef,
   editableRef,
   loadingRef,
@@ -31,9 +33,13 @@ export const PlateExternalValueSyncController = ({
 
     const editable = editableRef.current
     if (editable) {
-      const busy = !options.ready || loading
+      const busy = !contentReady || loading
       editable.dataset.state = busy ? 'loading' : 'ready'
       editable.setAttribute('aria-busy', busy ? 'true' : 'false')
+      editable.toggleAttribute('inert', busy)
+      editable.classList.toggle('invisible', busy)
+      if (busy) editable.setAttribute('aria-hidden', 'true')
+      else editable.removeAttribute('aria-hidden')
     }
   })
 

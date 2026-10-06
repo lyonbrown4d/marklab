@@ -11,6 +11,7 @@ export const embeddedLanguageClient: EmbeddedLanguageClient = {
   closeDocument: async (request) => {
     await languageIntelligenceApi.closeDocument(request)
   },
-  completion: (request) => languageIntelligenceApi.completion(request),
-  diagnostics: (request) => languageIntelligenceApi.diagnostics(request),
+  completion: ({ position, uri, version }) =>
+    languageIntelligenceApi.completion({ position, uri, version }),
+  diagnostics: ({ uri, version }) => languageIntelligenceApi.diagnostics({ uri, version }),
 }

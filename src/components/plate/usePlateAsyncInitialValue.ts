@@ -81,7 +81,9 @@ export const usePlateAsyncInitialValue = ({
       },
       controller.signal,
     ).then(
-      () => {
+      async () => {
+        if (controller.signal.aborted) return
+        await yieldToPlateHydrationTask()
         if (controller.signal.aborted) return
         resetPlateEditorHydrationState(editor)
         hydratedEditorRef.current = editor

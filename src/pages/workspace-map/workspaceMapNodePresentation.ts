@@ -1,6 +1,12 @@
 import type { Node } from '@xyflow/react'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import type { GraphNodeData } from '@/logic/graph'
+import {
+  WORKSPACE_MAP_COMPACT_NODE_HEIGHT,
+  WORKSPACE_MAP_COMPACT_NODE_WIDTH,
+  WORKSPACE_MAP_FILE_HEIGHT,
+  WORKSPACE_MAP_FILE_WIDTH,
+} from '@/logic/graphLayoutMetrics'
 import { getGraphNodeOpenPath } from '@/logic/graphViewModel'
 
 export const WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS = 'workspace-map-resource-drag-handle'
@@ -24,6 +30,17 @@ export const presentWorkspaceMapNode = (
   const openPath = getWorkspaceMapNodeOpenPath(node)
   return {
     ...node,
+    ...(editorActive
+      ? {
+          height: WORKSPACE_MAP_FILE_HEIGHT,
+          style: {
+            ...node.style,
+            height: WORKSPACE_MAP_FILE_HEIGHT,
+            width: WORKSPACE_MAP_FILE_WIDTH,
+          },
+          width: WORKSPACE_MAP_FILE_WIDTH,
+        }
+      : {}),
     ariaLabel: node.data.label,
     ariaRole: resourcePreview ? 'group' : openPath ? 'button' : 'group',
     dragHandle: resourcePreview
@@ -44,14 +61,31 @@ export const mergeWorkspaceMapNodeGeometry = (
   current: Node<GraphNodeData>,
 ): Node<GraphNodeData> => {
   const pinned = Boolean(current.data.workspaceMapPinned)
+  const activatingEditor =
+    Boolean(incoming.data.workspaceMapEditor) && !current.data.workspaceMapEditor
+  const currentWidth = current.width ?? numericStyleDimension(current, 'width')
+  const currentHeight = current.height ?? numericStyleDimension(current, 'height')
+  const currentIsCompact =
+    currentWidth === WORKSPACE_MAP_COMPACT_NODE_WIDTH &&
+    currentHeight === WORKSPACE_MAP_COMPACT_NODE_HEIGHT
+  const hasUserSizedGeometry = Boolean(currentWidth && currentHeight && !currentIsCompact)
+  const preserveCurrentGeometry = !activatingEditor || hasUserSizedGeometry
   return {
     ...incoming,
     data: pinned ? { ...incoming.data, workspaceMapPinned: true } : incoming.data,
     draggable: pinned ? false : incoming.draggable,
-    height: current.height ?? incoming.height,
-    measured: current.measured,
+    height: preserveCurrentGeometry ? (current.height ?? incoming.height) : incoming.height,
+    measured: preserveCurrentGeometry ? current.measured : incoming.measured,
     position: current.position,
-    style: current.style ? { ...incoming.style, ...current.style } : incoming.style,
-    width: current.width ?? incoming.width,
+    style:
+      preserveCurrentGeometry && current.style
+        ? { ...incoming.style, ...current.style }
+        : incoming.style,
+    width: preserveCurrentGeometry ? (current.width ?? incoming.width) : incoming.width,
   }
+}
+
+const numericStyleDimension = (node: Node<GraphNodeData>, key: 'height' | 'width') => {
+  const value = node.style?.[key]
+  return typeof value === 'number' ? value : undefined
 }

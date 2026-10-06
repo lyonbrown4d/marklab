@@ -153,6 +153,9 @@ describe('WorkspaceMapFileNode', () => {
     expect(surface).not.toHaveClass('nodrag', 'nopan')
     expect(screen.getByTestId('workspace-map-editor-content')).toHaveClass('nodrag', 'nopan')
     expect(surface.querySelector('.react-flow__resize-control')).not.toBeNull()
+    const viewport = screen.getByTestId('workspace-map-editor-viewport')
+    expect(viewport).toHaveClass('absolute', 'inset-0', 'overflow-hidden')
+    expect(viewport).toHaveClass('[contain:strict]')
     await waitFor(() => expect(plateEditor).toHaveFocus())
   })
 

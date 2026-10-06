@@ -633,6 +633,7 @@
   "preview.mermaidLoading": "Loading diagram...",
   "preview.mermaidInvalidSvg": "The diagram output could not be displayed safely.",
   "preview.mermaidExpand": "Expand diagram",
+  "preview.mermaidEditSource": "Edit Mermaid source",
   "preview.mermaidDialogTitle": "Mermaid diagram preview",
   "preview.mermaidZoomIn": "Zoom in",
   "preview.mermaidZoomOut": "Zoom out",

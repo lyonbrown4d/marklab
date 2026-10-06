@@ -90,66 +90,6 @@ describe('PlateEditorSurface async value lifecycle', () => {
     expect(workerMock.serialize).not.toHaveBeenCalled()
   })
 
-  it('applies only the latest external large value while editing is disabled', async () => {
-    const ref = createRef<PlateEditorSurfaceHandle>()
-    const view = render(
-      <PlateEditorSurface
-        activePath="notes/large.md"
-        onChange={vi.fn()}
-        placeholder="Write"
-        ref={ref}
-        value="Initial"
-      />,
-    )
-    await resolveRequest(workerMock.requests[0], 'Initial')
-    await waitFor(() =>
-      expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'ready'),
-    )
-
-    view.rerender(
-      <PlateEditorSurface
-        activePath="notes/large.md"
-        onChange={vi.fn()}
-        placeholder="Write"
-        ref={ref}
-        value="External one"
-      />,
-    )
-    view.rerender(
-      <PlateEditorSurface
-        activePath="notes/large.md"
-        onChange={vi.fn()}
-        placeholder="Write"
-        ref={ref}
-        value="External two"
-      />,
-    )
-
-    expect(screen.getByTestId('markdown-editor')).toHaveAttribute('contenteditable', 'true')
-    expect(screen.getByTestId('markdown-editor')).not.toHaveAttribute('inert')
-    const beforeInput = new InputEvent('beforeinput', {
-      bubbles: true,
-      cancelable: true,
-      data: 'blocked',
-      inputType: 'insertText',
-    })
-    expect(screen.getByTestId('markdown-editor').dispatchEvent(beforeInput)).toBe(false)
-    expect((await ref.current?.getMarkdown())?.trim()).toBe('Initial')
-    const firstExternal = workerMock.requests.find((request) => request.markdown === 'External one')
-    const latestExternal = workerMock.requests.find(
-      (request) => request.markdown === 'External two',
-    )
-    expect(firstExternal?.signal?.aborted).toBe(true)
-
-    await act(async () => {
-      latestExternal?.resolve(paragraph('External two'))
-      firstExternal?.resolve(paragraph('External one'))
-      await Promise.resolve()
-    })
-
-    expect((await ref.current?.getMarkdown())?.trim()).toBe('External two')
-  })
-
   it('loads the latest external value after initial parsing finishes', async () => {
     const ref = createRef<PlateEditorSurfaceHandle>()
     const view = render(

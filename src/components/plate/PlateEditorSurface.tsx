@@ -1,14 +1,13 @@
 import type { Value } from 'platejs'
 import { Plate, PlateContent, type PlateEditor, usePlateEditor } from 'platejs/react'
 import { useLatest } from 'ahooks'
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
   createPlateEditorPlugins,
   plateChunkingOptions,
   renderPlateEditorChunk,
 } from '@/components/plate/plateEditorConfig'
-import { syncPlateFocusActiveBlock } from '@/components/plate/plateFocusMode'
 import { PlateEditorOverlays } from '@/components/plate/PlateEditorOverlays'
 import {
   PlateExternalValueSyncController,
@@ -26,7 +25,7 @@ import {
   usePlateSlashCommands,
 } from '@/components/plate/slash'
 import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
-import { usePlateAnimatedCursor } from '@/components/plate/usePlateAnimatedCursor'
+import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import {
   loadPlateMarkdown,
@@ -47,6 +46,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       assetImportStrategy = 'copy-to-document-assets',
       autoFocus,
       className,
+      contentVisible = true,
       onCalendarFileCreate,
       onChange,
       onImageImport,
@@ -64,7 +64,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
   ) => {
     const editableRef = useRef<HTMLDivElement | null>(null)
     const shellRef = useRef<HTMLDivElement | null>(null)
-    const activeFocusBlockRef = useRef<HTMLElement | null>(null)
     const composingRef = useRef(false)
     const changeRevisionRef = useRef(0)
     const externalApplyRef = useRef(false)
@@ -97,6 +96,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onStatusChange,
       value,
     })
+    const contentReady = ready && contentVisible
     const getMarkdown = useCallback(
       () => Promise.resolve(serializePlateMarkdown(editor, editor.children as Value)),
       [editor],
@@ -119,13 +119,16 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onError: (error) => onStatusChange?.({ message: error.message, phase: 'error' }),
       onSnapshot: commitSnapshot,
     })
-    const isEditorReady = useCallback(() => ready && !externalLoadingRef.current, [ready])
+    const isEditorReady = useCallback(
+      () => contentReady && !externalLoadingRef.current,
+      [contentReady],
+    )
     const { assetDrop, pickAndImportImage } = usePlateEditorAssets({
       activePath,
       canEdit: isEditorReady,
       editor,
       getMarkdown,
-      readOnly: readOnly || !ready,
+      readOnly: readOnly || !contentReady,
       shellRef,
       strategy: assetImportStrategy,
     })
@@ -161,10 +164,17 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const completion = usePlateInlineCompletion({
       activePath,
       editor,
-      readOnly: readOnly || !ready,
+      readOnly: readOnly || !contentReady,
       value,
     })
-    usePlateAnimatedCursor({ editableRef, enabled: !readOnly && ready })
+    const syncActiveFocusBlock = usePlateEditorFocusLifecycle({
+      autoFocus,
+      className,
+      contentReady,
+      editableRef,
+      editor,
+      readOnly,
+    })
 
     const queueSnapshot = useCallback(() => {
       if (composingRef.current) return
@@ -172,24 +182,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       scheduleTypewriterScroll()
       enqueueSnapshot()
     }, [enqueueSnapshot, scheduleTypewriterScroll, syncSlashFromEditor])
-
-    useEffect(() => {
-      if (autoFocus && !readOnly && ready) editableRef.current?.focus()
-    }, [autoFocus, editor, readOnly, ready])
-
-    useEffect(() => {
-      const editable = editableRef.current
-      activeFocusBlockRef.current = syncPlateFocusActiveBlock(
-        editor,
-        editable,
-        activeFocusBlockRef.current,
-      )
-      return () => {
-        activeFocusBlockRef.current?.removeAttribute('data-focus-active')
-        editable?.removeAttribute('data-focus-active')
-        activeFocusBlockRef.current = null
-      }
-    }, [className, editor, ready])
 
     usePlateEditorDomEvents({
       applyPendingExternal: () => externalSyncRef.current?.applyPending() ?? false,
@@ -227,12 +219,8 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const handleSelectionChange = useCallback(() => {
       completion.onSelectionChange()
       syncSlashFromEditor()
-      activeFocusBlockRef.current = syncPlateFocusActiveBlock(
-        editor,
-        editableRef.current,
-        activeFocusBlockRef.current,
-      )
-    }, [completion, editor, syncSlashFromEditor])
+      syncActiveFocusBlock()
+    }, [completion, syncActiveFocusBlock, syncSlashFromEditor])
 
     return (
       <div {...assetDrop.dropzoneRootProps} ref={assetDrop.setShellElement}>
@@ -247,17 +235,19 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
           >
             <PlateContent
               aria-label={placeholder}
-              aria-busy={!ready}
+              aria-busy={!contentReady}
+              aria-hidden={!contentReady ? 'true' : undefined}
               className={cn(
                 'markdown-editor__content min-h-full w-full outline-none',
+                !contentReady && 'invisible',
                 readOnly && 'cursor-default',
                 className,
               )}
               data-editor-engine="plate"
               data-readonly={readOnly ? 'true' : undefined}
-              data-state={ready ? 'ready' : 'loading'}
+              data-state={contentReady ? 'ready' : 'loading'}
               data-testid="markdown-editor"
-              inert={!ready ? true : undefined}
+              inert={!contentReady ? true : undefined}
               placeholder={placeholder}
               readOnly={readOnly}
               ref={editableRef}
@@ -281,6 +271,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
             cancelSnapshot={cancelSnapshot}
             changeRevisionRef={changeRevisionRef}
             composingRef={composingRef}
+            contentReady={contentReady}
             controllerRef={externalSyncRef}
             editableRef={editableRef}
             editor={editor}

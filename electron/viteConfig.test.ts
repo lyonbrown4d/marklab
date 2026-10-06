@@ -61,4 +61,11 @@ describe('Vite production configuration', () => {
     expect(vite).toContain("'decode-named-character-reference': workerCharacterReferencePath")
     expect(vite).not.toContain('workerSafeMarkdownDependenciesPlugin')
   })
+
+  it('builds Mermaid validation as a dedicated Electron worker entry', async () => {
+    const electron = await fs.readFile('vite.electron.ts', 'utf8')
+
+    expect(electron).toContain('mermaidValidationWorkerEntry')
+    expect(electron).toContain('electron/services/mermaidLanguage/mermaidValidationWorkerEntry.ts')
+  })
 })

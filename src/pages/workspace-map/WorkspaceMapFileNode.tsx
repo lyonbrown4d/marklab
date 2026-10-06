@@ -167,16 +167,21 @@ const WorkspaceMapEmbeddedEditor = ({
       >
         {editor?.loadState.status === 'ready' ? (
           <Suspense fallback={<EditorPaneFallback label={t('workspaceMap.loadingDocument')} />}>
-            <MarkdownEditor
-              activePath={data.path ?? null}
-              autoFocus
-              value={editor.loadState.content}
-              onChange={editor.onChange}
-              placeholder={t('editor.placeholder')}
-              readOnly={editor.readOnly}
-              slashLabels={slashLabels}
-              variant="embedded"
-            />
+            <div
+              className="absolute inset-0 overflow-hidden [contain:strict] [&>div]:h-full [&>div]:min-h-0 [&>div]:overflow-hidden [&>div>div:first-child]:h-full [&>div>div:first-child]:min-h-0 [&>div>div:first-child]:overflow-hidden"
+              data-testid="workspace-map-editor-viewport"
+            >
+              <MarkdownEditor
+                activePath={data.path ?? null}
+                autoFocus
+                value={editor.loadState.content}
+                onChange={editor.onChange}
+                placeholder={t('editor.placeholder')}
+                readOnly={editor.readOnly}
+                slashLabels={slashLabels}
+                variant="embedded"
+              />
+            </div>
           </Suspense>
         ) : editor?.loadState.status === 'loading' ? (
           <EditorPaneFallback label={t('workspaceMap.loadingDocument')} path={data.path} />

@@ -3,6 +3,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  PanOnScrollMode,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -216,7 +217,9 @@ const WorkspaceMapCanvasContent = ({
         edgesFocusable={false}
         deleteKeyCode={null}
         panOnDrag
-        zoomOnScroll
+        panOnScroll
+        panOnScrollMode={PanOnScrollMode.Free}
+        zoomOnScroll={false}
         zoomOnPinch
         zoomOnDoubleClick={false}
         preventScrolling

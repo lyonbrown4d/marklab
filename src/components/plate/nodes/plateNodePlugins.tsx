@@ -32,7 +32,7 @@ import {
   TablePlugin,
   TableRowPlugin,
 } from '@platejs/table/react'
-import { ParagraphPlugin } from 'platejs/react'
+import { createPlatePlugin, ParagraphPlugin } from 'platejs/react'
 import {
   BlockquoteElement,
   BoldLeaf,
@@ -72,6 +72,18 @@ import {
 } from '@/components/plate/nodes/TableElements'
 import { isImeCompositionEvent } from '@/components/plate/nodes/tableOperations'
 import {
+  HtmlBreakElement,
+  HtmlDetailsElement,
+  HtmlKbdElement,
+  HtmlSummaryElement,
+} from '@/components/plate/nodes/HtmlElements'
+import {
+  PLATE_HTML_BR,
+  PLATE_HTML_DETAILS,
+  PLATE_HTML_KBD,
+  PLATE_HTML_SUMMARY,
+} from '@/components/plate/html/plateHtmlTypes'
+import {
   plateBlockquoteMarkdownInputRules,
   plateBoldMarkdownInputRules,
   plateCodeBlockMarkdownInputRules,
@@ -89,8 +101,32 @@ import { BulletedListElement } from '@/components/ui/list-classic-node'
 
 const codeBlockLowlight = createLowlight({ ...all, shell: all.bash })
 
+const HtmlDetailsPlugin = createPlatePlugin({
+  key: PLATE_HTML_DETAILS,
+  node: { isElement: true },
+}).withComponent(HtmlDetailsElement)
+
+const HtmlSummaryPlugin = createPlatePlugin({
+  key: PLATE_HTML_SUMMARY,
+  node: { isElement: true },
+}).withComponent(HtmlSummaryElement)
+
+const HtmlKbdPlugin = createPlatePlugin({
+  key: PLATE_HTML_KBD,
+  node: { isElement: true, isInline: true },
+}).withComponent(HtmlKbdElement)
+
+const HtmlBreakPlugin = createPlatePlugin({
+  key: PLATE_HTML_BR,
+  node: { isElement: true, isInline: true, isVoid: true },
+}).withComponent(HtmlBreakElement)
+
 export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {}) => [
   ParagraphPlugin.withComponent(ParagraphElement),
+  HtmlDetailsPlugin,
+  HtmlSummaryPlugin,
+  HtmlKbdPlugin,
+  HtmlBreakPlugin,
   BlockquotePlugin.configure({
     inputRules: plateBlockquoteMarkdownInputRules,
   }).withComponent(BlockquoteElement),
