@@ -1,14 +1,10 @@
-import { AlertTriangle, Cloud, GitBranch, RefreshCw, X } from 'lucide-react'
+import { AlertTriangle, Cloud, RefreshCw, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { useI18n } from '@/i18n/useI18n'
-
-type GitStatus =
-  | { status: 'not_repository' | 'error' }
-  | { status: 'ready'; branch: string | null; ahead: number; behind: number; changeCount: number }
 
 type WebDavStatus =
   | { status: 'unbound' }
@@ -17,30 +13,24 @@ type WebDavStatus =
   | { status: 'error'; label: string; message?: string; messageKey?: string }
 
 type SyncCenterPopoverProps = {
-  git: GitStatus
   webdav: WebDavStatus
   onStart: () => void
   onCancel: () => void
-  onOpenGit?: () => void
-  onRetryGit?: () => void
   loading?: boolean
   cancelPending?: boolean
   cancelError?: string | null
 }
 
 export const SyncCenterPopover = ({
-  git,
   webdav,
   onStart,
   onCancel,
-  onOpenGit,
-  onRetryGit,
   loading = false,
   cancelPending = false,
   cancelError = null,
 }: SyncCenterPopoverProps) => {
   const { t } = useI18n()
-  const problem = git.status === 'error' || webdav.status === 'error'
+  const problem = webdav.status === 'error'
   const syncing = webdav.status === 'syncing'
 
   return (
@@ -70,33 +60,6 @@ export const SyncCenterPopover = ({
             {t('sync.center.loading')}
           </p>
         ) : null}
-        <div className="flex items-center gap-2 rounded-md px-2 py-2">
-          <GitBranch aria-hidden="true" className="size-4 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium">{t('sync.channel.git')}</p>
-            <p className="truncate text-[11px] text-muted-foreground">
-              {git.status === 'ready'
-                ? (git.branch ?? t('scm.noBranch'))
-                : git.status === 'error'
-                  ? t('sync.git.detectionFailed')
-                  : t('sync.git.notRepository')}
-            </p>
-          </div>
-          {git.status === 'ready' ? (
-            <span className="text-[10px] text-muted-foreground">
-              ↑{git.ahead} ↓{git.behind}
-            </span>
-          ) : null}
-          {git.status === 'error' && onRetryGit ? (
-            <Button type="button" size="sm" variant="ghost" onClick={onRetryGit}>
-              {t('sync.git.retry')}
-            </Button>
-          ) : onOpenGit ? (
-            <Button type="button" size="sm" variant="ghost" onClick={onOpenGit}>
-              {t('sync.center.openGit')}
-            </Button>
-          ) : null}
-        </div>
         <div className="flex items-start gap-2 rounded-md px-2 py-2">
           <Cloud aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div className="min-w-0 flex-1">

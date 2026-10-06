@@ -11,11 +11,10 @@ export const createWorkspaceSyncPreloadSurface = (
 ): WorkspaceSyncApi => ({
   channels: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.syncChannelsGet),
-    remove: (provider) => ipcRenderer.invoke(nativeIpcChannels.syncChannelRemove, { provider }),
+    remove: () => ipcRenderer.invoke(nativeIpcChannels.syncChannelRemove),
     set: (channel) => ipcRenderer.invoke(nativeIpcChannels.syncChannelSet, channel),
   },
   cancel: (requestId) => ipcRenderer.invoke(nativeIpcChannels.syncCancel, { requestId }),
-  gitSummary: () => ipcRenderer.invoke(nativeIpcChannels.syncGitSummary),
   onProgress: (handler) => {
     const listener = (_event: IpcRendererEvent, payload: WorkspaceSyncProgressEvent) => {
       handler(payload)

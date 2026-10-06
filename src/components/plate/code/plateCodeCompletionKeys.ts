@@ -1,9 +1,10 @@
+import { isImeKeyboardEvent } from '@/logic/ime'
+
 export type PlateCodeCompletionKeyAction =
   'accept' | 'cancel' | 'complete' | 'next' | 'none' | 'previous'
 
 type CompletionKeyInput = {
   key: string
-  keyCode?: number
   composing: boolean
   menuOpen: boolean
   ctrl: boolean
@@ -11,12 +12,11 @@ type CompletionKeyInput = {
 
 export const resolvePlateCodeCompletionKey = ({
   key,
-  keyCode,
   composing,
   menuOpen,
   ctrl,
 }: CompletionKeyInput): PlateCodeCompletionKeyAction => {
-  if (composing || keyCode === 229) return 'none'
+  if (isImeKeyboardEvent({ isComposing: composing, key })) return 'none'
   if (ctrl && key === ' ') return 'complete'
   if (!menuOpen) return 'none'
   if (key === 'ArrowDown') return 'next'

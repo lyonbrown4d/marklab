@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type SubmitEvent } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -87,7 +87,7 @@ export const FileNameDialog = ({
     if (!inFlight.current) onOpenChange(nextOpen)
   }
 
-  const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (inFlight.current) return
     inFlight.current = true

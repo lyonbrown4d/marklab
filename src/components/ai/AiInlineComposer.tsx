@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type SubmitEvent } from 'react'
 import {
   AlignLeft,
   Check,
@@ -92,7 +92,7 @@ export const AiInlineComposer = ({
     else if (!inputDisabled) inputRef.current?.focus()
   }, [inputDisabled, pending])
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextInstruction = instruction.trim()
     if (!nextInstruction || inputDisabled) return

@@ -65,6 +65,26 @@ describe('Markdown source shortcuts', () => {
     expect(preventDefault).toHaveBeenCalled()
     expect(stopPropagation).toHaveBeenCalled()
   })
+
+  it.each([
+    ['native composition', 'b', true],
+    ['IME Process key', 'Process', false],
+  ] as const)('does not claim shortcuts during %s', (_caseName, key, isComposing) => {
+    const harness = createEditorHarness('alpha', 0, 5)
+    registerMarkdownSourceShortcuts({
+      editor: harness.editor,
+      overrides: { 'editor.bold': ['Control+B'] },
+      platform: 'windows',
+    })
+    const event = new KeyboardEvent('keydown', { ctrlKey: true, key })
+    Object.defineProperty(event, 'isComposing', { value: isComposing })
+    const preventDefault = vi.spyOn(event, 'preventDefault')
+
+    harness.fireKeydown(event)
+
+    expect(harness.trigger).not.toHaveBeenCalled()
+    expect(preventDefault).not.toHaveBeenCalled()
+  })
 })
 
 const createEditorHarness = (initialValue: string, startOffset: number, endOffset: number) => {

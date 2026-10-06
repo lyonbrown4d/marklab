@@ -12,6 +12,7 @@ import {
   type ShortcutActionId,
   type ShortcutBindings,
 } from '@/logic/shortcuts'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 type ShortcutOptions = {
   onImageImport?: () => void
@@ -102,7 +103,8 @@ export const runPlateEditorShortcut = (
 }
 
 export const handlePlateEditorBoundaryShortcut = (editor: PlateEditor, event: KeyboardEvent) => {
-  if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey) return false
+  if (event.defaultPrevented || isImeKeyboardEvent(event) || event.altKey || event.shiftKey)
+    return false
   const moveToStart =
     (event.ctrlKey && event.key === 'Home') || (event.metaKey && event.key === 'ArrowUp')
   const moveToEnd =
@@ -121,7 +123,7 @@ export const handlePlateEditorShortcut = (
   overrides: ShortcutBindings = {},
   options: ShortcutOptions = {},
 ) => {
-  if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return false
+  if (event.defaultPrevented || isImeKeyboardEvent(event)) return false
   if (handlePlateEditorBoundaryShortcut(editor, event)) return true
   const platform = detectPlatform()
   const resolved = resolveShortcutBindings(overrides)

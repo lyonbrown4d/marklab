@@ -1,18 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { LanguageModel } from 'ai'
 
-import { AiService } from '@electron/services/ai/aiService'
-import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types'
-
-const storedProvider = {
-  id: 'openai-main',
-  label: 'OpenAI',
-  kind: 'openai' as const,
-  model: 'gpt-5-mini',
-  createdAt: '2026-09-30T00:00:00.000Z',
-  updatedAt: '2026-09-30T00:00:00.000Z',
-  encryptedApiKey: Buffer.from('encrypted').toString('base64'),
-}
+import { createService, storedProvider } from '@electron/services/ai/aiServiceTestFixture'
 
 describe('AiService', () => {
   it('returns only masked credential state to the renderer', async () => {
@@ -21,6 +9,9 @@ describe('AiService', () => {
     await expect(service.listProviders()).resolves.toEqual([
       expect.objectContaining({
         id: 'openai-main',
+        locality: 'remote',
+        available: true,
+        requiresApiKey: true,
         hasApiKey: true,
         apiKeySource: 'stored',
         maskedApiKey: '••••••••',
@@ -152,6 +143,52 @@ describe('AiService', () => {
     )
   })
 
+  it('reports a keyless remote compatible provider as unavailable without exposing credentials', async () => {
+    const { service, store } = createService({
+      id: 'remote-compatible',
+      kind: 'openai-compatible',
+      baseUrl: 'https://models.example.com/v1',
+      encryptedApiKey: undefined,
+    })
+    vi.mocked(store.resolveApiKey).mockResolvedValue(null)
+
+    const provider = await service.getProvider('remote-compatible')
+
+    expect(provider).toMatchObject({
+      locality: 'remote',
+      available: false,
+      requiresApiKey: true,
+      hasApiKey: false,
+      apiKeySource: 'none',
+      maskedApiKey: null,
+    })
+    expect(provider).not.toHaveProperty('apiKey')
+    expect(provider).not.toHaveProperty('encryptedApiKey')
+    expect(JSON.stringify(provider)).not.toContain('stored-secret')
+  })
+
+  it('ignores injected global environment credentials for compatible providers', async () => {
+    const { service, store } = createService(
+      {
+        id: 'remote-compatible',
+        kind: 'openai-compatible',
+        baseUrl: 'https://models.example.com/v1',
+        encryptedApiKey: undefined,
+      },
+      undefined,
+      { 'openai-compatible': 'global-compatible-secret' },
+    )
+    vi.mocked(store.resolveApiKey).mockResolvedValue(null)
+
+    await expect(service.getProvider('remote-compatible')).resolves.toMatchObject({
+      available: false,
+      apiKeySource: 'none',
+    })
+    await expect(
+      service.generateText({ providerId: 'remote-compatible', prompt: 'Hi' }),
+    ).rejects.toThrow('AI provider API key is not configured')
+  })
+
   it.each(['http://127.0.0.1:11434/v1', 'http://localhost:11434/v1', 'http://[::1]:11434/v1'])(
     'allows a keyless loopback compatible provider at %s',
     async (baseUrl) => {
@@ -176,7 +213,35 @@ describe('AiService', () => {
     },
   )
 
-  it.each(['https://localhost:11434/v1', 'https://example.com/v1'])(
+  it.each(['http://127.42.3.9:11434/v1', 'https://localhost:11434/v1', 'https://[::1]:11434/v1'])(
+    'allows every HTTP(S) loopback compatible provider without a key at %s',
+    async (baseUrl) => {
+      const { generate, service, store } = createService({
+        id: 'compatible',
+        kind: 'openai-compatible',
+        baseUrl,
+        encryptedApiKey: undefined,
+      })
+      vi.mocked(store.resolveApiKey).mockResolvedValue(null)
+      vi.mocked(generate).mockResolvedValue({
+        text: 'Hello',
+        finishReason: 'stop',
+        usage: {},
+        warnings: [],
+      })
+
+      await expect(service.getProvider('compatible')).resolves.toMatchObject({
+        locality: 'local',
+        available: true,
+        requiresApiKey: false,
+      })
+      await expect(
+        service.generateText({ providerId: 'compatible', prompt: 'Hi' }),
+      ).resolves.toMatchObject({ text: 'Hello' })
+    },
+  )
+
+  it.each(['https://example.com/v1'])(
     'requires a real key for compatible provider at %s',
     async (baseUrl) => {
       const { service, store } = createService({
@@ -193,31 +258,3 @@ describe('AiService', () => {
     },
   )
 })
-
-const createService = (
-  providerOverrides: Partial<StoredAiProvider> = {},
-  environmentKey: string | undefined = undefined,
-) => {
-  const provider: StoredAiProvider = { ...storedProvider, ...providerOverrides }
-  const store = {
-    list: vi.fn(async () => [provider]),
-    get: vi.fn(async () => provider),
-    update: vi.fn(),
-    delete: vi.fn(),
-    resolveApiKey: vi.fn(async () => (provider.encryptedApiKey ? 'stored-secret' : null)),
-  } satisfies AiProviderStoreContract
-  const resolver = { resolve: vi.fn(() => ({ modelId: provider.model }) as LanguageModel) }
-  const generate = vi.fn()
-  const service = new AiService({
-    store,
-    resolver,
-    generate,
-    environment: {
-      openai: environmentKey,
-      anthropic: undefined,
-      google: undefined,
-      'openai-compatible': undefined,
-    },
-  })
-  return { generate, resolver, service, store }
-}

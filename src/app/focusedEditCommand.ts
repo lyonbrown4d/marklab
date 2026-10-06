@@ -1,9 +1,11 @@
 import { executeFocusedCodeEditorCommand, isCodeEditorElement } from '@/lib/focusedCodeEditor'
+import { queueFocusedEditCommand } from '@/runtime/editCommands'
+import type { FocusedEditAction } from '@/types/editCommand'
 
-type FocusedEditAction =
+type MenuEditAction =
   'edit.undo' | 'edit.redo' | 'edit.cut' | 'edit.copy' | 'edit.paste' | 'edit.select_all'
 
-const editCommandByAction: Record<FocusedEditAction, string> = {
+const editCommandByAction: Record<MenuEditAction, FocusedEditAction> = {
   'edit.undo': 'undo',
   'edit.redo': 'redo',
   'edit.cut': 'cut',
@@ -15,6 +17,7 @@ const editCommandByAction: Record<FocusedEditAction, string> = {
 export const executeFocusedEditCommand = (
   action: string,
   doc: Document | undefined = typeof document === 'undefined' ? undefined : document,
+  executeNative: (action: FocusedEditAction) => boolean = queueFocusedEditCommand,
 ) => {
   if (!doc || !isFocusedEditAction(action)) return false
 
@@ -31,10 +34,10 @@ export const executeFocusedEditCommand = (
     return selectEditableTarget(target, doc)
   }
 
-  return Boolean(doc.execCommand(editCommandByAction[action]))
+  return executeNative(editCommandByAction[action])
 }
 
-const isFocusedEditAction = (action: string): action is FocusedEditAction => {
+const isFocusedEditAction = (action: string): action is MenuEditAction => {
   return Object.prototype.hasOwnProperty.call(editCommandByAction, action)
 }
 

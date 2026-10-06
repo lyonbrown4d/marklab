@@ -1,18 +1,13 @@
-import type { AiEnvironment, AiProviderKind } from '@electron/services/ai/types'
+import { AI_PROVIDER_KINDS, getAiProviderPolicy } from '@electron/services/ai/providerCatalog'
+import type { AiEnvironment } from '@electron/services/ai/types'
 
-const environmentVariables: Record<AiProviderKind, string> = {
-  openai: 'OPENAI_API_KEY',
-  anthropic: 'ANTHROPIC_API_KEY',
-  google: 'GOOGLE_GENERATIVE_AI_API_KEY',
-  'openai-compatible': 'MARKLAB_OPENAI_COMPATIBLE_API_KEY',
-}
-
-export const readAiEnvironment = (environment: NodeJS.ProcessEnv = process.env): AiEnvironment => ({
-  openai: readSecret(environment, environmentVariables.openai),
-  anthropic: readSecret(environment, environmentVariables.anthropic),
-  google: readSecret(environment, environmentVariables.google),
-  'openai-compatible': readSecret(environment, environmentVariables['openai-compatible']),
-})
+export const readAiEnvironment = (environment: NodeJS.ProcessEnv = process.env): AiEnvironment =>
+  Object.fromEntries(
+    AI_PROVIDER_KINDS.map((kind) => {
+      const name = getAiProviderPolicy(kind).environmentVariable
+      return [kind, name ? readSecret(environment, name) : undefined]
+    }),
+  ) as AiEnvironment
 
 const readSecret = (environment: NodeJS.ProcessEnv, name: string): string | undefined => {
   const value = environment[name]

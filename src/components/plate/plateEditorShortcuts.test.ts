@@ -54,6 +54,15 @@ describe('Plate formatting shortcut resolution', () => {
     expect(editor.children).toEqual([{ type: 'p', children: [{ text: 'text' }] }])
   })
 
+  it('does not claim an IME Process key event', () => {
+    const editor = createPlateEditor({ value: [{ type: 'p', children: [{ text: 'text' }] }] })
+    const event = keyboardEvent('Process')
+    const preventDefault = vi.spyOn(event, 'preventDefault')
+
+    expect(handlePlateEditorShortcut(editor, event)).toBe(false)
+    expect(preventDefault).not.toHaveBeenCalled()
+  })
+
   it('moves the Slate selection to document boundaries without DOM traversal', () => {
     const editor = createPlateEditor({
       value: [

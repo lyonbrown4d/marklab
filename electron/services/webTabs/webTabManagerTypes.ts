@@ -77,6 +77,7 @@ export const updateWebTabActiveStates = (
 }
 
 export const updateWebTabHistory = (entry: WebTabEntry): void => {
-  entry.state.canGoBack = entry.view.webContents.canGoBack()
-  entry.state.canGoForward = entry.view.webContents.canGoForward()
+  const { navigationHistory } = entry.view.webContents
+  entry.state.canGoBack = navigationHistory.canGoBack()
+  entry.state.canGoForward = navigationHistory.canGoForward()
 }

@@ -63,7 +63,6 @@ describe('WorkspaceWebDavSyncService', () => {
   it('fails before network access when the workspace has no WebDAV binding', async () => {
     const fixture = createFixture()
     fixture.dependencies.configStore.getChannels.mockResolvedValueOnce({
-      git: null,
       webdav: null,
     })
 
@@ -170,7 +169,6 @@ const createFixture = () => {
   const dependencies = {
     configStore: {
       getChannels: vi.fn(async (): Promise<WorkspaceSyncChannels> => ({
-        git: null,
         webdav: {
           provider: 'webdav' as const,
           profileId: 'dav-main',

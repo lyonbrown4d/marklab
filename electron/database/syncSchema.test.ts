@@ -136,12 +136,8 @@ describe('local database sync schema', () => {
       service.database
         .insertInto('workspace_sync_channels')
         .values({
-          auto_fetch: null,
           auto_sync: 1,
-          branch: null,
           profile_id: 'profile-created-later',
-          provider: 'webdav',
-          remote: null,
           remote_root: '/notes',
           workspace_id: workspace.id,
         })
@@ -154,6 +150,48 @@ describe('local database sync schema', () => {
       )
       .get('workspace_sync_channels_profile_index')
     expect(index?.name).toBe('workspace_sync_channels_profile_index')
+  })
+
+  it('stores one WebDAV binding per workspace without Git columns', async () => {
+    const service = await createService()
+    const workspace = await service.database
+      .insertInto('workspaces')
+      .values({ canonical_path: 'C:/webdav-only', path: 'C:/WebDAV Only', root_kind: 'external' })
+      .returning('id')
+      .executeTakeFirstOrThrow()
+
+    const columns = service.sqlite
+      .prepare<[], { name: string }>('pragma table_info(workspace_sync_channels)')
+      .all()
+      .map(({ name }) => name)
+    expect(columns).toEqual([
+      'workspace_id',
+      'profile_id',
+      'remote_root',
+      'auto_sync',
+      'updated_at',
+    ])
+
+    await service.database
+      .insertInto('workspace_sync_channels')
+      .values({
+        auto_sync: 1,
+        profile_id: 'cloud',
+        remote_root: '/notes',
+        workspace_id: workspace.id,
+      })
+      .execute()
+    await expect(
+      service.database
+        .insertInto('workspace_sync_channels')
+        .values({
+          auto_sync: 0,
+          profile_id: 'other',
+          remote_root: '/other',
+          workspace_id: workspace.id,
+        })
+        .execute(),
+    ).rejects.toThrow()
   })
 })
 

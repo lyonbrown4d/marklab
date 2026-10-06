@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 type SettingsSwitchProps = React.ComponentPropsWithoutRef<typeof Switch>
 
 export const SettingsSwitch = React.forwardRef<
-  React.ElementRef<typeof Switch>,
+  React.ComponentRef<typeof Switch>,
   SettingsSwitchProps
 >(({ className, ...props }, ref) => (
   <Switch

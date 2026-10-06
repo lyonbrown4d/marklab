@@ -6,16 +6,16 @@ import { useWorkspaceMapKeyboard } from '@/pages/workspace-map/useWorkspaceMapKe
 const keyboardEvent = ({
   defaultPrevented = false,
   isComposing = false,
-  keyCode = 0,
+  key = 'Escape',
 }: {
   defaultPrevented?: boolean
   isComposing?: boolean
-  keyCode?: number
+  key?: string
 }) =>
   ({
     defaultPrevented,
-    key: 'Escape',
-    nativeEvent: { isComposing, keyCode },
+    key,
+    nativeEvent: { isComposing, key },
     preventDefault: vi.fn(),
     target: document.createElement('div'),
   }) as unknown as ReactKeyboardEvent<HTMLDivElement>
@@ -35,7 +35,7 @@ describe('useWorkspaceMapKeyboard', () => {
 
     result.current(keyboardEvent({ defaultPrevented: true }))
     result.current(keyboardEvent({ isComposing: true }))
-    result.current(keyboardEvent({ keyCode: 229 }))
+    result.current(keyboardEvent({ key: 'Process' }))
 
     expect(onCloseEditor).not.toHaveBeenCalled()
   })

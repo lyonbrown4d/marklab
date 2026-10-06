@@ -1,4 +1,3 @@
-import { isAiProviderUsable, isLoopbackHttpUrl } from '@/components/settings/aiProviderUtils'
 import { aiApi } from '@/services/aiApi'
 import type { SourceProviderLocality } from '@/components/markdownSourceInlineCompletionTypes'
 
@@ -13,10 +12,7 @@ export const resolveSourceProviderLocality = async (
 ): Promise<SourceProviderLocality> => {
   try {
     const provider = await aiApi.getProvider(providerId)
-    if (!isAiProviderUsable(provider)) return 'unavailable'
-    return provider.kind === 'openai-compatible' && isLoopbackHttpUrl(provider.baseUrl)
-      ? 'local'
-      : 'remote'
+    return provider.available ? provider.locality : 'unavailable'
   } catch {
     return 'unavailable'
   }

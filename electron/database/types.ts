@@ -107,13 +107,9 @@ export type GraphNodeLayoutsTable = {
 
 export type WorkspaceSyncChannelsTable = {
   workspace_id: number
-  provider: 'git' | 'webdav'
-  remote: string | null
-  branch: string | null
-  auto_fetch: SqliteBoolean | null
-  profile_id: string | null
-  remote_root: string | null
-  auto_sync: SqliteBoolean | null
+  profile_id: string
+  remote_root: string
+  auto_sync: SqliteBoolean
   updated_at: Generated<string>
 }
 

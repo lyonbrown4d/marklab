@@ -45,7 +45,7 @@ export const electronMainManualChunks = (id: string) => {
   if (includesAny(normalizedId, ['/ai/', '@ai-sdk/', '@vercel/oidc', '@workflow/serde'])) {
     return 'main-ai'
   }
-  if (normalizedId.includes('awilix')) return 'main-di'
+  if (normalizedId.includes('inversify')) return 'main-di'
   if (
     includesAny(normalizedId, [
       'fast-glob',

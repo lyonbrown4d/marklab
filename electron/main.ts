@@ -1,18 +1,8 @@
+import { app, BrowserWindow, nativeTheme, safeStorage, shell, WebContentsView } from 'electron'
 import {
-  app,
-  BrowserWindow,
-  clipboard,
-  dialog,
-  ipcMain,
-  nativeTheme,
-  safeStorage,
-  shell,
-  WebContentsView,
-} from 'electron'
-import {
-  createElectronContainer,
-  shutdownElectronContainer,
-  type ElectronContainer,
+  createElectronRuntime,
+  type ElectronRuntime,
+  type ElectronServices,
 } from '@electron/container'
 import { configureAppIdentity } from '@electron/appIdentity'
 import type { NativeIpcRegistration } from '@electron/ipc'
@@ -21,7 +11,6 @@ import {
   registerAssetProtocolPrivileges,
 } from '@electron/main/assetProtocol'
 import { installContentSecurityPolicy } from '@electron/main/contentSecurityPolicy'
-import { getLaunchInfo } from '@electron/main/deepLinks'
 import { configureDevUserDataPath } from '@electron/main/devUserData'
 import { installElectronE2eRuntimeFlags } from '@electron/main/e2eRuntime'
 import { registerMainNativeIpc } from '@electron/main/ipcBootstrap'
@@ -46,7 +35,7 @@ let didShowMain = false
 let rendererReady = false
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 let nativeIpc: NativeIpcRegistration | null = null
-let container: ElectronContainer | null = null
+let runtime: ElectronRuntime | null = null
 
 installElectronE2eRuntimeFlags()
 configureAppIdentity(app)
@@ -59,39 +48,36 @@ const clearFallbackTimer = (): void => {
   fallbackTimer = null
 }
 
-const getContainer = (): ElectronContainer => {
-  container ??= createElectronContainer({
+const getRuntime = (): ElectronRuntime => {
+  runtime ??= createElectronRuntime({
     app,
     BrowserWindow,
     WebContentsView,
-    clipboard,
-    dialog,
-    getLaunchInfo,
-    ipcMain,
     lifecycleTasks: createRuntimeLifecycleTasks({
       disposeSystemThemeMonitor: systemThemeMonitor.dispose,
       registerNativeRuntime: () => {
         installContentSecurityPolicy()
         registerAssetProtocol(
-          () => container?.cradle.workspaceRegistry ?? null,
-          () => container?.cradle.linkPreviewService ?? null,
+          () => runtime?.services.workspaceRegistry ?? null,
+          () => runtime?.services.linkPreviewService ?? null,
         )
         legacyShellIpc.register()
         nativeIpc ??= registerMainNativeIpc({
-          container: getContainer(),
           flushWorkspaceBuffers: windowLifecycle.flushWorkspaceBuffers,
           onRendererReady: handleRendererReady,
+          services: getServices(),
           windowCommandHandlers: windowCommandSetup.commandHandlers,
         })
       },
       startSystemThemeMonitor: systemThemeMonitor.start,
     }),
-    onRendererReady: handleRendererReady,
     safeStorage,
     shell,
   })
-  return container
+  return runtime
 }
+
+const getServices = (): ElectronServices => getRuntime().services
 
 const showMainWindow = (): void => {
   if (didShowMain || !windows) return
@@ -127,7 +113,7 @@ const systemThemeMonitor = createSystemThemeMonitor({
 })
 
 const windowLifecycle = createWindowLifecycle({
-  getContainer,
+  getServices,
   getNativeIpc: () => nativeIpc,
   getWindows: () => windows,
   persistWindowState: flushPersistedWindowState,
@@ -137,7 +123,7 @@ const windowLifecycle = createWindowLifecycle({
 })
 
 const windowCommandSetup = createWindowCommandSetup({
-  getContainer,
+  getServices,
   getNativeIpc: () => nativeIpc,
   getPrimaryWindow: () => windows?.main ?? null,
   getWindowPool: windowLifecycle.ensureWindowPool,
@@ -151,11 +137,11 @@ const legacyShellIpc = createLegacyShellIpcRegistration({
 })
 
 const bootstrap = async (): Promise<void> => {
-  container = getContainer()
-  const logger = container.cradle.logger
+  runtime = getRuntime()
+  const logger = runtime.services.logger
   logger.info('bootstrap started')
 
-  await container.cradle.lifecycleCoordinator.startup()
+  await runtime.startup()
 
   didShowMain = false
   rendererReady = false
@@ -181,7 +167,7 @@ const bootstrap = async (): Promise<void> => {
 
 installSingleInstanceAndDeepLinks({
   bootstrap,
-  getContainer,
+  getLogger: () => getServices().logger,
   getMainWindow: () => windows?.main ?? null,
   openSystemPath: windowCommandSetup.openSystemPath,
   queueDeepLinkPayload: runtimeEvents.queueDeepLinkPayload,
@@ -201,7 +187,7 @@ app.on('before-quit', (event) => {
     () => app.quit(),
     async () => {
       clearFallbackTimer()
-      if (container) await shutdownElectronContainer(container)
+      if (runtime) await runtime.shutdown()
     },
   )
 })

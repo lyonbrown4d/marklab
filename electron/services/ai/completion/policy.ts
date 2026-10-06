@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { isLoopbackProviderUrl } from '@electron/services/ai/schemas'
+import { getAiProviderPolicy } from '@electron/services/ai/providerCatalog'
 import type { AiProviderStoreContract } from '@electron/services/ai/types'
 import { getRendererPersistValue } from '@electron/services/settingsStore'
 
@@ -15,9 +15,9 @@ type AiInlineCompletionPolicyOptions = {
 
 const preferencesSchema = z
   .object({
-    state: z.object({ aiCompletionCloudContextConsent: z.boolean().optional() }).passthrough(),
+    state: z.object({ aiCompletionCloudContextConsent: z.boolean().optional() }).loose(),
   })
-  .passthrough()
+  .loose()
 
 export class AiInlineCompletionPolicy implements AiInlineCompletionPolicyContract {
   private readonly readCloudContextConsent: () => boolean
@@ -29,7 +29,7 @@ export class AiInlineCompletionPolicy implements AiInlineCompletionPolicyContrac
   async assertProviderAllowed(providerId: string): Promise<void> {
     const provider = await this.options.providerStore.get(providerId)
     if (!provider) throw new Error('AI provider was not found')
-    if (provider.kind === 'openai-compatible' && isLoopbackProviderUrl(provider.baseUrl)) {
+    if (getAiProviderPolicy(provider.kind).getLocality(provider) === 'local') {
       return
     }
     if (!this.readCloudContextConsent()) {

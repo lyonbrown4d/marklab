@@ -1,7 +1,6 @@
 import { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
-import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { NativeIpcRegistration } from '@electron/ipc'
 import {
   createAppWindowCommandHandlers,
   createNativeMenuActionDispatcher,
@@ -13,9 +12,18 @@ import {
   writeRendererPersistSession,
 } from '@electron/services/settingsStore'
 import type { MarklabWindowPool } from '@electron/windowPool'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+
+type WindowCommandServices = {
+  logger: Logger
+  workspaceRegistry: Pick<
+    WindowWorkspaceRegistry,
+    'registerWindow' | 'rootInfoForWindow' | 'sessionKeyForWindow'
+  >
+}
 
 type WindowCommandSetupArgs = {
-  getContainer: () => ElectronContainer
+  getServices: () => WindowCommandServices
   getNativeIpc: () => NativeIpcRegistration | null
   getPrimaryWindow: () => BrowserWindow | null
   getWindowPool: () => MarklabWindowPool
@@ -30,7 +38,7 @@ export type WindowCommandSetup = {
 }
 
 export const createWindowCommandSetup = ({
-  getContainer,
+  getServices,
   getNativeIpc,
   getPrimaryWindow,
   getWindowPool,
@@ -49,15 +57,15 @@ export const createWindowCommandSetup = ({
       if (!window || window.isDestroyed()) {
         throw new Error('No active workspace window is available')
       }
-      return getContainer().cradle.workspaceRegistry.rootInfoForWindow(window)
+      return getServices().workspaceRegistry.rootInfoForWindow(window)
     },
-    getLogger: () => getContainer().cradle.logger,
+    getLogger: () => getServices().logger,
     getNativeIpc,
     getPrimaryWindow,
     getSessionKeyForWindow: (window: BrowserWindow) =>
-      getContainer().cradle.workspaceRegistry.sessionKeyForWindow(window),
+      getServices().workspaceRegistry.sessionKeyForWindow(window),
     getWorkspaceServiceForWindow: (window: BrowserWindow) =>
-      getContainer().cradle.workspaceRegistry.registerWindow(window),
+      getServices().workspaceRegistry.registerWindow(window),
     getWindowPool,
     installManagedMainWindowLifecycle,
     writeWorkspaceSession: (targetSessionKey: string, state: Record<string, unknown>) =>

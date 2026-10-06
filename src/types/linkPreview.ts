@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
 const safeHttpUrl = z
-  .string()
   .url()
   .refine((value) => {
     const url = new URL(value)

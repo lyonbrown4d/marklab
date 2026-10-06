@@ -21,6 +21,9 @@ const cloudProvider = {
   label: 'OpenAI',
   kind: 'openai',
   model: 'gpt-5-mini',
+  locality: 'remote',
+  available: true,
+  requiresApiKey: true,
   hasApiKey: true,
   apiKeySource: 'stored',
   maskedApiKey: '••••••••',
@@ -57,6 +60,9 @@ describe('AiSettingsPage provider management', () => {
     api.listProviders.mockResolvedValue([])
     api.updateProvider.mockImplementation(async (value) => ({
       ...value,
+      locality: value.kind === 'openai-compatible' ? 'local' : 'remote',
+      available: value.kind === 'openai-compatible' || Boolean(value.apiKey),
+      requiresApiKey: value.kind !== 'openai-compatible',
       hasApiKey: Boolean(value.apiKey),
       apiKeySource: value.apiKey ? 'stored' : 'none',
       maskedApiKey: value.apiKey ? '••••••••' : null,

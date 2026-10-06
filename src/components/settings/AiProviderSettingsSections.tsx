@@ -91,8 +91,8 @@ export const AiProviderSettingsSections = () => {
   const cloudProviderFallbackRef = useRef<HTMLButtonElement>(null)
   const [formMode, setFormMode] = useState<'ollama' | 'compatible' | 'cloud' | null>(null)
   const providers = actions.providersQuery.data ?? []
-  const localProviders = providers.filter((provider) => provider.kind === 'openai-compatible')
-  const cloudProviders = providers.filter((provider) => provider.kind !== 'openai-compatible')
+  const localProviders = providers.filter((provider) => provider.locality === 'local')
+  const cloudProviders = providers.filter((provider) => provider.locality === 'remote')
   const ollamaProvider = localProviders.find(isOllamaPreset)
 
   const handleSave = async (input: AiProviderUpdate) => {

@@ -8,6 +8,10 @@ type InitializableDisposable = Disposable & {
   initialize: () => Promise<void>
 }
 
+type WorkspaceRegistry = {
+  disposeAll: () => Promise<void>
+}
+
 type MainLifecycleDependencies<TSettings> = {
   configureSettingsStore: (settingsStore: TSettings) => unknown
   getKnowledgeEngineService: () => Disposable & {
@@ -16,6 +20,7 @@ type MainLifecycleDependencies<TSettings> = {
   getLinkPreviewService: () => Disposable
   getLocalHistoryService: () => InitializableDisposable
   getSettingsStore: () => TSettings
+  getWorkspaceRegistry: () => WorkspaceRegistry
   localDatabaseService: {
     close: () => Promise<void>
     initialize: () => Promise<void>
@@ -47,7 +52,25 @@ export const createMainLifecycleTasks = <TSettings>(
   knowledgeEngineTask(dependencies.getKnowledgeEngineService),
   disposalTask('link-preview', 20, dependencies.getLinkPreviewService),
   initializedDisposalTask('local-history', 30, dependencies.getLocalHistoryService),
+  workspaceRegistryTask(dependencies.getWorkspaceRegistry),
 ]
+
+const workspaceRegistryTask = (
+  getRegistry: MainLifecycleDependencies<unknown>['getWorkspaceRegistry'],
+): LifecycleTask => {
+  let registry: WorkspaceRegistry | null = null
+  return {
+    critical: true,
+    dependencies: ['knowledge-engine', 'local-history'],
+    name: 'workspace-registry',
+    order: 40,
+    phase: 'services',
+    start: () => {
+      registry = getRegistry()
+    },
+    stop: () => registry?.disposeAll(),
+  }
+}
 
 const knowledgeEngineTask = (
   getService: MainLifecycleDependencies<unknown>['getKnowledgeEngineService'],

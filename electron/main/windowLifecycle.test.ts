@@ -28,6 +28,7 @@ const createHarness = () => {
   const workspace = {
     beginShutdownBarrier: vi.fn((reason: string) => barrier.begin(reason, participants)),
     cancelShutdownBarrier: vi.fn((id: number) => barrier.cancel(id)),
+    completeShutdownBarrier: vi.fn((id: number) => barrier.complete(id)),
     flushBuffersForShutdown: vi.fn(async (id: number) => {
       await save()
       barrier.review(id, participants)
@@ -52,25 +53,26 @@ const createHarness = () => {
   }
   const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
   const options = {
-    getContainer: () => ({ cradle: { logger, webTabManager, workspaceRegistry: workspace } }),
+    getServices: () => ({ logger, webTabManager, workspaceRegistry: workspace }),
     getNativeIpc: () => nativeIpc,
     persistWindowState,
     getWindows: () => null,
     setWindows: vi.fn(),
-  } as unknown as Parameters<typeof createWindowLifecycle>[0]
+  } satisfies Parameters<typeof createWindowLifecycle>[0]
   const lifecycle = createWindowLifecycle(options)
-  const window = Object.assign(new EventEmitter(), {
+  const windowEmitter = Object.assign(new EventEmitter(), {
     id: 42,
     isDestroyed: () => destroyed,
     close: vi.fn(() => {
       const event = { preventDefault: vi.fn() }
-      window.emit('close', event)
+      windowEmitter.emit('close', event)
       if (!event.preventDefault.mock.calls.length) {
         destroyed = true
-        window.emit('closed')
+        windowEmitter.emit('closed')
       }
     }),
   })
+  const window = windowEmitter as unknown as BrowserWindow & typeof windowEmitter
   return {
     gate,
     lifecycle,
@@ -85,9 +87,9 @@ const createHarness = () => {
 }
 
 describe('window persistence shutdown barrier', () => {
-  it('waits for admitted writes and keeps mutations frozen when quit continues', async () => {
+  it('waits for admitted writes and completes the barrier when quit continues', async () => {
     const { gate, lifecycle, requestRendererFlush, save, window } = createHarness()
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    lifecycle.installManagedMainWindowLifecycle(window)
     let finishWrite!: () => void
     const pending = new Promise<void>((resolve) => {
       finishWrite = resolve
@@ -105,10 +107,8 @@ describe('window persistence shutdown barrier', () => {
     await write
     await vi.waitFor(() => expect(continueQuit).toHaveBeenCalledTimes(1))
     expect(save).toHaveBeenCalledTimes(1)
-    expect(gate.reason).toBe('quit')
-    await expect(gate.runAsync('late write', async () => undefined)).rejects.toMatchObject({
-      code: 'workspace_mutation_frozen',
-    })
+    expect(gate.reason).toBeNull()
+    await expect(gate.runAsync('late write', async () => undefined)).resolves.toBeUndefined()
   })
 
   it('awaits application shutdown once and lets the recursive quit pass through', async () => {
@@ -143,7 +143,7 @@ describe('window persistence shutdown barrier', () => {
 
   it('persists managed window state before application services shut down', async () => {
     const { lifecycle, persistWindowState, window } = createHarness()
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    lifecycle.installManagedMainWindowLifecycle(window)
     const order: string[] = []
     persistWindowState.mockImplementationOnce(async () => {
       order.push('window-state')
@@ -175,13 +175,13 @@ describe('window persistence shutdown barrier', () => {
     expect(gate.reason).toBeNull()
     lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, continueQuit)
     await vi.waitFor(() => expect(continueQuit).toHaveBeenCalledTimes(1))
-    expect(gate.reason).toBe('quit')
+    expect(gate.reason).toBeNull()
   })
 
   it('keeps the window open on save failure and closes it only after a successful retry', async () => {
     const { gate, lifecycle, logger, save, webTabManager, window } = createHarness()
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    lifecycle.installManagedMainWindowLifecycle(window)
+    lifecycle.installManagedMainWindowLifecycle(window)
     expect(window.listenerCount('close')).toBe(1)
     expect(webTabManager.registerWindow).toHaveBeenCalledExactlyOnceWith(window)
     save.mockRejectedValueOnce(new Error('EACCES: permission denied'))
@@ -196,7 +196,7 @@ describe('window persistence shutdown barrier', () => {
 
   it('flushes only the closing window and does not freeze other workspace sessions', async () => {
     const { lifecycle, requestRendererFlush, window, workspace } = createHarness()
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    lifecycle.installManagedMainWindowLifecycle(window)
 
     window.close()
     await vi.waitFor(() => expect(window.isDestroyed()).toBe(true))
@@ -215,7 +215,7 @@ describe('window persistence shutdown barrier', () => {
         finishRendererFlush = resolve
       }),
     )
-    lifecycle.installManagedMainWindowLifecycle(window as unknown as BrowserWindow)
+    lifecycle.installManagedMainWindowLifecycle(window)
 
     window.close()
     await vi.waitFor(() => expect(requestRendererFlush).toHaveBeenCalledWith(window))

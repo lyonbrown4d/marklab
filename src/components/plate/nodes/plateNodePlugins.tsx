@@ -173,7 +173,7 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
         if (
           isImeCompositionEvent({
             isComposing: event.nativeEvent.isComposing,
-            which: event.which,
+            key: event.key,
           })
         ) {
           return

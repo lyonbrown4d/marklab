@@ -4,7 +4,6 @@ import type { WorkspaceSyncChannel } from '@/types/workspaceSync'
 
 export const syncQueryKeys = {
   channels: (rootPath: string) => ['workspace-sync', 'channels', rootPath] as const,
-  git: (rootPath: string) => ['workspace-sync', 'git', rootPath] as const,
   profiles: ['workspace-sync', 'webdav-profiles'] as const,
 }
 
@@ -12,14 +11,6 @@ export const useSyncChannels = (rootPath: string, enabled: boolean) =>
   useQuery({
     queryKey: syncQueryKeys.channels(rootPath),
     queryFn: workspaceSyncApi.getChannels,
-    enabled,
-    staleTime: 2_000,
-  })
-
-export const useGitSummary = (rootPath: string, enabled: boolean) =>
-  useQuery({
-    queryKey: syncQueryKeys.git(rootPath),
-    queryFn: workspaceSyncApi.getGitSummary,
     enabled,
     staleTime: 2_000,
   })
@@ -42,8 +33,7 @@ export const useSetSyncChannel = (rootPath: string) => {
 export const useRemoveSyncChannel = (rootPath: string) => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (provider: WorkspaceSyncChannel['provider']) =>
-      workspaceSyncApi.removeChannel(provider),
+    mutationFn: () => workspaceSyncApi.removeChannel(),
     onSuccess: (channels) => client.setQueryData(syncQueryKeys.channels(rootPath), channels),
   })
 }

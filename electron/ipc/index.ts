@@ -5,6 +5,7 @@ import { registerAppReadyIpc } from '@electron/ipc/appReady'
 import { registerClipboardIpc } from '@electron/ipc/clipboard'
 import { registerCommandInvokeIpc, type NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import { registerDialogIpc } from '@electron/ipc/dialogs'
+import { registerEditCommandsIpc } from '@electron/ipc/editCommands'
 import { registerGitNamedIpc } from '@electron/ipc/gitNamed'
 import {
   registerGitTerminalIpc,
@@ -94,6 +95,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerAppReadyIpc(dependencies.ipcMain, dependencies.app, dependencies.onRendererReady)
   registerClipboardIpc(dependencies.ipcMain, dependencies.clipboard)
   registerDialogIpc(dependencies.ipcMain, dependencies.dialog, dependencies.BrowserWindow)
+  registerEditCommandsIpc(dependencies.ipcMain)
   registerLifecycleIpc(dependencies.ipcMain, dependencies.getLaunchInfo)
   registerLanguageIntelligenceIpc(
     dependencies.ipcMain,
@@ -137,7 +139,6 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   })
   registerWorkspaceSyncIpc(dependencies.ipcMain, {
     configStore: dependencies.workspaceSyncConfigStore,
-    gitService: dependencies.gitService,
     profileStore: dependencies.webDavProfileStore,
     syncService: dependencies.workspaceWebDavSyncService,
     workspaceMutationCoordinator: dependencies.workspaceSyncCoordinator,

@@ -121,7 +121,7 @@ describe('CodeBlockElement language intelligence', () => {
     await waitFor(() => expect(languageClient.completion).toHaveBeenCalled())
     expect(await screen.findByRole('option', { name: /flowchart/ })).toBeInTheDocument()
     fireEvent.compositionStart(code)
-    fireEvent.keyDown(code, { key: 'Enter', keyCode: 229 })
+    fireEvent.keyDown(code, { isComposing: true, key: 'Enter' })
 
     expect(editor.api.string([0, 0])).toBe('fl')
   })

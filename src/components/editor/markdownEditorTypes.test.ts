@@ -18,7 +18,7 @@ describe('markdownEditorTypes', () => {
       getMarkdown: () => Promise<string>
     }>()
     expectTypeOf<MarkdownEditorProps['slashLabels']>().toEqualTypeOf<MarkdownEditorSlashLabels>()
-    expectTypeOf<MarkdownEditorStatus>().toMatchTypeOf<
+    expectTypeOf<MarkdownEditorStatus>().toEqualTypeOf<
       { phase: 'loading' } | { phase: 'ready' } | { phase: 'error'; message: string }
     >()
   })

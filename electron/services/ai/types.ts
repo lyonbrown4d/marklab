@@ -5,6 +5,7 @@ import type {
   AiProviderUpdate,
   aiProviderKindSchema,
 } from '@electron/services/ai/schemas'
+import type { AiProviderLocality } from '@electron/services/ai/providerCatalog'
 import type { z } from 'zod'
 
 export type AiProviderKind = z.infer<typeof aiProviderKindSchema>
@@ -16,6 +17,9 @@ export type StoredAiProvider = Omit<AiProviderUpdate, 'apiKey'> & {
 }
 
 export type PublicAiProvider = Omit<StoredAiProvider, 'encryptedApiKey'> & {
+  locality: AiProviderLocality
+  available: boolean
+  requiresApiKey: boolean
   hasApiKey: boolean
   apiKeySource: 'stored' | 'environment' | 'none'
   maskedApiKey: '••••••••' | null

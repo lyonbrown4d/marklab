@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,8 @@ import AppStatusBar from '@/components/AppStatusBar'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { AppStatusBarProvider, EditorStatusBar } from '@/components/EditorStatusBar'
+import { isDesktopRuntime } from '@/runtime/environment'
+import { gitApi } from '@/services/gitApi'
 
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
@@ -34,7 +36,19 @@ vi.mock('@/components/StatusCenter', () => ({
 }))
 
 vi.mock('@/runtime/environment', () => ({
-  isDesktopRuntime: () => false,
+  isDesktopRuntime: vi.fn(() => false),
+}))
+
+vi.mock('@/services/gitApi', () => ({
+  gitApi: { getStatus: vi.fn() },
+}))
+
+vi.mock('@/services/workspaceSyncApi', () => ({
+  workspaceSyncApi: {
+    getChannels: vi.fn(async () => ({ webdav: null })),
+    listWebDavProfiles: vi.fn(async () => []),
+    onProgress: vi.fn(() => vi.fn()),
+  },
 }))
 
 type AppStatusBarProps = ComponentProps<typeof AppStatusBar>
@@ -78,12 +92,28 @@ const renderStatusBar = (props: AppStatusBarProps) =>
   render(<AppStatusBar {...props} />, { wrapper: createWrapper() })
 
 beforeEach(() => {
+  vi.mocked(isDesktopRuntime).mockReturnValue(false)
+  vi.mocked(gitApi.getStatus).mockResolvedValue({
+    repo: { is_repository: false },
+    staged: [],
+    unstaged: [],
+    untracked: [],
+    conflicts: [],
+  })
   localStorage.clear()
   useMarkdownAssetSyncStore.setState({ failed: 0, lastError: null, pending: 0 })
   usePreferencesStore.setState({ sidebarCollapsed: true })
 })
 
 describe('AppStatusBar', () => {
+  it('loads Git status through the standalone SCM API', async () => {
+    vi.mocked(isDesktopRuntime).mockReturnValue(true)
+
+    renderStatusBar(createProps({ rootKind: 'external', rootPath: 'C:/notes' }))
+
+    await waitFor(() => expect(gitApi.getStatus).toHaveBeenCalledWith('C:/notes'))
+  })
+
   it('exposes icon-only status bar actions with accessible names', () => {
     const onToggleTerminal = vi.fn()
     const onToggleReadOnly = vi.fn()

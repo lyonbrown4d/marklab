@@ -8,9 +8,8 @@ describe('resolvePlateCodeCompletionKey', () => {
     ).toBe('none')
     expect(
       resolvePlateCodeCompletionKey({
-        key: 'Enter',
+        key: 'Process',
         composing: false,
-        keyCode: 229,
         menuOpen: true,
         ctrl: false,
       }),

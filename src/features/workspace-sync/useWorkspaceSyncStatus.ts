@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import {
-  useGitSummary,
-  useSyncChannels,
-  useWebDavProfiles,
-} from '@/features/workspace-sync/syncQueries'
+import { useSyncChannels, useWebDavProfiles } from '@/features/workspace-sync/syncQueries'
 import {
   createRootSyncState,
   normalizeSyncRoot,
@@ -70,7 +66,6 @@ type CancelRequest = SyncRequest
 export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncStatusOptions) => {
   const enabled = rootKind !== 'single' && Boolean(rootPath)
   const channels = useSyncChannels(rootPath, enabled)
-  const git = useGitSummary(rootPath, enabled)
   const profiles = useWebDavProfiles(enabled)
   const rootKey = normalizeSyncRoot(rootPath)
   const [syncStates, setSyncStates] = useState<Map<string, RootSyncState>>(() => new Map())
@@ -178,12 +173,7 @@ export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncS
   })
 
   return {
-    git: git.isError
-      ? { status: 'error' as const }
-      : (git.data ?? { status: 'not_repository' as const }),
-    gitLoading: git.isLoading,
-    gitFetching: git.isFetching,
-    loading: channels.isLoading || profiles.isLoading || git.isLoading,
+    loading: channels.isLoading || profiles.isLoading,
     webdav,
     cancelError: visibleState.cancelError,
     cancelPending: visibleState.cancelPending,
@@ -211,6 +201,5 @@ export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncS
       }))
       cancel.mutate({ rootKey, requestId })
     },
-    onRetryGit: () => git.refetch(),
   }
 }

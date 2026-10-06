@@ -1,5 +1,6 @@
 import { deleteColumn, deleteRow, insertTableColumn, insertTableRow } from '@platejs/table'
 import type { Path, SlateEditor, TElement } from 'platejs'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 export type TableAlignment = 'left' | 'center' | 'right'
 
@@ -59,8 +60,7 @@ export const createTableOperations = (
 
 type CompositionKeyboardEvent = {
   isComposing: boolean
-  which: number
+  key: string
 }
 
-export const isImeCompositionEvent = ({ isComposing, which }: CompositionKeyboardEvent) =>
-  isComposing || which === 229
+export const isImeCompositionEvent = (event: CompositionKeyboardEvent) => isImeKeyboardEvent(event)

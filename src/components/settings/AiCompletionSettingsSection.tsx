@@ -5,7 +5,7 @@ import {
   SettingsSelectField,
   SettingsSwitchField,
 } from '@/components/settings/SettingsRow'
-import { isAiProviderUsable, isLoopbackHttpUrl } from '@/components/settings/aiProviderUtils'
+import { isAiProviderUsable } from '@/components/settings/aiProviderUtils'
 import { useAiProviders } from '@/components/settings/useAiProviders'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiCompletionLength, AiCompletionTriggerMode } from '@/store/aiCompletionPreferences'
@@ -44,8 +44,7 @@ export const AiCompletionSettingsSection = () => {
   const effectiveProviderId = completionProviderId ?? defaultProviderId
   const effectiveProvider = usableProviders.find((provider) => provider.id === effectiveProviderId)
   const hasEffectiveProvider = Boolean(effectiveProvider)
-  const usesLocalProvider =
-    effectiveProvider?.kind === 'openai-compatible' && isLoopbackHttpUrl(effectiveProvider.baseUrl)
+  const usesLocalProvider = effectiveProvider?.locality === 'local'
   const usesCloudProvider = hasEffectiveProvider && !usesLocalProvider
   const providerOptions = [
     { value: FOLLOW_DEFAULT_PROVIDER, label: t('settings.aiCompletionFollowDefault') },

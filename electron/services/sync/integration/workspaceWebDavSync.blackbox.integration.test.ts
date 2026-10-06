@@ -107,7 +107,6 @@ const createWorkspace = async (name: string, endpoint: string, password = 'secre
   const service = new WorkspaceWebDavSyncService({
     configStore: {
       getChannels: async () => ({
-        git: null,
         webdav: {
           provider: 'webdav' as const,
           profileId: 'dav',

@@ -78,6 +78,12 @@ class FakeSession extends EventEmitter {
 
 class FakeWebContents extends EventEmitter {
   session = new FakeSession()
+  navigationHistory = {
+    canGoBack: vi.fn(() => false),
+    canGoForward: vi.fn(() => false),
+    goBack: vi.fn(),
+    goForward: vi.fn(),
+  }
   close = vi.fn()
   isDestroyed = vi.fn(() => false)
   loadURL = vi.fn(async () => undefined)
@@ -85,13 +91,9 @@ class FakeWebContents extends EventEmitter {
   setBackgroundThrottling = vi.fn()
   openHandler = vi.fn()
   setWindowOpenHandler = vi.fn((handler) => (this.openHandler = handler))
-  canGoBack = vi.fn(() => false)
-  canGoForward = vi.fn(() => false)
   getTitle = vi.fn(() => 'Docs')
   getURL = vi.fn(() => 'https://example.com/')
   focus = vi.fn()
-  goBack = vi.fn()
-  goForward = vi.fn()
   reload = vi.fn()
   stop = vi.fn()
 }

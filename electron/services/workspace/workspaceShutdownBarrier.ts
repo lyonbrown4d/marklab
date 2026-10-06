@@ -100,6 +100,10 @@ export class WorkspaceShutdownBarrier {
   private active: ActiveBarrier | null = null
   private nextId = 0
 
+  get activeId(): number | null {
+    return this.active?.id ?? null
+  }
+
   get reason(): string | null {
     return this.active?.reason ?? null
   }

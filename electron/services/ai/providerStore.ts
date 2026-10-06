@@ -5,6 +5,7 @@ import {
   type AiProviderRecord,
 } from '@electron/database/repositories/aiProviderRepository'
 import type { LocalDatabaseService } from '@electron/database/service'
+import { getProviderBaseUrlIssue } from '@electron/services/ai/providerCatalog'
 import { providerMetadataSchema, providerUpdateSchema } from '@electron/services/ai/schemas'
 import type {
   AiProviderStoreContract,
@@ -19,11 +20,12 @@ const storedProviderSchema = providerMetadataSchema
     encryptedApiKey: z.string().min(1).optional(),
   })
   .superRefine((value, context) => {
-    if (value.kind === 'openai-compatible' && !value.baseUrl) {
+    const issue = getProviderBaseUrlIssue(value.kind, value.baseUrl)
+    if (issue) {
       context.addIssue({
         code: 'custom',
         path: ['baseUrl'],
-        message: 'baseUrl is required for openai-compatible providers',
+        message: issue,
       })
     }
   })

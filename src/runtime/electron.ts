@@ -1,5 +1,6 @@
 import type { AssetApi } from '@/types/workspaceSession'
 import type { WindowOpeningProgress, WindowOpeningRetryResult } from '@/types/windowOpening'
+import type { FocusedEditAction } from '@/types/editCommand'
 import type {
   AiInlineCompletionEvent,
   AiInlineCompletionRequest,
@@ -195,6 +196,9 @@ export type RendererSafeElectronApi = {
   dialog: {
     open: (options?: ElectronOpenDialogOptions) => Promise<string | string[] | null>
     save: (options?: ElectronSaveDialogOptions) => Promise<string | null>
+  }
+  edit: {
+    execute: (action: FocusedEditAction) => Promise<{ ok: true }>
   }
   clipboard: {
     readText: () => Promise<string>

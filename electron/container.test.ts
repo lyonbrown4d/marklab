@@ -2,12 +2,15 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import type * as Electron from 'electron'
-import { asValue } from 'awilix'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createElectronContainer, shutdownElectronContainer } from '@electron/container'
+import { createElectronRuntime } from '@electron/container'
+import { TOKENS } from '@electron/di/tokens'
+import type { LifecycleCoordinator } from '@electron/main/lifecycle/lifecycleCoordinator'
 import type { Logger } from '@electron/services/logger'
+import type { TerminalService } from '@electron/services/terminal/service'
+import type { WebTabManager } from '@electron/services/webTabs/webTabManager'
 
 const logger = vi.hoisted(() => {
   const instance = {
@@ -32,119 +35,209 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })))
 })
 
-describe('Electron dependency container', () => {
-  it('owns one application-scoped instance for AI and local history services', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-'))
-    roots.push(root)
-    const safeStorage = createSafeStorage()
-    const container = createElectronContainer(createRuntimeDependencies(root, safeStorage))
-    await container.cradle.lifecycleCoordinator.startup()
+describe('Electron dependency runtime', () => {
+  it('binds every unique typed service token', async () => {
+    const runtime = await createRuntime('tokens')
 
-    expect(container.cradle.localHistoryService).toBe(container.cradle.localHistoryService)
-    expect(container.cradle.aiProviderStore).toBe(container.cradle.aiProviderStore)
-    expect(container.cradle.aiModelResolver).toBe(container.cradle.aiModelResolver)
-    expect(container.cradle.aiService).toBe(container.cradle.aiService)
-    expect(container.cradle.aiInlineCompletionService).toBe(
-      container.cradle.aiInlineCompletionService,
-    )
-    expect(container.cradle.aiInlineCompletionPolicy).toBe(
-      container.cradle.aiInlineCompletionPolicy,
-    )
-    expect(container.cradle.lifecycleCoordinator).toBe(container.cradle.lifecycleCoordinator)
-    expect(container.cradle.languageIntelligenceService).toBe(
-      container.cradle.languageIntelligenceService,
-    )
-    expect(container.cradle.linkPreviewService).toBe(container.cradle.linkPreviewService)
-    expect(container.cradle.webTabManager).toBe(container.cradle.webTabManager)
-    expect(safeStorage.isAsyncEncryptionAvailable).not.toHaveBeenCalled()
+    expect(new Set(Object.values(TOKENS)).size).toBe(Object.keys(TOKENS).length)
+    expect(runtime.services.logger).toBeDefined()
 
-    await container.cradle.aiProviderStore.update({
-      id: 'openai-main',
-      label: 'OpenAI',
-      kind: 'openai',
-      model: 'gpt-5-mini',
-      apiKey: 'secret',
+    await runtime.shutdown()
+  })
+
+  it('owns one application-scoped instance for resolved services', async () => {
+    const runtime = await createRuntime('singletons')
+
+    expect(runtime.services.languageIntelligenceService).toBe(
+      runtime.services.languageIntelligenceService,
+    )
+    expect(runtime.services.webTabManager).toBe(runtime.services.webTabManager)
+
+    await runtime.shutdown()
+  })
+
+  it('allows a typed dependency override before services are resolved', async () => {
+    const root = await createRoot('override')
+    const injectedLogger = { ...logger, info: vi.fn() }
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, createNoopLifecycleCoordinator())
+        overrides.set(TOKENS.logger, injectedLogger)
+      },
     })
 
-    expect(safeStorage.isAsyncEncryptionAvailable).toHaveBeenCalledOnce()
-    expect(safeStorage.encryptStringAsync).toHaveBeenCalledWith('secret')
-    await container.cradle.lifecycleCoordinator.shutdown()
-  })
-
-  it('disposes container-owned runtime resources', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-dispose-'))
-    roots.push(root)
-    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
-    await container.cradle.lifecycleCoordinator.startup()
-    const terminalDispose = vi.spyOn(container.cradle.terminalService, 'dispose')
-    const webTabDispose = vi.spyOn(container.cradle.webTabManager, 'dispose')
-
-    await container.cradle.lifecycleCoordinator.shutdown()
-    await container.dispose()
-
-    expect(terminalDispose).toHaveBeenCalledOnce()
-    expect(webTabDispose).toHaveBeenCalledOnce()
-  })
-
-  it('allows tests to inject a dependency before it is resolved', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-injection-'))
-    roots.push(root)
-    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
-    const injectedLogger = { ...logger, info: vi.fn() }
-
-    container.register({ logger: asValue(injectedLogger) })
-
-    expect(container.cradle.logger).toBe(injectedLogger)
-    await container.dispose()
-  })
-
-  it('uses the lifecycle disposer when a test disposes the container directly', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-container-lifecycle-'))
-    roots.push(root)
-    const container = createElectronContainer(createRuntimeDependencies(root, createSafeStorage()))
-    const coordinator = container.cradle.lifecycleCoordinator
-    await coordinator.startup()
-    const shutdown = vi.spyOn(coordinator, 'shutdown')
-
-    try {
-      await container.dispose()
-      expect(shutdown).toHaveBeenCalledOnce()
-    } finally {
-      await coordinator.shutdown()
-    }
+    expect(runtime.services.logger).toBe(injectedLogger)
+    await runtime.shutdown()
   })
 
   it('shuts down lifecycle resources before container-owned resources', async () => {
+    const root = await createRoot('release-order')
     const order: string[] = []
-    const container = {
-      cradle: {
-        lifecycleCoordinator: {
-          shutdown: vi.fn(async () => {
-            order.push('lifecycle')
-          }),
-        },
-      },
-      dispose: vi.fn(async () => {
-        order.push('container')
+    const lifecycleCoordinator = {
+      shutdown: vi.fn(async () => {
+        order.push('lifecycle')
       }),
-    }
+      startup: vi.fn(async () => undefined),
+    } as unknown as LifecycleCoordinator
+    const terminalService = {
+      dispose: vi.fn(async () => {
+        order.push('terminal')
+      }),
+    } as unknown as TerminalService
+    const webTabManager = {
+      dispose: vi.fn(() => {
+        order.push('web-tabs')
+      }),
+    } as unknown as WebTabManager
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, lifecycleCoordinator)
+        overrides.set(TOKENS.terminalService, terminalService)
+        overrides.set(TOKENS.webTabManager, webTabManager)
+      },
+    })
+    void runtime.services.terminalService
+    void runtime.services.webTabManager
 
-    await shutdownElectronContainer(container)
+    await runtime.shutdown()
 
-    expect(order).toEqual(['lifecycle', 'container'])
+    expect(order[0]).toBe('lifecycle')
+    expect(order.slice(1).sort()).toEqual(['terminal', 'web-tabs'])
+    expect(lifecycleCoordinator.shutdown).toHaveBeenCalledOnce()
   })
 
-  it('still disposes container-owned resources when lifecycle shutdown fails', async () => {
-    const failure = new Error('lifecycle failed')
-    const container = {
-      cradle: { lifecycleCoordinator: { shutdown: vi.fn(async () => Promise.reject(failure)) } },
-      dispose: vi.fn(async () => undefined),
-    }
+  it('clears a failed shutdown so a later window lifecycle attempt can retry', async () => {
+    const root = await createRoot('shutdown-retry')
+    const failure = new Error('lifecycle busy')
+    const shutdown = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(undefined)
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, {
+          shutdown,
+          startup: vi.fn(async () => undefined),
+        } as unknown as LifecycleCoordinator)
+      },
+    })
 
-    await expect(shutdownElectronContainer(container)).rejects.toThrow('lifecycle failed')
-    expect(container.dispose).toHaveBeenCalledOnce()
+    await expect(runtime.shutdown()).rejects.toBe(failure)
+    await expect(runtime.shutdown()).resolves.toBeUndefined()
+
+    expect(shutdown).toHaveBeenCalledTimes(2)
+  })
+
+  it('attempts every owned disposer and aggregates their failures', async () => {
+    const root = await createRoot('owned-failure-aggregation')
+    const terminalFailure = new Error('terminal failed')
+    const webTabFailure = new Error('web tabs failed')
+    const terminalDispose = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(terminalFailure)
+      .mockResolvedValueOnce(undefined)
+    const webTabDispose = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(webTabFailure)
+      .mockResolvedValueOnce(undefined)
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, createNoopLifecycleCoordinator())
+        overrides.set(TOKENS.terminalService, {
+          dispose: terminalDispose,
+        } as unknown as TerminalService)
+        overrides.set(TOKENS.webTabManager, {
+          dispose: webTabDispose,
+        } as unknown as WebTabManager)
+      },
+    })
+    void runtime.services.terminalService
+    void runtime.services.webTabManager
+
+    const failure = await runtime.shutdown().catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(AggregateError)
+    expect(new Set((failure as AggregateError).errors)).toEqual(
+      new Set([terminalFailure, webTabFailure]),
+    )
+    expect(terminalDispose).toHaveBeenCalledOnce()
+    expect(webTabDispose).toHaveBeenCalledOnce()
+    await expect(runtime.shutdown()).resolves.toBeUndefined()
+    expect(terminalDispose).toHaveBeenCalledTimes(2)
+    expect(webTabDispose).toHaveBeenCalledTimes(2)
+  })
+
+  it('aggregates lifecycle and owned-resource failures', async () => {
+    const root = await createRoot('failure-aggregation')
+    const lifecycleFailure = new Error('lifecycle failed')
+    const deactivationFailure = new Error('terminal failed')
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, {
+          shutdown: vi.fn(async () => Promise.reject(lifecycleFailure)),
+          startup: vi.fn(async () => undefined),
+        } as unknown as LifecycleCoordinator)
+        overrides.set(TOKENS.terminalService, {
+          dispose: vi.fn(async () => Promise.reject(deactivationFailure)),
+        } as unknown as TerminalService)
+      },
+    })
+    void runtime.services.terminalService
+
+    const failure = await runtime.shutdown().catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(AggregateError)
+    expect((failure as AggregateError).errors).toEqual([lifecycleFailure, deactivationFailure])
+  })
+
+  it('retries only owned resources whose previous disposal failed', async () => {
+    const root = await createRoot('owned-selective-retry')
+    const terminalDispose = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('terminal busy'))
+      .mockResolvedValueOnce(undefined)
+    const webTabDispose = vi.fn(async () => undefined)
+    const runtime = createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+      configure: (overrides) => {
+        overrides.set(TOKENS.lifecycleCoordinator, createNoopLifecycleCoordinator())
+        overrides.set(TOKENS.terminalService, {
+          dispose: terminalDispose,
+        } as unknown as TerminalService)
+        overrides.set(TOKENS.webTabManager, {
+          dispose: webTabDispose,
+        } as unknown as WebTabManager)
+      },
+    })
+    void runtime.services.terminalService
+    void runtime.services.webTabManager
+
+    await expect(runtime.shutdown()).rejects.toThrow('terminal busy')
+    await expect(runtime.shutdown()).resolves.toBeUndefined()
+
+    expect(terminalDispose).toHaveBeenCalledTimes(2)
+    expect(webTabDispose).toHaveBeenCalledOnce()
   })
 })
+
+const createRoot = async (name: string): Promise<string> => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), `marklab-container-${name}-`))
+  roots.push(root)
+  return root
+}
+
+const createRuntime = async (name: string) => {
+  const root = await createRoot(name)
+  return createElectronRuntime(createRuntimeDependencies(root, createSafeStorage()), {
+    configure: (overrides) =>
+      overrides.set(TOKENS.lifecycleCoordinator, createNoopLifecycleCoordinator()),
+  })
+}
+
+const createNoopLifecycleCoordinator = () =>
+  ({
+    shutdown: vi.fn(async () => undefined),
+    startup: vi.fn(async () => undefined),
+  }) as unknown as LifecycleCoordinator
 
 const createRuntimeDependencies = (
   userDataPath: string,
@@ -156,10 +249,6 @@ const createRuntimeDependencies = (
   } as unknown as Electron.App,
   BrowserWindow: { fromWebContents: vi.fn() } as unknown as typeof Electron.BrowserWindow,
   WebContentsView: vi.fn() as unknown as typeof Electron.WebContentsView,
-  clipboard: {} as Electron.Clipboard,
-  dialog: {} as Electron.Dialog,
-  getLaunchInfo: vi.fn(() => ({ args: [], cwd: userDataPath, deepLinks: [] })),
-  ipcMain: {} as Electron.IpcMain,
   safeStorage,
   shell: {} as Electron.Shell,
 })

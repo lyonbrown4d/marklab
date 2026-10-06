@@ -12,7 +12,6 @@ vi.mock('@/i18n/useI18n', () => ({
 vi.mock('@/services/workspaceSyncApi', () => ({
   workspaceSyncApi: {
     getChannels: vi.fn(),
-    getGitSummary: vi.fn(),
     listWebDavProfiles: vi.fn(),
     setChannel: vi.fn(),
     removeChannel: vi.fn(),
@@ -20,8 +19,7 @@ vi.mock('@/services/workspaceSyncApi', () => ({
 }))
 
 const renderMenu = () => {
-  vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({ git: null, webdav: null })
-  vi.mocked(workspaceSyncApi.getGitSummary).mockResolvedValue({ status: 'not_repository' })
+  vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({ webdav: null })
   vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([
     {
       id: 'cloud',

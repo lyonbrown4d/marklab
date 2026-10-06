@@ -18,7 +18,7 @@ afterEach(async () => {
   await Promise.all(fixtures.splice(0).map(removeRemoteFixture))
 })
 
-describe('Git synchronization protocol', { timeout: 30_000 }, () => {
+describe('Git remote SCM operations', { timeout: 30_000 }, () => {
   it('pushes, fetches, and pulls against a real bare remote', async () => {
     const fixture = await createRemoteFixture()
     fixtures.push(fixture)

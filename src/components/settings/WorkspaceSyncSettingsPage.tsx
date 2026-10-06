@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Cloud, GitBranch, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Cloud, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -141,16 +141,6 @@ const WorkspaceSyncSettingsPage = () => {
         ) : (
           <SettingsEmptyState>{t('sync.settings.noConnections')}</SettingsEmptyState>
         )}
-      </SettingsSection>
-      <SettingsSection
-        title={t('sync.settings.gitEnvironment')}
-        description={t('sync.settings.gitEnvironmentDescription')}
-        icon={GitBranch}
-        surface
-      >
-        <p className="text-xs leading-5 text-muted-foreground">
-          {t('sync.settings.gitCredentialNote')}
-        </p>
       </SettingsSection>
       {dialogOpen ? (
         <WebDavProfileDialog

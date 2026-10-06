@@ -1,10 +1,9 @@
 import type { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container'
 import { installNativeMenu } from '@electron/menu'
+import type { Logger } from '@electron/services/logger'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window'
 import type { MarklabWindowPool } from '@electron/windowPool'
 
-type Logger = ElectronContainer['cradle']['logger']
 type NativeMenuDispatcher = Parameters<typeof installNativeMenu>[1]
 
 type WindowSessionOptions = {

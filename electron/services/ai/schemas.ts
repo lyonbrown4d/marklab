@@ -1,54 +1,12 @@
-import { isIP } from 'node:net'
-
 import { z } from 'zod'
 
-export const aiProviderKindSchema = z.enum(['openai', 'anthropic', 'google', 'openai-compatible'])
+import {
+  AI_PROVIDER_KINDS,
+  getProviderBaseUrlIssue,
+  normalizeProviderBaseUrl,
+} from '@electron/services/ai/providerCatalog'
 
-const isLoopbackHost = (hostname: string): boolean => {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '')
-  if (host === 'localhost' || host === '::1') return true
-  if (isIP(host) !== 4) return false
-  return host.split('.')[0] === '127'
-}
-
-export const isLoopbackProviderUrl = (value: string | undefined): boolean => {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return (url.protocol === 'http:' || url.protocol === 'https:') && isLoopbackHost(url.hostname)
-  } catch {
-    return false
-  }
-}
-
-export const isLoopbackHttpUrl = (value: string | undefined): boolean => {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' && isLoopbackHost(url.hostname)
-  } catch {
-    return false
-  }
-}
-
-export const validateProviderBaseUrl = (value: string): string => {
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new Error('baseUrl must be a valid HTTP(S) URL')
-  }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error('baseUrl must use HTTPS or loopback HTTP')
-  }
-  if (url.username || url.password) throw new Error('baseUrl must not contain credentials')
-  if (url.search || url.hash) throw new Error('baseUrl must not contain a query or fragment')
-  if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) {
-    throw new Error('Remote AI provider baseUrl must use HTTPS')
-  }
-  const normalized = url.toString()
-  return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
-}
+export const aiProviderKindSchema = z.enum(AI_PROVIDER_KINDS)
 
 const providerIdSchema = z
   .string()
@@ -56,7 +14,7 @@ const providerIdSchema = z
   .max(64)
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, 'Provider id contains invalid characters')
 
-const optionalBaseUrlSchema = z.string().max(2048).transform(validateProviderBaseUrl).optional()
+const optionalBaseUrlSchema = z.string().max(2048).transform(normalizeProviderBaseUrl).optional()
 
 export const providerMetadataSchema = z
   .object({
@@ -78,17 +36,18 @@ export const providerUpdateSchema = providerMetadataSchema
       .optional(),
   })
   .superRefine((value, context) => {
-    if (value.kind === 'openai-compatible' && !value.baseUrl) {
+    const issue = getProviderBaseUrlIssue(value.kind, value.baseUrl)
+    if (issue) {
       context.addIssue({
         code: 'custom',
         path: ['baseUrl'],
-        message: 'baseUrl is required for openai-compatible providers',
+        message: issue,
       })
     }
   })
 
 export const providerIdRequestSchema = z.object({ id: providerIdSchema }).strict()
-export const generationCancelSchema = z.object({ requestId: z.string().uuid() }).strict()
+export const generationCancelSchema = z.object({ requestId: z.uuid() }).strict()
 
 export const generateTextRequestSchema = z
   .object({

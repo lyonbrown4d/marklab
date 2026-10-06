@@ -22,6 +22,9 @@ const provider = (overrides: Record<string, unknown> = {}) => ({
   kind: 'openai-compatible',
   model: 'local-model',
   baseUrl: 'http://127.0.0.1:9000/v1',
+  locality: 'local',
+  available: true,
+  requiresApiKey: false,
   hasApiKey: false,
   apiKeySource: 'none',
   maskedApiKey: null,
@@ -59,6 +62,9 @@ describe('AiSettingsPage provider safety', () => {
     api.listProviders.mockResolvedValue([])
     api.updateProvider.mockImplementation(async (value) => ({
       ...value,
+      locality: value.kind === 'openai-compatible' ? 'local' : 'remote',
+      available: Boolean(value.apiKey) || value.baseUrl?.includes('127.0.0.1'),
+      requiresApiKey: !value.baseUrl?.includes('127.0.0.1'),
       hasApiKey: Boolean(value.apiKey),
       apiKeySource: value.apiKey ? 'stored' : 'none',
       maskedApiKey: value.apiKey ? '••••••••' : null,
@@ -100,6 +106,9 @@ describe('AiSettingsPage provider safety', () => {
         id: 'remote-compatible',
         label: 'Remote compatible',
         baseUrl: 'https://ai.example.com/v1',
+        locality: 'remote',
+        available: false,
+        requiresApiKey: true,
       }),
     ])
     const user = userEvent.setup()
@@ -123,6 +132,9 @@ describe('AiSettingsPage provider safety', () => {
         id: 'remote-compatible',
         label: 'Remote compatible',
         baseUrl: 'https://ai.example.com/v1',
+        locality: 'remote',
+        available: false,
+        requiresApiKey: true,
       }),
     ])
     renderPage()
@@ -137,12 +149,16 @@ describe('AiSettingsPage provider safety', () => {
         id: 'stored',
         label: 'Stored',
         baseUrl: 'https://stored.example.com/v1',
+        locality: 'remote',
+        requiresApiKey: true,
+        available: true,
         hasApiKey: true,
         apiKeySource: 'stored',
       }),
       provider({
         id: 'environment',
         label: 'Environment',
+        available: true,
         hasApiKey: true,
         apiKeySource: 'environment',
       }),

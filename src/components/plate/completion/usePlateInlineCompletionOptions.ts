@@ -8,7 +8,6 @@ import type {
   PlateInlineCompletionControllerOptions,
   UsePlateInlineCompletionOptions,
 } from '@/components/plate/completion/types'
-import { isLoopbackHttpUrl } from '@/components/settings/aiProviderUtils'
 import { DocumentCompletionIndex } from '@/logic/documentCompletionIndex'
 import { aiApi } from '@/services/aiApi'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
@@ -28,8 +27,7 @@ const createSessionId = () => {
 const canUseProvider = async (providerId: string, cloudConsent: boolean) => {
   if (cloudConsent) return true
   const provider = await aiApi.getProvider(providerId)
-  // Loopback OpenAI-compatible providers such as Ollama remain local and do not require consent.
-  return provider.kind === 'openai-compatible' && isLoopbackHttpUrl(provider.baseUrl)
+  return provider.available && provider.locality === 'local'
 }
 
 export const usePlateInlineCompletionOptions = ({

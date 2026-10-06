@@ -4,6 +4,26 @@ import { nativeIpcChannels } from '@electron/channels'
 import { registerGitNamedIpc } from '@electron/ipc/gitNamed'
 
 describe('named Git IPC', () => {
+  it('keeps discovery, status, remote, fetch, pull and push on the SCM API', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+    const sender = event(6)
+
+    await handlers.get(nativeIpcChannels.gitDiscover)?.(sender)
+    await handlers.get(nativeIpcChannels.gitStatus)?.(sender)
+    await handlers.get(nativeIpcChannels.gitRemoteStatus)?.(sender)
+    await handlers.get(nativeIpcChannels.gitFetch)?.(sender, { remote: 'origin' })
+    await handlers.get(nativeIpcChannels.gitPull)?.(sender)
+    await handlers.get(nativeIpcChannels.gitPush)?.(sender, { remote: 'origin' })
+
+    expect(fixture.gitService.discover).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.gitService.status).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.gitService.remoteStatus).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.gitService.fetch).toHaveBeenCalledWith('D:/notes', 'origin')
+    expect(fixture.gitService.pull).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.gitService.push).toHaveBeenCalledWith('D:/notes', { remote: 'origin' })
+  })
+
   it('always operates on the workspace owned by the sender', async () => {
     const fixture = createFixture()
     const handlers = register(fixture)

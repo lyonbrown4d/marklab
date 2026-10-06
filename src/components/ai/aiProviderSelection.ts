@@ -5,21 +5,6 @@ export type InlineAiProvider = {
   label: string
 }
 
-const isLoopbackProvider = (provider: PublicAiProvider) => {
-  if (provider.kind !== 'openai-compatible' || !provider.baseUrl) return false
-  try {
-    const url = new URL(provider.baseUrl)
-    return (
-      url.protocol === 'http:' && ['localhost', '127.0.0.1', '::1', '[::1]'].includes(url.hostname)
-    )
-  } catch {
-    return false
-  }
-}
-
-const isUsableProvider = (provider: PublicAiProvider) =>
-  provider.hasApiKey || isLoopbackProvider(provider)
-
 const toInlineProvider = (provider: PublicAiProvider): InlineAiProvider => ({
   id: provider.id,
   label: `${provider.label} · ${provider.model}`,
@@ -31,11 +16,11 @@ export const resolveInlineAiProvider = (
 ): InlineAiProvider | null => {
   if (defaultProviderId !== null) {
     const explicitProvider = providers.find(
-      (provider) => provider.id === defaultProviderId && isUsableProvider(provider),
+      (provider) => provider.id === defaultProviderId && provider.available,
     )
     return explicitProvider ? toInlineProvider(explicitProvider) : null
   }
 
-  const firstConfigured = providers.find(isUsableProvider)
+  const firstConfigured = providers.find((provider) => provider.available)
   return firstConfigured ? toInlineProvider(firstConfigured) : null
 }

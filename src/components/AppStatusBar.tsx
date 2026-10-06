@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
@@ -11,6 +12,8 @@ import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { SyncCenterPopover } from '@/features/workspace-sync/SyncCenterPopover'
 import { useWorkspaceSyncStatus } from '@/features/workspace-sync/useWorkspaceSyncStatus'
+import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic/gitStatus'
+import { gitApi } from '@/services/gitApi'
 import type { SaveState } from '@/app/useEditorBuffer'
 import type { FileEntry, ViewMode, WorkspaceTab } from '@/store/appTypes'
 
@@ -57,8 +60,14 @@ const AppStatusBar = ({
   const assetSyncPending = useMarkdownAssetSyncStore((state) => state.pending)
   const assetSyncFailed = useMarkdownAssetSyncStore((state) => state.failed)
   const assetSyncLastError = useMarkdownAssetSyncStore((state) => state.lastError)
-  const gitEnabled = isDesktopRuntime() && rootKind !== 'single' && Boolean(rootPath)
+  const desktopWorkspaceEnabled = isDesktopRuntime() && rootKind !== 'single' && Boolean(rootPath)
   const workspaceSync = useWorkspaceSyncStatus({ rootKind, rootPath })
+  const gitStatus = useQuery({
+    queryKey: gitStatusQueryKey(rootPath),
+    queryFn: () => gitApi.getStatus(rootPath),
+    enabled: desktopWorkspaceEnabled,
+    staleTime: 2_000,
+  })
 
   const openScmPanel = useCallback(() => {
     usePreferencesStore.setState((current) =>
@@ -86,19 +95,20 @@ const AppStatusBar = ({
       : rootPath
         ? basename(rootPath)
         : t('statusBar.noWorkspace')
-  const gitSummary = workspaceSync.git
-  const gitChangeCount = gitSummary.status === 'ready' ? gitSummary.changeCount : 0
-  const gitConflictCount = gitSummary.status === 'ready' ? gitSummary.conflictCount : 0
-  const gitBranch = gitSummary.status === 'ready' ? (gitSummary.branch ?? t('scm.noBranch')) : ''
-  const gitLabel = !gitEnabled
+  const gitSnapshot = gitStatus.data
+  const gitIsRepository = Boolean(gitSnapshot?.repo.is_repository)
+  const gitChangeCount = countChangedFiles(gitSnapshot)
+  const gitConflictCount = countGitConflicts(gitSnapshot)
+  const gitBranch = gitIsRepository ? (gitSnapshot?.repo.branch ?? t('scm.noBranch')) : ''
+  const gitLabel = !desktopWorkspaceEnabled
     ? rootKind === 'single'
       ? t('statusBar.singleFile')
       : t('statusBar.gitUnavailable')
-    : workspaceSync.gitLoading
+    : gitStatus.isLoading
       ? t('statusBar.gitChecking')
-      : gitSummary.status === 'error'
+      : gitStatus.isError
         ? t('statusBar.gitError')
-        : gitSummary.status !== 'ready'
+        : !gitIsRepository
           ? t('statusBar.gitUnavailable')
           : gitConflictCount > 0
             ? t('statusBar.gitConflicts', { count: String(gitConflictCount) })
@@ -115,9 +125,9 @@ const AppStatusBar = ({
       >
         <AppStatusBarLeft
           gitBranch={gitBranch}
-          gitHasProblem={gitConflictCount > 0 || gitSummary.status === 'error'}
-          gitIsFetching={workspaceSync.gitFetching}
-          gitIsRepository={gitSummary.status === 'ready'}
+          gitHasProblem={gitConflictCount > 0 || gitStatus.isError}
+          gitIsFetching={gitStatus.isFetching}
+          gitIsRepository={gitIsRepository}
           gitLabel={gitLabel}
           markdownFileCount={markdownFileCount}
           restoreStatusBusy={restoreStatusBusy}
@@ -125,17 +135,14 @@ const AppStatusBar = ({
           terminalOpen={terminalOpen}
           workspaceLabel={workspaceLabel}
           syncControl={
-            gitEnabled ? (
+            desktopWorkspaceEnabled ? (
               <SyncCenterPopover
-                git={workspaceSync.git}
                 loading={workspaceSync.loading}
                 webdav={workspaceSync.webdav}
                 onCancel={workspaceSync.onCancel}
                 cancelError={workspaceSync.cancelError}
                 cancelPending={workspaceSync.cancelPending}
                 onStart={workspaceSync.onStart}
-                onOpenGit={openScmPanel}
-                onRetryGit={workspaceSync.onRetryGit}
               />
             ) : null
           }

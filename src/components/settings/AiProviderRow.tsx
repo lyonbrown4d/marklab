@@ -6,11 +6,7 @@ import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { AiProviderDialog } from '@/components/settings/AiProviderDialog'
 import { ConfirmDestructiveActionDialog } from '@/components/ConfirmDestructiveActionDialog'
-import {
-  isAiProviderUsable,
-  isLoopbackHttpUrl,
-  isOllamaPreset,
-} from '@/components/settings/aiProviderUtils'
+import { isAiProviderUsable, isOllamaPreset } from '@/components/settings/aiProviderUtils'
 
 type ProviderRowProps = {
   provider: PublicAiProvider
@@ -96,7 +92,7 @@ export const AiProviderRow = ({
             )}
             {provider.kind === 'openai-compatible' && (
               <p className="mt-1 text-xs text-muted-foreground">
-                {isLoopbackHttpUrl(provider.baseUrl)
+                {provider.locality === 'local'
                   ? t('settings.aiLoopbackPrivacy')
                   : t('settings.aiCompatibleRemoteWarning')}
               </p>

@@ -58,7 +58,7 @@ describe('WorkspaceMapFileNode interactions', () => {
     const surface = screen.getByTestId('workspace-map-editor-surface')
 
     fireEvent.keyDown(surface, { isComposing: true, key: 'Escape' })
-    fireEvent.keyDown(surface, { key: 'Escape', keyCode: 229 })
+    fireEvent.keyDown(surface, { key: 'Process' })
 
     expect(editor.onClose).not.toHaveBeenCalled()
   })

@@ -2,14 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { executeFocusedEditCommand } from '@/app/focusedEditCommand'
 import { clearFocusedCodeEditor, setFocusedCodeEditor } from '@/lib/focusedCodeEditor'
 
-const mockExecCommand = () => {
-  const execCommand = vi.fn(() => true)
-  Object.defineProperty(document, 'execCommand', {
-    configurable: true,
-    value: execCommand,
-  })
-  return execCommand
-}
+const createNativeExecutor = () => vi.fn(() => true)
 
 const createCodeEditor = () => {
   const editor = {
@@ -25,17 +18,17 @@ afterEach(() => {
 
 describe('executeFocusedEditCommand', () => {
   it('ignores edit commands when focus is outside an editable target', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const button = document.createElement('button')
     document.body.append(button)
     button.focus()
 
-    expect(executeFocusedEditCommand('edit.copy')).toBe(false)
-    expect(execCommand).not.toHaveBeenCalled()
+    expect(executeFocusedEditCommand('edit.copy', document, executeNative)).toBe(false)
+    expect(executeNative).not.toHaveBeenCalled()
   })
 
-  it('runs document edit commands only for the focused editable target', () => {
-    const execCommand = mockExecCommand()
+  it('routes native edit commands only for the focused editable target', () => {
+    const executeNative = createNativeExecutor()
     const editor = document.createElement('div')
     editor.setAttribute('contenteditable', 'true')
     editor.tabIndex = 0
@@ -43,12 +36,12 @@ describe('executeFocusedEditCommand', () => {
     document.body.append(editor)
     editor.focus()
 
-    expect(executeFocusedEditCommand('edit.copy')).toBe(true)
-    expect(execCommand).toHaveBeenCalledWith('copy')
+    expect(executeFocusedEditCommand('edit.copy', document, executeNative)).toBe(true)
+    expect(executeNative).toHaveBeenCalledWith('copy')
   })
 
   it('recognizes focused Slate editor roots as editable targets', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const editor = document.createElement('div')
     editor.dataset.slateEditor = 'true'
     editor.setAttribute('contenteditable', 'true')
@@ -56,12 +49,12 @@ describe('executeFocusedEditCommand', () => {
     document.body.append(editor)
     editor.focus()
 
-    expect(executeFocusedEditCommand('edit.undo')).toBe(true)
-    expect(execCommand).toHaveBeenCalledWith('undo')
+    expect(executeFocusedEditCommand('edit.undo', document, executeNative)).toBe(true)
+    expect(executeNative).toHaveBeenCalledWith('undo')
   })
 
   it('routes source editor edit commands to Monaco when focus is inside the editor', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const editor = createCodeEditor()
     const host = document.createElement('div')
     const inputArea = document.createElement('textarea')
@@ -71,14 +64,14 @@ describe('executeFocusedEditCommand', () => {
     inputArea.focus()
     setFocusedCodeEditor(editor as never)
 
-    expect(executeFocusedEditCommand('edit.paste')).toBe(true)
+    expect(executeFocusedEditCommand('edit.paste', document, executeNative)).toBe(true)
     expect(editor.focus).toHaveBeenCalled()
     expect(editor.trigger).toHaveBeenCalledWith(
       'marklab.editMenu',
       'editor.action.clipboardPasteAction',
       null,
     )
-    expect(execCommand).not.toHaveBeenCalled()
+    expect(executeNative).not.toHaveBeenCalled()
 
     clearFocusedCodeEditor(editor as never)
   })
@@ -100,20 +93,20 @@ describe('executeFocusedEditCommand', () => {
   })
 
   it('selects text inputs directly instead of using document selectAll', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const input = document.createElement('input')
     input.value = 'Alpha'
     document.body.append(input)
     input.focus()
 
-    expect(executeFocusedEditCommand('edit.select_all')).toBe(true)
+    expect(executeFocusedEditCommand('edit.select_all', document, executeNative)).toBe(true)
     expect(input.selectionStart).toBe(0)
     expect(input.selectionEnd).toBe(input.value.length)
-    expect(execCommand).not.toHaveBeenCalled()
+    expect(executeNative).not.toHaveBeenCalled()
   })
 
   it('selects contenteditable editor contents directly instead of using document selectAll', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const editor = document.createElement('div')
     editor.setAttribute('contenteditable', 'true')
     editor.tabIndex = 0
@@ -121,21 +114,21 @@ describe('executeFocusedEditCommand', () => {
     document.body.append(editor)
     editor.focus()
 
-    expect(executeFocusedEditCommand('edit.select_all')).toBe(true)
+    expect(executeFocusedEditCommand('edit.select_all', document, executeNative)).toBe(true)
     const selection = document.getSelection()
     const range = selection?.getRangeAt(0)
     expect(range?.startContainer).toBe(editor)
     expect(range?.endContainer).toBe(editor)
-    expect(execCommand).not.toHaveBeenCalled()
+    expect(executeNative).not.toHaveBeenCalled()
   })
 
   it('ignores unknown edit actions', () => {
-    const execCommand = mockExecCommand()
+    const executeNative = createNativeExecutor()
     const input = document.createElement('input')
     document.body.append(input)
     input.focus()
 
-    expect(executeFocusedEditCommand('edit.unknown')).toBe(false)
-    expect(execCommand).not.toHaveBeenCalled()
+    expect(executeFocusedEditCommand('edit.unknown', document, executeNative)).toBe(false)
+    expect(executeNative).not.toHaveBeenCalled()
   })
 })

@@ -1,49 +1,69 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
-import type { ElectronContainer } from '@electron/container'
 import { registerNativeIpc, type NativeIpcRegistration } from '@electron/ipc/index'
 import { getLaunchInfo } from '@electron/main/deepLinks'
 
 type RegisterNativeIpcOptions = Parameters<typeof registerNativeIpc>[0]
 
+type MainIpcServices = Pick<
+  RegisterNativeIpcOptions,
+  | 'aiInlineCompletionService'
+  | 'aiService'
+  | 'exportService'
+  | 'gitService'
+  | 'graphLayoutStore'
+  | 'knowledgeEngineService'
+  | 'languageIntelligenceService'
+  | 'linkPreviewService'
+  | 'localHistoryService'
+  | 'logger'
+  | 'terminalService'
+  | 'webDavProfileStore'
+  | 'webTabManager'
+  | 'workspaceRegistry'
+  | 'workspaceSyncConfigStore'
+  | 'workspaceSyncCoordinator'
+  | 'workspaceWebDavSyncService'
+>
+
 type MainNativeIpcOptions = {
-  container: ElectronContainer
   flushWorkspaceBuffers: (reason: string) => Promise<void>
   onRendererReady: () => void
+  services: MainIpcServices
   windowCommandHandlers: RegisterNativeIpcOptions['windowCommandHandlers']
 }
 
 export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcRegistration => {
-  const { container } = options
+  const { services } = options
 
   return registerNativeIpc({
-    aiService: container.cradle.aiService,
-    aiInlineCompletionService: container.cradle.aiInlineCompletionService,
+    aiService: services.aiService,
+    aiInlineCompletionService: services.aiInlineCompletionService,
     app,
     BrowserWindow,
     clipboard,
     dialog,
-    exportService: container.cradle.exportService,
-    gitService: container.cradle.gitService,
-    graphLayoutStore: container.cradle.graphLayoutStore,
-    knowledgeEngineService: container.cradle.knowledgeEngineService,
-    languageIntelligenceService: container.cradle.languageIntelligenceService,
-    linkPreviewService: container.cradle.linkPreviewService,
-    localHistoryService: container.cradle.localHistoryService,
+    exportService: services.exportService,
+    gitService: services.gitService,
+    graphLayoutStore: services.graphLayoutStore,
+    knowledgeEngineService: services.knowledgeEngineService,
+    languageIntelligenceService: services.languageIntelligenceService,
+    linkPreviewService: services.linkPreviewService,
+    localHistoryService: services.localHistoryService,
     getLaunchInfo,
     ipcMain,
-    logger: container.cradle.logger,
+    logger: services.logger,
     onRendererReady: options.onRendererReady,
     shell,
-    terminalService: container.cradle.terminalService,
-    webDavProfileStore: container.cradle.webDavProfileStore,
-    webTabManager: container.cradle.webTabManager,
-    workspaceSyncConfigStore: container.cradle.workspaceSyncConfigStore,
-    workspaceSyncCoordinator: container.cradle.workspaceSyncCoordinator,
-    workspaceWebDavSyncService: container.cradle.workspaceWebDavSyncService,
+    terminalService: services.terminalService,
+    webDavProfileStore: services.webDavProfileStore,
+    webTabManager: services.webTabManager,
+    workspaceSyncConfigStore: services.workspaceSyncConfigStore,
+    workspaceSyncCoordinator: services.workspaceSyncCoordinator,
+    workspaceWebDavSyncService: services.workspaceWebDavSyncService,
     updates: {
       onBeforeInstall: () => options.flushWorkspaceBuffers('update install'),
     },
     windowCommandHandlers: options.windowCommandHandlers,
-    workspaceRegistry: container.cradle.workspaceRegistry,
+    workspaceRegistry: services.workspaceRegistry,
   })
 }

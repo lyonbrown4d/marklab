@@ -33,6 +33,16 @@ describe('web tab contracts', () => {
     expect(() => webTabIdRequestSchema.parse({ tabId: '' })).toThrow()
   })
 
+  it('rejects non-finite bounds', () => {
+    expect(() =>
+      webTabActivateRequestSchema.parse({
+        bounds: { height: 480, width: Number.POSITIVE_INFINITY, x: 0, y: 0 },
+        tabId: 'tab.docs',
+        url: 'https://example.com',
+      }),
+    ).toThrow()
+  })
+
   it('validates state and blocked-window events', () => {
     expect(
       webTabEventSchema.parse({

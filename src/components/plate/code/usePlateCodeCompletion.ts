@@ -127,7 +127,6 @@ export const usePlateCodeCompletion = ({
     (event: KeyboardEvent<HTMLElement>) => {
       const action = resolvePlateCodeCompletionKey({
         key: event.key,
-        keyCode: event.keyCode,
         composing: composingRef.current || event.nativeEvent.isComposing,
         menuOpen: items.length > 0,
         ctrl: event.ctrlKey || event.metaKey,

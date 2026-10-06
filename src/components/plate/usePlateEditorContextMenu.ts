@@ -6,6 +6,7 @@ import type {
   EditorContextMenuCapabilities,
 } from '@/components/EditorContextMenu'
 import { readClipboardText } from '@/runtime/clipboard'
+import { queueFocusedEditCommand } from '@/runtime/editCommands'
 
 type UsePlateEditorContextMenuOptions = {
   getEditor: () => PlateEditor | null
@@ -94,7 +95,7 @@ const runAction = (
     })
     return
   }
-  document.execCommand?.(action)
+  if (action === 'copy' || action === 'cut') queueFocusedEditCommand(action)
 }
 
 export const usePlateEditorContextMenu = ({

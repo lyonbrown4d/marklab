@@ -1,18 +1,43 @@
 import type { BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container'
-import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { NativeIpcRegistration } from '@electron/ipc'
+import type { Logger } from '@electron/services/logger'
+import type { WebTabManager } from '@electron/services/webTabs/webTabManager'
+import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { MarklabWindows } from '@electron/window'
 import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool'
-
-type Logger = ElectronContainer['cradle']['logger']
 
 type PreventableEvent = {
   preventDefault: () => void
 }
 
+type WindowLifecycleIpc = {
+  commands: {
+    workspace: Pick<
+      NativeIpcRegistration['commands']['workspace'],
+      | 'beginShutdownBarrier'
+      | 'cancelShutdownBarrier'
+      | 'completeShutdownBarrier'
+      | 'flushBuffersForShutdown'
+      | 'flushWindowForClose'
+    >
+  }
+  windowClose: Pick<NativeIpcRegistration['windowClose'], 'requestRendererFlush'>
+}
+
+type WindowLifecycleServices = {
+  logger: Logger
+  webTabManager: Pick<WebTabManager, 'registerWindow'>
+  workspaceRegistry: Pick<WindowWorkspaceRegistry, 'registerWindow'>
+}
+
+type ShutdownBarrierHandle = {
+  cancel: () => void
+  complete: () => void
+}
+
 type WindowLifecycleOptions = {
-  getContainer: () => ElectronContainer
-  getNativeIpc: () => NativeIpcRegistration | null
+  getServices: () => WindowLifecycleServices
+  getNativeIpc: () => WindowLifecycleIpc | null
   getWindows: () => MarklabWindows | null
   persistWindowState: (window: BrowserWindow) => Promise<void> | void
   setWindows: (windows: MarklabWindows | null) => void
@@ -39,8 +64,10 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
   const windowsAllowedToClose = new WeakSet<BrowserWindow>()
   const windowsFlushingBeforeClose = new WeakSet<BrowserWindow>()
 
-  const flushWorkspaceBuffersWithBarrier = async (reason: string): Promise<() => void> => {
-    const container = options.getContainer()
+  const flushWorkspaceBuffersWithBarrier = async (
+    reason: string,
+  ): Promise<ShutdownBarrierHandle> => {
+    const services = options.getServices()
     const nativeIpc = options.getNativeIpc()
     if (!nativeIpc) {
       throw new Error(`Workspace flush is unavailable during ${reason}`)
@@ -58,7 +85,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     const barrierId = await workspaceRegistry.beginShutdownBarrier(reason)
     try {
       const flushed = await workspaceRegistry.flushBuffersForShutdown(barrierId)
-      container.cradle.logger.info('workspace buffers flushed behind shutdown barrier', {
+      services.logger.info('workspace buffers flushed behind shutdown barrier', {
         barrierId,
         flushed,
         reason,
@@ -67,12 +94,15 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
       workspaceRegistry.cancelShutdownBarrier(barrierId)
       throw error
     }
-    return () => workspaceRegistry.cancelShutdownBarrier(barrierId)
+    return {
+      cancel: () => workspaceRegistry.cancelShutdownBarrier(barrierId),
+      complete: () => workspaceRegistry.completeShutdownBarrier(barrierId),
+    }
   }
 
   const flushWorkspaceBuffers = async (reason: string): Promise<void> => {
-    const releaseBarrier = await flushWorkspaceBuffersWithBarrier(reason)
-    releaseBarrier()
+    const barrier = await flushWorkspaceBuffersWithBarrier(reason)
+    barrier.cancel()
   }
 
   const installMainWindowCloseFlush = (main: BrowserWindow): void => {
@@ -94,11 +124,11 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
           if (!main.isDestroyed()) main.close()
         } catch (error) {
           options
-            .getContainer()
-            .cradle.logger.error(
-              'window close cancelled because workspace buffers could not be saved',
-              { error, windowId: main.id },
-            )
+            .getServices()
+            .logger.error('window close cancelled because workspace buffers could not be saved', {
+              error,
+              windowId: main.id,
+            })
         } finally {
           windowsAllowedToClose.delete(main)
           windowsFlushingBeforeClose.delete(main)
@@ -109,12 +139,12 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
   const installManagedMainWindowLifecycle = (
     main: BrowserWindow,
-    logger = options.getContainer().cradle.logger,
+    logger = options.getServices().logger,
   ): void => {
     if (managedMainWindows.has(main)) return
     managedMainWindows.add(main)
-    options.getContainer().cradle.workspaceRegistry.registerWindow(main)
-    options.getContainer().cradle.webTabManager.registerWindow(main)
+    options.getServices().workspaceRegistry.registerWindow(main)
+    options.getServices().webTabManager.registerWindow(main)
     installMainWindowCloseFlush(main)
     main.on('closed', () => {
       managedMainWindows.delete(main)
@@ -124,7 +154,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
   }
 
   const ensureWindowPool = (): MarklabWindowPool => {
-    const logger = options.getContainer().cradle.logger
+    const logger = options.getServices().logger
     windowPool ??= createMarklabWindowPool(logger.child('window-pool'))
     return windowPool
   }
@@ -140,14 +170,14 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
     quitFlushInProgress = true
     void (async () => {
-      let releaseBarrier: () => void
+      let barrier: ShutdownBarrierHandle
       try {
-        releaseBarrier = await flushWorkspaceBuffersWithBarrier('quit')
+        barrier = await flushWorkspaceBuffersWithBarrier('quit')
       } catch (error) {
         quitFlushInProgress = false
         options
-          .getContainer()
-          .cradle.logger.error('app quit cancelled because workspace buffers could not be saved', {
+          .getServices()
+          .logger.error('app quit cancelled because workspace buffers could not be saved', {
             error,
           })
         return
@@ -160,19 +190,20 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
           ),
         )
         await shutdownApplication()
+        barrier.complete()
       } catch (error) {
-        releaseBarrier()
+        barrier.cancel()
         quitFlushInProgress = false
         options
-          .getContainer()
-          .cradle.logger.error('app quit cancelled because application shutdown failed', { error })
+          .getServices()
+          .logger.error('app quit cancelled because application shutdown failed', { error })
         return
       }
 
       allowAppQuit = true
       allowAllMainWindowClose = true
       windowPool?.destroyIdleWindows()
-      options.getContainer().cradle.logger.info('app quit continuing after flush')
+      options.getServices().logger.info('app quit continuing after flush')
       continueQuit()
     })()
   }

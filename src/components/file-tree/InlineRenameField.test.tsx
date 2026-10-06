@@ -22,9 +22,8 @@ const createNode = (name = 'draft.md') => {
 describe('InlineRenameField', () => {
   describe.each([
     'native composition flag',
-    'legacy key code',
     'composition lifecycle',
-    'legacy key code after composition end',
+    'Process key after composition end',
   ])('IME protection using %s', (mode) => {
     it.each(['Enter', 'Escape'])('ignores candidate-selection %s until composition ends', (key) => {
       const parentKeyDown = vi.fn()
@@ -39,17 +38,16 @@ describe('InlineRenameField', () => {
       const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Rename draft.md' })
       fireEvent.change(input, { target: { value: ' \u65e5\u672c\u8a9e.md ' } })
 
-      if (mode === 'composition lifecycle' || mode === 'legacy key code after composition end') {
+      if (mode === 'composition lifecycle' || mode === 'Process key after composition end') {
         fireEvent.compositionStart(input)
       }
-      if (mode === 'legacy key code after composition end') {
+      if (mode === 'Process key after composition end') {
         fireEvent.compositionEnd(input)
       }
 
       const candidateKeyDown = createEvent.keyDown(input, {
-        key,
+        key: mode === 'Process key after composition end' ? 'Process' : key,
         isComposing: mode === 'native composition flag',
-        keyCode: mode.startsWith('legacy') ? 229 : key === 'Enter' ? 13 : 27,
       })
       fireEvent(input, candidateKeyDown)
 

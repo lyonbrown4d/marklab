@@ -2,11 +2,9 @@ import { getElectronRuntime } from '@/runtime/electron'
 import type {
   WebDavProfile,
   WebDavProfileInput,
-  WorkspaceGitSummary,
   WorkspaceSyncChannel,
   WorkspaceSyncChannels,
   WorkspaceSyncProgressEvent,
-  WorkspaceSyncProvider,
   WorkspaceSyncResult,
 } from '@/types/workspaceSync'
 
@@ -21,9 +19,7 @@ export const workspaceSyncApi = {
   getChannels: (): Promise<WorkspaceSyncChannels> => runtime().channels.get(),
   setChannel: (channel: WorkspaceSyncChannel): Promise<WorkspaceSyncChannels> =>
     runtime().channels.set(channel),
-  removeChannel: (provider: WorkspaceSyncProvider): Promise<WorkspaceSyncChannels> =>
-    runtime().channels.remove(provider),
-  getGitSummary: (): Promise<WorkspaceGitSummary> => runtime().gitSummary(),
+  removeChannel: (): Promise<WorkspaceSyncChannels> => runtime().channels.remove(),
   start: async (requestId: string): Promise<WorkspaceSyncResult> => {
     const outcome = await runtime().start(requestId)
     if (outcome.status === 'completed') return outcome.result

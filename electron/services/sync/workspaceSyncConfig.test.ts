@@ -5,6 +5,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { LocalDatabaseService } from '@electron/database/localDatabaseService'
+import { SettingsRepository } from '@electron/database/repositories/settingsRepository'
 import { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
 
 const roots: string[] = []
@@ -25,16 +26,10 @@ const createFixture = async () => {
 }
 
 describe('WorkspaceSyncConfigStore', () => {
-  it('persists Git and WebDAV as independent channels for the same workspace', async () => {
+  it('persists one WebDAV channel for a workspace', async () => {
     const { database, root, store } = await createFixture()
-    const workspace = path.join(root, 'multi-channel-notes')
+    const workspace = path.join(root, 'webdav-notes')
 
-    await store.setChannel(workspace, {
-      provider: 'git',
-      remote: 'origin',
-      branch: 'main',
-      autoFetch: true,
-    })
     await store.setChannel(workspace, {
       provider: 'webdav',
       profileId: 'personal-dav',
@@ -43,12 +38,6 @@ describe('WorkspaceSyncConfigStore', () => {
     })
 
     await expect(new WorkspaceSyncConfigStore(database).getChannels(workspace)).resolves.toEqual({
-      git: {
-        provider: 'git',
-        remote: 'origin',
-        branch: 'main',
-        autoFetch: true,
-      },
       webdav: {
         provider: 'webdav',
         profileId: 'personal-dav',
@@ -63,14 +52,9 @@ describe('WorkspaceSyncConfigStore', () => {
     )
   })
 
-  it('removes one channel without disabling the other channel', async () => {
+  it('removes the workspace WebDAV channel', async () => {
     const { root, store } = await createFixture()
     const workspace = path.join(root, 'notes')
-    await store.setChannel(workspace, {
-      provider: 'git',
-      remote: 'origin',
-      autoFetch: false,
-    })
     await store.setChannel(workspace, {
       provider: 'webdav',
       profileId: 'personal-dav',
@@ -78,13 +62,10 @@ describe('WorkspaceSyncConfigStore', () => {
       autoSync: true,
     })
 
-    await expect(store.removeChannel(workspace, 'webdav')).resolves.toEqual({
-      git: { provider: 'git', remote: 'origin', autoFetch: false },
-      webdav: null,
-    })
+    await expect(store.removeChannel(workspace)).resolves.toEqual({ webdav: null })
   })
 
-  it('updates one channel atomically without replacing another channel', async () => {
+  it('updates the workspace WebDAV channel atomically', async () => {
     const { root, store } = await createFixture()
     const workspace = path.join(root, 'notes')
 
@@ -95,12 +76,6 @@ describe('WorkspaceSyncConfigStore', () => {
       autoSync: true,
     })
     await store.setChannel(workspace, {
-      provider: 'git',
-      remote: 'origin',
-      branch: 'main',
-      autoFetch: true,
-    })
-    await store.setChannel(workspace, {
       provider: 'webdav',
       profileId: 'personal-dav',
       remoteRoot: '/updated',
@@ -108,7 +83,6 @@ describe('WorkspaceSyncConfigStore', () => {
     })
 
     await expect(store.getChannels(workspace)).resolves.toEqual({
-      git: { provider: 'git', remote: 'origin', branch: 'main', autoFetch: true },
       webdav: {
         provider: 'webdav',
         profileId: 'personal-dav',
@@ -118,15 +92,63 @@ describe('WorkspaceSyncConfigStore', () => {
     })
   })
 
+  it('refreshes the persisted update timestamp when replacing a binding', async () => {
+    const { database, root, store } = await createFixture()
+    const workspace = path.join(root, 'notes')
+    await store.setChannel(workspace, {
+      provider: 'webdav',
+      profileId: 'personal-dav',
+      remoteRoot: '/before',
+      autoSync: true,
+    })
+    const binding = await database.database
+      .selectFrom('workspace_sync_channels')
+      .select('workspace_id')
+      .executeTakeFirstOrThrow()
+    await database.database
+      .updateTable('workspace_sync_channels')
+      .set({ updated_at: '2000-01-01 00:00:00' })
+      .where('workspace_id', '=', binding.workspace_id)
+      .execute()
+
+    await store.setChannel(workspace, {
+      provider: 'webdav',
+      profileId: 'personal-dav',
+      remoteRoot: '/after',
+      autoSync: false,
+    })
+
+    const updated = await database.database
+      .selectFrom('workspace_sync_channels')
+      .select(['remote_root', 'updated_at'])
+      .where('workspace_id', '=', binding.workspace_id)
+      .executeTakeFirstOrThrow()
+    expect(updated.remote_root).toBe('/after')
+    expect(updated.updated_at).not.toBe('2000-01-01 00:00:00')
+  })
+
+  it('rejects Git-shaped sync configuration', async () => {
+    const { root, store } = await createFixture()
+
+    await expect(
+      store.setChannel(path.join(root, 'notes'), {
+        provider: 'git',
+        remote: 'origin',
+        branch: 'main',
+        autoFetch: true,
+      } as never),
+    ).rejects.toThrow()
+  })
+
   it('rejects unsafe workspace and remote paths', async () => {
     const { root, store } = await createFixture()
 
     await expect(
       store.setChannel('relative/workspace', {
-        provider: 'git',
-        remote: 'origin',
-        branch: 'main',
-        autoFetch: false,
+        provider: 'webdav',
+        profileId: 'personal-dav',
+        remoteRoot: '/notes',
+        autoSync: false,
       }),
     ).rejects.toThrow('absolute')
     await expect(
@@ -137,14 +159,6 @@ describe('WorkspaceSyncConfigStore', () => {
         autoSync: false,
       }),
     ).rejects.toThrow('remote root')
-    await expect(
-      store.setChannel(path.join(root, 'notes'), {
-        provider: 'git',
-        remote: '..',
-        branch: 'bad..branch',
-        autoFetch: false,
-      }),
-    ).rejects.toThrow('remote name')
   })
 
   it('creates one stable device identity in the shared settings table', async () => {
@@ -161,5 +175,14 @@ describe('WorkspaceSyncConfigStore', () => {
       .where('key', '=', 'sync.deviceId')
       .executeTakeFirstOrThrow()
     expect(JSON.parse(setting.value_json)).toBe(deviceId)
+  })
+
+  it('rejects a persisted device identity that is not a UUID', async () => {
+    const { database, store } = await createFixture()
+    new SettingsRepository(database).upsert('sync.deviceId', JSON.stringify('device-1'), null)
+
+    await expect(store.getOrCreateDeviceId()).rejects.toThrow(
+      'Workspace sync device identity could not be read',
+    )
   })
 })

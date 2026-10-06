@@ -62,4 +62,31 @@ describe('graphLayoutApi', () => {
 
     expect(invoke).toHaveBeenCalledWith('fs_save_workspace_graph_layout', value)
   })
+
+  it('rejects non-finite saved layout values', async () => {
+    vi.mocked(invoke).mockClear()
+
+    await expect(
+      graphLayoutApi.save({
+        engineVersion: 'elk-workspace-map-v1',
+        graphRevision: 'revision-a',
+        layoutKey: 'workspace-map:overview',
+        mode: 'overview',
+        nodes: [
+          {
+            collapsed: false,
+            height: 240,
+            id: 'file:a.md',
+            pinned: false,
+            userModified: true,
+            width: 360,
+            x: Number.POSITIVE_INFINITY,
+            y: 20,
+          },
+        ],
+        viewport: null,
+      }),
+    ).rejects.toThrow()
+    expect(invoke).not.toHaveBeenCalled()
+  })
 })

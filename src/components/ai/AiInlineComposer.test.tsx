@@ -91,7 +91,7 @@ describe('AiInlineComposer', () => {
 
     const input = screen.getByRole('textbox', { name: labels.instruction })
     fireEvent.compositionStart(input)
-    fireEvent.keyDown(input, { isComposing: true, key: 'Enter', keyCode: 229 })
+    fireEvent.keyDown(input, { isComposing: true, key: 'Enter' })
 
     expect(onSubmit).not.toHaveBeenCalled()
   })
@@ -103,7 +103,6 @@ describe('AiInlineComposer', () => {
     fireEvent.keyDown(screen.getByRole('textbox', { name: labels.instruction }), {
       isComposing: true,
       key: 'Escape',
-      keyCode: 229,
     })
 
     expect(onDismiss).not.toHaveBeenCalled()

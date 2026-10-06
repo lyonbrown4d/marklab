@@ -5,36 +5,57 @@ import { registerWorkspaceSyncIpc } from '@electron/ipc/workspaceSync'
 import type { WorkspaceSyncChannelsRecord } from '@electron/services/sync/workspaceSyncConfig'
 
 describe('workspace sync IPC', () => {
-  it('stores and removes one channel without replacing the other channel', async () => {
+  it('stores and removes a WebDAV channel through the WebDAV-only contract', async () => {
     const fixture = createFixture()
     const handlers = register(fixture)
-    const gitChannel = {
-      provider: 'git',
-      remote: 'origin',
-      branch: 'main',
-      autoFetch: true,
+    const webDavChannel = {
+      provider: 'webdav',
+      profileId: 'dav-main',
+      remoteRoot: '/notes',
+      autoSync: true,
     }
 
     await handlers.get(nativeIpcChannels.syncChannelsGet)?.(fixture.event)
-    await handlers.get(nativeIpcChannels.syncChannelSet)?.(fixture.event, gitChannel)
-    await handlers.get(nativeIpcChannels.syncChannelRemove)?.(fixture.event, {
-      provider: 'git',
-    })
+    await handlers.get(nativeIpcChannels.syncChannelSet)?.(fixture.event, webDavChannel)
+    await handlers.get(nativeIpcChannels.syncChannelRemove)?.(fixture.event)
 
     expect(fixture.configStore.getChannels).toHaveBeenCalledWith('D:/notes')
-    expect(fixture.configStore.setChannel).toHaveBeenCalledWith('D:/notes', gitChannel)
-    expect(fixture.configStore.removeChannel).toHaveBeenCalledWith('D:/notes', 'git')
+    expect(fixture.configStore.setChannel).toHaveBeenCalledWith('D:/notes', webDavChannel)
+    expect(fixture.configStore.removeChannel).toHaveBeenCalledWith('D:/notes')
   })
 
-  it('returns structured Git auto-discovery for the sender workspace', async () => {
+  it('rejects Git-shaped sync configuration before persistence', async () => {
     const fixture = createFixture()
-    fixture.gitService.discover.mockResolvedValueOnce({ is_repository: false })
     const handlers = register(fixture)
 
-    await expect(handlers.get(nativeIpcChannels.syncGitSummary)?.(fixture.event)).resolves.toEqual({
-      status: 'not_repository',
-    })
-    expect(fixture.gitService.discover).toHaveBeenCalledWith('D:/notes')
+    await expect(
+      handlers.get(nativeIpcChannels.syncChannelSet)?.(fixture.event, {
+        provider: 'git',
+        remote: 'origin',
+        autoFetch: true,
+      }),
+    ).rejects.toThrow()
+    expect(fixture.configStore.setChannel).not.toHaveBeenCalled()
+  })
+
+  it('rejects legacy provider payloads on payload-free channel operations', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+    const legacyPayload = { provider: 'git' }
+
+    await expect(
+      Promise.resolve().then(() =>
+        handlers.get(nativeIpcChannels.syncChannelsGet)?.(fixture.event, legacyPayload),
+      ),
+    ).rejects.toThrow()
+    await expect(
+      Promise.resolve().then(() =>
+        handlers.get(nativeIpcChannels.syncChannelRemove)?.(fixture.event, legacyPayload),
+      ),
+    ).rejects.toThrow()
+
+    expect(fixture.configStore.getChannels).not.toHaveBeenCalled()
+    expect(fixture.configStore.removeChannel).not.toHaveBeenCalled()
   })
 
   it('rejects a WebDAV channel that references a missing global profile', async () => {
@@ -77,7 +98,6 @@ describe('workspace sync IPC', () => {
       {
         workspacePath: 'D:/notes',
         channels: {
-          git: null,
           webdav: {
             provider: 'webdav',
             profileId: 'dav-main',
@@ -160,6 +180,19 @@ describe('workspace sync IPC', () => {
     ).resolves.toEqual({ status: 'failed', message: 'remote unavailable' })
   })
 
+  it('does not accept a provider selector on sync start', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+
+    await expect(
+      handlers.get(nativeIpcChannels.syncStart)?.(fixture.event, {
+        requestId: '00000000-0000-4000-8000-000000000005',
+        provider: 'git',
+      }),
+    ).rejects.toThrow()
+    expect(fixture.syncService.sync).not.toHaveBeenCalled()
+  })
+
   it('rejects cancellation without an explicit request id', async () => {
     const fixture = createFixture()
     const handlers = register(fixture)
@@ -203,13 +236,10 @@ const createFixture = () => {
   const workspace = { rootInfo: vi.fn(() => ({ kind: 'external', path: 'D:/notes' })) }
   return {
     configStore: {
-      getChannels: vi.fn(async () => ({ git: null, webdav: null })),
+      getChannels: vi.fn(async () => ({ webdav: null })),
       listChannels: vi.fn(async (): Promise<WorkspaceSyncChannelsRecord[]> => []),
-      removeChannel: vi.fn(async () => ({ git: null, webdav: null })),
-      setChannel: vi.fn(async (_root, channel) => ({
-        git: channel.provider === 'git' ? channel : null,
-        webdav: channel.provider === 'webdav' ? channel : null,
-      })),
+      removeChannel: vi.fn(async () => ({ webdav: null })),
+      setChannel: vi.fn(async (_root, channel) => ({ webdav: channel })),
     },
     event: {
       sender: { id: 7, isDestroyed: vi.fn(() => false), once: vi.fn(), send: vi.fn() },
@@ -219,24 +249,6 @@ const createFixture = () => {
       get: vi.fn(async (): Promise<{ id: string } | null> => ({ id: 'dav-main' })),
       list: vi.fn(async () => []),
       update: vi.fn(async (input) => ({ ...input, password: undefined })),
-    },
-    gitService: {
-      discover: vi.fn(async () => ({ is_repository: false })),
-      remoteStatus: vi.fn(async () => ({
-        remotes: [],
-        branch: null,
-        upstream: null,
-        ahead: 0,
-        behind: 0,
-        detached: false,
-      })),
-      status: vi.fn(async () => ({
-        repo: { is_repository: false },
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        conflicts: [],
-      })),
     },
     syncService: {
       cancel: vi.fn(() => true),

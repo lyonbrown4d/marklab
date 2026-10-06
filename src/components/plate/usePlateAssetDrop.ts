@@ -6,7 +6,6 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type HTMLAttributes,
-  type MutableRefObject,
   type Ref,
   type RefObject,
 } from 'react'
@@ -286,5 +285,5 @@ const insideRect = (rect: DOMRect, x: number, y: number) =>
   x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 const assignRef = <T>(ref: Ref<T> | undefined, value: T | null) => {
   if (typeof ref === 'function') ref(value)
-  else if (ref) (ref as MutableRefObject<T | null>).current = value
+  else if (ref) ref.current = value
 }

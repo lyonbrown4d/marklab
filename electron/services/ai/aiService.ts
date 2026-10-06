@@ -2,9 +2,9 @@ import { generateText as vercelGenerateText } from 'ai'
 import pLimit, { type LimitFunction } from 'p-limit'
 
 import { readAiEnvironment } from '@electron/services/ai/environment'
+import { getAiProviderPolicy } from '@electron/services/ai/providerCatalog'
 import {
   generateTextRequestSchema,
-  isLoopbackHttpUrl,
   providerIdRequestSchema,
   providerUpdateSchema,
   type AiGenerateTextRequest,
@@ -25,7 +25,6 @@ const GENERATION_TIMEOUT_MS = 120_000
 const DEFAULT_MAX_OUTPUT_TOKENS = 4_096
 const MAX_CONCURRENT_GENERATIONS = 2
 const MAX_GENERATION_JOBS = 8
-const LOOPBACK_COMPATIBLE_API_KEY = 'ollama'
 
 type AiServiceOptions = {
   store: AiProviderStoreContract
@@ -100,13 +99,13 @@ export class AiService implements AiServiceContract {
   ): Promise<AiGenerateTextResult> {
     abortSignal?.throwIfAborted()
     const provider = await this.requireProvider(request.providerId)
+    const policy = getAiProviderPolicy(provider.kind)
+    const environmentApiKey = policy.environmentVariable
+      ? this.environment[provider.kind]
+      : undefined
     const configuredApiKey =
-      (await this.options.store.resolveApiKey(provider.id)) ?? this.environment[provider.kind]
-    const apiKey =
-      configuredApiKey ??
-      (provider.kind === 'openai-compatible' && isLoopbackHttpUrl(provider.baseUrl)
-        ? LOOPBACK_COMPATIBLE_API_KEY
-        : undefined)
+      (await this.options.store.resolveApiKey(provider.id)) ?? environmentApiKey
+    const apiKey = policy.resolveApiKey(provider, configuredApiKey)
     if (!apiKey) throw new Error('AI provider API key is not configured')
     try {
       const model = this.options.resolver.resolve(provider, apiKey)
@@ -133,9 +132,12 @@ export class AiService implements AiServiceContract {
   }
 
   private async toPublic(provider: StoredAiProvider): Promise<PublicAiProvider> {
+    const policy = getAiProviderPolicy(provider.kind)
+    const locality = policy.getLocality(provider)
+    const requiresApiKey = policy.requiresApiKey(provider)
     const source = provider.encryptedApiKey
       ? 'stored'
-      : this.environment[provider.kind]
+      : policy.environmentVariable && this.environment[provider.kind]
         ? 'environment'
         : 'none'
     return {
@@ -143,6 +145,9 @@ export class AiService implements AiServiceContract {
       label: provider.label,
       kind: provider.kind,
       model: provider.model,
+      locality,
+      available: source !== 'none' || !requiresApiKey,
+      requiresApiKey,
       ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
       createdAt: provider.createdAt,
       updatedAt: provider.updatedAt,

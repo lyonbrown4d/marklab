@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { AiInlineCompletionPolicy } from '@electron/services/ai/completion/policy'
 import type { AiProviderStoreContract, StoredAiProvider } from '@electron/services/ai/types'
 
+const settingsMocks = vi.hoisted(() => ({ getRendererPersistValue: vi.fn() }))
+
+vi.mock('@electron/services/settingsStore', () => ({
+  getRendererPersistValue: settingsMocks.getRendererPersistValue,
+}))
+
 const remoteProvider: StoredAiProvider = {
   id: 'remote-openai',
   label: 'Remote',
@@ -21,6 +27,22 @@ describe('AiInlineCompletionPolicy', () => {
 
   it('allows a remote provider when persisted cloud-context consent is enabled', async () => {
     const policy = createPolicy(remoteProvider, true)
+
+    await expect(policy.assertProviderAllowed('remote-openai')).resolves.toBeUndefined()
+  })
+
+  it('reads consent from a preferences payload with unrelated persisted fields', async () => {
+    settingsMocks.getRendererPersistValue.mockReturnValue({
+      unrelatedRootField: true,
+      state: {
+        aiCompletionCloudContextConsent: true,
+        unrelatedStateField: 'preserved',
+      },
+    })
+    const providerStore = {
+      get: vi.fn(async () => remoteProvider),
+    } as unknown as AiProviderStoreContract
+    const policy = new AiInlineCompletionPolicy({ providerStore })
 
     await expect(policy.assertProviderAllowed('remote-openai')).resolves.toBeUndefined()
   })

@@ -93,6 +93,10 @@ export class WindowWorkspaceRegistry {
     for (const binding of [...this.bindings.values()]) this.tryFinalizeWindow(binding)
   }
 
+  completeShutdownBarrier(barrierId: number): void {
+    this.shutdownBarrier.complete(barrierId)
+  }
+
   async flushBuffersForShutdown(barrierId: number): Promise<number> {
     const bindings = [...this.bindings.values()]
     const results = await Promise.allSettled(bindings.map((binding) => binding.flushForShutdown()))
@@ -121,7 +125,10 @@ export class WindowWorkspaceRegistry {
   }
 
   async disposeAll(): Promise<void> {
-    const barrierId = await this.beginShutdownBarrier('dispose all workspace sessions')
+    const activeBarrierId = this.shutdownBarrier.activeId
+    const ownsBarrier = activeBarrierId === null
+    const barrierId =
+      activeBarrierId ?? (await this.beginShutdownBarrier('dispose all workspace sessions'))
     for (const binding of this.bindings.values()) {
       binding.service.revokeAssetCapabilities()
     }
@@ -129,7 +136,8 @@ export class WindowWorkspaceRegistry {
     let phaseTwoStarted = false
     try {
       try {
-        await this.flushBuffersForShutdown(barrierId)
+        if (ownsBarrier) await this.flushBuffersForShutdown(barrierId)
+        else this.shutdownBarrier.review(barrierId, this.shutdownParticipants())
         phaseTwoStarted = true
       } catch (error) {
         errors.push(error)
@@ -148,16 +156,23 @@ export class WindowWorkspaceRegistry {
           if (result.status === 'rejected') errors.push(result.reason)
         }
       }
-    } finally {
-      try {
-        if (phaseTwoStarted) this.shutdownBarrier.complete(barrierId)
-        else this.cancelShutdownBarrier(barrierId)
-      } catch (error) {
-        errors.push(error)
+      if (errors.length > 0) {
+        throw new AggregateError(errors, 'Failed to dispose all workspace windows safely')
       }
-    }
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Failed to dispose all workspace windows safely')
+      if (ownsBarrier) this.shutdownBarrier.complete(barrierId)
+    } catch (error) {
+      if (ownsBarrier && this.shutdownBarrier.activeId === barrierId) {
+        try {
+          this.cancelShutdownBarrier(barrierId)
+        } catch (cancelError) {
+          throw new AggregateError(
+            [error, cancelError],
+            'Failed to dispose all workspace windows safely',
+            { cause: cancelError },
+          )
+        }
+      }
+      throw error
     }
   }
 

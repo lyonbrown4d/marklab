@@ -42,26 +42,13 @@ export const createIntegrationTables = async (db: Kysely<unknown>): Promise<void
   await db.schema
     .createTable('workspace_sync_channels')
     .addColumn('workspace_id', 'integer', (column) =>
-      column.notNull().references('workspaces.id').onDelete('cascade'),
+      column.primaryKey().references('workspaces.id').onDelete('cascade'),
     )
-    .addColumn('provider', 'text', (column) => column.notNull())
-    .addColumn('remote', 'text')
-    .addColumn('branch', 'text')
-    .addColumn('auto_fetch', 'integer')
-    .addColumn('profile_id', 'text')
-    .addColumn('remote_root', 'text')
-    .addColumn('auto_sync', 'integer')
+    .addColumn('profile_id', 'text', (column) => column.notNull())
+    .addColumn('remote_root', 'text', (column) => column.notNull())
+    .addColumn('auto_sync', 'integer', (column) => column.notNull())
     .addColumn('updated_at', 'text', (column) => column.notNull().defaultTo(now))
-    .addPrimaryKeyConstraint('workspace_sync_channels_primary', ['workspace_id', 'provider'])
-    .addCheckConstraint(
-      'workspace_sync_channels_provider_check',
-      sql`provider in ('git', 'webdav')`,
-    )
-    .addCheckConstraint(
-      'workspace_sync_channels_shape_check',
-      sql`(provider = 'git' and remote is not null and auto_fetch in (0, 1) and profile_id is null and remote_root is null and auto_sync is null)
-        or (provider = 'webdav' and remote is null and branch is null and auto_fetch is null and profile_id is not null and remote_root is not null and auto_sync in (0, 1))`,
-    )
+    .addCheckConstraint('workspace_sync_channels_auto_sync_check', sql`auto_sync in (0, 1)`)
     .execute()
   await db.schema
     .createIndex('workspace_sync_channels_profile_index')

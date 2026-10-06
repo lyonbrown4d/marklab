@@ -78,7 +78,7 @@ describe('Plate slash URL dialog', () => {
 
     fireEvent.compositionStart(url)
     await act(async () => {
-      fireEvent.keyDown(url, { isComposing: true, key: 'Enter', keyCode: 229 })
+      fireEvent.keyDown(url, { isComposing: true, key: 'Enter' })
     })
 
     expect(request.insert).not.toHaveBeenCalled()

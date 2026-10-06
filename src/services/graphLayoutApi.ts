@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { invoke } from '@/runtime/ipc'
 
 const text = (max: number) => z.string().trim().min(1).max(max)
-const coordinate = z.number().finite().min(-10_000_000).max(10_000_000)
-const dimension = z.number().finite().min(24).max(20_000)
+const coordinate = z.number().min(-10_000_000).max(10_000_000)
+const dimension = z.number().min(24).max(20_000)
 const modeSchema = z.enum(['focus', 'overview'])
 const requestSchema = z
   .object({
@@ -27,7 +27,7 @@ const nodeSchema = z
   })
   .strict()
 const viewportSchema = z
-  .object({ x: coordinate, y: coordinate, zoom: z.number().finite().min(0.1).max(4) })
+  .object({ x: coordinate, y: coordinate, zoom: z.number().min(0.1).max(4) })
   .strict()
 const saveSchema = requestSchema.extend({
   nodes: z.array(nodeSchema).max(5_000),

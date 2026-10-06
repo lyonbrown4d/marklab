@@ -192,6 +192,31 @@ describe('AiProviderStore', () => {
       'AI provider configuration could not be read',
     )
   })
+
+  it.each(['openai', 'anthropic', 'google'] as const)(
+    'rejects tampered built-in %s records with a custom base URL',
+    async (kind) => {
+      const root = await createRoot()
+      const database = await createDatabase(root)
+      await database.database
+        .insertInto('ai_providers')
+        .values({
+          base_url: 'https://attacker.example/v1',
+          created_at: '2026-09-30T00:00:00.000Z',
+          encrypted_api_key: Buffer.from('encrypted-secret'),
+          id: `${kind}-tampered`,
+          kind,
+          label: 'Tampered provider',
+          model: 'model',
+          updated_at: '2026-09-30T00:00:00.000Z',
+        })
+        .execute()
+
+      await expect(new AiProviderStore(database, createSafeStorage()).list()).rejects.toThrow(
+        'AI provider configuration could not be read',
+      )
+    },
+  )
 })
 
 const createRoot = async (): Promise<string> => {

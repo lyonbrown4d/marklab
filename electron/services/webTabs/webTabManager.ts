@@ -129,13 +129,15 @@ export class WebTabManager {
   }
 
   goBack(owner: BrowserWindow, request: WebTabIdRequest): void {
-    const webContents = this.requireEntry(this.stateFor(owner), request.tabId).view.webContents
-    if (webContents.canGoBack()) webContents.goBack()
+    const history = this.requireEntry(this.stateFor(owner), request.tabId).view.webContents
+      .navigationHistory
+    if (history.canGoBack()) history.goBack()
   }
 
   goForward(owner: BrowserWindow, request: WebTabIdRequest): void {
-    const webContents = this.requireEntry(this.stateFor(owner), request.tabId).view.webContents
-    if (webContents.canGoForward()) webContents.goForward()
+    const history = this.requireEntry(this.stateFor(owner), request.tabId).view.webContents
+      .navigationHistory
+    if (history.canGoForward()) history.goForward()
   }
 
   reload(owner: BrowserWindow, request: WebTabIdRequest): void {

@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type SubmitEvent } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -11,7 +11,7 @@ import {
 import { SettingsActionButton } from '@/components/settings/SettingsButtons'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
-import { createAiProviderId, isLoopbackHttpUrl } from '@/components/settings/aiProviderUtils'
+import { createAiProviderId } from '@/components/settings/aiProviderUtils'
 
 type ProviderFormProps = {
   mode: 'ollama' | 'compatible' | 'cloud'
@@ -48,7 +48,7 @@ export const AiProviderForm = ({
   const [apiKey, setApiKey] = useState('')
   const [newProviderId] = useState(() => createAiProviderId(mode))
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (pending) return
     const input: AiProviderUpdate = {
@@ -132,13 +132,6 @@ export const AiProviderForm = ({
               : t('settings.aiApiKeySecurity')}
           </p>
         </div>
-      )}
-      {mode === 'compatible' && baseUrl.trim() && (
-        <p className="text-xs text-muted-foreground">
-          {isLoopbackHttpUrl(baseUrl)
-            ? t('settings.aiLoopbackPrivacy')
-            : t('settings.aiCompatibleRemoteWarning')}
-        </p>
       )}
       {error && (
         <p role="alert" className="text-xs text-destructive">

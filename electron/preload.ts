@@ -9,6 +9,7 @@ import { createLanguageIntelligencePreloadSurface } from '@electron/preload/lang
 import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview'
 import { createWebTabsPreloadSurface } from '@electron/preload/webTabs'
 import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync'
+import { createEditCommandsPreloadSurface } from '@electron/preload/editCommands'
 import type {
   AppLaunchInfo,
   ClipboardImage,
@@ -127,6 +128,7 @@ const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipc
 const linkPreviewSurface = createLinkPreviewPreloadSurface(ipcRenderer)
 const webTabsSurface = createWebTabsPreloadSurface(ipcRenderer)
 const workspaceSyncSurface = createWorkspaceSyncPreloadSurface(ipcRenderer)
+const editCommandsSurface = createEditCommandsPreloadSurface(ipcRenderer)
 
 const desktopApi: RendererSafeElectronApi = {
   aiCompletion: {
@@ -190,6 +192,7 @@ const desktopApi: RendererSafeElectronApi = {
     save: (options?: SaveDialogOptions) =>
       ipcRenderer.invoke(nativeIpcChannels.dialogSave, options) as Promise<string | null>,
   },
+  edit: editCommandsSurface,
   clipboard: {
     readText: () => ipcRenderer.invoke(nativeIpcChannels.clipboardReadText) as Promise<string>,
     writeText: (text: string) =>

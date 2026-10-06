@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { ArrowLeft, ArrowRight, ExternalLink, Globe2, RotateCw, Square, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +54,7 @@ export const WebTabToolbar = ({
     setActionError(null)
     void Promise.resolve(action()).catch(() => setActionError(t('webTab.actionFailed')))
   }
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     const safeUrl = normalizeNavigableWebUrl(address)
     if (!safeUrl) {

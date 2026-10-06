@@ -39,6 +39,37 @@ describe('WebTabManager', () => {
     )
   })
 
+  it('publishes navigation history availability for toolbar controls', () => {
+    const fixture = createFixture()
+    fixture.manager.activate(fixture.window as never, request('docs'))
+    const history = fixture.views[0].webContents.navigationHistory
+    history.canGoBack.mockReturnValue(true)
+    history.canGoForward.mockReturnValue(true)
+
+    fixture.views[0].webContents.emit('did-finish-load')
+
+    expect(fixture.window.webContents.send).toHaveBeenLastCalledWith(
+      'marklab:web-tabs:state',
+      expect.objectContaining({
+        state: expect.objectContaining({ canGoBack: true, canGoForward: true }),
+      }),
+    )
+  })
+
+  it('delegates back and forward commands to navigation history when available', () => {
+    const fixture = createFixture()
+    fixture.manager.activate(fixture.window as never, request('docs'))
+    const history = fixture.views[0].webContents.navigationHistory
+    history.canGoBack.mockReturnValue(true)
+    history.canGoForward.mockReturnValue(true)
+
+    fixture.manager.goBack(fixture.window as never, { tabId: 'docs' })
+    fixture.manager.goForward(fixture.window as never, { tabId: 'docs' })
+
+    expect(history.goBack).toHaveBeenCalledOnce()
+    expect(history.goForward).toHaveBeenCalledOnce()
+  })
+
   it('keeps one active view and evicts the least recently used view above three', () => {
     const fixture = createFixture()
     const activate = (tabId: string) => {

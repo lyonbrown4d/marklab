@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceSyncMenuSection } from '@/features/workspace-sync/WorkspaceSyncMenuSection'
 import {
@@ -18,7 +17,6 @@ vi.mock('@/i18n/useI18n', () => ({
 vi.mock('@/services/workspaceSyncApi', () => ({
   workspaceSyncApi: {
     getChannels: vi.fn(),
-    getGitSummary: vi.fn(),
     listWebDavProfiles: vi.fn(),
     setChannel: vi.fn(),
     removeChannel: vi.fn(),
@@ -46,9 +44,8 @@ const renderSection = () => {
 }
 
 describe('WorkspaceSyncMenuSection', () => {
-  it('shows Git discovery and WebDAV binding as independent channels', async () => {
+  it('shows only the WebDAV binding in workspace sync UI', async () => {
     vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({
-      git: { provider: 'git', remote: 'origin', branch: 'main', autoFetch: true },
       webdav: {
         provider: 'webdav',
         profileId: 'cloud',
@@ -56,25 +53,12 @@ describe('WorkspaceSyncMenuSection', () => {
         autoSync: false,
       },
     })
-    vi.mocked(workspaceSyncApi.getGitSummary).mockResolvedValue({
-      status: 'ready',
-      branch: 'main',
-      head: 'abc',
-      upstream: 'origin/main',
-      ahead: 1,
-      behind: 2,
-      detached: false,
-      clean: false,
-      changeCount: 3,
-      conflictCount: 0,
-      remotes: [{ name: 'origin', fetchUrl: null, pushUrl: null }],
-    })
     vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([])
 
     renderSection()
-    expect(await screen.findByText('main')).toBeInTheDocument()
-    expect(screen.getByText('/notes')).toBeInTheDocument()
-    expect(screen.getAllByText(/sync\.channel\./)).toHaveLength(2)
+    expect(await screen.findByText('/notes')).toBeInTheDocument()
+    expect(screen.getAllByText(/sync\.channel\./)).toHaveLength(1)
+    expect(screen.queryByText('sync.channel.git')).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /sync\.binding\.configure/ })).toBeInTheDocument()
   })
 
@@ -97,25 +81,5 @@ describe('WorkspaceSyncMenuSection', () => {
       </QueryClientProvider>,
     )
     expect(screen.getByText('sync.singleFileUnavailable')).toBeInTheDocument()
-  })
-
-  it('distinguishes Git detection failures and lets the user retry', async () => {
-    vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({ git: null, webdav: null })
-    vi.mocked(workspaceSyncApi.getGitSummary)
-      .mockResolvedValueOnce({
-        status: 'error',
-        code: 'git_detection_failed',
-        message: 'git crashed',
-      })
-      .mockResolvedValueOnce({ status: 'not_repository' })
-    vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([])
-
-    renderSection()
-    expect(await screen.findByText('sync.git.detectionFailed')).toBeInTheDocument()
-    expect(screen.queryByText('sync.git.notRepository')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('menuitem', { name: 'sync.git.retry' }))
-    expect(await screen.findByText('sync.git.notRepository')).toBeInTheDocument()
-    expect(workspaceSyncApi.getGitSummary).toHaveBeenCalledTimes(2)
   })
 })

@@ -7,13 +7,8 @@ import { SettingsRepository } from '@electron/database/repositories/settingsRepo
 import { WorkspaceRepository } from '@electron/database/repositories/workspaceRepository'
 import { WorkspaceSyncChannelRepository } from '@electron/database/repositories/workspaceSyncChannelRepository'
 import { DATABASE_SETTING_KEYS } from '@electron/database/schema'
-import { validateBranchName, validateRemoteName } from '@electron/services/git/validation'
 import { canonicalWorkspacePath } from '@electron/services/workspace/workspaceIdentity'
-import type {
-  WorkspaceSyncChannel,
-  WorkspaceSyncChannels,
-  WorkspaceSyncProvider,
-} from '@/types/workspaceSync'
+import type { WorkspaceSyncChannel, WorkspaceSyncChannels } from '@/types/workspaceSync'
 
 const identifierSchema = z
   .string()
@@ -21,15 +16,7 @@ const identifierSchema = z
   .min(1)
   .max(128)
   .regex(/^[\w.-]+$/u)
-const gitChannelSchema = z
-  .object({
-    provider: z.literal('git'),
-    remote: identifierSchema,
-    branch: z.string().trim().min(1).max(255).optional(),
-    autoFetch: z.boolean(),
-  })
-  .strict()
-const webDavChannelSchema = z
+export const workspaceSyncChannelSchema = z
   .object({
     provider: z.literal('webdav'),
     profileId: identifierSchema,
@@ -37,11 +24,6 @@ const webDavChannelSchema = z
     autoSync: z.boolean(),
   })
   .strict()
-
-export const workspaceSyncChannelSchema = z.discriminatedUnion('provider', [
-  gitChannelSchema,
-  webDavChannelSchema,
-])
 
 export type WorkspaceSyncChannelsRecord = {
   workspacePath: string
@@ -63,7 +45,7 @@ export class WorkspaceSyncConfigStore {
     return this.localDatabase.sqlite.transaction(() => {
       const workspace = this.workspaces.findByCanonicalPath(this.localDatabase, canonical)
       if (!workspace) return emptyChannels()
-      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspace.id))
+      return channelsFromRow(this.channels.findForWorkspace(this.localDatabase, workspace.id))
     })()
   }
 
@@ -76,16 +58,10 @@ export class WorkspaceSyncConfigStore {
     const workspacePaths = new Map(
       snapshot.workspaces.map((workspace) => [workspace.id, workspace.path]),
     )
-    const records = new Map<number, WorkspaceSyncChannels>()
-    for (const row of snapshot.channels) {
-      const channels = records.get(row.workspace_id) ?? emptyChannels()
-      assignChannel(channels, row)
-      records.set(row.workspace_id, channels)
-    }
-    return [...records].map(([workspaceId, channels]) => {
-      const workspacePath = workspacePaths.get(workspaceId)
+    return snapshot.channels.map((row) => {
+      const workspacePath = workspacePaths.get(row.workspace_id)
       if (!workspacePath) throw new Error('Workspace sync channel has no workspace')
-      return { workspacePath, channels }
+      return { workspacePath, channels: channelsFromRow(row) }
     })
   }
 
@@ -112,82 +88,45 @@ export class WorkspaceSyncConfigStore {
     return this.localDatabase.sqlite.transaction(() => {
       const workspaceId = this.workspaces.findOrCreate(this.localDatabase, canonical, canonical)
       this.channels.upsert(this.localDatabase, channelValues(workspaceId, channel))
-      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspaceId))
+      return channelsFromRow(this.channels.findForWorkspace(this.localDatabase, workspaceId))
     })()
   }
 
-  async removeChannel(
-    workspacePath: string,
-    provider: WorkspaceSyncProvider,
-  ): Promise<WorkspaceSyncChannels> {
+  async removeChannel(workspacePath: string): Promise<WorkspaceSyncChannels> {
     const canonical = canonicalWorkspacePath(workspacePath)
     await this.localDatabase.initialize()
     return this.localDatabase.sqlite.transaction(() => {
       const workspace = this.workspaces.findByCanonicalPath(this.localDatabase, canonical)
       if (!workspace) return emptyChannels()
-      this.channels.remove(this.localDatabase, workspace.id, provider)
-      return channelsFromRows(this.channels.listForWorkspace(this.localDatabase, workspace.id))
+      this.channels.remove(this.localDatabase, workspace.id)
+      return emptyChannels()
     })()
   }
 }
 
-type ChannelRow = Awaited<ReturnType<WorkspaceSyncChannelRepository['listForWorkspace']>>[number]
+type ChannelRow = ReturnType<WorkspaceSyncChannelRepository['findForWorkspace']>
 
-const channelValues = (workspaceId: number, channel: WorkspaceSyncChannel) =>
-  channel.provider === 'git'
+const channelValues = (workspaceId: number, channel: WorkspaceSyncChannel) => ({
+  workspace_id: workspaceId,
+  profile_id: channel.profileId,
+  remote_root: channel.remoteRoot,
+  auto_sync: booleanInteger(channel.autoSync),
+})
+
+const channelsFromRow = (row: ChannelRow): WorkspaceSyncChannels => ({
+  webdav: row
     ? {
-        workspace_id: workspaceId,
-        provider: channel.provider,
-        remote: channel.remote,
-        branch: channel.branch ?? null,
-        auto_fetch: booleanInteger(channel.autoFetch),
-        profile_id: null,
-        remote_root: null,
-        auto_sync: null,
+        provider: 'webdav',
+        profileId: row.profile_id,
+        remoteRoot: row.remote_root,
+        autoSync: Boolean(row.auto_sync),
       }
-    : {
-        workspace_id: workspaceId,
-        provider: channel.provider,
-        remote: null,
-        branch: null,
-        auto_fetch: null,
-        profile_id: channel.profileId,
-        remote_root: channel.remoteRoot,
-        auto_sync: booleanInteger(channel.autoSync),
-      }
-
-const channelsFromRows = (rows: ChannelRow[]): WorkspaceSyncChannels => {
-  const channels = emptyChannels()
-  rows.forEach((row) => assignChannel(channels, row))
-  return channels
-}
-
-const assignChannel = (channels: WorkspaceSyncChannels, row: ChannelRow): void => {
-  if (row.provider === 'git' && row.remote && row.auto_fetch !== null) {
-    channels.git = {
-      provider: 'git',
-      remote: row.remote,
-      ...(row.branch ? { branch: row.branch } : {}),
-      autoFetch: Boolean(row.auto_fetch),
-    }
-  }
-  if (row.provider === 'webdav' && row.profile_id && row.remote_root && row.auto_sync !== null) {
-    channels.webdav = {
-      provider: 'webdav',
-      profileId: row.profile_id,
-      remoteRoot: row.remote_root,
-      autoSync: Boolean(row.auto_sync),
-    }
-  }
-}
+    : null,
+})
 
 const parseChannel = (value: WorkspaceSyncChannel): WorkspaceSyncChannel => {
   const channel = workspaceSyncChannelSchema.parse(value)
-  if (channel.provider === 'webdav') validateRemoteRoot(channel.remoteRoot)
-  if (channel.provider === 'git') {
-    validateRemoteName(channel.remote)
-    if (channel.branch) validateBranchName(channel.branch)
-  }
+  validateRemoteRoot(channel.remoteRoot)
   return channel
 }
 
@@ -206,11 +145,11 @@ const rejectControlCharacters = (value: string): void => {
 }
 
 const booleanInteger = (value: boolean): 0 | 1 => (value ? 1 : 0)
-const emptyChannels = (): WorkspaceSyncChannels => ({ git: null, webdav: null })
+const emptyChannels = (): WorkspaceSyncChannels => ({ webdav: null })
 
 const parseDeviceId = (valueJson: string): string => {
   try {
-    return z.string().uuid().parse(JSON.parse(valueJson))
+    return z.uuid().parse(JSON.parse(valueJson))
   } catch (error) {
     throw new Error('Workspace sync device identity could not be read', { cause: error })
   }

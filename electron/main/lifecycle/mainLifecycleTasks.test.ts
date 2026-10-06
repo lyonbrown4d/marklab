@@ -51,6 +51,13 @@ describe('main lifecycle tasks', () => {
         order: 30,
         phase: 'services',
       },
+      {
+        critical: true,
+        dependencies: ['knowledge-engine', 'local-history'],
+        name: 'workspace-registry',
+        order: 40,
+        phase: 'services',
+      },
     ])
   })
 
@@ -66,6 +73,7 @@ describe('main lifecycle tasks', () => {
     expect(dependencies.knowledgeEngineService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.dispose).toHaveBeenCalledOnce()
+    expect(dependencies.workspaceRegistry.disposeAll).toHaveBeenCalledOnce()
     expect(dependencies.linkPreviewService.dispose).toHaveBeenCalledOnce()
     expect(dependencies.knowledgeEngineService.dispose).toHaveBeenCalledOnce()
     expect(dependencies.localDatabaseService.close).toHaveBeenCalledOnce()
@@ -99,12 +107,14 @@ const createDependencies = () => {
     initialize: vi.fn(async () => undefined),
   }
   const settingsStore = { id: 'settings' }
+  const workspaceRegistry = { disposeAll: vi.fn(async () => undefined) }
   return {
     configureSettingsStore: vi.fn(),
     getKnowledgeEngineService: vi.fn(() => knowledgeEngineService),
     getLinkPreviewService: vi.fn(() => linkPreviewService),
     getLocalHistoryService: vi.fn(() => localHistoryService),
     getSettingsStore: vi.fn(() => settingsStore),
+    getWorkspaceRegistry: vi.fn(() => workspaceRegistry),
     knowledgeEngineService,
     linkPreviewService,
     localDatabaseService: {
@@ -113,5 +123,6 @@ const createDependencies = () => {
     },
     localHistoryService,
     settingsStore,
+    workspaceRegistry,
   }
 }

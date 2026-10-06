@@ -93,9 +93,9 @@ describe('createTableOperations', () => {
 })
 
 describe('isImeCompositionEvent', () => {
-  it('recognizes modern and legacy IME composition keyboard events', () => {
-    expect(isImeCompositionEvent({ isComposing: true, which: 0 })).toBe(true)
-    expect(isImeCompositionEvent({ isComposing: false, which: 229 })).toBe(true)
-    expect(isImeCompositionEvent({ isComposing: false, which: 13 })).toBe(false)
+  it('recognizes native composition state and the IME Process key', () => {
+    expect(isImeCompositionEvent({ isComposing: true, key: 'Enter' })).toBe(true)
+    expect(isImeCompositionEvent({ isComposing: false, key: 'Process' })).toBe(true)
+    expect(isImeCompositionEvent({ isComposing: false, key: 'Enter' })).toBe(false)
   })
 })

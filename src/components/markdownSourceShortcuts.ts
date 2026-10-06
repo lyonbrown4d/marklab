@@ -12,6 +12,7 @@ import {
   type ShortcutBindings,
   type ShortcutPlatform,
 } from '@/logic/shortcuts'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 type MarkdownSourceShortcutOptions = {
   editor: MonacoEditor.IStandaloneCodeEditor
@@ -63,12 +64,7 @@ export const registerMarkdownSourceShortcuts = ({
   )
   const keydown = editor.onKeyDown((event) => {
     const keyboardEvent = event.browserEvent
-    if (
-      keyboardEvent.defaultPrevented ||
-      keyboardEvent.isComposing ||
-      keyboardEvent.keyCode === 229
-    )
-      return
+    if (keyboardEvent.defaultPrevented || isImeKeyboardEvent(keyboardEvent)) return
 
     const match = resolved.bindings.find(({ hotkey }) =>
       matchesKeyboardEvent(keyboardEvent, hotkey, resolved.platform),

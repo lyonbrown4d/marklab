@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import type { NodeApi } from 'react-arborist'
 import type { FileTreeNode } from '@/logic/fileTree'
+import { isImeKeyboardEvent } from '@/logic/ime'
 type InlineRenameFieldProps = {
   node: NodeApi<FileTreeNode>
   label?: string
@@ -59,11 +60,7 @@ export const InlineRenameField = ({ node, label }: InlineRenameFieldProps) => {
         onPointerDown={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           event.stopPropagation()
-          if (
-            isComposingRef.current ||
-            event.nativeEvent.isComposing ||
-            event.nativeEvent.keyCode === 229
-          ) {
+          if (isComposingRef.current || isImeKeyboardEvent(event.nativeEvent)) {
             return
           }
           if (event.key === 'Escape') {

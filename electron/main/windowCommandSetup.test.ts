@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createAppWindowCommandHandlers } from '@electron/main/windowCommands'
 import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands'
+import { noopLogger } from '@electron/services/logger'
+import type { MarklabWindowPool } from '@electron/windowPool'
 
 const commandHandlers = vi.hoisted(() => ({
   open_path_in_current_window: vi.fn(),
@@ -28,12 +30,19 @@ const createHarness = (primary: BrowserWindow | null) => {
   const root = { kind: 'external' as const, path: '/workspace' }
   const rootInfoForWindow = vi.fn(() => root)
   const options = {
-    getContainer: () => ({ cradle: { workspaceRegistry: { rootInfoForWindow } } }),
+    getServices: () => ({
+      logger: noopLogger,
+      workspaceRegistry: {
+        registerWindow: vi.fn(),
+        rootInfoForWindow,
+        sessionKeyForWindow: vi.fn(() => 'test-session'),
+      },
+    }),
     getNativeIpc: () => null,
     getPrimaryWindow: () => primary,
-    getWindowPool: vi.fn(),
+    getWindowPool: () => ({}) as MarklabWindowPool,
     installManagedMainWindowLifecycle: vi.fn(),
-  } as unknown as Parameters<typeof createWindowCommandSetup>[0]
+  } satisfies Parameters<typeof createWindowCommandSetup>[0]
   createWindowCommandSetup(options)
   const dependencies = vi.mocked(createAppWindowCommandHandlers).mock.calls[0][0]
   return { dependencies, root, rootInfoForWindow }
@@ -49,12 +58,19 @@ beforeEach(() => {
 describe('window command workspace selection', () => {
   it('routes native paths according to the requested window disposition', async () => {
     const setup = createWindowCommandSetup({
-      getContainer: () => ({ cradle: {} }),
+      getServices: () => ({
+        logger: noopLogger,
+        workspaceRegistry: {
+          registerWindow: vi.fn(),
+          rootInfoForWindow: vi.fn(),
+          sessionKeyForWindow: vi.fn(() => 'test-session'),
+        },
+      }),
       getNativeIpc: () => null,
       getPrimaryWindow: () => createWindow(),
-      getWindowPool: vi.fn(),
+      getWindowPool: () => ({}) as MarklabWindowPool,
       installManagedMainWindowLifecycle: vi.fn(),
-    } as never)
+    })
 
     await setup.openSystemPath('C:/notes/current.md', 'current')
     await setup.openSystemPath('C:/notes/new.md', 'new')

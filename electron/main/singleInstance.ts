@@ -1,5 +1,4 @@
 import { app, type BrowserWindow } from 'electron'
-import type { ElectronContainer } from '@electron/container'
 import {
   createSingleInstancePayload,
   launchInfo,
@@ -9,6 +8,7 @@ import {
 } from '@electron/main/deepLinks'
 import { resolveExistingOpenTargets } from '@electron/main/openTargets'
 import type { RuntimeEventQueue } from '@electron/main/runtimeEvents'
+import type { Logger } from '@electron/services/logger'
 import type { DeepLinkPayload } from '@electron/types'
 
 type SingleInstanceOptions = Pick<
@@ -16,8 +16,11 @@ type SingleInstanceOptions = Pick<
   'queueDeepLinkPayload' | 'queueOrSendRuntimeEvent'
 > & {
   bootstrap: () => Promise<void>
-  getContainer: () => ElectronContainer
-  getMainWindow: () => BrowserWindow | null
+  getLogger: () => Logger
+  getMainWindow: () => Pick<
+    BrowserWindow,
+    'focus' | 'isDestroyed' | 'isMinimized' | 'restore'
+  > | null
   openSystemPath: (path: string, disposition: NativeOpenDisposition) => Promise<unknown>
   showMainWindow: () => void
 }
@@ -50,7 +53,7 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
       bootstrapPromise = options
         .bootstrap()
         .catch((error) => {
-          options.getContainer().cradle.logger.error('bootstrap failed', { error, reason })
+          options.getLogger().error('bootstrap failed', { error, reason })
           throw error
         })
         .finally(() => {
@@ -73,7 +76,7 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
     void options
       .openSystemPath(next.path, next.disposition)
       .catch((error) => {
-        options.getContainer().cradle.logger.warn('native open target failed', {
+        options.getLogger().warn('native open target failed', {
           error,
           target: next.path,
         })
@@ -106,7 +109,7 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
     void resolveExistingOpenTargets(args, cwd)
       .then((targets) => queueOpenTargets(targets, preferPrimaryWindow))
       .catch((error) => {
-        options.getContainer().cradle.logger.warn('native open target resolution failed', { error })
+        options.getLogger().warn('native open target resolution failed', { error })
       })
   }
 
@@ -119,27 +122,27 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
 
   app.on('open-url', (event, url) => {
     event.preventDefault()
-    options.getContainer().cradle.logger.info('deep link received from open-url')
+    options.getLogger().info('deep link received from open-url')
     publishDeepLinkUrl(url, 'open-url', queueDeepLinkPayload)
     focusOrBootstrap('open-url')
   })
 
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    options.getContainer().cradle.logger.info('native file open received')
+    options.getLogger().info('native file open received')
     queueOpenTargets([filePath], !app.isReady())
   })
 
   if (!app.requestSingleInstanceLock()) {
-    options.getContainer().cradle.logger.warn('single instance lock unavailable, quitting')
+    options.getLogger().warn('single instance lock unavailable, quitting')
     app.quit()
     return
   }
 
-  registerDeepLinkProtocol(options.getContainer().cradle.logger.child('deep-link'))
+  registerDeepLinkProtocol(options.getLogger().child('deep-link'))
 
   app.on('second-instance', (_event, commandLine, workingDirectory) => {
-    options.getContainer().cradle.logger.info('second instance received')
+    options.getLogger().info('second instance received')
     const payload = createSingleInstancePayload(commandLine, workingDirectory)
     focusOrBootstrap('second-instance')
     options.queueOrSendRuntimeEvent({ eventName: 'single-instance', payload })

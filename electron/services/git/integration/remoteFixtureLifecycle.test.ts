@@ -10,7 +10,7 @@ import {
   type RemoteFixture,
 } from '@electron/services/git/testSupport'
 
-describe('Git remote fixture lifecycle', () => {
+describe('Git remote test fixture lifecycle', () => {
   it('removes its temporary root when repository creation fails', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-git-remote-'))
     const commandFailure = new Error('git failed')

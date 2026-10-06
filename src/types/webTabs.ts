@@ -5,8 +5,8 @@ const webTabIdSchema = z
   .min(1)
   .max(128)
   .regex(/^[A-Za-z0-9._:-]+$/)
-const coordinateSchema = z.number().int().finite()
-const dimensionSchema = z.number().int().finite().positive()
+const coordinateSchema = z.number().int()
+const dimensionSchema = z.number().int().positive()
 
 export const webTabBoundsSchema = z.object({
   height: dimensionSchema,

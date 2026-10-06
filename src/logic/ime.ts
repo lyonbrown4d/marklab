@@ -1,4 +1,4 @@
-type ImeKeyboardEvent = Pick<KeyboardEvent, 'isComposing' | 'keyCode'>
+type ImeKeyboardEvent = Pick<KeyboardEvent, 'isComposing' | 'key'>
 
 export const isImeKeyboardEvent = (event: ImeKeyboardEvent) =>
-  event.isComposing || event.keyCode === 229
+  event.isComposing || event.key === 'Process'

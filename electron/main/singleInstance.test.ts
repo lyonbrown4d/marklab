@@ -49,14 +49,7 @@ vi.mock('@electron/main/openTargets', () => ({
 
 import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance'
 
-type FakeWindow = {
-  focus: ReturnType<typeof vi.fn>
-  isDestroyed: ReturnType<typeof vi.fn>
-  isMinimized: ReturnType<typeof vi.fn>
-  restore: ReturnType<typeof vi.fn>
-}
-
-const createWindow = (): FakeWindow => ({
+const createWindow = () => ({
   focus: vi.fn(),
   isDestroyed: vi.fn(() => false),
   isMinimized: vi.fn(() => false),
@@ -64,7 +57,7 @@ const createWindow = (): FakeWindow => ({
 })
 
 const createHarness = () => {
-  let mainWindow: FakeWindow | null = null
+  let mainWindow: ReturnType<typeof createWindow> | null = null
   const openSystemPath = vi.fn(async () => ({ ok: true }))
   const bootstrap = vi.fn(async () => {
     electronState.setReady(true)
@@ -72,14 +65,15 @@ const createHarness = () => {
   })
   const logger = {
     child: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
   }
   logger.child.mockReturnValue(logger)
-  const options = {
+  const options: Parameters<typeof installSingleInstanceAndDeepLinks>[0] = {
     bootstrap,
-    getContainer: () => ({ cradle: { logger } }),
+    getLogger: () => logger,
     getMainWindow: () => mainWindow,
     openSystemPath,
     queueDeepLinkPayload: vi.fn(),
@@ -107,7 +101,7 @@ describe('single instance native file opening', () => {
     launchState.args = ['C:\\notes\\one.md', 'C:\\notes\\two.markdown']
     const harness = createHarness()
 
-    installSingleInstanceAndDeepLinks(harness.options as never)
+    installSingleInstanceAndDeepLinks(harness.options)
     await vi.waitFor(() => expect(harness.openSystemPath).toHaveBeenCalledTimes(2))
 
     expect(harness.openSystemPath.mock.calls).toEqual([
@@ -118,7 +112,7 @@ describe('single instance native file opening', () => {
 
   it('opens a second-instance file in a new isolated window', async () => {
     const harness = createHarness()
-    installSingleInstanceAndDeepLinks(harness.options as never)
+    installSingleInstanceAndDeepLinks(harness.options)
     await vi.waitFor(() => expect(harness.bootstrap).toHaveBeenCalledOnce())
 
     electronState.emit('second-instance', {}, ['C:\\notes\\second.md'], 'C:\\notes')
@@ -137,7 +131,7 @@ describe('single instance native file opening', () => {
     const harness = createHarness()
     harness.options.bootstrap = vi.fn(() => bootstrapPromise)
 
-    installSingleInstanceAndDeepLinks(harness.options as never)
+    installSingleInstanceAndDeepLinks(harness.options)
     await settle()
 
     expect(harness.options.bootstrap).toHaveBeenCalledOnce()

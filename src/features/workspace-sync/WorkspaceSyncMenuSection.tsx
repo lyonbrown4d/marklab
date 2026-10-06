@@ -1,5 +1,4 @@
-import { Cloud, GitBranch, RotateCw, Settings2, Unlink } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Cloud, RotateCw, Settings2, Unlink } from 'lucide-react'
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -7,11 +6,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import { menuItemStyles } from '@/components/overlay/overlayStyles'
-import {
-  useGitSummary,
-  useRemoveSyncChannel,
-  useSyncChannels,
-} from '@/features/workspace-sync/syncQueries'
+import { useRemoveSyncChannel, useSyncChannels } from '@/features/workspace-sync/syncQueries'
 import { useI18n } from '@/i18n/useI18n'
 
 type WorkspaceSyncMenuSectionProps = {
@@ -30,7 +25,6 @@ export const WorkspaceSyncMenuSection = ({
   const { t } = useI18n()
   const enabled = rootKind !== 'single' && Boolean(rootPath)
   const channels = useSyncChannels(rootPath, enabled)
-  const git = useGitSummary(rootPath, enabled)
   const removeChannel = useRemoveSyncChannel(rootPath)
 
   if (!enabled) {
@@ -42,10 +36,9 @@ export const WorkspaceSyncMenuSection = ({
     )
   }
 
-  const busy = channels.isLoading || git.isLoading
-  const gitSummary = git.data
+  const busy = channels.isLoading
   const webdavChannel = channels.data?.webdav
-  const loadFailed = channels.isError || git.isError
+  const loadFailed = channels.isError
 
   return (
     <>
@@ -63,7 +56,7 @@ export const WorkspaceSyncMenuSection = ({
             className={itemClassName}
             onSelect={(event) => {
               event.preventDefault()
-              void Promise.all([channels.refetch(), git.refetch()])
+              void channels.refetch()
             }}
           >
             <RotateCw aria-hidden="true" />
@@ -76,40 +69,6 @@ export const WorkspaceSyncMenuSection = ({
           </DropdownMenuItem>
         ) : (
           <>
-            {gitSummary?.status === 'error' ? (
-              <DropdownMenuItem
-                className={itemClassName}
-                aria-label={t('sync.git.retry')}
-                onSelect={(event) => {
-                  event.preventDefault()
-                  void git.refetch()
-                }}
-              >
-                <GitBranch aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium">{t('sync.channel.git')}</span>
-                  <span className="block truncate text-[11px] text-destructive">
-                    {t('sync.git.detectionFailed')}
-                  </span>
-                </span>
-                <RotateCw aria-hidden="true" />
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem disabled className={itemClassName}>
-                <GitBranch aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium">{t('sync.channel.git')}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {gitSummary?.status === 'ready'
-                      ? (gitSummary.branch ?? t('scm.noBranch'))
-                      : t('sync.git.notRepository')}
-                  </span>
-                </span>
-                {gitSummary?.status === 'ready' ? (
-                  <Badge variant="outline">{t('sync.git.detected')}</Badge>
-                ) : null}
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               className={itemClassName}
               aria-label={`${t('sync.binding.configure')}: ${webdavChannel?.remoteRoot ?? t('sync.webdav.notBound')}`}
@@ -130,7 +89,7 @@ export const WorkspaceSyncMenuSection = ({
                 disabled={removeChannel.isPending}
                 onSelect={(event) => {
                   event.preventDefault()
-                  removeChannel.mutate('webdav')
+                  removeChannel.mutate()
                 }}
               >
                 <Unlink aria-hidden="true" />
@@ -141,7 +100,7 @@ export const WorkspaceSyncMenuSection = ({
         )}
       </DropdownMenuGroup>
       <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal leading-4 text-muted-foreground">
-        {removeChannel.isError ? t('sync.menu.updateFailed') : t('sync.menu.independentChannels')}
+        {removeChannel.isError ? t('sync.menu.updateFailed') : t('sync.menu.webdavOnly')}
       </DropdownMenuLabel>
     </>
   )

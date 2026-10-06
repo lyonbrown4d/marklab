@@ -54,6 +54,16 @@ describe('WorkspaceSyncSettingsPage', () => {
     expect(await screen.findByText('sync.settings.testSucceeded')).toBeInTheDocument()
   })
 
+  it('does not present Git as workspace sync configuration', async () => {
+    vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([])
+
+    renderPage()
+
+    await screen.findByText('sync.settings.noConnections')
+    expect(screen.queryByText('sync.settings.gitEnvironment')).not.toBeInTheDocument()
+    expect(screen.queryByText('sync.settings.gitCredentialNote')).not.toBeInTheDocument()
+  })
+
   it('shows an actionable error when profiles cannot load', async () => {
     vi.mocked(workspaceSyncApi.listWebDavProfiles).mockRejectedValue(new Error('offline'))
     renderPage()

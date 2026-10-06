@@ -11,7 +11,6 @@ let progressHandler: ((event: WorkspaceSyncProgressEvent) => void) | undefined
 vi.mock('@/services/workspaceSyncApi', () => ({
   workspaceSyncApi: {
     getChannels: vi.fn(),
-    getGitSummary: vi.fn(),
     listWebDavProfiles: vi.fn(),
     onProgress: vi.fn((handler) => {
       progressHandler = handler
@@ -33,10 +32,8 @@ describe('useWorkspaceSyncStatus', () => {
     vi.clearAllMocks()
     progressHandler = undefined
     vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({
-      git: null,
       webdav: { provider: 'webdav', profileId: 'cloud', remoteRoot: '/', autoSync: false },
     })
-    vi.mocked(workspaceSyncApi.getGitSummary).mockResolvedValue({ status: 'not_repository' })
     vi.mocked(workspaceSyncApi.listWebDavProfiles).mockResolvedValue([])
     vi.mocked(workspaceSyncApi.start).mockImplementation(() => new Promise(() => undefined))
   })
@@ -229,18 +226,5 @@ describe('useWorkspaceSyncStatus', () => {
 
     expect(result.current.webdav.status).toBe('syncing')
     expect(result.current.cancelPending).toBe(false)
-  })
-
-  it('exposes Git summary query errors separately with a retry action', async () => {
-    vi.mocked(workspaceSyncApi.getGitSummary).mockRejectedValueOnce(new Error('git unavailable'))
-    const { result } = renderHook(
-      () => useWorkspaceSyncStatus({ rootKind: 'external', rootPath: 'C:/one' }),
-      { wrapper },
-    )
-    await waitFor(() => expect(result.current.git.status).toBe('error'))
-
-    vi.mocked(workspaceSyncApi.getGitSummary).mockResolvedValueOnce({ status: 'not_repository' })
-    await act(async () => result.current.onRetryGit())
-    await waitFor(() => expect(result.current.git.status).toBe('not_repository'))
   })
 })

@@ -2,10 +2,8 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 
 import { nativeIpcChannels } from '@electron/channels'
-import type { GitService } from '@electron/services/git/service'
 import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
 import { webDavProfileInputSchema } from '@electron/services/sync/webdav/profileSchemas'
-import { readWorkspaceGitSummary } from '@electron/services/sync/workspaceGitSummary'
 import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/types'
 import {
   workspaceSyncChannelSchema,
@@ -17,7 +15,6 @@ import type { WorkspaceSyncStartOutcome } from '@/types/workspaceSync'
 
 type WorkspaceSyncIpcDependencies = {
   configStore: WorkspaceSyncConfigStore
-  gitService: GitService
   profileStore: WebDavProfileStoreContract
   syncService: WorkspaceWebDavSyncService
   workspaceMutationCoordinator: Pick<WorkspaceSyncCoordinator, 'runConfigurationMutation'>
@@ -25,9 +22,9 @@ type WorkspaceSyncIpcDependencies = {
 }
 
 const profileIdSchema = z.object({ id: z.string().trim().min(1).max(128) }).strict()
+const noPayloadSchema = z.undefined()
 const syncStartSchema = z.object({ requestId: z.uuid() }).strict()
 const syncCancelSchema = z.object({ requestId: z.uuid() }).strict()
-const syncProviderSchema = z.object({ provider: z.enum(['git', 'webdav']) }).strict()
 
 export const registerWorkspaceSyncIpc = (
   ipcMain: IpcMain,
@@ -59,9 +56,10 @@ export const registerWorkspaceSyncIpc = (
     const { id } = profileIdSchema.parse(payload)
     return dependencies.syncService.testConnection(id)
   })
-  ipcMain.handle(nativeIpcChannels.syncChannelsGet, (event) =>
-    dependencies.configStore.getChannels(rootFor(event)),
-  )
+  ipcMain.handle(nativeIpcChannels.syncChannelsGet, (event, payload: unknown) => {
+    noPayloadSchema.parse(payload)
+    return dependencies.configStore.getChannels(rootFor(event))
+  })
   ipcMain.handle(nativeIpcChannels.syncChannelSet, async (event, payload: unknown) => {
     const channel = workspaceSyncChannelSchema.parse(payload)
     const root = rootFor(event)
@@ -76,15 +74,12 @@ export const registerWorkspaceSyncIpc = (
     })
   })
   ipcMain.handle(nativeIpcChannels.syncChannelRemove, async (event, payload: unknown) => {
-    const { provider } = syncProviderSchema.parse(payload)
+    noPayloadSchema.parse(payload)
     const root = rootFor(event)
     return dependencies.workspaceMutationCoordinator.runConfigurationMutation(() =>
-      dependencies.configStore.removeChannel(root, provider),
+      dependencies.configStore.removeChannel(root),
     )
   })
-  ipcMain.handle(nativeIpcChannels.syncGitSummary, (event) =>
-    readWorkspaceGitSummary(dependencies.gitService, rootFor(event)),
-  )
   ipcMain.handle(nativeIpcChannels.syncStart, async (event, payload: unknown) => {
     const { requestId } = syncStartSchema.parse(payload)
     const workspace = workspaceFor(event)
