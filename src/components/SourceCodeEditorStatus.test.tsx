@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
+import SourceCodeEditor from '@/components/SourceCodeEditor'
 import { configureMonaco } from '@/lib/monaco'
 
 vi.mock('@/lib/monaco', () => ({
@@ -42,11 +42,11 @@ beforeEach(() => {
   vi.mocked(configureMonaco).mockReset()
 })
 
-describe('MarkdownSourceEditor status states', () => {
+describe('SourceCodeEditor status states', () => {
   it('uses a localized source editor loading state', () => {
     vi.mocked(configureMonaco).mockReturnValueOnce(new Promise<MonacoConfig>(() => {}))
 
-    render(<MarkdownSourceEditor {...props} />)
+    render(<SourceCodeEditor {...props} />)
 
     const status = screen.getByRole('status', { name: 'Loading source editor...' })
     expect(status).toHaveAttribute('aria-busy', 'true')
@@ -57,7 +57,7 @@ describe('MarkdownSourceEditor status states', () => {
   it('uses a localized source editor failure state', async () => {
     vi.mocked(configureMonaco).mockRejectedValueOnce(new Error('network unavailable'))
 
-    render(<MarkdownSourceEditor {...props} />)
+    render(<SourceCodeEditor {...props} />)
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Failed to load source editor: network unavailable')

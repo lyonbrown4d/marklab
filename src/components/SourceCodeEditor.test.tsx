@@ -1,6 +1,6 @@
 import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
+import SourceCodeEditor from '@/components/SourceCodeEditor'
 import { configureMonaco } from '@/lib/monaco'
 import type { CompletionMock, SymbolMock } from '@/components/sourceEditorTestTypes'
 
@@ -28,10 +28,7 @@ const monacoEditor = vi.hoisted(() => ({
 
 const monaco = vi.hoisted(() => ({
   editor: {
-    MarkerSeverity: {
-      Error: 1,
-      Warning: 2,
-    },
+    MarkerSeverity: { Error: 1, Warning: 2 },
     setModelMarkers: vi.fn(),
   },
   Range: class Range {
@@ -53,14 +50,8 @@ const monaco = vi.hoisted(() => ({
     }
   },
   languages: {
-    CompletionItemKind: {
-      File: 1,
-      Reference: 2,
-      Keyword: 3,
-    },
-    SymbolKind: {
-      String: 1,
-    },
+    CompletionItemKind: { File: 1, Reference: 2, Keyword: 3 },
+    SymbolKind: { String: 1 },
     registerCompletionItemProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerDocumentSymbolProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerReferenceProvider: vi.fn(() => ({ dispose: vi.fn() })),
@@ -68,10 +59,7 @@ const monaco = vi.hoisted(() => ({
     registerRenameProvider: vi.fn(() => ({ dispose: vi.fn() })),
     registerCodeActionProvider: vi.fn(() => ({ dispose: vi.fn() })),
   },
-  MarkerSeverity: {
-    Error: 1,
-    Warning: 2,
-  },
+  MarkerSeverity: { Error: 1, Warning: 2 },
 }))
 
 vi.mock('@/lib/monaco', () => ({
@@ -155,10 +143,10 @@ beforeEach(() => {
   sourceShortcutMock.register.mockClear()
 })
 
-describe('MarkdownSourceEditor', () => {
+describe('SourceCodeEditor', () => {
   it('registers the shared configurable formatting shortcuts with Monaco', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="notes/current.md"
         value="Alpha"
         files={[]}
@@ -176,7 +164,7 @@ describe('MarkdownSourceEditor', () => {
 
   it('registers workspace-aware markdown completions', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="notes/current.md"
         value="See [Target]("
         files={[
@@ -217,7 +205,7 @@ describe('MarkdownSourceEditor', () => {
 
   it('publishes link diagnostics for missing targets', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="notes/current.md"
         value="See [Missing](missing.md) and [Bad Heading](target.md#unknown)\n[[Unknown]]"
         files={[
@@ -272,7 +260,7 @@ describe('MarkdownSourceEditor', () => {
 
   it('registers markdown document symbols for the source outline', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="notes/current.md"
         value="# Project\n\n## Plan"
         files={[{ path: 'notes/current.md', kind: 'file' }]}

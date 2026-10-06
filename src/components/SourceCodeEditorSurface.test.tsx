@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
+import { SourceCodeEditorSurface } from '@/components/SourceCodeEditorSurface'
 
 const editorMock = vi.hoisted(() => ({
+  language: undefined as string | undefined,
   onContextMenuAction: vi.fn(),
   options: undefined as
     | {
@@ -16,7 +17,8 @@ const editorMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@monaco-editor/react', () => ({
-  default: ({ options }: { options?: typeof editorMock.options }) => {
+  default: ({ language, options }: { language?: string; options?: typeof editorMock.options }) => {
+    editorMock.language = language
     editorMock.options = options
     return <textarea aria-label="markdown source" />
   },
@@ -26,10 +28,11 @@ const renderSurface = (
   sourceCodeMiniMapEnabled: boolean,
   readOnly = false,
   shortcutOverrides = {},
+  activePath = 'notes/current.md',
 ) =>
   render(
-    <MarkdownSourceEditorSurface
-      activePath="notes/current.md"
+    <SourceCodeEditorSurface
+      activePath={activePath}
       darkMode={false}
       errorMessage={null}
       immersiveFocusMode={false}
@@ -52,7 +55,52 @@ const renderSurface = (
     />,
   )
 
-describe('MarkdownSourceEditorSurface', () => {
+describe('SourceCodeEditorSurface', () => {
+  it('selects the Monaco language from the active source path', () => {
+    const view = renderSurface(false, false, {}, 'src/example.ts')
+    expect(editorMock.language).toBe('typescript')
+
+    view.rerender(
+      <SourceCodeEditorSurface
+        activePath="notes/current.md"
+        darkMode={false}
+        errorMessage={null}
+        immersiveFocusMode={false}
+        immersiveTypewriterMode={false}
+        immersiveZenMode={false}
+        loadingLabel="Loading source editor..."
+        monacoReady
+        motionAnimatedCursor={false}
+        motionSmoothScrolling={false}
+        sourceCodeMiniMapEnabled={false}
+        value="# Current"
+        onChange={vi.fn()}
+        onMount={vi.fn()}
+      />,
+    )
+    expect(editorMock.language).toBe('markdown')
+
+    view.rerender(
+      <SourceCodeEditorSurface
+        activePath="src/native.c"
+        darkMode={false}
+        errorMessage={null}
+        immersiveFocusMode={false}
+        immersiveTypewriterMode={false}
+        immersiveZenMode={false}
+        loadingLabel="Loading source editor..."
+        monacoReady
+        motionAnimatedCursor={false}
+        motionSmoothScrolling={false}
+        sourceCodeMiniMapEnabled={false}
+        value="int main(void) {}"
+        onChange={vi.fn()}
+        onMount={vi.fn()}
+      />,
+    )
+    expect(editorMock.language).toBe('plaintext')
+  })
+
   it('passes the source editor minimap preference to Monaco', () => {
     renderSurface(true)
     expect(screen.getByLabelText('markdown source')).toBeInTheDocument()
@@ -74,6 +122,15 @@ describe('MarkdownSourceEditorSurface', () => {
     expect(editorMock.onContextMenuAction).toHaveBeenCalledWith('inlineCode')
   })
 
+  it('keeps generic context actions but hides Markdown formatting for source files', () => {
+    renderSurface(false, false, {}, 'src/example.ts')
+
+    fireEvent.contextMenu(screen.getByLabelText('markdown source'))
+
+    expect(screen.getByRole('menuitem', { name: /Copy/ })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Inline code/ })).not.toBeInTheDocument()
+  })
+
   it('shows the configured source editor shortcuts in the shared context menu', () => {
     renderSurface(false, false, { 'editor.inlineCode': ['F8'] })
 
@@ -87,9 +144,7 @@ describe('MarkdownSourceEditorSurface', () => {
 
     expect(editorMock.options?.readOnly).toBe(true)
     expect(editorMock.options?.domReadOnly).toBe(true)
-    expect(container.querySelector('.markdown-source-editor')).toHaveClass('is-readonly-editor')
-    expect(container.querySelector('.markdown-source-editor')).not.toHaveClass(
-      'is-typewriter-editor',
-    )
+    expect(container.querySelector('.source-code-editor')).toHaveClass('is-readonly-editor')
+    expect(container.querySelector('.source-code-editor')).not.toHaveClass('is-typewriter-editor')
   })
 })

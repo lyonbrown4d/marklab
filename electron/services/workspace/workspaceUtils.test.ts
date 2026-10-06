@@ -98,6 +98,25 @@ describe('listWorkspaceEntries', () => {
       'vendor-notes/review.md',
     ])
   })
+
+  it('includes only allowlisted source dotfiles while keeping hidden directories excluded', async () => {
+    const root = await createTempRoot()
+    await fs.writeFile(path.join(root, '.editorconfig'), 'root = true')
+    await fs.writeFile(path.join(root, '.gitignore'), 'dist')
+    await fs.writeFile(path.join(root, '.npmrc'), 'engine-strict=true')
+    await fs.writeFile(path.join(root, '.env'), 'SECRET=value')
+    await fs.mkdir(path.join(root, '.hidden'))
+    await fs.writeFile(path.join(root, '.hidden', '.editorconfig'), 'root = true')
+
+    const snapshot = await listWorkspacePathSnapshot(createWorkspaceState(root))
+
+    expect(snapshot.entries).toEqual([
+      { kind: 'file', name: '.editorconfig', path: '.editorconfig' },
+      { kind: 'file', name: '.gitignore', path: '.gitignore' },
+      { kind: 'file', name: '.npmrc', path: '.npmrc' },
+    ])
+    expect(snapshot.knownPaths.paths).toEqual(['.editorconfig', '.gitignore', '.npmrc'])
+  })
 })
 
 describe('isIgnoredWorkspaceDirectory', () => {

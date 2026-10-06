@@ -4,7 +4,7 @@ import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus, type EditorCursorPosition } from '@/components/EditorDocumentStatus'
-const MarkdownSourceEditor = lazy(() => import('@/components/MarkdownSourceEditor'))
+const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
 type SourceCodePageProps = {
   activePath: string | null
   value: string
@@ -54,7 +54,7 @@ const SourceCodePage = ({
         <div className="editor-paper relative h-full w-full overflow-hidden">
           <div className="motion-view h-full">
             <Suspense fallback={<EditorPaneFallback />}>
-              <MarkdownSourceEditor
+              <SourceCodeEditor
                 activePath={activePath}
                 value={value}
                 files={files}

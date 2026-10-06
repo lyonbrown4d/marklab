@@ -20,7 +20,7 @@ export const preloadSourceEditor = () => {
   sourceEditorPreload ??= resetOnFailure(
     Promise.all([
       import('@/pages/SourceCodePage'),
-      import('@/components/MarkdownSourceEditor'),
+      import('@/components/SourceCodeEditor'),
       import('@/lib/monaco').then(({ configureMonaco }) => configureMonaco()),
     ]),
     () => {

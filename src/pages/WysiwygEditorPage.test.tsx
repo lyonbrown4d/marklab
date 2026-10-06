@@ -24,6 +24,18 @@ vi.mock('@/components/MarkdownEditor', () => ({
         <button type="button" onClick={() => onWorkspaceLink?.('missing-page', 'notes/current.md')}>
           Open missing
         </button>
+        <button
+          type="button"
+          onClick={() => onWorkspaceLink?.('../src/example.ts', 'notes/current.md')}
+        >
+          Open source
+        </button>
+        <button
+          type="button"
+          onClick={() => onWorkspaceLink?.('../docs/spec.pdf', 'notes/current.md')}
+        >
+          Open PDF
+        </button>
       </>
     )
   }),
@@ -34,9 +46,12 @@ import WysiwygEditorPage from '@/pages/WysiwygEditorPage'
 describe('WysiwygEditorPage workspace links', () => {
   it('opens an indexed extensionless Markdown target and ignores a missing target', async () => {
     const onOpenFile = vi.fn()
+    const onOpenFileView = vi.fn()
     const files = [
       { kind: 'file' as const, path: 'notes/current.md' },
       { kind: 'file' as const, path: 'notes/architecture-overview.md' },
+      { kind: 'file' as const, path: 'src/example.ts' },
+      { kind: 'file' as const, path: 'docs/spec.pdf' },
     ]
     const workspaceIndex = {
       files: [{ path: 'notes/current.md' }, { path: 'notes/architecture-overview.md' }],
@@ -48,6 +63,7 @@ describe('WysiwygEditorPage workspace links', () => {
         files={files}
         onChange={vi.fn()}
         onOpenFile={onOpenFile}
+        onOpenFileView={onOpenFileView}
         readOnly={false}
         showStatusBar={false}
         value="[Architecture](architecture-overview)"
@@ -60,5 +76,11 @@ describe('WysiwygEditorPage workspace links', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open missing' }))
     expect(onOpenFile).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open source' }))
+    expect(onOpenFileView).toHaveBeenCalledWith('src/example.ts', 'source')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }))
+    expect(onOpenFile).toHaveBeenCalledWith('docs/spec.pdf')
   })
 })

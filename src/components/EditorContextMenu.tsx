@@ -53,6 +53,7 @@ export type EditorContextMenuAdapter = {
 
 type EditorContextMenuProps = EditorContextMenuAdapter & {
   children: ReactElement
+  showFormatting?: boolean
   shortcutOverrides?: ShortcutBindings
 }
 
@@ -99,6 +100,7 @@ export const EditorContextMenu = ({
   children,
   getCapabilities,
   onAction,
+  showFormatting = true,
   shortcutOverrides = {},
 }: EditorContextMenuProps) => {
   const { t } = useI18n()
@@ -145,15 +147,19 @@ export const EditorContextMenu = ({
         {editEntries.map(renderEntry)}
         <ContextMenuSeparator className={menuSeparatorStyles} />
         {clipboardEntries.map(renderEntry)}
-        <ContextMenuSeparator className={menuSeparatorStyles} />
-        {formatEntries
-          .filter((entry) => entry.action !== 'link' || capabilities.link !== false)
-          .map((entry) =>
-            renderEntry({
-              ...entry,
-              shortcut: shortcuts[entry.shortcutAction][0] ?? '',
-            }),
-          )}
+        {showFormatting ? (
+          <>
+            <ContextMenuSeparator className={menuSeparatorStyles} />
+            {formatEntries
+              .filter((entry) => entry.action !== 'link' || capabilities.link !== false)
+              .map((entry) =>
+                renderEntry({
+                  ...entry,
+                  shortcut: shortcuts[entry.shortcutAction][0] ?? '',
+                }),
+              )}
+          </>
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   )

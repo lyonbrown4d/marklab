@@ -27,7 +27,7 @@ const editorCommandByMenuAction: Partial<Record<EditorContextMenuAction, string>
   undo: 'undo',
 }
 
-export const useMarkdownSourceContextMenu = (
+export const useSourceCodeContextMenu = (
   editorRef: RefObject<MonacoEditor.IStandaloneCodeEditor | null>,
   readOnly = false,
 ): EditorContextMenuAdapter =>

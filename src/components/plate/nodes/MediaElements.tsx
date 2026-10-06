@@ -1,8 +1,11 @@
 import { useLink } from '@platejs/link/react'
+import { Maximize2 } from 'lucide-react'
 import type { TElement, TLinkElement } from 'platejs'
 import { PlateElement, type PlateElementProps } from 'platejs/react'
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
+import { DiagramPreviewDialog } from '@/components/previews/DiagramPreviewDialog'
+import { Button } from '@/components/ui/button'
 import {
   isLocalEmbeddedPreviewTarget,
   platePreviewKindForTarget,
@@ -37,6 +40,12 @@ type ResolvedImageState = {
   url: string
 }
 
+type ImageInteractionState = {
+  expanded: boolean
+  key: string
+  naturalSize: { height: number; width: number } | null
+}
+
 const imageAlt = (element: ImageElementNode) => {
   const caption = element.caption
     ?.map((part) => part.text ?? '')
@@ -62,7 +71,13 @@ const isWorkspaceLinkTarget = (target: string): boolean =>
 
 export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPlateImageProps) => {
   const { t } = useI18n()
+  const expandButtonRef = useRef<HTMLButtonElement | null>(null)
   const key = `${documentPath ?? ''}\u0000${src}`
+  const [interaction, setInteraction] = useState<ImageInteractionState>({
+    expanded: false,
+    key,
+    naturalSize: null,
+  })
   const [state, setState] = useState<ResolvedImageState>({ key: '', status: 'loading', url: '' })
   const directUrl = /^[a-z][a-z\d+.-]*:/i.test(src.trim()) ? safePreviewUrl(src) : ''
   const current =
@@ -71,6 +86,10 @@ export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPl
       : directUrl
         ? { key, status: 'ready' as const, url: directUrl }
         : { key, status: 'loading' as const, url: '' }
+  const currentInteraction =
+    interaction.key === key ? interaction : { expanded: false, key, naturalSize: null }
+
+  if (interaction.key !== key) setInteraction(currentInteraction)
 
   useEffect(() => {
     let active = true
@@ -107,15 +126,72 @@ export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPl
     )
   }
 
+  const dialogTitle = alt || title || t('preview.kind.image')
+  const stopEditorEvent = (event: SyntheticEvent) => event.stopPropagation()
+
   return (
-    <img
-      alt={alt}
-      className="max-h-[70vh] max-w-full rounded-lg border border-border object-contain"
-      loading="lazy"
-      onError={() => setState({ key, status: 'error', url: '' })}
-      src={current.url}
-      title={title}
-    />
+    <div className="group/image relative mx-auto w-fit max-w-full" contentEditable={false}>
+      <img
+        alt={alt}
+        className="max-h-[70vh] max-w-full rounded-lg border border-border object-contain"
+        loading="lazy"
+        onError={() => setState({ key, status: 'error', url: '' })}
+        onLoad={(event) => {
+          const { naturalHeight, naturalWidth } = event.currentTarget
+          if (naturalHeight > 0 && naturalWidth > 0) {
+            setInteraction((current) =>
+              current.key === key
+                ? { ...current, naturalSize: { height: naturalHeight, width: naturalWidth } }
+                : current,
+            )
+          }
+        }}
+        src={current.url}
+        title={title}
+      />
+      <Button
+        ref={expandButtonRef}
+        aria-label={t('preview.imageExpand')}
+        className="absolute right-2 top-2 opacity-0 shadow-sm transition-opacity group-focus-within/image:opacity-100 group-hover/image:opacity-100 focus:opacity-100"
+        onClick={(event) => {
+          event.stopPropagation()
+          setInteraction((current) =>
+            current.key === key ? { ...current, expanded: true } : current,
+          )
+        }}
+        onMouseDown={stopEditorEvent}
+        onPointerDown={stopEditorEvent}
+        size="icon"
+        title={t('preview.imageExpand')}
+        type="button"
+        variant="secondary"
+      >
+        <Maximize2 />
+      </Button>
+      <DiagramPreviewDialog
+        labels={{
+          resetZoom: t('preview.visualResetZoom'),
+          title: dialogTitle,
+          zoomIn: t('preview.visualZoomIn'),
+          zoomLevel: t('preview.visualZoomLevel'),
+          zoomOut: t('preview.visualZoomOut'),
+        }}
+        onOpenChange={(open) =>
+          setInteraction((current) =>
+            current.key === key ? { ...current, expanded: open } : current,
+          )
+        }
+        open={currentInteraction.expanded}
+        returnFocusRef={expandButtonRef}
+        visual={{
+          alt,
+          kind: 'image',
+          naturalHeight: currentInteraction.naturalSize?.height,
+          naturalWidth: currentInteraction.naturalSize?.width,
+          src: current.url,
+        }}
+      />
+    </div>
   )
 }
 

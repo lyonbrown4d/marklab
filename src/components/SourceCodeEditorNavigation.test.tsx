@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import MarkdownSourceEditor from '@/components/MarkdownSourceEditor'
+import SourceCodeEditor from '@/components/SourceCodeEditor'
 import { configureMonaco } from '@/lib/monaco'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 
@@ -151,11 +151,11 @@ const deferMonaco = () => {
   }
 }
 
-describe('MarkdownSourceEditor source navigation', () => {
+describe('SourceCodeEditor source navigation', () => {
   it('replays only the latest matching request after Monaco loads without changing content', async () => {
     const finishLoading = deferMonaco()
     const onChange = vi.fn()
-    const view = render(<MarkdownSourceEditor {...sourceProps} onChange={onChange} />)
+    const view = render(<SourceCodeEditor {...sourceProps} onChange={onChange} />)
 
     requestFocusSourcePosition({ path: 'source.md', line: 1, column: 1 })
     requestFocusSourcePosition({ path: 'source.md', line: 3, column: 1, endColumn: 2 })
@@ -172,17 +172,17 @@ describe('MarkdownSourceEditor source navigation', () => {
     })
     expect(screen.getByLabelText('markdown source')).toHaveValue(sourceProps.value)
     expect(onChange).not.toHaveBeenCalled()
-    view.rerender(<MarkdownSourceEditor {...sourceProps} onChange={onChange} value="updated" />)
+    view.rerender(<SourceCodeEditor {...sourceProps} onChange={onChange} value="updated" />)
     expect(monacoEditor.setPosition).toHaveBeenCalledTimes(1)
   })
 
   it('drops a queued request when switching away and back before Monaco loads', async () => {
     const finishLoading = deferMonaco()
-    const view = render(<MarkdownSourceEditor {...sourceProps} />)
+    const view = render(<SourceCodeEditor {...sourceProps} />)
     requestFocusSourcePosition({ path: 'source.md', line: 3, column: 1 })
 
-    view.rerender(<MarkdownSourceEditor {...sourceProps} activePath="other.md" />)
-    view.rerender(<MarkdownSourceEditor {...sourceProps} />)
+    view.rerender(<SourceCodeEditor {...sourceProps} activePath="other.md" />)
+    view.rerender(<SourceCodeEditor {...sourceProps} />)
     await finishLoading()
 
     expect(monacoEditor.setPosition).not.toHaveBeenCalled()
@@ -191,9 +191,9 @@ describe('MarkdownSourceEditor source navigation', () => {
 
   it('replays navigation for the new document when switching during loading', async () => {
     const finishLoading = deferMonaco()
-    const view = render(<MarkdownSourceEditor {...sourceProps} />)
+    const view = render(<SourceCodeEditor {...sourceProps} />)
     requestFocusSourcePosition({ path: 'source.md', line: 3, column: 1 })
-    view.rerender(<MarkdownSourceEditor {...sourceProps} activePath="other.md" />)
+    view.rerender(<SourceCodeEditor {...sourceProps} activePath="other.md" />)
     requestFocusSourcePosition({ path: 'other.md', line: 2, column: 1 })
     await finishLoading()
 
@@ -202,11 +202,11 @@ describe('MarkdownSourceEditor source navigation', () => {
 
   it('does not replay a queued request into a replacement editor after unmount', async () => {
     const finishLoading = deferMonaco()
-    const view = render(<MarkdownSourceEditor {...sourceProps} />)
+    const view = render(<SourceCodeEditor {...sourceProps} />)
     requestFocusSourcePosition({ path: 'source.md', line: 3, column: 1 })
     await waitFor(() => expect(configureMonaco).toHaveBeenCalledTimes(1))
     view.unmount()
-    render(<MarkdownSourceEditor {...sourceProps} />)
+    render(<SourceCodeEditor {...sourceProps} />)
     await waitFor(() => expect(configureMonaco).toHaveBeenCalledTimes(2))
     await finishLoading()
 
@@ -215,7 +215,7 @@ describe('MarkdownSourceEditor source navigation', () => {
 
   it('focuses the requested source position for the active file', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="source.md"
         value="a\nb\nc"
         files={[]}
@@ -247,7 +247,7 @@ describe('MarkdownSourceEditor source navigation', () => {
 
   it('ignores source focus requests for other files', async () => {
     render(
-      <MarkdownSourceEditor
+      <SourceCodeEditor
         activePath="source.md"
         value="a\nb\nc"
         files={[]}

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
 import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import type { FileEntry } from '@/store/appTypes'
+import type { FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
@@ -13,6 +14,7 @@ import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
 import { resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
+import { isSourcePreviewFilePath } from '@/logic/fileTypes'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
@@ -21,6 +23,7 @@ type WysiwygEditorPageProps = {
   value: string
   onChange: (value: string) => void
   onOpenFile: (path: string) => void
+  onOpenFileView?: (path: string, view: FileViewKind) => void
   files: FileEntry[]
   workspaceIndex?: FsWorkspaceIndex | null
   showStatusBar: boolean
@@ -94,6 +97,7 @@ const WysiwygEditorPage = ({
   value,
   onChange,
   onOpenFile,
+  onOpenFileView,
   files,
   workspaceIndex,
   showStatusBar,
@@ -107,9 +111,14 @@ const WysiwygEditorPage = ({
   const handleWorkspaceLink = useCallback(
     (target: string, documentPath: string | null) => {
       const path = resolveLinkedFilePath(documentPath ?? activePath, target, files, workspaceIndex)
-      if (path) onOpenFile(path)
+      if (!path) return
+      if (isSourcePreviewFilePath(path) && onOpenFileView) {
+        onOpenFileView(path, 'source')
+        return
+      }
+      onOpenFile(path)
     },
-    [activePath, files, onOpenFile, workspaceIndex],
+    [activePath, files, onOpenFile, onOpenFileView, workspaceIndex],
   )
 
   const slashLabels = useMarkdownEditorSlashLabels()

@@ -2,7 +2,7 @@ import { createRef } from 'react'
 import { renderHook } from '@testing-library/react'
 import type { editor as MonacoEditor } from 'monaco-editor'
 import { describe, expect, it, vi } from 'vitest'
-import { useMarkdownSourceContextMenu } from '@/components/markdownSourceContextMenu'
+import { useSourceCodeContextMenu } from '@/components/sourceCodeContextMenu'
 
 const createEditor = (selectionEmpty = false) => {
   const editor = {
@@ -14,12 +14,12 @@ const createEditor = (selectionEmpty = false) => {
   return editor
 }
 
-describe('useMarkdownSourceContextMenu', () => {
+describe('useSourceCodeContextMenu', () => {
   it('reports live Monaco capabilities and routes formatting through registered actions', () => {
     const editor = createEditor()
     const editorRef = createRef<MonacoEditor.IStandaloneCodeEditor | null>()
     editorRef.current = editor
-    const { result } = renderHook(() => useMarkdownSourceContextMenu(editorRef))
+    const { result } = renderHook(() => useSourceCodeContextMenu(editorRef))
 
     expect(result.current.getCapabilities()).toMatchObject({
       copy: true,
@@ -39,7 +39,7 @@ describe('useMarkdownSourceContextMenu', () => {
 
   it('disables editor actions before Monaco mounts', () => {
     const editorRef = createRef<MonacoEditor.IStandaloneCodeEditor | null>()
-    const { result } = renderHook(() => useMarkdownSourceContextMenu(editorRef))
+    const { result } = renderHook(() => useSourceCodeContextMenu(editorRef))
 
     expect(result.current.getCapabilities()).toMatchObject({
       bold: false,

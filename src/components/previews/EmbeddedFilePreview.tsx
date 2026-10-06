@@ -36,8 +36,8 @@ const sourceKey = (documentPath: string | null, target: string) =>
 
 const previewKindLabelKey = (kind: string) => `preview.kind.${kind}`
 
-const navigateToPreviewTab = (path: string) => {
-  window.location.hash = pathToFileViewRoute(path, 'preview')
+const navigateToPreviewTab = (path: string, kind: EmbeddedPreviewResolvedTarget['kind']) => {
+  window.location.hash = pathToFileViewRoute(path, kind === 'source' ? 'source' : 'preview')
 }
 
 export const EmbeddedFilePreview = ({
@@ -139,7 +139,7 @@ export const EmbeddedFilePreview = ({
   if (!kind) return null
 
   const openTab = () => {
-    if (resolved?.path) navigateToPreviewTab(resolved.path)
+    if (resolved?.path) navigateToPreviewTab(resolved.path, resolved.kind)
   }
   const openInSystem = () => {
     if (resolved?.path) void fsApi.openPathInSystem(resolved.path)

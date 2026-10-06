@@ -60,7 +60,10 @@ export const workspaceDocumentAdapters = [
       '.csv',
       '.cts',
       '.cxx',
+      '.gql',
       '.go',
+      '.gradle',
+      '.graphql',
       '.h',
       '.hh',
       '.hpp',
@@ -80,6 +83,8 @@ export const workspaceDocumentAdapters = [
       '.mjs',
       '.mts',
       '.php',
+      '.properties',
+      '.proto',
       '.ps1',
       '.py',
       '.rb',
@@ -110,5 +115,15 @@ const adapterByExtension = new Map<string, WorkspaceDocumentAdapter>(
   ),
 )
 
-export const workspaceDocumentAdapterForPath = (value: string): WorkspaceDocumentAdapter | null =>
-  adapterByExtension.get(path.extname(value).toLowerCase()) ?? null
+const sourceAdapter = workspaceDocumentAdapters.find((adapter) => adapter.kind === 'source') ?? null
+const sourceDotFileNames = new Set(['.editorconfig', '.gitignore', '.npmrc'])
+const sourceFileNames = new Set([...sourceDotFileNames, 'dockerfile', 'justfile', 'makefile'])
+
+export const isWorkspaceSourceDotFileName = (value: string): boolean =>
+  sourceDotFileNames.has(path.basename(value).toLowerCase())
+
+export const workspaceDocumentAdapterForPath = (value: string): WorkspaceDocumentAdapter | null => {
+  const adapter = adapterByExtension.get(path.extname(value).toLowerCase())
+  if (adapter) return adapter
+  return sourceFileNames.has(path.basename(value).toLowerCase()) ? sourceAdapter : null
+}

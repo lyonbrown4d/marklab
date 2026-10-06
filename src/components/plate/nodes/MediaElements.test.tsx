@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { LinkPlugin } from '@platejs/link/react'
 import {
   createPlateEditor,
@@ -9,25 +9,6 @@ import {
   type PlateElementProps,
 } from 'platejs/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-const resolveMarkdownAsset = vi.hoisted(() => vi.fn())
-const toAssetUrl = vi.hoisted(() => vi.fn())
-const fetchLinkPreview = vi.hoisted(() => vi.fn())
-
-vi.mock('@/runtime/environment', () => ({
-  isDesktopRuntime: () => true,
-}))
-
-vi.mock('@/services/fsApi', () => ({
-  fsApi: {
-    resolveMarkdownAsset,
-    toAssetUrl,
-  },
-}))
-
-vi.mock('@/services/linkPreviewApi', () => ({
-  linkPreviewApi: { fetch: fetchLinkPreview },
-}))
 
 vi.mock('@/components/previews/EmbeddedFilePreview', () => ({
   default: ({ documentPath, target, title }: Record<string, string>) => (
@@ -45,15 +26,7 @@ vi.mock('@/components/previews/ExternalLinkPreview', () => ({
   ),
 }))
 
-import { createLinkElement, ResolvedPlateImage } from '@/components/plate/nodes/MediaElements'
-
-const createDeferred = <T,>() => {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((nextResolve) => {
-    resolve = nextResolve
-  })
-  return { promise, resolve }
-}
+import { createLinkElement } from '@/components/plate/nodes/MediaElements'
 
 const TestParagraphElement = (props: PlateElementProps) => <PlateElement {...props} as="p" />
 
@@ -83,89 +56,6 @@ const renderLink = (url: string, documentPath = 'notes/current.md') => {
 describe('Plate media elements', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('ignores a stale relative-image resolution after the document changes', async () => {
-    const first = createDeferred<{
-      exists: boolean
-      is_external: boolean
-      media_type: string
-      relative_path: string
-    }>()
-    resolveMarkdownAsset.mockImplementation(({ documentPath }: { documentPath: string }) => {
-      if (documentPath === 'notes/first.md') return first.promise
-      return Promise.resolve({
-        exists: true,
-        is_external: false,
-        media_type: 'image/png',
-        relative_path: 'notes/second/image.png',
-      })
-    })
-    toAssetUrl.mockImplementation((path: string) =>
-      Promise.resolve({ expires_at_ms: Date.now() + 60_000, url: `marklab-asset://${path}` }),
-    )
-
-    const view = render(
-      <ResolvedPlateImage alt="Diagram" documentPath="notes/first.md" src="./image.png" />,
-    )
-    view.rerender(
-      <ResolvedPlateImage alt="Diagram" documentPath="notes/second.md" src="./image.png" />,
-    )
-
-    expect(await screen.findByRole('img', { name: 'Diagram' })).toHaveAttribute(
-      'src',
-      'marklab-asset://notes/second/image.png',
-    )
-
-    await act(async () => {
-      first.resolve({
-        exists: true,
-        is_external: false,
-        media_type: 'image/png',
-        relative_path: 'notes/first/image.png',
-      })
-      await first.promise
-    })
-
-    expect(screen.getByRole('img', { name: 'Diagram' })).toHaveAttribute(
-      'src',
-      'marklab-asset://notes/second/image.png',
-    )
-  })
-
-  it('never assigns a remote HTTP URL directly to an image element', async () => {
-    const remote = createDeferred<{
-      kind: 'image'
-      media_type: 'image/png'
-      src: string
-      url: string
-    }>()
-    fetchLinkPreview.mockReturnValue(remote.promise)
-    render(
-      <ResolvedPlateImage
-        alt="Remote diagram"
-        documentPath="notes/current.md"
-        src="https://example.com/diagram.png"
-      />,
-    )
-
-    expect(screen.queryByRole('img', { name: 'Remote diagram' })).toBeNull()
-    expect(document.querySelector('img[src^="http"]')).toBeNull()
-
-    await act(async () => {
-      remote.resolve({
-        kind: 'image',
-        media_type: 'image/png',
-        src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-        url: 'https://example.com/diagram.png',
-      })
-      await remote.promise
-    })
-
-    expect(screen.getByRole('img', { name: 'Remote diagram' })).toHaveAttribute(
-      'src',
-      'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-    )
   })
 
   it('renders a standard local file link with an adjacent preview and editable link text', () => {

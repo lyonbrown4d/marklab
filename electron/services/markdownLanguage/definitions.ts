@@ -17,6 +17,7 @@ import type {
   CompletionRequest,
   MarkdownLanguageDefinition,
 } from '@electron/services/markdownLanguage/types.js'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters.js'
 
 type LinkTarget =
   | {
@@ -46,16 +47,17 @@ export const getMarkdownDefinition = async (
     target,
     workspaceIndex: index,
   })
-  if (!resolved.file) return null
+  if (!resolved.path || !isDefinitionPath(resolved.path, resolved.file, index)) return null
 
   if (!resolved.anchor) {
     return {
-      path: resolved.file.path,
+      path: resolved.path,
       line: 1,
       column: 1,
     }
   }
 
+  if (!resolved.file) return null
   const normalizedAnchor = normalizeHeadingAnchor(resolved.anchor)
   const heading = resolved.file.headings.find((item) => item.slug === normalizedAnchor)
   if (!heading) return null
@@ -168,7 +170,7 @@ const resolveTarget = ({
   content: string
   target: LinkTarget
   workspaceIndex: FsWorkspaceIndex
-}): { file: FsIndexedMarkdownFile | null; anchor: string | null } => {
+}): { file: FsIndexedMarkdownFile | null; path: string | null; anchor: string | null } => {
   if (target.kind === 'wiki') {
     return resolveWikiTarget(activePath, content, target.target, workspaceIndex)
   }
@@ -187,6 +189,7 @@ const resolveMarkdownTarget = (
     : activePath
   return {
     file: getIndexedFile(activePath, content, targetPath, workspaceIndex),
+    path: targetPath,
     anchor,
   }
 }
@@ -205,8 +208,21 @@ const resolveWikiTarget = (
     )?.path ?? null
   return {
     file: getIndexedFile(activePath, content, targetPath, workspaceIndex),
+    path: targetPath,
     anchor,
   }
+}
+
+const isDefinitionPath = (
+  targetPath: string,
+  indexedFile: FsIndexedMarkdownFile | null,
+  workspaceIndex: FsWorkspaceIndex,
+) => {
+  if (indexedFile) return true
+  const knownPath =
+    workspaceIndex.paths?.includes(targetPath) === true ||
+    workspaceIndex.asset_paths?.includes(targetPath) === true
+  return knownPath && workspaceDocumentAdapterForPath(targetPath)?.kind === 'source'
 }
 
 const getIndexedFile = (

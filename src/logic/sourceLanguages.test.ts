@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sourceLanguageForPath } from '@/logic/sourceLanguages'
+import { monacoLanguageForPath, sourceLanguageForPath } from '@/logic/sourceLanguages'
 
 describe('sourceLanguageForPath', () => {
   it('maps common source and delimited-data extensions to readable labels', () => {
@@ -22,6 +22,17 @@ describe('sourceLanguageForPath', () => {
     expect(sourceLanguageForPath('android/build.gradle')).toEqual({
       id: 'gradle',
       label: 'Gradle',
+    })
+  })
+
+  it('keeps Markdown documents on the Markdown Monaco language', () => {
+    expect(sourceLanguageForPath('notes/README.md')).toEqual({
+      id: 'markdown',
+      label: 'Markdown',
+    })
+    expect(sourceLanguageForPath('notes/guide.markdown')).toEqual({
+      id: 'markdown',
+      label: 'Markdown',
     })
   })
 
@@ -52,4 +63,20 @@ describe('sourceLanguageForPath', () => {
       label: 'Plain text',
     })
   })
+
+  it('uses only Monaco 0.57 registered language identifiers', () => {
+    expect(monacoLanguageForPath('src/example.ts')).toBe('typescript')
+    expect(monacoLanguageForPath('scripts/report.py')).toBe('python')
+    expect(monacoLanguageForPath('cmd/server.go')).toBe('go')
+    expect(monacoLanguageForPath('config/app.yaml')).toBe('yaml')
+    expect(monacoLanguageForPath('Dockerfile')).toBe('dockerfile')
+    expect(monacoLanguageForPath('README.md')).toBe('markdown')
+  })
+
+  it.each(['main.c', 'build.gradle', 'gradle.properties', 'config.toml', 'Makefile', 'Justfile'])(
+    'falls back to plaintext when Monaco does not register the language for %s',
+    (path) => {
+      expect(monacoLanguageForPath(path)).toBe('plaintext')
+    },
+  )
 })

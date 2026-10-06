@@ -148,6 +148,7 @@ const EditFilePage = () => {
         value={loadState.content}
         onChange={context.onEditorChange}
         onOpenFile={context.onOpenFile}
+        onOpenFileView={context.onOpenFileView}
         files={context.files}
         showStatusBar={context.showEditorStatusBar}
         readOnly={context.editorReadOnlyMode}

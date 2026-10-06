@@ -36,6 +36,8 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
   kts: { id: 'kotlin', label: 'Kotlin script' },
   less: { id: 'less', label: 'Less' },
   lua: { id: 'lua', label: 'Lua' },
+  markdown: { id: 'markdown', label: 'Markdown' },
+  md: { id: 'markdown', label: 'Markdown' },
   mjs: { id: 'javascript', label: 'JavaScript' },
   mts: { id: 'typescript', label: 'TypeScript' },
   php: { id: 'php', label: 'PHP' },
@@ -64,6 +66,38 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
 
 const plainTextLanguage: SourceLanguage = { id: 'plaintext', label: 'Plain text' }
 
+const monacoLanguageIds = new Set([
+  'cpp',
+  'csharp',
+  'css',
+  'dockerfile',
+  'go',
+  'graphql',
+  'html',
+  'ini',
+  'java',
+  'javascript',
+  'json',
+  'kotlin',
+  'less',
+  'lua',
+  'markdown',
+  'php',
+  'plaintext',
+  'powershell',
+  'protobuf',
+  'python',
+  'ruby',
+  'rust',
+  'scss',
+  'shell',
+  'sql',
+  'swift',
+  'typescript',
+  'xml',
+  'yaml',
+])
+
 const languagesByFileName: Readonly<Record<string, SourceLanguage>> = {
   '.editorconfig': { id: 'ini', label: 'EditorConfig' },
   '.gitignore': { id: 'plaintext', label: 'Git ignore' },
@@ -76,4 +110,9 @@ const languagesByFileName: Readonly<Record<string, SourceLanguage>> = {
 export const sourceLanguageForPath = (path: string): SourceLanguage => {
   const namedLanguage = languagesByFileName[fileName(path).toLowerCase()]
   return namedLanguage ?? languagesByExtension[fileExtension(path)] ?? plainTextLanguage
+}
+
+export const monacoLanguageForPath = (path: string): string => {
+  const languageId = sourceLanguageForPath(path).id
+  return monacoLanguageIds.has(languageId) ? languageId : plainTextLanguage.id
 }

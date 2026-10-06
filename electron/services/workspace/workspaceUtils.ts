@@ -19,6 +19,7 @@ import {
   toWorkspaceRelative,
 } from '@electron/services/workspace/path.js'
 import type { FsEntry, FsStateData } from '@electron/services/workspace/types.js'
+import { isWorkspaceSourceDotFileName } from '@electron/services/workspace/documentAdapters.js'
 
 export type WatchEventName = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
 export type WorkspaceKnownPaths = { paths: string[]; assetPaths: string[] }
@@ -173,7 +174,11 @@ const walkWorkspace = async (
   const visit = async (directory: string) => {
     if (!(await pathExists(directory))) return
     for (const dirent of await fs.promises.readdir(directory, { withFileTypes: true })) {
-      if (dirent.name.startsWith('.')) continue
+      if (
+        dirent.name.startsWith('.') &&
+        !(dirent.isFile() && isWorkspaceSourceDotFileName(dirent.name))
+      )
+        continue
       if (dirent.isDirectory() && isIgnoredWorkspaceDirectory(dirent.name)) continue
       const absolutePath = path.join(directory, dirent.name)
       const relativePath = toWorkspaceRelative(root, absolutePath)

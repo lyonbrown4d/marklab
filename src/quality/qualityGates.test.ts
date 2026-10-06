@@ -12,7 +12,7 @@ const boundaryContractTests = [
   '../../electron/menu.test.ts',
   '../../electron/preloadRuntimeBoundary.test.ts',
   '../app/focusedEditCommand.test.ts',
-  '../components/MarkdownSourceEditorSurface.test.tsx',
+  '../components/SourceCodeEditorSurface.test.tsx',
   '../components/settings/EditingSettingsPage.test.tsx',
   '../pages/WorkspaceGraphPage.test.tsx',
   './i18nResourceBoundary.test.ts',
@@ -88,7 +88,7 @@ describe('quality gates', () => {
         'scripts/quality-impact.ts',
         '--files',
         'electron/menu.ts',
-        'src/components/MarkdownSourceEditorSurface.tsx',
+        'src/components/SourceCodeEditorSurface.tsx',
         'docs/quality-gates.md',
       ],
       {

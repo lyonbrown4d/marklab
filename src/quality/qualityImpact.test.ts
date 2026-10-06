@@ -10,7 +10,7 @@ describe('quality impact rules', () => {
   it('maps changed files to the expected boundary checks', () => {
     const impacts = analyzeChangedFiles([
       'electron/menu.ts',
-      'src/components/MarkdownSourceEditorSurface.tsx',
+      'src/components/SourceCodeEditorSurface.tsx',
       'src/logic/shortcuts.ts',
       'src/store/usePreferencesStore.ts',
       'electron/services/workspace/workspaceFileService.ts',
@@ -69,6 +69,16 @@ describe('quality impact rules', () => {
       ]),
     )
     expect(plateImpact?.checks).toContain('pnpm test:perf:software')
+  })
+
+  it('routes shared diagram preview changes to preview and zoom checks', () => {
+    const impacts = analyzeChangedFiles([
+      'src/components/previews/DiagramPreviewDialog.tsx',
+      'src/components/previews/ZoomableVisualViewport.tsx',
+    ])
+
+    const plateImpact = impacts.find((impact) => impact.area === 'WYSIWYG / Plate')
+    expect(plateImpact?.checks).toContain('preview/zoom tests')
   })
 
   it.each([

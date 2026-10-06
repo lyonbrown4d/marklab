@@ -5,8 +5,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { EditorContextMenu, type EditorContextMenuAdapter } from '@/components/EditorContextMenu'
 import type { ShortcutBindings } from '@/logic/shortcuts'
+import { monacoLanguageForPath } from '@/logic/sourceLanguages'
 
-type MarkdownSourceEditorSurfaceProps = {
+type SourceCodeEditorSurfaceProps = {
   activePath: string | null
   darkMode: boolean
   errorMessage: string | null
@@ -26,7 +27,7 @@ type MarkdownSourceEditorSurfaceProps = {
   contextMenu?: EditorContextMenuAdapter
 }
 
-export const MarkdownSourceEditorSurface = ({
+export const SourceCodeEditorSurface = ({
   activePath,
   darkMode,
   errorMessage,
@@ -44,11 +45,12 @@ export const MarkdownSourceEditorSurface = ({
   onChange,
   onMount,
   contextMenu,
-}: MarkdownSourceEditorSurfaceProps) => {
+}: SourceCodeEditorSurfaceProps) => {
+  const language = monacoLanguageForPath(activePath ?? '')
   const surface = (
     <div
       className={cn(
-        'markdown-source-editor h-full overflow-hidden',
+        'source-code-editor h-full overflow-hidden',
         immersiveZenMode && 'is-zen-editor',
         immersiveFocusMode && 'is-focus-editor',
         immersiveTypewriterMode && 'is-typewriter-editor',
@@ -69,7 +71,7 @@ export const MarkdownSourceEditorSurface = ({
       ) : monacoReady ? (
         <Editor
           height="100%"
-          language="markdown"
+          language={language}
           theme={darkMode ? 'vs-dark' : 'vs'}
           path={activePath ?? 'marklab-empty.md'}
           value={value}
@@ -121,6 +123,7 @@ export const MarkdownSourceEditorSurface = ({
     <EditorContextMenu
       getCapabilities={contextMenu.getCapabilities}
       onAction={contextMenu.onAction}
+      showFormatting={language === 'markdown'}
       shortcutOverrides={shortcutOverrides}
     >
       {surface}

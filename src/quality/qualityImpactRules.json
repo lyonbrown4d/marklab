@@ -17,9 +17,11 @@
     "risk": "duplicated edit commands, option drift, focus routing, or source navigation regression",
     "patterns": [
       "^src/app/focusedEditCommand",
-      "^src/components/MarkdownSourceEditor",
+      "^src/components/SourceCodeEditor",
       "^src/components/markdownSource",
+      "^src/components/sourceCodeContextMenu",
       "^src/lib/focusedCodeEditor",
+      "^src/logic/sourceLanguages",
       "^src/pages/Source"
     ],
     "checks": ["source editor tests", "focused edit tests", "pnpm exec tsc -b"]
@@ -32,13 +34,19 @@
       "^src/components/plate/",
       "^src/components/editor/",
       "^src/components/markdown/",
+      "^src/components/previews/(DiagramPreviewDialog|EmbeddedPreviewDialog|MermaidPreview|ZoomableVisualViewport)",
       "^src/styles/plate-editor",
       "^src/styles/source-editor",
       "^e2e/performance/",
       "^playwright\\.performance\\.config\\.ts$",
       "^\\.github/workflows/performance\\.yml$"
     ],
-    "checks": ["Plate command/paste/sync tests", "pnpm test:perf:software", "pnpm exec tsc -b"]
+    "checks": [
+      "Plate command/paste/sync tests",
+      "preview/zoom tests",
+      "pnpm test:perf:software",
+      "pnpm exec tsc -b"
+    ]
   },
   {
     "area": "React Flow graph",

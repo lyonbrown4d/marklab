@@ -26,11 +26,13 @@ type DiagnosticsContext = {
 }
 
 type UseMarkdownSourceDiagnosticsOptions = DiagnosticsContext & {
+  enabled?: boolean
   hostRef: RefObject<MarkdownSourceDiagnosticHost | null>
 }
 
 export const useMarkdownSourceDiagnostics = ({
   activePath,
+  enabled = true,
   files,
   fileContents,
   hostRef,
@@ -66,6 +68,10 @@ export const useMarkdownSourceDiagnostics = ({
   )
 
   useEffect(() => {
+    if (!enabled) {
+      applyDiagnostics([])
+      return
+    }
     if (desktopRuntime) {
       applyDiagnostics([])
       return
@@ -81,9 +87,13 @@ export const useMarkdownSourceDiagnostics = ({
       )
       .subscribe(applyDiagnostics)
     return () => subscription.unsubscribe()
-  }, [applyDiagnostics, desktopRuntime])
+  }, [applyDiagnostics, desktopRuntime, enabled])
 
   const scheduleDiagnostics = useCallback(() => {
+    if (!enabled) {
+      applyDiagnostics([])
+      return
+    }
     if (desktopRuntime) {
       applyDiagnostics([])
       return
@@ -91,7 +101,7 @@ export const useMarkdownSourceDiagnostics = ({
     const model = hostRef.current?.editor.getModel()
     if (!model) return
     requestsRef.current.next({ content: model.getValue(), context: contextRef.current })
-  }, [applyDiagnostics, contextRef, desktopRuntime, hostRef])
+  }, [applyDiagnostics, contextRef, desktopRuntime, enabled, hostRef])
 
   useEffect(scheduleDiagnostics, [
     activePath,

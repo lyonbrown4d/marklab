@@ -12,18 +12,19 @@ import {
   type FocusSourcePositionRequest,
 } from '@/utils/editorNavigation'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { isMarkdownFilePath } from '@/logic/fileTypes'
 import { registerMarkdownSourceProviders } from '@/components/markdownSourceProviders'
-import { MarkdownSourceEditorSurface } from '@/components/MarkdownSourceEditorSurface'
+import { SourceCodeEditorSurface } from '@/components/SourceCodeEditorSurface'
 import { useI18n } from '@/i18n/useI18n'
 import { clearFocusedCodeEditor, setFocusedCodeEditor } from '@/lib/focusedCodeEditor'
 import { registerMarkdownSourceShortcuts } from '@/components/markdownSourceShortcuts'
-import { useMarkdownSourceContextMenu } from '@/components/markdownSourceContextMenu'
+import { useSourceCodeContextMenu } from '@/components/sourceCodeContextMenu'
 import {
   useMarkdownSourceDiagnostics,
   type MarkdownSourceDiagnosticHost,
 } from '@/components/useMarkdownSourceDiagnostics'
 
-type MarkdownSourceEditorProps = {
+type SourceCodeEditorProps = {
   activePath: string | null
   value: string
   files: FileEntry[]
@@ -35,7 +36,7 @@ type MarkdownSourceEditorProps = {
   readOnly?: boolean
 }
 
-const MarkdownSourceEditor = ({
+const SourceCodeEditor = ({
   activePath,
   value,
   files,
@@ -45,7 +46,7 @@ const MarkdownSourceEditor = ({
   onOpenFileView,
   onCursorChange,
   readOnly = false,
-}: MarkdownSourceEditorProps) => {
+}: SourceCodeEditorProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
@@ -55,6 +56,7 @@ const MarkdownSourceEditor = ({
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
+  const markdownEnabled = isMarkdownFilePath(activePath ?? '')
   const [monacoReady, setMonacoReady] = useState(false)
   const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
@@ -67,13 +69,15 @@ const MarkdownSourceEditor = ({
   const searchHighlightTimerRef = useRef<number | null>(null)
   const { completionContextRef, scheduleDiagnostics } = useMarkdownSourceDiagnostics({
     activePath,
+    enabled: markdownEnabled,
     files,
     fileContents,
     hostRef: diagnosticHostRef,
     workspaceIndex,
   })
   const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
-  const contextMenu = useMarkdownSourceContextMenu(editorRef, readOnly)
+  const previousMarkdownEnabledRef = useRef(markdownEnabled)
+  const contextMenu = useSourceCodeContextMenu(editorRef, readOnly)
 
   useEffect(() => {
     let cancelled = false
@@ -113,17 +117,20 @@ const MarkdownSourceEditor = ({
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
     providersDisposableRef.current?.dispose()
-    providersDisposableRef.current = registerMarkdownSourceProviders({
-      monaco: monaco as typeof import('monaco-editor'),
-      editor,
-      getContext: () => completionContextRef.current,
-      onOpenFileView,
-      scheduleDiagnostics,
-    })
+    providersDisposableRef.current = markdownEnabled
+      ? registerMarkdownSourceProviders({
+          monaco: monaco as typeof import('monaco-editor'),
+          editor,
+          getContext: () => completionContextRef.current,
+          onOpenFileView,
+          scheduleDiagnostics,
+        })
+      : null
     shortcutsDisposableRef.current?.dispose()
-    shortcutsDisposableRef.current = readOnly
-      ? null
-      : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
+    shortcutsDisposableRef.current =
+      readOnly || !markdownEnabled
+        ? null
+        : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
 
     scheduleDiagnostics()
     const pending = pendingSourcePositionRef.current
@@ -138,10 +145,30 @@ const MarkdownSourceEditor = ({
     const editor = editorRef.current
     if (!editor) return
     shortcutsDisposableRef.current?.dispose()
-    shortcutsDisposableRef.current = readOnly
-      ? null
-      : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
-  }, [readOnly, shortcutOverrides])
+    shortcutsDisposableRef.current =
+      readOnly || !markdownEnabled
+        ? null
+        : registerMarkdownSourceShortcuts({ editor, overrides: shortcutOverrides })
+  }, [markdownEnabled, readOnly, shortcutOverrides])
+
+  useEffect(() => {
+    if (previousMarkdownEnabledRef.current === markdownEnabled) return
+    previousMarkdownEnabledRef.current = markdownEnabled
+    const host = diagnosticHostRef.current
+    if (!host) return
+
+    providersDisposableRef.current?.dispose()
+    providersDisposableRef.current = markdownEnabled
+      ? registerMarkdownSourceProviders({
+          monaco: host.monaco,
+          editor: host.editor,
+          getContext: () => completionContextRef.current,
+          onOpenFileView,
+          scheduleDiagnostics,
+        })
+      : null
+    scheduleDiagnostics()
+  }, [completionContextRef, markdownEnabled, onOpenFileView, scheduleDiagnostics])
 
   useEffect(() => {
     return () => {
@@ -220,7 +247,7 @@ const MarkdownSourceEditor = ({
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
 
   return (
-    <MarkdownSourceEditorSurface
+    <SourceCodeEditorSurface
       activePath={activePath}
       darkMode={darkMode}
       errorMessage={
@@ -244,4 +271,4 @@ const MarkdownSourceEditor = ({
   )
 }
 
-export default MarkdownSourceEditor
+export default SourceCodeEditor
