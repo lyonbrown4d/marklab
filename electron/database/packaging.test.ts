@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 // eslint-disable-next-line no-restricted-imports -- Root Vite helpers are outside Electron aliases.
 import { electronMainExternal } from '../../vite.electron'
@@ -9,11 +10,13 @@ describe('SQLite packaging', () => {
   it('externalizes and unpacks the better-sqlite3 native module', async () => {
     const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8')) as {
       build: { asarUnpack: string[]; files: string[] }
-      pnpm: { onlyBuiltDependencies: string[] }
+    }
+    const pnpmWorkspace = parse(await fs.readFile('pnpm-workspace.yaml', 'utf8')) as {
+      onlyBuiltDependencies: string[]
     }
 
     expect(electronMainExternal).toContain('better-sqlite3')
-    expect(packageJson.pnpm.onlyBuiltDependencies).toContain('better-sqlite3')
+    expect(pnpmWorkspace.onlyBuiltDependencies).toContain('better-sqlite3')
     expect(packageJson.build.files).toContain('node_modules/better-sqlite3/lib/**/*')
     expect(packageJson.build.files).toContain(
       'node_modules/better-sqlite3/prebuilds/*-${arch}.node',
