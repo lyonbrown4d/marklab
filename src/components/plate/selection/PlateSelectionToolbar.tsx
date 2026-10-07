@@ -7,6 +7,7 @@ import {
   Strikethrough,
   type LucideIcon,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
@@ -49,6 +50,14 @@ export const PlateSelectionToolbar = ({
   runAction,
   setToolbarElement,
 }: PlateSelectionToolbarProps) => {
+  const virtualAnchorRef = useMemo(
+    () => ({
+      current: {
+        getBoundingClientRect: () => new DOMRect(anchor.left, anchor.top),
+      },
+    }),
+    [anchor.left, anchor.top],
+  )
   const activeValues = markItems
     .filter(({ action }) => activeMarks[action])
     .map(({ action }) => action)
@@ -61,13 +70,7 @@ export const PlateSelectionToolbar = ({
 
   return (
     <Popover open={open}>
-      <PopoverAnchor asChild>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none fixed size-px"
-          style={{ left: anchor.left, top: anchor.top }}
-        />
-      </PopoverAnchor>
+      <PopoverAnchor virtualRef={virtualAnchorRef} />
       <PopoverContent
         align="center"
         className="w-auto p-1"

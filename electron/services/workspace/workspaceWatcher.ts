@@ -23,6 +23,18 @@ type WorkspaceWatcherOptions = {
 }
 
 const OWN_WRITE_EVENT_SUPPRESS_MS = 1500
+type ParcelWatcherOptions = NonNullable<Parameters<typeof watcher.subscribe>[2]>
+type ParcelWatcherBackend = NonNullable<ParcelWatcherOptions['backend']>
+
+const nativeWatcherBackends: Partial<Record<NodeJS.Platform, ParcelWatcherBackend>> = {
+  darwin: 'fs-events',
+  linux: 'inotify',
+  win32: 'windows',
+}
+
+const nativeWatcherOptions: ParcelWatcherOptions = {
+  backend: nativeWatcherBackends[process.platform],
+}
 
 export class WorkspaceWatcher {
   private readonly logger: Logger
@@ -96,18 +108,22 @@ export class WorkspaceWatcher {
     this.logger.info('watcher starting', { watchRoot: this.currentWatchRoot })
 
     let subscription: AsyncSubscription | null = null
-    subscription = await watcher.subscribe(this.currentWatchRoot, (error, events) => {
-      if (this.disposed || version !== this.watcherVersion) return
+    subscription = await watcher.subscribe(
+      this.currentWatchRoot,
+      (error, events) => {
+        if (this.disposed || version !== this.watcherVersion) return
 
-      if (error) {
-        if (this.subscription === subscription) this.subscription = null
-        this.options.setStatus('error', errorMessage(error))
-        this.logger.error('watcher error', { error })
-        return
-      }
+        if (error) {
+          if (this.subscription === subscription) this.subscription = null
+          this.options.setStatus('error', errorMessage(error))
+          this.logger.error('watcher error', { error })
+          return
+        }
 
-      events.forEach((event) => this.handleWatchEvent(event, version))
-    })
+        events.forEach((event) => this.handleWatchEvent(event, version))
+      },
+      nativeWatcherOptions,
+    )
 
     if (this.disposed || version !== this.watcherVersion) {
       void subscription.unsubscribe()

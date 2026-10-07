@@ -32,6 +32,13 @@ const createTempRoot = async () => {
   return root
 }
 
+const nativeBackends: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: 'fs-events',
+  linux: 'inotify',
+  win32: 'windows',
+}
+const nativeBackend = nativeBackends[process.platform]
+
 afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
@@ -59,7 +66,9 @@ describe('WorkspaceWatcher', () => {
     workspaceWatcher.restart()
 
     await vi.waitFor(() =>
-      expect(watcherMock.subscribe).toHaveBeenCalledWith(root, expect.any(Function)),
+      expect(watcherMock.subscribe).toHaveBeenCalledWith(root, expect.any(Function), {
+        backend: nativeBackend,
+      }),
     )
 
     const callback = watcherMock.subscribe.mock.calls[0]?.[1]

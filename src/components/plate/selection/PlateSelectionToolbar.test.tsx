@@ -56,4 +56,15 @@ describe('PlateSelectionToolbar', () => {
 
     expect(runAction).toHaveBeenCalledWith('link')
   })
+
+  it('does not place a fixed viewport anchor inside transformed editor ancestors', () => {
+    const { container } = render(
+      <div style={{ transform: 'translateY(24px)' }}>
+        <PlateSelectionToolbar {...createController()} labels={labels} />
+      </div>,
+    )
+
+    expect(container.querySelector('span[aria-hidden="true"].fixed')).not.toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: labels.toolbar })).toBeVisible()
+  })
 })
