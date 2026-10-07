@@ -8,8 +8,6 @@ import type {
   FsGraph,
   FsMarkdownDiagnostic,
   FsPathMetadata,
-  FsRootInfo,
-  FsSnapshot,
   FsStateData,
 } from '@electron/services/workspace/types'
 
@@ -48,22 +46,16 @@ type WorkspaceSidecarWriteService = KnowledgeEngineService & {
     content: string,
   ) => Promise<unknown>
 }
+type WorkspaceSidecarPreparationService = KnowledgeEngineService & {
+  prepareWorkspaceFileAccess?: (workspaceId: string, workspaceRoot: string) => Promise<void>
+}
 
-export const trySidecarSnapshot = async (
-  options: SidecarBridgeOptions & { root: FsRootInfo },
-): Promise<FsSnapshot | null> => {
+export const tryPrewarmSidecarFileAccess = async (options: SidecarBridgeOptions): Promise<void> => {
   const runtime = sidecarRuntime(options)
-  if (!runtime) return null
-  try {
-    return await options.knowledgeEngineService!.getWorkspaceFileSnapshot(
-      runtime.workspaceId,
-      runtime.workspaceRoot,
-      options.root,
-    )
-  } catch (error) {
-    options.logger.error('workspace vfs snapshot failed', { error })
-    throw error
-  }
+  const prepare = (options.knowledgeEngineService as WorkspaceSidecarPreparationService | undefined)
+    ?.prepareWorkspaceFileAccess
+  if (!runtime || typeof prepare !== 'function') return
+  await prepare.call(options.knowledgeEngineService, runtime.workspaceId, runtime.workspaceRoot)
 }
 
 export const trySidecarReadFile = async (options: SidecarPathOptions): Promise<string | null> => {

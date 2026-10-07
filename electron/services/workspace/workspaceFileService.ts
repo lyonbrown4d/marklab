@@ -5,10 +5,8 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import type {
   FsBufferStatus,
-  FsEntry,
   FsPathMetadataResult,
   FsRootInfo,
-  FsSnapshot,
   FsStateData,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types'
@@ -26,16 +24,18 @@ import {
 } from '@electron/services/workspace/workspaceRootSelection'
 import {
   trySidecarPathMutation,
+  tryPrewarmSidecarFileAccess,
   trySidecarReadFile,
-  trySidecarSnapshot,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
+import { WorkspaceAccessPrewarmer } from '@electron/services/workspace/workspaceAccessPrewarmer'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
   private rootTransitionInProgress = false
+  private readonly accessPrewarmer: WorkspaceAccessPrewarmer
 
   constructor(
     app: ConstructorParameters<typeof WorkspaceMutationService>[0],
@@ -45,28 +45,26 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     private readonly knowledgeEngineService?: KnowledgeEngineService,
   ) {
     super(app, shell, logger)
+    this.accessPrewarmer = new WorkspaceAccessPrewarmer({
+      logger: this.logger,
+      prepare: async () => {
+        await Promise.all([
+          this.pathSnapshots.get(),
+          tryPrewarmSidecarFileAccess({
+            knowledgeEngineService: this.knowledgeEngineService,
+            logger: this.logger,
+            state: this.state,
+          }),
+        ])
+      },
+      rootKind: () => this.state.rootKind,
+    })
+    this.accessPrewarmer.schedule()
   }
 
-  async snapshot(): Promise<FsSnapshot> {
-    const sidecarSnapshot = await trySidecarSnapshot({
-      knowledgeEngineService: this.knowledgeEngineService,
-      logger: this.logger,
-      root: this.rootInfo(),
-      state: this.state,
-    })
-    if (sidecarSnapshot) return sidecarSnapshot
-    return { root: this.rootInfo(), entries: await super.listEntries() }
-  }
-
-  protected override async listEntries(): Promise<FsEntry[]> {
-    const sidecarSnapshot = await trySidecarSnapshot({
-      knowledgeEngineService: this.knowledgeEngineService,
-      logger: this.logger,
-      root: this.rootInfo(),
-      state: this.state,
-    })
-    if (sidecarSnapshot) return sidecarSnapshot.entries
-    return super.listEntries()
+  override dispose(): void {
+    this.accessPrewarmer.dispose()
+    super.dispose()
   }
 
   terminalCwd(): string {
@@ -187,6 +185,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       state: this.state,
       value,
     })
+    this.pathSnapshots.invalidate()
   }
   async createDir(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
@@ -202,6 +201,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     if (!sidecarMutation) {
       await fs.promises.mkdir(this.resolve(relativePath), { recursive: true })
     }
+    this.pathSnapshots.invalidate()
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('folder created', { path: relativePath })
   }
@@ -224,6 +224,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       await fs.promises.rename(this.resolve(from), target)
     }
     this.buffers.rename(from, to)
+    this.pathSnapshots.invalidate()
     if (workspaceIndex) {
       await rewriteWorkspaceReferencesForRename({
         host: this,
@@ -254,6 +255,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     const kind =
       sidecarMutation?.kind ?? (await deleteWorkspacePathWithNode(this.resolve(relativePath)))
     this.buffers.deleteUnder(relativePath)
+    this.pathSnapshots.invalidate()
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path deleted', { path: relativePath, kind })
   }
@@ -293,7 +295,9 @@ export class WorkspaceFileService extends WorkspaceMutationService {
 
     this.buffers.clear()
     this.state = nextState
+    this.pathSnapshots.invalidate()
     this.watcher.restart()
+    this.accessPrewarmer.schedule()
     this.scheduleSnapshotChanged()
     this.logger.info('workspace root changed', {
       rootKind: nextState.rootKind,

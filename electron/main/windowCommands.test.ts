@@ -65,10 +65,11 @@ const createHarness = () => {
     restoreOpeningWindow: vi.fn(async () => undefined),
     stats: vi.fn(() => ({ poolHits: 1 })),
   }
+  const logger = { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }
   const dependencies = {
     copyWorkspaceSession: vi.fn(() => ({ state: { tabs: [] }, version: 1 })),
     getCurrentWorkspaceRoot: vi.fn(() => ({ kind: 'external' as const, path: '/notes' })),
-    getLogger: () => ({ debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+    getLogger: () => logger,
     getNativeIpc: () => null,
     getPrimaryWindow: () => source,
     getSessionKeyForWindow: (window: BrowserWindow) => `session-${window.id}`,
@@ -86,6 +87,7 @@ const createHarness = () => {
     dependencies,
     event,
     handlers,
+    logger,
     order,
     pool,
     source,
@@ -162,6 +164,25 @@ describe('app window commands', () => {
     expect(workspace.setRoot).toHaveBeenCalledWith({ path: root })
     expect(sourceWorkspace.setRoot).not.toHaveBeenCalled()
     expect(sourceWorkspace.setSingleFile).not.toHaveBeenCalled()
+  })
+
+  it('reports window acquisition, workspace initialization, and renderer activation timings', async () => {
+    const { event, handlers, logger } = createHarness()
+
+    await handlers.open_current_workspace_in_new_window(undefined, event)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'workspace window opened',
+      expect.objectContaining({
+        timings: {
+          acquisitionMs: expect.any(Number),
+          rendererActivationMs: expect.any(Number),
+          sessionSeedMs: expect.any(Number),
+          totalMs: expect.any(Number),
+          workspaceInitializationMs: expect.any(Number),
+        },
+      }),
+    )
   })
 
   it('opens a native file in the existing primary window without acquiring a pooled window', async () => {

@@ -18,14 +18,16 @@ export const createManager = () => {
     child,
     client,
   }))
+  const loggerInfo = vi.fn()
   const logger = {
-    info: vi.fn(),
+    info: loggerInfo,
     warn: vi.fn(),
   } as unknown as Logger
 
   return {
     child,
     client,
+    loggerInfo,
     manager: new WorkspaceSidecarManager({
       appDataDir: 'app-data',
       logger,

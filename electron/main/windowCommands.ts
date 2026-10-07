@@ -13,6 +13,7 @@ import type { WorkspaceService } from '@electron/services/workspace/workspaceSer
 import type { WindowOpeningProgress } from '@/types/windowOpening'
 import { showWindowWithMotion } from '@electron/windowMotion'
 import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool'
+import { createWindowOpenTimings } from '@electron/main/windowOpenTimings'
 
 type WorkspaceSessionSeed = {
   state?: Record<string, unknown>
@@ -146,6 +147,7 @@ export const createAppWindowCommandHandlers = (
     showWindowWithMotion(main, { focus: true })
 
     const runAttempt = async (retry: boolean): Promise<AppWindowOpenResult> => {
+      const timings = createWindowOpenTimings(acquisition.metrics.preparationDurationMs)
       try {
         if (retry) await dependencies.getWindowPool().restoreOpeningWindow(acquisition)
         sendOpeningProgress(main, {
@@ -155,10 +157,13 @@ export const createAppWindowCommandHandlers = (
         sendOpeningProgress(main, { stage: 'loading', workspacePath: request.requestedPath })
         const workspace = dependencies.getWorkspaceServiceForWindow(main)
         const root = await request.initializeWorkspace(workspace)
+        timings.finishPhase('workspaceInitializationMs')
         const seed = request.createSeed(main, root)
         sendOpeningProgress(main, { stage: 'indexing', workspacePath: root.path })
         await dependencies.getWindowPool().activateMainWindow(acquisition)
+        timings.finishPhase('rendererActivationMs')
         sendWorkspaceSessionSeed(main, seed)
+        timings.finishPhase('sessionSeedMs')
         if (main.isMinimized()) main.restore()
         showWindowWithMotion(main, { focus: true })
         retries.delete(main.id)
@@ -170,6 +175,7 @@ export const createAppWindowCommandHandlers = (
           reason: request.reason,
           requestedPath: request.requestedPath,
           startup: { source: acquisition.source, ...acquisition.metrics },
+          timings: timings.snapshot(),
           windowId: main.id,
           windowPool: dependencies.getWindowPool().stats(),
         })

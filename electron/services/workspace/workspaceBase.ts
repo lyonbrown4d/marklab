@@ -34,12 +34,13 @@ import {
 import {
   ensureDefaultFile,
   errorMessage,
-  listWorkspaceEntries,
-  listWorkspaceKnownPaths,
-  listWorkspacePathSnapshot,
   type WorkspaceKnownPaths,
   type WatchEventName,
 } from '@electron/services/workspace/workspaceUtils'
+import {
+  createWorkspacePathSnapshotCache,
+  type WorkspacePathSnapshotCache,
+} from '@electron/services/workspace/workspacePathSnapshotCache'
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher'
 
 type SnapshotListener = (snapshot: FsSnapshot) => void
@@ -54,6 +55,7 @@ export class WorkspaceBase {
   protected readonly snapshotListeners = new Set<SnapshotListener>()
   protected readonly backgroundTasksListeners = new Set<BackgroundTasksListener>()
   protected readonly watcher: WorkspaceWatcher
+  protected readonly pathSnapshots: WorkspacePathSnapshotCache
   protected readonly searchIndexTaskState: SearchIndexTaskState = { runs: 0 }
   protected readonly disposeOnWillQuit = () => this.dispose()
   protected snapshotTimer: ReturnType<typeof setTimeout> | null = null
@@ -75,6 +77,7 @@ export class WorkspaceBase {
     }
     fs.mkdirSync(internalRoot, { recursive: true })
     ensureDefaultFile(internalRoot)
+    this.pathSnapshots = createWorkspacePathSnapshotCache(() => this.state, this.logger)
     initializeWorkspaceBackgroundTasks((id, label, status, message) =>
       this.setTask(id, label, status, message),
     )
@@ -154,7 +157,7 @@ export class WorkspaceBase {
   }
 
   protected async listEntries(): Promise<FsEntry[]> {
-    return listWorkspaceEntries(this.state)
+    return (await this.pathSnapshots.get()).entries
   }
 
   protected async workspaceDocuments(
@@ -172,7 +175,7 @@ export class WorkspaceBase {
     replacePath?: string,
     replaceContent?: string,
   ): Promise<{ documents: WorkspaceDocument[]; knownPaths: WorkspaceKnownPaths }> {
-    const pathSnapshot = await listWorkspacePathSnapshot(this.state)
+    const pathSnapshot = await this.pathSnapshots.get()
     return {
       documents: await this.loadWorkspaceDocumentsFromEntries(
         pathSnapshot.entries,
@@ -181,10 +184,6 @@ export class WorkspaceBase {
       ),
       knownPaths: pathSnapshot.knownPaths,
     }
-  }
-
-  protected async workspaceKnownPaths(): Promise<WorkspaceKnownPaths> {
-    return listWorkspaceKnownPaths(this.state)
   }
 
   private async loadWorkspaceDocumentsFromEntries(
@@ -290,7 +289,8 @@ export class WorkspaceBase {
   }
 
   async snapshot(): Promise<FsSnapshot> {
-    return { root: this.rootInfo(), entries: await this.listEntries() }
+    const entries = await this.listEntries()
+    return { root: this.rootInfo(), entries }
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, _event?: WatchEventName): void {
@@ -299,6 +299,7 @@ export class WorkspaceBase {
   }
 
   protected handleWatchedPathChanged(changedPath: string | null, event?: WatchEventName): void {
+    if (!event || event !== 'change') this.pathSnapshots.invalidate()
     if (this.state.rootKind === 'single') {
       if (changedPath && !isCurrentSingleFilePath(this.state, changedPath)) return
       if (changedPath) {

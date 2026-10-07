@@ -110,6 +110,7 @@ export type WorkspaceSidecarRuntime = {
   state: WorkspaceSidecarRuntimeState
   openedAt: number
   lastActivityAt: number
+  workspaceOpened?: boolean
   address?: string
   child?: WorkspaceSidecarProcess
   client?: WorkspaceSidecarClient

@@ -44,6 +44,10 @@ export type {
 
 export class WorkspaceSidecarManager {
   private readonly runtimes = new Map<string, WorkspaceSidecarRuntime>()
+  private readonly openings = new Map<
+    string,
+    { indexPath: string; openWorkspace: boolean; request: Promise<void> }
+  >()
 
   constructor(private readonly options: WorkspaceSidecarManagerOptions) {}
 
@@ -56,17 +60,39 @@ export class WorkspaceSidecarManager {
     indexPath: string,
     options: { openWorkspace?: boolean } = {},
   ): Promise<void> {
-    await openWorkspaceSidecarRuntime({
+    const pending = this.openings.get(workspaceId)
+    if (pending?.indexPath === indexPath) {
+      pending.openWorkspace ||= options.openWorkspace ?? true
+      return pending.request
+    }
+    if (pending) await pending.request
+
+    const opening = {
+      indexPath,
+      openWorkspace: options.openWorkspace ?? true,
+      request: Promise.resolve(),
+    }
+    const request = openWorkspaceSidecarRuntime({
       workspaceId,
       indexPath,
       openWorkspace: options.openWorkspace,
       runtimes: this.runtimes,
       options: this.options,
       close: (id) => this.close(id),
+      isCurrent: () => this.openings.get(workspaceId) === opening,
+      shouldOpenWorkspace: () => opening.openWorkspace,
     })
+    opening.request = request
+    this.openings.set(workspaceId, opening)
+    try {
+      await request
+    } finally {
+      if (this.openings.get(workspaceId) === opening) this.openings.delete(workspaceId)
+    }
   }
 
   async close(workspaceId: string): Promise<void> {
+    this.openings.delete(workspaceId)
     const runtime = this.runtimes.get(workspaceId)
     if (!runtime) return
 
@@ -275,6 +301,7 @@ export class WorkspaceSidecarManager {
   }
 
   clear(): void {
+    this.openings.clear()
     for (const runtime of this.runtimes.values()) {
       runtime.client?.close()
       if (runtime.child && !runtime.child.killed) {

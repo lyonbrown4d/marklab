@@ -99,6 +99,10 @@ export class KnowledgeEngineService {
     await (await this.getSidecars()).open(workspaceId, indexPath)
   }
 
+  async prepareWorkspaceFileAccess(workspaceId: string, workspaceRoot: string): Promise<void> {
+    await (await this.getSidecars()).open(workspaceId, workspaceRoot, { openWorkspace: false })
+  }
+
   async closeWorkspace(workspaceId: string): Promise<void> {
     await (await this.getSidecars()).close(workspaceId)
   }
