@@ -134,6 +134,14 @@ export const createIntegrationTables = async (db: Kysely<unknown>): Promise<void
     .execute()
 
   await db.schema
+    .createTable('workspace_graphs')
+    .addColumn('workspace_key', 'text', (column) => column.primaryKey())
+    .addColumn('graph_revision', 'text', (column) => column.notNull())
+    .addColumn('graph_json', 'text', (column) => column.notNull())
+    .addColumn('updated_at', 'text', (column) => column.notNull().defaultTo(now))
+    .execute()
+
+  await db.schema
     .createTable('graph_node_layouts')
     .addColumn('workspace_key', 'text', (column) => column.notNull())
     .addColumn('layout_key', 'text', (column) => column.notNull())
@@ -173,6 +181,7 @@ export const dropIntegrationTables = async (db: Kysely<unknown>): Promise<void> 
   await db.schema.dropTable('workspace_sync_channels').ifExists().execute()
   await db.schema.dropTable('graph_node_layouts').ifExists().execute()
   await db.schema.dropTable('graph_layouts').ifExists().execute()
+  await db.schema.dropTable('workspace_graphs').ifExists().execute()
   await db.schema.dropTable('webdav_profiles').ifExists().execute()
   await db.schema.dropTable('ai_providers').ifExists().execute()
 }

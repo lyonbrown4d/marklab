@@ -17,6 +17,7 @@ export const DATABASE_TABLE_NAMES = [
   'workspaces',
   'graph_layouts',
   'graph_node_layouts',
+  'workspace_graphs',
   'workspace_sync_channels',
   'webdav_sync_state',
   'webdav_sync_entries',

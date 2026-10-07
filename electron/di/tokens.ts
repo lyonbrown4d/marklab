@@ -39,6 +39,9 @@ export const TOKENS = {
   workspaceSearchIndexFactory: token<ElectronBindings['workspaceSearchIndexFactory']>(
     'workspaceSearchIndexFactory',
   ),
+  workspaceGraphScheduler:
+    token<ElectronBindings['workspaceGraphScheduler']>('workspaceGraphScheduler'),
+  workspaceGraphStore: token<ElectronBindings['workspaceGraphStore']>('workspaceGraphStore'),
   workspaceRegistry: token<ElectronBindings['workspaceRegistry']>('workspaceRegistry'),
   exportService: token<ElectronBindings['exportService']>('exportService'),
   gitService: token<ElectronBindings['gitService']>('gitService'),

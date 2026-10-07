@@ -29,6 +29,93 @@ afterEach(async () => {
 })
 
 describe('WorkspaceAnalysisService sidecar graph', () => {
+  it('precomputes the graph after opening a workspace without blocking the root switch', async () => {
+    let finishGraph!: (graph: FsGraph) => void
+    const pendingGraph = new Promise<FsGraph>((resolve) => {
+      finishGraph = resolve
+    })
+    const graph = createGraph('mindmap')
+    const service = createKnowledgeServiceMock()
+    service.buildWorkspaceGraph.mockReturnValueOnce(pendingGraph)
+
+    const { workspace } = await createWorkspace(
+      service,
+      [{ path: 'alpha.md', content: '# Alpha' }],
+      { graphPrecomputeDelayMs: 0 },
+    )
+
+    try {
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      const request = workspace.workspaceGraph()
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+
+      finishGraph(graph)
+
+      await expect(request).resolves.toBe(graph)
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+    } finally {
+      finishGraph(graph)
+      await workspace.flushBuffers()
+      workspace.dispose()
+    }
+  })
+
+  it('debounces a fresh graph precompute after buffered changes are saved', async () => {
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(
+      service,
+      [{ path: 'alpha.md', content: '# Alpha' }],
+      { graphPrecomputeDelayMs: 0 },
+    )
+
+    try {
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+
+      workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
+      await workspace.flushBuffers()
+
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2))
+      const documents = service.buildWorkspaceGraph.mock.calls[1]?.[2] as Array<{
+        content: string
+        path: string
+      }>
+      expect(documents).toContainEqual(
+        expect.objectContaining({ path: 'alpha.md', content: '# Changed Alpha' }),
+      )
+    } finally {
+      await workspace.flushBuffers()
+      workspace.dispose()
+    }
+  })
+
+  it('precomputes a fresh graph after an external workspace invalidation', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(
+      service,
+      [{ path: 'alpha.md', content: '# Alpha' }],
+      { graphPrecomputeDelayMs: 0 },
+    )
+
+    try {
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      await fs.writeFile(path.join(root, 'alpha.md'), '# External Alpha', 'utf8')
+
+      workspace.invalidateAllExternalPaths()
+
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2))
+      const documents = service.buildWorkspaceGraph.mock.calls[1]?.[2] as Array<{
+        content: string
+        path: string
+      }>
+      expect(documents).toContainEqual(
+        expect.objectContaining({ path: 'alpha.md', content: '# External Alpha' }),
+      )
+    } finally {
+      await workspace.flushBuffers()
+      workspace.dispose()
+    }
+  })
+
   it('shares one workspace snapshot across concurrent index and graph analysis', async () => {
     const service = createKnowledgeServiceMock()
     const { workspace } = await createWorkspace(service, [{ path: 'alpha.md', content: '# Alpha' }])
@@ -168,6 +255,7 @@ type WorkspaceFixture = {
 const createWorkspace = async (
   service: KnowledgeGraphServiceMock,
   files: WorkspaceFixture[] = [],
+  options: { graphPrecomputeDelayMs?: number } = {},
 ) => {
   const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-analysis-'))
   tempRoots.push(tempRoot)
@@ -186,6 +274,7 @@ const createWorkspace = async (
     createLocalHistoryService(),
     undefined,
     service,
+    options,
   )
   await workspace.setRoot({ path: root })
   return { logger, root, workspace }

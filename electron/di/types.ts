@@ -26,6 +26,8 @@ import type { TerminalService } from '@electron/services/terminal/service'
 import type { WebTabManager } from '@electron/services/webTabs/webTabManager'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
+import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
+import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 
 export type WorkspaceSearchIndexFactory = () => WorkspaceSearchIndex
 
@@ -49,6 +51,8 @@ export type ElectronBindings = {
   linkPreviewService: LinkPreviewService
   webTabManager: WebTabManager
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
+  workspaceGraphScheduler: WorkspaceGraphComputationScheduler
+  workspaceGraphStore: WorkspaceGraphStore
   workspaceRegistry: WindowWorkspaceRegistry
   exportService: ExportService
   gitService: GitService

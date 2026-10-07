@@ -91,6 +91,13 @@ export type GraphLayoutsTable = {
   updated_at: Generated<string>
 }
 
+export type WorkspaceGraphsTable = {
+  workspace_key: string
+  graph_revision: string
+  graph_json: string
+  updated_at: Generated<string>
+}
+
 export type GraphNodeLayoutsTable = {
   workspace_key: string
   layout_key: string
@@ -156,6 +163,7 @@ export type DatabaseSchema = {
   workspaces: WorkspacesTable
   graph_layouts: GraphLayoutsTable
   graph_node_layouts: GraphNodeLayoutsTable
+  workspace_graphs: WorkspaceGraphsTable
   workspace_sync_channels: WorkspaceSyncChannelsTable
   webdav_sync_state: WebDavSyncStateTable
   webdav_sync_entries: WebDavSyncEntriesTable

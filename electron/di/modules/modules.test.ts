@@ -59,7 +59,13 @@ describe('Electron DI modules', () => {
     [
       'desktop workspace',
       workspaceModule,
-      [TOKENS.knowledgeEngineService, TOKENS.workspaceSearchIndexFactory, TOKENS.workspaceRegistry],
+      [
+        TOKENS.knowledgeEngineService,
+        TOKENS.workspaceGraphScheduler,
+        TOKENS.workspaceGraphStore,
+        TOKENS.workspaceSearchIndexFactory,
+        TOKENS.workspaceRegistry,
+      ],
       TOKENS.webTabManager,
     ],
     [

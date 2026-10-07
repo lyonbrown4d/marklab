@@ -5,6 +5,8 @@ import type { LocalHistoryServiceContract } from '@electron/services/localHistor
 import type { Logger } from '@electron/services/logger'
 import { applyAppTaskBadge } from '@electron/services/nativeWindowStatus'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
+import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import {
   createWindowWorkspaceBinding,
   detachWindowWorkspaceBinding,
@@ -24,6 +26,8 @@ type WindowWorkspaceRegistryOptions = {
   knowledgeEngineService?: KnowledgeEngineService
   localHistoryService: LocalHistoryServiceContract
   onSessionDisposed?: (sessionKey: string) => void
+  workspaceGraphScheduler?: WorkspaceGraphComputationScheduler
+  workspaceGraphStore?: WorkspaceGraphStore
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
 }
 
@@ -201,6 +205,8 @@ export class WindowWorkspaceRegistry {
       shell: this.shell,
       window,
       workspaceSearchIndexFactory: this.options.workspaceSearchIndexFactory,
+      workspaceGraphScheduler: this.options.workspaceGraphScheduler,
+      workspaceGraphStore: this.options.workspaceGraphStore,
     })
     this.bindings.set(window.id, binding)
     window.once('closed', () => this.disposeWindow(window.id))

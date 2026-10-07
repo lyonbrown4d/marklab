@@ -15,6 +15,7 @@ const expectedTables = [
   'ai_providers',
   'graph_layouts',
   'graph_node_layouts',
+  'workspace_graphs',
   'recent_workspaces',
   'session_tabs',
   'settings',

@@ -19,6 +19,8 @@ import {
   createNativeTaskAttentionState,
 } from '@electron/services/nativeWindowStatus'
 import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
+import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
@@ -45,6 +47,8 @@ type CreateWindowWorkspaceBindingOptions = {
   sessionKey: string
   shell: Shell
   window: BrowserWindow
+  workspaceGraphScheduler?: WorkspaceGraphComputationScheduler
+  workspaceGraphStore?: WorkspaceGraphStore
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
 }
 
@@ -148,6 +152,10 @@ export const createWindowWorkspaceBinding = (
     options.localHistoryService,
     options.workspaceSearchIndexFactory,
     options.knowledgeEngineService,
+    {
+      workspaceGraphScheduler: options.workspaceGraphScheduler,
+      workspaceGraphStore: options.workspaceGraphStore,
+    },
   )
   const mutationGate = new WorkspaceMutationGate()
   service.setAutoFlushMutationRunner((work) =>

@@ -5,12 +5,7 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import { noopLogger, type Logger } from '@electron/services/logger'
 import { fileLabel } from '@electron/services/workspace/markdown/utils'
-import type {
-  FsGraph,
-  FsMarkdownDiagnostic,
-  FsRootInfo,
-  FsWorkspaceIndex,
-} from '@electron/services/workspace/types'
+import type { FsGraph, FsRootInfo, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
 import { WorkspaceSearchIndexBuildCoordinator } from '@electron/services/workspace/workspaceSearchIndexBuildCoordinator'
@@ -20,19 +15,27 @@ import {
   workspaceSearchKey,
 } from '@electron/services/workspace/workspaceSearchIndexLifecycle'
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue'
+import { loadWorkspaceSearchDocuments } from '@electron/services/workspace/workspaceSearchDocumentLoader'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
 import { WorkspaceSearchOperations } from '@electron/services/workspace/workspaceSearchOperations'
-import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache'
+import { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
+import { WorkspaceGraphPrecomputeCoordinator } from '@electron/services/workspace/workspaceGraphPrecomputeCoordinator'
+import { WorkspaceGraphResolver } from '@electron/services/workspace/workspaceGraphResolver'
+import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
-import {
-  trySidecarMarkdownDiagnostics,
-  trySidecarWorkspaceGraph,
-} from '@electron/services/workspace/workspaceSidecarFileBridge'
-import { mergeMarkdownDiagnostics } from '@electron/services/workspace/markdown/diagnostics'
+import { createWorkspaceStorageKey } from '@electron/services/workspace/workspaceIdentity'
+import { trySidecarWorkspaceGraph } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient'
-import { stringArg, type WatchEventName } from '@electron/services/workspace/workspaceUtils'
+import { analyzeWorkspaceMarkdownBuffer } from '@electron/services/workspace/workspaceMarkdownAnalysis'
+import type { WatchEventName } from '@electron/services/workspace/workspaceUtils'
 
 const SEARCH_INDEX_REBUILD_DELAY_MS = 600
+
+type WorkspaceAnalysisServiceOptions = {
+  graphPrecomputeDelayMs?: number
+  workspaceGraphScheduler?: WorkspaceGraphComputationScheduler
+  workspaceGraphStore?: WorkspaceGraphStore
+}
 
 export type WorkspaceSearchIndexFactory = () => WorkspaceSearchIndex
 
@@ -44,15 +47,28 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     localHistoryService: LocalHistoryServiceContract,
     workspaceSearchIndexFactory: WorkspaceSearchIndexFactory = () => new WorkspaceSearchIndex(),
     private readonly analysisKnowledgeEngineService?: KnowledgeEngineService,
+    private readonly options: WorkspaceAnalysisServiceOptions = {},
   ) {
     super(app, shell, logger, localHistoryService, analysisKnowledgeEngineService)
     this.workspaceSearchIndex = workspaceSearchIndexFactory()
+    this.graphResolver = new WorkspaceGraphResolver({
+      logger: this.logger,
+      scheduler: this.options.workspaceGraphScheduler,
+      store: this.options.workspaceGraphStore,
+    })
     this.searchOperations = new WorkspaceSearchOperations({
       activeSearchKey: () => this.activeWorkspaceSearchKey,
       index: this.workspaceSearchIndex,
       logger: this.logger,
       prepare: () => this.prepareWorkspaceSearchIndex(),
       runTask: (work, name) => this.runSearchIndexTask(work, name),
+    })
+    this.graphPrecompute = new WorkspaceGraphPrecomputeCoordinator({
+      delayMs: this.options.graphPrecomputeDelayMs ?? 750,
+      logger: this.logger,
+      run: () => this.loadWorkspaceGraph('background').then(() => undefined),
+      setStatus: (status, message) =>
+        this.setTask('workspace-graph', 'Workspace graph', status, message),
     })
   }
 
@@ -61,14 +77,21 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   )
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
   private readonly searchOperations: WorkspaceSearchOperations
-  private readonly graphCache = new WorkspaceGraphCache()
+  private readonly graphResolver: WorkspaceGraphResolver
+  private readonly graphPrecompute: WorkspaceGraphPrecomputeCoordinator
   private readonly analysisCache = new WorkspaceAnalysisCache()
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<WorkspaceSearchDocument>({
       applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
       getDocumentPath: (document) => document.path,
-      loadDocuments: (paths) => this.loadDocuments(paths),
+      loadDocuments: (paths) =>
+        loadWorkspaceSearchDocuments({
+          concurrency: 8,
+          logger: this.logger,
+          paths,
+          readFile: (path) => this.readFile({ path }),
+        }),
       logger: this.logger.child('search-index-updates'),
       openIndex: () => this.openWorkspaceSearchIndex(),
       rebuildAll: async () => {
@@ -83,11 +106,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private needsSearchIndexRebuild = true
 
   override dispose(): void {
+    this.graphPrecompute.dispose()
     this.searchOperations.dispose()
     this.searchIndexBuildCoordinator.invalidate()
     this.searchIndexUpdateQueue.dispose()
     this.analysisCache.invalidate()
-    this.graphCache.clear()
+    this.graphResolver.clear()
     void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
     super.dispose()
@@ -113,22 +137,33 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async workspaceGraph(): Promise<FsGraph> {
-    return this.analysisCache.getGraph(async () => {
-      const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
-      const graphKey = this.graphCache.createWorkspaceGraphKey(documents, knownPaths)
-      const cachedGraph = this.graphCache.getWorkspaceGraphByKey(graphKey)
-      if (cachedGraph) return cachedGraph
+    return this.loadWorkspaceGraph('interactive')
+  }
 
-      const graph = await trySidecarWorkspaceGraph({
-        documents,
-        knowledgeEngineService: this.analysisKnowledgeEngineService,
-        knownPaths,
-        logger: this.logger,
-        state: this.state,
+  private async loadWorkspaceGraph(priority: 'background' | 'interactive'): Promise<FsGraph> {
+    const resolve = async () => {
+      const graphState = { ...this.state }
+      const workspaceKey = createWorkspaceStorageKey({
+        kind: graphState.rootKind,
+        path: graphState.rootPath,
       })
-      this.graphCache.setWorkspaceGraphByKey(graphKey, graph)
-      return graph
-    })
+      const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
+      return this.graphResolver.resolve({
+        build: () =>
+          trySidecarWorkspaceGraph({
+            documents,
+            knowledgeEngineService: this.analysisKnowledgeEngineService,
+            knownPaths,
+            logger: this.logger,
+            state: graphState,
+          }),
+        documents,
+        knownPaths,
+        priority,
+        workspaceKey,
+      })
+    }
+    return priority === 'interactive' ? this.analysisCache.getGraph(resolve) : resolve()
   }
 
   override updateBuffer(value: unknown): ReturnType<WorkspaceFileService['updateBuffer']> {
@@ -137,30 +172,16 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     return status
   }
 
-  async analyzeMarkdownBuffer(value: unknown): Promise<FsMarkdownDiagnostic[]> {
-    const pathValue = stringArg(value, 'path')
-    const content = stringArg(value, 'content')
-    const { documents, knownPaths } = await this.workspaceDocumentsAndKnownPaths(pathValue, content)
-    const [localDiagnostics, sidecarDiagnostics] = await Promise.all([
-      this.runWorkerTask(
-        () =>
-          this.analysisWorker.run<FsMarkdownDiagnostic[]>({
-            type: 'markdown-diagnostics',
-            documents,
-            knownPaths,
-            path: pathValue,
-          }),
-        'markdown-diagnostics',
-      ),
-      trySidecarMarkdownDiagnostics({
-        content,
-        knowledgeEngineService: this.analysisKnowledgeEngineService,
-        logger: this.logger,
-        path: pathValue,
-        state: this.state,
-      }),
-    ])
-    return mergeMarkdownDiagnostics(localDiagnostics, sidecarDiagnostics)
+  analyzeMarkdownBuffer(value: unknown) {
+    return analyzeWorkspaceMarkdownBuffer({
+      knowledgeEngineService: this.analysisKnowledgeEngineService,
+      loadInput: (path, content) => this.workspaceDocumentsAndKnownPaths(path, content),
+      logger: this.logger,
+      runLocalTask: (work) => this.runWorkerTask(work, 'markdown-diagnostics'),
+      state: this.state,
+      value,
+      worker: this.analysisWorker,
+    })
   }
 
   searchWorkspace(value: unknown) {
@@ -189,7 +210,8 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
     this.analysisCache.invalidate()
-    this.graphCache.clear()
+    this.graphResolver.clear()
+    this.scheduleGraphPrecompute()
     return result
   }
 
@@ -198,13 +220,15 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const result = await super.setSingleFile(value)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.resetSearchIndexState()
+    this.graphPrecompute.cancel()
     this.analysisCache.invalidate()
-    this.graphCache.clear()
+    this.graphResolver.clear()
     return result
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
     this.analysisCache.invalidate()
+    this.scheduleGraphPrecompute()
     if (!workspaceChangeAffectsSearch(_changedPath, event)) return
     if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
       this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
@@ -217,6 +241,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   protected override onBuffersFlushed(relativePaths: string[]): void {
     if (relativePaths.length > 0) {
       this.analysisCache.invalidate()
+      this.scheduleGraphPrecompute()
     }
     const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
     if (markdownPaths.length === 0) return
@@ -288,23 +313,9 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     })
   }
 
-  private async loadDocuments(relativePaths: string[]): Promise<WorkspaceSearchDocument[]> {
-    const documents: WorkspaceSearchDocument[] = []
-    for (const relativePath of relativePaths) {
-      try {
-        const content = await this.readFile({ path: relativePath })
-        documents.push({
-          path: relativePath,
-          title: fileLabel(relativePath),
-          content,
-        })
-      } catch (error) {
-        this.logger.warn('failed to read flushed file for search index update', {
-          error,
-          path: relativePath,
-        })
-      }
+  private scheduleGraphPrecompute(): void {
+    if (this.analysisKnowledgeEngineService && this.state.rootKind !== 'single') {
+      this.graphPrecompute.schedule()
     }
-    return documents
   }
 }
