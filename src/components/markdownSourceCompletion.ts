@@ -33,6 +33,7 @@ type MarkdownCompletionItem = {
   kind: 'file' | 'heading' | 'language' | number
   insertText: string
   detail?: string
+  documentation?: MonacoLanguages.CompletionItem['documentation']
   filterText?: string
   replacementStartColumn: number
   sortText?: string
@@ -116,6 +117,7 @@ export const registerMarkdownCompletionProvider = (
               ? { insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet }
               : {}),
             detail: item.detail,
+            documentation: item.documentation,
             filterText: item.filterText,
             sortText: item.sortText,
             range,
@@ -233,7 +235,7 @@ const getCompletionItems = async (
   }
 }
 
-const fromLanguageCompletion = (item: CompletionItem): MarkdownCompletionItem => {
+export const fromLanguageCompletion = (item: CompletionItem): MarkdownCompletionItem => {
   const textEdit = item.textEdit
   const editRange = textEdit ? ('range' in textEdit ? textEdit.range : textEdit.replace) : undefined
   const label = item.label
@@ -242,6 +244,7 @@ const fromLanguageCompletion = (item: CompletionItem): MarkdownCompletionItem =>
     kind: item.kind ?? 'language',
     insertText: textEdit?.newText ?? item.insertText ?? label,
     detail: item.detail,
+    documentation: item.documentation,
     filterText: item.filterText,
     replacementStartColumn: (editRange?.start.character ?? 0) + 1,
     sortText: item.sortText,

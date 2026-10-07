@@ -70,7 +70,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
       findingModel: t('ai.composer.findingModel'),
       generate: t('ai.composer.generate'),
       instruction: t('ai.composer.instructionLabel'),
+      privacy: t('ai.composer.privacySelection'),
       placeholder: t('ai.composer.placeholder'),
+      provider: t('ai.composer.provider'),
       retry: t('ai.composer.retry'),
       rewrite: t('ai.composer.actionRewrite'),
       stop: t('ai.composer.stop'),
@@ -151,6 +153,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             instruction={aiComposer.instruction}
             labels={aiLabels}
             modelLabel={aiComposer.modelLabel}
+            onProviderChange={aiComposer.setProviderId}
             onAccept={aiComposer.accept}
             onDismiss={aiComposer.dismiss}
             onInstructionChange={aiComposer.setInstruction}
@@ -160,6 +163,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             onSubmit={aiComposer.submit}
             phase={aiComposer.phase}
             proposal={aiComposer.proposal}
+            providerId={aiComposer.providerId}
+            providers={aiComposer.providers}
             sourceText={aiComposer.sourceText}
           />
         )}

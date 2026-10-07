@@ -7,6 +7,7 @@ import {
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { isMainRendererUrl } from '@/quality/electronWindowUrl'
 
@@ -261,8 +262,32 @@ export const snapshotStartupOpenTargetState = (page: Page) =>
   })
 
 export const closeElectronTestSession = async (session: ElectronTestSession | undefined) => {
-  await session?.app.close().catch(() => undefined)
-  if (session) fs.rmSync(session.testRunRoot, { recursive: true, force: true })
+  if (!session) return
+  let timer: NodeJS.Timeout | undefined
+  const closed = await Promise.race([
+    session.app
+      .close()
+      .then(() => true)
+      .catch(() => true),
+    new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), 5_000)
+    }),
+  ])
+  if (timer) clearTimeout(timer)
+  if (!closed) {
+    const processId = session.app.process().pid
+    if (process.platform === 'win32') {
+      spawnSync('taskkill', ['/PID', String(processId), '/T', '/F'], { windowsHide: true })
+    } else {
+      session.app.process().kill('SIGKILL')
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  try {
+    fs.rmSync(session.testRunRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
+  } catch (error) {
+    console.warn(`Unable to remove Electron E2E profile ${session.testRunRoot}`, error)
+  }
 }
 
 export const firstVisibleLocator = async (locators: Locator[], description: string) => {

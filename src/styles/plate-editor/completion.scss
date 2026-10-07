@@ -6,8 +6,23 @@
   white-space: pre-wrap;
 }
 
-.markdown-editor .marklab-ai-ghost-text[data-source='document'] {
-  color: color-mix(in srgb, hsl(var(--muted-foreground)) 62%, transparent);
+.markdown-editor .marklab-ai-ghost-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-inline-start: 0.5rem;
+  color: color-mix(in srgb, hsl(var(--muted-foreground)) 78%, transparent);
+  font-size: 0.6875rem;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.markdown-editor .marklab-ai-ghost-meta > span + span::before {
+  content: '·';
+  margin-inline-end: 0.45rem;
+  color: hsl(var(--border));
 }
 
 @media (prefers-contrast: more) {

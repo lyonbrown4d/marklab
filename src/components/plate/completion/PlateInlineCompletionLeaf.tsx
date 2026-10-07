@@ -94,6 +94,7 @@ export const PlateInlineCompletionLeaf = ({
   children,
   leaf,
 }: PlateInlineCompletionLeafProps) => {
+  const { t } = useI18n()
   const completionLeaf = leaf as CompletionLeaf
   const candidates = completionLeaf.plateInlineCompletionCandidates ?? []
   const text = completionLeaf.plateInlineCompletion
@@ -107,13 +108,14 @@ export const PlateInlineCompletionLeaf = ({
           candidates={candidates}
         />
       ) : completionLeaf.plateInlineCompletionKind === 'ai' && text ? (
-        <span
-          aria-hidden="true"
-          className="marklab-ai-ghost-text"
-          contentEditable={false}
-          data-completion-kind="ai"
-        >
-          {text}
+        <span aria-hidden="true" contentEditable={false} data-completion-kind="ai">
+          <span className="marklab-ai-ghost-text">{text}</span>
+          <span className="marklab-ai-ghost-meta" data-ai-completion-hint="">
+            <span data-ai-completion-source="">{t('editor.completionSourceAi')}</span>
+            <span>Tab {t('editor.completionAccept')}</span>
+            <span>Ctrl+→ {t('editor.completionAcceptWord')}</span>
+            <span>Esc {t('editor.completionDismiss')}</span>
+          </span>
         </span>
       ) : null}
     </span>

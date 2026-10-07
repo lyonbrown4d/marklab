@@ -11,6 +11,8 @@ import {
   X,
 } from 'lucide-react'
 import { AiProposalDiff } from '@/components/ai/AiProposalDiff'
+import { AiComposerConfiguration } from '@/components/ai/AiComposerConfiguration'
+import type { InlineAiProvider } from '@/components/ai/aiProviderSelection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
@@ -32,7 +34,9 @@ export type AiComposerLabels = {
   findingModel: string
   generate: string
   instruction: string
+  privacy: string
   placeholder: string
+  provider: string
   retry: string
   rewrite: string
   stop: string
@@ -44,6 +48,7 @@ type AiInlineComposerProps = {
   instruction: string
   labels: AiComposerLabels
   modelLabel: string
+  onProviderChange: (providerId: string) => void
   onAccept: () => void
   onDismiss: () => void
   onInstructionChange: (value: string) => void
@@ -53,6 +58,8 @@ type AiInlineComposerProps = {
   onSubmit: (instruction: string) => void
   phase: AiComposerPhase
   proposal: string
+  providerId: string
+  providers: InlineAiProvider[]
   sourceText: string
 }
 
@@ -71,6 +78,7 @@ export const AiInlineComposer = ({
   instruction,
   labels,
   modelLabel,
+  onProviderChange,
   onAccept,
   onDismiss,
   onInstructionChange,
@@ -80,6 +88,8 @@ export const AiInlineComposer = ({
   onSubmit,
   phase,
   proposal,
+  providerId,
+  providers,
   sourceText,
 }: AiInlineComposerProps) => {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -117,12 +127,12 @@ export const AiInlineComposer = ({
   return (
     <section
       aria-label={labels.dialog}
-      className="absolute z-50 w-[min(36rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-border/80 bg-background/95 shadow-xl backdrop-blur"
+      className="absolute z-50 w-[min(40rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-border/80 bg-background/98 shadow-xl shadow-foreground/10 backdrop-blur"
       role="dialog"
       style={{ left: anchor.left, top: anchor.top }}
       onKeyDown={handlePanelKeyDown}
     >
-      <form className="flex items-center gap-2 p-2" onSubmit={handleSubmit}>
+      <form className="flex items-center gap-2 p-3" onSubmit={handleSubmit}>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary/5 text-primary">
           <Sparkles aria-hidden="true" className="size-4" />
         </span>
@@ -136,9 +146,11 @@ export const AiInlineComposer = ({
           ref={inputRef}
           value={instruction}
         />
-        <span className="max-w-40 truncate text-xs text-muted-foreground" title={modelLabel}>
-          {phase === 'loading-provider' ? labels.findingModel : modelLabel}
-        </span>
+        {phase === 'loading-provider' && (
+          <span className="max-w-40 truncate text-xs text-muted-foreground">
+            {labels.findingModel}
+          </span>
+        )}
         {pending ? (
           <Button
             aria-label={labels.stop}
@@ -233,6 +245,15 @@ export const AiInlineComposer = ({
           ))
         )}
       </div>
+      {phase !== 'proposal' && (
+        <AiComposerConfiguration
+          disabled={inputDisabled}
+          labels={labels}
+          onProviderChange={onProviderChange}
+          providerId={providerId}
+          providers={providers}
+        />
+      )}
     </section>
   )
 }

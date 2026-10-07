@@ -18,6 +18,33 @@
   text-decoration-thickness: 0.14em;
 }
 
+// Monaco owns the suggestion DOM, so mirror the shared context-menu tokens here.
+.source-code-editor .monaco-editor .suggest-widget {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.8) !important;
+  border-radius: 0.75rem !important;
+  background: hsl(var(--popover) / 0.98) !important;
+  box-shadow: 0 18px 44px hsl(var(--foreground) / 0.12) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.source-code-editor .monaco-editor .suggest-widget .monaco-list-row {
+  border-radius: 0.5rem;
+}
+
+.source-code-editor .monaco-editor .suggest-widget .monaco-list-row.focused {
+  background: hsl(var(--accent) / 0.8) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.source-code-editor .monaco-editor .suggest-details {
+  border: 1px solid hsl(var(--border) / 0.8) !important;
+  border-radius: 0.75rem !important;
+  background: hsl(var(--popover) / 0.98) !important;
+  box-shadow: 0 18px 44px hsl(var(--foreground) / 0.12) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .source-code-editor .marklab-source-link-target {
     transition: none;

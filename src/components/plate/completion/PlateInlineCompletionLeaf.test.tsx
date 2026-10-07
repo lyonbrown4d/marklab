@@ -26,11 +26,14 @@ describe('PlateInlineCompletionLeaf', () => {
     })
 
     const ghost = screen.getByText('<img src=x onerror=alert(1)>')
-    expect(ghost).toHaveAttribute('aria-hidden', 'true')
-    expect(ghost).toHaveAttribute('contenteditable', 'false')
-    expect(ghost).toHaveAttribute('data-completion-kind', 'ai')
+    const completion = ghost.parentElement
+    expect(completion).toHaveAttribute('aria-hidden', 'true')
+    expect(completion).toHaveAttribute('contenteditable', 'false')
+    expect(completion).toHaveAttribute('data-completion-kind', 'ai')
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(document.querySelector('[data-ai-completion-hint]')).toHaveTextContent('Tab')
+    expect(document.querySelector('[data-ai-completion-source]')).toBeInTheDocument()
   })
 
   it('does not render an empty ghost node', () => {

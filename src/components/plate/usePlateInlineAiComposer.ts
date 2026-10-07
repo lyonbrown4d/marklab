@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { useLatest } from 'ahooks'
 import type { PlateEditor } from 'platejs/react'
 import type { AiComposerPhase, AiQuickAction } from '@/components/ai/AiInlineComposer'
-import { resolveInlineAiProvider, type InlineAiProvider } from '@/components/ai/aiProviderSelection'
+import {
+  listInlineAiProviders,
+  resolveInlineAiProvider,
+  type InlineAiProvider,
+} from '@/components/ai/aiProviderSelection'
 import { useAiGenerationEvents } from '@/components/ai/useAiGenerationEvents'
 import {
   buildAiReplacementPrompt,
@@ -41,6 +45,7 @@ export const usePlateInlineAiComposer = ({
   const [phase, setPhase] = useState<AiComposerPhase>('prompt')
   const [proposal, setProposal] = useState('')
   const [provider, setProvider] = useState<InlineAiProvider | null>(null)
+  const [providers, setProviders] = useState<InlineAiProvider[]>([])
   const activePathRef = useLatest(activePath)
   const captureRef = useLatest(capture)
   const proposalRef = useLatest(proposal)
@@ -129,6 +134,7 @@ export const usePlateInlineAiComposer = ({
       return
     }
     const nextProvider = resolveInlineAiProvider(defaultProviderId, providers)
+    setProviders(listInlineAiProviders(providers))
     setProvider(nextProvider)
     if (!nextProvider) {
       setError(
@@ -258,11 +264,15 @@ export const usePlateInlineAiComposer = ({
     instruction,
     isOpen: capture !== null,
     modelLabel: provider?.label ?? '',
+    providerId: provider?.id ?? '',
+    providers,
     phase,
     proposal,
     quickAction,
     retry: () => void submit(instruction),
     setInstruction,
+    setProviderId: (providerId: string) =>
+      setProvider(providers.find((candidate) => candidate.id === providerId) ?? null),
     sourceText: capture?.sourceText ?? '',
     stop: () => {
       cancelCurrentRequest()

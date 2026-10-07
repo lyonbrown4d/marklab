@@ -67,6 +67,7 @@ const createProps = (overrides: Partial<AppStatusBarProps> = {}): AppStatusBarPr
   readOnlyMode: false,
   onToggleTerminal: vi.fn(),
   onToggleReadOnly: vi.fn(),
+  onOpenSettings: vi.fn(),
   onRestoreSession: vi.fn(),
   restoreStatusMessage: null,
   restoreStatusBusy: false,

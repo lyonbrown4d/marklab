@@ -272,6 +272,7 @@ const AppLayout = () => {
           readOnlyMode={state.editorReadOnlyMode}
           onToggleTerminal={toggleTerminalArea}
           onToggleReadOnly={toggleReadOnly}
+          onOpenSettings={openSettings}
           onRestoreSession={state.restoreSession}
           restoreStatusMessage={state.restoreStatusMessage}
           restoreStatusBusy={state.isRestoringSession}

@@ -72,6 +72,34 @@ describe('MarkdownLanguageIntelligenceProvider', () => {
     expect(result.isIncomplete).toBe(true)
   })
 
+  it('adds an inspectable details card to workspace file completions', async () => {
+    const provider = new MarkdownLanguageIntelligenceProvider({
+      getCompletions: vi.fn(async () => [
+        {
+          label: 'Architecture',
+          kind: 'file' as const,
+          insertText: 'architecture.md',
+          detail: 'docs/architecture.md',
+          replacementStartColumn: 2,
+          lspKind: 17,
+        },
+      ]),
+      getDiagnostics: vi.fn(async () => []),
+    } as never)
+
+    const result = await provider.completion({
+      document: TextDocument.create('file:///workspace/note.md', 'markdown', 1, ']('),
+      path: 'note.md',
+      position: { line: 0, character: 2 },
+      workspace: {} as never,
+    })
+
+    expect(result.items[0]?.documentation).toEqual({
+      kind: 'markdown',
+      value: '**Architecture**\n\n`docs/architecture.md`',
+    })
+  })
+
   it('routes source completions inside a Mermaid fence and maps ranges to Markdown', async () => {
     const provider = new MarkdownLanguageIntelligenceProvider({
       getCompletions: vi.fn(async () => []),

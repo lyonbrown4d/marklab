@@ -33,7 +33,7 @@ describe('resolveInlineAiProvider', () => {
           hasApiKey: false,
         },
       ]),
-    ).toEqual({ id: 'ollama', label: 'Ollama · model-a' })
+    ).toEqual({ id: 'ollama', label: 'Ollama · model-a', locality: 'local' })
   })
 
   it('does not fall back when an explicit default is unavailable', () => {
@@ -54,13 +54,14 @@ describe('resolveInlineAiProvider', () => {
           hasApiKey: false,
         },
       ]),
-    ).toEqual({ id: 'secure-loopback', label: 'Remote · model-a' })
+    ).toEqual({ id: 'secure-loopback', label: 'Remote · model-a', locality: 'local' })
   })
 
   it('automatically selects only when there is no explicit default', () => {
     expect(resolveInlineAiProvider(null, [provider])).toEqual({
       id: 'remote',
       label: 'Remote · model-a',
+      locality: 'remote',
     })
     expect(resolveInlineAiProvider(null, [])).toBeNull()
   })

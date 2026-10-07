@@ -7,6 +7,7 @@ import StatusCenter from '@/components/StatusCenter'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import type { SaveState } from '@/app/useEditorBuffer'
+import { AiCompletionStatusPopover } from '@/components/ai/AiCompletionStatusPopover'
 
 type AppStatusBarRightProps = {
   activePath: string | null
@@ -20,6 +21,7 @@ type AppStatusBarRightProps = {
   terminalOpen: boolean
   readOnlyMode: boolean
   onToggleReadOnly: () => void
+  onOpenSettings: () => void
 }
 
 const AppStatusBarRightView = ({
@@ -34,6 +36,7 @@ const AppStatusBarRightView = ({
   terminalOpen,
   readOnlyMode,
   onToggleReadOnly,
+  onOpenSettings,
 }: AppStatusBarRightProps) => {
   const { t } = useI18n()
   const readOnlyLabel = t(readOnlyMode ? 'statusBar.readOnlyLocked' : 'statusBar.readOnlyEditable')
@@ -112,6 +115,7 @@ const AppStatusBarRightView = ({
           </TooltipContent>
         </Tooltip>
       )}
+      <AiCompletionStatusPopover onOpenSettings={onOpenSettings} />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

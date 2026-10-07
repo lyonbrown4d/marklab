@@ -43,47 +43,6 @@ test.describe('Electron AI experience', () => {
     session = undefined
   })
 
-  test('shows the built-in AI controls without starting a model download', async () => {
-    await page.keyboard.press('Control+Comma')
-    const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
-    await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
-    await settingsDialog.getByRole('tab', { name: /^AI$/ }).click()
-
-    await expect(
-      settingsDialog.getByText(/Built-in Local AI|内置本地 AI/i, { exact: true }),
-    ).toBeVisible()
-    await expect(
-      settingsDialog.getByRole('switch', {
-        name: /Use a custom model directory|使用自定义模型目录/i,
-      }),
-    ).toBeVisible()
-    await expect(settingsDialog.getByText(/Qwen3 0\.6B/i)).toBeVisible()
-    await expect(
-      settingsDialog.getByRole('button', { name: /Download Qwen3 0\.6B|下载 Qwen3 0\.6B/i }),
-    ).toBeVisible()
-
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'ai-settings.png'),
-    })
-
-    await settingsDialog
-      .getByRole('button', { name: /Add compatible service|添加兼容服务/i })
-      .click()
-    const providerDialog = page.getByRole('dialog', {
-      name: /Add compatible service|添加兼容服务/i,
-    })
-    await expect(providerDialog).toBeVisible()
-    await page.screenshot({
-      animations: 'disabled',
-      path: path.join(captureDirectory, 'ai-provider-dialog.png'),
-    })
-    await providerDialog.getByRole('button', { name: /Cancel|取消/i }).click()
-    await expect(providerDialog).toBeHidden()
-  })
-
   test('opens the transient AI companion from the Markdown editor', async () => {
     if (!mockAiServer) throw new Error('Mock AI server was not started')
     await page.keyboard.press('Control+Comma')
@@ -109,6 +68,18 @@ test.describe('Electron AI experience', () => {
       .click()
     await page.keyboard.press('Escape')
 
+    const aiStatus = page.getByRole('button', { name: /^(AI suggestions|AI 自动提示)$/i })
+    await expect(aiStatus).toBeVisible()
+    await aiStatus.click()
+    const aiCompletionSwitch = page.getByRole('switch', {
+      name: /Enable automatic AI suggestions|启用 AI 自动提示/i,
+    })
+    await expect(page.getByText('Local E2E · marklab-e2e', { exact: true })).toBeVisible()
+    await aiCompletionSwitch.click()
+    await expect(aiStatus).toHaveAttribute('aria-pressed', 'true')
+    await aiCompletionSwitch.click()
+    await page.keyboard.press('Escape')
+
     const editor = page.getByTestId('markdown-editor')
     await expect(editor).toBeVisible({ timeout: 10_000 })
     await editor.click()
@@ -125,6 +96,18 @@ test.describe('Electron AI experience', () => {
     await expect(companion.getByRole('button', { name: /Make concise|更简洁/i })).toBeVisible()
     await expect(companion.getByRole('button', { name: /Explain|解释/i })).toBeVisible()
     await expect(companion.getByText(/Local E2E · marklab-e2e/i)).toBeVisible()
+    await expect(companion.getByRole('combobox', { name: /^Model$|^模型$/i })).toBeVisible()
+    await expect(
+      companion.getByText(
+        /Only the selected text is sent to the selected provider|仅将选中的文本发送给当前选择的模型提供商/i,
+      ),
+    ).toBeVisible()
+    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
+    fs.mkdirSync(captureDirectory, { recursive: true })
+    await page.screenshot({
+      animations: 'disabled',
+      path: path.join(captureDirectory, 'ai-inline-composer.png'),
+    })
     await companion.getByRole('button', { name: /Rewrite|改写/i }).click()
     const proposalDiff = companion.getByLabel(/AI proposal changes|AI 建议修改/i)
     await expect(proposalDiff).toBeVisible({ timeout: 10_000 })
@@ -133,8 +116,6 @@ test.describe('Electron AI experience', () => {
     await expect(companion.getByRole('button', { name: /^Abandon$|^放弃$/i })).toBeVisible()
     await expect(companion.getByRole('button', { name: /^Try again$|^再试一次$/i })).toBeVisible()
 
-    const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
-    fs.mkdirSync(captureDirectory, { recursive: true })
     await page.screenshot({
       animations: 'disabled',
       path: path.join(captureDirectory, 'ai-inline-companion.png'),

@@ -2,13 +2,18 @@ import type { PublicAiProvider } from '@/services/aiApi'
 
 export type InlineAiProvider = {
   id: string
+  locality: PublicAiProvider['locality']
   label: string
 }
 
-const toInlineProvider = (provider: PublicAiProvider): InlineAiProvider => ({
+export const toInlineAiProvider = (provider: PublicAiProvider): InlineAiProvider => ({
   id: provider.id,
+  locality: provider.locality,
   label: `${provider.label} · ${provider.model}`,
 })
+
+export const listInlineAiProviders = (providers: PublicAiProvider[]) =>
+  providers.filter((provider) => provider.available).map(toInlineAiProvider)
 
 export const resolveInlineAiProvider = (
   defaultProviderId: string | null,
@@ -18,9 +23,9 @@ export const resolveInlineAiProvider = (
     const explicitProvider = providers.find(
       (provider) => provider.id === defaultProviderId && provider.available,
     )
-    return explicitProvider ? toInlineProvider(explicitProvider) : null
+    return explicitProvider ? toInlineAiProvider(explicitProvider) : null
   }
 
   const firstConfigured = providers.find((provider) => provider.available)
-  return firstConfigured ? toInlineProvider(firstConfigured) : null
+  return firstConfigured ? toInlineAiProvider(firstConfigured) : null
 }

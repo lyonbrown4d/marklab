@@ -31,6 +31,7 @@ type AppStatusBarProps = {
   readOnlyMode: boolean
   onToggleTerminal: () => void
   onToggleReadOnly: () => void
+  onOpenSettings: () => void
   onRestoreSession: () => void
   restoreStatusMessage: string | null
   restoreStatusBusy: boolean
@@ -51,6 +52,7 @@ const AppStatusBar = ({
   readOnlyMode,
   onToggleTerminal,
   onToggleReadOnly,
+  onOpenSettings,
   onRestoreSession,
   restoreStatusMessage,
   restoreStatusBusy,
@@ -164,6 +166,7 @@ const AppStatusBar = ({
             terminalOpen={terminalOpen}
             readOnlyMode={readOnlyMode}
             onToggleReadOnly={onToggleReadOnly}
+            onOpenSettings={onOpenSettings}
           />
         </div>
       </footer>

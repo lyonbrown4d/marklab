@@ -1,16 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { aiApi, type AiProviderUpdate } from '@/services/aiApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isAiProviderUsable } from '@/components/settings/aiProviderUtils'
-
-const providersKey = ['ai', 'providers'] as const
+import { aiProvidersQueryKey, useAiProvidersQuery } from '@/components/ai/aiProviderQuery'
 
 export const useAiProviders = () => {
   const queryClient = useQueryClient()
-  const providersQuery = useQuery({
-    queryKey: providersKey,
-    queryFn: () => aiApi.listProviders(),
-  })
+  const providersQuery = useAiProvidersQuery()
   const saveMutation = useMutation({
     mutationFn: (input: AiProviderUpdate) => aiApi.updateProvider(input),
     onSuccess: (provider) => {
@@ -21,7 +17,7 @@ export const useAiProviders = () => {
       if (preferences.aiCompletionProviderId === provider.id && !isAiProviderUsable(provider)) {
         preferences.setAiCompletionProviderId(null)
       }
-      return queryClient.invalidateQueries({ queryKey: providersKey })
+      return queryClient.invalidateQueries({ queryKey: aiProvidersQueryKey })
     },
   })
   const deleteMutation = useMutation({
@@ -30,7 +26,7 @@ export const useAiProviders = () => {
       const preferences = usePreferencesStore.getState()
       if (preferences.aiDefaultProviderId === id) preferences.setAiDefaultProviderId(null)
       if (preferences.aiCompletionProviderId === id) preferences.setAiCompletionProviderId(null)
-      return queryClient.invalidateQueries({ queryKey: providersKey })
+      return queryClient.invalidateQueries({ queryKey: aiProvidersQueryKey })
     },
   })
   const testMutation = useMutation({

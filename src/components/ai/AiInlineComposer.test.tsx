@@ -12,7 +12,9 @@ const labels = {
   findingModel: 'Finding model…',
   generate: 'Generate',
   instruction: 'AI instruction',
+  privacy: 'Only the selected context is sent to the selected provider.',
   placeholder: 'Tell AI what to change…',
+  provider: 'Model',
   retry: 'Try again',
   rewrite: 'Rewrite',
   stop: 'Stop generation',
@@ -24,6 +26,7 @@ const baseProps = {
   instruction: '',
   labels,
   modelLabel: 'OpenAI · gpt-5-mini',
+  onProviderChange: vi.fn(),
   onAccept: vi.fn(),
   onDismiss: vi.fn(),
   onInstructionChange: vi.fn(),
@@ -33,6 +36,11 @@ const baseProps = {
   onSubmit: vi.fn(),
   phase: 'prompt' as const,
   proposal: '',
+  providerId: 'openai-main',
+  providers: [
+    { id: 'openai-main', label: 'OpenAI · gpt-5-mini', locality: 'remote' as const },
+    { id: 'ollama-local', label: 'Ollama · qwen3:8b', locality: 'local' as const },
+  ],
   sourceText: 'Original words',
 }
 
@@ -94,6 +102,17 @@ describe('AiInlineComposer', () => {
     fireEvent.keyDown(input, { isComposing: true, key: 'Enter' })
 
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('lets the user choose the provider before a request', () => {
+    const onProviderChange = vi.fn()
+    render(<AiInlineComposer {...baseProps} onProviderChange={onProviderChange} />)
+
+    fireEvent.click(screen.getByRole('combobox', { name: labels.provider }))
+    fireEvent.click(screen.getByRole('option', { name: 'Ollama · qwen3:8b' }))
+    expect(onProviderChange).toHaveBeenCalledWith('ollama-local')
+
+    expect(screen.getByText(labels.privacy)).toBeInTheDocument()
   })
 
   it('does not dismiss while Escape is cancelling an IME candidate', () => {

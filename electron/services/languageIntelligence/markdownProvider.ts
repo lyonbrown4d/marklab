@@ -72,6 +72,10 @@ export class MarkdownLanguageIntelligenceProvider {
           label: item.label,
           kind: item.lspKind,
           detail: item.detail,
+          documentation:
+            item.kind === 'file' && item.detail
+              ? { kind: 'markdown', value: `**${item.label}**\n\n\`${item.detail}\`` }
+              : undefined,
           insertText: item.insertText,
           sortText: item.sortText,
           textEdit: {

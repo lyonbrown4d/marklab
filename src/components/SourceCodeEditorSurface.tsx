@@ -83,6 +83,7 @@ export const SourceCodeEditorSurface = ({
             domReadOnly: readOnly,
             minimap: { enabled: sourceCodeMiniMapEnabled },
             inlineSuggest: { enabled: true, showToolbar: 'onHover' },
+            suggest: { preview: true },
             wordWrap: 'on',
             tabSize: 2,
             scrollBeyondLastLine: false,
