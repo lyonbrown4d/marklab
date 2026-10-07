@@ -23,6 +23,8 @@ export type MarkdownImageImportOptions = {
   strategy: MarkdownAssetImportStrategy
 }
 
+const MAX_IMPORTED_ASSET_BYTES = 32 * 1024 * 1024
+
 export const importMarkdownImages = async (
   sources: readonly MarkdownImageImportSource[],
   options: MarkdownImageImportOptions,
@@ -112,16 +114,19 @@ const importAsset = async (
     })
   }
   if (source.kind === 'path') throw new Error('Invalid image source path')
-  return fsApi.importMarkdownAssetBase64({
-    base64Data: await blobToBase64(source.file, options.signal),
+  if (source.file.size > MAX_IMPORTED_ASSET_BYTES) {
+    throw new Error('Image asset is too large to import')
+  }
+  return fsApi.importMarkdownAssetBytes({
+    bytes: await blobToArrayBuffer(source.file, options.signal),
     documentPath: options.activePath,
     fileName: source.file.name || `image-${Date.now()}.${extensionFromMime(source.file.type)}`,
     title: options.title,
   })
 }
 
-const blobToBase64 = (blob: Blob, signal?: AbortSignal) =>
-  new Promise<string>((resolve, reject) => {
+const blobToArrayBuffer = (blob: Blob, signal?: AbortSignal) =>
+  new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader()
     const abort = () => {
       reader.abort()
@@ -131,10 +136,10 @@ const blobToBase64 = (blob: Blob, signal?: AbortSignal) =>
     reader.onerror = () => reject(reader.error ?? new Error('Failed to read image asset'))
     reader.onload = () => {
       signal?.removeEventListener('abort', abort)
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      resolve(result.slice(Math.max(0, result.indexOf(',') + 1)))
+      if (reader.result instanceof ArrayBuffer) resolve(reader.result)
+      else reject(new Error('Failed to read binary image asset'))
     }
-    reader.readAsDataURL(blob)
+    reader.readAsArrayBuffer(blob)
   })
 
 const isValidSource = (source: MarkdownImageImportSource) => {

@@ -282,6 +282,7 @@ const desktopApi: RendererSafeElectronApi = {
   },
   assets: workspacePreloadSurfaces.assets,
   workspace: workspacePreloadSurfaces.workspace,
+  workspaceTree: workspacePreloadSurfaces.workspaceTree,
   webview: {
     onFileDrop,
   },

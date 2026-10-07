@@ -1,4 +1,5 @@
 import type { Logger } from '@electron/services/logger'
+import { scheduleWorkspacePrewarm } from '@electron/services/workspace/workspacePrewarmScheduler'
 
 type WorkspaceAccessPrewarmerOptions = {
   delayMs?: number
@@ -10,15 +11,20 @@ type WorkspaceAccessPrewarmerOptions = {
 const DEFAULT_PREWARM_DELAY_MS = 75
 
 export class WorkspaceAccessPrewarmer {
+  private disposed = false
   private timer: ReturnType<typeof setTimeout> | null = null
 
   constructor(private readonly options: WorkspaceAccessPrewarmerOptions) {}
 
   schedule(): void {
+    if (this.disposed) return
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => {
       this.timer = null
-      void this.options.prepare().catch((error) => {
+      void scheduleWorkspacePrewarm(async () => {
+        if (this.disposed) return
+        await this.options.prepare()
+      }).catch((error) => {
         this.options.logger.warn('workspace access prewarm failed', {
           error,
           rootKind: this.options.rootKind(),
@@ -28,6 +34,7 @@ export class WorkspaceAccessPrewarmer {
   }
 
   dispose(): void {
+    this.disposed = true
     if (!this.timer) return
     clearTimeout(this.timer)
     this.timer = null

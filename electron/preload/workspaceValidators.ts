@@ -1,5 +1,4 @@
 import type {
-  AssetBytes,
   AssetCapability,
   WorkspaceBufferStatus,
   WorkspaceDescriptor,
@@ -13,6 +12,14 @@ import type {
   WorkspaceSwitchToken,
   WorkspaceTextPreview,
 } from '@electron/types'
+import type {
+  WorkspaceTreeChildrenResult,
+  WorkspaceTreeDeltaEvent,
+  WorkspaceTreeEntry,
+  WorkspaceTreeExistenceResult,
+  WorkspaceTreeInitialFileResult,
+  WorkspaceTreeSearchResult,
+} from '@/types/workspaceTree'
 import type { WorkspacePathActionAck } from '@/types/workspaceSession'
 
 type RecordValue = Record<string, unknown>
@@ -76,6 +83,101 @@ export const isTextPreview = (value: unknown): value is WorkspaceTextPreview =>
   typeof value.content === 'string' &&
   typeof value.truncated === 'boolean'
 
+const isWorkspaceTreeEntry = (value: unknown): value is WorkspaceTreeEntry =>
+  hasExactKeys(value, ['kind', 'name', 'path', 'hasChildren']) &&
+  (value.kind === 'file' || value.kind === 'folder') &&
+  typeof value.name === 'string' &&
+  typeof value.path === 'string' &&
+  typeof value.hasChildren === 'boolean'
+
+export const isWorkspaceTreeChildrenResult = (
+  value: unknown,
+): value is WorkspaceTreeChildrenResult =>
+  hasExactKeys(value, ['entries', 'nextCursor', 'parent', 'generation', 'revision', 'root']) &&
+  Array.isArray(value.entries) &&
+  value.entries.every(isWorkspaceTreeEntry) &&
+  (value.nextCursor === null || typeof value.nextCursor === 'string') &&
+  typeof value.parent === 'string' &&
+  isNonNegativeInteger(value.generation) &&
+  isNonNegativeInteger(value.revision) &&
+  isWorkspaceRoot(value.root)
+
+export const isWorkspaceTreeExistenceResult = (
+  value: unknown,
+): value is WorkspaceTreeExistenceResult =>
+  hasExactKeys(value, ['existing', 'generation', 'revision', 'root']) &&
+  Array.isArray(value.existing) &&
+  value.existing.every((path) => typeof path === 'string') &&
+  isNonNegativeInteger(value.generation) &&
+  isNonNegativeInteger(value.revision) &&
+  isWorkspaceRoot(value.root)
+
+export const isWorkspaceTreeInitialFileResult = (
+  value: unknown,
+): value is WorkspaceTreeInitialFileResult =>
+  hasExactKeys(value, ['generation', 'path', 'revision', 'root']) &&
+  isNonNegativeInteger(value.generation) &&
+  (value.path === null || typeof value.path === 'string') &&
+  isNonNegativeInteger(value.revision) &&
+  isWorkspaceRoot(value.root)
+
+export const isWorkspaceTreeSearchResult = (value: unknown): value is WorkspaceTreeSearchResult =>
+  hasExactKeys(value, ['entries', 'generation', 'revision', 'root']) &&
+  Array.isArray(value.entries) &&
+  value.entries.every(isWorkspaceTreeEntry) &&
+  isNonNegativeInteger(value.generation) &&
+  isNonNegativeInteger(value.revision) &&
+  isWorkspaceRoot(value.root)
+
+const isDeltaEntry = (value: unknown): boolean =>
+  hasExactKeys(value, ['kind', 'name', 'path']) &&
+  (value.kind === 'file' || value.kind === 'folder') &&
+  typeof value.name === 'string' &&
+  typeof value.path === 'string'
+
+const isWorkspaceTreeChange = (value: unknown): boolean => {
+  if (!isRecord(value)) return false
+  if (value.type === 'removed' || value.type === 'changed') {
+    return hasExactKeys(value, ['type', 'path']) && typeof value.path === 'string'
+  }
+  if (value.type === 'added') {
+    return hasExactKeys(value, ['type', 'entry']) && isDeltaEntry(value.entry)
+  }
+  return (
+    value.type === 'renamed' &&
+    hasExactKeys(value, ['type', 'from', 'entry']) &&
+    typeof value.from === 'string' &&
+    isDeltaEntry(value.entry)
+  )
+}
+
+export const isWorkspaceTreeDeltaEvent = (value: unknown): value is WorkspaceTreeDeltaEvent => {
+  if (!isRecord(value)) return false
+  const baseValid =
+    isNonNegativeInteger(value.previousRevision) &&
+    isNonNegativeInteger(value.generation) &&
+    isNonNegativeInteger(value.revision) &&
+    value.revision === value.previousRevision + 1 &&
+    isWorkspaceRoot(value.root)
+  if (!baseValid) return false
+  if (value.kind === 'invalidated') {
+    return hasExactKeys(value, ['generation', 'kind', 'previousRevision', 'revision', 'root'])
+  }
+  return (
+    value.kind === 'changes' &&
+    hasExactKeys(value, [
+      'changes',
+      'generation',
+      'kind',
+      'previousRevision',
+      'revision',
+      'root',
+    ]) &&
+    Array.isArray(value.changes) &&
+    value.changes.every(isWorkspaceTreeChange)
+  )
+}
+
 export const isSnapshot = (value: unknown): value is WorkspaceSnapshot =>
   hasExactKeys(value, ['root', 'entries']) &&
   isWorkspaceRoot(value.root) &&
@@ -109,11 +211,3 @@ export const isAssetCapability = (value: unknown): value is AssetCapability =>
   typeof value.url === 'string' &&
   capabilityUrlPattern.test(value.url) &&
   isNonNegativeInteger(value.expires_at_ms)
-export const isAssetBytes = (value: unknown): value is AssetBytes =>
-  hasAllowedKeys(value, ['bytes', 'size_bytes'], ['bytes', 'media_type', 'size_bytes']) &&
-  value.bytes instanceof ArrayBuffer &&
-  isNonNegativeInteger(value.size_bytes) &&
-  value.size_bytes === value.bytes.byteLength &&
-  (value.media_type === undefined ||
-    value.media_type === null ||
-    typeof value.media_type === 'string')

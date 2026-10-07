@@ -54,16 +54,23 @@ export const editorBufferIdentity = (workspace: string, path: string) =>
 
 export const createEditorBufferPersistence = () => {
   const pendingUpdates = new Set<Promise<void>>()
+  const updateFailures = new Map<string, unknown>()
   const revisions = new Map<string, EditorRevisionSnapshot>()
   let activeFlush: Promise<void> | null = null
   let updateSequence = 0
 
-  const trackUpdate = (operation: Promise<void>) => {
+  const trackUpdate = (operation: Promise<void>, identity = '') => {
     updateSequence += 1
     pendingUpdates.add(operation)
     void operation.then(
-      () => pendingUpdates.delete(operation),
-      () => pendingUpdates.delete(operation),
+      () => {
+        pendingUpdates.delete(operation)
+        updateFailures.delete(identity)
+      },
+      (error) => {
+        pendingUpdates.delete(operation)
+        updateFailures.set(identity, error)
+      },
     )
   }
 
@@ -92,6 +99,12 @@ export const createEditorBufferPersistence = () => {
         const observedSequence = updateSequence
         while (pendingUpdates.size > 0) {
           await Promise.allSettled(Array.from(pendingUpdates))
+        }
+        if (updateFailures.size > 0) {
+          throw new AggregateError(
+            [...updateFailures.values()],
+            'Editor buffer updates failed before flush',
+          )
         }
 
         await persist()

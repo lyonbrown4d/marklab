@@ -5,11 +5,21 @@ import type {
 } from '@electron/services/knowledgeEngine/workspaceOccurrenceSearch'
 
 export type WorkspaceOccurrenceSearchWorkerRequest = {
-  documents: WorkspaceSearchDocument[]
   id: number
-  input: OccurrenceSearchInput
-}
+} & (
+  | {
+      type: 'sync'
+      documents: WorkspaceSearchDocument[]
+      revision: string
+    }
+  | {
+      type: 'search'
+      input: OccurrenceSearchInput
+      revision: string
+    }
+)
 
 export type WorkspaceOccurrenceSearchWorkerResponse =
-  | { id: number; ok: true; result: OccurrenceSearchOutput }
-  | { id: number; ok: false; error: string }
+  | { type: 'synced'; id: number; ok: true; revision: string }
+  | { type: 'result'; id: number; ok: true; revision: string; result: OccurrenceSearchOutput }
+  | { type: 'error'; id: number; ok: false; error: string }

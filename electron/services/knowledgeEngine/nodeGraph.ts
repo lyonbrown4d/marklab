@@ -4,7 +4,6 @@ import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/ta
 import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils'
 import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups'
 import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters'
-import { workspaceFileSummary } from '@electron/services/knowledgeEngine/workspaceGraphSummary'
 import type {
   FsGraph,
   FsGraphEdge,
@@ -36,9 +35,7 @@ export const buildNodeWorkspaceGraph = (
   const files = indexed.map((item) => item.parsed)
   const filesByPath = new Map(files.map((file) => [file.path, file]))
   const assetPaths = new Set(knownPaths.assetPaths.map(normalizeWorkspacePath))
-  const nodes: FsGraphNode[] = indexed.map(({ document, parsed, tree }) =>
-    fileNode(parsed.path, workspaceFileSummary(document.content, tree)),
-  )
+  const nodes: FsGraphNode[] = indexed.map(({ parsed }) => fileNode(parsed.path))
   const nodeIds = new Set(nodes.map((node) => node.id))
   const edges: FsGraphEdge[] = []
   const contains = new Set<string>()
@@ -182,12 +179,11 @@ const previewTarget = (
 const fileNodeId = (path: string): string => `file:${path}`
 const headingNodeId = (path: string, slug: string): string => `heading:${path}:${slug}`
 
-const fileNode = (path: string, content?: string): FsGraphNode => ({
+const fileNode = (path: string): FsGraphNode => ({
   id: fileNodeId(path),
   kind: 'file',
   label: fileLabel(path),
   path,
-  ...(content ? { content } : {}),
 })
 
 const hasNonMarkdownExtension = (value: string): boolean => {

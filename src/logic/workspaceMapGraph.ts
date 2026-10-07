@@ -64,6 +64,7 @@ export const buildWorkspaceMapGraph = (graph: GraphData): GraphData => {
     nodes,
     edges,
     layoutKey: createGraphLayoutKey('workspace-map', nodes, edges),
+    revision: graph.revision,
   }
 }
 

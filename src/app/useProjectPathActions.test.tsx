@@ -4,7 +4,6 @@ import { useProjectLoader } from '@/app/useProjectLoader'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
 
 const api = vi.hoisted(() => ({
-  getSnapshot: vi.fn(),
   renamePath: vi.fn(),
   movePath: vi.fn(),
   createFile: vi.fn(),
@@ -13,7 +12,13 @@ const api = vi.hoisted(() => ({
   setRoot: vi.fn(),
   setSingleFile: vi.fn(),
 }))
+const treeApi = vi.hoisted(() => ({
+  initialFile: vi.fn(),
+  listChildren: vi.fn(),
+  pathsExist: vi.fn(),
+}))
 vi.mock('@/services/fsApi', () => ({ fsApi: api }))
+vi.mock('@/services/workspaceTreeApi', () => ({ workspaceTreeApi: treeApi }))
 vi.mock('@/runtime/environment', () => ({
   runInDesktop: async (work: () => Promise<unknown>) => {
     await work()
@@ -49,6 +54,25 @@ const snapshot = (paths = ['renamed.md', 'other.md']) => ({
   root: { kind: 'internal' as const, path: '/workspace' },
   entries: paths.map((path) => ({ kind: 'file' as const, path })),
 })
+const mockTreeProjection = (value = snapshot()) => {
+  const resultBase = {
+    generation: 0,
+    revision: 1,
+    root: value.root,
+  }
+  treeApi.listChildren.mockResolvedValue({
+    ...resultBase,
+    entries: value.entries.map((entry) => ({ ...entry, hasChildren: false })),
+    nextCursor: null,
+  })
+  treeApi.pathsExist.mockImplementation(({ paths }: { paths: string[] }) =>
+    Promise.resolve({
+      ...resultBase,
+      existing: paths.filter((path) => value.entries.some((entry) => entry.path === path)),
+    }),
+  )
+  treeApi.initialFile.mockResolvedValue({ ...resultBase, path: value.entries[0]?.path ?? null })
+}
 const deferred = () => {
   let resolve!: () => void
   const promise = new Promise<void>((done) => {
@@ -58,7 +82,7 @@ const deferred = () => {
 }
 beforeEach(() => {
   vi.resetAllMocks()
-  api.getSnapshot.mockResolvedValue(snapshot())
+  mockTreeProjection()
   api.renamePath.mockResolvedValue(undefined)
   api.movePath.mockResolvedValue(undefined)
 })
@@ -85,7 +109,7 @@ describe('workspace path mutation navigation', () => {
       activeTabId: 'file:edit:docs/note.md',
       locationPathname: '/files/edit/docs/note.md',
     })
-    api.getSnapshot.mockResolvedValue(snapshot(['archive/note.md', 'docs-other/note.md']))
+    mockTreeProjection(snapshot(['archive/note.md', 'docs-other/note.md']))
     const { result } = renderHook(() => useProjectLoader(props))
     await act(async () => {
       await result.current.renamePath('docs', 'archive')
@@ -158,7 +182,7 @@ describe('workspace path mutation navigation', () => {
       await mutation
     })
     expect(props.setTabs).not.toHaveBeenCalled()
-    expect(api.getSnapshot).not.toHaveBeenCalled()
+    expect(treeApi.listChildren).not.toHaveBeenCalled()
   })
 
   it('respects navigation performed while the rename is pending', async () => {

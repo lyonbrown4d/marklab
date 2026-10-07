@@ -20,6 +20,8 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
     nodes,
     searchTerm,
     handleActivate,
+    handleToggle,
+    handleScrollCapture,
     handleMove,
     handleRename,
     handleCreateSubmit,
@@ -48,6 +50,7 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
             ref={setTreeContainerRef}
             className="h-full min-h-0 w-full overflow-hidden"
             onKeyDownCapture={handleKeyDownCapture}
+            onScrollCapture={handleScrollCapture}
           >
             {dndRootElement && (
               <AutoSizer
@@ -81,6 +84,7 @@ const SidebarFileTree = (props: SidebarFileTreeProps) => {
                       disableMultiSelection
                       className="outline-none"
                       onActivate={handleActivate}
+                      onToggle={(id) => void handleToggle(id)}
                       onMove={handleMove}
                       onRename={handleRename}
                     >

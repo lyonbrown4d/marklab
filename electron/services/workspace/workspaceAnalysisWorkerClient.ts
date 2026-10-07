@@ -44,6 +44,11 @@ export class WorkspaceAnalysisWorkerClient {
     })
   }
 
+  runLatest<T extends WorkspaceAnalysisResult>(task: WorkspaceAnalysisTask): Promise<T> {
+    this.terminate()
+    return this.run<T>(task)
+  }
+
   terminate(): void {
     const worker = this.worker
     this.worker = null
@@ -57,13 +62,15 @@ export class WorkspaceAnalysisWorkerClient {
     worker.on('message', (message) => this.handleMessage(message as RawWorkerMessage))
     worker.on('error', (error) => {
       this.logger.warn('workspace analysis worker failed', { error })
+      if (this.worker !== worker) return
       this.worker = null
       this.rejectPending(
         error instanceof Error ? error : new Error('Workspace analysis worker failed.'),
       )
     })
     worker.on('exit', (code) => {
-      if (this.worker === worker) this.worker = null
+      if (this.worker !== worker) return
+      this.worker = null
       if (code !== 0) {
         this.rejectPending(new Error(`Workspace analysis worker exited with code ${code}.`))
       }

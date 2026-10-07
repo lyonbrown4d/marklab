@@ -2,8 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppMenuAction } from '@/app/useAppMenuAction'
+import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 import { exportApi } from '@/services/exportApi'
-import { requestExportContent } from '@/utils/exportContent'
 
 const messages: Record<string, string> = {
   'appMenu.exportFailed': 'Export failed',
@@ -21,12 +21,12 @@ vi.mock('@/runtime/environment', () => ({
 
 vi.mock('@/services/exportApi', () => ({
   exportApi: {
-    exportMarkdown: vi.fn(),
+    exportDocument: vi.fn(),
   },
 }))
 
-vi.mock('@/utils/exportContent', () => ({
-  requestExportContent: vi.fn(),
+vi.mock('@/app/editorCloseLifecycle', () => ({
+  flushEditorChanges: vi.fn(),
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -54,12 +54,12 @@ const createState = (overrides: Record<string, unknown> = {}) => ({
 describe('useAppMenuAction', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(requestExportContent).mockResolvedValue('# Export content')
-    vi.mocked(exportApi.exportMarkdown).mockResolvedValue(undefined)
+    vi.mocked(flushEditorChanges).mockResolvedValue(undefined)
+    vi.mocked(exportApi.exportDocument).mockResolvedValue(undefined)
   })
 
   it('shows localized feedback when a desktop export action fails', async () => {
-    vi.mocked(exportApi.exportMarkdown).mockRejectedValue(new Error('disk full'))
+    vi.mocked(exportApi.exportDocument).mockRejectedValue(new Error('disk full'))
     const state = createState()
     const { result } = renderHook(() =>
       useAppMenuAction({
@@ -77,10 +77,8 @@ describe('useAppMenuAction', () => {
         description: 'Error: disk full',
       })
     })
-    expect(requestExportContent).toHaveBeenCalledWith('# Local draft', {
-      expectedActivePath: 'notes/readme.md',
-    })
-    expect(exportApi.exportMarkdown).toHaveBeenCalledWith('# Export content', 'pdf', {
+    expect(flushEditorChanges).toHaveBeenCalledOnce()
+    expect(exportApi.exportDocument).toHaveBeenCalledWith('pdf', {
       rootPath: 'D:/notes',
       activePath: 'notes/readme.md',
     })

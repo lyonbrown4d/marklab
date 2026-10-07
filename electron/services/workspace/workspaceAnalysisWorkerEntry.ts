@@ -7,6 +7,9 @@ import type {
   WorkspaceAnalysisTask,
   WorkspaceAnalysisWorkerRequest,
 } from '@electron/services/workspace/workspaceAnalysisWorkerMessages'
+import { WorkspaceGraphNodeDetailsCache } from '@electron/services/workspace/workspaceGraphNodeDetailsCache'
+
+const graphNodeDetails = new WorkspaceGraphNodeDetailsCache()
 
 const runWorkspaceBuildIndex = ({
   documents,
@@ -46,6 +49,8 @@ const runWorkspaceTask = (task: WorkspaceAnalysisTask): WorkspaceAnalysisResult 
       return runWorkspaceBuildIndex(task)
     case 'markdown-diagnostics':
       return runWorkspaceAnalyze(task)
+    case 'workspace-graph-node-details':
+      return graphNodeDetails.query(task.revision, task.documents, task.query)
   }
 }
 

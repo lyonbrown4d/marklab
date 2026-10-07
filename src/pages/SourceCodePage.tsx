@@ -3,13 +3,14 @@ import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus, type EditorCursorPosition } from '@/components/EditorDocumentStatus'
+import type { EditorChangeHandler } from '@/types/editorChanges'
 const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
 type SourceCodePageProps = {
   activePath: string | null
   value: string
   files: FileEntry[]
   fileContents: Record<string, string>
-  onChange: (value: string) => void
+  onChange: EditorChangeHandler
   onOpenFileView?: (path: string, view: FileViewKind) => void
   showStatusBar: boolean
   readOnly: boolean

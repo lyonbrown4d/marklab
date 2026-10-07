@@ -17,6 +17,10 @@ import type {
   KnowledgeEngineInitializeResult,
   KnowledgeEngineStatus,
 } from '@electron/services/knowledgeEngine/types'
+import {
+  getKnowledgeEngineStatus,
+  initializeKnowledgeEngine,
+} from '@electron/services/knowledgeEngine/knowledgeEngineStatus'
 import type { WorkspaceSidecarManager } from '@electron/services/knowledgeEngine/workspaceSidecarManager'
 import type { Logger } from '@electron/services/logger'
 import type {
@@ -37,16 +41,21 @@ import type {
   KnowledgeSearchResultSet,
 } from '@electron/services/knowledgeEngine/knowledgeSearch'
 import { workspaceStatusWorkspaceId } from '@electron/services/knowledgeEngine/workspaceStatusPayload'
+import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 
 type KnowledgeEngineServiceOptions = {
   app: App
   logger: Logger
+  workspaceAnalysisScheduler?: WorkspaceAnalysisScheduler
 }
 
 export class KnowledgeEngineService {
   private sidecars: WorkspaceSidecarManager | null = null
+  private readonly analysisScheduler: WorkspaceAnalysisScheduler
 
-  constructor(private readonly options: KnowledgeEngineServiceOptions) {}
+  constructor(private readonly options: KnowledgeEngineServiceOptions) {
+    this.analysisScheduler = options.workspaceAnalysisScheduler ?? new WorkspaceAnalysisScheduler()
+  }
 
   get commandHandlers(): NativeCommandHandlers {
     return {
@@ -60,39 +69,11 @@ export class KnowledgeEngineService {
   }
 
   getStatus(): KnowledgeEngineStatus {
-    const runtimes = this.sidecars?.listActive() ?? []
-    const activeRuntime = runtimes.find((runtime) => runtime.state === 'ready') ?? runtimes[0]
-    const state: KnowledgeEngineStatus['state'] = activeRuntime
-      ? activeRuntime.state === 'opening'
-        ? 'starting'
-        : activeRuntime.state === 'closing'
-          ? 'stopped'
-          : activeRuntime.state
-      : 'stopped'
-
-    return {
-      binaryPath: null,
-      state,
-      ...(activeRuntime?.pid ? { pid: activeRuntime.pid } : {}),
-      ...(activeRuntime?.lastError ? { lastError: activeRuntime.lastError } : {}),
-    }
+    return getKnowledgeEngineStatus(this.sidecars?.listActive() ?? [])
   }
 
   async initialize(): Promise<KnowledgeEngineInitializeResult> {
-    const status = this.getStatus()
-    if (status.state === 'error') {
-      return {
-        error: status.lastError ?? 'Knowledge engine runtime is not available.',
-        ok: false,
-        status,
-      }
-    }
-
-    return {
-      ok: true,
-      response: { mode: 'node-utility-process' },
-      status,
-    }
+    return initializeKnowledgeEngine(this.getStatus())
   }
 
   async openWorkspace(workspaceId: string, indexPath: string): Promise<void> {
@@ -295,7 +276,9 @@ export class KnowledgeEngineService {
   ): Promise<KnowledgeWorkspaceGraph> {
     const sidecars = await this.getSidecars()
     await sidecars.open(workspaceId, workspaceRoot, { openWorkspace: false })
-    return sidecars.buildWorkspaceGraph(workspaceId, documents, knownPaths)
+    return this.analysisScheduler.run(() =>
+      sidecars.buildWorkspaceGraph(workspaceId, documents, knownPaths),
+    )
   }
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
@@ -307,7 +290,11 @@ export class KnowledgeEngineService {
     request: WorkspaceOccurrenceSearchRequest,
     signal?: AbortSignal,
   ): Promise<WorkspaceOccurrenceSearchResultSet> {
-    return (await this.getSidecars()).searchOccurrences(workspaceId, request, signal)
+    const sidecars = await this.getSidecars()
+    return this.analysisScheduler.run(
+      () => sidecars.searchOccurrences(workspaceId, request, signal),
+      signal,
+    )
   }
 
   async searchWithOptions(

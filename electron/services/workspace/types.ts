@@ -35,12 +35,6 @@ export type FsAssetCapability = {
   expires_at_ms: number
 }
 
-export type FsAssetBytes = {
-  bytes: ArrayBuffer
-  media_type?: string | null
-  size_bytes: number
-}
-
 export type FsBufferStatus = {
   path: string
   revision: number

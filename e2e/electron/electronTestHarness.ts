@@ -181,8 +181,7 @@ export const launchElectronTestSession = async (
     await waitForRendererAppShell(page, output)
     return { app, output, page, testRunRoot }
   } catch (error) {
-    await app.close().catch(() => undefined)
-    fs.rmSync(testRunRoot, { recursive: true, force: true })
+    await closeElectronTestSession({ app, testRunRoot })
     throw error
   }
 }
@@ -261,7 +260,9 @@ export const snapshotStartupOpenTargetState = (page: Page) =>
     return { launchInfo, rootInfo }
   })
 
-export const closeElectronTestSession = async (session: ElectronTestSession | undefined) => {
+export const closeElectronTestSession = async (
+  session: Pick<ElectronTestSession, 'app' | 'testRunRoot'> | undefined,
+) => {
   if (!session) return
   let timer: NodeJS.Timeout | undefined
   const closed = await Promise.race([

@@ -23,6 +23,54 @@ afterEach(async () => {
 })
 
 describe('workspace snapshot performance', () => {
+  it('emits an explicit revisioned changed path for an external watcher edit', async () => {
+    vi.useFakeTimers()
+    const fixture = await createWorkspace()
+    await fixture.workspace.listTreeChildren({ parent: null })
+    const listener = vi.fn()
+    fixture.workspace.onTreeChanged(listener)
+
+    ;(
+      fixture.workspace as unknown as {
+        handleWatchedPathChanged: (path: string, event: 'change') => void
+      }
+    ).handleWatchedPathChanged(path.join(fixture.root, 'note.md'), 'change')
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changes: [{ type: 'changed', path: 'note.md' }],
+        kind: 'changes',
+        previousRevision: 0,
+        revision: 1,
+      }),
+    )
+    fixture.workspace.dispose()
+  })
+
+  it('does not recreate an externally removed file from a dirty buffer', async () => {
+    vi.useFakeTimers()
+    const fixture = await createWorkspace()
+    await fixture.workspace.listTreeChildren({ parent: null })
+    await fixture.workspace.openFile({ path: 'note.md' })
+    fixture.workspace.updateBuffer({ path: 'note.md', content: '# Local recovery' })
+    await fs.unlink(path.join(fixture.root, 'note.md'))
+
+    ;(
+      fixture.workspace as unknown as {
+        handleWatchedPathChanged: (path: string, event: 'delete') => void
+      }
+    ).handleWatchedPathChanged(path.join(fixture.root, 'note.md'), 'delete')
+    await vi.advanceTimersByTimeAsync(300)
+    await expect(fixture.workspace.flushBuffers()).rejects.toThrow('Failed to save')
+
+    await expect(fs.access(path.join(fixture.root, 'note.md'))).rejects.toThrow()
+    ;(
+      fixture.workspace as unknown as { buffers: { deleteUnder: (path: string) => void } }
+    ).buffers.deleteUnder('note.md')
+    fixture.workspace.dispose()
+  })
+
   it('does not put the sidecar cold start on the interactive snapshot path', async () => {
     const fixture = await createWorkspace()
     fixture.knowledge.getWorkspaceFileSnapshot.mockRejectedValue(
@@ -124,6 +172,21 @@ describe('workspace snapshot performance', () => {
     })
     fixture.workspace.dispose()
   })
+
+  it('advances the tree generation synchronously with a committed root', async () => {
+    const fixture = await createWorkspace()
+    const before = await fixture.workspace.listTreeChildren({ parent: null })
+    const nextRoot = path.join(path.dirname(fixture.root), 'generation-workspace')
+    await fs.mkdir(nextRoot)
+    await fs.writeFile(path.join(nextRoot, 'next.md'), '# Next')
+
+    await fixture.workspace.setRoot({ path: nextRoot })
+    const after = await fixture.workspace.listTreeChildren({ parent: null })
+
+    expect(after.generation).toBe(before.generation + 1)
+    expect(after.root.path).toBe(nextRoot)
+    fixture.workspace.dispose()
+  })
 })
 
 const createWorkspace = async () => {
@@ -154,6 +217,9 @@ const createKnowledgeService = (root: string) => {
     }),
     getWorkspaceFileSnapshot: vi.fn(),
     prepareWorkspaceFileAccess: vi.fn(async () => undefined),
+    readWorkspaceFile: vi.fn(async (_id: string, workspaceRoot: string, relativePath: string) =>
+      fs.readFile(path.join(workspaceRoot, relativePath), 'utf8'),
+    ),
   }
   void root
   return service as unknown as KnowledgeEngineService & typeof service

@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
+import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 import { exportApi } from '@/services/exportApi'
-import { requestExportContent } from '@/utils/exportContent'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { useAppLayoutState } from '@/app/useAppLayoutState'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -62,12 +62,11 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
         if (!isDesktopRuntime()) return
         const format =
           id === 'file.export_pdf' ? 'pdf' : id === 'file.export_docx' ? 'docx' : 'html'
-        const { activePath, rootPath, editorValue } = currentState
+        const { activePath, rootPath } = currentState
+        if (!activePath) return
         void (async () => {
-          const content = await requestExportContent(editorValue, {
-            expectedActivePath: activePath,
-          })
-          await exportApi.exportMarkdown(content, format, {
+          await flushEditorChanges()
+          await exportApi.exportDocument(format, {
             rootPath,
             activePath,
           })

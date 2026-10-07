@@ -15,6 +15,7 @@ import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWin
 import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
 import { useWorkspaceMapEditorRoute } from '@/app/useWorkspaceMapEditorRoute'
 import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
+import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useAppLayoutGraphState } from '@/app/useAppLayoutGraphState'
 
 export const useAppLayoutState = () => {
@@ -27,6 +28,9 @@ export const useAppLayoutState = () => {
     tabs,
     activeTabId,
     hasHydrated,
+    unavailableTreePaths,
+    treeGeneration,
+    treeRevision,
     setRootPath,
     setRootKind,
     setEntries,
@@ -81,7 +85,15 @@ export const useAppLayoutState = () => {
     activeResourcePath,
     viewMode,
     workspaceView,
-  } = useEditorRoutes({ entries, activeTab, tabViewModes })
+  } = useEditorRoutes({
+    entries,
+    activeTab,
+    tabViewModes,
+    treeGeneration,
+    treeRevision,
+    rootKind,
+    rootPath,
+  })
   const activeTabIdRef = useLatest(activeTabId)
   const currentFilePathRef = useLatest(currentFilePath)
   const inspectedPathRef = useLatest(inspectedPath)
@@ -119,6 +131,9 @@ export const useAppLayoutState = () => {
   const editorBufferPath =
     graphEditorPath ??
     (currentFilePath && isTextFileViewPath(currentFilePath) ? currentFilePath : null)
+  const activePathUnavailable = Boolean(
+    editorBufferPath && unavailableTreePaths.includes(editorBufferPath),
+  )
   const {
     fileContents,
     editorValue,
@@ -166,6 +181,9 @@ export const useAppLayoutState = () => {
       rootPath,
       rootKind,
       loadWorkspace,
+      dirtyPaths,
+      onTreeActiveTabChanged: (tab) =>
+        navigate(tab ? pathToWorkspaceTabRoute(tab) : '/', { replace: true }),
     })
   const onOpenWorkspaceFiles = useCallback(() => {
     const target = getWorkspaceFilesTarget(
@@ -236,7 +254,7 @@ export const useAppLayoutState = () => {
     defaultFileView,
     graphMiniMapEnabled,
     graphContentMode,
-    editorReadOnlyMode,
+    editorReadOnlyMode: editorReadOnlyMode || activePathUnavailable,
     shortcutOverrides,
     viewMode,
     workspaceView,

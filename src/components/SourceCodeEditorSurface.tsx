@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { EditorContextMenu, type EditorContextMenuAdapter } from '@/components/EditorContextMenu'
 import type { ShortcutBindings } from '@/logic/shortcuts'
 import { monacoLanguageForPath } from '@/logic/sourceLanguages'
+import type { EditorChangeHandler } from '@/types/editorChanges'
+import { toEditorTextChanges } from '@/components/sourceCodeChanges'
 
 type SourceCodeEditorSurfaceProps = {
   activePath: string | null
@@ -22,7 +24,7 @@ type SourceCodeEditorSurfaceProps = {
   shortcutOverrides?: ShortcutBindings
   loadingLabel: string
   value: string
-  onChange: (value: string) => void
+  onChange: EditorChangeHandler
   onMount: OnMount
   contextMenu?: EditorContextMenuAdapter
 }
@@ -75,7 +77,9 @@ export const SourceCodeEditorSurface = ({
           theme={darkMode ? 'vs-dark' : 'vs'}
           path={activePath ?? 'marklab-empty.md'}
           value={value}
-          onChange={(next) => onChange(next ?? '')}
+          onChange={(next, event) =>
+            onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
+          }
           onMount={onMount}
           options={{
             contextmenu: false,

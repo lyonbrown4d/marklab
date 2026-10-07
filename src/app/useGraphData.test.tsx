@@ -72,6 +72,26 @@ describe('useGraphData', () => {
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
   })
 
+  it('changes content presentation without refetching graph topology', async () => {
+    vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('stable'))
+    const queryClient = createQueryClient()
+    const { result, rerender } = renderHook(
+      ({ contentMode }) => useGraphData('workspace', 'directory:C:/one', contentMode),
+      {
+        initialProps: { contentMode: 'none' as const } as {
+          contentMode: 'none' | 'summary' | 'full'
+        },
+        wrapper: createWrapper(queryClient),
+      },
+    )
+    await waitFor(() => expect(result.current.graph.nodes).toHaveLength(1))
+
+    rerender({ contentMode: 'summary' })
+
+    expect(result.current.graph.nodes[0]?.data.contentMode).toBe('summary')
+    expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
+  })
+
   it('exposes errors and a stable retry for workspace graphs', async () => {
     vi.mocked(fsApi.getWorkspaceGraph)
       .mockRejectedValueOnce(new Error('graph unavailable'))

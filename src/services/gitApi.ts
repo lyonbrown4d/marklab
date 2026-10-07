@@ -43,7 +43,6 @@ export const gitFileDiffSchema = z.object({
   modified_label: z.string(),
   original_content: z.string(),
   modified_content: z.string(),
-  unified_diff: z.string().optional(),
 })
 
 export const gitRemoteStatusSchema = z.object({

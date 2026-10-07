@@ -80,6 +80,9 @@ vi.mock('@xyflow/react', () => ({
 }))
 
 vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
+vi.mock('@/pages/workspace-map/useWorkspaceMapNodeDetails', () => ({
+  useWorkspaceMapNodeDetails: ({ graph }: { graph: GraphData }) => graph,
+}))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/pages/graph/graphMiniMap', () => ({
   getMiniMapNodeColor: () => 'transparent',

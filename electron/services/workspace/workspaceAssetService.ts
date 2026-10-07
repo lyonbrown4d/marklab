@@ -1,7 +1,6 @@
 import fs from 'node:fs'
 
 import type {
-  FsAssetBytes,
   FsAssetCapability,
   FsMarkdownAssetImportResult,
   FsMarkdownAssetResolveResult,
@@ -12,7 +11,6 @@ import {
   workspaceAssetIdentity,
 } from '@electron/services/workspace/workspaceAssetCapabilities'
 import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset'
-import { readWorkspaceAssetBytes } from '@electron/services/workspace/workspaceAssetBytes'
 import {
   copyAssetToDocumentAssets,
   preserveAssetPath,
@@ -22,6 +20,8 @@ import {
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
 import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset'
+
+const MAX_IMPORTED_ASSET_BYTES = 32 * 1024 * 1024
 
 export class WorkspaceAssetService extends WorkspaceAnalysisService {
   private readonly assetCapabilities = new WorkspaceAssetCapabilities(() => this.state)
@@ -61,12 +61,6 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     return this.assetCapabilities.resolveToken(token)
   }
 
-  readAssetBytes(value: unknown): Promise<FsAssetBytes> {
-    return readWorkspaceAssetBytes(value, {
-      resolveAssetUrl: (assetUrl) => this.assetCapabilities.resolveUrl(assetUrl),
-    })
-  }
-
   readMarkdownExportAsset(
     documentPath: string,
     target: string,
@@ -101,13 +95,13 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     return result
   }
 
-  async importMarkdownAssetBase64(value: unknown): Promise<FsMarkdownAssetImportResult> {
+  async importMarkdownAssetBytes(value: unknown): Promise<FsMarkdownAssetImportResult> {
     const fileName = stringArg(value, 'fileName')
-    const base64Data = stringArg(value, 'base64Data')
     const documentPath = stringArg(value, 'documentPath')
     const title = nullableStringArg(value, 'title')
-    const bytes = Buffer.from(base64Data, 'base64')
+    const bytes = Buffer.from(binaryArg(value, 'bytes'))
     if (bytes.length === 0) throw new Error('Asset content must not be empty')
+    if (bytes.length > MAX_IMPORTED_ASSET_BYTES) throw new Error('Asset content is too large')
     const result = await writeAssetBytes(
       this.state,
       fileName,
@@ -125,4 +119,13 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     if (!target) throw new Error('Asset target must not be empty')
     return resolveMarkdownAssetTarget(this.state, documentPath, target, this.resolve(documentPath))
   }
+}
+
+const binaryArg = (value: unknown, key: string): ArrayBuffer => {
+  if (!value || typeof value !== 'object' || !(key in value)) {
+    throw new Error(`${key} must be binary data`)
+  }
+  const result = (value as Record<string, unknown>)[key]
+  if (!(result instanceof ArrayBuffer)) throw new Error(`${key} must be binary data`)
+  return result
 }

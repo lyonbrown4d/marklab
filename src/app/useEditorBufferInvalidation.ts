@@ -1,7 +1,7 @@
-import { useEffect, useState, type RefObject } from 'react'
-import { listen } from '@/runtime/events'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { isDesktopRuntime } from '@/runtime/environment'
-import { fsSnapshotSchema } from '@/services/fsApi'
+import { workspaceTreeApi } from '@/services/workspaceTreeApi'
+import { editorBufferIdentity } from '@/app/useEditorBufferState'
 
 export const useEditorBufferInvalidation = (
   workspaceKey: string,
@@ -9,37 +9,36 @@ export const useEditorBufferInvalidation = (
   activePath: string | null,
 ) => {
   const [generation, setGeneration] = useState(0)
-
+  const revisionRef = useRef<{ revision: number | null; workspace: string }>({
+    revision: null,
+    workspace: workspaceKey,
+  })
   useEffect(() => {
     if (!isDesktopRuntime()) return
-    let cancelled = false
-    let unlisten: (() => void) | undefined
-    void listen<unknown>('fs-changed', (event) => {
-      if (cancelled) return
-      const snapshot = fsSnapshotSchema.safeParse(event.payload)
-      if (!snapshot.success) return
-      const { root } = snapshot.data
-      if (workspaceKey !== `${root.kind}:${root.path}`) return
-      // Keep local text and dirty revisions. Only the disk-read baseline expires.
-      // Inactive clean documents will be read again when they are selected.
-      syncedContentsRef.current = {}
-      if (
-        snapshot.data.entries.some((entry) => entry.kind === 'file' && entry.path === activePath)
-      ) {
+    if (revisionRef.current.workspace !== workspaceKey) {
+      revisionRef.current = { revision: null, workspace: workspaceKey }
+    }
+    return workspaceTreeApi.onChanged((event) => {
+      if (workspaceKey !== `${event.root.kind}:${event.root.path}`) return
+      const previousRevision = revisionRef.current.revision
+      revisionRef.current.revision = event.revision
+      const hasGap = previousRevision !== null && event.previousRevision !== previousRevision
+      if (event.kind === 'invalidated' || hasGap) {
+        syncedContentsRef.current = {}
+        if (activePath) setGeneration((value) => value + 1)
+        return
+      }
+
+      const changedPaths = event.changes.flatMap((change) =>
+        change.type === 'changed' ? [change.path] : [],
+      )
+      changedPaths.forEach((path) => {
+        delete syncedContentsRef.current[editorBufferIdentity(workspaceKey, path)]
+      })
+      if (activePath && changedPaths.includes(activePath)) {
         setGeneration((value) => value + 1)
       }
     })
-      .then((unsubscribe) => {
-        if (cancelled) unsubscribe()
-        else unlisten = unsubscribe
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) console.error('Failed to subscribe to workspace file changes', error)
-      })
-    return () => {
-      cancelled = true
-      unlisten?.()
-    }
   }, [activePath, syncedContentsRef, workspaceKey])
 
   return generation

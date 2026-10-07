@@ -10,6 +10,7 @@ import type {
 } from '@/store/appTypes'
 import type { SaveState } from '@/app/useEditorBuffer'
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import type { EditorChangeHandler } from '@/types/editorChanges'
 
 export type LayoutContext = {
   activePath: string | null
@@ -21,7 +22,7 @@ export type LayoutContext = {
   graphRefreshing: boolean
   graphEditorPath: string | null
   editorBufferPath: string | null
-  onEditorChange: (value: string) => void
+  onEditorChange: EditorChangeHandler
   onOpenFile: (path: string) => void
   onOpenFileView: (path: string, view: FileViewKind) => void
   theme: ThemeMode

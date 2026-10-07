@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
+export * from '@/services/fsBufferSchemas'
 
 export const fsRootInfoSchema = z.object({
   kind: z.enum(['internal', 'external', 'single']),
@@ -17,27 +18,12 @@ export const fsSnapshotSchema = z.object({
   entries: z.array(fsEntrySchema),
 })
 
-const arrayBufferSchema = z
-  .custom<ArrayBuffer | ArrayBufferView>(
-    (value) => value instanceof ArrayBuffer || ArrayBuffer.isView(value),
-  )
-  .transform((value) => {
-    if (value instanceof ArrayBuffer) return value
-    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)
-  })
-
 export const fsPathMetadataSchema = z.object({
   path: z.string(),
   kind: z.enum(['file', 'folder']),
   size_bytes: z.number(),
   modified_ms: z.number().optional(),
   readonly: z.boolean(),
-})
-
-export const fsAssetBytesSchema = z.object({
-  bytes: arrayBufferSchema,
-  media_type: z.string().nullable().optional(),
-  size_bytes: z.number(),
 })
 
 export const fsTextPreviewLimitSchema = z
@@ -91,12 +77,6 @@ export const fsAssetCapabilitySchema = z
     expires_at_ms: z.number().int().nonnegative(),
   })
   .strict()
-
-export const fsBufferStatusSchema = z.object({
-  path: z.string(),
-  revision: z.number(),
-  dirty: z.boolean(),
-})
 
 export const backgroundTaskStatusSchema = z.object({
   id: z.string(),
@@ -208,6 +188,31 @@ export const fsGraphSchema = z.object({
   edges: z.array(fsGraphEdgeSchema),
 })
 
+export const workspaceGraphNodeDetailsRequestSchema = z
+  .object({
+    node_ids: z.array(z.string().min(1).max(1_024)).min(1).max(256),
+    mode: z.enum(['summary', 'full']),
+    max_nodes: z.number().int().min(1).max(64).optional(),
+    revision: z.string().min(1),
+  })
+  .strict()
+
+export const workspaceGraphNodeDetailsResultSchema = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          id: z.string(),
+          content: z.string(),
+          content_blocks: z.array(fsMarkdownBlockSchema).optional(),
+        })
+        .strict(),
+    ),
+    revision: z.string().min(1),
+    truncated: z.boolean(),
+  })
+  .strict()
+
 export const markdownAssetImportStrategySchema = z.enum([
   'copy-to-document-assets',
   'preserve-path',
@@ -234,10 +239,12 @@ export type FsEntry = z.infer<typeof fsEntrySchema>
 export type FsRootInfo = z.infer<typeof fsRootInfoSchema>
 export type FsSnapshot = z.infer<typeof fsSnapshotSchema>
 export type FsPathMetadata = z.infer<typeof fsPathMetadataSchema>
-export type FsAssetBytes = z.infer<typeof fsAssetBytesSchema>
 export type FsAssetCapability = z.infer<typeof fsAssetCapabilitySchema>
 export type FsTextPreview = z.infer<typeof fsTextPreviewSchema>
-export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
+export type WorkspaceGraphNodeDetailsRequest = z.infer<
+  typeof workspaceGraphNodeDetailsRequestSchema
+>
+export type WorkspaceGraphNodeDetailsResult = z.infer<typeof workspaceGraphNodeDetailsResultSchema>
 export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
 export type FsSearchResult = z.infer<typeof fsSearchResultSchema>
 export type WorkspaceOccurrenceSearchOptions = z.infer<

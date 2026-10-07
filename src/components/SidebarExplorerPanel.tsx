@@ -10,6 +10,7 @@ import LocalHistoryTimeline from '@/components/local-history/LocalHistoryTimelin
 import { FileNameDialog } from '@/components/file-tree/FileOperationDialogs'
 import type { SidebarExplorerPanelProps } from '@/components/sidebarPanelTypes'
 import { useI18n } from '@/i18n/useI18n'
+import { useWorkspaceTreeSearch } from '@/components/file-tree/useWorkspaceTreeSearch'
 import { filterTree } from '@/logic/fileTree'
 
 type RootCreateKind = 'file' | 'folder'
@@ -53,7 +54,6 @@ const ExplorerToolbarButton = ({
 
 const SidebarExplorerPanel = ({
   activePath,
-  fileCount,
   fileTree,
   focusFileFilterRequest,
   onCreateFile,
@@ -80,7 +80,8 @@ const SidebarExplorerPanel = ({
   const [rootCreateKind, setRootCreateKind] = useState<RootCreateKind | null>(null)
   const filterInputRef = useRef<HTMLInputElement | null>(null)
   const readonlyTree = rootKind === 'single'
-  const visibleTree = useMemo(() => filterTree(fileTree, filter), [fileTree, filter])
+  const searchTree = useWorkspaceTreeSearch(filter)
+  const visibleTree = searchTree ?? filterTree(fileTree, filter)
   const hasVisibleFiles = visibleTree.length > 0
   const hasFilter = filter.trim().length > 0
   const emptyMessage = readonlyTree
@@ -139,14 +140,7 @@ const SidebarExplorerPanel = ({
         ariaLabel={readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.files')}
         className="flex-1"
         contentClassName="flex-1"
-        title={
-          <>
-            {readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.files')}
-            <span className="text-[10px] font-normal tabular-nums text-muted-foreground/70">
-              {fileCount}
-            </span>
-          </>
-        }
+        title={readonlyTree ? t('sidebar.singleFileMode') : t('sidebar.files')}
         actions={
           <TooltipProvider delayDuration={180}>
             <>
@@ -225,7 +219,7 @@ const SidebarExplorerPanel = ({
             />
           ) : (
             <SidebarFileTree
-              nodes={fileTree}
+              nodes={visibleTree}
               searchTerm={filter}
               activePath={activePath}
               readonlyTree={readonlyTree}

@@ -2,20 +2,26 @@ import { ipcRenderer, type IpcRenderer } from 'electron'
 
 import { nativeIpcChannels, type NativeIpcChannel } from '@electron/channels'
 import {
-  isAssetBytes,
   isAssetCapability,
   isPathActionAck,
   isTextPreview,
+  isWorkspaceTreeChildrenResult,
+  isWorkspaceTreeDeltaEvent,
+  isWorkspaceTreeExistenceResult,
+  isWorkspaceTreeInitialFileResult,
+  isWorkspaceTreeSearchResult,
   type Validator,
 } from '@electron/preload/workspaceValidators'
 import type { AssetApi } from '@electron/types'
 import type { ElectronWorkspacePathApi } from '@/runtime/electron'
+import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 
-type WorkspaceIpcRenderer = Pick<IpcRenderer, 'invoke'>
+type WorkspaceIpcRenderer = Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>
 
 type WorkspacePreloadSurfaces = {
   assets: AssetApi
   workspace: ElectronWorkspacePathApi
+  workspaceTree: WorkspaceTreeApi
 }
 
 const invalidResponse = (surface: string): Error => new Error(`Invalid ${surface} response`)
@@ -53,14 +59,6 @@ export const createWorkspacePreloadSurfaces = (
         'assets.issueCapability',
         request,
       ),
-    readBytes: (request) =>
-      invokeValidated(
-        renderer,
-        nativeIpcChannels.assetsReadBytes,
-        isAssetBytes,
-        'assets.readBytes',
-        request,
-      ),
   },
   workspace: {
     openPathInSystem: (path) =>
@@ -92,5 +90,45 @@ export const createWorkspacePreloadSurfaces = (
         'workspace.copyAbsolutePathToClipboard',
         path,
       ),
+  },
+  workspaceTree: {
+    initialFile: async () => {
+      const value: unknown = await renderer.invoke(nativeIpcChannels.workspaceTreeInitialFile)
+      if (!isWorkspaceTreeInitialFileResult(value)) {
+        throw invalidResponse('workspaceTree.initialFile')
+      }
+      return value
+    },
+    listChildren: (request) =>
+      invokeValidated(
+        renderer,
+        nativeIpcChannels.workspaceTreeListChildren,
+        isWorkspaceTreeChildrenResult,
+        'workspaceTree.listChildren',
+        request,
+      ),
+    pathsExist: (request) =>
+      invokeValidated(
+        renderer,
+        nativeIpcChannels.workspaceTreePathsExist,
+        isWorkspaceTreeExistenceResult,
+        'workspaceTree.pathsExist',
+        request,
+      ),
+    search: (request) =>
+      invokeValidated(
+        renderer,
+        nativeIpcChannels.workspaceTreeSearch,
+        isWorkspaceTreeSearchResult,
+        'workspaceTree.search',
+        request,
+      ),
+    onChanged: (handler) => {
+      const listener = (_event: unknown, payload: unknown) => {
+        if (isWorkspaceTreeDeltaEvent(payload)) handler(payload)
+      }
+      renderer.on(nativeIpcChannels.workspaceTreeChanged, listener)
+      return () => renderer.removeListener(nativeIpcChannels.workspaceTreeChanged, listener)
+    },
   },
 })

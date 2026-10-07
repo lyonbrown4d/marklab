@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEditorBuffer } from '@/app/useEditorBuffer'
 
 const fsApiMock = vi.hoisted(() => ({
+  applyBufferUpdate: vi.fn(),
   flushBuffers: vi.fn(),
   getBufferStatus: vi.fn(),
   openFile: vi.fn(),
@@ -17,6 +18,10 @@ const eventHandlers = vi.hoisted(
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
+}))
+
+vi.mock('@/services/workspaceTreeApi', () => ({
+  workspaceTreeApi: { onChanged: vi.fn(() => vi.fn()) },
 }))
 
 vi.mock('@/services/fsApi', async (importOriginal) => {
@@ -126,6 +131,7 @@ beforeEach(() => {
     path: 'notes/current.md',
     revision: 1,
     dirty: true,
+    session_generation: 3,
   })
   fsApiMock.openFile.mockImplementation((path: string) =>
     Promise.resolve(path === 'notes/other.md' ? 'other' : 'initial'),
@@ -134,6 +140,14 @@ beforeEach(() => {
     path: 'notes/current.md',
     revision: 1,
     dirty: true,
+    session_generation: 3,
+  })
+  fsApiMock.applyBufferUpdate.mockResolvedValue({
+    kind: 'applied',
+    path: 'notes/current.md',
+    revision: 1,
+    dirty: true,
+    session_generation: 3,
   })
 })
 
@@ -148,14 +162,14 @@ describe('useEditorBuffer', () => {
 
     expect(await screen.findByTestId('persisted-value')).toHaveTextContent('initial')
     expect(screen.getByTestId('persisted-state')).toHaveTextContent('saved:false')
-    fsApiMock.updateBuffer.mockClear()
+    fsApiMock.applyBufferUpdate.mockClear()
     fsApiMock.flushBuffers.mockClear()
 
     await user.click(screen.getByRole('button', { name: 'restore persisted' }))
 
     expect(screen.getByTestId('persisted-value')).toHaveTextContent('restored')
     expect(screen.getByTestId('persisted-state')).toHaveTextContent('saved:false')
-    expect(fsApiMock.updateBuffer).not.toHaveBeenCalled()
+    expect(fsApiMock.applyBufferUpdate).not.toHaveBeenCalled()
     expect(fsApiMock.flushBuffers).not.toHaveBeenCalled()
   })
 
@@ -169,7 +183,15 @@ describe('useEditorBuffer', () => {
 
     await waitFor(
       () => {
-        expect(fsApiMock.updateBuffer).toHaveBeenCalledWith('notes/current.md', 'changed')
+        expect(fsApiMock.applyBufferUpdate).toHaveBeenCalledWith({
+          path: 'notes/current.md',
+          base_revision: 1,
+          session_generation: 3,
+          update: {
+            kind: 'patch',
+            changes: [{ offset: 0, delete_length: 7, insert_text: 'changed' }],
+          },
+        })
       },
       { timeout: 2000 },
     )
@@ -190,8 +212,15 @@ describe('useEditorBuffer', () => {
 
   it('does not let stale dirty events replace a newer unsaved state', async () => {
     let resolveUpdate:
-      ((status: { path: string; revision: number; dirty: boolean }) => void) | undefined
-    fsApiMock.updateBuffer.mockReturnValue(
+      | ((status: {
+          kind: 'applied'
+          path: string
+          revision: number
+          dirty: boolean
+          session_generation: number
+        }) => void)
+      | undefined
+    fsApiMock.applyBufferUpdate.mockReturnValue(
       new Promise((resolve) => {
         resolveUpdate = resolve
       }),
@@ -207,7 +236,7 @@ describe('useEditorBuffer', () => {
 
     await waitFor(
       () => {
-        expect(fsApiMock.updateBuffer).toHaveBeenCalledWith('notes/current.md', 'changed')
+        expect(fsApiMock.applyBufferUpdate).toHaveBeenCalled()
       },
       { timeout: 2000 },
     )
@@ -226,9 +255,11 @@ describe('useEditorBuffer', () => {
 
     await act(async () => {
       resolveUpdate?.({
+        kind: 'applied',
         path: 'notes/current.md',
         revision: 1,
         dirty: true,
+        session_generation: 3,
       })
     })
 

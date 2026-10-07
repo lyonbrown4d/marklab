@@ -165,16 +165,6 @@ export type AssetCapability = {
   expires_at_ms: number
 }
 
-export type AssetReadBytesRequest = {
-  asset_url: string
-}
-
-export type AssetBytes = {
-  bytes: ArrayBuffer
-  media_type?: string | null
-  size_bytes: number
-}
-
 export type WorkspaceSessionApi = {
   getSession: () => Promise<WorkspaceGetSessionResult>
   readFile: (request: WorkspaceReadFileRequest) => Promise<WorkspaceReadFileResult>
@@ -208,5 +198,4 @@ export type WorkspaceLifecycleApi = {
 
 export type AssetApi = {
   issueCapability: (request: AssetIssueCapabilityRequest) => Promise<AssetCapability>
-  readBytes: (request: AssetReadBytesRequest) => Promise<AssetBytes>
 }

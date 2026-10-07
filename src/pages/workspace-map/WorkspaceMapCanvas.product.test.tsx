@@ -26,6 +26,10 @@ type FlowApi = {
 const flowPropsRef = vi.hoisted(() => ({ current: null as FlowProps | null }))
 const layoutGraphRef = vi.hoisted(() => ({ current: null as GraphData | null }))
 
+vi.mock('@/pages/workspace-map/useWorkspaceMapNodeDetails', () => ({
+  useWorkspaceMapNodeDetails: ({ graph }: { graph: GraphData }) => graph,
+}))
+
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
   BackgroundVariant: { Dots: 'dots' },

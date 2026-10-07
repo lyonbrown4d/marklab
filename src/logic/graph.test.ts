@@ -55,6 +55,7 @@ describe('buildGraphFromKnowledgeGraph', () => {
       ]),
     )
     expect(graph.edges[0]).toMatchObject({ className: 'graph-edge--hierarchy', type: 'smoothstep' })
+    expect(graph.nodes.every((node) => node.position.x === 0 && node.position.y === 0)).toBe(true)
   })
 
   it('preserves backend preview nodes and preview edges', () => {

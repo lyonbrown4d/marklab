@@ -3,6 +3,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { FsGraph } from '@electron/services/workspace/types'
+import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 import {
   cleanupWorkspaceFixtures,
   createGraph,
@@ -24,6 +25,23 @@ vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient', () => ({
 afterEach(cleanupWorkspaceFixtures)
 
 describe('WorkspaceAnalysisService sidecar graph', () => {
+  it('runs workspace-index CPU work through the injected cross-window scheduler', async () => {
+    const scheduler = new WorkspaceAnalysisScheduler({ concurrency: 1 })
+    const schedule = vi.spyOn(scheduler, 'run')
+    const service = createKnowledgeServiceMock()
+    const { workspace } = await createWorkspace(service, [], {
+      workspaceAnalysisScheduler: scheduler,
+      workspaceIndexPrecomputeDelayMs: 60_000,
+    })
+
+    try {
+      await workspace.workspaceIndex()
+      expect(schedule).toHaveBeenCalledOnce()
+    } finally {
+      workspace.dispose()
+    }
+  })
+
   it('precomputes the workspace index after a root switch', async () => {
     const service = createKnowledgeServiceMock()
     const { logger, workspace } = await createWorkspace(

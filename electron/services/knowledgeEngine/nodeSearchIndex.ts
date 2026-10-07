@@ -28,31 +28,13 @@ import {
   queryTerms,
   resultForSearchDocument,
 } from '@electron/services/knowledgeEngine/nodeSearchText'
-import type {
-  WorkspaceOccurrenceSearchRequest,
-  WorkspaceOccurrenceSearchResultSet,
-} from '@electron/services/workspace/workspaceSearchTypes'
-import type {
-  OccurrenceSearchInput,
-  OccurrenceSearchOutput,
-} from '@electron/services/knowledgeEngine/workspaceOccurrenceSearch'
-import { WorkspaceOccurrenceSearchWorkerClient } from '@electron/services/knowledgeEngine/workspaceOccurrenceSearchWorkerClient'
+import type { WorkspaceOccurrenceSearchRequest } from '@electron/services/workspace/workspaceSearchTypes'
+import {
+  NodeSearchOccurrences,
+  type OccurrenceSearchRunner,
+} from '@electron/services/knowledgeEngine/nodeSearchOccurrences'
 
 export type { NodeSearchIndexStats } from '@electron/services/knowledgeEngine/nodeSearchStats'
-
-const MAX_OCCURRENCE_DOCUMENTS = 2_000
-const MAX_OCCURRENCE_CHARACTERS = 8 * 1024 * 1024
-const MAX_OCCURRENCE_DOCUMENT_CHARACTERS = 2 * 1024 * 1024
-const MAX_OCCURRENCE_RESULTS = 500
-
-type OccurrenceSearchRunner = {
-  run: (
-    documents: WorkspaceSearchDocument[],
-    input: OccurrenceSearchInput,
-    signal?: AbortSignal,
-  ) => Promise<OccurrenceSearchOutput>
-}
-
 export class NodeSearchIndex {
   private closePromise?: Promise<void>
   private closed = false
@@ -62,18 +44,25 @@ export class NodeSearchIndex {
   private readonly readOperations = new Set<Promise<unknown>>()
   private rebuildGeneration = 0
   private stats: NodeSearchIndexStats = emptyNodeSearchIndexStats()
+  private readonly occurrences: NodeSearchOccurrences
 
   constructor(
     private readonly storageDirectory?: string,
     private readonly workspaceIdentity = '',
     private readonly buildOptions: NodeSearchBuildOptions = {},
-    private readonly occurrenceSearch: OccurrenceSearchRunner = new WorkspaceOccurrenceSearchWorkerClient(),
-  ) {}
+    occurrenceSearch?: OccurrenceSearchRunner,
+  ) {
+    this.occurrences = new NodeSearchOccurrences(
+      () => this.getDatabase(),
+      workspaceIdentity,
+      () => ({ documentCount: this.stats.documentCount, updatedAt: this.stats.updatedAt }),
+      occurrenceSearch,
+    )
+  }
 
   get size(): number {
     return this.stats.documentCount
   }
-
   getSize(): Promise<number> {
     return this.runRead(async () => {
       await this.readyForRead()
@@ -127,6 +116,7 @@ export class NodeSearchIndex {
           lastError: null,
           updatedAt: persisted.updatedAt,
         }
+        this.occurrences.invalidate()
       } catch (error) {
         if (generation === this.rebuildGeneration) {
           const message = searchErrorMessage(error)
@@ -165,33 +155,11 @@ export class NodeSearchIndex {
     return this.runRead(() => this.performSearch(query, options))
   }
 
-  searchOccurrences(
-    request: WorkspaceOccurrenceSearchRequest,
-    signal?: AbortSignal,
-  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+  searchOccurrences(request: WorkspaceOccurrenceSearchRequest, signal?: AbortSignal) {
     return this.runRead(async () => {
       this.assertOpen()
       await this.readyForRead()
-      const batch = await this.getDatabase().occurrenceDocuments(
-        MAX_OCCURRENCE_DOCUMENTS,
-        MAX_OCCURRENCE_CHARACTERS,
-        MAX_OCCURRENCE_DOCUMENT_CHARACTERS,
-      )
-      const result = await this.occurrenceSearch.run(
-        batch.documents,
-        {
-          ...request.options,
-          limit: Math.min(Math.max(Math.trunc(request.limit ?? 100), 1), MAX_OCCURRENCE_RESULTS),
-          query: request.query,
-        },
-        signal,
-      )
-      return {
-        ...result,
-        requestId: request.requestId,
-        scannedDocuments: batch.documents.length,
-        truncated: batch.truncated,
-      }
+      return this.occurrences.search(request, signal)
     })
   }
 
@@ -281,6 +249,7 @@ export class NodeSearchIndex {
           lastError: null,
           updatedAt,
         }
+        this.occurrences.invalidate()
       } catch (error) {
         this.stats = { ...this.stats, lastError: searchErrorMessage(error) }
         throw error
@@ -294,7 +263,6 @@ export class NodeSearchIndex {
     if (!this.database) throw new Error('Node search database is not initialized.')
     return this.database
   }
-
   private assertOpen(): void {
     if (this.closed) throw this.closedError()
   }
@@ -311,7 +279,12 @@ export class NodeSearchIndex {
     const database = this.database
     this.database = null
     this.loadPromise = undefined
-    await database?.close()
+    const [databaseClose, occurrenceDispose] = await Promise.allSettled([
+      database?.close(),
+      this.occurrences.dispose(),
+    ])
+    if (databaseClose.status === 'rejected') throw databaseClose.reason
+    if (occurrenceDispose.status === 'rejected') throw occurrenceDispose.reason
   }
 
   private runRead<Value>(work: () => Promise<Value>): Promise<Value> {

@@ -1,15 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types'
+import type { FsBufferStatus } from '@electron/services/workspace/types'
+import type { WorkspaceTreeDeltaEvent } from '@/types/workspaceTree'
 import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
 
-const snapshot = {
+const delta = {
+  generation: 0,
+  kind: 'changes',
+  previousRevision: 2,
+  revision: 3,
   root: { kind: 'internal', path: '/workspace' },
-  entries: [{ kind: 'file', path: 'new.md', name: 'new.md' }],
-} satisfies FsSnapshot
+  changes: [{ type: 'added', entry: { kind: 'file', path: 'new.md', name: 'new.md' } }],
+} satisfies WorkspaceTreeDeltaEvent
 const status = { path: 'new.md', revision: 3, dirty: false } satisfies FsBufferStatus
 
 const createHarness = () => {
-  const snapshots = new Set<(value: FsSnapshot) => void>()
+  const treeChanges = new Set<(value: WorkspaceTreeDeltaEvent) => void>()
   const statuses = new Set<(value: FsBufferStatus) => void>()
   const window = {
     isDestroyed: vi.fn(() => false),
@@ -20,10 +25,10 @@ const createHarness = () => {
     window,
     logger,
     service: {
-      onSnapshotChanged: (listener) => {
-        snapshots.add(listener)
+      onTreeChanged: (listener) => {
+        treeChanges.add(listener)
         return () => {
-          snapshots.delete(listener)
+          treeChanges.delete(listener)
         }
       },
       onBufferStatus: (listener) => {
@@ -38,10 +43,10 @@ const createHarness = () => {
     window,
     logger,
     dispose,
-    snapshots,
+    treeChanges,
     statuses,
-    emitSnapshot: () => {
-      for (const listener of snapshots) listener(snapshot)
+    emitTreeChange: () => {
+      for (const listener of treeChanges) listener(delta)
     },
     emitStatus: () => {
       for (const listener of statuses) listener(status)
@@ -52,10 +57,10 @@ const createHarness = () => {
 describe('workspace renderer events', () => {
   it('forwards file snapshots and buffer status using the existing renderer channels', () => {
     const harness = createHarness()
-    harness.emitSnapshot()
+    harness.emitTreeChange()
     harness.emitStatus()
     expect(harness.window.webContents.send.mock.calls).toEqual([
-      ['fs-changed', snapshot],
+      ['fs-changed', delta],
       ['fs-buffer-status', status],
     ])
     harness.dispose()
@@ -64,7 +69,7 @@ describe('workspace renderer events', () => {
   it('does not broadcast one workspace into another window', () => {
     const first = createHarness()
     const second = createHarness()
-    first.emitSnapshot()
+    first.emitTreeChange()
     first.emitStatus()
     expect(first.window.webContents.send).toHaveBeenCalledTimes(2)
     expect(second.window.webContents.send).not.toHaveBeenCalled()
@@ -76,7 +81,7 @@ describe('workspace renderer events', () => {
     const harness = createHarness()
     const destroyed = target === 'window' ? harness.window : harness.window.webContents
     destroyed.isDestroyed.mockReturnValue(true)
-    harness.emitSnapshot()
+    harness.emitTreeChange()
     harness.emitStatus()
     expect(harness.window.webContents.send).not.toHaveBeenCalled()
     harness.dispose()
@@ -84,11 +89,11 @@ describe('workspace renderer events', () => {
 
   it('removes subscriptions and suppresses already captured callbacks after detach', () => {
     const harness = createHarness()
-    const callbacks = [...harness.snapshots]
+    const callbacks = [...harness.treeChanges]
     harness.dispose()
     harness.dispose()
-    for (const listener of callbacks) listener(snapshot)
-    expect(harness.snapshots.size).toBe(0)
+    for (const listener of callbacks) listener(delta)
+    expect(harness.treeChanges.size).toBe(0)
     expect(harness.statuses.size).toBe(0)
     expect(harness.window.webContents.send).not.toHaveBeenCalled()
   })

@@ -28,6 +28,7 @@ import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windo
 import type { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
 import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
 import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
+import type { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 
 export type WorkspaceSearchIndexFactory = () => WorkspaceSearchIndex
 
@@ -51,6 +52,7 @@ export type ElectronBindings = {
   linkPreviewService: LinkPreviewService
   webTabManager: WebTabManager
   workspaceSearchIndexFactory: WorkspaceSearchIndexFactory
+  workspaceAnalysisScheduler: WorkspaceAnalysisScheduler
   workspaceGraphScheduler: WorkspaceGraphComputationScheduler
   workspaceGraphStore: WorkspaceGraphStore
   workspaceRegistry: WindowWorkspaceRegistry

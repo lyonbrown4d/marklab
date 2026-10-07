@@ -4,9 +4,11 @@ import { getElectronRuntime } from '@/runtime/electron'
 import { invoke } from '@/runtime/ipc'
 import {
   backgroundTaskStatusSchema,
-  fsAssetBytesSchema,
   fsAssetCapabilitySchema,
   fsBufferStatusSchema,
+  fsBufferSyncStatusSchema,
+  fsBufferUpdateRequestSchema,
+  fsBufferUpdateResultSchema,
   fsGraphSchema,
   fsMarkdownAssetImportResultSchema,
   fsMarkdownAssetResolveResultSchema,
@@ -16,12 +18,15 @@ import {
   fsSnapshotSchema,
   fsTextPreviewLimitSchema,
   fsTextPreviewSchema,
-  opaqueAssetUrlSchema,
   workspaceRelativeAssetPathSchema,
   workspaceOccurrenceSearchRequestSchema,
   workspaceOccurrenceSearchResultSetSchema,
   workspaceOccurrenceSearchCancelResultSchema,
+  workspaceGraphNodeDetailsRequestSchema,
+  workspaceGraphNodeDetailsResultSchema,
   type WorkspaceOccurrenceSearchRequest,
+  type FsBufferUpdateRequest,
+  type WorkspaceGraphNodeDetailsRequest,
   type MarkdownAssetImportStrategy,
 } from '@/services/fsApiSchemas'
 
@@ -55,6 +60,11 @@ export const fsApi = {
     const result = await invoke<unknown>('fs_get_workspace_graph')
     return fsGraphSchema.parse(result)
   },
+  async getWorkspaceGraphNodeDetails(request: WorkspaceGraphNodeDetailsRequest) {
+    const payload = workspaceGraphNodeDetailsRequestSchema.parse(request)
+    const result = await invoke<unknown>('fs_get_workspace_graph_node_details', payload)
+    return workspaceGraphNodeDetailsResultSchema.parse(result)
+  },
   async searchWorkspace(query: string, limit = 20) {
     const result = await invoke<unknown>('fs_search_workspace', { query, limit })
     return z.array(fsSearchResultSchema).parse(result)
@@ -71,16 +81,50 @@ export const fsApi = {
   rebuildSearchIndex() {
     return invoke<void>('fs_rebuild_search_index')
   },
+  async applyBufferUpdate(request: FsBufferUpdateRequest) {
+    const payload = fsBufferUpdateRequestSchema.parse(request)
+    const result = await invoke<unknown>('fs_apply_buffer_update', payload)
+    return fsBufferUpdateResultSchema.parse(result)
+  },
   async updateBuffer(path: string, content: string) {
-    const result = await invoke<unknown>('fs_update_buffer', { path, content })
-    return fsBufferStatusSchema.parse(result)
+    let status = await this.getBufferStatus(path)
+    if (!status) {
+      await this.openFile(path)
+      status = await this.getBufferStatus(path)
+    }
+    if (!status) throw new Error('Workspace buffer session is unavailable')
+    let result = await this.applyBufferUpdate({
+      path,
+      base_revision: status.revision,
+      session_generation: status.session_generation,
+      update: { kind: 'snapshot', content },
+    })
+    if (result.kind === 'resync_required') {
+      result = await this.applyBufferUpdate({
+        path,
+        base_revision: result.revision,
+        session_generation: result.session_generation,
+        update: { kind: 'snapshot', content },
+      })
+    }
+    if (result.kind === 'session_mismatch') {
+      throw new Error('Workspace changed before the buffer update was applied')
+    }
+    if (result.kind === 'resync_required') {
+      throw new Error('Workspace buffer snapshot resynchronization was rejected')
+    }
+    return fsBufferStatusSchema.parse({
+      path: result.path,
+      revision: result.revision,
+      dirty: result.dirty,
+    })
   },
   flushBuffers() {
     return invoke<number>('fs_flush_buffers')
   },
   async getBufferStatus(path: string) {
     const result = await invoke<unknown>('fs_get_buffer_status', { path })
-    return result == null ? null : fsBufferStatusSchema.parse(result)
+    return result == null ? null : fsBufferSyncStatusSchema.parse(result)
   },
   async getBackgroundTasks() {
     const result = await invoke<unknown>('fs_get_background_tasks')
@@ -114,11 +158,6 @@ export const fsApi = {
     }
     return capability
   },
-  async readAssetBytes(assetUrl: string) {
-    const asset_url = opaqueAssetUrlSchema.parse(assetUrl)
-    const result = await getElectronRuntime().assets.readBytes({ asset_url })
-    return fsAssetBytesSchema.parse(result)
-  },
   openPathInSystem(path: string) {
     return getElectronRuntime().workspace.openPathInSystem(path)
   },
@@ -147,20 +186,20 @@ export const fsApi = {
     })
     return fsMarkdownAssetImportResultSchema.parse(result)
   },
-  async importMarkdownAssetBase64({
+  async importMarkdownAssetBytes({
     fileName,
-    base64Data,
+    bytes,
     documentPath,
     title,
   }: {
     fileName: string
-    base64Data: string
+    bytes: ArrayBuffer
     documentPath: string
     title?: string | null
   }) {
-    const result = await invoke<unknown>('fs_import_markdown_asset_base64', {
+    const result = await invoke<unknown>('fs_import_markdown_asset_bytes', {
       fileName,
-      base64Data,
+      bytes,
       documentPath,
       title,
     })

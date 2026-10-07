@@ -234,19 +234,39 @@ test.describe('Electron desktop shell', () => {
   })
 
   test('tracks system color-scheme changes in both directions', async () => {
-    await page.emulateMedia({ colorScheme: 'dark' })
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
-        timeout: 3_000,
-      })
-      .toBe(true)
+    const electronApp = session?.app
+    expect(electronApp).toBeDefined()
+    if (!electronApp) return
 
-    await page.emulateMedia({ colorScheme: 'light' })
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
-        timeout: 3_000,
-      })
-      .toBe(false)
+    const setNativeTheme = (themeSource: 'dark' | 'light' | 'system') =>
+      electronApp.evaluate(({ nativeTheme }, source) => {
+        nativeTheme.themeSource = source
+      }, themeSource)
+
+    try {
+      await setNativeTheme('light')
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+          timeout: 3_000,
+        })
+        .toBe(false)
+
+      await setNativeTheme('dark')
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+          timeout: 3_000,
+        })
+        .toBe(true)
+
+      await setNativeTheme('light')
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+          timeout: 3_000,
+        })
+        .toBe(false)
+    } finally {
+      await setNativeTheme('system')
+    }
   })
 
   test('anchors the localized Markdown table toolbar to the active cell', async () => {

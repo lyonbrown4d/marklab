@@ -11,6 +11,7 @@ import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
+import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -269,6 +270,7 @@ export type RendererSafeElectronApi = {
     onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => () => void
   }
   workspace: ElectronWorkspacePathApi
+  workspaceTree: WorkspaceTreeApi
   window: {
     minimize: () => Promise<void>
     maximize: () => Promise<void>

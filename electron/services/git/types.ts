@@ -38,7 +38,6 @@ export type GitFileDiff = {
   modified_label: string
   original_content: string
   modified_content: string
-  unified_diff?: string
 }
 
 export type GitRemote = {

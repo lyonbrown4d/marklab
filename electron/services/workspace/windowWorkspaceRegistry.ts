@@ -4,7 +4,8 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import type { Logger } from '@electron/services/logger'
 import { applyAppTaskBadge } from '@electron/services/nativeWindowStatus'
-import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisServiceTypes'
+import type { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
 import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import {
@@ -23,6 +24,7 @@ import type { WorkspaceService } from '@electron/services/workspace/workspaceSer
 import type { BackgroundTaskStatus, FsRootInfo } from '@electron/services/workspace/types'
 
 type WindowWorkspaceRegistryOptions = {
+  workspaceAnalysisScheduler?: WorkspaceAnalysisScheduler
   knowledgeEngineService?: KnowledgeEngineService
   localHistoryService: LocalHistoryServiceContract
   onSessionDisposed?: (sessionKey: string) => void
@@ -204,6 +206,7 @@ export class WindowWorkspaceRegistry {
       sessionKey,
       shell: this.shell,
       window,
+      workspaceAnalysisScheduler: this.options.workspaceAnalysisScheduler,
       workspaceSearchIndexFactory: this.options.workspaceSearchIndexFactory,
       workspaceGraphScheduler: this.options.workspaceGraphScheduler,
       workspaceGraphStore: this.options.workspaceGraphStore,

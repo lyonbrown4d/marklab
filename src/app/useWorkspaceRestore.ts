@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fsApi, fsSnapshotSchema, type FsSnapshot } from '@/services/fsApi'
+import { fsApi, type FsSnapshot } from '@/services/fsApi'
 import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
-import { normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
+import { getWorkspaceTabId, normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
 import type { RootKind, WorkspaceTab } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { useI18n } from '@/i18n/useI18n'
+import { workspaceTreeApi } from '@/services/workspaceTreeApi'
+import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 
 type LoadWorkspace = (options?: {
   activeTabId?: string | null
@@ -20,13 +22,15 @@ type UseWorkspaceRestoreArgs = {
   rootPath: string
   rootKind: RootKind
   loadWorkspace: LoadWorkspace
+  dirtyPaths?: Record<string, true>
+  onTreeActiveTabChanged?: (tab: WorkspaceTab | null) => void
 }
 
 type UseWorkspaceRestoreResult = {
   isSessionRestored: boolean
   restoreStatusMessage: string | null
   isRestoringSession: boolean
-  restoreWorkspaceSession: () => Promise<void>
+  restoreWorkspaceSession: () => Promise<boolean>
 }
 
 type WorkspaceSessionSeedPayload = {
@@ -102,6 +106,8 @@ export const useWorkspaceRestore = ({
   rootPath,
   rootKind,
   loadWorkspace,
+  dirtyPaths = {},
+  onTreeActiveTabChanged,
 }: UseWorkspaceRestoreArgs): UseWorkspaceRestoreResult => {
   const { t } = useI18n()
   const [restoreStatusMessage, setRestoreStatusMessage] = useState<string | null>(null)
@@ -111,12 +117,13 @@ export const useWorkspaceRestore = ({
   const restoreInProgressRef = useRef(false)
 
   const restoreWorkspaceSession = useCallback(async () => {
-    if (restoreInProgressRef.current) return
+    if (restoreInProgressRef.current) return false
     restoreInProgressRef.current = true
     setIsRestoringSession(true)
     try {
       if (isDesktopRuntime() && rootPath) {
         try {
+          await flushEditorChanges()
           if (rootKind === 'single') {
             await fsApi.setSingleFile(rootPath)
           } else if (rootKind === 'external') {
@@ -125,13 +132,16 @@ export const useWorkspaceRestore = ({
         } catch (error) {
           setRestoreStatusMessage(t('app.restoreRootFailed'))
           void error
+          return false
         }
       }
       await loadWorkspace()
       setRestoreStatusMessage(null)
+      return true
     } catch (error) {
       setRestoreStatusMessage(t('app.restoreSessionFailed'))
       void error
+      return false
     } finally {
       setIsRestoringSession(false)
       restoreInProgressRef.current = false
@@ -144,8 +154,8 @@ export const useWorkspaceRestore = ({
 
     let cancelled = false
     void (async () => {
-      await restoreWorkspaceSession()
-      if (!cancelled) setIsSessionRestored(true)
+      const restored = await restoreWorkspaceSession()
+      if (!cancelled && restored) setIsSessionRestored(true)
     })()
 
     return () => {
@@ -177,24 +187,28 @@ export const useWorkspaceRestore = ({
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
-
-    let unlisten: (() => void) | undefined
-    const setup = async () => {
-      unlisten = await listen<unknown>('fs-changed', (event) => {
-        const parsed = fsSnapshotSchema.safeParse(event.payload)
-        if (!parsed.success) return
-        void loadWorkspace({
-          snapshot: parsed.data,
-        })
-      })
-    }
-    void setup()
-    return () => {
-      if (unlisten) {
-        unlisten()
+    return workspaceTreeApi.onChanged((event) => {
+      const state = useWorkspaceStore.getState()
+      if (
+        state.rootPath &&
+        `${state.rootKind}:${state.rootPath}` !== `${event.root.kind}:${event.root.path}`
+      ) {
+        return
       }
-    }
-  }, [loadWorkspace])
+      const previousActiveTabId = state.activeTabId
+      if (!state.applyTreeDelta(event, dirtyPaths)) {
+        const next = useWorkspaceStore.getState()
+        if (next.activeTabId !== previousActiveTabId) {
+          const activeTab = next.tabs.find((tab) => getWorkspaceTabId(tab) === next.activeTabId)
+          onTreeActiveTabChanged?.(activeTab ?? null)
+        }
+        return
+      }
+      void loadWorkspace({ preserveCurrentRoute: true }).catch((error: unknown) => {
+        useWorkspaceStore.getState().failTreeLoad(error)
+      })
+    })
+  }, [dirtyPaths, loadWorkspace, onTreeActiveTabChanged])
 
   return {
     isSessionRestored,

@@ -21,10 +21,8 @@ import {
   type WorkspaceBufferWriteFile,
   WorkspaceBufferStore,
 } from '@electron/services/workspace/workspaceBuffers'
-import {
-  loadWorkspaceDocuments,
-  type WorkspaceDocument,
-} from '@electron/services/workspace/workspaceDocumentLoader'
+import type { WorkspaceDocument } from '@electron/services/workspace/workspaceDocumentLoader'
+import { WorkspaceDocumentCatalog } from '@electron/services/workspace/workspaceDocumentCatalog'
 import {
   initializeWorkspaceBackgroundTasks,
   runSearchIndexTask as runSearchIndexTaskWithStatus,
@@ -42,12 +40,13 @@ import {
   type WorkspacePathSnapshotCache,
 } from '@electron/services/workspace/workspacePathSnapshotCache'
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher'
+import { WorkspaceTreeProjection } from '@electron/services/workspace/workspaceTreeProjection'
+import type { WorkspaceTreeDeltaEvent } from '@/types/workspaceTree'
 
 type SnapshotListener = (snapshot: FsSnapshot) => void
 type BackgroundTasksListener = (tasks: BackgroundTaskStatus[]) => void
 
 const WATCH_DEBOUNCE_MS = 250
-const WORKSPACE_DOCUMENT_READ_BATCH_SIZE = 8
 
 export class WorkspaceBase {
   protected readonly buffers: WorkspaceBufferStore
@@ -56,6 +55,8 @@ export class WorkspaceBase {
   protected readonly backgroundTasksListeners = new Set<BackgroundTasksListener>()
   protected readonly watcher: WorkspaceWatcher
   protected readonly pathSnapshots: WorkspacePathSnapshotCache
+  protected readonly documents: WorkspaceDocumentCatalog
+  protected readonly tree: WorkspaceTreeProjection
   protected readonly searchIndexTaskState: SearchIndexTaskState = { runs: 0 }
   protected readonly disposeOnWillQuit = () => this.dispose()
   protected snapshotTimer: ReturnType<typeof setTimeout> | null = null
@@ -78,6 +79,14 @@ export class WorkspaceBase {
     fs.mkdirSync(internalRoot, { recursive: true })
     ensureDefaultFile(internalRoot)
     this.pathSnapshots = createWorkspacePathSnapshotCache(() => this.state, this.logger)
+    this.documents = new WorkspaceDocumentCatalog(
+      () => this.pathSnapshots.get(),
+      (entryPath) => this.readFile({ path: entryPath }),
+    )
+    this.tree = new WorkspaceTreeProjection(
+      () => this.listEntries(),
+      () => this.rootInfo(),
+    )
     initializeWorkspaceBackgroundTasks((id, label, status, message) =>
       this.setTask(id, label, status, message),
     )
@@ -141,6 +150,18 @@ export class WorkspaceBase {
     }
   }
 
+  onTreeChanged(listener: (event: WorkspaceTreeDeltaEvent) => void): () => void {
+    return this.tree.onChanged(listener)
+  }
+
+  listTreeChildren = (value: unknown) => this.tree.listChildren(value)
+
+  treePathsExist = (value: unknown) => this.tree.pathsExist(value)
+
+  initialTreeFile = () => this.tree.initialFile()
+
+  searchTree = (value: unknown) => this.tree.search(value)
+
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
@@ -153,6 +174,7 @@ export class WorkspaceBase {
     this.watcher.dispose()
     this.buffers.dispose()
     this.snapshotListeners.clear()
+    this.tree.dispose()
     this.backgroundTasksListeners.clear()
   }
 
@@ -164,40 +186,14 @@ export class WorkspaceBase {
     replacePath?: string,
     replaceContent?: string,
   ): Promise<WorkspaceDocument[]> {
-    return this.loadWorkspaceDocumentsFromEntries(
-      await this.listEntries(),
-      replacePath,
-      replaceContent,
-    )
+    return this.documents.documents(replacePath, replaceContent)
   }
 
   protected async workspaceDocumentsAndKnownPaths(
     replacePath?: string,
     replaceContent?: string,
   ): Promise<{ documents: WorkspaceDocument[]; knownPaths: WorkspaceKnownPaths }> {
-    const pathSnapshot = await this.pathSnapshots.get()
-    return {
-      documents: await this.loadWorkspaceDocumentsFromEntries(
-        pathSnapshot.entries,
-        replacePath,
-        replaceContent,
-      ),
-      knownPaths: pathSnapshot.knownPaths,
-    }
-  }
-
-  private async loadWorkspaceDocumentsFromEntries(
-    entries: FsEntry[],
-    replacePath?: string,
-    replaceContent?: string,
-  ): Promise<WorkspaceDocument[]> {
-    return loadWorkspaceDocuments({
-      batchSize: WORKSPACE_DOCUMENT_READ_BATCH_SIZE,
-      entries,
-      readFile: (entryPath) => this.readFile({ path: entryPath }),
-      replaceContent,
-      replacePath,
-    })
+    return this.documents.documentsAndKnownPaths(replacePath, replaceContent)
   }
 
   protected readFile(value: unknown): Promise<string> {
@@ -280,6 +276,7 @@ export class WorkspaceBase {
     this.pendingSnapshotWatcherRestart = false
     try {
       const snapshot = await this.snapshot()
+      this.tree.advance(snapshot.root, snapshot.entries)
       if (shouldRestartWatcher) this.watcher.restart()
       for (const listener of this.snapshotListeners) listener(snapshot)
     } catch (emitError) {
@@ -299,7 +296,10 @@ export class WorkspaceBase {
   }
 
   protected handleWatchedPathChanged(changedPath: string | null, event?: WatchEventName): void {
-    if (!event || event !== 'change') this.pathSnapshots.invalidate()
+    if (!event || event !== 'change') {
+      this.pathSnapshots.invalidate()
+      this.tree.invalidateQueries()
+    }
     if (this.state.rootKind === 'single') {
       if (changedPath && !isCurrentSingleFilePath(this.state, changedPath)) return
       if (changedPath) {
@@ -307,6 +307,10 @@ export class WorkspaceBase {
       } else {
         const singleFileName = currentSingleFileName(this.state)
         if (singleFileName) this.buffers.invalidateCleanForRelativePaths([singleFileName])
+      }
+      if (event === 'change') {
+        const singleFileName = currentSingleFileName(this.state)
+        this.tree.recordChangedPath(singleFileName)
       }
       this.scheduleSnapshotChanged()
       this.onWorkspacePathChanged(changedPath ? path.basename(changedPath) : null, event)
@@ -321,6 +325,7 @@ export class WorkspaceBase {
     const relativePath = changedPath
       ? relativePathsForAbsolutePaths(this.state, [changedPath])[0]
       : null
+    if (event === 'change') this.tree.recordChangedPath(relativePath)
     this.onWorkspacePathChanged(relativePath, event)
     this.scheduleSnapshotChanged()
   }

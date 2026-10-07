@@ -5,7 +5,7 @@ import { fsApi } from '@/services/fsApi'
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     importMarkdownAsset: vi.fn(),
-    importMarkdownAssetBase64: vi.fn(),
+    importMarkdownAssetBytes: vi.fn(),
   },
 }))
 
@@ -119,8 +119,8 @@ describe('importMarkdownImages', () => {
     expect(insertImage).toHaveBeenCalledWith('../assets/diagrams/flow.png', 'flow')
   })
 
-  it('imports a browser clipboard blob through the typed base64 boundary', async () => {
-    vi.mocked(fsApi.importMarkdownAssetBase64).mockResolvedValue({
+  it('imports a browser clipboard blob through the typed binary boundary', async () => {
+    vi.mocked(fsApi.importMarkdownAssetBytes).mockResolvedValue({
       copied: true,
       markdown_target: 'Page.assets/paste.png',
       relative_path: 'Page.assets/paste.png',
@@ -142,8 +142,12 @@ describe('importMarkdownImages', () => {
       ),
     ).resolves.toBe(true)
 
-    expect(fsApi.importMarkdownAssetBase64).toHaveBeenCalledWith(
-      expect.objectContaining({ documentPath: 'Page.md', fileName: 'paste.png' }),
+    expect(fsApi.importMarkdownAssetBytes).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bytes: expect.any(ArrayBuffer),
+        documentPath: 'Page.md',
+        fileName: 'paste.png',
+      }),
     )
     expect(insertImage).toHaveBeenCalledWith('Page.assets/paste.png', 'paste')
   })
@@ -164,7 +168,25 @@ describe('importMarkdownImages', () => {
     ).resolves.toBe(true)
 
     expect(fsApi.importMarkdownAsset).not.toHaveBeenCalled()
-    expect(fsApi.importMarkdownAssetBase64).not.toHaveBeenCalled()
+    expect(fsApi.importMarkdownAssetBytes).not.toHaveBeenCalled()
     expect(insertImage).toHaveBeenCalledWith('https://cdn.example.com/hero.png', 'hero')
+  })
+
+  it('rejects oversized clipboard images before reading or invoking IPC', async () => {
+    const oversized = new File([], 'huge.png', { type: 'image/png' })
+    Object.defineProperty(oversized, 'size', { value: 32 * 1024 * 1024 + 1 })
+    const identity = {}
+
+    await expect(
+      importMarkdownImages([{ kind: 'file', file: oversized }], {
+        activePath: 'Page.md',
+        getDocumentPath: () => 'Page.md',
+        getEditorIdentity: () => identity,
+        insertImage: vi.fn(() => true),
+        markdown: '',
+        strategy: 'copy-to-document-assets',
+      }),
+    ).resolves.toBe(false)
+    expect(fsApi.importMarkdownAssetBytes).not.toHaveBeenCalled()
   })
 })

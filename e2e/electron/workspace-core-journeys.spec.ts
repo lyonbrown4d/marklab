@@ -172,10 +172,14 @@ test.describe('Workspace core product journeys', () => {
         .click()
       const palette = page.getByRole('dialog', { name: /Command palette|命令面板/i })
       await expect(palette).toBeVisible()
-      await palette.getByRole('button', { name: /^\?\s/ }).click()
+      const fullTextMode = palette.getByRole('tab', {
+        name: /Full-text search|全文搜索/i,
+      })
+      await fullTextMode.click()
+      await expect(fullTextMode).toHaveAttribute('aria-selected', 'true')
       const search = palette.getByRole('combobox')
       await expect(search).toBeFocused()
-      await expect(search).toHaveValue('? ')
+      await expect(search).toHaveValue('')
       await search.pressSequentially('Topic 07 contains')
       const result = palette.getByRole('option', { name: /Topic-07.*Topic 07 contains/i }).first()
       await expect.soft(result).toBeVisible({ timeout: 15_000 })

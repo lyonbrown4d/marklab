@@ -8,6 +8,15 @@ import type {
 import { createWorkspaceStorageKey } from '@electron/services/workspace/workspaceIdentity'
 import type { WorkspaceGraphResolver } from '@electron/services/workspace/workspaceGraphResolver'
 import { trySidecarWorkspaceGraph } from '@electron/services/workspace/workspaceSidecarFileBridge'
+import {
+  parseWorkspaceGraphNodeDetailsQuery,
+  selectWorkspaceGraphNodeDocuments,
+} from '@electron/services/knowledgeEngine/workspaceGraphNodeDetails'
+import type {
+  WorkspaceGraphNodeDetailsTask,
+  WorkspaceGraphNodeDetailsWorkerResult,
+} from '@electron/services/workspace/workspaceAnalysisWorkerMessages'
+import { graphTopologyOnly } from '@electron/services/knowledgeEngine/workspaceGraphTopology'
 
 type WorkspaceGraphQueryServiceOptions = {
   analysisCache: WorkspaceAnalysisCache
@@ -16,6 +25,9 @@ type WorkspaceGraphQueryServiceOptions = {
   graphResolver: WorkspaceGraphResolver
   knowledgeEngineService?: KnowledgeEngineService
   logger: Logger
+  runNodeDetails: (
+    task: WorkspaceGraphNodeDetailsTask,
+  ) => Promise<WorkspaceGraphNodeDetailsWorkerResult>
 }
 
 export class WorkspaceGraphQueryService {
@@ -25,9 +37,28 @@ export class WorkspaceGraphQueryService {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const revision = this.options.analysisCache.revision
       const graph = await this.loadRevision(priority)
-      if (revision === this.options.analysisCache.revision) return graph
+      if (revision === this.options.analysisCache.revision) return graphTopologyOnly(graph)
     }
     throw new Error('Workspace analysis changed while the graph query was running')
+  }
+
+  async loadNodeDetails(value: unknown) {
+    const query = parseWorkspaceGraphNodeDetailsQuery(value)
+    const graph = await this.load('interactive')
+    if (graph.revision !== query.revision) throw new Error('Workspace graph revision is stale')
+    const generation = this.options.analysisCache.revision
+    const { documents } = await this.options.getInput()
+    const { revision, ...selection } = query
+    const result = await this.options.runNodeDetails({
+      type: 'workspace-graph-node-details',
+      documents: selectWorkspaceGraphNodeDocuments(documents, selection),
+      query: selection,
+      revision,
+    })
+    if (generation !== this.options.analysisCache.revision || result.revision !== query.revision) {
+      throw new Error('Workspace graph node details result is stale')
+    }
+    return result
   }
 
   private loadRevision(priority: 'background' | 'interactive'): Promise<FsGraph> {

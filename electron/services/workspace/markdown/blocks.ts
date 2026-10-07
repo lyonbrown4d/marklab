@@ -3,12 +3,16 @@ import {
   parseMarkdownAst,
   rawNodeText,
   type MarkdownNode,
+  type MarkdownRoot,
 } from '@electron/services/workspace/markdown/ast'
 import { trimLineBreaks } from '@electron/services/workspace/markdown/text'
 
-export const parseMarkdownBlocks = (baseId: string, markdown: string): FsMarkdownBlock[] => {
+export const parseMarkdownBlocks = (
+  baseId: string,
+  markdown: string,
+  tree: MarkdownRoot = parseMarkdownAst(markdown),
+): FsMarkdownBlock[] => {
   const blocks: FsMarkdownBlock[] = []
-  const tree = parseMarkdownAst(markdown)
 
   const pushBlock = (block: Omit<FsMarkdownBlock, 'id'>) => {
     blocks.push({ id: `${baseId}:block:${blocks.length}`, ...block })

@@ -9,6 +9,7 @@ import type { LocalHistoryServiceContract } from '@electron/services/localHistor
 import type { Logger } from '@electron/services/logger'
 import type { FsGraph } from '@electron/services/workspace/types'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 
 const tempRoots: string[] = []
 
@@ -33,6 +34,7 @@ export const createWorkspace = async (
   files: WorkspaceFixture[] = [],
   options: {
     graphPrecomputeDelayMs?: number
+    workspaceAnalysisScheduler?: WorkspaceAnalysisScheduler
     workspaceIndexPrecomputeDelayMs?: number
   } = {},
 ) => {

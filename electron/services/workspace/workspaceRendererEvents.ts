@@ -1,10 +1,11 @@
 import type { WebContents } from 'electron'
 import type { Logger } from '@electron/services/logger'
-import type { FsBufferStatus, FsSnapshot } from '@electron/services/workspace/types'
+import type { FsBufferStatus } from '@electron/services/workspace/types'
+import type { WorkspaceTreeDeltaEvent } from '@/types/workspaceTree'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 
 type WorkspaceRendererEventPayloads = {
-  'fs-changed': FsSnapshot
+  'fs-changed': WorkspaceTreeDeltaEvent
   'fs-buffer-status': FsBufferStatus
 }
 
@@ -13,7 +14,7 @@ type WorkspaceRendererEventsOptions = {
     isDestroyed: () => boolean
     webContents: Pick<WebContents, 'isDestroyed' | 'send'>
   }
-  service: Pick<WorkspaceService, 'onSnapshotChanged' | 'onBufferStatus'>
+  service: Pick<WorkspaceService, 'onTreeChanged' | 'onBufferStatus'>
   logger: Pick<Logger, 'warn'>
 }
 
@@ -36,7 +37,7 @@ export const bindWorkspaceRendererEvents = ({
     }
   }
   const unsubscribers = [
-    service.onSnapshotChanged((snapshot) => send('fs-changed', snapshot)),
+    service.onTreeChanged((event) => send('fs-changed', event)),
     service.onBufferStatus((status) => send('fs-buffer-status', status)),
   ]
   return () => {

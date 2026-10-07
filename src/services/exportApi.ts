@@ -24,12 +24,11 @@ const getDefaultExportPath = (
   return fullPath.replace(/\.[^/.]+$/, `.${ext}`)
 }
 let exportInProgress = false
-const exportMarkdown = async (
-  markdown: string,
+const exportDocument = async (
   format: ExportFormat,
-  options?: {
-    rootPath?: string
-    activePath?: string | null
+  options: {
+    rootPath: string
+    activePath: string
   },
 ): Promise<string | undefined> => {
   if (exportInProgress) return undefined
@@ -38,7 +37,7 @@ const exportMarkdown = async (
     const config = FORMAT_CONFIG[format]
     const ext = config.extensions[0]
     const defaultPath =
-      options?.rootPath && options?.activePath
+      options.rootPath && options.activePath
         ? getDefaultExportPath(options.rootPath, options.activePath, ext)
         : undefined
     // Defer so native menu can close before the save dialog opens (macOS)
@@ -49,17 +48,16 @@ const exportMarkdown = async (
     })
     if (!path) return undefined
     return await invoke<string>('export_markdown', {
-      markdown,
       format,
       outputPath: path,
-      sourceDocumentPath: options?.activePath ?? undefined,
+      sourceDocumentPath: options.activePath,
     })
   } finally {
     exportInProgress = false
   }
 }
 export const exportApi = {
-  exportMarkdown,
+  exportDocument,
   cancelExport(taskId: string) {
     return invoke<boolean>('export_cancel', { taskId })
   },

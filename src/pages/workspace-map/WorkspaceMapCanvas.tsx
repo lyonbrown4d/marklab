@@ -25,6 +25,7 @@ import { useWorkspaceMapInteractions } from '@/pages/workspace-map/useWorkspaceM
 import { useWorkspaceMapNodeDisclosure } from '@/pages/workspace-map/useWorkspaceMapNodeDisclosure'
 import { useWorkspaceMapNeighborhood } from '@/pages/workspace-map/useWorkspaceMapNeighborhood'
 import { useWorkspaceMapPresentedGraph } from '@/pages/workspace-map/useWorkspaceMapPresentedGraph'
+import { useWorkspaceMapNodeDetails } from '@/pages/workspace-map/useWorkspaceMapNodeDetails'
 import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/workspaceMapNeighborhood'
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
@@ -75,6 +76,19 @@ const WorkspaceMapCanvasContent = ({
   const darkMode = useDarkMode()
   const { t } = useI18n()
   const canvasRef = useRef<HTMLDivElement>(null)
+  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
+  const [viewportRevision, setViewportRevision] = useState(0)
+  const handleCanvasRef = useCallback((element: HTMLDivElement | null) => {
+    canvasRef.current = element
+    setCanvasElement(element)
+  }, [])
+  const graphWithDetails = useWorkspaceMapNodeDetails({
+    activePath,
+    container: canvasElement,
+    graph,
+    graphIdentity,
+    viewportRevision,
+  })
   const [flow, setFlow] = useState<ReactFlowInstance<Node<GraphNodeData>, Edge> | null>(null)
   const [externalState, setExternalState] = useState({
     graphIdentity,
@@ -91,7 +105,7 @@ const WorkspaceMapCanvasContent = ({
     useWorkspaceMapPresentedGraph({
       activePath,
       editorLoadState,
-      graph,
+      graph: graphWithDetails,
       mode,
       onChange,
       onCloseEditor,
@@ -187,6 +201,10 @@ const WorkspaceMapCanvasContent = ({
   const handleViewportMove = useCallback(() => {
     notifyAnimatedCursorViewport(canvasRef.current)
   }, [])
+  const handleViewportMoveEnd = useCallback(() => {
+    persistence.scheduleViewportSave()
+    setViewportRevision((revision) => revision + 1)
+  }, [persistence])
 
   if (layout.status === 'loading') {
     return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
@@ -202,7 +220,7 @@ const WorkspaceMapCanvasContent = ({
   }
 
   return (
-    <div className="relative h-full w-full" data-marklab-cursor-viewport ref={canvasRef}>
+    <div className="relative h-full w-full" data-marklab-cursor-viewport ref={handleCanvasRef}>
       <ReactFlow<Node<GraphNodeData>, Edge>
         aria-label={t('workspaceMap.canvas')}
         tabIndex={0}
@@ -226,7 +244,7 @@ const WorkspaceMapCanvasContent = ({
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onMove={handleViewportMove}
-        onMoveEnd={() => persistence.scheduleViewportSave()}
+        onMoveEnd={handleViewportMoveEnd}
         onPaneClick={interactions.onPaneClick}
         nodesDraggable
         nodesConnectable={false}

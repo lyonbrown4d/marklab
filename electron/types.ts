@@ -5,10 +5,8 @@ export type {
 } from '@/types/workspaceTextPreview'
 export type {
   AssetApi,
-  AssetBytes,
   AssetCapability,
   AssetIssueCapabilityRequest,
-  AssetReadBytesRequest,
   WorkspaceBufferStatus,
   WorkspaceCancelSwitchRequest,
   WorkspaceCancelSwitchResult,

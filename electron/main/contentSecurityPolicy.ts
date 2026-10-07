@@ -31,6 +31,7 @@ export const createContentSecurityPolicy = (): string => {
   const fontSources = ["'self'", 'data:']
   const connectSources = [
     "'self'",
+    'marklab-asset:',
     'http://localhost:*',
     'http://127.0.0.1:*',
     'ws://localhost:*',

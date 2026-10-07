@@ -1,13 +1,14 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { produce } from 'immer'
 import { toast } from 'sonner'
-import { fsApi } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import {
   editorBufferIdentity,
   type createEditorBufferPersistence,
   type SaveState,
 } from '@/app/useEditorBufferState'
+import type { EditorTextChange } from '@/types/editorChanges'
+import type { createEditorBufferSync } from '@/app/editorBufferSync'
 
 type WorkspaceContents = Record<string, Record<string, string>>
 type WorkspaceLoadingPaths = Record<string, Record<string, true>>
@@ -27,6 +28,7 @@ type EditorBufferChangesOptions = {
   persistence: ReturnType<typeof createEditorBufferPersistence>
   scheduleFlush: () => void
   updateErrorMessage: () => string
+  bufferSync: ReturnType<typeof createEditorBufferSync>
 }
 
 export const useEditorBufferChanges = ({
@@ -43,9 +45,10 @@ export const useEditorBufferChanges = ({
   persistence,
   scheduleFlush,
   updateErrorMessage,
+  bufferSync,
 }: EditorBufferChangesOptions) =>
   useCallback(
-    (value: string) => {
+    (value: string, changes?: EditorTextChange[]) => {
       // Delayed editor notifications belong to the document that produced them.
       const path = activePath
       const workspace = binding.workspace
@@ -96,9 +99,14 @@ export const useEditorBufferChanges = ({
         changeVersionRef.current[identity] === version &&
         latestContentsRef.current[identity] === value
 
-      const operation = fsApi
-        .updateBuffer(path, value)
-        .then((status) => {
+      const operation = bufferSync.enqueue({
+        identity,
+        path,
+        previous,
+        content: value,
+        changes,
+        shouldApply: () => currentBindingRef.current === binding,
+        onApplied: (status) => {
           if (!isCurrent()) return
           persistence.setRevision({
             identity,
@@ -113,21 +121,23 @@ export const useEditorBufferChanges = ({
           }
           persistence.deleteRevision(identity, status.revision)
           markPathClean(workspace, path, value)
+        },
+      })
+      void operation.catch((error: unknown) => {
+        if (!isCurrent()) return
+        toast.error(updateErrorMessage(), {
+          id: 'editor-buffer-error:update:' + identity,
+          description: String(error),
         })
-        .catch((error: unknown) => {
-          if (!isCurrent()) return
-          toast.error(updateErrorMessage(), {
-            id: 'editor-buffer-error:update:' + identity,
-            description: String(error),
-          })
-          markPathDirty(workspace, path, { status: 'error', message: String(error) })
-        })
+        markPathDirty(workspace, path, { status: 'error', message: String(error) })
+      })
 
-      persistence.trackUpdate(operation)
+      persistence.trackUpdate(operation, identity)
       scheduleFlush()
     },
     [
       activePath,
+      bufferSync,
       binding,
       currentBindingRef,
       workspaceFileContentsRef,

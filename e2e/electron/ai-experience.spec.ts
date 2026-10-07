@@ -49,12 +49,12 @@ test.describe('Electron AI experience', () => {
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     await settingsDialog.getByRole('tab', { name: /^AI$/ }).click()
-    await settingsDialog
-      .getByRole('button', { name: /Add compatible service|添加兼容服务/i })
-      .click()
+    await settingsDialog.getByRole('button', { name: /Add AI provider|添加 AI 提供方/i }).click()
     const providerDialog = page.getByRole('dialog', {
-      name: /Add compatible service|添加兼容服务/i,
+      name: /Add AI provider|添加 AI 提供方/i,
     })
+    await providerDialog.getByRole('combobox', { name: /Provider|提供方/i }).click()
+    await page.getByRole('option', { name: 'OpenAI-compatible' }).click()
     await providerDialog.getByRole('textbox', { name: /Display name|显示名称/i }).fill('Local E2E')
     await providerDialog.getByRole('textbox', { name: /^Model$|^模型$/i }).fill('marklab-e2e')
     await providerDialog

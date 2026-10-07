@@ -43,11 +43,17 @@ const createHarness = () => {
   }
   const sourceWorkspace = {
     setRoot: vi.fn(),
-    setSingleFile: vi.fn(async ({ path: filePath }) => ({
-      kind: 'single' as const,
-      path: filePath,
-    })),
+    setSingleFile: vi.fn(async ({ path: filePath }) => {
+      order.push('workspace')
+      return { kind: 'single' as const, path: filePath }
+    }),
   }
+  const requestRendererFlush = vi.fn(async () => {
+    order.push('flush')
+  })
+  const getNativeIpc = vi.fn<
+    () => { windowClose: { requestRendererFlush: typeof requestRendererFlush } } | null
+  >(() => ({ windowClose: { requestRendererFlush } }))
   const pool = {
     acquireMainWindow: vi.fn(async () => ({
       metrics: {
@@ -70,7 +76,7 @@ const createHarness = () => {
     copyWorkspaceSession: vi.fn(() => ({ state: { tabs: [] }, version: 1 })),
     getCurrentWorkspaceRoot: vi.fn(() => ({ kind: 'external' as const, path: '/notes' })),
     getLogger: () => logger,
-    getNativeIpc: () => null,
+    getNativeIpc,
     getPrimaryWindow: () => source,
     getSessionKeyForWindow: (window: BrowserWindow) => `session-${window.id}`,
     getWorkspaceServiceForWindow: (window: BrowserWindow) =>
@@ -86,10 +92,12 @@ const createHarness = () => {
   return {
     dependencies,
     event,
+    getNativeIpc,
     handlers,
     logger,
     order,
     pool,
+    requestRendererFlush,
     source,
     sourceWorkspace,
     target,
@@ -190,7 +198,16 @@ describe('app window commands', () => {
     temporaryRoots.push(root)
     const filePath = path.join(root, 'note.md')
     await fs.writeFile(filePath, '# Note')
-    const { dependencies, event, handlers, pool, source, sourceWorkspace } = createHarness()
+    const {
+      dependencies,
+      event,
+      handlers,
+      order,
+      pool,
+      requestRendererFlush,
+      source,
+      sourceWorkspace,
+    } = createHarness()
     const openInCurrentWindow = handlers.open_path_in_current_window
 
     expect(openInCurrentWindow).toBeTypeOf('function')
@@ -203,6 +220,8 @@ describe('app window commands', () => {
       workspacePath: filePath,
     })
     expect(sourceWorkspace.setSingleFile).toHaveBeenCalledWith({ path: filePath })
+    expect(requestRendererFlush).toHaveBeenCalledWith(source)
+    expect(order).toEqual(['flush', 'workspace'])
     expect(dependencies.writeWorkspaceSession).toHaveBeenCalledWith('session-1', {
       activeTabId: null,
       rootKind: 'single',
@@ -210,6 +229,32 @@ describe('app window commands', () => {
       tabs: [],
     })
     expect(pool.acquireMainWindow).not.toHaveBeenCalled()
+  })
+
+  it('keeps the current workspace when renderer flush rejects', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-native-flush-'))
+    temporaryRoots.push(root)
+    const { event, handlers, requestRendererFlush, sourceWorkspace } = createHarness()
+    requestRendererFlush.mockRejectedValueOnce(new Error('queued update failed'))
+
+    const result = await handlers.open_path_in_current_window({ path: root }, event)
+
+    expect(result).toMatchObject({ ok: false, error: 'queued update failed' })
+    expect(sourceWorkspace.setRoot).not.toHaveBeenCalled()
+    expect(sourceWorkspace.setSingleFile).not.toHaveBeenCalled()
+  })
+
+  it('keeps the current workspace when the native IPC bridge is unavailable', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-native-missing-'))
+    temporaryRoots.push(root)
+    const { event, getNativeIpc, handlers, sourceWorkspace } = createHarness()
+    getNativeIpc.mockReturnValueOnce(null)
+
+    const result = await handlers.open_path_in_current_window({ path: root }, event)
+
+    expect(result).toMatchObject({ ok: false, error: 'Native IPC bridge is unavailable.' })
+    expect(sourceWorkspace.setRoot).not.toHaveBeenCalled()
+    expect(sourceWorkspace.setSingleFile).not.toHaveBeenCalled()
   })
 
   it('keeps a failed target retryable and succeeds through its own renderer command', async () => {

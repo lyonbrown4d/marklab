@@ -1,4 +1,5 @@
 import type { Logger } from '@electron/services/logger'
+import { scheduleWorkspacePrewarm } from '@electron/services/workspace/workspacePrewarmScheduler'
 
 type WorkspaceIndexPrewarmerOptions = {
   delayMs: number
@@ -18,7 +19,10 @@ export class WorkspaceIndexPrewarmer {
     this.timer = setTimeout(
       () => {
         this.timer = null
-        void this.options.run().catch((error) => {
+        void scheduleWorkspacePrewarm(async () => {
+          if (this.disposed) return
+          await this.options.run()
+        }).catch((error) => {
           if (!this.disposed)
             this.options.logger.warn('workspace index precompute failed', { error })
         })

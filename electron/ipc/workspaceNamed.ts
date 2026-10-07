@@ -28,11 +28,20 @@ export const registerWorkspaceNamedIpc = (
   ipcMain.handle(nativeIpcChannels.assetsIssueCapability, (event, request: unknown) =>
     workspaceFor(event).issueAssetCapability(request),
   )
-  ipcMain.handle(nativeIpcChannels.assetsReadBytes, (event, request: unknown) =>
-    workspaceFor(event).readAssetBytes(request),
-  )
   ipcMain.handle(nativeIpcChannels.workspaceReadTextPreview, (event, request: unknown) =>
     workspaceFor(event).readTextPreview(request),
+  )
+  ipcMain.handle(nativeIpcChannels.workspaceTreeListChildren, (event, request: unknown) =>
+    workspaceFor(event).listTreeChildren(request),
+  )
+  ipcMain.handle(nativeIpcChannels.workspaceTreePathsExist, (event, request: unknown) =>
+    workspaceFor(event).treePathsExist(request),
+  )
+  ipcMain.handle(nativeIpcChannels.workspaceTreeInitialFile, (event) =>
+    workspaceFor(event).initialTreeFile(),
+  )
+  ipcMain.handle(nativeIpcChannels.workspaceTreeSearch, (event, request: unknown) =>
+    workspaceFor(event).searchTree(request),
   )
   ipcMain.handle(nativeIpcChannels.workspaceOpenPathInSystem, async (event, request: unknown) => {
     await workspaceFor(event).openPathInSystem({ path: workspacePath(request) })

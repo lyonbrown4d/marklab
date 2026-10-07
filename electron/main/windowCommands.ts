@@ -267,6 +267,9 @@ export const createAppWindowCommandHandlers = (
       requestedPath = target.path
       const main = sourceWindowForEvent(event, dependencies.getPrimaryWindow())
       if (!main || main.isDestroyed()) throw new Error('No active window is available.')
+      const nativeIpc = dependencies.getNativeIpc()
+      if (!nativeIpc) throw new Error('Native IPC bridge is unavailable.')
+      await nativeIpc.windowClose.requestRendererFlush(main)
       const root = await setWorkspaceTarget(dependencies.getWorkspaceServiceForWindow(main), target)
       const seed = dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(main), {
         activeTabId: null,

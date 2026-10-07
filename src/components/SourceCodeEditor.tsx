@@ -22,13 +22,14 @@ import {
   useMarkdownSourceDiagnostics,
   type MarkdownSourceDiagnosticHost,
 } from '@/components/useMarkdownSourceDiagnostics'
+import type { EditorChangeHandler } from '@/types/editorChanges'
 
 type SourceCodeEditorProps = {
   activePath: string | null
   value: string
   files: FileEntry[]
   fileContents: Record<string, string>
-  onChange: (value: string) => void
+  onChange: EditorChangeHandler
   onOpenFileView?: (path: string, view: FileViewKind) => void
   onCursorChange?: (position: EditorCursorPosition | null) => void
   readOnly?: boolean

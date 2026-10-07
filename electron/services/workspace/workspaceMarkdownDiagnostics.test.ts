@@ -8,6 +8,7 @@ import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import type { Logger } from '@electron/services/logger'
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
+import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 import { trySidecarMarkdownDiagnostics } from '@electron/services/workspace/workspaceSidecarFileBridge'
 
 vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient', () => ({
@@ -34,6 +35,20 @@ afterEach(async () => {
 })
 
 describe('WorkspaceAnalysisService Markdown diagnostics', () => {
+  it('runs local diagnostics CPU work through the injected cross-window scheduler', async () => {
+    const scheduler = new WorkspaceAnalysisScheduler({ concurrency: 1 })
+    const schedule = vi.spyOn(scheduler, 'run')
+    const sidecar = createSidecarMock(vi.fn(async () => []))
+    const { workspace } = await createWorkspace(sidecar, scheduler)
+
+    try {
+      await workspace.analyzeMarkdownBuffer({ content: '# Alpha', path: 'alpha.md' })
+      expect(schedule).toHaveBeenCalledOnce()
+    } finally {
+      workspace.dispose()
+    }
+  })
+
   it('merges and sorts custom diagnostics with Node sidecar reference diagnostics', async () => {
     const supplemental = {
       end_column: 16,
@@ -140,7 +155,10 @@ describe('WorkspaceAnalysisService Markdown diagnostics', () => {
   })
 })
 
-const createWorkspace = async (service: KnowledgeEngineService) => {
+const createWorkspace = async (
+  service: KnowledgeEngineService,
+  workspaceAnalysisScheduler?: WorkspaceAnalysisScheduler,
+) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-md-diagnostics-'))
   tempRoots.push(root)
   await fs.writeFile(path.join(root, 'alpha.md'), '# Alpha', 'utf8')
@@ -156,6 +174,7 @@ const createWorkspace = async (service: KnowledgeEngineService) => {
     createLocalHistoryService(),
     undefined,
     service,
+    { workspaceAnalysisScheduler },
   )
   await workspace.setRoot({ path: root })
   return { logger, workspace }

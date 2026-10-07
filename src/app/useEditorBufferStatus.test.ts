@@ -46,6 +46,7 @@ beforeEach(() => {
     path: 'note.md',
     revision: 1,
     dirty: false,
+    session_generation: 3,
   })
 })
 
@@ -91,7 +92,12 @@ describe('editor buffer status confirmation', () => {
 
   it('keeps dirty revisions in saving state and propagates status-read failures', async () => {
     const { result, options, snapshot } = createHarness()
-    mocks.getBufferStatus.mockResolvedValueOnce({ path: 'note.md', revision: 1, dirty: true })
+    mocks.getBufferStatus.mockResolvedValueOnce({
+      path: 'note.md',
+      revision: 1,
+      dirty: true,
+      session_generation: 3,
+    })
     await result.current([snapshot])
     expect(options.markPathDirty).toHaveBeenCalledWith('internal:/workspace', 'note.md', {
       status: 'saving',

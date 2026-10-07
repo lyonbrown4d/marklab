@@ -106,6 +106,12 @@ describe('SidebarExplorerPanel', () => {
     )
   })
 
+  it('does not present the partial projection count as the workspace total', () => {
+    render(<SidebarExplorerPanel {...createProps({ fileCount: 999 })} />)
+
+    expect(screen.queryByText('999')).not.toBeInTheDocument()
+  })
+
   it('connects the active file to the local history timeline', () => {
     render(<SidebarExplorerPanel {...createProps()} />)
 

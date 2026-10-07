@@ -47,7 +47,6 @@ const createDiff = (overrides: Partial<GitFileDiff> = {}): GitFileDiff => ({
   original_content: '# Original\n',
   original_label: 'HEAD',
   path: 'docs/guide.md',
-  unified_diff: undefined,
   ...overrides,
 })
 

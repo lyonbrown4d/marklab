@@ -34,3 +34,10 @@ export const rewriteWorkspaceReferencesForRename = async ({
     touchedFiles: rewrite.touchedFiles.length,
   })
 }
+
+export const getOptionalWorkspaceIndex = async (
+  service: unknown,
+): Promise<FsWorkspaceIndex | null> => {
+  const provider = service as { workspaceIndex?: () => Promise<FsWorkspaceIndex> }
+  return provider.workspaceIndex ? provider.workspaceIndex().catch(() => null) : null
+}

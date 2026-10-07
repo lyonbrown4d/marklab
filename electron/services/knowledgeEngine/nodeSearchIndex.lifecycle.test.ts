@@ -153,4 +153,19 @@ describe('NodeSearchIndex rebuild lifecycle', () => {
     await Promise.all([search, close])
     expect(didClose).toBe(true)
   })
+
+  it('disposes the occurrence worker even when closing the database fails', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ results: [], totalHits: 0 })),
+      dispose: vi.fn(async () => undefined),
+    }
+    const index = new NodeSearchIndex(undefined, '', {}, runner)
+    await index.rebuild([{ path: 'notes/a.md', title: 'A', content: 'alpha' }])
+    vi.spyOn(NodeSearchDatabase.prototype, 'close').mockRejectedValueOnce(
+      new Error('database close failed'),
+    )
+
+    await expect(index.close()).rejects.toThrow('database close failed')
+    expect(runner.dispose).toHaveBeenCalledOnce()
+  })
 })

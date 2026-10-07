@@ -1,15 +1,18 @@
 import fs from 'node:fs/promises'
 import fsSync from 'node:fs'
 import path from 'node:path'
-import type { App, Shell } from 'electron'
 import watcher from '@parcel/watcher'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
-import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
-import type { Logger } from '@electron/services/logger'
-import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
+import type { FsBufferStatus } from '@electron/services/workspace/types'
+import {
+  cleanupWorkspaceFileServiceFixtures,
+  createKnowledgeServiceMock,
+  createWorkspace,
+  prepareBufferForSave,
+  settleWatcherTasks,
+} from '@electron/services/workspace/workspaceFileServiceTestUtils'
 
 vi.mock('@parcel/watcher', () => ({
   default: {
@@ -19,12 +22,8 @@ vi.mock('@parcel/watcher', () => ({
   },
 }))
 
-const tempRoots: string[] = []
-
 afterEach(async () => {
-  await Promise.all(
-    tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
-  )
+  await cleanupWorkspaceFileServiceFixtures()
 })
 
 describe('WorkspaceFileService sidecar mutations', () => {
@@ -89,7 +88,6 @@ describe('WorkspaceFileService sidecar mutations', () => {
     const service = createKnowledgeServiceMock()
     const { root, workspace } = await createWorkspace(service)
     await prepareBufferForSave(root, workspace, service)
-
     workspace.updateBuffer({ path: 'notes/a.md', content: '# A' })
 
     await expect(workspace.flushBuffers()).resolves.toBeUndefined()
@@ -170,7 +168,111 @@ describe('WorkspaceFileService background tasks', () => {
   })
 })
 
+describe('WorkspaceFileService incremental buffers', () => {
+  it('applies a patch only when its base revision matches', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+    await prepareBufferForSave(root, workspace, service)
+    const sessionGeneration = workspace.getBufferStatus({ path: 'notes/a.md' })!.session_generation
+
+    expect(
+      workspace.applyBufferUpdate({
+        path: 'notes/a.md',
+        base_revision: 9,
+        session_generation: sessionGeneration,
+        update: {
+          kind: 'patch',
+          changes: [{ offset: 2, delete_length: 7, insert_text: 'Changed' }],
+        },
+      }),
+    ).toEqual({
+      kind: 'resync_required',
+      path: 'notes/a.md',
+      revision: 0,
+      session_generation: sessionGeneration,
+    })
+    expect(await workspace.readFile({ path: 'notes/a.md' })).toBe('# Initial')
+
+    expect(
+      workspace.applyBufferUpdate({
+        path: 'notes/a.md',
+        base_revision: 0,
+        session_generation: sessionGeneration,
+        update: {
+          kind: 'patch',
+          changes: [{ offset: 2, delete_length: 7, insert_text: 'Changed' }],
+        },
+      }),
+    ).toEqual({
+      kind: 'applied',
+      path: 'notes/a.md',
+      revision: 1,
+      dirty: true,
+      session_generation: sessionGeneration,
+    })
+    expect(await workspace.readFile({ path: 'notes/a.md' })).toBe('# Changed')
+
+    await workspace.flushBuffers()
+    workspace.dispose()
+  })
+})
+
 describe('WorkspaceFileService root switching', () => {
+  it('keeps the old root and generation when flushing buffers fails', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+    await prepareBufferForSave(root, workspace, service)
+    const status = workspace.getBufferStatus({ path: 'notes/a.md' })!
+    workspace.updateBuffer({ path: 'notes/a.md', content: '# Unsaved' })
+    service.writeWorkspaceFile.mockRejectedValueOnce(new Error('disk full'))
+    const nextRoot = path.join(path.dirname(root), 'failed-next-workspace')
+    await fs.mkdir(nextRoot)
+
+    await expect(workspace.setRoot({ path: nextRoot })).rejects.toThrow(
+      'Failed to save 1 workspace buffer(s)',
+    )
+
+    expect(workspace.rootInfo()).toEqual({ kind: 'external', path: root })
+    expect(workspace.getBufferStatus({ path: 'notes/a.md' })).toMatchObject({
+      dirty: true,
+      session_generation: status.session_generation,
+    })
+    expect(await fs.readFile(path.join(root, 'notes/a.md'), 'utf8')).toBe('# Initial')
+
+    await workspace.flushBuffers()
+    workspace.dispose()
+  })
+
+  it('rejects buffer updates from an earlier workspace generation', async () => {
+    const service = createKnowledgeServiceMock()
+    const { root, workspace } = await createWorkspace(service)
+    await prepareBufferForSave(root, workspace, service)
+    const status = workspace.getBufferStatus({ path: 'notes/a.md' }) as FsBufferStatus & {
+      session_generation: number
+    }
+    const nextRoot = path.join(path.dirname(root), 'next-workspace')
+    await fs.mkdir(nextRoot)
+    await fs.writeFile(path.join(nextRoot, 'notes.md'), '# New workspace')
+
+    await workspace.setRoot({ path: nextRoot })
+    expect(
+      workspace.applyBufferUpdate({
+        path: 'notes/a.md',
+        base_revision: status.revision,
+        session_generation: status.session_generation,
+        update: { kind: 'snapshot', content: '# Stale edit' },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        kind: 'session_mismatch',
+        session_generation: expect.any(Number),
+      }),
+    )
+    expect(await fs.readFile(path.join(nextRoot, 'notes.md'), 'utf8')).toBe('# New workspace')
+
+    workspace.dispose()
+  })
+
   it('rejects invalid selections without changing the current root', async () => {
     const { root, workspace } = await createWorkspace(createKnowledgeServiceMock())
     const file = path.join(root, 'note.md')
@@ -204,97 +306,3 @@ describe('WorkspaceFileService root switching', () => {
     workspace.dispose()
   })
 })
-
-const prepareBufferForSave = async (
-  root: string,
-  workspace: WorkspaceFileService,
-  service: ReturnType<typeof createKnowledgeServiceMock>,
-): Promise<void> => {
-  await fs.mkdir(path.join(root, 'notes'))
-  await fs.writeFile(path.join(root, 'notes/a.md'), '# Initial')
-  service.readWorkspaceFile.mockResolvedValueOnce('# Initial')
-  service.writeWorkspaceFile.mockImplementation(
-    async (_id: string, workspaceRoot: string, relativePath: string, content: string) => {
-      await fs.writeFile(path.join(workspaceRoot, relativePath), content)
-      return { changed: true, kind: 'file' as const }
-    },
-  )
-  await workspace.openFile({ path: 'notes/a.md' })
-}
-
-const createWorkspace = async (service: KnowledgeEngineService) => {
-  const tempRoot = await fs.mkdtemp(path.join(tempDir(), 'marklab-workspace-sidecar-'))
-  tempRoots.push(tempRoot)
-  const appData = path.join(tempRoot, 'app-data')
-  const root = path.join(tempRoot, 'workspace')
-  await fs.mkdir(root, { recursive: true })
-  const logger = createLogger()
-  const workspace = new WorkspaceFileService(
-    createApp(appData),
-    createShell(),
-    logger,
-    createLocalHistoryService(),
-    service,
-  )
-  await workspace.setRoot({ path: root })
-  return { logger, root, workspace }
-}
-
-const tempDir = () => path.resolve(process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.')
-
-const settleWatcherTasks = async (): Promise<void> => {
-  await Promise.resolve()
-  await Promise.resolve()
-}
-
-const createKnowledgeServiceMock = () =>
-  ({
-    createWorkspaceDirectory: vi.fn(async () => ({ changed: true, kind: 'folder' as const })),
-    createWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
-    deleteWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
-    renameWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
-    readWorkspaceFile: vi.fn<() => Promise<string>>(),
-    writeWorkspaceFile: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
-  }) as unknown as KnowledgeEngineService & {
-    createWorkspaceDirectory: ReturnType<typeof vi.fn>
-    createWorkspaceFile: ReturnType<typeof vi.fn>
-    deleteWorkspacePath: ReturnType<typeof vi.fn>
-    renameWorkspacePath: ReturnType<typeof vi.fn>
-    readWorkspaceFile: ReturnType<typeof vi.fn>
-    writeWorkspaceFile: ReturnType<typeof vi.fn>
-  }
-
-const createLocalHistoryService = (): LocalHistoryServiceContract =>
-  ({
-    capture: vi.fn(async () => ({ status: 'skipped', reason: 'duplicate' as const })),
-  }) as unknown as LocalHistoryServiceContract
-
-const createLogger = (): Logger & {
-  error: ReturnType<typeof vi.fn>
-  info: ReturnType<typeof vi.fn>
-  warn: ReturnType<typeof vi.fn>
-} => {
-  const logger = {
-    child: vi.fn(() => logger),
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  } as unknown as Logger & {
-    error: ReturnType<typeof vi.fn>
-    info: ReturnType<typeof vi.fn>
-    warn: ReturnType<typeof vi.fn>
-  }
-  return logger
-}
-
-const createApp = (userDataPath: string): App =>
-  ({
-    getPath: vi.fn(() => userDataPath),
-    on: vi.fn(),
-    removeListener: vi.fn(),
-  }) as unknown as App
-
-const createShell = (): Shell =>
-  ({
-    openPath: vi.fn(async () => ''),
-  }) as unknown as Shell

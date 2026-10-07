@@ -20,11 +20,13 @@ import { toast } from 'sonner'
 import {
   areWorkspaceEntriesEqual,
   areWorkspaceTabListsEqual,
-  fetchWorkspaceSnapshot,
+  fetchWorkspaceLoadProjection,
   isWorkspaceFileEntry,
   projectLoaderErrorMessage,
   type LoadWorkspaceOptions,
 } from '@/app/projectLoaderUtils'
+import { useWorkspaceStore } from '@/store/useWorkspaceStore'
+import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 
 type UseProjectLoaderArgs = {
   rootPath: string
@@ -72,12 +74,33 @@ export const useProjectLoader = ({
   const defaultFileViewRef = useLatest(defaultFileView)
   const internalRootSwitchingRef = useRef(false)
   const pathMutationInProgress = useRef(false)
+  const loadRequest = useRef(0)
 
   const loadWorkspace = useCallback(
     async (options?: LoadWorkspaceOptions) => {
+      const request = ++loadRequest.current
       if (pathMutationInProgress.current && options?.snapshot) return
       await runInDesktop(async () => {
-        const snapshot = options?.snapshot ?? (await fetchWorkspaceSnapshot())
+        let snapshot = options?.snapshot
+        if (!snapshot) {
+          useWorkspaceStore.getState().beginTreeLoad()
+          try {
+            const projection = await fetchWorkspaceLoadProjection(options?.tabs ?? tabsRef.current)
+            if (request !== loadRequest.current) return
+            snapshot = projection.snapshot
+            useWorkspaceStore.setState({
+              loadedTreeParents: [''],
+              treeNextCursors: { '': projection.nextCursor },
+              treeError: null,
+              treeGeneration: projection.generation,
+              treeRevision: projection.revision,
+              treeStatus: 'ready',
+            })
+          } catch (error) {
+            useWorkspaceStore.getState().failTreeLoad(error)
+            throw error
+          }
+        }
         const rootInfo = snapshot.root
         if (rootPathRef.current !== rootInfo.path) {
           setRootPath(rootInfo.path)
@@ -86,19 +109,7 @@ export const useProjectLoader = ({
           setRootKind(rootInfo.kind)
         }
 
-        let nextEntries = snapshot.entries
-        if (rootInfo.kind !== 'single' && !nextEntries.some(isWorkspaceFileEntry)) {
-          const fallbackName = 'Untitled.md'
-          await fsApi.createFile(fallbackName)
-          const refreshed = await fetchWorkspaceSnapshot()
-          nextEntries = refreshed.entries
-          if (rootPathRef.current !== refreshed.root.path) {
-            setRootPath(refreshed.root.path)
-          }
-          if (rootKindRef.current !== refreshed.root.kind) {
-            setRootKind(refreshed.root.kind)
-          }
-        }
+        const nextEntries = snapshot.entries
 
         if (!areWorkspaceEntriesEqual(entriesRef.current, nextEntries)) {
           setEntries(nextEntries)
@@ -168,6 +179,7 @@ export const useProjectLoader = ({
     async (path: string) => {
       try {
         await runInDesktop(async () => {
+          await flushEditorChanges()
           const preferSingleFile = isMarkdownFilePath(path) || isPreviewableFilePath(path)
           if (preferSingleFile) {
             try {
@@ -255,6 +267,7 @@ export const useProjectLoader = ({
     internalRootSwitchingRef.current = true
     try {
       await runInDesktop(async () => {
+        await flushEditorChanges()
         await fsApi.setRoot(null)
         await loadWorkspace({ preserveCurrentRoute: false })
       })

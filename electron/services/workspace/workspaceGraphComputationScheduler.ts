@@ -1,4 +1,4 @@
-import PQueue from 'p-queue'
+import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 
 type GraphComputationPriority = 'background' | 'interactive'
 
@@ -10,34 +10,31 @@ type GraphComputation<T> = {
 }
 
 const PRIORITY = { background: 0, interactive: 10 } as const
-const DEFAULT_CONCURRENCY = 3
-
 export class WorkspaceGraphComputationScheduler {
   private readonly inFlight = new Map<string, Promise<unknown>>()
   private readonly latestRevision = new Map<string, string>()
   private readonly queued = new Set<string>()
-  private readonly queue: PQueue
+  private readonly scheduler: WorkspaceAnalysisScheduler
 
-  constructor(options: { concurrency?: number } = {}) {
-    this.queue = new PQueue({
-      concurrency: Math.max(1, Math.floor(options.concurrency ?? DEFAULT_CONCURRENCY)),
-    })
+  constructor(options: { concurrency?: number; scheduler?: WorkspaceAnalysisScheduler } = {}) {
+    this.scheduler =
+      options.scheduler ?? new WorkspaceAnalysisScheduler({ concurrency: options.concurrency })
   }
 
   run<T>({ priority, revision, task, workspaceKey }: GraphComputation<T>): Promise<T> {
     this.latestRevision.set(workspaceKey, revision)
-    const taskKey = `${workspaceKey}\0${revision}`
+    const taskKey = `graph:${workspaceKey}\0${revision}`
     const current = this.inFlight.get(taskKey) as Promise<T> | undefined
     if (current) {
       if (priority === 'interactive' && this.queued.has(taskKey)) {
-        this.queue.setPriority(taskKey, PRIORITY.interactive)
+        this.scheduler.setPriority(taskKey, PRIORITY.interactive)
       }
       return current
     }
 
     this.queued.add(taskKey)
-    const promise = this.queue
-      .add(
+    const promise = this.scheduler
+      .run(
         () => {
           this.queued.delete(taskKey)
           return task()

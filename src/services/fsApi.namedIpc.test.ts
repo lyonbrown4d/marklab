@@ -5,7 +5,6 @@ import { fsApi } from '@/services/fsApi'
 const runtime = vi.hoisted(() => ({
   assets: {
     issueCapability: vi.fn(),
-    readBytes: vi.fn(),
   },
   workspace: {
     copyAbsolutePathToClipboard: vi.fn(),
@@ -25,15 +24,11 @@ describe('fsApi named IPC', () => {
       url: 'marklab-asset://local/v1/token',
       expires_at_ms: Date.now() + 10_000,
     }
-    const bytes = { bytes: new ArrayBuffer(2), size_bytes: 2 }
     runtime.assets.issueCapability.mockResolvedValue(capability)
-    runtime.assets.readBytes.mockResolvedValue(bytes)
 
     await expect(fsApi.toAssetUrl('images/photo.png')).resolves.toEqual(capability)
-    await expect(fsApi.readAssetBytes(capability.url)).resolves.toEqual(bytes)
 
     expect(runtime.assets.issueCapability).toHaveBeenCalledWith({ path: 'images/photo.png' })
-    expect(runtime.assets.readBytes).toHaveBeenCalledWith({ asset_url: capability.url })
   })
 
   it('delegates path operations to the narrow workspace API', async () => {

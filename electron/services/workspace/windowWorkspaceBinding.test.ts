@@ -22,6 +22,7 @@ vi.mock('@electron/services/workspace/workspaceService', () => ({
     getBackgroundTasks = () => []
     onBufferStatus = () => vi.fn()
     onSnapshotChanged = () => vi.fn()
+    onTreeChanged = () => vi.fn()
     onBackgroundTasksChanged = () => vi.fn()
     setAutoFlushMutationRunner = vi.fn()
     setRoot = vi.fn()
@@ -35,7 +36,7 @@ vi.mock('@electron/services/workspace/workspaceService', () => ({
     movePath = vi.fn()
     deletePath = vi.fn()
     importMarkdownAsset = vi.fn()
-    importMarkdownAssetBase64 = vi.fn()
+    importMarkdownAssetBytes = vi.fn()
     dispose = vi.fn()
   },
 }))

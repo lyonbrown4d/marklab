@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff'
 import { simpleGit } from 'simple-git'
 
 import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors'
@@ -225,29 +224,6 @@ export const allCommitChanges = (snapshot: GitStatusSnapshot): GitFileChange[] =
     byPath.set(change.path, change)
   }
   return [...byPath.values()]
-}
-
-export const syntheticUnifiedDiff = (
-  filePath: string,
-  originalContent: string,
-  modifiedContent: string,
-): string => {
-  if (originalContent === modifiedContent) return ''
-
-  const oldPath = originalContent ? `a/${filePath}` : '/dev/null'
-  const newPath = modifiedContent ? `b/${filePath}` : '/dev/null'
-  return createTwoFilesPatch(
-    oldPath,
-    newPath,
-    originalContent,
-    modifiedContent,
-    undefined,
-    undefined,
-    {
-      context: Number.MAX_SAFE_INTEGER,
-      headerOptions: FILE_HEADERS_ONLY,
-    },
-  )
 }
 
 const outputToString = (output: string | Buffer | undefined, fallback = ''): string => {

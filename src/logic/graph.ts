@@ -4,7 +4,6 @@ import { graphNodeContent } from '@/logic/graphNodeContent'
 import type { PreviewFileKind } from '@/logic/fileTypes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
-import { applyDagreLayout } from '@/logic/graphDagreLayout'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
 
 export type GraphNodeData = Record<string, unknown> & {
@@ -70,6 +69,7 @@ export type GraphData = {
   nodes: Node<GraphNodeData>[]
   edges: Edge[]
   layoutKey?: string
+  revision?: string
 }
 
 export const buildGraphFromKnowledgeGraph = (
@@ -113,15 +113,10 @@ export const buildGraphFromKnowledgeGraph = (
     data: { kind: edge.kind },
   }))
 
-  if (nodes.length > 0) applyGraphLayout(nodes, edges)
-  return { nodes, edges, layoutKey: createGraphLayoutKey(graph.mode, nodes, edges) }
-}
-
-const applyGraphLayout = (nodes: Node<GraphNodeData>[], edges: Edge[]) => {
-  applyDagreLayout(nodes, edges, {
-    rankdir: 'LR',
-    ranksep: 180,
-    nodesep: 54,
-    edgesep: 24,
-  })
+  return {
+    nodes,
+    edges,
+    layoutKey: createGraphLayoutKey(graph.mode, nodes, edges),
+    revision: graph.revision,
+  }
 }

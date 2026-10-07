@@ -10,7 +10,6 @@ import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFall
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { usePdfDocumentData } from '@/components/previews/usePdfDocumentData'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 
@@ -64,10 +63,9 @@ const useMeasuredWidth = (fallback: number, ready: boolean) => {
 
 export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   const { t } = useI18n()
-  const { error, loading, file } = usePdfDocumentData(fileUrl)
-  const failed = error !== null
+  const file = fileUrl.split('#')[0] ?? fileUrl
   const [pageState, setPageState] = useState({ key: '', numPages: 0, pageNumber: 1 })
-  const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680, Boolean(file))
+  const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680, true)
   const pageWidth = Math.max(240, Math.min(documentWidth - 24, mode === 'modal' ? 960 : 720))
   const currentPageState =
     pageState.key === fileUrl ? pageState : { key: fileUrl, numPages: 0, pageNumber: 1 }
@@ -94,19 +92,6 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
     },
     [fileUrl],
   )
-
-  if (loading || failed || !file) {
-    return (
-      <div className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}>
-        <div className="marklab-pdf-viewer__document" ref={documentRef}>
-          <PdfPreviewStatus
-            failed={failed}
-            label={failed ? t('preview.pdfFailed') : t('preview.pdfReading')}
-          />
-        </div>
-      </div>
-    )
-  }
 
   if (mode === 'graph') {
     return (

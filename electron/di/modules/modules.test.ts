@@ -61,6 +61,7 @@ describe('Electron DI modules', () => {
       workspaceModule,
       [
         TOKENS.knowledgeEngineService,
+        TOKENS.workspaceAnalysisScheduler,
         TOKENS.workspaceGraphScheduler,
         TOKENS.workspaceGraphStore,
         TOKENS.workspaceSearchIndexFactory,

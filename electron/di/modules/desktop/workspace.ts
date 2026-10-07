@@ -8,13 +8,19 @@ import { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWork
 import { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
 import { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
+import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 
 export const workspaceModule = new ContainerModule(({ bind }) => {
+  bind(TOKENS.workspaceAnalysisScheduler).toConstantValue(new WorkspaceAnalysisScheduler())
   bind(TOKENS.knowledgeEngineService)
     .toResolvedValue(
-      (app, logger) =>
-        new KnowledgeEngineService({ app, logger: logger.child('knowledge-engine') }),
-      [TOKENS.app, TOKENS.logger],
+      (app, logger, scheduler) =>
+        new KnowledgeEngineService({
+          app,
+          logger: logger.child('knowledge-engine'),
+          workspaceAnalysisScheduler: scheduler,
+        }),
+      [TOKENS.app, TOKENS.logger, TOKENS.workspaceAnalysisScheduler],
     )
     .inSingletonScope()
   bind(TOKENS.workspaceSearchIndexFactory)
@@ -24,9 +30,12 @@ export const workspaceModule = new ContainerModule(({ bind }) => {
       [TOKENS.knowledgeEngineService],
     )
     .inSingletonScope()
-  bind(TOKENS.workspaceGraphScheduler).toConstantValue(
-    new WorkspaceGraphComputationScheduler({ concurrency: 3 }),
-  )
+  bind(TOKENS.workspaceGraphScheduler)
+    .toResolvedValue(
+      (scheduler) => new WorkspaceGraphComputationScheduler({ scheduler }),
+      [TOKENS.workspaceAnalysisScheduler],
+    )
+    .inSingletonScope()
   bind(TOKENS.workspaceGraphStore)
     .toResolvedValue((database) => new WorkspaceGraphStore(database), [TOKENS.localDatabaseService])
     .inSingletonScope()
@@ -41,6 +50,7 @@ export const workspaceModule = new ContainerModule(({ bind }) => {
         graphScheduler,
         graphStore,
         indexFactory,
+        analysisScheduler,
       ) =>
         new WindowWorkspaceRegistry(app, shell, logger.child('workspace'), {
           knowledgeEngineService,
@@ -49,6 +59,7 @@ export const workspaceModule = new ContainerModule(({ bind }) => {
           workspaceGraphScheduler: graphScheduler,
           workspaceGraphStore: graphStore,
           workspaceSearchIndexFactory: indexFactory,
+          workspaceAnalysisScheduler: analysisScheduler,
         }),
       [
         TOKENS.app,
@@ -59,6 +70,7 @@ export const workspaceModule = new ContainerModule(({ bind }) => {
         TOKENS.workspaceGraphScheduler,
         TOKENS.workspaceGraphStore,
         TOKENS.workspaceSearchIndexFactory,
+        TOKENS.workspaceAnalysisScheduler,
       ],
     )
     .inSingletonScope()

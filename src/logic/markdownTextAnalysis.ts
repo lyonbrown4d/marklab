@@ -1,6 +1,7 @@
 import { extractHeadings } from '@/logic/paths'
 
 export type MarkdownDocumentStats = {
+  characters: number
   lines: number
   words: number
 }
@@ -13,6 +14,7 @@ export type MarkdownTextAnalysisResult = {
 export const EMPTY_MARKDOWN_TEXT_ANALYSIS: MarkdownTextAnalysisResult = {
   outline: [],
   stats: {
+    characters: 0,
     lines: 0,
     words: 0,
   },
@@ -21,6 +23,7 @@ export const EMPTY_MARKDOWN_TEXT_ANALYSIS: MarkdownTextAnalysisResult = {
 export const getMarkdownDocumentStats = (value: string): MarkdownDocumentStats => {
   const trimmed = value.trim()
   return {
+    characters: value.replace(/\s/g, '').length,
     lines: value.length === 0 ? 0 : value.split(/\r\n|\r|\n/).length,
     words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).filter(Boolean).length,
   }

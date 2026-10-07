@@ -3,11 +3,17 @@ import type { KeyboardEvent } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { NodeApi, TreeApi } from 'react-arborist'
 import { useSidebarFileTreeState } from '@/components/file-tree/useSidebarFileTreeState'
+import { useWorkspaceTreeNextPageLoader } from '@/components/file-tree/useWorkspaceTreeFolderLoader'
 import type { ContextLabels, SidebarFileTreeProps } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
+import { workspaceTreeApi } from '@/services/workspaceTreeApi'
+import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 
 vi.mock('@/components/file-tree/FileTreeNodeRenderer', () => ({ FileTreeNodeRenderer: () => null }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('@/services/workspaceTreeApi', () => ({
+  workspaceTreeApi: { listChildren: vi.fn() },
+}))
 
 const createFixture = () => {
   const node = {
@@ -131,6 +137,109 @@ describe('creating inside a collapsed folder', () => {
     })
     expect(open).not.toHaveBeenCalled()
     expect(result.current.createRequest).toEqual({ kind: 'file', parentPath: 'docs' })
+  })
+})
+
+describe('lazy folder projection', () => {
+  it('loads bounded children the first time a folder toggles', async () => {
+    useWorkspaceStore.setState({
+      entries: [{ kind: 'folder', path: 'docs', hasChildren: true }],
+      loadedTreeParents: [''],
+      rootKind: 'external',
+      rootPath: '/workspace',
+      treeGeneration: 0,
+      treeRevision: 2,
+    })
+    vi.mocked(workspaceTreeApi.listChildren).mockResolvedValue({
+      entries: [{ kind: 'file', name: 'readme.md', path: 'docs/readme.md', hasChildren: false }],
+      nextCursor: null,
+      parent: 'docs',
+      generation: 0,
+      revision: 2,
+      root: { kind: 'external', path: '/workspace' },
+    })
+    const { result } = createFixture()
+
+    await act(async () => result.current.handleToggle('docs'))
+
+    expect(workspaceTreeApi.listChildren).toHaveBeenCalledWith({
+      cursor: null,
+      limit: 256,
+      parent: 'docs',
+    })
+    expect(useWorkspaceStore.getState().entries).toContainEqual({
+      kind: 'file',
+      path: 'docs/readme.md',
+      hasChildren: false,
+    })
+  })
+
+  it('keeps a failed folder load retryable and recovers on the next toggle', async () => {
+    useWorkspaceStore.setState({
+      entries: [{ kind: 'folder', path: 'docs', hasChildren: true }],
+      loadedTreeParents: [''],
+      rootKind: 'external',
+      rootPath: '/workspace',
+      treeGeneration: 0,
+      treeRevision: 2,
+    })
+    vi.mocked(workspaceTreeApi.listChildren)
+      .mockRejectedValueOnce(new Error('temporarily unavailable'))
+      .mockResolvedValueOnce({
+        entries: [{ kind: 'file', name: 'readme.md', path: 'docs/readme.md', hasChildren: false }],
+        nextCursor: null,
+        parent: 'docs',
+        generation: 0,
+        revision: 2,
+        root: { kind: 'external', path: '/workspace' },
+      })
+    const { result } = createFixture()
+
+    await act(async () => result.current.handleToggle('docs'))
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      loadedTreeParents: [''],
+      treeStatus: 'error',
+    })
+    await act(async () => result.current.handleToggle('docs'))
+
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      loadedTreeParents: ['', 'docs'],
+      treeError: null,
+      treeStatus: 'ready',
+    })
+  })
+})
+
+describe('tree page fairness', () => {
+  it('round-robins pending root and non-root cursors', async () => {
+    useWorkspaceStore.setState({
+      rootKind: 'external',
+      rootPath: '/workspace',
+      treeGeneration: 0,
+      treeRevision: 2,
+      treeNextCursors: { '': '0:2:256', docs: '0:2:256' },
+    })
+    vi.mocked(workspaceTreeApi.listChildren).mockImplementation(async ({ parent }) => ({
+      entries: [],
+      generation: 0,
+      nextCursor: '0:2:512',
+      parent: parent ?? '',
+      revision: 2,
+      root: { kind: 'external', path: '/workspace' },
+    }))
+    const { result } = renderHook(() => useWorkspaceTreeNextPageLoader('failed'))
+
+    await act(async () => result.current())
+    await act(async () => result.current())
+
+    expect(workspaceTreeApi.listChildren).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ parent: '' }),
+    )
+    expect(workspaceTreeApi.listChildren).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ parent: 'docs' }),
+    )
   })
 })
 

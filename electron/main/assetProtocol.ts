@@ -24,9 +24,11 @@ export const registerAssetProtocolPrivileges = (): void => {
     {
       scheme: ASSET_PROTOCOL,
       privileges: {
+        corsEnabled: true,
         standard: true,
         secure: true,
         stream: true,
+        supportFetchAPI: true,
       },
     },
   ])

@@ -34,6 +34,8 @@ export type WorkspaceTab =
 export type FileEntry = {
   path: string
   kind: 'file' | 'folder'
+  hasChildren?: boolean
+  childrenLoaded?: boolean
 }
 
 export type RootKind = 'internal' | 'external' | 'single'

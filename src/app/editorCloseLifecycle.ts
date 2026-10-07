@@ -26,7 +26,7 @@ export const registerEditorBufferFlusher = (flusher: EditorCloseFlusher) =>
 export const registerEditorPersistenceFlusher = (flusher: EditorCloseFlusher) =>
   registerFlusher(persistenceFlushers, flusher)
 
-export const flushEditorChangesForClose = (): Promise<void> => {
+export const flushEditorChanges = (): Promise<void> => {
   if (activeCloseFlush) return activeCloseFlush
   const task = runFlushers(snapshotFlushers)
     .then(() => runFlushers(bufferFlushers))
@@ -37,3 +37,5 @@ export const flushEditorChangesForClose = (): Promise<void> => {
   activeCloseFlush = tracked
   return tracked
 }
+
+export const flushEditorChangesForClose = flushEditorChanges

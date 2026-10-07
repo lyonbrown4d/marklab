@@ -5,6 +5,8 @@ export type FileTreeNode = {
   path: string
   type: 'file' | 'folder'
   children?: FileTreeNode[]
+  hasChildren?: boolean
+  childrenLoaded?: boolean
 }
 
 export const filterTree = (nodes: FileTreeNode[], query: string): FileTreeNode[] => {
@@ -28,24 +30,36 @@ export const filterTree = (nodes: FileTreeNode[], query: string): FileTreeNode[]
 
 export const buildFileTree = (entries: FileEntry[]) => {
   const root: FileTreeNode = { name: 'root', path: '', type: 'folder', children: [] }
+  const nodesByPath = new Map<string, FileTreeNode>([['', root]])
 
   entries.forEach((entry) => {
     const parts = entry.path.split('/')
-    let current = root
     parts.forEach((part, index) => {
+      const parentPath = parts.slice(0, index).join('/')
+      const nodePath = parts.slice(0, index + 1).join('/')
       const isFile = index === parts.length - 1
-      if (!current.children) current.children = []
-      let next = current.children.find((child) => child.name === part)
+      const parent = nodesByPath.get(parentPath)
+      if (!parent) return
+      if (!parent.children) parent.children = []
+      let next = nodesByPath.get(nodePath)
       if (!next) {
+        const type = isFile ? entry.kind : 'folder'
         next = {
           name: part,
-          path: parts.slice(0, index + 1).join('/'),
-          type: isFile ? entry.kind : 'folder',
-          children: isFile ? undefined : [],
+          path: nodePath,
+          type,
+          children: type === 'folder' ? [] : undefined,
+          hasChildren: isFile && type === 'folder' ? entry.hasChildren : true,
+          childrenLoaded: isFile && type === 'folder' ? entry.childrenLoaded : true,
         }
-        current.children.push(next)
+        parent.children.push(next)
+        nodesByPath.set(nodePath, next)
+      } else if (isFile) {
+        next.type = entry.kind
+        next.children = entry.kind === 'folder' ? (next.children ?? []) : undefined
+        next.hasChildren = entry.hasChildren
+        next.childrenLoaded = entry.childrenLoaded
       }
-      current = next
     })
   })
 

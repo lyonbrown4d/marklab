@@ -17,14 +17,13 @@ describe('exportApi', () => {
     vi.mocked(invoke).mockResolvedValue('export-pdf-1')
 
     await expect(
-      exportApi.exportMarkdown('![diagram](images/flow.png)', 'pdf', {
+      exportApi.exportDocument('pdf', {
         rootPath: 'D:/notes',
         activePath: 'docs/guide.md',
       }),
     ).resolves.toBe('export-pdf-1')
 
     expect(invoke).toHaveBeenCalledWith('export_markdown', {
-      markdown: '![diagram](images/flow.png)',
       format: 'pdf',
       outputPath: 'D:/exports/guide.pdf',
       sourceDocumentPath: 'docs/guide.md',

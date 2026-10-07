@@ -71,6 +71,27 @@ describe('named workspace IPC', () => {
     ).resolves.toEqual({ content: 'preview', truncated: false })
     expect(workspace.readTextPreview).toHaveBeenCalledWith(request)
   })
+
+  it('routes bounded tree queries through the sender workspace', async () => {
+    const workspace = createWorkspace('C:/notes')
+    const dependencies = createDependencies([workspace, workspace, workspace, workspace])
+    const handlers = register(dependencies)
+
+    await handlers.get(nativeIpcChannels.workspaceTreeListChildren)?.(event(1), {
+      parent: 'docs',
+      limit: 32,
+    })
+    await handlers.get(nativeIpcChannels.workspaceTreePathsExist)?.(event(1), {
+      paths: ['docs/readme.md'],
+    })
+    await handlers.get(nativeIpcChannels.workspaceTreeInitialFile)?.(event(1), undefined)
+    await handlers.get(nativeIpcChannels.workspaceTreeSearch)?.(event(1), { query: 'readme' })
+
+    expect(workspace.listTreeChildren).toHaveBeenCalledWith({ parent: 'docs', limit: 32 })
+    expect(workspace.treePathsExist).toHaveBeenCalledWith({ paths: ['docs/readme.md'] })
+    expect(workspace.initialTreeFile).toHaveBeenCalledOnce()
+    expect(workspace.searchTree).toHaveBeenCalledWith({ query: 'readme' })
+  })
 })
 
 type Handler = (event: { sender: { id: number } }, payload: unknown) => unknown
@@ -92,8 +113,11 @@ const createWorkspace = (root: string) => ({
     expires_at_ms: Date.now() + 1_000,
   })),
   openPathInSystem: vi.fn(async () => undefined),
-  readAssetBytes: vi.fn(async () => ({ bytes: new ArrayBuffer(1), size_bytes: 1 })),
   readTextPreview: vi.fn(async () => ({ content: 'preview', truncated: false })),
+  listTreeChildren: vi.fn(async () => ({ entries: [], nextCursor: null })),
+  treePathsExist: vi.fn(async () => ({ existing: [], revision: 0 })),
+  initialTreeFile: vi.fn(async () => ({ path: null, revision: 0 })),
+  searchTree: vi.fn(async () => ({ entries: [], generation: 0, revision: 0 })),
   resolveCoordinatorPath: vi.fn((relativePath: string) => path.resolve(root, relativePath)),
 })
 
@@ -104,6 +128,8 @@ const createDependencies = (workspaces: Array<ReturnType<typeof createWorkspace>
     serviceForWebContents: vi
       .fn()
       .mockImplementationOnce(() => workspaces[0])
-      .mockImplementationOnce(() => workspaces[1] ?? workspaces[0]),
+      .mockImplementationOnce(() => workspaces[1] ?? workspaces[0])
+      .mockImplementationOnce(() => workspaces[2] ?? workspaces[0])
+      .mockImplementationOnce(() => workspaces[3] ?? workspaces[0]),
   },
 })

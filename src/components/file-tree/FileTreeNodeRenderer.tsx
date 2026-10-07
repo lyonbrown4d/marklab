@@ -42,7 +42,7 @@ export const FileTreeNodeRenderer = ({
   const isActive = item.type === 'file' && item.path === activePath
   const previewKind = item.type === 'file' ? getPreviewFileKind(item.path) : null
   const isImageFile = previewKind === 'image'
-  const hasChildren = isFolder && (item.children?.length ?? 0) > 0
+  const hasChildren = isFolder && (item.hasChildren === true || (item.children?.length ?? 0) > 0)
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()

@@ -8,10 +8,12 @@ import type {
   FsPathMetadataResult,
   FsRootInfo,
   FsStateData,
-  FsWorkspaceIndex,
 } from '@electron/services/workspace/types'
 import { WorkspaceMutationService } from '@electron/services/workspace/workspaceMutationService'
-import { rewriteWorkspaceReferencesForRename } from '@electron/services/workspace/workspaceFileRenameReferences'
+import {
+  getOptionalWorkspaceIndex,
+  rewriteWorkspaceReferencesForRename,
+} from '@electron/services/workspace/workspaceFileRenameReferences'
 import type { WorkspaceBufferWriteFile } from '@electron/services/workspace/workspaceBuffers'
 import { deleteWorkspacePathWithNode } from '@electron/services/workspace/workspaceNodeFileMutations'
 import { workspaceTerminalCwd } from '@electron/services/workspace/workspaceAssetAccess'
@@ -32,10 +34,19 @@ import { stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import { WorkspaceAccessPrewarmer } from '@electron/services/workspace/workspaceAccessPrewarmer'
+import { createWorkspaceBufferUpdateHandler } from '@electron/services/workspace/workspaceBufferUpdateHandler'
+import { openWorkspacePath } from '@electron/services/workspace/workspaceSystemPath'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
   private rootTransitionInProgress = false
+  private workspaceSessionGeneration = 0
   private readonly accessPrewarmer: WorkspaceAccessPrewarmer
+  readonly applyBufferUpdate = createWorkspaceBufferUpdateHandler(
+    this.buffers,
+    (path) => void this.resolve(path),
+    (path, content) => this.updateBuffer({ path, content }),
+    () => this.workspaceSessionGeneration,
+  )
 
   constructor(
     app: ConstructorParameters<typeof WorkspaceMutationService>[0],
@@ -67,9 +78,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     super.dispose()
   }
 
-  terminalCwd(): string {
-    return workspaceTerminalCwd(this.state)
-  }
+  terminalCwd = () => workspaceTerminalCwd(this.state)
 
   async setRoot(value: unknown): Promise<FsRootInfo> {
     this.beginRootTransition()
@@ -167,10 +176,11 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     }
   }
 
-  getBufferStatus(value: unknown): FsBufferStatus | null {
+  getBufferStatus(value: unknown): (FsBufferStatus & { session_generation: number }) | null {
     const relativePath = stringArg(value, 'path')
     this.resolve(relativePath)
-    return this.buffers.getStatus(relativePath)
+    const status = this.buffers.getStatus(relativePath)
+    return status ? { ...status, session_generation: this.workspaceSessionGeneration } : null
   }
 
   async createFile(value: unknown): Promise<void> {
@@ -186,6 +196,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       value,
     })
     this.pathSnapshots.invalidate()
+    this.tree.invalidateQueries()
   }
   async createDir(value: unknown): Promise<void> {
     this.ensureWorkspaceMode()
@@ -202,6 +213,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       await fs.promises.mkdir(this.resolve(relativePath), { recursive: true })
     }
     this.pathSnapshots.invalidate()
+    this.tree.invalidateQueries()
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('folder created', { path: relativePath })
   }
@@ -209,7 +221,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     this.ensureWorkspaceMode()
     const from = stringArg(value, 'from')
     const to = stringArg(value, 'to')
-    const workspaceIndex = await this.getWorkspaceIndexForRename()
+    const workspaceIndex = await getOptionalWorkspaceIndex(this)
     const sidecarMutation = await trySidecarPathMutation({
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
@@ -224,7 +236,9 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       await fs.promises.rename(this.resolve(from), target)
     }
     this.buffers.rename(from, to)
+    this.tree.recordRename(from, to)
     this.pathSnapshots.invalidate()
+    this.tree.invalidateQueries()
     if (workspaceIndex) {
       await rewriteWorkspaceReferencesForRename({
         host: this,
@@ -256,6 +270,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       sidecarMutation?.kind ?? (await deleteWorkspacePathWithNode(this.resolve(relativePath)))
     this.buffers.deleteUnder(relativePath)
     this.pathSnapshots.invalidate()
+    this.tree.invalidateQueries()
     this.scheduleSnapshotChanged({ restartWatcher: true })
     this.logger.info('path deleted', { path: relativePath, kind })
   }
@@ -271,13 +286,8 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     return toPathMetadataResult(metadata)
   }
 
-  async openPathInSystem(value: unknown): Promise<void> {
-    const relativePath = stringArg(value, 'path')
-    const error = await this.shell.openPath(this.resolve(relativePath))
-    if (error) this.logger.warn('open path in system failed', { path: relativePath, error })
-    if (error) throw new Error(`Failed to open path: ${error}`)
-    this.logger.info('path opened in system', { path: relativePath })
-  }
+  openPathInSystem = (value: unknown) =>
+    openWorkspacePath(this.state, this.shell, this.logger, value)
 
   private beginRootTransition(): void {
     if (this.rootTransitionInProgress) {
@@ -294,7 +304,9 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     }
 
     this.buffers.clear()
+    this.workspaceSessionGeneration += 1
     this.state = nextState
+    this.tree.commitRoot()
     this.pathSnapshots.invalidate()
     this.watcher.restart()
     this.accessPrewarmer.schedule()
@@ -304,12 +316,5 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       rootPath: nextState.rootPath,
     })
     return this.rootInfo()
-  }
-
-  private async getWorkspaceIndexForRename(): Promise<FsWorkspaceIndex | null> {
-    const service = this as unknown as {
-      workspaceIndex?: () => Promise<FsWorkspaceIndex>
-    }
-    return service.workspaceIndex ? service.workspaceIndex().catch(() => null) : null
   }
 }

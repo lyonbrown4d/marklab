@@ -19,6 +19,7 @@ import {
   useEditorBufferState,
   type SaveState,
 } from '@/app/useEditorBufferState'
+import { createEditorBufferSync } from '@/app/editorBufferSync'
 export type { SaveState } from '@/app/useEditorBufferState'
 export { editorLoadGenerationFromState, nextEditorLoadRouteState } from '@/app/editorLoadRouteState'
 
@@ -48,6 +49,14 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
   const editorValue = activePath ? (fileContents[activePath] ?? '') : ''
 
   const persistence = useMemo(() => createEditorBufferPersistence(), [])
+  const bufferSync = useMemo(
+    () =>
+      createEditorBufferSync({
+        applyBufferUpdate: (request) => fsApi.applyBufferUpdate(request),
+        getBufferStatus: (path) => fsApi.getBufferStatus(path),
+      }),
+    [],
+  )
   const fileContentsRef = useLatest(fileContents)
   const dirtyPathsRef = useLatest(dirtyPaths)
   const workspaceKeyRef = useLatest(workspaceKey)
@@ -144,8 +153,11 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     latestContentsRef.current = {}
     changeVersionRef.current = {}
     persistence.clearRevisions()
-    void flushNow().catch(reportFlushError)
-  }, [flushNow, persistence, reportFlushError, workspaceKey])
+    void flushNow().then(
+      () => bufferSync.clear(),
+      (error) => reportFlushError(error),
+    )
+  }, [bufferSync, flushNow, persistence, reportFlushError, workspaceKey])
 
   useEffect(() => {
     const previousLoad = activeLoadRef.current
@@ -266,6 +278,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     persistence,
     scheduleFlush,
     updateErrorMessage,
+    bufferSync,
   })
   const onPersistedContentChange = usePersistedEditorBufferContent({
     workspace: workspaceKey,

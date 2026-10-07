@@ -18,7 +18,8 @@ import {
   clearWindowTaskAttention,
   createNativeTaskAttentionState,
 } from '@electron/services/nativeWindowStatus'
-import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisService'
+import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/workspaceAnalysisServiceTypes'
+import type { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
 import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier'
@@ -47,6 +48,7 @@ type CreateWindowWorkspaceBindingOptions = {
   sessionKey: string
   shell: Shell
   window: BrowserWindow
+  workspaceAnalysisScheduler?: WorkspaceAnalysisScheduler
   workspaceGraphScheduler?: WorkspaceGraphComputationScheduler
   workspaceGraphStore?: WorkspaceGraphStore
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
@@ -95,7 +97,7 @@ const installMutationGate = (
   const movePath = service.movePath.bind(service)
   const deletePath = service.deletePath.bind(service)
   const importAsset = service.importMarkdownAsset.bind(service)
-  const importAssetBase64 = service.importMarkdownAssetBase64.bind(service)
+  const importAssetBytes = service.importMarkdownAssetBytes.bind(service)
 
   service.setRoot = (value) => gate.runAsync('switch workspace root', () => setRoot(value))
   service.setSingleFile = (value) =>
@@ -137,8 +139,8 @@ const installMutationGate = (
     )
   service.importMarkdownAsset = (value) =>
     gate.runAsync('import markdown asset', () => importAsset(value))
-  service.importMarkdownAssetBase64 = (value) =>
-    gate.runAsync('import base64 markdown asset', () => importAssetBase64(value))
+  service.importMarkdownAssetBytes = (value) =>
+    gate.runAsync('import binary markdown asset', () => importAssetBytes(value))
   return flushForShutdown
 }
 
@@ -153,6 +155,7 @@ export const createWindowWorkspaceBinding = (
     options.workspaceSearchIndexFactory,
     options.knowledgeEngineService,
     {
+      workspaceAnalysisScheduler: options.workspaceAnalysisScheduler,
       workspaceGraphScheduler: options.workspaceGraphScheduler,
       workspaceGraphStore: options.workspaceGraphStore,
     },

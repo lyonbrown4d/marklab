@@ -6,24 +6,17 @@ import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
 describe('workspace preload surfaces', () => {
   it('uses dedicated channels for workspace assets', async () => {
     const ipcRenderer = {
-      invoke: vi
-        .fn()
-        .mockResolvedValueOnce({
-          url: 'marklab-asset://local/v1/token',
-          expires_at_ms: Date.now() + 1_000,
-        })
-        .mockResolvedValueOnce({ bytes: new ArrayBuffer(2), size_bytes: 2 }),
+      invoke: vi.fn().mockResolvedValueOnce({
+        url: 'marklab-asset://local/v1/token',
+        expires_at_ms: Date.now() + 1_000,
+      }),
     }
     const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
 
     await surfaces.assets.issueCapability({ path: 'images/file.png' })
-    await surfaces.assets.readBytes({ asset_url: 'asset://token/file.png' })
 
     expect(ipcRenderer.invoke).toHaveBeenNthCalledWith(1, nativeIpcChannels.assetsIssueCapability, {
       path: 'images/file.png',
-    })
-    expect(ipcRenderer.invoke).toHaveBeenNthCalledWith(2, nativeIpcChannels.assetsReadBytes, {
-      asset_url: 'asset://token/file.png',
     })
   })
 
@@ -66,6 +59,84 @@ describe('workspace preload surfaces', () => {
       limit_bytes: 16_384,
       path: 'src/example.ts',
     })
+  })
+
+  it('uses dedicated validated channels for bounded workspace tree queries', async () => {
+    const ipcRenderer = {
+      invoke: vi
+        .fn()
+        .mockResolvedValueOnce({
+          entries: [{ kind: 'file', name: 'note.md', path: 'note.md', hasChildren: false }],
+          nextCursor: null,
+          parent: '',
+          generation: 1,
+          revision: 4,
+          root: { kind: 'external', path: '/workspace' },
+        })
+        .mockResolvedValueOnce({
+          existing: ['note.md'],
+          generation: 1,
+          revision: 4,
+          root: { kind: 'external', path: '/workspace' },
+        })
+        .mockResolvedValueOnce({
+          generation: 1,
+          path: 'note.md',
+          revision: 4,
+          root: { kind: 'external', path: '/workspace' },
+        }),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    }
+    const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
+
+    await surfaces.workspaceTree.listChildren({ parent: null, limit: 64 })
+    await surfaces.workspaceTree.pathsExist({ paths: ['note.md'] })
+    await surfaces.workspaceTree.initialFile()
+
+    expect(ipcRenderer.invoke).toHaveBeenNthCalledWith(
+      1,
+      nativeIpcChannels.workspaceTreeListChildren,
+      { parent: null, limit: 64 },
+    )
+    expect(ipcRenderer.invoke).toHaveBeenNthCalledWith(
+      2,
+      nativeIpcChannels.workspaceTreePathsExist,
+      { paths: ['note.md'] },
+    )
+    expect(ipcRenderer.invoke).toHaveBeenNthCalledWith(
+      3,
+      nativeIpcChannels.workspaceTreeInitialFile,
+    )
+  })
+
+  it('validates tree change events before delivering them to the renderer', () => {
+    const listeners = new Map<string, (_event: unknown, payload: unknown) => void>()
+    const ipcRenderer = {
+      invoke: vi.fn(),
+      on: vi.fn((channel: string, listener: (_event: unknown, payload: unknown) => void) => {
+        listeners.set(channel, listener)
+      }),
+      removeListener: vi.fn(),
+    }
+    const surfaces = createWorkspacePreloadSurfaces(ipcRenderer as never)
+    const handler = vi.fn()
+    surfaces.workspaceTree.onChanged(handler)
+    const listener = listeners.get(nativeIpcChannels.workspaceTreeChanged)
+
+    listener?.({}, { kind: 'invalidated', previousRevision: 1, revision: 3, root: {} })
+    listener?.(
+      {},
+      {
+        kind: 'invalidated',
+        generation: 1,
+        previousRevision: 1,
+        revision: 2,
+        root: { kind: 'external', path: '/workspace' },
+      },
+    )
+
+    expect(handler).toHaveBeenCalledOnce()
   })
 
   it('rejects malformed native responses', async () => {

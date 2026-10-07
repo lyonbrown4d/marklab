@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, UIEvent } from 'react'
 import type {
   MoveHandler,
   NodeApi,
@@ -16,6 +16,10 @@ import {
 import { FileTreeNodeRenderer } from '@/components/file-tree/FileTreeNodeRenderer'
 import type { SidebarFileTreeProps } from '@/components/file-tree/types'
 import type { FileTreeNode } from '@/logic/fileTree'
+import {
+  useWorkspaceTreeFolderLoader,
+  useWorkspaceTreeNextPageLoader,
+} from '@/components/file-tree/useWorkspaceTreeFolderLoader'
 
 type CreateDialogRequest = {
   kind: 'file' | 'folder'
@@ -78,6 +82,18 @@ export const useSidebarFileTreeState = ({
       }
     },
     [onOpenFile],
+  )
+
+  const handleToggle = useWorkspaceTreeFolderLoader(labels.actionFailed)
+  const loadNextTreePage = useWorkspaceTreeNextPageLoader(labels.actionFailed)
+  const handleScrollCapture = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement)) return
+      if (target.scrollTop + target.clientHeight < target.scrollHeight - 56) return
+      void loadNextTreePage()
+    },
+    [loadNextTreePage],
   )
 
   const handleMove = useCallback<MoveHandler<FileTreeNode>>(
@@ -274,6 +290,8 @@ export const useSidebarFileTreeState = ({
     nodes,
     searchTerm,
     handleActivate,
+    handleToggle,
+    handleScrollCapture,
     handleMove,
     handleRename,
     requestDeleteNode,

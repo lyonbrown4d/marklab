@@ -5,6 +5,11 @@ import { useProjectLoader } from '@/app/useProjectLoader'
 import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
+import { workspaceTreeApi } from '@/services/workspaceTreeApi'
+
+const lifecycle = vi.hoisted(() => ({ flushEditorChanges: vi.fn() }))
+
+vi.mock('@/app/editorCloseLifecycle', () => lifecycle)
 
 const messages: Record<string, string> = {
   'projectLoader.openPathFailed': 'Failed to open path',
@@ -29,6 +34,15 @@ vi.mock('@/services/fsApi', () => ({
   fsApi: {
     getSnapshot: vi.fn(),
     setRoot: vi.fn(),
+    setSingleFile: vi.fn(),
+  },
+}))
+
+vi.mock('@/services/workspaceTreeApi', () => ({
+  workspaceTreeApi: {
+    initialFile: vi.fn(),
+    listChildren: vi.fn(),
+    pathsExist: vi.fn(),
   },
 }))
 
@@ -63,8 +77,31 @@ describe('useProjectLoader', () => {
     vi.mocked(openDialog).mockReset()
     vi.mocked(runInDesktop).mockReset()
     vi.mocked(runInDesktop).mockImplementation((callback) => Promise.resolve(callback()))
+    lifecycle.flushEditorChanges.mockResolvedValue(undefined)
+    vi.mocked(fsApi.setRoot).mockResolvedValue({ kind: 'external', path: 'D:/next' })
+    vi.mocked(fsApi.setSingleFile).mockResolvedValue({ kind: 'single', path: 'D:/next.md' })
     vi.mocked(fsApi.getSnapshot).mockResolvedValue({
       entries: [{ kind: 'file', path: 'Untitled.md' }],
+      root: { kind: 'internal', path: '/app-data/workspace' },
+    })
+    vi.mocked(workspaceTreeApi.listChildren).mockResolvedValue({
+      entries: [{ kind: 'file', name: 'Untitled.md', path: 'Untitled.md', hasChildren: false }],
+      nextCursor: null,
+      parent: '',
+      generation: 1,
+      revision: 1,
+      root: { kind: 'internal', path: '/app-data/workspace' },
+    })
+    vi.mocked(workspaceTreeApi.initialFile).mockResolvedValue({
+      generation: 1,
+      path: 'Untitled.md',
+      revision: 1,
+      root: { kind: 'internal', path: '/app-data/workspace' },
+    })
+    vi.mocked(workspaceTreeApi.pathsExist).mockResolvedValue({
+      existing: [],
+      generation: 1,
+      revision: 1,
       root: { kind: 'internal', path: '/app-data/workspace' },
     })
   })
@@ -123,12 +160,21 @@ describe('useProjectLoader', () => {
   })
 
   it('opens the root Home document instead of the first sorted asset without a restorable session', async () => {
-    vi.mocked(fsApi.getSnapshot).mockResolvedValue({
+    vi.mocked(workspaceTreeApi.listChildren).mockResolvedValue({
       entries: [
-        { kind: 'file', path: 'architecture.svg' },
-        { kind: 'file', path: 'docs/overview.md' },
-        { kind: 'file', path: 'Home.md' },
+        { kind: 'file', name: 'architecture.svg', path: 'architecture.svg', hasChildren: false },
+        { kind: 'file', name: 'Home.md', path: 'Home.md', hasChildren: false },
       ],
+      nextCursor: null,
+      parent: '',
+      generation: 1,
+      revision: 1,
+      root: { kind: 'external', path: 'D:/wiki' },
+    })
+    vi.mocked(workspaceTreeApi.initialFile).mockResolvedValue({
+      generation: 1,
+      path: 'Home.md',
+      revision: 1,
       root: { kind: 'external', path: 'D:/wiki' },
     })
     const setTabs = vi.fn()
@@ -172,6 +218,57 @@ describe('useProjectLoader', () => {
     resolveSetRoot({ kind: 'internal', path: '/app-data/workspace' })
     await act(async () => {
       await firstSwitch
+    })
+  })
+
+  it('loads a bounded root projection without requesting the full snapshot', async () => {
+    const setEntries = vi.fn()
+    const { result } = renderHook(() => useProjectLoader(createProps({ setEntries }) as never))
+
+    await act(async () => result.current.loadWorkspace())
+
+    expect(workspaceTreeApi.listChildren).toHaveBeenCalledWith({
+      cursor: null,
+      limit: 256,
+      parent: null,
+    })
+    expect(fsApi.getSnapshot).not.toHaveBeenCalled()
+    expect(setEntries).toHaveBeenCalledWith([
+      { kind: 'file', path: 'Untitled.md', hasChildren: false },
+    ])
+  })
+
+  it.each([
+    ['folder', 'D:/next', 'setRoot'],
+    ['single file', 'D:/next.md', 'setSingleFile'],
+  ] as const)('awaits editor flush before switching to a %s', async (_label, path, method) => {
+    let finishFlush: (() => void) | undefined
+    lifecycle.flushEditorChanges.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishFlush = resolve
+      }),
+    )
+    const { result } = renderHook(() => useProjectLoader(createProps() as never))
+
+    const switching = result.current.openFolder(path)
+    await vi.waitFor(() => expect(lifecycle.flushEditorChanges).toHaveBeenCalledOnce())
+    expect(fsApi[method]).not.toHaveBeenCalled()
+    finishFlush?.()
+    await act(async () => switching)
+
+    expect(fsApi[method]).toHaveBeenCalled()
+  })
+
+  it('does not switch roots after a dirty editor update fails to flush', async () => {
+    lifecycle.flushEditorChanges.mockRejectedValue(new Error('Editor buffer update cancelled'))
+    const { result } = renderHook(() => useProjectLoader(createProps() as never))
+
+    await act(async () => result.current.openFolder('D:/next'))
+
+    expect(fsApi.setRoot).not.toHaveBeenCalled()
+    expect(fsApi.setSingleFile).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Failed to open path', {
+      description: 'D:/next\nEditor buffer update cancelled',
     })
   })
 })

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMatch, useParams } from 'react-router-dom'
 import type { FileEntry, FileViewKind, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import {
@@ -11,11 +11,17 @@ import {
   WEB_TAB_ROUTE_PATTERN,
 } from '@/logic/routing'
 import { getWorkspaceTabPath } from '@/logic/tabs'
+import { isDesktopRuntime } from '@/runtime/environment'
+import { workspaceTreeApi } from '@/services/workspaceTreeApi'
 
 type UseEditorRoutesArgs = {
   entries: FileEntry[]
   activeTab: WorkspaceTab | null
   tabViewModes: Record<string, ViewMode>
+  treeGeneration: number
+  treeRevision: number
+  rootKind: 'internal' | 'external' | 'single'
+  rootPath: string
 }
 
 export type WorkspaceView = 'files' | 'map'
@@ -47,7 +53,15 @@ export const resolveEditorViewMode = ({
   return tabViewModes[currentFilePath] ?? 'wysiwyg'
 }
 
-export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorRoutesArgs) => {
+export const useEditorRoutes = ({
+  entries,
+  activeTab,
+  tabViewModes,
+  treeGeneration,
+  treeRevision,
+  rootKind,
+  rootPath,
+}: UseEditorRoutesArgs) => {
   const params = useParams()
   const editMatch = useMatch(FILE_ROUTE_PATTERN)
   const gitDiffMatch = useMatch(GIT_DIFF_ROUTE_PATTERN)
@@ -81,12 +95,61 @@ export const useEditorRoutes = ({ entries, activeTab, tabViewModes }: UseEditorR
     allPagesMatch ||
     webMatch,
   )
-  const isRouteFile = useMemo(
+  const locallyKnownRoute = useMemo(
     () =>
-      routePath !== null &&
-      entries.some((entry) => entry.kind === 'file' && entry.path === routePath),
+      Boolean(
+        routePath && entries.some((entry) => entry.kind === 'file' && entry.path === routePath),
+      ),
     [entries, routePath],
   )
+  const [remoteRoute, setRemoteRoute] = useState<{
+    exists: boolean
+    generation: number
+    path: string
+    revision: number
+  } | null>(null)
+  useEffect(() => {
+    if (!routePath || locallyKnownRoute || !isDesktopRuntime()) return
+    let cancelled = false
+    void workspaceTreeApi
+      .pathsExist({ kind: 'file', paths: [routePath] })
+      .then((result) => {
+        if (
+          cancelled ||
+          result.generation !== treeGeneration ||
+          result.revision !== treeRevision ||
+          result.root.kind !== rootKind ||
+          result.root.path !== rootPath
+        )
+          return
+        setRemoteRoute({
+          exists: result.existing.includes(routePath),
+          generation: treeGeneration,
+          path: routePath,
+          revision: treeRevision,
+        })
+      })
+      .catch(() => {
+        if (cancelled) return
+        setRemoteRoute({
+          exists: false,
+          generation: treeGeneration,
+          path: routePath,
+          revision: treeRevision,
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [locallyKnownRoute, rootKind, rootPath, routePath, treeGeneration, treeRevision])
+  const isRouteFile =
+    locallyKnownRoute ||
+    Boolean(
+      remoteRoute?.exists &&
+      remoteRoute.path === routePath &&
+      remoteRoute.generation === treeGeneration &&
+      remoteRoute.revision === treeRevision,
+    )
   const activeFilePath = activeTab?.kind === 'file' ? activeTab.path : null
   const currentFilePath =
     !internalRouteActive || graphWorkspaceMatch || allPagesMatch

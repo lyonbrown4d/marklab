@@ -7,7 +7,10 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { createAssetProtocolHandler } from '@electron/main/assetProtocol'
+import {
+  createAssetProtocolHandler,
+  registerAssetProtocolPrivileges,
+} from '@electron/main/assetProtocol'
 import type { LinkPreviewServiceContract } from '@electron/services/linkPreview/service'
 
 const capability = 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
@@ -17,6 +20,19 @@ describe('remote asset protocol', () => {
   const service = { resolveImageCapability } as unknown as LinkPreviewServiceContract
 
   beforeEach(() => vi.clearAllMocks())
+
+  it('registers the asset scheme for streaming fetch requests', async () => {
+    const { protocol } = await import('electron')
+
+    registerAssetProtocolPrivileges()
+
+    expect(protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
+      expect.objectContaining({
+        scheme: 'marklab-asset',
+        privileges: expect.objectContaining({ corsEnabled: true, supportFetchAPI: true }),
+      }),
+    ])
+  })
 
   it('serves bounded image bytes from the link preview capability store', async () => {
     resolveImageCapability.mockReturnValue({

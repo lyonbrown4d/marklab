@@ -90,6 +90,8 @@ const createWorkspaceCommandHandlers = (
     fs_get_workspace_knowledge_summary: (_payload, event) =>
       workspaceForEvent(event).workspaceKnowledgeSummary(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
+    fs_get_workspace_graph_node_details: (payload, event) =>
+      workspaceForEvent(event).workspaceGraphNodeDetails(payload),
     fs_get_workspace_graph_layout: async (payload, event) => {
       const workspace = workspaceForEvent(event)
       return graphLayoutStore.get(
@@ -110,7 +112,7 @@ const createWorkspaceCommandHandlers = (
     fs_cancel_workspace_occurrence_search: (payload, event) =>
       workspaceForEvent(event).cancelWorkspaceOccurrenceSearch(payload),
     fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
-    fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),
+    fs_apply_buffer_update: (payload, event) => workspaceForEvent(event).applyBufferUpdate(payload),
     fs_write_file: (payload, event) => workspaceForEvent(event).writeFile(payload),
     fs_flush_buffers: (_payload, event) => workspaceForEvent(event).flushBuffers(),
     local_history_list: (payload, event) => {
@@ -161,8 +163,8 @@ const createWorkspaceCommandHandlers = (
     fs_open_path_in_system: (payload, event) => workspaceForEvent(event).openPathInSystem(payload),
     fs_import_markdown_asset: (payload, event) =>
       workspaceForEvent(event).importMarkdownAsset(payload),
-    fs_import_markdown_asset_base64: (payload, event) =>
-      workspaceForEvent(event).importMarkdownAssetBase64(payload),
+    fs_import_markdown_asset_bytes: (payload, event) =>
+      workspaceForEvent(event).importMarkdownAssetBytes(payload),
     fs_resolve_markdown_asset: (payload, event) =>
       workspaceForEvent(event).resolveMarkdownAsset(payload),
     markdown_language_get_document_symbols: (payload, event) =>
@@ -182,25 +184,29 @@ const createWorkspaceCommandHandlers = (
         event.sender.id,
         validateExportOutputPath(payload),
       )
-      const workspace = workspaceForEvent(event)
-      const sourceDocumentPath = readOptionalString(payload, 'sourceDocumentPath')
-      const resourceBasePath = sourceDocumentPath
-        ? path.dirname(workspace.resolveCoordinatorPath(sourceDocumentPath))
-        : undefined
-      const root = workspace.rootInfo()
-      const workspaceRootPath = root.kind === 'single' ? path.dirname(root.path) : root.path
       try {
-        return exportService.exportMarkdown(payload, {
-          commitOutput: (data) => commitSavePathCapability(capability, data),
-          ownerId: event.sender.id,
-          readImage: sourceDocumentPath
-            ? (url) =>
-                workspace.readMarkdownExportAsset(sourceDocumentPath, url, maxLocalImageBytes)
-            : undefined,
-          resourceBasePath,
-          releaseOutput: () => releaseSavePathCapability(capability),
-          workspaceRootPath,
-        })
+        const workspace = workspaceForEvent(event)
+        const sourceDocumentPath = readRequiredString(payload, 'sourceDocumentPath')
+        const markdown = await workspace.readFile({ path: sourceDocumentPath })
+        const resourceBasePath = path.dirname(workspace.resolveCoordinatorPath(sourceDocumentPath))
+        const root = workspace.rootInfo()
+        const workspaceRootPath = root.kind === 'single' ? path.dirname(root.path) : root.path
+        return exportService.exportMarkdown(
+          {
+            format: readRequiredString(payload, 'format'),
+            markdown,
+            outputPath: validateExportOutputPath(payload),
+          },
+          {
+            commitOutput: (data) => commitSavePathCapability(capability, data),
+            ownerId: event.sender.id,
+            readImage: (url) =>
+              workspace.readMarkdownExportAsset(sourceDocumentPath, url, maxLocalImageBytes),
+            resourceBasePath,
+            releaseOutput: () => releaseSavePathCapability(capability),
+            workspaceRootPath,
+          },
+        )
       } catch (error) {
         await releaseSavePathCapability(capability)
         throw error
