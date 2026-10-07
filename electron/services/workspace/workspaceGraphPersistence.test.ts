@@ -33,7 +33,10 @@ describe('WorkspaceAnalysisService persistent graph cache', () => {
     const { service, workspace } = await createWorkspace(graph('sidecar'), graphStore)
 
     try {
-      await expect(workspace.workspaceGraph()).resolves.toBe(restored)
+      await expect(workspace.workspaceGraph()).resolves.toEqual({
+        ...restored,
+        revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })
       expect(graphStore.get).toHaveBeenCalledWith(
         expect.stringMatching(/^external:/),
         expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -50,7 +53,10 @@ describe('WorkspaceAnalysisService persistent graph cache', () => {
     const { workspace } = await createWorkspace(computed, graphStore)
 
     try {
-      await expect(workspace.workspaceGraph()).resolves.toBe(computed)
+      await expect(workspace.workspaceGraph()).resolves.toEqual({
+        ...computed,
+        revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })
       expect(graphStore.save).toHaveBeenCalledWith(
         expect.stringMatching(/^external:/),
         expect.stringMatching(/^[a-f0-9]{64}$/),

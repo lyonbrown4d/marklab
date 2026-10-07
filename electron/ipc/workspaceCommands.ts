@@ -20,6 +20,11 @@ import {
 } from '@electron/ipc/savePathCapabilities'
 import { validateExportOutputPath } from '@electron/services/export/exportRequest'
 import { maxLocalImageBytes } from '@electron/services/export/docxImages'
+import {
+  parseWorkspaceDocumentInsightsRequest,
+  parseWorkspaceNavigationQuery,
+  parseWorkspacePageQuery,
+} from '@electron/ipc/workspaceAnalysisQuerySchemas'
 
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
@@ -74,7 +79,16 @@ const createWorkspaceCommandHandlers = (
     fs_set_single_file: (payload, event) => workspaceForEvent(event).setSingleFile(payload),
     fs_open_file: (payload, event) => workspaceForEvent(event).openFile(payload),
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
-    fs_get_workspace_index: (_payload, event) => workspaceForEvent(event).workspaceIndex(),
+    fs_query_workspace_pages: (payload, event) =>
+      workspaceForEvent(event).workspacePageQuery(parseWorkspacePageQuery(payload)),
+    fs_query_workspace_navigation: (payload, event) =>
+      workspaceForEvent(event).workspaceNavigationQuery(parseWorkspaceNavigationQuery(payload)),
+    fs_get_workspace_document_insights: (payload, event) => {
+      const request = parseWorkspaceDocumentInsightsRequest(payload)
+      return workspaceForEvent(event).workspaceDocumentInsights(request.path, request.asset_limit)
+    },
+    fs_get_workspace_knowledge_summary: (_payload, event) =>
+      workspaceForEvent(event).workspaceKnowledgeSummary(),
     fs_get_workspace_graph: (_payload, event) => workspaceForEvent(event).workspaceGraph(),
     fs_get_workspace_graph_layout: async (payload, event) => {
       const workspace = workspaceForEvent(event)

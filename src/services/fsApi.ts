@@ -16,7 +16,6 @@ import {
   fsSnapshotSchema,
   fsTextPreviewLimitSchema,
   fsTextPreviewSchema,
-  fsWorkspaceIndexSchema,
   opaqueAssetUrlSchema,
   workspaceRelativeAssetPathSchema,
   workspaceOccurrenceSearchRequestSchema,
@@ -51,10 +50,6 @@ export const fsApi = {
     const limit = fsTextPreviewLimitSchema.parse(limitBytes)
     const result = await getElectronRuntime().workspace.readTextPreview(path, limit)
     return fsTextPreviewSchema.parse(result)
-  },
-  async getWorkspaceIndex() {
-    const result = await invoke<unknown>('fs_get_workspace_index')
-    return fsWorkspaceIndexSchema.parse(result)
   },
   async getWorkspaceGraph() {
     const result = await invoke<unknown>('fs_get_workspace_graph')

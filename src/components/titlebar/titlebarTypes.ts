@@ -1,4 +1,4 @@
-import type { FsSearchResult, FsWorkspaceIndex } from '@/services/fsApi'
+import type { FsSearchResult } from '@/services/fsApi'
 import type { FileEntry, RootKind, ThemeMode, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import type { WorkspaceView } from '@/app/useEditorRoutes'
 
@@ -10,19 +10,6 @@ export type TitlebarMenuItem = {
 export type TitlebarMenuGroup = {
   label: string
   items: TitlebarMenuItem[]
-}
-
-export type TitlebarCommandFile = {
-  path: string
-  label: string
-}
-
-export type TitlebarCommandHeading = {
-  path: string
-  slug: string
-  text: string
-  level: number
-  label: string
 }
 
 export type TitlebarProps = {
@@ -51,7 +38,6 @@ export type TitlebarProps = {
   onChangeView: (mode: ViewMode) => void
   viewMode: ViewMode
   files: FileEntry[]
-  workspaceIndex: FsWorkspaceIndex | null
   workspaceKey: string
   canCreateWorkspaceEntries: boolean
   searchIndexRebuilding: boolean

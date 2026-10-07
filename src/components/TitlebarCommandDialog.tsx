@@ -7,35 +7,27 @@ import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandAnalysisState from '@/components/command/CommandAnalysisState'
 import CommandDialogFooter from '@/components/command/CommandDialogFooter'
 import CommandEmptyState from '@/components/command/CommandEmptyState'
 import CommandNavigationSection, {
   type CommandNavigationBacklink,
-  type CommandNavigationHeading,
   type CommandNavigationMissingLink,
   type CommandNavigationOutgoingLink,
 } from '@/components/command/CommandNavigationSection'
 import CommandRecentFilesSection from '@/components/command/CommandRecentFilesSection'
 import CommandSearchOverview from '@/components/command/CommandSearchOverview'
 import CommandSearchHistory from '@/components/command/CommandSearchHistory'
-import CommandSearchResults, {
-  type CommandFile,
-  type CommandHeading,
-} from '@/components/command/CommandSearchResults'
+import CommandSearchResults, { type CommandFile } from '@/components/command/CommandSearchResults'
 import { useCommandDialogController } from '@/components/command/useCommandDialogController'
-import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
-import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
+import { builtInMarkdownCollections } from '@/logic/markdownCollections'
+import { useWorkspaceNavigationQuery } from '@/components/titlebar/useWorkspaceNavigationQuery'
 
 type TitlebarCommandDialogProps = {
   open: boolean
   activePath: string | null
   files: CommandFile[]
   recentFiles: CommandFile[]
-  headings: CommandHeading[]
-  navigationHeadings: CommandNavigationHeading[]
-  navigationOutgoingLinks: CommandNavigationOutgoingLink[]
-  navigationBacklinks: CommandNavigationBacklink[]
-  navigationMissingLinks: CommandNavigationMissingLink[]
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
@@ -44,11 +36,7 @@ type TitlebarCommandDialogProps = {
   onOpenNavigationMissingLink: (missingLink: CommandNavigationMissingLink) => void
   onAction: (id: string) => void
   canCreateWorkspaceEntries: boolean
-  workspaceIndexed: boolean
-  indexedFileCount: number
   searchIndexRebuilding: boolean
-  knowledgeSummary: WorkspaceKnowledgeSummary
-  collections: MarkdownCollectionSummary[]
   workspaceKey: string
   dataReady?: boolean
 }
@@ -58,11 +46,6 @@ const TitlebarCommandDialog = ({
   activePath,
   files,
   recentFiles,
-  headings,
-  navigationHeadings,
-  navigationOutgoingLinks,
-  navigationBacklinks,
-  navigationMissingLinks,
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
@@ -71,10 +54,7 @@ const TitlebarCommandDialog = ({
   onOpenNavigationMissingLink,
   onAction,
   canCreateWorkspaceEntries,
-  workspaceIndexed,
-  indexedFileCount,
   searchIndexRebuilding,
-  collections,
   workspaceKey,
   dataReady = true,
 }: TitlebarCommandDialogProps) => {
@@ -112,7 +92,23 @@ const TitlebarCommandDialog = ({
     searching,
     trimmedQuery,
   } = controller
+  const navigationScope = deferredParsedSearch.scope === 'text' ? 'all' : deferredParsedSearch.scope
+  const navigation = useWorkspaceNavigationQuery({
+    activePath,
+    enabled: contentReady,
+    navigationEnabled: mode === 'quick-open',
+    query: deferredTrimmedQuery,
+    scope: navigationScope,
+    workspaceKey,
+  })
   const fullTextResults = fullTextSearch.fullTextResults
+  const collections = useMemo(() => {
+    const collectionCounts: Readonly<Record<string, number>> = navigation.collectionCounts ?? {}
+    return builtInMarkdownCollections.map((collection) => ({
+      ...collection,
+      count: collectionCounts[collection.id] ?? 0,
+    }))
+  }, [navigation.collectionCounts])
   const emptyQueryLabel =
     mode === 'commands'
       ? t('command.emptyTitle.commands')
@@ -182,6 +178,11 @@ const TitlebarCommandDialog = ({
             aria-labelledby={`command-mode-tab-${mode}`}
           >
             <CommandList className="mt-2 min-h-[260px] max-h-[min(56vh,520px)] scroll-py-2 px-2 pb-2">
+              <CommandAnalysisState
+                error={navigation.error}
+                loading={navigation.loading}
+                onRetry={navigation.retry}
+              />
               <CommandEmpty>
                 {!suppressEmptyState && (
                   <CommandEmptyState
@@ -210,10 +211,10 @@ const TitlebarCommandDialog = ({
               {mode === 'quick-open' && parsedSearch.scope === 'all' && (
                 <CommandNavigationSection
                   activePath={activePath}
-                  headings={navigationHeadings}
-                  outgoingLinks={navigationOutgoingLinks}
-                  backlinks={navigationBacklinks}
-                  missingLinks={navigationMissingLinks}
+                  headings={navigation.navigationHeadings}
+                  outgoingLinks={navigation.navigationOutgoingLinks}
+                  backlinks={navigation.navigationBacklinks}
+                  missingLinks={navigation.navigationMissingLinks}
                   onOpenHeading={rememberAndOpenHeading}
                   onOpenOutgoingLink={onOpenNavigationOutgoingLink}
                   onOpenBacklink={onOpenNavigationBacklink}
@@ -225,12 +226,12 @@ const TitlebarCommandDialog = ({
                   query={deferredQuery}
                   scope={deferredParsedSearch.scope}
                   files={files}
-                  headings={headings}
+                  headings={navigation.headings}
                   fullTextResults={fullTextResults}
                   fullTextFetching={fullTextSearch.fullTextFetching}
                   fullTextError={fullTextSearch.fullTextError}
-                  workspaceIndexed={workspaceIndexed}
-                  indexedFileCount={indexedFileCount}
+                  workspaceIndexed={navigation.workspaceIndexed}
+                  indexedFileCount={navigation.indexedFileCount}
                   searchIndexRebuilding={searchIndexRebuilding}
                   includeFullText={false}
                   onOpenFile={rememberAndOpenFile}
@@ -247,8 +248,8 @@ const TitlebarCommandDialog = ({
                   fullTextResults={fullTextResults}
                   fullTextFetching={fullTextSearch.fullTextFetching}
                   fullTextError={fullTextSearch.fullTextError}
-                  workspaceIndexed={workspaceIndexed}
-                  indexedFileCount={indexedFileCount}
+                  workspaceIndexed={navigation.workspaceIndexed}
+                  indexedFileCount={navigation.indexedFileCount}
                   searchIndexRebuilding={searchIndexRebuilding}
                   onOpenFile={rememberAndOpenFile}
                   onOpenHeading={rememberAndOpenHeading}

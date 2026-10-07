@@ -62,7 +62,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onChangeView,
       viewMode,
       files,
-      workspaceIndex,
       workspaceKey,
       canCreateWorkspaceEntries,
       searchIndexRebuilding,
@@ -113,14 +112,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     const { platform, getAppWindow, isWindows, isMacDesktop } = useTitlebarPlatform()
     const {
       commandFiles,
-      commandHeadings,
-      commandNavigationHeadings,
-      commandNavigationOutgoingLinks,
-      commandNavigationBacklinks,
-      commandNavigationMissingLinks,
       commandRecentFiles,
-      commandCollections,
-      workspaceKnowledgeSummary,
       onOpenSearch,
       onMenuAction,
       onCommandAction,
@@ -131,7 +123,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       activePath,
       files,
       tabs,
-      workspaceIndex,
       canCreateWorkspaceEntries,
       onCommandOpenChange: setCommandOpen,
       onChangeView,
@@ -243,12 +234,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
                 activePath={activePath}
                 files={commandFiles}
                 recentFiles={commandRecentFiles}
-                headings={commandHeadings}
-                navigationHeadings={commandNavigationHeadings}
-                navigationOutgoingLinks={commandNavigationOutgoingLinks}
-                navigationBacklinks={commandNavigationBacklinks}
-                navigationMissingLinks={commandNavigationMissingLinks}
-                collections={commandCollections}
                 onOpenFile={onCommandOpenFile}
                 onOpenHeading={onCommandOpenHeading}
                 onOpenSearchResult={onCommandOpenSearchResult}
@@ -267,10 +252,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
                 }
                 onAction={onCommandAction}
                 canCreateWorkspaceEntries={canCreateWorkspaceEntries}
-                workspaceIndexed={Boolean(workspaceIndex)}
-                indexedFileCount={workspaceIndex?.files.length ?? 0}
                 searchIndexRebuilding={searchIndexRebuilding}
-                knowledgeSummary={workspaceKnowledgeSummary}
                 workspaceKey={workspaceKey}
               />
             </Suspense>

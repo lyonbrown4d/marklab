@@ -1,5 +1,4 @@
 import type { GraphData } from '@/logic/graph'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 import type {
   FileEntry,
   FileViewKind,
@@ -29,10 +28,6 @@ export type LayoutContext = {
   setTheme: (theme: ThemeMode) => void
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex: FsWorkspaceIndex | null
-  workspaceIndexLoading: boolean
-  workspaceIndexError: unknown
-  onRetryWorkspaceIndex: () => Promise<unknown>
   saveStates: Record<string, SaveState>
   loadingPaths: Record<string, true>
   currentView: ViewMode

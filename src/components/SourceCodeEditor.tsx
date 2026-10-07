@@ -6,7 +6,6 @@ import type { editor as MonacoEditor } from 'monaco-editor'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER } from '@/logic/markdownDiagnostics'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 import {
   onFocusSourcePositionRequest,
   type FocusSourcePositionRequest,
@@ -29,7 +28,6 @@ type SourceCodeEditorProps = {
   value: string
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex?: FsWorkspaceIndex | null
   onChange: (value: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
   onCursorChange?: (position: EditorCursorPosition | null) => void
@@ -41,7 +39,6 @@ const SourceCodeEditor = ({
   value,
   files,
   fileContents,
-  workspaceIndex,
   onChange,
   onOpenFileView,
   onCursorChange,
@@ -73,7 +70,6 @@ const SourceCodeEditor = ({
     files,
     fileContents,
     hostRef: diagnosticHostRef,
-    workspaceIndex,
   })
   const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
   const previousMarkdownEnabledRef = useRef(markdownEnabled)

@@ -7,7 +7,6 @@ import {
   MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER,
 } from '@/logic/markdownDiagnostics'
 import { markdownEditorPerformancePolicy } from '@/components/markdownEditorPerformance'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 import { isDesktopRuntime } from '@/runtime/environment'
 
@@ -22,7 +21,6 @@ type DiagnosticsContext = {
   activePath: string | null
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex?: FsWorkspaceIndex | null
 }
 
 type UseMarkdownSourceDiagnosticsOptions = DiagnosticsContext & {
@@ -36,10 +34,9 @@ export const useMarkdownSourceDiagnostics = ({
   files,
   fileContents,
   hostRef,
-  workspaceIndex,
 }: UseMarkdownSourceDiagnosticsOptions) => {
   const desktopRuntime = isDesktopRuntime()
-  const contextRef = useLatest({ activePath, files, fileContents, workspaceIndex })
+  const contextRef = useLatest({ activePath, files, fileContents })
   const requestsRef = useRef(new ReplaySubject<{ content: string; context: DiagnosticsContext }>(1))
 
   const applyDiagnostics = useCallback(
@@ -103,12 +100,6 @@ export const useMarkdownSourceDiagnostics = ({
     requestsRef.current.next({ content: model.getValue(), context: contextRef.current })
   }, [applyDiagnostics, contextRef, desktopRuntime, enabled, hostRef])
 
-  useEffect(scheduleDiagnostics, [
-    activePath,
-    files,
-    fileContents,
-    scheduleDiagnostics,
-    workspaceIndex,
-  ])
+  useEffect(scheduleDiagnostics, [activePath, files, fileContents, scheduleDiagnostics])
   return { completionContextRef: contextRef, scheduleDiagnostics }
 }

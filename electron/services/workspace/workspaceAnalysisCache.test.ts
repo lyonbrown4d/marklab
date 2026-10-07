@@ -12,6 +12,15 @@ const index: FsWorkspaceIndex = { files: [], paths: ['note.md'], asset_paths: []
 const graph: FsGraph = { edges: [], mode: 'mindmap', nodes: [] }
 
 describe('WorkspaceAnalysisCache', () => {
+  it('exposes a stable revision that advances on invalidation', () => {
+    const cache = new WorkspaceAnalysisCache()
+
+    expect(cache.revision).toBe(0)
+    expect(cache.revision).toBe(0)
+    cache.invalidate()
+    expect(cache.revision).toBe(1)
+  })
+
   it('shares analysis input and result promises within one generation', async () => {
     const cache = new WorkspaceAnalysisCache()
     const loadInput = vi.fn(async () => input)

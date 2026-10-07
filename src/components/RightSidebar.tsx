@@ -1,8 +1,9 @@
 import { useI18n } from '@/i18n/useI18n'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { createFileLabel } from '@/logic/paths'
-import type { FileEntry, FileViewKind, ViewMode } from '@/store/appTypes'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
+import type { FileViewKind, ViewMode } from '@/store/appTypes'
+import { Button } from '@/components/ui/button'
+import { CircleAlert, LoaderCircle } from 'lucide-react'
 import {
   requestFocusHeading,
   requestFocusSourcePosition,
@@ -20,13 +21,11 @@ import { useRightSidebarData } from '@/components/useRightSidebarData'
 
 type RightSidebarProps = {
   collapsed: boolean
+  workspaceKey: string
   activePath: string | null
   inspectedPath: string | null
   editorValue: string
-  files: FileEntry[]
   fileContents: Record<string, string>
-  dirtyPaths?: Record<string, true>
-  workspaceIndex?: FsWorkspaceIndex | null
   tabs: string[]
   totalFiles: number
   onOpenFileView: (path: string, view: FileViewKind) => void
@@ -51,13 +50,11 @@ const RightSidebarComponent = ({ collapsed, tabs, totalFiles, ...props }: RightS
 type RightSidebarExpandedProps = Omit<RightSidebarProps, 'collapsed' | 'tabs' | 'totalFiles'>
 
 const RightSidebarExpanded = ({
+  workspaceKey,
   activePath,
   inspectedPath,
   editorValue,
-  files,
   fileContents,
-  dirtyPaths,
-  workspaceIndex,
   onOpenFileView,
   viewMode,
 }: RightSidebarExpandedProps) => {
@@ -77,15 +74,16 @@ const RightSidebarExpanded = ({
     loadingMetadata,
     assetReport,
     knowledge,
+    insightsLoading,
+    insightsError,
+    retryInsights,
   } = useRightSidebarData({
     collapsed: false,
+    workspaceKey,
     activePath,
     targetPath,
     editorValue,
-    files,
     fileContents,
-    dirtyPaths,
-    workspaceIndex,
   })
   const targetLabel = targetPath ? createFileLabel(targetPath) : t('inspector.none')
 
@@ -190,28 +188,59 @@ const RightSidebarExpanded = ({
   }, [activePath, pendingSourcePosition, viewMode])
 
   return (
-    <RightSidebarContent
-      activePath={activePath}
-      targetPath={targetPath}
-      targetLabel={targetLabel}
-      viewMode={viewMode}
-      outline={outline}
-      backlinks={backlinks}
-      problems={problems}
-      errorProblems={errorProblems}
-      warningProblems={warningProblems}
-      knowledge={knowledge}
-      documentStats={documentStats}
-      displayMetadata={displayMetadata}
-      loadingMetadata={loadingMetadata}
-      assetReport={assetReport}
-      onOpenHeading={handleOpenHeading}
-      onOpenBacklink={handleOpenBacklink}
-      onOpenKnowledgeFile={handleOpenKnowledgeFile}
-      onOpenKnowledgeReference={handleOpenKnowledgeReference}
-      onOpenMissingLink={handleOpenMissingLink}
-      onOpenProblem={handleOpenProblem}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      {insightsLoading ? (
+        <div
+          role="status"
+          className="mx-3 mt-2 flex shrink-0 items-center gap-2 rounded-md border border-border/60 bg-muted/35 px-2.5 py-2 text-xs text-muted-foreground"
+        >
+          <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+          {t('inspector.loading')}
+        </div>
+      ) : null}
+      {insightsError ? (
+        <div
+          role="alert"
+          className="mx-3 mt-2 flex shrink-0 items-center gap-2 rounded-md border border-destructive/35 bg-destructive/10 px-2.5 py-2 text-xs text-destructive"
+        >
+          <CircleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate">{insightsError}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 shrink-0 px-2 text-xs"
+            onClick={() => void retryInsights()}
+          >
+            {t('actions.retry')}
+          </Button>
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <RightSidebarContent
+          activePath={activePath}
+          targetPath={targetPath}
+          targetLabel={targetLabel}
+          viewMode={viewMode}
+          outline={outline}
+          backlinks={backlinks}
+          problems={problems}
+          errorProblems={errorProblems}
+          warningProblems={warningProblems}
+          knowledge={knowledge}
+          documentStats={documentStats}
+          displayMetadata={displayMetadata}
+          loadingMetadata={loadingMetadata}
+          assetReport={assetReport}
+          onOpenHeading={handleOpenHeading}
+          onOpenBacklink={handleOpenBacklink}
+          onOpenKnowledgeFile={handleOpenKnowledgeFile}
+          onOpenKnowledgeReference={handleOpenKnowledgeReference}
+          onOpenMissingLink={handleOpenMissingLink}
+          onOpenProblem={handleOpenProblem}
+        />
+      </div>
+    </div>
   )
 }
 

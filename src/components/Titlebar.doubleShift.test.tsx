@@ -41,7 +41,6 @@ const createProps = (): TitlebarProps => ({
   onChangeView: vi.fn(),
   viewMode: 'wysiwyg',
   files: [{ path: 'notes/target.md', kind: 'file' }],
-  workspaceIndex: null,
   workspaceKey: 'external:/workspace',
   canCreateWorkspaceEntries: true,
   searchIndexRebuilding: false,

@@ -73,7 +73,7 @@ const baseState = {
   tabs: [{ kind: 'file' as const, view: 'edit' as const, path: '/notes/one.md' }],
   viewMode: 'wysiwyg',
   workspaceView: 'files' as 'files' | 'map',
-  workspaceIndex: null,
+  workspaceKey: 'external:/notes',
   onCloseTab: action,
   onOpenTab: action,
 }

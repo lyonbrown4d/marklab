@@ -18,6 +18,10 @@ export class WorkspaceAnalysisCache {
   private index: CacheEntry<FsWorkspaceIndex> | null = null
   private graph: CacheEntry<FsGraph> | null = null
 
+  get revision(): number {
+    return this.generation
+  }
+
   getInput(load: () => Promise<WorkspaceAnalysisInput>): Promise<WorkspaceAnalysisInput> {
     return this.getOrCreate(this.input, load, (entry) => {
       this.input = entry

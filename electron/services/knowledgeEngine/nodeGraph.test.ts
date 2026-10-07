@@ -10,6 +10,61 @@ import { buildNodeWorkspaceGraph } from '@electron/services/knowledgeEngine/node
 import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast'
 
 describe('Node workspace graph file summaries', () => {
+  it('includes previewable local references in the backend graph', () => {
+    const graph = buildNodeWorkspaceGraph(
+      [
+        {
+          path: 'docs/current.md',
+          content: [
+            '![Architecture](../assets/architecture.png)',
+            '[Specification](../assets/specification.pdf)',
+            '[Implementation](../src/example.ts)',
+          ].join('\n'),
+        },
+      ],
+      {
+        paths: [
+          'docs/current.md',
+          'assets/architecture.png',
+          'assets/specification.pdf',
+          'src/example.ts',
+        ],
+        assetPaths: ['assets/architecture.png', 'assets/specification.pdf', 'src/example.ts'],
+      },
+    )
+
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'preview:assets/architecture.png',
+          kind: 'preview',
+          path: 'assets/architecture.png',
+          preview_kind: 'image',
+          source_path: 'docs/current.md',
+        }),
+        expect.objectContaining({
+          id: 'preview:assets/specification.pdf',
+          kind: 'preview',
+          preview_kind: 'pdf',
+        }),
+        expect.objectContaining({
+          id: 'preview:src/example.ts',
+          kind: 'preview',
+          preview_kind: 'source',
+        }),
+      ]),
+    )
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'previews',
+          source: 'file:docs/current.md',
+          target: 'preview:assets/architecture.png',
+        }),
+      ]),
+    )
+  })
+
   it('resolves extensionless Markdown links against indexed files in the same directory', () => {
     const graph = buildNodeWorkspaceGraph(
       [

@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps, PropsWithChildren } from 'react'
 import RightSidebar from '@/components/RightSidebar'
+import { createRightSidebarInsights } from '@/components/rightSidebarTestFixtures'
 import i18n from '@/i18n/setup'
+import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
   onFocusHeadingRequest,
@@ -17,51 +19,20 @@ vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => false,
 }))
 
+vi.mock('@/services/workspaceAnalysisApi', () => ({
+  workspaceAnalysisApi: { getDocumentInsights: vi.fn() },
+}))
+
+const analysisApi = vi.mocked(workspaceAnalysisApi)
+
 type RightSidebarProps = ComponentProps<typeof RightSidebar>
-
-const baseFiles = [
-  { path: 'target.md', kind: 'file' },
-  { path: 'source.md', kind: 'file' },
-] satisfies RightSidebarProps['files']
-
-const workspaceIndex = {
-  files: [
-    {
-      path: 'target.md',
-      headings: [
-        { path: 'target.md', level: 1, text: 'Indexed Target', slug: 'indexed-target', line: 1 },
-        { path: 'target.md', level: 2, text: 'Indexed Detail', slug: 'indexed-detail', line: 2 },
-      ],
-      links: [],
-    },
-    {
-      path: 'source.md',
-      headings: [],
-      links: [
-        {
-          source_path: 'source.md',
-          text: 'Indexed Detail',
-          target: 'target.md#indexed-detail',
-          link_type: 'markdown',
-          target_path: 'target.md',
-          target_anchor: 'indexed-detail',
-          target_heading_slug: 'indexed-detail',
-          is_external: false,
-          context: 'See [Indexed Detail](target.md#indexed-detail) from index',
-          line: 3,
-          column: 5,
-        },
-      ],
-    },
-  ],
-} satisfies NonNullable<RightSidebarProps['workspaceIndex']>
 
 const createProps = (overrides: Partial<RightSidebarProps> = {}): RightSidebarProps => ({
   collapsed: false,
+  workspaceKey: 'external:D:/wiki',
   activePath: 'target.md',
   inspectedPath: null,
   editorValue: '# Target\n## Details\n',
-  files: baseFiles,
   fileContents: {
     'target.md': '# Target\n## Details\n',
     'source.md': 'intro\nSee [Target](target.md) here\n',
@@ -69,7 +40,6 @@ const createProps = (overrides: Partial<RightSidebarProps> = {}): RightSidebarPr
   tabs: ['target.md'],
   totalFiles: 2,
   onOpenFileView: vi.fn(),
-  workspaceIndex: null,
   viewMode: 'wysiwyg',
   ...overrides,
 })
@@ -89,6 +59,8 @@ const renderRightSidebar = (props: RightSidebarProps) =>
 
 beforeEach(async () => {
   localStorage.clear()
+  analysisApi.getDocumentInsights.mockReset()
+  analysisApi.getDocumentInsights.mockResolvedValue(createRightSidebarInsights())
   usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })
@@ -118,6 +90,22 @@ describe('RightSidebar', () => {
     const unsubscribe = onFocusHeadingRequest((request) => events.push(request))
 
     try {
+      analysisApi.getDocumentInsights.mockResolvedValue(
+        createRightSidebarInsights({
+          headings: [
+            { path: 'target.md', level: 1, text: 'Target', slug: 'target', line: 1, column: 1 },
+            { path: 'target.md', level: 2, text: 'Details', slug: 'details', line: 2, column: 1 },
+            {
+              path: 'target.md',
+              level: 2,
+              text: 'Release Notes',
+              slug: 'release-notes',
+              line: 3,
+              column: 1,
+            },
+          ],
+        }),
+      )
       renderRightSidebar(
         createProps({
           editorValue: '# Target\n## Details\n## Release Notes\n',
@@ -169,11 +157,13 @@ describe('RightSidebar', () => {
   })
 
   it('shows empty inspector states when a document has no outline or backlinks', async () => {
+    analysisApi.getDocumentInsights.mockResolvedValue(
+      createRightSidebarInsights({ headings: [], backlinks: [] }),
+    )
     renderRightSidebar(
       createProps({
         editorValue: 'Plain text only',
         fileContents: { 'target.md': 'Plain text only' },
-        files: [{ path: 'target.md', kind: 'file' }],
       }),
     )
 
@@ -221,43 +211,35 @@ describe('RightSidebar', () => {
     }
   })
 
-  it('uses the shared workspace index for inspected outline and backlinks', async () => {
-    renderRightSidebar(
-      createProps({
-        activePath: 'source.md',
-        inspectedPath: 'target.md',
-        editorValue: '# Source\n',
-        fileContents: {},
-        workspaceIndex,
-      }),
-    )
-
-    expect(screen.getByText('Indexed Detail')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('tab', { name: /backlinks/i }))
-
-    expect(await screen.findByText('Anchor references')).toBeInTheDocument()
-    expect(screen.getByText('source')).toBeInTheDocument()
-    expect(
-      screen.getByText('See [Indexed Detail](target.md#indexed-detail) from index'),
-    ).toBeInTheDocument()
-
-    const filterInput = screen.getByRole('searchbox', {
-      name: /filter backlinks/i,
-    })
-
-    await userEvent.type(filterInput, 'indexed-detail')
-
-    expect(screen.getByText('#indexed-detail')).toBeInTheDocument()
-
-    await userEvent.clear(filterInput)
-    await userEvent.type(filterInput, 'missing-anchor')
-
-    expect(await screen.findByText('No matching backlinks')).toBeInTheDocument()
-  })
-
   it('lists markdown link problems and switches to source on click', async () => {
     const onOpenFileView = vi.fn()
+    analysisApi.getDocumentInsights.mockResolvedValue(
+      createRightSidebarInsights({
+        diagnostics: [
+          {
+            line: 3,
+            start_column: 2,
+            end_column: 12,
+            message: 'Cannot find linked file "missing.md"',
+            severity: 'error',
+          },
+          {
+            line: 4,
+            start_column: 2,
+            end_column: 17,
+            message: 'Cannot find heading "missing-anchor" in target.md',
+            severity: 'warning',
+          },
+          {
+            line: 5,
+            start_column: 3,
+            end_column: 10,
+            message: 'Cannot find linked note "Unknown"',
+            severity: 'error',
+          },
+        ],
+      }),
+    )
     renderRightSidebar(
       createProps({
         activePath: 'target.md',

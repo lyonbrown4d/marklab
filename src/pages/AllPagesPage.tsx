@@ -15,13 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useI18n } from '@/i18n/useI18n'
-import {
-  allPagesSortKeys,
-  buildAllPagesModelFromRows,
-  buildAllPagesRows,
-  type AllPagesFilters,
-  type AllPagesSortKey,
-} from '@/logic/allPages'
+import { allPagesSortKeys, type AllPagesFilters, type AllPagesSortKey } from '@/logic/allPages'
 import {
   hasAllPagesActiveFilters,
   parseAllPagesRouteState,
@@ -30,37 +24,24 @@ import {
   type AllPagesRouteStatePatch,
 } from '@/logic/allPagesRouteState'
 import type { AllPagesViewMode } from '@/logic/allPagesViews'
-import {
-  builtInMarkdownCollections,
-  filterRowsByMarkdownCollection,
-  summarizeMarkdownCollections,
-} from '@/logic/markdownCollections'
+import { builtInMarkdownCollections } from '@/logic/markdownCollections'
 import { AllPagesActiveFilters } from '@/pages/all-pages/AllPagesActiveFilters'
 import { AllPagesCollections } from '@/pages/all-pages/AllPagesCollections'
 import { AllPagesResults } from '@/pages/all-pages/AllPagesResults'
 import { AllPagesViewModeSelect } from '@/pages/all-pages/AllPagesViewModeSelect'
 import { AllPagesIndexState } from '@/pages/all-pages/AllPagesIndexState'
+import { useWorkspacePagesQuery } from '@/pages/all-pages/useWorkspacePagesQuery'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 
 const collectionIds = builtInMarkdownCollections.map((collection) => collection.id)
 
 const AllPagesPage = () => {
   const { t } = useI18n()
-  const {
-    files,
-    onOpenFile,
-    onRetryWorkspaceIndex,
-    workspaceIndex,
-    workspaceIndexError,
-    workspaceIndexLoading,
-  } = useLayoutContext(
+  const { onOpenFile, rootKind, rootPath } = useLayoutContext(
     useShallow((state) => ({
-      files: state.files,
       onOpenFile: state.onOpenFile,
-      onRetryWorkspaceIndex: state.onRetryWorkspaceIndex,
-      workspaceIndex: state.workspaceIndex,
-      workspaceIndexError: state.workspaceIndexError,
-      workspaceIndexLoading: state.workspaceIndexLoading,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
     })),
   )
   const [searchParams, setSearchParams] = useSearchParams()
@@ -79,30 +60,12 @@ const AllPagesPage = () => {
   )
   const hasActiveFilters = hasAllPagesActiveFilters(routeState)
   const activeCollectionId = routeState.collectionId
-  const allRows = useMemo(() => buildAllPagesRows(files, workspaceIndex), [files, workspaceIndex])
-  const collectionSummaries = useMemo(
-    () => summarizeMarkdownCollections(allRows, builtInMarkdownCollections),
-    [allRows],
-  )
-  const baseModel = useMemo(
-    () => buildAllPagesModelFromRows(allRows, deferredFilters),
-    [allRows, deferredFilters],
-  )
-  const activeCollection = useMemo(
-    () =>
-      builtInMarkdownCollections.find((collection) => collection.id === activeCollectionId) ??
-      builtInMarkdownCollections[0],
-    [activeCollectionId],
-  )
-  const model = useMemo(
-    () => ({
-      ...baseModel,
-      rows: activeCollection
-        ? filterRowsByMarkdownCollection(baseModel.rows, activeCollection)
-        : baseModel.rows,
-    }),
-    [activeCollection, baseModel],
-  )
+  const workspaceKey = `${rootKind}:${rootPath}`
+  const query = useWorkspacePagesQuery({
+    collectionId: activeCollectionId,
+    filters: deferredFilters,
+    workspaceKey,
+  })
   const updateRouteState = useCallback(
     (patch: AllPagesRouteStatePatch) => {
       setSearchParams(updateAllPagesRouteState(searchParams, collectionIds, patch), {
@@ -126,7 +89,7 @@ const AllPagesPage = () => {
   const clearFilters = useCallback(() => {
     setSearchParams(resetAllPagesRouteFilters(searchParams, collectionIds), { replace: true })
   }, [searchParams, setSearchParams])
-  const indexUnavailable = workspaceIndexError && !workspaceIndex
+  const indexUnavailable = Boolean(query.error) && query.rows.length === 0
 
   return (
     <div className="h-full overflow-hidden bg-background text-foreground">
@@ -136,21 +99,21 @@ const AllPagesPage = () => {
             <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
             <h1 className="text-base font-semibold tracking-tight">{t('allPages.title')}</h1>
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-              {model.rows.length} / {model.totalRows}
+              {query.rows.length} / {query.totalRows}
             </span>
           </header>
 
           <AllPagesIndexState
-            error={workspaceIndexError}
-            loading={workspaceIndexLoading}
-            onRetry={onRetryWorkspaceIndex}
+            error={query.error}
+            loading={query.loading}
+            onRetry={query.retry}
             t={t}
           />
-          {!workspaceIndexLoading && !indexUnavailable ? (
+          {!query.loading && !indexUnavailable ? (
             <>
               <AllPagesCollections
                 activeCollectionId={activeCollectionId}
-                collections={collectionSummaries}
+                collections={query.collections}
                 onSelect={selectCollection}
                 t={t}
               />
@@ -178,7 +141,7 @@ const AllPagesPage = () => {
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="all">{t('allPages.allFolders')}</SelectItem>
-                        {model.folders.map((folder) => (
+                        {query.folders.map((folder) => (
                           <SelectItem key={folder} value={folder}>
                             {folder}
                           </SelectItem>
@@ -230,7 +193,7 @@ const AllPagesPage = () => {
               </section>
               <AllPagesResults
                 hasActiveFilters={hasActiveFilters}
-                rows={model.rows}
+                rows={query.rows}
                 viewMode={viewMode}
                 onClearFilters={clearFilters}
                 onOpenFile={onOpenFile}

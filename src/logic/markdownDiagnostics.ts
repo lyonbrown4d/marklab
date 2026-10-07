@@ -1,6 +1,4 @@
-import keyBy from 'lodash-es/keyBy'
 import type { FileEntry } from '@/store/appTypes'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import {
   createFileLabel,
   extractHeadings,
@@ -32,7 +30,6 @@ type MarkdownDiagnosticsContext = {
   content: string
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex?: FsWorkspaceIndex | null
 }
 
 export const getMarkdownSourceDiagnostics = ({
@@ -40,19 +37,12 @@ export const getMarkdownSourceDiagnostics = ({
   content,
   files,
   fileContents,
-  workspaceIndex,
 }: MarkdownDiagnosticsContext): MarkdownSourceDiagnostic[] => {
   if (!activePath) return []
 
-  const indexedFilesByPath = keyBy(workspaceIndex?.files ?? [], 'path') as Record<
-    string,
-    FsIndexedMarkdownFile
-  >
-  const markdownFiles = workspaceIndex
-    ? workspaceIndex.files.map((file) => file.path)
-    : files
-        .filter((file) => file.kind === 'file' && MARKDOWN_EXTENSIONS.test(file.path))
-        .map((file) => file.path)
+  const markdownFiles = files
+    .filter((file) => file.kind === 'file' && MARKDOWN_EXTENSIONS.test(file.path))
+    .map((file) => file.path)
   const markdownFileSet = new Set(markdownFiles)
   const wikiNameIndex = buildWikiNameIndex(markdownFiles)
 
@@ -96,7 +86,7 @@ export const getMarkdownSourceDiagnostics = ({
       }
 
       if (anchor) {
-        const headings = getHeadingsFromSource(resolvedPath, indexedFilesByPath, fileContents)
+        const headings = getHeadingsFromSource(resolvedPath, fileContents)
         if (headings === null) continue
         const anchorSlug = normalizeHeadingAnchor(anchor)
         if (anchorSlug && !headings.some((heading) => heading.slug === anchorSlug)) {
@@ -168,13 +158,7 @@ const resolveWikiTarget = (
   return null
 }
 
-const getHeadingsFromSource = (
-  path: string,
-  indexedFilesByPath: Record<string, FsIndexedMarkdownFile>,
-  fileContents: Record<string, string>,
-) => {
-  const indexedFile = indexedFilesByPath[path]
-  if (indexedFile) return indexedFile.headings
+const getHeadingsFromSource = (path: string, fileContents: Record<string, string>) => {
   const content = fileContents[path]
   if (content == null) return null
   return extractHeadings(content)

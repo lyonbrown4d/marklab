@@ -105,61 +105,6 @@ export const backgroundTaskStatusSchema = z.object({
   message: z.string().nullable().optional(),
 })
 
-export const fsMarkdownHeadingSchema = z.object({
-  path: z.string(),
-  level: z.number(),
-  text: z.string(),
-  slug: z.string(),
-  line: z.number(),
-})
-
-export const fsMarkdownLinkSchema = z.object({
-  source_path: z.string(),
-  text: z.string(),
-  target: z.string(),
-  link_type: z.enum(['markdown', 'wiki']),
-  target_path: z.string().nullable().optional(),
-  target_anchor: z.string().nullable().optional(),
-  target_heading_slug: z.string().nullable().optional(),
-  is_external: z.boolean(),
-  context: z.string(),
-  line: z.number(),
-  column: z.number(),
-})
-
-export const fsMarkdownAssetSchema = z.object({
-  source_path: z.string(),
-  text: z.string().nullable().optional(),
-  target: z.string(),
-  target_path: z.string().nullable().optional(),
-  is_external: z.boolean(),
-  media_type: z.string().nullable().optional(),
-  context: z.string(),
-  line: z.number(),
-  column: z.number(),
-})
-
-export const fsIndexedMarkdownFileSchema = z.object({
-  path: z.string(),
-  headings: z.array(fsMarkdownHeadingSchema),
-  links: z.array(fsMarkdownLinkSchema),
-  assets: z.array(fsMarkdownAssetSchema).default([]),
-})
-
-export const fsWorkspaceIndexSchema = z.object({
-  files: z.array(fsIndexedMarkdownFileSchema),
-  paths: z.array(z.string()).optional(),
-  asset_paths: z.array(z.string()).optional(),
-})
-
-export const fsMarkdownDiagnosticSchema = z.object({
-  line: z.number(),
-  start_column: z.number(),
-  end_column: z.number(),
-  message: z.string(),
-  severity: z.enum(['error', 'warning']),
-})
-
 export const fsSearchResultSchema = z.object({
   path: z.string(),
   title: z.string(),
@@ -223,7 +168,7 @@ export const fsMarkdownBlockSchema = z.object({
 
 export const fsGraphNodeSchema = z.object({
   id: z.string(),
-  kind: z.enum(['file', 'heading', 'missing', 'external']),
+  kind: z.enum(['file', 'heading', 'missing', 'external', 'preview']),
   label: z.string(),
   path: z.string().nullable().optional(),
   line: z.number().nullable().optional(),
@@ -233,6 +178,12 @@ export const fsGraphNodeSchema = z.object({
   content_blocks: z.array(fsMarkdownBlockSchema).nullable().optional(),
   content_start_line: z.number().nullable().optional(),
   content_end_line: z.number().nullable().optional(),
+  preview_kind: z
+    .enum(['audio', 'docx', 'drawio', 'excalidraw', 'image', 'pdf', 'source', 'video'])
+    .nullable()
+    .optional(),
+  source_path: z.string().nullable().optional(),
+  target: z.string().nullable().optional(),
   group: z
     .object({
       key: z.string(),
@@ -247,11 +198,12 @@ export const fsGraphEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
-  kind: z.enum(['contains', 'links_to', 'references_heading']),
+  kind: z.enum(['contains', 'links_to', 'references_heading', 'previews']),
 })
 
 export const fsGraphSchema = z.object({
   mode: z.literal('mindmap'),
+  revision: z.string().optional(),
   nodes: z.array(fsGraphNodeSchema),
   edges: z.array(fsGraphEdgeSchema),
 })
@@ -287,21 +239,6 @@ export type FsAssetCapability = z.infer<typeof fsAssetCapabilitySchema>
 export type FsTextPreview = z.infer<typeof fsTextPreviewSchema>
 export type FsBufferStatus = z.infer<typeof fsBufferStatusSchema>
 export type BackgroundTaskStatus = z.infer<typeof backgroundTaskStatusSchema>
-export type FsMarkdownHeading = z.infer<typeof fsMarkdownHeadingSchema>
-export type FsMarkdownLink = z.infer<typeof fsMarkdownLinkSchema>
-export type FsMarkdownAsset = z.infer<typeof fsMarkdownAssetSchema>
-export type FsIndexedMarkdownFile = {
-  path: string
-  headings: FsMarkdownHeading[]
-  links: FsMarkdownLink[]
-  assets?: FsMarkdownAsset[]
-}
-export type FsWorkspaceIndex = {
-  files: FsIndexedMarkdownFile[]
-  paths?: string[]
-  asset_paths?: string[]
-}
-export type FsMarkdownDiagnostic = z.infer<typeof fsMarkdownDiagnosticSchema>
 export type FsSearchResult = z.infer<typeof fsSearchResultSchema>
 export type WorkspaceOccurrenceSearchOptions = z.infer<
   typeof workspaceOccurrenceSearchOptionsSchema

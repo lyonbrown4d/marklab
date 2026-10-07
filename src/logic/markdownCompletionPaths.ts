@@ -1,6 +1,5 @@
 import { dirname, relative } from 'pathe'
 import type { FileEntry } from '@/store/appTypes'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 import { createFileLabel, normalizePath, resolveRelativePath, splitLinkTarget } from '@/logic/paths'
 
 const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
@@ -10,20 +9,18 @@ const WORKSPACE_LINK_TARGET_EXTENSIONS =
 export const fileCompletions = ({
   activePath,
   files,
-  workspaceIndex,
   query,
   replacementStartColumn,
   mode,
 }: {
   activePath: string | null
   files: FileEntry[]
-  workspaceIndex?: FsWorkspaceIndex | null
   query: string
   replacementStartColumn: number
   mode: 'markdown' | 'wiki'
 }) => {
   const normalizedQuery = query.toLowerCase()
-  return workspaceDocumentPaths(files, workspaceIndex, mode)
+  return workspaceDocumentPaths(files, mode)
     .filter((path) => {
       const label = createFileLabel(path)
       return (
@@ -43,21 +40,9 @@ export const fileCompletions = ({
     })
 }
 
-const workspaceDocumentPaths = (
-  files: FileEntry[],
-  workspaceIndex: FsWorkspaceIndex | null | undefined,
-  mode: 'markdown' | 'wiki',
-) => {
+const workspaceDocumentPaths = (files: FileEntry[], mode: 'markdown' | 'wiki') => {
   const extensionPattern = mode === 'wiki' ? MARKDOWN_EXTENSIONS : WORKSPACE_LINK_TARGET_EXTENSIONS
-  const paths = workspaceIndex
-    ? [
-        ...workspaceIndex.files.map((file) => file.path),
-        ...(workspaceIndex.paths ?? []).filter((path) => extensionPattern.test(path)),
-        ...(mode === 'markdown'
-          ? (workspaceIndex.asset_paths ?? []).filter((path) => extensionPattern.test(path))
-          : []),
-      ]
-    : files.filter((file) => file.kind === 'file').map((file) => file.path)
+  const paths = files.filter((file) => file.kind === 'file').map((file) => file.path)
 
   return Array.from(new Set(paths)).filter((path) => extensionPattern.test(path))
 }
@@ -71,7 +56,6 @@ export const resolveLinkedFilePath = (
   activePath: string | null,
   target: string,
   files: FileEntry[],
-  workspaceIndex?: FsWorkspaceIndex | null,
 ) => {
   if (!activePath) return null
   if (!target.trim()) return activePath
@@ -83,11 +67,7 @@ export const resolveLinkedFilePath = (
     MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.markdown`,
   ].map(normalizePath)
   const existing = new Set(
-    [
-      ...files.filter((file) => file.kind === 'file').map((file) => file.path),
-      ...(workspaceIndex?.files.map((file) => file.path) ?? []),
-      ...(workspaceIndex?.asset_paths ?? []),
-    ].map(normalizePath),
+    files.filter((file) => file.kind === 'file').map((file) => normalizePath(file.path)),
   )
   return candidates.find((candidate) => existing.has(candidate)) ?? null
 }

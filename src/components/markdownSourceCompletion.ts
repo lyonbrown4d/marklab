@@ -15,14 +15,12 @@ import type { MarkdownSourceDocumentSession } from '@/components/markdownSourceD
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 import type { FileEntry } from '@/store/appTypes'
 
 export type MarkdownSourceCompletionContext = {
   activePath: string | null
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex?: FsWorkspaceIndex | null
 }
 
 type MonacoModule = typeof import('monaco-editor')

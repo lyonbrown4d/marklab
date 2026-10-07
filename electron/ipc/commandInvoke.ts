@@ -8,6 +8,11 @@ export type NativeCommandHandler = (
   event: Electron.IpcMainInvokeEvent,
 ) => unknown | Promise<unknown>
 export type NativeCommandHandlers = Record<string, NativeCommandHandler>
+const commandsWithDedicatedPerformanceLogs = new Set([
+  'open_current_workspace_in_new_window',
+  'open_path_in_new_window',
+  'retry_window_open',
+])
 export const registerCommandInvokeIpc = (
   ipcMain: Electron.IpcMain,
   handlers: NativeCommandHandlers,
@@ -28,7 +33,7 @@ export const registerCommandInvokeIpc = (
     try {
       const result = await handler(request.args, event)
       const durationMs = Date.now() - startedAt
-      if (durationMs > 500) {
+      if (durationMs > 500 && !commandsWithDedicatedPerformanceLogs.has(request.command)) {
         logger.info('slow command invoke completed', {
           command: request.command,
           durationMs,

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
@@ -22,11 +22,14 @@ import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 import { SettingsDialogHost, type SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
+import { useWorkspaceAnalysisInvalidation } from '@/app/useWorkspaceAnalysisInvalidation'
 export type { LayoutContext } from '@/app/AppLayoutContext'
 const AppLayout = () => {
+  const [commandOpen, setCommandOpen] = useState(false)
   const state = useAppLayoutState()
   const stateRef = useLatest(state)
   const queryClient = useQueryClient()
+  useWorkspaceAnalysisInvalidation(state.workspaceKey)
   const titlebarRef = useRef<TitlebarHandle | null>(null)
   const settingsDialogRef = useRef<SettingsDialogHostHandle | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
@@ -142,7 +145,7 @@ const AppLayout = () => {
       tabs: state.tabs,
       viewMode: state.viewMode,
       workspaceView: state.workspaceView,
-      workspaceIndex: state.workspaceIndex,
+      workspaceKey: state.workspaceKey,
     }),
     [
       state.activePath,
@@ -172,7 +175,7 @@ const AppLayout = () => {
       state.tabs,
       state.viewMode,
       state.workspaceView,
-      state.workspaceIndex,
+      state.workspaceKey,
     ],
   )
   const workspacePanels = useMemo(
@@ -204,6 +207,8 @@ const AppLayout = () => {
       <ExportStatusOverlay />
       <Titlebar
         ref={titlebarRef}
+        commandOpen={commandOpen}
+        onCommandOpenChange={setCommandOpen}
         activePath={state.activePath}
         activeTab={state.activeTab}
         tabs={state.tabs}
@@ -229,7 +234,6 @@ const AppLayout = () => {
         onChangeView={state.setViewMode}
         viewMode={state.viewMode}
         files={state.files}
-        workspaceIndex={state.workspaceIndex}
         workspaceKey={state.workspaceKey}
         canCreateWorkspaceEntries={state.rootKind !== 'single'}
         searchIndexRebuilding={searchIndexRebuilding}

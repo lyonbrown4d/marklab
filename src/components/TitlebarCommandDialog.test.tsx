@@ -3,13 +3,13 @@ import { forwardRef, type ComponentProps, type KeyboardEvent, type ReactNode } f
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import type { FsSearchResult } from '@/services/fsApi'
-import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
 
 const state = vi.hoisted(() => ({
   rememberSearch: vi.fn(),
   clearSearchHistory: vi.fn(),
   searches: ['recent query'],
   streamCalls: [] as { open: boolean; query: string; scope: string }[],
+  navigationCalls: [] as Array<{ activePath: string | null; query: string; scope: string }>,
   result: {
     column: 2,
     end_column: 9,
@@ -55,6 +55,22 @@ vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
   useCommandFullTextSearchStream: (options: (typeof state.streamCalls)[number]) => {
     state.streamCalls.push(options)
     return { fullTextResults: [state.result], fullTextFetching: false, fullTextError: null }
+  },
+}))
+vi.mock('@/components/titlebar/useWorkspaceNavigationQuery', () => ({
+  useWorkspaceNavigationQuery: (options: {
+    activePath: string | null
+    query: string
+    scope: string
+  }) => {
+    state.navigationCalls.push(options)
+    return {
+      headings: [],
+      navigationHeadings: [],
+      navigationOutgoingLinks: [],
+      navigationBacklinks: [],
+      navigationMissingLinks: [],
+    }
   },
 }))
 vi.mock('@/components/command/CommandSearchHistory', () => ({
@@ -125,18 +141,9 @@ const renderDialog = (overrides: Partial<ComponentProps<typeof TitlebarCommandDi
       activePath="docs/current.md"
       files={[{ path: 'docs/recent.md', label: 'Recent' }]}
       recentFiles={[{ path: 'docs/recent.md', label: 'Recent' }]}
-      headings={[]}
-      navigationHeadings={[]}
-      navigationOutgoingLinks={[]}
-      navigationBacklinks={[]}
-      navigationMissingLinks={[]}
       canCreateWorkspaceEntries
-      workspaceIndexed
       workspaceKey="external:/workspace"
-      indexedFileCount={1}
       searchIndexRebuilding={false}
-      knowledgeSummary={{} as WorkspaceKnowledgeSummary}
-      collections={[]}
       {...callbacks}
       {...overrides}
     />,
@@ -149,6 +156,7 @@ const input = () => screen.getByRole('textbox', { name: 'Command input' })
 
 beforeEach(() => {
   state.streamCalls.length = 0
+  state.navigationCalls.length = 0
   state.rememberSearch.mockClear()
 })
 
@@ -218,6 +226,20 @@ describe('TitlebarCommandDialog', () => {
     expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/search.md')
     expect(callbacks.onOpenHeading).toHaveBeenCalledWith('docs/search.md', 'match')
     expect(callbacks.onOpenSearchResult).toHaveBeenCalledWith(state.result)
+  })
+
+  it('drives bounded heading queries from the deferred dialog input', async () => {
+    renderDialog()
+    await ready()
+    fireEvent.change(input(), { target: { value: '# architecture' } })
+
+    await waitFor(() =>
+      expect(state.navigationCalls.at(-1)).toMatchObject({
+        activePath: 'docs/current.md',
+        query: 'architecture',
+        scope: 'headings',
+      }),
+    )
   })
 
   it('opens explicit commands without full-text work and returns to recent content', async () => {

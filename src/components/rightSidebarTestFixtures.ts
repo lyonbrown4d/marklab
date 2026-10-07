@@ -1,0 +1,40 @@
+export const createRightSidebarInsights = (overrides: Record<string, unknown> = {}) => ({
+  ready: true as const,
+  revision: 1,
+  path: 'target.md',
+  found: true,
+  headings: [
+    { path: 'target.md', level: 1, text: 'Target', slug: 'target', line: 1, column: 1 },
+    { path: 'target.md', level: 2, text: 'Details', slug: 'details', line: 2, column: 1 },
+  ],
+  backlinks: [
+    {
+      source_path: 'source.md',
+      text: 'Target',
+      context: 'See [Target](target.md) here',
+      line: 2,
+      column: 5,
+      target_anchor: null,
+      target_heading_slug: null,
+    },
+  ],
+  diagnostics: [],
+  asset_report: {
+    current_assets: [],
+    current_asset_count: 0,
+    current_missing_count: 0,
+    workspace_missing_assets: [],
+    workspace_missing_count: 0,
+    limit: 80,
+  },
+  knowledge: {
+    incoming: [],
+    outgoing: [],
+    missing: [],
+    incoming_count: 0,
+    outgoing_count: 0,
+    missing_count: 0,
+    orphan: false,
+  },
+  ...overrides,
+})

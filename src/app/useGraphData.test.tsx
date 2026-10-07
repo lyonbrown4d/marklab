@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useGraphData } from '@/app/useGraphData'
-import { fsApi, type FsGraph, type FsWorkspaceIndex } from '@/services/fsApi'
+import { fsApi, type FsGraph } from '@/services/fsApi'
 
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
 vi.mock('@/services/fsApi', async () => {
@@ -17,30 +17,9 @@ vi.mock('@/services/fsApi', async () => {
   }
 })
 
-const INDEX: FsWorkspaceIndex = {
-  files: [
-    {
-      path: 'notes/a.md',
-      headings: [],
-      links: [
-        {
-          source_path: 'notes/a.md',
-          text: 'B',
-          target: 'b.md',
-          link_type: 'markdown',
-          target_path: 'notes/b.md',
-          is_external: false,
-          context: 'B',
-          line: 1,
-          column: 1,
-        },
-      ],
-      assets: [],
-    },
-  ],
-}
 const graph = (label: string): FsGraph => ({
   mode: 'mindmap',
+  revision: label,
   nodes: [{ id: `file:${label}`, kind: 'file', label, path: `${label}.md` }],
   edges: [],
 })
@@ -61,7 +40,9 @@ const deferred = <T,>() => {
 }
 
 describe('useGraphData', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('does not share workspace graph queries between workspaces with identical indexes', async () => {
     vi.mocked(fsApi.getWorkspaceGraph)
@@ -69,7 +50,7 @@ describe('useGraphData', () => {
       .mockResolvedValueOnce(graph('second'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      ({ workspaceKey }) => useGraphData('workspace', workspaceKey, INDEX, 'none'),
+      ({ workspaceKey }) => useGraphData('workspace', workspaceKey, 'none'),
       { initialProps: { workspaceKey: 'directory:C:/one' }, wrapper: createWrapper(queryClient) },
     )
     await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('first'))
@@ -80,64 +61,15 @@ describe('useGraphData', () => {
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledTimes(2)
   })
 
-  it('starts the workspace graph before the index is ready', async () => {
+  it('loads the workspace graph without requesting a renderer-side index', async () => {
     vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('early'))
     const queryClient = createQueryClient()
-    const { result } = renderHook(
-      () => useGraphData('workspace', 'directory:C:/one', null, 'none'),
-      { wrapper: createWrapper(queryClient) },
-    )
+    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one', 'none'), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('early'))
     expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
-  })
-
-  it('does not request the same graph again when its index revision arrives', async () => {
-    vi.mocked(fsApi.getWorkspaceGraph).mockResolvedValueOnce(graph('stable'))
-    const queryClient = createQueryClient()
-    const { result, rerender } = renderHook(
-      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, 'none'),
-      {
-        initialProps: { index: null as FsWorkspaceIndex | null },
-        wrapper: createWrapper(queryClient),
-      },
-    )
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('stable'))
-
-    const changed: FsWorkspaceIndex = {
-      files: [
-        {
-          ...INDEX.files[0],
-          links: [{ ...INDEX.files[0].links[0], target: 'other.md' }],
-        },
-      ],
-    }
-    rerender({ index: changed })
-
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('stable'))
-    expect(fsApi.getWorkspaceGraph).toHaveBeenCalledOnce()
-  })
-
-  it('refreshes the graph when workspace paths change after initial hydration', async () => {
-    vi.mocked(fsApi.getWorkspaceGraph)
-      .mockResolvedValueOnce(graph('before'))
-      .mockResolvedValueOnce(graph('after'))
-    const queryClient = createQueryClient()
-    const { result, rerender } = renderHook(
-      ({ index }) => useGraphData('workspace', 'directory:C:/one', index, 'none'),
-      { initialProps: { index: INDEX }, wrapper: createWrapper(queryClient) },
-    )
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('before'))
-
-    rerender({
-      index: {
-        ...INDEX,
-        files: [{ ...INDEX.files[0], path: 'notes/renamed.md' }],
-      },
-    })
-
-    await waitFor(() => expect(result.current.graph.nodes[0]?.data.label).toBe('after'))
-    expect(fsApi.getWorkspaceGraph).toHaveBeenCalledTimes(2)
   })
 
   it('exposes errors and a stable retry for workspace graphs', async () => {
@@ -146,7 +78,7 @@ describe('useGraphData', () => {
       .mockResolvedValueOnce(graph('ok'))
     const queryClient = createQueryClient()
     const { result, rerender } = renderHook(
-      () => useGraphData('workspace', 'directory:C:/one', INDEX, 'none'),
+      () => useGraphData('workspace', 'directory:C:/one', 'none'),
       { wrapper: createWrapper(queryClient) },
     )
     await waitFor(() => expect(result.current.error).toEqual(new Error('graph unavailable')))
@@ -169,10 +101,9 @@ describe('useGraphData', () => {
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise)
     const queryClient = createQueryClient()
-    const { result } = renderHook(
-      () => useGraphData('workspace', 'directory:C:/one', INDEX, 'none'),
-      { wrapper: createWrapper(queryClient) },
-    )
+    const { result } = renderHook(() => useGraphData('workspace', 'directory:C:/one', 'none'), {
+      wrapper: createWrapper(queryClient),
+    })
     expect(result.current.loading).toBe(true)
     expect(result.current.refreshing).toBe(false)
     act(() => first.resolve(graph('cached')))

@@ -1,26 +1,18 @@
 import { useMemo } from 'react'
 import type { AppPlatform } from '@/services/appApi'
 import { useI18n } from '@/i18n/useI18n'
-import { buildAllPagesRows } from '@/logic/allPages'
-import { buildWorkspaceKnowledgeSummary } from '@/logic/knowledge'
-import {
-  builtInMarkdownCollections,
-  summarizeMarkdownCollections,
-} from '@/logic/markdownCollections'
 import { createFileLabel } from '@/logic/paths'
 import { formatShortcutList, resolveShortcutBindings } from '@/logic/shortcuts'
 import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandActions } from '@/components/titlebar/useTitlebarCommandActions'
-import { buildTitlebarCommandNavigationModel } from '@/components/titlebar/titlebarCommandNavigation'
 
 type UseTitlebarCommandModelArgs = Pick<
   TitlebarProps,
   | 'activePath'
   | 'files'
   | 'tabs'
-  | 'workspaceIndex'
   | 'onChangeView'
   | 'onSelectProject'
   | 'onSelectSingleFile'
@@ -51,7 +43,6 @@ export const useTitlebarCommandModel = ({
   activePath,
   files,
   tabs,
-  workspaceIndex,
   onCommandOpenChange,
   onChangeView,
   onSelectProject,
@@ -137,43 +128,13 @@ export const useTitlebarCommandModel = ({
 
   const commandFiles = useMemo(() => {
     if (!commandOpen) return []
-    const fileTreePaths = files.filter((file) => file.kind === 'file').map((file) => file.path)
-    const paths = workspaceIndex
-      ? Array.from(new Set([...workspaceIndex.files.map((file) => file.path), ...fileTreePaths]))
-      : fileTreePaths
-
-    return paths.map((path) => ({
-      path,
-      label: createFileLabel(path),
-    }))
-  }, [commandOpen, files, workspaceIndex])
-
-  const commandHeadings = useMemo(() => {
-    if (!commandOpen) return []
-    if (!workspaceIndex) return []
-    return workspaceIndex.files.flatMap((file) =>
-      file.headings.map((heading) => ({
-        path: file.path,
-        slug: heading.slug,
-        text: heading.text,
-        level: heading.level,
-        label: createFileLabel(file.path),
-      })),
-    )
-  }, [commandOpen, workspaceIndex])
-
-  const commandNavigation = useMemo(
-    () =>
-      commandOpen
-        ? buildTitlebarCommandNavigationModel(activePath, workspaceIndex)
-        : {
-            headings: [],
-            outgoingLinks: [],
-            backlinks: [],
-            missingLinks: [],
-          },
-    [activePath, commandOpen, workspaceIndex],
-  )
+    return files
+      .filter((file) => file.kind === 'file')
+      .map(({ path }) => ({
+        path,
+        label: createFileLabel(path),
+      }))
+  }, [commandOpen, files])
 
   const commandRecentFiles = useMemo(() => {
     if (!commandOpen) return []
@@ -185,21 +146,6 @@ export const useTitlebarCommandModel = ({
       return [{ path: tab.path, label: createFileLabel(tab.path) }]
     })
   }, [activePath, commandOpen, tabs])
-
-  const workspaceKnowledgeSummary = useMemo(
-    () => buildWorkspaceKnowledgeSummary(commandOpen ? workspaceIndex : null),
-    [commandOpen, workspaceIndex],
-  )
-  const commandCollections = useMemo(
-    () =>
-      commandOpen
-        ? summarizeMarkdownCollections(
-            buildAllPagesRows(files, workspaceIndex),
-            builtInMarkdownCollections,
-          )
-        : [],
-    [commandOpen, files, workspaceIndex],
-  )
 
   const commandPaletteShortcut = useMemo(() => {
     const hotkeyPlatform =
@@ -242,14 +188,7 @@ export const useTitlebarCommandModel = ({
   return {
     menuGroups,
     commandFiles,
-    commandHeadings,
-    commandNavigationHeadings: commandNavigation.headings,
-    commandNavigationOutgoingLinks: commandNavigation.outgoingLinks,
-    commandNavigationBacklinks: commandNavigation.backlinks,
-    commandNavigationMissingLinks: commandNavigation.missingLinks,
     commandRecentFiles,
-    workspaceKnowledgeSummary,
-    commandCollections,
     commandPaletteShortcut,
     onMenuAction,
     onOpenSearch,

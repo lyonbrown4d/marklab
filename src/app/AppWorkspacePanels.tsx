@@ -42,7 +42,7 @@ type AppWorkspacePanelsState = Pick<
   | 'tabs'
   | 'viewMode'
   | 'workspaceView'
-  | 'workspaceIndex'
+  | 'workspaceKey'
 >
 
 type AppWorkspacePanelsProps = {
@@ -107,10 +107,8 @@ export const AppWorkspacePanels = ({
       collapsed={false}
       activePath={state.activePath}
       editorValue={state.editorValue}
-      files={state.files}
       fileContents={state.fileContents}
-      dirtyPaths={state.dirtyPaths}
-      workspaceIndex={state.workspaceIndex}
+      workspaceKey={state.workspaceKey}
       tabs={tabIds}
       totalFiles={totalFiles}
       onOpenFileView={onOpenFileView}

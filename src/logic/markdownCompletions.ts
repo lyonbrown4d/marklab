@@ -1,5 +1,4 @@
 import type { FileEntry } from '@/store/appTypes'
-import type { FsIndexedMarkdownFile, FsWorkspaceIndex } from '@/services/fsApi'
 import { fileCompletions, resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
 import { extractHeadings, normalizeHeadingAnchor } from '@/logic/paths'
 
@@ -20,7 +19,6 @@ type MarkdownCompletionContext = {
   column: number
   files: FileEntry[]
   fileContents: Record<string, string>
-  workspaceIndex?: FsWorkspaceIndex | null
 }
 
 const LANGUAGE_COMPLETIONS = [
@@ -57,7 +55,6 @@ export const getMarkdownCompletions = ({
   column,
   files,
   fileContents,
-  workspaceIndex,
 }: MarkdownCompletionContext): MarkdownCompletionItem[] => {
   const currentLine = getLine(content, line)
   const prefix = currentLine.slice(0, Math.max(0, column - 1))
@@ -72,7 +69,6 @@ export const getMarkdownCompletions = ({
     return fileCompletions({
       activePath,
       files,
-      workspaceIndex,
       query: wikiContext.query,
       replacementStartColumn: wikiContext.replacementStartColumn,
       mode: 'wiki',
@@ -87,17 +83,8 @@ export const getMarkdownCompletions = ({
     const targetBeforeHash = markdownLinkContext.target.slice(0, hashIndex)
     const query = markdownLinkContext.target.slice(hashIndex + 1)
     const targetPath = targetBeforeHash.trim()
-      ? resolveLinkedFilePath(activePath, targetBeforeHash, files, workspaceIndex)
+      ? resolveLinkedFilePath(activePath, targetBeforeHash, files)
       : activePath
-    if (targetBeforeHash.trim() && targetPath !== activePath && workspaceIndex) {
-      return headingCompletionsFromIndex({
-        file: workspaceIndex.files.find((file) => file.path === targetPath),
-        query,
-        detailPath: targetPath ?? undefined,
-        replacementStartColumn: markdownLinkContext.replacementStartColumn + hashIndex + 1,
-      })
-    }
-
     const source = targetPath === activePath ? content : (fileContents[targetPath ?? ''] ?? '')
     return headingCompletions({
       content: source,
@@ -110,7 +97,6 @@ export const getMarkdownCompletions = ({
   return fileCompletions({
     activePath,
     files,
-    workspaceIndex,
     query: markdownLinkContext.target,
     replacementStartColumn: markdownLinkContext.replacementStartColumn,
     mode: 'markdown',
@@ -187,36 +173,6 @@ const headingCompletions = ({
   const normalizedQuery = normalizeHeadingAnchor(query)
   const lowerQuery = query.toLowerCase()
   return extractHeadings(content)
-    .filter((heading) => {
-      if (!query) return true
-      return (
-        heading.slug.includes(normalizedQuery) || heading.text.toLowerCase().includes(lowerQuery)
-      )
-    })
-    .map((heading) => ({
-      label: heading.text,
-      kind: 'heading' as const,
-      insertText: heading.slug,
-      detail: detailPath ? `${detailPath}#${heading.slug}` : `#${heading.slug}`,
-      replacementStartColumn,
-    }))
-}
-
-const headingCompletionsFromIndex = ({
-  file,
-  query,
-  detailPath,
-  replacementStartColumn,
-}: {
-  file?: FsIndexedMarkdownFile
-  query: string
-  detailPath?: string
-  replacementStartColumn: number
-}) => {
-  if (!file) return []
-  const normalizedQuery = normalizeHeadingAnchor(query)
-  const lowerQuery = query.toLowerCase()
-  return file.headings
     .filter((heading) => {
       if (!query) return true
       return (

@@ -215,17 +215,7 @@ describe('SourceCodeEditor', () => {
         fileContents={{
           'notes/current.md':
             'See [Missing](missing.md) and [Bad Heading](target.md#unknown)\n[[Unknown]]',
-        }}
-        workspaceIndex={{
-          files: [
-            {
-              path: 'notes/target.md',
-              headings: [
-                { path: 'notes/target.md', level: 1, text: 'Present', slug: 'present', line: 1 },
-              ],
-              links: [],
-            },
-          ],
+          'notes/target.md': '# Present',
         }}
         onChange={vi.fn()}
       />,

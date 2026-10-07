@@ -23,16 +23,18 @@ import { WorkspaceGraphPrecomputeCoordinator } from '@electron/services/workspac
 import { WorkspaceGraphResolver } from '@electron/services/workspace/workspaceGraphResolver'
 import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
-import { createWorkspaceStorageKey } from '@electron/services/workspace/workspaceIdentity'
-import { trySidecarWorkspaceGraph } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient'
 import { analyzeWorkspaceMarkdownBuffer } from '@electron/services/workspace/workspaceMarkdownAnalysis'
 import type { WatchEventName } from '@electron/services/workspace/workspaceUtils'
+import { WorkspaceIndexPrewarmer } from '@electron/services/workspace/workspaceIndexPrewarmer'
+import { WorkspaceIndexQueryService } from '@electron/services/workspace/workspaceIndexQueryService'
+import { WorkspaceGraphQueryService } from '@electron/services/workspace/workspaceGraphQueryService'
 
 const SEARCH_INDEX_REBUILD_DELAY_MS = 600
 
 type WorkspaceAnalysisServiceOptions = {
   graphPrecomputeDelayMs?: number
+  workspaceIndexPrecomputeDelayMs?: number
   workspaceGraphScheduler?: WorkspaceGraphComputationScheduler
   workspaceGraphStore?: WorkspaceGraphStore
 }
@@ -56,6 +58,14 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       scheduler: this.options.workspaceGraphScheduler,
       store: this.options.workspaceGraphStore,
     })
+    this.graphQueries = new WorkspaceGraphQueryService({
+      analysisCache: this.analysisCache,
+      getInput: () => this.getWorkspaceAnalysisInput(),
+      getState: () => ({ ...this.state }),
+      graphResolver: this.graphResolver,
+      knowledgeEngineService: this.analysisKnowledgeEngineService,
+      logger: this.logger,
+    })
     this.searchOperations = new WorkspaceSearchOperations({
       activeSearchKey: () => this.activeWorkspaceSearchKey,
       index: this.workspaceSearchIndex,
@@ -66,10 +76,16 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.graphPrecompute = new WorkspaceGraphPrecomputeCoordinator({
       delayMs: this.options.graphPrecomputeDelayMs ?? 750,
       logger: this.logger,
-      run: () => this.loadWorkspaceGraph('background').then(() => undefined),
+      run: () => this.graphQueries.load('background').then(() => undefined),
       setStatus: (status, message) =>
         this.setTask('workspace-graph', 'Workspace graph', status, message),
     })
+    this.indexPrewarmer = new WorkspaceIndexPrewarmer({
+      delayMs: this.options.workspaceIndexPrecomputeDelayMs ?? 100,
+      logger: this.logger,
+      run: () => this.workspaceIndex(),
+    })
+    this.indexPrewarmer.schedule()
   }
 
   private readonly analysisWorker = new WorkspaceAnalysisWorkerClient(
@@ -78,8 +94,24 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
   private readonly searchOperations: WorkspaceSearchOperations
   private readonly graphResolver: WorkspaceGraphResolver
+  private readonly graphQueries: WorkspaceGraphQueryService
   private readonly graphPrecompute: WorkspaceGraphPrecomputeCoordinator
+  private readonly indexPrewarmer: WorkspaceIndexPrewarmer
   private readonly analysisCache = new WorkspaceAnalysisCache()
+  private readonly indexQueries = new WorkspaceIndexQueryService({
+    getRevision: () => this.analysisCache.revision,
+    load: () => this.workspaceIndex(),
+  })
+  readonly workspacePageQuery = this.indexQueries.workspacePageQuery.bind(this.indexQueries)
+  readonly workspaceNavigationQuery = this.indexQueries.workspaceNavigationQuery.bind(
+    this.indexQueries,
+  )
+  readonly workspaceDocumentInsights = this.indexQueries.workspaceDocumentInsights.bind(
+    this.indexQueries,
+  )
+  readonly workspaceKnowledgeSummary = this.indexQueries.workspaceKnowledgeSummary.bind(
+    this.indexQueries,
+  )
   private readonly searchIndexUpdateQueue =
     new WorkspaceSearchIndexUpdateQueue<WorkspaceSearchDocument>({
       applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
@@ -106,6 +138,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private needsSearchIndexRebuild = true
 
   override dispose(): void {
+    this.indexPrewarmer.dispose()
     this.graphPrecompute.dispose()
     this.searchOperations.dispose()
     this.searchIndexBuildCoordinator.invalidate()
@@ -118,52 +151,24 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async workspaceIndex(): Promise<FsWorkspaceIndex> {
-    return this.runSearchIndexTask(
-      () =>
-        this.analysisCache.getIndex(async () => {
-          const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
-          return this.runWorkerTask(
-            () =>
-              this.analysisWorker.run<FsWorkspaceIndex>({
-                type: 'workspace-index',
-                documents,
-                knownPaths,
-              }),
-            'workspace-index',
-          )
-        }),
-      'workspace-index',
+    return this.analysisCache.getIndex(() =>
+      this.runSearchIndexTask(async () => {
+        const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
+        return this.runWorkerTask(
+          () =>
+            this.analysisWorker.run<FsWorkspaceIndex>({
+              type: 'workspace-index',
+              documents,
+              knownPaths,
+            }),
+          'workspace-index',
+        )
+      }, 'workspace-index'),
     )
   }
 
   async workspaceGraph(): Promise<FsGraph> {
-    return this.loadWorkspaceGraph('interactive')
-  }
-
-  private async loadWorkspaceGraph(priority: 'background' | 'interactive'): Promise<FsGraph> {
-    const resolve = async () => {
-      const graphState = { ...this.state }
-      const workspaceKey = createWorkspaceStorageKey({
-        kind: graphState.rootKind,
-        path: graphState.rootPath,
-      })
-      const { documents, knownPaths } = await this.getWorkspaceAnalysisInput()
-      return this.graphResolver.resolve({
-        build: () =>
-          trySidecarWorkspaceGraph({
-            documents,
-            knowledgeEngineService: this.analysisKnowledgeEngineService,
-            knownPaths,
-            logger: this.logger,
-            state: graphState,
-          }),
-        documents,
-        knownPaths,
-        priority,
-        workspaceKey,
-      })
-    }
-    return priority === 'interactive' ? this.analysisCache.getGraph(resolve) : resolve()
+    return this.graphQueries.load('interactive')
   }
 
   override updateBuffer(value: unknown): ReturnType<WorkspaceFileService['updateBuffer']> {
@@ -211,6 +216,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.resetSearchIndexState()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
+    this.indexPrewarmer.schedule()
     this.scheduleGraphPrecompute()
     return result
   }
@@ -223,6 +229,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.graphPrecompute.cancel()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
+    this.indexPrewarmer.schedule()
     return result
   }
 

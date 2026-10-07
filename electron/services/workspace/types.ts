@@ -1,3 +1,5 @@
+import type { WorkspaceDocumentAdapterKind } from '@electron/services/workspace/documentAdapters'
+
 export type FsRootKind = 'internal' | 'external' | 'single'
 export type FsEntryKind = 'file' | 'folder'
 
@@ -131,7 +133,7 @@ export type FsMarkdownBlock = {
 
 export type FsGraphNode = {
   id: string
-  kind: 'file' | 'heading' | 'missing' | 'external'
+  kind: 'file' | 'heading' | 'missing' | 'external' | 'preview'
   label: string
   path?: string | null
   line?: number | null
@@ -142,6 +144,9 @@ export type FsGraphNode = {
   content_start_line?: number | null
   content_end_line?: number | null
   group?: FsGraphGroup | null
+  preview_kind?: WorkspaceDocumentAdapterKind | null
+  source_path?: string | null
+  target?: string | null
 }
 
 export type FsGraphGroup = {
@@ -154,13 +159,14 @@ export type FsGraphEdge = {
   id: string
   source: string
   target: string
-  kind: 'contains' | 'links_to' | 'references_heading'
+  kind: 'contains' | 'links_to' | 'references_heading' | 'previews'
 }
 
 export type FsGraph = {
   mode: 'mindmap'
   nodes: FsGraphNode[]
   edges: FsGraphEdge[]
+  revision?: string
 }
 
 export type FsMarkdownAssetImportResult = {

@@ -1,12 +1,10 @@
 import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
-import {
-  parseMarkdownAst,
-  type MarkdownNode,
-  type MarkdownRoot,
-} from '@electron/services/workspace/markdown/ast'
+import { parseMarkdownAst } from '@electron/services/workspace/markdown/ast'
 import { resolveIndexedLinkPath } from '@electron/services/workspace/markdown/targets'
 import { fileLabel, normalizeWorkspacePath } from '@electron/services/workspace/markdown/utils'
 import { deriveWorkspaceGraphGroups } from '@electron/services/knowledgeEngine/workspaceGraphGroups'
+import { workspaceDocumentAdapterForPath } from '@electron/services/workspace/documentAdapters'
+import { workspaceFileSummary } from '@electron/services/knowledgeEngine/workspaceGraphSummary'
 import type {
   FsGraph,
   FsGraphEdge,
@@ -47,7 +45,7 @@ export const buildNodeWorkspaceGraph = (
 
   for (const { parsed } of indexed) {
     for (const link of parsed.links) {
-      const target = graphTarget(link, files, filesByPath, assetPaths)
+      const target = graphTarget(parsed.path, link, files, filesByPath, assetPaths)
       if (!target) continue
       if (target.node && !nodeIds.has(target.node.id)) {
         nodeIds.add(target.node.id)
@@ -72,6 +70,20 @@ export const buildNodeWorkspaceGraph = (
         target: target.id,
       })
     }
+    for (const asset of parsed.assets) {
+      const target = previewTarget(parsed.path, asset.target, asset.target_path)
+      if (!target) continue
+      if (target.node && !nodeIds.has(target.node.id)) {
+        nodeIds.add(target.node.id)
+        nodes.push(target.node)
+      }
+      edges.push({
+        id: `${fileNodeId(parsed.path)}->${target.id}-${edges.length}`,
+        kind: target.kind,
+        source: fileNodeId(parsed.path),
+        target: target.id,
+      })
+    }
   }
   const groups = deriveWorkspaceGraphGroups(
     indexed.map(({ parsed, tree }) => ({ id: fileNodeId(parsed.path), path: parsed.path, tree })),
@@ -85,13 +97,14 @@ export const buildNodeWorkspaceGraph = (
 }
 
 const graphTarget = (
+  sourcePath: string,
   link: FsIndexedMarkdownFile['links'][number],
   files: FsIndexedMarkdownFile[],
   filesByPath: Map<string, FsIndexedMarkdownFile>,
   assetPaths: Set<string>,
 ): {
   id: string
-  kind: 'links_to' | 'references_heading'
+  kind: 'links_to' | 'references_heading' | 'previews'
   headingPath?: string
   node?: FsGraphNode
 } | null => {
@@ -104,6 +117,8 @@ const graphTarget = (
     }
   }
   const targetPath = resolveIndexedLinkPath(link, filesByPath, files)
+  const preview = previewTarget(sourcePath, link.target, targetPath)
+  if (preview) return preview
   if (!targetPath || assetPaths.has(targetPath) || hasNonMarkdownExtension(targetPath)) return null
   if (link.target_heading_slug) {
     const heading = filesByPath
@@ -136,6 +151,34 @@ const graphTarget = (
   }
 }
 
+const previewTarget = (
+  sourcePath: string,
+  target: string,
+  targetPath?: string | null,
+): {
+  id: string
+  kind: 'previews'
+  node: FsGraphNode
+} | null => {
+  if (!targetPath) return null
+  const adapter = workspaceDocumentAdapterForPath(targetPath)
+  if (!adapter) return null
+  const id = `preview:${targetPath}`
+  return {
+    id,
+    kind: 'previews',
+    node: {
+      id,
+      kind: 'preview',
+      label: fileLabel(targetPath),
+      path: targetPath,
+      preview_kind: adapter.kind,
+      source_path: sourcePath,
+      target,
+    },
+  }
+}
+
 const fileNodeId = (path: string): string => `file:${path}`
 const headingNodeId = (path: string, slug: string): string => `heading:${path}:${slug}`
 
@@ -146,139 +189,6 @@ const fileNode = (path: string, content?: string): FsGraphNode => ({
   path,
   ...(content ? { content } : {}),
 })
-
-const WORKSPACE_FILE_SUMMARY_BLOCKS = 3
-const WORKSPACE_FILE_SUMMARY_CHARACTERS = 420
-
-const workspaceFileSummary = (content: string, tree: MarkdownRoot): string => {
-  const frontmatterEndOffset = leadingFrontmatterEndOffset(content)
-  const excerpts: string[] = []
-
-  for (const node of tree.children) {
-    const excerpt = normalizedSummaryText(
-      markdownNodeSummaryText(node, content, frontmatterEndOffset),
-    )
-    if (!excerpt) continue
-    excerpts.push(excerpt)
-    if (excerpts.length === WORKSPACE_FILE_SUMMARY_BLOCKS) break
-  }
-
-  const summaryBlocks = excerpts.length
-    ? excerpts
-    : workspaceHeadingFallback(tree, content, frontmatterEndOffset)
-  const summary = summaryBlocks.join('\n\n')
-  if (summary.length <= WORKSPACE_FILE_SUMMARY_CHARACTERS) return summary
-  return `${summary.slice(0, WORKSPACE_FILE_SUMMARY_CHARACTERS - 3).trimEnd()}...`
-}
-
-const workspaceHeadingFallback = (
-  tree: MarkdownRoot,
-  content: string,
-  contentStartOffset: number,
-): string[] => {
-  const headings = tree.children.filter((node) => {
-    if (node.type !== 'heading') return false
-    const endOffset = node.position?.end.offset
-    return typeof endOffset !== 'number' || endOffset > contentStartOffset
-  })
-  const candidates = headings[0]?.depth === 1 ? headings.slice(1) : headings
-  const excerpts = new Map<string, string>()
-
-  for (const heading of candidates) {
-    const excerpt = normalizedSummaryText(
-      markdownNodeSummaryText(heading, content, contentStartOffset, true),
-    )
-    if (excerpt) excerpts.set(excerpt.toLocaleLowerCase(), excerpt)
-    if (excerpts.size === WORKSPACE_FILE_SUMMARY_BLOCKS) break
-  }
-
-  return [...excerpts.values()]
-}
-
-const leadingFrontmatterEndOffset = (content: string): number => {
-  const firstLine = markdownLineAtOffset(content, 0)
-  const delimiter = firstLine.text.trim()
-  if (delimiter !== '---' && delimiter !== '+++') return 0
-
-  let offset = firstLine.nextOffset
-  while (offset < content.length) {
-    const line = markdownLineAtOffset(content, offset)
-    if (line.text.trim() === delimiter) return line.nextOffset
-    offset = line.nextOffset
-  }
-
-  return 0
-}
-
-const markdownLineAtOffset = (
-  content: string,
-  startOffset: number,
-): { text: string; nextOffset: number } => {
-  let endOffset = startOffset
-  while (endOffset < content.length && content[endOffset] !== '\r' && content[endOffset] !== '\n') {
-    endOffset += 1
-  }
-
-  let nextOffset = endOffset
-  if (content[nextOffset] === '\r') nextOffset += 1
-  if (content[nextOffset] === '\n') nextOffset += 1
-  return { text: content.slice(startOffset, endOffset), nextOffset }
-}
-
-const SUMMARY_SKIPPED_NODE_TYPES = new Set([
-  'code',
-  'definition',
-  'heading',
-  'html',
-  'inlineCode',
-  'thematicBreak',
-])
-const SUMMARY_LINE_NODE_TYPES = new Set([
-  'blockquote',
-  'list',
-  'listItem',
-  'table',
-  'tableCell',
-  'tableRow',
-])
-
-const markdownNodeSummaryText = (
-  node: MarkdownNode,
-  content: string,
-  contentStartOffset: number,
-  includeHeading = false,
-): string => {
-  const nodeEndOffset = node.position?.end.offset
-  if (typeof nodeEndOffset === 'number' && nodeEndOffset <= contentStartOffset) return ''
-  if (SUMMARY_SKIPPED_NODE_TYPES.has(node.type) && !(includeHeading && node.type === 'heading'))
-    return ''
-  if (node.type === 'break') return '\n'
-  if (node.type === 'text') {
-    const startOffset = node.position?.start.offset
-    const endOffset = node.position?.end.offset
-    if (
-      typeof startOffset === 'number' &&
-      typeof endOffset === 'number' &&
-      startOffset < contentStartOffset
-    ) {
-      return content.slice(contentStartOffset, endOffset)
-    }
-    return node.value ?? ''
-  }
-  if (node.type === 'image') return node.alt ?? ''
-  const children =
-    node.children
-      ?.map((child) => markdownNodeSummaryText(child, content, contentStartOffset))
-      .filter(Boolean) ?? []
-  return children.join(SUMMARY_LINE_NODE_TYPES.has(node.type) ? '\n' : '')
-}
-
-const normalizedSummaryText = (value: string): string =>
-  value
-    .split(/\r\n?|\n/)
-    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n')
 
 const hasNonMarkdownExtension = (value: string): boolean => {
   const extension = value.split('/').at(-1)?.split('.').at(-1)?.toLocaleLowerCase()

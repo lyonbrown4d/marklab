@@ -6,6 +6,11 @@ import type { ComponentProps, PropsWithChildren } from 'react'
 import Titlebar from '@/components/Titlebar'
 import i18n from '@/i18n/setup'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
+import {
+  linkedWorkspaceNavigationFixture,
+  workspaceKnowledgeSummaryFixture,
+} from '@/components/titlebar/workspaceAnalysisTestFixtures'
 
 vi.mock('@/runtime/window', () => ({
   isDesktopRuntime: () => false,
@@ -29,85 +34,16 @@ vi.mock('@/runtime/clipboard', () => ({
   readClipboardText: vi.fn(),
   writeClipboardText: vi.fn(),
 }))
+vi.mock('@/services/workspaceAnalysisApi', () => ({
+  workspaceAnalysisApi: {
+    getKnowledgeSummary: vi.fn(),
+    queryNavigation: vi.fn(),
+  },
+}))
 
 type TitlebarProps = ComponentProps<typeof Titlebar>
 
-const workspaceIndex = {
-  files: [
-    {
-      path: 'notes/target.md',
-      headings: [
-        {
-          path: 'notes/target.md',
-          level: 2,
-          text: 'Current Topic',
-          slug: 'current-topic',
-          line: 4,
-        },
-      ],
-      links: [
-        {
-          source_path: 'notes/target.md',
-          text: 'Resolved Topic',
-          target: 'resolved.md#done',
-          link_type: 'markdown',
-          target_path: 'notes/resolved.md',
-          target_anchor: 'done',
-          target_heading_slug: 'done',
-          is_external: false,
-          context: 'Read [Resolved Topic](resolved.md#done)',
-          line: 6,
-          column: 3,
-        },
-        {
-          source_path: 'notes/target.md',
-          text: 'Missing Note',
-          target: 'missing.md',
-          link_type: 'markdown',
-          target_path: null,
-          target_anchor: null,
-          target_heading_slug: null,
-          is_external: false,
-          context: 'See [Missing Note](missing.md)',
-          line: 8,
-          column: 5,
-        },
-      ],
-    },
-    {
-      path: 'notes/resolved.md',
-      headings: [
-        {
-          path: 'notes/resolved.md',
-          level: 2,
-          text: 'Done',
-          slug: 'done',
-          line: 2,
-        },
-      ],
-      links: [],
-    },
-    {
-      path: 'notes/source.md',
-      headings: [],
-      links: [
-        {
-          source_path: 'notes/source.md',
-          text: 'Target',
-          target: 'target.md',
-          link_type: 'markdown',
-          target_path: 'notes/target.md',
-          target_anchor: null,
-          target_heading_slug: null,
-          is_external: false,
-          context: 'Backlink context points to Target',
-          line: 3,
-          column: 7,
-        },
-      ],
-    },
-  ],
-} satisfies NonNullable<TitlebarProps['workspaceIndex']>
+const analysisApi = vi.mocked(workspaceAnalysisApi)
 
 const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => ({
   activePath: 'notes/target.md',
@@ -138,7 +74,6 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
     { path: 'notes/source.md', kind: 'file' },
     { path: 'notes/resolved.md', kind: 'file' },
   ],
-  workspaceIndex,
   workspaceKey: 'external:/workspace',
   canCreateWorkspaceEntries: true,
   searchIndexRebuilding: false,
@@ -169,6 +104,8 @@ const renderTitlebar = (props: TitlebarProps) => {
 beforeEach(async () => {
   localStorage.clear()
   usePreferencesStore.setState({ locale: 'en-US' })
+  analysisApi.getKnowledgeSummary.mockResolvedValue(workspaceKnowledgeSummaryFixture)
+  analysisApi.queryNavigation.mockResolvedValue(linkedWorkspaceNavigationFixture)
   await i18n.changeLanguage('en-US')
 })
 

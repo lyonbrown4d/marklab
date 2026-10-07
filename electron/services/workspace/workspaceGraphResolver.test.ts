@@ -24,7 +24,10 @@ describe('WorkspaceGraphResolver', () => {
 
     const newest = graph('new')
     const newRequest = resolver.resolve(input('# New', async () => newest))
-    await expect(newRequest).resolves.toBe(newest)
+    await expect(newRequest).resolves.toEqual({
+      ...newest,
+      revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+    })
     releaseOld(graph('old'))
     await oldRequest
 

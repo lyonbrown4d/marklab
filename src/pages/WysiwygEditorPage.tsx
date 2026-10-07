@@ -7,7 +7,7 @@ import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEdi
 import type { FileEntry } from '@/store/appTypes'
 import type { FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
-import { fsApi, type FsWorkspaceIndex } from '@/services/fsApi'
+import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
@@ -25,7 +25,6 @@ type WysiwygEditorPageProps = {
   onOpenFile: (path: string) => void
   onOpenFileView?: (path: string, view: FileViewKind) => void
   files: FileEntry[]
-  workspaceIndex?: FsWorkspaceIndex | null
   showStatusBar: boolean
   readOnly: boolean
 }
@@ -99,7 +98,6 @@ const WysiwygEditorPage = ({
   onOpenFile,
   onOpenFileView,
   files,
-  workspaceIndex,
   showStatusBar,
   readOnly,
 }: WysiwygEditorPageProps) => {
@@ -110,7 +108,7 @@ const WysiwygEditorPage = ({
   const stats = useDocumentStats(value, showStatusBar)
   const handleWorkspaceLink = useCallback(
     (target: string, documentPath: string | null) => {
-      const path = resolveLinkedFilePath(documentPath ?? activePath, target, files, workspaceIndex)
+      const path = resolveLinkedFilePath(documentPath ?? activePath, target, files)
       if (!path) return
       if (isSourcePreviewFilePath(path) && onOpenFileView) {
         onOpenFileView(path, 'source')
@@ -118,7 +116,7 @@ const WysiwygEditorPage = ({
       }
       onOpenFile(path)
     },
-    [activePath, files, onOpenFile, onOpenFileView, workspaceIndex],
+    [activePath, files, onOpenFile, onOpenFileView],
   )
 
   const slashLabels = useMarkdownEditorSlashLabels()

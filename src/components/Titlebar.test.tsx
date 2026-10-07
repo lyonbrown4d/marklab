@@ -7,6 +7,11 @@ import Titlebar from '@/components/Titlebar'
 import i18n from '@/i18n/setup'
 import { writeClipboardText } from '@/runtime/clipboard'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
+import {
+  basicWorkspaceNavigationFixture,
+  workspaceKnowledgeSummaryFixture,
+} from '@/components/titlebar/workspaceAnalysisTestFixtures'
 
 vi.mock('@/runtime/window', () => ({
   isDesktopRuntime: () => false,
@@ -30,27 +35,17 @@ vi.mock('@/runtime/clipboard', () => ({
   readClipboardText: vi.fn(),
   writeClipboardText: vi.fn(),
 }))
+vi.mock('@/services/workspaceAnalysisApi', () => ({
+  workspaceAnalysisApi: {
+    getKnowledgeSummary: vi.fn(),
+    queryNavigation: vi.fn(),
+  },
+}))
 
 type TitlebarProps = ComponentProps<typeof Titlebar>
 const writeClipboardTextMock = vi.mocked(writeClipboardText)
 
-const workspaceIndex = {
-  files: [
-    {
-      path: 'notes/target.md',
-      headings: [
-        {
-          path: 'notes/target.md',
-          level: 2,
-          text: 'Indexed Detail',
-          slug: 'indexed-detail',
-          line: 4,
-        },
-      ],
-      links: [],
-    },
-  ],
-} satisfies NonNullable<TitlebarProps['workspaceIndex']>
+const analysisApi = vi.mocked(workspaceAnalysisApi)
 
 const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => ({
   activePath: 'notes/target.md',
@@ -77,7 +72,6 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   onChangeView: vi.fn(),
   viewMode: 'wysiwyg',
   files: [{ path: 'notes/target.md', kind: 'file' }],
-  workspaceIndex,
   workspaceKey: 'external:/workspace',
   canCreateWorkspaceEntries: true,
   searchIndexRebuilding: false,
@@ -138,6 +132,8 @@ beforeEach(async () => {
   writeClipboardTextMock.mockReset()
   writeClipboardTextMock.mockResolvedValue(undefined)
   usePreferencesStore.setState({ locale: 'en-US' })
+  analysisApi.getKnowledgeSummary.mockResolvedValue(workspaceKnowledgeSummaryFixture)
+  analysisApi.queryNavigation.mockResolvedValue(basicWorkspaceNavigationFixture)
   await i18n.changeLanguage('en-US')
 })
 
@@ -278,7 +274,7 @@ describe('Titlebar command palette', () => {
     expect(onOpenAllPages).toHaveBeenCalledWith()
   })
 
-  it('opens markdown collections from the command palette', async () => {
+  it('keeps built-in collection shortcuts while bounded counts are unavailable', async () => {
     const onOpenAllPages = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenAllPages }))
 

@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { forwardRef, useImperativeHandle } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 
 vi.mock('@/components/MarkdownEditor', () => ({
   default: forwardRef<
@@ -53,10 +52,6 @@ describe('WysiwygEditorPage workspace links', () => {
       { kind: 'file' as const, path: 'src/example.ts' },
       { kind: 'file' as const, path: 'docs/spec.pdf' },
     ]
-    const workspaceIndex = {
-      files: [{ path: 'notes/current.md' }, { path: 'notes/architecture-overview.md' }],
-    } as FsWorkspaceIndex
-
     render(
       <WysiwygEditorPage
         activePath="notes/current.md"
@@ -67,7 +62,6 @@ describe('WysiwygEditorPage workspace links', () => {
         readOnly={false}
         showStatusBar={false}
         value="[Architecture](architecture-overview)"
-        workspaceIndex={workspaceIndex}
       />,
     )
 

@@ -32,12 +32,12 @@ export class WorkspaceGraphResolver {
   async resolve(input: ResolveGraphInput): Promise<FsGraph> {
     const revision = this.cache.createWorkspaceGraphKey(input.documents, input.knownPaths)
     const cached = this.cache.getWorkspaceGraphByKey(revision)
-    if (cached) return cached
+    if (cached) return withRevision(cached, revision)
 
     const stored = await this.readStored(input.workspaceKey, revision)
     if (stored) {
       this.cache.setWorkspaceGraphByKey(revision, stored)
-      return stored
+      return withRevision(stored, revision)
     }
 
     const graph = await this.scheduler.run({
@@ -50,7 +50,7 @@ export class WorkspaceGraphResolver {
     if (this.scheduler.isCurrent(input.workspaceKey, revision)) {
       await this.store(input.workspaceKey, revision, graph)
     }
-    return graph
+    return withRevision(graph, revision)
   }
 
   clear(): void {
@@ -75,4 +75,8 @@ export class WorkspaceGraphResolver {
       this.options.logger.warn('workspace graph cache write failed', { error, workspaceKey })
     }
   }
+}
+
+const withRevision = (graph: FsGraph, revision: string): FsGraph => {
+  return graph.revision === revision ? graph : { ...graph, revision }
 }

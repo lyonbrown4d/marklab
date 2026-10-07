@@ -20,19 +20,28 @@ vi.mock('@/i18n/useI18n', () => ({
 vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
   useCommandFullTextSearchStream: () => fullText,
 }))
+vi.mock('@/components/titlebar/useWorkspaceNavigationQuery', () => ({
+  useWorkspaceNavigationQuery: () => ({
+    headings: [{ label: 'Guide', level: 2, path: 'docs/Guide.md', slug: 'guide', text: 'Guide' }],
+    navigationHeadings: [
+      { level: 2, path: 'docs/current.md', slug: 'guide-navigation', text: 'Guide navigation' },
+    ],
+    navigationOutgoingLinks: [],
+    navigationBacklinks: [],
+    navigationMissingLinks: [],
+    indexedFileCount: 1,
+    workspaceIndexed: true,
+    loading: false,
+    error: false,
+    retry: vi.fn(async () => undefined),
+  }),
+}))
 
 const baseProps: ComponentProps<typeof TitlebarCommandDialog> = {
   open: true,
   activePath: 'docs/current.md',
   files: [{ label: 'Guide.md', path: 'docs/Guide.md' }],
   recentFiles: [{ label: 'Recent.md', path: 'docs/Recent.md' }],
-  headings: [{ label: 'Guide.md', level: 2, path: 'docs/Guide.md', slug: 'guide', text: 'Guide' }],
-  navigationHeadings: [
-    { level: 2, path: 'docs/current.md', slug: 'guide-navigation', text: 'Guide navigation' },
-  ],
-  navigationOutgoingLinks: [],
-  navigationBacklinks: [],
-  navigationMissingLinks: [],
   onOpenFile: vi.fn(),
   onOpenHeading: vi.fn(),
   onOpenSearchResult: vi.fn(),
@@ -41,18 +50,7 @@ const baseProps: ComponentProps<typeof TitlebarCommandDialog> = {
   onOpenNavigationMissingLink: vi.fn(),
   onAction: vi.fn(),
   canCreateWorkspaceEntries: true,
-  workspaceIndexed: true,
-  indexedFileCount: 1,
   searchIndexRebuilding: false,
-  knowledgeSummary: {
-    fileCount: 1,
-    headingCount: 1,
-    internalLinkCount: 0,
-    linkedFileCount: 0,
-    missingLinkCount: 0,
-    orphanFileCount: 1,
-  },
-  collections: [],
   workspaceKey: 'external:/workspace',
 }
 

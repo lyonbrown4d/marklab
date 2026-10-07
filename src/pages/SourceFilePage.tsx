@@ -26,7 +26,6 @@ const SourceFilePage = () => {
       onOpenFileView: state.onOpenFileView,
       saveState: requestedPath ? state.saveStates[requestedPath] : undefined,
       showEditorStatusBar: state.showEditorStatusBar,
-      workspaceIndex: state.workspaceIndex,
     })),
   )
   const { t } = useI18n()
@@ -105,7 +104,6 @@ const SourceFilePage = () => {
       value={loadState.content}
       files={context.files}
       fileContents={context.fileContents}
-      workspaceIndex={context.workspaceIndex}
       onChange={context.onEditorChange}
       onOpenFileView={context.onOpenFileView}
       showStatusBar={context.showEditorStatusBar}

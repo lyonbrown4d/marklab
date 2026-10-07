@@ -1,9 +1,7 @@
 import type { Edge, Node } from '@xyflow/react'
-import type { FsGraph, FsWorkspaceIndex } from '@/services/fsApi'
-import { createFileLabel } from '@/logic/paths'
+import type { FsGraph } from '@/services/fsApi'
 import { graphNodeContent } from '@/logic/graphNodeContent'
 import type { PreviewFileKind } from '@/logic/fileTypes'
-import { appendPreviewNodesFromWorkspaceIndex } from '@/logic/graphPreviewNodes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
 import { applyDagreLayout } from '@/logic/graphDagreLayout'
@@ -74,143 +72,6 @@ export type GraphData = {
   layoutKey?: string
 }
 
-export const buildGraphFromWorkspaceIndex = (index: FsWorkspaceIndex): GraphData => {
-  const edges: Edge[] = []
-  const fileNodes = new Map<string, Node<GraphNodeData>>()
-  const externalNodes = new Map<string, Node<GraphNodeData>>()
-  const missingNodes = new Map<string, Node<GraphNodeData>>()
-  const headingNodes = new Map<string, Node<GraphNodeData>>()
-  const headingSlugIndex = new Map<string, Map<string, string>>()
-
-  index.files.forEach((file) => {
-    const label = createFileLabel(file.path)
-    fileNodes.set(file.path, {
-      id: `file:${file.path}`,
-      type: 'file',
-      data: { label, path: file.path },
-      position: { x: 0, y: 0 },
-    })
-  })
-
-  index.files.forEach((file) => {
-    const sourceId = `file:${file.path}`
-    const headingIdsBySlug = new Map<string, string>()
-    headingSlugIndex.set(file.path, headingIdsBySlug)
-
-    const headingStack: Array<{ level: number; id: string }> = []
-    file.headings.forEach((heading) => {
-      const headingId = `heading:${file.path}:${heading.slug}`
-      headingIdsBySlug.set(heading.slug, headingId)
-      headingNodes.set(headingId, {
-        id: headingId,
-        type: 'heading',
-        data: {
-          label: heading.text,
-          subtitle: `H${heading.level}`,
-          path: file.path,
-          line: heading.line,
-          level: heading.level,
-          slug: heading.slug,
-        },
-        position: { x: 0, y: 0 },
-      })
-      while (
-        headingStack.length > 0 &&
-        headingStack[headingStack.length - 1].level >= heading.level
-      ) {
-        headingStack.pop()
-      }
-      const parentId = headingStack[headingStack.length - 1]?.id ?? sourceId
-      edges.push({
-        id: `${parentId}->${headingId}-${edges.length}`,
-        source: parentId,
-        target: headingId,
-        data: { kind: 'contains' },
-      })
-      headingStack.push({ level: heading.level, id: headingId })
-    })
-  })
-
-  index.files.forEach((file) => {
-    const sourceId = `file:${file.path}`
-    file.links.forEach((link) => {
-      if (link.is_external) {
-        const url = link.target
-        if (!externalNodes.has(url)) {
-          const hostname = url.replace(/^https?:\/\//i, '').split('/')[0] ?? url
-          externalNodes.set(url, {
-            id: `ext:${url}`,
-            type: 'external',
-            data: { label: link.text || hostname, subtitle: hostname, url },
-            position: { x: 0, y: 0 },
-          })
-        }
-        edges.push({
-          id: `${sourceId}->ext:${url}-${edges.length}`,
-          source: sourceId,
-          target: `ext:${url}`,
-        })
-        return
-      }
-
-      const targetPath = link.target_path
-      if (!targetPath) return
-
-      const targetHeadingId = link.target_heading_slug
-        ? headingSlugIndex.get(targetPath)?.get(link.target_heading_slug)
-        : undefined
-      if (targetHeadingId) {
-        edges.push({
-          id: `${sourceId}->${targetHeadingId}-${edges.length}`,
-          source: sourceId,
-          target: targetHeadingId,
-        })
-        return
-      }
-
-      if (fileNodes.has(targetPath)) {
-        edges.push({
-          id: `${sourceId}->file:${targetPath}-${edges.length}`,
-          source: sourceId,
-          target: `file:${targetPath}`,
-        })
-        return
-      }
-
-      if (!missingNodes.has(targetPath)) {
-        missingNodes.set(targetPath, {
-          id: `missing:${targetPath}`,
-          type: 'missing',
-          data: { label: createFileLabel(targetPath), subtitle: targetPath, path: targetPath },
-          position: { x: 0, y: 0 },
-        })
-      }
-
-      edges.push({
-        id: `${sourceId}->missing:${targetPath}-${edges.length}`,
-        source: sourceId,
-        target: `missing:${targetPath}`,
-      })
-    })
-  })
-
-  const nodes = [
-    ...fileNodes.values(),
-    ...headingNodes.values(),
-    ...externalNodes.values(),
-    ...missingNodes.values(),
-  ]
-  if (nodes.length === 0) {
-    return { nodes, edges, layoutKey: 'empty' }
-  }
-
-  applyGraphLayout(nodes, edges)
-  return appendPreviewNodesFromWorkspaceIndex(
-    { nodes, edges, layoutKey: createGraphLayoutKey('index', nodes, edges) },
-    index,
-  )
-}
-
 export const buildGraphFromKnowledgeGraph = (
   graph: FsGraph,
   contentMode: GraphContentMode = 'none',
@@ -236,6 +97,9 @@ export const buildGraphFromKnowledgeGraph = (
       contentStartLine: includeContent ? (node.content_start_line ?? undefined) : undefined,
       contentEndLine: includeContent ? (node.content_end_line ?? undefined) : undefined,
       contentMode,
+      previewKind: node.preview_kind ?? undefined,
+      sourcePath: node.source_path ?? undefined,
+      target: node.target ?? undefined,
       workspaceGroup: node.group ?? undefined,
     },
     position: { x: 0, y: 0 },

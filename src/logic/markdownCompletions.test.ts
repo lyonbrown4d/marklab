@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getMarkdownCompletions } from '@/logic/markdownCompletions'
 import type { FileEntry } from '@/store/appTypes'
-import type { FsWorkspaceIndex } from '@/services/fsApi'
 
 const files: FileEntry[] = [
   { path: 'notes/current.md', kind: 'file' },
@@ -17,46 +16,6 @@ const fileContents = {
   'notes/target.md': '# Target\n## Details\n## API & UI\n',
   'daily/today.md': '# Today\n',
 }
-
-const workspaceIndex = {
-  files: [
-    {
-      path: 'notes/current.md',
-      headings: [{ path: 'notes/current.md', level: 1, text: 'Current', slug: 'current', line: 1 }],
-      links: [],
-    },
-    {
-      path: 'notes/target.md',
-      headings: [
-        { path: 'notes/target.md', level: 1, text: 'Target', slug: 'target', line: 1 },
-        {
-          path: 'notes/target.md',
-          level: 2,
-          text: 'Indexed Details',
-          slug: 'indexed-details',
-          line: 2,
-        },
-      ],
-      links: [],
-    },
-    {
-      path: 'daily/today.md',
-      headings: [{ path: 'daily/today.md', level: 1, text: 'Today', slug: 'today', line: 1 }],
-      links: [],
-    },
-  ],
-  paths: [
-    'notes',
-    'notes/current.md',
-    'notes/target.md',
-    'notes/calendar.ics',
-    'daily',
-    'daily/today.md',
-    'docs/spec.pdf',
-    'assets/logo.png',
-  ],
-  asset_paths: ['docs/spec.pdf', 'assets/logo.png'],
-} satisfies FsWorkspaceIndex
 
 describe('markdown completions', () => {
   it('suggests markdown file links relative to the active file', () => {
@@ -144,7 +103,6 @@ describe('markdown completions', () => {
         column: 19,
         files,
         fileContents,
-        workspaceIndex,
       }),
     ).toEqual([
       {
@@ -166,7 +124,6 @@ describe('markdown completions', () => {
         column: 15,
         files,
         fileContents,
-        workspaceIndex,
       }),
     ).toEqual([
       {
@@ -200,7 +157,7 @@ describe('markdown completions', () => {
     ])
   })
 
-  it('suggests heading anchors from the workspace index for other files', () => {
+  it('does not fabricate heading anchors when a linked file has not been loaded', () => {
     expect(
       getMarkdownCompletions({
         activePath: 'notes/current.md',
@@ -209,17 +166,8 @@ describe('markdown completions', () => {
         column: 29,
         files,
         fileContents: {},
-        workspaceIndex,
       }),
-    ).toEqual([
-      {
-        label: 'Indexed Details',
-        kind: 'heading',
-        insertText: 'indexed-details',
-        detail: 'notes/target.md#indexed-details',
-        replacementStartColumn: 24,
-      },
-    ])
+    ).toEqual([])
   })
 
   it('suggests heading anchors from the current unsaved content', () => {
@@ -231,7 +179,6 @@ describe('markdown completions', () => {
         column: 17,
         files,
         fileContents,
-        workspaceIndex,
       }),
     ).toEqual([
       {
