@@ -29,6 +29,8 @@ import type {
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
 } from '@electron/services/workspace/workspaceSearchTypes'
 import type {
   KnowledgeSearchOptions,
@@ -294,6 +296,14 @@ export class KnowledgeEngineService {
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return (await this.getSidecars()).search(workspaceId, query, limit)
+  }
+
+  async searchOccurrences(
+    workspaceId: string,
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+    return (await this.getSidecars()).searchOccurrences(workspaceId, request, signal)
   }
 
   async searchWithOptions(

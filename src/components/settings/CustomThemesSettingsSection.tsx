@@ -100,6 +100,7 @@ const CustomThemesSettingsSection = () => {
 
   return (
     <SettingsSection
+      targetId="settings-custom-themes"
       title={t('settings.customThemes')}
       description={t('settings.customThemesDescription')}
       icon={Upload}

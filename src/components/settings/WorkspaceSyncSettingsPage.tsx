@@ -47,6 +47,7 @@ const WorkspaceSyncSettingsPage = () => {
   return (
     <SettingsPageStack>
       <SettingsSection
+        targetId="settings-workspace-sync"
         title={t('sync.settings.title')}
         description={t('sync.settings.description')}
         icon={Cloud}

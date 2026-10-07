@@ -129,6 +129,24 @@ describe('CommandSearchResultRows', () => {
     await waitFor(() => expect(screen.getByText('Copied')).toBeTruthy())
   })
 
+  it('highlights matching query text with safe text nodes', () => {
+    const callbacks = baseCallbacks()
+    render(
+      <CommandResultRowItem
+        row={{
+          file: { label: 'Architecture Guide.md', path: 'docs/architecture/Guide.md' },
+          id: 'title-file:docs/architecture/Guide.md',
+          kind: 'title-file',
+        }}
+        query="arch"
+        {...callbacks}
+      />,
+    )
+
+    expect(screen.getAllByText(/Arch/i).some((node) => node.tagName === 'MARK')).toBe(true)
+    expect(screen.getByText('itecture Guide.md')).toBeInTheDocument()
+  })
+
   it('escapes markdown link labels and angle brackets in copied links', () => {
     clipboard.writeClipboardText.mockResolvedValueOnce(undefined)
     renderRow({
@@ -157,7 +175,7 @@ describe('CommandSearchResultRows', () => {
       kind: 'heading',
     })
 
-    fireEvent.click(screen.getByText('### Deep setup').closest('[role="button"]') as HTMLElement)
+    fireEvent.click(screen.getByText('Deep setup').closest('[role="button"]') as HTMLElement)
     fireEvent.click(
       screen.getByRole('button', { name: 'Copy markdown link docs/Guide.md#deep-setup' }),
     )

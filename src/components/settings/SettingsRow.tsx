@@ -29,6 +29,7 @@ type SettingsSectionProps = {
   title: ReactNode
   description?: ReactNode
   children: ReactNode
+  targetId?: string
   icon?: ElementType
   surface?: boolean
   className?: string
@@ -54,11 +55,16 @@ type SettingsSelectFieldProps = Omit<SettingsRowProps, 'control'> & {
 }
 
 export const SettingsPageStack = ({ className, ...props }: ComponentProps<'div'>) => {
-  return <div className={cn('flex flex-col gap-8', className)} {...props} />
+  return <div className={cn('flex flex-col gap-7', className)} {...props} />
 }
 
 export const SettingsFieldGroup = ({ className, ...props }: ComponentProps<typeof FieldGroup>) => {
-  return <FieldGroup className={cn('gap-0', className)} {...props} />
+  return (
+    <FieldGroup
+      className={cn('gap-0 [&>[data-slot=field]+[data-slot=field]]:border-t', className)}
+      {...props}
+    />
+  )
 }
 
 export const SettingsSubsection = ({
@@ -89,6 +95,7 @@ export const SettingsSection = ({
   title,
   description,
   children,
+  targetId,
   icon: Icon,
   surface = false,
   className,
@@ -96,7 +103,9 @@ export const SettingsSection = ({
 }: SettingsSectionProps) => {
   return (
     <section
-      className={cn('flex flex-col gap-4', surface && 'rounded-md bg-muted/30 p-3', className)}
+      id={targetId}
+      tabIndex={targetId ? -1 : undefined}
+      className={cn('flex flex-col gap-3', surface && 'rounded-lg bg-muted/30 p-4', className)}
     >
       <header className="flex items-start gap-3">
         {Icon && (
@@ -128,7 +137,7 @@ export const SettingsField = ({
       orientation="vertical"
       data-disabled={disabled ? 'true' : undefined}
       className={cn(
-        'items-start justify-between gap-3 py-3 data-[disabled=true]:opacity-60 sm:flex-row sm:gap-5 sm:[&>*]:w-auto',
+        'items-start justify-between gap-3 py-3.5 data-[disabled=true]:opacity-60 sm:flex-row sm:gap-5 sm:[&>*]:w-auto',
         className,
       )}
     >

@@ -22,6 +22,20 @@ describe('Node knowledge runtime build configuration', () => {
     expect(mise).not.toMatch(/^rust\s*=/m)
     expect(vite).toContain('entry: electronMainEntry')
     expect(electronVite).toContain('knowledgeSidecarEntry')
+    expect(electronVite).toContain('workspaceOccurrenceSearchWorkerEntry')
     expect(electronVite).not.toContain('localAiUtilityEntry')
+  })
+
+  it('keeps the occurrence worker entry out of the shared knowledge chunk', async () => {
+    const electronVite = await fs.readFile(path.join(process.cwd(), 'vite.electron.ts'), 'utf8')
+    const workerEntryRule = electronVite.indexOf(
+      "normalizedId.endsWith(\n      '/electron/services/knowledgeEngine/workspaceOccurrenceSearchWorkerEntry.ts'",
+    )
+    const sharedKnowledgeRule = electronVite.indexOf(
+      "normalizedId.includes('/electron/services/knowledgeEngine/')",
+    )
+
+    expect(workerEntryRule).toBeGreaterThanOrEqual(0)
+    expect(workerEntryRule).toBeLessThan(sharedKnowledgeRule)
   })
 })

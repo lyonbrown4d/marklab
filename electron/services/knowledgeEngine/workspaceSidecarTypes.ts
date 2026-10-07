@@ -29,6 +29,8 @@ import type { Logger } from '@electron/services/logger'
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
 } from '@electron/services/workspace/workspaceSearchTypes'
 import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
 
@@ -88,6 +90,10 @@ export type WorkspaceSidecarClient = {
   readWorkspaceFile: (path: string) => Promise<string>
   writeWorkspaceFile: (path: string, content: string) => Promise<KnowledgeWorkspacePathMutation>
   search: (query: string, limit: number) => Promise<FsSearchResult[]>
+  searchOccurrences: (
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ) => Promise<WorkspaceOccurrenceSearchResultSet>
   searchWithOptions: (
     query: string,
     options: KnowledgeSearchOptions,

@@ -39,6 +39,7 @@ import { migrateNodeSearchDatabase } from '@electron/services/knowledgeEngine/no
 const SEARCH_DATABASE_FILE = 'search.sqlite3'
 const BUSY_TIMEOUT_MS = 5_000
 const SEARCH_READ_BATCH_SIZE = 128
+const OCCURRENCE_READ_BATCH_SIZE = 32
 
 type SearchRow = WorkspaceSearchDocument & { rank: number }
 
@@ -153,6 +154,40 @@ export class NodeSearchDatabase {
       if (matches.length > 0) yield matches
       if (rows.length < SEARCH_READ_BATCH_SIZE) break
     }
+  }
+
+  async occurrenceDocuments(
+    maxDocuments: number,
+    maxCharacters: number,
+    maxDocumentCharacters: number,
+  ): Promise<{ documents: WorkspaceSearchDocument[]; truncated: boolean }> {
+    const documents: WorkspaceSearchDocument[] = []
+    const totalDocuments = await this.documents.count()
+    let characters = 0
+    let offset = 0
+    let truncated = false
+
+    while (offset < totalDocuments && documents.length < maxDocuments) {
+      const rows = await this.documents.listPage(OCCURRENCE_READ_BATCH_SIZE, offset)
+      if (rows.length === 0) break
+      offset += rows.length
+      for (const row of rows) {
+        if (row.content.length > maxDocumentCharacters) {
+          truncated = true
+          continue
+        }
+        if (characters + row.content.length > maxCharacters) {
+          truncated = true
+          break
+        }
+        documents.push({ content: row.content, path: row.path, title: row.title })
+        characters += row.content.length
+        if (documents.length >= maxDocuments) break
+      }
+      if (characters >= maxCharacters) break
+    }
+
+    return { documents, truncated: truncated || offset < totalDocuments }
   }
 
   async close(): Promise<void> {

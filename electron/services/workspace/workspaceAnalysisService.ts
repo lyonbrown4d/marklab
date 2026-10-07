@@ -9,7 +9,6 @@ import type {
   FsGraph,
   FsMarkdownDiagnostic,
   FsRootInfo,
-  FsSearchResult,
   FsWorkspaceIndex,
 } from '@electron/services/workspace/types'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
@@ -22,6 +21,7 @@ import {
 } from '@electron/services/workspace/workspaceSearchIndexLifecycle'
 import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue'
 import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import { WorkspaceSearchOperations } from '@electron/services/workspace/workspaceSearchOperations'
 import { WorkspaceGraphCache } from '@electron/services/workspace/workspaceGraphCache'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
 import {
@@ -47,12 +47,20 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   ) {
     super(app, shell, logger, localHistoryService, analysisKnowledgeEngineService)
     this.workspaceSearchIndex = workspaceSearchIndexFactory()
+    this.searchOperations = new WorkspaceSearchOperations({
+      activeSearchKey: () => this.activeWorkspaceSearchKey,
+      index: this.workspaceSearchIndex,
+      logger: this.logger,
+      prepare: () => this.prepareWorkspaceSearchIndex(),
+      runTask: (work, name) => this.runSearchIndexTask(work, name),
+    })
   }
 
   private readonly analysisWorker = new WorkspaceAnalysisWorkerClient(
     this.logger.child('analysis-worker'),
   )
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
+  private readonly searchOperations: WorkspaceSearchOperations
   private readonly graphCache = new WorkspaceGraphCache()
   private readonly analysisCache = new WorkspaceAnalysisCache()
   private readonly searchIndexUpdateQueue =
@@ -75,6 +83,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private needsSearchIndexRebuild = true
 
   override dispose(): void {
+    this.searchOperations.dispose()
     this.searchIndexBuildCoordinator.invalidate()
     this.searchIndexUpdateQueue.dispose()
     this.analysisCache.invalidate()
@@ -154,24 +163,16 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     return mergeMarkdownDiagnostics(localDiagnostics, sidecarDiagnostics)
   }
 
-  async searchWorkspace(value: unknown): Promise<FsSearchResult[]> {
-    const query = stringArg(value, 'query')
-    const limitValue = value && typeof value === 'object' && 'limit' in value ? value.limit : 20
-    const limit = typeof limitValue === 'number' && Number.isFinite(limitValue) ? limitValue : 20
+  searchWorkspace(value: unknown) {
+    return this.searchOperations.search(value)
+  }
 
-    return this.runSearchIndexTask(async () => {
-      await this.openWorkspaceSearchIndex()
-      await this.searchIndexUpdateQueue.flushPending()
-      await this.rebuildSearchIndexIfNeeded()
+  searchWorkspaceOccurrences(value: unknown) {
+    return this.searchOperations.searchOccurrences(value)
+  }
 
-      const indexedResult = await this.workspaceSearchIndex.search(query, limit)
-      this.logger.info('workspace search completed', {
-        queryLength: query.length,
-        resultCount: indexedResult.length,
-        searchKey: this.activeWorkspaceSearchKey.slice(0, 12),
-      })
-      return indexedResult
-    }, 'search-documents')
+  cancelWorkspaceOccurrenceSearch(value: unknown) {
+    return this.searchOperations.cancelOccurrenceSearch(value)
   }
 
   async rebuildSearchIndex(): Promise<void> {
@@ -250,6 +251,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     if (await this.buildSearchIndexFromWorkspace()) {
       this.needsSearchIndexRebuild = false
     }
+  }
+
+  private async prepareWorkspaceSearchIndex(): Promise<void> {
+    await this.openWorkspaceSearchIndex()
+    await this.searchIndexUpdateQueue.flushPending()
+    await this.rebuildSearchIndexIfNeeded()
   }
 
   private async buildSearchIndexFromWorkspace(): Promise<boolean> {

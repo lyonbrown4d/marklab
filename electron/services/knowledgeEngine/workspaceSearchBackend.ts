@@ -1,5 +1,9 @@
 import type { FsSearchResult } from '@electron/services/workspace/types'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import type {
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
+  WorkspaceSearchDocument,
+} from '@electron/services/workspace/workspaceSearchTypes'
 import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes'
 import type { KnowledgeSearchOptions } from '@electron/services/knowledgeEngine/knowledgeSearch'
 import type { WorkspaceSearchIndexBackend } from '@electron/services/workspace/workspaceSearchIndex'
@@ -45,6 +49,14 @@ export class KnowledgeEngineWorkspaceSearchBackend implements WorkspaceSearchInd
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return this.knowledgeEngine.search(workspaceId, query, limit)
+  }
+
+  searchOccurrences(
+    workspaceId: string,
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+    return this.knowledgeEngine.searchOccurrences(workspaceId, request, signal)
   }
 
   async searchWithOptions(workspaceId: string, query: string, options: KnowledgeSearchOptions) {

@@ -73,6 +73,7 @@ describe('AppCommandDialog', () => {
     expect(dialog).toBeInTheDocument()
     expect(dialog).toHaveClass('rounded-2xl')
     expect(dialog).toHaveClass('border-border/70')
+    expect(dialog).toHaveClass('[&>button:last-child]:hidden')
   })
 
   it('returns keyboard focus to the editor when dismissed without a DialogTrigger', async () => {
@@ -142,23 +143,26 @@ describe('AppCommandDialog', () => {
     },
   )
 
-  it.each(['Project outline', '@ Project outline', '# Project outline', '? Project outline'])(
-    'does not filter out matching results for the query %s',
-    async (query) => {
-      render(
-        <AppCommandDialog open onOpenChange={vi.fn()}>
-          <CommandInput aria-label="Search" />
-          <CommandList>
-            <CommandItem value="Project outline">Project outline</CommandItem>
-            <CommandItem value="Weekly notes">Weekly notes</CommandItem>
-          </CommandList>
-        </AppCommandDialog>,
-      )
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
-      await waitFor(() =>
-        expect(screen.getByRole('option', { name: 'Project outline' })).toBeVisible(),
-      )
-      expect(screen.queryByRole('option', { name: 'Weekly notes' })).not.toBeInTheDocument()
-    },
-  )
+  it.each([
+    'Project outline',
+    '@ Project outline',
+    '# Project outline',
+    '? Project outline',
+    '> Project outline',
+  ])('does not filter out matching results for the query %s', async (query) => {
+    render(
+      <AppCommandDialog open onOpenChange={vi.fn()}>
+        <CommandInput aria-label="Search" />
+        <CommandList>
+          <CommandItem value="Project outline">Project outline</CommandItem>
+          <CommandItem value="Weekly notes">Weekly notes</CommandItem>
+        </CommandList>
+      </AppCommandDialog>,
+    )
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: 'Project outline' })).toBeVisible(),
+    )
+    expect(screen.queryByRole('option', { name: 'Weekly notes' })).not.toBeInTheDocument()
+  })
 })

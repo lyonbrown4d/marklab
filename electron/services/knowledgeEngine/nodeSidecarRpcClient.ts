@@ -1,14 +1,14 @@
 import type { WorkspaceSidecarClient } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 import type {
+  NodeSidecarMessage,
   NodeSidecarMethod,
-  NodeSidecarRequest,
 } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 import { isNodeSidecarResponse } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 
 export type NodeSidecarProcessPort = {
   on(event: 'exit', listener: (code: number) => void): unknown
   on(event: 'message', listener: (message: unknown) => void): unknown
-  postMessage(message: NodeSidecarRequest): void
+  postMessage(message: NodeSidecarMessage): void
 }
 
 type PendingRequest = {
@@ -119,6 +119,20 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
       limit,
     )
   }
+  searchOccurrences(
+    request: Parameters<WorkspaceSidecarClient['searchOccurrences']>[0],
+    signal?: AbortSignal,
+  ) {
+    if (signal) {
+      return this.requestCancellable<
+        Awaited<ReturnType<WorkspaceSidecarClient['searchOccurrences']>>
+      >(signal, 'searchOccurrences', request)
+    }
+    return this.request<Awaited<ReturnType<WorkspaceSidecarClient['searchOccurrences']>>>(
+      'searchOccurrences',
+      request,
+    )
+  }
   searchWithOptions(
     query: string,
     options: Parameters<WorkspaceSidecarClient['searchWithOptions']>[1],
@@ -213,6 +227,7 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
         if (!pending) return
         this.pending.delete(id)
         pending.cleanup?.()
+        this.port.postMessage({ cancelId: id })
         reject(abortError())
       }
       signal.addEventListener('abort', onAbort, { once: true })
@@ -246,7 +261,7 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
 }
 
 const abortError = (): Error => {
-  const error = new Error('Markdown diagnostics request was cancelled')
+  const error = new Error('Knowledge engine request was cancelled')
   error.name = 'AbortError'
   return error
 }

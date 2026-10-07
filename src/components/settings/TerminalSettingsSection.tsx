@@ -61,7 +61,7 @@ const TerminalSettingsSection = () => {
   }
 
   return (
-    <SettingsSection title={t('settings.terminal')} icon={Terminal}>
+    <SettingsSection targetId="settings-terminal" title={t('settings.terminal')} icon={Terminal}>
       <SettingsField
         title={t('settings.terminalShell')}
         description={t('settings.terminalShellDescription')}

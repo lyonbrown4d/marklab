@@ -152,6 +152,13 @@ class NodeWorkspaceClient implements WorkspaceSidecarClient {
     return (await this.searchIndex.search(query, { limit })).results
   }
 
+  searchOccurrences(
+    request: Parameters<NodeSearchIndex['searchOccurrences']>[0],
+    signal?: AbortSignal,
+  ) {
+    return this.searchIndex.searchOccurrences(request, signal)
+  }
+
   async searchWithOptions(query: string, options: Parameters<NodeSearchIndex['search']>[1]) {
     return this.searchIndex.search(query, options)
   }

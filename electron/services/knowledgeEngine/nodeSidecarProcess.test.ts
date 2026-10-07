@@ -117,10 +117,11 @@ describe('Node knowledge sidecar process', () => {
 
     controller.abort()
     await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
+    expect(process.postMessage.mock.calls[1]?.[0]).toEqual({ cancelId: staleRequest.id })
 
     process.emit('message', { id: staleRequest.id, ok: true, result: [] })
     const current = started.client.getMarkdownDiagnostics('alpha.md', '[Current][missing]')
-    const currentRequest = process.postMessage.mock.calls[1]?.[0] as { id: number }
+    const currentRequest = process.postMessage.mock.calls[2]?.[0] as { id: number }
     process.emit('message', { id: currentRequest.id, ok: true, result: [{ line: 1 }] })
 
     await expect(current).resolves.toEqual([{ line: 1 }])

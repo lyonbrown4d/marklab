@@ -20,6 +20,7 @@ const ImmersiveSettingsSection = () => {
 
   return (
     <SettingsSection
+      targetId="settings-immersive-editing"
       title={t('settings.immersiveEditing')}
       description={t('settings.immersiveEditingDescription')}
       icon={Eye}

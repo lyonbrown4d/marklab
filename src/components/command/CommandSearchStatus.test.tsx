@@ -65,4 +65,23 @@ describe('CommandSearchStatus', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it.each([
+    ['rebuilding', { searchIndexRebuilding: true }, 'command.search.status.fullTextRebuilding'],
+    ['warming', { workspaceIndexed: false }, 'command.search.status.fullTextWarming'],
+    ['failed', { fullTextError: true }, 'command.search.status.fullTextOnlyError'],
+    ['ready', {}, 'command.search.status.fullTextReady:12'],
+  ])('uses accurate full-text-only copy while %s', (_name, overrides, message) => {
+    const props = { ...createProps(overrides), fullTextOnly: true }
+    render(<CommandSearchStatus {...props} />)
+
+    expect(screen.getByText(message)).toBeInTheDocument()
+  })
+
+  it('does not show a full-text minimum hint when full text is excluded', () => {
+    const props = { ...createProps({ query: 'a' }), includeFullText: false }
+    render(<CommandSearchStatus {...props} />)
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
 })

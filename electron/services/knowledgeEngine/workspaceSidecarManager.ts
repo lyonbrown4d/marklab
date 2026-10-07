@@ -20,6 +20,8 @@ import type {
 import type {
   WorkspaceSearchDocument,
   WorkspaceSearchMutationBatch,
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
 } from '@electron/services/workspace/workspaceSearchTypes'
 import {
   KnowledgeCloseDocumentInput,
@@ -250,6 +252,14 @@ export class WorkspaceSidecarManager {
 
   async search(workspaceId: string, query: string, limit: number): Promise<FsSearchResult[]> {
     return this.requireReady(workspaceId).client.search(query, limit)
+  }
+
+  searchOccurrences(
+    workspaceId: string,
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+    return this.requireReady(workspaceId).client.searchOccurrences(request, signal)
   }
 
   async searchWithOptions(

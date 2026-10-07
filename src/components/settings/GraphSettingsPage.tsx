@@ -42,6 +42,7 @@ const GraphSettingsPage = () => {
   return (
     <SettingsPageStack>
       <SettingsSection
+        targetId="settings-graph-minimap"
         title={t('settings.graphMiniMap')}
         description={t('settings.graphMiniMapDescription')}
         icon={Map}
@@ -78,6 +79,7 @@ const GraphSettingsPage = () => {
         </SettingsChoiceGrid>
       </SettingsSection>
       <SettingsSection
+        targetId="settings-graph-content"
         title={t('settings.graphContentMode')}
         description={t('settings.graphContentModeDescription')}
         icon={Map}

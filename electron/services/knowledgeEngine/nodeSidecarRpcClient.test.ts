@@ -17,14 +17,35 @@ describe('NodeSidecarRpcClient cancellation', () => {
 
     controller.abort()
     await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
+    expect(port.postMessage).toHaveBeenCalledWith({ cancelId: staleRequest.id })
     port.emit('message', { id: staleRequest.id, ok: true, result: [{ line: 99 }] })
 
     const current = client.getMarkdownDiagnostics('note.md', '[Current][missing]')
-    const currentRequest = port.postMessage.mock.calls[1]?.[0]
+    const currentRequest = port.postMessage.mock.calls[2]?.[0]
     port.emit('message', { id: currentRequest.id, ok: true, result: [{ line: 1 }] })
 
     await expect(current).resolves.toEqual([{ line: 1 }])
     expect(staleRequest.args).toEqual(['note.md', '[Stale][missing]'])
+  })
+
+  it('propagates occurrence-search cancellation to the utility process', async () => {
+    const port = new FakeProcessPort()
+    const client = new NodeSidecarRpcClient(port)
+    const controller = new AbortController()
+    const operation = client.searchOccurrences(
+      {
+        requestId: 'request-1',
+        query: 'needle',
+        options: { caseSensitive: false, wholeWord: false, useRegex: false },
+      },
+      controller.signal,
+    )
+    const request = port.postMessage.mock.calls[0]?.[0]
+
+    controller.abort()
+
+    await expect(operation).rejects.toMatchObject({ name: 'AbortError' })
+    expect(port.postMessage).toHaveBeenLastCalledWith({ cancelId: request.id })
   })
 })
 

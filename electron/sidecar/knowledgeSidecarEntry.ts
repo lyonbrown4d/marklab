@@ -1,5 +1,6 @@
 import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/nodeWorkspaceClient'
 import {
+  isNodeSidecarCancel,
   isNodeSidecarRequest,
   type NodeSidecarResponse,
 } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
@@ -11,11 +12,18 @@ if (!engineDataDir) throw new Error('Knowledge sidecar engine data directory is 
 if (!process.parentPort) throw new Error('Knowledge sidecar parent port is unavailable.')
 
 const client = createNodeWorkspaceClient(workspaceRoot, engineDataDir)
+const activeRequests = new Map<number, AbortController>()
 
 process.parentPort.on('message', (event) => {
   const request = event.data
+  if (isNodeSidecarCancel(request)) {
+    activeRequests.get(request.cancelId)?.abort()
+    return
+  }
   if (!isNodeSidecarRequest(request)) return
-  void dispatch(request.method, request.args)
+  const controller = new AbortController()
+  activeRequests.set(request.id, controller)
+  void dispatch(request.method, request.args, controller.signal)
     .then((result) => send({ id: request.id, ok: true, result }))
     .catch((error: unknown) =>
       send({
@@ -24,9 +32,23 @@ process.parentPort.on('message', (event) => {
         ok: false,
       }),
     )
+    .finally(() => activeRequests.delete(request.id))
 })
 
-const dispatch = async (method: keyof typeof client, args: unknown[]): Promise<unknown> => {
+const dispatch = async (
+  method: keyof typeof client,
+  args: unknown[],
+  signal: AbortSignal,
+): Promise<unknown> => {
+  if (method === 'searchOccurrences') {
+    return client.searchOccurrences(
+      args[0] as Parameters<typeof client.searchOccurrences>[0],
+      signal,
+    )
+  }
+  if (method === 'getMarkdownDiagnostics') {
+    return client.getMarkdownDiagnostics(args[0] as string, args[1] as string, signal)
+  }
   const handler = client[method] as unknown as (...values: unknown[]) => unknown
   return handler.apply(client, args)
 }

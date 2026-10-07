@@ -124,6 +124,7 @@ export const AiProviderSettingsSections = () => {
   return (
     <>
       <SettingsSection
+        targetId="settings-ai-local"
         title={t('settings.aiExternalLocal')}
         description={t('settings.aiExternalLocalDescription')}
         icon={Server}
@@ -148,6 +149,7 @@ export const AiProviderSettingsSections = () => {
         </div>
       </SettingsSection>
       <SettingsSection
+        targetId="settings-ai-cloud"
         title={t('settings.aiCloud')}
         description={t('settings.aiCloudDescription')}
         icon={Cloud}

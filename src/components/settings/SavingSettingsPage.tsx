@@ -1,11 +1,11 @@
-import { CloudCog } from 'lucide-react'
+import { Check, Save } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import {
-  SettingsFieldGroup,
+  SettingsChoiceButton,
+  SettingsChoiceGrid,
   SettingsPageStack,
   SettingsSection,
-  SettingsSwitchRow,
 } from '@/components/settings/SettingsRow'
 
 const SavingSettingsPage = () => {
@@ -16,24 +16,39 @@ const SavingSettingsPage = () => {
   return (
     <SettingsPageStack>
       <SettingsSection
+        targetId="settings-save-behavior"
         title={t('settings.saveBehavior')}
         description={t('settings.detailedSaveDescription')}
-        icon={CloudCog}
+        icon={Save}
       >
-        <SettingsFieldGroup>
-          <SettingsSwitchRow
-            title={t('settings.silentSave')}
-            description={t('settings.silentSaveDescription')}
-            checked={silentSave}
-            onCheckedChange={setSilentSave}
-          />
-          <SettingsSwitchRow
-            title={t('settings.detailedSave')}
-            description={t('settings.detailedSaveDescription')}
-            checked={!silentSave}
-            onCheckedChange={(checked) => setSilentSave(!checked)}
-          />
-        </SettingsFieldGroup>
+        <SettingsChoiceGrid columns={2} aria-label={t('settings.saveBehavior')}>
+          <SettingsChoiceButton
+            selected={silentSave}
+            className="h-auto items-start gap-3 p-3 text-left"
+            onClick={() => setSilentSave(true)}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{t('settings.silentSave')}</span>
+              <span className="mt-1 block whitespace-normal text-xs font-normal leading-5 text-muted-foreground">
+                {t('settings.silentSaveDescription')}
+              </span>
+            </span>
+            {silentSave ? <Check className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : null}
+          </SettingsChoiceButton>
+          <SettingsChoiceButton
+            selected={!silentSave}
+            className="h-auto items-start gap-3 p-3 text-left"
+            onClick={() => setSilentSave(false)}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{t('settings.detailedSave')}</span>
+              <span className="mt-1 block whitespace-normal text-xs font-normal leading-5 text-muted-foreground">
+                {t('settings.detailedSaveDescription')}
+              </span>
+            </span>
+            {!silentSave ? <Check className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : null}
+          </SettingsChoiceButton>
+        </SettingsChoiceGrid>
       </SettingsSection>
     </SettingsPageStack>
   )

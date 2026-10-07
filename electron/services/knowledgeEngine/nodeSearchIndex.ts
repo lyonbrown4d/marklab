@@ -28,8 +28,30 @@ import {
   queryTerms,
   resultForSearchDocument,
 } from '@electron/services/knowledgeEngine/nodeSearchText'
+import type {
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
+} from '@electron/services/workspace/workspaceSearchTypes'
+import type {
+  OccurrenceSearchInput,
+  OccurrenceSearchOutput,
+} from '@electron/services/knowledgeEngine/workspaceOccurrenceSearch'
+import { WorkspaceOccurrenceSearchWorkerClient } from '@electron/services/knowledgeEngine/workspaceOccurrenceSearchWorkerClient'
 
 export type { NodeSearchIndexStats } from '@electron/services/knowledgeEngine/nodeSearchStats'
+
+const MAX_OCCURRENCE_DOCUMENTS = 2_000
+const MAX_OCCURRENCE_CHARACTERS = 8 * 1024 * 1024
+const MAX_OCCURRENCE_DOCUMENT_CHARACTERS = 2 * 1024 * 1024
+const MAX_OCCURRENCE_RESULTS = 500
+
+type OccurrenceSearchRunner = {
+  run: (
+    documents: WorkspaceSearchDocument[],
+    input: OccurrenceSearchInput,
+    signal?: AbortSignal,
+  ) => Promise<OccurrenceSearchOutput>
+}
 
 export class NodeSearchIndex {
   private closePromise?: Promise<void>
@@ -45,6 +67,7 @@ export class NodeSearchIndex {
     private readonly storageDirectory?: string,
     private readonly workspaceIdentity = '',
     private readonly buildOptions: NodeSearchBuildOptions = {},
+    private readonly occurrenceSearch: OccurrenceSearchRunner = new WorkspaceOccurrenceSearchWorkerClient(),
   ) {}
 
   get size(): number {
@@ -140,6 +163,36 @@ export class NodeSearchIndex {
 
   search(query: string, options: KnowledgeSearchOptions = {}): Promise<KnowledgeSearchResultSet> {
     return this.runRead(() => this.performSearch(query, options))
+  }
+
+  searchOccurrences(
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+    return this.runRead(async () => {
+      this.assertOpen()
+      await this.readyForRead()
+      const batch = await this.getDatabase().occurrenceDocuments(
+        MAX_OCCURRENCE_DOCUMENTS,
+        MAX_OCCURRENCE_CHARACTERS,
+        MAX_OCCURRENCE_DOCUMENT_CHARACTERS,
+      )
+      const result = await this.occurrenceSearch.run(
+        batch.documents,
+        {
+          ...request.options,
+          limit: Math.min(Math.max(Math.trunc(request.limit ?? 100), 1), MAX_OCCURRENCE_RESULTS),
+          query: request.query,
+        },
+        signal,
+      )
+      return {
+        ...result,
+        requestId: request.requestId,
+        scannedDocuments: batch.documents.length,
+        truncated: batch.truncated,
+      }
+    })
   }
 
   private async performSearch(

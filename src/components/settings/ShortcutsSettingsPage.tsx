@@ -102,6 +102,7 @@ const ShortcutsSettingsPage = () => {
   return (
     <SettingsPageStack className="gap-5">
       <SettingsSection
+        targetId="settings-shortcuts"
         title={t('settings.shortcuts')}
         description={t('settings.shortcutsDescription')}
         icon={Keyboard}

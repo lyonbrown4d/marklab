@@ -3,7 +3,11 @@ import path from 'node:path'
 
 import type { FsSearchResult } from '@electron/services/workspace/types'
 import { isSearchIndexablePath } from '@electron/services/workspace/path'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
+import type {
+  WorkspaceOccurrenceSearchRequest,
+  WorkspaceOccurrenceSearchResultSet,
+  WorkspaceSearchDocument,
+} from '@electron/services/workspace/workspaceSearchTypes'
 import type { WorkspaceSearchMutationBatch } from '@electron/services/workspace/workspaceSearchTypes'
 import type {
   KnowledgeSearchOptions,
@@ -23,6 +27,11 @@ export type WorkspaceSearchIndexBackend = {
   removeDocument: (workspaceId: string, path: string) => Promise<void>
   removePathPrefix: (workspaceId: string, prefix: string) => Promise<void>
   search: (workspaceId: string, query: string, limit: number) => Promise<FsSearchResult[]>
+  searchOccurrences?: (
+    workspaceId: string,
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ) => Promise<WorkspaceOccurrenceSearchResultSet>
   searchWithOptions?: (
     workspaceId: string,
     query: string,
@@ -119,6 +128,16 @@ export class WorkspaceSearchIndex {
     }
     const results = await this.search(query, options.limit ?? 20)
     return { results, totalHits: results.length }
+  }
+
+  searchOccurrences(
+    request: WorkspaceOccurrenceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceOccurrenceSearchResultSet> {
+    if (!this.backend.searchOccurrences) {
+      throw new Error('Workspace occurrence search is not configured.')
+    }
+    return this.backend.searchOccurrences(this.requireWorkspaceId(), request, signal)
   }
 
   private requireWorkspaceId(): string {

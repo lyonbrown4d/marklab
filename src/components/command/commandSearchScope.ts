@@ -12,6 +12,7 @@ export const parseCommandSearchScope = (value: string): ParsedCommandSearch => {
   if (marker === '@') return { scope: 'files', query: trimmed.slice(1).trim() }
   if (marker === '#') return { scope: 'headings', query: trimmed.slice(1).trim() }
   if (marker === '?') return { scope: 'text', query: trimmed.slice(1).trim() }
+  if (marker === '>') return { scope: 'all', query: trimmed.slice(1).trim() }
 
   return { scope: 'all', query: trimmed }
 }

@@ -67,6 +67,7 @@ const FileSettingsPage = () => {
   return (
     <SettingsPageStack>
       <SettingsSection
+        targetId="settings-default-file-view"
         title={t('settings.defaultFileView')}
         description={t('settings.defaultFileViewDescription')}
       >
@@ -88,6 +89,7 @@ const FileSettingsPage = () => {
       </SettingsSection>
 
       <SettingsSection
+        targetId="settings-asset-strategy"
         title={t('settings.assetStrategy')}
         description={t('settings.assetStrategyDescription')}
       >
@@ -104,7 +106,11 @@ const FileSettingsPage = () => {
         </SettingsChoiceGrid>
       </SettingsSection>
 
-      <SettingsSection title={t('settings.drawio')} description={t('settings.drawioDescription')}>
+      <SettingsSection
+        targetId="settings-drawio"
+        title={t('settings.drawio')}
+        description={t('settings.drawioDescription')}
+      >
         <SettingsChoiceGrid columns={2} aria-label={t('settings.drawio')}>
           {drawioEditorModes.map((item) => (
             <SettingsChoiceButton

@@ -243,6 +243,7 @@ describe('Titlebar command palette', () => {
     await i18n.changeLanguage('zh-CN')
     renderTitlebar(createProps({ commandOpen: true, onOpenWorkspaceGraph }))
 
+    await userEvent.click(await screen.findByRole('tab', { name: '命令' }))
     await userEvent.type(screen.getByRole('combobox'), 'workspace graph')
     await userEvent.click(await screen.findByRole('option', { name: /打开工作区图谱/i }))
 
@@ -263,7 +264,7 @@ describe('Titlebar command palette', () => {
     )
 
     await userEvent.type(screen.getByRole('combobox'), 'spec')
-    await userEvent.click(await screen.findByText('docs/spec.pdf'))
+    await userEvent.click(await screen.findByRole('option', { name: /docs\/spec\.pdf/i }))
 
     expect(onOpenFile).toHaveBeenCalledWith('docs/spec.pdf')
   })
@@ -272,6 +273,7 @@ describe('Titlebar command palette', () => {
     const onOpenAllPages = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenAllPages }))
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Commands' }))
     await userEvent.click(await screen.findByRole('option', { name: /Open All Pages/i }))
 
     expect(onOpenAllPages).toHaveBeenCalledWith()
@@ -281,6 +283,7 @@ describe('Titlebar command palette', () => {
     const onOpenAllPages = vi.fn()
     renderTitlebar(createProps({ commandOpen: true, onOpenAllPages }))
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Commands' }))
     await userEvent.click(await screen.findByRole('option', { name: /^All pages/i }))
 
     expect(onOpenAllPages).toHaveBeenCalledWith('all')
@@ -294,6 +297,7 @@ describe('Titlebar command palette', () => {
       }),
     )
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Commands' }))
     expect(
       await screen.findByText('Project file creation is unavailable in single-file mode.'),
     ).toBeInTheDocument()

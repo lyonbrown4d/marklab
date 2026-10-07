@@ -37,6 +37,7 @@ type CommandSearchResultsProps = {
   workspaceIndexed: boolean
   indexedFileCount: number
   searchIndexRebuilding: boolean
+  includeFullText?: boolean
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
@@ -135,6 +136,7 @@ const CommandSearchResults = ({
   workspaceIndexed,
   indexedFileCount,
   searchIndexRebuilding,
+  includeFullText = true,
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
@@ -146,7 +148,7 @@ const CommandSearchResults = ({
   const hasDeferredQuery = deferredTrimmedQuery.length > 0
   const showFiles = scope === 'all' || scope === 'files'
   const showHeadings = scope === 'all' || scope === 'headings'
-  const showFullText = scope === 'all' || scope === 'text'
+  const showFullText = includeFullText && (scope === 'all' || scope === 'text')
   const fileFuse = useMemo(() => new Fuse(files, FILE_SEARCH_OPTIONS), [files])
   const headingFuse = useMemo(() => new Fuse(headings, HEADING_SEARCH_OPTIONS), [headings])
   const groupedResults = useMemo<LocalSearchGroups>(() => {
@@ -239,17 +241,29 @@ const CommandSearchResults = ({
         workspaceIndexed={workspaceIndexed}
         indexedFileCount={indexedFileCount}
         searchIndexRebuilding={searchIndexRebuilding}
+        includeFullText={includeFullText}
+        fullTextOnly={includeFullText && scope === 'text'}
       />
       {resultSections.map((section) => {
         const hiddenCount = getHiddenCount(section.totalCount, section.rows.length)
 
         return (
           <Fragment key={section.id}>
-            <CommandGroup heading={section.heading}>
+            <CommandGroup
+              heading={
+                <span className="flex items-center gap-2">
+                  <span>{section.heading}</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                    {section.totalCount}
+                  </span>
+                </span>
+              }
+            >
               {section.rows.map((row) => (
                 <CommandResultRowItem
                   key={row.id}
                   row={row}
+                  query={deferredTrimmedQuery}
                   onOpenFile={onOpenFile}
                   onOpenHeading={onOpenHeading}
                   onOpenSearchResult={onOpenSearchResult}

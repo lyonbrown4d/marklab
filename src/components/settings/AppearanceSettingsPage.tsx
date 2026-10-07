@@ -32,6 +32,7 @@ const AppearanceSettingsPage = () => {
   return (
     <SettingsPageStack className="gap-5">
       <SettingsSection
+        targetId="settings-theme"
         title={t('menu.theme')}
         description={t('settings.themeDescription')}
         icon={Palette}
@@ -108,6 +109,7 @@ const AppearanceSettingsPage = () => {
       <CustomThemesSettingsSection />
 
       <SettingsSection
+        targetId="settings-language"
         title={t('menu.language')}
         description={t('settings.languageDescription')}
         icon={Languages}

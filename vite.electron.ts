@@ -30,11 +30,22 @@ export const electronMainEntry = {
     import.meta.dirname,
     'electron/services/workspace/workspaceAnalysisWorkerEntry.ts',
   ),
+  workspaceOccurrenceSearchWorkerEntry: path.resolve(
+    import.meta.dirname,
+    'electron/services/knowledgeEngine/workspaceOccurrenceSearchWorkerEntry.ts',
+  ),
 }
 
 export const electronMainManualChunks = (id: string) => {
   const normalizedId = id.replaceAll('\\', '/')
 
+  if (
+    normalizedId.endsWith(
+      '/electron/services/knowledgeEngine/workspaceOccurrenceSearchWorkerEntry.ts',
+    )
+  ) {
+    return undefined
+  }
   if (normalizedId.includes('/electron/services/knowledgeEngine/')) {
     return 'main-knowledge-engine'
   }

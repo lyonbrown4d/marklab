@@ -16,7 +16,11 @@ const GeneralSettingsPage = () => {
 
   return (
     <SettingsPageStack>
-      <SettingsSection title={t('settings.general')} icon={MonitorCog}>
+      <SettingsSection
+        targetId="settings-status-bar"
+        title={t('settings.general')}
+        icon={MonitorCog}
+      >
         <SettingsSwitchRow
           title={t('settings.statusBar')}
           description={t('settings.statusBarDescription')}

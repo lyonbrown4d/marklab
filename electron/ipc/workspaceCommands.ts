@@ -91,6 +91,10 @@ const createWorkspaceCommandHandlers = (
       )
     },
     fs_search_workspace: (payload, event) => workspaceForEvent(event).searchWorkspace(payload),
+    fs_search_workspace_occurrences: (payload, event) =>
+      workspaceForEvent(event).searchWorkspaceOccurrences(payload),
+    fs_cancel_workspace_occurrence_search: (payload, event) =>
+      workspaceForEvent(event).cancelWorkspaceOccurrenceSearch(payload),
     fs_rebuild_search_index: (_payload, event) => workspaceForEvent(event).rebuildSearchIndex(),
     fs_update_buffer: (payload, event) => workspaceForEvent(event).updateBuffer(payload),
     fs_write_file: (payload, event) => workspaceForEvent(event).writeFile(payload),

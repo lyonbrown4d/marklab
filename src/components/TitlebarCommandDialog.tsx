@@ -1,10 +1,13 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { X } from 'lucide-react'
+import { useMemo } from 'react'
 import { CommandDialogLoadingBody } from '@/components/TitlebarCommandDialogFallback'
 import { CommandEmpty, CommandInput, CommandList } from '@/components/ui/command'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
 import type { FsSearchResult } from '@/services/fsApi'
 import CommandActionSections from '@/components/command/CommandActionSections'
+import CommandDialogFooter from '@/components/command/CommandDialogFooter'
 import CommandEmptyState from '@/components/command/CommandEmptyState'
 import CommandNavigationSection, {
   type CommandNavigationBacklink,
@@ -19,9 +22,7 @@ import CommandSearchResults, {
   type CommandFile,
   type CommandHeading,
 } from '@/components/command/CommandSearchResults'
-import { parseCommandSearchScope } from '@/components/command/commandSearchScope'
-import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
-import { useCommandFullTextSearchStream } from '@/components/command/useCommandFullTextSearchStream'
+import { useCommandDialogController } from '@/components/command/useCommandDialogController'
 import type { WorkspaceKnowledgeSummary } from '@/logic/knowledge'
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 
@@ -78,175 +79,194 @@ const TitlebarCommandDialog = ({
   dataReady = true,
 }: TitlebarCommandDialogProps) => {
   const { t } = useI18n()
-  const [query, setQuery] = useState('')
-  const [actionsOnly, setActionsOnly] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (!open) return
-    // The dialog shell may already be open when its lazy content arrives.
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus())
-    return () => window.cancelAnimationFrame(frame)
-  }, [open])
   const commandContentReady = useDeferredOpenContent(open)
   const contentReady = commandContentReady && dataReady
-  const deferredQuery = useDeferredValue(query)
-  const parsedSearch = useMemo(() => parseCommandSearchScope(query), [query])
-  const deferredParsedSearch = useMemo(
-    () => parseCommandSearchScope(deferredQuery),
-    [deferredQuery],
-  )
-  const trimmedQuery = parsedSearch.query
-  const deferredTrimmedQuery = deferredParsedSearch.query
-  const searching = trimmedQuery.length > 0 || parsedSearch.scope !== 'all'
-  const { searches, rememberSearch, clearSearchHistory } = useCommandSearchHistory()
-  const fullTextSearch = useCommandFullTextSearchStream({
-    limit: 8,
-    open: contentReady && !actionsOnly && deferredTrimmedQuery.length >= 2,
-    query: deferredTrimmedQuery,
-    scope: deferredParsedSearch.scope,
+  const controller = useCommandDialogController({
+    contentReady,
+    onOpenFile,
+    onOpenHeading,
+    onOpenSearchResult,
+    open,
     workspaceKey,
   })
+  const {
+    clearQuery,
+    clearSearchHistory,
+    deferredParsedSearch,
+    deferredQuery,
+    deferredTrimmedQuery,
+    fullTextSearch,
+    handleInputKeyDown,
+    handleQueryChange,
+    handleSelectMode,
+    handleSelectQuery,
+    inputRef,
+    mode,
+    parsedSearch,
+    query,
+    rememberAndOpenFile,
+    rememberAndOpenHeading,
+    rememberAndOpenSearchResult,
+    returnToQuickOpen,
+    searches,
+    searching,
+    trimmedQuery,
+  } = controller
   const fullTextResults = fullTextSearch.fullTextResults
   const emptyQueryLabel =
-    trimmedQuery.length > 0
-      ? t('command.noResultsFor', { query: trimmedQuery })
-      : t('command.noResults')
+    mode === 'commands'
+      ? t('command.emptyTitle.commands')
+      : mode === 'full-text'
+        ? t('command.emptyTitle.fullText')
+        : t('command.emptyTitle.quickOpen')
   const emptyDescription =
-    trimmedQuery.length === 0
-      ? t('command.searchHint')
-      : parsedSearch.scope === 'files'
-        ? t('command.empty.files')
-        : parsedSearch.scope === 'headings'
-          ? t('command.empty.headings')
-          : parsedSearch.scope === 'text'
-            ? t('command.empty.text')
-            : t('command.empty.all')
+    mode === 'commands'
+      ? t('command.empty.commands')
+      : mode === 'full-text'
+        ? t(trimmedQuery ? 'command.empty.text' : 'command.empty.fullTextPrompt')
+        : parsedSearch.scope === 'files'
+          ? t('command.empty.files')
+          : parsedSearch.scope === 'headings'
+            ? t('command.empty.headings')
+            : t(trimmedQuery ? 'command.empty.quickOpen' : 'command.empty.quickOpenPrompt')
   const emptyScopeSuggestions = useMemo(
-    () => [
-      { marker: '@', label: t('command.search.scopeFiles'), value: '@ ' },
-      { marker: '#', label: t('command.search.scopeHeadings'), value: '# ' },
-      { marker: '?', label: t('command.search.scopeText'), value: '? ' },
-    ],
-    [t],
+    () =>
+      mode !== 'quick-open'
+        ? []
+        : [
+            { marker: '@', label: t('command.search.scopeFiles'), value: '@ ' },
+            { marker: '#', label: t('command.search.scopeHeadings'), value: '# ' },
+          ],
+    [mode, t],
   )
-  const handleOpenFile = useCallback(
-    (path: string) => {
-      rememberSearch(deferredTrimmedQuery)
-      onOpenFile(path)
-    },
-    [deferredTrimmedQuery, onOpenFile, rememberSearch],
-  )
-  const handleOpenHeading = useCallback(
-    (path: string, slug: string) => {
-      rememberSearch(deferredTrimmedQuery)
-      onOpenHeading(path, slug)
-    },
-    [deferredTrimmedQuery, onOpenHeading, rememberSearch],
-  )
-  const handleOpenSearchResult = useCallback(
-    (result: FsSearchResult) => {
-      rememberSearch(deferredTrimmedQuery)
-      onOpenSearchResult(result)
-    },
-    [deferredTrimmedQuery, onOpenSearchResult, rememberSearch],
-  )
-  const handleSelectQuery = useCallback((nextQuery: string) => {
-    setActionsOnly(false)
-    setQuery(nextQuery)
-    inputRef.current?.focus()
-  }, [])
-
-  const handleCommandPaletteAction = useCallback(() => {
-    handleSelectQuery('')
-  }, [handleSelectQuery])
-
-  const handleToggleActions = useCallback(() => {
-    setActionsOnly((current) => !current)
-    setQuery('')
-    inputRef.current?.focus()
-  }, [])
+  const inputPlaceholder =
+    mode === 'commands'
+      ? t('command.placeholder.commands')
+      : mode === 'full-text'
+        ? t('command.placeholder.fullText')
+        : t('command.placeholder.quickOpen')
+  const suppressEmptyState =
+    mode === 'full-text' && (fullTextSearch.fullTextFetching || fullTextSearch.fullTextError)
 
   return (
     <>
-      <CommandInput
-        ref={inputRef}
-        value={query}
-        onValueChange={setQuery}
-        placeholder={t('sidebar.search')}
-        className="h-14 text-[15px]"
-      />
+      <div className="relative m-4 mb-3 rounded-xl border border-primary/55 bg-background shadow-sm shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/20">
+        <CommandInput
+          ref={inputRef}
+          aria-label={inputPlaceholder}
+          value={query}
+          onValueChange={handleQueryChange}
+          onKeyDown={handleInputKeyDown}
+          placeholder={inputPlaceholder}
+          className="h-14 pr-20 text-[15px] focus-visible:!shadow-none"
+        />
+        {query && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label={t('search.clear')}
+            className="absolute right-3 top-1/2 size-8 -translate-y-1/2 rounded-lg text-muted-foreground"
+            onClick={clearQuery}
+          >
+            <X className="size-4" />
+          </Button>
+        )}
+      </div>
       {contentReady ? (
         <>
-          <CommandSearchOverview
-            actionsOnly={actionsOnly}
-            scope={parsedSearch.scope}
-            onSelectScope={handleSelectQuery}
-            onToggleActions={handleToggleActions}
-          />
-          <CommandList className="max-h-[min(62vh,520px)] scroll-py-2 px-1 pb-2">
-            <CommandEmpty>
-              <CommandEmptyState
-                title={emptyQueryLabel}
-                description={emptyDescription}
-                suggestions={emptyScopeSuggestions}
-                onSelectScope={handleSelectQuery}
-              />
-            </CommandEmpty>
-            {!searching && !actionsOnly && (
-              <CommandSearchHistory
-                query={query}
-                searches={searches}
-                onSelectSearch={handleSelectQuery}
-                onClearSearches={clearSearchHistory}
-              />
-            )}
-            {!searching && !actionsOnly && (
-              <CommandRecentFilesSection
-                files={recentFiles}
-                query={deferredTrimmedQuery}
-                onOpenFile={handleOpenFile}
-              />
-            )}
-            {(actionsOnly || parsedSearch.scope === 'all') && (
-              <CommandNavigationSection
-                activePath={activePath}
-                headings={navigationHeadings}
-                outgoingLinks={navigationOutgoingLinks}
-                backlinks={navigationBacklinks}
-                missingLinks={navigationMissingLinks}
-                onOpenHeading={handleOpenHeading}
-                onOpenOutgoingLink={onOpenNavigationOutgoingLink}
-                onOpenBacklink={onOpenNavigationBacklink}
-                onOpenMissingLink={onOpenNavigationMissingLink}
-              />
-            )}
-            {searching && !actionsOnly && (
-              <CommandSearchResults
-                query={deferredQuery}
-                scope={deferredParsedSearch.scope}
-                files={files}
-                headings={headings}
-                fullTextResults={fullTextResults}
-                fullTextFetching={fullTextSearch.fullTextFetching}
-                fullTextError={fullTextSearch.fullTextError}
-                workspaceIndexed={workspaceIndexed}
-                indexedFileCount={indexedFileCount}
-                searchIndexRebuilding={searchIndexRebuilding}
-                onOpenFile={handleOpenFile}
-                onOpenHeading={handleOpenHeading}
-                onOpenSearchResult={handleOpenSearchResult}
-              />
-            )}
-            {(actionsOnly || parsedSearch.scope === 'all') && (
-              <CommandActionSections
-                canCreateWorkspaceEntries={canCreateWorkspaceEntries}
-                collections={collections}
-                searchIndexRebuilding={searchIndexRebuilding}
-                onCommandPaletteAction={handleCommandPaletteAction}
-                onAction={onAction}
-              />
-            )}
-          </CommandList>
+          <CommandSearchOverview mode={mode} onSelectMode={handleSelectMode} />
+          <div
+            role="tabpanel"
+            id="command-mode-results"
+            aria-labelledby={`command-mode-tab-${mode}`}
+          >
+            <CommandList className="mt-2 min-h-[260px] max-h-[min(56vh,520px)] scroll-py-2 px-2 pb-2">
+              <CommandEmpty>
+                {!suppressEmptyState && (
+                  <CommandEmptyState
+                    title={emptyQueryLabel}
+                    description={emptyDescription}
+                    suggestions={emptyScopeSuggestions}
+                    onSelectScope={handleSelectQuery}
+                  />
+                )}
+              </CommandEmpty>
+              {!searching && mode === 'quick-open' && (
+                <CommandSearchHistory
+                  query={query}
+                  searches={searches}
+                  onSelectSearch={handleSelectQuery}
+                  onClearSearches={clearSearchHistory}
+                />
+              )}
+              {!searching && mode === 'quick-open' && (
+                <CommandRecentFilesSection
+                  files={recentFiles}
+                  query={deferredTrimmedQuery}
+                  onOpenFile={rememberAndOpenFile}
+                />
+              )}
+              {mode === 'quick-open' && parsedSearch.scope === 'all' && (
+                <CommandNavigationSection
+                  activePath={activePath}
+                  headings={navigationHeadings}
+                  outgoingLinks={navigationOutgoingLinks}
+                  backlinks={navigationBacklinks}
+                  missingLinks={navigationMissingLinks}
+                  onOpenHeading={rememberAndOpenHeading}
+                  onOpenOutgoingLink={onOpenNavigationOutgoingLink}
+                  onOpenBacklink={onOpenNavigationBacklink}
+                  onOpenMissingLink={onOpenNavigationMissingLink}
+                />
+              )}
+              {mode === 'quick-open' && searching && (
+                <CommandSearchResults
+                  query={deferredQuery}
+                  scope={deferredParsedSearch.scope}
+                  files={files}
+                  headings={headings}
+                  fullTextResults={fullTextResults}
+                  fullTextFetching={fullTextSearch.fullTextFetching}
+                  fullTextError={fullTextSearch.fullTextError}
+                  workspaceIndexed={workspaceIndexed}
+                  indexedFileCount={indexedFileCount}
+                  searchIndexRebuilding={searchIndexRebuilding}
+                  includeFullText={false}
+                  onOpenFile={rememberAndOpenFile}
+                  onOpenHeading={rememberAndOpenHeading}
+                  onOpenSearchResult={rememberAndOpenSearchResult}
+                />
+              )}
+              {mode === 'full-text' && (
+                <CommandSearchResults
+                  query={deferredQuery}
+                  scope="text"
+                  files={[]}
+                  headings={[]}
+                  fullTextResults={fullTextResults}
+                  fullTextFetching={fullTextSearch.fullTextFetching}
+                  fullTextError={fullTextSearch.fullTextError}
+                  workspaceIndexed={workspaceIndexed}
+                  indexedFileCount={indexedFileCount}
+                  searchIndexRebuilding={searchIndexRebuilding}
+                  onOpenFile={rememberAndOpenFile}
+                  onOpenHeading={rememberAndOpenHeading}
+                  onOpenSearchResult={rememberAndOpenSearchResult}
+                />
+              )}
+              {mode === 'commands' && (
+                <CommandActionSections
+                  canCreateWorkspaceEntries={canCreateWorkspaceEntries}
+                  collections={collections}
+                  searchIndexRebuilding={searchIndexRebuilding}
+                  onCommandPaletteAction={returnToQuickOpen}
+                  onAction={onAction}
+                />
+              )}
+            </CommandList>
+          </div>
+          <CommandDialogFooter />
         </>
       ) : (
         <CommandDialogLoadingBody />

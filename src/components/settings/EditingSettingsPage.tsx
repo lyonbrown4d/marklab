@@ -26,6 +26,7 @@ const EditingSettingsPage = () => {
       <ImmersiveSettingsSection />
 
       <SettingsSection
+        targetId="settings-source-code"
         title={t('settings.sourceCode')}
         description={t('settings.sourceCodeDescription')}
       >
@@ -39,7 +40,11 @@ const EditingSettingsPage = () => {
         </SettingsFieldGroup>
       </SettingsSection>
 
-      <SettingsSection title={t('settings.motion')} description={t('settings.motionDescription')}>
+      <SettingsSection
+        targetId="settings-motion"
+        title={t('settings.motion')}
+        description={t('settings.motionDescription')}
+      >
         <SettingsFieldGroup>
           <SettingsSwitchRow
             title={t('settings.motionSmoothScrolling')}

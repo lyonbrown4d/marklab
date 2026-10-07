@@ -17,9 +17,15 @@ const sampleResult = vi.hoisted(() => ({
 }))
 
 const messages: Record<string, string> = {
+  'search.caseSensitive': 'Match case',
   'search.fullText': 'Full text search',
+  'search.regex': 'Use regular expression',
+  'search.wholeWord': 'Match whole word',
+  'search.workspaceTitle': 'Workspace search',
   'sidebar.searchAction': 'Search',
 }
+
+const panelKeyDown = vi.hoisted(() => vi.fn(() => true))
 
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
@@ -33,21 +39,38 @@ vi.mock('@/components/ui/input', () => ({
   )),
 }))
 
-vi.mock('@/components/FullTextSearchPanel', () => ({
-  default: ({
-    onOpenResult,
-    query,
-  }: {
-    onOpenResult: (result: FsSearchResult) => void
-    query: string
-  }) => (
-    <section aria-label="Full text panel" data-query={query}>
-      <button onClick={() => onOpenResult(sampleResult as FsSearchResult)} type="button">
-        Open full text result
-      </button>
-    </section>
-  ),
-}))
+vi.mock('@/components/FullTextSearchPanel', async () => {
+  const React = await import('react')
+  return {
+    default: React.forwardRef(
+      (
+        {
+          onOpenResult,
+          options,
+          query,
+        }: {
+          onOpenResult: (result: FsSearchResult) => void
+          options: Record<string, boolean>
+          query: string
+        },
+        ref: React.ForwardedRef<{ handleKeyDown: (key: string) => boolean }>,
+      ) => {
+        React.useImperativeHandle(ref, () => ({ handleKeyDown: panelKeyDown }))
+        return (
+          <section
+            aria-label="Full text panel"
+            data-options={JSON.stringify(options)}
+            data-query={query}
+          >
+            <button onClick={() => onOpenResult(sampleResult as FsSearchResult)} type="button">
+              Open full text result
+            </button>
+          </section>
+        )
+      },
+    ),
+  }
+})
 
 describe('SidebarSearchPanel', () => {
   it('uses the shared flat sidebar panel structure', () => {
@@ -60,10 +83,10 @@ describe('SidebarSearchPanel', () => {
       />,
     )
 
-    const panel = screen.getByRole('region', { name: 'Search' })
+    const panel = screen.getByRole('region', { name: 'Workspace search' })
     expect(panel).toHaveAttribute('data-sidebar-panel', 'search')
     expect(panel).toHaveClass('p-0')
-    expect(screen.getByRole('heading', { name: 'Search' })).toHaveClass(
+    expect(screen.getByRole('heading', { name: 'Workspace search' })).toHaveClass(
       'h-8',
       'px-1',
       'text-xs',
@@ -84,13 +107,15 @@ describe('SidebarSearchPanel', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { name: 'Search' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Workspace search' })).toBeTruthy()
     expect(screen.getByRole('searchbox', { name: 'Full text search' })).toHaveAttribute(
       'placeholder',
       'Full text search',
     )
     expect(
-      screen.getByRole('heading', { name: 'Search' }).querySelector('[class~="size-3.5"]'),
+      screen
+        .getByRole('heading', { name: 'Workspace search' })
+        .querySelector('[class~="size-3.5"]'),
     ).not.toBeNull()
   })
 
@@ -117,6 +142,24 @@ describe('SidebarSearchPanel', () => {
     expect(onOpenSearchResult).toHaveBeenCalledWith(sampleResult)
   })
 
+  it('does not truncate ordinary queries at the regular-expression safety limit', () => {
+    render(
+      <SidebarSearchPanel
+        focusWorkspaceSearchRequest={0}
+        rootKind="external"
+        rootPath="/workspace"
+        onOpenSearchResult={vi.fn()}
+      />,
+    )
+
+    const query = 'a'.repeat(140)
+    const searchbox = screen.getByRole('searchbox', { name: 'Full text search' })
+    expect(searchbox).not.toHaveAttribute('maxLength')
+
+    fireEvent.change(searchbox, { target: { value: query } })
+    expect(screen.getByLabelText('Full text panel')).toHaveAttribute('data-query', query)
+  })
+
   it('focuses the full-text query when a new focus request arrives', () => {
     const props = {
       focusWorkspaceSearchRequest: 0,
@@ -130,5 +173,34 @@ describe('SidebarSearchPanel', () => {
     rerender(<SidebarSearchPanel {...props} focusWorkspaceSearchRequest={1} />)
 
     expect(screen.getByRole('searchbox', { name: 'Full text search' })).toHaveFocus()
+  })
+
+  it('controls advanced options and delegates result navigation keys from the query field', () => {
+    render(
+      <SidebarSearchPanel
+        focusWorkspaceSearchRequest={0}
+        rootKind="external"
+        rootPath="/workspace"
+        onOpenSearchResult={vi.fn()}
+      />,
+    )
+
+    const panel = screen.getByLabelText('Full text panel')
+    expect(panel).toHaveAttribute(
+      'data-options',
+      JSON.stringify({ caseSensitive: false, wholeWord: false, useRegex: false }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Match case' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Match whole word' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use regular expression' }))
+    expect(panel).toHaveAttribute(
+      'data-options',
+      JSON.stringify({ caseSensitive: true, wholeWord: true, useRegex: true }),
+    )
+
+    fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Full text search' }), {
+      key: 'ArrowDown',
+    })
+    expect(panelKeyDown).toHaveBeenCalledWith('ArrowDown')
   })
 })

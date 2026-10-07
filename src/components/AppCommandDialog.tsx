@@ -83,13 +83,13 @@ const AppCommandDialog = ({ children, ...props }: DialogProps) => {
               )
           }
         }}
-        className="command-dialog-surface top-[44%] max-w-[760px] overflow-hidden rounded-2xl border-border/70 bg-popover/98 p-0 shadow-2xl shadow-foreground/10 backdrop-blur-xl transform-cpu will-change-auto data-[state=open]:!duration-150 data-[state=closed]:!duration-100 data-[state=open]:!zoom-in-[0.99] data-[state=closed]:!zoom-out-[0.99] motion-reduce:data-[state=open]:!animate-none motion-reduce:data-[state=closed]:!animate-none motion-reduce:transition-none"
+        className="command-dialog-surface !top-1/2 !w-[min(860px,calc(100vw-32px))] !max-w-[860px] !-translate-y-1/2 overflow-hidden rounded-2xl border-border/70 bg-popover/98 p-0 shadow-2xl shadow-foreground/15 backdrop-blur-xl transform-cpu will-change-auto [&>button:last-child]:hidden data-[state=open]:!duration-150 data-[state=closed]:!duration-100 data-[state=open]:!zoom-in-[0.99] data-[state=closed]:!zoom-out-[0.99] motion-reduce:data-[state=open]:!animate-none motion-reduce:data-[state=closed]:!animate-none motion-reduce:transition-none"
       >
         <DialogTitle className="sr-only">{t('command.palette')}</DialogTitle>
         <Command
           loop
           filter={filterCommand}
-          className="command-dialog-command rounded-2xl bg-transparent [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-1 [&_[cmdk-input-wrapper]]:border-border/60 [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-input-wrapper]_svg]:size-5 [&_[cmdk-input-wrapper]_svg]:text-muted-foreground [&_[cmdk-item]]:mx-1 [&_[cmdk-item]]:rounded-lg [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item]]:transition-colors [&_[cmdk-item]_svg]:size-4"
+          className="command-dialog-command rounded-2xl bg-transparent [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-1 [&_[cmdk-input-wrapper]]:rounded-xl [&_[cmdk-input-wrapper]]:border-0 [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-input-wrapper]_svg]:size-5 [&_[cmdk-input-wrapper]_svg]:text-muted-foreground [&_[cmdk-item]]:mx-1 [&_[cmdk-item]]:rounded-lg [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item]]:transition-colors [&_[cmdk-item]_svg]:size-4"
         >
           {children}
         </Command>

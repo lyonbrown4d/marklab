@@ -12,6 +12,8 @@ type CommandSearchStatusProps = {
   workspaceIndexed: boolean
   indexedFileCount: number
   searchIndexRebuilding: boolean
+  includeFullText?: boolean
+  fullTextOnly?: boolean
 }
 
 type StatusTone = keyof typeof statusToneClassName
@@ -64,6 +66,8 @@ const CommandSearchStatus = ({
   workspaceIndexed,
   indexedFileCount,
   searchIndexRebuilding,
+  includeFullText = true,
+  fullTextOnly = false,
 }: CommandSearchStatusProps) => {
   const { t } = useI18n()
   const trimmedQuery = query.trim()
@@ -74,7 +78,11 @@ const CommandSearchStatus = ({
         icon={<Spinner aria-hidden="true" className="size-3.5" role="presentation" />}
         tone="info"
       >
-        {t('command.search.status.rebuilding')}
+        {t(
+          fullTextOnly
+            ? 'command.search.status.fullTextRebuilding'
+            : 'command.search.status.rebuilding',
+        )}
       </StatusNotice>
     )
   }
@@ -82,20 +90,26 @@ const CommandSearchStatus = ({
   if (!workspaceIndexed) {
     return (
       <StatusNotice icon={<Database aria-hidden="true" className="size-3.5" />}>
-        {t('command.search.status.warming')}
+        {t(
+          fullTextOnly ? 'command.search.status.fullTextWarming' : 'command.search.status.warming',
+        )}
       </StatusNotice>
     )
   }
 
-  if (fullTextError) {
+  if (includeFullText && fullTextError) {
     return (
       <StatusNotice icon={<AlertCircle aria-hidden="true" className="size-3.5" />} tone="danger">
-        {t('command.search.status.fullTextError')}
+        {t(
+          fullTextOnly
+            ? 'command.search.status.fullTextOnlyError'
+            : 'command.search.status.fullTextError',
+        )}
       </StatusNotice>
     )
   }
 
-  if (fullTextFetching) {
+  if (includeFullText && fullTextFetching) {
     return (
       <StatusNotice icon={<Spinner aria-hidden="true" className="size-3.5" role="presentation" />}>
         {t('command.search.status.searching')}
@@ -103,7 +117,7 @@ const CommandSearchStatus = ({
     )
   }
 
-  if (trimmedQuery.length > 0 && trimmedQuery.length < 2) {
+  if (includeFullText && trimmedQuery.length > 0 && trimmedQuery.length < 2) {
     return (
       <StatusNotice icon={<Search aria-hidden="true" className="size-3.5" />}>
         {t('command.search.status.minQuery')}
@@ -112,9 +126,12 @@ const CommandSearchStatus = ({
   }
 
   if (!trimmedQuery) {
+    if (!includeFullText) return null
     return (
       <StatusNotice icon={<Database aria-hidden="true" className="size-3.5" />}>
-        {t('command.search.status.ready', { count: indexedFileCount })}
+        {t(fullTextOnly ? 'command.search.status.fullTextReady' : 'command.search.status.ready', {
+          count: indexedFileCount,
+        })}
       </StatusNotice>
     )
   }

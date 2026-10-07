@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
+import { useDoubleShiftCommandPalette } from '@/components/command/useDoubleShiftCommandPalette'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 const noop = () => undefined
@@ -93,13 +94,15 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       },
       [controlledCommandOpen, onCommandOpenChange],
     )
+    const openCommandPalette = useCallback(() => setCommandOpen(true), [setCommandOpen])
+    useDoubleShiftCommandPalette({ enabled: !commandOpen, onOpen: openCommandPalette })
 
     useImperativeHandle(
       ref,
       () => ({
-        openCommandPalette: () => setCommandOpen(true),
+        openCommandPalette,
       }),
-      [setCommandOpen],
+      [openCommandPalette],
     )
 
     const { platform, getAppWindow, isWindows, isMacDesktop } = useTitlebarPlatform()

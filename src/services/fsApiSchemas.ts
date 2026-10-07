@@ -176,6 +176,41 @@ export const fsSearchResultSchema = z.object({
   score: z.number(),
 })
 
+export const workspaceOccurrenceSearchOptionsSchema = z
+  .object({
+    caseSensitive: z.boolean(),
+    wholeWord: z.boolean(),
+    useRegex: z.boolean(),
+  })
+  .strict()
+
+export const workspaceOccurrenceSearchRequestSchema = z
+  .object({
+    requestId: z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/),
+    query: z
+      .string()
+      .min(1)
+      .max(256)
+      .refine((value) => value.trim().length > 0, 'Query must not be blank'),
+    limit: z.number().int().min(1).max(500).optional(),
+    options: workspaceOccurrenceSearchOptionsSchema,
+  })
+  .strict()
+
+export const workspaceOccurrenceSearchResultSetSchema = z
+  .object({
+    requestId: z.string(),
+    results: z.array(fsSearchResultSchema),
+    totalHits: z.number().int().nonnegative(),
+    scannedDocuments: z.number().int().nonnegative(),
+    truncated: z.boolean(),
+  })
+  .strict()
+
+export const workspaceOccurrenceSearchCancelResultSchema = z
+  .object({ requestId: z.string(), cancelled: z.boolean() })
+  .strict()
+
 export const fsMarkdownBlockSchema = z.object({
   id: z.string(),
   kind: z.enum(['paragraph', 'blockquote', 'code', 'list', 'divider', 'table']),
@@ -268,6 +303,18 @@ export type FsWorkspaceIndex = {
 }
 export type FsMarkdownDiagnostic = z.infer<typeof fsMarkdownDiagnosticSchema>
 export type FsSearchResult = z.infer<typeof fsSearchResultSchema>
+export type WorkspaceOccurrenceSearchOptions = z.infer<
+  typeof workspaceOccurrenceSearchOptionsSchema
+>
+export type WorkspaceOccurrenceSearchRequest = z.infer<
+  typeof workspaceOccurrenceSearchRequestSchema
+>
+export type WorkspaceOccurrenceSearchResultSet = z.infer<
+  typeof workspaceOccurrenceSearchResultSetSchema
+>
+export type WorkspaceOccurrenceSearchCancelResult = z.infer<
+  typeof workspaceOccurrenceSearchCancelResultSchema
+>
 export type FsMarkdownBlock = z.infer<typeof fsMarkdownBlockSchema>
 export type FsGraphNode = z.infer<typeof fsGraphNodeSchema>
 export type FsGraphEdge = z.infer<typeof fsGraphEdgeSchema>

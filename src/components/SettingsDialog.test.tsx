@@ -13,10 +13,20 @@ const labels: Record<string, string> = {
   'settings.description': 'Configure MarkLab desktop preferences.',
   'settings.editing': 'Editing',
   'settings.files': 'Files',
+  'settings.filesAndSaving': 'Files & saving',
+  'settings.filesAndSavingDescription': 'Control files, assets, and save feedback.',
   'settings.general': 'General',
+  'settings.generalDescription': 'Configure application and terminal behavior.',
   'settings.graphEditor': 'Graph editor',
+  'settings.group.application': 'Application',
+  'settings.group.smart': 'Smart features',
+  'settings.group.system': 'System',
+  'settings.group.workspace': 'Workspace',
   'settings.loading': 'Loading settings...',
+  'settings.search': 'Search settings...',
+  'settings.searchNoResults': 'No matching settings',
   'settings.saveBehavior': 'Saving',
+  'settings.silentSave': 'Silent autosave',
   'settings.shortcuts': 'Shortcuts',
   'settings.title': 'Settings',
 }
@@ -142,6 +152,66 @@ describe('SettingsDialog', () => {
 
     expect(await screen.findByText('AI settings panel')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'AI' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('groups navigation and combines file and saving settings', async () => {
+    const user = userEvent.setup()
+    renderSettingsDialog()
+
+    expect(screen.getByText('Application')).toBeInTheDocument()
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
+    expect(screen.getByText('Smart features')).toBeInTheDocument()
+    expect(screen.getByText('System')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Files' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Saving' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Files & saving' }))
+
+    expect(await screen.findByText('File settings panel')).toBeInTheDocument()
+    expect(screen.getByText('Saving settings panel')).toBeInTheDocument()
+  })
+
+  it('searches setting items and opens the matching page', async () => {
+    const user = userEvent.setup()
+    renderSettingsDialog()
+
+    const search = screen.getByRole('searchbox', { name: 'Search settings...' })
+    await user.type(search, 'silent autosave')
+    await user.click(screen.getByRole('option', { name: /Silent autosave/ }))
+
+    expect(screen.getByRole('tab', { name: 'Files & saving' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(await screen.findByText('Saving settings panel')).toBeInTheDocument()
+  })
+
+  it('moves from search into results with the keyboard and opens the focused result', async () => {
+    const user = userEvent.setup()
+    renderSettingsDialog()
+
+    const search = screen.getByRole('searchbox', { name: 'Search settings...' })
+    await user.type(search, 'silent autosave')
+    expect(search).toHaveAttribute('aria-expanded', 'true')
+    expect(search).toHaveAttribute('aria-controls')
+
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByRole('option', { name: /Silent autosave/ })).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('tab', { name: 'Files & saving' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  it('focuses settings search with the displayed shortcut', async () => {
+    const user = userEvent.setup()
+    renderSettingsDialog()
+
+    await user.keyboard('{Control>},{/Control}')
+
+    expect(screen.getByRole('searchbox', { name: 'Search settings...' })).toHaveFocus()
   })
 
   it('keeps the active settings tab in view when sections change', async () => {

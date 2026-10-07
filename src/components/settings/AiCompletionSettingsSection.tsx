@@ -53,6 +53,7 @@ export const AiCompletionSettingsSection = () => {
 
   return (
     <SettingsSection
+      targetId="settings-ai-completion"
       title={t('settings.aiCompletion')}
       description={t('settings.aiCompletionDescription')}
       icon={Sparkles}

@@ -8,6 +8,9 @@ export type NodeSidecarRequest = {
   args: unknown[]
 }
 
+export type NodeSidecarCancel = { cancelId: number }
+export type NodeSidecarMessage = NodeSidecarRequest | NodeSidecarCancel
+
 export type NodeSidecarResponse =
   { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string }
 
@@ -20,6 +23,12 @@ export const isNodeSidecarRequest = (value: unknown): value is NodeSidecarReques
     Array.isArray(request.args) &&
     allowedMethods.has(request.method as NodeSidecarMethod)
   )
+}
+
+export const isNodeSidecarCancel = (value: unknown): value is NodeSidecarCancel => {
+  if (!value || typeof value !== 'object') return false
+  const cancel = value as Partial<NodeSidecarCancel>
+  return typeof cancel.cancelId === 'number'
 }
 
 export const isNodeSidecarResponse = (value: unknown): value is NodeSidecarResponse => {
@@ -56,6 +65,7 @@ const allowedMethods = new Set<NodeSidecarMethod>([
   'renameWorkspacePath',
   'resyncMarkdownDocument',
   'search',
+  'searchOccurrences',
   'searchWithOptions',
   'shutdown',
   'upsertDocument',

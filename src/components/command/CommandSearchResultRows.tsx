@@ -1,6 +1,7 @@
 import { Copy, FileText, ListTree } from 'lucide-react'
 import { memo, useCallback, useState, type MouseEvent } from 'react'
 import { CommandItem } from '@/components/ui/command'
+import CommandHighlight from '@/components/command/CommandHighlight'
 import SearchResultPreview from '@/components/SearchResultPreview'
 import { useI18n } from '@/i18n/useI18n'
 import { writeClipboardText } from '@/runtime/clipboard'
@@ -31,6 +32,7 @@ export type CommandResultRow =
 
 type CommandResultRowItemProps = {
   row: CommandResultRow
+  query?: string
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
@@ -118,20 +120,25 @@ const FileResultRow = memo(
     file,
     kind,
     onOpenFile,
+    query,
   }: {
     file: CommandFile
     kind: 'title-file' | 'path-file'
     onOpenFile: (path: string) => void
+    query: string
   }) => (
     <CommandItem
+      className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
       value={kind === 'title-file' ? `${file.label} ${file.path}` : `${file.path} ${file.label}`}
       onSelect={() => onOpenFile(file.path)}
     >
       <FileText className="size-4" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate">{kind === 'title-file' ? file.label : file.path}</span>
+        <span className="block truncate font-medium">
+          <CommandHighlight query={query} text={kind === 'title-file' ? file.label : file.path} />
+        </span>
         <span className="block truncate text-[11px] text-muted-foreground">
-          {kind === 'title-file' ? file.path : file.label}
+          <CommandHighlight query={query} text={kind === 'title-file' ? file.path : file.label} />
         </span>
       </span>
       <CopyMarkdownLinkAction
@@ -146,12 +153,13 @@ FileResultRow.displayName = 'FileResultRow'
 
 const CommandResultRowItemComponent = ({
   row,
+  query = '',
   onOpenFile,
   onOpenHeading,
   onOpenSearchResult,
 }: CommandResultRowItemProps) => {
   if (row.kind === 'title-file' || row.kind === 'path-file') {
-    return <FileResultRow file={row.file} kind={row.kind} onOpenFile={onOpenFile} />
+    return <FileResultRow file={row.file} kind={row.kind} query={query} onOpenFile={onOpenFile} />
   }
 
   if (row.kind === 'heading') {
@@ -159,16 +167,20 @@ const CommandResultRowItemComponent = ({
 
     return (
       <CommandItem
+        className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
         value={`${heading.text} ${heading.slug} ${heading.path}`}
         onSelect={() => onOpenHeading(heading.path, heading.slug)}
       >
         <ListTree className="size-4" />
         <span className="min-w-0 flex-1">
           <span className="block truncate">
-            {'#'.repeat(Math.min(heading.level, 6))} {heading.text}
+            <span className="mr-2 font-mono text-muted-foreground">
+              {'#'.repeat(Math.min(heading.level, 6))}
+            </span>
+            <CommandHighlight query={query} text={heading.text} />
           </span>
           <span className="block truncate text-[11px] text-muted-foreground">
-            {heading.label}#{heading.slug}
+            <CommandHighlight query={query} text={`${heading.label}#${heading.slug}`} />
           </span>
         </span>
         <CopyMarkdownLinkAction
@@ -181,6 +193,7 @@ const CommandResultRowItemComponent = ({
 
   return (
     <CommandItem
+      className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
       value={`${row.result.title} ${row.result.path} ${row.result.snippet}`}
       onSelect={() => onOpenSearchResult(row.result)}
     >

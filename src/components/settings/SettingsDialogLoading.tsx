@@ -2,7 +2,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const settingsDialogContentClassName =
-  'settings-dialog-content bottom-0 left-0 right-0 top-0 m-auto translate-x-0 translate-y-0 transform-none will-change-auto grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-md border border-border bg-card p-0 text-card-foreground shadow-[0_16px_40px_-30px_hsl(var(--foreground)/0.34)] sm:h-[min(620px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(840px,calc(100vw-2rem))]'
+  'settings-dialog-content bottom-0 left-0 right-0 top-0 m-auto translate-x-0 translate-y-0 transform-none will-change-auto grid h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 text-card-foreground shadow-[0_24px_80px_-30px_hsl(var(--foreground)/0.42)] sm:h-[min(680px,calc(100vh-2rem))] sm:max-h-[calc(100vh-2rem)] sm:w-[min(980px,calc(100vw-2rem))]'
 
 export const SettingsDialogLoadingPanel = () => {
   const { t } = useI18n()

@@ -26,6 +26,8 @@ const allowedCommandNames = [
   'fs_get_workspace_graph_layout',
   'fs_save_workspace_graph_layout',
   'fs_search_workspace',
+  'fs_search_workspace_occurrences',
+  'fs_cancel_workspace_occurrence_search',
   'fs_rebuild_search_index',
   'fs_update_buffer',
   'fs_write_file',

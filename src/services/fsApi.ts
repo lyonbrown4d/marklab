@@ -19,6 +19,10 @@ import {
   fsWorkspaceIndexSchema,
   opaqueAssetUrlSchema,
   workspaceRelativeAssetPathSchema,
+  workspaceOccurrenceSearchRequestSchema,
+  workspaceOccurrenceSearchResultSetSchema,
+  workspaceOccurrenceSearchCancelResultSchema,
+  type WorkspaceOccurrenceSearchRequest,
   type MarkdownAssetImportStrategy,
 } from '@/services/fsApiSchemas'
 
@@ -59,6 +63,15 @@ export const fsApi = {
   async searchWorkspace(query: string, limit = 20) {
     const result = await invoke<unknown>('fs_search_workspace', { query, limit })
     return z.array(fsSearchResultSchema).parse(result)
+  },
+  async searchWorkspaceOccurrences(request: WorkspaceOccurrenceSearchRequest) {
+    const payload = workspaceOccurrenceSearchRequestSchema.parse(request)
+    const result = await invoke<unknown>('fs_search_workspace_occurrences', payload)
+    return workspaceOccurrenceSearchResultSetSchema.parse(result)
+  },
+  async cancelWorkspaceOccurrenceSearch(requestId: string) {
+    const result = await invoke<unknown>('fs_cancel_workspace_occurrence_search', { requestId })
+    return workspaceOccurrenceSearchCancelResultSchema.parse(result)
   },
   rebuildSearchIndex() {
     return invoke<void>('fs_rebuild_search_index')

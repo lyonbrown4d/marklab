@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { forwardRef, type ComponentProps, type ReactNode } from 'react'
+import { forwardRef, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TitlebarCommandDialog from '@/components/TitlebarCommandDialog'
 import type { FsSearchResult } from '@/services/fsApi'
@@ -31,14 +31,20 @@ vi.mock('@/components/ui/command', () => ({
   CommandList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CommandInput: forwardRef<
     HTMLInputElement,
-    { value: string; onValueChange: (value: string) => void; placeholder: string }
-  >(({ value, onValueChange, placeholder }, ref) => (
+    {
+      value: string
+      onValueChange: (value: string) => void
+      onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
+      placeholder: string
+    }
+  >(({ value, onValueChange, onKeyDown, placeholder }, ref) => (
     <input
       ref={ref}
       aria-label="Command input"
       placeholder={placeholder}
       value={value}
       onChange={(event) => onValueChange(event.target.value)}
+      onKeyDown={onKeyDown}
     />
   )),
 }))
@@ -138,7 +144,7 @@ const renderDialog = (overrides: Partial<ComponentProps<typeof TitlebarCommandDi
   return callbacks
 }
 
-const ready = () => screen.findByRole('button', { name: 'shortcuts.commandPalette' })
+const ready = () => screen.findByRole('tab', { name: 'command.mode.quickOpen' })
 const input = () => screen.getByRole('textbox', { name: 'Command input' })
 
 beforeEach(() => {
@@ -156,48 +162,55 @@ describe('TitlebarCommandDialog', () => {
     expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 
-  it('shows recent files with document navigation and actions on entry', async () => {
+  it('shows recent files with document navigation without mixing in commands on entry', async () => {
     const callbacks = renderDialog()
     await ready()
     expect(screen.getByRole('button', { name: 'Pick history' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Open recent file' }))
     expect(callbacks.onOpenFile).toHaveBeenCalledWith('docs/recent.md')
     expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Actions')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open navigation heading' })).toBeInTheDocument()
   })
 
-  it.each([
-    ['@', 'scopeFiles', 'files'],
-    ['#', 'scopeHeadings', 'headings'],
-    ['?', 'scopeText', 'text'],
-  ])(
-    'selects the %s scope and returns keyboard focus to the input',
-    async (marker, label, scope) => {
-      renderDialog()
-      await ready()
-      fireEvent.click(
-        screen.getAllByRole('button', { name: `${marker} command.search.${label}` })[0],
-      )
-      expect(input()).toHaveValue(`${marker} `)
-      expect(input()).toHaveFocus()
-      await waitFor(() =>
-        expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', scope),
-      )
-      expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
-    },
-  )
+  it('switches modes without mixing content and command results', async () => {
+    renderDialog()
+    await ready()
+
+    fireEvent.change(input(), { target: { value: 'guide' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.fullText' }))
+    expect(input()).toHaveFocus()
+    await waitFor(() =>
+      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', 'text'),
+    )
+    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Open navigation heading' }),
+    ).not.toBeInTheDocument()
+    expect(state.streamCalls.at(-1)).toMatchObject({ open: true, query: 'guide', scope: 'text' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open search result' }))
+    expect(state.rememberSearch).toHaveBeenCalledWith('? guide')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.commands' }))
+    expect(input()).toHaveFocus()
+    expect(screen.getByLabelText('Actions')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Open navigation heading' }),
+    ).not.toBeInTheDocument()
+  })
 
   it('searches instead of repeating recent files and remembers selections', async () => {
     const callbacks = renderDialog()
     await ready()
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'command-mode-results')
     fireEvent.change(input(), { target: { value: 'guide' } })
     await waitFor(() =>
       expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'guide'),
     )
     expect(screen.queryByRole('button', { name: 'Open recent file' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Actions')).toBeInTheDocument()
-    expect(state.streamCalls.at(-1)).toMatchObject({ open: true, query: 'guide' })
+    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
+    expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Open search file' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open search heading' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open search result' }))
@@ -209,7 +222,8 @@ describe('TitlebarCommandDialog', () => {
 
   it('opens explicit commands without full-text work and returns to recent content', async () => {
     const callbacks = renderDialog()
-    fireEvent.click(await ready())
+    await ready()
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.commands' }))
     expect(input()).toHaveFocus()
     fireEvent.change(input(), { target: { value: 'settings' } })
     expect(screen.queryByLabelText('Search results')).not.toBeInTheDocument()
@@ -220,6 +234,48 @@ describe('TitlebarCommandDialog', () => {
     expect(input()).toHaveValue('')
     expect(input()).toHaveFocus()
     expect(screen.getByRole('button', { name: 'Open recent file' })).toBeVisible()
+  })
+
+  it('switches modes with keyboard shortcuts and clears the current query', async () => {
+    renderDialog()
+    await ready()
+    fireEvent.change(input(), { target: { value: 'guide' } })
+
+    fireEvent.keyDown(input(), { ctrlKey: true, key: '2' })
+    expect(screen.getByRole('tab', { name: 'command.mode.fullText' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    fireEvent.keyDown(input(), { ctrlKey: true, key: '3' })
+    expect(screen.getByRole('tab', { name: 'command.mode.commands' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'search.clear' }))
+    expect(input()).toHaveValue('')
+    expect(input()).toHaveFocus()
+  })
+
+  it('normalizes legacy markers when switching modes and keeps content hints out of commands', async () => {
+    renderDialog()
+    await ready()
+    fireEvent.change(input(), { target: { value: '? guide' } })
+    expect(screen.getByRole('tab', { name: 'command.mode.fullText' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.quickOpen' }))
+    expect(input()).toHaveValue('guide')
+    await waitFor(() =>
+      expect(screen.getByLabelText('Search results')).toHaveAttribute('data-scope', 'all'),
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.commands' }))
+    fireEvent.click(screen.getByRole('button', { name: 'search.clear' }))
+    expect(
+      screen.queryByRole('button', { name: '@ command.search.scopeFiles' }),
+    ).not.toBeInTheDocument()
   })
 
   it('restores a history query and focuses the input', async () => {
@@ -236,9 +292,7 @@ describe('TitlebarCommandDialog', () => {
   it('does not mount expensive content until workspace data is ready', () => {
     renderDialog({ dataReady: false })
     expect(input()).toBeVisible()
-    expect(
-      screen.queryByRole('button', { name: 'shortcuts.commandPalette' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'command.mode.quickOpen' })).not.toBeInTheDocument()
     expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 })

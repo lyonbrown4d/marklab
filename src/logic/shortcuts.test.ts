@@ -43,6 +43,10 @@ describe('shortcuts', () => {
     )
   })
 
+  it('keeps the command palette available through Ctrl/Cmd+P', () => {
+    expect(defaultShortcutBindings['app.commandPalette']).toEqual(['Mod+P'])
+  })
+
   it('provides a quick read-only browsing shortcut', () => {
     expect(defaultShortcutBindings['view.toggleReadonly']).toEqual(['Mod+Shift+E'])
     expect(shortcutCategories.find((category) => category.id === 'workspace')?.actions).toEqual(

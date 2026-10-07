@@ -110,6 +110,13 @@ const createClient = (): WorkspaceSidecarClient => ({
   readWorkspaceFile: vi.fn(async () => '# Alpha'),
   renameWorkspacePath: vi.fn(async () => ({ changed: true, kind: 'file' as const })),
   search: vi.fn(async () => []),
+  searchOccurrences: vi.fn(async (request) => ({
+    requestId: request.requestId,
+    results: [],
+    scannedDocuments: 0,
+    totalHits: 0,
+    truncated: false,
+  })),
   searchWithOptions: vi.fn(async () => ({
     results: [
       {
