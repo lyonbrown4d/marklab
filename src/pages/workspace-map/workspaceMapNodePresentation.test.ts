@@ -45,10 +45,20 @@ describe('workspace map node presentation', () => {
 
     expect(file.width).toBeUndefined()
     expect(file.height).toBeUndefined()
+    expect(file.dragHandle).toBeUndefined()
     expect(webpage.width).toBeUndefined()
     expect(webpage.height).toBeUndefined()
     expect(webpage.dragHandle).toBe('.workspace-map-web-drag-handle')
     expect(webpage.draggable).toBe(true)
+  })
+
+  it('limits dragging to the title strip only while a Markdown editor is active', () => {
+    const active = presentWorkspaceMapNode(
+      node('file:notes/a.md', 'file', { path: 'notes/a.md' }),
+      'notes/a.md',
+    )
+
+    expect(active.dragHandle).toBe('.workspace-map-resource-drag-handle')
   })
 
   it('preserves user position and resized dimensions across graph refreshes', () => {

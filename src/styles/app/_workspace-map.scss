@@ -19,10 +19,13 @@
   min-height: 240px;
   border-color: color-mix(in srgb, var(--workspace-map-node-accent) 28%, hsl(var(--border)));
   container-type: inline-size;
-  cursor: text;
   box-shadow:
     0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent),
     0 18px 42px -30px color-mix(in srgb, hsl(var(--foreground)) 42%, transparent);
+}
+
+.workspace-map-editor[data-editor-active='true'] {
+  cursor: text;
 }
 
 .workspace-map-editor[data-workspace-map-collapsed='true'] {

@@ -74,7 +74,8 @@ const WorkspaceMapEmbeddedEditor = ({
       <section
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
-          'workspace-map-editor flex h-[112px] w-[248px] cursor-grab flex-col overflow-visible rounded-lg px-3 py-2.5 active:cursor-grabbing',
+          'workspace-map-editor flex h-[112px] w-[248px] flex-col overflow-visible rounded-lg px-3 py-2.5',
+          data.workspaceMapPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
           selected && 'workspace-map-editor--selected',
         )}
         aria-label={data.label}
@@ -119,6 +120,8 @@ const WorkspaceMapEmbeddedEditor = ({
     <section
       className={cn(
         'workspace-map-editor flex flex-col overflow-visible rounded-lg',
+        !editor &&
+          (data.workspaceMapPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'),
         selected && 'workspace-map-editor--selected',
       )}
       aria-label={editor ? `${t('workspaceMap.editing')} ${data.label}` : data.label}
@@ -131,7 +134,8 @@ const WorkspaceMapEmbeddedEditor = ({
       <header
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
-          'flex h-11 shrink-0 cursor-grab items-center gap-2 rounded-t-[inherit] border-b border-border/70 bg-muted/30 px-3 active:cursor-grabbing',
+          'flex h-11 shrink-0 items-center gap-2 rounded-t-[inherit] border-b border-border/70 bg-muted/30 px-3',
+          data.workspaceMapPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
         )}
         data-testid="workspace-map-resource-drag-handle"
       >

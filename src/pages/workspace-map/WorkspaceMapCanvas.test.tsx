@@ -175,10 +175,10 @@ describe('WorkspaceMapCanvas', () => {
     expect(flowPropsRef.current?.nodes[0]).toMatchObject({
       ariaLabel: 'A',
       ariaRole: 'button',
-      dragHandle: '.workspace-map-resource-drag-handle',
       focusable: true,
       draggable: true,
     })
+    expect(flowPropsRef.current?.nodes[0]?.dragHandle).toBeUndefined()
     expect(flowPropsRef.current?.nodes[2]).toMatchObject({
       ariaRole: 'group',
       dragHandle: '.embedded-preview-drag-handle',

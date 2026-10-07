@@ -122,6 +122,7 @@ describe('WorkspaceMapFileNode', () => {
 
     const surface = screen.getByTestId('workspace-map-editor-surface')
     expect(surface).not.toHaveClass('nodrag')
+    expect(surface).toHaveClass('cursor-grab', 'active:cursor-grabbing')
     expect(surface).toHaveClass('overflow-visible')
     expect(screen.getByTestId('workspace-map-resource-drag-handle')).toHaveTextContent('a')
     expect(surface.querySelector('.react-flow__resize-control')).toBeNull()
@@ -150,6 +151,7 @@ describe('WorkspaceMapFileNode', () => {
     const plateEditor = await screen.findByTestId('plate-editor')
     expect(plateEditor).not.toHaveAttribute('readonly')
     expect(surface).toHaveAttribute('data-editor-active', 'true')
+    expect(surface).not.toHaveClass('cursor-grab', 'active:cursor-grabbing')
     expect(surface).not.toHaveClass('nodrag', 'nopan')
     expect(screen.getByTestId('workspace-map-editor-content')).toHaveClass('nodrag', 'nopan')
     expect(surface.querySelector('.react-flow__resize-control')).not.toBeNull()
