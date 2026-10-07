@@ -97,6 +97,10 @@ export const createSourceCompletionHarness = (
       return { dispose: () => tokenListeners.delete(listener) }
     },
   }
+  const complete = () => {
+    if (!provider) throw new Error('Inline provider was not registered')
+    return provider.provideInlineCompletions(model, editor.getPosition(), {}, token)
+  }
   return {
     cancelToken: () => {
       token.isCancellationRequested = true
@@ -107,6 +111,7 @@ export const createSourceCompletionHarness = (
       version += 1
       contentListener()
     },
+    complete,
     editor,
     model,
     monaco,

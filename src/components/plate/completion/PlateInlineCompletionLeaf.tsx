@@ -3,16 +3,16 @@ import type { HTMLAttributes, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
-import type { PlateInlineCompletionCandidate } from '@/components/plate/completion/types'
+import type { PlateInlineDocumentCompletion } from '@/components/plate/completion/types'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
 type CompletionLeaf = TText & {
-  plateInlineCompletionAccept?: (index: number) => void
-  plateInlineCompletionCandidates?: readonly PlateInlineCompletionCandidate[]
+  plateInlineCompletionAccept?: (index?: number) => void
+  plateInlineCompletionCandidates?: readonly PlateInlineDocumentCompletion[]
   plateInlineCompletionIndex?: number
   plateInlineCompletion?: string
-  plateInlineCompletionSource?: 'ai' | 'document'
+  plateInlineCompletionKind?: 'ai' | 'document'
 }
 
 type PlateInlineCompletionLeafProps = {
@@ -21,34 +21,27 @@ type PlateInlineCompletionLeafProps = {
   leaf: TText
 }
 
-const CompletionCandidates = ({
+const DocumentCompletionMenu = ({
   accept,
   activeIndex,
   candidates,
-  source,
-  text,
 }: {
   accept?: (index: number) => void
   activeIndex: number
-  candidates: readonly PlateInlineCompletionCandidate[]
-  source?: PlateInlineCompletionCandidate['source']
-  text: string
+  candidates: readonly PlateInlineDocumentCompletion[]
 }) => {
   const { t } = useI18n()
   const activeCandidate = candidates[activeIndex]
-  const ghost = (
-    <span
-      aria-hidden="true"
-      className="marklab-ai-ghost-text"
-      contentEditable={false}
-      data-source={source}
-    >
-      {text}
-    </span>
-  )
   return (
     <Popover open>
-      <PopoverAnchor asChild>{ghost}</PopoverAnchor>
+      <PopoverAnchor asChild>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none inline-block size-0"
+          contentEditable={false}
+          data-completion-anchor=""
+        />
+      </PopoverAnchor>
       <PopoverContent
         align="start"
         className={cn(menuSurfaceStyles(), 'w-[min(28rem,calc(100vw-2rem))]')}
@@ -86,11 +79,7 @@ const CompletionCandidates = ({
                 className="shrink-0 text-[0.6875rem] text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
                 data-completion-meta=""
               >
-                {t(
-                  candidate.source === 'ai'
-                    ? 'editor.completionSourceAi'
-                    : 'editor.completionSourceDocument',
-                )}
+                {t('editor.completionSourceDocument')}
               </span>
             </Button>
           ))}
@@ -111,20 +100,18 @@ export const PlateInlineCompletionLeaf = ({
   return (
     <span {...attributes}>
       {children}
-      {text && candidates.length ? (
-        <CompletionCandidates
+      {completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
+        <DocumentCompletionMenu
           accept={completionLeaf.plateInlineCompletionAccept}
           activeIndex={completionLeaf.plateInlineCompletionIndex ?? 0}
           candidates={candidates}
-          source={completionLeaf.plateInlineCompletionSource}
-          text={text}
         />
-      ) : text ? (
+      ) : completionLeaf.plateInlineCompletionKind === 'ai' && text ? (
         <span
           aria-hidden="true"
           className="marklab-ai-ghost-text"
           contentEditable={false}
-          data-source={completionLeaf.plateInlineCompletionSource}
+          data-completion-kind="ai"
         >
           {text}
         </span>

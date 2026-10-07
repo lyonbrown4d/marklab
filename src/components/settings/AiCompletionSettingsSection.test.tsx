@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AiSettingsPage from '@/components/settings/AiSettingsPage'
+import enUS from '@/i18n/locales/en-US.json'
+import zhCN from '@/i18n/locales/zh-CN.json'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const api = vi.hoisted(() => ({
@@ -76,6 +78,11 @@ describe('AI completion settings', () => {
     vi.clearAllMocks()
     usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
     api.listProviders.mockResolvedValue([localProvider, cloudProvider])
+  })
+
+  it('labels the AI switch as suggestions in both supported languages', () => {
+    expect(zhCN['settings.aiCompletionEnabled']).toBe('启用 AI 自动提示')
+    expect(enUS['settings.aiCompletionEnabled']).toBe('Enable AI suggestions')
   })
 
   it('toggles completion and updates provider, trigger, length, and nearby context preferences', async () => {

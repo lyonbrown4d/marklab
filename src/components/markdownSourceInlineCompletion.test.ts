@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { registerMarkdownSourceInlineCompletion } from '@/components/markdownSourceInlineCompletion'
 import {
   createSourceCompletionHarness as createHarness,
-  sourceCompletionContext as context,
   sourceCompletionPreferences as preferences,
 } from '@/components/markdownSourceInlineCompletionTestHarness'
 
@@ -20,9 +19,7 @@ describe('markdown source inline completion', () => {
       requestCompletion: vi.fn(),
     })
 
-    const result = harness
-      .provider()
-      .provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    const result = harness.complete()
 
     expect(harness.monaco.languages.registerInlineCompletionsProvider).toHaveBeenCalledWith(
       'markdown',
@@ -55,16 +52,57 @@ Project plan includes`)
       requestCompletion: vi.fn(),
     })
 
-    const result = harness
-      .provider()
-      .provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    const result = harness.complete()
 
     expect(result.items.map(({ insertText }) => insertText)).toEqual([' reviewing the release.'])
   })
 
-  it('appends a delayed AI candidate and uses a stable completion session id', async () => {
+  it('returns document candidates without scheduling AI', async () => {
     const harness = createHarness()
     const requestCompletion = vi.fn().mockResolvedValue(' finish the draft')
+    registerMarkdownSourceInlineCompletion({
+      editor: harness.editor as never,
+      getDocumentKey: () => 'notes/current.md',
+      getPreferences: preferences,
+      monaco: harness.monaco as never,
+      requestCompletion,
+      resolveProviderLocality: vi.fn().mockResolvedValue('remote'),
+    })
+    const initial = harness.complete()
+    expect(initial.items).toHaveLength(1)
+    expect(requestCompletion).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(requestCompletion).not.toHaveBeenCalled()
+  })
+
+  it('rechecks the rebuilt local index before sending AI', async () => {
+    const harness = createHarness('Compose an original ending')
+    const requestCompletion = vi.fn(() => new Promise<string | null>(() => undefined))
+    registerMarkdownSourceInlineCompletion({
+      editor: harness.editor as never,
+      getDocumentKey: () => 'notes/current.md',
+      getPreferences: preferences,
+      monaco: harness.monaco as never,
+      requestCompletion,
+      resolveProviderLocality: vi.fn().mockResolvedValue('remote'),
+    })
+    const changed = vi.fn()
+    harness.provider().onDidChangeInlineCompletions(changed)
+    harness.model.getValue.mockClear()
+    harness.change('I plan to review the notes.\n\nI plan to')
+    expect(harness.complete().items).toEqual([])
+    await vi.advanceTimersByTimeAsync(180)
+    expect(harness.model.getValue).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(70)
+    expect(requestCompletion).not.toHaveBeenCalled()
+    expect(changed).toHaveBeenCalledOnce()
+    expect(harness.complete().items[0]?.insertText).toBe(' review the notes.')
+  })
+
+  it('returns delayed AI as the only candidate when the document has no match', async () => {
+    const harness = createHarness('Compose an original ending')
+    const requestCompletion = vi.fn().mockResolvedValue(' with a clear next step')
     registerMarkdownSourceInlineCompletion({
       editor: harness.editor as never,
       getDocumentKey: () => 'notes/current.md',
@@ -77,15 +115,8 @@ Project plan includes`)
     const changed = vi.fn()
     provider.onDidChangeInlineCompletions(changed)
 
-    const initial = provider.provideInlineCompletions(
-      harness.model,
-      harness.position(),
-      context,
-      harness.token,
-    )
-    expect(initial.items).toHaveLength(1)
-    expect(requestCompletion).not.toHaveBeenCalled()
-
+    const initial = harness.complete()
+    expect(initial.items).toEqual([])
     await vi.advanceTimersByTimeAsync(250)
     expect(requestCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -96,20 +127,12 @@ Project plan includes`)
       expect.any(AbortSignal),
     )
     expect(changed).toHaveBeenCalledOnce()
-    const refreshed = provider.provideInlineCompletions(
-      harness.model,
-      harness.position(),
-      context,
-      harness.token,
-    )
-    expect(refreshed.items.map(({ insertText }) => insertText)).toEqual([
-      ' review the notes.',
-      ' finish the draft',
-    ])
+    const refreshed = harness.complete()
+    expect(refreshed.items.map(({ insertText }) => insertText)).toEqual([' with a clear next step'])
   })
 
   it('cancels and discards AI work after token, version, or path becomes stale', async () => {
-    const harness = createHarness()
+    const harness = createHarness('Compose an original ending')
     let resolve: (value: string | null) => void = () => undefined
     let signal: AbortSignal | undefined
     const requestCompletion = vi.fn((_input, nextSignal: AbortSignal) => {
@@ -129,7 +152,7 @@ Project plan includes`)
     const provider = harness.provider()
     const changed = vi.fn()
     provider.onDidChangeInlineCompletions(changed)
-    provider.provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    harness.complete()
     await vi.advanceTimersByTimeAsync(250)
 
     harness.setPath('notes/other.md')
@@ -175,9 +198,7 @@ Project plan includes`)
       requestCompletion,
     })
 
-    const result = harness
-      .provider()
-      .provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    const result = harness.complete()
     vi.advanceTimersByTime(2_000)
 
     expect(result.items).toEqual([])
@@ -195,9 +216,7 @@ Project plan includes`)
     })
     harness.model.getValue.mockClear()
 
-    harness
-      .provider()
-      .provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    harness.complete()
     harness.change('I plan to review the notes.\n\nI plan today')
     harness.change('I plan to review the notes.\n\nI plan tomorrow')
     expect(harness.model.getValue).not.toHaveBeenCalled()
@@ -207,7 +226,7 @@ Project plan includes`)
   })
 
   it('reacts to preference subscriptions by cancelling and clearing stale AI suggestions', async () => {
-    const harness = createHarness()
+    const harness = createHarness('Compose an original ending')
     let current = preferences()
     let notifyPreferences: () => void = () => undefined
     let resolve: (value: string | null) => void = () => undefined
@@ -234,7 +253,7 @@ Project plan includes`)
     const provider = harness.provider()
     const changed = vi.fn()
     provider.onDidChangeInlineCompletions(changed)
-    provider.provideInlineCompletions(harness.model, harness.position(), context, harness.token)
+    harness.complete()
     await vi.advanceTimersByTimeAsync(250)
 
     current = { ...current, aiCompletionEnabled: false }
@@ -244,17 +263,14 @@ Project plan includes`)
 
     expect(signal?.aborted).toBe(true)
     expect(changed).toHaveBeenCalledOnce()
-    expect(
-      provider.provideInlineCompletions(harness.model, harness.position(), context, harness.token)
-        .items,
-    ).toHaveLength(1)
+    expect(harness.complete().items).toHaveLength(0)
     registration.dispose()
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
   it('requires consent for remote AI but allows local providers without it', async () => {
-    const remote = createHarness()
-    const local = createHarness()
+    const remote = createHarness('Compose an original remote ending')
+    const local = createHarness('Compose an original local ending')
     const remoteRequest = vi.fn().mockResolvedValue(' remote')
     const localRequest = vi.fn().mockResolvedValue(' local')
     const noConsent = () => ({ ...preferences(), aiCompletionCloudContextConsent: false })
@@ -274,10 +290,8 @@ Project plan includes`)
       requestCompletion: localRequest,
       resolveProviderLocality: vi.fn().mockResolvedValue('local'),
     })
-    remote
-      .provider()
-      .provideInlineCompletions(remote.model, remote.position(), context, remote.token)
-    local.provider().provideInlineCompletions(local.model, local.position(), context, local.token)
+    remote.complete()
+    local.complete()
 
     await vi.advanceTimersByTimeAsync(250)
     expect(remoteRequest).not.toHaveBeenCalled()

@@ -90,14 +90,7 @@ export const registerMarkdownSourceInlineCompletion = (
       snapshot.position.lineNumber,
       snapshot.position.column,
     )
-    const texts = [...documentTexts]
-    if (
-      aiCache?.key === snapshot.key &&
-      !texts.some((text) => text.trim() === aiCache?.text.trim())
-    ) {
-      texts.push(aiCache.text)
-    }
-    return texts.map((insertText) => ({ insertText, range }))
+    return documentTexts.map((insertText) => ({ insertText, range }))
   }
 
   const scheduleAi = (
@@ -117,6 +110,14 @@ export const registerMarkdownSourceInlineCompletion = (
     const timer = setTimeout(async () => {
       try {
         if (!isCurrent(snapshot, token) || requestGeneration !== generation) return
+        if (
+          options.getPreferences().documentCompletionEnabled &&
+          index.query(snapshot.context.prefix, snapshot.context.cursorOffset).length > 0
+        ) {
+          cancelActive()
+          fireChange()
+          return
+        }
         const locality = await resolveProviderLocality(snapshot.providerId)
         if (!isCurrent(snapshot, token) || requestGeneration !== generation) return
         const latestPreferences = options.getPreferences()
@@ -219,6 +220,10 @@ export const registerMarkdownSourceInlineCompletion = (
             .slice(0, MAX_DOCUMENT_CANDIDATES)
             .map(({ text }) => text)
         : []
+      if (documentTexts.length > 0) {
+        cancelActive()
+        return { items: completionItems(snapshot, documentTexts) }
+      }
       if (preferences.aiCompletionEnabled && providerId) {
         scheduleAi(
           snapshot,
@@ -230,7 +235,9 @@ export const registerMarkdownSourceInlineCompletion = (
       } else {
         cancelActive()
       }
-      return { items: completionItems(snapshot, documentTexts) }
+      return {
+        items: completionItems(snapshot, aiCache?.key === snapshot.key ? [aiCache.text] : []),
+      }
     },
   }
 

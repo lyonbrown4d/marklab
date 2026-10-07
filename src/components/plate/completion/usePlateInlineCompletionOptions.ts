@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import {
   buildPlateInlineCompletionRequest,
@@ -8,12 +8,11 @@ import type {
   PlateInlineCompletionControllerOptions,
   UsePlateInlineCompletionOptions,
 } from '@/components/plate/completion/types'
-import { DocumentCompletionIndex } from '@/logic/documentCompletionIndex'
+import { usePlateDocumentCompletionIndex } from '@/components/plate/completion/usePlateDocumentCompletionIndex'
 import { aiApi } from '@/services/aiApi'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
-const INDEX_REBUILD_DELAY_MS = 180
 let fallbackSessionId = 0
 
 const createSessionId = () => {
@@ -32,9 +31,10 @@ const canUseProvider = async (providerId: string, cloudConsent: boolean) => {
 
 export const usePlateInlineCompletionOptions = ({
   activePath,
+  editor,
   readOnly,
   value,
-}: Omit<UsePlateInlineCompletionOptions, 'editor'>) => {
+}: UsePlateInlineCompletionOptions) => {
   const documentEnabled = usePreferencesStore((state) => state.documentCompletionEnabled)
   const aiEnabled = usePreferencesStore((state) => state.aiCompletionEnabled)
   const dedicatedProviderId = usePreferencesStore((state) => state.aiCompletionProviderId)
@@ -54,34 +54,18 @@ export const usePlateInlineCompletionOptions = ({
     readOnly,
     triggerMode,
   })
-  const indexRef = useRef(new DocumentCompletionIndex())
-  const indexPathRef = useRef<string | null>(null)
-  const indexVersionRef = useRef(0)
   const revisionRef = useRef(0)
   const sessionIdRef = useRef(createSessionId())
-  const [indexRevision, setIndexRevision] = useState(0)
-
-  useEffect(() => {
-    indexVersionRef.current += 1
-    const version = indexVersionRef.current
-    if (indexPathRef.current !== activePath) {
-      indexPathRef.current = activePath
-      indexRef.current.destroy()
-      indexRef.current = new DocumentCompletionIndex()
-    }
-    const timer = window.setTimeout(() => {
-      indexRef.current.rebuild(value, version)
-      setIndexRevision((current) => current + 1)
-    }, INDEX_REBUILD_DELAY_MS)
-    return () => window.clearTimeout(timer)
-  }, [activePath, value])
-
-  useEffect(
-    () => () => {
-      indexRef.current.destroy()
-    },
-    [],
-  )
+  const {
+    getDocumentCompletions,
+    revision: indexRevision,
+    syncEditorChanges: syncDocumentIndex,
+  } = usePlateDocumentCompletionIndex({
+    activePath,
+    editor,
+    enabled: documentEnabled,
+    value,
+  })
 
   const options = useMemo<PlateInlineCompletionControllerOptions>(
     () => ({
@@ -92,9 +76,7 @@ export const usePlateInlineCompletionOptions = ({
         return !config.readOnly && (config.documentEnabled || config.aiEnabled)
       },
       getDocumentCompletions: (context) =>
-        configurationRef.current.documentEnabled
-          ? indexRef.current.query(context.before, undefined, { heading: context.heading })
-          : [],
+        configurationRef.current.documentEnabled ? getDocumentCompletions(context) : [],
       getDocumentKey: () => configurationRef.current.activePath,
       requestCompletion: async (context, excluded, signal) => {
         const config = configurationRef.current
@@ -116,12 +98,13 @@ export const usePlateInlineCompletionOptions = ({
         return text ? { source: 'ai' as const, text } : null
       },
     }),
-    [configurationRef],
+    [configurationRef, getDocumentCompletions],
   )
 
   return {
     indexRevision,
     options,
+    syncDocumentIndex,
     syncKey: [
       activePath,
       aiEnabled,

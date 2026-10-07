@@ -44,7 +44,6 @@ Project plan includes research.
 Project plan includes writing.`)
 
     const candidates = index.query('Project plan includes')
-
     expect(candidates.map(({ text }) => text)).toEqual([' research', ' writing.'])
   })
 
@@ -85,7 +84,6 @@ Some unrelated content.
 
 Continue with the nearby option.`
     index.rebuild(markdown)
-
     expect(index.query('Continue with the', markdown.length)[0]?.text).toBe(' nearby option.')
   })
 
@@ -122,7 +120,6 @@ Project plan includes reviewing the release.
 Project plan includes buying groceries.`
     const index = new DocumentCompletionIndex()
     index.rebuild(markdown)
-
     expect(index.query('Project plan includes', markdown.indexOf('# Personal') - 1)[0]?.text).toBe(
       ' reviewing the release.',
     )
@@ -170,7 +167,6 @@ Project plan includes buying groceries.`
     )
 
     const candidates = index.query('Topic')
-
     expect(index.size).toBeLessThanOrEqual(4)
     expect(candidates).toHaveLength(2)
     expect(candidates.every(({ text }) => text.length <= 12)).toBe(true)
@@ -181,11 +177,107 @@ Project plan includes buying groceries.`
     index.scheduleRebuild('Draft continues with stale text', 1)
     index.scheduleRebuild('Draft continues with current text', 2)
     index.scheduleRebuild('Draft continues with old text', 1)
-
     expect(index.query('Draft continues with')).toEqual([])
     await vi.advanceTimersByTimeAsync(40)
 
     expect(index.query('Draft continues with')[0]?.text).toBe(' current text')
     index.destroy()
+  })
+
+  it('finds Chinese, English, and mixed query anchors', () => {
+    const index = new DocumentCompletionIndex()
+    index.rebuild('Release计划面向AI users and reviewers.')
+
+    expect(index.query('Release计划')[0]?.text).toBe('面向AI users and reviewers.')
+    expect(index.query('计划面向AI')[0]?.text).toBe(' users and reviewers.')
+    expect(index.query('AI users')[0]?.text).toBe(' and reviewers.')
+  })
+
+  it('makes replaceBlocks equivalent to rebuilding the joined document', () => {
+    const blocks = [
+      { id: 'heading', text: '# Work' },
+      { id: 'first', text: 'Project plan includes reviewing the release.' },
+      { id: 'second', text: 'Another useful sentence.' },
+    ]
+    const rebuilt = new DocumentCompletionIndex()
+    const replaced = new DocumentCompletionIndex()
+    rebuilt.rebuild(blocks.map(({ text }) => text).join('\n'), 4)
+    replaced.replaceBlocks(blocks, 4)
+    expect(replaced.query('Project plan includes', undefined, { heading: 'Work' })).toEqual(
+      rebuilt.query('Project plan includes', undefined, { heading: 'Work' }),
+    )
+    expect(replaced.size).toBe(rebuilt.size)
+  })
+
+  it('upserts and removes blocks without retaining old candidates', () => {
+    const index = new DocumentCompletionIndex()
+    index.replaceBlocks([{ id: 'draft', text: 'Draft continues with stale text' }], 1)
+
+    expect(
+      index.applyBlockBatch(
+        [{ type: 'upsert', block: { id: 'draft', text: 'Draft continues with current text' } }],
+        2,
+      ),
+    ).toBe(true)
+    expect(index.query('Draft continues with')[0]?.text).toBe(' current text')
+    expect(index.query('stale text')).toEqual([])
+    expect(index.applyBlockBatch([{ type: 'remove', id: 'draft' }], 3)).toBe(true)
+    expect(index.query('Draft continues with')).toEqual([])
+  })
+
+  it('rejects stale incremental batches without changing the index', () => {
+    const index = new DocumentCompletionIndex()
+    index.replaceBlocks([{ id: 'draft', text: 'Draft continues with current text' }], 5)
+
+    expect(
+      index.applyBlockBatch(
+        [{ type: 'upsert', block: { id: 'draft', text: 'Draft continues with stale text' } }],
+        4,
+      ),
+    ).toBe(false)
+    expect(index.query('Draft continues with')[0]?.text).toBe(' current text')
+  })
+
+  it('keeps recent entries when maxEntries is constrained', () => {
+    const index = new DocumentCompletionIndex({ maxEntries: 2 })
+    index.replaceBlocks(
+      [
+        { id: 'old', text: 'Choice continues with old text' },
+        { id: 'middle', text: 'Choice continues with middle text' },
+        { id: 'recent', text: 'Choice continues with recent text' },
+      ],
+      1,
+    )
+
+    expect(index.query('Choice continues with').map(({ text }) => text)).toContain(' recent text')
+    expect(index.query('Choice continues with').map(({ text }) => text)).not.toContain(' old text')
+  })
+
+  it('uses heading metadata and a block-local cursor for scope and proximity', () => {
+    const index = new DocumentCompletionIndex()
+    index.replaceBlocks([
+      { id: 'heading', kind: 'heading', order: 0, text: 'Work' },
+      { id: 'far', order: 1, text: 'Continue with the distant option.' },
+      { id: 'padding', order: 2, text: 'Unrelated padding content.' },
+      { id: 'near', order: 3, text: 'Continue with the nearby option.' },
+    ])
+
+    expect(index.query('Continue with the', undefined, { blockId: 'near' })[0]?.text).toBe(
+      ' nearby option.',
+    )
+    expect(index.resolveBlockOffset('near', 2)).toBeGreaterThan(
+      index.resolveBlockOffset('far') ?? 0,
+    )
+  })
+
+  it('retains the active section when context truncation removes its heading', () => {
+    const body = 'Project plan includes reviewing the release.'
+    const markdown = `# Work\n${body}`
+    const index = new DocumentCompletionIndex({ maxContextLength: body.length })
+    index.rebuild(markdown)
+
+    expect(index.query('Project plan includes', markdown.length)[0]?.text).toBe(
+      ' reviewing the release.',
+    )
   })
 })

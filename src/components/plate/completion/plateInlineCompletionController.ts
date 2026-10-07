@@ -48,21 +48,29 @@ export const createPlateInlineCompletionController = (
   let destroyed = false
   let generation = 0
   let state: PlateInlineCompletionState | null = null
+  let stateOrigin: {
+    children: PlateEditor['children']
+    documentKey: string | null
+  } | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
   const listeners = new Set<() => void>()
 
-  const setState = (next: PlateInlineCompletionState | null) => {
+  const setState = (
+    next: PlateInlineCompletionState | null,
+    origin: typeof stateOrigin = next ? stateOrigin : null,
+  ) => {
     if (state === next) return
     state = next
+    stateOrigin = next ? origin : null
     listeners.forEach((listener) => listener())
   }
-  const cancel = (clear: boolean) => {
+  const cancel = () => {
     if (timer) clearTimeout(timer)
     timer = null
     abortController?.abort()
     abortController = null
     generation += 1
-    if (clear) setState(null)
+    setState(null)
   }
   const context = (nearby: boolean) => {
     if (destroyed || composing || !options.enabled()) return null
@@ -89,10 +97,6 @@ export const createPlateInlineCompletionController = (
   const runAiRequest = async () => {
     const completionContext = context(true)
     if (!completionContext) return
-    const maximum = options.maxCandidates ?? DEFAULT_MAX_CANDIDATES
-    const excluded = state?.candidates.map(({ text }) => text) ?? []
-    const capacity = maximum - excluded.length
-    if (capacity <= 0) return
     const controller = new AbortController()
     abortController?.abort()
     abortController = controller
@@ -102,15 +106,20 @@ export const createPlateInlineCompletionController = (
     const anchor = editor.selection ? { ...editor.selection.focus } : null
     if (!anchor) return
     try {
-      const result = await options.requestCompletion(completionContext, excluded, controller.signal)
+      const result = await options.requestCompletion(completionContext, [], controller.signal)
       if (controller.signal.aborted || !isCurrent(requestGeneration, children, documentKey, anchor))
         return
-      const additions = normalizePlateInlineCompletionCandidates(result, excluded, capacity, 'ai')
-      if (!additions.length) return
-      const retained = state?.candidates ?? []
-      const candidates = [...retained, ...additions]
-      const index = Math.min(state?.index ?? 0, candidates.length - 1)
-      setState({ anchor, candidates, index })
+      const candidate = normalizePlateInlineCompletionCandidates(result, [], 1, 'ai')[0]
+      if (!candidate) return
+      setState(
+        {
+          anchor,
+          candidates: [],
+          completion: { source: 'ai', text: candidate.text },
+          kind: 'ai',
+        },
+        { children, documentKey },
+      )
     } catch (error) {
       if (!controller.signal.aborted) console.warn('Plate inline completion request failed', error)
     } finally {
@@ -119,7 +128,7 @@ export const createPlateInlineCompletionController = (
   }
 
   const sync = () => {
-    cancel(true)
+    cancel()
     const localContext = context(false)
     if (!localContext || !editor.selection) return
     const requestGeneration = generation
@@ -130,9 +139,9 @@ export const createPlateInlineCompletionController = (
     const local = normalizePlateInlineCompletionCandidates(
       options.getDocumentCompletions?.(localContext),
       [],
-      Math.max(0, maximum - 1),
+      maximum,
       'document',
-    )
+    ).map(({ text }) => ({ source: 'document' as const, text }))
     queueMicrotask(() => {
       if (
         destroyed ||
@@ -140,13 +149,20 @@ export const createPlateInlineCompletionController = (
         generation !== requestGeneration ||
         editor.children !== children ||
         !editor.selection ||
+        !PointApi.equals(anchor, editor.selection.anchor) ||
         !PointApi.equals(anchor, editor.selection.focus) ||
         (options.getDocumentKey?.() ?? null) !== documentKey
       ) {
         return
       }
-      if (local.length) setState({ anchor, candidates: local, index: 0 })
+      if (local.length) {
+        setState(
+          { anchor, candidates: local, index: 0, kind: 'document' },
+          { children, documentKey },
+        )
+      }
     })
+    if (local.length) return
     timer = setTimeout(
       () => {
         timer = null
@@ -156,21 +172,27 @@ export const createPlateInlineCompletionController = (
     )
   }
 
+  const hasCurrentAnchor = () =>
+    Boolean(
+      state &&
+      stateOrigin &&
+      editor.children === stateOrigin.children &&
+      (options.getDocumentKey?.() ?? null) === stateOrigin.documentKey &&
+      editor.selection &&
+      PointApi.equals(state.anchor, editor.selection.anchor) &&
+      PointApi.equals(state.anchor, editor.selection.focus),
+    )
+
   const accept = (text: string) => {
-    if (
-      !text ||
-      !state ||
-      !editor.selection ||
-      !PointApi.equals(state.anchor, editor.selection.focus)
-    ) {
-      return false
-    }
-    cancel(true)
+    if (!text || !hasCurrentAnchor()) return false
+    cancel()
     editor.tf.insertText(text)
     return true
   }
-  const acceptAt = (index: number) => {
-    const candidate = state?.candidates[index]
+  const acceptAt = (index = 0) => {
+    if (!state) return false
+    const candidate =
+      state.kind === 'document' ? state.candidates[index] : index === 0 ? state.completion : null
     return candidate ? accept(candidate.text) : false
   }
 
@@ -184,57 +206,70 @@ export const createPlateInlineCompletionController = (
     },
     compositionStart: () => {
       composing = true
-      cancel(true)
+      cancel()
     },
     deactivate: () => {
       destroyed = true
-      cancel(true)
+      cancel()
     },
     decorate: ([node, path]: NodeEntry) => {
-      const candidate = state?.candidates[state.index]
       if (
         !state ||
-        !candidate ||
+        !hasCurrentAnchor() ||
         !TextApi.isText(node) ||
         !PathApi.equals(path, state.anchor.path)
       ) {
         return []
       }
-      return [
-        {
-          anchor: state.anchor,
-          focus: state.anchor,
-          plateInlineCompletion: candidate.text,
-          plateInlineCompletionAccept: acceptAt,
-          plateInlineCompletionCandidates: state.candidates,
-          plateInlineCompletionIndex: state.index,
-          plateInlineCompletionSource: candidate.source,
-        },
-      ]
+      const range = { anchor: state.anchor, focus: state.anchor }
+      return state.kind === 'document'
+        ? [
+            {
+              ...range,
+              plateInlineCompletionAccept: acceptAt,
+              plateInlineCompletionCandidates: state.candidates,
+              plateInlineCompletionIndex: state.index,
+              plateInlineCompletionKind: 'document',
+            },
+          ]
+        : [
+            {
+              ...range,
+              plateInlineCompletion: state.completion.text,
+              plateInlineCompletionAccept: acceptAt,
+              plateInlineCompletionKind: 'ai',
+            },
+          ]
     },
     destroy: () => {
       destroyed = true
-      cancel(true)
+      cancel()
       listeners.clear()
     },
     getSnapshot: () => state,
     keyDown: (event) => {
-      const candidate = state?.candidates[state.index]
-      if (event.key === 'Escape' && candidate) {
+      if (event.key === 'Escape' && state) {
         event.preventDefault()
-        cancel(true)
+        cancel()
         return true
       }
-      if (!candidate || composing || !options.enabled()) return false
+      if (!state || composing || !options.enabled() || !hasCurrentAnchor()) return false
+      const candidate = state.kind === 'ai' ? state.completion : state.candidates[state.index]
+      if (!candidate) return false
       if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey) {
         event.preventDefault()
         return accept(candidate.text)
       }
-      if (event.key === 'ArrowRight' && (event.ctrlKey || event.metaKey)) {
+      if (state.kind === 'document' && event.key === 'Enter' && !event.altKey) {
+        event.preventDefault()
+        return accept(candidate.text)
+      }
+      if (state.kind === 'ai' && event.key === 'ArrowRight' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault()
         return accept(nextWordPrefix(candidate.text))
       }
       if (
+        state.kind === 'document' &&
         (event.key === 'ArrowDown' || event.key === 'ArrowUp') &&
         !event.altKey &&
         !event.ctrlKey &&
@@ -243,15 +278,8 @@ export const createPlateInlineCompletionController = (
       ) {
         event.preventDefault()
         const offset = event.key === 'ArrowUp' ? -1 : 1
-        const index = (state!.index + offset + state!.candidates.length) % state!.candidates.length
-        setState({ ...state!, index })
-        return true
-      }
-      if (event.altKey && (event.key === '[' || event.key === ']')) {
-        event.preventDefault()
-        const offset = event.key === '[' ? -1 : 1
-        const index = (state!.index + offset + state!.candidates.length) % state!.candidates.length
-        setState({ ...state!, index })
+        const index = (state.index + offset + state.candidates.length) % state.candidates.length
+        setState({ ...state, index })
         return true
       }
       return false

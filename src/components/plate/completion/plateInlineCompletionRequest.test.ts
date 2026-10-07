@@ -20,6 +20,8 @@ describe('Plate inline completion request policy', () => {
       context: {
         after: 'suffix',
         before: 'prefix',
+        blockId: 'active-block',
+        blockOffset: 6,
         followingBlocks: ['after block'],
         heading: 'Plans',
         nodeType: 'p',

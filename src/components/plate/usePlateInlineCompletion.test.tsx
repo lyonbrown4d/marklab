@@ -26,6 +26,38 @@ const createEditor = (text: string) => {
   return editor
 }
 
+const createEditorWithReference = (reference: string, active: string) => {
+  const editor = createPlateEditor({
+    value: [
+      { id: 'reference', type: 'p', children: [{ text: reference }] },
+      { id: 'active', type: 'p', children: [{ text: active }] },
+    ],
+  })
+  editor.tf.select({
+    anchor: { path: [1, 0], offset: active.length },
+    focus: { path: [1, 0], offset: active.length },
+  })
+  return editor
+}
+
+const createEditorWithBlocks = () => {
+  const editor = createPlateEditor({
+    value: [
+      {
+        id: 'reference',
+        type: 'p',
+        children: [{ text: 'Project notes continue with the release checklist.' }],
+      },
+      { id: 'active', type: 'p', children: [{ text: 'Project notes continue' }] },
+    ],
+  })
+  editor.tf.select({
+    anchor: { path: [1, 0], offset: 'Project notes continue'.length },
+    focus: { path: [1, 0], offset: 'Project notes continue'.length },
+  })
+  return editor
+}
+
 describe('usePlateInlineCompletion', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -37,7 +69,7 @@ describe('usePlateInlineCompletion', () => {
   afterEach(() => vi.useRealTimers())
 
   it('indexes the current Markdown and exposes a local candidate', async () => {
-    const editor = createEditor('I plan to')
+    const editor = createEditorWithReference('I plan to review the notes tomorrow.', 'I plan to')
     const value = 'I plan to review the notes tomorrow.\n\nI plan to'
     const { result } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
@@ -45,11 +77,86 @@ describe('usePlateInlineCompletion', () => {
 
     await act(async () => vi.advanceTimersByTimeAsync(200))
 
-    expect(result.current.state?.candidates[0]).toMatchObject({
+    expect(result.current.state?.kind).toBe('document')
+    if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
+    expect(result.current.state.candidates[0]).toMatchObject({
       source: 'document',
       text: ' review the notes tomorrow.',
     })
     expect(result.current.renderLeaf).toBeTypeOf('function')
+  })
+
+  it('hydrates local suggestions from Plate blocks without waiting for Markdown serialization', async () => {
+    const editor = createEditorWithBlocks()
+    const { result } = renderHook(() =>
+      usePlateInlineCompletion({
+        activePath: 'note.md',
+        editor,
+        readOnly: false,
+        value: 'stale external snapshot',
+      }),
+    )
+
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(20))
+
+    expect(result.current.state?.kind).toBe('document')
+    if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
+    expect(result.current.state.candidates[0]).toMatchObject({
+      source: 'document',
+      text: ' with the release checklist.',
+    })
+  })
+
+  it('hydrates a newly activated document while the previous value echo is pending', async () => {
+    const firstEditor = createEditorWithReference('First notes continue tomorrow.', 'First notes')
+    const secondEditor = createEditorWithReference(
+      'Second notes continue with the migration plan.',
+      'Second notes continue',
+    )
+    const { result, rerender } = renderHook(
+      ({ activePath, editor, value }) =>
+        usePlateInlineCompletion({ activePath, editor, readOnly: false, value }),
+      {
+        initialProps: {
+          activePath: 'first.md',
+          editor: firstEditor,
+          value: 'first snapshot',
+        },
+      },
+    )
+
+    act(() => result.current.onEditorChange())
+    rerender({ activePath: 'second.md', editor: secondEditor, value: 'second snapshot' })
+    await act(async () => vi.advanceTimersByTimeAsync(20))
+
+    expect(result.current.state?.kind).toBe('document')
+    if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
+    expect(result.current.state.candidates[0]?.text).toBe(' with the migration plan.')
+  })
+
+  it('hydrates a same-path history restore while a local value echo is pending', async () => {
+    const editor = createEditorWithReference('First notes continue tomorrow.', 'First notes')
+    const restored = createEditorWithReference(
+      'Restored notes continue with the recovery plan.',
+      'Restored notes continue',
+    )
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
+      { initialProps: { value: 'first snapshot' } },
+    )
+
+    act(() => result.current.onEditorChange())
+    editor.children = restored.children
+    editor.selection = restored.selection
+    rerender({ value: 'restored external snapshot' })
+    act(() => result.current.onSelectionChange())
+    await act(async () => vi.advanceTimersByTimeAsync(20))
+
+    expect(result.current.state?.kind).toBe('document')
+    if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
+    expect(result.current.state.candidates[0]?.text).toBe(' with the recovery plan.')
   })
 
   it('uses the configured provider and AI request preferences', async () => {
@@ -85,7 +192,7 @@ describe('usePlateInlineCompletion', () => {
   })
 
   it('cancels and clears completion when preferences disable it', async () => {
-    const editor = createEditor('I plan to')
+    const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'
     const { result } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
@@ -98,7 +205,7 @@ describe('usePlateInlineCompletion', () => {
   })
 
   it('defers value-change completion work until after the next paint', async () => {
-    const editor = createEditor('I plan to')
+    const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'
     const { result } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
@@ -115,7 +222,7 @@ describe('usePlateInlineCompletion', () => {
   })
 
   it('clears suggestions while its cached route is inactive and resumes on return', async () => {
-    const editor = createEditor('I plan to')
+    const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'
     const { result, rerender } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),

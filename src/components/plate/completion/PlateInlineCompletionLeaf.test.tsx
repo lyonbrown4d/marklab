@@ -3,15 +3,13 @@ import type { PlateLeafProps } from 'platejs/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PlateInlineCompletionLeaf } from '@/components/plate/completion/PlateInlineCompletionLeaf'
 
-const renderLeaf = (completion?: string, leafOverrides: Record<string, unknown> = {}) =>
+const renderLeaf = (leafOverrides: Record<string, unknown> = {}) =>
   render(
     <PlateInlineCompletionLeaf
       {...({
         attributes: { 'data-testid': 'leaf' },
         children: 'Typed text',
         leaf: {
-          plateInlineCompletion: completion,
-          plateInlineCompletionSource: 'ai',
           text: '',
           ...leafOverrides,
         },
@@ -22,29 +20,34 @@ const renderLeaf = (completion?: string, leafOverrides: Record<string, unknown> 
 
 describe('PlateInlineCompletionLeaf', () => {
   it('renders ghost text as inert escaped content', () => {
-    renderLeaf('<img src=x onerror=alert(1)>')
+    renderLeaf({
+      plateInlineCompletion: '<img src=x onerror=alert(1)>',
+      plateInlineCompletionKind: 'ai',
+    })
 
     const ghost = screen.getByText('<img src=x onerror=alert(1)>')
     expect(ghost).toHaveAttribute('aria-hidden', 'true')
     expect(ghost).toHaveAttribute('contenteditable', 'false')
-    expect(ghost).toHaveAttribute('data-source', 'ai')
+    expect(ghost).toHaveAttribute('data-completion-kind', 'ai')
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
   it('does not render an empty ghost node', () => {
-    renderLeaf()
+    renderLeaf({ plateInlineCompletionKind: 'ai' })
     expect(screen.getByTestId('leaf')).toHaveTextContent('Typed text')
     expect(document.querySelector('.marklab-ai-ghost-text')).toBeNull()
   })
 
-  it('renders all completion candidates and marks the active option', () => {
-    renderLeaf(' review tasks', {
+  it('renders document candidates from an inert zero-width anchor without a ghost', () => {
+    renderLeaf({
       plateInlineCompletionAccept: vi.fn(),
       plateInlineCompletionCandidates: [
         { source: 'document', text: ' write notes' },
-        { source: 'ai', text: ' review tasks' },
+        { source: 'document', text: ' review tasks' },
       ],
       plateInlineCompletionIndex: 1,
+      plateInlineCompletionKind: 'document',
     })
 
     const options = screen.getAllByRole('option')
@@ -55,6 +58,11 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(options[1]).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('status')).toHaveTextContent('review tasks')
     expect(screen.getByRole('listbox').parentElement).toHaveClass('rounded-xl', 'bg-popover/98')
+    expect(document.querySelector('[data-completion-anchor]')).toHaveAttribute(
+      'contenteditable',
+      'false',
+    )
+    expect(document.querySelector('.marklab-ai-ghost-text')).toBeNull()
     expect(options[0]?.querySelector('[data-completion-meta]')).toHaveClass(
       'opacity-0',
       'group-hover:opacity-100',
@@ -64,13 +72,14 @@ describe('PlateInlineCompletionLeaf', () => {
 
   it('accepts a candidate with the mouse without moving the editor selection', () => {
     const accept = vi.fn()
-    renderLeaf(' review tasks', {
+    renderLeaf({
       plateInlineCompletionAccept: accept,
       plateInlineCompletionCandidates: [
         { source: 'document', text: ' write notes' },
-        { source: 'ai', text: ' review tasks' },
+        { source: 'document', text: ' review tasks' },
       ],
       plateInlineCompletionIndex: 1,
+      plateInlineCompletionKind: 'document',
     })
 
     const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })

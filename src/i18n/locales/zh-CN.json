@@ -330,7 +330,7 @@
   "settings.aiCompletionDescription": "在光标处直接显示安静、类似 IDE 的建议。",
   "settings.documentCompletionEnabled": "使用当前文档补全",
   "settings.documentCompletionEnabledDescription": "从当前文档索引中提示词语和短语，无需配置 AI，也不会发送任何文本。",
-  "settings.aiCompletionEnabled": "启用行内补全",
+  "settings.aiCompletionEnabled": "启用 AI 自动提示",
   "settings.aiCompletionEnabledDescription": "在输入短暂停顿后生成建议；Tab 接受，Esc 忽略。",
   "settings.aiCompletionProvider": "补全提供方",
   "settings.aiCompletionProviderDescription": "跟随默认 AI 提供方，或为补全指定单独的提供方。",

@@ -330,7 +330,7 @@
   "settings.aiCompletionDescription": "Show quiet, IDE-style suggestions directly at the cursor.",
   "settings.documentCompletionEnabled": "Complete from this document",
   "settings.documentCompletionEnabledDescription": "Offer indexed words and phrases from the current document without requiring AI or sending text anywhere.",
-  "settings.aiCompletionEnabled": "Enable inline completion",
+  "settings.aiCompletionEnabled": "Enable AI suggestions",
   "settings.aiCompletionEnabledDescription": "Generate suggestions after you pause while typing. Tab accepts and Escape dismisses them.",
   "settings.aiCompletionProvider": "Completion provider",
   "settings.aiCompletionProviderDescription": "Use the default AI provider or choose one dedicated to completion.",

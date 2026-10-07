@@ -14,8 +14,9 @@ export const usePlateInlineCompletion = ({
 }: UsePlateInlineCompletionOptions) => {
   const routeCache = useKeepAliveContext()
   const routeActive = !routeCache.cacheKey || routeCache.active
-  const { indexRevision, options, syncKey } = usePlateInlineCompletionOptions({
+  const { indexRevision, options, syncDocumentIndex, syncKey } = usePlateInlineCompletionOptions({
     activePath,
+    editor,
     readOnly,
     value,
   })
@@ -30,12 +31,13 @@ export const usePlateInlineCompletion = ({
   )
   const syncFrameRef = useRef<number | null>(null)
   const scheduleSync = useCallback(() => {
+    syncDocumentIndex()
     if (syncFrameRef.current !== null) cancelAnimationFrame(syncFrameRef.current)
     syncFrameRef.current = requestAnimationFrame(() => {
       syncFrameRef.current = null
       controller.sync()
     })
-  }, [controller])
+  }, [controller, syncDocumentIndex])
 
   useEffect(() => {
     return () => {

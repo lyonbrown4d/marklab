@@ -19,6 +19,8 @@ const DISABLED_NODE_TYPES = new Set([
 export type PlateInlineCompletionContext = {
   after: string
   before: string
+  blockId: string
+  blockOffset: number
   followingBlocks: readonly string[]
   heading: string | null
   nodeType: string
@@ -78,10 +80,8 @@ export const buildPlateInlineCompletionContext = (
   const budget = Math.max(1, options.characterBudget ?? DEFAULT_CHARACTER_BUDGET)
   const nearbyLimit = Math.max(0, options.nearbyBlockLimit ?? DEFAULT_NEARBY_BLOCK_LIMIT)
   let remaining = budget
-  const before = takeEnd(
-    editor.api.string({ anchor: start, focus: editor.selection.focus }),
-    remaining,
-  )
+  const blockBefore = editor.api.string({ anchor: start, focus: editor.selection.focus })
+  const before = takeEnd(blockBefore, remaining)
   remaining -= before.length
   const after = takeStart(
     editor.api.string({ anchor: editor.selection.focus, focus: end }),
@@ -91,6 +91,9 @@ export const buildPlateInlineCompletionContext = (
 
   const topLevelIndex = editor.selection.focus.path[0]
   if (topLevelIndex === undefined) return null
+  const blockNode = editor.children[topLevelIndex]
+  const candidateBlockId =
+    blockNode && 'id' in blockNode && typeof blockNode.id === 'string' ? blockNode.id : null
   let headingIndex = -1
   const headingScanStart = Math.max(0, topLevelIndex - MAX_HEADING_SCAN_BLOCKS)
   for (let index = topLevelIndex - 1; index >= headingScanStart; index -= 1) {
@@ -128,6 +131,8 @@ export const buildPlateInlineCompletionContext = (
   return {
     after,
     before,
+    blockId: candidateBlockId || `block:${topLevelIndex}`,
+    blockOffset: blockBefore.length,
     followingBlocks,
     heading: heading || null,
     nodeType: nodeType(block[0]),

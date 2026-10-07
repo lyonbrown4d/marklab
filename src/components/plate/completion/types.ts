@@ -2,10 +2,17 @@ import type { DecoratedRange, NodeEntry, Point } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import type { PlateInlineCompletionContext } from '@/components/plate/completion/plateInlineCompletionContext'
 
-export type PlateInlineCompletionCandidate = {
-  source: 'ai' | 'document'
+export type PlateInlineDocumentCompletion = {
+  source: 'document'
   text: string
 }
+
+export type PlateInlineAiCompletion = {
+  source: 'ai'
+  text: string
+}
+
+export type PlateInlineCompletionCandidate = PlateInlineDocumentCompletion | PlateInlineAiCompletion
 
 export type PlateInlineCompletionResult =
   | PlateInlineCompletionCandidate
@@ -14,19 +21,42 @@ export type PlateInlineCompletionResult =
   | null
   | undefined
 
-export type PlateInlineCompletionState = {
+type PlateInlineCompletionStateBase = {
   anchor: Point
-  candidates: readonly PlateInlineCompletionCandidate[]
-  index: number
 }
 
-export type PlateInlineCompletionDecoration = DecoratedRange & {
-  plateInlineCompletion: string
-  plateInlineCompletionAccept: (index: number) => boolean
-  plateInlineCompletionCandidates: readonly PlateInlineCompletionCandidate[]
-  plateInlineCompletionIndex: number
-  plateInlineCompletionSource: PlateInlineCompletionCandidate['source']
+export type PlateInlineDocumentCompletionState = PlateInlineCompletionStateBase & {
+  candidates: readonly PlateInlineDocumentCompletion[]
+  index: number
+  kind: 'document'
 }
+
+export type PlateInlineAiCompletionState = PlateInlineCompletionStateBase & {
+  candidates: readonly []
+  completion: PlateInlineAiCompletion
+  kind: 'ai'
+}
+
+export type PlateInlineCompletionState =
+  PlateInlineDocumentCompletionState | PlateInlineAiCompletionState
+
+type PlateInlineCompletionDecorationBase = DecoratedRange & {
+  plateInlineCompletionAccept: (index?: number) => boolean
+}
+
+export type PlateInlineDocumentCompletionDecoration = PlateInlineCompletionDecorationBase & {
+  plateInlineCompletionCandidates: readonly PlateInlineDocumentCompletion[]
+  plateInlineCompletionIndex: number
+  plateInlineCompletionKind: 'document'
+}
+
+export type PlateInlineAiCompletionDecoration = PlateInlineCompletionDecorationBase & {
+  plateInlineCompletion: string
+  plateInlineCompletionKind: 'ai'
+}
+
+export type PlateInlineCompletionDecoration =
+  PlateInlineDocumentCompletionDecoration | PlateInlineAiCompletionDecoration
 
 export type PlateInlineCompletionControllerOptions = {
   canComplete: (context: PlateInlineCompletionContext) => boolean
@@ -35,7 +65,7 @@ export type PlateInlineCompletionControllerOptions = {
   enabled: () => boolean
   getDocumentCompletions?: (
     context: PlateInlineCompletionContext,
-  ) => readonly PlateInlineCompletionCandidate[]
+  ) => readonly PlateInlineDocumentCompletion[]
   getDocumentKey?: () => string | null
   maxCandidates?: number
   requestCompletion: (

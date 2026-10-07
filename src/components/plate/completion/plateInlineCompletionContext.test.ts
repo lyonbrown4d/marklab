@@ -21,6 +21,8 @@ describe('Plate inline completion context', () => {
     expect(buildPlateInlineCompletionContext(editor)).toEqual({
       after: 'write tomorrow',
       before: 'I plan to ',
+      blockId: 'block:2',
+      blockOffset: 10,
       followingBlocks: ['Following note'],
       heading: 'Plans',
       nodeType: 'p',
@@ -54,5 +56,26 @@ describe('Plate inline completion context', () => {
     })
 
     expect(buildPlateInlineCompletionContext(editor)?.before).toBe('ordinary')
+  })
+
+  it('keeps the full block UTF-16 offset when the before context is truncated', () => {
+    const leadingText = 'a'.repeat(1_300)
+    const editor = createEditor([
+      {
+        id: 'long-block',
+        type: 'p',
+        children: [{ text: leadingText }, { bold: true, text: '😀tail' }],
+      },
+    ])
+    editor.tf.select({
+      anchor: { path: [0, 1], offset: '😀'.length },
+      focus: { path: [0, 1], offset: '😀'.length },
+    })
+
+    const context = buildPlateInlineCompletionContext(editor)
+
+    expect(context?.before).toHaveLength(1_200)
+    expect(context?.before.endsWith('😀')).toBe(true)
+    expect(context?.blockOffset).toBe(1_302)
   })
 })
