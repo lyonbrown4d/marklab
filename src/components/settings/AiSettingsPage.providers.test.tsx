@@ -45,12 +45,15 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 const renderPage = () => render(<AiSettingsPage />, { wrapper })
 
-const externalSection = () => {
-  const section = screen
-    .getByRole('heading', { name: 'settings.aiExternalLocal' })
-    .closest('section')
-  if (!section) throw new Error('External local AI section was not rendered.')
+const providerSection = () => {
+  const section = screen.getByRole('heading', { name: 'settings.aiProviders' }).closest('section')
+  if (!section) throw new Error('AI provider section was not rendered.')
   return within(section)
+}
+
+const selectProviderKind = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  await user.click(screen.getByRole('combobox', { name: 'settings.aiProviderKind' }))
+  await user.click(screen.getByRole('option', { name }))
 }
 
 describe('AiSettingsPage provider management', () => {
@@ -60,9 +63,9 @@ describe('AiSettingsPage provider management', () => {
     api.listProviders.mockResolvedValue([])
     api.updateProvider.mockImplementation(async (value) => ({
       ...value,
-      locality: value.kind === 'openai-compatible' ? 'local' : 'remote',
-      available: value.kind === 'openai-compatible' || Boolean(value.apiKey),
-      requiresApiKey: value.kind !== 'openai-compatible',
+      locality: value.kind === 'ollama' ? 'local' : 'remote',
+      available: value.kind === 'ollama' || Boolean(value.apiKey),
+      requiresApiKey: value.kind !== 'ollama',
       hasApiKey: Boolean(value.apiKey),
       apiKeySource: value.apiKey ? 'stored' : 'none',
       maskedApiKey: value.apiKey ? '••••••••' : null,
@@ -85,14 +88,31 @@ describe('AiSettingsPage provider management', () => {
     expect(screen.getByRole('button', { name: 'settings.aiRetryProviders' })).toBeEnabled()
   })
 
+  it('manages Ollama and DeepSeek from one provider section', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'settings.aiProviders' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'settings.aiExternalLocal' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'settings.aiCloud' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'settings.aiAddProvider' }))
+    await user.click(screen.getByRole('combobox', { name: 'settings.aiProviderKind' }))
+
+    expect(screen.getByRole('option', { name: 'Ollama' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'DeepSeek' })).toBeInTheDocument()
+  })
+
   it('saves the Ollama preset without an API key and guards duplicate submit', async () => {
     let resolveSave!: (value: typeof cloudProvider) => void
     api.updateProvider.mockReturnValue(new Promise((resolve) => (resolveSave = resolve)))
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByRole('heading', { name: 'settings.aiExternalLocal' })
-    await user.click(externalSection().getByRole('button', { name: 'settings.aiConfigureOllama' }))
+    await user.click(await screen.findByRole('button', { name: 'settings.aiAddProvider' }))
+    await selectProviderKind(user, 'Ollama')
     expect(screen.getByLabelText('settings.aiBaseUrl')).toHaveValue('http://127.0.0.1:11434/v1')
     expect(screen.queryByLabelText('settings.aiApiKey')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('settings.aiModel'), 'qwen3:4b')
@@ -104,7 +124,7 @@ describe('AiSettingsPage provider management', () => {
     expect(api.updateProvider).toHaveBeenCalledWith({
       id: expect.stringMatching(/^ollama-/),
       label: 'Ollama',
-      kind: 'openai-compatible',
+      kind: 'ollama',
       model: 'qwen3:4b',
       baseUrl: 'http://127.0.0.1:11434/v1',
       apiKey: null,
@@ -117,10 +137,10 @@ describe('AiSettingsPage provider management', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByRole('heading', { name: 'settings.aiExternalLocal' })
-    await user.click(externalSection().getByRole('button', { name: 'settings.aiAddCompatible' }))
+    await user.click(await screen.findByRole('button', { name: 'settings.aiAddProvider' }))
+    await selectProviderKind(user, 'OpenAI-compatible')
 
-    const providerDialog = screen.getByRole('dialog', { name: 'settings.aiAddCompatible' })
+    const providerDialog = screen.getByRole('dialog', { name: 'settings.aiAddProvider' })
     expect(within(providerDialog).getByLabelText('settings.aiBaseUrl')).toHaveValue('')
     expect(within(providerDialog).getByLabelText('settings.aiApiKey')).toHaveAttribute(
       'type',
@@ -128,9 +148,7 @@ describe('AiSettingsPage provider management', () => {
     )
 
     await user.click(within(providerDialog).getByRole('button', { name: 'settings.cancel' }))
-    expect(
-      screen.queryByRole('dialog', { name: 'settings.aiAddCompatible' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'settings.aiAddProvider' })).not.toBeInTheDocument()
   })
 
   it('never reveals a stored key and preserves it when an edited key stays blank', async () => {
@@ -171,7 +189,7 @@ describe('AiSettingsPage provider management', () => {
     await waitFor(() => expect(api.deleteProvider).toHaveBeenCalledWith(cloudProvider.id))
     expect(usePreferencesStore.getState().aiDefaultProviderId).toBeNull()
     expect(usePreferencesStore.getState().aiCompletionProviderId).toBeNull()
-    expect(screen.getByRole('button', { name: 'settings.aiAddCloudProvider' })).toHaveFocus()
+    expect(providerSection().getByRole('button', { name: 'settings.aiAddProvider' })).toHaveFocus()
   })
 
   it('keeps the default and reports an error when deletion fails', async () => {

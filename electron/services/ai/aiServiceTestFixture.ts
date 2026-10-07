@@ -41,6 +41,8 @@ export const createService = (
       openai: environmentKey,
       anthropic: undefined,
       google: undefined,
+      deepseek: undefined,
+      ollama: undefined,
       'openai-compatible': undefined,
       ...environmentOverrides,
     },

@@ -47,12 +47,15 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 const renderPage = () => render(<AiSettingsPage />, { wrapper })
 
-const externalSection = () => {
-  const section = screen
-    .getByRole('heading', { name: 'settings.aiExternalLocal' })
-    .closest('section')
-  if (!section) throw new Error('External local AI section was not rendered.')
+const providerSection = () => {
+  const section = screen.getByRole('heading', { name: 'settings.aiProviders' }).closest('section')
+  if (!section) throw new Error('AI provider section was not rendered.')
   return within(section)
+}
+
+const selectProviderKind = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  await user.click(screen.getByRole('combobox', { name: 'settings.aiProviderKind' }))
+  await user.click(screen.getByRole('option', { name }))
 }
 
 describe('AiSettingsPage provider safety', () => {
@@ -62,9 +65,9 @@ describe('AiSettingsPage provider safety', () => {
     api.listProviders.mockResolvedValue([])
     api.updateProvider.mockImplementation(async (value) => ({
       ...value,
-      locality: value.kind === 'openai-compatible' ? 'local' : 'remote',
-      available: Boolean(value.apiKey) || value.baseUrl?.includes('127.0.0.1'),
-      requiresApiKey: !value.baseUrl?.includes('127.0.0.1'),
+      locality: value.kind === 'ollama' ? 'local' : 'remote',
+      available: value.kind === 'ollama' || Boolean(value.apiKey),
+      requiresApiKey: value.kind !== 'ollama',
       hasApiKey: Boolean(value.apiKey),
       apiKeySource: value.apiKey ? 'stored' : 'none',
       maskedApiKey: value.apiKey ? '••••••••' : null,
@@ -80,6 +83,7 @@ describe('AiSettingsPage provider safety', () => {
       provider({
         id: 'ollama-local',
         label: 'My Ollama',
+        kind: 'ollama',
         model: 'qwen3:8b',
         baseUrl: 'http://127.0.0.1:11434/v1',
       }),
@@ -87,9 +91,7 @@ describe('AiSettingsPage provider safety', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(
-      await externalSection().findByRole('button', { name: 'settings.aiConfigureOllama' }),
-    )
+    await user.click(await screen.findByRole('button', { name: 'settings.edit My Ollama' }))
     expect(screen.getByLabelText('settings.aiProviderName')).toHaveValue('My Ollama')
     expect(screen.getByLabelText('settings.aiModel')).toHaveValue('qwen3:8b')
     await user.click(screen.getByRole('button', { name: 'settings.save' }))
@@ -221,14 +223,14 @@ describe('AiSettingsPage provider safety', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(
-      await externalSection().findByRole('button', { name: 'settings.aiConfigureOllama' }),
-    )
+    await user.click(await screen.findByRole('button', { name: 'settings.aiAddProvider' }))
+    await selectProviderKind(user, 'Ollama')
     await user.type(screen.getByLabelText('settings.aiModel'), 'qwen3:4b')
     await user.click(screen.getByRole('button', { name: 'settings.save' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('stale save error')
     await user.click(screen.getByRole('button', { name: 'settings.cancel' }))
-    await user.click(externalSection().getByRole('button', { name: 'settings.aiAddCompatible' }))
+    await user.click(providerSection().getByRole('button', { name: 'settings.aiAddProvider' }))
+    await selectProviderKind(user, 'OpenAI-compatible')
     expect(screen.queryByText('stale save error')).not.toBeInTheDocument()
   })
 })

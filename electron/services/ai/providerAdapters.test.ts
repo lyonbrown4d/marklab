@@ -17,6 +17,8 @@ describe('AI provider adapter registry', () => {
       openai: 'OPENAI_API_KEY',
       anthropic: 'ANTHROPIC_API_KEY',
       google: 'GOOGLE_GENERATIVE_AI_API_KEY',
+      deepseek: 'DEEPSEEK_API_KEY',
+      ollama: undefined,
       'openai-compatible': undefined,
     })
   })
@@ -60,5 +62,19 @@ describe('AI provider adapter registry', () => {
     expect(adapter.getLocality(provider)).toBe('remote')
     expect(adapter.requiresApiKey(provider)).toBe(true)
     expect(adapter.resolveApiKey(provider, undefined)).toBeUndefined()
+  })
+
+  it('treats Ollama as a keyless local provider with a loopback endpoint', () => {
+    const policy = getAiProviderPolicy('ollama')
+    const provider = {
+      id: 'ollama-local',
+      kind: 'ollama' as const,
+      model: 'qwen3',
+      baseUrl: 'http://127.0.0.1:11434/v1',
+    }
+
+    expect(policy.getLocality(provider)).toBe('local')
+    expect(policy.requiresApiKey(provider)).toBe(false)
+    expect(policy.resolveApiKey(provider, undefined)).toBe('ollama')
   })
 })

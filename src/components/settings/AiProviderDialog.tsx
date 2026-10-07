@@ -1,4 +1,4 @@
-import { Cloud, PencilLine, Server } from 'lucide-react'
+import { Bot, PencilLine } from 'lucide-react'
 import { AiProviderForm } from '@/components/settings/AiProviderForm'
 import {
   Dialog,
@@ -11,7 +11,6 @@ import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
 
 type AiProviderDialogProps = {
-  mode: 'ollama' | 'compatible' | 'cloud'
   provider?: PublicAiProvider
   open: boolean
   pending: boolean
@@ -20,26 +19,7 @@ type AiProviderDialogProps = {
   onSave: (input: AiProviderUpdate) => Promise<void>
 }
 
-const dialogMetadata = {
-  ollama: {
-    description: 'settings.aiOllamaDialogDescription',
-    icon: Server,
-    title: 'settings.aiConfigureOllama',
-  },
-  compatible: {
-    description: 'settings.aiCompatibleDialogDescription',
-    icon: Server,
-    title: 'settings.aiAddCompatible',
-  },
-  cloud: {
-    description: 'settings.aiCloudDialogDescription',
-    icon: Cloud,
-    title: 'settings.aiAddCloudProvider',
-  },
-} as const
-
 export const AiProviderDialog = ({
-  mode,
   provider,
   open,
   pending,
@@ -48,8 +28,7 @@ export const AiProviderDialog = ({
   onSave,
 }: AiProviderDialogProps) => {
   const { t } = useI18n()
-  const metadata = dialogMetadata[mode]
-  const Icon = provider ? PencilLine : metadata.icon
+  const Icon = provider ? PencilLine : Bot
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,17 +40,16 @@ export const AiProviderDialog = ({
             </span>
             <div className="min-w-0">
               <DialogTitle className="text-base">
-                {t(provider ? 'settings.aiEditProvider' : metadata.title)}
+                {t(provider ? 'settings.aiEditProvider' : 'settings.aiAddProvider')}
               </DialogTitle>
               <DialogDescription className="mt-1 leading-5">
-                {t(metadata.description)}
+                {t('settings.aiProviderDialogDescription')}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
         <div className="px-6 py-5">
           <AiProviderForm
-            mode={mode}
             provider={provider}
             pending={pending}
             error={error}

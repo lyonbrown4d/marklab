@@ -1,4 +1,4 @@
-import { Cloud, Server } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { useRef, useState, type RefObject } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SettingsActionButton, SettingsEmptyState } from '@/components/settings/SettingsButtons'
@@ -7,7 +7,6 @@ import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
 import { AiProviderDialog } from '@/components/settings/AiProviderDialog'
 import { AiProviderRow } from '@/components/settings/AiProviderRow'
-import { isOllamaPreset } from '@/components/settings/aiProviderUtils'
 import { useAiProviders } from '@/components/settings/useAiProviders'
 
 type ProviderListProps = {
@@ -87,27 +86,23 @@ const ProviderList = ({ providers, emptyText, actions, fallbackFocusRef }: Provi
 export const AiProviderSettingsSections = () => {
   const { t } = useI18n()
   const actions = useAiProviders()
-  const localProviderFallbackRef = useRef<HTMLButtonElement>(null)
-  const cloudProviderFallbackRef = useRef<HTMLButtonElement>(null)
-  const [formMode, setFormMode] = useState<'ollama' | 'compatible' | 'cloud' | null>(null)
+  const providerFallbackRef = useRef<HTMLButtonElement>(null)
+  const [formOpen, setFormOpen] = useState(false)
   const providers = actions.providersQuery.data ?? []
-  const localProviders = providers.filter((provider) => provider.locality === 'local')
-  const cloudProviders = providers.filter((provider) => provider.locality === 'remote')
-  const ollamaProvider = localProviders.find(isOllamaPreset)
 
   const handleSave = async (input: AiProviderUpdate) => {
     if (actions.saveMutation.isPending) return
     try {
       await actions.saveMutation.mutateAsync(input)
-      setFormMode(null)
+      setFormOpen(false)
     } catch {
       // The mutation error remains visible in the active form.
     }
   }
 
-  const openForm = (mode: 'ollama' | 'compatible' | 'cloud') => {
+  const openForm = () => {
     actions.saveMutation.reset()
-    setFormMode(mode)
+    setFormOpen(true)
   }
 
   const queryState = actions.providersQuery.isPending ? (
@@ -124,63 +119,36 @@ export const AiProviderSettingsSections = () => {
   return (
     <>
       <SettingsSection
-        targetId="settings-ai-local"
-        title={t('settings.aiExternalLocal')}
-        description={t('settings.aiExternalLocalDescription')}
-        icon={Server}
+        targetId="settings-ai-providers"
+        title={t('settings.aiProviders')}
+        description={t('settings.aiProvidersDescription')}
+        icon={Bot}
       >
-        <p className="mb-3 text-xs text-muted-foreground">{t('settings.aiOllamaPrivacy')}</p>
+        <p className="mb-3 text-xs text-muted-foreground">{t('settings.aiProviderPrivacy')}</p>
         {queryState}
         {!queryState && (
           <ProviderList
-            providers={localProviders}
-            emptyText={t('settings.aiNoExternalLocal')}
+            providers={providers}
+            emptyText={t('settings.aiNoProviders')}
             actions={actions}
-            fallbackFocusRef={localProviderFallbackRef}
-          />
-        )}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <SettingsActionButton ref={localProviderFallbackRef} onClick={() => openForm('ollama')}>
-            {t('settings.aiConfigureOllama')}
-          </SettingsActionButton>
-          <SettingsActionButton variant="ghost" onClick={() => openForm('compatible')}>
-            {t('settings.aiAddCompatible')}
-          </SettingsActionButton>
-        </div>
-      </SettingsSection>
-      <SettingsSection
-        targetId="settings-ai-cloud"
-        title={t('settings.aiCloud')}
-        description={t('settings.aiCloudDescription')}
-        icon={Cloud}
-      >
-        <p className="mb-3 text-xs text-muted-foreground">{t('settings.aiRemotePrivacy')}</p>
-        {actions.providersQuery.isSuccess && (
-          <ProviderList
-            providers={cloudProviders}
-            emptyText={t('settings.aiNoCloudProviders')}
-            actions={actions}
-            fallbackFocusRef={cloudProviderFallbackRef}
+            fallbackFocusRef={providerFallbackRef}
           />
         )}
         <SettingsActionButton
-          ref={cloudProviderFallbackRef}
+          ref={providerFallbackRef}
           className="mt-3 self-start"
-          onClick={() => openForm('cloud')}
+          onClick={openForm}
         >
-          {t('settings.aiAddCloudProvider')}
+          {t('settings.aiAddProvider')}
         </SettingsActionButton>
       </SettingsSection>
-      {formMode && (
+      {formOpen && (
         <AiProviderDialog
-          key={formMode}
-          mode={formMode}
-          provider={formMode === 'ollama' ? ollamaProvider : undefined}
           open
           pending={actions.saveMutation.isPending}
           error={actions.saveMutation.error?.message}
           onOpenChange={(open) => {
-            if (!open) setFormMode(null)
+            setFormOpen(open)
           }}
           onSave={handleSave}
         />

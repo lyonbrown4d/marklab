@@ -6,6 +6,8 @@ import type { LanguageModel } from 'ai'
 
 import type { AiProviderConfig, AiProviderKind } from '@electron/services/ai/providerCatalog'
 
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
+
 export type AiProviderAdapter = Readonly<{
   kind: AiProviderKind
   createModel: (provider: AiProviderConfig, apiKey: string) => LanguageModel
@@ -25,6 +27,26 @@ const adapters = new Map<AiProviderKind, AiProviderAdapter>([
   [
     'google',
     adapter('google', (provider, apiKey) => createGoogleGenerativeAI({ apiKey })(provider.model)),
+  ],
+  [
+    'deepseek',
+    adapter('deepseek', (provider, apiKey) =>
+      createOpenAICompatible({
+        apiKey,
+        baseURL: DEEPSEEK_BASE_URL,
+        name: provider.id,
+      })(provider.model),
+    ),
+  ],
+  [
+    'ollama',
+    adapter('ollama', (provider, apiKey) =>
+      createOpenAICompatible({
+        apiKey,
+        baseURL: provider.baseUrl!,
+        name: provider.id,
+      })(provider.model),
+    ),
   ],
   [
     'openai-compatible',

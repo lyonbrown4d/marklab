@@ -53,7 +53,7 @@ export type WindowStateTable = {
 export type AiProvidersTable = Timestamped & {
   id: string
   label: string
-  kind: 'anthropic' | 'google' | 'openai' | 'openai-compatible'
+  kind: 'anthropic' | 'deepseek' | 'google' | 'ollama' | 'openai' | 'openai-compatible'
   model: string
   base_url: string | null
   encrypted_api_key: Buffer | null

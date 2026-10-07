@@ -3,7 +3,14 @@ import { z } from 'zod'
 import { listen } from '@/runtime/events'
 import { invoke } from '@/runtime/ipc'
 
-export const aiProviderKindSchema = z.enum(['openai', 'anthropic', 'google', 'openai-compatible'])
+export const aiProviderKindSchema = z.enum([
+  'openai',
+  'anthropic',
+  'google',
+  'deepseek',
+  'ollama',
+  'openai-compatible',
+])
 
 export const publicAiProviderSchema = z
   .object({

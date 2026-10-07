@@ -59,7 +59,6 @@ const createProps = () => ({
   onOpenProject: vi.fn(),
   onOpenCurrentWorkspaceInNewWindow: vi.fn(),
   onSelectWorkspaceInNewWindow: vi.fn(),
-  onUseInternalRoot: vi.fn(),
   workspaceWindowOpening: false,
   openCurrentWorkspaceInNewWindowLabel: 'Open Current Workspace in New Window',
   openWorkspaceInNewWindowLabel: 'Open Workspace in New Window…',

@@ -11,10 +11,15 @@ import {
 import { SettingsActionButton } from '@/components/settings/SettingsButtons'
 import { useI18n } from '@/i18n/useI18n'
 import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
-import { createAiProviderId } from '@/components/settings/aiProviderUtils'
+import {
+  aiProviderOptions,
+  aiProviderUsesBaseUrl,
+  createAiProviderId,
+  getAiProviderOption,
+  type AiProviderKind,
+} from '@/components/settings/aiProviderUtils'
 
 type ProviderFormProps = {
-  mode: 'ollama' | 'compatible' | 'cloud'
   provider?: PublicAiProvider
   pending: boolean
   error?: string
@@ -25,7 +30,6 @@ type ProviderFormProps = {
 const fieldClassName = 'grid gap-1.5'
 
 export const AiProviderForm = ({
-  mode,
   provider,
   pending,
   error,
@@ -39,25 +43,36 @@ export const AiProviderForm = ({
   const modelId = `${formId}-model`
   const baseUrlId = `${formId}-url`
   const apiKeyId = `${formId}-key`
-  const [label, setLabel] = useState(provider?.label ?? (mode === 'ollama' ? 'Ollama' : ''))
-  const [kind, setKind] = useState<AiProviderUpdate['kind']>(provider?.kind ?? 'openai')
+  const initialKind = provider?.kind ?? 'openai'
+  const initialOption = getAiProviderOption(initialKind)
+  const [label, setLabel] = useState(provider?.label ?? initialOption.label)
+  const [kind, setKind] = useState<AiProviderKind>(initialKind)
   const [model, setModel] = useState(provider?.model ?? '')
-  const [baseUrl, setBaseUrl] = useState(
-    provider?.baseUrl ?? (mode === 'ollama' ? 'http://127.0.0.1:11434/v1' : ''),
-  )
+  const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? initialOption.defaultBaseUrl ?? '')
   const [apiKey, setApiKey] = useState('')
-  const [newProviderId] = useState(() => createAiProviderId(mode))
+  const [newProviderSuffix] = useState(() => crypto.randomUUID())
+  const usesBaseUrl = aiProviderUsesBaseUrl(kind)
+
+  const handleKindChange = (nextKind: AiProviderKind) => {
+    const currentOption = getAiProviderOption(kind)
+    const nextOption = getAiProviderOption(nextKind)
+    if (label === currentOption.label) setLabel(nextOption.label)
+    if (!baseUrl || baseUrl === currentOption.defaultBaseUrl) {
+      setBaseUrl(nextOption.defaultBaseUrl ?? '')
+    }
+    setKind(nextKind)
+  }
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (pending) return
     const input: AiProviderUpdate = {
-      id: provider?.id ?? newProviderId,
+      id: provider?.id ?? createAiProviderId(kind, newProviderSuffix),
       label: label.trim(),
-      kind: mode === 'cloud' ? kind : 'openai-compatible',
+      kind,
       model: model.trim(),
-      ...(mode !== 'cloud' ? { baseUrl: baseUrl.trim() } : {}),
-      ...(mode === 'ollama' ? { apiKey: null } : apiKey ? { apiKey } : {}),
+      ...(usesBaseUrl ? { baseUrl: baseUrl.trim() } : {}),
+      ...(kind === 'ollama' ? { apiKey: null } : apiKey ? { apiKey } : {}),
     }
     void onSave(input)
   }
@@ -73,17 +88,19 @@ export const AiProviderForm = ({
           required
         />
       </div>
-      {mode === 'cloud' && !provider && (
+      {!provider && (
         <div className={fieldClassName}>
           <Label htmlFor={kindId}>{t('settings.aiProviderKind')}</Label>
-          <Select value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
+          <Select value={kind} onValueChange={(value) => handleKindChange(value as AiProviderKind)}>
             <SelectTrigger id={kindId} aria-label={t('settings.aiProviderKind')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="google">Google</SelectItem>
+              {aiProviderOptions.map((option) => (
+                <SelectItem key={option.kind} value={option.kind}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -97,7 +114,7 @@ export const AiProviderForm = ({
           required
         />
       </div>
-      {mode !== 'cloud' && (
+      {usesBaseUrl && (
         <div className={fieldClassName}>
           <Label htmlFor={baseUrlId}>{t('settings.aiBaseUrl')}</Label>
           <Input
@@ -109,7 +126,7 @@ export const AiProviderForm = ({
           />
         </div>
       )}
-      {mode !== 'ollama' && (
+      {kind !== 'ollama' && (
         <div className={fieldClassName}>
           <Label htmlFor={apiKeyId}>{t('settings.aiApiKey')}</Label>
           <Input
@@ -142,7 +159,10 @@ export const AiProviderForm = ({
         <SettingsActionButton type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           {t('settings.cancel')}
         </SettingsActionButton>
-        <SettingsActionButton type="submit" disabled={pending || !label.trim() || !model.trim()}>
+        <SettingsActionButton
+          type="submit"
+          disabled={pending || !label.trim() || !model.trim() || (usesBaseUrl && !baseUrl.trim())}
+        >
           {t('settings.save')}
         </SettingsActionButton>
       </div>

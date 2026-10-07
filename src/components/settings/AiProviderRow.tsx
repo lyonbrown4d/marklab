@@ -6,7 +6,7 @@ import type { AiProviderUpdate, PublicAiProvider } from '@/services/aiApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { AiProviderDialog } from '@/components/settings/AiProviderDialog'
 import { ConfirmDestructiveActionDialog } from '@/components/ConfirmDestructiveActionDialog'
-import { isAiProviderUsable, isOllamaPreset } from '@/components/settings/aiProviderUtils'
+import { isAiProviderUsable } from '@/components/settings/aiProviderUtils'
 
 type ProviderRowProps = {
   provider: PublicAiProvider
@@ -63,13 +63,6 @@ export const AiProviderRow = ({
     }
   }
 
-  const formMode =
-    provider.kind === 'openai-compatible'
-      ? isOllamaPreset(provider)
-        ? 'ollama'
-        : 'compatible'
-      : 'cloud'
-
   return (
     <>
       <div className="border-t border-border/70 py-3 first:border-t-0 first:pt-0 last:pb-0">
@@ -90,7 +83,7 @@ export const AiProviderRow = ({
             {!usable && (
               <p className="mt-1 text-xs text-destructive">{t('settings.aiCredentialRequired')}</p>
             )}
-            {provider.kind === 'openai-compatible' && (
+            {(provider.kind === 'openai-compatible' || provider.kind === 'ollama') && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {provider.locality === 'local'
                   ? t('settings.aiLoopbackPrivacy')
@@ -168,7 +161,6 @@ export const AiProviderRow = ({
         )}
       </div>
       <AiProviderDialog
-        mode={formMode}
         provider={provider}
         open={editing}
         pending={savePending}

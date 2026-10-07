@@ -47,7 +47,6 @@ export type LayoutContext = {
   onCloseActiveTab: () => void
   onOpenProject: (path: string) => void
   onOpenProjectInCurrentWindow: (path: string) => void
-  onUseInternalRoot: () => void
 }
 
 export type LayoutContextStore = StoreApi<LayoutContext>

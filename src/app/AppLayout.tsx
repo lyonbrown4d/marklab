@@ -222,7 +222,6 @@ const AppLayout = () => {
         onOpenProject={state.onOpenProject}
         onOpenCurrentWorkspaceInNewWindow={state.onOpenCurrentWorkspaceInNewWindow}
         onSelectWorkspaceInNewWindow={state.onSelectWorkspaceInNewWindow}
-        onUseInternalRoot={state.onUseInternalRoot}
         onToggleReadOnly={toggleReadOnly}
         onCloseActiveTab={state.onCloseActiveTab}
         onOpenTerminal={openTerminalArea}

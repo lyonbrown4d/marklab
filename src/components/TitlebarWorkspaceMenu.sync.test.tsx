@@ -35,41 +35,35 @@ const renderMenu = () => {
     },
   ])
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const onUseInternalRoot = vi.fn()
-  return {
-    onUseInternalRoot,
-    ...render(
-      <QueryClientProvider client={client}>
-        <TitlebarWorkspaceMenu
-          section="Notes"
-          workspaceMenuLabel="Workspace"
-          newWorkspaceLabel="New workspace"
-          openFileLabel="Open file"
-          newFileLabel="New file"
-          recentWorkspaces={{
-            currentLabel: 'Current',
-            emptyLabel: 'Empty',
-            openLabel: 'Open {name}',
-            paths: [],
-            rootKind: 'external',
-            rootPath: 'C:/notes',
-            sectionLabel: 'Recent',
-          }}
-          openCurrentWorkspaceInNewWindowLabel="Open current in new window"
-          openWorkspaceInNewWindowLabel="Open workspace in new window"
-          localLibraryLabel="Local library"
-          onNewWorkspace={vi.fn()}
-          onOpenFile={vi.fn()}
-          onCreateFile={vi.fn()}
-          onOpenProject={vi.fn()}
-          onOpenCurrentWorkspaceInNewWindow={vi.fn()}
-          onSelectWorkspaceInNewWindow={vi.fn()}
-          onUseInternalRoot={onUseInternalRoot}
-          workspaceWindowOpening={false}
-        />
-      </QueryClientProvider>,
-    ),
-  }
+  return render(
+    <QueryClientProvider client={client}>
+      <TitlebarWorkspaceMenu
+        section="Notes"
+        workspaceMenuLabel="Workspace"
+        newWorkspaceLabel="New workspace"
+        openFileLabel="Open file"
+        newFileLabel="New file"
+        recentWorkspaces={{
+          currentLabel: 'Current',
+          emptyLabel: 'Empty',
+          openLabel: 'Open {name}',
+          paths: [],
+          rootKind: 'external',
+          rootPath: 'C:/notes',
+          sectionLabel: 'Recent',
+        }}
+        openCurrentWorkspaceInNewWindowLabel="Open current in new window"
+        openWorkspaceInNewWindowLabel="Open workspace in new window"
+        onNewWorkspace={vi.fn()}
+        onOpenFile={vi.fn()}
+        onCreateFile={vi.fn()}
+        onOpenProject={vi.fn()}
+        onOpenCurrentWorkspaceInNewWindow={vi.fn()}
+        onSelectWorkspaceInNewWindow={vi.fn()}
+        workspaceWindowOpening={false}
+      />
+    </QueryClientProvider>,
+  )
 }
 
 describe('TitlebarWorkspaceMenu sync flow', () => {
@@ -107,13 +101,12 @@ describe('TitlebarWorkspaceMenu sync flow', () => {
     expect(alert).toHaveTextContent('sync.menu.updateFailed')
   })
 
-  it('opens the built-in local library from the workspace menu', async () => {
+  it('does not expose the built-in local library from the workspace menu', async () => {
     const user = userEvent.setup()
-    const { onUseInternalRoot } = renderMenu()
+    renderMenu()
 
     await user.click(screen.getByRole('button', { name: 'Workspace: Notes' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Local library' }))
 
-    expect(onUseInternalRoot).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('menuitem', { name: 'Local library' })).not.toBeInTheDocument()
   })
 })

@@ -61,7 +61,6 @@ export const useAppLayoutOutlet = ({
       onCloseActiveTab: state.onCloseActiveTab,
       onOpenProject: state.onOpenProject,
       onOpenProjectInCurrentWindow: state.onOpenProjectInCurrentWindow,
-      onUseInternalRoot: state.onUseInternalRoot,
     }
   }, [
     immersiveZenMode,
@@ -87,7 +86,6 @@ export const useAppLayoutOutlet = ({
     state.onEditorChange,
     state.onOpenProject,
     state.onOpenProjectInCurrentWindow,
-    state.onUseInternalRoot,
     state.recentProjects,
     state.rootKind,
     state.rootPath,

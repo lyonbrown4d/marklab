@@ -193,7 +193,7 @@ describe('AiProviderStore', () => {
     )
   })
 
-  it.each(['openai', 'anthropic', 'google'] as const)(
+  it.each(['openai', 'anthropic', 'google', 'deepseek'] as const)(
     'rejects tampered built-in %s records with a custom base URL',
     async (kind) => {
       const root = await createRoot()

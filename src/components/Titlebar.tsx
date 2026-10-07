@@ -53,7 +53,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenProject,
       onOpenCurrentWorkspaceInNewWindow,
       onSelectWorkspaceInNewWindow,
-      onUseInternalRoot,
       onToggleReadOnly,
       onCloseActiveTab,
       onOpenTerminal,
@@ -226,7 +225,6 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onExport={(format) => onMenuAction(`file.export_${format}`)}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
-          onUseInternalRoot={onUseInternalRoot}
           workspaceWindowOpening={workspaceWindowOpening}
         />
         {commandOpen && (

@@ -7,7 +7,6 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
-  Library,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,14 +47,12 @@ type TitlebarWorkspaceMenuProps = {
   recentWorkspaces: RecentWorkspaceMenuData
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
-  localLibraryLabel: string
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
   onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
-  onUseInternalRoot: () => void
   workspaceWindowOpening: boolean
 }
 
@@ -68,14 +65,12 @@ export const TitlebarWorkspaceMenu = ({
   recentWorkspaces,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
-  localLibraryLabel,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
   onOpenProject,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
-  onUseInternalRoot,
   workspaceWindowOpening,
 }: TitlebarWorkspaceMenuProps) => {
   const [open, setOpen] = useState(false)
@@ -186,10 +181,6 @@ export const TitlebarWorkspaceMenu = ({
               {openWorkspaceInNewWindowLabel}
             </DropdownMenuItem>
             <DropdownMenuSeparator className={menuSeparatorStyles} />
-            <DropdownMenuItem className={menuItemStyles()} onSelect={onUseInternalRoot}>
-              <Library aria-hidden="true" />
-              {localLibraryLabel}
-            </DropdownMenuItem>
             <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
               <FolderPlus aria-hidden="true" />
               {newWorkspaceLabel}

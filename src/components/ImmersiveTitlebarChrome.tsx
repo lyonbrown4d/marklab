@@ -39,7 +39,6 @@ type ImmersiveTitlebarChromeProps = {
   exportDocxLabel: string
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
-  onUseInternalRoot: () => void
   onOpenSearch: () => void
   onOpenWorkspaceFiles: () => void
   onOpenWorkspaceGraph: () => void
@@ -109,7 +108,6 @@ export const ImmersiveTitlebarChrome = ({
   exportDocxLabel,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
-  onUseInternalRoot,
   onOpenSearch,
   onOpenWorkspaceFiles,
   onOpenWorkspaceGraph,
@@ -179,14 +177,12 @@ export const ImmersiveTitlebarChrome = ({
           recentWorkspaces={recentWorkspaces}
           openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
           openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
-          localLibraryLabel={localLibraryLabel}
           onNewWorkspace={onNewWorkspace}
           onOpenFile={onOpenFile}
           onCreateFile={onCreateFile}
           onOpenProject={onOpenProject}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}
-          onUseInternalRoot={onUseInternalRoot}
           workspaceWindowOpening={workspaceWindowOpening}
         />
         {recentWorkspaces.rootKind !== 'single' ? (

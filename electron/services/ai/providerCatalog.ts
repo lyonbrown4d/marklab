@@ -4,6 +4,8 @@ export const AI_PROVIDER_KINDS = Object.freeze([
   'openai',
   'anthropic',
   'google',
+  'deepseek',
+  'ollama',
   'openai-compatible',
 ] as const)
 
@@ -27,7 +29,7 @@ export type AiProviderPolicy = Readonly<{
 }>
 
 const remotePolicy = (
-  kind: Exclude<AiProviderKind, 'openai-compatible'>,
+  kind: Exclude<AiProviderKind, 'ollama' | 'openai-compatible'>,
   environmentVariable: string,
 ): AiProviderPolicy =>
   Object.freeze({
@@ -38,6 +40,14 @@ const remotePolicy = (
     requiresApiKey: () => true,
     resolveApiKey: (_provider: AiProviderConfig, configured: string | undefined) => configured,
   })
+
+const ollamaPolicy: AiProviderPolicy = Object.freeze({
+  kind: 'ollama',
+  baseUrlPolicy: 'required',
+  getLocality: () => 'local',
+  requiresApiKey: () => false,
+  resolveApiKey: () => 'ollama',
+})
 
 const compatiblePolicy: AiProviderPolicy = Object.freeze({
   kind: 'openai-compatible',
@@ -53,6 +63,8 @@ const policies = new Map<AiProviderKind, AiProviderPolicy>([
   ['openai', remotePolicy('openai', 'OPENAI_API_KEY')],
   ['anthropic', remotePolicy('anthropic', 'ANTHROPIC_API_KEY')],
   ['google', remotePolicy('google', 'GOOGLE_GENERATIVE_AI_API_KEY')],
+  ['deepseek', remotePolicy('deepseek', 'DEEPSEEK_API_KEY')],
+  ['ollama', ollamaPolicy],
   ['openai-compatible', compatiblePolicy],
 ])
 
@@ -68,7 +80,10 @@ export const getProviderBaseUrlIssue = (
 ): string | null => {
   const policy = getAiProviderPolicy(kind).baseUrlPolicy
   if (policy === 'required' && !baseUrl) {
-    return 'baseUrl is required for openai-compatible providers'
+    return `baseUrl is required for ${kind} providers`
+  }
+  if (kind === 'ollama' && baseUrl && !isLoopbackProviderUrl(baseUrl)) {
+    return 'Ollama baseUrl must use a loopback address'
   }
   if (policy === 'forbidden' && baseUrl) return `baseUrl is not supported for ${kind} providers`
   return null

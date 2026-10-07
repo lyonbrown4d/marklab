@@ -44,7 +44,6 @@ export type TitlebarProps = {
   onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
-  onUseInternalRoot: () => void
   onToggleReadOnly: () => void
   onCloseActiveTab: () => void
   onOpenTerminal: () => void

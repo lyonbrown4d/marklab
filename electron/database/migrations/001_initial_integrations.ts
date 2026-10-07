@@ -15,7 +15,7 @@ export const createIntegrationTables = async (db: Kysely<unknown>): Promise<void
     .addColumn('updated_at', 'text', (column) => column.notNull().defaultTo(now))
     .addCheckConstraint(
       'ai_providers_kind_check',
-      sql`kind in ('openai', 'anthropic', 'google', 'openai-compatible')`,
+      sql`kind in ('openai', 'anthropic', 'google', 'deepseek', 'ollama', 'openai-compatible')`,
     )
     .execute()
 

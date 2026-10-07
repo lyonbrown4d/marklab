@@ -50,7 +50,7 @@ describe('AI provider validation', () => {
     expect(() => providerUpdateSchema.parse(provider)).toThrow(/baseUrl/i)
   })
 
-  it.each(['openai', 'anthropic', 'google'] as const)(
+  it.each(['openai', 'anthropic', 'google', 'deepseek'] as const)(
     'rejects a custom base URL for built-in %s providers',
     (kind) => {
       expect(() =>
@@ -62,6 +62,24 @@ describe('AI provider validation', () => {
       ).toThrow(/baseUrl.*not supported|must not/i)
     },
   )
+
+  it('requires Ollama to use a loopback base URL', () => {
+    expect(
+      providerUpdateSchema.parse({
+        ...provider,
+        kind: 'ollama',
+        baseUrl: 'http://localhost:11434/v1',
+        apiKey: null,
+      }).kind,
+    ).toBe('ollama')
+    expect(() =>
+      providerUpdateSchema.parse({
+        ...provider,
+        kind: 'ollama',
+        baseUrl: 'https://ollama.example.com/v1',
+      }),
+    ).toThrow(/loopback/i)
+  })
 
   it('bounds prompt, system, token, and temperature inputs', () => {
     expect(() =>

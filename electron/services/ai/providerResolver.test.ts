@@ -31,6 +31,8 @@ describe('VercelAiProviderResolver', () => {
     ['openai', 'gpt-5-mini', undefined],
     ['anthropic', 'claude-sonnet-4-6', undefined],
     ['google', 'gemini-3-flash-preview', undefined],
+    ['deepseek', 'deepseek-chat', undefined],
+    ['ollama', 'qwen3', 'http://127.0.0.1:11434/v1'],
     ['openai-compatible', 'qwen3', 'http://127.0.0.1:11434/v1'],
   ] as const)('creates an AI SDK model for %s', (kind, model, baseUrl) => {
     const provider: StoredAiProvider = {
@@ -47,11 +49,12 @@ describe('VercelAiProviderResolver', () => {
 
     const modelMetadata = resolved as { modelId: string; provider: string }
     expect(modelMetadata.modelId).toBe(model)
-    expect(modelMetadata.provider).toContain(kind === 'openai-compatible' ? provider.id : kind)
-    if (kind === 'openai-compatible') {
+    const compatibleKind = kind === 'deepseek' || kind === 'ollama' || kind === 'openai-compatible'
+    expect(modelMetadata.provider).toContain(compatibleKind ? provider.id : kind)
+    if (compatibleKind) {
       expect(sdkFactories.compatible).toHaveBeenCalledWith({
         apiKey: 'not-a-real-key',
-        baseURL: baseUrl,
+        baseURL: kind === 'deepseek' ? 'https://api.deepseek.com' : baseUrl,
         name: provider.id,
       })
     }

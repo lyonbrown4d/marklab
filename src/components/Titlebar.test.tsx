@@ -70,7 +70,6 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   onOpenProject: vi.fn(),
   onOpenCurrentWorkspaceInNewWindow: vi.fn(),
   onSelectWorkspaceInNewWindow: vi.fn(),
-  onUseInternalRoot: vi.fn(),
   onToggleReadOnly: vi.fn(),
   onCloseActiveTab: vi.fn(),
   onOpenTerminal: vi.fn(),
