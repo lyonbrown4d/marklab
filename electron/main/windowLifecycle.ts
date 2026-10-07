@@ -168,6 +168,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
     event.preventDefault()
     if (quitFlushInProgress) return
 
+    const logger = options.getServices().logger
     quitFlushInProgress = true
     void (async () => {
       let barrier: ShutdownBarrierHandle
@@ -175,11 +176,7 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
         barrier = await flushWorkspaceBuffersWithBarrier('quit')
       } catch (error) {
         quitFlushInProgress = false
-        options
-          .getServices()
-          .logger.error('app quit cancelled because workspace buffers could not be saved', {
-            error,
-          })
+        logger.error('app quit cancelled because workspace buffers could not be saved', { error })
         return
       }
 
@@ -194,16 +191,14 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
       } catch (error) {
         barrier.cancel()
         quitFlushInProgress = false
-        options
-          .getServices()
-          .logger.error('app quit cancelled because application shutdown failed', { error })
+        logger.error('app quit cancelled because application shutdown failed', { error })
         return
       }
 
       allowAppQuit = true
       allowAllMainWindowClose = true
       windowPool?.destroyIdleWindows()
-      options.getServices().logger.info('app quit continuing after flush')
+      logger.info('app quit continuing after flush')
       continueQuit()
     })()
   }

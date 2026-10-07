@@ -52,8 +52,12 @@ const createHarness = () => {
     warn: vi.fn(),
   }
   const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
+  let servicesAvailable = true
   const options = {
-    getServices: () => ({ logger, webTabManager, workspaceRegistry: workspace }),
+    getServices: () => {
+      if (!servicesAvailable) throw new Error('dependency container released')
+      return { logger, webTabManager, workspaceRegistry: workspace }
+    },
     getNativeIpc: () => nativeIpc,
     persistWindowState,
     getWindows: () => null,
@@ -79,6 +83,9 @@ const createHarness = () => {
     logger,
     persistWindowState,
     requestRendererFlush,
+    releaseServices: () => {
+      servicesAvailable = false
+    },
     save,
     webTabManager,
     window,
@@ -156,6 +163,19 @@ describe('window persistence shutdown barrier', () => {
 
     await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
     expect(order).toEqual(['window-state', 'shutdown'])
+  })
+
+  it('does not resolve services after application shutdown releases the container', async () => {
+    const { lifecycle, logger, releaseServices } = createHarness()
+    const continueQuit = vi.fn()
+    const shutdown = vi.fn(async () => {
+      releaseServices()
+    })
+
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, continueQuit, shutdown)
+
+    await vi.waitFor(() => expect(continueQuit).toHaveBeenCalledOnce())
+    expect(logger.info).toHaveBeenCalledWith('app quit continuing after flush')
   })
 
   it('cancels quit on a real save failure, unfreezes, and permits a later retry', async () => {
