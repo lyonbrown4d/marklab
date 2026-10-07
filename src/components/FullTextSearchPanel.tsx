@@ -11,7 +11,7 @@ import { AlertCircle, ChevronsDownUp, ChevronsUpDown, Search, SearchX, X } from 
 import AppButton from '@/components/AppButton'
 import AppEmptyState from '@/components/AppEmptyState'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/i18n/useI18n'

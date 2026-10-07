@@ -3,8 +3,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
 export const PLATE_EDITOR_SELECTOR = '[data-testid="markdown-editor"][data-editor-engine="plate"]'
 export const EDITABLE_PLATE_EDITOR_SELECTOR = `${PLATE_EDITOR_SELECTOR}[contenteditable="true"]`
 
-export const captureEditorState = (page: Page) =>
-  page.evaluate((selector) => {
+export const captureEditorLocatorState = (editor: Locator) =>
+  editor.evaluate((element) => {
     const paragraphStyle = (element: HTMLElement | null) => {
       if (!element) return null
       const style = getComputedStyle(element)
@@ -18,23 +18,37 @@ export const captureEditorState = (page: Page) =>
         paddingTop: style.paddingTop,
       }
     }
-    const editor = document.querySelector<HTMLElement>(selector)
     return {
-      activeEditors: document.querySelectorAll(`${selector}[data-slate-editor="true"]`).length,
-      activeParagraphStyle: paragraphStyle(editor?.querySelector<HTMLElement>('p') ?? null),
-      chunkCount: editor?.querySelectorAll('[data-slate-chunk="true"]').length ?? 0,
-      domNodeCount: editor ? editor.querySelectorAll('*').length + 1 : 0,
-      renderedElementCount: editor?.querySelectorAll('[data-slate-node="element"]').length ?? 0,
-      scrollHeight: editor?.scrollHeight ?? 0,
-      scrollTop: editor?.scrollTop ?? 0,
+      activeEditors: element.matches('[data-slate-editor="true"]') ? 1 : 0,
+      activeParagraphStyle: paragraphStyle(element.querySelector<HTMLElement>('p')),
+      chunkCount: element.querySelectorAll('[data-slate-chunk="true"]').length,
+      domBreakdown: {
+        blockDragWrappers: element.querySelectorAll('[data-block-drag-wrapper="true"]').length,
+        codeBlocks: element.querySelectorAll('pre').length,
+        links: element.querySelectorAll('a').length,
+        mermaidPreviews: element.querySelectorAll('[data-plate-preview="mermaid"]').length,
+        mermaidSvgNodes: element.querySelectorAll('[data-plate-mermaid-output] svg *').length,
+        slateLeaves: element.querySelectorAll('[data-slate-leaf="true"]').length,
+        slateStrings: element.querySelectorAll('[data-slate-string="true"]').length,
+        svgNodes: element.querySelectorAll('svg *').length,
+        tableCells: element.querySelectorAll('th, td').length,
+        tables: element.querySelectorAll('table').length,
+      },
+      domNodeCount: element.querySelectorAll('*').length + 1,
+      renderedElementCount: element.querySelectorAll('[data-slate-node="element"]').length,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
       usedJsHeapBytes:
         'memory' in performance
           ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory
               .usedJSHeapSize
           : null,
-      viewportHeight: editor?.clientHeight ?? 0,
+      viewportHeight: element.clientHeight,
     }
-  }, PLATE_EDITOR_SELECTOR)
+  })
+
+export const captureEditorState = (page: Page) =>
+  captureEditorLocatorState(page.locator(PLATE_EDITOR_SELECTOR).first())
 
 export const captureSentinelOrder = (page: Page, sentinels: readonly string[]) =>
   page.evaluate(
@@ -100,17 +114,15 @@ export const dragNativeScrollbar = async (page: Page, viewport: Locator) => {
       supported: false,
     }
   }
-  const targetScrollTop = maxScrollTop / 2
-  await viewport.evaluate((element, top) => {
-    element.scrollTo({ behavior: 'instant', top })
-  }, targetScrollTop)
   await expect
     .poll(
       () =>
-        viewport.evaluate(
-          (element, target) => Math.abs(element.scrollTop - target) <= 2,
-          targetScrollTop,
-        ),
+        viewport.evaluate((element) => {
+          const viewportElement = element as HTMLElement
+          const target = (viewportElement.scrollHeight - viewportElement.clientHeight) / 2
+          viewportElement.scrollTo({ behavior: 'instant', top: target })
+          return Math.abs(viewportElement.scrollTop - target) <= 2
+        }),
       { message: 'The editor viewport did not settle at the native scrollbar midpoint.' },
     )
     .toBe(true)

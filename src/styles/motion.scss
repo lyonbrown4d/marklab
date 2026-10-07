@@ -53,7 +53,8 @@
   }
 }
 
-.motion-scroll-viewport {
+.motion-scroll-viewport,
+[data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'] {
   scroll-behavior: smooth;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -81,7 +82,10 @@
   }
 }
 
-:root[data-motion-smooth-scrolling='false'] .motion-scroll-viewport {
+:root[data-motion-smooth-scrolling='false'] .motion-scroll-viewport,
+:root[data-motion-smooth-scrolling='false']
+  [data-slot='app-scroll-area']
+  > [data-slot='scroll-area-viewport'] {
   scroll-behavior: auto;
 }
 
@@ -149,6 +153,7 @@
 :root[data-motion-panels='true'] .motion-view,
 :root[data-motion-panels='true'] .motion-view-stack,
 :root[data-motion-panels='true'] .motion-scroll-viewport,
+:root[data-motion-panels='true'] [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'],
 :root[data-motion-panels='true'] .settings-scroll-viewport,
 :root[data-motion-panels='true'] .layout-rail,
 :root[data-motion-panels='true'] [data-slot='dialog-content'] {
@@ -194,7 +199,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .motion-scroll-viewport {
+  .motion-scroll-viewport,
+  [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'] {
     scroll-behavior: auto;
   }
 
@@ -207,6 +213,7 @@
   .motion-view,
   .motion-view-stack,
   .motion-scroll-viewport,
+  [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'],
   .settings-scroll-viewport,
   [data-slot='dialog-content'],
   .layout-rail {

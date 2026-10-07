@@ -16,7 +16,7 @@ import type { InlineAiProvider } from '@/components/ai/aiProviderSelection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
 export type AiComposerPhase =

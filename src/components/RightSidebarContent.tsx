@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { RightSidebarCollapsedRail } from '@/components/RightSidebarCollapsedRail'
 import { RightSidebarAssetsPanel } from '@/components/assets/RightSidebarAssetsPanel'

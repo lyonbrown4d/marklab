@@ -119,8 +119,8 @@ describe('WebTabManager', () => {
     const fixture = createFixture()
     fixture.manager.activate(fixture.window as never, request('docs'))
     const view = fixture.views[0]
-    const navigation = { preventDefault: vi.fn() }
-    view.webContents.emit('will-navigate', navigation, 'file:///tmp/private.md')
+    const navigation = { preventDefault: vi.fn(), url: 'file:///tmp/private.md' }
+    view.webContents.emit('will-navigate', navigation)
     expect(navigation.preventDefault).toHaveBeenCalledOnce()
 
     fixture.window.emit('closed')

@@ -2,6 +2,10 @@ import { createElement } from 'react'
 import type { PlateChunkProps } from 'platejs/react'
 import { createPlateNodePlugins, type PlatePreviewOptions } from '@/components/plate/nodes'
 import { plateMarkdownPlugin } from '@/components/plate/plateMarkdownConfig'
+import {
+  PLATE_CHUNK_INTRINSIC_BLOCK_SIZE,
+  PlateVirtualChunk,
+} from '@/components/plate/PlateVirtualChunk'
 
 export const createPlateEditorPlugins = (previewOptions: PlatePreviewOptions = {}) => [
   ...createPlateNodePlugins(previewOptions),
@@ -13,8 +17,7 @@ export const plateChunkingOptions = {
   contentVisibilityAuto: true,
 } as const
 
-const PLATE_CHUNK_INTRINSIC_BLOCK_SIZE = 'auto 800px'
-
+// Editable chunks must retain Slate's node-to-DOM mappings for selection and IME input.
 export const renderPlateEditorChunk = ({ attributes, children, lowest }: PlateChunkProps) => {
   if (!lowest) return children
 
@@ -29,4 +32,14 @@ export const renderPlateEditorChunk = ({ attributes, children, lowest }: PlateCh
     },
     children,
   )
+}
+
+export const renderReadOnlyPlateEditorChunk = ({
+  attributes,
+  children,
+  lowest,
+}: PlateChunkProps) => {
+  if (!lowest) return children
+
+  return createElement(PlateVirtualChunk, { attributes, children })
 }

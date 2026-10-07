@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/AppTooltip'
 import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
 import { AppStatusBarRight } from '@/components/AppStatusBarRight'
 import { EditorStatusBarSlot } from '@/components/EditorStatusBar'

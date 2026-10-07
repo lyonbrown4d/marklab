@@ -28,7 +28,7 @@ vi.mock('@/i18n/useI18n', () => ({
   }),
 }))
 
-vi.mock('@/components/ui/scroll-area', () => ({
+vi.mock('@/components/AppScrollArea', () => ({
   ScrollArea: ({
     children,
     className,

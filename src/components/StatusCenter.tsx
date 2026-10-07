@@ -4,7 +4,7 @@ import { Activity, AlertTriangle, Clock, FileText, Terminal } from 'lucide-react
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Section, EmptyState, StatusRow } from '@/components/status-center/StatusCenterRows'

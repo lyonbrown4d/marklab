@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import { Skeleton } from '@/components/ui/skeleton'
 import AppEmptyState from '@/components/AppEmptyState'
 import { PropertyCell } from '@/components/RightSidebarPrimitives'

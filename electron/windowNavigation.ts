@@ -22,7 +22,7 @@ export const installWindowNavigationGuard = (
     return { action: 'deny' }
   })
 
-  window.webContents.on('will-navigate', (event, url) => {
-    if (!allowedNavigationUrls.has(url)) event.preventDefault()
+  window.webContents.on('will-navigate', (details) => {
+    if (!allowedNavigationUrls.has(details.url)) details.preventDefault()
   })
 }

@@ -1,6 +1,6 @@
 import { Code2, PenLine } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
 import type { ViewMode } from '@/store/appTypes'
 

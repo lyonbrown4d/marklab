@@ -10,23 +10,26 @@ type ExternalLinkPreviewProps = {
 
 export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPreviewProps) => {
   const cardRef = useRef<HTMLElement | null>(null)
+  const [focused, setFocused] = useState(false)
+  const [hovered, setHovered] = useState(false)
   const [requested, setRequested] = useState(false)
+  const [visible, setVisible] = useState(false)
   const requestPreview = useCallback(() => setRequested(true), [])
 
   useEffect(() => {
     const card = cardRef.current
-    if (!card || requested || typeof IntersectionObserver !== 'function') return
+    if (!card || typeof IntersectionObserver !== 'function') return
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return
-        requestPreview()
-        observer.disconnect()
+        const nextVisible = entries.some((entry) => entry.isIntersecting)
+        setVisible(nextVisible)
+        if (nextVisible) requestPreview()
       },
       { rootMargin: '180px' },
     )
     observer.observe(card)
     return () => observer.disconnect()
-  }, [requestPreview, requested])
+  }, [requestPreview])
 
   const stopEditorEvent = useCallback((event: SyntheticEvent) => event.stopPropagation(), [])
   const fallbackTitle = title?.trim() || url
@@ -38,12 +41,22 @@ export const ExternalLinkPreview = ({ className, title, url }: ExternalLinkPrevi
       contentEditable={false}
       data-marklab-editor-chrome="external-link-preview"
       onClick={stopEditorEvent}
-      onFocusCapture={requestPreview}
+      onBlurCapture={() => setFocused(false)}
+      onFocusCapture={() => {
+        setFocused(true)
+        requestPreview()
+      }}
       onPointerDown={stopEditorEvent}
-      onPointerEnter={requestPreview}
+      onPointerEnter={() => {
+        setHovered(true)
+        requestPreview()
+      }}
+      onPointerLeave={() => setHovered(false)}
       role="article"
     >
       <ExternalWebPreviewSurface
+        capturePriority={focused || hovered ? 'interactive' : 'background'}
+        captureRequested={visible || focused || hovered}
         className={className}
         requested={requested}
         title={title}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import AppSearchField from '@/components/AppSearchField'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'

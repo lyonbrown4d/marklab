@@ -1,4 +1,10 @@
-import type { Event, Session, WebContents } from 'electron'
+import type {
+  Event,
+  Session,
+  WebContents,
+  WebContentsWillNavigateEventParams,
+  WebContentsWillRedirectEventParams,
+} from 'electron'
 
 import { normalizeWebTabUrl } from '@electron/services/webTabs/webTabUrl'
 
@@ -15,11 +21,13 @@ export const configureWebTabSession = (session: Session): void => {
 }
 
 export const installNavigationGuard = (webContents: WebContents): void => {
-  const guard = (event: Event, url: string): void => {
+  const guard = (
+    details: Event<WebContentsWillNavigateEventParams | WebContentsWillRedirectEventParams>,
+  ): void => {
     try {
-      normalizeWebTabUrl(url)
+      normalizeWebTabUrl(details.url)
     } catch {
-      event.preventDefault()
+      details.preventDefault()
     }
   }
   webContents.on('will-navigate', guard)

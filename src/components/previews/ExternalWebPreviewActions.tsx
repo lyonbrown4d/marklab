@@ -2,7 +2,7 @@ import { AppWindow, ArrowUpRight, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 

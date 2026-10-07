@@ -8,6 +8,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import WindowControls from '@/components/WindowControls'
 import AppCommandDialog from '@/components/AppCommandDialog'
 import TitlebarCommandDialogFallback from '@/components/TitlebarCommandDialogFallback'
@@ -24,6 +25,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { useDoubleShiftCommandPalette } from '@/components/command/useDoubleShiftCommandPalette'
+import { preloadWorkspaceGraph } from '@/app/preloadWorkspaceGraph'
 
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 const noop = () => undefined
@@ -78,6 +80,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     },
     ref,
   ) => {
+    const queryClient = useQueryClient()
     const [internalCommandOpen, setInternalCommandOpen] = useState(false)
     const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
@@ -94,6 +97,9 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       [controlledCommandOpen, onCommandOpenChange],
     )
     const openCommandPalette = useCallback(() => setCommandOpen(true), [setCommandOpen])
+    const handlePreloadWorkspaceGraph = useCallback(() => {
+      void preloadWorkspaceGraph(queryClient, workspaceKey)
+    }, [queryClient, workspaceKey])
     useDoubleShiftCommandPalette({ enabled: !commandOpen, onOpen: openCommandPalette })
 
     useImperativeHandle(
@@ -214,6 +220,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onOpenSearch={onOpenSearch}
           onOpenWorkspaceFiles={onOpenWorkspaceFiles}
           onOpenWorkspaceGraph={onOpenWorkspaceGraph}
+          onPreloadWorkspaceGraph={handlePreloadWorkspaceGraph}
           onToggleSidebar={onToggleSidebar}
           onToggleOutline={onToggleRightSidebar}
           onOpenSettings={onOpenSettings}

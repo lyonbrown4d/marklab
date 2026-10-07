@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import AppEmptyState from '@/components/AppEmptyState'
 import { InspectorEmptyState } from '@/components/RightSidebarPrimitives'
 import { useI18n } from '@/i18n/useI18n'

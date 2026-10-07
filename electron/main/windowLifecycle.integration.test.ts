@@ -87,6 +87,8 @@ describe('window lifecycle composition', () => {
       ) => workspaceRegistry.flushWindowForClose(window),
     }
     const lifecycle = createWindowLifecycle({
+      finalizeWindowState: vi.fn(async () => undefined),
+      flushWindowState: vi.fn(async () => undefined),
       getNativeIpc: () => ({
         commands: { workspace: workspaceCommands },
         windowClose: { requestRendererFlush: vi.fn(async () => undefined) },
@@ -97,7 +99,6 @@ describe('window lifecycle composition', () => {
         workspaceRegistry,
       }),
       getWindows: () => null,
-      persistWindowState: vi.fn(async () => undefined),
       setWindows: vi.fn(),
     })
     const continueQuit = vi.fn()

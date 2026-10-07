@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
+import { createMarklabWindowPool, type MarklabWindowPool } from '@electron/windowPool'
 import {
   WorkspaceMutationGate,
   WorkspaceShutdownBarrier,
@@ -43,7 +44,8 @@ const createHarness = () => {
   const requestRendererFlush = vi.fn(async (window: BrowserWindow): Promise<void> => {
     void window
   })
-  const persistWindowState = vi.fn(async () => undefined)
+  const flushWindowState = vi.fn(async () => undefined)
+  const finalizeWindowState = vi.fn(async () => undefined)
   const logger = {
     child: vi.fn(),
     debug: vi.fn(),
@@ -54,12 +56,13 @@ const createHarness = () => {
   const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
   let servicesAvailable = true
   const options = {
+    finalizeWindowState,
+    flushWindowState,
     getServices: () => {
       if (!servicesAvailable) throw new Error('dependency container released')
       return { logger, webTabManager, workspaceRegistry: workspace }
     },
     getNativeIpc: () => nativeIpc,
-    persistWindowState,
     getWindows: () => null,
     setWindows: vi.fn(),
   } satisfies Parameters<typeof createWindowLifecycle>[0]
@@ -78,10 +81,11 @@ const createHarness = () => {
   })
   const window = windowEmitter as unknown as BrowserWindow & typeof windowEmitter
   return {
+    finalizeWindowState,
+    flushWindowState,
     gate,
     lifecycle,
     logger,
-    persistWindowState,
     requestRendererFlush,
     releaseServices: () => {
       servicesAvailable = false
@@ -149,10 +153,10 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('persists managed window state before application services shut down', async () => {
-    const { lifecycle, persistWindowState, window } = createHarness()
+    const { flushWindowState, lifecycle, window } = createHarness()
     lifecycle.installManagedMainWindowLifecycle(window)
     const order: string[] = []
-    persistWindowState.mockImplementationOnce(async () => {
+    flushWindowState.mockImplementationOnce(async () => {
       order.push('window-state')
     })
     const shutdown = vi.fn(async () => {
@@ -163,6 +167,53 @@ describe('window persistence shutdown barrier', () => {
 
     await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
     expect(order).toEqual(['window-state', 'shutdown'])
+  })
+
+  it('disposes the window pool after application services shut down', async () => {
+    const { lifecycle } = createHarness()
+    const order: string[] = []
+    const pool = {
+      dispose: vi.fn(async () => {
+        order.push('pool-dispose')
+      }),
+    } as unknown as MarklabWindowPool
+    vi.mocked(createMarklabWindowPool).mockReturnValueOnce(pool)
+    lifecycle.ensureWindowPool()
+    const shutdown = vi.fn(async () => {
+      order.push('shutdown')
+    })
+
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, vi.fn(), shutdown)
+
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(pool.dispose).toHaveBeenCalledOnce())
+    expect(order).toEqual(['shutdown', 'pool-dispose'])
+  })
+
+  it('keeps finalizers and the window pool usable when application shutdown fails', async () => {
+    const { finalizeWindowState, lifecycle, logger, window } = createHarness()
+    const pool = { dispose: vi.fn(async () => undefined) } as unknown as MarklabWindowPool
+    vi.mocked(createMarklabWindowPool).mockReturnValueOnce(pool)
+    lifecycle.ensureWindowPool()
+    lifecycle.installManagedMainWindowLifecycle(window)
+    const error = new Error('shutdown failed')
+    const shutdown = vi.fn().mockRejectedValueOnce(error).mockResolvedValueOnce(undefined)
+    const continueQuit = vi.fn()
+
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, continueQuit, shutdown)
+    await vi.waitFor(() =>
+      expect(logger.error).toHaveBeenCalledWith(
+        'app quit cancelled because application shutdown failed',
+        { error },
+      ),
+    )
+    expect(finalizeWindowState).not.toHaveBeenCalled()
+    expect(pool.dispose).not.toHaveBeenCalled()
+
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, continueQuit, shutdown)
+    await vi.waitFor(() => expect(continueQuit).toHaveBeenCalledOnce())
+    expect(finalizeWindowState).toHaveBeenCalledWith(window)
+    expect(pool.dispose).toHaveBeenCalledOnce()
   })
 
   it('does not resolve services after application shutdown releases the container', async () => {

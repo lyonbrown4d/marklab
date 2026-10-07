@@ -1,6 +1,6 @@
 import { CaseSensitive, Regex, WholeWord } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import type { WorkspaceSearchOptions } from '@/components/sidebar-search/searchModel'
 
 type SearchOptionsBarProps = {

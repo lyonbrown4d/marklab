@@ -60,9 +60,18 @@ describe('installWindowNavigationGuard', () => {
     const queryVariant = { preventDefault: vi.fn() }
     const external = { preventDefault: vi.fn() }
 
-    harness.window.webContents.emit('will-navigate', allowed, 'file:///app/index.html')
-    harness.window.webContents.emit('will-navigate', queryVariant, 'file:///app/index.html?next=1')
-    harness.window.webContents.emit('will-navigate', external, 'https://example.com')
+    harness.window.webContents.emit('will-navigate', {
+      ...allowed,
+      url: 'file:///app/index.html',
+    })
+    harness.window.webContents.emit('will-navigate', {
+      ...queryVariant,
+      url: 'file:///app/index.html?next=1',
+    })
+    harness.window.webContents.emit('will-navigate', {
+      ...external,
+      url: 'https://example.com',
+    })
 
     expect(allowed.preventDefault).not.toHaveBeenCalled()
     expect(queryVariant.preventDefault).toHaveBeenCalledOnce()

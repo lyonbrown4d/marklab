@@ -148,6 +148,10 @@
   -webkit-app-region: no-drag;
 }
 
+[data-slot='sheet-overlay']:has(+ [data-slot='sheet-content'][data-overlay='hidden']) {
+  display: none;
+}
+
 .immersive-workspace {
   background: hsl(var(--background));
 }

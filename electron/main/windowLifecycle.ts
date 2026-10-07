@@ -36,10 +36,11 @@ type ShutdownBarrierHandle = {
 }
 
 type WindowLifecycleOptions = {
+  finalizeWindowState: (window: BrowserWindow) => Promise<void> | void
+  flushWindowState: (window: BrowserWindow) => Promise<void> | void
   getServices: () => WindowLifecycleServices
   getNativeIpc: () => WindowLifecycleIpc | null
   getWindows: () => MarklabWindows | null
-  persistWindowState: (window: BrowserWindow) => Promise<void> | void
   setWindows: (windows: MarklabWindows | null) => void
 }
 
@@ -183,10 +184,16 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
       try {
         await Promise.all(
           Array.from(managedMainWindows, (window) =>
-            window.isDestroyed() ? Promise.resolve() : options.persistWindowState(window),
+            window.isDestroyed() ? Promise.resolve() : options.flushWindowState(window),
           ),
         )
         await shutdownApplication()
+        await Promise.all(
+          Array.from(managedMainWindows, (window) =>
+            window.isDestroyed() ? Promise.resolve() : options.finalizeWindowState(window),
+          ),
+        )
+        await windowPool?.dispose()
         barrier.complete()
       } catch (error) {
         barrier.cancel()
@@ -197,7 +204,6 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
 
       allowAppQuit = true
       allowAllMainWindowClose = true
-      windowPool?.destroyIdleWindows()
       logger.info('app quit continuing after flush')
       continueQuit()
     })()

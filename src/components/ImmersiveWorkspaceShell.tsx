@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { PanelLeftOpen } from 'lucide-react'
+import { AppSheetContent } from '@/components/AppSheetContent'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetTitle } from '@/components/ui/sheet'
 import { useSidebarHoverPreview } from '@/components/useSidebarHoverPreview'
 import { useNativeSurfaceInsetsStore } from '@/app/nativeSurfaceInsets'
 
@@ -90,7 +91,7 @@ export const ImmersiveWorkspaceShell = ({
       <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
 
       <Sheet modal={false} open={effectiveSidebarOpen} onOpenChange={handleSidebarOpenChange}>
-        <SheetContent
+        <AppSheetContent
           side="left"
           showOverlay={false}
           aria-describedby={undefined}
@@ -108,7 +109,7 @@ export const ImmersiveWorkspaceShell = ({
         >
           <SheetTitle className="sr-only">{sidebarLabel}</SheetTitle>
           <div className="min-h-0 flex-1">{sidebar}</div>
-        </SheetContent>
+        </AppSheetContent>
       </Sheet>
 
       <Sheet
@@ -116,7 +117,7 @@ export const ImmersiveWorkspaceShell = ({
         open={inspectorOpen}
         onOpenChange={(open) => !open && onToggleInspector()}
       >
-        <SheetContent
+        <AppSheetContent
           side="right"
           showOverlay={false}
           aria-describedby={undefined}
@@ -124,7 +125,7 @@ export const ImmersiveWorkspaceShell = ({
         >
           <SheetTitle className="sr-only">{inspectorLabel}</SheetTitle>
           <div className="min-h-0 flex-1">{inspector}</div>
-        </SheetContent>
+        </AppSheetContent>
       </Sheet>
     </div>
   )

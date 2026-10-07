@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { Button } from '@/components/ui/button'
 import AppSearchField from '@/components/AppSearchField'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/AppScrollArea'
 import {
   Select,
   SelectContent,

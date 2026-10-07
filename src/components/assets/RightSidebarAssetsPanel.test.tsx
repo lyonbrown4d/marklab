@@ -11,7 +11,7 @@ vi.mock('@/components/file-tree/fileTreeActions', () => ({
   copyText: copyTextMock,
 }))
 
-vi.mock('@/components/ui/scroll-area', () => ({
+vi.mock('@/components/AppScrollArea', () => ({
   ScrollArea: ({
     children,
     className,

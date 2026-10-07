@@ -1,6 +1,6 @@
 import { Files, Network } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import type { WorkspaceView } from '@/app/useEditorRoutes'
 import { preloadGraphView } from '@/lib/preloadFeatures'
 
@@ -11,6 +11,7 @@ type WorkspaceViewSwitcherProps = {
   mapLabel: string
   onOpenFiles: () => void
   onOpenMap: () => void
+  onPreloadMap?: () => void
 }
 
 export const WorkspaceViewSwitcher = ({
@@ -20,10 +21,15 @@ export const WorkspaceViewSwitcher = ({
   mapLabel,
   onOpenFiles,
   onOpenMap,
+  onPreloadMap,
 }: WorkspaceViewSwitcherProps) => {
   const handleValueChange = (value: string) => {
     if (value === 'files') onOpenFiles()
     if (value === 'map') onOpenMap()
+  }
+  const handlePreloadMap = () => {
+    preloadGraphView()
+    onPreloadMap?.()
   }
 
   return (
@@ -60,8 +66,8 @@ export const WorkspaceViewSwitcher = ({
                 aria-label={mapLabel}
                 className="size-6 rounded"
                 data-no-drag
-                onFocus={preloadGraphView}
-                onPointerEnter={preloadGraphView}
+                onFocus={handlePreloadMap}
+                onPointerEnter={handlePreloadMap}
               >
                 <Network aria-hidden="true" />
               </ToggleGroupItem>

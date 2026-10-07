@@ -1,4 +1,4 @@
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { LayoutGrid, NotebookTabs, type LucideIcon } from 'lucide-react'

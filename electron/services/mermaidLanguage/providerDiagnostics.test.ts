@@ -7,6 +7,8 @@ import {
 } from '@electron/services/mermaidLanguage/provider'
 import { validateWithOfficialMermaidParser } from '@electron/services/mermaidLanguage/validationWorkerParser'
 
+const OFFICIAL_PARSER_COLD_START_TIMEOUT_MS = 60_000
+
 const document = (text: string): MermaidTextDocument => ({
   languageId: 'mermaid',
   text,
@@ -33,19 +35,23 @@ describe('MermaidLanguageProvider diagnostics', () => {
     ])
   })
 
-  it('reports invalid Mermaid syntax with the official parser', async () => {
-    const diagnostics = await officialProvider().provideDiagnostics(
-      document('flowchrt LR\n  A --> B'),
-    )
+  it(
+    'reports invalid Mermaid syntax with the official parser',
+    async () => {
+      const diagnostics = await officialProvider().provideDiagnostics(
+        document('flowchrt LR\n  A --> B'),
+      )
 
-    expect(diagnostics).toEqual([
-      expect.objectContaining({
-        message: expect.stringContaining('flowchrt'),
-        severity: DiagnosticSeverity.Error,
-        source: 'mermaid',
-      }),
-    ])
-  })
+      expect(diagnostics).toEqual([
+        expect.objectContaining({
+          message: expect.stringContaining('flowchrt'),
+          severity: DiagnosticSeverity.Error,
+          source: 'mermaid',
+        }),
+      ])
+    },
+    OFFICIAL_PARSER_COLD_START_TIMEOUT_MS,
+  )
 
   it('reports invalid diagram body syntax beyond the declaration', async () => {
     const diagnostics = await officialProvider().provideDiagnostics(

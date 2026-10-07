@@ -19,6 +19,7 @@ describe('createMainWindowSession', () => {
     const pool: MarklabWindowPool = {
       acquireMainWindow: vi.fn(),
       activateMainWindow: vi.fn(),
+      dispose: vi.fn(async () => undefined),
       destroyIdleWindows: vi.fn(),
       prewarmMainWindow: vi.fn(async () => undefined),
       restoreOpeningWindow: vi.fn(),

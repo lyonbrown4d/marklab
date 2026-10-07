@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import type { PlateSelectionToolbarController } from '@/components/plate/usePlateSelectionToolbar'
 import type { PlateSelectionToolbarAction } from '@/components/plate/selection/selectionToolbarActions'
 

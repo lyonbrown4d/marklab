@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
 import { ArrowUpRight, Globe2, ImageIcon } from 'lucide-react'
-import { useCallback, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { useOpenWebTab } from '@/app/useOpenWebTab'
 import {
@@ -11,10 +10,13 @@ import {
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
-import { linkPreviewApi } from '@/services/linkPreviewApi'
+import type { PreviewCapturePriority } from '@/components/previews/previewCaptureQueue'
+import { useExternalWebPreviewData } from '@/components/previews/useExternalWebPreviewData'
 
 type ExternalWebPreviewSurfaceProps = {
   action?: ReactNode
+  capturePriority?: PreviewCapturePriority
+  captureRequested?: boolean
   className?: string
   dragHandleClassName?: string
   interactionClassName?: string
@@ -34,32 +36,23 @@ const siteLabel = (url: string) => {
 
 export const ExternalWebPreviewSurface = ({
   action,
+  capturePriority = 'background',
   className,
   dragHandleClassName,
   interactionClassName,
   requested,
+  captureRequested = requested,
   title,
   url,
   variant,
 }: ExternalWebPreviewSurfaceProps) => {
   const openWebTab = useOpenWebTab()
-  const metadata = useQuery({
-    enabled: requested,
-    queryFn: () => linkPreviewApi.fetch(url),
-    queryKey: ['link-preview', url],
-    staleTime: 30 * 60 * 1000,
+  const { capture, metadata, retryPreview } = useExternalWebPreviewData({
+    capturePriority,
+    captureRequested,
+    metadataRequested: requested,
+    url,
   })
-  const capture = useQuery({
-    enabled: requested,
-    queryFn: () => linkPreviewApi.capture(url),
-    queryKey: ['link-preview-capture', url],
-    staleTime: 30 * 60 * 1000,
-  })
-  const refetchMetadata = metadata.refetch
-  const refetchCapture = capture.refetch
-  const retryPreview = useCallback(() => {
-    void Promise.all([refetchMetadata(), refetchCapture()])
-  }, [refetchCapture, refetchMetadata])
   const fallbackTitle = title?.trim() || siteLabel(url)
   const result = metadata.data
   const webpageUrl = result?.kind === 'webpage' ? result.url : url

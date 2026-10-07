@@ -1,4 +1,4 @@
-import type { DialogProps } from '@radix-ui/react-dialog'
+import type { DialogProps } from 'radix-ui/dialog'
 import { useRef } from 'react'
 import { defaultFilter } from 'cmdk'
 import { parseCommandSearchScope } from '@/components/command/commandSearchScope'

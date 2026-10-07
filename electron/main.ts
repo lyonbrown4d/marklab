@@ -22,7 +22,10 @@ import { createMainWindowSession } from '@electron/main/windowSession'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
 import type { MarklabWindows } from '@electron/window'
-import { flushPersistedWindowState } from '@electron/windowStatePersistence'
+import {
+  flushPersistedWindowState,
+  releasePersistedWindowState,
+} from '@electron/windowStatePersistence'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion'
 import { dismissSplashWindow } from '@electron/splashLifecycle'
 import { syncNativeWindowBackgrounds } from '@electron/windowTheme'
@@ -113,10 +116,11 @@ const systemThemeMonitor = createSystemThemeMonitor({
 })
 
 const windowLifecycle = createWindowLifecycle({
+  finalizeWindowState: releasePersistedWindowState,
+  flushWindowState: flushPersistedWindowState,
   getServices,
   getNativeIpc: () => nativeIpc,
   getWindows: () => windows,
-  persistWindowState: flushPersistedWindowState,
   setWindows: (nextWindows) => {
     windows = nextWindows
   },

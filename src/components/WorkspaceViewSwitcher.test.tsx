@@ -79,6 +79,7 @@ describe('WorkspaceViewSwitcher', () => {
   })
 
   it('preloads the map feature when its control is hovered or focused', () => {
+    const onPreloadMap = vi.fn()
     render(
       <WorkspaceViewSwitcher
         activeView="files"
@@ -87,6 +88,7 @@ describe('WorkspaceViewSwitcher', () => {
         mapLabel="Map"
         onOpenFiles={vi.fn()}
         onOpenMap={vi.fn()}
+        onPreloadMap={onPreloadMap}
       />,
     )
 
@@ -95,5 +97,6 @@ describe('WorkspaceViewSwitcher', () => {
     fireEvent.focus(map)
 
     expect(preloadGraphView).toHaveBeenCalledTimes(2)
+    expect(onPreloadMap).toHaveBeenCalledTimes(2)
   })
 })

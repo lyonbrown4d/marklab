@@ -7,6 +7,7 @@ import {
   createPlateEditorPlugins,
   plateChunkingOptions,
   renderPlateEditorChunk,
+  renderReadOnlyPlateEditorChunk,
 } from '@/components/plate/plateEditorConfig'
 import { PlateEditorOverlays } from '@/components/plate/PlateEditorOverlays'
 import {
@@ -251,7 +252,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               placeholder={placeholder}
               readOnly={readOnly}
               ref={editableRef}
-              renderChunk={renderPlateEditorChunk}
+              renderChunk={readOnly ? renderReadOnlyPlateEditorChunk : renderPlateEditorChunk}
               spellCheck
               tabIndex={readOnly ? 0 : undefined}
             />

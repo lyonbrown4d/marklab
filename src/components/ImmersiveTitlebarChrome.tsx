@@ -42,6 +42,7 @@ type ImmersiveTitlebarChromeProps = {
   onOpenSearch: () => void
   onOpenWorkspaceFiles: () => void
   onOpenWorkspaceGraph: () => void
+  onPreloadWorkspaceGraph?: () => void
   onToggleSidebar: () => void
   onToggleOutline: () => void
   onOpenSettings: () => void
@@ -111,6 +112,7 @@ export const ImmersiveTitlebarChrome = ({
   onOpenSearch,
   onOpenWorkspaceFiles,
   onOpenWorkspaceGraph,
+  onPreloadWorkspaceGraph,
   onToggleSidebar,
   onToggleOutline,
   onOpenSettings,
@@ -193,6 +195,7 @@ export const ImmersiveTitlebarChrome = ({
             mapLabel={workspaceMapLabel}
             onOpenFiles={onOpenWorkspaceFiles}
             onOpenMap={onOpenWorkspaceGraph}
+            onPreloadMap={onPreloadWorkspaceGraph}
           />
         ) : null}
       </div>

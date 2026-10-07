@@ -1,8 +1,8 @@
-import { forwardRef } from 'react'
-import { Button, type ButtonProps } from '@/components/ui/button'
+import { forwardRef, type ComponentProps } from 'react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type AppButtonProps = ButtonProps & {
+export type AppButtonProps = ComponentProps<typeof Button> & {
   motion?: boolean
 }
 

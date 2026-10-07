@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { useNativeSurfaceInsetsStore } from '@/app/nativeSurfaceInsets'
+import { isDarkThemeMode } from '@/logic/themes'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const TOASTER_SELECTOR = '[data-sonner-toaster]'
 const TOAST_SELECTOR = '[data-sonner-toast]'
@@ -34,6 +36,7 @@ const mutationsContainToaster = (records: MutationRecord[]) =>
 
 const AppToaster = () => {
   const setToastHeight = useNativeSurfaceInsetsStore((state) => state.setToastHeight)
+  const theme = usePreferencesStore((state) => (isDarkThemeMode(state.theme) ? 'dark' : 'light'))
   useEffect(() => {
     let toaster: HTMLElement | null = null
     let observedToasts = new Set<HTMLElement>()
@@ -91,7 +94,22 @@ const AppToaster = () => {
       setToastHeight(0)
     }
   }, [setToastHeight])
-  return <Toaster richColors closeButton position="bottom-center" />
+  return (
+    <Toaster
+      richColors
+      closeButton
+      position="bottom-center"
+      theme={theme}
+      style={
+        {
+          '--normal-bg': 'hsl(var(--popover))',
+          '--normal-text': 'hsl(var(--popover-foreground))',
+          '--normal-border': 'hsl(var(--border))',
+          '--border-radius': 'var(--radius)',
+        } as CSSProperties
+      }
+    />
+  )
 }
 
 export default AppToaster

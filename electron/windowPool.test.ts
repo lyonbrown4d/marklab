@@ -149,4 +149,54 @@ describe('MarklabWindowPool', () => {
     expect(closeEvent.preventDefault).not.toHaveBeenCalled()
     expect(pool.stats()).toMatchObject({ activeMainWindows: 0, idleMainWindows: 0 })
   })
+
+  it('does not retain a prewarm that finishes after the pool is disposed', async () => {
+    let finishOpening!: () => void
+    const opening = new Promise<undefined>((resolve) => {
+      finishOpening = () => resolve(undefined)
+    })
+    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
+    loadOpeningWindow.mockReturnValueOnce(opening)
+
+    const prewarm = pool.prewarmMainWindow()
+    await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledOnce())
+    const disposal = pool.dispose()
+    finishOpening()
+    await Promise.all([disposal, prewarm])
+
+    expect(createMainWindow.mock.results[0]?.value.destroy).toHaveBeenCalledOnce()
+    expect(pool.stats().idleMainWindows).toBe(0)
+  })
+
+  it('destroys an in-flight prewarm when the final active window closes', async () => {
+    let finishOpening!: () => void
+    const opening = new Promise<undefined>((resolve) => {
+      finishOpening = () => resolve(undefined)
+    })
+    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
+    const active = await pool.acquireMainWindow()
+    loadOpeningWindow.mockReturnValueOnce(opening)
+
+    const prewarm = pool.prewarmMainWindow()
+    await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledTimes(2))
+    const warming = createMainWindow.mock.results[1]?.value
+    active.window.emit('closed')
+
+    expect(warming.destroy).toHaveBeenCalledOnce()
+    finishOpening()
+    await prewarm
+    expect(pool.stats()).toMatchObject({ activeMainWindows: 0, idleMainWindows: 0 })
+  })
+
+  it('does not wait indefinitely for an in-flight prewarm during disposal', async () => {
+    const neverFinishes = new Promise<undefined>(() => undefined)
+    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
+    loadOpeningWindow.mockReturnValueOnce(neverFinishes)
+
+    void pool.prewarmMainWindow()
+    await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledOnce())
+
+    await expect(pool.dispose()).resolves.toBeUndefined()
+    expect(createMainWindow.mock.results[0]?.value.destroy).toHaveBeenCalledOnce()
+  })
 })

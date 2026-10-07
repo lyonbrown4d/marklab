@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react'
 import { ArrowLeft, ArrowRight, ExternalLink, Globe2, RotateCw, Square, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { useI18n } from '@/i18n/useI18n'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
 

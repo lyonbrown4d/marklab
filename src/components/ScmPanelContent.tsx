@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { useI18n } from '@/i18n/useI18n'
 import type { GitDiffRequest } from '@/services/gitApi'
 

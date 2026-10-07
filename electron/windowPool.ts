@@ -36,6 +36,7 @@ export type WindowPoolStats = {
 export type MarklabWindowPool = {
   acquireMainWindow: () => Promise<WindowPoolAcquisition>
   activateMainWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
+  dispose: () => Promise<void>
   destroyIdleWindows: () => void
   prewarmMainWindow: () => Promise<void>
   restoreOpeningWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
@@ -72,11 +73,13 @@ export const createMarklabWindowPool = (
   const trackedMainWindows = new WeakSet<BrowserWindow>()
   let idleMainWindows: BrowserWindow[] = []
   let prewarmInFlight: Promise<void> | null = null
+  let prewarmWindow: BrowserWindow | null = null
   let coldStarts = 0
   let createdMainWindows = 0
   let mainRendererLoads = 0
   let openingShellLoads = 0
   let poolHits = 0
+  let disposed = false
 
   const destroyWindow = (window: BrowserWindow): void => {
     if (!window.isDestroyed()) window.destroy()
@@ -95,10 +98,20 @@ export const createMarklabWindowPool = (
     idle.forEach(destroyWindow)
   }
 
+  const destroyPrewarmWindow = (): void => {
+    const window = prewarmWindow
+    prewarmWindow = null
+    prewarmInFlight = null
+    if (window) destroyWindow(window)
+  }
+
   const forgetWindow = (window: BrowserWindow): void => {
     activeMainWindows.delete(window)
     idleMainWindows = idleMainWindows.filter((candidate) => candidate !== window)
-    if (activeMainWindows.size === 0) destroyIdleWindows()
+    if (activeMainWindows.size === 0) {
+      destroyIdleWindows()
+      destroyPrewarmWindow()
+    }
   }
 
   const trackWindow = (window: BrowserWindow): void => {
@@ -128,6 +141,7 @@ export const createMarklabWindowPool = (
   }
 
   const prewarmMainWindow = async (): Promise<void> => {
+    if (disposed) return
     pruneWindows()
     if (!hasMemoryHeadroom()) {
       destroyIdleWindows()
@@ -136,23 +150,41 @@ export const createMarklabWindowPool = (
     if (maxIdleMainWindows === 0 || idleMainWindows.length >= maxIdleMainWindows) return
     if (prewarmInFlight) return prewarmInFlight
 
-    prewarmInFlight = (async () => {
-      const window = await createOpeningWindow()
-      if (window.isVisible()) window.hide()
-      if (!isUsableWindow(window) || idleMainWindows.length >= maxIdleMainWindows) {
+    const prewarm = (async () => {
+      const window = createMainWindow(logger.child('main'))
+      createdMainWindows += 1
+      trackWindow(window)
+      prewarmWindow = window
+      try {
+        await loadOpeningWindow(window)
+        if (!isUsableWindow(window)) return
+        openingShellLoads += 1
+        if (window.isVisible()) window.hide()
+        if (disposed || !isUsableWindow(window) || idleMainWindows.length >= maxIdleMainWindows) {
+          destroyWindow(window)
+          return
+        }
+        idleMainWindows.push(window)
+        logger.debug('prewarmed lightweight main window', stats())
+      } catch (error) {
+        const cancelled = disposed || prewarmWindow !== window || !isUsableWindow(window)
         destroyWindow(window)
-        return
+        if (!cancelled) throw error
+      } finally {
+        if (prewarmWindow === window) prewarmWindow = null
       }
-      idleMainWindows.push(window)
-      logger.debug('prewarmed lightweight main window', stats())
-    })().finally(() => {
-      prewarmInFlight = null
+    })()
+    const trackedPrewarm = prewarm.finally(() => {
+      if (prewarmInFlight === trackedPrewarm) prewarmInFlight = null
     })
-    return prewarmInFlight
+    prewarmInFlight = trackedPrewarm
+    return trackedPrewarm
   }
 
   const acquireMainWindow = async (): Promise<WindowPoolAcquisition> => {
+    if (disposed) throw new Error('Cannot acquire a window from a disposed pool.')
     if (prewarmInFlight) await prewarmInFlight
+    if (disposed) throw new Error('Cannot acquire a window from a disposed pool.')
     pruneWindows()
     const startedAt = now()
     const pooledWindow = idleMainWindows.shift()
@@ -214,9 +246,18 @@ export const createMarklabWindowPool = (
     }
   }
 
+  const dispose = async (): Promise<void> => {
+    if (!disposed) {
+      disposed = true
+      destroyIdleWindows()
+      destroyPrewarmWindow()
+    }
+  }
+
   return {
     acquireMainWindow,
     activateMainWindow,
+    dispose,
     destroyIdleWindows,
     prewarmMainWindow,
     restoreOpeningWindow,

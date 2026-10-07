@@ -12,9 +12,9 @@ vi.mock('@/app/nativeSurfaceInsets', () => ({
     selector({ setToastHeight: mocks.setToastHeight }),
 }))
 vi.mock('@/components/ui/sonner', () => ({
-  Toaster: () =>
+  Toaster: ({ style, theme }: { style?: React.CSSProperties; theme?: string }) =>
     mocks.toasterMounted ? (
-      <ol data-sonner-toaster>
+      <ol data-sonner-toaster data-theme={theme} style={style}>
         {mocks.toastTops.map((top, index) => (
           <li key={`${top}-${index}`} data-sonner-toast data-toast-top={top} />
         ))}
@@ -97,6 +97,16 @@ describe('AppToaster', () => {
     render(<AppToaster />)
 
     expect(mocks.setToastHeight).toHaveBeenLastCalledWith(100)
+  })
+
+  it('adapts bare HSL theme tokens into valid Sonner colors', () => {
+    render(<AppToaster />)
+
+    const toaster = document.querySelector<HTMLElement>('[data-sonner-toaster]')
+    expect(toaster).toHaveAttribute('data-theme', 'light')
+    expect(toaster?.style.getPropertyValue('--normal-bg')).toBe('hsl(var(--popover))')
+    expect(toaster?.style.getPropertyValue('--normal-text')).toBe('hsl(var(--popover-foreground))')
+    expect(toaster?.style.getPropertyValue('--normal-border')).toBe('hsl(var(--border))')
   })
 
   it('observes document body child changes without tracking editor attributes', () => {

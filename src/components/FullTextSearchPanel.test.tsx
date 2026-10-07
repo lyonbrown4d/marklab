@@ -46,7 +46,7 @@ vi.mock('@/services/fsApi', () => ({
     searchWorkspaceOccurrences: vi.fn(),
   },
 }))
-vi.mock('@/components/ui/scroll-area', () => ({
+vi.mock('@/components/AppScrollArea', () => ({
   ScrollArea: ({ children }: { children: ReactNode }) => <section>{children}</section>,
 }))
 

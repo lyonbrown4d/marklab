@@ -63,6 +63,18 @@ export default defineConfig([
     },
   },
   {
+    files: ['src/**/*.{ts,tsx}', 'electron/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-deprecated': 'error',
+    },
+  },
+  {
     files: legacyOversizedFiles,
     rules: {
       'max-lines': 'off',
@@ -72,6 +84,7 @@ export default defineConfig([
     files: ['src/components/ui/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': 'off',
+      'react-hooks/purity': 'off',
     },
   },
 ])
