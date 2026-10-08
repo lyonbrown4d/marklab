@@ -1,7 +1,7 @@
 import type * as Electron from 'electron'
 import { registerAiIpc, type AiIpcBridge } from '@electron/ipc/ai'
 import { registerAiCompletionIpc, type AiCompletionIpcBridge } from '@electron/ipc/aiCompletion'
-import { registerAppReadyIpc } from '@electron/ipc/appReady'
+import { parseRendererReadySignal, registerAppReadyIpc } from '@electron/ipc/appReady'
 import { registerClipboardIpc } from '@electron/ipc/clipboard'
 import { registerCommandInvokeIpc, type NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import { registerDialogIpc } from '@electron/ipc/dialogs'
@@ -53,6 +53,7 @@ import type { WebDavProfileStoreContract } from '@electron/services/sync/webdav/
 import type { WorkspaceSyncConfigStore } from '@electron/services/sync/workspaceSyncConfig'
 import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
 import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
+import type { RendererReadySignal } from '@/types/rendererReady'
 export type NativeIpcDependencies = {
   aiService: AiServiceContract
   aiInlineCompletionService: AiInlineCompletionServiceContract
@@ -70,7 +71,7 @@ export type NativeIpcDependencies = {
   linkPreviewService: LinkPreviewServiceContract
   logger: Logger
   localHistoryService: LocalHistoryServiceContract
-  onRendererReady?: () => void
+  onRendererReady?: (event: Electron.IpcMainInvokeEvent, signal: RendererReadySignal) => void
   shell: Electron.Shell
   terminalService: TerminalService
   webDavProfileStore: WebDavProfileStoreContract
@@ -190,7 +191,7 @@ const createRuntimeCommandHandlers = (
   menu: MenuDispatchBridge,
   knowledgeEngineCommandHandlers: NativeCommandHandlers,
   windowCommandHandlers: NativeCommandHandlers = {},
-  onRendererReady?: () => void,
+  onRendererReady?: (event: Electron.IpcMainInvokeEvent, signal: RendererReadySignal) => void,
   rendererLogger?: Logger,
 ): NativeCommandHandlers => {
   return {
@@ -202,8 +203,8 @@ const createRuntimeCommandHandlers = (
     ...(rendererLogger
       ? { diagnostics_renderer_report: createRendererDiagnosticsHandler(rendererLogger) }
       : {}),
-    'app-ready': () => {
-      onRendererReady?.()
+    'app-ready': (payload, event) => {
+      onRendererReady?.(event, parseRendererReadySignal(payload))
       return { ok: true }
     },
     app_get_platform: () => getPlatformInfo().platform,

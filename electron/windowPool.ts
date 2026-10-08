@@ -8,6 +8,7 @@ import {
   loadMainWindow as loadDefaultMainWindow,
   loadWindowOpeningShell as loadDefaultOpeningWindow,
 } from '@electron/window'
+import { createWindowPoolReadiness } from '@electron/windowPoolReadiness'
 
 const DEFAULT_MAX_IDLE_MAIN_WINDOWS = 1
 const DEFAULT_MINIMUM_FREE_MEMORY_BYTES = 512 * 1024 * 1024
@@ -35,18 +36,23 @@ export type WindowPoolStats = {
 
 export type MarklabWindowPool = {
   acquireMainWindow: () => Promise<WindowPoolAcquisition>
-  activateMainWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
+  activateMainWindow: (
+    acquisition: WindowPoolAcquisition,
+    options?: { standby?: boolean },
+  ) => Promise<void>
   dispose: () => Promise<void>
   destroyIdleWindows: () => void
+  markRendererInteractive: (window: BrowserWindow, error?: Error) => void
   prewarmMainWindow: () => Promise<void>
   restoreOpeningWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
   stats: () => WindowPoolStats
+  waitForRendererInteractive: (acquisition: WindowPoolAcquisition) => Promise<void>
 }
 
 type MarklabWindowPoolOptions = {
   createMainWindow?: (logger: Logger) => BrowserWindow
   hasMemoryHeadroom?: () => boolean
-  loadMainWindow?: (window: BrowserWindow) => Promise<void>
+  loadMainWindow?: (window: BrowserWindow, options?: { standby?: boolean }) => Promise<void>
   loadOpeningWindow?: (window: BrowserWindow) => Promise<void>
   maxIdleMainWindows?: number
   now?: () => number
@@ -70,6 +76,7 @@ export const createMarklabWindowPool = (
     Math.min(1, Math.floor(options.maxIdleMainWindows ?? DEFAULT_MAX_IDLE_MAIN_WINDOWS)),
   )
   const activeMainWindows = new Set<BrowserWindow>()
+  const rendererReadiness = createWindowPoolReadiness()
   const trackedMainWindows = new WeakSet<BrowserWindow>()
   let idleMainWindows: BrowserWindow[] = []
   let prewarmInFlight: Promise<void> | null = null
@@ -82,6 +89,7 @@ export const createMarklabWindowPool = (
   let disposed = false
 
   const destroyWindow = (window: BrowserWindow): void => {
+    rendererReadiness.cancel(window)
     if (!window.isDestroyed()) window.destroy()
   }
 
@@ -106,6 +114,7 @@ export const createMarklabWindowPool = (
   }
 
   const forgetWindow = (window: BrowserWindow): void => {
+    rendererReadiness.cancel(window)
     activeMainWindows.delete(window)
     idleMainWindows = idleMainWindows.filter((candidate) => candidate !== window)
     if (activeMainWindows.size === 0) {
@@ -122,7 +131,11 @@ export const createMarklabWindowPool = (
       const wasIdle = idleMainWindows.includes(window)
       forgetWindow(window)
       destroyWindow(window)
-      if (wasIdle && activeMainWindows.size > 0) void prewarmMainWindow()
+      if (wasIdle && activeMainWindows.size > 0) {
+        void prewarmMainWindow().catch((error) => {
+          logger.warn('unable to replenish window pool after renderer crash', { error })
+        })
+      }
     })
   }
 
@@ -156,16 +169,16 @@ export const createMarklabWindowPool = (
       trackWindow(window)
       prewarmWindow = window
       try {
-        await loadOpeningWindow(window)
+        await loadMainWindow(window, { standby: true })
         if (!isUsableWindow(window)) return
-        openingShellLoads += 1
+        mainRendererLoads += 1
         if (window.isVisible()) window.hide()
         if (disposed || !isUsableWindow(window) || idleMainWindows.length >= maxIdleMainWindows) {
           destroyWindow(window)
           return
         }
         idleMainWindows.push(window)
-        logger.debug('prewarmed lightweight main window', stats())
+        logger.debug('prewarmed standby main renderer', stats())
       } catch (error) {
         const cancelled = disposed || prewarmWindow !== window || !isUsableWindow(window)
         destroyWindow(window)
@@ -183,10 +196,17 @@ export const createMarklabWindowPool = (
 
   const acquireMainWindow = async (): Promise<WindowPoolAcquisition> => {
     if (disposed) throw new Error('Cannot acquire a window from a disposed pool.')
-    if (prewarmInFlight) await prewarmInFlight
+    const startedAt = now()
+    if (prewarmInFlight) {
+      try {
+        await prewarmInFlight
+      } catch (error) {
+        logger.warn('standby renderer prewarm failed; falling back to a cold window', { error })
+        destroyPrewarmWindow()
+      }
+    }
     if (disposed) throw new Error('Cannot acquire a window from a disposed pool.')
     pruneWindows()
-    const startedAt = now()
     const pooledWindow = idleMainWindows.shift()
     if (pooledWindow) {
       activeMainWindows.add(pooledWindow)
@@ -216,12 +236,24 @@ export const createMarklabWindowPool = (
     }
   }
 
-  const activateMainWindow = async (acquisition: WindowPoolAcquisition): Promise<void> => {
+  const activateMainWindow = async (
+    acquisition: WindowPoolAcquisition,
+    options: { standby?: boolean } = {},
+  ): Promise<void> => {
     if (!activeMainWindows.has(acquisition.window) || !isUsableWindow(acquisition.window)) {
       throw new Error('Cannot activate an unavailable main window.')
     }
-    await loadMainWindow(acquisition.window)
+    rendererReadiness.reset(acquisition.window)
+    if (acquisition.source === 'pool' && options.standby) return
+    await loadMainWindow(acquisition.window, options.standby ? { standby: true } : undefined)
     mainRendererLoads += 1
+  }
+
+  const waitForRendererInteractive = (acquisition: WindowPoolAcquisition): Promise<void> => {
+    if (!activeMainWindows.has(acquisition.window) || !isUsableWindow(acquisition.window)) {
+      return Promise.reject(new Error('Cannot wait for an unavailable main window.'))
+    }
+    return rendererReadiness.waitForInteractive(acquisition.window)
   }
 
   const restoreOpeningWindow = async (acquisition: WindowPoolAcquisition): Promise<void> => {
@@ -259,8 +291,10 @@ export const createMarklabWindowPool = (
     activateMainWindow,
     dispose,
     destroyIdleWindows,
+    markRendererInteractive: rendererReadiness.markInteractive,
     prewarmMainWindow,
     restoreOpeningWindow,
     stats,
+    waitForRendererInteractive,
   }
 }

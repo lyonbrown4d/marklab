@@ -35,6 +35,8 @@ const createHarness = () => {
   const target = createWindow(2)
   const order: string[] = []
   const workspace = {
+    beginRendererHydration: vi.fn(),
+    markRendererInteractive: vi.fn(),
     setRoot: vi.fn(async ({ path: rootPath }) => {
       order.push('workspace')
       return { kind: 'external' as const, path: rootPath }
@@ -70,6 +72,7 @@ const createHarness = () => {
     prewarmMainWindow: vi.fn(async () => undefined),
     restoreOpeningWindow: vi.fn(async () => undefined),
     stats: vi.fn(() => ({ poolHits: 1 })),
+    waitForRendererInteractive: vi.fn(async () => undefined),
   }
   const logger = { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }
   const dependencies = {
@@ -118,7 +121,8 @@ afterEach(async () => {
 
 describe('app window commands', () => {
   it('opens the current workspace in an isolated target session with staged progress', async () => {
-    const { dependencies, event, handlers, order, pool, source, target } = createHarness()
+    const { dependencies, event, handlers, order, pool, source, target, workspace } =
+      createHarness()
 
     const result = await handlers.open_current_workspace_in_new_window(undefined, event)
 
@@ -150,6 +154,8 @@ describe('app window commands', () => {
       path: '/notes',
     })
     expect(order).toEqual(['window-state:external', 'workspace', 'activate'])
+    expect(workspace.beginRendererHydration).toHaveBeenCalledOnce()
+    expect(workspace.markRendererInteractive).toHaveBeenCalledOnce()
     expect(pool.prewarmMainWindow).toHaveBeenCalledOnce()
   })
 
@@ -192,6 +198,7 @@ describe('app window commands', () => {
         timings: {
           acquisitionMs: expect.any(Number),
           rendererActivationMs: expect.any(Number),
+          rendererInteractiveMs: expect.any(Number),
           sessionSeedMs: expect.any(Number),
           totalMs: expect.any(Number),
           workspaceInitializationMs: expect.any(Number),
@@ -280,7 +287,7 @@ describe('app window commands', () => {
       sender: target.webContents,
     } as never)
 
-    expect(pool.restoreOpeningWindow).toHaveBeenCalledOnce()
+    expect(pool.restoreOpeningWindow).not.toHaveBeenCalled()
     expect(retried).toMatchObject({ ok: true, windowId: 2 })
   })
 })

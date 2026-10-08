@@ -3,12 +3,14 @@ import { performance } from 'node:perf_hooks'
 export type WindowOpenTimings = {
   acquisitionMs: number
   rendererActivationMs: number
+  rendererInteractiveMs: number
   sessionSeedMs: number
   totalMs: number
   workspaceInitializationMs: number
 }
 
-type WindowOpenPhase = 'rendererActivationMs' | 'sessionSeedMs' | 'workspaceInitializationMs'
+type WindowOpenPhase =
+  'rendererActivationMs' | 'rendererInteractiveMs' | 'sessionSeedMs' | 'workspaceInitializationMs'
 
 export const createWindowOpenTimings = (
   acquisitionMs: number,
@@ -27,6 +29,7 @@ export const createWindowOpenTimings = (
     snapshot: (): WindowOpenTimings => ({
       acquisitionMs,
       rendererActivationMs: phases.rendererActivationMs ?? 0,
+      rendererInteractiveMs: phases.rendererInteractiveMs ?? 0,
       sessionSeedMs: phases.sessionSeedMs ?? 0,
       totalMs: Math.max(0, acquisitionMs + now() - startedAt),
       workspaceInitializationMs: phases.workspaceInitializationMs ?? 0,

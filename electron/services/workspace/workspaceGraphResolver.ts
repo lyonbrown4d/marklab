@@ -11,7 +11,9 @@ type GraphInput = {
 
 type ResolveGraphInput = GraphInput & {
   build: () => Promise<FsGraph>
+  onStarted?: () => void
   priority: 'background' | 'interactive'
+  signal?: AbortSignal
   workspaceKey: string
 }
 
@@ -43,6 +45,8 @@ export class WorkspaceGraphResolver {
     const graph = await this.scheduler.run({
       priority: input.priority,
       revision,
+      onStarted: input.onStarted,
+      signal: input.signal,
       task: input.build,
       workspaceKey: input.workspaceKey,
     })

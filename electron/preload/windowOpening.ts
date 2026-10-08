@@ -26,16 +26,24 @@ const isWindowOpeningProgress = (value: unknown): value is WindowOpeningProgress
 
 export const createWindowOpeningPreloadSurface = (
   ipcRenderer: OpeningIpcRenderer,
-): WindowOpeningPreloadSurface => ({
-  onProgress: (handler) => {
-    const listener = (_event: IpcRendererEvent, payload: unknown) => {
-      if (isWindowOpeningProgress(payload)) handler(payload)
-    }
-    ipcRenderer.on(nativeIpcChannels.windowOpeningProgress, listener)
-    return () => ipcRenderer.removeListener(nativeIpcChannels.windowOpeningProgress, listener)
-  },
-  retry: () =>
-    ipcRenderer.invoke(nativeIpcChannels.commandInvoke, {
-      command: 'retry_window_open',
-    }) as Promise<WindowOpeningRetryResult>,
-})
+): WindowOpeningPreloadSurface => {
+  let latestProgress: WindowOpeningProgress | null = null
+  ipcRenderer.on(nativeIpcChannels.windowOpeningProgress, (_event, payload: unknown) => {
+    if (isWindowOpeningProgress(payload)) latestProgress = payload
+  })
+
+  return {
+    onProgress: (handler) => {
+      if (latestProgress) handler(latestProgress)
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (isWindowOpeningProgress(payload)) handler(payload)
+      }
+      ipcRenderer.on(nativeIpcChannels.windowOpeningProgress, listener)
+      return () => ipcRenderer.removeListener(nativeIpcChannels.windowOpeningProgress, listener)
+    },
+    retry: () =>
+      ipcRenderer.invoke(nativeIpcChannels.commandInvoke, {
+        command: 'retry_window_open',
+      }) as Promise<WindowOpeningRetryResult>,
+  }
+}

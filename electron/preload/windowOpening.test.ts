@@ -6,6 +6,21 @@ import { nativeIpcChannels } from '@electron/channels'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
 
 describe('window opening preload surface', () => {
+  it('replays progress received before the renderer subscribes', () => {
+    const ipcRenderer = Object.assign(new EventEmitter(), { invoke: vi.fn() })
+    const surface = createWindowOpeningPreloadSurface(ipcRenderer as never)
+
+    ipcRenderer.emit(
+      nativeIpcChannels.windowOpeningProgress,
+      {},
+      { stage: 'indexing', workspacePath: 'C:\\notes' },
+    )
+    const handler = vi.fn()
+    surface.onProgress(handler)
+
+    expect(handler).toHaveBeenCalledWith({ stage: 'indexing', workspacePath: 'C:\\notes' })
+  })
+
   it('delivers validated progress and removes its listener', () => {
     const ipcRenderer = Object.assign(new EventEmitter(), {
       invoke: vi.fn(),

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { scheduleWorkspacePrewarm } from '@electron/services/workspace/workspacePrewarmScheduler'
 
@@ -29,5 +29,22 @@ describe('workspace prewarm scheduler', () => {
     await Promise.all([first, second])
 
     expect(maximum).toBe(1)
+  })
+
+  it('removes an aborted prewarm before it starts', async () => {
+    let release!: () => void
+    const blocker = scheduleWorkspacePrewarm(
+      () => new Promise<void>((resolve) => (release = resolve)),
+    )
+    await Promise.resolve()
+    const task = vi.fn(async () => undefined)
+    const controller = new AbortController()
+    const queued = scheduleWorkspacePrewarm(task, controller.signal)
+
+    controller.abort()
+    await expect(queued).rejects.toMatchObject({ name: 'AbortError' })
+    release()
+    await blocker
+    expect(task).not.toHaveBeenCalled()
   })
 })

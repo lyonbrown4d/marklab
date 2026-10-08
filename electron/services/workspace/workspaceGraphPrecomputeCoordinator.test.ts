@@ -63,4 +63,68 @@ describe('WorkspaceGraphPrecomputeCoordinator', () => {
     coordinator.dispose()
     vi.useRealTimers()
   })
+
+  it('keeps a cancelled running task visible until the computation settles', async () => {
+    vi.useFakeTimers()
+    let release!: () => void
+    const run = vi.fn(
+      ({ markStarted }: { markStarted: () => void; signal: AbortSignal }) =>
+        new Promise<void>((resolve) => {
+          markStarted()
+          release = resolve
+        }),
+    )
+    const setStatus = vi.fn()
+    const coordinator = new WorkspaceGraphPrecomputeCoordinator({
+      delayMs: 0,
+      logger: { warn: vi.fn() },
+      run,
+      setStatus,
+    })
+
+    coordinator.schedule()
+    await vi.advanceTimersByTimeAsync(0)
+    coordinator.cancel()
+
+    expect(setStatus).toHaveBeenLastCalledWith('running', null)
+    release()
+    await vi.runAllTimersAsync()
+    expect(setStatus).toHaveBeenLastCalledWith('idle', null)
+    coordinator.dispose()
+    vi.useRealTimers()
+  })
+
+  it('does not let an obsolete running generation overwrite a newer generation', async () => {
+    vi.useFakeTimers()
+    const releases: Array<() => void> = []
+    const run = vi.fn(
+      ({ markStarted }: { markStarted: () => void; signal: AbortSignal }) =>
+        new Promise<void>((resolve) => {
+          markStarted()
+          releases.push(resolve)
+        }),
+    )
+    const setStatus = vi.fn()
+    const coordinator = new WorkspaceGraphPrecomputeCoordinator({
+      delayMs: 0,
+      logger: { warn: vi.fn() },
+      run,
+      setStatus,
+    })
+
+    coordinator.schedule()
+    await vi.advanceTimersByTimeAsync(0)
+    coordinator.cancel()
+    coordinator.schedule()
+    await vi.advanceTimersByTimeAsync(0)
+    releases.shift()?.()
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(2))
+
+    expect(setStatus).toHaveBeenLastCalledWith('running', null)
+    releases.shift()?.()
+    await vi.runAllTimersAsync()
+    expect(setStatus).toHaveBeenLastCalledWith('idle', null)
+    coordinator.dispose()
+    vi.useRealTimers()
+  })
 })

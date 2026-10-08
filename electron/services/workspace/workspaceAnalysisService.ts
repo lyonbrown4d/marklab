@@ -1,40 +1,27 @@
 import type { App, Shell } from 'electron'
 
-import { isSearchIndexablePath } from '@electron/services/workspace/path'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import { noopLogger, type Logger } from '@electron/services/logger'
 import type { FsGraph, FsRootInfo, FsWorkspaceIndex } from '@electron/services/workspace/types'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
-import { WorkspaceSearchIndexBuildCoordinator } from '@electron/services/workspace/workspaceSearchIndexBuildCoordinator'
-import {
-  workspaceChangeAffectsSearch,
-  workspaceSearchIndexPath,
-  workspaceSearchKey,
-} from '@electron/services/workspace/workspaceSearchIndexLifecycle'
-import { WorkspaceSearchIndexUpdateQueue } from '@electron/services/workspace/workspaceSearchIndexUpdateQueue'
-import { loadWorkspaceSearchDocuments } from '@electron/services/workspace/workspaceSearchDocumentLoader'
-import type { WorkspaceSearchDocument } from '@electron/services/workspace/workspaceSearchTypes'
-import { WorkspaceSearchOperations } from '@electron/services/workspace/workspaceSearchOperations'
-import { WorkspaceGraphPrecomputeCoordinator } from '@electron/services/workspace/workspaceGraphPrecomputeCoordinator'
+import { workspaceSearchKey } from '@electron/services/workspace/workspaceSearchIndexLifecycle'
 import { WorkspaceGraphResolver } from '@electron/services/workspace/workspaceGraphResolver'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
 import { WorkspaceAnalysisWorkerClient } from '@electron/services/workspace/workspaceAnalysisWorkerClient'
 import { analyzeWorkspaceMarkdownBuffer } from '@electron/services/workspace/workspaceMarkdownAnalysis'
 import type { WatchEventName } from '@electron/services/workspace/workspaceUtils'
-import { WorkspaceIndexPrewarmer } from '@electron/services/workspace/workspaceIndexPrewarmer'
 import { WorkspaceIndexQueryService } from '@electron/services/workspace/workspaceIndexQueryService'
 import { WorkspaceGraphQueryService } from '@electron/services/workspace/workspaceGraphQueryService'
 import { WorkspaceGraphNodeDetailsRunner } from '@electron/services/workspace/workspaceGraphNodeDetailsRunner'
 import { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
-import { rebuildWorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndexBuilder'
+import { WorkspaceAnalysisPrewarmLifecycle } from '@electron/services/workspace/workspaceAnalysisPrewarmLifecycle'
+import { WorkspaceSearchIndexRuntime } from '@electron/services/workspace/workspaceSearchIndexRuntime'
 import type {
   WorkspaceAnalysisServiceOptions,
   WorkspaceSearchIndexFactory,
 } from '@electron/services/workspace/workspaceAnalysisServiceTypes'
-
-const SEARCH_INDEX_REBUILD_DELAY_MS = 600
 
 export class WorkspaceAnalysisService extends WorkspaceFileService {
   constructor(
@@ -68,26 +55,29 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       logger: this.logger,
       runNodeDetails: (task) => this.graphDetailsRunner.run(task),
     })
-    this.searchOperations = new WorkspaceSearchOperations({
-      activeSearchKey: () => this.activeWorkspaceSearchKey,
+    this.searchIndex = new WorkspaceSearchIndexRuntime({
+      getState: () => this.state,
+      getUserDataPath: () => this.app.getPath('userData'),
       index: this.workspaceSearchIndex,
+      loadDocuments: () => this.workspaceDocuments(),
       logger: this.logger,
-      prepare: () => this.prepareWorkspaceSearchIndex(),
+      readFile: (path) => this.readFile({ path }),
       runTask: (work, name) => this.runSearchIndexTask(work, name),
     })
-    this.graphPrecompute = new WorkspaceGraphPrecomputeCoordinator({
-      delayMs: this.options.graphPrecomputeDelayMs ?? 750,
+    this.analysisPrewarm = new WorkspaceAnalysisPrewarmLifecycle({
+      canPrecomputeGraph: () =>
+        Boolean(this.analysisKnowledgeEngineService) && this.state.rootKind !== 'single',
+      graphDelayMs: this.options.graphPrecomputeDelayMs ?? 750,
+      indexDelayMs: this.options.workspaceIndexPrecomputeDelayMs ?? 100,
       logger: this.logger,
-      run: () => this.graphQueries.load('background').then(() => undefined),
-      setStatus: (status, message) =>
+      precomputeGraph: ({ markStarted, signal }) =>
+        this.graphQueries
+          .load('background', { onStarted: markStarted, signal })
+          .then(() => undefined),
+      precomputeIndex: () => this.workspaceIndex(),
+      setGraphStatus: (status, message) =>
         this.setTask('workspace-graph', 'Workspace graph', status, message),
     })
-    this.indexPrewarmer = new WorkspaceIndexPrewarmer({
-      delayMs: this.options.workspaceIndexPrecomputeDelayMs ?? 100,
-      logger: this.logger,
-      run: () => this.workspaceIndex(),
-    })
-    this.indexPrewarmer.schedule()
   }
 
   private readonly analysisWorker = new WorkspaceAnalysisWorkerClient(
@@ -96,63 +86,39 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly analysisScheduler: WorkspaceAnalysisScheduler
   private readonly graphDetailsRunner: WorkspaceGraphNodeDetailsRunner
   private readonly workspaceSearchIndex: WorkspaceSearchIndex
-  private readonly searchOperations: WorkspaceSearchOperations
+  private readonly searchIndex: WorkspaceSearchIndexRuntime
   private readonly graphResolver: WorkspaceGraphResolver
   private readonly graphQueries: WorkspaceGraphQueryService
-  private readonly graphPrecompute: WorkspaceGraphPrecomputeCoordinator
-  private readonly indexPrewarmer: WorkspaceIndexPrewarmer
+  private readonly analysisPrewarm: WorkspaceAnalysisPrewarmLifecycle
   private readonly analysisCache = new WorkspaceAnalysisCache()
-  private readonly indexQueries = new WorkspaceIndexQueryService({
+  private readonly indexQuery = new WorkspaceIndexQueryService({
     getRevision: () => this.analysisCache.revision,
     load: () => this.workspaceIndex(),
   })
-  readonly workspacePageQuery = this.indexQueries.workspacePageQuery.bind(this.indexQueries)
-  readonly workspaceNavigationQuery = this.indexQueries.workspaceNavigationQuery.bind(
-    this.indexQueries,
+  readonly workspacePageQuery = this.indexQuery.workspacePageQuery.bind(this.indexQuery)
+  readonly workspaceNavigationQuery = this.indexQuery.workspaceNavigationQuery.bind(this.indexQuery)
+  readonly workspaceDocumentInsights = this.indexQuery.workspaceDocumentInsights.bind(
+    this.indexQuery,
   )
-  readonly workspaceDocumentInsights = this.indexQueries.workspaceDocumentInsights.bind(
-    this.indexQueries,
-  )
-  readonly workspaceKnowledgeSummary = this.indexQueries.workspaceKnowledgeSummary.bind(
-    this.indexQueries,
+  readonly workspaceKnowledgeSummary = this.indexQuery.workspaceKnowledgeSummary.bind(
+    this.indexQuery,
   )
   workspaceGraphNodeDetails(value: unknown) {
     return this.graphQueries.loadNodeDetails(value)
   }
-  private readonly searchIndexUpdateQueue =
-    new WorkspaceSearchIndexUpdateQueue<WorkspaceSearchDocument>({
-      applyChanges: (changes) => this.workspaceSearchIndex.applySearchChanges(changes),
-      delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
-      getDocumentPath: (document) => document.path,
-      loadDocuments: (paths) =>
-        loadWorkspaceSearchDocuments({
-          concurrency: 8,
-          logger: this.logger,
-          paths,
-          readFile: (path) => this.readFile({ path }),
-        }),
-      logger: this.logger.child('search-index-updates'),
-      openIndex: () => this.openWorkspaceSearchIndex(),
-      rebuildAll: async () => {
-        if (await this.buildSearchIndexFromWorkspace()) {
-          this.needsSearchIndexRebuild = false
-        }
-      },
-      runTask: (work, taskName) => this.runSearchIndexTask(work, taskName),
-    })
-  private activeWorkspaceSearchKey = ''
-  private readonly searchIndexBuildCoordinator = new WorkspaceSearchIndexBuildCoordinator()
-  private needsSearchIndexRebuild = true
+  beginRendererHydration(): void {
+    this.analysisPrewarm.beginRendererHydration()
+  }
+
+  markRendererInteractive(): void {
+    if (!this.disposed) this.analysisPrewarm.markRendererInteractive()
+  }
 
   override dispose(): void {
-    this.indexPrewarmer.dispose()
-    this.graphPrecompute.dispose()
-    this.searchOperations.dispose()
-    this.searchIndexBuildCoordinator.invalidate()
-    this.searchIndexUpdateQueue.dispose()
+    this.analysisPrewarm.dispose()
+    this.searchIndex.dispose()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
-    void this.workspaceSearchIndex.close()
     this.analysisWorker.terminate()
     this.graphDetailsRunner.dispose()
     super.dispose()
@@ -201,34 +167,29 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   searchWorkspace(value: unknown) {
-    return this.searchOperations.search(value)
+    return this.searchIndex.search(value)
   }
 
   searchWorkspaceOccurrences(value: unknown) {
-    return this.searchOperations.searchOccurrences(value)
+    return this.searchIndex.searchOccurrences(value)
   }
 
   cancelWorkspaceOccurrenceSearch(value: unknown) {
-    return this.searchOperations.cancelOccurrenceSearch(value)
+    return this.searchIndex.cancelOccurrenceSearch(value)
   }
 
   async rebuildSearchIndex(): Promise<void> {
-    await this.openWorkspaceSearchIndex()
-    this.needsSearchIndexRebuild = true
-    if (await this.buildSearchIndexFromWorkspace()) {
-      this.needsSearchIndexRebuild = false
-    }
+    await this.searchIndex.rebuild()
   }
 
   override async setRoot(value: unknown): Promise<FsRootInfo> {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setRoot(value)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
-    this.resetSearchIndexState()
+    this.beginRendererHydration()
+    this.searchIndex.reset()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
-    this.indexPrewarmer.schedule()
-    this.scheduleGraphPrecompute()
     return result
   }
 
@@ -236,91 +197,27 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setSingleFile(value)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
-    this.resetSearchIndexState()
-    this.graphPrecompute.cancel()
+    this.beginRendererHydration()
+    this.searchIndex.reset()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
-    this.indexPrewarmer.schedule()
     return result
   }
 
   protected onWorkspacePathChanged(_changedPath: string | null, event?: WatchEventName): void {
     this.analysisCache.invalidate()
-    this.scheduleGraphPrecompute()
-    if (!workspaceChangeAffectsSearch(_changedPath, event)) return
-    if (this.activeWorkspaceSearchKey && !this.needsSearchIndexRebuild) {
-      this.searchIndexUpdateQueue.schedulePathChange(_changedPath, event)
-      return
-    }
-    this.needsSearchIndexRebuild = true
-    this.searchIndexUpdateQueue.scheduleFullRebuild()
+    this.analysisPrewarm.scheduleGraph()
+    this.searchIndex.onWorkspacePathChanged(_changedPath, event)
   }
 
   protected override onBuffersFlushed(relativePaths: string[]): void {
     if (relativePaths.length > 0) {
       this.analysisCache.invalidate()
-      this.scheduleGraphPrecompute()
+      this.analysisPrewarm.scheduleGraph()
     }
-    const markdownPaths = relativePaths.filter((value) => isSearchIndexablePath(value))
-    if (markdownPaths.length === 0) return
-
-    for (const relativePath of markdownPaths) {
-      this.searchIndexUpdateQueue.schedulePathChange(relativePath, 'change')
-    }
-  }
-
-  private async openWorkspaceSearchIndex(): Promise<void> {
-    const searchKey = workspaceSearchKey(this.state)
-    const indexPath = workspaceSearchIndexPath(this.app.getPath('userData'), searchKey)
-    await this.workspaceSearchIndex.open(indexPath, searchKey)
-
-    if (this.activeWorkspaceSearchKey !== searchKey) {
-      this.activeWorkspaceSearchKey = searchKey
-      const hasDocuments = await this.workspaceSearchIndex.hasDocuments()
-      this.needsSearchIndexRebuild = !hasDocuments
-      this.logger.info('workspace search index opened', {
-        hasDocuments,
-        searchKey: searchKey.slice(0, 12),
-      })
-    }
+    this.searchIndex.onBuffersFlushed(relativePaths)
   }
 
   private readonly getWorkspaceAnalysisInput = () =>
     this.analysisCache.getInput(() => this.workspaceDocumentsAndKnownPaths())
-
-  private async rebuildSearchIndexIfNeeded(): Promise<void> {
-    if (!this.needsSearchIndexRebuild) return
-    if (await this.buildSearchIndexFromWorkspace()) this.needsSearchIndexRebuild = false
-  }
-
-  private async prepareWorkspaceSearchIndex(): Promise<void> {
-    await this.openWorkspaceSearchIndex()
-    await this.searchIndexUpdateQueue.flushPending()
-    await this.rebuildSearchIndexIfNeeded()
-  }
-
-  private async buildSearchIndexFromWorkspace(): Promise<boolean> {
-    return rebuildWorkspaceSearchIndex({
-      coordinator: this.searchIndexBuildCoordinator,
-      currentSearchKey: () => workspaceSearchKey(this.state),
-      index: this.workspaceSearchIndex,
-      loadDocuments: () => this.workspaceDocuments(),
-      logger: this.logger,
-    })
-  }
-
-  private resetSearchIndexState(): void {
-    this.searchIndexBuildCoordinator.invalidate()
-    this.searchIndexUpdateQueue.clear()
-    this.activeWorkspaceSearchKey = ''
-    this.needsSearchIndexRebuild = true
-    void this.workspaceSearchIndex.close().catch((error) => {
-      this.logger.warn('search index close failed while switching workspace', { error })
-    })
-  }
-
-  private scheduleGraphPrecompute(): void {
-    if (this.analysisKnowledgeEngineService && this.state.rootKind !== 'single')
-      this.graphPrecompute.schedule()
-  }
 }

@@ -111,4 +111,41 @@ describe('WorkspaceGraphComputationScheduler', () => {
     await Promise.all([blocker, ordinary, promoted, joined])
     expect(order).toEqual(['promoted', 'ordinary'])
   })
+
+  it('keeps a shared queued computation when one consumer is cancelled', async () => {
+    const scheduler = new WorkspaceGraphComputationScheduler({ concurrency: 1 })
+    let release!: () => void
+    const blocker = scheduler.run({
+      priority: 'background',
+      revision: 'r1',
+      task: () => new Promise<void>((resolve) => (release = resolve)),
+      workspaceKey: 'blocker',
+    })
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    const task = vi.fn(async () => 'graph')
+    const onStarted = vi.fn()
+    const controller = new AbortController()
+    const background = scheduler.run({
+      onStarted,
+      priority: 'background',
+      revision: 'r1',
+      signal: controller.signal,
+      task,
+      workspaceKey: 'shared',
+    })
+    const interactive = scheduler.run({
+      priority: 'interactive',
+      revision: 'r1',
+      task,
+      workspaceKey: 'shared',
+    })
+
+    controller.abort()
+    await expect(background).rejects.toMatchObject({ name: 'AbortError' })
+    release()
+    await blocker
+    await expect(interactive).resolves.toBe('graph')
+    expect(task).toHaveBeenCalledOnce()
+    expect(onStarted).not.toHaveBeenCalled()
+  })
 })

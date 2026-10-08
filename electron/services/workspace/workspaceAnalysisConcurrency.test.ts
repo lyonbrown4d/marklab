@@ -82,4 +82,27 @@ describe('workspace analysis concurrency', () => {
     await expect(scheduler.run(() => scheduler.run(async () => 'nested'))).resolves.toBe('nested')
     expect(scheduler.running).toBe(0)
   })
+
+  it('removes an aborted graph computation before it starts', async () => {
+    let release!: () => void
+    const scheduler = new WorkspaceAnalysisScheduler({ concurrency: 1 })
+    const graphScheduler = new WorkspaceGraphComputationScheduler({ scheduler })
+    const blocker = scheduler.run(() => new Promise<void>((resolve) => (release = resolve)))
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    const task = vi.fn(async () => undefined)
+    const controller = new AbortController()
+    const queued = graphScheduler.run({
+      priority: 'background',
+      revision: 'r1',
+      signal: controller.signal,
+      task,
+      workspaceKey: 'workspace',
+    })
+
+    controller.abort()
+    await expect(queued).rejects.toMatchObject({ name: 'AbortError' })
+    release()
+    await blocker
+    expect(task).not.toHaveBeenCalled()
+  })
 })

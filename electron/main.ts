@@ -30,6 +30,8 @@ import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMoti
 import { dismissSplashWindow } from '@electron/splashLifecycle'
 import { syncNativeWindowBackgrounds } from '@electron/windowTheme'
 import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
+import { createRendererReadyCoordinator } from '@electron/main/rendererReady'
+import type { RendererReadySignal } from '@/types/rendererReady'
 
 const APP_READY_FALLBACK_MS = 5000
 
@@ -96,10 +98,17 @@ const showMainWindow = (): void => {
   }
 }
 
-const handleRendererReady = (): void => {
+const handlePrimaryRendererShellReady = (): void => {
   rendererReady = true
   showMainWindow()
   systemThemeMonitor.announceCurrent()
+}
+
+const handleRendererReady = (
+  event: Electron.IpcMainInvokeEvent,
+  signal: RendererReadySignal,
+): void => {
+  rendererReadyCoordinator.handle(event, signal)
 }
 
 const runtimeEvents = createRuntimeEventQueue(() => windows?.main ?? null)
@@ -123,6 +132,7 @@ const windowLifecycle = createWindowLifecycle({
   getWindows: () => windows,
   setWindows: (nextWindows) => {
     windows = nextWindows
+    rendererReadyCoordinator.flushPrimaryInteractive()
   },
 })
 
@@ -132,6 +142,18 @@ const windowCommandSetup = createWindowCommandSetup({
   getPrimaryWindow: () => windows?.main ?? null,
   getWindowPool: windowLifecycle.ensureWindowPool,
   installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
+})
+
+const rendererReadyCoordinator = createRendererReadyCoordinator({
+  fromWebContents: (contents) => BrowserWindow.fromWebContents(contents),
+  getPrimaryWindow: () => windows?.main ?? null,
+  getWindowPool: windowLifecycle.ensureWindowPool,
+  getWorkspaceServiceForWindow: (window) => getServices().workspaceRegistry.registerWindow(window),
+  isPrimaryBootstrapping: () => windows === null && !didShowMain,
+  logger: {
+    warn: (message, context) => getServices().logger.warn(message, context),
+  },
+  onPrimaryShellReady: handlePrimaryRendererShellReady,
 })
 
 const legacyShellIpc = createLegacyShellIpcRegistration({
@@ -157,6 +179,7 @@ const bootstrap = async (): Promise<void> => {
       installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
       logger,
     })
+    rendererReadyCoordinator.flushPrimaryInteractive()
   } catch (error) {
     logger.error('window creation failed', { error })
     throw error

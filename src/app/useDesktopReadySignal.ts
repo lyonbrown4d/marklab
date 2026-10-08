@@ -34,7 +34,7 @@ export const useDesktopReadySignal = () => {
       .then(async () => {
         if (cancelled) return
         if (!cancelled) {
-          await signalAppReady()
+          await signalAppReady({ phase: 'shell' })
         }
       })
       .catch((error) => {

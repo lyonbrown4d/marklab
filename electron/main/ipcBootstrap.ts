@@ -1,6 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
 import { registerNativeIpc, type NativeIpcRegistration } from '@electron/ipc/index'
 import { getLaunchInfo } from '@electron/main/deepLinks'
+import type { RendererReadySignal } from '@/types/rendererReady'
 
 type RegisterNativeIpcOptions = Parameters<typeof registerNativeIpc>[0]
 
@@ -27,7 +28,7 @@ type MainIpcServices = Pick<
 
 type MainNativeIpcOptions = {
   flushWorkspaceBuffers: (reason: string) => Promise<void>
-  onRendererReady: () => void
+  onRendererReady: (event: Electron.IpcMainInvokeEvent, signal: RendererReadySignal) => void
   services: MainIpcServices
   windowCommandHandlers: RegisterNativeIpcOptions['windowCommandHandlers']
 }

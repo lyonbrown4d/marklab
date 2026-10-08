@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fsApi, type FsSnapshot } from '@/services/fsApi'
-import { listen } from '@/runtime/events'
 import { isDesktopRuntime } from '@/runtime/environment'
-import { getWorkspaceTabId, normalizeWorkspaceTabId, normalizeWorkspaceTabs } from '@/logic/tabs'
+import {
+  consumeWorkspaceSessionSeed,
+  hasPendingWorkspaceSessionSeed,
+  onWorkspaceSessionSeed,
+  signalRendererReady,
+  waitForWorkspaceInteractivePaint,
+} from '@/runtime/rendererLifecycle'
+import { getWorkspaceTabId } from '@/logic/tabs'
 import type { RootKind, WorkspaceTab } from '@/store/appTypes'
-import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { useI18n } from '@/i18n/useI18n'
 import { workspaceTreeApi } from '@/services/workspaceTreeApi'
 import { flushEditorChanges } from '@/app/editorCloseLifecycle'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
+import type { RendererReadySignal } from '@/types/rendererReady'
+import { applyWorkspaceSessionSeed } from '@/app/workspaceSessionSeed'
 
 type LoadWorkspace = (options?: {
   activeTabId?: string | null
@@ -33,71 +41,25 @@ type UseWorkspaceRestoreResult = {
   restoreWorkspaceSession: () => Promise<boolean>
 }
 
-type WorkspaceSessionSeedPayload = {
-  state?: Record<string, unknown>
-  version?: number
+type RestoreFailure = 'root' | 'session'
+type RestoreResult = { ok: true } | { error: unknown; failure: RestoreFailure; ok: false }
+type RestoreOperation = {
+  generation: number
+  kind: 'default' | 'seed'
+  payload?: Parameters<typeof applyWorkspaceSessionSeed>[0]
+  promise: Promise<RestoreResult>
+  settled: boolean
+}
+type QueuedSeed = {
+  generation: number
+  payload: Parameters<typeof applyWorkspaceSessionSeed>[0]
 }
 
-type ParsedWorkspaceSessionSeed = {
-  activeTabId?: string | null
-  tabs?: WorkspaceTab[]
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
-}
-
-const hasOwn = (value: Record<string, unknown>, key: string): boolean => {
-  return Object.prototype.hasOwnProperty.call(value, key)
-}
-
-const isRootKind = (value: unknown): value is RootKind => {
-  return value === 'internal' || value === 'external' || value === 'single'
-}
-
-const applyWorkspaceSessionSeed = (payload: unknown): ParsedWorkspaceSessionSeed => {
-  if (!isRecord(payload) || !isRecord(payload.state)) return {}
-  const seed = payload.state
-  const tabs = Array.isArray(seed.tabs) ? normalizeWorkspaceTabs(seed.tabs) : undefined
-  const activeTabId =
-    hasOwn(seed, 'activeTabId') && typeof seed.activeTabId === 'string'
-      ? normalizeWorkspaceTabId(seed.activeTabId, tabs ?? [])
-      : hasOwn(seed, 'activeTabId')
-        ? null
-        : undefined
-
-  const workspacePatch: {
-    activeTabId?: string | null
-    rootKind?: RootKind
-    rootPath?: string
-    tabs?: WorkspaceTab[]
-  } = {}
-  const preferencesPatch: {
-    rightSidebarCollapsed?: boolean
-    sidebarCollapsed?: boolean
-  } = {}
-
-  if (typeof seed.rootPath === 'string') workspacePatch.rootPath = seed.rootPath
-  if (isRootKind(seed.rootKind)) workspacePatch.rootKind = seed.rootKind
-  if (tabs) workspacePatch.tabs = tabs
-  if (activeTabId !== undefined) workspacePatch.activeTabId = activeTabId
-  if (typeof seed.sidebarCollapsed === 'boolean') {
-    preferencesPatch.sidebarCollapsed = seed.sidebarCollapsed
-  }
-  if (typeof seed.rightSidebarCollapsed === 'boolean') {
-    preferencesPatch.rightSidebarCollapsed = seed.rightSidebarCollapsed
-  }
-
-  if (Object.keys(workspacePatch).length > 0) {
-    useWorkspaceStore.setState(workspacePatch)
-  }
-  if (Object.keys(preferencesPatch).length > 0) {
-    usePreferencesStore.setState(preferencesPatch)
-  }
-
-  return {
-    ...(tabs ? { tabs } : {}),
-    ...(activeTabId !== undefined ? { activeTabId } : {}),
+const reportRendererReady = async (signal: RendererReadySignal): Promise<void> => {
+  try {
+    await signalRendererReady(signal)
+  } catch (error) {
+    rendererDiagnostics.error('app.lifecycle', 'workspace-ready-signal-failed', error)
   }
 }
 
@@ -113,77 +75,153 @@ export const useWorkspaceRestore = ({
   const [restoreStatusMessage, setRestoreStatusMessage] = useState<string | null>(null)
   const [isRestoringSession, setIsRestoringSession] = useState(false)
   const [isSessionRestored, setIsSessionRestored] = useState(false)
-  const sessionRestoreStartedRef = useRef(false)
-  const restoreInProgressRef = useRef(false)
-
-  const restoreWorkspaceSession = useCallback(async () => {
-    if (restoreInProgressRef.current) return false
-    restoreInProgressRef.current = true
-    setIsRestoringSession(true)
-    try {
-      if (isDesktopRuntime() && rootPath) {
-        try {
-          await flushEditorChanges()
-          if (rootKind === 'single') {
-            await fsApi.setSingleFile(rootPath)
-          } else if (rootKind === 'external') {
-            await fsApi.setRoot(rootPath)
-          }
-        } catch (error) {
-          setRestoreStatusMessage(t('app.restoreRootFailed'))
-          void error
-          return false
-        }
-      }
-      await loadWorkspace()
-      setRestoreStatusMessage(null)
-      return true
-    } catch (error) {
-      setRestoreStatusMessage(t('app.restoreSessionFailed'))
-      void error
-      return false
-    } finally {
-      setIsRestoringSession(false)
-      restoreInProgressRef.current = false
-    }
-  }, [loadWorkspace, rootKind, rootPath, t])
+  const [queuedSeed, setQueuedSeed] = useState<QueuedSeed | null>(null)
+  const activeOperationRef = useRef<RestoreOperation | null>(null)
+  const automaticRestoreCompletedRef = useRef(false)
+  const generationRef = useRef(0)
+  const latestSeedRef = useRef<Parameters<typeof applyWorkspaceSessionSeed>[0] | null>(null)
+  const mountedRef = useRef(true)
+  const translateRef = useRef(t)
 
   useEffect(() => {
-    if (!hasHydrated || sessionRestoreStartedRef.current) return
-    sessionRestoreStartedRef.current = true
+    translateRef.current = t
+  }, [t])
 
-    let cancelled = false
-    void (async () => {
-      const restored = await restoreWorkspaceSession()
-      if (!cancelled && restored) setIsSessionRestored(true)
-    })()
-
+  useEffect(() => {
+    mountedRef.current = true
     return () => {
-      cancelled = true
+      mountedRef.current = false
     }
-  }, [hasHydrated, restoreWorkspaceSession])
+  }, [])
+
+  const runDefaultRestore = useCallback(async (): Promise<RestoreResult> => {
+    if (isDesktopRuntime() && rootPath) {
+      try {
+        await flushEditorChanges()
+        if (rootKind === 'single') await fsApi.setSingleFile(rootPath)
+        else if (rootKind === 'external') await fsApi.setRoot(rootPath)
+      } catch (error) {
+        return { error, failure: 'root', ok: false }
+      }
+    }
+    try {
+      await loadWorkspace()
+      return { ok: true }
+    } catch (error) {
+      return { error, failure: 'session', ok: false }
+    }
+  }, [loadWorkspace, rootKind, rootPath])
+
+  const runSeedRestore = useCallback(
+    async (payload: Parameters<typeof applyWorkspaceSessionSeed>[0]): Promise<RestoreResult> => {
+      try {
+        const seed = applyWorkspaceSessionSeed(payload)
+        await loadWorkspace({
+          activeTabId: seed.activeTabId,
+          preserveCurrentRoute: false,
+          tabs: seed.tabs,
+        })
+        return { ok: true }
+      } catch (error) {
+        return { error, failure: 'session', ok: false }
+      }
+    },
+    [loadWorkspace],
+  )
+
+  const observeOperation = useCallback((operation: RestoreOperation): void => {
+    void operation.promise.then(async (result) => {
+      operation.settled = true
+      if (result.ok) await waitForWorkspaceInteractivePaint()
+      if (!mountedRef.current || generationRef.current !== operation.generation) return
+      automaticRestoreCompletedRef.current = true
+      if (operation.payload) {
+        setQueuedSeed((current) => (current?.generation === operation.generation ? null : current))
+      }
+      setIsRestoringSession(false)
+      if (!result.ok) {
+        const messageKey =
+          result.failure === 'root' ? 'app.restoreRootFailed' : 'app.restoreSessionFailed'
+        setRestoreStatusMessage(translateRef.current(messageKey))
+        await reportRendererReady({
+          error: result.error instanceof Error ? result.error.message : String(result.error),
+          phase: 'workspace-error',
+        })
+        return
+      }
+      if (operation.payload) consumeWorkspaceSessionSeed(operation.payload)
+      setRestoreStatusMessage(null)
+      setIsSessionRestored(true)
+      await reportRendererReady({ phase: 'workspace-interactive' })
+    })
+  }, [])
+
+  const beginDefaultRestore = useCallback((): RestoreOperation => {
+    const current = activeOperationRef.current
+    if (current?.kind === 'default' && !current.settled) return current
+    const operation: RestoreOperation = {
+      generation: ++generationRef.current,
+      kind: 'default',
+      promise: runDefaultRestore(),
+      settled: false,
+    }
+    activeOperationRef.current = operation
+    setIsRestoringSession(true)
+    observeOperation(operation)
+    return operation
+  }, [observeOperation, runDefaultRestore])
+
+  const beginSeedRestore = useCallback(
+    (seed: QueuedSeed): RestoreOperation => {
+      const current = activeOperationRef.current
+      if (current?.kind === 'seed' && current.generation === seed.generation) return current
+      const operation: RestoreOperation = {
+        generation: seed.generation,
+        kind: 'seed',
+        payload: seed.payload,
+        promise: runSeedRestore(seed.payload),
+        settled: false,
+      }
+      activeOperationRef.current = operation
+      setIsRestoringSession(true)
+      setIsSessionRestored(false)
+      observeOperation(operation)
+      return operation
+    },
+    [observeOperation, runSeedRestore],
+  )
+
+  const restoreWorkspaceSession = useCallback(async (): Promise<boolean> => {
+    const operation = beginDefaultRestore()
+    const result = await operation.promise
+    return result.ok && operation.generation === generationRef.current
+  }, [beginDefaultRestore])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    if (queuedSeed) {
+      beginSeedRestore(queuedSeed)
+      return
+    }
+    if (!automaticRestoreCompletedRef.current && !hasPendingWorkspaceSessionSeed()) {
+      beginDefaultRestore()
+    }
+  }, [beginDefaultRestore, beginSeedRestore, hasHydrated, queuedSeed])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
 
-    let unlistenWorkspaceSeed: (() => void) | undefined
-    void listen<WorkspaceSessionSeedPayload>('workspace-session-seed', (event) => {
-      const seed = applyWorkspaceSessionSeed(event.payload)
-      void loadWorkspace({
-        activeTabId: seed.activeTabId,
-        preserveCurrentRoute: false,
-        tabs: seed.tabs,
-      })
-    }).then((fn) => {
-      unlistenWorkspaceSeed = fn
+    const unlistenWorkspaceSeed = onWorkspaceSessionSeed((payload) => {
+      if (latestSeedRef.current === payload) return
+      latestSeedRef.current = payload
+      const generation = ++generationRef.current
+      automaticRestoreCompletedRef.current = false
+      setQueuedSeed({ generation, payload })
+      setIsSessionRestored(false)
     })
 
-    return () => {
-      if (unlistenWorkspaceSeed) {
-        unlistenWorkspaceSeed()
-      }
-    }
-  }, [loadWorkspace])
+    return unlistenWorkspaceSeed
+  }, [])
 
   useEffect(() => {
     if (!isDesktopRuntime()) return

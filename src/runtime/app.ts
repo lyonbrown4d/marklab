@@ -4,6 +4,7 @@ import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { invoke } from '@/runtime/ipc'
 import type { AppPlatform } from '@/services/appApi'
 import { requestMenuAction } from '@/utils/appEvents'
+import type { RendererReadySignal } from '@/types/rendererReady'
 
 export type AppWindowOpenResult = {
   cancelled?: boolean
@@ -44,13 +45,13 @@ export const setNativeMenuLocale = async (locale: string) => {
   if (!electron?.commands?.invoke) return { locale, ok: true }
   return invoke<{ locale: string; ok: boolean }>('menu_set_locale', { locale })
 }
-export const signalAppReady = async () => {
+export const signalAppReady = async (signal: RendererReadySignal = { phase: 'shell' }) => {
   const electron = getElectronRuntime()
   if (electron) {
-    await electron.appReady()
+    await electron.appReady(signal)
     return
   }
-  await emit('app-ready')
+  await emit('app-ready', signal)
 }
 export const getLaunchInfo = async () => {
   const electron = getElectronRuntime()

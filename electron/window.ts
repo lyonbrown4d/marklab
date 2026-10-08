@@ -36,7 +36,13 @@ export type MarklabWindows = {
 }
 export type MainWindowPool = {
   acquireMainWindow: () => Promise<WindowPoolAcquisition>
-  activateMainWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
+  activateMainWindow: (
+    acquisition: WindowPoolAcquisition,
+    options?: MainWindowLoadOptions,
+  ) => Promise<void>
+}
+export type MainWindowLoadOptions = {
+  standby?: boolean
 }
 const isDevMode = () => !app.isPackaged
 const isMacOS = () => process.platform === 'darwin'
@@ -57,6 +63,11 @@ const getRendererUrl = (page = '') => {
 const getRendererNavigationUrl = (page = '') => {
   const rendererUrl = getRendererUrl(page)
   return isDevMode() ? rendererUrl : pathToFileURL(rendererUrl).toString()
+}
+const getMainRendererNavigationUrl = (standby = false): string => {
+  const rendererUrl = new URL(getRendererNavigationUrl())
+  if (standby) rendererUrl.searchParams.set('marklab-standby', '1')
+  return rendererUrl.toString()
 }
 const mainWindowChromeOptions = (): Pick<
   Electron.BrowserWindowConstructorOptions,
@@ -159,7 +170,8 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     main.setWindowButtonVisibility(true)
   }
   installWindowNavigationGuard(main, [
-    getRendererNavigationUrl(),
+    getMainRendererNavigationUrl(),
+    getMainRendererNavigationUrl(true),
     getRendererNavigationUrl('window-opening.html'),
   ])
   installWindowStatePersistence(
@@ -178,12 +190,15 @@ export const loadSplashWindow = async (splash: BrowserWindow) => {
   }
   await splash.loadFile(splashPage)
 }
-export const loadMainWindow = async (main: BrowserWindow) => {
+export const loadMainWindow = async (main: BrowserWindow, options: MainWindowLoadOptions = {}) => {
   if (isDevMode()) {
-    await loadDevUrl(main, getRendererUrl())
+    await loadDevUrl(main, getMainRendererNavigationUrl(options.standby))
     return
   }
-  await main.loadFile(getRendererUrl())
+  await main.loadFile(
+    getRendererUrl(),
+    options.standby ? { query: { 'marklab-standby': '1' } } : {},
+  )
 }
 export const loadWindowOpeningShell = async (main: BrowserWindow) => {
   const openingPage = getRendererUrl('window-opening.html')

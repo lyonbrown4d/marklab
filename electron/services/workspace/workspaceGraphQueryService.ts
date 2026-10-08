@@ -33,10 +33,14 @@ type WorkspaceGraphQueryServiceOptions = {
 export class WorkspaceGraphQueryService {
   constructor(private readonly options: WorkspaceGraphQueryServiceOptions) {}
 
-  async load(priority: 'background' | 'interactive'): Promise<FsGraph> {
+  async load(
+    priority: 'background' | 'interactive',
+    options: { onStarted?: () => void; signal?: AbortSignal } = {},
+  ): Promise<FsGraph> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      options.signal?.throwIfAborted()
       const revision = this.options.analysisCache.revision
-      const graph = await this.loadRevision(priority)
+      const graph = await this.loadRevision(priority, options)
       if (revision === this.options.analysisCache.revision) return graphTopologyOnly(graph)
     }
     throw new Error('Workspace analysis changed while the graph query was running')
@@ -61,11 +65,16 @@ export class WorkspaceGraphQueryService {
     return result
   }
 
-  private loadRevision(priority: 'background' | 'interactive'): Promise<FsGraph> {
+  private loadRevision(
+    priority: 'background' | 'interactive',
+    options: { onStarted?: () => void; signal?: AbortSignal },
+  ): Promise<FsGraph> {
     const resolve = async () => {
+      options.signal?.throwIfAborted()
       const state = this.options.getState()
       const workspaceKey = createWorkspaceStorageKey({ kind: state.rootKind, path: state.rootPath })
       const { documents, knownPaths } = await this.options.getInput()
+      options.signal?.throwIfAborted()
       return this.options.graphResolver.resolve({
         build: () =>
           trySidecarWorkspaceGraph({
@@ -77,7 +86,9 @@ export class WorkspaceGraphQueryService {
           }),
         documents,
         knownPaths,
+        onStarted: options.onStarted,
         priority,
+        signal: options.signal,
         workspaceKey,
       })
     }

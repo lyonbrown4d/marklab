@@ -12,6 +12,7 @@ import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
 import type { WorkspaceTreeApi } from '@/types/workspaceTree'
+import type { RendererReadySignal } from '@/types/rendererReady'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -173,7 +174,7 @@ export type RendererSafeElectronApi = {
     onEvent: (handler: (event: AiInlineCompletionEvent) => void) => () => void
     start: (input: AiInlineCompletionRequest) => Promise<AiInlineCompletionStartResult>
   }
-  appReady: () => Promise<{ ok: boolean }>
+  appReady: (signal?: RendererReadySignal) => Promise<{ ok: boolean }>
   assets: AssetApi
   lifecycle: {
     getLaunchInfo: () => Promise<ElectronLaunchInfo>

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect } from 'react'
-import { useDesktopReadySignal } from '@/app/useDesktopReadySignal'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { listen } from '@/runtime/events'
@@ -85,8 +84,6 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
       unlisten?.()
     }
   }, [syncSystemAppearance, themeMode])
-
-  useDesktopReadySignal()
 
   useEffect(() => {
     if (!isDesktopRuntime()) return

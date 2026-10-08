@@ -19,6 +19,12 @@ import { initializeReactScan } from '@/dev/reactScan'
 import { scheduleEditorRuntimePreload } from '@/app/scheduleEditorRuntimePreload'
 import AppToaster from '@/app/AppToaster'
 import { installRendererDiagnostics, reportReactError } from '@/services/rendererDiagnostics'
+import RendererBootstrap from '@/app/RendererBootstrap'
+import {
+  initializeRendererLifecycle,
+  isStandbyRenderer,
+  onRendererInteractive,
+} from '@/runtime/rendererLifecycle'
 
 const ReactQueryDevtools = import.meta.env.DEV
   ? lazy(async () => {
@@ -29,6 +35,7 @@ const ReactQueryDevtools = import.meta.env.DEV
 
 initializeReactScan(import.meta.env.DEV, import.meta.env.VITE_REACT_SCAN)
 installRendererDiagnostics()
+await initializeRendererLifecycle()
 
 if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
   const loadReactDevTools = () => {
@@ -57,18 +64,30 @@ createRoot(document.getElementById('root')!, {
   onUncaughtError: (error, info) => reportReactError('uncaught-error', error, info.componentStack),
 }).render(
   <StrictMode>
-    <PlateDndProvider>
-      <QueryClientProvider client={queryClient}>
-        <App />
-        <AppToaster />
-        {ReactQueryDevtools && (
-          <Suspense fallback={null}>
-            <ReactQueryDevtools initialIsOpen={false} />
-          </Suspense>
-        )}
-      </QueryClientProvider>
-    </PlateDndProvider>
+    <RendererBootstrap
+      application={
+        <PlateDndProvider>
+          <QueryClientProvider client={queryClient}>
+            <App />
+            <AppToaster />
+            {ReactQueryDevtools && (
+              <Suspense fallback={null}>
+                <ReactQueryDevtools initialIsOpen={false} />
+              </Suspense>
+            )}
+          </QueryClientProvider>
+        </PlateDndProvider>
+      }
+    />
   </StrictMode>,
 )
 
-scheduleEditorRuntimePreload()
+if (isStandbyRenderer()) {
+  let stopListening: () => void = () => undefined
+  stopListening = onRendererInteractive(() => {
+    stopListening()
+    scheduleEditorRuntimePreload()
+  })
+} else {
+  scheduleEditorRuntimePreload()
+}

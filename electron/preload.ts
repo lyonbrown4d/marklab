@@ -147,7 +147,8 @@ const desktopApi: RendererSafeElectronApi = {
         input,
       ) as Promise<AiInlineCompletionStartResult>,
   },
-  appReady: () => ipcRenderer.invoke(nativeIpcChannels.appReadySignal) as Promise<{ ok: boolean }>,
+  appReady: (signal) =>
+    ipcRenderer.invoke(nativeIpcChannels.appReadySignal, signal) as Promise<{ ok: boolean }>,
   lifecycle: {
     getLaunchInfo: () =>
       ipcRenderer.invoke(nativeIpcChannels.lifecycleGetLaunchInfo) as Promise<AppLaunchInfo>,

@@ -17,7 +17,7 @@ vi.mock('@electron/windowStateRestore', () => ({
 describe('createMainWindowSession', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('starts one lightweight prewarm after the primary renderer is ready', async () => {
+  it('does not prewarm while the primary renderer is still hydrating', async () => {
     const main = {} as BrowserWindow
     const splash = {} as BrowserWindow
     vi.mocked(createMarklabWindows).mockResolvedValue({ main, splash })
@@ -26,9 +26,11 @@ describe('createMainWindowSession', () => {
       activateMainWindow: vi.fn(),
       dispose: vi.fn(async () => undefined),
       destroyIdleWindows: vi.fn(),
+      markRendererInteractive: vi.fn(),
       prewarmMainWindow: vi.fn(async () => undefined),
       restoreOpeningWindow: vi.fn(),
       stats: vi.fn(),
+      waitForRendererInteractive: vi.fn(),
     }
 
     await createMainWindowSession({
@@ -38,7 +40,7 @@ describe('createMainWindowSession', () => {
       logger: noopLogger,
     })
 
-    expect(pool.prewarmMainWindow).toHaveBeenCalledOnce()
+    expect(pool.prewarmMainWindow).not.toHaveBeenCalled()
   })
 
   it('registers the primary window with the stable persisted session key', async () => {

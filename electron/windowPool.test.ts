@@ -63,15 +63,15 @@ const createHarness = (memoryHeadroom = true, visible = false) => {
 }
 
 describe('MarklabWindowPool', () => {
-  it('prewarms one lightweight renderer without mounting the main application', async () => {
+  it('prewarms one standby renderer without loading the opening document', async () => {
     const { createMainWindow, loadMainWindow, loadOpeningWindow, pool } = createHarness()
 
     await Promise.all([pool.prewarmMainWindow(), pool.prewarmMainWindow()])
 
     expect(createMainWindow).toHaveBeenCalledTimes(1)
-    expect(loadOpeningWindow).toHaveBeenCalledTimes(1)
-    expect(loadMainWindow).not.toHaveBeenCalled()
-    expect(pool.stats()).toMatchObject({ idleMainWindows: 1, openingShellLoads: 1 })
+    expect(loadOpeningWindow).not.toHaveBeenCalled()
+    expect(loadMainWindow).toHaveBeenCalledWith(expect.anything(), { standby: true })
+    expect(pool.stats()).toMatchObject({ idleMainWindows: 1, mainRendererLoads: 1 })
   })
 
   it('hides a prewarmed renderer if the platform exposes it during loading', async () => {
@@ -86,10 +86,11 @@ describe('MarklabWindowPool', () => {
     const { createMainWindow, loadMainWindow, loadOpeningWindow, pool } = createHarness()
     await pool.prewarmMainWindow()
     createMainWindow.mockClear()
+    loadMainWindow.mockClear()
     loadOpeningWindow.mockClear()
 
     const acquisition = await pool.acquireMainWindow()
-    await pool.activateMainWindow(acquisition)
+    await pool.activateMainWindow(acquisition, { standby: true })
 
     expect(acquisition.source).toBe('pool')
     expect(acquisition.metrics).toMatchObject({
@@ -98,7 +99,7 @@ describe('MarklabWindowPool', () => {
     })
     expect(createMainWindow).not.toHaveBeenCalled()
     expect(loadOpeningWindow).not.toHaveBeenCalled()
-    expect(loadMainWindow).toHaveBeenCalledOnce()
+    expect(loadMainWindow).not.toHaveBeenCalled()
     expect(pool.stats()).toMatchObject({ coldStarts: 0, poolHits: 1, mainRendererLoads: 1 })
   })
 
@@ -106,13 +107,63 @@ describe('MarklabWindowPool', () => {
     const { createMainWindow, loadMainWindow, loadOpeningWindow, pool } = createHarness()
 
     const acquisition = await pool.acquireMainWindow()
-    await pool.activateMainWindow(acquisition)
+    await pool.activateMainWindow(acquisition, { standby: true })
 
     expect(acquisition.source).toBe('cold')
     expect(createMainWindow).toHaveBeenCalledOnce()
     expect(loadOpeningWindow).toHaveBeenCalledOnce()
-    expect(loadMainWindow).toHaveBeenCalledOnce()
+    expect(loadMainWindow).toHaveBeenCalledWith(acquisition.window, { standby: true })
     expect(pool.stats()).toMatchObject({ coldStarts: 1, poolHits: 0 })
+  })
+
+  it('includes time spent waiting for an in-flight prewarm in acquisition timing', async () => {
+    let finishPrewarm!: () => void
+    const prewarmLoad = new Promise<undefined>((resolve) => {
+      finishPrewarm = () => resolve(undefined)
+    })
+    const { loadMainWindow, pool } = createHarness()
+    loadMainWindow.mockReturnValueOnce(prewarmLoad)
+
+    const prewarm = pool.prewarmMainWindow()
+    const acquisition = pool.acquireMainWindow()
+    finishPrewarm()
+
+    await prewarm
+    await expect(acquisition).resolves.toMatchObject({
+      metrics: { preparationDurationMs: 4 },
+      source: 'pool',
+    })
+  })
+
+  it('waits for the activated renderer to become interactive before completing', async () => {
+    const { createMainWindow, pool } = createHarness()
+    await pool.prewarmMainWindow()
+    const acquisition = await pool.acquireMainWindow()
+
+    let settled = false
+    const interactive = pool.waitForRendererInteractive(acquisition).then(() => {
+      settled = true
+    })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    pool.markRendererInteractive(createMainWindow.mock.results[0]?.value)
+    await expect(interactive).resolves.toBeUndefined()
+  })
+
+  it('rejects interactive readiness when renderer hydration fails', async () => {
+    const { createMainWindow, pool } = createHarness()
+    await pool.prewarmMainWindow()
+    const acquisition = await pool.acquireMainWindow()
+
+    pool.markRendererInteractive(
+      createMainWindow.mock.results[0]?.value,
+      new Error('workspace hydration failed'),
+    )
+
+    await expect(pool.waitForRendererInteractive(acquisition)).rejects.toThrow(
+      'workspace hydration failed',
+    )
   })
 
   it('drops damaged idle renderers and enforces the idle cap across repeated prewarms', async () => {
@@ -155,8 +206,8 @@ describe('MarklabWindowPool', () => {
     const opening = new Promise<undefined>((resolve) => {
       finishOpening = () => resolve(undefined)
     })
-    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
-    loadOpeningWindow.mockReturnValueOnce(opening)
+    const { createMainWindow, loadMainWindow, pool } = createHarness()
+    loadMainWindow.mockReturnValueOnce(opening)
 
     const prewarm = pool.prewarmMainWindow()
     await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledOnce())
@@ -173,9 +224,9 @@ describe('MarklabWindowPool', () => {
     const opening = new Promise<undefined>((resolve) => {
       finishOpening = () => resolve(undefined)
     })
-    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
+    const { createMainWindow, loadMainWindow, pool } = createHarness()
     const active = await pool.acquireMainWindow()
-    loadOpeningWindow.mockReturnValueOnce(opening)
+    loadMainWindow.mockReturnValueOnce(opening)
 
     const prewarm = pool.prewarmMainWindow()
     await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledTimes(2))
@@ -190,8 +241,8 @@ describe('MarklabWindowPool', () => {
 
   it('does not wait indefinitely for an in-flight prewarm during disposal', async () => {
     const neverFinishes = new Promise<undefined>(() => undefined)
-    const { createMainWindow, loadOpeningWindow, pool } = createHarness()
-    loadOpeningWindow.mockReturnValueOnce(neverFinishes)
+    const { createMainWindow, loadMainWindow, pool } = createHarness()
+    loadMainWindow.mockReturnValueOnce(neverFinishes)
 
     void pool.prewarmMainWindow()
     await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledOnce())

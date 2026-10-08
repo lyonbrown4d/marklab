@@ -43,6 +43,25 @@ vi.mock('@/components/MarkdownEditor', () => ({
 import WysiwygEditorPage from '@/pages/WysiwygEditorPage'
 
 describe('WysiwygEditorPage workspace links', () => {
+  it('identifies the rendered editor with its document path', () => {
+    const { container } = render(
+      <WysiwygEditorPage
+        activePath="notes/current.md"
+        files={[]}
+        onChange={vi.fn()}
+        onOpenFile={vi.fn()}
+        readOnly={false}
+        showStatusBar={false}
+        value="Current document"
+      />,
+    )
+
+    expect(container.firstElementChild).toHaveAttribute(
+      'data-editor-document-path',
+      'notes/current.md',
+    )
+  })
+
   it('opens an indexed extensionless Markdown target and ignores a missing target', async () => {
     const onOpenFile = vi.fn()
     const onOpenFileView = vi.fn()

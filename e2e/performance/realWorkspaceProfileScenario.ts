@@ -1,4 +1,4 @@
-import { expect, type Page, type TestInfo } from '@playwright/test'
+import { expect, type Locator, type Page, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -26,31 +26,33 @@ const HOME_FILE = 'Home.md'
 const LARGE_FILE = 'libs-panhe.md'
 const SEARCH_QUERY = 'client'
 
-const waitForStableGeometry = (page: Page, selector: string) =>
+const waitForStableGeometry = (element: Locator) =>
+  element.evaluate(
+    (element) =>
+      new Promise<void>((resolve, reject) => {
+        let previous = ''
+        let stableFrames = 0
+        let sampledFrames = 0
+        const sample = () => {
+          const rect = element.getBoundingClientRect()
+          const current = [rect.x, rect.y, rect.width, rect.height].map(Math.round).join(':')
+          stableFrames =
+            current === previous && rect.width > 0 && rect.height > 0 ? stableFrames + 1 : 0
+          previous = current
+          sampledFrames += 1
+          if (stableFrames >= 8) resolve()
+          else if (sampledFrames >= 180)
+            reject(new Error(`Editor geometry did not settle: ${current}`))
+          else requestAnimationFrame(sample)
+        }
+        requestAnimationFrame(sample)
+      }),
+  )
+
+const visiblePlateDocument = (page: Page) =>
   page
-    .locator(selector)
-    .filter({ visible: true })
-    .evaluate(
-      (element) =>
-        new Promise<void>((resolve, reject) => {
-          let previous = ''
-          let stableFrames = 0
-          let sampledFrames = 0
-          const sample = () => {
-            const rect = element.getBoundingClientRect()
-            const current = [rect.x, rect.y, rect.width, rect.height].map(Math.round).join(':')
-            stableFrames =
-              current === previous && rect.width > 0 && rect.height > 0 ? stableFrames + 1 : 0
-            previous = current
-            sampledFrames += 1
-            if (stableFrames >= 8) resolve()
-            else if (sampledFrames >= 180)
-              reject(new Error(`Editor geometry did not settle: ${current}`))
-            else requestAnimationFrame(sample)
-          }
-          requestAnimationFrame(sample)
-        }),
-    )
+    .locator('[data-editor-document-path]')
+    .filter({ has: page.locator(PLATE_EDITOR_SELECTOR), visible: true })
 
 const copyWorkspace = (sourceRoot: string, runtimeRoot: string) => {
   const targetRoot = path.join(runtimeRoot, 'real-workspace-copy')
@@ -76,10 +78,17 @@ const openQuickFile = async (page: Page, fileName: string) => {
   await expect(option).toBeVisible({ timeout: 20_000 })
   await option.click()
   await expect(dialog).toBeHidden()
-  await expect(page.locator(PLATE_EDITOR_SELECTOR)).toHaveAttribute('data-state', 'ready', {
+  const document = visiblePlateDocument(page)
+  await expect(document).toHaveCount(1)
+  await expect(document).toHaveAttribute('data-editor-document-path', fileName, {
     timeout: 60_000,
   })
-  await waitForStableGeometry(page, PLATE_EDITOR_SELECTOR)
+  const editor = document.locator(PLATE_EDITOR_SELECTOR)
+  await expect(editor).toHaveCount(1)
+  await expect(editor).toHaveAttribute('data-state', 'ready', {
+    timeout: 60_000,
+  })
+  await waitForStableGeometry(editor)
 }
 
 const exerciseSearch = async (page: Page) => {

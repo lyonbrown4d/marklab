@@ -1,15 +1,17 @@
 import { BrowserWindow } from 'electron'
 
-import { nativeIpcChannels } from '@electron/channels'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import type { NativeIpcRegistration } from '@electron/ipc/index'
 import type { MenuActionDispatcher } from '@electron/menu'
 import type { Logger } from '@electron/services/logger'
 import type { FsRootInfo } from '@electron/services/workspace/types'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
-import type { WindowOpeningProgress } from '@/types/windowOpening'
 import { showWindowWithMotion } from '@electron/windowMotion'
 import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool'
+import {
+  createWindowOpeningProgressPublisher,
+  sendWorkspaceSessionSeed,
+} from '@electron/main/windowCommandEvents'
 import { createWindowOpenTimings } from '@electron/main/windowOpenTimings'
 import {
   parsePathOpenTarget,
@@ -74,27 +76,6 @@ const failure = (error: unknown, requestedPath?: string): AppWindowOpenResult =>
   sharedWorkspaceSession: false,
 })
 
-const sendOpeningProgress = (window: BrowserWindow, progress: WindowOpeningProgress): void => {
-  if (!window.webContents.isDestroyed()) {
-    window.webContents.send(nativeIpcChannels.windowOpeningProgress, progress)
-  }
-}
-
-const sendWorkspaceSessionSeed = (
-  window: BrowserWindow,
-  seed: WorkspaceSessionSeed | null,
-): void => {
-  if (!seed || window.webContents.isDestroyed()) return
-  const send = () => {
-    if (!window.webContents.isDestroyed()) {
-      window.webContents.send(nativeIpcChannels.workspaceSessionSeed, seed)
-      window.webContents.send('workspace-session-seed', seed)
-    }
-  }
-  send()
-  setTimeout(send, 250)
-}
-
 export const createAppWindowCommandHandlers = (
   dependencies: AppWindowCommandDependencies,
 ): NativeCommandHandlers => {
@@ -113,25 +94,33 @@ export const createAppWindowCommandHandlers = (
     dependencies.activateWorkspaceWindowState(main, request.windowStateRoot)
     if (main.isMinimized()) main.restore()
     showWindowWithMotion(main, { focus: true })
+    const progress = createWindowOpeningProgressPublisher(main)
 
     const runAttempt = async (retry: boolean): Promise<AppWindowOpenResult> => {
       const timings = createWindowOpenTimings(acquisition.metrics.preparationDurationMs)
       try {
-        if (retry) await dependencies.getWindowPool().restoreOpeningWindow(acquisition)
-        sendOpeningProgress(main, {
+        if (retry && acquisition.source === 'cold') {
+          await dependencies.getWindowPool().restoreOpeningWindow(acquisition)
+        }
+        progress.send({
           stage: 'starting',
           workspacePath: request.requestedPath,
         })
-        sendOpeningProgress(main, { stage: 'loading', workspacePath: request.requestedPath })
+        progress.send({ stage: 'loading', workspacePath: request.requestedPath })
         const workspace = dependencies.getWorkspaceServiceForWindow(main)
+        workspace.beginRendererHydration()
         const root = await request.initializeWorkspace(workspace)
         timings.finishPhase('workspaceInitializationMs')
         const seed = request.createSeed(main, root)
-        sendOpeningProgress(main, { stage: 'indexing', workspacePath: root.path })
-        await dependencies.getWindowPool().activateMainWindow(acquisition)
+        progress.send({ stage: 'indexing', workspacePath: root.path })
+        await dependencies.getWindowPool().activateMainWindow(acquisition, { standby: true })
         timings.finishPhase('rendererActivationMs')
+        if (acquisition.source === 'cold') progress.replay()
         sendWorkspaceSessionSeed(main, seed)
         timings.finishPhase('sessionSeedMs')
+        await dependencies.getWindowPool().waitForRendererInteractive(acquisition)
+        timings.finishPhase('rendererInteractiveMs')
+        workspace.markRendererInteractive()
         if (main.isMinimized()) main.restore()
         showWindowWithMotion(main, { focus: true })
         retries.delete(main.id)
@@ -158,12 +147,16 @@ export const createAppWindowCommandHandlers = (
         }
       } catch (error) {
         const result = failure(error, request.requestedPath)
-        sendOpeningProgress(main, {
-          error: result.error,
-          stage: 'failed',
-          workspacePath: request.requestedPath,
-        })
-        retries.set(main.id, () => runAttempt(true))
+        if (!main.isDestroyed() && !main.webContents.isDestroyed()) {
+          progress.send({
+            error: result.error,
+            stage: 'failed',
+            workspacePath: request.requestedPath,
+          })
+          retries.set(main.id, () => runAttempt(true))
+        } else {
+          retries.delete(main.id)
+        }
         logger.error('workspace window open failed', {
           error,
           reason: request.reason,

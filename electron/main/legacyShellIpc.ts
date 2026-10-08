@@ -1,10 +1,12 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import type { NativeIpcRegistration } from '@electron/ipc/index'
+import type { RendererReadySignal } from '@/types/rendererReady'
+import { parseRendererReadySignal } from '@electron/ipc/appReady'
 
 type LegacyShellIpcOptions = {
   getMainWindow: () => BrowserWindow | null
   getNativeIpc: () => NativeIpcRegistration | null
-  onRendererReady: () => void
+  onRendererReady: (event: Electron.IpcMainInvokeEvent, signal: RendererReadySignal) => void
 }
 
 type LegacyShellIpcRegistration = {
@@ -20,8 +22,8 @@ export const createLegacyShellIpcRegistration = (
     if (registered) return
     registered = true
 
-    ipcMain.handle('app-ready', () => {
-      options.onRendererReady()
+    ipcMain.handle('app-ready', (event, payload: unknown) => {
+      options.onRendererReady(event, parseRendererReadySignal(payload))
       return { ok: true }
     })
 
