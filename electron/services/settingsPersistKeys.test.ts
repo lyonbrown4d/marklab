@@ -35,4 +35,11 @@ describe('settingsPersistKeys', () => {
     expect(preferenceStateKeys.has('graphMiniMapPosition')).toBe(true)
     expect(preferenceStateKeys.has('graphMiniMapSize')).toBe(true)
   })
+
+  it('allows desktop notification preferences through the renderer persist boundary', () => {
+    expect(preferenceStateKeys.has('desktopNotificationsEnabled')).toBe(true)
+    expect(preferenceStateKeys.has('desktopNotificationsBackgroundOnly')).toBe(true)
+    expect(preferenceStateKeys.has('desktopNotificationExportsEnabled')).toBe(true)
+    expect(preferenceStateKeys.has('desktopNotificationSyncEnabled')).toBe(true)
+  })
 })

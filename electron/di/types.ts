@@ -9,6 +9,7 @@ import type { AiInlineCompletionService } from '@electron/services/ai/completion
 import type { AiProviderStore } from '@electron/services/ai/providerStore'
 import type { VercelAiProviderResolver } from '@electron/services/ai/providerResolver'
 import type { ExportService } from '@electron/services/export/exportService'
+import type { DesktopNotificationService } from '@electron/services/desktopNotificationService'
 import type { GitService } from '@electron/services/git/service'
 import type { GraphLayoutStore } from '@electron/services/graphLayout/graphLayoutStore'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
@@ -57,6 +58,7 @@ export type ElectronBindings = {
   workspaceGraphStore: WorkspaceGraphStore
   workspaceRegistry: WindowWorkspaceRegistry
   exportService: ExportService
+  desktopNotificationService: DesktopNotificationService
   gitService: GitService
   graphLayoutStore: GraphLayoutStore
   knowledgeEngineService: KnowledgeEngineService
@@ -81,6 +83,7 @@ export type ElectronServices = Pick<
   | 'aiInlineCompletionService'
   | 'aiService'
   | 'exportService'
+  | 'desktopNotificationService'
   | 'gitService'
   | 'graphLayoutStore'
   | 'knowledgeEngineService'

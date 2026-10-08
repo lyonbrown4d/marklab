@@ -53,7 +53,12 @@ describe('Electron DI modules', () => {
     [
       'desktop content',
       contentModule,
-      [TOKENS.languageIntelligenceService, TOKENS.linkPreviewService, TOKENS.exportService],
+      [
+        TOKENS.desktopNotificationService,
+        TOKENS.languageIntelligenceService,
+        TOKENS.linkPreviewService,
+        TOKENS.exportService,
+      ],
       TOKENS.workspaceRegistry,
     ],
     [

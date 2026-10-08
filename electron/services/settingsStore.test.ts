@@ -25,12 +25,23 @@ describe('SettingsStore SQLite persistence', () => {
 
   it('persists renderer settings independently by key', () => {
     store.setRendererPersistValue('marklab.preferences', {
-      state: { locale: 'zh-CN', sidebarCollapsed: true, ignored: 'value' },
+      state: {
+        desktopNotificationsEnabled: false,
+        desktopNotificationsBackgroundOnly: false,
+        locale: 'zh-CN',
+        sidebarCollapsed: true,
+        ignored: 'value',
+      },
       version: 3,
     })
 
     expect(store.getRendererPersistValue('marklab.preferences')).toEqual({
-      state: { locale: 'zh-CN', sidebarCollapsed: true },
+      state: {
+        desktopNotificationsBackgroundOnly: false,
+        desktopNotificationsEnabled: false,
+        locale: 'zh-CN',
+        sidebarCollapsed: true,
+      },
       version: 3,
     })
     expect(store.getRendererPersistValue('marklab.drawio')).toBeNull()

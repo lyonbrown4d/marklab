@@ -42,6 +42,27 @@ describe('writing-first layout preferences', () => {
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(false)
   })
 
+  it('enables background-only desktop notifications by default', () => {
+    const store = usePreferencesStore.getState()
+
+    expect(store.desktopNotificationsEnabled).toBe(true)
+    expect(store.desktopNotificationsBackgroundOnly).toBe(true)
+    expect(store.desktopNotificationExportsEnabled).toBe(true)
+    expect(store.desktopNotificationSyncEnabled).toBe(true)
+
+    store.setDesktopNotificationsEnabled(false)
+    store.setDesktopNotificationsBackgroundOnly(false)
+    store.setDesktopNotificationExportsEnabled(false)
+    store.setDesktopNotificationSyncEnabled(false)
+
+    expect(usePreferencesStore.getState()).toMatchObject({
+      desktopNotificationsEnabled: false,
+      desktopNotificationsBackgroundOnly: false,
+      desktopNotificationExportsEnabled: false,
+      desktopNotificationSyncEnabled: false,
+    })
+  })
+
   it('stores the graph minimap corner and compact size', () => {
     const store = usePreferencesStore.getState()
 

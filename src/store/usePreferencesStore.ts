@@ -38,10 +38,15 @@ import type {
   ThemeModePreference,
 } from '@/store/appTypes'
 import { createGraphPreferencesSlice, type GraphPreferencesState } from '@/store/graphPreferences'
+import {
+  createNotificationPreferencesSlice,
+  type NotificationPreferencesState,
+} from '@/store/notificationPreferences'
 
 export type PreferencesState = AiCompletionPreferencesState &
   GraphPreferencesState &
   ImmersivePreferencesState &
+  NotificationPreferencesState &
   TerminalPreferencesState & {
     theme: ThemeMode
     themeMode: ThemeModePreference
@@ -100,6 +105,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       ...createAiCompletionPreferencesSlice(set, get, store),
       ...createGraphPreferencesSlice(set, get, store),
       ...createImmersivePreferencesSlice(set, get, store),
+      ...createNotificationPreferencesSlice(set, get, store),
       ...createTerminalPreferencesSlice(set, get, store),
       locale: getInitialLocale(),
       sidebarCollapsed: true,

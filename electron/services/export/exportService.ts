@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { BrowserWindow, Shell } from 'electron'
 import { noopLogger, type Logger } from '@electron/services/logger'
+import type { DesktopNotificationServiceContract } from '@electron/services/desktopNotificationService'
 import type { ExportTaskPayload } from '@electron/types'
 import { validateExistingLocalPath } from '@electron/services/pathValidation'
 import { renderDocx } from '@electron/services/export/docx'
@@ -12,7 +13,6 @@ import {
   notifyExportFailed,
   notifyExportFinished,
 } from '@electron/services/export/exportNotifications'
-import { revealFinishedExport } from '@electron/services/export/exportResultAction'
 import { renderPdfDocument } from '@electron/services/export/pdf'
 import {
   createExportTaskId,
@@ -21,6 +21,7 @@ import {
   validateExportOutputExtension,
   validateExportOutputPath,
   type ExportFormat,
+  type ExportResourceContext,
 } from '@electron/services/export/exportRequest'
 type ActiveExport = {
   controller: AbortController
@@ -31,14 +32,6 @@ type ActiveExport = {
   ownerId?: number
   progress: number
 }
-type ExportResourceContext = {
-  commitOutput?: (data: string | NodeJS.ArrayBufferView) => Promise<void>
-  ownerId?: number
-  readImage?: (url: string) => Promise<Buffer | null>
-  releaseOutput?: () => Promise<void>
-  resourceBasePath?: string
-  workspaceRootPath?: string
-}
 export class ExportService {
   private readonly allowedOutputPaths = new Map<string, number | undefined>()
   private readonly queue = new ExportQueue(1)
@@ -48,6 +41,7 @@ export class ExportService {
     private readonly shell: Shell,
     private readonly BrowserWindowClass: typeof BrowserWindow,
     private readonly logger: Logger = noopLogger,
+    private readonly desktopNotifications?: DesktopNotificationServiceContract,
   ) {}
   exportMarkdown(value: unknown, context: ExportResourceContext | string = {}): string {
     const resources = typeof context === 'string' ? { resourceBasePath: context } : context
@@ -162,15 +156,20 @@ export class ExportService {
         },
         task.ownerId,
       )
-      notifyExportFinished(format, outputPath, () =>
-        revealFinishedExport(this.BrowserWindowClass, this.shell, outputPath, task.ownerId),
+      notifyExportFinished(
+        `export:${taskId}`,
+        format,
+        outputPath,
+        task.ownerId,
+        () => this.shell.showItemInFolder(outputPath),
+        this.desktopNotifications,
       )
     } catch (error) {
       if (task.controller.signal.aborted) {
         if (!task.cancellationReported) this.cancelExport(taskId, task.ownerId)
         return
       }
-      const message = errorMessage(error)
+      const message = error instanceof Error ? error.message : String(error)
       this.logger.error('export task failed', {
         error,
         format,
@@ -188,7 +187,14 @@ export class ExportService {
         },
         task.ownerId,
       )
-      notifyExportFailed(format, outputPath, message)
+      notifyExportFailed(
+        `export:${taskId}`,
+        format,
+        outputPath,
+        message,
+        task.ownerId,
+        this.desktopNotifications,
+      )
     } finally {
       this.activeTasks.delete(taskId)
       await resources.releaseOutput?.()
@@ -250,7 +256,8 @@ export class ExportService {
     data: string | NodeJS.ArrayBufferView,
   ): Promise<void> {
     if (!resources.commitOutput) throw new Error('Export output was not authorized')
-    beginExportCommit(task)
+    task.controller.signal.throwIfAborted()
+    task.committing = true
     await resources.commitOutput(data)
   }
   private emitExportTask(payload: ExportTaskPayload, ownerId?: number): void {
@@ -284,12 +291,4 @@ export class ExportService {
       task.ownerId,
     )
   }
-}
-const errorMessage = (error: unknown): string => {
-  return error instanceof Error ? error.message : String(error)
-}
-
-const beginExportCommit = (task: ActiveExport): void => {
-  task.controller.signal.throwIfAborted()
-  task.committing = true
 }

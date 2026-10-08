@@ -47,6 +47,9 @@ export const TOKENS = {
   workspaceGraphStore: token<ElectronBindings['workspaceGraphStore']>('workspaceGraphStore'),
   workspaceRegistry: token<ElectronBindings['workspaceRegistry']>('workspaceRegistry'),
   exportService: token<ElectronBindings['exportService']>('exportService'),
+  desktopNotificationService: token<ElectronBindings['desktopNotificationService']>(
+    'desktopNotificationService',
+  ),
   gitService: token<ElectronBindings['gitService']>('gitService'),
   graphLayoutStore: token<ElectronBindings['graphLayoutStore']>('graphLayoutStore'),
   knowledgeEngineService:

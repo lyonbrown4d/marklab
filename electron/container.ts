@@ -109,6 +109,9 @@ const createElectronServices = (container: Container): ElectronServices => ({
   get exportService() {
     return container.get(TOKENS.exportService)
   },
+  get desktopNotificationService() {
+    return container.get(TOKENS.desktopNotificationService)
+  },
   get gitService() {
     return container.get(TOKENS.gitService)
   },

@@ -34,6 +34,7 @@ import {
   type WorkspaceCommandServices,
 } from '@electron/ipc/workspaceCommands'
 import type { ExportService } from '@electron/services/export/exportService'
+import type { DesktopNotificationServiceContract } from '@electron/services/desktopNotificationService'
 import type { AiServiceContract } from '@electron/services/ai/types'
 import type { AiInlineCompletionServiceContract } from '@electron/services/ai/completion/types'
 import type { GitService } from '@electron/services/git/service'
@@ -64,6 +65,7 @@ export type NativeIpcDependencies = {
   ipcMain: Electron.IpcMain
   getLaunchInfo: () => import('@electron/types').AppLaunchInfo
   exportService: ExportService
+  desktopNotificationService: DesktopNotificationServiceContract
   gitService: GitService
   graphLayoutStore: GraphLayoutStore
   knowledgeEngineService: KnowledgeEngineService
@@ -140,6 +142,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   })
   registerWorkspaceSyncIpc(dependencies.ipcMain, {
     configStore: dependencies.workspaceSyncConfigStore,
+    desktopNotifications: dependencies.desktopNotificationService,
     profileStore: dependencies.webDavProfileStore,
     syncService: dependencies.workspaceWebDavSyncService,
     workspaceMutationCoordinator: dependencies.workspaceSyncCoordinator,

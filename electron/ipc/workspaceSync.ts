@@ -1,4 +1,5 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
+import path from 'node:path'
 import { z } from 'zod'
 
 import { nativeIpcChannels } from '@electron/channels'
@@ -12,9 +13,11 @@ import {
 import type { WorkspaceWebDavSyncService } from '@electron/services/sync/workspaceWebDavSyncService'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { WorkspaceSyncStartOutcome } from '@/types/workspaceSync'
+import type { DesktopNotificationServiceContract } from '@electron/services/desktopNotificationService'
 
 type WorkspaceSyncIpcDependencies = {
   configStore: WorkspaceSyncConfigStore
+  desktopNotifications: DesktopNotificationServiceContract
   profileStore: WebDavProfileStoreContract
   syncService: WorkspaceWebDavSyncService
   workspaceMutationCoordinator: Pick<WorkspaceSyncCoordinator, 'runConfigurationMutation'>
@@ -97,9 +100,26 @@ export const registerWorkspaceSyncIpc = (
           }
         },
       })
+      dependencies.desktopNotifications.show({
+        body: `${workspaceLabel(root)} is up to date`,
+        category: 'sync',
+        id: `sync:${requestId}`,
+        ownerWebContentsId: event.sender.id,
+        title: 'Sync completed',
+      })
       return { status: 'completed', result } satisfies WorkspaceSyncStartOutcome
     } catch (error) {
-      return syncStartFailureOutcome(error)
+      const outcome = syncStartFailureOutcome(error)
+      if (outcome.status === 'failed') {
+        dependencies.desktopNotifications.show({
+          body: `${workspaceLabel(root)} needs attention`,
+          category: 'sync',
+          id: `sync:${requestId}`,
+          ownerWebContentsId: event.sender.id,
+          title: 'Sync failed',
+        })
+      }
+      return outcome
     } finally {
       untrackSync(event.sender, requestId)
     }
@@ -127,6 +147,9 @@ const hasErrorField = (error: unknown, field: 'code' | 'name', value: string): b
   error !== null &&
   field in error &&
   (error as Record<'code' | 'name', unknown>)[field] === value
+
+const workspaceLabel = (root: string): string =>
+  path.basename(root.replaceAll('\\', '/')) || 'Workspace'
 
 const subscribedSenders = new WeakSet<object>()
 const activeSyncsBySender = new WeakMap<object, Map<string, string>>()

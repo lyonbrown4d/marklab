@@ -1,6 +1,14 @@
 import path from 'node:path'
 
 export type ExportFormat = 'html' | 'pdf' | 'docx'
+export type ExportResourceContext = {
+  commitOutput?: (data: string | NodeJS.ArrayBufferView) => Promise<void>
+  ownerId?: number
+  readImage?: (url: string) => Promise<Buffer | null>
+  releaseOutput?: () => Promise<void>
+  resourceBasePath?: string
+  workspaceRootPath?: string
+}
 const schemePattern = /^[a-z][a-z\d+.-]*:/i
 let exportTaskCounter = 0
 

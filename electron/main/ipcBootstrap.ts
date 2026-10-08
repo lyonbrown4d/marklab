@@ -10,6 +10,7 @@ type MainIpcServices = Pick<
   | 'aiInlineCompletionService'
   | 'aiService'
   | 'exportService'
+  | 'desktopNotificationService'
   | 'gitService'
   | 'graphLayoutStore'
   | 'knowledgeEngineService'
@@ -44,6 +45,7 @@ export const registerMainNativeIpc = (options: MainNativeIpcOptions): NativeIpcR
     clipboard,
     dialog,
     exportService: services.exportService,
+    desktopNotificationService: services.desktopNotificationService,
     gitService: services.gitService,
     graphLayoutStore: services.graphLayoutStore,
     knowledgeEngineService: services.knowledgeEngineService,

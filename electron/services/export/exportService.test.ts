@@ -4,6 +4,8 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BrowserWindow, Shell } from 'electron'
 import { ExportService } from '@electron/services/export/exportService'
+import type { DesktopNotificationRequest } from '@electron/services/desktopNotificationService'
+import { noopLogger } from '@electron/services/logger'
 import type { ExportTaskPayload } from '@electron/types'
 
 const electron = vi.hoisted(() => ({
@@ -239,9 +241,15 @@ describe('ExportService PDF lifecycle', () => {
     ])
   })
 
-  it('focuses the owner window and reveals the output when a completion notification is clicked', async () => {
-    electron.notificationSupported.mockReturnValue(true)
+  it('lets the notification service focus the owner and only reveals the output on click', async () => {
     windowIds = [7]
+    let click: (() => void) | undefined
+    const desktopNotifications = {
+      show: vi.fn((request: DesktopNotificationRequest) => {
+        click = request.onClick
+        return true
+      }),
+    }
     const shell = {
       openPath: vi.fn(),
       showItemInFolder: vi.fn(),
@@ -249,6 +257,8 @@ describe('ExportService PDF lifecycle', () => {
     const service = new ExportService(
       shell as unknown as Shell,
       FakeBrowserWindow as unknown as typeof BrowserWindow,
+      noopLogger,
+      desktopNotifications,
     )
 
     service.exportMarkdown(
@@ -257,10 +267,13 @@ describe('ExportService PDF lifecycle', () => {
     )
 
     await vi.waitFor(() => expect(sent.some((task) => task.status === 'finished')).toBe(true))
-    electron.notificationInstances[0]?.click?.()
+    click?.()
 
-    expect(nativeWindows.get(7)?.show).toHaveBeenCalledOnce()
-    expect(nativeWindows.get(7)?.focus).toHaveBeenCalledOnce()
+    expect(desktopNotifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'export', ownerWebContentsId: 7 }),
+    )
+    expect(nativeWindows.get(7)?.show).not.toHaveBeenCalled()
+    expect(nativeWindows.get(7)?.focus).not.toHaveBeenCalled()
     expect(shell.showItemInFolder).toHaveBeenCalledWith(path.resolve('D:/exports/done.html'))
   })
 })

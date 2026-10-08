@@ -145,6 +145,14 @@ describe('workspace sync IPC', () => {
       progress: { stage: 'scanning', completed: 1, total: 2 },
     })
     expect(fixture.syncService.cancel).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.desktopNotifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'sync',
+        id: `sync:${requestId}`,
+        ownerWebContentsId: 7,
+        title: 'Sync completed',
+      }),
+    )
   })
 
   it('returns busy and cancelled outcomes without relying on serialized Error fields', async () => {
@@ -178,6 +186,14 @@ describe('workspace sync IPC', () => {
         requestId: '00000000-0000-4000-8000-000000000004',
       }),
     ).resolves.toEqual({ status: 'failed', message: 'remote unavailable' })
+    expect(fixture.desktopNotifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'sync',
+        id: 'sync:00000000-0000-4000-8000-000000000004',
+        ownerWebContentsId: 7,
+        title: 'Sync failed',
+      }),
+    )
   })
 
   it('does not accept a provider selector on sync start', async () => {
@@ -244,6 +260,7 @@ const createFixture = () => {
     event: {
       sender: { id: 7, isDestroyed: vi.fn(() => false), once: vi.fn(), send: vi.fn() },
     },
+    desktopNotifications: { show: vi.fn() },
     profileStore: {
       delete: vi.fn(async () => ({ ok: true as const })),
       get: vi.fn(async (): Promise<{ id: string } | null> => ({ id: 'dav-main' })),

@@ -37,6 +37,31 @@ describe('GeneralSettingsPage terminal shell', () => {
     expect(usePreferencesStore.getState().terminalShellPath).toBeNull()
   })
 
+  it('configures desktop notification policy and categories', async () => {
+    const user = userEvent.setup()
+    render(<GeneralSettingsPage />)
+
+    const master = screen.getByRole('switch', { name: 'settings.desktopNotifications' })
+    const backgroundOnly = screen.getByRole('switch', {
+      name: 'settings.desktopNotificationsBackgroundOnly',
+    })
+    const exports = screen.getByRole('switch', {
+      name: 'settings.desktopNotificationExports',
+    })
+    const sync = screen.getByRole('switch', { name: 'settings.desktopNotificationSync' })
+
+    expect(master).toBeChecked()
+    expect(backgroundOnly).toBeChecked()
+    expect(exports).toBeChecked()
+    expect(sync).toBeChecked()
+
+    await user.click(master)
+    expect(backgroundOnly).toBeDisabled()
+    expect(exports).toBeDisabled()
+    expect(sync).toBeDisabled()
+    expect(usePreferencesStore.getState().desktopNotificationsEnabled).toBe(false)
+  })
+
   it('prevents duplicate selection and exposes picker errors', async () => {
     let rejectPicker!: (error: Error) => void
     vi.mocked(openDialog).mockReturnValue(

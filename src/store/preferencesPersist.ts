@@ -9,6 +9,10 @@ export type PreferencesPersistedState = Pick<
   | 'aiCompletionProviderId'
   | 'aiCompletionTriggerMode'
   | 'documentCompletionEnabled'
+  | 'desktopNotificationExportsEnabled'
+  | 'desktopNotificationsBackgroundOnly'
+  | 'desktopNotificationsEnabled'
+  | 'desktopNotificationSyncEnabled'
   | 'aiDefaultProviderId'
   | 'autoSystemThemeSync'
   | 'customThemeId'
@@ -61,6 +65,10 @@ export const selectPreferencesPersistedState = (
   aiCompletionProviderId: state.aiCompletionProviderId,
   aiCompletionTriggerMode: state.aiCompletionTriggerMode,
   documentCompletionEnabled: state.documentCompletionEnabled,
+  desktopNotificationsEnabled: state.desktopNotificationsEnabled,
+  desktopNotificationsBackgroundOnly: state.desktopNotificationsBackgroundOnly,
+  desktopNotificationExportsEnabled: state.desktopNotificationExportsEnabled,
+  desktopNotificationSyncEnabled: state.desktopNotificationSyncEnabled,
   aiDefaultProviderId: state.aiDefaultProviderId,
   locale: state.locale,
   sidebarCollapsed: state.sidebarCollapsed,
