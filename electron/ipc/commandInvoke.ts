@@ -41,12 +41,26 @@ export const registerCommandInvokeIpc = (
       }
       return result
     } catch (error) {
-      logger.error('command invoke failed', { command: request.command, error })
+      if (isAbortError(error)) {
+        logger.debug('command invoke cancelled', { command: request.command })
+      } else {
+        logger.error('command invoke failed', { command: request.command, error })
+      }
       throw error
     }
   }
   ipcMain.handle(nativeIpcChannels.commandInvoke, invokeHandler)
 }
+
+const isAbortError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false
+  try {
+    return 'name' in error && error.name === 'AbortError'
+  } catch {
+    return false
+  }
+}
+
 const parseCommandInvokePayload = (payload: unknown, legacyArgs: unknown): CommandInvokePayload => {
   if (typeof payload === 'string') {
     return {

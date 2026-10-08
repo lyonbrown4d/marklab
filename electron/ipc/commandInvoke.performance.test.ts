@@ -57,4 +57,39 @@ describe('command invoke performance logging', () => {
     })
     now.mockRestore()
   })
+
+  it('logs expected command cancellation at debug level', async () => {
+    const { invoke, ipcMain, logger } = createHarness()
+    const abortError = new DOMException('This operation was aborted', 'AbortError')
+    registerCommandInvokeIpc(
+      ipcMain,
+      { fs_get_workspace_graph_node_details: vi.fn(async () => Promise.reject(abortError)) },
+      logger,
+    )
+
+    await expect(invoke('fs_get_workspace_graph_node_details')).rejects.toBe(abortError)
+
+    expect(logger.debug).toHaveBeenCalledWith('command invoke cancelled', {
+      command: 'fs_get_workspace_graph_node_details',
+    })
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('keeps unexpected command failures at error level', async () => {
+    const { invoke, ipcMain, logger } = createHarness()
+    const failure = new Error('graph details failed')
+    registerCommandInvokeIpc(
+      ipcMain,
+      { fs_get_workspace_graph_node_details: vi.fn(async () => Promise.reject(failure)) },
+      logger,
+    )
+
+    await expect(invoke('fs_get_workspace_graph_node_details')).rejects.toBe(failure)
+
+    expect(logger.error).toHaveBeenCalledWith('command invoke failed', {
+      command: 'fs_get_workspace_graph_node_details',
+      error: failure,
+    })
+    expect(logger.debug).not.toHaveBeenCalled()
+  })
 })
