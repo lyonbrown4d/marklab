@@ -44,7 +44,18 @@ const removeRuntimeRoot = (runtimeRoot: string) => {
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error(`Refusing to remove performance runtime outside ${runtimeParent}`)
   }
-  fs.rmSync(runtimeRoot, { force: true, maxRetries: 10, recursive: true, retryDelay: 100 })
+  try {
+    fs.rmSync(runtimeRoot, { force: true, maxRetries: 10, recursive: true, retryDelay: 100 })
+    return true
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error.code === 'EBUSY' || error.code === 'EPERM')
+    )
+      return false
+    throw error
+  }
 }
 
 const revealElectronWindow = async (app: ElectronApplication, page: Page) => {
@@ -161,7 +172,8 @@ export const launchPerformanceSession = async (
     return { app, gpuFeatureStatus, isolation, launcherPage, output, pageTracking, runtimeRoot }
   } catch (error) {
     await closeElectronApp(app)
-    removeRuntimeRoot(runtimeRoot)
+    if (!removeRuntimeRoot(runtimeRoot))
+      output.push(`Performance runtime cleanup deferred: ${runtimeRoot}`)
     throw error
   }
 }
@@ -259,5 +271,6 @@ export const flushWorkspaceBuffers = async (page: Page) =>
 
 export const closePerformanceSession = async (session: ElectronPerformanceSession | undefined) => {
   if (session) await closeElectronApp(session.app)
-  if (session) removeRuntimeRoot(session.runtimeRoot)
+  if (session && !removeRuntimeRoot(session.runtimeRoot))
+    session.output.push(`Performance runtime cleanup deferred: ${session.runtimeRoot}`)
 }

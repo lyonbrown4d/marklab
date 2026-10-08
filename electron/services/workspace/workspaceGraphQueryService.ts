@@ -21,6 +21,7 @@ import { graphTopologyOnly } from '@electron/services/knowledgeEngine/workspaceG
 type WorkspaceGraphQueryServiceOptions = {
   analysisCache: WorkspaceAnalysisCache
   getInput: () => Promise<WorkspaceAnalysisInput>
+  getNodeDocuments: (paths: string[]) => Promise<WorkspaceAnalysisInput['documents']>
   getState: () => FsStateData
   graphResolver: WorkspaceGraphResolver
   knowledgeEngineService?: KnowledgeEngineService
@@ -51,8 +52,10 @@ export class WorkspaceGraphQueryService {
     const graph = await this.load('interactive')
     if (graph.revision !== query.revision) throw new Error('Workspace graph revision is stale')
     const generation = this.options.analysisCache.revision
-    const { documents } = await this.options.getInput()
     const { revision, ...selection } = query
+    const selectedPaths = selectTopologyFilePaths(graph, selection)
+    const documents =
+      selectedPaths.length > 0 ? await this.options.getNodeDocuments(selectedPaths) : []
     const result = await this.options.runNodeDetails({
       type: 'workspace-graph-node-details',
       documents: selectWorkspaceGraphNodeDocuments(documents, selection),
@@ -94,4 +97,30 @@ export class WorkspaceGraphQueryService {
     }
     return priority === 'interactive' ? this.options.analysisCache.getGraph(resolve) : resolve()
   }
+}
+
+const selectTopologyFilePaths = (
+  graph: FsGraph,
+  selection: WorkspaceGraphNodeDetailsTask['query'],
+): string[] => {
+  const requestedFileDocuments = [...new Set(selection.node_ids)]
+    .filter((id) => id.startsWith('file:'))
+    .map((id) => ({ content: '', path: id.slice('file:'.length) }))
+  const selectedNodeIds = new Set(
+    selectWorkspaceGraphNodeDocuments(requestedFileDocuments, selection).map(
+      (document) => `file:${document.path}`,
+    ),
+  )
+  return [
+    ...new Set(
+      graph.nodes.flatMap((node) =>
+        node.kind === 'file' &&
+        node.path &&
+        node.id === `file:${node.path}` &&
+        selectedNodeIds.has(node.id)
+          ? [node.path]
+          : [],
+      ),
+    ),
+  ]
 }

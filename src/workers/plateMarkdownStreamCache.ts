@@ -63,4 +63,11 @@ export class PlateMarkdownStreamCache {
     this.cache.set(markdown, chunks)
     return chunks
   }
+
+  takeChunks(markdown: string): Value[] {
+    const cached = this.cache.get(markdown)
+    if (!cached) return chunkPlateMarkdownValue(this.parse(markdown))
+    this.cache.delete(markdown)
+    return cached
+  }
 }

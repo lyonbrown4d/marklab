@@ -153,6 +153,7 @@ describe('WorkspaceAnalysisService sidecar graph', () => {
       await expectGraphWithRevision(workspace.workspaceGraph(), firstGraph)
       expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(1)
 
+      await workspace.openFile({ path: 'alpha.md' })
       workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
 
       await expectGraphWithRevision(workspace.workspaceGraph(), secondGraph)

@@ -27,7 +27,6 @@ import {
 import {
   trySidecarPathMutation,
   tryPrewarmSidecarFileAccess,
-  trySidecarReadFile,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { stringArg } from '@electron/services/workspace/workspaceUtils'
@@ -36,11 +35,13 @@ import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 import { WorkspaceAccessPrewarmer } from '@electron/services/workspace/workspaceAccessPrewarmer'
 import { createWorkspaceBufferUpdateHandler } from '@electron/services/workspace/workspaceBufferUpdateHandler'
 import { openWorkspacePath } from '@electron/services/workspace/workspaceSystemPath'
+import { WorkspaceFileReader } from '@electron/services/workspace/workspaceFileReader'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
   private rootTransitionInProgress = false
   private workspaceSessionGeneration = 0
   private readonly accessPrewarmer: WorkspaceAccessPrewarmer
+  private readonly fileReader: WorkspaceFileReader
   readonly applyBufferUpdate = createWorkspaceBufferUpdateHandler(
     this.buffers,
     (path) => void this.resolve(path),
@@ -56,6 +57,13 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     private readonly knowledgeEngineService?: KnowledgeEngineService,
   ) {
     super(app, shell, logger)
+    this.fileReader = new WorkspaceFileReader({
+      buffers: this.buffers,
+      getState: () => this.state,
+      knowledgeEngineService: this.knowledgeEngineService,
+      logger: this.logger,
+      resolvePath: (relativePath) => this.resolve(relativePath),
+    })
     this.accessPrewarmer = new WorkspaceAccessPrewarmer({
       logger: this.logger,
       prepare: async () => {
@@ -100,27 +108,15 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     }
   }
 
-  async openFile(value: unknown): Promise<string> {
-    return this.readFile(value)
+  readonly openFile = (value: unknown): Promise<string> =>
+    this.fileReader.open(stringArg(value, 'path'))
+
+  override async readFile(value: unknown): Promise<string> {
+    return this.fileReader.open(stringArg(value, 'path'))
   }
 
-  async readFile(value: unknown): Promise<string> {
-    const relativePath = stringArg(value, 'path')
-    const absolutePath = this.resolve(relativePath)
-    const cached = this.buffers.readCached(relativePath)
-    if (cached != null) return cached
-    const sidecarContent = await trySidecarReadFile({
-      knowledgeEngineService: this.knowledgeEngineService,
-      logger: this.logger,
-      path: relativePath,
-      state: this.state,
-    })
-    if (sidecarContent != null) {
-      return this.buffers.cacheCleanFile(relativePath, sidecarContent)
-    }
-    const content = await fs.promises.readFile(absolutePath, 'utf8')
-    return this.buffers.cacheCleanFile(relativePath, content)
-  }
+  protected override readonly readFileForAnalysis = (relativePath: string): Promise<string> =>
+    this.fileReader.readForAnalysis(relativePath)
 
   readTextPreview(value: unknown): Promise<WorkspaceTextPreview> {
     return readWorkspaceTextPreview(this.state, value)

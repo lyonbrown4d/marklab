@@ -81,7 +81,7 @@ export class WorkspaceBase {
     this.pathSnapshots = createWorkspacePathSnapshotCache(() => this.state, this.logger)
     this.documents = new WorkspaceDocumentCatalog(
       () => this.pathSnapshots.get(),
-      (entryPath) => this.readFile({ path: entryPath }),
+      (entryPath) => this.readFileForAnalysis(entryPath),
     )
     this.tree = new WorkspaceTreeProjection(
       () => this.listEntries(),
@@ -189,17 +189,18 @@ export class WorkspaceBase {
     return this.documents.documents(replacePath, replaceContent)
   }
 
-  protected async workspaceDocumentsAndKnownPaths(
+  protected readonly workspaceDocumentsAndKnownPaths = async (
     replacePath?: string,
     replaceContent?: string,
-  ): Promise<{ documents: WorkspaceDocument[]; knownPaths: WorkspaceKnownPaths }> {
-    return this.documents.documentsAndKnownPaths(replacePath, replaceContent)
-  }
+  ): Promise<{ documents: WorkspaceDocument[]; knownPaths: WorkspaceKnownPaths }> =>
+    this.documents.documentsAndKnownPaths(replacePath, replaceContent)
 
   protected readFile(value: unknown): Promise<string> {
     void value
     throw new Error('WorkspaceBase.readFile must be implemented by a subclass')
   }
+
+  protected readFileForAnalysis = (relativePath: string) => this.readFile({ path: relativePath })
 
   protected resolve(relativePath: string): string {
     return resolveWorkspacePath(this.state, relativePath)

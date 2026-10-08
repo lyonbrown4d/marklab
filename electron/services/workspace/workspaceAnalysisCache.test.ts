@@ -46,6 +46,24 @@ describe('WorkspaceAnalysisCache', () => {
     expect(loadGraph).toHaveBeenCalledOnce()
   })
 
+  it('weakly reuses resolved analysis input while retaining in-flight deduplication', async () => {
+    const cache = new WorkspaceAnalysisCache()
+    const loadInput = vi.fn(async () => ({
+      documents: [{ path: 'note.md', content: '# Loaded ' + String(loadInput.mock.calls.length) }],
+      knownPaths: input.knownPaths,
+    }))
+
+    const [first, concurrent] = await Promise.all([
+      cache.getInput(loadInput),
+      cache.getInput(loadInput),
+    ])
+    const next = await cache.getInput(loadInput)
+
+    expect(first).toBe(concurrent)
+    expect(next).toBe(first)
+    expect(loadInput).toHaveBeenCalledOnce()
+  })
+
   it('invalidates every cached stage together', async () => {
     const cache = new WorkspaceAnalysisCache()
     const loadInput = vi.fn(async () => input)

@@ -20,6 +20,7 @@ import {
   PLATE_EDITOR_SELECTOR,
 } from './platePerformanceMetrics.js'
 import { profileRendererInteraction } from './rendererCpuProfile.js'
+import { captureProcessMemorySnapshot, diffMemorySnapshots } from './processMemoryObservability.js'
 /* eslint-enable no-restricted-imports */
 
 const HOME_FILE = 'Home.md'
@@ -152,6 +153,7 @@ export const runRealWorkspaceProfile = async ({
     })
     page.on('pageerror', (error) => rendererErrors.push(error.stack ?? error.message))
     await resizeElectronWindow(session, page, { height: 960, width: 1440 })
+    const smallDocumentMemory = await captureProcessMemorySnapshot(session, page)
 
     const switchMeasured = stripRawProfile(
       await profileRendererInteraction(page, 'switch-largest-document', async () => {
@@ -167,6 +169,7 @@ export const runRealWorkspaceProfile = async ({
     await expect(editable).toHaveCount(1)
     await expect(editable).toBeVisible()
     const initialEditor = await captureEditorLocatorState(editor)
+    const largeDocumentMemory = await captureProcessMemorySnapshot(session, page)
 
     const scrollMeasured = stripRawProfile(
       await profileRendererInteraction(page, 'wheel-scroll-largest-document', () =>
@@ -221,6 +224,7 @@ export const runRealWorkspaceProfile = async ({
         return { frames, map }
       }),
     )
+    const mapMemory = await captureProcessMemorySnapshot(session, page)
 
     if (!warmup) {
       await testInfo.attach(`real-workspace-run-${runIndex}.png`, {
@@ -248,6 +252,18 @@ export const runRealWorkspaceProfile = async ({
       initialization: opened.initialization,
       input: { profile: inputMeasured.profile, ...inputMeasured.result },
       map: { profile: mapMeasured.profile, ...mapMeasured.result },
+      memory: {
+        deltas: {
+          largeDocument: diffMemorySnapshots(smallDocumentMemory, largeDocumentMemory),
+          map: diffMemorySnapshots(largeDocumentMemory, mapMemory),
+          total: diffMemorySnapshots(smallDocumentMemory, mapMemory),
+        },
+        snapshots: {
+          largeDocument: largeDocumentMemory,
+          map: mapMemory,
+          smallDocument: smallDocumentMemory,
+        },
+      },
       rawProfiles,
       rendererErrors,
       runIndex,

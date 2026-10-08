@@ -15,6 +15,10 @@ type CacheEntry<T> = {
 export class WorkspaceAnalysisCache {
   private generation = 0
   private input: CacheEntry<WorkspaceAnalysisInput> | null = null
+  private inputReference: {
+    generation: number
+    reference: WeakRef<WorkspaceAnalysisInput>
+  } | null = null
   private index: CacheEntry<FsWorkspaceIndex> | null = null
   private graph: CacheEntry<FsGraph> | null = null
 
@@ -23,9 +27,20 @@ export class WorkspaceAnalysisCache {
   }
 
   getInput(load: () => Promise<WorkspaceAnalysisInput>): Promise<WorkspaceAnalysisInput> {
-    return this.getOrCreate(this.input, load, (entry) => {
-      this.input = entry
-    })
+    if (this.input?.generation === this.generation) return this.input.promise
+    if (this.inputReference?.generation === this.generation) {
+      const cached = this.inputReference.reference.deref()
+      if (cached) return Promise.resolve(cached)
+      this.inputReference = null
+    }
+
+    const entry = { generation: this.generation, promise: Promise.resolve().then(load) }
+    this.input = entry
+    void entry.promise.then(
+      (input) => this.retainWeakInput(entry, input),
+      () => this.releaseInput(entry),
+    )
+    return entry.promise
   }
 
   getIndex(load: () => Promise<FsWorkspaceIndex>): Promise<FsWorkspaceIndex> {
@@ -43,8 +58,22 @@ export class WorkspaceAnalysisCache {
   invalidate(): void {
     this.generation += 1
     this.input = null
+    this.inputReference = null
     this.index = null
     this.graph = null
+  }
+
+  private releaseInput(entry: CacheEntry<WorkspaceAnalysisInput>): void {
+    if (this.input === entry) this.input = null
+  }
+
+  private retainWeakInput(
+    entry: CacheEntry<WorkspaceAnalysisInput>,
+    input: WorkspaceAnalysisInput,
+  ): void {
+    if (this.input !== entry) return
+    this.inputReference = { generation: entry.generation, reference: new WeakRef(input) }
+    this.input = null
   }
 
   private getOrCreate<T>(

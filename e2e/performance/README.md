@@ -36,6 +36,16 @@ is installed before Plate is ready and records window-open-to-ready separately. 
 GPU feature status, isolated runtime paths, heap, geometry, Slate/DOM/chunk counts, and window-pool
 data.
 
+Memory observations use Electron's `app.getAppMetrics()` for per-process main, renderer, utility,
+GPU, and other-process snapshots. Working-set and available private-memory values are normalized
+from Electron kilobytes to bytes; unsupported or zero-filled platform fields remain `null` with an
+explicit coverage count instead of being reported as zero. The active renderer snapshot also records
+V8 heap, embedder heap, documents, DOM nodes, and event listeners through CDP. Reports include
+relative deltas for launcher → large fixture → post-interaction and, when
+`MARKLAB_E2E_WORKSPACE` is supplied, small Markdown → large Markdown → Workspace Map. These values
+are observability baselines, not fixed memory budgets: compare repeated runs on the same platform and
+build before adding a regression threshold.
+
 The suite also seeds a legacy 1.36 MB local-history snapshot and restores it through the real
 Timeline → Preview → Confirm interaction. That gate verifies the restored Slate marker, on-disk
 content, post-restore input and flush behavior, while measuring frames and long tasks from the final
@@ -56,6 +66,7 @@ Playwright writes run artifacts under `test-results/electron-performance` and th
 - `large-document-metrics.json`;
 - `local-history-restore-metrics.json`;
 - `performance-budget.json` and `electron-performance.log` even when setup or an assertion fails;
+- process and renderer memory snapshots/deltas embedded in the document and real-workspace reports;
 - Playwright failure context when a performance or rendering budget is exceeded.
 
 Both directories are ignored by Git. Performance assertions use separate native-GPU and

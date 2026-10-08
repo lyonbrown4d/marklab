@@ -28,6 +28,31 @@ describe('PlateMarkdownStreamCache', () => {
     expect(parse).toHaveBeenCalledOnce()
   })
 
+  it('consumes prepared chunks once and reparses subsequent stream requests', () => {
+    const parse = vi.fn((markdown: string) => paragraph(markdown))
+    const cache = new PlateMarkdownStreamCache(parse, 1)
+    const prepared = cache.getChunks('First')
+
+    expect(cache.takeChunks('First')).toBe(prepared)
+    expect(cache.takeChunks('First')).not.toBe(prepared)
+    expect(cache.takeChunks('First')).not.toBe(prepared)
+    expect(parse).toHaveBeenCalledTimes(3)
+  })
+
+  it('preserves another prepared document when a stream parse fails', () => {
+    const parse = vi.fn((markdown: string) => {
+      if (markdown === 'Broken') throw new Error('Parse failed')
+      return paragraph(markdown)
+    })
+    const cache = new PlateMarkdownStreamCache(parse, 2)
+    const prepared = cache.getChunks('Prepared')
+
+    expect(() => cache.takeChunks('Broken')).toThrow('Parse failed')
+    expect(cache.takeChunks('Prepared')).toBe(prepared)
+    expect(cache.takeChunks('Prepared')).not.toBe(prepared)
+    expect(parse).toHaveBeenCalledTimes(3)
+  })
+
   it('evicts the least recently used document at the configured limit', () => {
     const parse = vi.fn((markdown: string) => paragraph(markdown))
     const cache = new PlateMarkdownStreamCache(parse, 1)

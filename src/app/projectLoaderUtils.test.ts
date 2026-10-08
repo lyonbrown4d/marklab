@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { areWorkspaceEntriesEqual, fetchWorkspaceTreeChildrenPage } from '@/app/projectLoaderUtils'
+import {
+  areWorkspaceEntriesEqual,
+  fetchWorkspaceTreeChildrenPage,
+  fetchWorkspaceTreeProjection,
+} from '@/app/projectLoaderUtils'
 import { workspaceTreeApi } from '@/services/workspaceTreeApi'
 
 vi.mock('@/services/workspaceTreeApi', () => ({
-  workspaceTreeApi: { listChildren: vi.fn() },
+  workspaceTreeApi: { initialFile: vi.fn(), listChildren: vi.fn(), pathsExist: vi.fn() },
 }))
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => vi.resetAllMocks())
 
 describe('fetchWorkspaceTreeChildrenPage', () => {
   it('loads only one bounded page for incremental rendering', async () => {
@@ -51,5 +55,38 @@ describe('areWorkspaceEntriesEqual', () => {
       false,
     )
     expect(areWorkspaceEntriesEqual(unloaded, [{ ...unloaded[0], hasChildren: false }])).toBe(false)
+  })
+})
+
+describe('fetchWorkspaceTreeProjection', () => {
+  it('retries when the tree changes while selecting the initial file', async () => {
+    const root = { kind: 'external' as const, path: '/workspace' }
+    vi.mocked(workspaceTreeApi.listChildren)
+      .mockResolvedValueOnce({
+        entries: [],
+        generation: 1,
+        nextCursor: null,
+        parent: '',
+        revision: 1,
+        root,
+      })
+      .mockResolvedValueOnce({
+        entries: [{ kind: 'file', name: 'home.md', path: 'home.md', hasChildren: false }],
+        generation: 1,
+        nextCursor: null,
+        parent: '',
+        revision: 2,
+        root,
+      })
+    vi.mocked(workspaceTreeApi.initialFile)
+      .mockResolvedValueOnce({ generation: 1, path: 'home.md', revision: 2, root })
+      .mockResolvedValueOnce({ generation: 1, path: 'home.md', revision: 2, root })
+
+    await expect(fetchWorkspaceTreeProjection([])).resolves.toMatchObject({
+      entries: [{ path: 'home.md' }],
+      revision: 2,
+    })
+    expect(workspaceTreeApi.listChildren).toHaveBeenCalledTimes(2)
+    expect(workspaceTreeApi.initialFile).toHaveBeenCalledTimes(2)
   })
 })

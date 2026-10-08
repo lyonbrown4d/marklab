@@ -19,6 +19,7 @@ describe('WorkspaceGraphQueryService', () => {
     const service = new WorkspaceGraphQueryService({
       analysisCache: cache,
       getInput,
+      getNodeDocuments: vi.fn(),
       getState: () => ({
         internalRoot: 'C:/app/workspace',
         rootKind: 'external',
@@ -49,15 +50,24 @@ describe('WorkspaceGraphQueryService', () => {
       ],
       knownPaths: { assetPaths: [], paths: ['alpha.md', 'beta.md'] },
     })
-    const graphResolver = { resolve: vi.fn(async () => graph('Topology', 'revision-1')) }
+    const graphResolver = {
+      resolve: vi.fn(async () => ({
+        ...graph('Topology', 'revision-1'),
+        nodes: [{ id: 'file:beta.md', kind: 'file' as const, label: 'Beta', path: 'beta.md' }],
+      })),
+    }
     const runNodeDetails = vi.fn(async () => ({
       items: [{ id: 'file:beta.md', content: 'Beta summary.' }],
       revision: 'revision-1',
       truncated: false,
     }))
+    const getNodeDocuments = vi.fn(async (paths: string[]) =>
+      paths.map((path) => ({ content: '# Beta\n\nBeta summary.', path })),
+    )
     const service = new WorkspaceGraphQueryService({
       analysisCache: cache,
       getInput,
+      getNodeDocuments,
       getState: () => ({
         internalRoot: 'C:/app/workspace',
         rootKind: 'external',
@@ -85,7 +95,8 @@ describe('WorkspaceGraphQueryService', () => {
       }),
     )
     expect(graphResolver.resolve).toHaveBeenCalledOnce()
-    expect(getInput).toHaveBeenCalledTimes(2)
+    expect(getInput).toHaveBeenCalledOnce()
+    expect(getNodeDocuments).toHaveBeenCalledWith(['beta.md'])
   })
 
   it('rejects node details for a stale topology revision before running analysis', async () => {
@@ -94,6 +105,7 @@ describe('WorkspaceGraphQueryService', () => {
     const service = new WorkspaceGraphQueryService({
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
+      getNodeDocuments: vi.fn(),
       getState: () => ({
         internalRoot: 'C:/app/workspace',
         rootKind: 'external',
@@ -113,6 +125,48 @@ describe('WorkspaceGraphQueryService', () => {
       }),
     ).rejects.toThrow(/stale/i)
     expect(runNodeDetails).not.toHaveBeenCalled()
+  })
+
+  it('loads only a canonical file node matching the exact requested id', async () => {
+    const cache = new WorkspaceAnalysisCache()
+    const getNodeDocuments = vi.fn(async () => [{ content: '# Private', path: 'x.md' }])
+    const runNodeDetails = vi.fn(async () => ({
+      items: [],
+      revision: 'revision-1',
+      truncated: false,
+    }))
+    const service = new WorkspaceGraphQueryService({
+      analysisCache: cache,
+      getInput: vi.fn().mockResolvedValue(input('# Alpha')),
+      getNodeDocuments,
+      getState: () => ({
+        internalRoot: 'C:/app/workspace',
+        rootKind: 'external',
+        rootPath: 'C:/notes',
+        singleFile: null,
+      }),
+      graphResolver: {
+        resolve: vi.fn(async () => ({
+          ...graph('Topology', 'revision-1'),
+          nodes: [
+            { id: 'heading:x', kind: 'heading' as const, label: 'X', path: 'x.md' },
+            { id: 'file:x.md', kind: 'file' as const, label: 'Wrong', path: 'y.md' },
+          ],
+        })),
+      } as never,
+      logger: {} as never,
+      runNodeDetails,
+    })
+
+    await expect(
+      service.loadNodeDetails({
+        mode: 'summary',
+        node_ids: ['file:x.md'],
+        revision: 'revision-1',
+      }),
+    ).resolves.toMatchObject({ items: [] })
+    expect(getNodeDocuments).not.toHaveBeenCalled()
+    expect(runNodeDetails).toHaveBeenCalledWith(expect.objectContaining({ documents: [] }))
   })
 
   it('strips persisted legacy node content from topology responses', async () => {
@@ -135,6 +189,7 @@ describe('WorkspaceGraphQueryService', () => {
     const service = new WorkspaceGraphQueryService({
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
+      getNodeDocuments: vi.fn(),
       getState: () => ({
         internalRoot: 'C:/app/workspace',
         rootKind: 'external',

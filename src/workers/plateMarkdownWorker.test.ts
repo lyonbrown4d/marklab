@@ -1,9 +1,15 @@
 import type { Value } from 'platejs'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   chunkPlateMarkdownValue,
   processPlateMarkdownWorkerRequest,
 } from '@/workers/plateMarkdownWorker'
+import type {
+  PlateMarkdownWorkerRequest,
+  PlateMarkdownWorkerResponse,
+} from '@/workers/plateMarkdownWorkerProtocol'
+
+afterEach(() => vi.restoreAllMocks())
 
 describe('processPlateMarkdownWorkerRequest', () => {
   it('splits parsed values into bounded top-level chunks without changing node order', () => {
@@ -92,5 +98,108 @@ describe('processPlateMarkdownWorkerRequest', () => {
     })
 
     expect(serialized).toMatchObject({ markdown: `${markdown}\n` })
+  })
+
+  it('consumes prepared stream chunks before a later stream of the same Markdown', () => {
+    const postMessage = vi.spyOn(self, 'postMessage').mockImplementation(() => undefined)
+    const send = (data: PlateMarkdownWorkerRequest) => {
+      self.onmessage?.({ data } as MessageEvent<PlateMarkdownWorkerRequest>)
+    }
+
+    send({ id: 100, markdown: '# Prepared', operation: 'prepare-stream' })
+    send({ id: 101, markdown: '# Prepared', operation: 'parse-stream' })
+    send({ id: 102, markdown: '# Prepared', operation: 'parse-stream' })
+
+    const first = postMessage.mock.calls[1]?.[0] as PlateMarkdownWorkerResponse
+    const second = postMessage.mock.calls[2]?.[0] as PlateMarkdownWorkerResponse
+    if (!first.ok || first.operation !== 'parse-stream') throw new Error('First stream failed.')
+    if (!second.ok || second.operation !== 'parse-stream') throw new Error('Second stream failed.')
+    expect(second.value).not.toBe(first.value)
+
+    postMessage.mockRestore()
+  })
+
+  it('keeps another stream intact when delivering a later chunk fails', () => {
+    const firstMarkdown = Array.from({ length: 21 }, (_, index) => `# First heading ${index}`).join(
+      '\n',
+    )
+    const secondMarkdown = Array.from(
+      { length: 21 },
+      (_, index) => `# Second heading ${index}`,
+    ).join('\n')
+    let rejectNextFirstChunk = false
+    const postMessage = vi.spyOn(self, 'postMessage').mockImplementation((message) => {
+      const response = message as PlateMarkdownWorkerResponse
+      if (
+        rejectNextFirstChunk &&
+        response.id === 201 &&
+        response.ok &&
+        response.operation === 'parse-stream'
+      ) {
+        rejectNextFirstChunk = false
+        throw new Error('Transfer failed')
+      }
+    })
+    const send = (data: PlateMarkdownWorkerRequest) => {
+      self.onmessage?.({ data } as MessageEvent<PlateMarkdownWorkerRequest>)
+    }
+
+    send({ id: 201, markdown: firstMarkdown, operation: 'parse-stream' })
+    send({ id: 202, markdown: secondMarkdown, operation: 'parse-stream' })
+    rejectNextFirstChunk = true
+
+    send({ id: 201, operation: 'parse-next' })
+    expect(postMessage.mock.calls[3]?.[0]).toMatchObject({
+      error: 'Transfer failed',
+      id: 201,
+      ok: false,
+      operation: 'parse-stream',
+    })
+    send({ id: 202, operation: 'parse-next' })
+    const callsAfterSecondCompletes = postMessage.mock.calls.length
+    send({ id: 201, operation: 'parse-next' })
+
+    expect(postMessage.mock.calls[4]?.[0]).toMatchObject({
+      done: true,
+      id: 202,
+      ok: true,
+      operation: 'parse-stream',
+      value: [{ children: [{ text: 'Second heading 20' }], type: 'h1' }],
+    })
+    expect(postMessage).toHaveBeenCalledTimes(callsAfterSecondCompletes)
+
+    postMessage.mockRestore()
+  })
+
+  it('keeps another stream intact when the first stream is cancelled', () => {
+    const firstMarkdown = Array.from({ length: 21 }, (_, index) => `# First heading ${index}`).join(
+      '\n',
+    )
+    const secondMarkdown = Array.from(
+      { length: 21 },
+      (_, index) => `# Second heading ${index}`,
+    ).join('\n')
+    const postMessage = vi.spyOn(self, 'postMessage').mockImplementation(() => undefined)
+    const send = (data: PlateMarkdownWorkerRequest) => {
+      self.onmessage?.({ data } as MessageEvent<PlateMarkdownWorkerRequest>)
+    }
+
+    send({ id: 301, markdown: firstMarkdown, operation: 'parse-stream' })
+    send({ id: 302, markdown: secondMarkdown, operation: 'parse-stream' })
+    send({ id: 301, operation: 'cancel' })
+    send({ id: 302, operation: 'parse-next' })
+    const callsAfterSecondCompletes = postMessage.mock.calls.length
+    send({ id: 301, operation: 'parse-next' })
+
+    expect(postMessage.mock.calls[2]?.[0]).toMatchObject({
+      done: true,
+      id: 302,
+      ok: true,
+      operation: 'parse-stream',
+      value: [{ children: [{ text: 'Second heading 20' }], type: 'h1' }],
+    })
+    expect(postMessage).toHaveBeenCalledTimes(callsAfterSecondCompletes)
+
+    postMessage.mockRestore()
   })
 })

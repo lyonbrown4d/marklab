@@ -15,6 +15,10 @@ export type LoadWorkspaceOptions = {
   tabs?: WorkspaceTab[]
 }
 
+const WORKSPACE_PROJECTION_MAX_ATTEMPTS = 3
+
+class WorkspaceProjectionStaleError extends Error {}
+
 export const isWorkspaceFileEntry = (entry: FileEntry) => {
   return entry.kind === 'file'
 }
@@ -38,7 +42,7 @@ export const fetchWorkspaceTreeChildrenPage = async (
   })
 }
 
-export const fetchWorkspaceTreeProjection = async (
+const fetchWorkspaceTreeProjectionAttempt = async (
   tabs: WorkspaceTab[],
 ): Promise<{
   entries: FileEntry[]
@@ -61,7 +65,7 @@ export const fetchWorkspaceTreeProjection = async (
       result.root.kind !== rootPage.root.kind ||
       result.root.path !== rootPage.root.path
     ) {
-      throw new Error('Workspace tree changed while restoring tabs')
+      throw new WorkspaceProjectionStaleError('Workspace tree changed while restoring tabs')
     }
     existing.push(...result.existing)
   }
@@ -72,7 +76,9 @@ export const fetchWorkspaceTreeProjection = async (
     initial.root.kind !== rootPage.root.kind ||
     initial.root.path !== rootPage.root.path
   ) {
-    throw new Error('Workspace tree changed while selecting an initial file')
+    throw new WorkspaceProjectionStaleError(
+      'Workspace tree changed while selecting an initial file',
+    )
   }
   const byPath = new Map<string, FileEntry>()
   for (const entry of rootPage.entries) {
@@ -98,6 +104,19 @@ export const fetchWorkspaceTreeProjection = async (
     revision: rootPage.revision,
     root: rootPage.root,
   }
+}
+
+export const fetchWorkspaceTreeProjection = async (tabs: WorkspaceTab[]) => {
+  let staleError: WorkspaceProjectionStaleError | undefined
+  for (let attempt = 0; attempt < WORKSPACE_PROJECTION_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetchWorkspaceTreeProjectionAttempt(tabs)
+    } catch (error) {
+      if (!(error instanceof WorkspaceProjectionStaleError)) throw error
+      staleError = error
+    }
+  }
+  throw staleError ?? new Error('Unable to load a stable workspace tree projection')
 }
 
 export const fetchWorkspaceLoadProjection = async (

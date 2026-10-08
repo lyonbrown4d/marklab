@@ -49,6 +49,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     this.graphQueries = new WorkspaceGraphQueryService({
       analysisCache: this.analysisCache,
       getInput: () => this.getWorkspaceAnalysisInput(),
+      getNodeDocuments: (paths) => this.documents.documentsForPaths(paths),
       getState: () => ({ ...this.state }),
       graphResolver: this.graphResolver,
       knowledgeEngineService: this.analysisKnowledgeEngineService,
@@ -61,7 +62,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       index: this.workspaceSearchIndex,
       loadDocuments: () => this.workspaceDocuments(),
       logger: this.logger,
-      readFile: (path) => this.readFile({ path }),
+      readFile: (path) => this.readFileForAnalysis(path),
       runTask: (work, name) => this.runSearchIndexTask(work, name),
     })
     this.analysisPrewarm = new WorkspaceAnalysisPrewarmLifecycle({

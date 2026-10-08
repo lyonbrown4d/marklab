@@ -34,6 +34,23 @@ export const prepareBufferForSave = async (
 }
 
 export const createWorkspace = async (service: KnowledgeEngineService) => {
+  return createWorkspaceWithFactory(
+    service,
+    (app, shell, logger, localHistory, knowledgeService) =>
+      new WorkspaceFileService(app, shell, logger, localHistory, knowledgeService),
+  )
+}
+
+export const createWorkspaceWithFactory = async <T extends WorkspaceFileService>(
+  service: KnowledgeEngineService,
+  factory: (
+    app: App,
+    shell: Shell,
+    logger: Logger,
+    localHistory: LocalHistoryServiceContract,
+    knowledgeService: KnowledgeEngineService,
+  ) => T,
+) => {
   const base = process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? '.'
   const tempRoot = await fs.mkdtemp(path.join(path.resolve(base), 'marklab-workspace-sidecar-'))
   tempRoots.push(tempRoot)
@@ -41,7 +58,7 @@ export const createWorkspace = async (service: KnowledgeEngineService) => {
   const root = path.join(tempRoot, 'workspace')
   await fs.mkdir(root, { recursive: true })
   const logger = createLogger()
-  const workspace = new WorkspaceFileService(
+  const workspace = factory(
     createApp(appData),
     createShell(),
     logger,

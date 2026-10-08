@@ -78,7 +78,12 @@ const postNextParseChunk = (id: number) => {
   const done = stream.index >= stream.chunks.length - 1
   if (done) parseStreams.delete(id)
   else stream.index += 1
-  workerScope.postMessage({ done, id, ok: true, operation: 'parse-stream', value })
+  try {
+    workerScope.postMessage({ done, id, ok: true, operation: 'parse-stream', value })
+  } catch (error) {
+    parseStreams.delete(id)
+    throw error
+  }
 }
 
 workerScope.onmessage = ({ data }) => {
@@ -87,12 +92,16 @@ workerScope.onmessage = ({ data }) => {
     return
   }
   if (data.operation === 'parse-next') {
-    postNextParseChunk(data.id)
+    try {
+      postNextParseChunk(data.id)
+    } catch (error) {
+      postWorkerFailure(data.id, 'parse-stream', error)
+    }
     return
   }
   if (data.operation === 'parse-stream') {
     try {
-      parseStreams.set(data.id, { chunks: streamCache.getChunks(data.markdown), index: 0 })
+      parseStreams.set(data.id, { chunks: streamCache.takeChunks(data.markdown), index: 0 })
       postNextParseChunk(data.id)
     } catch (error) {
       postWorkerFailure(data.id, data.operation, error)

@@ -68,6 +68,18 @@ export class WorkspaceBufferStore {
     return content
   }
 
+  reconcilePersistedRead(relativePath: string, persistedContent: string): string {
+    const key = canonicalWorkspaceRelativeKey(relativePath)
+    const current = this.records.get(key)
+    if (!current) return persistedContent
+    if (current.dirty && current.baselineContent === undefined) {
+      this.assertMutable(key)
+      current.baselineContent = persistedContent
+      this.syncWriteClaims()
+    }
+    return current.content
+  }
+
   setCleanFile(relativePath: string, content: string): void {
     const key = canonicalWorkspaceRelativeKey(relativePath)
     this.assertMutable()

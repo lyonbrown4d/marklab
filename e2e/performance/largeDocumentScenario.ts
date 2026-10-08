@@ -13,6 +13,7 @@ import {
 import { measureFrames } from './frameMeasurement.js'
 import { type LargeDocumentFixture, writeLargeDocumentWorkspace } from './largeDocumentFixture.js'
 import { measureInputLatency } from './plateInputLatencyMetrics.js'
+import { captureProcessMemorySnapshot, diffMemorySnapshots } from './processMemoryObservability.js'
 import {
   captureEditorState,
   captureSentinelOrder,
@@ -54,6 +55,7 @@ export const runLargeDocumentSample = async ({
   try {
     session = await launchPerformanceSession(rendererUrl, graphicsMode)
     const fixture = createFixture(session.runtimeRoot)
+    const beforeOpenMemory = await captureProcessMemorySnapshot(session, session.launcherPage)
     const {
       initialization,
       page,
@@ -64,6 +66,7 @@ export const runLargeDocumentSample = async ({
     const activeEditor = page.locator(EDITABLE_PLATE_EDITOR_SELECTOR)
     await expect(viewport).toBeVisible()
     await expect(activeEditor).toBeVisible()
+    const afterOpenMemory = await captureProcessMemorySnapshot(session, page)
     const initial = await captureEditorState(page)
     const hydration = await captureSentinelOrder(page, fixture.sentinels)
     if (!warmup) {
@@ -120,6 +123,7 @@ export const runLargeDocumentSample = async ({
       persistedDocument.indexOf(sentinel),
     )
     const finalState = await captureEditorState(page)
+    const afterInteractionsMemory = await captureProcessMemorySnapshot(session, page)
     if (!warmup) {
       await captureScreenshot(page, testInfo, `large-document-run-${runIndex}-final`)
     }
@@ -136,6 +140,18 @@ export const runLargeDocumentSample = async ({
       initial,
       initialization,
       isolation: session.isolation,
+      memory: {
+        deltas: {
+          interactions: diffMemorySnapshots(afterOpenMemory, afterInteractionsMemory),
+          openLargeDocument: diffMemorySnapshots(beforeOpenMemory, afterOpenMemory),
+          total: diffMemorySnapshots(beforeOpenMemory, afterInteractionsMemory),
+        },
+        snapshots: {
+          afterInteractions: afterInteractionsMemory,
+          afterOpen: afterOpenMemory,
+          beforeOpen: beforeOpenMemory,
+        },
+      },
       openResult,
       persistence: {
         firstMarkerPersisted: persistedContent.includes(firstMarker),

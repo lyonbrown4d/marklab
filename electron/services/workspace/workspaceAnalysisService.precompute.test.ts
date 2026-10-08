@@ -89,6 +89,7 @@ describe('WorkspaceAnalysisService background precompute', () => {
       workspace.markRendererInteractive()
       await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
 
+      await workspace.openFile({ path: 'alpha.md' })
       workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
       await workspace.flushBuffers()
 

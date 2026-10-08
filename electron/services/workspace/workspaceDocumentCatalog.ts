@@ -31,6 +31,14 @@ export class WorkspaceDocumentCatalog {
     }
   }
 
+  async documentsForPaths(paths: string[]): Promise<WorkspaceDocument[]> {
+    const selectedPaths = new Set(paths)
+    const entries = (await this.getSnapshot()).entries.filter((entry) =>
+      selectedPaths.has(entry.path),
+    )
+    return this.load(entries)
+  }
+
   private load(
     entries: FsEntry[],
     replacePath?: string,
