@@ -21,6 +21,10 @@ import {
 /* eslint-enable no-restricted-imports */
 
 const sourceRoot = process.env.MARKLAB_E2E_WORKSPACE?.trim()
+const samplePlan =
+  process.env.MARKLAB_PERFORMANCE_SMOKE === '1'
+    ? Object.freeze({ measuredRuns: 1, warmupRuns: 0 })
+    : PERFORMANCE_SAMPLE_PLAN
 
 const withoutRawProfiles = (sample: RealWorkspaceProfileSample) => {
   const { electronOutput, rawProfiles, ...reportSample } = sample
@@ -56,7 +60,16 @@ const summarizeSamples = (samples: RealWorkspaceProfileSample[]) => ({
     },
   },
   mapMaxFrameMs: summarizeDurations(samples.map((sample) => sample.map.frames.maxFrameMs)),
+  mapNodeDragMaxFrameMs: summarizeDurations(
+    samples.map((sample) => sample.map.interactions.nodeDrag.frames.maxFrameMs),
+  ),
   mapOpenMs: summarizeDurations(samples.map((sample) => sample.map.profile.durationMs)),
+  mapPanMaxFrameMs: summarizeDurations(
+    samples.map((sample) => sample.map.interactions.pan.frames.maxFrameMs),
+  ),
+  mapZoomMaxFrameMs: summarizeDurations(
+    samples.map((sample) => sample.map.interactions.zoom.frames.maxFrameMs),
+  ),
   searchMs: summarizeDurations(samples.map((sample) => sample.search.profile.durationMs)),
   scrollMaxFrameMs: summarizeDurations(samples.map((sample) => sample.scroll.frames.maxFrameMs)),
   scrollbarMaxFrameMs: summarizeDurations(
@@ -82,11 +95,11 @@ test.describe('real workspace performance profile @performance @blackbox', () =>
   test.afterAll(async () => closeRendererServer(rendererServer))
 
   // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.
-  test('profiles cold open, file switching, scrolling, typing, search, and map rendering', async ({}, testInfo) => {
-    test.setTimeout(600_000)
+  test('profiles cold open, editing, search, and real map gestures', async ({}, testInfo) => {
+    test.setTimeout(1_200_000)
     const collection = await collectPerformanceSamples<RealWorkspaceProfileSample>({
-      maxAttempts: (PERFORMANCE_SAMPLE_PLAN.warmupRuns + PERFORMANCE_SAMPLE_PLAN.measuredRuns) * 2,
-      plan: PERFORMANCE_SAMPLE_PLAN,
+      maxAttempts: (samplePlan.warmupRuns + samplePlan.measuredRuns) * 2,
+      plan: samplePlan,
       runSample: ({ attemptIndex, warmup }) =>
         runRealWorkspaceProfile({
           rendererUrl,
@@ -99,11 +112,13 @@ test.describe('real workspace performance profile @performance @blackbox', () =>
     const allSamples = collection.samples
     const measured = allSamples.filter((sample) => !sample.warmup)
     const warmup = allSamples.find((sample) => sample.warmup)
+    expect(collection.failures, 'performance sample attempts failed').toEqual([])
+    expect(measured).toHaveLength(samplePlan.measuredRuns)
     const report = {
       generatedAt: new Date().toISOString(),
       attemptCount: collection.attemptCount,
       attemptFailures: collection.failures,
-      samplePlan: PERFORMANCE_SAMPLE_PLAN,
+      samplePlan,
       sourceRoot,
       reliability: {
         attemptedRuns: collection.attemptCount,
@@ -145,8 +160,6 @@ test.describe('real workspace performance profile @performance @blackbox', () =>
       path: electronLogPath,
       contentType: 'text/plain',
     })
-    expect(measured).toHaveLength(PERFORMANCE_SAMPLE_PLAN.measuredRuns)
-    expect(collection.failures, 'performance sample attempts failed').toEqual([])
     expect(measured.flatMap((sample) => sample.rendererErrors)).toEqual([])
   })
 })

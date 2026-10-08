@@ -21,6 +21,7 @@ import {
 } from './platePerformanceMetrics.js'
 import { profileRendererInteraction } from './rendererCpuProfile.js'
 import { captureProcessMemorySnapshot, diffMemorySnapshots } from './processMemoryObservability.js'
+import { profileWorkspaceMap } from './workspaceMapPerformanceMetrics.js'
 /* eslint-enable no-restricted-imports */
 
 const HOME_FILE = 'Home.md'
@@ -105,19 +106,6 @@ const exerciseSearch = async (page: Page) => {
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   return { query: SEARCH_QUERY, resultCount }
-}
-
-const exerciseMap = async (page: Page) => {
-  await page.locator('[role="radio"][aria-label="Map"], [role="radio"][aria-label="地图"]').click()
-  const canvas = page.locator('.workspace-map-canvas')
-  await expect(canvas).toBeVisible({ timeout: 60_000 })
-  const nodes = canvas.locator('.react-flow__node')
-  await expect.poll(() => nodes.count(), { timeout: 60_000 }).toBeGreaterThan(10)
-  await expect.poll(() => canvas.locator('.react-flow__edge').count()).toBeGreaterThan(0)
-  return {
-    edgeCount: await canvas.locator('.react-flow__edge').count(),
-    nodeCount: await nodes.count(),
-  }
 }
 
 const stripRawProfile = <Result>(
@@ -214,16 +202,7 @@ export const runRealWorkspaceProfile = async ({
         return { frames, search }
       }),
     )
-    const mapMeasured = stripRawProfile(
-      await profileRendererInteraction(page, 'workspace-map-open', async () => {
-        let map: Awaited<ReturnType<typeof exerciseMap>> | undefined
-        const frames = await measureFrames(page, async () => {
-          map = await exerciseMap(page)
-        })
-        if (!map) throw new Error('Workspace Map did not return metrics')
-        return { frames, map }
-      }),
-    )
+    const mapMeasured = await profileWorkspaceMap(page)
     const mapMemory = await captureProcessMemorySnapshot(session, page)
 
     if (!warmup) {
@@ -234,7 +213,8 @@ export const runRealWorkspaceProfile = async ({
     }
     const rawProfiles = {
       input: inputMeasured.rawCpuProfile,
-      map: mapMeasured.rawCpuProfile,
+      map: mapMeasured.rawProfiles.open,
+      mapInteractions: mapMeasured.rawProfiles.interactions,
       search: searchMeasured.rawCpuProfile,
       scroll: scrollMeasured.rawCpuProfile,
       scrollbar: scrollbarMeasured.rawCpuProfile,
@@ -251,7 +231,7 @@ export const runRealWorkspaceProfile = async ({
       gpuFeatureStatus: session.gpuFeatureStatus,
       initialization: opened.initialization,
       input: { profile: inputMeasured.profile, ...inputMeasured.result },
-      map: { profile: mapMeasured.profile, ...mapMeasured.result },
+      map: mapMeasured.report,
       memory: {
         deltas: {
           largeDocument: diffMemorySnapshots(smallDocumentMemory, largeDocumentMemory),

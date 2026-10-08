@@ -11,6 +11,8 @@ renderer. It does not add test-only APIs to the production preload surface.
 - `pnpm test:perf:all` builds once and runs both profiles serially.
 - Append `:run` to any command to reuse an existing `dist` and `dist-electron` build during local
   investigation.
+- Set `MARKLAB_PERFORMANCE_SMOKE=1` to run one measured session without a warmup while diagnosing a
+  real-workspace interaction. The default and report baseline remain one warmup plus five samples.
 
 ## Scenario
 
@@ -49,6 +51,11 @@ are summarized across measured runs with min, mean, median, p95, max, population
 coefficient of variation, platform-field coverage, and successful/failed attempt rates. They are
 observability baselines, not fixed memory budgets: compare repeated runs on the same platform and
 build before adding a regression threshold.
+
+The real-workspace profile also finds a Markdown node through the visible map search UI, drags the
+node with incremental pointer movement, pans an unobstructed part of the canvas, and activates the
+visible zoom controls. It verifies the node geometry, viewport translation, and zoom scale changed,
+then reports separate frame distributions for all three gestures plus one combined CPU profile.
 
 The suite also seeds a legacy 1.36 MB local-history snapshot and restores it through the real
 Timeline → Preview → Confirm interaction. That gate verifies the restored Slate marker, on-disk
