@@ -4,11 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding'
 import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose'
+import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
 
 const state = vi.hoisted(() => ({
   constructorArgs: [] as unknown[][],
   dirty: true,
   flush: vi.fn<() => Promise<void>>(),
+  snapshotListener: null as
+    ((snapshot: { root: { kind: 'external'; path: string } }) => void) | null,
 }))
 vi.mock('@electron/services/workspace/workspaceService', () => ({
   WorkspaceService: class {
@@ -21,12 +24,23 @@ vi.mock('@electron/services/workspace/workspaceService', () => ({
     hasDirtyBuffers = () => state.dirty
     getBackgroundTasks = () => []
     onBufferStatus = () => vi.fn()
-    onSnapshotChanged = () => vi.fn()
+    onSnapshotChanged = (
+      listener: (snapshot: { root: { kind: 'external'; path: string } }) => void,
+    ) => {
+      state.snapshotListener = listener
+      return vi.fn()
+    }
     onTreeChanged = () => vi.fn()
     onBackgroundTasksChanged = () => vi.fn()
     setAutoFlushMutationRunner = vi.fn()
-    setRoot = vi.fn()
-    setSingleFile = vi.fn()
+    setRoot = vi.fn(async ({ path }: { path: string }) => ({
+      kind: 'external' as const,
+      path,
+    }))
+    setSingleFile = vi.fn(async ({ path }: { path: string }) => ({
+      kind: 'single' as const,
+      path,
+    }))
     readFile = vi.fn()
     updateBuffer = vi.fn()
     writeFile = vi.fn()
@@ -50,6 +64,9 @@ vi.mock('@electron/services/nativeWindowStatus', () => ({
   applyWindowTaskProgress: vi.fn(),
   clearWindowTaskAttention: vi.fn(),
   createNativeTaskAttentionState: () => ({}),
+}))
+vi.mock('@electron/windowStateRestore', () => ({
+  activateWorkspaceWindowState: vi.fn(),
 }))
 
 const createHarness = () => {
@@ -90,9 +107,31 @@ beforeEach(() => {
   state.constructorArgs.length = 0
   state.dirty = true
   state.flush.mockReset().mockResolvedValue(undefined)
+  state.snapshotListener = null
+  vi.mocked(activateWorkspaceWindowState).mockReset()
 })
 
 describe('workspace window blur persistence', () => {
+  it('switches native window state as soon as a root mutation succeeds', async () => {
+    const { binding, logger, window } = createHarness()
+    const root = { kind: 'external' as const, path: 'D:\\wiki' }
+
+    await binding.service.setRoot({ path: root.path })
+
+    expect(activateWorkspaceWindowState).toHaveBeenCalledWith(window, root, logger)
+    binding.dispose()
+  })
+
+  it('switches native window state when the workspace root changes', () => {
+    const { binding, logger, window } = createHarness()
+    const root = { kind: 'external' as const, path: 'D:\\wiki' }
+
+    state.snapshotListener?.({ root })
+
+    expect(activateWorkspaceWindowState).toHaveBeenCalledWith(window, root, logger)
+    binding.dispose()
+  })
+
   it('injects shared local history into distinct per-window workspace services', () => {
     const first = createHarness()
     const second = createHarness()

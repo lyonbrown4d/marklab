@@ -45,8 +45,8 @@ export class SettingsStore {
     this.windows = new WindowStateRepository(localDatabase)
   }
 
-  getWindowState(): PersistedWindowState | null {
-    const row = this.windows.get(MAIN_WINDOW_ID)
+  getWindowState(windowStateKey = MAIN_WINDOW_ID): PersistedWindowState | null {
+    const row = this.windows.get(windowStateKey)
     if (!row) return null
     return normalizeWindowState({
       height: row.height,
@@ -57,10 +57,10 @@ export class SettingsStore {
     })
   }
 
-  setWindowState(value: PersistedWindowState): void {
+  setWindowState(value: PersistedWindowState, windowStateKey = MAIN_WINDOW_ID): void {
     const state = normalizeWindowState(value)
     if (!state) throw new Error('Invalid window state')
-    this.windows.upsert(MAIN_WINDOW_ID, state)
+    this.windows.upsert(windowStateKey, state)
   }
 
   getRendererPersistValue(key: RendererPersistKey, sessionKey?: string | null): unknown {

@@ -24,9 +24,11 @@ const persistKey = (key: string): RendererPersistKey => {
   return key as RendererPersistKey
 }
 
-export const getWindowState = (): PersistedWindowState | null => store().getWindowState()
+export const getWindowState = (windowStateKey?: string): PersistedWindowState | null =>
+  store().getWindowState(windowStateKey)
 
-export const setWindowState = (state: PersistedWindowState): void => store().setWindowState(state)
+export const setWindowState = (state: PersistedWindowState, windowStateKey?: string): void =>
+  store().setWindowState(state, windowStateKey)
 
 export const getRendererPersistValue = (key: string, sessionKey?: string | null): unknown =>
   store().getRendererPersistValue(persistKey(key), sessionKey)

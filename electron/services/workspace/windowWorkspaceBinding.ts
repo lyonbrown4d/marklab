@@ -1,7 +1,3 @@
-import {
-  runWorkspacePathMutation,
-  type WorkspaceMutationPath,
-} from '@electron/services/workspace/workspaceWriteCoordinator'
 import type { App, BrowserWindow, Shell } from 'electron'
 
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
@@ -22,9 +18,11 @@ import type { WorkspaceSearchIndexFactory } from '@electron/services/workspace/w
 import type { WorkspaceAnalysisScheduler } from '@electron/services/workspace/workspaceAnalysisConcurrency'
 import type { WorkspaceGraphComputationScheduler } from '@electron/services/workspace/workspaceGraphComputationScheduler'
 import type { WorkspaceGraphStore } from '@electron/services/workspace/workspaceGraphStore'
+import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
 import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
+import { installWindowWorkspaceMutationGate } from '@electron/services/workspace/windowWorkspaceMutationGate'
 
 export type WindowWorkspaceBinding = {
   detach: () => void
@@ -54,96 +52,6 @@ type CreateWindowWorkspaceBindingOptions = {
   workspaceSearchIndexFactory?: WorkspaceSearchIndexFactory
 }
 
-const installMutationGate = (
-  service: WorkspaceService,
-  gate: WorkspaceMutationGate,
-): (() => Promise<void>) => {
-  const mutationPath = (
-    value: unknown,
-    field: 'path' | 'from' | 'to',
-    includeDescendants = false,
-  ): WorkspaceMutationPath => {
-    const candidate = (value as Record<string, unknown> | null)?.[field]
-    if (typeof candidate !== 'string') {
-      throw new Error('Workspace mutation requires a string "' + field + '" path')
-    }
-    return {
-      absolutePath: service.resolveCoordinatorPath(candidate),
-      includeDescendants,
-    }
-  }
-  const coordinatedMutation = <T>(
-    operation: string,
-    paths: () => WorkspaceMutationPath[],
-    work: () => Promise<T>,
-  ): Promise<T> =>
-    gate.runAsync(operation, () =>
-      runWorkspacePathMutation({
-        ownerId: service.writeCoordinatorOwnerId(),
-        paths: paths(),
-        work,
-      }),
-    )
-  const flushForShutdown = service.flushBuffers.bind(service)
-  const setRoot = service.setRoot.bind(service)
-  const setSingleFile = service.setSingleFile.bind(service)
-  const readFile = service.readFile.bind(service)
-  const updateBuffer = service.updateBuffer.bind(service)
-  const writeFile = service.writeFile.bind(service)
-  const flushBuffers = service.flushBuffers.bind(service)
-  const createFile = service.createFile.bind(service)
-  const createDir = service.createDir.bind(service)
-  const renamePath = service.renamePath.bind(service)
-  const movePath = service.movePath.bind(service)
-  const deletePath = service.deletePath.bind(service)
-  const importAsset = service.importMarkdownAsset.bind(service)
-  const importAssetBytes = service.importMarkdownAssetBytes.bind(service)
-
-  service.setRoot = (value) => gate.runAsync('switch workspace root', () => setRoot(value))
-  service.setSingleFile = (value) =>
-    gate.runAsync('switch single-file workspace', () => setSingleFile(value))
-  service.readFile = (value) => gate.runAsync('complete workspace file read', () => readFile(value))
-  service.updateBuffer = (value) =>
-    gate.runSync('update workspace buffer', () => updateBuffer(value))
-  service.writeFile = (value) => gate.runSync('write workspace file', () => writeFile(value))
-  service.flushBuffers = () => gate.runAsync('flush workspace buffers', () => flushBuffers())
-  service.createFile = (value) =>
-    coordinatedMutation(
-      'create workspace file',
-      () => [mutationPath(value, 'path')],
-      () => createFile(value),
-    )
-  service.createDir = (value) =>
-    coordinatedMutation(
-      'create workspace directory',
-      () => [mutationPath(value, 'path', true)],
-      () => createDir(value),
-    )
-  service.renamePath = (value) =>
-    coordinatedMutation(
-      'rename workspace path',
-      () => [mutationPath(value, 'from', true), mutationPath(value, 'to', true)],
-      () => renamePath(value),
-    )
-  service.movePath = (value) =>
-    coordinatedMutation(
-      'move workspace path',
-      () => [mutationPath(value, 'from', true), mutationPath(value, 'to', true)],
-      () => movePath(value),
-    )
-  service.deletePath = (value) =>
-    coordinatedMutation(
-      'delete workspace path',
-      () => [mutationPath(value, 'path', true)],
-      () => deletePath(value),
-    )
-  service.importMarkdownAsset = (value) =>
-    gate.runAsync('import markdown asset', () => importAsset(value))
-  service.importMarkdownAssetBytes = (value) =>
-    gate.runAsync('import binary markdown asset', () => importAssetBytes(value))
-  return flushForShutdown
-}
-
 export const createWindowWorkspaceBinding = (
   options: CreateWindowWorkspaceBindingOptions,
 ): WindowWorkspaceBinding => {
@@ -164,7 +72,9 @@ export const createWindowWorkspaceBinding = (
   service.setAutoFlushMutationRunner((work) =>
     mutationGate.runAsync('auto-flush workspace buffers', work),
   )
-  const flushForShutdown = installMutationGate(service, mutationGate)
+  const flushForShutdown = installWindowWorkspaceMutationGate(service, mutationGate, (root) =>
+    activateWorkspaceWindowState(options.window, root, options.logger),
+  )
   const recentDocumentState = createNativeRecentDocumentState()
   const taskAttentionState = createNativeTaskAttentionState()
   const nativeDisposers: Array<() => void> = []
@@ -277,6 +187,7 @@ export const createWindowWorkspaceBinding = (
   nativeDisposers.push(
     service.onBufferStatus(updateDocumentStatus),
     service.onSnapshotChanged((snapshot) => {
+      activateWorkspaceWindowState(options.window, snapshot.root, options.logger)
       applyWindowDocumentStatus(options.window, snapshot.root, service.hasDirtyBuffers())
       applyAppRecentDocument(options.app, snapshot.root, recentDocumentState)
     }),

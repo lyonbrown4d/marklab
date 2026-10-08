@@ -13,6 +13,7 @@ import {
 } from '@electron/services/settingsStore'
 import type { MarklabWindowPool } from '@electron/windowPool'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
+import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
 
 type WindowCommandServices = {
   logger: Logger
@@ -45,6 +46,10 @@ export const createWindowCommandSetup = ({
   installManagedMainWindowLifecycle,
 }: WindowCommandSetupArgs): WindowCommandSetup => {
   const dependencies = {
+    activateWorkspaceWindowState: (
+      window: BrowserWindow,
+      root: Parameters<typeof activateWorkspaceWindowState>[1],
+    ) => activateWorkspaceWindowState(window, root, getServices().logger),
     copyWorkspaceSession: (sourceSessionKey: string, targetSessionKey: string, overrides = {}) =>
       copyRendererPersistSession(
         'marklab.workspace',

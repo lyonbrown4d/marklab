@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMainWindowSession } from '@electron/main/windowSession'
 import { noopLogger } from '@electron/services/logger'
+import { DEFAULT_SESSION_KEY } from '@electron/services/settingsStoreValues'
 import { createMarklabWindows } from '@electron/window'
+import { activatePersistedWorkspaceWindowState } from '@electron/windowStateRestore'
 import type { MarklabWindowPool } from '@electron/windowPool'
 
 vi.mock('@electron/menu', () => ({ installNativeMenu: vi.fn() }))
 vi.mock('@electron/window', () => ({ createMarklabWindows: vi.fn() }))
+vi.mock('@electron/windowStateRestore', () => ({
+  activatePersistedWorkspaceWindowState: vi.fn(),
+}))
 
 describe('createMainWindowSession', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -34,5 +39,33 @@ describe('createMainWindowSession', () => {
     })
 
     expect(pool.prewarmMainWindow).toHaveBeenCalledOnce()
+  })
+
+  it('registers the primary window with the stable persisted session key', async () => {
+    const main = {} as BrowserWindow
+    const splash = {} as BrowserWindow
+    const installManagedMainWindowLifecycle = vi.fn()
+    vi.mocked(createMarklabWindows).mockResolvedValue({ main, splash })
+    const pool = {
+      prewarmMainWindow: vi.fn(async () => undefined),
+    } as unknown as MarklabWindowPool
+
+    await createMainWindowSession({
+      dispatchNativeMenuAction: vi.fn(),
+      ensureWindowPool: () => pool,
+      installManagedMainWindowLifecycle,
+      logger: noopLogger,
+    })
+
+    expect(installManagedMainWindowLifecycle).toHaveBeenCalledWith(
+      main,
+      noopLogger,
+      DEFAULT_SESSION_KEY,
+    )
+    expect(activatePersistedWorkspaceWindowState).toHaveBeenCalledWith(
+      main,
+      DEFAULT_SESSION_KEY,
+      noopLogger,
+    )
   })
 })

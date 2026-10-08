@@ -52,7 +52,11 @@ export type WindowLifecycle = {
     continueQuit: () => void,
     shutdownApplication?: () => Promise<void>,
   ) => void
-  installManagedMainWindowLifecycle: (main: BrowserWindow, logger?: Logger) => void
+  installManagedMainWindowLifecycle: (
+    main: BrowserWindow,
+    logger?: Logger,
+    sessionKey?: string,
+  ) => void
 }
 
 export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLifecycle => {
@@ -141,10 +145,11 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
   const installManagedMainWindowLifecycle = (
     main: BrowserWindow,
     logger = options.getServices().logger,
+    sessionKey?: string,
   ): void => {
     if (managedMainWindows.has(main)) return
     managedMainWindows.add(main)
-    options.getServices().workspaceRegistry.registerWindow(main)
+    options.getServices().workspaceRegistry.registerWindow(main, sessionKey)
     options.getServices().webTabManager.registerWindow(main)
     installMainWindowCloseFlush(main)
     main.on('closed', () => {

@@ -1,10 +1,11 @@
-import { BrowserWindow, app, nativeTheme, screen } from 'electron'
+import { BrowserWindow, app, nativeTheme } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { MARKLAB_APP_NAME } from '@electron/appIdentity'
 import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime'
 import { noopLogger, type Logger } from '@electron/services/logger'
-import { getWindowState, setWindowState } from '@electron/services/settingsStore'
+import { setWindowState } from '@electron/services/settingsStore'
+import { MAIN_WINDOW_ID } from '@electron/services/settingsStoreValues'
 import { resolveElectronProjectRoots } from '@electron/windowIconPaths'
 import { createWindowIcon } from '@electron/windowIcon'
 import type { PersistedWindowState } from '@electron/types'
@@ -12,15 +13,16 @@ import { resolveNativeWindowBackground } from '@electron/windowTheme'
 import type { WindowPoolAcquisition } from '@electron/windowPool'
 import { installWindowNavigationGuard } from '@electron/windowNavigation'
 import { showSplashWithoutActivation } from '@electron/splashLifecycle'
-import { restoreMaximizedOnFirstShow } from '@electron/windowStateRestore'
+import {
+  getInitialWindowState,
+  MAIN_WINDOW_MIN_HEIGHT,
+  MAIN_WINDOW_MIN_WIDTH,
+  restoreMaximizedOnFirstShow,
+} from '@electron/windowStateRestore'
 import { installWindowStatePersistence } from '@electron/windowStatePersistence'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
-const MAIN_WINDOW_MIN_WIDTH = 640
-const MAIN_WINDOW_MIN_HEIGHT = 480
-const MAIN_WINDOW_DEFAULT_WIDTH = 800
-const MAIN_WINDOW_DEFAULT_HEIGHT = 600
 const SPLASH_READY_FALLBACK_MS = 700
 const WINDOW_STATE_SAVE_DELAY_MS = 250
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
@@ -35,12 +37,6 @@ export type MarklabWindows = {
 export type MainWindowPool = {
   acquireMainWindow: () => Promise<WindowPoolAcquisition>
   activateMainWindow: (acquisition: WindowPoolAcquisition) => Promise<void>
-}
-type WindowBounds = {
-  height: number
-  width: number
-  x: number
-  y: number
 }
 const isDevMode = () => !app.isPackaged
 const isMacOS = () => process.platform === 'darwin'
@@ -97,36 +93,7 @@ const loadDevUrl = async (window: BrowserWindow, url: string) => {
   }
   throw lastError
 }
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value && typeof value === 'object')
-}
-const normalizedDimension = (value: unknown, min: number, fallback: number): number => {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? Math.max(min, Math.round(value))
-    : fallback
-}
-const normalizedCoordinate = (value: unknown): number | undefined => {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : undefined
-}
-const normalizeWindowState = (value: unknown): PersistedWindowState | null => {
-  if (!isRecord(value)) return null
-  return {
-    width: normalizedDimension(value.width, MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_DEFAULT_WIDTH),
-    height: normalizedDimension(value.height, MAIN_WINDOW_MIN_HEIGHT, MAIN_WINDOW_DEFAULT_HEIGHT),
-    x: normalizedCoordinate(value.x),
-    y: normalizedCoordinate(value.y),
-    isMaximized: value.isMaximized === true,
-  }
-}
-const readWindowState = (logger: Logger): PersistedWindowState | null => {
-  try {
-    return normalizeWindowState(getWindowState())
-  } catch (error) {
-    logger.warn('unable to read persisted window state', { error })
-    return null
-  }
-}
-const writeWindowState = (window: BrowserWindow, logger: Logger): void => {
+const writeWindowState = (window: BrowserWindow, logger: Logger, stateKey: string): void => {
   try {
     const bounds = window.getNormalBounds()
     const state: PersistedWindowState = {
@@ -136,48 +103,9 @@ const writeWindowState = (window: BrowserWindow, logger: Logger): void => {
       y: Math.round(bounds.y),
       isMaximized: window.isMaximized(),
     }
-    setWindowState(state)
+    setWindowState(state, stateKey)
   } catch (error) {
     logger.warn('unable to persist window state', { error })
-  }
-}
-const rectanglesIntersect = (a: WindowBounds, b: WindowBounds): boolean => {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-}
-const hasVisibleArea = (bounds: WindowBounds): boolean => {
-  return screen.getAllDisplays().some((display) => rectanglesIntersect(bounds, display.workArea))
-}
-const restoredWindowBounds = (logger: Logger) => {
-  const state = readWindowState(logger)
-  if (!state) {
-    return {
-      bounds: {
-        width: MAIN_WINDOW_DEFAULT_WIDTH,
-        height: MAIN_WINDOW_DEFAULT_HEIGHT,
-      },
-      isMaximized: false,
-    }
-  }
-  const bounds = {
-    width: state.width,
-    height: state.height,
-    ...(state.x !== undefined && state.y !== undefined ? { x: state.x, y: state.y } : {}),
-  }
-  const visibleBounds =
-    state.x !== undefined && state.y !== undefined
-      ? {
-          x: state.x,
-          y: state.y,
-          width: state.width,
-          height: state.height,
-        }
-      : null
-  return {
-    bounds:
-      visibleBounds && !hasVisibleArea(visibleBounds)
-        ? { width: state.width, height: state.height }
-        : bounds,
-    isMaximized: state.isMaximized,
   }
 }
 export const createSplashWindow = () => {
@@ -213,7 +141,7 @@ export const createSplashWindow = () => {
 }
 export const createMainWindow = (logger: Logger = noopLogger) => {
   installDevelopmentDockIcon()
-  const restored = restoredWindowBounds(logger)
+  const restored = getInitialWindowState(MAIN_WINDOW_ID, logger)
   const main = new BrowserWindow({
     ...restored.bounds,
     minWidth: MAIN_WINDOW_MIN_WIDTH,
@@ -236,7 +164,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
   ])
   installWindowStatePersistence(
     main,
-    () => writeWindowState(main, logger),
+    (stateKey) => writeWindowState(main, logger, stateKey),
     WINDOW_STATE_SAVE_DELAY_MS,
   )
   restoreMaximizedOnFirstShow(main, restored.isMaximized)

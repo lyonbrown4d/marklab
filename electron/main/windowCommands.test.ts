@@ -73,6 +73,9 @@ const createHarness = () => {
   }
   const logger = { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }
   const dependencies = {
+    activateWorkspaceWindowState: vi.fn((_window: BrowserWindow, root: { kind: string }) => {
+      order.push(`window-state:${root.kind}`)
+    }),
     copyWorkspaceSession: vi.fn(() => ({ state: { tabs: [] }, version: 1 })),
     getCurrentWorkspaceRoot: vi.fn(() => ({ kind: 'external' as const, path: '/notes' })),
     getLogger: () => logger,
@@ -142,7 +145,11 @@ describe('app window commands', () => {
       nativeIpcChannels.windowOpeningProgress,
       expect.objectContaining({ stage: 'indexing' }),
     )
-    expect(order).toEqual(['workspace', 'activate'])
+    expect(dependencies.activateWorkspaceWindowState).toHaveBeenCalledWith(target, {
+      kind: 'external',
+      path: '/notes',
+    })
+    expect(order).toEqual(['window-state:external', 'workspace', 'activate'])
     expect(pool.prewarmMainWindow).toHaveBeenCalledOnce()
   })
 
@@ -221,7 +228,7 @@ describe('app window commands', () => {
     })
     expect(sourceWorkspace.setSingleFile).toHaveBeenCalledWith({ path: filePath })
     expect(requestRendererFlush).toHaveBeenCalledWith(source)
-    expect(order).toEqual(['flush', 'workspace'])
+    expect(order).toEqual(['flush', 'workspace', 'window-state:single'])
     expect(dependencies.writeWorkspaceSession).toHaveBeenCalledWith('session-1', {
       activeTabId: null,
       rootKind: 'single',

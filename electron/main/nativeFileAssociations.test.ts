@@ -27,4 +27,19 @@ describe('native Markdown file associations', () => {
       expect.arrayContaining(['text/markdown', 'text/x-markdown']),
     )
   })
+
+  it('embeds the Marklab icon into Windows executables used by shortcuts', async () => {
+    const packageJson = JSON.parse(
+      await fs.readFile(path.resolve(process.cwd(), 'package.json'), 'utf8'),
+    ) as {
+      build?: {
+        win?: { icon?: string; signAndEditExecutable?: boolean }
+      }
+    }
+
+    expect(packageJson.build?.win).toMatchObject({
+      icon: 'resources/icons/marklab.ico',
+      signAndEditExecutable: true,
+    })
+  })
 })

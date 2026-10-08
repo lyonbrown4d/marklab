@@ -19,6 +19,7 @@ import {
   WorkspaceShutdownBarrier,
   type WorkspaceShutdownParticipant,
 } from '@electron/services/workspace/workspaceShutdownBarrier'
+import { flushWorkspaceBindingsForShutdown } from '@electron/services/workspace/windowWorkspaceShutdown'
 import type { WorkspaceOpenedAsset } from '@electron/services/workspace/workspaceOpenedAsset'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import type { BackgroundTaskStatus, FsRootInfo } from '@electron/services/workspace/types'
@@ -44,8 +45,8 @@ export class WindowWorkspaceRegistry {
     private readonly options: WindowWorkspaceRegistryOptions,
   ) {}
 
-  registerWindow(window: BrowserWindow): WorkspaceService {
-    return this.bindingForWindow(window).service
+  registerWindow(window: BrowserWindow, sessionKey?: string): WorkspaceService {
+    return this.bindingForWindow(window, sessionKey).service
   }
 
   serviceForWebContents(webContents: WebContents): WorkspaceService {
@@ -105,29 +106,12 @@ export class WindowWorkspaceRegistry {
 
   async flushBuffersForShutdown(barrierId: number): Promise<number> {
     const bindings = [...this.bindings.values()]
-    const results = await Promise.allSettled(bindings.map((binding) => binding.flushForShutdown()))
-    const errors: Error[] = []
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') return
-      errors.push(
-        new Error(
-          'Window ' +
-            bindings[index].window.id +
-            ' failed to flush: ' +
-            this.errorMessage(result.reason),
-          { cause: result.reason },
-        ),
-      )
-    })
-    try {
-      this.shutdownBarrier.review(barrierId, this.shutdownParticipants())
-    } catch (error) {
-      errors.push(error instanceof Error ? error : new Error(String(error)))
-    }
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Workspace shutdown flush did not reach a stable state')
-    }
-    return bindings.length
+    return flushWorkspaceBindingsForShutdown(
+      bindings,
+      this.shutdownBarrier,
+      barrierId,
+      this.shutdownParticipants(),
+    )
   }
 
   async disposeAll(): Promise<void> {
@@ -188,14 +172,17 @@ export class WindowWorkspaceRegistry {
     return this.bindingForWindow(window)
   }
 
-  private bindingForWindow(window: BrowserWindow): WindowWorkspaceBinding {
+  private bindingForWindow(
+    window: BrowserWindow,
+    requestedSessionKey?: string,
+  ): WindowWorkspaceBinding {
     const current = this.bindings.get(window.id)
     if (current) return current
     if (this.shutdownBarrier.reason) {
       throw new Error('Cannot create a workspace session during ' + this.shutdownBarrier.reason)
     }
 
-    const sessionKey = 'workspace-window-' + window.webContents.id
+    const sessionKey = requestedSessionKey ?? 'workspace-window-' + window.webContents.id
     const binding = createWindowWorkspaceBinding({
       app: this.app,
       knowledgeEngineService: this.options.knowledgeEngineService,
@@ -309,9 +296,5 @@ export class WindowWorkspaceRegistry {
       tasks.push(...binding.service.getBackgroundTasks())
     }
     applyAppTaskBadge(this.app, tasks)
-  }
-
-  private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error)
   }
 }

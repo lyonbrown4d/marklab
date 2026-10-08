@@ -141,7 +141,7 @@
       }
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "signAndEditExecutable": true,
       "icon": "resources/icons/marklab.ico",
       "target": [
         "nsis",

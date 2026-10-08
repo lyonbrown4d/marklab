@@ -141,4 +141,29 @@ describe('SettingsStore SQLite persistence', () => {
       y: 48,
     })
   })
+
+  it('keeps window geometry isolated by workspace state key', () => {
+    store.setWindowState(
+      { height: 720, isMaximized: false, width: 1280, x: 24, y: 48 },
+      'workspace:external:c:/notes',
+    )
+    store.setWindowState(
+      { height: 900, isMaximized: true, width: 1440, x: 80, y: 96 },
+      'workspace:external:d:/wiki',
+    )
+
+    expect(store.getWindowState('workspace:external:c:/notes')).toMatchObject({
+      height: 720,
+      width: 1280,
+      x: 24,
+      y: 48,
+    })
+    expect(store.getWindowState('workspace:external:d:/wiki')).toMatchObject({
+      height: 900,
+      isMaximized: true,
+      width: 1440,
+      x: 80,
+      y: 96,
+    })
+  })
 })

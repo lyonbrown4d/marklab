@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-
 import { BrowserWindow } from 'electron'
 
 import { nativeIpcChannels } from '@electron/channels'
@@ -14,6 +11,13 @@ import type { WindowOpeningProgress } from '@/types/windowOpening'
 import { showWindowWithMotion } from '@electron/windowMotion'
 import type { MarklabWindowPool, WindowPoolAcquisition } from '@electron/windowPool'
 import { createWindowOpenTimings } from '@electron/main/windowOpenTimings'
+import {
+  parsePathOpenTarget,
+  setWorkspaceRoot,
+  setWorkspaceTarget,
+  sourceWindowForEvent,
+  workspaceRootForTarget,
+} from '@electron/main/windowCommandTargets'
 
 type WorkspaceSessionSeed = {
   state?: Record<string, unknown>
@@ -31,9 +35,11 @@ export type AppWindowOpenResult = {
   workspacePath?: string
 }
 
-type PathOpenTarget = { kind: 'directory' | 'file'; path: string }
-
 type AppWindowCommandDependencies = {
+  activateWorkspaceWindowState: (
+    window: BrowserWindow,
+    root: Pick<FsRootInfo, 'kind' | 'path'>,
+  ) => void
   copyWorkspaceSession: (
     sourceSessionKey: string,
     targetSessionKey: string,
@@ -58,6 +64,7 @@ type OpenWindowRequest = {
   initializeWorkspace: (workspace: WorkspaceService) => Promise<FsRootInfo>
   reason: string
   requestedPath: string
+  windowStateRoot: Pick<FsRootInfo, 'kind' | 'path'>
 }
 
 const failure = (error: unknown, requestedPath?: string): AppWindowOpenResult => ({
@@ -88,46 +95,6 @@ const sendWorkspaceSessionSeed = (
   setTimeout(send, 250)
 }
 
-const setWorkspaceRoot = async (
-  workspace: WorkspaceService,
-  root: FsRootInfo,
-): Promise<FsRootInfo> => {
-  if (root.kind === 'single') return workspace.setSingleFile({ path: root.path })
-  if (root.kind === 'external') return workspace.setRoot({ path: root.path })
-  return workspace.setRoot(null)
-}
-
-const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarget> => {
-  const raw =
-    value && typeof value === 'object' && 'path' in value
-      ? (value as Record<string, unknown>).path
-      : value
-  if (typeof raw !== 'string' || !raw.trim()) throw new Error('path must be a string')
-  if (raw.includes('\0')) throw new Error('path contains invalid characters')
-  const resolved = path.resolve(raw)
-  const stat = await fs.stat(resolved).catch(() => null)
-  if (!stat) throw new Error('path does not exist')
-  if (stat.isDirectory()) return { path: resolved, kind: 'directory' }
-  if (stat.isFile()) return { path: resolved, kind: 'file' }
-  throw new Error('path must be a file or directory')
-}
-
-const setWorkspaceTarget = async (
-  workspace: WorkspaceService,
-  target: PathOpenTarget,
-): Promise<FsRootInfo> =>
-  target.kind === 'directory'
-    ? workspace.setRoot({ path: target.path })
-    : workspace.setSingleFile({ path: target.path })
-
-const sourceWindowForEvent = (
-  event: Electron.IpcMainInvokeEvent | null,
-  primary: BrowserWindow | null,
-): BrowserWindow | null =>
-  (event ? BrowserWindow.fromWebContents(event.sender) : null) ??
-  BrowserWindow.getFocusedWindow() ??
-  primary
-
 export const createAppWindowCommandHandlers = (
   dependencies: AppWindowCommandDependencies,
 ): NativeCommandHandlers => {
@@ -143,6 +110,7 @@ export const createAppWindowCommandHandlers = (
     }
     const main = acquisition.window
     dependencies.installManagedMainWindowLifecycle(main, logger)
+    dependencies.activateWorkspaceWindowState(main, request.windowStateRoot)
     if (main.isMinimized()) main.restore()
     showWindowWithMotion(main, { focus: true })
 
@@ -231,6 +199,7 @@ export const createAppWindowCommandHandlers = (
         initializeWorkspace: (workspace) => setWorkspaceRoot(workspace, root),
         reason,
         requestedPath: root.path,
+        windowStateRoot: root,
       })
     } catch (error) {
       return failure(error)
@@ -251,6 +220,7 @@ export const createAppWindowCommandHandlers = (
         initializeWorkspace: (workspace) => setWorkspaceTarget(workspace, target),
         reason,
         requestedPath: target.path,
+        windowStateRoot: workspaceRootForTarget(target),
       })
     } catch (error) {
       return failure(error)
@@ -271,6 +241,7 @@ export const createAppWindowCommandHandlers = (
       if (!nativeIpc) throw new Error('Native IPC bridge is unavailable.')
       await nativeIpc.windowClose.requestRendererFlush(main)
       const root = await setWorkspaceTarget(dependencies.getWorkspaceServiceForWindow(main), target)
+      dependencies.activateWorkspaceWindowState(main, root)
       const seed = dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(main), {
         activeTabId: null,
         rootKind: root.kind,
