@@ -206,6 +206,67 @@ describe('WorkspaceGraphQueryService', () => {
     expect(result.nodes[0]).not.toHaveProperty('content')
     expect(result.nodes[0]).not.toHaveProperty('content_blocks')
   })
+
+  it('returns a strict file-level topology from a legacy graph', async () => {
+    const cache = new WorkspaceAnalysisCache()
+    const service = new WorkspaceGraphQueryService({
+      analysisCache: cache,
+      getInput: vi.fn().mockResolvedValue(input('# Alpha')),
+      getNodeDocuments: vi.fn(),
+      getState: () => ({
+        internalRoot: 'C:/app/workspace',
+        rootKind: 'external',
+        rootPath: 'C:/notes',
+        singleFile: null,
+      }),
+      graphResolver: {
+        resolve: vi.fn(async () => ({
+          mode: 'mindmap' as const,
+          nodes: [
+            { id: 'file:note.md', kind: 'file' as const, label: 'Alpha', path: 'note.md' },
+            {
+              id: 'heading:note.md:intro',
+              kind: 'heading' as const,
+              label: 'Intro',
+              path: 'note.md',
+              slug: 'intro',
+            },
+            { id: 'file:other.md', kind: 'file' as const, label: 'Other', path: 'other.md' },
+          ],
+          edges: [
+            {
+              id: 'contains',
+              kind: 'contains' as const,
+              source: 'file:note.md',
+              target: 'heading:note.md:intro',
+            },
+            {
+              id: 'reference',
+              kind: 'references_heading' as const,
+              source: 'file:other.md',
+              target: 'heading:note.md:intro',
+            },
+          ],
+        })),
+      } as never,
+      logger: {} as never,
+      runNodeDetails: vi.fn(),
+    })
+
+    await expect(service.load('interactive')).resolves.toMatchObject({
+      nodes: [
+        { id: 'file:note.md', kind: 'file' },
+        { id: 'file:other.md', kind: 'file' },
+      ],
+      edges: [
+        {
+          id: 'reference',
+          source: 'file:note.md',
+          target: 'file:other.md',
+        },
+      ],
+    })
+  })
 })
 
 const input = (content: string) => ({

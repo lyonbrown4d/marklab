@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useLatest } from 'ahooks'
 import { ExternalLink } from 'lucide-react'
 import {
   createDrawioLoadMessage,
@@ -20,6 +21,8 @@ import DrawioEditorToolbar, {
 } from '@/components/previews/DrawioEditorToolbar'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { useLayoutContext } from '@/pages/useLayoutContext'
+import { useActiveWorkspaceKey } from '@/app/AppCachedOutlet'
 
 type DrawioEditorSurfaceProps = {
   path: string
@@ -29,6 +32,10 @@ type DrawioEditorSurfaceProps = {
 
 const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps) => {
   const { t } = useI18n()
+  const rootKind = useLayoutContext((state) => state.rootKind)
+  const rootPath = useLayoutContext((state) => state.rootPath)
+  const workspaceKey = `${rootKind}:${rootPath}`
+  const activeWorkspaceKey = useActiveWorkspaceKey()
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const loadedKeyRef = useRef('')
   const drawioEditorMode = useDrawioSettingsStore((state) => state.drawioEditorMode)
@@ -38,14 +45,15 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
   const [saveState, setSaveState] = useState<DrawioEditorSaveState>('clean')
   const [message, setMessage] = useState<string | null>(null)
   const remoteEnabled = drawioEditorMode === 'remote' && embedUrl.ok
-
+  const sessionKey = `${workspaceKey}:${path}:${embedUrl.ok ? embedUrl.url : 'unavailable'}`
+  const sessionKeyRef = useLatest(sessionKey)
   const documentQuery = useQuery({
-    queryKey: ['drawio-document', path],
+    queryKey: ['drawio-document', rootKind, rootPath, path],
     queryFn: () => drawioDocumentApi.load(path),
     enabled: remoteEnabled,
+    gcTime: 0,
     staleTime: 0,
   })
-
   const postToFrame = useCallback(
     (payload: Parameters<typeof serializeDrawioMessage>[0]) => {
       if (!embedUrl.ok) return
@@ -56,13 +64,13 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
     },
     [embedUrl],
   )
-
   const openInSystem = useCallback(() => {
     void fsApi.openPathInSystem(path)
   }, [path])
 
   const saveXml = useCallback(
-    async (xml: string, flush: boolean) => {
+    async (xml: string, flush: boolean, sourceSession: string) => {
+      if (sessionKeyRef.current !== sourceSession) return
       if (readonly) {
         setSaveState('error')
         setMessage(t('preview.drawioReadOnlyDescription'))
@@ -74,23 +82,26 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
       setMessage(flush ? t('preview.drawioSaving') : t('preview.drawioUnsaved'))
       try {
         const result = await drawioDocumentApi.save({ flush, path, xml })
+        if (sessionKeyRef.current !== sourceSession) return
         setSaveState(result.dirty ? 'dirty' : 'clean')
         setMessage(result.dirty ? t('preview.drawioUnsaved') : t('preview.drawioSaved'))
         postToFrame(createDrawioStatusMessage(t('preview.drawioSaved'), result.dirty))
       } catch (error) {
+        if (sessionKeyRef.current !== sourceSession) return
         const errorMessage = error instanceof Error ? error.message : String(error)
         setSaveState('error')
         setMessage(errorMessage)
         postToFrame(createDrawioStatusMessage(errorMessage, true))
       }
     },
-    [path, postToFrame, readonly, t],
+    [path, postToFrame, readonly, sessionKeyRef, t],
   )
 
   useEffect(() => {
     if (!remoteEnabled || !embedUrl.ok) return
 
     const handleMessage = (event: MessageEvent) => {
+      if (activeWorkspaceKey !== null && activeWorkspaceKey !== workspaceKey) return
       if (event.origin !== embedUrl.origin) return
       if (event.source !== iframeRef.current?.contentWindow) return
 
@@ -115,7 +126,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
           setMessage(t('preview.drawioMissingXml'))
           return
         }
-        void saveXml(frameMessage.xml, frameMessage.event !== 'autosave')
+        void saveXml(frameMessage.xml, frameMessage.event !== 'autosave', sessionKey)
         return
       }
       if (frameMessage.event === 'exit') {
@@ -127,12 +138,21 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
     return () => {
       window.removeEventListener('message', handleMessage)
     }
-  }, [embedUrl, postToFrame, remoteEnabled, saveXml, t])
+  }, [
+    activeWorkspaceKey,
+    embedUrl,
+    postToFrame,
+    remoteEnabled,
+    saveXml,
+    sessionKey,
+    t,
+    workspaceKey,
+  ])
 
   useEffect(() => {
     if (!remoteEnabled || !embedUrl.ok || !frameReady || documentQuery.data == null) return
 
-    const loadKey = `${path}:${embedUrl.url}:${documentQuery.dataUpdatedAt}`
+    const loadKey = `${sessionKey}:${documentQuery.dataUpdatedAt}`
     if (loadedKeyRef.current === loadKey) return
     loadedKeyRef.current = loadKey
     postToFrame(
@@ -151,6 +171,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
     readonly,
     remoteEnabled,
     title,
+    sessionKey,
   ])
 
   if (drawioEditorMode === 'system') {
@@ -219,7 +240,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
             </div>
           )}
           <iframe
-            key={`${embedUrl.url}:${path}`}
+            key={sessionKey}
             ref={iframeRef}
             title={t('preview.drawioFrameTitle', { name: title })}
             src={embedUrl.url}

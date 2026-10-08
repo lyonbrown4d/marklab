@@ -130,6 +130,62 @@ describe('Plate inline AI completion', () => {
     controller.destroy()
   })
 
+  it.each([
+    ['Ctrl+Shift+Right', { ctrlKey: true, shiftKey: true }],
+    ['Meta+Shift+Right', { metaKey: true, shiftKey: true }],
+    ['Alt+Ctrl+Right', { altKey: true, ctrlKey: true }],
+    ['Alt+Meta+Right', { altKey: true, metaKey: true }],
+  ] satisfies readonly (readonly [string, KeyboardEventInit])[])(
+    'keeps an AI ghost visible for %s',
+    async (_label, modifiers) => {
+      const editor = createCompletionEditor()
+      const controller = createPlateInlineCompletionController(editor, {
+        canComplete: () => true,
+        debounceMs: () => 0,
+        enabled: () => true,
+        requestCompletion: async () => ' write notes tomorrow',
+      })
+      controller.sync()
+      await vi.advanceTimersByTimeAsync(0)
+      const snapshot = controller.getSnapshot()
+      const event = new KeyboardEvent('keydown', {
+        cancelable: true,
+        key: 'ArrowRight',
+        ...modifiers,
+      })
+
+      expect(controller.keyDown(event)).toBe(false)
+      expect(event.defaultPrevented).toBe(false)
+      expect(editor.api.string([])).toBe('I plan to')
+      expect(controller.getSnapshot()).toBe(snapshot)
+      controller.destroy()
+    },
+  )
+
+  it('keeps an AI ghost visible for a composing Escape', async () => {
+    const editor = createCompletionEditor()
+    const controller = createPlateInlineCompletionController(editor, {
+      canComplete: () => true,
+      debounceMs: () => 0,
+      enabled: () => true,
+      requestCompletion: async () => ' tomorrow',
+    })
+    controller.sync()
+    await vi.advanceTimersByTimeAsync(0)
+    const snapshot = controller.getSnapshot()
+    const event = new KeyboardEvent('keydown', {
+      cancelable: true,
+      isComposing: true,
+      key: 'Escape',
+    })
+
+    expect(controller.keyDown(event)).toBe(false)
+    expect(event.defaultPrevented).toBe(false)
+    expect(editor.api.string([])).toBe('I plan to')
+    expect(controller.getSnapshot()).toBe(snapshot)
+    controller.destroy()
+  })
+
   it('dismisses an AI ghost with Escape and accepts it with Tab', async () => {
     const editor = createCompletionEditor()
     const controller = createPlateInlineCompletionController(editor, {

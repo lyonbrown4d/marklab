@@ -1,8 +1,23 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownPdfPreview, { PdfPreviewSurface } from '@/components/previews/PdfPreviewSurface'
 
 const documentFile = vi.hoisted(() => vi.fn())
+const documentFixture = vi.hoisted(() => ({ numPages: 3 }))
+
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 156,
+    getVirtualItems: () =>
+      Array.from({ length: Math.min(count, 8) }, (_, index) => ({
+        index,
+        key: index,
+        size: 156,
+        start: index * 156,
+      })),
+    measureElement: vi.fn(),
+  }),
+}))
 
 vi.mock('react-pdf', async () => {
   const { useEffect } = await import('react')
@@ -18,7 +33,7 @@ vi.mock('react-pdf', async () => {
     }) => {
       documentFile(file)
       useEffect(() => {
-        onLoadSuccess?.({ numPages: 3 })
+        onLoadSuccess?.({ numPages: documentFixture.numPages })
       }, [onLoadSuccess])
       return <div data-testid="pdf-document">{children}</div>
     },
@@ -48,6 +63,10 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 describe('MarkdownPdfPreview', () => {
+  beforeEach(() => {
+    documentFixture.numPages = 3
+  })
+
   it('labels the PDF page navigation from i18n', async () => {
     vi.stubGlobal(
       'ResizeObserver',
@@ -83,6 +102,24 @@ describe('MarkdownPdfPreview', () => {
     expect(await screen.findByTestId('pdf-page')).toHaveTextContent('1')
     expect(screen.getAllByTestId('pdf-page')).toHaveLength(1)
     expect(screen.queryByRole('navigation', { name: 'PDF pages' })).not.toBeInTheDocument()
+  })
+
+  it('only mounts a bounded thumbnail window for long PDF documents', async () => {
+    documentFixture.numPages = 200
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        disconnect = vi.fn()
+        observe = vi.fn()
+        unobserve = vi.fn()
+      },
+    )
+
+    render(<PdfPreviewSurface fileUrl="marklab-asset://local/v1/long-pdf" mode="inline" />)
+
+    const navigation = await screen.findByRole('navigation', { name: 'PDF pages' })
+    await waitFor(() => expect(navigation.querySelectorAll('button').length).toBeGreaterThan(0))
+    expect(navigation.querySelectorAll('button').length).toBeLessThan(20)
   })
 
   it('uses localized PDF loading and failed states', async () => {

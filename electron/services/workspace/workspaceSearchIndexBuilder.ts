@@ -8,8 +8,9 @@ type Options = {
   coordinator: WorkspaceSearchIndexBuildCoordinator
   currentSearchKey: () => string
   index: WorkspaceSearchIndex
-  loadDocuments: () => Promise<Array<{ content: string; path: string }>>
+  loadDocuments: (signal?: AbortSignal) => Promise<Array<{ content: string; path: string }>>
   logger: Logger
+  signal?: AbortSignal
 }
 
 export const rebuildWorkspaceSearchIndex = ({
@@ -18,10 +19,13 @@ export const rebuildWorkspaceSearchIndex = ({
   index,
   loadDocuments,
   logger,
+  signal,
 }: Options): Promise<boolean> => {
+  signal?.throwIfAborted()
   const searchKey = currentSearchKey()
   return coordinator.run(searchKey, async (isCurrent) => {
-    const documents = await loadDocuments()
+    const documents = await loadDocuments(signal)
+    signal?.throwIfAborted()
     if (!isCurrent() || searchKey !== currentSearchKey()) return false
     const indexable = documents.map<WorkspaceSearchDocument>((document) => ({
       path: document.path,
@@ -33,6 +37,7 @@ export const rebuildWorkspaceSearchIndex = ({
       searchKey: searchKey.slice(0, 12),
     })
     await index.rebuild(indexable)
+    signal?.throwIfAborted()
     return isCurrent() && searchKey === currentSearchKey()
   })
 }

@@ -61,6 +61,7 @@ const Shell = () => {
         routeCacheKey="documents"
         routePathname="/files/edit/a.md"
         shouldAnimateRouteCache={false}
+        workspaceKey="internal:"
       />
     </>
   )
@@ -122,6 +123,7 @@ describe('AppCachedOutlet render isolation', () => {
             routeCacheKey={`internal::${location.pathname}`}
             routePathname={location.pathname}
             shouldAnimateRouteCache={false}
+            workspaceKey="internal:"
           />
         </>
       )
@@ -166,6 +168,7 @@ describe('AppCachedOutlet render isolation', () => {
             routeCacheKey={`internal::${location.pathname}`}
             routePathname={location.pathname}
             shouldAnimateRouteCache={false}
+            workspaceKey="internal:"
           />
         </>
       )
@@ -210,6 +213,7 @@ describe('AppCachedOutlet render isolation', () => {
             routeCacheKey={`internal::${location.pathname}`}
             routePathname={location.pathname}
             shouldAnimateRouteCache={false}
+            workspaceKey="internal:"
           />
         </>
       )

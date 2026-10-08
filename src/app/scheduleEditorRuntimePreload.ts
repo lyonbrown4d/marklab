@@ -2,8 +2,7 @@ import { preloadPlateMarkdownWorkers } from '@/services/plateMarkdownWorkerClien
 
 type EditorRuntimePreload = (targetWorkerCount: number) => Promise<void> | void
 
-const PRELOAD_TARGETS = [1, 2, 3]
-const PRELOAD_INTERVAL_MS = 750
+const PRELOAD_TARGET_WORKERS = 1
 
 const preloadPlateRuntime = (targetWorkerCount: number) =>
   preloadPlateMarkdownWorkers(targetWorkerCount)
@@ -14,19 +13,11 @@ export const scheduleEditorRuntimePreload = (
   let cancelled = false
   let idleRequestId: number | undefined
   let timeoutId: number | undefined
-  let targetIndex = 0
-
-  const scheduleNext = () => {
-    if (cancelled || targetIndex >= PRELOAD_TARGETS.length) return
-    timeoutId = window.setTimeout(schedule, PRELOAD_INTERVAL_MS)
-  }
 
   const run = () => {
-    if (cancelled || targetIndex >= PRELOAD_TARGETS.length) return
-    const targetWorkerCount = PRELOAD_TARGETS[targetIndex]
-    targetIndex += 1
+    if (cancelled) return
     try {
-      void Promise.resolve(preload(targetWorkerCount)).then(scheduleNext, () => undefined)
+      void Promise.resolve(preload(PRELOAD_TARGET_WORKERS)).catch(() => undefined)
     } catch {
       // Preloading is an optional optimization and must not affect startup.
     }
@@ -38,7 +29,7 @@ export const scheduleEditorRuntimePreload = (
       idleRequestId = requestIdleCallback(run)
       return
     }
-    timeoutId = window.setTimeout(run, targetIndex === 0 ? 1_500 : PRELOAD_INTERVAL_MS)
+    timeoutId = window.setTimeout(run, 1_500)
   }
 
   schedule()

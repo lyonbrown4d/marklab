@@ -30,6 +30,7 @@ vi.mock('@/i18n/useI18n', () => ({
 
 const props = {
   activePath: 'notes/current.md',
+  workspaceKey: 'external:C:/notes',
   fileContents: {},
   files: [{ path: 'notes/current.md', kind: 'file' as const }],
   onChange: vi.fn(),

@@ -1,10 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DrawioEditorSurface from '@/components/previews/DrawioEditorSurface'
 import { DEFAULT_DRAWIO_EMBED_URL } from '@/logic/drawioEmbed'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
+import { ActiveWorkspaceProvider } from '@/app/AppCachedOutlet'
+
+const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
+
+vi.mock('@/pages/useLayoutContext', () => ({
+  useLayoutContext: (selector: (state: unknown) => unknown) => selector(workspaceIdentity),
+}))
 
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
@@ -15,17 +22,23 @@ vi.mock('@/services/fsApi', () => ({
   },
 }))
 
-const renderSurface = ({ readonly = false }: { readonly?: boolean } = {}) => {
+const renderSurface = ({
+  activeWorkspaceKey = 'external:C:/one',
+  readonly = false,
+}: { activeWorkspaceKey?: string; readonly?: boolean } = {}) => {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
-      <DrawioEditorSurface path="diagrams/flow.drawio" readonly={readonly} title="flow.drawio" />
+      <ActiveWorkspaceProvider value={activeWorkspaceKey}>
+        <DrawioEditorSurface path="diagrams/flow.drawio" readonly={readonly} title="flow.drawio" />
+      </ActiveWorkspaceProvider>
     </QueryClientProvider>,
   )
+  return { ...view, client }
 }
 
 const drawioMessage = (
@@ -44,6 +57,8 @@ const drawioMessage = (
 
 describe('DrawioEditorSurface', () => {
   beforeEach(() => {
+    workspaceIdentity.rootKind = 'external'
+    workspaceIdentity.rootPath = 'C:/one'
     vi.clearAllMocks()
     vi.mocked(fsApi.readFile).mockResolvedValue('<mxfile />')
     vi.mocked(fsApi.updateBuffer).mockResolvedValue({
@@ -56,6 +71,93 @@ describe('DrawioEditorSurface', () => {
       drawioEditorMode: 'remote',
       drawioEmbedUrl: DEFAULT_DRAWIO_EMBED_URL,
     })
+  })
+
+  it('isolates document queries and iframe sessions by workspace identity', async () => {
+    const view = renderSurface()
+    const oldIframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
+    await waitFor(() => expect(fsApi.readFile).toHaveBeenCalledTimes(1))
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual(['drawio-document', 'external', 'C:/one', 'diagrams/flow.drawio'])
+
+    workspaceIdentity.rootPath = 'D:/two'
+    view.rerender(
+      <QueryClientProvider client={view.client}>
+        <DrawioEditorSurface path="diagrams/flow.drawio" readonly={false} title="flow.drawio" />
+      </QueryClientProvider>,
+    )
+    const currentIframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
+    await waitFor(() => expect(fsApi.readFile).toHaveBeenCalledTimes(2))
+
+    drawioMessage(oldIframe, { event: 'save', xml: '<mxfile>stale</mxfile>' })
+    expect(fsApi.updateBuffer).not.toHaveBeenCalled()
+
+    drawioMessage(currentIframe, { event: 'save', xml: '<mxfile>current</mxfile>' })
+    await waitFor(() =>
+      expect(fsApi.updateBuffer).toHaveBeenCalledWith(
+        'diagrams/flow.drawio',
+        '<mxfile>current</mxfile>',
+      ),
+    )
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual(['drawio-document', 'external', 'D:/two', 'diagrams/flow.drawio'])
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).not.toContainEqual(['drawio-document', 'external', 'C:/one', 'diagrams/flow.drawio'])
+  })
+
+  it('ignores iframe saves after its cached workspace becomes inactive', async () => {
+    const view = renderSurface()
+    const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
+
+    view.rerender(
+      <QueryClientProvider client={view.client}>
+        <ActiveWorkspaceProvider value="external:D:/two">
+          <DrawioEditorSurface path="diagrams/flow.drawio" readonly={false} title="flow.drawio" />
+        </ActiveWorkspaceProvider>
+      </QueryClientProvider>,
+    )
+    drawioMessage(iframe, { event: 'save', xml: '<mxfile>stale</mxfile>' })
+
+    expect(fsApi.updateBuffer).not.toHaveBeenCalled()
+  })
+
+  it('ignores a save failure that arrives after the workspace session changes', async () => {
+    let rejectSave: ((error: Error) => void) | undefined
+    vi.mocked(fsApi.updateBuffer).mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectSave = reject
+      }),
+    )
+    const view = renderSurface()
+    const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
+
+    drawioMessage(iframe, { event: 'save', xml: '<mxfile>pending</mxfile>' })
+    await waitFor(() => expect(fsApi.updateBuffer).toHaveBeenCalledOnce())
+
+    workspaceIdentity.rootPath = 'D:/two'
+    view.rerender(
+      <QueryClientProvider client={view.client}>
+        <ActiveWorkspaceProvider value="external:D:/two">
+          <DrawioEditorSurface path="diagrams/flow.drawio" readonly={false} title="flow.drawio" />
+        </ActiveWorkspaceProvider>
+      </QueryClientProvider>,
+    )
+    await act(async () => rejectSave?.(new Error('stale save failed')))
+
+    expect(screen.queryByText('stale save failed')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Save failed|保存失败/)).not.toBeInTheDocument()
   })
 
   it('loads the current drawio xml into the remote iframe after init', async () => {

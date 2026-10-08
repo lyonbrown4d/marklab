@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { writeClipboardText } from '@/runtime/clipboard'
 import { fsApi } from '@/services/fsApi'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
+import { useLayoutContext } from '@/pages/useLayoutContext'
 
 export const MAX_SOURCE_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 export const MAX_SOURCE_PREVIEW_CHARACTERS = 200_000
@@ -52,6 +53,8 @@ const SourcePreviewSurface = ({
   title,
 }: SourcePreviewSurfaceProps) => {
   const { t } = useI18n()
+  const rootKind = useLayoutContext((state) => state.rootKind)
+  const rootPath = useLayoutContext((state) => state.rootPath)
   const language = sourceLanguageForPath(path)
   const graphPresentation = presentation === 'graph'
   const byteLimit = graphPresentation ? GRAPH_SOURCE_PREVIEW_BYTES : MAX_SOURCE_PREVIEW_BYTES
@@ -62,7 +65,7 @@ const SourcePreviewSurface = ({
   const [copyState, setCopyState] = useState<CopyState>({ path, status: 'idle' })
   const currentCopyStatus = copyState.path === path ? copyState.status : 'idle'
   const sourceQuery = useQuery({
-    queryKey: ['source-preview', path, byteLimit],
+    queryKey: ['source-preview', rootKind, rootPath, path, byteLimit],
     queryFn: async () => {
       const preview = await fsApi.readTextPreview(path, byteLimit)
       const rendered = previewLines(preview.content, maxCharacters, maxLines)

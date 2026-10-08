@@ -26,6 +26,7 @@ import type { EditorChangeHandler } from '@/types/editorChanges'
 
 type SourceCodeEditorProps = {
   activePath: string | null
+  workspaceKey: string
   value: string
   files: FileEntry[]
   fileContents: Record<string, string>
@@ -37,6 +38,7 @@ type SourceCodeEditorProps = {
 
 const SourceCodeEditor = ({
   activePath,
+  workspaceKey,
   value,
   files,
   fileContents,
@@ -59,6 +61,7 @@ const SourceCodeEditor = ({
   const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const cursorCallbackRef = useLatest(onCursorChange)
+  const workspaceKeyRef = useLatest(workspaceKey)
   const cursorSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticHostRef = useRef<MarkdownSourceDiagnosticHost | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
@@ -119,6 +122,7 @@ const SourceCodeEditor = ({
           monaco: monaco as typeof import('monaco-editor'),
           editor,
           getContext: () => completionContextRef.current,
+          getWorkspaceKey: () => workspaceKeyRef.current,
           onOpenFileView,
           scheduleDiagnostics,
         })
@@ -160,12 +164,13 @@ const SourceCodeEditor = ({
           monaco: host.monaco,
           editor: host.editor,
           getContext: () => completionContextRef.current,
+          getWorkspaceKey: () => workspaceKeyRef.current,
           onOpenFileView,
           scheduleDiagnostics,
         })
       : null
     scheduleDiagnostics()
-  }, [completionContextRef, markdownEnabled, onOpenFileView, scheduleDiagnostics])
+  }, [completionContextRef, markdownEnabled, onOpenFileView, scheduleDiagnostics, workspaceKeyRef])
 
   useEffect(() => {
     return () => {
@@ -246,6 +251,7 @@ const SourceCodeEditor = ({
   return (
     <SourceCodeEditorSurface
       activePath={activePath}
+      workspaceKey={workspaceKey}
       darkMode={darkMode}
       errorMessage={
         monacoLoadError ? t('editor.sourceLoadFailed', { error: editorLoadError }) : null

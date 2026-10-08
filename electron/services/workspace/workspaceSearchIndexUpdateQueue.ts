@@ -11,18 +11,27 @@ type SearchIndexChange = {
 }
 
 type WorkspaceSearchIndexUpdateQueueOptions<TDocument> = {
-  applyChanges: (changes: {
-    removeDocuments: string[]
-    removePrefixes: string[]
-    upserts: TDocument[]
-  }) => Promise<void>
+  applyChanges: (
+    changes: {
+      removeDocuments: string[]
+      removePrefixes: string[]
+      upserts: TDocument[]
+    },
+    signal?: AbortSignal,
+  ) => Promise<void>
   delayMs: number
   getDocumentPath: (document: TDocument) => string
-  loadDocuments: (paths: string[]) => Promise<TDocument[]>
+  loadDocuments: (paths: string[], signal?: AbortSignal) => Promise<TDocument[]>
   logger: Logger
-  openIndex: () => Promise<void>
-  rebuildAll: () => Promise<void>
+  openIndex: (signal?: AbortSignal) => Promise<void>
+  rebuildAll: (signal?: AbortSignal) => Promise<void>
   runTask: <T>(work: () => Promise<T>, taskName: string) => Promise<T>
+}
+
+type SearchIndexQueueGeneration = {
+  controller: AbortController
+  flushQueue: Promise<void>
+  id: number
 }
 
 export class WorkspaceSearchIndexUpdateQueue<TDocument> {
@@ -30,7 +39,7 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   private readonly flushCancelRequests = new Subject<void>()
   private readonly flushRequests = new Subject<void>()
   private readonly flushSubscription: Subscription
-  private flushQueue: Promise<void> = Promise.resolve()
+  private generation = this.createGeneration(0)
   private rebuildScheduled = false
   private disposed = false
 
@@ -47,6 +56,9 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   clear(): void {
+    if (this.disposed) return
+    this.generation.controller.abort()
+    this.generation = this.createGeneration(this.generation.id + 1)
     this.changes.clear()
     this.rebuildScheduled = false
     this.flushCancelRequests.next()
@@ -54,8 +66,11 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
 
   dispose(): void {
     if (this.disposed) return
-    this.clear()
     this.disposed = true
+    this.generation.controller.abort()
+    this.changes.clear()
+    this.rebuildScheduled = false
+    this.flushCancelRequests.next()
     this.flushSubscription.unsubscribe()
     this.flushRequests.complete()
     this.flushCancelRequests.complete()
@@ -70,7 +85,7 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   async flushPending(): Promise<void> {
     this.flushCancelRequests.next()
     if (!this.rebuildScheduled && this.changes.size === 0) {
-      await this.flushQueue
+      await this.generation.flushQueue
       return
     }
     await this.flush()
@@ -100,7 +115,10 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   private queueChange(changedPath: string, kind: SearchIndexChangeKind): void {
-    if (this.rebuildScheduled) return
+    if (this.rebuildScheduled) {
+      this.scheduleFlush()
+      return
+    }
     if (kind === 'remove-prefix') {
       for (const path of this.changes.keys()) {
         if (path === changedPath || path.startsWith(`${changedPath}/`)) this.changes.delete(path)
@@ -116,12 +134,14 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
   }
 
   private async flush(): Promise<void> {
-    const operation = this.flushQueue.then(() => this.flushOnce())
-    this.flushQueue = operation.catch(() => undefined)
+    const generation = this.generation
+    const operation = generation.flushQueue.then(() => this.flushOnce(generation))
+    generation.flushQueue = operation.catch(() => undefined)
     return operation
   }
 
-  private async flushOnce(): Promise<void> {
+  private async flushOnce(generation: SearchIndexQueueGeneration): Promise<void> {
+    if (!this.isCurrentGeneration(generation)) return
     if (!this.rebuildScheduled && this.changes.size === 0) return
     const shouldRebuild = this.rebuildScheduled
     const changes = [...this.changes.entries()].map(([path, kind]) => ({ kind, path }))
@@ -130,20 +150,32 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
 
     try {
       await this.options.runTask(async () => {
-        await this.options.openIndex()
-        if (shouldRebuild) {
-          await this.options.rebuildAll()
-          return
+        try {
+          if (!this.isCurrentGeneration(generation)) return
+          generation.controller.signal.throwIfAborted()
+          await this.options.openIndex(generation.controller.signal)
+          if (!this.isCurrentGeneration(generation)) return
+          if (shouldRebuild) {
+            await this.options.rebuildAll(generation.controller.signal)
+            return
+          }
+          await this.applyChanges(generation, changes)
+        } catch (error) {
+          if (generation.controller.signal.aborted || !this.isCurrentGeneration(generation)) return
+          throw error
         }
-        await this.applyChanges(changes)
       }, 'search-index')
     } catch (error) {
-      this.restoreFailedChanges(shouldRebuild, changes)
+      if (generation.controller.signal.aborted || !this.isCurrentGeneration(generation)) return
+      this.restoreFailedChanges(generation, shouldRebuild, changes)
       throw error
     }
   }
 
-  private async applyChanges(changes: SearchIndexChange[]): Promise<void> {
+  private async applyChanges(
+    generation: SearchIndexQueueGeneration,
+    changes: SearchIndexChange[],
+  ): Promise<void> {
     const upsertPaths: string[] = []
     const removeDocuments: string[] = []
     const removePrefixes: string[] = []
@@ -157,16 +189,32 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
       }
     }
 
-    const documents = await this.options.loadDocuments(upsertPaths)
+    const documents = await this.options.loadDocuments(upsertPaths, generation.controller.signal)
+    if (!this.isCurrentGeneration(generation)) return
     const loadedPaths = new Set(documents.map(this.options.getDocumentPath))
     for (const upsertPath of upsertPaths) {
       if (!loadedPaths.has(upsertPath)) removeDocuments.push(upsertPath)
     }
-    await this.options.applyChanges({ removeDocuments, removePrefixes, upserts: documents })
+    await this.options.applyChanges(
+      { removeDocuments, removePrefixes, upserts: documents },
+      generation.controller.signal,
+    )
   }
 
-  private restoreFailedChanges(shouldRebuild: boolean, changes: SearchIndexChange[]): void {
-    if (this.disposed) return
+  private createGeneration(id: number): SearchIndexQueueGeneration {
+    return { controller: new AbortController(), flushQueue: Promise.resolve(), id }
+  }
+
+  private isCurrentGeneration(generation: SearchIndexQueueGeneration): boolean {
+    return !this.disposed && generation === this.generation
+  }
+
+  private restoreFailedChanges(
+    generation: SearchIndexQueueGeneration,
+    shouldRebuild: boolean,
+    changes: SearchIndexChange[],
+  ): void {
+    if (!this.isCurrentGeneration(generation)) return
     if (shouldRebuild) {
       this.rebuildScheduled = true
       this.changes.clear()
@@ -175,6 +223,5 @@ export class WorkspaceSearchIndexUpdateQueue<TDocument> {
         if (!this.changes.has(change.path)) this.changes.set(change.path, change.kind)
       }
     }
-    this.scheduleFlush()
   }
 }

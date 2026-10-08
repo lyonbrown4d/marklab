@@ -61,6 +61,7 @@ describe('SourceCodeEditor Markdown feature boundary', () => {
     render(
       <SourceCodeEditor
         activePath="src/example.ts"
+        workspaceKey="external:C:/notes"
         fileContents={{}}
         files={[{ kind: 'file', path: 'src/example.ts' }]}
         onChange={vi.fn()}
@@ -84,6 +85,7 @@ describe('SourceCodeEditor Markdown feature boundary', () => {
       files: [],
       onChange: vi.fn(),
       value: '# Notes',
+      workspaceKey: 'external:C:/notes',
     }
     const view = render(<SourceCodeEditor {...props} activePath="notes/current.md" />)
     await waitFor(() => expect(markdownFeatures.registerProviders).toHaveBeenCalledTimes(1))

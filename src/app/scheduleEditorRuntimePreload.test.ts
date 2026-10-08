@@ -27,7 +27,7 @@ describe('scheduleEditorRuntimePreload', () => {
     expect(preload).toHaveBeenCalledWith(1)
   })
 
-  it('staggers three workers across separate idle periods', async () => {
+  it('preloads only one worker and does not schedule additional idle preloads', async () => {
     vi.useFakeTimers()
     const idleCallbacks: IdleRequestCallback[] = []
     vi.stubGlobal(
@@ -44,18 +44,11 @@ describe('scheduleEditorRuntimePreload', () => {
     idleCallbacks[0]?.({ didTimeout: false, timeRemaining: () => 16 })
     await Promise.resolve()
     await Promise.resolve()
-    expect(preload).toHaveBeenLastCalledWith(1)
+    await vi.advanceTimersByTimeAsync(10_000)
 
-    await vi.advanceTimersByTimeAsync(750)
-    idleCallbacks[1]?.({ didTimeout: false, timeRemaining: () => 16 })
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(preload).toHaveBeenLastCalledWith(2)
-
-    await vi.advanceTimersByTimeAsync(750)
-    idleCallbacks[2]?.({ didTimeout: false, timeRemaining: () => 16 })
-    await Promise.resolve()
-    expect(preload).toHaveBeenLastCalledWith(3)
+    expect(preload).toHaveBeenCalledOnce()
+    expect(preload).toHaveBeenCalledWith(1)
+    expect(idleCallbacks).toHaveLength(1)
   })
 
   it('cancels an idle preload that is no longer needed', () => {

@@ -34,6 +34,9 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
     const style = styleRef.current
     if (!body || !style) return
 
+    const controller = new AbortController()
+    const renderedBody = document.createElement('div')
+    const renderedStyle = document.createElement('div')
     let cancelled = false
     body.replaceChildren()
     style.replaceChildren()
@@ -44,13 +47,14 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
         fetchPreviewAssetBlob(
           src,
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          controller.signal,
         ),
       ])
 
       const data = await blob.arrayBuffer()
       if (cancelled) return
 
-      await renderAsync(data, body, style, {
+      await renderAsync(data, renderedBody, renderedStyle, {
         breakPages: true,
         className: 'marklab-docx',
         experimental: false,
@@ -61,6 +65,8 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
       })
 
       if (!cancelled) {
+        body.replaceChildren(...Array.from(renderedBody.childNodes))
+        style.replaceChildren(...Array.from(renderedStyle.childNodes))
         setRenderState({ key: src, status: 'ready' })
       }
     })().catch((error) => {
@@ -71,6 +77,7 @@ const DocxPreviewSurface = ({ src, title }: DocxPreviewSurfaceProps) => {
 
     return () => {
       cancelled = true
+      controller.abort()
       body.replaceChildren()
       style.replaceChildren()
     }

@@ -91,10 +91,7 @@ export const useAppLayoutOutlet = ({
     state.theme,
     state.viewMode,
   ])
-  const routeCacheKey = useMemo(
-    () => `${state.rootKind}:${state.rootPath}:${location.pathname}`,
-    [location.pathname, state.rootKind, state.rootPath],
-  )
+  const routeCacheKey = location.pathname
   const shouldAnimateRouteCache = state.viewMode !== 'wysiwyg'
   // Keep sidebar and terminal state changes outside the cached route subtree.
   // AppCachedOutlet still subscribes to router context for navigation updates.
@@ -105,8 +102,9 @@ export const useAppLayoutOutlet = ({
         routeCacheKey,
         routePathname: location.pathname,
         shouldAnimateRouteCache,
+        workspaceKey: state.workspaceKey,
       }),
-    [location.pathname, outletContext, routeCacheKey, shouldAnimateRouteCache],
+    [location.pathname, outletContext, routeCacheKey, shouldAnimateRouteCache, state.workspaceKey],
   )
 
   return {

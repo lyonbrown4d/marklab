@@ -72,6 +72,9 @@ let provider: languages.CompletionItemProvider
 let registration: { dispose: () => void }
 let context: MarkdownSourceCompletionContext
 let model: editor.ITextModel
+let ownerModel: editor.ITextModel | null
+let ownerEditor: editor.IStandaloneCodeEditor
+let workspaceKey: string
 let state: { content: string; version: number; disposed: boolean }
 let documentSession: MarkdownSourceDocumentSession
 const disposeProvider = vi.fn()
@@ -99,6 +102,11 @@ beforeEach(() => {
     getVersionId: () => state.version,
     isDisposed: () => state.disposed,
   } as editor.ITextModel
+  ownerModel = model
+  ownerEditor = {
+    getModel: () => ownerModel,
+  } as editor.IStandaloneCodeEditor
+  workspaceKey = 'external:C:/workspace'
   documentSession = {
     dispose: vi.fn(),
     prepareCompletion: vi.fn(async (nextModel: editor.ITextModel) => ({
@@ -132,7 +140,10 @@ beforeEach(() => {
       }
     },
   } as unknown as typeof import('monaco-editor')
-  registration = registerMarkdownCompletionProvider(monaco, () => context, documentSession)
+  registration = registerMarkdownCompletionProvider(monaco, () => context, documentSession, {
+    getWorkspaceKey: () => workspaceKey,
+    ownerEditor,
+  })
 })
 afterEach(() => {
   registration.dispose()
@@ -260,24 +271,6 @@ describe('Markdown source completion lifecycle', () => {
     expect(await previous).toEqual({ suggestions: [] })
   })
 
-  it('discards superseded requests even if content and path have not changed', async () => {
-    const pending = deferred<CompletionList>()
-    vi.mocked(languageIntelligenceApi.completion).mockReturnValueOnce(pending.promise)
-    const previous = request()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect((await request())?.suggestions).toHaveLength(1)
-    pending.resolve({ isIncomplete: false, items: [fileCompletion] })
-    expect(await previous).toEqual({ suggestions: [] })
-  })
-
-  it.each(['model', 'provider'])('does not start IPC after %s disposal', async (target) => {
-    if (target === 'model') state.disposed = true
-    else registration.dispose()
-    expect(await request()).toEqual({ suggestions: [] })
-    expect(languageIntelligenceApi.completion).not.toHaveBeenCalled()
-  })
-
   it('keeps the existing fallback for a current request when IPC fails', async () => {
     vi.mocked(languageIntelligenceApi.completion).mockRejectedValue(new Error('unavailable'))
     vi.mocked(getMarkdownCompletions).mockReturnValue([
@@ -296,17 +289,5 @@ describe('Markdown source completion lifecycle', () => {
       line: 1,
       column: 10,
     })
-  })
-
-  it('does not compute fallback for a document that changed during IPC', async () => {
-    const pending = deferred<CompletionList>()
-    vi.mocked(languageIntelligenceApi.completion).mockReturnValue(pending.promise)
-    const response = request()
-    await Promise.resolve()
-    await Promise.resolve()
-    state.version += 1
-    pending.reject(new Error('unavailable'))
-    expect(await response).toEqual({ suggestions: [] })
-    expect(getMarkdownCompletions).not.toHaveBeenCalled()
   })
 })

@@ -12,6 +12,12 @@ import SourcePreviewSurface, {
 import { writeClipboardText } from '@/runtime/clipboard'
 import { fsApi } from '@/services/fsApi'
 
+const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
+
+vi.mock('@/pages/useLayoutContext', () => ({
+  useLayoutContext: (selector: (state: unknown) => unknown) => selector(workspaceIdentity),
+}))
+
 vi.mock('@/runtime/clipboard', () => ({
   writeClipboardText: vi.fn<() => Promise<void>>(),
 }))
@@ -51,20 +57,65 @@ const renderPreview = (
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <div onClick={onChromeEvent} onPointerDown={onChromeEvent}>
         <SourcePreviewSurface path={path} presentation={presentation} title="example.ts" />
       </div>
     </QueryClientProvider>,
   )
+  return { ...view, client }
 }
 
 describe('SourcePreviewSurface', () => {
   beforeEach(() => {
+    workspaceIdentity.rootKind = 'external'
+    workspaceIdentity.rootPath = 'C:/one'
     vi.mocked(fsApi.readTextPreview).mockReset()
     vi.mocked(writeClipboardText).mockReset()
     vi.mocked(writeClipboardText).mockResolvedValue(undefined)
+  })
+
+  it('does not reuse source content from another workspace with the same relative path', async () => {
+    vi.mocked(fsApi.readTextPreview)
+      .mockResolvedValueOnce({ content: 'workspace one', truncated: false })
+      .mockResolvedValueOnce({ content: 'workspace two', truncated: false })
+
+    const view = renderPreview('README.md')
+    expect(await screen.findByText('workspace one')).toBeInTheDocument()
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual([
+      'source-preview',
+      'external',
+      'C:/one',
+      'README.md',
+      MAX_SOURCE_PREVIEW_BYTES,
+    ])
+
+    workspaceIdentity.rootPath = 'D:/two'
+    view.rerender(
+      <QueryClientProvider client={view.client}>
+        <SourcePreviewSurface path="README.md" title="README.md" />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByText('workspace two')).toBeInTheDocument()
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual([
+      'source-preview',
+      'external',
+      'D:/two',
+      'README.md',
+      MAX_SOURCE_PREVIEW_BYTES,
+    ])
   })
 
   it('loads one bounded preview and renders numbered copyable source', async () => {

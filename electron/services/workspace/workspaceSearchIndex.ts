@@ -40,46 +40,79 @@ export type WorkspaceSearchIndexBackend = {
   upsertDocument: (workspaceId: string, document: WorkspaceSearchDocument) => Promise<void>
 }
 
+type ActiveWorkspaceIndex = {
+  indexPath: string
+  key: string
+  workspaceId: string
+}
+
 export class WorkspaceSearchIndex {
-  private indexPath: string | null = null
-  private lifecycleQueue: Promise<void> = Promise.resolve()
-  private workspaceId: string | null = null
+  private active: ActiveWorkspaceIndex | null = null
+  private desiredKey: string | null = null
+  private generation = 0
+  private readonly opened = new Map<string, ActiveWorkspaceIndex>()
+  private readonly openings = new Map<string, Promise<void>>()
+  private readonly workspaceCloseBarriers = new Map<string, Promise<void>>()
+  private transitionBarrier: Promise<void> = Promise.resolve()
 
   constructor(private readonly backend: WorkspaceSearchIndexBackend = createUnavailableBackend()) {}
 
-  async open(indexPath: string, workspaceId = indexPath): Promise<void> {
+  async open(indexPath: string, workspaceId = indexPath, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted()
     const normalizedPath = path.resolve(indexPath)
-    await this.enqueueLifecycle(async () => {
-      if (normalizedPath === this.indexPath && workspaceId === this.workspaceId) return
+    const key = this.workspaceKey(workspaceId, normalizedPath)
+    if (this.active?.key === key) return
 
-      await this.closeCurrent()
-      await mkdir(normalizedPath, { recursive: true })
-      await this.backend.open(workspaceId, normalizedPath)
-      this.workspaceId = workspaceId
-      this.indexPath = normalizedPath
-    })
-  }
+    const generation = ++this.generation
+    this.desiredKey = key
+    if (this.active && this.active.key !== key) {
+      const closing = this.scheduleWorkspaceClose(this.active.workspaceId)
+      this.transitionBarrier = closing.catch(() => undefined)
+      this.active = null
+    }
 
-  async close(): Promise<void> {
-    await this.enqueueLifecycle(() => this.closeCurrent())
-  }
-
-  private async closeCurrent(): Promise<void> {
-    const workspaceId = this.workspaceId
-    this.indexPath = null
-    this.workspaceId = null
-    if (workspaceId) {
-      await this.backend.close(workspaceId)
+    const opening = this.ensureOpen({ indexPath: normalizedPath, key, workspaceId })
+    try {
+      await this.waitForOpening(opening, signal)
+      signal?.throwIfAborted()
+      if (generation !== this.generation || this.desiredKey !== key) {
+        void this.closeIfUnused(key).catch(() => undefined)
+        return
+      }
+      this.active = { indexPath: normalizedPath, key, workspaceId }
+    } catch (error) {
+      if (signal?.aborted) {
+        void opening
+          .then(
+            () => this.closeIfUnused(key),
+            () => undefined,
+          )
+          .catch(() => undefined)
+      }
+      throw error
     }
   }
 
-  private enqueueLifecycle<T>(work: () => Promise<T>): Promise<T> {
-    const operation = this.lifecycleQueue.then(work)
-    this.lifecycleQueue = operation.then(
-      () => undefined,
-      () => undefined,
-    )
-    return operation
+  async close(): Promise<void> {
+    this.generation += 1
+    this.desiredKey = null
+    const active = this.active
+    this.active = null
+    const closing: Promise<unknown>[] = []
+    if (active) {
+      const activeClose = this.scheduleWorkspaceClose(active.workspaceId)
+      this.transitionBarrier = activeClose.catch(() => undefined)
+      closing.push(activeClose)
+    }
+    for (const opened of this.opened.values()) {
+      if (opened.key !== active?.key) closing.push(this.scheduleWorkspaceClose(opened.workspaceId))
+    }
+    for (const [key, opening] of this.openings) {
+      closing.push(opening.then(() => this.closeIfUnused(key)))
+    }
+    const results = await Promise.allSettled(closing)
+    const failed = results.find((result) => result.status === 'rejected')
+    if (failed?.status === 'rejected') throw failed.reason
   }
 
   async hasDocuments(): Promise<boolean> {
@@ -141,8 +174,68 @@ export class WorkspaceSearchIndex {
   }
 
   private requireWorkspaceId(): string {
-    if (!this.workspaceId) throw new Error('Workspace search index is not opened.')
-    return this.workspaceId
+    if (!this.active) throw new Error('Workspace search index is not opened.')
+    return this.active.workspaceId
+  }
+
+  private ensureOpen(workspace: ActiveWorkspaceIndex): Promise<void> {
+    const pending = this.openings.get(workspace.key)
+    if (pending) return pending
+    if (this.opened.has(workspace.key)) return Promise.resolve()
+
+    const transitionBarrier = this.transitionBarrier
+    const workspaceBarrier = this.workspaceCloseBarriers.get(workspace.workspaceId)
+    const opening = Promise.resolve().then(async () => {
+      await transitionBarrier
+      await workspaceBarrier
+      await mkdir(workspace.indexPath, { recursive: true })
+      await this.backend.open(workspace.workspaceId, workspace.indexPath)
+      this.opened.set(workspace.key, workspace)
+    })
+    this.openings.set(workspace.key, opening)
+    void opening
+      .finally(() => {
+        if (this.openings.get(workspace.key) === opening) this.openings.delete(workspace.key)
+      })
+      .catch(() => undefined)
+    return opening
+  }
+
+  private closeIfUnused(key: string): Promise<void> {
+    if (this.desiredKey === key || this.active?.key === key) return Promise.resolve()
+    const workspace = this.opened.get(key)
+    if (!workspace) return Promise.resolve()
+    return this.scheduleWorkspaceClose(workspace.workspaceId)
+  }
+
+  private scheduleWorkspaceClose(workspaceId: string): Promise<void> {
+    for (const [key, workspace] of this.opened) {
+      if (workspace.workspaceId === workspaceId) this.opened.delete(key)
+    }
+    const previous = this.workspaceCloseBarriers.get(workspaceId) ?? Promise.resolve()
+    const closing = previous.then(() => this.backend.close(workspaceId))
+    const barrier = closing.catch(() => undefined)
+    this.workspaceCloseBarriers.set(workspaceId, barrier)
+    void barrier.finally(() => {
+      if (this.workspaceCloseBarriers.get(workspaceId) === barrier) {
+        this.workspaceCloseBarriers.delete(workspaceId)
+      }
+    })
+    return closing
+  }
+
+  private waitForOpening(opening: Promise<void>, signal?: AbortSignal): Promise<void> {
+    if (!signal) return opening
+    signal.throwIfAborted()
+    return new Promise<void>((resolve, reject) => {
+      const abort = () => reject(signal.reason)
+      signal.addEventListener('abort', abort, { once: true })
+      void opening.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort))
+    })
+  }
+
+  private workspaceKey(workspaceId: string, indexPath: string): string {
+    return `${workspaceId}\0${indexPath}`
   }
 }
 

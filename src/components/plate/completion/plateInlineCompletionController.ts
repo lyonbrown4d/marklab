@@ -8,8 +8,13 @@ import type {
   PlateInlineCompletionResult,
   PlateInlineCompletionState,
 } from '@/components/plate/completion/types'
+import { isImeKeyboardEvent } from '@/logic/ime'
 
 const DEFAULT_MAX_CANDIDATES = 3
+const hasModifierKey = (event: KeyboardEvent) =>
+  event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+const isWordAccept = (event: KeyboardEvent) =>
+  (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
 
 export const normalizePlateInlineCompletionCandidates = (
   result: PlateInlineCompletionResult,
@@ -248,6 +253,7 @@ export const createPlateInlineCompletionController = (
     },
     getSnapshot: () => state,
     keyDown: (event) => {
+      if (isImeKeyboardEvent(event)) return false
       if (event.key === 'Escape' && state) {
         event.preventDefault()
         cancel()
@@ -256,15 +262,15 @@ export const createPlateInlineCompletionController = (
       if (!state || composing || !options.enabled() || !hasCurrentAnchor()) return false
       const candidate = state.kind === 'ai' ? state.completion : state.candidates[state.index]
       if (!candidate) return false
-      if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      if (event.key === 'Tab' && !hasModifierKey(event)) {
         event.preventDefault()
         return accept(candidate.text)
       }
-      if (state.kind === 'document' && event.key === 'Enter' && !event.altKey) {
+      if (state.kind === 'document' && event.key === 'Enter' && !hasModifierKey(event)) {
         event.preventDefault()
         return accept(candidate.text)
       }
-      if (state.kind === 'ai' && event.key === 'ArrowRight' && (event.ctrlKey || event.metaKey)) {
+      if (state.kind === 'ai' && event.key === 'ArrowRight' && isWordAccept(event)) {
         event.preventDefault()
         return accept(nextWordPrefix(candidate.text))
       }

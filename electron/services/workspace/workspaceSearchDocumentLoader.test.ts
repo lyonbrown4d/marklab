@@ -3,6 +3,23 @@ import { describe, expect, it, vi } from 'vitest'
 import { loadWorkspaceSearchDocuments } from '@electron/services/workspace/workspaceSearchDocumentLoader'
 
 describe('loadWorkspaceSearchDocuments', () => {
+  it('does not start file reads when the operation is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const readFile = vi.fn(async () => '# Never read')
+
+    await expect(
+      loadWorkspaceSearchDocuments({
+        concurrency: 2,
+        logger: { warn: vi.fn() },
+        paths: ['a.md', 'b.md'],
+        readFile,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(readFile).not.toHaveBeenCalled()
+  })
+
   it('loads documents with titles while preserving input order', async () => {
     const readFile = vi.fn(async (path: string) => `content:${path}`)
 

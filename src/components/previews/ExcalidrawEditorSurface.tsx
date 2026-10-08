@@ -11,6 +11,7 @@ import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 
 import { parseExcalidrawDocument } from '@/components/previews/excalidrawDocument'
+import { useLayoutContext } from '@/pages/useLayoutContext'
 
 type ExcalidrawEditorSurfaceProps = {
   path: string
@@ -30,15 +31,19 @@ const ExcalidrawEditorSurface = ({
   title,
 }: ExcalidrawEditorSurfaceProps) => {
   const { t } = useI18n()
+  const rootKind = useLayoutContext((state) => state.rootKind)
+  const rootPath = useLayoutContext((state) => state.rootPath)
+  const workspaceKey = `${rootKind}:${rootPath}`
   const latestContentRef = useRef<string | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const documentQuery = useQuery({
-    queryKey: ['file-preview', 'excalidraw', path],
+    queryKey: ['file-preview', 'excalidraw', rootKind, rootPath, path],
     queryFn: async () => parseExcalidrawDocument(await fsApi.readFile(path)),
     retry: false,
+    gcTime: 0,
   })
 
   const handleChange = useCallback<ExcalidrawChangeHandler>((elements, appState, files) => {
@@ -128,6 +133,7 @@ const ExcalidrawEditorSurface = ({
       )}
       <div className="min-h-0 flex-1">
         <Excalidraw
+          key={`${workspaceKey}:${path}`}
           initialData={documentQuery.data.initialData as ExcalidrawInitialData}
           onChange={handleChange}
           viewModeEnabled={readonly}

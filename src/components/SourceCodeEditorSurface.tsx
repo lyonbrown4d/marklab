@@ -11,6 +11,7 @@ import { toEditorTextChanges } from '@/components/sourceCodeChanges'
 
 type SourceCodeEditorSurfaceProps = {
   activePath: string | null
+  workspaceKey: string
   darkMode: boolean
   errorMessage: string | null
   immersiveFocusMode: boolean
@@ -31,6 +32,7 @@ type SourceCodeEditorSurfaceProps = {
 
 export const SourceCodeEditorSurface = ({
   activePath,
+  workspaceKey,
   darkMode,
   errorMessage,
   immersiveFocusMode,
@@ -49,6 +51,7 @@ export const SourceCodeEditorSurface = ({
   contextMenu,
 }: SourceCodeEditorSurfaceProps) => {
   const language = monacoLanguageForPath(activePath ?? '')
+  const modelPath = sourceCodeModelPath(workspaceKey, activePath)
   const surface = (
     <div
       className={cn(
@@ -75,7 +78,7 @@ export const SourceCodeEditorSurface = ({
           height="100%"
           language={language}
           theme={darkMode ? 'vs-dark' : 'vs'}
-          path={activePath ?? 'marklab-empty.md'}
+          path={modelPath}
           value={value}
           onChange={(next, event) =>
             onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
@@ -135,3 +138,6 @@ export const SourceCodeEditorSurface = ({
     </EditorContextMenu>
   )
 }
+
+export const sourceCodeModelPath = (workspaceKey: string, activePath: string | null): string =>
+  `marklab-source://model/${encodeURIComponent(workspaceKey)}/${encodeURIComponent(activePath ?? 'marklab-empty.md')}`

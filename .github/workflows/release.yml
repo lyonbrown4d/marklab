@@ -15,6 +15,7 @@ permissions:
   contents: read
 
 env:
+  CI: 'true'
   NODE_VERSION: '24'
   PNPM_VERSION: '10.26.0'
 
@@ -43,6 +44,20 @@ jobs:
 
       - name: Project check
         run: pnpm check
+
+      - name: Run focused Electron release regressions
+        run: xvfb-run --auto-servernum pnpm test:electron:release
+
+      - name: Upload Electron regression evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-release-regressions
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            output/playwright/electron/
+            playwright-report/
 
   build:
     name: Build ${{ matrix.name }}

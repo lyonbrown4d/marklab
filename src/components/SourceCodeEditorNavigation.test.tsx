@@ -129,6 +129,7 @@ beforeEach(() => {
 
 const sourceProps = {
   activePath: 'source.md',
+  workspaceKey: 'external:C:/notes',
   value: 'a\nb\nc',
   files: [],
   fileContents: {},
@@ -217,6 +218,7 @@ describe('SourceCodeEditor source navigation', () => {
     render(
       <SourceCodeEditor
         activePath="source.md"
+        workspaceKey="external:C:/notes"
         value="a\nb\nc"
         files={[]}
         fileContents={{}}
@@ -249,6 +251,7 @@ describe('SourceCodeEditor source navigation', () => {
     render(
       <SourceCodeEditor
         activePath="source.md"
+        workspaceKey="external:C:/notes"
         value="a\nb\nc"
         files={[]}
         fileContents={{}}

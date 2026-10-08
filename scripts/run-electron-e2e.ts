@@ -17,7 +17,7 @@ for (const key of Object.keys(env)) {
 const run = async (): Promise<void> => {
   const result = await execa(
     process.execPath,
-    [playwrightCli, 'test', '-c', 'playwright.electron.config.ts'],
+    [playwrightCli, 'test', '-c', 'playwright.electron.config.ts', ...process.argv.slice(2)],
     {
       cwd: repoRoot,
       env,

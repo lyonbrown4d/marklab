@@ -40,6 +40,7 @@
     "test:electron": "pnpm test:electron:build && pnpm test:electron:run",
     "test:electron:build": "pnpm icons:generate && pnpm exec vite build --mode electron",
     "test:electron:run": "node --experimental-strip-types scripts/run-electron-e2e.ts",
+    "test:electron:release": "pnpm test:electron:build && pnpm test:electron:run release-regressions.spec.ts",
     "test:perf": "pnpm test:electron:build && pnpm test:perf:run",
     "test:perf:all": "pnpm test:electron:build && pnpm test:perf:all:run",
     "test:perf:all:run": "pnpm exec playwright test --config playwright.performance.config.ts",

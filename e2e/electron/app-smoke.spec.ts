@@ -50,7 +50,6 @@ test.describe('Electron desktop shell', () => {
 
   test('loads the renderer through a narrow secure preload bridge', async () => {
     await expect(page).toHaveTitle(/marklab/i)
-
     const bridge = await page.evaluate(() => {
       const rendererWindow = window as RendererWindow
       return {
@@ -59,7 +58,6 @@ test.describe('Electron desktop shell', () => {
         hasNodeRequire: typeof rendererWindow.require === 'function',
       }
     })
-
     expect(bridge).toEqual({
       hasGenericIpc: false,
       hasMarklabElectronBridge: true,
@@ -69,18 +67,15 @@ test.describe('Electron desktop shell', () => {
 
   test('opens modal shells promptly without blank first paint', async () => {
     await expect(page).toHaveTitle(/marklab/i)
-
     await expect(page.locator('.app-titlebar')).toBeVisible({ timeout: 10_000 })
     const commandStartedAt = Date.now()
     await page.keyboard.press('ControlOrMeta+P')
-
     const commandDialog = page.getByRole('dialog', { name: /Command palette|命令面板/i })
     await expect(commandDialog).toBeVisible({ timeout: 2_000 })
     expect(Date.now() - commandStartedAt).toBeLessThan(2_000)
     await expect(commandDialog.getByRole('combobox')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(commandDialog).toBeHidden({ timeout: 2_000 })
-
     const settingsStartedAt = Date.now()
     await page.keyboard.press('Control+Comma')
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
@@ -92,19 +87,15 @@ test.describe('Electron desktop shell', () => {
   test('centers the settings dialog within the Electron viewport', async () => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.keyboard.press('Control+Comma')
-
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
-
     const dialogBox = await settingsDialog.boundingBox()
     expect(dialogBox).not.toBeNull()
     if (!dialogBox) return
-
     const expectedX = (1280 - dialogBox.width) / 2
     const expectedY = (900 - dialogBox.height) / 2
     expect(Math.abs(dialogBox.x - expectedX)).toBeLessThanOrEqual(1)
     expect(Math.abs(dialogBox.y - expectedY)).toBeLessThanOrEqual(1)
-
     await captureDesignScreenshot(page, 'settings-dialog-position.png')
   })
 
@@ -114,7 +105,6 @@ test.describe('Electron desktop shell', () => {
     })
     await expect(workspaceMenuTrigger).toBeVisible()
     await workspaceMenuTrigger.click()
-
     const menu = page.getByRole('menu').first()
     await expect(menu).toBeVisible()
     const menuStyle = await menu.evaluate((element) => {
@@ -125,14 +115,12 @@ test.describe('Electron desktop shell', () => {
       }
     })
     expect(menuStyle).toEqual({ backdropFilter: 'blur(16px)', borderRadius: '12px' })
-
     const firstItem = menu.getByRole('menuitem').first()
     const itemStyle = await firstItem.evaluate((element) => {
       const style = window.getComputedStyle(element)
       return { borderRadius: style.borderRadius, fontSize: style.fontSize }
     })
     expect(itemStyle).toEqual({ borderRadius: '8px', fontSize: '13px' })
-
     await captureDesignScreenshot(page, 'unified-titlebar-menu.png')
   })
 
@@ -191,7 +179,7 @@ test.describe('Electron desktop shell', () => {
     await expect(editor).toBeVisible({ timeout: 10_000 })
 
     await editor.click()
-    await page.keyboard.press('Control+A')
+    await page.keyboard.press('ControlOrMeta+A')
     await page.keyboard.insertText('one two')
     await page.keyboard.press('Enter')
     await page.keyboard.insertText('three')
@@ -278,7 +266,7 @@ test.describe('Electron desktop shell', () => {
     const sourceEditor = page.locator('.monaco-editor')
     await expect(sourceEditor).toBeVisible({ timeout: 10_000 })
     await sourceEditor.click()
-    await page.keyboard.press('Control+A')
+    await page.keyboard.press('ControlOrMeta+A')
     await page.keyboard.insertText('| Name | Status |\n| --- | --- |\n| Marklab | Ready |')
 
     await editingModeGroup

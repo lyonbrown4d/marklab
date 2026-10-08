@@ -2,6 +2,35 @@ import { describe, expect, it, vi } from 'vitest'
 import { loadWorkspaceDocuments } from '@electron/services/workspace/workspaceDocumentLoader'
 
 describe('loadWorkspaceDocuments', () => {
+  it('stops queued reads when the workspace scan is aborted', async () => {
+    const controller = new AbortController()
+    let releaseFirstRead!: () => void
+    const firstReadGate = new Promise<void>((resolve) => {
+      releaseFirstRead = resolve
+    })
+    const readFile = vi.fn(async (path: string) => {
+      if (path === 'notes/a.md') await firstReadGate
+      return `content:${path}`
+    })
+    const loading = loadWorkspaceDocuments({
+      batchSize: 1,
+      entries: [
+        { kind: 'file', name: 'a.md', path: 'notes/a.md' },
+        { kind: 'file', name: 'b.md', path: 'notes/b.md' },
+        { kind: 'file', name: 'c.md', path: 'notes/c.md' },
+      ],
+      readFile,
+      signal: controller.signal,
+    })
+    await vi.waitFor(() => expect(readFile).toHaveBeenCalledOnce())
+
+    controller.abort()
+    releaseFirstRead()
+
+    await expect(loading).rejects.toMatchObject({ name: 'AbortError' })
+    expect(readFile).toHaveBeenCalledTimes(1)
+  })
+
   it('loads only search-indexable workspace documents', async () => {
     const readFile = vi.fn(async (path: string) => `content:${path}`)
     const documents = await loadWorkspaceDocuments({

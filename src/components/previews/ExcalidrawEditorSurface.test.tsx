@@ -6,6 +6,12 @@ import ExcalidrawEditorSurface from '@/components/previews/ExcalidrawEditorSurfa
 
 import { fsApi } from '@/services/fsApi'
 
+const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
+
+vi.mock('@/pages/useLayoutContext', () => ({
+  useLayoutContext: (selector: (state: unknown) => unknown) => selector(workspaceIdentity),
+}))
+
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     flushBuffers: vi.fn(),
@@ -67,18 +73,54 @@ const renderSurface = () => {
     },
   })
 
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <ExcalidrawEditorSurface path="diagram.excalidraw" title="diagram.excalidraw" />
     </QueryClientProvider>,
   )
+  return { ...view, queryClient }
 }
 
 describe('ExcalidrawEditorSurface', () => {
   beforeEach(() => {
+    workspaceIdentity.rootKind = 'external'
+    workspaceIdentity.rootPath = 'C:/one'
     vi.mocked(fsApi.flushBuffers).mockReset()
     vi.mocked(fsApi.readFile).mockReset()
     vi.mocked(fsApi.updateBuffer).mockReset()
+  })
+
+  it('loads the same relative path independently for each workspace', async () => {
+    vi.mocked(fsApi.readFile).mockResolvedValue('{"type":"excalidraw","version":2,"elements":[]}')
+    const view = renderSurface()
+    await screen.findByTestId('excalidraw-editor')
+    expect(
+      view.queryClient
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual(['file-preview', 'excalidraw', 'external', 'C:/one', 'diagram.excalidraw'])
+
+    workspaceIdentity.rootPath = 'D:/two'
+    view.rerender(
+      <QueryClientProvider client={view.queryClient}>
+        <ExcalidrawEditorSurface path="diagram.excalidraw" title="diagram.excalidraw" />
+      </QueryClientProvider>,
+    )
+
+    await waitFor(() => expect(fsApi.readFile).toHaveBeenCalledTimes(2))
+    expect(
+      view.queryClient
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).toContainEqual(['file-preview', 'excalidraw', 'external', 'D:/two', 'diagram.excalidraw'])
+    expect(
+      view.queryClient
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey),
+    ).not.toContainEqual(['file-preview', 'excalidraw', 'external', 'C:/one', 'diagram.excalidraw'])
   })
 
   it('uses localized loading status while opening a scene', () => {

@@ -16,8 +16,15 @@ export class WorkspaceDocumentCatalog {
     private readonly readFile: (path: string) => Promise<string>,
   ) {}
 
-  async documents(replacePath?: string, replaceContent?: string): Promise<WorkspaceDocument[]> {
-    return this.load((await this.getSnapshot()).entries, replacePath, replaceContent)
+  async documents(
+    replacePath?: string,
+    replaceContent?: string,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceDocument[]> {
+    signal?.throwIfAborted()
+    const snapshot = await this.getSnapshot()
+    signal?.throwIfAborted()
+    return this.load(snapshot.entries, replacePath, replaceContent, signal)
   }
 
   async documentsAndKnownPaths(
@@ -43,6 +50,7 @@ export class WorkspaceDocumentCatalog {
     entries: FsEntry[],
     replacePath?: string,
     replaceContent?: string,
+    signal?: AbortSignal,
   ): Promise<WorkspaceDocument[]> {
     return loadWorkspaceDocuments({
       batchSize: WORKSPACE_DOCUMENT_READ_BATCH_SIZE,
@@ -50,6 +58,7 @@ export class WorkspaceDocumentCatalog {
       readFile: this.readFile,
       replaceContent,
       replacePath,
+      signal,
     })
   }
 }

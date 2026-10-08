@@ -50,6 +50,8 @@ verification and CI use the same entry point.
 | IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                          |
 | Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                        |
 | Knowledge engine / Node runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Node runtime tests, typecheck, Electron build                   |
+| Renderer lifecycle / route cache | stale workspace routes or retained workers                     | route cache/worker tests, focused release Electron regression   |
+| Document preview lifecycle       | cross-workspace preview data or retained preview resources     | preview component tests, focused release Electron regression    |
 | Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks                     |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests                     |
 | Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`          |
@@ -130,3 +132,14 @@ pnpm test:electron:build
 
 For dependency updates or packaging changes, prefer `pnpm build:desktop` or the platform-specific
 dist command after targeted tests pass.
+
+For release-critical renderer lifecycle changes, run the focused Electron gate. It builds the
+Electron bundles once, then verifies that source and preview state remain isolated while one window
+switches between workspaces with the same relative file path:
+
+```bash
+pnpm test:electron:release
+```
+
+The release workflow runs this narrow gate once on Ubuntu under Xvfb before the three packaging
+jobs. Playwright retains traces and failure screenshots, and CI uploads them with the HTML report.

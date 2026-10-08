@@ -125,6 +125,33 @@
     "checks": ["knowledge engine Node runtime tests", "pnpm typecheck", "pnpm test:electron:build"]
   },
   {
+    "area": "Renderer lifecycle / route cache",
+    "risk": "stale workspace state, retained workers, or cached routes crossing workspace boundaries",
+    "patterns": [
+      "^src/app/AppCachedOutlet",
+      "^src/app/routeCachePolicy",
+      "^src/app/scheduleEditorRuntimePreload",
+      "^src/app/useAppLayoutOutlet",
+      "^src/services/boundedWorkerPool"
+    ],
+    "checks": [
+      "route cache and worker lifecycle tests",
+      "pnpm test:electron:release",
+      "pnpm exec tsc -b"
+    ]
+  },
+  {
+    "area": "Document preview lifecycle",
+    "risk": "preview data crossing workspaces, stale async work, or retained document resources",
+    "patterns": [
+      "^src/components/previews/",
+      "^src/services/preview",
+      "^src/services/fsApi",
+      "^src/types/workspace.*Preview"
+    ],
+    "checks": ["document preview component tests", "pnpm test:electron:release", "pnpm exec tsc -b"]
+  },
+  {
     "area": "Build/package",
     "risk": "CI/task drift, missing resources, oversized bundles, asset drift, or broken package metadata",
     "patterns": [

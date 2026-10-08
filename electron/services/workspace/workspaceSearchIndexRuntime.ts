@@ -21,7 +21,7 @@ type WorkspaceSearchIndexRuntimeOptions = {
   getState: () => FsStateData
   getUserDataPath: () => string
   index: WorkspaceSearchIndex
-  loadDocuments: () => Promise<Array<{ content: string; path: string }>>
+  loadDocuments: (signal?: AbortSignal) => Promise<Array<{ content: string; path: string }>>
   logger: Logger
   readFile: (path: string) => Promise<string>
   runTask: <T>(work: () => Promise<T>, name: string) => Promise<T>
@@ -43,20 +43,25 @@ export class WorkspaceSearchIndexRuntime {
       runTask: options.runTask,
     })
     this.updateQueue = new WorkspaceSearchIndexUpdateQueue({
-      applyChanges: (changes) => options.index.applySearchChanges(changes),
+      applyChanges: async (changes, signal) => {
+        signal?.throwIfAborted()
+        await options.index.applySearchChanges(changes)
+        signal?.throwIfAborted()
+      },
       delayMs: SEARCH_INDEX_REBUILD_DELAY_MS,
       getDocumentPath: (document) => document.path,
-      loadDocuments: (paths) =>
+      loadDocuments: (paths, signal) =>
         loadWorkspaceSearchDocuments({
           concurrency: 8,
           logger: options.logger,
           paths,
           readFile: options.readFile,
+          signal,
         }),
       logger: options.logger.child('search-index-updates'),
-      openIndex: () => this.open(),
-      rebuildAll: async () => {
-        if (await this.build()) this.needsRebuild = false
+      openIndex: (signal) => this.open(signal),
+      rebuildAll: async (signal) => {
+        if (await this.build(signal)) this.needsRebuild = false
       },
       runTask: options.runTask,
     })
@@ -116,10 +121,12 @@ export class WorkspaceSearchIndexRuntime {
     })
   }
 
-  private async open(): Promise<void> {
+  private async open(signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted()
     const searchKey = workspaceSearchKey(this.options.getState())
     const indexPath = workspaceSearchIndexPath(this.options.getUserDataPath(), searchKey)
-    await this.options.index.open(indexPath, searchKey)
+    await this.options.index.open(indexPath, searchKey, signal)
+    signal?.throwIfAborted()
     if (this.activeSearchKey === searchKey) return
 
     this.activeSearchKey = searchKey
@@ -137,13 +144,14 @@ export class WorkspaceSearchIndexRuntime {
     if (this.needsRebuild && (await this.build())) this.needsRebuild = false
   }
 
-  private build(): Promise<boolean> {
+  private build(signal?: AbortSignal): Promise<boolean> {
     return rebuildWorkspaceSearchIndex({
       coordinator: this.buildCoordinator,
       currentSearchKey: () => workspaceSearchKey(this.options.getState()),
       index: this.options.index,
       loadDocuments: this.options.loadDocuments,
       logger: this.options.logger,
+      signal,
     })
   }
 }

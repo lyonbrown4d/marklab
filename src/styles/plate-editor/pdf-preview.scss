@@ -77,13 +77,15 @@
 }
 
 .marklab-pdf-viewer__thumbs {
-  align-content: start;
   background: color-mix(in srgb, hsl(var(--muted)) 82%, hsl(var(--background)));
   border-right: 1px solid hsl(var(--border));
-  display: grid;
-  gap: 0.55rem;
   overflow: auto;
   padding: 0.65rem;
+}
+
+.marklab-pdf-viewer__thumb-track {
+  position: relative;
+  width: 100%;
 }
 
 .marklab-pdf-viewer__thumb {
@@ -94,8 +96,12 @@
   cursor: pointer;
   display: grid;
   gap: 0.35rem;
+  inset-inline-start: 0;
   justify-items: center;
   padding: 0.35rem;
+  position: absolute;
+  top: 0;
+  width: 100%;
 }
 
 .marklab-pdf-viewer__thumb:hover,

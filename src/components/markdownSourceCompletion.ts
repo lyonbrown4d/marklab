@@ -43,10 +43,16 @@ type MarkdownCompletionResult = {
   isIncomplete: boolean
 }
 
+type MarkdownCompletionProviderOwner = {
+  getWorkspaceKey: () => string
+  ownerEditor: MonacoEditor.IStandaloneCodeEditor
+}
+
 export const registerMarkdownCompletionProvider = (
   monaco: MonacoModule,
   getContext: () => MarkdownSourceCompletionContext,
   documentSession: MarkdownSourceDocumentSession,
+  owner: MarkdownCompletionProviderOwner,
 ) => {
   let disposed = false
   let latestRequest = 0
@@ -58,11 +64,17 @@ export const registerMarkdownCompletionProvider = (
       _context: MonacoLanguages.CompletionContext,
       token: CancellationLike = { isCancellationRequested: false },
     ) => {
-      if (disposed || token.isCancellationRequested || model.isDisposed()) {
+      if (
+        disposed ||
+        token.isCancellationRequested ||
+        model.isDisposed() ||
+        owner.ownerEditor.getModel() !== model
+      ) {
         return { suggestions: [] }
       }
       const context = getContext()
       const path = context.activePath
+      const workspaceKey = owner.getWorkspaceKey()
       const version = model.getVersionId()
       const request = ++latestRequest
       const isCurrent = () =>
@@ -70,7 +82,9 @@ export const registerMarkdownCompletionProvider = (
         !token.isCancellationRequested &&
         request === latestRequest &&
         !model.isDisposed() &&
+        owner.ownerEditor.getModel() === model &&
         model.getVersionId() === version &&
+        owner.getWorkspaceKey() === workspaceKey &&
         getContext().activePath === path
       let cancellationSubscription: IDisposable | undefined
       const cancelled = new Promise<MarkdownCompletionResult>((resolve) => {

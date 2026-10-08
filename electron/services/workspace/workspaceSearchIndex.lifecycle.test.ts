@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   WorkspaceSearchIndex,
@@ -17,6 +17,31 @@ afterEach(async () => {
 })
 
 describe('WorkspaceSearchIndex lifecycle', () => {
+  it('opens a new workspace without waiting for an aborted previous open', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-lifecycle-'))
+    tempDirs.push(dir)
+    const backend = new DelayedOpenBackend()
+    const index = new WorkspaceSearchIndex(backend)
+    const controller = new AbortController()
+    const firstOpen = index.open(path.join(dir, 'first'), 'workspace-a', controller.signal)
+    await backend.firstOpenStarted
+
+    controller.abort()
+    const firstOpenCanceled = expect(firstOpen).rejects.toMatchObject({ name: 'AbortError' })
+    const nextOpen = index.open(path.join(dir, 'second'), 'workspace-b')
+    await expect(nextOpen).resolves.toBeUndefined()
+
+    expect(backend.openCalls).toEqual(['workspace-a', 'workspace-b'])
+    backend.releaseFirstOpen()
+    await firstOpenCanceled
+    await vi.waitFor(() => expect(backend.closeCalls).toContain('workspace-a'))
+
+    await index.hasDocuments()
+    expect(backend.hasDocumentCalls.at(-1)).toBe('workspace-b')
+    expect(backend.closeCalls).not.toContain('workspace-b')
+    await index.close()
+  })
+
   it('coalesces concurrent first opens for the same workspace', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'marklab-search-lifecycle-'))
     tempDirs.push(dir)
@@ -58,6 +83,7 @@ describe('WorkspaceSearchIndex lifecycle', () => {
 
 class DelayedOpenBackend implements WorkspaceSearchIndexBackend {
   readonly closeCalls: string[] = []
+  readonly hasDocumentCalls: string[] = []
   readonly openCalls: string[] = []
   private markFirstOpenStarted!: () => void
   private release!: () => void
@@ -83,7 +109,8 @@ class DelayedOpenBackend implements WorkspaceSearchIndexBackend {
     this.closeCalls.push(workspaceId)
   }
 
-  async hasDocuments(): Promise<boolean> {
+  async hasDocuments(workspaceId: string): Promise<boolean> {
+    this.hasDocumentCalls.push(workspaceId)
     return false
   }
 

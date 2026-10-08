@@ -19,8 +19,21 @@ const boundaryContractTests = [
   './shortcutBoundary.test.ts',
   './settingsPersistBoundary.test.ts',
   '../styles/graph-interactions.test.ts',
+  '../app/AppCachedOutlet.render.test.tsx',
+  '../app/AppCachedOutlet.policy.test.tsx',
+  '../app/scheduleEditorRuntimePreload.test.ts',
+  '../services/boundedWorkerPool.test.ts',
+  '../components/markdownSourceCompletion.isolation.test.ts',
+  '../components/previews/SourcePreviewSurface.test.tsx',
+  '../components/previews/PdfPreviewSurface.test.tsx',
+  '../components/previews/DocxPreviewSurface.test.tsx',
+  '../components/previews/DrawioEditorSurface.test.tsx',
+  '../components/previews/ExcalidrawEditorSurface.test.tsx',
+  '../../e2e/electron/release-regressions.spec.ts',
   '../../electron/services/settingsPersistKeys.test.ts',
+  '../../electron/services/knowledgeEngine/workspaceGraphTopology.test.ts',
   '../../electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.test.ts',
+  '../../electron/services/workspace/workspaceSearchIndexUpdateQueue.test.ts',
 ] as const
 
 describe('quality gates', () => {
@@ -71,6 +84,31 @@ describe('quality gates', () => {
     expect(moonConfig).toContain('command: pnpm quality:impact')
     expect(moonConfig).toContain('- ~:quality-impact')
     expect(releaseWorkflow).toContain('run: pnpm check')
+    expect(releaseWorkflow).toContain('run: xvfb-run --auto-servernum pnpm test:electron:release')
+    expect(releaseWorkflow).toContain('name: electron-release-regressions')
+  })
+
+  it('keeps the focused Electron release regression command build-once and discoverable', () => {
+    const packageJson = JSON.parse(fileText('../../package.json')) as {
+      scripts?: Record<string, string>
+    }
+    const runner = fileText('../../scripts/run-electron-e2e.ts')
+
+    expect(packageJson.scripts?.['test:electron:release']).toBe(
+      'pnpm test:electron:build && pnpm test:electron:run release-regressions.spec.ts',
+    )
+    expect(runner).toContain('...process.argv.slice(2)')
+  })
+
+  it('keeps Electron Playwright deterministic and retains CI failure evidence', () => {
+    const config = fileText('../../playwright.electron.config.ts')
+
+    expect(config).toContain('forbidOnly: !!process.env.CI')
+    expect(config).toContain('retries: 0')
+    expect(config).toContain('workers: 1')
+    expect(config).toContain("screenshot: 'only-on-failure'")
+    expect(config).toContain("trace: 'retain-on-failure'")
+    expect(config).toContain("['github']")
   })
 
   it('keeps the change impact CLI backed by the shared rule data', () => {

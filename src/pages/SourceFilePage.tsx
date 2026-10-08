@@ -24,6 +24,8 @@ const SourceFilePage = () => {
       onEditorChange: state.onEditorChange,
       onOpenFile: state.onOpenFile,
       onOpenFileView: state.onOpenFileView,
+      rootKind: state.rootKind,
+      rootPath: state.rootPath,
       saveState: requestedPath ? state.saveStates[requestedPath] : undefined,
       showEditorStatusBar: state.showEditorStatusBar,
     })),
@@ -101,6 +103,7 @@ const SourceFilePage = () => {
   return (
     <SourceCodePage
       activePath={requestedPath}
+      workspaceKey={`${context.rootKind}:${context.rootPath}`}
       value={loadState.content}
       files={context.files}
       fileContents={context.fileContents}

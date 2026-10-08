@@ -38,6 +38,7 @@ import { migrateNodeSearchDatabase } from '@electron/services/knowledgeEngine/no
 
 const SEARCH_DATABASE_FILE = 'search.sqlite3'
 const BUSY_TIMEOUT_MS = 5_000
+const INCOMPLETE_INDEX_UPDATED_AT = ''
 const SEARCH_READ_BATCH_SIZE = 128
 const OCCURRENCE_READ_BATCH_SIZE = 32
 
@@ -93,6 +94,7 @@ export class NodeSearchDatabase {
   ): Promise<{ committed: boolean; updatedAt: string }> {
     const updatedAt = new Date().toISOString()
     if (!shouldCommit()) return { committed: false, updatedAt }
+    await this.metadata.upsert(SEARCH_METADATA_KEYS.updatedAt, INCOMPLETE_INDEX_UPDATED_AT)
     try {
       await this.connection.transaction().execute(async (transaction) => {
         const documentRepository = this.documents.withDatabase(transaction)
@@ -112,6 +114,7 @@ export class NodeSearchDatabase {
 
   async applyBatch(batch: WorkspaceSearchMutationBatch): Promise<string> {
     const updatedAt = new Date().toISOString()
+    await this.metadata.upsert(SEARCH_METADATA_KEYS.updatedAt, INCOMPLETE_INDEX_UPDATED_AT)
     const paths = batch.removeDocuments.map(normalizeSearchPath)
     const prefixes = batch.removePrefixes.map(normalizeSearchPath)
     const upserts = batch.upserts.map(normalizeSearchDocument).map(toWrite)
@@ -200,7 +203,7 @@ export class NodeSearchDatabase {
       const metadata = this.metadata.withDatabase(transaction)
       if (current !== null && current !== this.workspaceIdentity) {
         await this.documents.withDatabase(transaction).deleteAll()
-        await metadata.upsert(SEARCH_METADATA_KEYS.updatedAt, '')
+        await metadata.upsert(SEARCH_METADATA_KEYS.updatedAt, INCOMPLETE_INDEX_UPDATED_AT)
       }
       await metadata.upsert(SEARCH_METADATA_KEYS.workspaceIdentity, this.workspaceIdentity)
     })

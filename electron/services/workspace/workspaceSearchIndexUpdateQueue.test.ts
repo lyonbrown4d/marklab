@@ -71,12 +71,15 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
     await vi.advanceTimersByTimeAsync(1)
 
     expect(openIndex).toHaveBeenCalledTimes(1)
-    expect(loadDocuments).toHaveBeenCalledWith(['a.md', 'b.md'])
-    expect(applyChanges).toHaveBeenCalledWith({
-      removeDocuments: [],
-      removePrefixes: [],
-      upserts: [{ path: 'a.md' }, { path: 'b.md' }],
-    })
+    expect(loadDocuments).toHaveBeenCalledWith(['a.md', 'b.md'], expect.any(AbortSignal))
+    expect(applyChanges).toHaveBeenCalledWith(
+      {
+        removeDocuments: [],
+        removePrefixes: [],
+        upserts: [{ path: 'a.md' }, { path: 'b.md' }],
+      },
+      expect.any(AbortSignal),
+    )
 
     queue.dispose()
   })
@@ -126,12 +129,15 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
     queue.schedulePathChange('folder', 'unlinkDir')
     await vi.advanceTimersByTimeAsync(100)
 
-    expect(loadDocuments).toHaveBeenCalledWith([])
-    expect(applyChanges).toHaveBeenCalledWith({
-      removeDocuments: [],
-      removePrefixes: ['folder'],
-      upserts: [],
-    })
+    expect(loadDocuments).toHaveBeenCalledWith([], expect.any(AbortSignal))
+    expect(applyChanges).toHaveBeenCalledWith(
+      {
+        removeDocuments: [],
+        removePrefixes: ['folder'],
+        upserts: [],
+      },
+      expect.any(AbortSignal),
+    )
 
     queue.dispose()
   })
@@ -146,11 +152,67 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
 
     await queue.flushPending()
     expect(applyChanges).toHaveBeenCalledTimes(2)
-    expect(applyChanges).toHaveBeenLastCalledWith({
-      removeDocuments: [],
-      removePrefixes: [],
-      upserts: [{ path: 'a.md' }],
-    })
+    expect(applyChanges).toHaveBeenLastCalledWith(
+      {
+        removeDocuments: [],
+        removePrefixes: [],
+        upserts: [{ path: 'a.md' }],
+      },
+      expect.any(AbortSignal),
+    )
+
+    queue.dispose()
+  })
+
+  it('retains a failed mutation batch without automatically retrying it', async () => {
+    const { applyChanges, queue } = createQueue()
+    applyChanges.mockRejectedValue(new Error('disk full'))
+    queue.schedulePathChange('a.md', 'change')
+
+    await vi.advanceTimersByTimeAsync(100)
+    expect(applyChanges).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(applyChanges).toHaveBeenCalledTimes(1)
+
+    queue.dispose()
+  })
+
+  it('retries a failed mutation batch when a new file event arrives', async () => {
+    const { applyChanges, queue } = createQueue()
+    applyChanges.mockRejectedValueOnce(new Error('disk full'))
+    queue.schedulePathChange('a.md', 'change')
+    await vi.advanceTimersByTimeAsync(100)
+    await vi.advanceTimersByTimeAsync(500)
+
+    queue.schedulePathChange('b.md', 'change')
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(applyChanges).toHaveBeenCalledTimes(2)
+    expect(applyChanges).toHaveBeenLastCalledWith(
+      {
+        removeDocuments: [],
+        removePrefixes: [],
+        upserts: [{ path: 'a.md' }, { path: 'b.md' }],
+      },
+      expect.any(AbortSignal),
+    )
+
+    queue.dispose()
+  })
+
+  it('retries a failed rebuild when a new file event arrives', async () => {
+    const { applyChanges, queue, rebuildAll } = createQueue()
+    rebuildAll.mockRejectedValueOnce(new Error('disk full'))
+    queue.scheduleFullRebuild()
+    await vi.advanceTimersByTimeAsync(100)
+    await vi.advanceTimersByTimeAsync(500)
+
+    queue.schedulePathChange('a.md', 'change')
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(rebuildAll).toHaveBeenCalledTimes(2)
+    expect(applyChanges).not.toHaveBeenCalled()
 
     queue.dispose()
   })
@@ -162,11 +224,14 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
 
     await queue.flushPending()
 
-    expect(applyChanges).toHaveBeenCalledWith({
-      removeDocuments: ['missing.md'],
-      removePrefixes: [],
-      upserts: [],
-    })
+    expect(applyChanges).toHaveBeenCalledWith(
+      {
+        removeDocuments: ['missing.md'],
+        removePrefixes: [],
+        upserts: [],
+      },
+      expect.any(AbortSignal),
+    )
     queue.dispose()
   })
 
@@ -191,11 +256,44 @@ describe('WorkspaceSearchIndexUpdateQueue', () => {
     await queue.flushPending()
 
     expect(applyChanges).toHaveBeenCalledTimes(2)
-    expect(applyChanges).toHaveBeenLastCalledWith({
-      removeDocuments: ['note.md'],
-      removePrefixes: [],
-      upserts: [],
+    expect(applyChanges).toHaveBeenLastCalledWith(
+      {
+        removeDocuments: ['note.md'],
+        removePrefixes: [],
+        upserts: [],
+      },
+      expect.any(AbortSignal),
+    )
+    queue.dispose()
+  })
+
+  it('does not restore a failed batch after the queue is cleared', async () => {
+    const { applyChanges, queue } = createQueue()
+    let rejectFirst!: (error: Error) => void
+    const firstWrite = new Promise<void>((_resolve, reject) => {
+      rejectFirst = reject
     })
+    applyChanges.mockReturnValueOnce(firstWrite)
+    queue.schedulePathChange('workspace-a.md', 'change')
+    const firstFlush = queue.flushPending()
+    await vi.waitFor(() => expect(applyChanges).toHaveBeenCalledOnce())
+
+    queue.clear()
+    queue.schedulePathChange('workspace-b.md', 'change')
+    rejectFirst(new Error('workspace A write failed'))
+
+    await expect(firstFlush).resolves.toBeUndefined()
+    await queue.flushPending()
+
+    expect(applyChanges).toHaveBeenCalledTimes(2)
+    expect(applyChanges).toHaveBeenLastCalledWith(
+      {
+        removeDocuments: [],
+        removePrefixes: [],
+        upserts: [{ path: 'workspace-b.md' }],
+      },
+      expect.any(AbortSignal),
+    )
     queue.dispose()
   })
 })

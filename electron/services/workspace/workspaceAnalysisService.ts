@@ -60,7 +60,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       getState: () => this.state,
       getUserDataPath: () => this.app.getPath('userData'),
       index: this.workspaceSearchIndex,
-      loadDocuments: () => this.workspaceDocuments(),
+      loadDocuments: (signal) => this.loadSearchDocuments(signal),
       logger: this.logger,
       readFile: (path) => this.readFileForAnalysis(path),
       runTask: (work, name) => this.runSearchIndexTask(work, name),
@@ -92,6 +92,8 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   private readonly graphQueries: WorkspaceGraphQueryService
   private readonly analysisPrewarm: WorkspaceAnalysisPrewarmLifecycle
   private readonly analysisCache = new WorkspaceAnalysisCache()
+  private readonly loadSearchDocuments = (signal?: AbortSignal) =>
+    signal ? this.documents.documents(undefined, undefined, signal) : this.workspaceDocuments()
   private readonly indexQuery = new WorkspaceIndexQueryService({
     getRevision: () => this.analysisCache.revision,
     load: () => this.workspaceIndex(),

@@ -98,6 +98,37 @@ describe('Plate inline document completion', () => {
     controller.destroy()
   })
 
+  it.each([
+    ['Shift+Tab', { key: 'Tab', shiftKey: true }],
+    ['Shift+Enter', { key: 'Enter', shiftKey: true }],
+    ['Control+Enter', { ctrlKey: true, key: 'Enter' }],
+    ['Meta+Enter', { key: 'Enter', metaKey: true }],
+    ['a composing Enter', { isComposing: true, key: 'Enter' }],
+    ['Process', { key: 'Process' }],
+  ] satisfies readonly (readonly [string, KeyboardEventInit])[])(
+    'keeps the document candidate visible for %s',
+    async (_label, init) => {
+      const editor = createCompletionEditor()
+      const controller = createPlateInlineCompletionController(editor, {
+        canComplete: () => true,
+        debounceMs: () => 100,
+        enabled: () => true,
+        getDocumentCompletions: () => [{ source: 'document', text: ' write notes' }],
+        requestCompletion: async () => null,
+      })
+      controller.sync()
+      await settleCompletion()
+      const snapshot = controller.getSnapshot()
+      const event = new KeyboardEvent('keydown', { cancelable: true, ...init })
+
+      expect(controller.keyDown(event)).toBe(false)
+      expect(event.defaultPrevented).toBe(false)
+      expect(editor.api.string([])).toBe('I plan to')
+      expect(controller.getSnapshot()).toBe(snapshot)
+      controller.destroy()
+    },
+  )
+
   it('exposes a menu-only decoration and accepts a mouse-selected option', async () => {
     const editor = createCompletionEditor()
     const controller = createPlateInlineCompletionController(editor, {

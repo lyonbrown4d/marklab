@@ -7,6 +7,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 import AppAlert from '@/components/AppAlert'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
+import { PdfThumbnailRail } from '@/components/previews/PdfThumbnailRail'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -70,7 +71,6 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   const currentPageState =
     pageState.key === fileUrl ? pageState : { key: fileUrl, numPages: 0, pageNumber: 1 }
   const { numPages, pageNumber } = currentPageState
-  const pages = Array.from({ length: numPages }, (_, index) => index + 1)
   const handleLoadSuccess = useCallback(
     ({ numPages: nextNumPages }: { numPages: number }) => {
       const key = fileUrl
@@ -123,25 +123,12 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
       error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
       onLoadSuccess={handleLoadSuccess}
     >
-      <nav className="marklab-pdf-viewer__thumbs" aria-label={t('preview.pdfPages')}>
-        {pages.map((page) => (
-          <button
-            key={page}
-            className="marklab-pdf-viewer__thumb"
-            data-active={page === pageNumber}
-            onClick={() => selectPage(page)}
-            type="button"
-          >
-            <Page
-              pageNumber={page}
-              renderAnnotationLayer={false}
-              renderTextLayer={false}
-              width={92}
-            />
-            <span>{page}</span>
-          </button>
-        ))}
-      </nav>
+      <PdfThumbnailRail
+        activePage={pageNumber}
+        label={t('preview.pdfPages')}
+        pageCount={numPages}
+        onSelectPage={selectPage}
+      />
       <div className="marklab-pdf-viewer__document" ref={documentRef}>
         <Page pageNumber={pageNumber} width={pageWidth} />
       </div>

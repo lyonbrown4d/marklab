@@ -14,6 +14,7 @@ type LoadWorkspaceDocumentsOptions = {
   readFile: (path: string) => Promise<string>
   replaceContent?: string
   replacePath?: string
+  signal?: AbortSignal
 }
 
 export const loadWorkspaceDocuments = async ({
@@ -22,21 +23,27 @@ export const loadWorkspaceDocuments = async ({
   readFile,
   replaceContent,
   replacePath,
+  signal,
 }: LoadWorkspaceDocumentsOptions): Promise<WorkspaceDocument[]> => {
-  const files = entries.filter(
-    (entry) => entry.kind === 'file' && isSearchIndexablePath(entry.path),
-  )
+  signal?.throwIfAborted()
+  const files: FsEntry[] = []
+  for (const entry of entries) {
+    signal?.throwIfAborted()
+    if (entry.kind === 'file' && isSearchIndexablePath(entry.path)) files.push(entry)
+  }
   const limit = pLimit(batchSize)
 
   return Promise.all(
     files.map((entry) =>
-      limit(async () => ({
-        path: entry.path,
-        content:
+      limit(async () => {
+        signal?.throwIfAborted()
+        const content =
           entry.path === replacePath && replaceContent != null
             ? replaceContent
-            : await readFile(entry.path),
-      })),
+            : await readFile(entry.path)
+        signal?.throwIfAborted()
+        return { path: entry.path, content }
+      }),
     ),
   )
 }

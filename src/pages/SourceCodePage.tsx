@@ -7,6 +7,7 @@ import type { EditorChangeHandler } from '@/types/editorChanges'
 const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
 type SourceCodePageProps = {
   activePath: string | null
+  workspaceKey: string
   value: string
   files: FileEntry[]
   fileContents: Record<string, string>
@@ -17,6 +18,7 @@ type SourceCodePageProps = {
 }
 const SourceCodePage = ({
   activePath,
+  workspaceKey,
   value,
   files,
   fileContents,
@@ -54,6 +56,7 @@ const SourceCodePage = ({
             <Suspense fallback={<EditorPaneFallback />}>
               <SourceCodeEditor
                 activePath={activePath}
+                workspaceKey={workspaceKey}
                 value={value}
                 files={files}
                 fileContents={sourceFileContents}

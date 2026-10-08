@@ -1,12 +1,13 @@
-import { render, waitFor } from '@testing-library/react'
-import { createElement, type ReactNode } from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { act, render, waitFor } from '@testing-library/react'
+import { createElement, useEffect, type ReactNode } from 'react'
+import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppCachedOutlet } from '@/app/AppCachedOutlet'
-import type { LayoutContext } from '@/app/AppLayoutContext'
+import type { LayoutContext, LayoutContextStore } from '@/app/AppLayoutContext'
 import { ROUTE_CACHE_LIMITS, ROUTE_CACHE_TTL_SECONDS } from '@/app/routeCachePolicy'
 
 const keepAliveProps = vi.hoisted(() => vi.fn())
+const keepAliveUnmounts = vi.hoisted(() => vi.fn())
 const aliveApi = vi.hoisted(() => ({
   destroy: vi.fn(() => Promise.resolve()),
   getCacheNodes: vi.fn((): Array<{ cacheKey: string; lastActiveTime: number }> => []),
@@ -14,6 +15,7 @@ const aliveApi = vi.hoisted(() => ({
 
 vi.mock('keepalive-for-react', () => ({
   KeepAlive: (props: { children?: ReactNode }) => {
+    useEffect(() => () => keepAliveUnmounts(), [])
     keepAliveProps(props)
     return props.children
   },
@@ -21,16 +23,17 @@ vi.mock('keepalive-for-react', () => ({
 }))
 
 const context = { files: [] } as unknown as LayoutContext
-const cacheNodeKey = (pathname: string) => `cache:0:internal::${pathname}`
+const cacheNodeKey = (pathname: string) => `cache:0:0:internal::${pathname}`
 
 const renderOutlet = (pathname: string) => {
-  const cacheKey = `internal::${pathname}`
+  const cacheKey = pathname
   const Shell = () =>
     createElement(AppCachedOutlet, {
       context,
       routeCacheKey: cacheKey,
       routePathname: pathname,
       shouldAnimateRouteCache: false,
+      workspaceKey: 'internal:',
     } as never)
 
   render(
@@ -47,10 +50,12 @@ const renderOutlet = (pathname: string) => {
 
 describe('AppCachedOutlet cache policy', () => {
   beforeEach(() => {
-    aliveApi.destroy.mockClear()
+    aliveApi.destroy.mockReset()
+    aliveApi.destroy.mockResolvedValue(undefined)
     aliveApi.getCacheNodes.mockReset()
     aliveApi.getCacheNodes.mockReturnValue([])
     keepAliveProps.mockClear()
+    keepAliveUnmounts.mockClear()
   })
 
   it('bounds editor caches and applies route-specific TTLs', () => {
@@ -87,9 +92,10 @@ describe('AppCachedOutlet cache policy', () => {
             element={
               <AppCachedOutlet
                 context={context}
-                routeCacheKey={`internal::${pathname}`}
+                routeCacheKey={pathname}
                 routePathname={pathname}
                 shouldAnimateRouteCache={false}
+                workspaceKey="internal:"
               />
             }
           >
@@ -127,7 +133,124 @@ describe('AppCachedOutlet cache policy', () => {
 
     view.rerender(renderTree(paths[0]))
     expect(keepAliveProps.mock.calls.at(-1)?.[0].activeCacheKey).toBe(
-      'cache:1:internal::/files/edit/a.md',
+      'cache:0:1:internal::/files/edit/a.md',
     )
+  })
+
+  it('destroys caches owned by the previous workspace when identity changes', async () => {
+    const oldCacheKey = 'cache:0:0:external:C:/one:/files/edit/README.md'
+    aliveApi.getCacheNodes.mockReturnValue([{ cacheKey: oldCacheKey, lastActiveTime: Date.now() }])
+    const renderTree = (workspaceKey: string) => (
+      <MemoryRouter initialEntries={['/files/edit/README.md']}>
+        <Routes>
+          <Route
+            element={
+              <AppCachedOutlet
+                context={context}
+                routeCacheKey="/files/edit/README.md"
+                routePathname="/files/edit/README.md"
+                shouldAnimateRouteCache={false}
+                workspaceKey={workspaceKey}
+              />
+            }
+          >
+            <Route path="*" element={<div>Route</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    )
+    const view = render(renderTree('external:C:/one'))
+
+    view.rerender(renderTree('external:D:/two'))
+
+    await waitFor(() => expect(aliveApi.destroy).toHaveBeenCalledWith([oldCacheKey]))
+    expect(keepAliveProps.mock.calls.at(-1)?.[0].activeCacheKey).toBe(
+      'cache:1:0:external:D:/two:/files/edit/README.md',
+    )
+  })
+
+  it('remounts the cache owner for every workspace identity transition', async () => {
+    const renderTree = (workspaceKey: string) => (
+      <MemoryRouter initialEntries={['/files/edit/README.md']}>
+        <Routes>
+          <Route
+            element={
+              <AppCachedOutlet
+                context={context}
+                routeCacheKey="/files/edit/README.md"
+                routePathname="/files/edit/README.md"
+                shouldAnimateRouteCache={false}
+                workspaceKey={workspaceKey}
+              />
+            }
+          >
+            <Route path="*" element={<div>Route</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    )
+    const view = render(renderTree('external:C:/one'))
+
+    view.rerender(renderTree('external:D:/two'))
+    await waitFor(() => expect(keepAliveUnmounts).toHaveBeenCalledTimes(1))
+
+    view.rerender(renderTree('external:C:/one'))
+    await waitFor(() => expect(keepAliveUnmounts).toHaveBeenCalledTimes(2))
+  })
+
+  it('isolates a reopened workspace from an older delayed destroy', async () => {
+    let resolveOldDestroy: (() => void) | undefined
+    const oldDestroy = new Promise<void>((resolve) => {
+      resolveOldDestroy = resolve
+    })
+    aliveApi.destroy.mockImplementationOnce(() => oldDestroy)
+    const observedStores: LayoutContextStore[] = []
+    const StoreProbe = () => {
+      observedStores.push(useOutletContext<LayoutContextStore>())
+      return <div>Route</div>
+    }
+    const renderTree = (workspaceKey: string, pathname: string) => (
+      <MemoryRouter initialEntries={['/files/edit/README.md']}>
+        <Routes>
+          <Route
+            element={
+              <AppCachedOutlet
+                context={context}
+                routeCacheKey={pathname}
+                routePathname={pathname}
+                shouldAnimateRouteCache={false}
+                workspaceKey={workspaceKey}
+              />
+            }
+          >
+            <Route path="*" element={<StoreProbe />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    )
+    const workspaceA = 'external:C:/one'
+    const workspaceB = 'external:D:/two'
+    const readmePath = '/files/edit/README.md'
+    const otherPath = '/files/edit/other.md'
+    const view = render(renderTree(workspaceA, readmePath))
+    const initialAStore = observedStores.at(-1)
+    const oldCacheKey = keepAliveProps.mock.calls.at(-1)?.[0].activeCacheKey
+
+    view.rerender(renderTree(workspaceB, readmePath))
+    await waitFor(() => expect(aliveApi.destroy).toHaveBeenCalledTimes(1))
+
+    view.rerender(renderTree(workspaceA, readmePath))
+    const reopenedAStore = observedStores.at(-1)
+    const reopenedCacheKey = keepAliveProps.mock.calls.at(-1)?.[0].activeCacheKey
+    view.rerender(renderTree(workspaceA, otherPath))
+    await act(async () => {
+      resolveOldDestroy?.()
+      await oldDestroy
+    })
+    view.rerender(renderTree(workspaceA, readmePath))
+
+    expect(reopenedCacheKey).not.toBe(oldCacheKey)
+    expect(reopenedAStore).not.toBe(initialAStore)
+    expect(observedStores.at(-1)).toBe(reopenedAStore)
   })
 })

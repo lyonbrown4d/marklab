@@ -148,6 +148,7 @@ describe('SourceCodeEditor', () => {
     render(
       <SourceCodeEditor
         activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
         value="Alpha"
         files={[]}
         fileContents={{}}
@@ -166,6 +167,7 @@ describe('SourceCodeEditor', () => {
     render(
       <SourceCodeEditor
         activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
         value="See [Target]("
         files={[
           { path: 'notes/current.md', kind: 'file' },
@@ -185,10 +187,12 @@ describe('SourceCodeEditor', () => {
     expect(providerCall?.[0]).toBe('markdown')
 
     const provider = providerCall?.[1]
-    const result = await provider?.provideCompletionItems(
-      { getValue: () => 'See [Target](', getVersionId: () => 1, isDisposed: () => false },
-      { lineNumber: 1, column: 14 },
-    )
+    const ownerModel = monacoEditor.getModel()
+    monacoEditor.getModel.mockReturnValue(ownerModel)
+    const result = await provider?.provideCompletionItems(ownerModel, {
+      lineNumber: 1,
+      column: 14,
+    })
 
     expect(result?.suggestions[1]).toMatchObject({
       label: 'target',
@@ -207,6 +211,7 @@ describe('SourceCodeEditor', () => {
     render(
       <SourceCodeEditor
         activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
         value="See [Missing](missing.md) and [Bad Heading](target.md#unknown)\n[[Unknown]]"
         files={[
           { path: 'notes/current.md', kind: 'file' },
@@ -252,6 +257,7 @@ describe('SourceCodeEditor', () => {
     render(
       <SourceCodeEditor
         activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
         value="# Project\n\n## Plan"
         files={[{ path: 'notes/current.md', kind: 'file' }]}
         fileContents={{}}

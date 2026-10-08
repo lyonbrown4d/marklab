@@ -25,12 +25,14 @@ export const registerMarkdownSourceProviders = ({
   monaco,
   editor,
   getContext,
+  getWorkspaceKey,
   onOpenFileView,
   scheduleDiagnostics,
 }: {
   monaco: MonacoModule
   editor: MonacoEditor.IStandaloneCodeEditor
   getContext: () => MarkdownSourceCompletionContext
+  getWorkspaceKey: () => string
   onOpenFileView?: (path: string, view: FileViewKind) => void
   scheduleDiagnostics: () => void
 }): Disposable => {
@@ -52,7 +54,10 @@ export const registerMarkdownSourceProviders = ({
       : { dispose: () => undefined }
   const disposables: Disposable[] = [
     documentSession,
-    registerMarkdownCompletionProvider(monaco, getContext, documentSession),
+    registerMarkdownCompletionProvider(monaco, getContext, documentSession, {
+      getWorkspaceKey,
+      ownerEditor: editor,
+    }),
     registerMarkdownSourceLanguageDiagnostics({
       client: languageIntelligenceApi,
       documentSession,

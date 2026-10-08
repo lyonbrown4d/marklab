@@ -4,6 +4,7 @@ import { SourceCodeEditorSurface } from '@/components/SourceCodeEditorSurface'
 
 const editorMock = vi.hoisted(() => ({
   language: undefined as string | undefined,
+  path: undefined as string | undefined,
   onContextMenuAction: vi.fn(),
   options: undefined as
     | {
@@ -17,9 +18,18 @@ const editorMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@monaco-editor/react', () => ({
-  default: ({ language, options }: { language?: string; options?: typeof editorMock.options }) => {
+  default: ({
+    language,
+    options,
+    path,
+  }: {
+    language?: string
+    options?: typeof editorMock.options
+    path?: string
+  }) => {
     editorMock.language = language
     editorMock.options = options
+    editorMock.path = path
     return <textarea aria-label="markdown source" />
   },
 }))
@@ -33,6 +43,7 @@ const renderSurface = (
   render(
     <SourceCodeEditorSurface
       activePath={activePath}
+      workspaceKey="external:C:/notes"
       darkMode={false}
       errorMessage={null}
       immersiveFocusMode={false}
@@ -63,6 +74,7 @@ describe('SourceCodeEditorSurface', () => {
     view.rerender(
       <SourceCodeEditorSurface
         activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
         darkMode={false}
         errorMessage={null}
         immersiveFocusMode={false}
@@ -83,6 +95,7 @@ describe('SourceCodeEditorSurface', () => {
     view.rerender(
       <SourceCodeEditorSurface
         activePath="src/native.c"
+        workspaceKey="external:C:/notes"
         darkMode={false}
         errorMessage={null}
         immersiveFocusMode={false}
@@ -110,6 +123,35 @@ describe('SourceCodeEditorSurface', () => {
     expect(editorMock.options?.minimap?.enabled).toBe(false)
     expect(editorMock.options?.contextmenu).toBe(false)
     expect(editorMock.options?.inlineSuggest?.enabled).toBe(true)
+  })
+
+  it('scopes Monaco model paths to the workspace identity', () => {
+    const view = renderSurface(false, false, {}, 'README.md')
+    const firstPath = editorMock.path
+
+    view.rerender(
+      <SourceCodeEditorSurface
+        activePath="README.md"
+        workspaceKey="external:D:/other-notes"
+        darkMode={false}
+        errorMessage={null}
+        immersiveFocusMode={false}
+        immersiveTypewriterMode={false}
+        immersiveZenMode={false}
+        loadingLabel="Loading source editor..."
+        monacoReady
+        motionAnimatedCursor={false}
+        motionSmoothScrolling={false}
+        sourceCodeMiniMapEnabled={false}
+        value="# Current"
+        onChange={vi.fn()}
+        onMount={vi.fn()}
+      />,
+    )
+
+    expect(firstPath).toContain('external%3AC%3A%2Fnotes')
+    expect(editorMock.path).toContain('external%3AD%3A%2Fother-notes')
+    expect(editorMock.path).not.toBe(firstPath)
   })
 
   it('opens the source editor menu and delegates enabled actions', () => {

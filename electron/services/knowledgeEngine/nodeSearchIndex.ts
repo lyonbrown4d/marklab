@@ -71,7 +71,8 @@ export class NodeSearchIndex {
   }
 
   async hasDocuments(): Promise<boolean> {
-    return (await this.getSize()) > 0
+    const stats = await this.getStats()
+    return stats.documentCount > 0 && stats.updatedAt !== null
   }
 
   getStats(): Promise<NodeSearchIndexStats> {
