@@ -1,7 +1,7 @@
 {
   "name": "marklab",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Desktop-first local Markdown workspace for Marklab.",
   "author": "Marklab",
   "type": "module",
@@ -27,6 +27,7 @@
     "package": "moon run desktop:package",
     "dist": "moon run desktop:dist",
     "dist:win": "moon run desktop:dist-win",
+    "dist:win:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-signed-windows.ps1",
     "dist:mac": "moon run desktop:dist-mac",
     "dist:linux": "moon run desktop:dist-linux",
     "lint": "moon run desktop:lint",
@@ -143,6 +144,12 @@
     "win": {
       "signAndEditExecutable": true,
       "icon": "resources/icons/marklab.ico",
+      "signtoolOptions": {
+        "signingHashAlgorithms": [
+          "sha256"
+        ],
+        "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+      },
       "target": [
         "nsis",
         "zip"

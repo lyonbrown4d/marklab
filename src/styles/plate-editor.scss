@@ -21,7 +21,7 @@
       transparent 34rem
     ),
     hsl(var(--background));
-  caret-color: hsl(var(--primary));
+  caret-color: hsl(var(--foreground));
   color: hsl(var(--foreground));
   cursor: text;
   font-family: var(--editor-prose-font);

@@ -18,6 +18,15 @@
   text-decoration-thickness: 0.14em;
 }
 
+.source-code-editor .monaco-editor .cursors-layer > .cursor {
+  border-color: hsl(var(--foreground)) !important;
+  background-color: hsl(var(--foreground)) !important;
+}
+
+.source-code-editor .monaco-editor .inputarea.ime-input {
+  caret-color: hsl(var(--foreground)) !important;
+}
+
 // Monaco owns the suggestion DOM, so mirror the shared context-menu tokens here.
 .source-code-editor .monaco-editor .suggest-widget {
   overflow: hidden;

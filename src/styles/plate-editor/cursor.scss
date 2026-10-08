@@ -13,10 +13,10 @@ body > .marklab-animated-caret[data-marklab-plate-overlay='animated-cursor'] {
   width: 2px;
   height: var(--marklab-caret-height);
   border-radius: 999px;
-  background: hsl(var(--primary));
+  background: hsl(var(--foreground));
   box-shadow:
     0 0 0 1px color-mix(in srgb, hsl(var(--background)) 34%, transparent),
-    0 0 12px color-mix(in srgb, hsl(var(--primary)) 44%, transparent);
+    0 0 12px color-mix(in srgb, hsl(var(--foreground)) 36%, transparent);
   opacity: 0;
   pointer-events: none;
   transform: translate3d(var(--marklab-caret-x), var(--marklab-caret-y), 0);
@@ -49,7 +49,7 @@ body > .marklab-animated-caret.is-tracking-scroll[data-marklab-plate-overlay='an
 
 @media (prefers-reduced-motion: reduce) {
   .markdown-editor.marklab-animated-cursor-host {
-    caret-color: hsl(var(--primary));
+    caret-color: hsl(var(--foreground));
   }
 
   body > .marklab-animated-caret[data-marklab-plate-overlay='animated-cursor'] {

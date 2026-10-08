@@ -46,8 +46,8 @@ const surfaceTheme = (dark: boolean) =>
     {
       '&': { backgroundColor: 'var(--background)', height: '100%' },
       '&.cm-focused': { outline: 'none' },
-      '.cm-content': { caretColor: 'var(--primary)', padding: '12px 0' },
-      '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--primary)' },
+      '.cm-content': { caretColor: 'hsl(var(--foreground))', padding: '12px 0' },
+      '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'hsl(var(--foreground))' },
       '.cm-gutters': {
         backgroundColor: 'var(--muted)',
         borderRight: '1px solid var(--border)',

@@ -50,13 +50,39 @@ avoiding a full production dependency copy.
 
 ## Windows Signing
 
-Windows packaging currently sets `win.signAndEditExecutable` to `false`. This
-keeps local unpacked builds working without `winCodeSign`, which requires
-Windows symlink privileges when its tool archive is extracted.
+Signed Windows releases use a certificate installed in the local user's Windows
+certificate store. CI remains unsigned and does not receive signing credentials.
 
-Before publishing signed Windows artifacts, add a real app icon and code signing
-configuration, enable symlink support on the build machine, then remove that
-override so Electron Builder can edit executable metadata and sign the app.
+The certificate must be in `Cert:\CurrentUser\My` or
+`Cert:\LocalMachine\My`, be currently valid, include an accessible private key,
+and include the Code Signing EKU (`1.3.6.1.5.5.7.3.3`). List suitable
+certificates and copy the thumbprint:
+
+```powershell
+Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
+  Select-Object Subject, Thumbprint, NotAfter, HasPrivateKey
+Get-ChildItem Cert:\LocalMachine\My -CodeSigningCert |
+  Select-Object Subject, Thumbprint, NotAfter, HasPrivateKey
+```
+
+Set the thumbprint for the current shell and run the local signed package task:
+
+```powershell
+$env:MARKLAB_WINDOWS_CERTIFICATE_SHA1 = '<certificate-thumbprint>'
+pnpm dist:win:signed
+```
+
+The task validates the certificate before building, requires Electron Builder to
+sign, uses SHA-256 with an RFC 3161 timestamp, then verifies both the NSIS setup
+executable and `release/win-unpacked/Marklab.exe` with SignTool and
+`Get-AuthenticodeSignature`. Missing, expired, invalid, unsigned, or
+non-timestamped artifacts fail the task. A Windows SDK installation providing
+`signtool.exe` is required for verification; the script can also use Electron
+Builder's cached x64 SignTool.
+
+Normal `pnpm dist:win` builds remain unsigned for development. Private-key
+containers (`*.pfx` and `*.p12`) are ignored by Git even though this workflow
+does not read them directly.
 
 ## Platform Notes
 

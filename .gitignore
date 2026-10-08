@@ -118,6 +118,10 @@ out
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Code-signing private-key containers
+*.pfx
+*.p12
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
