@@ -1,6 +1,10 @@
 import { nativeImage } from 'electron'
 import fs from 'node:fs'
-import { resolveWindowIconPaths, type WindowIconProjectRoots } from '@electron/windowIconPaths'
+import {
+  resolveWindowIconPaths,
+  type WindowIconColorMode,
+  type WindowIconProjectRoots,
+} from '@electron/windowIconPaths'
 
 const createNativeImageFromPath = (iconPath: string): Electron.NativeImage | null => {
   try {
@@ -16,8 +20,11 @@ const createNativeImageFromPath = (iconPath: string): Electron.NativeImage | nul
   }
 }
 
-export const createWindowIcon = (projectRoots: WindowIconProjectRoots) => {
-  for (const iconPath of resolveWindowIconPaths(projectRoots)) {
+export const createWindowIcon = (
+  projectRoots: WindowIconProjectRoots,
+  colorMode?: WindowIconColorMode,
+) => {
+  for (const iconPath of resolveWindowIconPaths(projectRoots, process.platform, colorMode)) {
     const image = createNativeImageFromPath(iconPath)
     if (image && !image.isEmpty()) return image
   }

@@ -18,7 +18,11 @@ export const toWorkspaceRelative = (root: string, absolutePath: string): string 
   return relative
 }
 
-export const resolveWorkspacePath = (data: FsStateData, relative: string): string => {
+export const resolveWorkspacePath = (
+  data: FsStateData,
+  relative: string,
+  platform: NodeJS.Platform = process.platform,
+): string => {
   if (typeof relative !== 'string' || relative.trim() === '') {
     throw new Error('Path must not be empty')
   }
@@ -37,8 +41,13 @@ export const resolveWorkspacePath = (data: FsStateData, relative: string): strin
   }
   if (data.rootKind === 'single') {
     if (!data.singleFile) throw new Error('Single-file path is not set')
-    const fileName = path.basename(data.singleFile)
-    if (normalized !== fileName) {
+    const platformPath = platform === 'win32' ? path.win32 : path.posix
+    const fileName = platformPath.basename(data.singleFile)
+    const matchesOpenedFile =
+      platform === 'win32'
+        ? normalized.toLowerCase() === fileName.toLowerCase()
+        : normalized === fileName
+    if (!matchesOpenedFile) {
       throw new Error('Single-file mode only allows operations on the opened file')
     }
     return path.resolve(data.singleFile)

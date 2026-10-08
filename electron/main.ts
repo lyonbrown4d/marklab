@@ -21,14 +21,14 @@ import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance
 import { createMainWindowSession } from '@electron/main/windowSession'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
-import type { MarklabWindows } from '@electron/window'
+import { createAppWindowIcon, type MarklabWindows } from '@electron/window'
 import {
   flushPersistedWindowState,
   releasePersistedWindowState,
 } from '@electron/windowStatePersistence'
 import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion'
 import { dismissSplashWindow } from '@electron/splashLifecycle'
-import { syncNativeWindowBackgrounds } from '@electron/windowTheme'
+import { syncNativeWindowBackgrounds, syncNativeWindowIcons } from '@electron/windowTheme'
 import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
 import { createRendererReadyCoordinator } from '@electron/main/rendererReady'
 import type { RendererReadySignal } from '@/types/rendererReady'
@@ -116,7 +116,11 @@ const runtimeEvents = createRuntimeEventQueue(() => windows?.main ?? null)
 const systemThemeMonitor = createSystemThemeMonitor({
   nativeTheme,
   onChange: (payload) => {
-    syncNativeWindowBackgrounds(windows, payload.colorMode === 'dark')
+    const dark = payload.colorMode === 'dark'
+    syncNativeWindowBackgrounds(windows, dark)
+    if (process.platform === 'win32' || process.platform === 'linux') {
+      syncNativeWindowIcons(windows, createAppWindowIcon(dark))
+    }
     runtimeEvents.queueOrSendRuntimeEvent({
       eventName: 'system-theme-changed',
       payload,

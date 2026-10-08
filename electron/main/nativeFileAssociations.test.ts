@@ -9,17 +9,27 @@ describe('native Markdown file associations', () => {
       await fs.readFile(path.resolve(process.cwd(), 'package.json'), 'utf8'),
     ) as {
       build?: {
-        fileAssociations?: Array<{ ext?: string[]; mimeType?: string; role?: string }>
+        fileAssociations?: unknown
         linux?: { mimeTypes?: string[] }
+        mac?: { fileAssociations?: Array<{ ext?: string[]; icon?: string }> }
+        win?: { fileAssociations?: Array<{ ext?: string[]; icon?: string }> }
       }
     }
 
-    expect(packageJson.build?.fileAssociations).toEqual(
+    expect(packageJson.build?.fileAssociations).toBeUndefined()
+    expect(packageJson.build?.win?.fileAssociations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           ext: expect.arrayContaining(['md', 'markdown']),
-          mimeType: 'text/markdown',
-          role: 'Editor',
+          icon: 'resources/icons/marklab.ico',
+        }),
+      ]),
+    )
+    expect(packageJson.build?.mac?.fileAssociations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ext: expect.arrayContaining(['md', 'markdown']),
+          icon: 'resources/icons/marklab.icns',
         }),
       ]),
     )

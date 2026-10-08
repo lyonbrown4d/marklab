@@ -87,8 +87,7 @@ tasks:
     command: node --experimental-strip-types scripts/generate-app-icons.ts
     inputs:
       - scripts/generate-app-icons.ts
-      - public/marklab-dark.svg
-      - public/marklab.svg
+      - resources/icon-sources/*.svg
     outputs:
       - resources/icons/**/*
 

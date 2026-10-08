@@ -6,6 +6,8 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 
 export type ParsedWorkspaceSessionSeed = {
   activeTabId?: string | null
+  rootKind?: RootKind
+  rootPath?: string
   tabs?: WorkspaceTab[]
 }
 
@@ -23,6 +25,7 @@ export const applyWorkspaceSessionSeed = (
 ): ParsedWorkspaceSessionSeed => {
   if (!isRecord(payload.state)) return {}
   const seed = payload.state
+  const currentWorkspace = useWorkspaceStore.getState()
   const tabs = Array.isArray(seed.tabs) ? normalizeWorkspaceTabs(seed.tabs) : undefined
   const activeTabId =
     hasOwn(seed, 'activeTabId') && typeof seed.activeTabId === 'string'
@@ -35,6 +38,17 @@ export const applyWorkspaceSessionSeed = (
     ...(isRootKind(seed.rootKind) ? { rootKind: seed.rootKind } : {}),
     ...(tabs ? { tabs } : {}),
     ...(activeTabId !== undefined ? { activeTabId } : {}),
+    ...((typeof seed.rootPath === 'string' && seed.rootPath !== currentWorkspace.rootPath) ||
+    (isRootKind(seed.rootKind) && seed.rootKind !== currentWorkspace.rootKind)
+      ? {
+          entries: [],
+          loadedTreeParents: [],
+          treeError: null,
+          treeNextCursors: {},
+          treeStatus: 'idle' as const,
+          unavailableTreePaths: [],
+        }
+      : {}),
   }
   const preferencesPatch = {
     ...(typeof seed.sidebarCollapsed === 'boolean'
@@ -49,5 +63,7 @@ export const applyWorkspaceSessionSeed = (
   return {
     ...(tabs ? { tabs } : {}),
     ...(activeTabId !== undefined ? { activeTabId } : {}),
+    ...(isRootKind(seed.rootKind) ? { rootKind: seed.rootKind } : {}),
+    ...(typeof seed.rootPath === 'string' ? { rootPath: seed.rootPath } : {}),
   }
 }

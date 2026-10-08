@@ -1,7 +1,7 @@
 {
   "name": "marklab",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Desktop-first local Markdown workspace for Marklab.",
   "author": "Marklab",
   "type": "module",
@@ -129,21 +129,20 @@
         ]
       }
     ],
-    "fileAssociations": [
-      {
-        "ext": [
-          "md",
-          "markdown"
-        ],
-        "name": "Markdown Document",
-        "description": "Markdown document",
-        "role": "Editor",
-        "mimeType": "text/markdown"
-      }
-    ],
     "win": {
       "signAndEditExecutable": true,
       "icon": "resources/icons/marklab.ico",
+      "fileAssociations": [
+        {
+          "ext": [
+            "md",
+            "markdown"
+          ],
+          "name": "Markdown Document",
+          "description": "Markdown document",
+          "icon": "resources/icons/marklab.ico"
+        }
+      ],
       "signtoolOptions": {
         "signingHashAlgorithms": [
           "sha256"
@@ -169,6 +168,17 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "resources/icons/marklab.icns",
+      "fileAssociations": [
+        {
+          "ext": [
+            "md",
+            "markdown"
+          ],
+          "name": "Markdown Document",
+          "icon": "resources/icons/marklab.icns",
+          "role": "Editor"
+        }
+      ],
       "target": [
         "dmg",
         "zip"

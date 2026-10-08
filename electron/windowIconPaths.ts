@@ -4,6 +4,7 @@ import path from 'node:path'
 export type WindowIconPlatform = NodeJS.Platform | string
 
 export type WindowIconProjectRoots = string | string[]
+export type WindowIconColorMode = 'dark' | 'light'
 
 const WINDOW_ICON_CANDIDATES: Record<string, string[]> = {
   win32: [
@@ -42,9 +43,15 @@ export const resolveElectronProjectRoots = (electronDir: string, cwd = process.c
 export const resolveWindowIconPaths = (
   projectRoots: WindowIconProjectRoots,
   platform: WindowIconPlatform = process.platform,
+  colorMode?: WindowIconColorMode,
 ): string[] => {
   const roots = uniquePaths(Array.isArray(projectRoots) ? projectRoots : [projectRoots])
-  const candidates = [...(WINDOW_ICON_CANDIDATES[platform] ?? []), ...FALLBACK_ICON_CANDIDATES]
+  const themedCandidates = resolveThemedCandidates(platform, colorMode)
+  const candidates = [
+    ...themedCandidates,
+    ...(WINDOW_ICON_CANDIDATES[platform] ?? []),
+    ...FALLBACK_ICON_CANDIDATES,
+  ]
   const paths: string[] = []
 
   for (const root of roots) {
@@ -60,8 +67,23 @@ export const resolveWindowIconPaths = (
 export const resolveWindowIconPath = (
   projectRoots: WindowIconProjectRoots,
   platform: WindowIconPlatform = process.platform,
+  colorMode?: WindowIconColorMode,
 ): string | null => {
-  return resolveWindowIconPaths(projectRoots, platform)[0] ?? null
+  return resolveWindowIconPaths(projectRoots, platform, colorMode)[0] ?? null
+}
+
+const resolveThemedCandidates = (
+  platform: WindowIconPlatform,
+  colorMode?: WindowIconColorMode,
+): string[] => {
+  if (!colorMode) return []
+  if (platform === 'win32') {
+    return [path.join('resources', 'icons', `marklab-${colorMode}.ico`)]
+  }
+  if (platform === 'linux') {
+    return [path.join('resources', 'icons', `marklab-${colorMode}.png`)]
+  }
+  return []
 }
 
 const uniquePaths = (paths: string[]): string[] => {

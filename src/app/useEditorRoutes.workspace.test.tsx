@@ -83,6 +83,63 @@ describe('useEditorRoutes workspace view', () => {
     expect(result.current.isRouteFile).toBe(false)
   })
 
+  it('does not expose an unconfirmed stale route as the current file after a workspace switch', () => {
+    vi.mocked(workspaceTreeApi.pathsExist).mockReturnValue(new Promise(() => undefined))
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <MemoryRouter initialEntries={['/files/edit/old.md']}>{children}</MemoryRouter>
+    )
+    const { result } = renderHook(
+      () =>
+        useEditorRoutes({
+          activeTab: null,
+          entries: [],
+          rootKind: 'single',
+          rootPath: '/native/new.md',
+          tabViewModes: {},
+          treeGeneration: 1,
+          treeRevision: 0,
+        }),
+      { wrapper },
+    )
+
+    expect(result.current.isRouteFile).toBe(false)
+    expect(result.current.currentFilePath).toBeNull()
+    expect(result.current.activeResourcePath).toBeNull()
+  })
+
+  it('invalidates a remotely confirmed route when the workspace root changes', async () => {
+    vi.mocked(workspaceTreeApi.pathsExist)
+      .mockResolvedValueOnce({
+        existing: ['deep/unloaded.md'],
+        generation: 0,
+        revision: 0,
+        root: { kind: 'external', path: '/old-workspace' },
+      })
+      .mockReturnValueOnce(new Promise(() => undefined))
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <MemoryRouter initialEntries={['/files/edit/deep/unloaded.md']}>{children}</MemoryRouter>
+    )
+    const { result, rerender } = renderHook(
+      ({ rootPath }) =>
+        useEditorRoutes({
+          activeTab: null,
+          entries: [],
+          rootKind: 'external',
+          rootPath,
+          tabViewModes: {},
+          treeGeneration: 0,
+          treeRevision: 0,
+        }),
+      { initialProps: { rootPath: '/old-workspace' }, wrapper },
+    )
+    await waitFor(() => expect(result.current.isRouteFile).toBe(true))
+
+    rerender({ rootPath: '/new-workspace' })
+
+    expect(result.current.isRouteFile).toBe(false)
+    expect(result.current.currentFilePath).toBeNull()
+  })
+
   it('does not recognize the removed file graph route as an editor mode', () => {
     const { result } = renderRoutes('/files/graph/notes/active.md')
 

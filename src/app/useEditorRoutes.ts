@@ -107,6 +107,8 @@ export const useEditorRoutes = ({
     generation: number
     path: string
     revision: number
+    rootKind: UseEditorRoutesArgs['rootKind']
+    rootPath: string
   } | null>(null)
   useEffect(() => {
     if (!routePath || locallyKnownRoute || !isDesktopRuntime()) return
@@ -127,6 +129,8 @@ export const useEditorRoutes = ({
           generation: treeGeneration,
           path: routePath,
           revision: treeRevision,
+          rootKind,
+          rootPath,
         })
       })
       .catch(() => {
@@ -136,6 +140,8 @@ export const useEditorRoutes = ({
           generation: treeGeneration,
           path: routePath,
           revision: treeRevision,
+          rootKind,
+          rootPath,
         })
       })
     return () => {
@@ -148,18 +154,21 @@ export const useEditorRoutes = ({
       remoteRoute?.exists &&
       remoteRoute.path === routePath &&
       remoteRoute.generation === treeGeneration &&
-      remoteRoute.revision === treeRevision,
+      remoteRoute.revision === treeRevision &&
+      remoteRoute.rootKind === rootKind &&
+      remoteRoute.rootPath === rootPath,
     )
+  const confirmedRouteFilePath = isRouteFile ? routeFilePath : null
   const activeFilePath = activeTab?.kind === 'file' ? activeTab.path : null
   const currentFilePath =
     !internalRouteActive || graphWorkspaceMatch || allPagesMatch
       ? null
-      : (routeFilePath ?? activeFilePath)
+      : (confirmedRouteFilePath ?? activeFilePath)
   const activeResourcePath = !internalRouteActive
     ? null
     : graphWorkspaceMatch || allPagesMatch
       ? getWorkspaceTabPath(activeTab)
-      : (routeFilePath ?? getWorkspaceTabPath(activeTab))
+      : (confirmedRouteFilePath ?? getWorkspaceTabPath(activeTab))
   const viewMode = resolveEditorViewMode({
     activeTab,
     currentFilePath,

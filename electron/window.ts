@@ -28,7 +28,10 @@ const WINDOW_STATE_SAVE_DELAY_MS = 250
 const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
-const appIcon = createWindowIcon(resolveElectronProjectRoots(electronDir))
+const appIconRoots = resolveElectronProjectRoots(electronDir)
+export const createAppWindowIcon = (dark = nativeTheme.shouldUseDarkColors) =>
+  createWindowIcon(appIconRoots, dark ? 'dark' : 'light')
+const appIcon = createAppWindowIcon()
 let didInstallDevelopmentDockIcon = false
 export type MarklabWindows = {
   splash: BrowserWindow

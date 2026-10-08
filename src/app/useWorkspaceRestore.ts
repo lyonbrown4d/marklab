@@ -5,7 +5,6 @@ import {
   consumeWorkspaceSessionSeed,
   hasPendingWorkspaceSessionSeed,
   onWorkspaceSessionSeed,
-  signalRendererReady,
   waitForWorkspaceInteractivePaint,
 } from '@/runtime/rendererLifecycle'
 import { getWorkspaceTabId } from '@/logic/tabs'
@@ -14,9 +13,13 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { useI18n } from '@/i18n/useI18n'
 import { workspaceTreeApi } from '@/services/workspaceTreeApi'
 import { flushEditorChanges } from '@/app/editorCloseLifecycle'
-import { rendererDiagnostics } from '@/services/rendererDiagnostics'
-import type { RendererReadySignal } from '@/types/rendererReady'
 import { applyWorkspaceSessionSeed } from '@/app/workspaceSessionSeed'
+import {
+  alignWorkspaceSessionBackendRoot,
+  createWorkspaceRestoreBackendBarrier,
+  type WorkspaceRestoreBackendBarrier,
+} from '@/app/workspaceRestoreBackend'
+import { reportWorkspaceRendererReady } from '@/app/workspaceRestoreReady'
 
 type LoadWorkspace = (options?: {
   activeTabId?: string | null
@@ -44,6 +47,7 @@ type UseWorkspaceRestoreResult = {
 type RestoreFailure = 'root' | 'session'
 type RestoreResult = { ok: true } | { error: unknown; failure: RestoreFailure; ok: false }
 type RestoreOperation = {
+  backendAlignment?: WorkspaceRestoreBackendBarrier
   generation: number
   kind: 'default' | 'seed'
   payload?: Parameters<typeof applyWorkspaceSessionSeed>[0]
@@ -53,14 +57,6 @@ type RestoreOperation = {
 type QueuedSeed = {
   generation: number
   payload: Parameters<typeof applyWorkspaceSessionSeed>[0]
-}
-
-const reportRendererReady = async (signal: RendererReadySignal): Promise<void> => {
-  try {
-    await signalRendererReady(signal)
-  } catch (error) {
-    rendererDiagnostics.error('app.lifecycle', 'workspace-ready-signal-failed', error)
-  }
 }
 
 export const useWorkspaceRestore = ({
@@ -77,6 +73,7 @@ export const useWorkspaceRestore = ({
   const [isSessionRestored, setIsSessionRestored] = useState(false)
   const [queuedSeed, setQueuedSeed] = useState<QueuedSeed | null>(null)
   const activeOperationRef = useRef<RestoreOperation | null>(null)
+  const defaultRestorePromiseRef = useRef<Promise<RestoreResult> | null>(null)
   const automaticRestoreCompletedRef = useRef(false)
   const generationRef = useRef(0)
   const latestSeedRef = useRef<Parameters<typeof applyWorkspaceSessionSeed>[0] | null>(null)
@@ -94,28 +91,56 @@ export const useWorkspaceRestore = ({
     }
   }, [])
 
-  const runDefaultRestore = useCallback(async (): Promise<RestoreResult> => {
-    if (isDesktopRuntime() && rootPath) {
-      try {
-        await flushEditorChanges()
-        if (rootKind === 'single') await fsApi.setSingleFile(rootPath)
-        else if (rootKind === 'external') await fsApi.setRoot(rootPath)
-      } catch (error) {
-        return { error, failure: 'root', ok: false }
+  const runDefaultRestore = useCallback(
+    async (generation: number): Promise<RestoreResult> => {
+      if (isDesktopRuntime() && rootPath) {
+        try {
+          await flushEditorChanges()
+          if (generationRef.current !== generation) return { ok: true }
+          if (rootKind === 'single') await fsApi.setSingleFile(rootPath)
+          else if (rootKind === 'external') await fsApi.setRoot(rootPath)
+          if (generationRef.current !== generation) return { ok: true }
+        } catch (error) {
+          return { error, failure: 'root', ok: false }
+        }
       }
-    }
-    try {
-      await loadWorkspace()
-      return { ok: true }
-    } catch (error) {
-      return { error, failure: 'session', ok: false }
-    }
-  }, [loadWorkspace, rootKind, rootPath])
+      if (generationRef.current !== generation) return { ok: true }
+      try {
+        await loadWorkspace()
+        return { ok: true }
+      } catch (error) {
+        return { error, failure: 'session', ok: false }
+      }
+    },
+    [loadWorkspace, rootKind, rootPath],
+  )
 
   const runSeedRestore = useCallback(
-    async (payload: Parameters<typeof applyWorkspaceSessionSeed>[0]): Promise<RestoreResult> => {
+    async (
+      payload: Parameters<typeof applyWorkspaceSessionSeed>[0],
+      generation: number,
+      previous: Promise<unknown> | null,
+      backendAlignment: WorkspaceRestoreBackendBarrier,
+    ): Promise<RestoreResult> => {
+      let seed: ReturnType<typeof applyWorkspaceSessionSeed>
       try {
-        const seed = applyWorkspaceSessionSeed(payload)
+        seed = applyWorkspaceSessionSeed(payload)
+      } catch (error) {
+        backendAlignment.settle()
+        return { error, failure: 'session', ok: false }
+      }
+      try {
+        const requiresBackendAlignment = previous !== null
+        if (previous) await previous
+        if (generationRef.current !== generation) return { ok: true }
+        if (requiresBackendAlignment) await alignWorkspaceSessionBackendRoot(seed)
+        if (generationRef.current !== generation) return { ok: true }
+      } catch (error) {
+        return { error, failure: 'root', ok: false }
+      } finally {
+        backendAlignment.settle()
+      }
+      try {
         await loadWorkspace({
           activeTabId: seed.activeTabId,
           preserveCurrentRoute: false,
@@ -132,6 +157,9 @@ export const useWorkspaceRestore = ({
   const observeOperation = useCallback((operation: RestoreOperation): void => {
     void operation.promise.then(async (result) => {
       operation.settled = true
+      if (defaultRestorePromiseRef.current === operation.promise) {
+        defaultRestorePromiseRef.current = null
+      }
       if (result.ok) await waitForWorkspaceInteractivePaint()
       if (!mountedRef.current || generationRef.current !== operation.generation) return
       automaticRestoreCompletedRef.current = true
@@ -143,7 +171,7 @@ export const useWorkspaceRestore = ({
         const messageKey =
           result.failure === 'root' ? 'app.restoreRootFailed' : 'app.restoreSessionFailed'
         setRestoreStatusMessage(translateRef.current(messageKey))
-        await reportRendererReady({
+        await reportWorkspaceRendererReady({
           error: result.error instanceof Error ? result.error.message : String(result.error),
           phase: 'workspace-error',
         })
@@ -152,19 +180,21 @@ export const useWorkspaceRestore = ({
       if (operation.payload) consumeWorkspaceSessionSeed(operation.payload)
       setRestoreStatusMessage(null)
       setIsSessionRestored(true)
-      await reportRendererReady({ phase: 'workspace-interactive' })
+      await reportWorkspaceRendererReady({ phase: 'workspace-interactive' })
     })
   }, [])
 
   const beginDefaultRestore = useCallback((): RestoreOperation => {
     const current = activeOperationRef.current
     if (current?.kind === 'default' && !current.settled) return current
+    const generation = ++generationRef.current
     const operation: RestoreOperation = {
-      generation: ++generationRef.current,
+      generation,
       kind: 'default',
-      promise: runDefaultRestore(),
+      promise: runDefaultRestore(generation),
       settled: false,
     }
+    defaultRestorePromiseRef.current = operation.promise
     activeOperationRef.current = operation
     setIsRestoringSession(true)
     observeOperation(operation)
@@ -175,11 +205,23 @@ export const useWorkspaceRestore = ({
     (seed: QueuedSeed): RestoreOperation => {
       const current = activeOperationRef.current
       if (current?.kind === 'seed' && current.generation === seed.generation) return current
+      const pendingSeedAlignment =
+        current?.kind === 'seed' && current.backendAlignment && !current.backendAlignment.settled
+          ? current.backendAlignment.promise
+          : null
+      const previousBackendWork = pendingSeedAlignment ?? defaultRestorePromiseRef.current
+      const backendAlignment = createWorkspaceRestoreBackendBarrier()
       const operation: RestoreOperation = {
+        backendAlignment,
         generation: seed.generation,
         kind: 'seed',
         payload: seed.payload,
-        promise: runSeedRestore(seed.payload),
+        promise: runSeedRestore(
+          seed.payload,
+          seed.generation,
+          previousBackendWork,
+          backendAlignment,
+        ),
         settled: false,
       }
       activeOperationRef.current = operation

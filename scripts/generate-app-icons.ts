@@ -5,6 +5,8 @@ import { Resvg } from '@resvg/resvg-js'
 import { BICUBIC, createICNS, createICO } from 'png2icons'
 
 type PngBuffersBySize = Record<number, Buffer | Uint8Array>
+type IconColorMode = 'dark' | 'light'
+type IconVariant = { icoFile: string; pngFile: string; sourceFile: string }
 
 const __filename = fileURLToPath(import.meta.url)
 const scriptDir = path.dirname(__filename)
@@ -13,23 +15,29 @@ const ICON_SIZES = [16, 32, 48, 64, 128, 256, 512, 1024] as const
 const HIGH_QUALITY_DPI = 300
 const SCALE_RENDERER = BICUBIC
 const NUM_COLORS = 0
-
-const resolveSourceSvg = (): string => {
-  const candidates = [
-    path.join(projectRoot, 'public', 'marklab-dark.svg'),
-    path.join(projectRoot, 'public', 'marklab.svg'),
-  ]
-
-  const sourceSvg = candidates.find(existsSync)
-  if (!sourceSvg) {
-    throw new Error(`Cannot find a source svg: ${candidates.join(', ')}`)
-  }
-  return sourceSvg
+const ICON_VARIANTS: Record<IconColorMode, IconVariant> = {
+  light: {
+    sourceFile: 'marklab-light.svg',
+    pngFile: 'marklab-light.png',
+    icoFile: 'marklab-light.ico',
+  },
+  dark: {
+    sourceFile: 'marklab-dark.svg',
+    pngFile: 'marklab-dark.png',
+    icoFile: 'marklab-dark.ico',
+  },
 }
 
-const getProjectSource = (): { sourceSvg: string } => ({
-  sourceSvg: resolveSourceSvg(),
-})
+const resolveSourceSvg = (colorMode: IconColorMode): string => {
+  const sourceSvg = path.join(
+    projectRoot,
+    'resources',
+    'icon-sources',
+    ICON_VARIANTS[colorMode].sourceFile,
+  )
+  if (!existsSync(sourceSvg)) throw new Error(`Cannot find source svg: ${sourceSvg}`)
+  return sourceSvg
+}
 
 const renderPng = (svg: string, size: number): Uint8Array => {
   const instance = new Resvg(svg, {
@@ -53,22 +61,38 @@ const writeIfBuffer = (
   writeFileSync(filePath, Buffer.from(buffer as Uint8Array))
 }
 
+const generateColorModeAssets = (outputDir: string, colorMode: IconColorMode): PngBuffersBySize => {
+  const source = readFileSync(resolveSourceSvg(colorMode), 'utf8')
+  const buffers: PngBuffersBySize = {}
+
+  for (const size of ICON_SIZES) buffers[size] = renderPng(source, size)
+
+  const largestPng = buffers[1024]
+  if (!largestPng) throw new Error(`Expected ${colorMode} 1024px icon source not generated`)
+  const variant = ICON_VARIANTS[colorMode]
+  writeFileSync(path.join(outputDir, variant.pngFile), largestPng)
+  writeIfBuffer(
+    path.join(outputDir, variant.icoFile),
+    createICO(Buffer.from(largestPng), SCALE_RENDERER, NUM_COLORS, true, true),
+    variant.icoFile,
+  )
+  return buffers
+}
+
 const main = (): void => {
   const outputDir = path.join(projectRoot, 'resources', 'icons')
   mkdirSync(outputDir, { recursive: true })
 
-  const { sourceSvg } = getProjectSource()
-  const sourceContent = readFileSync(sourceSvg, 'utf8')
-
-  const iconPathBySize: PngBuffersBySize = {}
+  generateColorModeAssets(outputDir, 'light')
+  const darkIcons = generateColorModeAssets(outputDir, 'dark')
 
   for (const size of ICON_SIZES) {
-    const buffer = renderPng(sourceContent, size)
-    iconPathBySize[size] = buffer
+    const buffer = darkIcons[size]
+    if (!buffer) throw new Error(`Expected dark ${size}px icon source not generated`)
     writeFileSync(path.join(outputDir, `marklab-${size}.png`), buffer)
   }
 
-  const largestPng = iconPathBySize[1024]
+  const largestPng = darkIcons[1024]
   if (!largestPng) {
     throw new Error('Expected 1024px icon source not generated')
   }

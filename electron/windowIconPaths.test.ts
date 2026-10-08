@@ -36,4 +36,29 @@ describe('window icon paths', () => {
       resolveWindowIconPath(resolveElectronProjectRoots(electronDir, '/missing'), 'linux'),
     ).toBe(iconPath)
   })
+
+  it('selects the matching Windows window icon for the current color mode', async () => {
+    const root = await mkdtemp(path.join(tempRoot(), 'marklab-window-icon-'))
+    const staticPath = await createIcon(root, path.join('resources', 'icons', 'marklab.ico'))
+    const lightPath = await createIcon(root, path.join('resources', 'icons', 'marklab-light.ico'))
+    const darkPath = await createIcon(root, path.join('resources', 'icons', 'marklab-dark.ico'))
+
+    expect(resolveWindowIconPath(root, 'win32', 'light')).toBe(lightPath)
+    expect(resolveWindowIconPath(root, 'win32', 'dark')).toBe(darkPath)
+    expect(resolveWindowIconPath(root, 'win32')).toBe(staticPath)
+  })
+
+  it('selects themed PNGs on Linux while keeping the packaged macOS icon stable', async () => {
+    const root = await mkdtemp(path.join(tempRoot(), 'marklab-window-icon-'))
+    const staticPng = await createIcon(root, path.join('resources', 'icons', 'marklab.png'))
+    const lightPng = await createIcon(root, path.join('resources', 'icons', 'marklab-light.png'))
+    const darkPng = await createIcon(root, path.join('resources', 'icons', 'marklab-dark.png'))
+    const icnsPath = await createIcon(root, path.join('resources', 'icons', 'marklab.icns'))
+
+    expect(resolveWindowIconPath(root, 'linux', 'light')).toBe(lightPng)
+    expect(resolveWindowIconPath(root, 'linux', 'dark')).toBe(darkPng)
+    expect(resolveWindowIconPath(root, 'darwin', 'dark')).toBe(icnsPath)
+    expect(resolveWindowIconPath(root, 'darwin', 'light')).toBe(icnsPath)
+    expect(resolveWindowIconPath(root, 'linux')).toBe(staticPng)
+  })
 })
