@@ -18,7 +18,12 @@ import {
   writeLargeDocumentWorkspace,
 } from './largeDocumentFixture.js'
 import { performanceBudgetForProject } from './performanceBudgets.js'
-import { PERFORMANCE_SAMPLE_PLAN, summarizeDurations } from './performanceStatistics.js'
+import { summarizeLargeDocumentMemory } from './largeDocumentMemoryStatistics.js'
+import {
+  PERFORMANCE_SAMPLE_PLAN,
+  collectPerformanceSamples,
+  summarizeDurations,
+} from './performanceStatistics.js'
 /* eslint-enable no-restricted-imports */
 
 const assertFrameBudget = (
@@ -181,7 +186,7 @@ const documentGates: DocumentGate[] = [
     expectedStats: BLOCK_HEAVY_DOCUMENT_EXPECTATIONS,
     minimumSelectionLength: 3_500,
     name: 'block-heavy 4,000-block document',
-    samplePlan: { measuredRuns: 2, warmupRuns: 1 },
+    samplePlan: { measuredRuns: 3, warmupRuns: 1 },
   },
 ]
 
@@ -191,20 +196,25 @@ const runDocumentGate = async (gate: DocumentGate, rendererUrl: string, testInfo
   const samples: PerformanceSample[] = []
   let summary: Record<string, unknown> | null = null
   let failure: { message: string; stack?: string } | null = null
+  let attemptFailures: Awaited<ReturnType<typeof collectPerformanceSamples>>['failures'] = []
+  let attemptCount = 0
   try {
-    const totalRuns = gate.samplePlan.warmupRuns + gate.samplePlan.measuredRuns
-    for (let runIndex = 0; runIndex < totalRuns; runIndex += 1) {
-      samples.push(
-        await runLargeDocumentSample({
+    const collection = await collectPerformanceSamples({
+      maxAttempts: (gate.samplePlan.warmupRuns + gate.samplePlan.measuredRuns) * 2,
+      plan: gate.samplePlan,
+      runSample: ({ attemptIndex, warmup }) =>
+        runLargeDocumentSample({
           createFixture: gate.createFixture,
           graphicsMode,
           rendererUrl,
-          runIndex,
+          runIndex: attemptIndex,
           testInfo,
-          warmup: runIndex < gate.samplePlan.warmupRuns,
+          warmup,
         }),
-      )
-    }
+    })
+    samples.push(...collection.samples)
+    attemptCount = collection.attemptCount
+    attemptFailures = collection.failures
     const measured = samples.filter((sample) => !sample.warmup)
     const initialization = summarizeDurations(
       measured.map((sample) => sample.initialization.windowOpenToReadyMs),
@@ -217,8 +227,22 @@ const runDocumentGate = async (gate: DocumentGate, rendererUrl: string, testInfo
     const slowInputSampleCount = inputDurations.filter(
       (duration) => duration > budget.inputSlowSampleMs,
     ).length
-    summary = { initialization, input, measuredRuns: measured.length, slowInputSampleCount }
+    summary = {
+      attemptCount,
+      initialization,
+      input,
+      measuredRuns: measured.length,
+      memory: summarizeLargeDocumentMemory(measured),
+      reliability: {
+        attemptedRuns: attemptCount,
+        failedRunRate: Number((attemptFailures.length / attemptCount).toFixed(4)),
+        failedRuns: attemptFailures.length,
+        successfulRuns: samples.length,
+      },
+      slowInputSampleCount,
+    }
 
+    expect.soft(attemptFailures, 'performance sample attempts failed').toEqual([])
     expect.soft(measured).toHaveLength(gate.samplePlan.measuredRuns)
     measured.forEach((sample) =>
       assertSample(sample, budget, gate.expectedStats, gate.minimumSelectionLength),
@@ -238,6 +262,8 @@ const runDocumentGate = async (gate: DocumentGate, rendererUrl: string, testInfo
     await writeArtifact(testInfo, gate.artifactName, {
       failure,
       graphicsMode,
+      attemptCount,
+      attemptFailures,
       samplePlan: gate.samplePlan,
       samples,
       summary,

@@ -5,7 +5,15 @@ import path from 'node:path'
 // eslint-disable-next-line no-restricted-imports -- Performance tests share the production renderer server.
 import { closeRendererServer, startRendererServer } from '../electron/electronTestHarness.js'
 /* eslint-disable no-restricted-imports -- Performance tests use sibling helpers. */
-import { PERFORMANCE_SAMPLE_PLAN, summarizeDurations } from './performanceStatistics.js'
+import {
+  PERFORMANCE_SAMPLE_PLAN,
+  collectPerformanceSamples,
+  summarizeDurations,
+} from './performanceStatistics.js'
+import {
+  summarizeProcessMemoryDeltas,
+  summarizeProcessMemorySnapshots,
+} from './processMemoryStatistics.js'
 import {
   runRealWorkspaceProfile,
   type RealWorkspaceProfileSample,
@@ -29,6 +37,24 @@ const summarizeSamples = (samples: RealWorkspaceProfileSample[]) => ({
   inputLatencyP95Ms: summarizeDurations(
     samples.map((sample) => sample.input.latency.summary?.p95Ms ?? 0),
   ),
+  memory: {
+    deltas: {
+      largeDocument: summarizeProcessMemoryDeltas(
+        samples.map((sample) => sample.memory.deltas.largeDocument),
+      ),
+      map: summarizeProcessMemoryDeltas(samples.map((sample) => sample.memory.deltas.map)),
+      total: summarizeProcessMemoryDeltas(samples.map((sample) => sample.memory.deltas.total)),
+    },
+    snapshots: {
+      largeDocument: summarizeProcessMemorySnapshots(
+        samples.map((sample) => sample.memory.snapshots.largeDocument),
+      ),
+      map: summarizeProcessMemorySnapshots(samples.map((sample) => sample.memory.snapshots.map)),
+      smallDocument: summarizeProcessMemorySnapshots(
+        samples.map((sample) => sample.memory.snapshots.smallDocument),
+      ),
+    },
+  },
   mapMaxFrameMs: summarizeDurations(samples.map((sample) => sample.map.frames.maxFrameMs)),
   mapOpenMs: summarizeDurations(samples.map((sample) => sample.map.profile.durationMs)),
   searchMs: summarizeDurations(samples.map((sample) => sample.search.profile.durationMs)),
@@ -58,24 +84,33 @@ test.describe('real workspace performance profile @performance @blackbox', () =>
   // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.
   test('profiles cold open, file switching, scrolling, typing, search, and map rendering', async ({}, testInfo) => {
     test.setTimeout(600_000)
-    const allSamples: RealWorkspaceProfileSample[] = []
-    const totalRuns = PERFORMANCE_SAMPLE_PLAN.warmupRuns + PERFORMANCE_SAMPLE_PLAN.measuredRuns
-    for (let runIndex = 0; runIndex < totalRuns; runIndex += 1) {
-      const sample = await runRealWorkspaceProfile({
-        rendererUrl,
-        runIndex,
-        sourceRoot: sourceRoot!,
-        testInfo,
-        warmup: runIndex < PERFORMANCE_SAMPLE_PLAN.warmupRuns,
-      })
-      allSamples.push(sample)
-    }
+    const collection = await collectPerformanceSamples<RealWorkspaceProfileSample>({
+      maxAttempts: (PERFORMANCE_SAMPLE_PLAN.warmupRuns + PERFORMANCE_SAMPLE_PLAN.measuredRuns) * 2,
+      plan: PERFORMANCE_SAMPLE_PLAN,
+      runSample: ({ attemptIndex, warmup }) =>
+        runRealWorkspaceProfile({
+          rendererUrl,
+          runIndex: attemptIndex,
+          sourceRoot: sourceRoot!,
+          testInfo,
+          warmup,
+        }),
+    })
+    const allSamples = collection.samples
     const measured = allSamples.filter((sample) => !sample.warmup)
     const warmup = allSamples.find((sample) => sample.warmup)
     const report = {
       generatedAt: new Date().toISOString(),
+      attemptCount: collection.attemptCount,
+      attemptFailures: collection.failures,
       samplePlan: PERFORMANCE_SAMPLE_PLAN,
       sourceRoot,
+      reliability: {
+        attemptedRuns: collection.attemptCount,
+        failedRunRate: Number((collection.failures.length / collection.attemptCount).toFixed(4)),
+        failedRuns: collection.failures.length,
+        successfulRuns: collection.samples.length,
+      },
       summary: summarizeSamples(measured),
       samples: measured.map(withoutRawProfiles),
       warmup: warmup ? withoutRawProfiles(warmup) : undefined,
@@ -111,6 +146,7 @@ test.describe('real workspace performance profile @performance @blackbox', () =>
       contentType: 'text/plain',
     })
     expect(measured).toHaveLength(PERFORMANCE_SAMPLE_PLAN.measuredRuns)
+    expect(collection.failures, 'performance sample attempts failed').toEqual([])
     expect(measured.flatMap((sample) => sample.rendererErrors)).toEqual([])
   })
 })

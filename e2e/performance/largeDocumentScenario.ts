@@ -76,11 +76,8 @@ export const runLargeDocumentSample = async ({
     const focusStartedAt = performance.now()
     await activeEditor.locator('[data-slate-node="text"]').first().click()
     const focusMs = performance.now() - focusStartedAt
-    const firstMarkers = ['q', 'z', 'j', 'k'] as const
-    const firstMarker = firstMarkers[runIndex] ?? `m${runIndex}`
-    const firstInput = await measureInputLatency(page, activeEditor, firstMarker, {
-      allowUnapplied: true,
-    })
+    const firstMarker = `marklab-first-input-${runIndex}-${Date.now()}`
+    const firstInput = await measureInputLatency(page, activeEditor, firstMarker)
 
     const beforeWheel = await viewport.evaluate((element) => element.scrollTop)
     const wheelFrames = await measureFrames(page, () => exerciseWheel(page, viewport))
@@ -94,8 +91,14 @@ export const runLargeDocumentSample = async ({
 
     await page.keyboard.press('ControlOrMeta+A')
     const selectAll = await selectionState(page)
+    await activeEditor.focus()
     await page.keyboard.press(endOfDocumentShortcut)
-    await activeEditor.locator('[data-slate-node="text"]').first().click()
+    await expect
+      .poll(async () => {
+        const selection = await selectionState(page)
+        return selection.insideEditor && selection.textLength === 0
+      })
+      .toBe(true)
 
     const continuousMarker = `responsive-${runIndex}-${Date.now()}`
     let continuousInput: Awaited<ReturnType<typeof measureInputLatency>> | undefined

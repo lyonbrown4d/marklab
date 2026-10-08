@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { performanceBudgetForProject } from '@/../e2e/performance/performanceBudgets'
 import {
   PERFORMANCE_SAMPLE_PLAN,
+  collectPerformanceSamples,
   inputProbeCanFinalizeAfterMarkerPaint,
   inputProbeHasMissingMutation,
   inputProbeSettled,
   summarizeDurations,
+  summarizeOptionalMeasurements,
 } from '@/../e2e/performance/performanceStatistics'
 
 describe('Plate performance budgets', () => {
@@ -43,17 +45,61 @@ describe('Plate performance budgets', () => {
     },
   )
 
-  it('uses one warmup and three measured runs', () => {
-    expect(PERFORMANCE_SAMPLE_PLAN).toEqual({ measuredRuns: 3, warmupRuns: 1 })
+  it('uses one warmup and five measured runs', () => {
+    expect(PERFORMANCE_SAMPLE_PLAN).toEqual({ measuredRuns: 5, warmupRuns: 1 })
   })
 
-  it('summarizes first, p95, max, and sample count without adding settle time', () => {
-    expect(summarizeDurations([12.345, 2, 8, 20])).toEqual({
-      firstMs: 12.35,
-      maxMs: 20,
-      p95Ms: 20,
-      sampleCount: 4,
+  it('summarizes a multi-run duration distribution without adding settle time', () => {
+    expect(summarizeDurations([10, 20, 30, 40, 50])).toEqual({
+      coefficientOfVariation: 0.4714,
+      firstMs: 10,
+      maxMs: 50,
+      meanMs: 30,
+      medianMs: 30,
+      minMs: 10,
+      p95Ms: 50,
+      sampleCount: 5,
+      standardDeviationMs: 14.14,
     })
+  })
+
+  it('reports nullable measurement coverage alongside its distribution', () => {
+    expect(summarizeOptionalMeasurements([100, null, 120, 110])).toEqual({
+      availableSampleCount: 3,
+      distribution: {
+        coefficientOfVariation: 0.0742,
+        max: 120,
+        mean: 110,
+        median: 110,
+        min: 100,
+        p95: 120,
+        sampleCount: 3,
+        standardDeviation: 8.16,
+      },
+      missingSampleCount: 1,
+      totalSampleCount: 4,
+    })
+  })
+
+  it('continues after a failed attempt until the requested successful samples are collected', async () => {
+    const result = await collectPerformanceSamples({
+      maxAttempts: 5,
+      plan: { measuredRuns: 2, warmupRuns: 1 },
+      runSample: async ({ attemptIndex, warmup }) => {
+        if (attemptIndex === 1) throw new Error('transient input probe failure')
+        return { attemptIndex, warmup }
+      },
+    })
+
+    expect(result.samples).toEqual([
+      { attemptIndex: 0, warmup: true },
+      { attemptIndex: 2, warmup: false },
+      { attemptIndex: 3, warmup: false },
+    ])
+    expect(result.failures).toMatchObject([
+      { attemptIndex: 1, message: 'transient input probe failure', warmup: false },
+    ])
+    expect(result.attemptCount).toBe(4)
   })
 
   it('settles from observed inputs instead of assuming one event per marker character', () => {

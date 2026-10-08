@@ -16,8 +16,10 @@ renderer. It does not add test-only APIs to the production preload surface.
 
 The test creates an isolated workspace containing a deterministic 29,256-line Markdown document.
 Every line is non-empty, the UTF-8 byte count and 488-block scale are fixed, and fixture drift fails
-before Electron launches. Each profile runs one warmup followed by three measured, isolated Electron
-sessions. The scenario then
+before Electron launches. Each profile runs one successful warmup followed by five successful,
+measured, isolated Electron sessions. The attempt budget is twice the required sample count so a
+failed interaction still appears in the artifact without preventing the remaining samples from
+being collected; any failed attempt still fails the gate. The scenario then
 opens it in a real Marklab window through the typed preload command, and exercises:
 
 1. single Plate editor initialization;
@@ -43,7 +45,9 @@ explicit coverage count instead of being reported as zero. The active renderer s
 V8 heap, embedder heap, documents, DOM nodes, and event listeners through CDP. Reports include
 relative deltas for launcher → large fixture → post-interaction and, when
 `MARKLAB_E2E_WORKSPACE` is supplied, small Markdown → large Markdown → Workspace Map. These values
-are observability baselines, not fixed memory budgets: compare repeated runs on the same platform and
+are summarized across measured runs with min, mean, median, p95, max, population standard deviation,
+coefficient of variation, platform-field coverage, and successful/failed attempt rates. They are
+observability baselines, not fixed memory budgets: compare repeated runs on the same platform and
 build before adding a regression threshold.
 
 The suite also seeds a legacy 1.36 MB local-history snapshot and restores it through the real
@@ -77,7 +81,7 @@ reason.
 
 The software-rendering profile is the required CI candidate because it is reproducible on the Linux
 runner. Native-GPU results remain a local/hardware-specific signal. Budget changes require a fresh
-warmup-plus-three sample artifact for both the old and proposed threshold; do not calibrate from a
+warmup-plus-five sample artifact for both the old and proposed threshold; do not calibrate from a
 single run.
 
 The software budgets were recalibrated from an October 2026 Windows software-rendering sample after
