@@ -52,6 +52,7 @@ const register = () => {
       handle: (command: string, handler: Handler) => handlers.set(command, handler),
     } as never,
     {
+      app: { addRecentDocument: vi.fn() },
       exportService: {} as never,
       graphLayoutStore: graphLayoutStore as never,
       localHistoryService: {} as never,

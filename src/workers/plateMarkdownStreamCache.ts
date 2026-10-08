@@ -2,8 +2,9 @@ import type { Value } from 'platejs'
 import { LRUCache } from 'lru-cache'
 
 const PARSE_CHUNK_MAX_CHARACTERS = 96 * 1_024
-const PARSE_CHUNK_MAX_NODES = 256
-const PARSE_FIRST_CHUNK_MAX_NODES = 32
+// Keep transport boundaries divisible by Plate's 20-node renderer chunks.
+const PARSE_CHUNK_MAX_NODES = 240
+const PARSE_FIRST_CHUNK_MAX_NODES = 20
 
 const countNodeCharacters = (root: unknown) => {
   const pending = [root]

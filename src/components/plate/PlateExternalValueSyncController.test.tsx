@@ -44,13 +44,13 @@ describe('PlateExternalValueSyncController', () => {
     syncMock.loading = true
   })
 
-  it('keeps the editor visually and semantically gated during external hydration', () => {
+  it('keeps the editor semantically gated without deferring its layout', () => {
     const view = render(renderController(true))
     const editor = screen.getByTestId('editor')
 
     expect(editor).toHaveAttribute('inert')
     expect(editor).toHaveAttribute('aria-hidden', 'true')
-    expect(editor).toHaveClass('invisible')
+    expect(editor).not.toHaveClass('invisible')
 
     syncMock.loading = false
     view.rerender(renderController(true))

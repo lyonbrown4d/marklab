@@ -69,9 +69,9 @@ test.describe('large local-history restore @performance @blackbox', () => {
       expect.soft(sample.inputPersisted).toBe(true)
       expect.soft(sample.finalState.activeEditors).toBe(1)
       expect.soft(sample.finalState.renderedElementCount).toBe(expectedBlocks)
-      expect
-        .soft(restoreFrames.loadingFrames, 'restore did not expose incremental loading frames')
-        .toBeGreaterThan(0)
+      expect.soft(sample.restoreObservation.markerObserved).toBe(true)
+      expect.soft(sample.restoreObservation.initialState).toBe('ready')
+      expect.soft(sample.restoreObservation.durationMs).toBeGreaterThan(0)
       expect.soft(restoreFrames.frameCount).toBeGreaterThanOrEqual(budget.minFrameCount)
       expect.soft(restoreFrames.maxVisibleSurfaces).toBeLessThanOrEqual(budget.maxVisibleSurfaces)
       expect.soft(restoreFrames.maxFrameMs).toBeLessThanOrEqual(budget.maxFrameMs)

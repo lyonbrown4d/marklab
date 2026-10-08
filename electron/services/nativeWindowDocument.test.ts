@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   applyAppRecentDocument,
+  applyAppRecentWorkspaceFile,
   applyWindowDocumentStatus,
   createNativeRecentDocumentState,
   recentDocumentPathForRoot,
@@ -78,6 +79,77 @@ describe('native window document status', () => {
 
     applyAppRecentDocument(app, root('internal', '/user-data/workspace'), state, 'darwin')
     applyAppRecentDocument(app, root('single', '/workspace/note.md'), state, 'linux')
+
+    expect(app.addRecentDocument).not.toHaveBeenCalled()
+  })
+
+  it('only adds file types registered by the Windows installer to the JumpList', () => {
+    const state = createNativeRecentDocumentState()
+    const app = { addRecentDocument: vi.fn() }
+
+    applyAppRecentDocument(app, root('external', 'C:\\workspace'), state, 'win32')
+    applyAppRecentDocument(app, root('single', 'C:\\workspace\\code.ts'), state, 'win32')
+    applyAppRecentDocument(app, root('single', 'C:\\workspace\\note.md'), state, 'win32')
+
+    expect(app.addRecentDocument).toHaveBeenCalledOnce()
+    expect(app.addRecentDocument).toHaveBeenCalledWith('C:\\workspace\\note.md')
+  })
+
+  it('adds user-opened Markdown files from external workspaces to native recent documents', () => {
+    const state = createNativeRecentDocumentState()
+    const app = { addRecentDocument: vi.fn() }
+
+    applyAppRecentWorkspaceFile(
+      app,
+      root('external', '/workspace'),
+      '/workspace/notes/a.md',
+      state,
+      'win32',
+    )
+    applyAppRecentWorkspaceFile(
+      app,
+      root('external', '/workspace'),
+      '/workspace/notes/a.md',
+      state,
+      'win32',
+    )
+    applyAppRecentWorkspaceFile(
+      app,
+      root('external', '/workspace'),
+      '/workspace/notes/b.markdown',
+      state,
+      'win32',
+    )
+
+    expect(app.addRecentDocument).toHaveBeenNthCalledWith(1, '/workspace/notes/a.md')
+    expect(app.addRecentDocument).toHaveBeenNthCalledWith(2, '/workspace/notes/b.markdown')
+  })
+
+  it('does not register internal, unassociated, or unsupported workspace files', () => {
+    const state = createNativeRecentDocumentState()
+    const app = { addRecentDocument: vi.fn() }
+
+    applyAppRecentWorkspaceFile(
+      app,
+      root('internal', '/workspace'),
+      '/workspace/note.md',
+      state,
+      'win32',
+    )
+    applyAppRecentWorkspaceFile(
+      app,
+      root('external', '/workspace'),
+      '/workspace/code.ts',
+      state,
+      'win32',
+    )
+    applyAppRecentWorkspaceFile(
+      app,
+      root('external', '/workspace'),
+      '/workspace/note.md',
+      state,
+      'linux',
+    )
 
     expect(app.addRecentDocument).not.toHaveBeenCalled()
   })

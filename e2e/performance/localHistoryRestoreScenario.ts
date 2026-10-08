@@ -15,6 +15,7 @@ import {
   type LocalHistoryDocumentKind,
   writeLocalHistoryRestoreFixture,
 } from './localHistoryRestoreFixture.js'
+import { observeLocalHistoryRestore } from './localHistoryRestoreObserver.js'
 import { measureInputLatency } from './plateInputLatencyMetrics.js'
 import {
   captureEditorState,
@@ -60,14 +61,6 @@ const markerRendered = (page: Page, marker: string) =>
     { expectedMarker: marker, selector: PLATE_EDITOR_SELECTOR },
   )
 
-const waitForRestoredMarker = (page: Page, marker: string) =>
-  page.waitForFunction(
-    ({ expectedMarker, selector }) =>
-      document.querySelector<HTMLElement>(selector)?.textContent?.includes(expectedMarker) ?? false,
-    { expectedMarker: marker, selector: PLATE_EDITOR_SELECTOR },
-    { timeout: RESTORE_TIMEOUT_MS },
-  )
-
 export const runLocalHistoryRestoreSample = async ({
   documentKind = 'text-heavy',
   graphicsMode,
@@ -101,18 +94,20 @@ export const runLocalHistoryRestoreSample = async ({
     await expect.poll(() => markerRendered(page, fixture.marker)).toBe(false)
 
     const ui = await historyUi(page)
-    const restoreStartedAt = performance.now()
+    let restoreObservation: Awaited<ReturnType<typeof observeLocalHistoryRestore>> | undefined
     const restoreFrames = await measureFrames(page, async () => {
-      await ui.confirmRestore.click()
-      await expect(viewport).toHaveAttribute('data-state', 'loading', {
-        timeout: RESTORE_TIMEOUT_MS,
+      restoreObservation = await observeLocalHistoryRestore({
+        action: () => ui.confirmRestore.click(),
+        marker: fixture.marker,
+        page,
+        selector: PLATE_EDITOR_SELECTOR,
+        timeoutMs: RESTORE_TIMEOUT_MS,
       })
       await expect(viewport).toHaveAttribute('data-state', 'ready', {
         timeout: RESTORE_TIMEOUT_MS,
       })
     })
-    await waitForRestoredMarker(page, fixture.marker)
-    const restoreToMarkerMs = performance.now() - restoreStartedAt
+    if (!restoreObservation) throw new Error('Local-history restore observation was not collected')
     const restoredMarkerRendered = await markerRendered(page, fixture.marker)
     const restoredFileMatchedSnapshot =
       fs.readFileSync(fixture.filePath, 'utf8') === fixture.historyContent
@@ -161,7 +156,8 @@ export const runLocalHistoryRestoreSample = async ({
       restoredFileMatchedSnapshot,
       restoredMarkerRendered,
       restoreFrames,
-      restoreToMarkerMs: Number(restoreToMarkerMs.toFixed(2)),
+      restoreObservation,
+      restoreToMarkerMs: restoreObservation.durationMs,
     }
   } finally {
     if (session) electronOutput.push(...session.output)

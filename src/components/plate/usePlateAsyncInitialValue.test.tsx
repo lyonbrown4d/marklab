@@ -113,19 +113,23 @@ describe('usePlateAsyncInitialValue', () => {
     expect(editor.history).toEqual({ redos: [], undos: [] })
   })
 
-  it('splits worker transport chunks into frame-sized renderer commits', async () => {
+  it('aligns renderer commits with Plate chunks across worker transport boundaries', async () => {
     const { editor } = createStreamingEditor()
     renderHook(() =>
       usePlateAsyncInitialValue({ editor: editor as never, enabled: true, value: 'Large' }),
     )
-    const nodes: Value = Array.from({ length: 130 }, (_, index) => ({
+    const nodes: Value = Array.from({ length: 40 }, (_, index) => ({
       type: 'p',
       children: [{ text: String(index) }],
     }))
 
-    await act(async () => workerMock.streams[0]?.emit(nodes))
+    await act(async () => workerMock.streams[0]?.emit(nodes.slice(0, 20)))
+    expect(editor.api.onChange).toHaveBeenCalledOnce()
+    expect(editor.children).toEqual(nodes.slice(0, 20))
 
-    expect(editor.api.onChange).toHaveBeenCalledTimes(11)
+    await act(async () => workerMock.streams[0]?.emit(nodes.slice(20)))
+
+    expect(editor.api.onChange).toHaveBeenCalledTimes(2)
     expect(editor.children).toEqual(nodes)
   })
 

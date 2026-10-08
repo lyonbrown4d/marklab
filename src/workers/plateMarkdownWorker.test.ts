@@ -32,7 +32,7 @@ describe('processPlateMarkdownWorkerRequest', () => {
       1, 1, 1,
     ])
     expect(chunkPlateMarkdownValue(nodeHeavy).map((chunk) => chunk.length)).toEqual([
-      32, 256, 256, 256, 256, 144,
+      20, 240, 240, 240, 240, 220,
     ])
   })
 

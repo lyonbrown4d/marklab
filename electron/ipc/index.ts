@@ -151,6 +151,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     logger.child('ai-completion'),
   )
   const commands = registerWorkspaceCommandsIpc(dependencies.ipcMain, {
+    app: dependencies.app,
     exportService: dependencies.exportService,
     graphLayoutStore: dependencies.graphLayoutStore,
     localHistoryService: dependencies.localHistoryService,

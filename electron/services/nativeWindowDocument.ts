@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { App, BrowserWindow } from 'electron'
 
 import type { FsRootInfo } from '@electron/services/workspace/types'
@@ -8,6 +9,8 @@ type NativeDocumentWindow = Pick<
 >
 
 type NativeRecentDocumentApp = Pick<App, 'addRecentDocument'>
+
+const nativeRecentDocumentExtensions = new Set(['.md', '.markdown'])
 
 export type NativeRecentDocumentState = {
   path: string | null
@@ -45,10 +48,36 @@ export const applyAppRecentDocument = (
   platform: NodeJS.Platform = process.platform,
 ): void => {
   const recentPath = recentDocumentPathForRoot(root)
-  if (!recentPath || recentPath === state.path) return
+  if (!recentPath) return
+  addNativeRecentDocument(app, recentPath, state, platform)
+}
+
+export const applyAppRecentWorkspaceFile = (
+  app: NativeRecentDocumentApp,
+  root: FsRootInfo,
+  absolutePath: string,
+  state: NativeRecentDocumentState,
+  platform: NodeJS.Platform = process.platform,
+): void => {
+  if (root.kind !== 'external') return
+  addNativeRecentDocument(app, absolutePath, state, platform)
+}
+
+const addNativeRecentDocument = (
+  app: NativeRecentDocumentApp,
+  recentPath: string,
+  state: NativeRecentDocumentState,
+  platform: NodeJS.Platform,
+): void => {
+  if (platform !== 'darwin' && platform !== 'win32') return
+  if (
+    platform === 'win32' &&
+    !nativeRecentDocumentExtensions.has(path.extname(recentPath).toLowerCase())
+  ) {
+    return
+  }
+  if (recentPath === state.path) return
 
   state.path = recentPath
-  if (platform === 'darwin' || platform === 'win32') {
-    app.addRecentDocument(recentPath)
-  }
+  app.addRecentDocument(recentPath)
 }

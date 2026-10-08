@@ -214,7 +214,7 @@ export const finalizePatchedPlateEditorValue = async (
   }
 }
 
-export const splitPlateHydrationChunk = (value: Value, maxNodes = 12) => {
+export const splitPlateHydrationChunk = (value: Value, maxNodes = 20) => {
   const chunks: Value[] = []
   for (let index = 0; index < value.length; index += maxNodes) {
     chunks.push(value.slice(index, index + maxNodes))

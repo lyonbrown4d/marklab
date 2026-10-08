@@ -21,6 +21,7 @@ describe('workspace local history IPC', () => {
     const logger = { info: vi.fn() }
 
     registerWorkspaceCommandsIpc(ipcMain as never, {
+      app: { addRecentDocument: vi.fn() },
       exportService: {} as never,
       graphLayoutStore: {} as never,
       localHistoryService: localHistoryService as never,

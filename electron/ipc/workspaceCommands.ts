@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { IpcMain, IpcMainInvokeEvent } from 'electron'
+import type { App, IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import type { ExportService } from '@electron/services/export/exportService'
 import type { Logger } from '@electron/services/logger'
@@ -25,6 +25,11 @@ import {
   parseWorkspaceNavigationQuery,
   parseWorkspacePageQuery,
 } from '@electron/ipc/workspaceAnalysisQuerySchemas'
+import {
+  applyAppRecentWorkspaceFile,
+  createNativeRecentDocumentState,
+  type NativeRecentDocumentState,
+} from '@electron/services/nativeWindowDocument'
 
 export type WorkspaceCommandServices = {
   commandHandlers: NativeCommandHandlers
@@ -33,10 +38,12 @@ export type WorkspaceCommandServices = {
 }
 
 type WorkspaceIpcDependencies = {
+  app: Pick<App, 'addRecentDocument'>
   exportService: ExportService
   graphLayoutStore: GraphLayoutStore
   localHistoryService: LocalHistoryServiceContract
   logger: Logger
+  platform?: NodeJS.Platform
   workspaceRegistry: WindowWorkspaceRegistry
 }
 
@@ -45,10 +52,12 @@ type WorkspaceForEvent = (event: IpcMainInvokeEvent) => WorkspaceService
 export const registerWorkspaceCommandsIpc = (
   ipcMain: IpcMain,
   {
+    app,
     exportService,
     graphLayoutStore,
     localHistoryService,
     logger,
+    platform = process.platform,
     workspaceRegistry,
   }: WorkspaceIpcDependencies,
 ): WorkspaceCommandServices => {
@@ -57,6 +66,10 @@ export const registerWorkspaceCommandsIpc = (
     exportService,
     graphLayoutStore,
     localHistoryService,
+    app,
+    createNativeRecentDocumentState(),
+    logger,
+    platform,
   )
   registerLegacyCommandHandlers(ipcMain, commandHandlers)
   logger.info('workspace IPC registered')
@@ -68,6 +81,10 @@ const createWorkspaceCommandHandlers = (
   exportService: ExportService,
   graphLayoutStore: GraphLayoutStore,
   localHistory: LocalHistoryServiceContract,
+  app: Pick<App, 'addRecentDocument'>,
+  recentDocumentState: NativeRecentDocumentState,
+  logger: Logger,
+  platform: NodeJS.Platform,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
 
@@ -77,7 +94,23 @@ const createWorkspaceCommandHandlers = (
     fs_list_entries: (_payload, event) => workspaceForEvent(event).entries(),
     fs_set_root: (payload, event) => workspaceForEvent(event).setRoot(payload),
     fs_set_single_file: (payload, event) => workspaceForEvent(event).setSingleFile(payload),
-    fs_open_file: (payload, event) => workspaceForEvent(event).openFile(payload),
+    fs_open_file: async (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      const content = await workspace.openFile(payload)
+      try {
+        const relativePath = readRequiredString(payload, 'path')
+        applyAppRecentWorkspaceFile(
+          app,
+          workspace.rootInfo(),
+          workspace.resolveCoordinatorPath(relativePath),
+          recentDocumentState,
+          platform,
+        )
+      } catch (error) {
+        logger.warn('failed to register native recent document', { error })
+      }
+      return content
+    },
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
     fs_query_workspace_pages: (payload, event) =>
       workspaceForEvent(event).workspacePageQuery(parseWorkspacePageQuery(payload)),

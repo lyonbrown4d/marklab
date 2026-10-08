@@ -37,7 +37,6 @@ export const PlateExternalValueSyncController = ({
       editable.dataset.state = busy ? 'loading' : 'ready'
       editable.setAttribute('aria-busy', busy ? 'true' : 'false')
       editable.toggleAttribute('inert', busy)
-      editable.classList.toggle('invisible', busy)
       if (busy) editable.setAttribute('aria-hidden', 'true')
       else editable.removeAttribute('aria-hidden')
     }

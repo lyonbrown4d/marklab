@@ -65,7 +65,7 @@ describe('PlateEditorSurface streamed hydration', () => {
     consoleError.mockRestore()
   })
 
-  it('renders later chunks while editing remains disabled until completion', async () => {
+  it('renders later chunks behind the loading overlay while editing remains disabled', async () => {
     const onChange = vi.fn()
     render(
       <PlateEditorSurface
@@ -83,7 +83,7 @@ describe('PlateEditorSurface streamed hydration', () => {
     expect(editor).toHaveAttribute('contenteditable', 'true')
     expect(editor).toHaveAttribute('inert')
     expect(editor).toHaveAttribute('aria-hidden', 'true')
-    expect(editor).toHaveClass('invisible')
+    expect(editor).not.toHaveClass('invisible')
 
     await act(async () => streamMock.emit?.(paragraph('Later streamed block')))
     expect(screen.getByText('Later streamed block')).toBeInTheDocument()

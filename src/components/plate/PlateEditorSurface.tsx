@@ -240,7 +240,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               aria-hidden={!contentReady ? 'true' : undefined}
               className={cn(
                 'markdown-editor__content min-h-full w-full outline-none',
-                !contentReady && 'invisible',
                 readOnly && 'cursor-default',
                 className,
               )}
