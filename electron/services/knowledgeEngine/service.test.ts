@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
 import { describe, expect, it, vi } from 'vitest'
 import type { App } from 'electron'
 
@@ -27,7 +30,7 @@ describe('KnowledgeEngineService Node runtime', () => {
       listActive: vi.fn(() => []),
       open: vi.fn(async () => undefined),
     }
-    Object.assign(service, { sidecars })
+    Object.assign(service, { runtime: { sidecars: async () => sidecars } })
 
     await expect(
       service.getMarkdownDiagnostics('workspace-a', 'C:/workspace', 'alpha.md', '[A][missing]'),
@@ -40,5 +43,18 @@ describe('KnowledgeEngineService Node runtime', () => {
       'alpha.md',
       '[A][missing]',
     )
+  })
+
+  it('owns one shared utility-process pool for all workspace runtimes', async () => {
+    const source = await fs.readFile(
+      path.join(
+        process.cwd(),
+        'electron/services/knowledgeEngine/workspaceSidecarManagerFactory.ts',
+      ),
+      'utf8',
+    )
+
+    expect(source).toContain('NodeSidecarProcessPool')
+    expect(source).toContain('startSidecar:')
   })
 })

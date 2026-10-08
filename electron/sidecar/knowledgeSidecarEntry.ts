@@ -2,56 +2,92 @@ import { createNodeWorkspaceClient } from '@electron/services/knowledgeEngine/no
 import {
   isNodeSidecarCancel,
   isNodeSidecarRequest,
+  type NodeSidecarRequest,
   type NodeSidecarResponse,
+  type NodeSidecarWorkspace,
 } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 
-const workspaceRoot = process.argv[2]
-if (!workspaceRoot) throw new Error('Knowledge sidecar workspace root is required.')
-const engineDataDir = process.argv[3]
-if (!engineDataDir) throw new Error('Knowledge sidecar engine data directory is required.')
 if (!process.parentPort) throw new Error('Knowledge sidecar parent port is unavailable.')
 
-const client = createNodeWorkspaceClient(workspaceRoot, engineDataDir)
-const activeRequests = new Map<number, AbortController>()
+const clients = new Map<string, ReturnType<typeof createNodeWorkspaceClient>>()
+const workspaces = new Map<string, NodeSidecarWorkspace>()
+const activeRequests = new Map<string, AbortController>()
 
 process.parentPort.on('message', (event) => {
   const request = event.data
   if (isNodeSidecarCancel(request)) {
-    activeRequests.get(request.cancelId)?.abort()
+    activeRequests.get(requestKey(request.workspaceInstanceId, request.cancelId))?.abort()
     return
   }
   if (!isNodeSidecarRequest(request)) return
   const controller = new AbortController()
-  activeRequests.set(request.id, controller)
-  void dispatch(request.method, request.args, controller.signal)
-    .then((result) => send({ id: request.id, ok: true, result }))
+  const key = requestKey(request.workspace.workspaceInstanceId, request.id)
+  activeRequests.set(key, controller)
+  void dispatch(request, controller.signal)
+    .then((result) =>
+      send({
+        id: request.id,
+        ok: true,
+        result,
+        workspaceInstanceId: request.workspace.workspaceInstanceId,
+      }),
+    )
     .catch((error: unknown) =>
       send({
         error: error instanceof Error ? error.message : String(error),
         id: request.id,
         ok: false,
+        workspaceInstanceId: request.workspace.workspaceInstanceId,
       }),
     )
-    .finally(() => activeRequests.delete(request.id))
+    .finally(() => activeRequests.delete(key))
 })
 
-const dispatch = async (
-  method: keyof typeof client,
-  args: unknown[],
-  signal: AbortSignal,
-): Promise<unknown> => {
-  if (method === 'searchOccurrences') {
+const dispatch = async (request: NodeSidecarRequest, signal: AbortSignal): Promise<unknown> => {
+  const client = workspaceClient(request.workspace)
+  if (request.method === 'searchOccurrences') {
     return client.searchOccurrences(
-      args[0] as Parameters<typeof client.searchOccurrences>[0],
+      request.args[0] as Parameters<typeof client.searchOccurrences>[0],
       signal,
     )
   }
-  if (method === 'getMarkdownDiagnostics') {
-    return client.getMarkdownDiagnostics(args[0] as string, args[1] as string, signal)
+  if (request.method === 'getMarkdownDiagnostics') {
+    return client.getMarkdownDiagnostics(
+      request.args[0] as string,
+      request.args[1] as string,
+      signal,
+    )
   }
-  const handler = client[method] as unknown as (...values: unknown[]) => unknown
-  return handler.apply(client, args)
+  const handler = client[request.method] as unknown as (...values: unknown[]) => unknown
+  try {
+    return await handler.apply(client, request.args)
+  } finally {
+    if (request.method === 'shutdown') {
+      clients.delete(request.workspace.workspaceInstanceId)
+      workspaces.delete(request.workspace.workspaceInstanceId)
+    }
+  }
 }
+
+const workspaceClient = (workspace: NodeSidecarWorkspace) => {
+  const current = workspaces.get(workspace.workspaceInstanceId)
+  if (current) {
+    if (
+      current.canonicalRoot !== workspace.canonicalRoot ||
+      current.engineDataDir !== workspace.engineDataDir
+    ) {
+      throw new Error('Knowledge sidecar workspace identity changed unexpectedly.')
+    }
+    return clients.get(workspace.workspaceInstanceId)!
+  }
+  const client = createNodeWorkspaceClient(workspace.canonicalRoot, workspace.engineDataDir)
+  workspaces.set(workspace.workspaceInstanceId, workspace)
+  clients.set(workspace.workspaceInstanceId, client)
+  return client
+}
+
+const requestKey = (workspaceInstanceId: string, requestId: number): string =>
+  `${workspaceInstanceId}:${requestId}`
 
 const send = (response: NodeSidecarResponse): void => {
   process.parentPort?.postMessage(response)

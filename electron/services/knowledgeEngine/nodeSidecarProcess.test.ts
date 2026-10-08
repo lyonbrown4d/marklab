@@ -25,16 +25,21 @@ describe('Node knowledge sidecar process', () => {
     process.emit('spawn')
     const started = await starting
     const pending = started.client.hasDocuments()
-    const request = process.postMessage.mock.calls[0]?.[0] as { id: number; method: string }
-    process.emit('message', { id: request.id, ok: true, result: true })
+    const request = process.postMessage.mock.calls[0]?.[0] as {
+      id: number
+      method: string
+      workspace: { workspaceInstanceId: string }
+    }
+    respond(process, request, true)
 
     await expect(pending).resolves.toBe(true)
     expect(fork).toHaveBeenCalledWith(
       'knowledgeSidecarEntry.js',
-      ['workspace-root', 'engine-data'],
+      [],
       expect.objectContaining({ serviceName: 'Marklab Knowledge Engine' }),
     )
     expect(request.method).toBe('hasDocuments')
+    expect(request.workspace.workspaceInstanceId).toBe('instance-a')
     expect(started.address).toBe('node:utility-process')
   })
 
@@ -89,7 +94,7 @@ describe('Node knowledge sidecar process', () => {
       id: number
       method: string
     }
-    process.emit('message', { id: request.id, ok: true, result: [] })
+    respond(process, request, [])
 
     await expect(pending).resolves.toEqual([])
     expect(request).toMatchObject({
@@ -117,12 +122,15 @@ describe('Node knowledge sidecar process', () => {
 
     controller.abort()
     await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
-    expect(process.postMessage.mock.calls[1]?.[0]).toEqual({ cancelId: staleRequest.id })
+    expect(process.postMessage.mock.calls[1]?.[0]).toEqual({
+      cancelId: staleRequest.id,
+      workspaceInstanceId: 'instance-a',
+    })
 
-    process.emit('message', { id: staleRequest.id, ok: true, result: [] })
+    respond(process, staleRequest, [])
     const current = started.client.getMarkdownDiagnostics('alpha.md', '[Current][missing]')
     const currentRequest = process.postMessage.mock.calls[2]?.[0] as { id: number }
-    process.emit('message', { id: currentRequest.id, ok: true, result: [{ line: 1 }] })
+    respond(process, currentRequest, [{ line: 1 }])
 
     await expect(current).resolves.toEqual([{ line: 1 }])
   })
@@ -141,3 +149,12 @@ const identity = (): WorkspaceSidecarIdentity => ({
   workspaceId: 'workspace-a',
   workspaceInstanceId: 'instance-a',
 })
+
+const respond = (process: FakeUtilityProcess, request: { id: number }, result: unknown): void => {
+  process.emit('message', {
+    id: request.id,
+    ok: true,
+    result,
+    workspaceInstanceId: 'instance-a',
+  })
+}

@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest'
 const stylePath = 'src/styles/plate-editor.scss'
 const codeHighlightStylePath = 'src/styles/plate-editor/code-highlight.scss'
 const modesStylePath = 'src/styles/plate-editor/modes.scss'
-const mainSource = readFileSync('src/main.tsx', 'utf8') as string
+const applicationSource = readFileSync('src/app/RendererApplication.tsx', 'utf8') as string
 
 describe('Plate editor styles', () => {
-  it('loads the dedicated Plate stylesheet from the renderer entrypoint', () => {
+  it('loads the dedicated Plate stylesheet with the renderer application', () => {
     expect(existsSync(stylePath)).toBe(true)
-    expect(mainSource).toContain("import '@/styles/plate-editor.scss'")
-    expect(mainSource).not.toContain("import '@/styles/editor-playground.scss'")
+    expect(applicationSource).toContain("import '@/styles/plate-editor.scss'")
+    expect(applicationSource).not.toContain("import '@/styles/editor-playground.scss'")
   })
 
   it('targets the stable Marklab and Slate contracts without Milkdown internals', () => {

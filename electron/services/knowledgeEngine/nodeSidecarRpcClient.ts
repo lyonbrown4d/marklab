@@ -4,11 +4,14 @@ import type {
   NodeSidecarMethod,
 } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
 import { isNodeSidecarResponse } from '@electron/services/knowledgeEngine/nodeSidecarProtocol'
+import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngine/workspaceIdentity'
 
 export type NodeSidecarProcessPort = {
   on(event: 'exit', listener: (code: number) => void): unknown
   on(event: 'message', listener: (message: unknown) => void): unknown
   postMessage(message: NodeSidecarMessage): void
+  removeListener(event: 'exit', listener: (code: number) => void): unknown
+  removeListener(event: 'message', listener: (message: unknown) => void): unknown
 }
 
 type PendingRequest = {
@@ -20,10 +23,18 @@ type PendingRequest = {
 export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
   private nextId = 1
   private readonly pending = new Map<number, PendingRequest>()
+  private readonly handleExitListener = (code: number) => this.handleExit(code)
+  private readonly handleMessageListener = (message: unknown) => this.handleMessage(message)
 
-  constructor(private readonly port: NodeSidecarProcessPort) {
-    port.on('message', (message) => this.handleMessage(message))
-    port.on('exit', (code) => this.handleExit(code))
+  constructor(
+    private readonly port: NodeSidecarProcessPort,
+    private readonly workspace: Pick<
+      WorkspaceSidecarIdentity,
+      'canonicalRoot' | 'engineDataDir' | 'workspaceInstanceId'
+    >,
+  ) {
+    port.on('message', this.handleMessageListener)
+    port.on('exit', this.handleExitListener)
   }
 
   getCapabilities(workspaceInstanceId: string) {
@@ -203,6 +214,8 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
     return this.request<void>('shutdown', reason)
   }
   close(): void {
+    this.port.removeListener('message', this.handleMessageListener)
+    this.port.removeListener('exit', this.handleExitListener)
     this.handleExit(0)
   }
 
@@ -210,7 +223,7 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
     const id = this.nextId++
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { reject, resolve: (value) => resolve(value as T) })
-      this.port.postMessage({ args, id, method })
+      this.port.postMessage({ args, id, method, workspace: this.workspace })
     })
   }
 
@@ -227,7 +240,10 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
         if (!pending) return
         this.pending.delete(id)
         pending.cleanup?.()
-        this.port.postMessage({ cancelId: id })
+        this.port.postMessage({
+          cancelId: id,
+          workspaceInstanceId: this.workspace.workspaceInstanceId,
+        })
         reject(abortError())
       }
       signal.addEventListener('abort', onAbort, { once: true })
@@ -236,12 +252,13 @@ export class NodeSidecarRpcClient implements WorkspaceSidecarClient {
         reject,
         resolve: (value) => resolve(value as T),
       })
-      this.port.postMessage({ args, id, method })
+      this.port.postMessage({ args, id, method, workspace: this.workspace })
     })
   }
 
   private handleMessage(message: unknown): void {
     if (!isNodeSidecarResponse(message)) return
+    if (message.workspaceInstanceId !== this.workspace.workspaceInstanceId) return
     const pending = this.pending.get(message.id)
     if (!pending) return
     this.pending.delete(message.id)

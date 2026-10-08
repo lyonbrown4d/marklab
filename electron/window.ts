@@ -101,6 +101,12 @@ const secureWebPreferences = () => {
     preload: preloadPath,
   } satisfies Electron.WebPreferences
 }
+const splashWebPreferences = (): Electron.WebPreferences => ({
+  backgroundThrottling: true,
+  contextIsolation: true,
+  nodeIntegration: false,
+  sandbox: true,
+})
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 const loadDevUrl = async (window: BrowserWindow, url: string) => {
   let lastError: unknown
@@ -144,7 +150,7 @@ export const createSplashWindow = () => {
     show: false,
     skipTaskbar: true,
     backgroundColor: resolveNativeWindowBackground(nativeTheme.shouldUseDarkColors),
-    webPreferences: secureWebPreferences(),
+    webPreferences: splashWebPreferences(),
   })
   installWindowNavigationGuard(splash, [getRendererNavigationUrl('splashscreen.html')])
 

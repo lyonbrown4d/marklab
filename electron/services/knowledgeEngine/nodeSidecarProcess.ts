@@ -8,13 +8,13 @@ import type { WorkspaceSidecarIdentity } from '@electron/services/knowledgeEngin
 import type { StartedWorkspaceSidecar } from '@electron/services/knowledgeEngine/workspaceSidecarTypes'
 import type { Logger } from '@electron/services/logger'
 
-type ForkUtilityProcess = (
+export type ForkUtilityProcess = (
   modulePath: string,
   args: string[],
   options: ForkOptions,
 ) => NodeUtilityProcess
 
-type NodeUtilityProcess = {
+export type NodeUtilityProcess = {
   kill: () => boolean
   on(event: 'exit', listener: (code: number) => void): unknown
   on(event: 'message', listener: (message: unknown) => void): unknown
@@ -22,6 +22,8 @@ type NodeUtilityProcess = {
   once(event: 'spawn', listener: () => void): unknown
   pid?: number
   postMessage: (message: unknown) => void
+  removeListener(event: 'exit', listener: (code: number) => void): unknown
+  removeListener(event: 'message', listener: (message: unknown) => void): unknown
 }
 
 type StartNodeSidecarOptions = {
@@ -36,11 +38,11 @@ export const startNodeSidecar = async (
 ): Promise<StartedWorkspaceSidecar> => {
   const entryPath = options.entryPath ?? resolveNodeSidecarEntry(import.meta.url)
   const fork = options.fork ?? (await import('electron')).utilityProcess.fork
-  const utility = fork(entryPath, [identity.canonicalRoot, identity.engineDataDir], {
+  const utility = fork(entryPath, [], {
     serviceName: 'Marklab Knowledge Engine',
     stdio: 'ignore',
   })
-  await waitForSpawn(utility)
+  await waitForNodeSidecarSpawn(utility)
   let killed = false
   utility.on('exit', (code) => {
     killed = true
@@ -65,11 +67,11 @@ export const startNodeSidecar = async (
         return utility.pid
       },
     },
-    client: new NodeSidecarRpcClient(utility),
+    client: new NodeSidecarRpcClient(utility, identity),
   }
 }
 
-const waitForSpawn = (utility: NodeUtilityProcess): Promise<void> =>
+export const waitForNodeSidecarSpawn = (utility: NodeUtilityProcess): Promise<void> =>
   new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       try {

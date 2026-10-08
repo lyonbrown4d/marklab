@@ -1,23 +1,7 @@
-import { lazy, StrictMode, Suspense } from 'react'
+import { lazy, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClientProvider } from '@tanstack/react-query'
-import '@fontsource/jetbrains-mono/latin-400.css'
-import '@fontsource/jetbrains-mono/latin-500.css'
-import '@fontsource/jetbrains-mono/latin-600.css'
-import '@xyflow/react/dist/base.css'
 import '@/index.scss'
-import '@/styles/app.scss'
-import '@/styles/plate-editor.scss'
-import '@/styles/source-editor.scss'
-import '@/styles/motion.scss'
-import '@/styles/search.scss'
-import '@/i18n/setup'
-import App from '@/App.tsx'
-import { queryClient } from '@/app/queryClient'
-import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { initializeReactScan } from '@/dev/reactScan'
-import { scheduleEditorRuntimePreload } from '@/app/scheduleEditorRuntimePreload'
-import AppToaster from '@/app/AppToaster'
 import { installRendererDiagnostics, reportReactError } from '@/services/rendererDiagnostics'
 import RendererBootstrap from '@/app/RendererBootstrap'
 import {
@@ -26,12 +10,15 @@ import {
   onRendererInteractive,
 } from '@/runtime/rendererLifecycle'
 
-const ReactQueryDevtools = import.meta.env.DEV
-  ? lazy(async () => {
-      const { ReactQueryDevtools: Devtools } = await import('@tanstack/react-query-devtools')
-      return { default: Devtools }
-    })
-  : null
+const standby = isStandbyRenderer()
+const RendererApplication = standby
+  ? lazy(() => import('@/app/RendererApplication'))
+  : (await import('@/app/RendererApplication')).default
+
+const scheduleEditorRuntimePreload = async (): Promise<void> => {
+  const runtime = await import('@/app/scheduleEditorRuntimePreload')
+  runtime.scheduleEditorRuntimePreload()
+}
 
 initializeReactScan(import.meta.env.DEV, import.meta.env.VITE_REACT_SCAN)
 installRendererDiagnostics()
@@ -64,30 +51,16 @@ createRoot(document.getElementById('root')!, {
   onUncaughtError: (error, info) => reportReactError('uncaught-error', error, info.componentStack),
 }).render(
   <StrictMode>
-    <RendererBootstrap
-      application={
-        <PlateDndProvider>
-          <QueryClientProvider client={queryClient}>
-            <App />
-            <AppToaster />
-            {ReactQueryDevtools && (
-              <Suspense fallback={null}>
-                <ReactQueryDevtools initialIsOpen={false} />
-              </Suspense>
-            )}
-          </QueryClientProvider>
-        </PlateDndProvider>
-      }
-    />
+    <RendererBootstrap application={<RendererApplication />} />
   </StrictMode>,
 )
 
-if (isStandbyRenderer()) {
+if (standby) {
   let stopListening: () => void = () => undefined
   stopListening = onRendererInteractive(() => {
     stopListening()
-    scheduleEditorRuntimePreload()
+    void scheduleEditorRuntimePreload()
   })
 } else {
-  scheduleEditorRuntimePreload()
+  void scheduleEditorRuntimePreload()
 }

@@ -16,6 +16,6 @@ export const dismissSplashWindow = (splash: BrowserWindow, hideWindow: HideWindo
   }, SPLASH_DISMISS_FALLBACK_MS)
   splash.once('closed', () => clearTimeout(fallback))
   hideWindow(splash, () => {
-    if (!splash.isDestroyed()) splash.close()
+    if (!splash.isDestroyed()) splash.destroy()
   })
 }

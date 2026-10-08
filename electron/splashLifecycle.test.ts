@@ -37,14 +37,14 @@ describe('splash lifecycle', () => {
     expect(splash.show).not.toHaveBeenCalled()
   })
 
-  it('closes after the hide animation completes', () => {
+  it('destroys the splash renderer after the hide animation completes', () => {
     const splash = createSplash()
     const hide = vi.fn((_window, onHidden: () => void) => onHidden())
 
     dismissSplashWindow(splash as unknown as BrowserWindow, hide)
 
-    expect(splash.close).toHaveBeenCalledOnce()
-    expect(splash.destroy).not.toHaveBeenCalled()
+    expect(splash.destroy).toHaveBeenCalledOnce()
+    expect(splash.close).not.toHaveBeenCalled()
   })
 
   it('destroys a lingering splash when the hide callback never arrives', () => {
