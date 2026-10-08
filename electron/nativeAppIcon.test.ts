@@ -29,4 +29,10 @@ describe('native app icon assets', () => {
     expect(generator).toContain("'marklab-light.ico'")
     expect(generator).toContain("'marklab-dark.ico'")
   })
+
+  it('applies the native icon to the Windows taskbar relaunch entry', () => {
+    const windowSource = readProjectFile('electron/window.ts')
+
+    expect(windowSource).toContain('configureWindowAppIdentity(main, windowsTaskbarIconPath)')
+  })
 })

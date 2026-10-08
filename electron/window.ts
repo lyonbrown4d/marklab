@@ -1,12 +1,15 @@
 import { BrowserWindow, app, nativeTheme } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
-import { MARKLAB_APP_NAME } from '@electron/appIdentity'
+import { configureWindowAppIdentity, MARKLAB_APP_NAME } from '@electron/appIdentity'
 import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime'
 import { noopLogger, type Logger } from '@electron/services/logger'
 import { setWindowState } from '@electron/services/settingsStore'
 import { MAIN_WINDOW_ID } from '@electron/services/settingsStoreValues'
-import { resolveElectronProjectRoots } from '@electron/windowIconPaths'
+import {
+  resolveElectronProjectRoots,
+  resolveWindowsTaskbarIconPath,
+} from '@electron/windowIconPaths'
 import { createWindowIcon } from '@electron/windowIcon'
 import type { PersistedWindowState } from '@electron/types'
 import { resolveNativeWindowBackground } from '@electron/windowTheme'
@@ -29,6 +32,11 @@ const electronDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(electronDir, '..')
 const preloadPath = path.join(electronDir, 'preload.cjs')
 const appIconRoots = resolveElectronProjectRoots(electronDir)
+const windowsTaskbarIconPath = resolveWindowsTaskbarIconPath(
+  appIconRoots,
+  app.isPackaged,
+  process.execPath,
+)
 export const createAppWindowIcon = (dark = nativeTheme.shouldUseDarkColors) =>
   createWindowIcon(appIconRoots, dark ? 'dark' : 'light')
 const appIcon = createAppWindowIcon()
@@ -169,6 +177,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     backgroundColor: resolveNativeWindowBackground(nativeTheme.shouldUseDarkColors),
     webPreferences: secureWebPreferences(),
   })
+  configureWindowAppIdentity(main, windowsTaskbarIconPath)
   if (isMacOS()) {
     main.setWindowButtonVisibility(true)
   }

@@ -5,6 +5,7 @@ import {
   resolveElectronProjectRoots,
   resolveWindowIconPath,
   resolveWindowIconPaths,
+  resolveWindowsTaskbarIconPath,
 } from '@electron/windowIconPaths'
 
 const createIcon = async (root: string, relativePath: string): Promise<string> => {
@@ -46,6 +47,21 @@ describe('window icon paths', () => {
     expect(resolveWindowIconPath(root, 'win32', 'light')).toBe(lightPath)
     expect(resolveWindowIconPath(root, 'win32', 'dark')).toBe(darkPath)
     expect(resolveWindowIconPath(root, 'win32')).toBe(staticPath)
+  })
+
+  it('uses the executable icon for packaged Windows taskbar relaunch entries', async () => {
+    const root = await mkdtemp(path.join(tempRoot(), 'marklab-window-icon-'))
+    await createIcon(root, path.join('resources', 'icons', 'marklab.ico'))
+    const executablePath = 'C:\\Program Files\\Marklab\\Marklab.exe'
+
+    expect(resolveWindowsTaskbarIconPath(root, true, executablePath)).toBe(executablePath)
+  })
+
+  it('uses the generated ico for development taskbar relaunch entries', async () => {
+    const root = await mkdtemp(path.join(tempRoot(), 'marklab-window-icon-'))
+    const iconPath = await createIcon(root, path.join('resources', 'icons', 'marklab.ico'))
+
+    expect(resolveWindowsTaskbarIconPath(root, false, 'electron.exe')).toBe(iconPath)
   })
 
   it('selects themed PNGs on Linux while keeping the packaged macOS icon stable', async () => {

@@ -72,6 +72,15 @@ export const resolveWindowIconPath = (
   return resolveWindowIconPaths(projectRoots, platform, colorMode)[0] ?? null
 }
 
+export const resolveWindowsTaskbarIconPath = (
+  projectRoots: WindowIconProjectRoots,
+  isPackaged: boolean,
+  executablePath: string,
+): string | null => {
+  if (isPackaged) return executablePath || null
+  return resolveWindowIconPath(projectRoots, 'win32')
+}
+
 const resolveThemedCandidates = (
   platform: WindowIconPlatform,
   colorMode?: WindowIconColorMode,

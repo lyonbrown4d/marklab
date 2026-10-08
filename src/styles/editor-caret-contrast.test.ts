@@ -51,7 +51,8 @@ const themeBlocks = [
 describe('editor caret contrast', () => {
   it('uses the high-contrast foreground token for native and animated Plate carets', () => {
     expect(plateStyles).toMatch(/caret-color:\s*hsl\(var\(--foreground\)\)/)
-    expect(animatedCaretStyles).toMatch(/background:\s*hsl\(var\(--foreground\)\)/)
+    expect(animatedCaretStyles).toMatch(/--marklab-caret-color:\s*hsl\(var\(--foreground\)\)/)
+    expect(animatedCaretStyles).toMatch(/background:\s*var\(--marklab-caret-color\)/)
     expect(animatedCaretStyles).toMatch(
       /prefers-reduced-motion:[\s\S]*caret-color:\s*hsl\(var\(--foreground\)\)/,
     )

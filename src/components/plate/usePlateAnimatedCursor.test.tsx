@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
 import { usePlateAnimatedCursor } from '@/components/plate/usePlateAnimatedCursor'
 
-const AnimatedCursorHarness = ({ transformed = false }: { transformed?: boolean }) => {
+const AnimatedCursorHarness = ({
+  color,
+  transformed = false,
+}: {
+  color?: string
+  transformed?: boolean
+}) => {
   const editableRef = useRef<HTMLDivElement>(null)
 
   usePlateAnimatedCursor({ editableRef, enabled: true })
@@ -14,6 +20,7 @@ const AnimatedCursorHarness = ({ transformed = false }: { transformed?: boolean 
       contentEditable
       data-testid="editable"
       ref={editableRef}
+      style={{ color }}
       suppressContentEditableWarning
       tabIndex={0}
     >
@@ -30,6 +37,46 @@ const AnimatedCursorHarness = ({ transformed = false }: { transformed?: boolean 
 }
 
 describe('usePlateAnimatedCursor', () => {
+  it('inherits the embedded editor text color when the portal caret is mounted on body', () => {
+    let nextFrameId = 0
+    const animationFrames = new Map<number, FrameRequestCallback>()
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      const frameId = ++nextFrameId
+      animationFrames.set(frameId, callback)
+      return frameId
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((frameId) => {
+      animationFrames.delete(frameId)
+    })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+
+    render(<AnimatedCursorHarness color="rgb(31, 41, 55)" transformed />)
+    const editable = screen.getByTestId('editable')
+    const text = editable.firstChild
+    expect(text).toBeInstanceOf(Text)
+
+    const range = document.createRange()
+    range.setStart(text!, 2)
+    range.collapse(true)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    editable.focus()
+    document.dispatchEvent(new Event('selectionchange'))
+    Object.defineProperty(selection.getRangeAt(0), 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 42, height: 20, left: 36, right: 36, top: 22, width: 0 }),
+    })
+    const callbacks = [...animationFrames.values()]
+    animationFrames.clear()
+    act(() => callbacks.forEach((callback) => callback(performance.now())))
+
+    const caret = document.querySelector<HTMLElement>(
+      '[data-marklab-plate-overlay="animated-cursor"]',
+    )
+    expect(caret?.style.getPropertyValue('--marklab-caret-color')).toBe('rgb(31, 41, 55)')
+  })
+
   it('hides the portal caret while the window is unfocused even when the editor stays active', () => {
     let nextFrameId = 0
     const animationFrames = new Map<number, FrameRequestCallback>()

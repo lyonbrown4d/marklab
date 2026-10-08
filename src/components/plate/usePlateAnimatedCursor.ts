@@ -64,6 +64,8 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
         setVisible(false)
         return
       }
+      const editorColor = view.getComputedStyle(root).color
+      if (editorColor) caret.style.setProperty('--marklab-caret-color', editorColor)
       caret.style.setProperty('--marklab-caret-x', `${rect.left - CURSOR_WIDTH / 2}px`)
       caret.style.setProperty('--marklab-caret-y', `${rect.top}px`)
       caret.style.setProperty('--marklab-caret-height', `${Math.max(14, rect.height)}px`)
@@ -95,7 +97,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
 
     const preferenceObserver = new MutationObserver(scheduleUpdate)
     preferenceObserver.observe(document.documentElement, {
-      attributeFilter: ['data-motion-cursor'],
+      attributeFilter: ['class', 'data-motion-cursor', 'data-theme'],
       attributes: true,
     })
     document.addEventListener('selectionchange', scheduleUpdate)
