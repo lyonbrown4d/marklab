@@ -49,6 +49,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onOpenFile,
       onOpenHeading,
       onOpenSearchResult,
+      recentNavigationLocations = [],
+      onOpenNavigationLocation = noop,
       onOpenWorkspaceGraph,
       onOpenWorkspaceFiles = noop,
       onOpenAllPages,
@@ -119,6 +121,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       onCommandOpenFile,
       onCommandOpenHeading,
       onCommandOpenSearchResult,
+      onCommandOpenPathInNewWindow,
     } = useTitlebarCommandModel({
       activePath,
       files,
@@ -146,6 +149,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       platform,
       commandOpen: commandDataReady,
       onOpenCurrentWorkspaceInNewWindow,
+      rootKind,
+      rootPath,
     })
 
     const handleTitlebarMouseDown = useCallback(
@@ -165,6 +170,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     )
     return (
       <header
+        data-app-focus-zone="titlebar"
         className={cn(
           'app-titlebar relative flex h-[52px] items-center justify-between border-b border-border/60 px-2.5',
           isMacDesktop && 'pl-[76px]',
@@ -234,9 +240,19 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
                 activePath={activePath}
                 files={commandFiles}
                 recentFiles={commandRecentFiles}
+                recentLocations={recentNavigationLocations}
                 onOpenFile={onCommandOpenFile}
                 onOpenHeading={onCommandOpenHeading}
                 onOpenSearchResult={onCommandOpenSearchResult}
+                onOpenPathInNewWindow={onCommandOpenPathInNewWindow}
+                onOpenNavigationLocation={(location) => {
+                  setCommandOpen(false)
+                  onOpenNavigationLocation(location)
+                }}
+                onOpenSettingsSelection={(selection) => {
+                  setCommandOpen(false)
+                  onOpenSettings(selection)
+                }}
                 onOpenNavigationOutgoingLink={(link) => {
                   if (link.targetHeadingSlug) {
                     onCommandOpenHeading(link.targetPath, link.targetHeadingSlug)

@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { DndPlugin } from '@platejs/dnd'
+import { BlockSelectionPlugin } from '@platejs/selection/react'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -50,7 +52,7 @@ vi.mock('@/runtime/environment', () => ({
 const renderMarkdown = (markdown: string, readOnly = true) => {
   const editor = createPlateEditor({
     nodeId: true,
-    plugins: [...createPlateNodePlugins(), plateMarkdownPlugin],
+    plugins: [BlockSelectionPlugin, ...createPlateNodePlugins(), plateMarkdownPlugin],
     value: (instance) => deserializePlateMarkdown(instance, markdown),
   })
 
@@ -209,7 +211,10 @@ describe('createPlateNodePlugins', () => {
     expect(blocks).toHaveLength(2)
     expect(screen.getAllByRole('button', { name: 'Move block' })).toHaveLength(2)
     const handle = within(blocks[0]).getByRole('button', { name: 'Move block' })
-    expect(handle).toHaveAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown')
+    expect(handle).toHaveAttribute(
+      'aria-keyshortcuts',
+      'Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown',
+    )
     expect(handle).toHaveAttribute('contenteditable', 'false')
     expect(handle).toHaveAttribute('data-block-id')
     expect(handle).toHaveAttribute('draggable', 'true')
@@ -219,13 +224,33 @@ describe('createPlateNodePlugins', () => {
     expect(screen.queryByRole('button', { name: 'Move block' })).not.toBeInTheDocument()
   })
 
-  it('moves a top-level block with the drag handle keyboard controls', async () => {
+  it('roves between handles and moves a selected block with Alt+Arrow', async () => {
     const { container, editor } = renderMarkdown('First\n\nSecond\n\nThird', false)
     const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
     const secondHandle = within(blocks[1]).getByRole('button', { name: 'Move block' })
 
     secondHandle.focus()
     fireEvent.keyDown(secondHandle, { key: 'ArrowUp' })
+
+    const firstHandle = within(blocks[0]).getByRole('button', { name: 'Move block' })
+    expect(firstHandle).toHaveFocus()
+    expect(editor.children.map((node) => node.children[0]?.text)).toEqual([
+      'First',
+      'Second',
+      'Third',
+    ])
+
+    fireEvent.keyDown(firstHandle, { key: 'ArrowDown' })
+    expect(secondHandle).toHaveFocus()
+    fireEvent.keyDown(secondHandle, { key: ' ' })
+    expect(editor.getOptions(BlockSelectionPlugin).selectedIds).toEqual(
+      new Set([blocks[1]?.dataset.blockId]),
+    )
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Move block' })[1]).toHaveFocus()
+    })
+    const selectedHandle = screen.getAllByRole('button', { name: 'Move block' })[1]!
+    expect(fireEvent.keyDown(selectedHandle, { altKey: true, key: 'ArrowUp' })).toBe(false)
 
     expect(editor.children.map((node) => node.children[0]?.text)).toEqual([
       'Second',
@@ -238,11 +263,48 @@ describe('createPlateNodePlugins', () => {
       )
     })
 
-    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+    fireEvent.keyDown(document.activeElement!, { altKey: true, key: 'ArrowDown' })
     expect(editor.children.map((node) => node.children[0]?.text)).toEqual([
       'First',
       'Second',
       'Third',
+    ])
+  })
+
+  it('shows contiguous and disjoint handle selections without replacing text selection', () => {
+    const { container, editor } = renderMarkdown('First\n\nSecond\n\nThird\n\nFourth', false)
+    const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
+    const handles = [...blocks].map((block) =>
+      within(block).getByRole('button', { name: 'Move block' }),
+    )
+
+    fireEvent.pointerDown(handles[1])
+    fireEvent.pointerDown(handles[3], { shiftKey: true })
+
+    expect([...blocks].map((block) => block.dataset.blockSelected)).toEqual([
+      'false',
+      'true',
+      'true',
+      'true',
+    ])
+
+    fireEvent.pointerDown(handles[0], { ctrlKey: true })
+    fireEvent.pointerDown(handles[2], { ctrlKey: true })
+    expect(editor.getOptions(BlockSelectionPlugin).selectedIds?.size).toBe(3)
+    expect([...blocks].map((block) => block.dataset.blockSelected)).toEqual([
+      'true',
+      'true',
+      'false',
+      'true',
+    ])
+
+    fireEvent.dragStart(handles[1], {
+      dataTransfer: { dropEffect: 'none', effectAllowed: 'none' },
+    })
+    expect(editor.getOption(DndPlugin, 'draggingId')).toEqual([
+      blocks[0]?.dataset.blockId,
+      blocks[1]?.dataset.blockId,
+      blocks[3]?.dataset.blockId,
     ])
   })
 })

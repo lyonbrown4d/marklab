@@ -33,8 +33,16 @@ const getErrorMessage = (error: unknown) => (error instanceof Error ? error.mess
 export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsOptions) => {
   const [searchIndexRebuilding, setSearchIndexRebuilding] = useState(false)
   const { t } = useI18n()
-  const { createFile, createFolder, files, onOpenFile, onOpenFileView, onOpenGitDiff, rootKind } =
-    state
+  const {
+    createFile,
+    createFolder,
+    files,
+    onOpenFile,
+    onOpenFileView,
+    onOpenGitDiff,
+    rootKind,
+    workspaceKey,
+  } = state
 
   const handleOpenFile = useCallback(
     (path: string) => {
@@ -124,17 +132,16 @@ export const useAppLayoutActions = ({ queryClient, state }: UseAppLayoutActionsO
 
   const handleOpenSearchResult = useCallback(
     (result: FsSearchResult) => {
+      requestFocusSourcePosition({
+        path: result.path,
+        line: result.line,
+        column: result.column,
+        endColumn: result.end_column,
+        workspaceKey,
+      })
       onOpenFileView(result.path, 'source')
-      window.setTimeout(() => {
-        requestFocusSourcePosition({
-          path: result.path,
-          line: result.line,
-          column: result.column,
-          endColumn: result.end_column,
-        })
-      }, 80)
     },
-    [onOpenFileView],
+    [onOpenFileView, workspaceKey],
   )
 
   return {

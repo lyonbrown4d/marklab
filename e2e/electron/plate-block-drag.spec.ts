@@ -26,6 +26,7 @@ import {
   openMarkdownDocument,
   readNativeDragProbe,
   readRenderedBlockOrder,
+  selectBlocksByMarker,
   type NativeDragEventSnapshot,
 } from './plateBlockDragHarness.js'
 // eslint-disable-next-line no-restricted-imports -- Product fixtures must stay outside production bundles.
@@ -131,6 +132,68 @@ test.describe('Plate block drag and drop', () => {
     await expect
       .poll(async () => (await readRenderedBlockOrder(editor)).indexOf(sourceMarker))
       .toBeGreaterThan((await readRenderedBlockOrder(editor)).indexOf(targetMarker))
+    assertNoRuntimeErrors(diagnostics)
+  })
+
+  test('drags a disjoint block selection as a group and undoes it atomically', async () => {
+    if (!session || !fixture || !diagnostics) throw new Error('Drag test is not initialized')
+    const page = session.page
+    const editor = page.getByTestId('markdown-editor')
+    const selectedMarkers: [string, string] = [fixture.markers[1]!, fixture.markers[3]!]
+    const targetMarker = fixture.markers[5]!
+    const initialOrder = await readRenderedBlockOrder(editor)
+    const expectedOrder = initialOrder.filter((marker) => !selectedMarkers.includes(marker))
+    expectedOrder.splice(expectedOrder.indexOf(targetMarker) + 1, 0, ...selectedMarkers)
+
+    await selectBlocksByMarker(editor, selectedMarkers)
+    await expect(page.getByTestId('plate-block-selection-count')).toHaveText('2')
+    await dragBlockAfter(
+      page,
+      blockByMarker(editor, selectedMarkers[0]),
+      blockByMarker(editor, targetMarker),
+    )
+
+    await expect.poll(() => readRenderedBlockOrder(editor)).toEqual(expectedOrder)
+    await expect.poll(() => readPersistedBlockOrder(fixture!.documentPath)).toEqual(expectedOrder)
+
+    await page.locator('.slate-shadow-input').focus()
+    await page.keyboard.press('ControlOrMeta+Z')
+    await expect.poll(() => readRenderedBlockOrder(editor)).toEqual(initialOrder)
+    await expect.poll(() => readPersistedBlockOrder(fixture!.documentPath)).toEqual(initialOrder)
+    assertNoRuntimeErrors(diagnostics)
+  })
+
+  test('selects and moves blocks entirely from the keyboard with one Tab stop', async () => {
+    if (!session || !fixture || !diagnostics) throw new Error('Drag test is not initialized')
+    const page = session.page
+    const editor = page.getByTestId('markdown-editor')
+    const handles = editor.locator('button[data-block-drag-handle="true"]')
+    const initialOrder = await readRenderedBlockOrder(editor)
+
+    await expect
+      .poll(() =>
+        handles.evaluateAll((items) => items.filter((item) => item.tabIndex === 0).length),
+      )
+      .toBe(1)
+    const firstSelectedHandle = blockByMarker(editor, fixture.markers[1]!).locator(
+      'button[data-block-drag-handle="true"]',
+    )
+    await firstSelectedHandle.focus()
+    await page.keyboard.press('Space')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Shift+Space')
+    await expect(page.getByTestId('plate-block-selection-count')).toHaveText('3')
+    await page.keyboard.press('ControlOrMeta+Space')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ControlOrMeta+Space')
+    await expect(page.getByTestId('plate-block-selection-count')).toHaveText('3')
+
+    await page.keyboard.press('Alt+ArrowDown')
+    await expect.poll(() => readRenderedBlockOrder(editor)).not.toEqual(initialOrder)
+    await page.keyboard.press('ControlOrMeta+Z')
+    await expect.poll(() => readRenderedBlockOrder(editor)).toEqual(initialOrder)
     assertNoRuntimeErrors(diagnostics)
   })
 

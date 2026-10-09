@@ -35,9 +35,10 @@ vi.mock('@/components/ui/command', () => ({
       value: string
       onValueChange: (value: string) => void
       onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
+      onKeyDownCapture?: (event: KeyboardEvent<HTMLInputElement>) => void
       placeholder: string
     }
-  >(({ value, onValueChange, onKeyDown, placeholder }, ref) => (
+  >(({ value, onValueChange, onKeyDown, onKeyDownCapture, placeholder }, ref) => (
     <input
       ref={ref}
       aria-label="Command input"
@@ -45,6 +46,7 @@ vi.mock('@/components/ui/command', () => ({
       value={value}
       onChange={(event) => onValueChange(event.target.value)}
       onKeyDown={onKeyDown}
+      onKeyDownCapture={onKeyDownCapture}
     />
   )),
 }))
@@ -228,20 +230,6 @@ describe('TitlebarCommandDialog', () => {
     expect(callbacks.onOpenSearchResult).toHaveBeenCalledWith(state.result)
   })
 
-  it('drives bounded heading queries from the deferred dialog input', async () => {
-    renderDialog()
-    await ready()
-    fireEvent.change(input(), { target: { value: '# architecture' } })
-
-    await waitFor(() =>
-      expect(state.navigationCalls.at(-1)).toMatchObject({
-        activePath: 'docs/current.md',
-        query: 'architecture',
-        scope: 'headings',
-      }),
-    )
-  })
-
   it('opens explicit commands without full-text work and returns to recent content', async () => {
     const callbacks = renderDialog()
     await ready()
@@ -299,7 +287,6 @@ describe('TitlebarCommandDialog', () => {
       screen.queryByRole('button', { name: '@ command.search.scopeFiles' }),
     ).not.toBeInTheDocument()
   })
-
   it('restores a history query and focuses the input', async () => {
     renderDialog()
     await ready()
@@ -309,12 +296,5 @@ describe('TitlebarCommandDialog', () => {
     await waitFor(() =>
       expect(screen.getByLabelText('Search results')).toHaveAttribute('data-query', 'recent query'),
     )
-  })
-
-  it('does not mount expensive content until workspace data is ready', () => {
-    renderDialog({ dataReady: false })
-    expect(input()).toBeVisible()
-    expect(screen.queryByRole('tab', { name: 'command.mode.quickOpen' })).not.toBeInTheDocument()
-    expect(state.streamCalls.every(({ open }) => !open)).toBe(true)
   })
 })

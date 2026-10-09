@@ -10,11 +10,7 @@ type UseDoubleShiftCommandPaletteArgs = {
   onOpen: () => void
 }
 
-const openModalSelector = [
-  '[role="dialog"]:not([data-state="closed"])',
-  '[role="alertdialog"]:not([data-state="closed"])',
-  '[aria-modal="true"]:not([data-state="closed"])',
-].join(',')
+const openModalSelector = '[aria-modal="true"]:not([data-state="closed"])'
 
 const isCommandPaletteUnavailable = () =>
   document.visibilityState === 'hidden' || document.querySelector(openModalSelector) !== null
@@ -57,12 +53,12 @@ export const useDoubleShiftCommandPalette = ({
     const handleKeyDown = (event: KeyboardEvent) => handleKey('keydown', event)
     const handleKeyUp = (event: KeyboardEvent) => handleKey('keyup', event)
 
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    window.addEventListener('keyup', handleKeyUp, { capture: true })
     window.addEventListener('blur', reset)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+      window.removeEventListener('keyup', handleKeyUp, { capture: true })
       window.removeEventListener('blur', reset)
     }
   }, [enabled, onOpen])

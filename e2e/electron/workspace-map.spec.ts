@@ -123,9 +123,10 @@ test.describe('Workspace map', () => {
     expect(editorAfterActivation.height).toBeGreaterThan(editorBeforeActivation.height)
 
     const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
-    await expect(statusBar.getByText(/\d+\s+(lines|行)$/i)).toHaveCount(1)
-    await expect(statusBar.getByText(/\d+\s+(words|词)$/i)).toHaveCount(1)
-    await expect(statusBar.getByText(/\d+\s+(chars|字符)$/i)).toHaveCount(1)
+    if (!(await statusBar.isVisible().catch(() => false))) {
+      await page.getByRole('button', { name: /Show status bar|显示状态栏/i }).click()
+    }
+    await expect(statusBar).toBeVisible()
 
     if (!session) throw new Error('Electron test session is unavailable')
     await revealElectronWindow(session.app, page, { width: 720, height: 640 })

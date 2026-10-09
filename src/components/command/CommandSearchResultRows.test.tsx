@@ -42,12 +42,24 @@ vi.mock('@/components/ui/command', () => ({
   CommandItem: ({
     children,
     onSelect,
+    value,
+    keywords,
+    ...props
   }: {
     children: ReactNode
     onSelect?: () => void
     value?: string
+    keywords?: string[]
+    'data-open-new-window-path'?: string
   }) => (
-    <div onClick={() => onSelect?.()} role="button" tabIndex={0}>
+    <div
+      {...props}
+      data-keywords={keywords?.join('|')}
+      data-value={value}
+      onClick={() => onSelect?.()}
+      role="button"
+      tabIndex={0}
+    >
       {children}
     </div>
   ),
@@ -127,6 +139,19 @@ describe('CommandSearchResultRows', () => {
     expect(callbacks.onOpenFile).not.toHaveBeenCalled()
     expect(clipboard.writeClipboardText).toHaveBeenCalledWith('[Guide.md](<docs/Guide.md>)')
     await waitFor(() => expect(screen.getByText('Copied')).toBeTruthy())
+  })
+
+  it('uses a stable selection value and exposes file support for opening in a new window', () => {
+    renderRow({
+      file: { label: 'Guide.md', path: 'docs/Guide.md' },
+      id: 'title-file:docs/Guide.md',
+      kind: 'title-file',
+    })
+
+    const row = screen.getByText('Guide.md').closest('[role="button"]')
+    expect(row).toHaveAttribute('data-value', 'title-file:docs/Guide.md')
+    expect(row).toHaveAttribute('data-open-new-window-path', 'docs/Guide.md')
+    expect(row).toHaveAttribute('data-keywords', 'Guide.md|docs/Guide.md')
   })
 
   it('highlights matching query text with safe text nodes', () => {

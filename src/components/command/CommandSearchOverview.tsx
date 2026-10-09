@@ -1,35 +1,39 @@
 import type { KeyboardEvent } from 'react'
-import { FileSearch, Search, Terminal } from 'lucide-react'
+import { FileSearch, Search, Settings2, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
-export type CommandDialogMode = 'quick-open' | 'full-text' | 'commands'
+export type CommandDialogMode = 'quick-open' | 'full-text' | 'commands' | 'settings'
 
 type CommandSearchOverviewProps = {
   mode: CommandDialogMode
   onSelectMode: (mode: CommandDialogMode) => void
 }
 
-const modes = [
+export const commandDialogModes = [
   { icon: FileSearch, id: 'quick-open', labelKey: 'command.mode.quickOpen', shortcut: '1' },
   { icon: Search, id: 'full-text', labelKey: 'command.mode.fullText', shortcut: '2' },
   { icon: Terminal, id: 'commands', labelKey: 'command.mode.commands', shortcut: '3' },
+  { icon: Settings2, id: 'settings', labelKey: 'command.mode.settings', shortcut: '4' },
 ] as const
 
 const CommandSearchOverview = ({ mode, onSelectMode }: CommandSearchOverviewProps) => {
   const { t } = useI18n()
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Tab'].includes(event.key)) return
     event.preventDefault()
     const nextIndex =
       event.key === 'Home'
         ? 0
         : event.key === 'End'
-          ? modes.length - 1
-          : (index + (event.key === 'ArrowRight' ? 1 : -1) + modes.length) % modes.length
-    onSelectMode(modes[nextIndex].id)
+          ? commandDialogModes.length - 1
+          : (index +
+              (event.key === 'ArrowRight' || (event.key === 'Tab' && !event.shiftKey) ? 1 : -1) +
+              commandDialogModes.length) %
+            commandDialogModes.length
+    onSelectMode(commandDialogModes[nextIndex].id)
     const tabs =
       event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
     tabs?.[nextIndex]?.focus()
@@ -39,9 +43,9 @@ const CommandSearchOverview = ({ mode, onSelectMode }: CommandSearchOverviewProp
     <div
       role="tablist"
       aria-label={t('command.mode.label')}
-      className="mx-4 grid grid-cols-3 rounded-xl bg-muted/55 p-1"
+      className="mx-4 grid grid-cols-4 rounded-xl bg-muted/55 p-1"
     >
-      {modes.map(({ icon: Icon, id, labelKey, shortcut }, index) => {
+      {commandDialogModes.map(({ icon: Icon, id, labelKey, shortcut }, index) => {
         const selected = mode === id
         return (
           <Button

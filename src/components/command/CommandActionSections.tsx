@@ -23,6 +23,7 @@ import { preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
 import { createAppActionPresentations } from '@/logic/appActionCatalog'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
+import CommandRecentCommandsSection from '@/components/command/CommandRecentCommandsSection'
 
 type CommandActionSectionsProps = {
   canCreateWorkspaceEntries: boolean
@@ -30,6 +31,8 @@ type CommandActionSectionsProps = {
   searchIndexRebuilding: boolean
   onCommandPaletteAction: () => void
   onAction: (id: string) => void
+  query?: string
+  recentCommandIds?: readonly string[]
 }
 
 const CommandActionSections = ({
@@ -38,6 +41,8 @@ const CommandActionSections = ({
   searchIndexRebuilding,
   onCommandPaletteAction,
   onAction,
+  query = '',
+  recentCommandIds = [],
 }: CommandActionSectionsProps) => {
   const { t } = useI18n()
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
@@ -51,9 +56,24 @@ const CommandActionSections = ({
     [canCreateWorkspaceEntries, shortcutOverrides, t],
   )
   const createActionsEnabled = actions['file.new'].enabled && actions['file.new_folder'].enabled
+  const commandLabels = useMemo(
+    () => Object.fromEntries(Object.values(actions).map((action) => [action.id, action.label])),
+    [actions],
+  )
+  const showRecentCommands = query.trim().length === 0 && recentCommandIds.length > 0
 
   return (
     <>
+      {showRecentCommands && (
+        <>
+          <CommandRecentCommandsSection
+            commandLabels={commandLabels}
+            recentCommandIds={recentCommandIds}
+            onAction={onAction}
+          />
+          <CommandSeparator />
+        </>
+      )}
       <CommandGroup>
         <CommandItem
           value={actions['app.command_palette'].searchValue}

@@ -24,6 +24,11 @@ export type SettingsRouteId =
 
 export type SettingsGroupId = 'application' | 'workspace' | 'smart' | 'system'
 
+export type SettingsSelection = {
+  route: SettingsRouteId
+  targetId: string
+}
+
 export type SettingsRoute = {
   value: SettingsRouteId
   group: SettingsGroupId

@@ -142,7 +142,9 @@ describe('AppWorkspacePanels editor focus handoff', () => {
 
     expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
     expect(document.activeElement).toBe(openButton)
-    await waitFor(() => expect(editorBridge.statusChange).not.toBeNull())
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
+    )
 
     act(() => editorBridge.statusChange?.({ phase: 'ready' }))
 
@@ -159,7 +161,9 @@ describe('AppWorkspacePanels editor focus handoff', () => {
     const openButton = screen.getByRole('button', { name: 'Open second file' })
     openButton.focus()
     fireEvent.click(openButton)
-    await waitFor(() => expect(editorBridge.statusChange).not.toBeNull())
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
+    )
 
     act(() => editorBridge.statusChange?.({ message: 'load failed', phase: 'error' }))
 
@@ -170,7 +174,9 @@ describe('AppWorkspacePanels editor focus handoff', () => {
   it('does not steal focus when the user moves on before the editor is ready', async () => {
     render(<FocusHandoffHarness />)
     fireEvent.click(screen.getByRole('button', { name: 'Open second file' }))
-    await waitFor(() => expect(editorBridge.statusChange).not.toBeNull())
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
+    )
     const otherAction = screen.getByRole('button', { name: 'Other action' })
     fireEvent.pointerDown(otherAction)
     otherAction.focus()

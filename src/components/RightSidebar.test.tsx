@@ -78,7 +78,9 @@ describe('RightSidebar', () => {
       fireEvent.click(headingButton!)
 
       await waitFor(() => {
-        expect(events).toEqual([{ path: 'target.md', slug: 'details' }])
+        expect(events).toEqual([
+          { path: 'target.md', slug: 'details', workspaceKey: 'external:D:/wiki' },
+        ])
       })
     } finally {
       unsubscribe()
@@ -130,7 +132,9 @@ describe('RightSidebar', () => {
       fireEvent.click(headingButton!)
 
       await waitFor(() => {
-        expect(events).toEqual([{ path: 'target.md', slug: 'release-notes' }])
+        expect(events).toEqual([
+          { path: 'target.md', slug: 'release-notes', workspaceKey: 'external:D:/wiki' },
+        ])
       })
 
       await userEvent.clear(filterInput)
@@ -204,7 +208,14 @@ describe('RightSidebar', () => {
       )
 
       await waitFor(() => {
-        expect(events).toEqual([{ path: 'source.md', line: 2, column: 5 }])
+        expect(events).toEqual([
+          {
+            path: 'source.md',
+            line: 2,
+            column: 5,
+            workspaceKey: 'external:D:/wiki',
+          },
+        ])
       })
     } finally {
       unsubscribe()

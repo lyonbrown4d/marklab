@@ -19,21 +19,25 @@ import {
   settingsGroups,
   settingsRoutes,
   type SettingsRouteId,
+  type SettingsSelection,
 } from '@/components/settings/settingsRoutes'
 
 type SettingsDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialSelection?: SettingsSelection
 }
 
 const defaultRoute: SettingsRouteId = 'general'
 
-const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
+const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialogProps) => {
   const { t } = useI18n()
   const isMobile = useIsMobile()
-  const [route, setRoute] = useState<SettingsRouteId>(defaultRoute)
+  const [route, setRoute] = useState<SettingsRouteId>(initialSelection?.route ?? defaultRoute)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchTargetId, setSearchTargetId] = useState<string | null>(null)
+  const [searchTargetId, setSearchTargetId] = useState<string | null>(
+    initialSelection?.targetId ?? null,
+  )
   const tabsListRef = useRef<HTMLDivElement | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)

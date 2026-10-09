@@ -118,18 +118,22 @@ CopyMarkdownLinkAction.displayName = 'CopyMarkdownLinkAction'
 const FileResultRow = memo(
   ({
     file,
+    id,
     kind,
     onOpenFile,
     query,
   }: {
     file: CommandFile
+    id: string
     kind: 'title-file' | 'path-file'
     onOpenFile: (path: string) => void
     query: string
   }) => (
     <CommandItem
       className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
-      value={kind === 'title-file' ? `${file.label} ${file.path}` : `${file.path} ${file.label}`}
+      data-open-new-window-path={file.path}
+      keywords={kind === 'title-file' ? [file.label, file.path] : [file.path, file.label]}
+      value={id}
       onSelect={() => onOpenFile(file.path)}
     >
       <FileText className="size-4" />
@@ -159,7 +163,15 @@ const CommandResultRowItemComponent = ({
   onOpenSearchResult,
 }: CommandResultRowItemProps) => {
   if (row.kind === 'title-file' || row.kind === 'path-file') {
-    return <FileResultRow file={row.file} kind={row.kind} query={query} onOpenFile={onOpenFile} />
+    return (
+      <FileResultRow
+        file={row.file}
+        id={row.id}
+        kind={row.kind}
+        query={query}
+        onOpenFile={onOpenFile}
+      />
+    )
   }
 
   if (row.kind === 'heading') {
@@ -168,7 +180,9 @@ const CommandResultRowItemComponent = ({
     return (
       <CommandItem
         className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
-        value={`${heading.text} ${heading.slug} ${heading.path}`}
+        data-open-new-window-path={heading.path}
+        keywords={[heading.text, heading.slug, heading.path, heading.label]}
+        value={row.id}
         onSelect={() => onOpenHeading(heading.path, heading.slug)}
       >
         <ListTree className="size-4" />
@@ -194,7 +208,9 @@ const CommandResultRowItemComponent = ({
   return (
     <CommandItem
       className="group min-h-14 border border-transparent data-[selected=true]:border-primary/20"
-      value={`${row.result.title} ${row.result.path} ${row.result.snippet}`}
+      data-open-new-window-path={row.result.path}
+      keywords={[row.result.title, row.result.path, row.result.snippet]}
+      value={row.id}
       onSelect={() => onOpenSearchResult(row.result)}
     >
       <SearchResultPreview result={row.result} compact />

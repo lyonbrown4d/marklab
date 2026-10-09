@@ -25,6 +25,7 @@ export type AppEventMap = {
     line: number
     column: number
     endColumn?: number
+    workspaceKey?: string
   }
   [APP_EVENT.menuAction]: string
 }

@@ -24,6 +24,7 @@ const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
 type WysiwygEditorPageProps = {
   activePath: string | null
+  workspaceKey?: string
   value: string
   onChange: (value: string) => void
   onOpenFile: (path: string) => void
@@ -97,6 +98,7 @@ const markdownLinkForCalendar = (activePath: string, calendarPath: string) => {
 
 const WysiwygEditorPage = ({
   activePath,
+  workspaceKey,
   value,
   onChange,
   onOpenFile,
@@ -202,6 +204,7 @@ const WysiwygEditorPage = ({
             <MarkdownEditor
               ref={editorRef}
               activePath={activePath}
+              workspaceKey={workspaceKey}
               value={value}
               onChange={onChange}
               onStatusChange={handleEditorStatusChange}

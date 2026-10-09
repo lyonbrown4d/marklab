@@ -55,7 +55,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     [activePath, onStatusChange],
   )
   const getEditor = useCallback(() => surfaceRef.current?.getEditor() ?? null, [])
-  usePlateFocusHeading(props.activePath, getEditor)
+  usePlateFocusHeading(props.activePath, getEditor, props.workspaceKey)
   const openLinkDialog = useCallback(() => surfaceRef.current?.openLinkDialog(), [])
   const contextMenu = usePlateEditorContextMenu({
     getEditor,

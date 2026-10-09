@@ -265,4 +265,27 @@ describe('SourceCodeEditor source navigation', () => {
 
     expect(monacoEditor.setPosition).not.toHaveBeenCalled()
   })
+
+  it('ignores sticky source requests owned by another workspace', async () => {
+    render(
+      <SourceCodeEditor
+        activePath="source.md"
+        workspaceKey="external:C:/notes"
+        value="a\nb\nc"
+        files={[]}
+        fileContents={{}}
+        onChange={vi.fn()}
+      />,
+    )
+    await screen.findByLabelText('markdown source')
+
+    requestFocusSourcePosition({
+      path: 'source.md',
+      line: 2,
+      column: 1,
+      workspaceKey: 'external:D:/other',
+    })
+
+    expect(monacoEditor.setPosition).not.toHaveBeenCalled()
+  })
 })

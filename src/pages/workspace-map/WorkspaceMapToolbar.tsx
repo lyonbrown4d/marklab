@@ -10,6 +10,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useRovingToolbar } from '@/components/useRovingToolbar'
 import { useI18n } from '@/i18n/useI18n'
 import type { GraphNodeData } from '@/logic/graph'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
@@ -37,12 +38,24 @@ export const WorkspaceMapToolbar = ({
 }: WorkspaceMapToolbarProps) => {
   const { t } = useI18n()
   const [searchOpen, setSearchOpen] = useState(false)
+  const {
+    ref: toolbarRef,
+    onFocusCapture: handleToolbarFocus,
+    onKeyDown: handleToolbarKeyDown,
+  } = useRovingToolbar(externalCount > 0)
   const externalLabel = showExternalResources
     ? t('workspaceMap.hideExternalResources')
     : t('workspaceMap.showExternalResources')
 
   return (
-    <div className="pointer-events-auto absolute left-3 top-3 z-10 flex items-center gap-2">
+    <div
+      ref={toolbarRef}
+      aria-label={t('workspaceMap.toolbar')}
+      className="pointer-events-auto absolute left-3 top-3 z-10 flex items-center gap-2"
+      onFocusCapture={handleToolbarFocus}
+      onKeyDown={handleToolbarKeyDown}
+      role="toolbar"
+    >
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <PopoverTrigger asChild>
           <Button

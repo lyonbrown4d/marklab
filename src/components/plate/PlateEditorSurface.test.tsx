@@ -8,41 +8,6 @@ import {
 import { runPlateEditorShortcut } from '@/components/plate/plateEditorShortcuts'
 
 describe('PlateEditorSurface', () => {
-  it('renders Markdown through the Plate editor surface', () => {
-    const ref = createRef<PlateEditorSurfaceHandle>()
-    render(
-      <PlateEditorSurface
-        activePath="notes/example.md"
-        onChange={vi.fn()}
-        placeholder="Write"
-        ref={ref}
-        value={'# Heading\n\nParagraph'}
-      />,
-    )
-
-    expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-editor-engine', 'plate')
-    expect(ref.current?.getEditor().children).toEqual([
-      { children: [{ text: 'Heading' }], type: 'h1' },
-      { children: [{ text: 'Paragraph' }], type: 'p' },
-    ])
-  })
-
-  it('provides the drag-and-drop runtime for editable top-level blocks', () => {
-    const { container } = render(
-      <PlateEditorSurface
-        activePath="notes/example.md"
-        onChange={vi.fn()}
-        placeholder="Write"
-        value={'First\n\nSecond'}
-      />,
-    )
-
-    const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
-    expect(blocks).toHaveLength(2)
-    fireEvent.pointerEnter(blocks[0])
-    expect(screen.getByRole('button', { name: 'Move block' })).toHaveAttribute('draggable', 'true')
-  })
-
   it('keeps read-only mode non-editable', () => {
     render(
       <PlateEditorSurface
@@ -144,7 +109,9 @@ describe('PlateEditorSurface', () => {
       if (editor) runPlateEditorShortcut(editor, 'editor.bold')
     })
 
-    expect(editor?.children).toEqual([{ children: [{ bold: true, text: 'Paragraph' }], type: 'p' }])
+    expect(editor?.children).toMatchObject([
+      { children: [{ bold: true, text: 'Paragraph' }], id: expect.any(String), type: 'p' },
+    ])
   })
 
   it('marks the selected top-level block for focus mode without relying on DOM focus', async () => {

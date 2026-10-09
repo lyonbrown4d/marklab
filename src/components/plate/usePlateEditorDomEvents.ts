@@ -3,6 +3,10 @@ import { useEffect, type RefObject } from 'react'
 import type { PlateInlineCompletionBindings } from '@/components/plate/usePlateInlineCompletion'
 import { handlePlateEditorShortcut } from '@/components/plate/plateEditorShortcuts'
 import { setPlateMarkdownInputRulesComposing } from '@/components/plate/plateMarkdownInputRules'
+import {
+  getFocusedTopLevelBlockId,
+  handlePlateBlockMoveShortcut,
+} from '@/components/plate/selection/plateBlockSelection'
 import type { PlateEditorSurfaceProps } from '@/components/plate/plateEditorSurfaceTypes'
 import type { PlateSlashCommandsController } from '@/components/plate/slash'
 
@@ -50,6 +54,9 @@ export const usePlateEditorDomEvents = ({
         return
       }
       if (readOnly) return
+      if (handlePlateBlockMoveShortcut(editor, event, getFocusedTopLevelBlockId(editor))) {
+        return
+      }
       if (completion.onKeyDown(event)) return
       if (!onSlashKeyDown(event)) {
         handlePlateEditorShortcut(editor, event, shortcutOverrides, {

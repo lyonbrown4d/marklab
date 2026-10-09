@@ -91,10 +91,13 @@ export const ImmersiveWorkspaceShell = ({
         </Button>
       </div>
 
-      <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
+      <main className="min-h-0 min-w-0 flex-1 overflow-hidden" data-app-focus-zone="editor">
+        {children}
+      </main>
 
       <Sheet modal={false} open={effectiveSidebarOpen} onOpenChange={handleSidebarOpenChange}>
         <AppSheetContent
+          data-app-focus-zone="sidebar"
           side="left"
           showOverlay={false}
           aria-describedby={undefined}
@@ -134,6 +137,7 @@ export const ImmersiveWorkspaceShell = ({
         onOpenChange={(open) => !open && onToggleInspector()}
       >
         <AppSheetContent
+          data-app-focus-zone="inspector"
           side="right"
           showOverlay={false}
           aria-describedby={undefined}

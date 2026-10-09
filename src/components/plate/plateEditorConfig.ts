@@ -1,13 +1,30 @@
 import { createElement } from 'react'
-import type { PlateChunkProps } from 'platejs/react'
+import { BlockSelectionPlugin } from '@platejs/selection/react'
+import type { PlateChunkProps, PlateEditor } from 'platejs/react'
 import { createPlateNodePlugins, type PlatePreviewOptions } from '@/components/plate/nodes'
 import { plateMarkdownPlugin } from '@/components/plate/plateMarkdownConfig'
 import {
   PLATE_CHUNK_INTRINSIC_BLOCK_SIZE,
   PlateVirtualChunk,
 } from '@/components/plate/PlateVirtualChunk'
+import { handlePlateBlockMoveShortcut } from '@/components/plate/selection/plateBlockSelection'
 
 export const createPlateEditorPlugins = (previewOptions: PlatePreviewOptions = {}) => [
+  BlockSelectionPlugin.configure({
+    options: {
+      areaOptions: {
+        behaviour: {
+          scrolling: { speedDivider: 0.8 },
+          startThreshold: 4,
+        },
+      },
+      enableContextMenu: true,
+      isSelectable: (_element, path) => path.length === 1,
+      onKeyDownSelecting: (editor, event) => {
+        handlePlateBlockMoveShortcut(editor as PlateEditor, event)
+      },
+    },
+  }),
   ...createPlateNodePlugins(previewOptions),
   plateMarkdownPlugin,
 ]

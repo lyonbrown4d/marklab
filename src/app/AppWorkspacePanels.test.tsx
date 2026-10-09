@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import type { FileViewKind } from '@/store/appTypes'
@@ -61,6 +61,7 @@ const baseState = {
   fileTree: [],
   files: [],
   inspectedPath: '/notes/one.md',
+  loadingPaths: {},
   movePath: action,
   onPersistedContentChange: persistedContentChange,
   onInspectPath: action,
@@ -87,10 +88,11 @@ const renderPanels = (
     onOpenFileView?: (path: string, view: FileViewKind) => void
     onOpenSearchResult?: typeof action
   } = {},
+  outlet: ReactNode = <main>Editor</main>,
 ) => (
   <AppWorkspacePanels
     state={state as never}
-    outlet={<main>Editor</main>}
+    outlet={outlet}
     totalFiles={1}
     onOpenFile={callbacks.onOpenFile ?? action}
     onOpenFileView={callbacks.onOpenFileView ?? action}
@@ -101,6 +103,10 @@ const renderPanels = (
 )
 
 describe('AppWorkspacePanels render isolation', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     renderSpies.inspector.mockClear()
     renderSpies.shell.mockClear()
@@ -230,5 +236,46 @@ describe('AppWorkspacePanels render isolation', () => {
 
     expect(screen.queryByTestId('tabs-dock')).not.toBeInTheDocument()
     expect(screen.getByText('Editor')).toBeInTheDocument()
+  })
+
+  it('commits the workspace map when leaving an active file tab', () => {
+    vi.useFakeTimers()
+    const { rerender } = render(renderPanels(baseState))
+
+    rerender(
+      renderPanels({ ...baseState, workspaceView: 'map' }, {}, <main>Workspace map canvas</main>),
+    )
+    act(() => vi.advanceTimersByTime(140))
+
+    expect(screen.getByText('Workspace map canvas')).toBeVisible()
+    expect(screen.queryByText('Editor')).not.toBeInTheDocument()
+  })
+
+  it('keeps the previous editor visible while the selected tab loads', () => {
+    const { rerender } = render(renderPanels(baseState))
+    const loadingState = {
+      ...baseState,
+      activePath: '/notes/two.md',
+      activeTabId: 'file:edit:/notes/two.md',
+      loadingPaths: { '/notes/two.md': true as const },
+      tabs: [{ kind: 'file' as const, view: 'edit' as const, path: '/notes/two.md' }],
+    }
+
+    rerender(
+      <AppWorkspacePanels
+        state={loadingState as never}
+        outlet={<main>Second editor</main>}
+        totalFiles={1}
+        onOpenFile={action}
+        onOpenFileView={action}
+        onOpenGitDiff={action}
+        onOpenSearchResult={action}
+        immersiveZenMode={false}
+      />,
+    )
+
+    expect(screen.getByText('Editor')).toBeVisible()
+    expect(screen.queryByText('Second editor')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('editor.transition.loading')
   })
 })

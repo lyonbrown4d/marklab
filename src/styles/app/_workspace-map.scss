@@ -227,6 +227,34 @@
   transform-origin: bottom right;
 }
 
+[data-viewport-lod='mid'] .workspace-map-canvas .react-flow__edge-path {
+  stroke-width: 0.75;
+}
+
+[data-viewport-lod='far'] .workspace-map-canvas .react-flow__edge-path {
+  stroke-width: 0.65;
+  opacity: 0.07;
+}
+
+[data-viewport-lod='far']
+  :is(
+    .workspace-map-node__resize-handle,
+    .workspace-map-node__resize-line,
+    .workspace-map-node__handle,
+    .workspace-map-node__disclosure,
+    .graph-branch-toggle
+  ) {
+  visibility: hidden;
+}
+
+[data-viewport-lod='far'] :is(.workspace-map-node, .workspace-map-editor) {
+  box-shadow: none;
+}
+
+[data-viewport-lod='far'] .workspace-map-group-region {
+  opacity: 0.34;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workspace-map-editor {
     transition: none;

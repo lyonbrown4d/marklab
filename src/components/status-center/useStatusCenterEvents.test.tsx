@@ -42,14 +42,17 @@ const terminalOutputSubject = terminalOutputEvents$ as Subject<TerminalOutputEve
 const terminalExitSubject = terminalExitEvents$ as Subject<TerminalExitEvent>
 
 const Harness = ({ desktopRuntime }: { desktopRuntime: boolean }) => {
-  const { terminalEvents } = useStatusCenterEvents(desktopRuntime)
+  const { eventError, terminalEvents } = useStatusCenterEvents(desktopRuntime)
 
   return (
-    <div data-testid="terminal-events">
-      {terminalEvents.map((event) => (
-        <div key={`${event.id}:${event.status}`}>{event.message}</div>
-      ))}
-    </div>
+    <>
+      <div data-testid="terminal-events">
+        {terminalEvents.map((event) => (
+          <div key={`${event.id}:${event.status}`}>{event.message}</div>
+        ))}
+      </div>
+      {eventError ? <div role="alert">{eventError}</div> : null}
+    </>
   )
 }
 
@@ -108,5 +111,17 @@ describe('useStatusCenterEvents terminal streams', () => {
 
     expect(terminalOutputSubject.observed).toBe(false)
     expect(terminalExitSubject.observed).toBe(false)
+  })
+
+  it('surfaces export event subscription failures', async () => {
+    runtimeMocks.listen.mockRejectedValueOnce(new Error('IPC subscription failed'))
+
+    render(<Harness desktopRuntime />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('IPC subscription failed')
   })
 })

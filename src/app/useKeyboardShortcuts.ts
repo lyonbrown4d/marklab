@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   useHotkeys,
   type RegisterableHotkey,
@@ -17,6 +17,7 @@ import { toggleSidebarFromShortcut } from '@/app/sidebarShortcut'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 import { useWebTabShortcutBridge } from '@/app/useWebTabShortcutBridge'
+import { nextTabInMru, updateTabMru } from '@/app/workspaceTabMru'
 
 type UseKeyboardShortcutsArgs = {
   activeTabId: string | null
@@ -35,6 +36,8 @@ type UseKeyboardShortcutsArgs = {
   onToggleSidebar: () => void
   onToggleTerminal: () => void
   onToggleReadOnly: () => void
+  onNavigateBack: () => void
+  onNavigateForward: () => void
 }
 
 export const useKeyboardShortcuts = ({
@@ -54,6 +57,8 @@ export const useKeyboardShortcuts = ({
   onToggleSidebar,
   onToggleTerminal,
   onToggleReadOnly,
+  onNavigateBack,
+  onNavigateForward,
 }: UseKeyboardShortcutsArgs) => {
   const argsRef = useLatest<UseKeyboardShortcutsArgs>({
     activeTabId,
@@ -72,11 +77,61 @@ export const useKeyboardShortcuts = ({
     onToggleSidebar,
     onToggleTerminal,
     onToggleReadOnly,
+    onNavigateBack,
+    onNavigateForward,
   })
+  const tabMruRef = useRef<string[]>([])
+  const tabMruCycleRef = useRef<readonly string[] | null>(null)
+  const tabIds = useMemo(() => tabs.map(getWorkspaceTabId), [tabs])
+
+  useEffect(() => {
+    if (tabMruCycleRef.current) {
+      const available = new Set(tabIds)
+      tabMruCycleRef.current = tabMruCycleRef.current.filter((id) => available.has(id))
+    }
+    tabMruRef.current = updateTabMru(
+      tabMruRef.current,
+      tabIds,
+      tabMruCycleRef.current ? null : activeTabId,
+    )
+  }, [activeTabId, tabIds])
+
+  const finishTabMruCycle = useCallback(() => {
+    if (!tabMruCycleRef.current) return
+    tabMruCycleRef.current = null
+    const current = argsRef.current
+    tabMruRef.current = updateTabMru(
+      tabMruRef.current,
+      current.tabs.map(getWorkspaceTabId),
+      current.activeTabId,
+    )
+  }, [argsRef])
+
+  useEffect(() => {
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Control' || event.key === 'Meta') finishTabMruCycle()
+    }
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', finishTabMruCycle)
+    return () => {
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', finishTabMruCycle)
+    }
+  }, [finishTabMruCycle])
 
   const bindings = useMemo(() => resolveShortcutBindings(shortcutOverrides), [shortcutOverrides])
   const execute = useCallback(
-    (action: ShortcutActionId) => executeShortcutAction(action, argsRef.current),
+    (action: ShortcutActionId) => {
+      const current = argsRef.current
+      if (action === 'tab.next' || action === 'tab.previous') {
+        const cycle = tabMruCycleRef.current ?? [...tabMruRef.current]
+        tabMruCycleRef.current = cycle
+        const target = nextTabInMru(cycle, current.activeTabId, action === 'tab.next' ? 1 : -1)
+        if (target) current.onOpenTab(target)
+        return
+      }
+      executeShortcutAction(action, current)
+    },
     [argsRef],
   )
   const definitions = useMemo<UseHotkeyDefinition[]>(() => {
@@ -87,6 +142,10 @@ export const useKeyboardShortcuts = ({
           hotkey: hotkey as RegisterableHotkey,
           callback: () => execute(action.id),
           options: {
+            ignoreInputs:
+              action.id === 'navigation.back' || action.id === 'navigation.forward'
+                ? false
+                : undefined,
             meta: { name: action.id },
           },
         })),
@@ -104,8 +163,6 @@ export const useKeyboardShortcuts = ({
 
 const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortcutsArgs) => {
   const {
-    activeTabId,
-    tabs,
     viewMode,
     onCloseActiveTab,
     onCreateFile,
@@ -113,12 +170,13 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
     onOpenFile,
     onOpenProject,
     onOpenSettings,
-    onOpenTab,
     onSetViewMode,
     onToggleRightSidebar,
     onToggleSidebar,
     onToggleTerminal,
     onToggleReadOnly,
+    onNavigateBack,
+    onNavigateForward,
   } = args
 
   if (action === 'app.commandPalette') return onOpenCommandPalette()
@@ -126,9 +184,8 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
   if (action === 'file.new') return onCreateFile()
   if (action === 'file.openProject') return onOpenProject()
   if (action === 'file.openFile') return onOpenFile()
-  if (action === 'tab.next' || action === 'tab.previous') {
-    return openAdjacentTab(action, { activeTabId, onOpenTab, tabs })
-  }
+  if (action === 'navigation.back') return onNavigateBack()
+  if (action === 'navigation.forward') return onNavigateForward()
   if (action === 'tab.close') return onCloseActiveTab()
   if (action === 'view.wysiwyg') return onSetViewMode('wysiwyg')
   if (action === 'view.source') return onSetViewMode('source')
@@ -150,22 +207,4 @@ const executeShortcutAction = (action: ShortcutActionId, args: UseKeyboardShortc
     const preferences = usePreferencesStore.getState()
     return preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
   }
-}
-
-const openAdjacentTab = (
-  action: ShortcutActionId,
-  {
-    activeTabId,
-    tabs,
-    onOpenTab,
-  }: Pick<UseKeyboardShortcutsArgs, 'activeTabId' | 'onOpenTab' | 'tabs'>,
-) => {
-  if (tabs.length === 0) return
-  const activeIndex = activeTabId
-    ? tabs.findIndex((tab) => getWorkspaceTabId(tab) === activeTabId)
-    : -1
-  const currentIndex = activeIndex >= 0 ? activeIndex : 0
-  const direction = action === 'tab.next' ? 1 : -1
-  const nextIndex = (currentIndex + direction + tabs.length) % tabs.length
-  onOpenTab(getWorkspaceTabId(tabs[nextIndex]))
 }

@@ -3,6 +3,7 @@ import { map, merge, throttleTime } from 'rxjs'
 import {
   summarizeTerminalExit,
   summarizeTerminalOutput,
+  upsertRecentExportTask,
   type ExportTaskEntry,
   type ExportTaskPayload,
   type TerminalEventEntry,
@@ -16,6 +17,7 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
   const translateRef = useRef(t)
   const [exportTasks, setExportTasks] = useState<Record<string, ExportTaskEntry>>({})
   const [terminalEvents, setTerminalEvents] = useState<TerminalEventEntry[]>([])
+  const [eventError, setEventError] = useState<string | null>(null)
 
   useEffect(() => {
     translateRef.current = t
@@ -27,22 +29,23 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
     let disposed = false
     let unlisten: (() => void) | undefined
 
-    void listen<ExportTaskPayload>('export-task', (event) => {
-      const task = event.payload
-      setExportTasks((current) => ({
-        ...current,
-        [task.id]: {
-          ...task,
-          updatedAt: Date.now(),
-        },
-      }))
-    }).then((nextUnlisten) => {
-      if (disposed) {
-        nextUnlisten()
-        return
-      }
-      unlisten = nextUnlisten
-    })
+    void Promise.resolve()
+      .then(() =>
+        listen<ExportTaskPayload>('export-task', (event) => {
+          const task = event.payload
+          setExportTasks((current) => upsertRecentExportTask(current, task))
+        }),
+      )
+      .then((nextUnlisten) => {
+        if (disposed) {
+          nextUnlisten()
+          return
+        }
+        unlisten = nextUnlisten
+      })
+      .catch((error: unknown) => {
+        if (!disposed) setEventError(error instanceof Error ? error.message : String(error))
+      })
 
     return () => {
       disposed = true
@@ -85,7 +88,8 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
         })),
       ),
     ).subscribe({
-      error: () => undefined,
+      error: (error: unknown) =>
+        setEventError(error instanceof Error ? error.message : String(error)),
       next: pushTerminalEvent,
     })
 
@@ -94,5 +98,5 @@ export const useStatusCenterEvents = (desktopRuntime: boolean) => {
     }
   }, [desktopRuntime])
 
-  return { exportTasks, terminalEvents }
+  return { eventError, exportTasks, terminalEvents }
 }

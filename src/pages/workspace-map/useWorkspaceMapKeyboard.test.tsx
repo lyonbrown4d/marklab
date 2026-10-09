@@ -32,9 +32,13 @@ describe('useWorkspaceMapKeyboard', () => {
       useWorkspaceMapKeyboard({
         activePath: 'notes/a.md',
         activateNode: vi.fn(),
+        exitFocusedView: vi.fn(() => false),
         flow: null,
+        focusNode: vi.fn(),
+        mode: 'overview',
         nodes: [],
         onCloseEditor,
+        onModeChange: vi.fn(),
       }),
     )
 
@@ -58,9 +62,13 @@ describe('useWorkspaceMapKeyboard', () => {
       useWorkspaceMapKeyboard({
         activePath: 'notes/active.md',
         activateNode,
+        exitFocusedView: vi.fn(() => false),
         flow: null,
+        focusNode: vi.fn(),
+        mode: 'overview',
         nodes: [node],
         onCloseEditor,
+        onModeChange: vi.fn(),
       }),
     )
     const enter = keyboardEvent({ key: 'Enter' })
@@ -75,5 +83,69 @@ describe('useWorkspaceMapKeyboard', () => {
     expect(enter.stopPropagation).toHaveBeenCalledOnce()
     expect(escape.preventDefault).toHaveBeenCalledOnce()
     expect(escape.stopPropagation).toHaveBeenCalledOnce()
+  })
+
+  it('unwinds focus and map mode through layered Escape handling', () => {
+    const exitFocusedView = vi.fn(() => true)
+    const onModeChange = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ mode }) =>
+        useWorkspaceMapKeyboard({
+          activePath: null,
+          activateNode: vi.fn(),
+          exitFocusedView,
+          flow: null,
+          focusNode: vi.fn(),
+          mode,
+          nodes: [],
+          onCloseEditor: vi.fn(),
+          onModeChange,
+        }),
+      { initialProps: { mode: 'focus' as 'focus' | 'overview' } },
+    )
+    const firstEscape = keyboardEvent({ key: 'Escape' })
+
+    result.current(firstEscape)
+
+    expect(exitFocusedView).toHaveBeenCalledOnce()
+    expect(onModeChange).not.toHaveBeenCalled()
+    expect(firstEscape.preventDefault).toHaveBeenCalledOnce()
+
+    exitFocusedView.mockReturnValue(false)
+    rerender({ mode: 'focus' })
+    const secondEscape = keyboardEvent({ key: 'Escape' })
+    result.current(secondEscape)
+
+    expect(onModeChange).toHaveBeenCalledExactlyOnceWith('overview')
+    expect(secondEscape.preventDefault).toHaveBeenCalledOnce()
+  })
+
+  it('focuses the keyboard-targeted node with F', () => {
+    const focusNode = vi.fn()
+    const node = {
+      data: { label: 'A', path: 'notes/a.md' },
+      id: 'file:notes/a.md',
+      position: { x: 0, y: 0 },
+      type: 'file',
+    }
+    const { result } = renderHook(() =>
+      useWorkspaceMapKeyboard({
+        activePath: null,
+        activateNode: vi.fn(),
+        exitFocusedView: vi.fn(() => false),
+        flow: null,
+        focusNode,
+        mode: 'overview',
+        nodes: [node],
+        onCloseEditor: vi.fn(),
+        onModeChange: vi.fn(),
+      }),
+    )
+    const event = keyboardEvent({ key: 'f' })
+
+    result.current(event)
+
+    expect(focusNode).toHaveBeenCalledExactlyOnceWith(node)
+    expect(event.preventDefault).toHaveBeenCalledOnce()
   })
 })

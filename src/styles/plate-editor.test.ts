@@ -74,4 +74,12 @@ describe('Plate editor styles', () => {
       /\.markdown-editor--embedded > \[data-slate-node='element'\],\s*\.markdown-editor--embedded > \.plate-block-draggable,\s*\.markdown-editor--embedded > \[data-slate-chunk='true'\] \{\s*width: min\(100%, 680px\);/s,
     )
   })
+
+  it('scopes the official block-selection marquee to the Plate editor shell', () => {
+    const styles = readFileSync(stylePath, 'utf8') as string
+
+    expect(styles).toMatch(
+      /\[data-plate-editor-shell='true'\] \.slate-selection-area\s*\{[^}]*border:[^}]*background:/s,
+    )
+  })
 })

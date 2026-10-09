@@ -1,57 +1,69 @@
-import { memo, useId, useMemo, useState } from 'react'
+import { memo, useEffect, useId, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, AlertTriangle, Clock, FileText, Terminal } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { PopoverContent } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/AppScrollArea'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
 import { Section, EmptyState, StatusRow } from '@/components/status-center/StatusCenterRows'
 import {
   basename,
-  formatExportLabel,
-  formatTime,
   getSaveToneClass,
   getTaskToneClass,
 } from '@/components/status-center/statusCenterModel'
 import { useStatusCenterEvents } from '@/components/status-center/useStatusCenterEvents'
-import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import type { SaveState } from '@/app/useEditorBuffer'
+import { TaskStatusRow } from '@/components/status-center/TaskStatusRow'
+import { StatusCenterHeader } from '@/components/status-center/StatusCenterHeader'
+import { StatusCenterExportSection } from '@/components/status-center/StatusCenterExportSection'
+import { StatusCenterPopoverRoot } from '@/components/status-center/StatusCenterPopoverRoot'
+import { StatusCenterTrigger } from '@/components/status-center/StatusCenterTrigger'
+import type { StatusCenterSummary } from '@/components/status-center/statusCenterModel'
+import { useStatusCenterSummaryStore } from '@/store/useStatusCenterSummaryStore'
 
 type StatusCenterProps = {
   activePath: string | null
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
   terminalOpen: boolean
+  workspaceKey: string
+  visible?: boolean
+  onSummaryChange?: (summary: StatusCenterSummary) => void
+  onVisibilityCloseFocus?: () => void
 }
 
-const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: StatusCenterProps) => {
+const StatusCenter = ({
+  activePath,
+  dirtyPaths,
+  saveStates,
+  terminalOpen,
+  workspaceKey,
+  visible = true,
+  onSummaryChange,
+  onVisibilityCloseFocus,
+}: StatusCenterProps) => {
   const { t } = useI18n()
   const titleId = useId()
   const statusCenterTitle = t('statusCenter.title')
   const desktopRuntime = isDesktopRuntime()
-  const [open, setOpen] = useState(false)
-  useNativeSurfaceOcclusion('status-center', open)
-  const { exportTasks, terminalEvents } = useStatusCenterEvents(desktopRuntime)
+  const setStoredSummary = useStatusCenterSummaryStore((state) => state.setSummary)
+  const { eventError, exportTasks, terminalEvents } = useStatusCenterEvents(desktopRuntime)
 
   const backgroundTasksQuery = useQuery({
-    queryKey: ['status-center', 'background-tasks'],
+    queryKey: ['status-center', workspaceKey, 'background-tasks'],
     queryFn: () => fsApi.getBackgroundTasks(),
     enabled: desktopRuntime,
     staleTime: 1_500,
-    refetchInterval: open ? 2_000 : 8_000,
+    refetchInterval: visible ? 2_000 : 8_000,
   })
 
   const activeBufferQuery = useQuery({
-    queryKey: ['status-center', 'buffer-status', activePath],
+    queryKey: ['status-center', workspaceKey, 'buffer-status', activePath],
     queryFn: () => fsApi.getBufferStatus(activePath ?? ''),
-    enabled: desktopRuntime && open && Boolean(activePath),
+    enabled: desktopRuntime && visible && Boolean(activePath),
     staleTime: 1_000,
-    refetchInterval: open ? 2_000 : false,
+    refetchInterval: visible ? 2_000 : false,
   })
 
   const backgroundTasks = backgroundTasksQuery.data ?? []
@@ -71,7 +83,18 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
   const exportRunningCount = recentExportTasks.filter((task) => task.status === 'started').length
   const exportErrorCount = recentExportTasks.filter((task) => task.status === 'failed').length
   const activeCount = backgroundRunningCount + savingCount + exportRunningCount
-  const issueCount = backgroundErrorCount + saveErrorCount + exportErrorCount
+  const queryErrorCount = Number(backgroundTasksQuery.isError) + Number(activeBufferQuery.isError)
+  const issueCount =
+    backgroundErrorCount +
+    saveErrorCount +
+    exportErrorCount +
+    queryErrorCount +
+    Number(Boolean(eventError))
+  useEffect(() => {
+    const summary = { activeCount, issueCount }
+    setStoredSummary(summary)
+    onSummaryChange?.(summary)
+  }, [activeCount, issueCount, onSummaryChange, setStoredSummary])
   const buttonLabel =
     issueCount > 0
       ? t('statusCenter.issueCount', { count: issueCount })
@@ -81,194 +104,201 @@ const StatusCenter = ({ activePath, dirtyPaths, saveStates, terminalOpen }: Stat
   const triggerLabel = `${statusCenterTitle} - ${buttonLabel}`
   const activeSaveState = activePath ? saveStates[activePath] : undefined
   const activeBuffer = activeBufferQuery.data
+  const taskLabels = {
+    cancel: t('statusCenter.cancelTask'),
+    retry: t('statusCenter.retryTask'),
+    showDetails: t('statusCenter.showDetails'),
+    open: t('statusCenter.openOutput'),
+  }
+  const retryBackgroundTask = async (taskId: string) => {
+    if (taskId === 'search-index') {
+      await fsApi.rebuildSearchIndex()
+      await backgroundTasksQuery.refetch()
+      return
+    }
+    if (taskId === 'buffer-flush') {
+      await fsApi.flushBuffers()
+      await backgroundTasksQuery.refetch()
+    }
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant={open || issueCount > 0 ? 'secondary' : 'ghost'}
-          size="sm"
-          className="h-6 gap-1.5 rounded px-2 text-[11px] font-normal text-muted-foreground"
-          aria-label={triggerLabel}
-          title={triggerLabel}
-        >
-          {issueCount > 0 ? (
-            <AlertTriangle aria-hidden="true" className="size-3.5 text-destructive" />
-          ) : activeCount > 0 ? (
-            <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
-          ) : (
-            <Activity aria-hidden="true" className="size-3.5" />
-          )}
-          <span className="hidden sm:inline">{buttonLabel}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        side="top"
-        className="w-[380px] p-0"
-        aria-labelledby={titleId}
-        role="dialog"
-      >
-        <div className="border-b border-border/80 px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground" id={titleId}>
-                {statusCenterTitle}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {desktopRuntime
+    <StatusCenterPopoverRoot
+      key={visible ? 'visible' : 'hidden'}
+      visible={visible}
+      onVisibilityCloseFocus={onVisibilityCloseFocus}
+    >
+      {(open) => (
+        <>
+          <StatusCenterTrigger
+            activeCount={activeCount}
+            buttonLabel={buttonLabel}
+            issueCount={issueCount}
+            open={open}
+            triggerLabel={triggerLabel}
+          />
+          <PopoverContent
+            align="end"
+            side="top"
+            className="w-[380px] p-0"
+            aria-labelledby={titleId}
+            role="dialog"
+          >
+            <StatusCenterHeader
+              activeCount={activeCount}
+              buttonLabel={buttonLabel}
+              issueCount={issueCount}
+              summary={
+                desktopRuntime
                   ? t('statusCenter.summary', { active: activeCount, issues: issueCount })
-                  : t('statusCenter.unavailable')}
-              </p>
-            </div>
-            <Badge
-              variant={issueCount > 0 ? 'outline' : 'secondary'}
-              className={issueCount > 0 ? 'border-destructive/30 text-destructive' : undefined}
-            >
-              {buttonLabel}
-            </Badge>
-          </div>
-        </div>
-        <ScrollArea className="max-h-[520px]" viewportClassName="p-4">
-          <div className="flex flex-col gap-4">
-            <Section title={t('statusCenter.backgroundTasks')}>
-              {backgroundTasksQuery.isLoading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-11/12" />
-                </div>
-              ) : backgroundTasks.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {backgroundTasks.map((task) => (
-                    <StatusRow
-                      key={task.id}
-                      dotClassName={getTaskToneClass(task.status)}
-                      meta={task.message ?? task.status}
+                  : t('statusCenter.unavailable')
+              }
+              title={statusCenterTitle}
+              titleId={titleId}
+            />
+            <ScrollArea className="max-h-[520px]" viewportClassName="p-4">
+              <div className="flex flex-col gap-4">
+                <Section title={t('statusCenter.backgroundTasks')}>
+                  {backgroundTasksQuery.isError ? (
+                    <TaskStatusRow
+                      details={
+                        backgroundTasksQuery.error instanceof Error
+                          ? backgroundTasksQuery.error.message
+                          : String(backgroundTasksQuery.error)
+                      }
+                      dotClassName="bg-destructive"
+                      labels={taskLabels}
+                      meta={t('statusCenter.backgroundLoadFailed')}
+                      onRetry={() => backgroundTasksQuery.refetch()}
                     >
-                      {task.label}
-                    </StatusRow>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  label={
-                    desktopRuntime
-                      ? t('statusCenter.noBackgroundTasks')
-                      : t('statusCenter.unavailable')
-                  }
-                />
-              )}
-            </Section>
-
-            <Section title={t('statusCenter.activeBuffer')}>
-              {activePath ? (
-                <StatusRow
-                  dotClassName={getSaveToneClass(activeSaveState?.status ?? 'saved')}
-                  meta={
-                    activeBufferQuery.isLoading
-                      ? t('statusCenter.checkingBuffer')
-                      : activeBuffer
-                        ? t('statusCenter.bufferRevision', {
-                            revision: activeBuffer.revision,
-                            state: activeBuffer.dirty
-                              ? t('statusCenter.dirty')
-                              : t('statusCenter.synced'),
-                          })
-                        : (activeSaveState?.message ??
-                          activeSaveState?.status ??
-                          t('statusCenter.saved'))
-                  }
-                >
-                  {basename(activePath)}
-                </StatusRow>
-              ) : (
-                <EmptyState label={t('statusCenter.noActiveFile')} />
-              )}
-            </Section>
-
-            <Section title={t('statusCenter.saveQueue')}>
-              {dirtyCount > 0 || savingCount > 0 || saveErrorCount > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {saveEntries
-                    .filter(([, state]) => state.status !== 'saved')
-                    .slice(0, 8)
-                    .map(([path, state]) => (
-                      <StatusRow
-                        key={path}
-                        dotClassName={getSaveToneClass(state.status)}
-                        meta={state.message ?? state.status}
-                      >
-                        {basename(path)}
-                      </StatusRow>
-                    ))}
-                  {dirtyCount > saveEntries.length && (
-                    <StatusRow
-                      dotClassName="bg-primary"
-                      meta={t('statusCenter.dirtyFiles', { count: dirtyCount })}
-                    >
-                      {t('statusCenter.unsavedFiles')}
-                    </StatusRow>
+                      {t('statusCenter.backgroundLoadFailed')}
+                    </TaskStatusRow>
+                  ) : backgroundTasksQuery.isLoading ? (
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-11/12" />
+                    </div>
+                  ) : backgroundTasks.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {backgroundTasks.map((task) => (
+                        <TaskStatusRow
+                          key={task.id}
+                          dotClassName={getTaskToneClass(task.status)}
+                          details={task.status === 'error' ? task.message : undefined}
+                          labels={taskLabels}
+                          meta={task.status}
+                          onRetry={
+                            task.status === 'error' &&
+                            (task.id === 'search-index' || task.id === 'buffer-flush')
+                              ? () => retryBackgroundTask(task.id)
+                              : undefined
+                          }
+                        >
+                          {task.label}
+                        </TaskStatusRow>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      label={
+                        desktopRuntime
+                          ? t('statusCenter.noBackgroundTasks')
+                          : t('statusCenter.unavailable')
+                      }
+                    />
                   )}
-                </div>
-              ) : (
-                <EmptyState label={t('statusCenter.noSaveActivity')} />
-              )}
-            </Section>
+                </Section>
 
-            <Section title={t('statusCenter.exportAndTerminal')}>
-              <div className="flex flex-col gap-2">
-                <StatusRow
-                  dotClassName={terminalOpen ? 'bg-primary' : 'bg-muted-foreground/45'}
-                  meta={terminalEvents[0] ? formatTime(terminalEvents[0].updatedAt) : undefined}
-                >
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <Terminal aria-hidden="true" className="size-3.5 shrink-0" />
-                    <span className="truncate">
-                      {terminalEvents[0]?.message ??
-                        (terminalOpen
-                          ? t('statusCenter.terminalOpen')
-                          : t('statusCenter.terminalClosed'))}
-                    </span>
-                  </span>
-                </StatusRow>
-                {recentExportTasks.length > 0 ? (
-                  recentExportTasks.map((task) => (
-                    <StatusRow
-                      key={task.id}
-                      dotClassName={
-                        task.status === 'failed'
-                          ? 'bg-destructive'
-                          : task.status === 'started'
-                            ? 'bg-primary'
-                            : 'bg-muted-foreground'
+                <Section title={t('statusCenter.activeBuffer')}>
+                  {activePath && activeBufferQuery.isError ? (
+                    <TaskStatusRow
+                      details={
+                        activeBufferQuery.error instanceof Error
+                          ? activeBufferQuery.error.message
+                          : String(activeBufferQuery.error)
                       }
+                      dotClassName="bg-destructive"
+                      labels={taskLabels}
+                      meta={basename(activePath)}
+                      onRetry={() => activeBufferQuery.refetch()}
+                    >
+                      {t('statusCenter.bufferLoadFailed')}
+                    </TaskStatusRow>
+                  ) : activePath ? (
+                    <StatusRow
+                      dotClassName={getSaveToneClass(activeSaveState?.status ?? 'saved')}
                       meta={
-                        task.message ??
-                        `${basename(task.output_path)} · ${formatTime(task.updatedAt)}`
+                        activeBufferQuery.isLoading
+                          ? t('statusCenter.checkingBuffer')
+                          : activeBuffer
+                            ? t('statusCenter.bufferRevision', {
+                                revision: activeBuffer.revision,
+                                state: activeBuffer.dirty
+                                  ? t('statusCenter.dirty')
+                                  : t('statusCenter.synced'),
+                              })
+                            : (activeSaveState?.message ??
+                              activeSaveState?.status ??
+                              t('statusCenter.saved'))
                       }
                     >
-                      <span className="inline-flex min-w-0 items-center gap-1.5">
-                        {task.status === 'started' ? (
-                          <Clock aria-hidden="true" className="size-3.5 shrink-0" />
-                        ) : (
-                          <FileText aria-hidden="true" className="size-3.5 shrink-0" />
-                        )}
-                        <span className="truncate">
-                          {formatExportLabel(task, (key, options) => t(key, options))}
-                        </span>
-                      </span>
+                      {basename(activePath)}
                     </StatusRow>
-                  ))
-                ) : (
-                  <EmptyState label={t('statusCenter.noEvents')} />
-                )}
+                  ) : (
+                    <EmptyState label={t('statusCenter.noActiveFile')} />
+                  )}
+                </Section>
+
+                <Section title={t('statusCenter.saveQueue')}>
+                  {dirtyCount > 0 || savingCount > 0 || saveErrorCount > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {saveEntries
+                        .filter(([, state]) => state.status !== 'saved')
+                        .slice(0, 8)
+                        .map(([path, state]) => (
+                          <StatusRow
+                            key={path}
+                            dotClassName={getSaveToneClass(state.status)}
+                            meta={state.message ?? state.status}
+                          >
+                            {basename(path)}
+                          </StatusRow>
+                        ))}
+                      {dirtyCount > saveEntries.length && (
+                        <StatusRow
+                          dotClassName="bg-primary"
+                          meta={t('statusCenter.dirtyFiles', { count: dirtyCount })}
+                        >
+                          {t('statusCenter.unsavedFiles')}
+                        </StatusRow>
+                      )}
+                    </div>
+                  ) : (
+                    <EmptyState label={t('statusCenter.noSaveActivity')} />
+                  )}
+                </Section>
+
+                <StatusCenterExportSection
+                  eventError={eventError}
+                  labels={taskLabels}
+                  recentExportTasks={recentExportTasks}
+                  terminalEvents={terminalEvents}
+                  terminalOpen={terminalOpen}
+                  text={{
+                    closed: t('statusCenter.terminalClosed'),
+                    noEvents: t('statusCenter.noEvents'),
+                    open: t('statusCenter.terminalOpen'),
+                    section: t('statusCenter.exportAndTerminal'),
+                    unavailable: t('statusCenter.activityUnavailable'),
+                  }}
+                  translate={(key, options) => t(key, options)}
+                />
               </div>
-            </Section>
-          </div>
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+            </ScrollArea>
+          </PopoverContent>
+        </>
+      )}
+    </StatusCenterPopoverRoot>
   )
 }
 

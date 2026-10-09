@@ -37,6 +37,8 @@ const EditFilePage = () => {
         onEditorChange: state.onEditorChange,
         onOpenFile: state.onOpenFile,
         onOpenFileView: state.onOpenFileView,
+        rootKind: state.rootKind,
+        rootPath: state.rootPath,
         saveState: path ? state.saveStates[path] : undefined,
         showEditorStatusBar: state.showEditorStatusBar,
       }
@@ -156,6 +158,7 @@ const EditFilePage = () => {
     <Suspense fallback={fallback}>
       <WysiwygEditorPage
         activePath={activePath}
+        workspaceKey={`${context.rootKind}:${context.rootPath}`}
         value={loadState.content}
         onChange={context.onEditorChange}
         onOpenFile={context.onOpenFile}

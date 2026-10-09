@@ -8,7 +8,10 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { parseCommandSearchScope } from '@/components/command/commandSearchScope'
-import type { CommandDialogMode } from '@/components/command/CommandSearchOverview'
+import {
+  commandDialogModes,
+  type CommandDialogMode,
+} from '@/components/command/CommandSearchOverview'
 import { useCommandSearchHistory } from '@/components/command/useCommandSearchHistory'
 import { useCommandFullTextSearchStream } from '@/components/command/useCommandFullTextSearchStream'
 import type { FsSearchResult } from '@/services/fsApi'
@@ -17,6 +20,7 @@ type UseCommandDialogControllerOptions = {
   contentReady: boolean
   onOpenFile: (path: string) => void
   onOpenHeading: (path: string, slug: string) => void
+  onOpenPathInNewWindow?: (path: string) => void
   onOpenSearchResult: (result: FsSearchResult) => void
   open: boolean
   workspaceKey: string
@@ -26,6 +30,7 @@ const modeByShortcut: Record<string, CommandDialogMode> = {
   '1': 'quick-open',
   '2': 'full-text',
   '3': 'commands',
+  '4': 'settings',
 }
 
 const normalizeModeQuery = (value: string) => value.trim().replace(/^[@#?>]\s*/, '')
@@ -34,6 +39,7 @@ export const useCommandDialogController = ({
   contentReady,
   onOpenFile,
   onOpenHeading,
+  onOpenPathInNewWindow,
   onOpenSearchResult,
   open,
   workspaceKey,
@@ -71,6 +77,17 @@ export const useCommandDialogController = ({
     inputRef.current?.focus()
   }, [])
 
+  const handleCycleMode = useCallback((direction: -1 | 1) => {
+    setMode((currentMode) => {
+      const currentIndex = commandDialogModes.findIndex(({ id }) => id === currentMode)
+      const nextIndex =
+        (currentIndex + direction + commandDialogModes.length) % commandDialogModes.length
+      return commandDialogModes[nextIndex].id
+    })
+    setQuery(normalizeModeQuery)
+    inputRef.current?.focus()
+  }, [])
+
   const handleSelectQuery = useCallback((nextQuery: string) => {
     setMode(nextQuery.trimStart().startsWith('?') ? 'full-text' : 'quick-open')
     setQuery(nextQuery)
@@ -87,13 +104,30 @@ export const useCommandDialogController = ({
 
   const handleInputKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault()
+        handleCycleMode(event.shiftKey ? -1 : 1)
+        return
+      }
+      if (event.key === 'Enter' && event.altKey && onOpenPathInNewWindow) {
+        const commandRoot = inputRef.current?.closest('[cmdk-root]') ?? document
+        const selected = commandRoot.querySelector<HTMLElement>(
+          '[cmdk-item][data-selected="true"][data-open-new-window-path]',
+        )
+        const path = selected?.dataset.openNewWindowPath
+        if (path) {
+          event.preventDefault()
+          onOpenPathInNewWindow(path)
+        }
+        return
+      }
       const nextMode = modeByShortcut[event.key]
       if ((event.ctrlKey || event.metaKey) && nextMode) {
         event.preventDefault()
         handleSelectMode(nextMode)
       }
     },
-    [handleSelectMode],
+    [handleCycleMode, handleSelectMode, onOpenPathInNewWindow],
   )
 
   const historyQuery =
@@ -156,3 +190,8 @@ export const useCommandDialogController = ({
     trimmedQuery,
   }
 }
+
+export type ReturnTypeOfUseCommandDialogController = Omit<
+  ReturnType<typeof useCommandDialogController>,
+  'inputRef'
+>

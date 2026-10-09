@@ -1,15 +1,10 @@
 import { useI18n } from '@/i18n/useI18n'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback } from 'react'
 import { createFileLabel } from '@/logic/paths'
 import type { FileViewKind, ViewMode } from '@/store/appTypes'
 import { Button } from '@/components/ui/button'
 import { CircleAlert, LoaderCircle } from 'lucide-react'
-import {
-  requestFocusHeading,
-  requestFocusSourcePosition,
-  type FocusHeadingRequest,
-  type FocusSourcePositionRequest,
-} from '@/utils/editorNavigation'
+import { requestFocusHeading, requestFocusSourcePosition } from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
 import {
@@ -59,9 +54,6 @@ const RightSidebarExpanded = ({
   viewMode,
 }: RightSidebarExpandedProps) => {
   const { t } = useI18n()
-  const [pendingHeading, setPendingHeading] = useState<FocusHeadingRequest | null>(null)
-  const [pendingSourcePosition, setPendingSourcePosition] =
-    useState<FocusSourcePositionRequest | null>(null)
   const targetPath = activePath ? (inspectedPath ?? activePath) : null
   const {
     outline,
@@ -90,22 +82,23 @@ const RightSidebarExpanded = ({
   const handleOpenHeading = useCallback(
     (slug: string) => {
       if (!targetPath) return
-      setPendingHeading({ path: targetPath, slug })
+      requestFocusHeading({ path: targetPath, slug, workspaceKey })
       onOpenFileView(targetPath, 'edit')
     },
-    [onOpenFileView, targetPath],
+    [onOpenFileView, targetPath, workspaceKey],
   )
 
   const handleOpenBacklink = useCallback(
     (backlink: SidebarBacklink) => {
-      setPendingSourcePosition({
+      requestFocusSourcePosition({
         path: backlink.sourcePath,
         line: backlink.line,
         column: backlink.column,
+        workspaceKey,
       })
       onOpenFileView(backlink.sourcePath, 'source')
     },
-    [onOpenFileView],
+    [onOpenFileView, workspaceKey],
   )
 
   const handleOpenKnowledgeFile = useCallback(
@@ -117,75 +110,44 @@ const RightSidebarExpanded = ({
 
   const handleOpenKnowledgeReference = useCallback(
     (reference: KnowledgeLinkReference) => {
-      setPendingSourcePosition({
+      requestFocusSourcePosition({
         path: reference.path,
         line: reference.firstLine,
         column: reference.firstColumn,
+        workspaceKey,
       })
       onOpenFileView(reference.path, 'source')
     },
-    [onOpenFileView],
+    [onOpenFileView, workspaceKey],
   )
 
   const handleOpenMissingLink = useCallback(
     (reference: KnowledgeMissingReference) => {
       if (!targetPath) return
-      setPendingSourcePosition({
+      requestFocusSourcePosition({
         path: targetPath,
         line: reference.line,
         column: reference.column,
+        workspaceKey,
       })
       onOpenFileView(targetPath, 'source')
     },
-    [onOpenFileView, targetPath],
+    [onOpenFileView, targetPath, workspaceKey],
   )
 
   const handleOpenProblem = useCallback(
     (problem: MarkdownSourceDiagnostic) => {
       if (!targetPath) return
-      setPendingSourcePosition({
+      requestFocusSourcePosition({
         path: targetPath,
         line: problem.line,
         column: problem.startColumn,
+        workspaceKey,
       })
       onOpenFileView(targetPath, 'source')
     },
-    [onOpenFileView, targetPath],
+    [onOpenFileView, targetPath, workspaceKey],
   )
-
-  useEffect(() => {
-    if (!pendingHeading) return
-    if (pendingHeading.path !== activePath || viewMode !== 'wysiwyg') return
-
-    const timer = window.setTimeout(() => {
-      requestFocusHeading(pendingHeading)
-      setPendingHeading((current) =>
-        current?.path === pendingHeading.path && current.slug === pendingHeading.slug
-          ? null
-          : current,
-      )
-    }, 80)
-
-    return () => window.clearTimeout(timer)
-  }, [activePath, pendingHeading, viewMode])
-
-  useEffect(() => {
-    if (!pendingSourcePosition) return
-    if (pendingSourcePosition.path !== activePath || viewMode !== 'source') return
-
-    const timer = window.setTimeout(() => {
-      requestFocusSourcePosition(pendingSourcePosition)
-      setPendingSourcePosition((current) =>
-        current?.path === pendingSourcePosition.path &&
-        current.line === pendingSourcePosition.line &&
-        current.column === pendingSourcePosition.column
-          ? null
-          : current,
-      )
-    }, 80)
-
-    return () => window.clearTimeout(timer)
-  }, [activePath, pendingSourcePosition, viewMode])
 
   return (
     <div className="flex h-full min-h-0 flex-col">

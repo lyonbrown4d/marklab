@@ -93,6 +93,16 @@ export const openMarkdownDocument = async (
 export const blockByMarker = (editor: Locator, marker: string) =>
   editor.locator(BLOCK_WRAPPER).filter({ hasText: marker }).first()
 
+export const selectBlocksByMarker = async (editor: Locator, markers: [string, ...string[]]) => {
+  await blockByMarker(editor, markers[0]).locator(DRAG_HANDLE).click()
+  const additiveModifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+  for (const marker of markers.slice(1)) {
+    await blockByMarker(editor, marker)
+      .locator(DRAG_HANDLE)
+      .click({ modifiers: [additiveModifier] })
+  }
+}
+
 export const readRenderedBlockOrder = (editor: Locator) =>
   editor
     .locator(BLOCK_WRAPPER)
@@ -127,23 +137,38 @@ export const beginBlockDrag = async (page: Page, block: Locator) => {
 }
 
 export const dropBlockAfter = async (page: Page, target: Locator) => {
-  const hitPoint = await target.evaluate((element) => {
+  const hitPoints = await target.evaluate((element) => {
     const box = element.getBoundingClientRect()
+    const points: Array<{ x: number; y: number }> = []
     for (const yRatio of [0.85, 0.75, 0.65, 0.55]) {
       for (const xRatio of [0.5, 0.25, 0.75]) {
         const x = box.left + box.width * xRatio
         const y = box.top + box.height * yRatio
         const hit = document.elementFromPoint(x, y)
-        if (hit?.closest('[data-block-drag-wrapper="true"]') === element) return { x, y }
+        if (hit?.closest('[data-block-drag-wrapper="true"]') === element) points.push({ x, y })
       }
     }
-    return null
+    return points
   })
-  if (!hitPoint) throw new Error('Block drop target has no hit-testable point in its bottom half')
+  if (hitPoints.length === 0) {
+    throw new Error('Block drop target has no hit-testable point in its bottom half')
+  }
 
-  await page.mouse.move(hitPoint.x, hitPoint.y, { steps: 16 })
-  await expect(target.locator('[data-block-drop-line="bottom"]')).toBeVisible()
-  await page.mouse.up()
+  const dropLine = target.locator('[data-block-drop-line="bottom"]')
+  for (const hitPoint of hitPoints) {
+    await page.mouse.move(hitPoint.x, hitPoint.y, { steps: 8 })
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    )
+    if (await dropLine.isVisible().catch(() => false)) {
+      await page.mouse.up()
+      return
+    }
+  }
+  throw new Error('Block drop target did not expose its bottom drop line')
 }
 
 export const dragBlockAfter = async (page: Page, source: Locator, target: Locator) => {

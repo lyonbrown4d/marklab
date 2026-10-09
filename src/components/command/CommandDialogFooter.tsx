@@ -13,13 +13,16 @@ const Shortcut = ({ keys, label }: { keys: string; label: string }) => (
 
 const CommandDialogFooter = () => {
   const { t } = useI18n()
-  const modeKeys = inferPlatformFromUserAgent() === 'macos' ? '⌘ 1–3' : 'Ctrl 1–3'
+  const modeKeys = inferPlatformFromUserAgent() === 'macos' ? '⌘ 1–4' : 'Ctrl 1–4'
 
   return (
     <footer className="flex min-h-11 items-center gap-4 border-t border-border/65 px-4 text-[11px] text-muted-foreground">
       <Keyboard className="mr-auto size-4" aria-hidden="true" />
       <Shortcut keys="↑↓" label={t('command.footer.select')} />
       <Shortcut keys="Enter" label={t('command.footer.open')} />
+      <span className="hidden sm:inline-flex">
+        <Shortcut keys="Alt+Enter" label={t('command.footer.openNewWindow')} />
+      </span>
       <Shortcut keys={modeKeys} label={t('command.footer.mode')} />
       <Shortcut keys="Esc" label={t('command.footer.close')} />
     </footer>

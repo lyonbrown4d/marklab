@@ -7,6 +7,7 @@ import '@xyflow/react/dist/base.css'
 
 import App from '@/App'
 import AppToaster from '@/app/AppToaster'
+import { ApplicationFocusCycle } from '@/app/ApplicationFocusCycle'
 import { queryClient } from '@/app/queryClient'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import '@/i18n/setup'
@@ -27,6 +28,7 @@ const RendererApplication = () => (
   <PlateDndProvider>
     <QueryClientProvider client={queryClient}>
       <App />
+      <ApplicationFocusCycle />
       <AppToaster />
       {ReactQueryDevtools ? (
         <Suspense fallback={null}>

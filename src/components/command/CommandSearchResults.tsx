@@ -12,6 +12,7 @@ import {
 } from '@/components/command/CommandSearchResultRows'
 import type { CommandSearchScope } from '@/components/command/commandSearchScope'
 import type { FsSearchResult } from '@/services/fsApi'
+import { useStableCommandResultSections } from '@/components/command/useStableCommandResultSections'
 
 export type CommandFile = {
   path: string
@@ -231,6 +232,10 @@ const CommandSearchResults = ({
 
     return sections
   }, [fullTextResults, groupedResults, hasQuery, showFiles, showFullText, showHeadings, t])
+  const stableResultSections = useStableCommandResultSections(
+    `${scope}:${deferredTrimmedQuery}`,
+    resultSections,
+  )
 
   return (
     <>
@@ -244,7 +249,7 @@ const CommandSearchResults = ({
         includeFullText={includeFullText}
         fullTextOnly={includeFullText && scope === 'text'}
       />
-      {resultSections.map((section) => {
+      {stableResultSections.map((section) => {
         const hiddenCount = getHiddenCount(section.totalCount, section.rows.length)
 
         return (

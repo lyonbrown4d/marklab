@@ -62,6 +62,9 @@ const AppShellPanelsView = ({
           id="terminal-resize"
         />
         <ResizablePanel
+          data-app-focus-zone="terminal"
+          aria-hidden={!terminalOpen || undefined}
+          inert={!terminalOpen ? true : undefined}
           className={cn(
             'motion-panel motion-terminal-shell min-h-0',
             terminalOpen ? 'motion-panel-open' : 'motion-panel-collapsed',

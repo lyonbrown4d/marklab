@@ -67,7 +67,7 @@ export const registerMarkdownSourceProviders = ({
     inlineCompletionDisposable,
     registerMarkdownDocumentSymbolProvider(monaco, getContext),
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),
-    registerMarkdownDefinitionClick({ editor, getContext, onOpenFileView }),
+    registerMarkdownDefinitionClick({ editor, getContext, getWorkspaceKey, onOpenFileView }),
     registerMarkdownReferenceProvider(monaco, getContext),
     registerMarkdownHoverProvider(monaco, getContext),
     registerMarkdownRenameProvider(monaco, getContext),

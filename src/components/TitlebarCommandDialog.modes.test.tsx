@@ -8,6 +8,7 @@ const fullText = vi.hoisted(() => ({
   fullTextError: false,
   fullTextFetching: false,
   fullTextResults: [],
+  navigationCalls: [] as Array<{ activePath: string | null; query: string; scope: string }>,
 }))
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -21,20 +22,27 @@ vi.mock('@/components/command/useCommandFullTextSearchStream', () => ({
   useCommandFullTextSearchStream: () => fullText,
 }))
 vi.mock('@/components/titlebar/useWorkspaceNavigationQuery', () => ({
-  useWorkspaceNavigationQuery: () => ({
-    headings: [{ label: 'Guide', level: 2, path: 'docs/Guide.md', slug: 'guide', text: 'Guide' }],
-    navigationHeadings: [
-      { level: 2, path: 'docs/current.md', slug: 'guide-navigation', text: 'Guide navigation' },
-    ],
-    navigationOutgoingLinks: [],
-    navigationBacklinks: [],
-    navigationMissingLinks: [],
-    indexedFileCount: 1,
-    workspaceIndexed: true,
-    loading: false,
-    error: false,
-    retry: vi.fn(async () => undefined),
-  }),
+  useWorkspaceNavigationQuery: (options: {
+    activePath: string | null
+    query: string
+    scope: string
+  }) => {
+    fullText.navigationCalls.push(options)
+    return {
+      headings: [{ label: 'Guide', level: 2, path: 'docs/Guide.md', slug: 'guide', text: 'Guide' }],
+      navigationHeadings: [
+        { level: 2, path: 'docs/current.md', slug: 'guide-navigation', text: 'Guide navigation' },
+      ],
+      navigationOutgoingLinks: [],
+      navigationBacklinks: [],
+      navigationMissingLinks: [],
+      indexedFileCount: 1,
+      workspaceIndexed: true,
+      loading: false,
+      error: false,
+      retry: vi.fn(async () => undefined),
+    }
+  },
 }))
 
 const baseProps: ComponentProps<typeof TitlebarCommandDialog> = {
@@ -76,6 +84,7 @@ beforeEach(() => {
   fullText.fullTextError = false
   fullText.fullTextFetching = false
   fullText.fullTextResults = []
+  fullText.navigationCalls.length = 0
 })
 
 describe('TitlebarCommandDialog modes', () => {
@@ -90,6 +99,29 @@ describe('TitlebarCommandDialog modes', () => {
     fireEvent.change(input, { target: { value: '# guide' } })
     expect(await screen.findByText('command.headings')).toBeVisible()
     expect(screen.queryByText('Guide navigation')).not.toBeInTheDocument()
+  })
+
+  it('drives bounded heading queries from the deferred dialog input', async () => {
+    const input = await renderReadyDialog()
+    fireEvent.change(input, { target: { value: '# architecture' } })
+
+    await waitFor(() =>
+      expect(fullText.navigationCalls.at(-1)).toMatchObject({
+        activePath: 'docs/current.md',
+        query: 'architecture',
+        scope: 'headings',
+      }),
+    )
+  })
+
+  it('does not mount expensive content until workspace data is ready', () => {
+    render(
+      <AppCommandDialog open onOpenChange={vi.fn()}>
+        <TitlebarCommandDialog {...baseProps} dataReady={false} />
+      </AppCommandDialog>,
+    )
+    expect(screen.getByRole('combobox')).toBeVisible()
+    expect(screen.queryByRole('tab', { name: 'command.mode.quickOpen' })).not.toBeInTheDocument()
   })
 
   it('closes on Escape even when the query is not empty', async () => {
@@ -135,6 +167,42 @@ describe('TitlebarCommandDialog modes', () => {
     expect(
       screen.queryByRole('button', { name: '@ command.search.scopeFiles' }),
     ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.settings' }))
+    expect(
+      await screen.findByRole('heading', { name: 'command.emptyTitle.settings' }),
+    ).toBeVisible()
+  })
+
+  it('searches settings only in the settings scope and opens the exact target', async () => {
+    const onOpenSettingsSelection = vi.fn()
+    render(
+      <AppCommandDialog open onOpenChange={vi.fn()}>
+        <TitlebarCommandDialog {...baseProps} onOpenSettingsSelection={onOpenSettingsSelection} />
+      </AppCommandDialog>,
+    )
+    await screen.findByRole('tab', { name: 'command.mode.quickOpen' })
+    const input = screen.getByRole('combobox')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.settings' }))
+    fireEvent.change(input, { target: { value: 'themePreset' } })
+
+    fireEvent.click(await screen.findByRole('option', { name: /settings\.themePreset/ }))
+    expect(onOpenSettingsSelection).toHaveBeenCalledWith({
+      route: 'appearance',
+      targetId: 'settings-theme',
+    })
+    expect(screen.queryByText('Guide')).not.toBeInTheDocument()
+  })
+
+  it('shows a selected command in the recent commands empty state', async () => {
+    await renderReadyDialog()
+    fireEvent.click(screen.getByRole('tab', { name: 'command.mode.commands' }))
+
+    fireEvent.click(screen.getByRole('option', { name: /menu\.settings/ }))
+
+    expect(screen.getByText('command.recentCommands')).toBeVisible()
+    expect(screen.getAllByRole('option', { name: /menu\.settings/ }).length).toBeGreaterThan(1)
   })
 
   it.each([

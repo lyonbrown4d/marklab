@@ -4,6 +4,16 @@ import type { TerminalExitEvent, TerminalOutputEvent } from '@/services/terminal
 
 export type ExportTaskStatus = 'started' | 'finished' | 'failed' | 'cancelled'
 
+export type StatusCenterSummary = {
+  activeCount: number
+  issueCount: number
+}
+
+export const EMPTY_STATUS_CENTER_SUMMARY: StatusCenterSummary = {
+  activeCount: 0,
+  issueCount: 0,
+}
+
 export type ExportTaskPayload = {
   id: string
   format: string
@@ -16,6 +26,19 @@ export type ExportTaskPayload = {
 export type ExportTaskEntry = ExportTaskPayload & {
   updatedAt: number
 }
+
+const EXPORT_TASK_HISTORY_LIMIT = 12
+
+export const upsertRecentExportTask = (
+  current: Record<string, ExportTaskEntry>,
+  task: ExportTaskPayload,
+  updatedAt = Date.now(),
+) =>
+  Object.fromEntries(
+    Object.entries({ ...current, [task.id]: { ...task, updatedAt } })
+      .sort(([, left], [, right]) => right.updatedAt - left.updatedAt)
+      .slice(0, EXPORT_TASK_HISTORY_LIMIT),
+  )
 
 export type TerminalEventEntry = {
   id: string

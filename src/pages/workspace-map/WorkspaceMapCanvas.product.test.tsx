@@ -20,6 +20,8 @@ type FlowProps = {
 
 type FlowApi = {
   fitView: ReturnType<typeof vi.fn>
+  getViewport: ReturnType<typeof vi.fn>
+  setViewport: ReturnType<typeof vi.fn>
   zoomIn: ReturnType<typeof vi.fn>
   zoomOut: ReturnType<typeof vi.fn>
 }
@@ -156,6 +158,8 @@ describe('WorkspaceMapCanvas product readiness', () => {
     renderCanvas()
     const flow: FlowApi = {
       fitView: vi.fn().mockResolvedValue(true),
+      getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+      setViewport: vi.fn().mockResolvedValue(true),
       zoomIn: vi.fn().mockResolvedValue(true),
       zoomOut: vi.fn().mockResolvedValue(true),
     }

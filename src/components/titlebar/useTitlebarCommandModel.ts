@@ -30,6 +30,8 @@ type UseTitlebarCommandModelArgs = Pick<
   | 'onToggleReadOnly'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
+  | 'rootKind'
+  | 'rootPath'
 > & {
   commandOpen: boolean
   platform: AppPlatform
@@ -64,6 +66,8 @@ export const useTitlebarCommandModel = ({
   commandOpen,
   platform,
   onOpenCurrentWorkspaceInNewWindow,
+  rootKind,
+  rootPath,
 }: UseTitlebarCommandModelArgs) => {
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const hotkeyPlatform = platform === 'macos' ? 'mac' : platform === 'windows' ? 'windows' : 'linux'
@@ -100,6 +104,7 @@ export const useTitlebarCommandModel = ({
     onCommandOpenFile,
     onCommandOpenHeading,
     onCommandOpenSearchResult,
+    onCommandOpenPathInNewWindow,
   } = useTitlebarCommandActions({
     onCommandOpenChange,
     onChangeView,
@@ -122,6 +127,8 @@ export const useTitlebarCommandModel = ({
     setTheme,
     canCreateWorkspaceEntries,
     onOpenCurrentWorkspaceInNewWindow,
+    rootKind,
+    rootPath,
   })
 
   return {
@@ -134,5 +141,6 @@ export const useTitlebarCommandModel = ({
     onCommandOpenFile,
     onCommandOpenHeading,
     onCommandOpenSearchResult,
+    onCommandOpenPathInNewWindow,
   }
 }

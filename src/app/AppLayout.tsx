@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useDefaultLayout, usePanelRef } from 'react-resizable-panels'
 import { useQueryClient } from '@tanstack/react-query'
 import Titlebar, { type TitlebarHandle } from '@/components/Titlebar'
 import { AppStatusBarProvider } from '@/components/EditorStatusBar'
-import ExportStatusOverlay from '@/components/ExportStatusOverlay'
 import AppStatusBar from '@/components/AppStatusBar'
 import { AppStatusBarDock } from '@/components/AppStatusBarDock'
 import { AppStatusBarEdgeHandle } from '@/components/AppStatusBarEdgeHandle'
@@ -23,9 +22,13 @@ import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
 import { SettingsDialogHost, type SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
 import { useWorkspaceAnalysisInvalidation } from '@/app/useWorkspaceAnalysisInvalidation'
+import { useRetryActiveFile } from '@/app/useRetryActiveFile'
+import { useAppNavigationHistory } from '@/app/useAppNavigationHistory'
+import { useAppChromeActions } from '@/app/useAppChromeActions'
 export type { LayoutContext } from '@/app/AppLayoutContext'
 const AppLayout = () => {
   const [commandOpen, setCommandOpen] = useState(false)
+  const retryActiveFile = useRetryActiveFile()
   const state = useAppLayoutState()
   const stateRef = useLatest(state)
   const queryClient = useQueryClient()
@@ -38,22 +41,9 @@ const AppLayout = () => {
     id: 'marklab-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
   })
-  const openCommandPalette = useCallback(() => {
-    titlebarRef.current?.openCommandPalette()
-  }, [])
-  const openSettings = useCallback(() => {
-    settingsDialogRef.current?.openSettings()
-  }, [])
-  const toggleReadOnly = useCallback(() => {
-    const current = stateRef.current
-    const nextReadOnly = !current.editorReadOnlyMode
-    current.setEditorReadOnlyMode(nextReadOnly)
-    if (nextReadOnly && current.activePath) current.setViewMode('wysiwyg')
-  }, [stateRef])
-  const toggleStatusBar = useCallback(() => {
-    const current = stateRef.current
-    current.setShowEditorStatusBar(!current.showEditorStatusBar)
-  }, [stateRef])
+  const { openCommandPalette, openSettings, toggleReadOnly, toggleStatusBar } = useAppChromeActions(
+    { titlebarRef, settingsDialogRef, stateRef },
+  )
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
   const editorChromeVisible = !immersiveZenMode && state.activeTab?.kind !== 'web'
   const {
@@ -89,6 +79,17 @@ const AppLayout = () => {
     activePath: state.activePath,
     onOpenFileView: handleOpenFileView,
     viewMode: state.viewMode,
+    workspaceKey: state.workspaceKey,
+  })
+  const navigationHistory = useAppNavigationHistory({
+    activePath: state.activePath,
+    viewMode: state.viewMode,
+    workspaceView: state.workspaceView,
+    workspaceKey: state.workspaceKey,
+    openFileView: handleOpenFileView,
+    openHeading,
+    openSearchResult: handleOpenSearchResult,
+    openWorkspaceGraph: state.onOpenWorkspaceGraph,
   })
   const { outlet, totalFiles } = useAppLayoutOutlet({
     immersiveZenMode,
@@ -113,6 +114,8 @@ const AppLayout = () => {
     onToggleSidebar: state.toggleSidebar,
     onToggleTerminal: toggleTerminalArea,
     onToggleReadOnly: toggleReadOnly,
+    onNavigateBack: navigationHistory.back,
+    onNavigateForward: navigationHistory.forward,
   })
   useAppMenuEventSync(handleMenuAction)
   useNativeMenuLocaleSync()
@@ -130,6 +133,7 @@ const AppLayout = () => {
       fileTree: state.fileTree,
       files: state.files,
       inspectedPath: state.inspectedPath,
+      loadingPaths: state.loadingPaths,
       movePath: state.movePath,
       onCloseTab: state.onCloseTab,
       onPersistedContentChange: state.onPersistedContentChange,
@@ -160,6 +164,7 @@ const AppLayout = () => {
       state.fileTree,
       state.files,
       state.inspectedPath,
+      state.loadingPaths,
       state.movePath,
       state.onCloseTab,
       state.onPersistedContentChange,
@@ -187,7 +192,8 @@ const AppLayout = () => {
         onOpenFile={handleOpenFile}
         onOpenFileView={handleOpenFileView}
         onOpenGitDiff={handleOpenGitDiff}
-        onOpenSearchResult={handleOpenSearchResult}
+        onOpenSearchResult={navigationHistory.onOpenSearchResult}
+        onRetryActiveFile={retryActiveFile}
         immersiveZenMode={immersiveZenMode}
       />
     ),
@@ -195,16 +201,16 @@ const AppLayout = () => {
       handleOpenFile,
       handleOpenFileView,
       handleOpenGitDiff,
-      handleOpenSearchResult,
+      navigationHistory.onOpenSearchResult,
       immersiveZenMode,
       outlet,
+      retryActiveFile,
       workspacePanelState,
       totalFiles,
     ],
   )
   return (
     <AppStatusBarProvider activePath={state.editorBufferPath} viewMode={state.viewMode}>
-      <ExportStatusOverlay />
       <Titlebar
         ref={titlebarRef}
         commandOpen={commandOpen}
@@ -219,8 +225,10 @@ const AppLayout = () => {
         onCreateFile={handleCreateFile}
         onCreateFolder={handleCreateFolder}
         onOpenFile={handleOpenFile}
-        onOpenHeading={openHeading}
-        onOpenSearchResult={handleOpenSearchResult}
+        onOpenHeading={navigationHistory.onOpenHeading}
+        onOpenSearchResult={navigationHistory.onOpenSearchResult}
+        recentNavigationLocations={navigationHistory.recentLocations}
+        onOpenNavigationLocation={navigationHistory.onOpenLocation}
         onOpenWorkspaceGraph={state.onOpenWorkspaceGraph}
         onOpenWorkspaceFiles={state.onOpenWorkspaceFiles}
         onOpenAllPages={state.onOpenAllPages}
@@ -279,6 +287,7 @@ const AppLayout = () => {
           onRestoreSession={state.restoreSession}
           restoreStatusMessage={state.restoreStatusMessage}
           restoreStatusBusy={state.isRestoringSession}
+          statusBarVisible={state.showEditorStatusBar && editorChromeVisible}
         />
       </AppStatusBarDock>
       {editorChromeVisible ? (

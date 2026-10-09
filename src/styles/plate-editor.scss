@@ -46,6 +46,14 @@
   background: color-mix(in srgb, hsl(var(--primary)) 22%, transparent);
 }
 
+[data-plate-editor-shell='true'] .slate-selection-area {
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 68%, transparent);
+  border-radius: calc(var(--radius) * 0.75);
+  background: color-mix(in srgb, hsl(var(--primary)) 12%, transparent);
+  pointer-events: none;
+  z-index: 20;
+}
+
 .markdown-editor > [data-slate-node='element'],
 .markdown-editor > .plate-block-draggable,
 .markdown-editor > [data-slate-chunk='true'] {

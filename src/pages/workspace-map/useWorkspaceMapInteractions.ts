@@ -8,34 +8,34 @@ import { getWorkspaceMapNodeOpenPath } from '@/pages/workspace-map/workspaceMapN
 type WorkspaceMapInteractionsOptions = {
   activePath: string | null
   clearNeighborhood: () => void
+  exitFocusedView: () => boolean
+  fitWorkspace: () => void
   flow: ReactFlowInstance<Node<GraphNodeData>, Edge> | null
-  focusNeighborhoodNode: (nodeId: string) => void
+  focusNode: (node: Node<GraphNodeData>) => void
+  mode: import('@/pages/workspace-map/workspaceMapMode').WorkspaceMapMode
   nodes: Node<GraphNodeData>[]
   onActivateEditor: (path: string) => void
   onCloseEditor: () => void
   onOpenFile: (path: string) => void
+  onModeChange: (mode: import('@/pages/workspace-map/workspaceMapMode').WorkspaceMapMode) => void
   webViews: { activate: (nodeId: string) => void; deactivate: () => void }
 }
 
 export const useWorkspaceMapInteractions = ({
   activePath,
   clearNeighborhood,
+  exitFocusedView,
+  fitWorkspace,
   flow,
-  focusNeighborhoodNode,
+  focusNode,
+  mode,
   nodes,
   onActivateEditor,
   onCloseEditor,
   onOpenFile,
+  onModeChange,
   webViews,
 }: WorkspaceMapInteractionsOptions) => {
-  const focusNode = useCallback(
-    (node: Node<GraphNodeData>) => {
-      if (!flow) return
-      focusNeighborhoodNode(node.id)
-      void flow.fitView({ duration: 0, maxZoom: 1, minZoom: 0.35, nodes: [node], padding: 0.32 })
-    },
-    [flow, focusNeighborhoodNode],
-  )
   const activateNode = useCallback(
     (node: Node<GraphNodeData>) => {
       if (node.type === 'external' && node.data.url) {
@@ -72,13 +72,33 @@ export const useWorkspaceMapInteractions = ({
     clearNeighborhood()
     webViews.deactivate()
   }, [clearNeighborhood, webViews])
+  const onCanvasDoubleClick = useCallback(
+    (event: MouseEvent) => {
+      if (!(event.target instanceof HTMLElement)) return
+      if (!event.target.classList.contains('react-flow__pane')) return
+      event.preventDefault()
+      fitWorkspace()
+    },
+    [fitWorkspace],
+  )
   const onKeyDown = useWorkspaceMapKeyboard({
     activePath,
     activateNode,
+    exitFocusedView,
     flow,
+    focusNode,
+    mode,
     nodes,
     onCloseEditor,
+    onModeChange,
   })
 
-  return { focusNode, onKeyDown, onNodeClick, onNodeDoubleClick, onPaneClick }
+  return {
+    focusNode,
+    onKeyDown,
+    onNodeClick,
+    onNodeDoubleClick,
+    onPaneClick,
+    onCanvasDoubleClick,
+  }
 }

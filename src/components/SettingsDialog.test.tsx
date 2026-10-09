@@ -69,9 +69,12 @@ vi.mock('@/components/settings/ShortcutsSettingsPage', () => ({
   default: () => <section>Shortcuts settings panel</section>,
 }))
 
-const renderSettingsDialog = () => {
+const renderSettingsDialog = (initialSelection?: {
+  route: 'appearance'
+  targetId: 'settings-page-appearance'
+}) => {
   const onOpenChange = vi.fn()
-  render(<SettingsDialog open onOpenChange={onOpenChange} />)
+  render(<SettingsDialog open onOpenChange={onOpenChange} initialSelection={initialSelection} />)
   return { onOpenChange }
 }
 
@@ -126,6 +129,14 @@ describe('SettingsDialog', () => {
       'true',
     )
     expect(await screen.findByText('General settings panel')).toBeInTheDocument()
+  })
+
+  it('opens and focuses an exact setting selected by the global command dialog', async () => {
+    renderSettingsDialog({ route: 'appearance', targetId: 'settings-page-appearance' })
+
+    expect(await screen.findByText('Appearance settings panel')).toBeVisible()
+    expect(screen.getByRole('tab', { name: 'Appearance' })).toHaveAttribute('aria-selected', 'true')
+    expect(document.getElementById('settings-page-appearance')).toHaveFocus()
   })
 
   it('updates the active section when a settings tab is selected', async () => {

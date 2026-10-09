@@ -24,6 +24,7 @@ import {
   TaskListPlugin,
 } from '@platejs/list-classic/react'
 import { ImagePlugin } from '@platejs/media/react'
+import { BlockSelectionPlugin } from '@platejs/selection/react'
 import { all, createLowlight } from 'lowlight'
 import {
   onKeyDownTable,
@@ -192,6 +193,28 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
   TableCellPlugin.withComponent(TableCellElement),
   TableCellHeaderPlugin.withComponent(TableHeaderCellElement),
   DndPlugin.configure({
+    handlers: {
+      onDragStart: ({ editor, event, plugin }) => {
+        const target = event.target
+        if (!(target instanceof HTMLElement)) return
+        const id = target.dataset.blockId
+        if (!id) return
+
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.dropEffect = 'move'
+        const selectedIds = editor
+          .getApi(BlockSelectionPlugin)
+          .blockSelection.getNodes({ sort: true })
+          .flatMap(([node]) => (typeof node.id === 'string' ? [node.id] : []))
+        editor.setOption(
+          plugin,
+          'draggingId',
+          selectedIds.length > 1 && selectedIds.includes(id) ? selectedIds : id,
+        )
+        editor.setOption(plugin, 'isDragging', true)
+        editor.setOption(plugin, '_isOver', true)
+      },
+    },
     options: {
       enableScroller: false,
     },

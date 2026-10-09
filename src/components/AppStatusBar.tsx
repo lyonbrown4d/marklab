@@ -35,6 +35,7 @@ type AppStatusBarProps = {
   onRestoreSession: () => void
   restoreStatusMessage: string | null
   restoreStatusBusy: boolean
+  statusBarVisible?: boolean
 }
 
 const basename = (path: string) => {
@@ -56,6 +57,7 @@ const AppStatusBar = ({
   onRestoreSession,
   restoreStatusMessage,
   restoreStatusBusy,
+  statusBarVisible = true,
 }: AppStatusBarProps) => {
   const { t } = useI18n()
   const [, setSearchParams] = useSearchParams()
@@ -122,6 +124,7 @@ const AppStatusBar = ({
     <TooltipProvider>
       <footer
         id="app-status-bar"
+        data-app-focus-zone="statusbar"
         aria-label={t('statusBar.label')}
         className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-2 overflow-hidden border-t border-border/60 px-2 text-[11px] text-muted-foreground"
       >
@@ -164,6 +167,8 @@ const AppStatusBar = ({
             dirtyPaths={dirtyPaths}
             saveStates={saveStates}
             terminalOpen={terminalOpen}
+            workspaceKey={`${rootKind}:${rootPath}`}
+            statusBarVisible={statusBarVisible}
             readOnlyMode={readOnlyMode}
             onToggleReadOnly={onToggleReadOnly}
             onOpenSettings={onOpenSettings}

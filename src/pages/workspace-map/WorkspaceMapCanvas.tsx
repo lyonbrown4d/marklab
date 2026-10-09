@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Background,
-  BackgroundVariant,
-  Controls,
-  PanOnScrollMode,
-  ReactFlow,
-  useEdgesState,
-  useNodesState,
-} from '@xyflow/react'
+import { PanOnScrollMode, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
-import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/logic/graph'
+import type { GraphNodeData } from '@/logic/graph'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import { GraphMiniMap } from '@/pages/graph/GraphMiniMapView'
-import { WorkspaceMapGroupRegions } from '@/pages/workspace-map/WorkspaceMapGroupRegions'
+import { WorkspaceMapFlowLayers } from '@/pages/workspace-map/WorkspaceMapFlowLayers'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { WorkspaceMapToolbar } from '@/pages/workspace-map/WorkspaceMapToolbar'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
@@ -24,29 +16,16 @@ import { useWorkspaceMapNodeDisclosure } from '@/pages/workspace-map/useWorkspac
 import { useWorkspaceMapNeighborhood } from '@/pages/workspace-map/useWorkspaceMapNeighborhood'
 import { useWorkspaceMapPresentedGraph } from '@/pages/workspace-map/useWorkspaceMapPresentedGraph'
 import { useWorkspaceMapNodeDetails } from '@/pages/workspace-map/useWorkspaceMapNodeDetails'
+import { useWorkspaceMapViewNavigation } from '@/pages/workspace-map/useWorkspaceMapViewNavigation'
 import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/workspaceMapNeighborhood'
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
-import {
-  workspaceMapNodeTypes,
-  workspaceMapToolbarAwareMiniMapOffsets,
-} from '@/pages/workspace-map/workspaceMapCanvasConfig'
+import { workspaceMapNodeTypes } from '@/pages/workspace-map/workspaceMapCanvasConfig'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
+import type { WorkspaceMapCanvasProps } from '@/pages/workspace-map/workspaceMapCanvasTypes'
+import { getWorkspaceMapViewportLod } from '@/pages/workspace-map/workspaceMapViewportLod'
 import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
-
-type WorkspaceMapCanvasProps = {
-  activePath: string | null
-  editorLoadState: WorkspaceMapEditorLoadState
-  graph: GraphData
-  graphIdentity: string
-  onActivateEditor: (path: string) => void
-  onChange: (value: string) => void
-  onCloseEditor: () => void
-  onOpenFile: (path: string) => void
-  onRetryEditor: () => void
-  readOnly: boolean
-  showMiniMap: boolean
-}
+import { useWorkspaceMapNavigationRequests } from '@/pages/workspace-map/useWorkspaceMapNavigationRequests'
 
 export const WorkspaceMapCanvas = (props: WorkspaceMapCanvasProps) => (
   <WorkspaceMapCanvasContent key={props.graphIdentity} {...props} />
@@ -67,9 +46,12 @@ const WorkspaceMapCanvasContent = ({
 }: WorkspaceMapCanvasProps) => {
   const darkMode = useDarkMode()
   const { t } = useI18n()
+  const routeCache = useKeepAliveContext()
+  const routeActive = !routeCache.cacheKey || routeCache.active
   const canvasRef = useRef<HTMLDivElement>(null)
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const [viewportRevision, setViewportRevision] = useState(0)
+  const [viewportLod, setViewportLod] = useState(() => getWorkspaceMapViewportLod(1))
   const handleCanvasRef = useCallback((element: HTMLDivElement | null) => {
     canvasRef.current = element
     setCanvasElement(element)
@@ -179,18 +161,46 @@ const WorkspaceMapCanvasContent = ({
     })
   }, [neighborhood, renderedGraph.nodes, setNodes])
   useEffect(() => setEdges(presentedGraph.edges), [presentedGraph.edges, setEdges])
-  const interactions = useWorkspaceMapInteractions({
-    activePath,
+  const handleModeChange = useCallback(
+    (nextMode: WorkspaceMapMode) => setModeState({ graphIdentity, mode: nextMode }),
+    [graphIdentity],
+  )
+  const viewNavigation = useWorkspaceMapViewNavigation({
+    active: routeActive,
     clearNeighborhood,
     flow,
     focusNeighborhoodNode,
+    graphIdentity,
+  })
+  useWorkspaceMapNavigationRequests({
+    active: routeActive,
+    flow,
+    fitWorkspace: viewNavigation.fitWorkspace,
+    focusNeighborhoodNode,
+    focusNode: viewNavigation.focusNode,
+    nodes,
+    workspaceKey: graphIdentity,
+  })
+  const interactions = useWorkspaceMapInteractions({
+    activePath,
+    clearNeighborhood,
+    exitFocusedView: viewNavigation.exitFocus,
+    fitWorkspace: viewNavigation.fitWorkspace,
+    flow,
+    focusNode: viewNavigation.focusNode,
+    mode,
     nodes,
     onActivateEditor,
     onCloseEditor,
     onOpenFile,
+    onModeChange: handleModeChange,
     webViews,
   })
-  const handleViewportMove = useCallback(() => {
+  const handleViewportMove = useCallback((_event: unknown, viewport: { zoom: number }) => {
+    setViewportLod((current) => {
+      const next = getWorkspaceMapViewportLod(viewport.zoom)
+      return current === next ? current : next
+    })
     notifyAnimatedCursorViewport(canvasRef.current)
   }, [])
   const handleViewportMoveEnd = useCallback(() => {
@@ -212,7 +222,12 @@ const WorkspaceMapCanvasContent = ({
   }
 
   return (
-    <div className="relative h-full w-full" data-marklab-cursor-viewport ref={handleCanvasRef}>
+    <div
+      className="relative h-full w-full"
+      data-marklab-cursor-viewport
+      data-viewport-lod={viewportLod}
+      ref={handleCanvasRef}
+    >
       <ReactFlow<Node<GraphNodeData>, Edge>
         aria-label={t('workspaceMap.canvas')}
         tabIndex={0}
@@ -238,6 +253,7 @@ const WorkspaceMapCanvasContent = ({
         onMove={handleViewportMove}
         onMoveEnd={handleViewportMoveEnd}
         onPaneClick={interactions.onPaneClick}
+        onDoubleClick={interactions.onCanvasDoubleClick}
         nodesDraggable
         nodeDragThreshold={4}
         nodesConnectable={false}
@@ -257,23 +273,7 @@ const WorkspaceMapCanvasContent = ({
         maxZoom={2.2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1}
-          color="hsl(var(--muted-foreground) / 0.22)"
-        />
-        {mode === 'overview' ? <WorkspaceMapGroupRegions nodes={disclosedNodes} /> : null}
-        <Controls
-          position="bottom-right"
-          showInteractive={false}
-          fitViewOptions={{ maxZoom: 1, minZoom: 0.35, padding: 0.22 }}
-        />
-        <GraphMiniMap
-          nodeCount={nodes.length}
-          offsets={workspaceMapToolbarAwareMiniMapOffsets}
-          show={showMiniMap}
-        />
+        <WorkspaceMapFlowLayers mode={mode} nodes={disclosedNodes} showMiniMap={showMiniMap} />
       </ReactFlow>
       <WorkspaceMapToolbar
         externalCount={totalExternalCount}
@@ -281,7 +281,7 @@ const WorkspaceMapCanvasContent = ({
         nodes={disclosedNodes}
         onArrange={layout.arrange}
         onFocusNode={interactions.focusNode}
-        onModeChange={(nextMode) => setModeState({ graphIdentity, mode: nextMode })}
+        onModeChange={handleModeChange}
         onToggleExternalResources={() =>
           setExternalState((current) => ({
             graphIdentity,

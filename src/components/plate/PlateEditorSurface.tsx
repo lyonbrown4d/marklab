@@ -1,11 +1,8 @@
 import type { Value } from 'platejs'
-import { Plate, PlateContent, type PlateEditor, usePlateEditor } from 'platejs/react'
-import { useLatest } from 'ahooks'
+import { Plate, PlateContent, type PlateEditor } from 'platejs/react'
 import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
-  createPlateEditorPlugins,
-  plateChunkingOptions,
   renderPlateEditorChunk,
   renderReadOnlyPlateEditorChunk,
 } from '@/components/plate/plateEditorConfig'
@@ -17,6 +14,7 @@ import {
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
+import { PlateBlockSelectionCount } from '@/components/plate/selection/PlateBlockSelectionCount'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
 import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
@@ -29,8 +27,8 @@ import {
 import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
+import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
 import {
-  loadPlateMarkdown,
   serializePlateMarkdown,
   shouldParsePlateMarkdownInWorker,
 } from '@/services/plateMarkdownWorkerClient'
@@ -73,22 +71,13 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const localEchoRef = useRef<string | null>(null)
     const externalSyncRef = useRef<PlateExternalValueSyncHandle | null>(null)
     const externalLoadingRef = useRef(false)
-    const onWorkspaceLinkRef = useLatest(onWorkspaceLink)
     const asyncInitialValue = shouldParsePlateMarkdownInWorker(value)
-    const editor = usePlateEditor(
-      {
-        chunking: plateChunkingOptions,
-        plugins: createPlateEditorPlugins({
-          getDocumentPath: () => activePath,
-          onWorkspaceLink: (target, documentPath) =>
-            onWorkspaceLinkRef.current?.(target, documentPath),
-        }),
-        value: asyncInitialValue
-          ? [{ type: 'p', children: [{ text: '' }] }]
-          : (instance) => loadPlateMarkdown(instance, value),
-      },
-      [activePath],
-    )
+    const editor = useConfiguredPlateEditor({
+      activePath,
+      asyncInitialValue,
+      onWorkspaceLink,
+      value,
+    })
 
     const ready = usePlateAsyncInitialValue({
       editor,
@@ -261,6 +250,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               tabIndex={readOnly ? 0 : undefined}
             />
             <PlateDndEdgeScroller containerRef={editableRef} />
+            <PlateBlockSelectionCount />
             {slashLabels && (
               <PlateEditorOverlays
                 activePath={activePath}

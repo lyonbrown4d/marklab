@@ -3,6 +3,10 @@ import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppLayoutActions } from '@/app/useAppLayoutActions'
 import { fsApi } from '@/services/fsApi'
+import {
+  clearPendingSourcePositionNavigation,
+  sourcePositionNavigationStore,
+} from '@/utils/editorNavigation'
 
 const messages: Record<string, string> = {
   'workspaceActions.singleFileCreateFileUnavailable':
@@ -45,6 +49,7 @@ const createState = (overrides: Record<string, unknown> = {}) => ({
   onOpenFileView: vi.fn(),
   onOpenGitDiff: vi.fn(),
   rootKind: 'single',
+  workspaceKey: 'external:C:/notes',
   ...overrides,
 })
 
@@ -56,7 +61,39 @@ const createQueryClient = () =>
 describe('useAppLayoutActions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearPendingSourcePositionNavigation()
     vi.mocked(fsApi.rebuildSearchIndex).mockResolvedValue(undefined)
+  })
+
+  it('queues a workspace-scoped source position before opening a search result', () => {
+    const state = createState({ rootKind: 'external' })
+    const { result } = renderHook(() =>
+      useAppLayoutActions({ queryClient: createQueryClient(), state: state as never }),
+    )
+
+    act(() => {
+      result.current.handleOpenSearchResult({
+        path: 'notes/target.md',
+        title: 'target',
+        line: 7,
+        column: 3,
+        end_column: 9,
+        snippet: 'target',
+        snippet_highlights: [],
+        score: 1,
+      })
+    })
+
+    expect(
+      sourcePositionNavigationStore.getState().requests['external:C:/notes:notes/target.md'],
+    ).toEqual({
+      path: 'notes/target.md',
+      line: 7,
+      column: 3,
+      endColumn: 9,
+      workspaceKey: 'external:C:/notes',
+    })
+    expect(state.onOpenFileView).toHaveBeenCalledWith('notes/target.md', 'source')
   })
 
   it('shows a localized toast instead of creating files in single-file mode', () => {

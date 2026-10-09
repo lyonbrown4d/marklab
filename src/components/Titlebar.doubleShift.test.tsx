@@ -83,4 +83,30 @@ describe('Titlebar double-Shift shortcut', () => {
       'true',
     )
   })
+
+  it('opens from an input that stops bubbling keyboard events', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Titlebar {...createProps()} />
+        <div aria-label="Non-modal sidebar" aria-modal="false" role="dialog">
+          <input
+            aria-label="File filter"
+            onKeyDown={(event) => event.stopPropagation()}
+            onKeyUp={(event) => event.stopPropagation()}
+          />
+        </div>
+      </QueryClientProvider>,
+    )
+
+    const input = screen.getByRole('textbox', { name: 'File filter' })
+    fireEvent.keyDown(input, { key: 'Shift' })
+    fireEvent.keyUp(input, { key: 'Shift' })
+    fireEvent.keyDown(input, { key: 'Shift' })
+    fireEvent.keyUp(input, { key: 'Shift' })
+
+    expect(await screen.findByRole('dialog', { name: 'Command palette' })).toBeInTheDocument()
+  })
 })

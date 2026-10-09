@@ -57,6 +57,7 @@ export type MarkdownEditorSlashLabels = {
 
 export type MarkdownEditorProps = {
   activePath: string | null
+  workspaceKey?: string
   autoFocus?: boolean
   value: string
   onChange: (value: string) => void

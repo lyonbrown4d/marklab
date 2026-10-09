@@ -1,8 +1,17 @@
 import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { renderPlateEditorChunk } from '@/components/plate/plateEditorConfig'
+import {
+  createPlateEditorPlugins,
+  renderPlateEditorChunk,
+} from '@/components/plate/plateEditorConfig'
 
 describe('Plate editor chunk rendering', () => {
+  it('registers the official block selection plugin before block node plugins', () => {
+    const pluginKeys = createPlateEditorPlugins().map((plugin) => plugin.key)
+
+    expect(pluginKeys[0]).toBe('blockSelection')
+  })
+
   it('gives lowest chunks a stable intrinsic block size for offscreen layout', () => {
     const child = createElement('p', null, 'Chunk')
     const chunk = renderPlateEditorChunk({

@@ -19,6 +19,8 @@ type AppStatusBarRightProps = {
   dirtyPaths: Record<string, true>
   saveStates: Record<string, SaveState>
   terminalOpen: boolean
+  workspaceKey: string
+  statusBarVisible: boolean
   readOnlyMode: boolean
   onToggleReadOnly: () => void
   onOpenSettings: () => void
@@ -34,6 +36,8 @@ const AppStatusBarRightView = ({
   dirtyPaths,
   saveStates,
   terminalOpen,
+  workspaceKey,
+  statusBarVisible,
   readOnlyMode,
   onToggleReadOnly,
   onOpenSettings,
@@ -153,6 +157,8 @@ const AppStatusBarRightView = ({
         dirtyPaths={dirtyPaths}
         saveStates={saveStates}
         terminalOpen={terminalOpen}
+        workspaceKey={workspaceKey}
+        visible={statusBarVisible}
       />
     </div>
   )

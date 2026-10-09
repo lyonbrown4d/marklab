@@ -1,4 +1,5 @@
 import { useDraggable, useDropLine } from '@platejs/dnd'
+import { useBlockSelected } from '@platejs/selection/react'
 import { GripVertical } from 'lucide-react'
 import type { TElement } from 'platejs'
 import {
@@ -10,36 +11,56 @@ import {
 import type { KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import {
+  handlePlateBlockMoveShortcut,
+  handlePlateBlockSelectionShortcut,
+  selectBlockFromHandle,
+} from '@/components/plate/selection/plateBlockSelection'
+import i18n from '@/i18n/setup'
 
-type MoveDirection = 'down' | 'up'
+const DRAG_HANDLE_SELECTOR = '[data-block-drag-handle="true"]'
 
-const moveTopLevelBlock = (editor: PlateEditor, element: TElement, direction: MoveDirection) => {
-  const path = editor.api.findPath(element)
-  if (!path || path.length !== 1) return false
+const getHandleNavigationRoot = (handle: HTMLButtonElement) =>
+  handle.closest('[data-plate-editor-shell="true"], [data-slate-editor="true"]') ??
+  handle.ownerDocument
 
-  const index = path[0]
-  if (direction === 'up') {
-    if (index === 0) return false
-    editor.tf.moveNodes({ at: path, to: [index - 1] })
-    return true
-  }
-
-  if (index >= editor.children.length - 1) return false
-  editor.tf.moveNodes({ at: path, to: [index + 1] })
-  return true
+const activateRovingHandle = (handle: HTMLButtonElement) => {
+  const handles =
+    getHandleNavigationRoot(handle).querySelectorAll<HTMLButtonElement>(DRAG_HANDLE_SELECTOR)
+  handles.forEach((candidate) => {
+    candidate.tabIndex = candidate === handle ? 0 : -1
+  })
 }
 
 const restoreHandleFocus = (editor: PlateEditor, element: TElement) => {
   queueMicrotask(() => {
     const block = editor.api.toDOMNode(element)
-    block?.parentElement
-      ?.querySelector<HTMLButtonElement>('[data-block-drag-handle="true"]')
-      ?.focus()
+    const handle = block?.parentElement?.querySelector<HTMLButtonElement>(DRAG_HANDLE_SELECTOR)
+    if (!handle) return
+    activateRovingHandle(handle)
+    handle.focus()
   })
+}
+
+const focusAdjacentHandle = (handle: HTMLButtonElement, direction: 'next' | 'previous') => {
+  const handles = [
+    ...getHandleNavigationRoot(handle).querySelectorAll<HTMLButtonElement>(DRAG_HANDLE_SELECTOR),
+  ]
+  const currentIndex = handles.indexOf(handle)
+  const offset = direction === 'previous' ? -1 : 1
+  const target = handles[currentIndex + offset]
+  if (!target) return false
+  activateRovingHandle(target)
+  target.focus()
+  return true
 }
 
 export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   const editor = useEditorRef()
+  const id = element.id as string
+  const path = editor.api.findPath(element)
+  const initialTabIndex = path?.length === 1 && path[0] === 0 ? 0 : -1
+  const isSelected = useBlockSelected(id) as boolean
   const { dropLine } = useDropLine({ id: element.id as string, orientation: 'vertical' })
   const { handleRef, isDragging, nodeRef } = useDraggable({
     element,
@@ -47,35 +68,52 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   })
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (handlePlateBlockSelectionShortcut(editor, event, id)) {
+      restoreHandleFocus(editor, element)
+      return
+    }
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+    if (handlePlateBlockMoveShortcut(editor, event, id)) {
+      restoreHandleFocus(editor, element)
+      return
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
     event.preventDefault()
     event.stopPropagation()
-    if (moveTopLevelBlock(editor, element, event.key === 'ArrowUp' ? 'up' : 'down')) {
-      restoreHandleFocus(editor, element)
-    }
+    focusAdjacentHandle(event.currentTarget, event.key === 'ArrowUp' ? 'previous' : 'next')
   }
 
   return (
     <div
-      className={cn('plate-block-draggable group/block relative pl-8', isDragging && 'opacity-50')}
+      className={cn(
+        'plate-block-draggable group/block relative rounded-md pl-8 transition-colors duration-150 motion-reduce:transition-none',
+        isSelected && 'bg-primary/[0.07] ring-1 ring-inset ring-primary/35',
+        isDragging && 'opacity-50',
+      )}
       data-block-drag-wrapper="true"
-      data-block-id={element.id as string}
+      data-block-id={id}
+      data-block-selected={isSelected ? 'true' : 'false'}
       ref={nodeRef}
     >
       <Button
-        aria-keyshortcuts="ArrowUp ArrowDown"
-        aria-label="Move block"
+        aria-keyshortcuts="Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown"
+        aria-label={i18n.t('plate.blockDrag.moveLabel')}
+        aria-pressed={isSelected}
         className={cn(
           'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
           'active:cursor-grabbing',
+          isSelected && 'bg-primary/10 text-primary',
         )}
         contentEditable={false}
-        data-block-id={element.id as string}
+        data-block-id={id}
         data-block-drag-handle="true"
+        data-plate-prevent-unselect="true"
         onKeyDown={handleKeyDown}
+        onPointerDown={(event) => selectBlockFromHandle(editor, id, event)}
         ref={handleRef}
         size="icon"
-        title="Drag to move block. Use the arrow keys to move it up or down."
+        tabIndex={initialTabIndex}
+        title={i18n.t('plate.blockDrag.instructions')}
         type="button"
         variant="ghost"
       >

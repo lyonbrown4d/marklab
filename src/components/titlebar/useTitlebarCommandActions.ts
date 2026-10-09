@@ -13,6 +13,7 @@ import type { FsSearchResult } from '@/services/fsApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
+import { resolveCommandNewWindowPath } from '@/components/titlebar/titlebarCommandPath'
 
 type UseTitlebarCommandActionsArgs = Pick<
   TitlebarProps,
@@ -35,6 +36,8 @@ type UseTitlebarCommandActionsArgs = Pick<
   | 'onToggleReadOnly'
   | 'setTheme'
   | 'canCreateWorkspaceEntries'
+  | 'rootKind'
+  | 'rootPath'
 > & {
   onCommandOpenChange: (open: boolean) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
@@ -62,6 +65,8 @@ export const useTitlebarCommandActions = ({
   setTheme,
   canCreateWorkspaceEntries,
   onOpenCurrentWorkspaceInNewWindow,
+  rootKind,
+  rootPath,
 }: UseTitlebarCommandActionsArgs) => {
   const onMenuAction = useCallback(
     (id: string) => {
@@ -199,6 +204,20 @@ export const useTitlebarCommandActions = ({
     [onCommandOpenChange, onOpenSearchResult],
   )
 
+  const onCommandOpenPathInNewWindow = useCallback(
+    (path: string) => {
+      onCommandOpenChange(false)
+      const target = resolveCommandNewWindowPath({ path, rootKind, rootPath })
+      void appApi
+        .openPathInNewWindow(target)
+        .then((result) => {
+          if (!result.ok) console.error('open command result in new window failed', result.error)
+        })
+        .catch((error) => console.error('open command result in new window failed', error))
+    },
+    [onCommandOpenChange, rootKind, rootPath],
+  )
+
   return {
     onMenuAction,
     onOpenSearch,
@@ -206,5 +225,6 @@ export const useTitlebarCommandActions = ({
     onCommandOpenFile,
     onCommandOpenHeading,
     onCommandOpenSearchResult,
+    onCommandOpenPathInNewWindow,
   }
 }
