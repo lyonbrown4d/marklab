@@ -186,6 +186,16 @@ export const markdownEditorCommandCatalog: readonly MarkdownEditorCommandSpec[] 
     slash: customSlash('advanced', 'footnote', 'footnote', ['fn']),
   },
   {
+    id: 'editor.inlineMath',
+    kind: 'inline',
+    slash: customSlash('advanced', 'math-inline', 'inlineMath', ['formula', 'latex']),
+  },
+  {
+    id: 'editor.blockMath',
+    kind: 'insert',
+    slash: customSlash('advanced', 'math-block', 'blockMath', ['equation', 'latex-block']),
+  },
+  {
     id: 'editor.frontmatter',
     kind: 'insert',
     slash: customSlash('advanced', 'frontmatter', 'frontmatter', ['yaml', 'meta']),

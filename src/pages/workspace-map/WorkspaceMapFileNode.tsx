@@ -20,6 +20,7 @@ import { WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS } from '@/pages/workspace-map/
 import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
 import { WorkspaceMapNodeDisclosure } from '@/pages/workspace-map/WorkspaceMapNodeDisclosure'
 import { WorkspaceMapNodeToolbar } from '@/pages/workspace-map/WorkspaceMapNodeToolbar'
+import { WorkspaceMapStaticMarkdownPreview } from '@/pages/workspace-map/WorkspaceMapStaticMarkdownPreview'
 import { useWorkspaceMapNodeTools } from '@/pages/workspace-map/useWorkspaceMapNodeTools'
 
 type WorkspaceMapFileGraphNode = Node<GraphNodeData, 'file'>
@@ -216,11 +217,8 @@ const WorkspaceMapEmbeddedEditor = ({
             </div>
           </div>
         ) : data.content ? (
-          <div
-            className="h-full overflow-hidden bg-muted/10 px-8 py-7 text-sm leading-6 text-foreground/85"
-            data-testid="workspace-map-document-preview"
-          >
-            <p className="whitespace-pre-line break-words">{data.content}</p>
+          <div className="h-full overflow-hidden bg-muted/10 px-8 py-7 text-sm leading-6 text-foreground/85">
+            <WorkspaceMapStaticMarkdownPreview markdown={data.content} />
           </div>
         ) : (
           <div

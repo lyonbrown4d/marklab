@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PlateEditor } from 'platejs/react'
@@ -12,6 +12,8 @@ const expandedSelection = {
 afterEach(() => {
   window.getSelection()?.removeAllRanges()
   document.body.innerHTML = ''
+  Reflect.deleteProperty(document.documentElement, 'clientHeight')
+  Reflect.deleteProperty(document.documentElement, 'clientWidth')
 })
 
 const createEditor = () =>
@@ -49,16 +51,23 @@ const installNativeSelection = (root: HTMLElement) => {
 }
 
 describe('usePlateSelectionToolbar', () => {
-  it('shows an expanded editor selection and updates its anchor after scrolling', async () => {
+  it('uses Plate floating to reposition on editor scroll and viewport resize', async () => {
     const editor = createEditor()
+    const scroller = document.createElement('div')
+    scroller.style.overflow = 'auto'
     const root = document.createElement('div')
     root.contentEditable = 'true'
     root.tabIndex = 0
     root.textContent = 'text selection'
-    document.body.append(root)
+    scroller.append(root)
+    document.body.append(scroller)
     const rect = installNativeSelection(root)
     const editableRef = createRef<HTMLElement>()
     editableRef.current = root
+    Object.defineProperties(document.documentElement, {
+      clientHeight: { configurable: true, value: 768 },
+      clientWidth: { configurable: true, value: 1024 },
+    })
 
     const { result } = renderHook(() =>
       usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
@@ -66,15 +75,41 @@ describe('usePlateSelectionToolbar', () => {
 
     act(() => document.dispatchEvent(new Event('selectionchange')))
     expect(result.current.open).toBe(true)
-    expect(result.current.anchor).toEqual({ left: 112, top: 44 })
+    const toolbar = document.createElement('div')
+    toolbar.style.height = '20px'
+    toolbar.style.width = '40px'
+    Object.defineProperties(toolbar, {
+      offsetHeight: { configurable: true, value: 20 },
+      offsetWidth: { configurable: true, value: 40 },
+    })
+    document.body.append(toolbar)
+    act(() => result.current.setToolbarElement(toolbar))
+    await waitFor(() =>
+      expect(result.current.floatingStyle).toMatchObject({
+        left: 92,
+        position: 'fixed',
+        top: 16,
+      }),
+    )
 
     rect.left = 120
     rect.right = 184
-    await act(async () => {
-      document.dispatchEvent(new Event('scroll', { bubbles: true }))
-      await new Promise((resolve) => window.setTimeout(resolve, 24))
-    })
-    expect(result.current.anchor).toEqual({ left: 152, top: 44 })
+    act(() => scroller.dispatchEvent(new Event('scroll')))
+    await waitFor(() => expect(result.current.floatingStyle?.left).toBe(132))
+
+    rect.bottom = 104
+    rect.top = 84
+    act(() => window.dispatchEvent(new Event('resize')))
+    await waitFor(() => expect(result.current.floatingStyle?.top).toBe(56))
+
+    rect.bottom = 24
+    rect.height = 20
+    rect.left = 0
+    rect.right = 4
+    rect.top = 4
+    rect.width = 4
+    act(() => window.dispatchEvent(new Event('resize')))
+    await waitFor(() => expect(result.current.floatingStyle).toMatchObject({ left: 8, top: 32 }))
   })
 
   it.each([
@@ -120,13 +155,16 @@ describe('usePlateSelectionToolbar', () => {
     expect(result.current.open).toBe(true)
   })
 
-  it('hides after focus leaves both the editor and the toolbar', async () => {
+  it('stays open inside the toolbar and hides after focus leaves both surfaces', async () => {
     const editor = createEditor()
     const root = document.createElement('div')
+    const toolbar = document.createElement('div')
+    const toolbarButton = document.createElement('button')
     const outside = document.createElement('button')
     root.tabIndex = 0
     root.textContent = 'text selection'
-    document.body.append(root, outside)
+    toolbar.append(toolbarButton)
+    document.body.append(root, toolbar, outside)
     installNativeSelection(root)
     const editableRef = createRef<HTMLElement>()
     editableRef.current = root
@@ -134,6 +172,16 @@ describe('usePlateSelectionToolbar', () => {
       usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
     )
     act(() => document.dispatchEvent(new Event('selectionchange')))
+    expect(result.current.open).toBe(true)
+    act(() => result.current.setToolbarElement(toolbar))
+
+    await act(async () => {
+      toolbarButton.focus()
+      expect(document.activeElement).toBe(toolbarButton)
+      expect(window.getSelection()?.rangeCount).toBe(1)
+      expect(root.contains(window.getSelection()?.anchorNode ?? null)).toBe(false)
+      await new Promise((resolve) => window.setTimeout(resolve, 24))
+    })
     expect(result.current.open).toBe(true)
 
     await act(async () => {

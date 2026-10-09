@@ -15,13 +15,15 @@ import {
   Pilcrow,
   Quote,
   RemoveFormatting,
+  Sigma,
   Strikethrough,
   Table,
   TextQuote,
   type LucideIcon,
 } from 'lucide-react'
 import { deserializeMd } from '@platejs/markdown'
-import type { TRange } from 'platejs'
+import { FootnoteReferencePlugin } from '@platejs/footnote/react'
+import { ElementApi, type TRange } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import {
   markdownEditorCommandCatalog,
@@ -55,6 +57,8 @@ const iconByKey: Record<string, LucideIcon> = {
   'inline-code': Code,
   italic: Italic,
   link: Link,
+  'math-block': Sigma,
+  'math-inline': Sigma,
   orderedList: ListOrdered,
   quote: Quote,
   strike: Strikethrough,
@@ -139,13 +143,29 @@ const consumeTrigger = (editor: PlateEditor, trigger: PlateSlashTrigger) => {
 }
 
 const isBlockCommand = (command: PlateSlashCommand) =>
-  command.kind === 'block' || command.kind === 'insert'
+  command.key !== 'footnote' && (command.kind === 'block' || command.kind === 'insert')
+
+const inlineVoidCommandKeys = new Set(['footnote', 'math-inline'])
+
+const canInsertInlineVoid = (editor: PlateEditor, trigger: PlateSlashTrigger) => {
+  const path = trigger.range.anchor.path
+  for (let depth = 1; depth < path.length; depth += 1) {
+    const entry = editor.api.node(path.slice(0, depth))
+    const node = entry?.[0]
+    if (!node || !ElementApi.isElement(node)) continue
+    if (node.type === 'code_line' || node.type === 'code_block' || editor.api.isVoid(node)) {
+      return false
+    }
+  }
+  return true
+}
 
 export const canRunPlateSlashCommand = (
   editor: PlateEditor,
   command: PlateSlashCommand,
   trigger: PlateSlashTrigger,
 ) => {
+  if (inlineVoidCommandKeys.has(command.key)) return canInsertInlineVoid(editor, trigger)
   if (!isBlockCommand(command)) return true
   const block = editor.api.block()
   const start = block ? editor.api.start(block[1]) : undefined
@@ -221,6 +241,11 @@ export const runPlateSlashCommand = async ({
       } finally {
         target.unref()
       }
+      return
+    }
+    if (command.key === 'footnote') {
+      consumeTrigger(editor, trigger)
+      editor.getTransforms(FootnoteReferencePlugin).insert.footnote()
       return
     }
     const markdown = markdownByKey[command.key]

@@ -841,6 +841,8 @@
   "slash.mermaid": "Mermaid 图表",
   "slash.table": "表格",
   "slash.footnote": "脚注",
+  "slash.inlineMath": "行内公式",
+  "slash.blockMath": "块级公式",
   "slash.frontmatter": "Frontmatter",
   "slash.details": "折叠块",
   "slash.toc": "目录",

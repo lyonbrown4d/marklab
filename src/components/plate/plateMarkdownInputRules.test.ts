@@ -118,6 +118,28 @@ describe('Plate Markdown input rules', () => {
     expect(serializeMd(editor).trim()).toBe(expectedMarkdown)
   })
 
+  it('recognizes inline math while typing', () => {
+    const editor = createEditor()
+
+    typeText(editor, '$x^2$')
+
+    expect(editor.children[0]).toMatchObject({
+      children: expect.arrayContaining([
+        expect.objectContaining({ texExpression: 'x^2', type: 'inline_equation' }),
+      ]),
+      type: 'p',
+    })
+  })
+
+  it('recognizes a display-math marker when Enter is pressed', () => {
+    const editor = createEditor()
+    typeText(editor, '$$')
+
+    editor.tf.insertBreak()
+
+    expect(editor.children[0]).toMatchObject({ texExpression: '', type: 'equation' })
+  })
+
   it('recognizes a complete Markdown link while typing', () => {
     const editor = createEditor()
 
@@ -181,6 +203,26 @@ describe('Plate Markdown input rules', () => {
 
     expect(editor.children).toEqual([
       { type: 'p', children: [{ text: '```' }] },
+      { type: 'p', children: [{ text: '' }] },
+    ])
+  })
+
+  it('keeps math markers literal while an IME composition is active', () => {
+    const editor = createEditor()
+    setPlateMarkdownInputRulesComposing(editor, true)
+
+    try {
+      typeText(editor, '$x$')
+      editor.tf.insertBreak()
+      typeText(editor, '$$')
+      editor.tf.insertBreak()
+    } finally {
+      setPlateMarkdownInputRulesComposing(editor, false)
+    }
+
+    expect(editor.children).toEqual([
+      { type: 'p', children: [{ text: '$x$' }] },
+      { type: 'p', children: [{ text: '$$' }] },
       { type: 'p', children: [{ text: '' }] },
     ])
   })

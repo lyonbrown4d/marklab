@@ -11,6 +11,8 @@ export const markdownTemplates: Record<string, string> = {
   'callout-warning': '> [!WARNING]\n> \n',
   'callout-caution': '> [!CAUTION]\n> \n',
   footnote: 'Text[^1]\n\n[^1]: Footnote\n',
+  'math-inline': '$x$',
+  'math-block': '$$\nx\n$$\n',
   frontmatter: '---\ntitle: Untitled\ntags: []\n---\n\n',
   details: '<details>\n<summary>Title</summary>\n\nContent\n\n</details>\n',
   toc: '## Contents\n\n- [Section](#section)\n',

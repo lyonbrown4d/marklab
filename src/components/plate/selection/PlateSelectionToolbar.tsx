@@ -1,3 +1,4 @@
+import { FloatingPortal } from '@platejs/floating'
 import {
   Bold,
   Code2,
@@ -7,9 +8,7 @@ import {
   Strikethrough,
   type LucideIcon,
 } from 'lucide-react'
-import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
@@ -45,19 +44,12 @@ const markItems: readonly {
 export const PlateSelectionToolbar = ({
   activeMarks,
   anchor,
+  floatingStyle,
   labels,
   open,
   runAction,
   setToolbarElement,
 }: PlateSelectionToolbarProps) => {
-  const virtualAnchorRef = useMemo(
-    () => ({
-      current: {
-        getBoundingClientRect: () => new DOMRect(anchor.left, anchor.top),
-      },
-    }),
-    [anchor.left, anchor.top],
-  )
   const activeValues = markItems
     .filter(({ action }) => activeMarks[action])
     .map(({ action }) => action)
@@ -67,20 +59,18 @@ export const PlateSelectionToolbar = ({
     )
     if (changed) runAction(changed.action)
   }
+  if (!open) return null
 
   return (
-    <Popover open={open}>
-      <PopoverAnchor virtualRef={virtualAnchorRef} />
-      <PopoverContent
-        align="center"
-        className="w-auto p-1"
-        onCloseAutoFocus={(event) => event.preventDefault()}
-        onOpenAutoFocus={(event) => event.preventDefault()}
-        side="top"
-        sideOffset={8}
+    <FloatingPortal>
+      <div
+        className="z-50 w-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-hidden"
+        data-slot="popover-content"
+        ref={setToolbarElement}
+        style={floatingStyle ?? { left: anchor.left, position: 'fixed', top: anchor.top }}
       >
         <TooltipProvider>
-          <div className="flex items-center gap-1" ref={setToolbarElement}>
+          <div className="flex items-center gap-1">
             <ToggleGroup
               aria-label={labels.toolbar}
               onValueChange={handleValueChange}
@@ -121,7 +111,7 @@ export const PlateSelectionToolbar = ({
             </Tooltip>
           </div>
         </TooltipProvider>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </FloatingPortal>
   )
 }

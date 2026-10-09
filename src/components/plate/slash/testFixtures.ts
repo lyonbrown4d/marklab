@@ -3,6 +3,7 @@ import type { PlateSlashCommandLabels } from '@/components/plate/slash/types'
 export const plateSlashTestLabels: PlateSlashCommandLabels = {
   advancedGroup: 'Advanced',
   bold: 'Bold',
+  blockMath: 'Block equation',
   bulletList: 'Bullet list',
   calendarFile: 'Calendar file',
   calendarFilePrompt: 'Calendar file name',
@@ -34,6 +35,7 @@ export const plateSlashTestLabels: PlateSlashCommandLabels = {
   imageUrl: 'Image URL',
   imageUrlPrompt: 'Enter image URL',
   inlineCode: 'Inline code',
+  inlineMath: 'Inline equation',
   insertionError: 'Insertion failed',
   italic: 'Italic',
   link: 'Link',

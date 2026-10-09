@@ -186,6 +186,11 @@ export default defineConfig(({ command, mode }) => {
         '**/coverage/**',
       ],
       environment: 'jsdom',
+      server: {
+        deps: {
+          inline: ['@platejs/math', 'katex'],
+        },
+      },
       // Native Git processes, workspace workers, and jsdom are resource-heavy when combined.
       // A fixed cap avoids Windows worker crashes and locked temporary repositories.
       maxWorkers: 4,

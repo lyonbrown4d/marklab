@@ -14,6 +14,7 @@ import {
 } from '@platejs/basic-nodes/react'
 import { CodeBlockPlugin, CodeLinePlugin, CodeSyntaxPlugin } from '@platejs/code-block/react'
 import { DndPlugin } from '@platejs/dnd'
+import { FootnoteDefinitionPlugin, FootnoteReferencePlugin } from '@platejs/footnote/react'
 import { LinkPlugin } from '@platejs/link/react'
 import {
   BulletedListPlugin,
@@ -24,6 +25,7 @@ import {
   TaskListPlugin,
 } from '@platejs/list-classic/react'
 import { ImagePlugin } from '@platejs/media/react'
+import { EquationPlugin, InlineEquationPlugin } from '@platejs/math/react'
 import { BlockSelectionPlugin } from '@platejs/selection/react'
 import { all, createLowlight } from 'lowlight'
 import {
@@ -79,6 +81,12 @@ import {
   HtmlSummaryElement,
 } from '@/components/plate/nodes/HtmlElements'
 import {
+  EquationElement,
+  FootnoteDefinitionElement,
+  FootnoteReferenceElement,
+  InlineEquationElement,
+} from '@/components/plate/nodes/MathFootnoteElements'
+import {
   PLATE_HTML_BR,
   PLATE_HTML_DETAILS,
   PLATE_HTML_KBD,
@@ -86,12 +94,14 @@ import {
 } from '@/components/plate/html/plateHtmlTypes'
 import {
   plateBlockquoteMarkdownInputRules,
+  plateBlockMathMarkdownInputRules,
   plateBoldMarkdownInputRules,
   plateCodeBlockMarkdownInputRules,
   plateCodeMarkdownInputRules,
   plateHeadingMarkdownInputRules,
   plateHorizontalRuleMarkdownInputRules,
   plateItalicMarkdownInputRules,
+  plateInlineMathMarkdownInputRules,
   plateLinkMarkdownInputRules,
   plateListMarkdownInputRules,
   plateStrikethroughMarkdownInputRules,
@@ -159,6 +169,14 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
   }).withComponent(CodeBlockElement),
   CodeLinePlugin.withComponent(CodeLineElement),
   CodeSyntaxPlugin.withComponent(CodeSyntaxLeaf),
+  FootnoteReferencePlugin.withComponent(FootnoteReferenceElement),
+  FootnoteDefinitionPlugin.withComponent(FootnoteDefinitionElement),
+  InlineEquationPlugin.configure({
+    inputRules: plateInlineMathMarkdownInputRules,
+  }).withComponent(InlineEquationElement),
+  EquationPlugin.configure({
+    inputRules: plateBlockMathMarkdownInputRules,
+  }).withComponent(EquationElement),
   LinkPlugin.configure({
     inputRules: plateLinkMarkdownInputRules,
     options: {

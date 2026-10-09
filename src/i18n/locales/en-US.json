@@ -841,6 +841,8 @@
   "slash.mermaid": "Mermaid diagram",
   "slash.table": "Table",
   "slash.footnote": "Footnote",
+  "slash.inlineMath": "Inline equation",
+  "slash.blockMath": "Block equation",
   "slash.frontmatter": "Frontmatter",
   "slash.details": "Details",
   "slash.toc": "Table of contents",

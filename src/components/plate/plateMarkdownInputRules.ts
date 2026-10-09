@@ -9,6 +9,7 @@ import {
 } from '@platejs/basic-nodes'
 import { CodeBlockRules } from '@platejs/code-block'
 import { LinkRules } from '@platejs/link'
+import { MathRules } from '@platejs/math'
 import {
   BulletedListRules,
   OrderedListRules,
@@ -161,6 +162,14 @@ export const plateCodeBlockMarkdownInputRules = [
 ]
 
 export const plateLinkMarkdownInputRules = [withInputRuleGuard(LinkRules.markdown())]
+
+export const plateInlineMathMarkdownInputRules = [
+  withInputRuleGuard(MathRules.markdown({ variant: '$' })),
+]
+
+export const plateBlockMathMarkdownInputRules = [
+  withInputRuleGuard(MathRules.markdown({ on: 'break', variant: '$$' })),
+]
 
 export const setPlateMarkdownInputRulesComposing = (editor: SlateEditor, composing: boolean) => {
   if (composing) composingEditors.add(editor)

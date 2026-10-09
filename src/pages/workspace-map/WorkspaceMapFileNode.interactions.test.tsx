@@ -111,11 +111,12 @@ describe('WorkspaceMapFileNode interactions', () => {
 
   it('lets inactive preview pointer and wheel gestures reach the canvas', () => {
     const parentHandlers = { onPointerDown: vi.fn(), onWheel: vi.fn() }
-    renderNode({ label: 'a', path: 'notes/a.md' }, parentHandlers)
+    renderNode({ content: '# Preview', label: 'a', path: 'notes/a.md' }, parentHandlers)
     const surface = screen.getByTestId('workspace-map-editor-surface')
+    const preview = screen.getByTestId('workspace-map-document-preview')
 
-    fireEvent.pointerDown(surface)
-    fireEvent.wheel(surface, { deltaY: 40 })
+    fireEvent.pointerDown(preview)
+    fireEvent.wheel(preview, { deltaY: 40 })
 
     expect(surface).not.toHaveClass('nopan')
     expect(parentHandlers.onPointerDown).toHaveBeenCalledOnce()

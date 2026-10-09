@@ -23,6 +23,7 @@ export type MarkdownEditorSlashLabels = {
   codeTypeScript: string
   details: string
   divider: string
+  blockMath: string
   footnote: string
   frontmatter: string
   heading1: string
@@ -37,6 +38,7 @@ export type MarkdownEditorSlashLabels = {
   imageUrlPrompt: string
   insertionError: string
   inlineCode: string
+  inlineMath: string
   italic: string
   link: string
   linkTextPrompt: string
