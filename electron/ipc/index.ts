@@ -91,6 +91,7 @@ export type NativeIpcRegistration = {
   commands: WorkspaceCommandServices
   gitTerminal: GitTerminalIpcBridge
   menu: MenuDispatchBridge
+  updates: import('@electron/services/updater/service').UpdateService
   windowClose: WindowCloseLifecycleIpcBridge
 }
 export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIpcRegistration => {
@@ -116,9 +117,10 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
   registerSettingsIpc(dependencies.ipcMain, dependencies.workspaceRegistry)
   registerShellIpc(dependencies.ipcMain, dependencies.shell)
   registerThemeIpc(dependencies.ipcMain, dependencies.shell)
-  registerUpdatesIpc({
+  const updates = registerUpdatesIpc({
     app: dependencies.app,
     BrowserWindow: dependencies.BrowserWindow,
+    desktopNotifications: dependencies.desktopNotificationService,
     ipcMain: dependencies.ipcMain,
     logger,
     onBeforeInstall: dependencies.updates?.onBeforeInstall,
@@ -185,7 +187,7 @@ export const registerNativeIpc = (dependencies: NativeIpcDependencies): NativeIp
     logger.child('command-invoke'),
   )
   logger.info('native IPC registered')
-  return { ai, aiCompletion, commands, gitTerminal, menu, windowClose }
+  return { ai, aiCompletion, commands, gitTerminal, menu, updates, windowClose }
 }
 const createRuntimeCommandHandlers = (
   commands: WorkspaceCommandServices,

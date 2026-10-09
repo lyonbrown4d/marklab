@@ -41,5 +41,6 @@ describe('settingsPersistKeys', () => {
     expect(preferenceStateKeys.has('desktopNotificationsBackgroundOnly')).toBe(true)
     expect(preferenceStateKeys.has('desktopNotificationExportsEnabled')).toBe(true)
     expect(preferenceStateKeys.has('desktopNotificationSyncEnabled')).toBe(true)
+    expect(preferenceStateKeys.has('desktopNotificationUpdatesEnabled')).toBe(true)
   })
 })

@@ -49,16 +49,19 @@ describe('GeneralSettingsPage terminal shell', () => {
       name: 'settings.desktopNotificationExports',
     })
     const sync = screen.getByRole('switch', { name: 'settings.desktopNotificationSync' })
+    const updates = screen.getByRole('switch', { name: 'settings.desktopNotificationUpdates' })
 
     expect(master).toBeChecked()
     expect(backgroundOnly).toBeChecked()
     expect(exports).toBeChecked()
     expect(sync).toBeChecked()
+    expect(updates).toBeChecked()
 
     await user.click(master)
     expect(backgroundOnly).toBeDisabled()
     expect(exports).toBeDisabled()
     expect(sync).toBeDisabled()
+    expect(updates).toBeDisabled()
     expect(usePreferencesStore.getState().desktopNotificationsEnabled).toBe(false)
   })
 

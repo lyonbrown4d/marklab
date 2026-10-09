@@ -18,6 +18,7 @@ type WorkspaceMapInteractionsOptions = {
   onCloseEditor: () => void
   onOpenFile: (path: string) => void
   onModeChange: (mode: import('@/pages/workspace-map/workspaceMapMode').WorkspaceMapMode) => void
+  onOpenSearch: () => void
   webViews: { activate: (nodeId: string) => void; deactivate: () => void }
 }
 
@@ -34,6 +35,7 @@ export const useWorkspaceMapInteractions = ({
   onCloseEditor,
   onOpenFile,
   onModeChange,
+  onOpenSearch,
   webViews,
 }: WorkspaceMapInteractionsOptions) => {
   const activateNode = useCallback(
@@ -91,6 +93,7 @@ export const useWorkspaceMapInteractions = ({
     nodes,
     onCloseEditor,
     onModeChange,
+    onOpenSearch,
   })
 
   return {

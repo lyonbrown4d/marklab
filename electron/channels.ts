@@ -50,6 +50,7 @@ export const nativeIpcChannels = {
   updatesEvent: 'marklab:updates:event',
   updatesGetState: 'marklab:updates:get-state',
   updatesInstall: 'marklab:updates:install',
+  updatesSetInstallOnQuit: 'marklab:updates:set-install-on-quit',
   webTabsActivate: 'marklab:web-tabs:activate',
   webTabsClose: 'marklab:web-tabs:close',
   webTabsGoBack: 'marklab:web-tabs:go-back',

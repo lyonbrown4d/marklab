@@ -110,6 +110,14 @@ const WorkspaceMapEmbeddedEditor = ({
   }
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!editor) return
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.shiftKey &&
+      !event.altKey &&
+      event.key.toLowerCase() === 'f'
+    ) {
+      return
+    }
     event.stopPropagation()
     if (event.defaultPrevented || isImeKeyboardEvent(event.nativeEvent)) return
     if (event.key !== 'Escape') return

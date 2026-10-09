@@ -9,6 +9,7 @@ import {
 } from '@/components/settings/SettingsRow'
 import TerminalSettingsSection from '@/components/settings/TerminalSettingsSection'
 import DesktopNotificationsSettingsSection from '@/components/settings/DesktopNotificationsSettingsSection'
+import SoftwareUpdateSettingsSection from '@/components/settings/SoftwareUpdateSettingsSection'
 
 const GeneralSettingsPage = () => {
   const { t } = useI18n()
@@ -30,6 +31,7 @@ const GeneralSettingsPage = () => {
         />
       </SettingsSection>
       <DesktopNotificationsSettingsSection />
+      <SoftwareUpdateSettingsSection />
       <TerminalSettingsSection />
       <MarkdownDefaultAppPrompt />
     </SettingsPageStack>

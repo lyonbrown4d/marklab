@@ -49,17 +49,20 @@ describe('writing-first layout preferences', () => {
     expect(store.desktopNotificationsBackgroundOnly).toBe(true)
     expect(store.desktopNotificationExportsEnabled).toBe(true)
     expect(store.desktopNotificationSyncEnabled).toBe(true)
+    expect(store.desktopNotificationUpdatesEnabled).toBe(true)
 
     store.setDesktopNotificationsEnabled(false)
     store.setDesktopNotificationsBackgroundOnly(false)
     store.setDesktopNotificationExportsEnabled(false)
     store.setDesktopNotificationSyncEnabled(false)
+    store.setDesktopNotificationUpdatesEnabled(false)
 
     expect(usePreferencesStore.getState()).toMatchObject({
       desktopNotificationsEnabled: false,
       desktopNotificationsBackgroundOnly: false,
       desktopNotificationExportsEnabled: false,
       desktopNotificationSyncEnabled: false,
+      desktopNotificationUpdatesEnabled: false,
     })
   })
 

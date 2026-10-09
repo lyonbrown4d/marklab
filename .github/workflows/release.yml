@@ -14,10 +14,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
 env:
   CI: 'true'
   NODE_VERSION: '24'
   PNPM_VERSION: '10.26.0'
+  RELEASE_REPOSITORY: 'lyonbrown4d/marklab'
 
 jobs:
   validate:
@@ -26,6 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify release repository identity
+        shell: bash
+        run: |
+          if [ "$GITHUB_REPOSITORY" != "$RELEASE_REPOSITORY" ]; then
+            echo "Release workflow must run from $RELEASE_REPOSITORY." >&2
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -69,13 +82,10 @@ jobs:
         include:
           - name: linux
             os: ubuntu-22.04
-            command: pnpm electron:build && pnpm exec electron-builder --linux --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
           - name: macos
             os: macos-latest
-            command: pnpm electron:build && pnpm exec electron-builder --mac --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
           - name: windows
             os: windows-latest
-            command: pnpm electron:build && pnpm exec electron-builder --win --publish never -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }} -c.publish.tagNamePrefix=app-v
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,10 +111,71 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Require macOS signing credentials
+        if: matrix.name == 'macos'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          if [ -z "$CSC_LINK" ] || [ -z "$CSC_KEY_PASSWORD" ]; then
+            echo "Stable releases require macOS signing credentials." >&2
+            exit 1
+          fi
+
       - name: Build Electron bundles
-        run: ${{ matrix.command }}
+        run: pnpm electron:build
+
+      - name: Package Linux
+        if: matrix.name == 'linux'
+        run: pnpm exec electron-builder --linux --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Package Windows
+        if: matrix.name == 'windows'
+        run: pnpm exec electron-builder --win --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Package signed macOS
+        if: matrix.name == 'macos'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: pnpm exec electron-builder --mac --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v -c.extraMetadata.marklabMacAutoUpdateSupported=true
+
+      - name: Verify Windows updater artifact contract
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'release/latest.yml')) {
+            throw 'Missing Windows updater metadata: release/latest.yml'
+          }
+          $installers = @(Get-ChildItem -LiteralPath 'release' -Filter '*-setup.exe' -File)
+          $blockmaps = @(Get-ChildItem -LiteralPath 'release' -Filter '*-setup.exe.blockmap' -File)
+          if ($installers.Count -lt 1) { throw 'Missing Windows NSIS installer.' }
+          if ($blockmaps.Count -lt 1) { throw 'Missing Windows NSIS .exe.blockmap.' }
+
+      - name: Verify macOS updater artifact contract
+        if: matrix.name == 'macos'
+        shell: bash
+        run: |
+          compgen -G 'release/*.zip' >/dev/null
+          compgen -G 'release/*.dmg' >/dev/null
+          test -f release/latest-mac.yml
+          app_bundle="$(find release -type d -name '*.app' -print -quit)"
+          test -n "$app_bundle"
+          codesign --verify --deep --strict --verbose=2 "$app_bundle"
+
+      - name: Verify Linux updater artifact contract
+        if: matrix.name == 'linux'
+        shell: bash
+        run: |
+          test -f release/latest-linux.yml
+          compgen -G 'release/*.AppImage' >/dev/null
+          compgen -G 'release/*.deb' >/dev/null
+          compgen -G 'release/*.tar.gz' >/dev/null
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -139,47 +210,63 @@ jobs:
 
       - name: Resolve release tag
         id: release-tag
+        env:
+          REQUESTED_TAG: ${{ github.event.inputs.tag }}
         shell: bash
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             release_tag="${GITHUB_REF_NAME}"
-          elif [ -n "${{ github.event.inputs.tag }}" ]; then
-            release_tag="${{ github.event.inputs.tag }}"
+          elif [ -n "$REQUESTED_TAG" ]; then
+            release_tag="$REQUESTED_TAG"
           else
-            version="$(node -p "require('./package.json').version")"
-            release_tag="app-v${version}"
+            package_version="$(node -p "require('./package.json').version")"
+            release_tag="app-v${package_version}"
           fi
 
-          if [ -z "$release_tag" ]; then
-            echo "Unable to resolve release tag." >&2
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ ! "$package_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Package version must be a stable semantic version without prerelease data." >&2
+            exit 1
+          fi
+          expected_tag="app-v${package_version}"
+          if [ "$release_tag" != "$expected_tag" ]; then
+            echo "Release tag must exactly match $expected_tag." >&2
             exit 1
           fi
 
           echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Create or reuse release
+      - name: Verify downloaded updater artifact contract
+        shell: bash
+        run: |
+          test -f downloaded-artifacts/marklab-windows/latest.yml
+          compgen -G 'downloaded-artifacts/marklab-windows/*-setup.exe' >/dev/null
+          compgen -G 'downloaded-artifacts/marklab-windows/*-setup.exe.blockmap' >/dev/null
+          compgen -G 'downloaded-artifacts/marklab-macos/*.zip' >/dev/null
+          compgen -G 'downloaded-artifacts/marklab-macos/*.dmg' >/dev/null
+          test -f downloaded-artifacts/marklab-macos/latest-mac.yml
+          test -f downloaded-artifacts/marklab-linux/latest-linux.yml
+          compgen -G 'downloaded-artifacts/marklab-linux/*.AppImage' >/dev/null
+
+      - name: Create or update draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
         shell: bash
         run: |
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.id')"
+          if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
+              --repo "$RELEASE_REPOSITORY" \
+              --draft \
               --title "marklab $RELEASE_TAG" \
               --notes "Automated desktop release. Installers are attached below."
-            gh api \
-              --method PATCH \
-              "repos/$GITHUB_REPOSITORY/releases/$release_id" \
-              -F draft=false \
-              >/dev/null
             exit 0
           fi
 
           create_args=(
             "$RELEASE_TAG"
-            --repo "$GITHUB_REPOSITORY"
+            --repo "$RELEASE_REPOSITORY"
+            --draft
             --title "marklab $RELEASE_TAG"
             --notes "Automated desktop release. Installers are attached below."
           )
@@ -218,5 +305,18 @@ jobs:
           fi
 
           gh release upload "$RELEASE_TAG" "${assets[@]}" \
-            --repo "$GITHUB_REPOSITORY" \
+            --repo "$RELEASE_REPOSITORY" \
             --clobber
+
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
+        shell: bash
+        run: |
+          release_id="$(gh api "repos/$RELEASE_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.id')"
+          gh api \
+            --method PATCH \
+            "repos/$RELEASE_REPOSITORY/releases/$release_id" \
+            -F draft=false \
+            >/dev/null

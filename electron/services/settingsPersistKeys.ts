@@ -18,6 +18,7 @@ export const preferenceStateKeys = new Set([
   'desktopNotificationsBackgroundOnly',
   'desktopNotificationsEnabled',
   'desktopNotificationSyncEnabled',
+  'desktopNotificationUpdatesEnabled',
   'aiDefaultProviderId',
   'customThemeId',
   'defaultFileView',

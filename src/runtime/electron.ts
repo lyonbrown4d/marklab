@@ -13,6 +13,21 @@ import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
 import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 import type { RendererReadySignal } from '@/types/rendererReady'
+import type {
+  ElectronUpdateEvent,
+  ElectronUpdateResult,
+  ElectronUpdateState,
+} from '@/types/softwareUpdate'
+
+export type {
+  ElectronUpdateError,
+  ElectronUpdateEvent,
+  ElectronUpdateInfo,
+  ElectronUpdateProgress,
+  ElectronUpdateResult,
+  ElectronUpdateState,
+  ElectronUpdateStatus,
+} from '@/types/softwareUpdate'
 
 type ElectronPlatformInfo = {
   platform: 'windows' | 'macos' | 'linux' | 'unknown'
@@ -101,53 +116,6 @@ export type ElectronUserThemeInfo = {
   createdAt: number
   id: string
   name: string
-}
-
-export type ElectronUpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'not-available'
-  | 'downloading'
-  | 'downloaded'
-  | 'installing'
-  | 'error'
-  | 'unavailable'
-
-export type ElectronUpdateInfo = {
-  releaseDate?: string
-  releaseName?: string
-  version: string
-}
-
-export type ElectronUpdateProgress = {
-  bytesPerSecond: number
-  percent: number
-  transferred: number
-  total: number
-}
-
-export type ElectronUpdateState = {
-  error?: string
-  info?: ElectronUpdateInfo
-  progress?: ElectronUpdateProgress
-  status: ElectronUpdateStatus
-}
-
-export type ElectronUpdateResult = ElectronUpdateState & {
-  ok: boolean
-}
-
-export type ElectronUpdateEvent = ElectronUpdateState & {
-  event:
-    | 'checking'
-    | 'available'
-    | 'not-available'
-    | 'download-progress'
-    | 'downloaded'
-    | 'installing'
-    | 'error'
-    | 'unavailable'
 }
 
 export type ElectronRuntimeEventEnvelope<T = unknown> = {
@@ -263,6 +231,7 @@ export type RendererSafeElectronApi = {
     download: () => Promise<ElectronUpdateResult>
     getState: () => Promise<ElectronUpdateState>
     install: () => Promise<ElectronUpdateResult>
+    setInstallOnQuit: (enabled: boolean) => Promise<ElectronUpdateResult>
     onEvent: (handler: (payload: ElectronUpdateEvent) => void) => () => void
   }
   webTabs: WebTabsApi

@@ -23,6 +23,7 @@ describe('useWorkspaceMapInteractions', () => {
         onCloseEditor: vi.fn(),
         onModeChange: vi.fn(),
         onOpenFile: vi.fn(),
+        onOpenSearch: vi.fn(),
         webViews: { activate: vi.fn(), deactivate: vi.fn() },
       }),
     )

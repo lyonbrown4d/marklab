@@ -211,6 +211,7 @@ export type UpdateStatus =
 export type AppUpdateInfo = {
   releaseDate?: string
   releaseName?: string
+  releaseNotes?: string
   version: string
 }
 
@@ -221,9 +222,23 @@ export type UpdateProgressInfo = {
   total: number
 }
 
+export type UpdateError = {
+  code:
+    | 'CHECK_FAILED'
+    | 'DOWNLOAD_FAILED'
+    | 'INSTALL_FAILED'
+    | 'INVALID_REQUEST'
+    | 'NOT_READY'
+    | 'UNAVAILABLE'
+  message: string
+  operation: 'availability' | 'check' | 'download' | 'install' | 'install-on-quit'
+}
+
 export type UpdateState = {
-  error?: string
+  currentVersion: string
+  error?: UpdateError
   info?: AppUpdateInfo
+  installOnQuit: boolean
   progress?: UpdateProgressInfo
   status: UpdateStatus
 }
@@ -240,6 +255,7 @@ export type UpdateEventPayload = UpdateState & {
     | 'download-progress'
     | 'downloaded'
     | 'installing'
+    | 'install-on-quit-changed'
     | 'error'
     | 'unavailable'
 }

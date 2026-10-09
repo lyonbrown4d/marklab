@@ -4,7 +4,9 @@ import { applyWindowUpdateProgress } from '@electron/services/nativeUpdateProgre
 import type { UpdateEventPayload } from '@electron/types'
 
 const update = (overrides: Partial<UpdateEventPayload>): UpdateEventPayload => ({
+  currentVersion: '0.2.4',
   event: 'checking',
+  installOnQuit: false,
   status: 'checking',
   ...overrides,
 })

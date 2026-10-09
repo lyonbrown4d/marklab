@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import { BlockSelectionPlugin } from '@platejs/selection/react'
+import { FindReplacePlugin } from '@platejs/find-replace'
 import type { PlateChunkProps, PlateEditor } from 'platejs/react'
 import { createPlateNodePlugins, type PlatePreviewOptions } from '@/components/plate/nodes'
 import { plateMarkdownPlugin } from '@/components/plate/plateMarkdownConfig'
@@ -8,6 +9,7 @@ import {
   PlateVirtualChunk,
 } from '@/components/plate/PlateVirtualChunk'
 import { handlePlateBlockMoveShortcut } from '@/components/plate/selection/plateBlockSelection'
+import { PlateFindMatchLeaf } from '@/components/plate/PlateFindMatchLeaf'
 
 export const createPlateEditorPlugins = (previewOptions: PlatePreviewOptions = {}) => [
   BlockSelectionPlugin.configure({
@@ -25,6 +27,7 @@ export const createPlateEditorPlugins = (previewOptions: PlatePreviewOptions = {
       },
     },
   }),
+  FindReplacePlugin.configure({ render: { node: PlateFindMatchLeaf } }),
   ...createPlateNodePlugins(previewOptions),
   plateMarkdownPlugin,
 ]

@@ -47,6 +47,7 @@ const createFixture = (overrides: Record<string, boolean> = {}) => {
     desktopNotificationsBackgroundOnly: true,
     desktopNotificationExportsEnabled: true,
     desktopNotificationSyncEnabled: true,
+    desktopNotificationUpdatesEnabled: true,
     ...overrides,
   }
   const BrowserWindowClass = {
@@ -148,6 +149,7 @@ describe('DesktopNotificationService', () => {
     ['desktopNotificationsEnabled', 'export'],
     ['desktopNotificationExportsEnabled', 'export'],
     ['desktopNotificationSyncEnabled', 'sync'],
+    ['desktopNotificationUpdatesEnabled', 'update'],
   ] as const)('honors the %s preference', (preference, category) => {
     const { service } = createFixture({ [preference]: false })
 

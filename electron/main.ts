@@ -21,6 +21,7 @@ import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance
 import { createMainWindowSession } from '@electron/main/windowSession'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
+import { continueAppQuit } from '@electron/main/updateQuit'
 import { createAppWindowIcon, type MarklabWindows } from '@electron/window'
 import {
   flushPersistedWindowState,
@@ -215,7 +216,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (event) => {
   windowLifecycle.handleBeforeQuit(
     event,
-    () => app.quit(),
+    () => continueAppQuit(app, nativeIpc?.updates ?? null),
     async () => {
       clearFallbackTimer()
       if (runtime) await runtime.shutdown()

@@ -13,6 +13,7 @@ import {
 } from '@/components/plate/PlateExternalValueSyncController'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
+import { PlateDocumentFind } from '@/components/plate/PlateDocumentFind'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
 import { PlateBlockSelectionCount } from '@/components/plate/selection/PlateBlockSelectionCount'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
@@ -39,7 +40,6 @@ import type {
 } from '@/components/plate/plateEditorSurfaceTypes'
 
 export type { PlateEditorSurfaceHandle } from '@/components/plate/plateEditorSurfaceTypes'
-
 const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorSurfaceProps>(
   (
     {
@@ -253,6 +253,14 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               tabIndex={readOnly ? 0 : undefined}
             />
             <PlateDndEdgeScroller containerRef={editableRef} />
+            {interactionActive && contentReady && (
+              <PlateDocumentFind
+                editableRef={editableRef}
+                editor={editor}
+                key={activePath ?? ''}
+                virtualized={readOnly}
+              />
+            )}
             <PlateBlockSelectionCount />
             {slashLabels && (
               <PlateEditorOverlays

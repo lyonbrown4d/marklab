@@ -52,6 +52,7 @@ const WorkspaceMapCanvasContent = ({
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
   const [viewportRevision, setViewportRevision] = useState(0)
   const [viewportLod, setViewportLod] = useState(() => getWorkspaceMapViewportLod(1))
+  const [searchOpen, setSearchOpen] = useState(false)
   const handleCanvasRef = useCallback((element: HTMLDivElement | null) => {
     canvasRef.current = element
     setCanvasElement(element)
@@ -194,6 +195,7 @@ const WorkspaceMapCanvasContent = ({
     onCloseEditor,
     onOpenFile,
     onModeChange: handleModeChange,
+    onOpenSearch: () => setSearchOpen(true),
     webViews,
   })
   const handleViewportMove = useCallback((_event: unknown, viewport: { zoom: number }) => {
@@ -282,6 +284,7 @@ const WorkspaceMapCanvasContent = ({
         onArrange={layout.arrange}
         onFocusNode={interactions.focusNode}
         onModeChange={handleModeChange}
+        onSearchOpenChange={setSearchOpen}
         onToggleExternalResources={() =>
           setExternalState((current) => ({
             graphIdentity,
@@ -290,6 +293,7 @@ const WorkspaceMapCanvasContent = ({
           }))
         }
         showExternalResources={showExternalResources}
+        searchOpen={searchOpen}
       />
     </div>
   )

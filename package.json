@@ -116,8 +116,10 @@
     "buildDependenciesFromSource": false,
     "publish": [
       {
+        "owner": "lyonbrown4d",
         "provider": "github",
         "publishAutoUpdate": true,
+        "repo": "marklab",
         "releaseType": "release",
         "tagNamePrefix": "app-v"
       }
@@ -224,6 +226,7 @@
     "@platejs/basic-nodes": "^53.0.0",
     "@platejs/code-block": "^53.0.0",
     "@platejs/dnd": "^53.3.8",
+    "@platejs/find-replace": "53.0.0",
     "@platejs/link": "^53.3.5",
     "@platejs/list-classic": "53.0.0",
     "@platejs/markdown": "^53.3.15",

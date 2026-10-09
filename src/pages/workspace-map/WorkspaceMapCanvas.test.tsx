@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
@@ -275,5 +275,24 @@ describe('WorkspaceMapCanvas', () => {
     flow.fitView.mockClear()
     fireEvent(window, new Event('resize'))
     expect(flow.fitView).not.toHaveBeenCalled()
+  })
+
+  it('opens and focuses node search with Mod+F without consuming Mod+Shift+F', async () => {
+    renderCanvas(null)
+    const canvas = screen.getByTestId('flow')
+    const workspaceFind = createEvent.keyDown(canvas, {
+      ctrlKey: true,
+      key: 'f',
+      shiftKey: true,
+    })
+
+    fireEvent(canvas, workspaceFind)
+    expect(workspaceFind.defaultPrevented).toBe(false)
+    expect(screen.queryByRole('combobox', { name: 'workspaceMap.searchNodes' })).toBeNull()
+
+    fireEvent.keyDown(canvas, { ctrlKey: true, key: 'f' })
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'workspaceMap.searchNodes' })).toHaveFocus(),
+    )
   })
 })

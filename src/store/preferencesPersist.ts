@@ -13,6 +13,7 @@ export type PreferencesPersistedState = Pick<
   | 'desktopNotificationsBackgroundOnly'
   | 'desktopNotificationsEnabled'
   | 'desktopNotificationSyncEnabled'
+  | 'desktopNotificationUpdatesEnabled'
   | 'aiDefaultProviderId'
   | 'autoSystemThemeSync'
   | 'customThemeId'
@@ -69,6 +70,7 @@ export const selectPreferencesPersistedState = (
   desktopNotificationsBackgroundOnly: state.desktopNotificationsBackgroundOnly,
   desktopNotificationExportsEnabled: state.desktopNotificationExportsEnabled,
   desktopNotificationSyncEnabled: state.desktopNotificationSyncEnabled,
+  desktopNotificationUpdatesEnabled: state.desktopNotificationUpdatesEnabled,
   aiDefaultProviderId: state.aiDefaultProviderId,
   locale: state.locale,
   sidebarCollapsed: state.sidebarCollapsed,

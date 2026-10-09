@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapToolbar } from '@/pages/workspace-map/WorkspaceMapToolbar'
@@ -19,7 +19,9 @@ describe('WorkspaceMapToolbar', () => {
         onArrange={onArrange}
         onFocusNode={vi.fn()}
         onModeChange={onModeChange}
+        onSearchOpenChange={vi.fn()}
         onToggleExternalResources={vi.fn()}
+        searchOpen={false}
         showExternalResources={false}
       />,
     )
@@ -45,7 +47,9 @@ describe('WorkspaceMapToolbar', () => {
         onArrange={vi.fn()}
         onFocusNode={vi.fn()}
         onModeChange={vi.fn()}
+        onSearchOpenChange={vi.fn()}
         onToggleExternalResources={vi.fn()}
+        searchOpen={false}
         showExternalResources={false}
       />,
     )
@@ -70,7 +74,9 @@ describe('WorkspaceMapToolbar', () => {
       onArrange: vi.fn(),
       onFocusNode: vi.fn(),
       onModeChange: vi.fn(),
+      onSearchOpenChange: vi.fn(),
       onToggleExternalResources: vi.fn(),
+      searchOpen: false,
       showExternalResources: false,
     }
     const view = render(
@@ -90,5 +96,47 @@ describe('WorkspaceMapToolbar', () => {
     )
 
     expect(outside).toHaveFocus()
+  })
+
+  it.each([
+    ['Control', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+  ])('reclaims repeated %s+F from any node-search control', (_name, mod) => {
+    render(
+      <WorkspaceMapToolbar
+        externalCount={0}
+        mode="overview"
+        nodes={[
+          {
+            data: { label: 'Alpha', path: 'notes/alpha.md' },
+            id: 'file:notes/alpha.md',
+            position: { x: 0, y: 0 },
+            type: 'file',
+          },
+        ]}
+        onArrange={vi.fn()}
+        onFocusNode={vi.fn()}
+        onModeChange={vi.fn()}
+        onSearchOpenChange={vi.fn()}
+        onToggleExternalResources={vi.fn()}
+        searchOpen
+        showExternalResources={false}
+      />,
+    )
+    const input = screen.getByRole<HTMLInputElement>('combobox', {
+      name: 'workspaceMap.searchNodes',
+    })
+    fireEvent.change(input, { target: { value: 'alp' } })
+    input.setSelectionRange(3, 3)
+    const result = screen.getByRole('option', { name: /Alpha/ })
+    result.focus()
+    const repeatedFind = createEvent.keyDown(result, { ...mod, key: 'f' })
+
+    fireEvent(result, repeatedFind)
+
+    expect(repeatedFind.defaultPrevented).toBe(true)
+    expect(input).toHaveFocus()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(input.value.length)
   })
 })

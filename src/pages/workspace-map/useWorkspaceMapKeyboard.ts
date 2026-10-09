@@ -15,6 +15,7 @@ type WorkspaceMapKeyboardOptions = {
   nodes: Node<GraphNodeData>[]
   onCloseEditor: () => void
   onModeChange: (mode: WorkspaceMapMode) => void
+  onOpenSearch: () => void
 }
 
 export const useWorkspaceMapKeyboard = ({
@@ -27,6 +28,7 @@ export const useWorkspaceMapKeyboard = ({
   nodes,
   onCloseEditor,
   onModeChange,
+  onOpenSearch,
 }: WorkspaceMapKeyboardOptions) => {
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
 
@@ -52,6 +54,17 @@ export const useWorkspaceMapKeyboard = ({
         return
       }
       if (event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) {
+        return
+      }
+      if (
+        event.key.toLowerCase() === 'f' &&
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        onOpenSearch()
         return
       }
       const nodeElement = event.target.closest<HTMLElement>('.react-flow__node')
@@ -98,6 +111,7 @@ export const useWorkspaceMapKeyboard = ({
       nodesById,
       onCloseEditor,
       onModeChange,
+      onOpenSearch,
     ],
   )
 }

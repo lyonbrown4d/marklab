@@ -88,6 +88,9 @@ importers:
       '@platejs/dnd':
         specifier: ^53.3.8
         version: 53.3.8(platejs@53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0)))(react-dnd-html5-backend@16.0.1)(react-dnd@16.0.1(@types/node@26.6.4)(@types/react@19.3.0)(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@platejs/find-replace':
+        specifier: 53.0.0
+        version: 53.0.0(platejs@53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0)))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@platejs/link':
         specifier: ^53.3.5
         version: 53.3.5(platejs@53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0)))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2387,6 +2390,13 @@ packages:
       react: '>=18.0.0'
       react-dnd: '>=14.0.0'
       react-dnd-html5-backend: '>=14.0.0'
+      react-dom: '>=18.0.0'
+
+  '@platejs/find-replace@53.0.0':
+    resolution: {integrity: sha512-3nPuhuyKYSdlbSnk6sSQEzfeIGaGvpxMFt1s31Kb1SbKejP+6h27x/et16EZbWqMos+V1cf0nipgQ+myCLTqKA==}
+    peerDependencies:
+      platejs: '>=53.0.0'
+      react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
   '@platejs/floating@53.0.0':
@@ -11170,6 +11180,13 @@ snapshots:
       react-compiler-runtime: 1.0.0(react@19.3.0)
       react-dnd: 16.0.1(@types/node@26.6.4)(@types/react@19.3.0)(react@19.3.0)
       react-dnd-html5-backend: 16.0.1
+      react-dom: 19.3.0(react@19.3.0)
+
+  '@platejs/find-replace@53.0.0(platejs@53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0)))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      platejs: 53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0))
+      react: 19.3.0
+      react-compiler-runtime: 1.0.0(react@19.3.0)
       react-dom: 19.3.0(react@19.3.0)
 
   '@platejs/floating@53.0.0(platejs@53.3.15(@types/lodash@4.17.25)(@types/react@19.3.0)(immer@11.1.21)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(scheduler@0.28.0)(use-sync-external-store@1.7.0(react@19.3.0)))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':

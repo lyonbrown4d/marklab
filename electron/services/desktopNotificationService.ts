@@ -6,7 +6,7 @@ import { noopLogger } from '@electron/services/logger'
 import type { SettingsStore } from '@electron/services/settingsStore'
 import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
 
-export type DesktopNotificationCategory = 'export' | 'sync'
+export type DesktopNotificationCategory = 'export' | 'sync' | 'update'
 
 export type DesktopNotificationRequest = {
   body: string
@@ -32,6 +32,7 @@ const preferencesSchema = z.looseObject({
       desktopNotificationsBackgroundOnly: z.boolean().optional(),
       desktopNotificationsEnabled: z.boolean().optional(),
       desktopNotificationSyncEnabled: z.boolean().optional(),
+      desktopNotificationUpdatesEnabled: z.boolean().optional(),
     })
     .optional(),
 })
@@ -41,6 +42,7 @@ const defaultPreferences = {
   desktopNotificationsBackgroundOnly: true,
   desktopNotificationsEnabled: true,
   desktopNotificationSyncEnabled: true,
+  desktopNotificationUpdatesEnabled: true,
 }
 
 export class DesktopNotificationService {
@@ -102,6 +104,8 @@ export class DesktopNotificationService {
       return false
     }
     if (request.category === 'sync' && !preferences.desktopNotificationSyncEnabled) return false
+    if (request.category === 'update' && !preferences.desktopNotificationUpdatesEnabled)
+      return false
     if (!preferences.desktopNotificationsBackgroundOnly) return true
     return !this.BrowserWindowClass.getFocusedWindow()
   }

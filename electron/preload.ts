@@ -36,13 +36,10 @@ import type {
 
 type MenuActionHandler = (id: string) => void
 type RuntimeEventHandler<T = unknown> = (event: RuntimeEventEnvelope<T>) => void
-
 let nextRuntimeEventId = 1
-
 const emitMenuAction = (id: string): void => {
   window.dispatchEvent(new CustomEvent('marklab:menu-action', { detail: id }))
 }
-
 const menuCommandFromPayload = (payload: unknown): string | null => {
   if (typeof payload === 'string') return payload
   if (
@@ -237,6 +234,11 @@ const desktopApi: RendererSafeElectronApi = {
     check: () => ipcRenderer.invoke(nativeIpcChannels.updatesCheck) as Promise<UpdateResult>,
     download: () => ipcRenderer.invoke(nativeIpcChannels.updatesDownload) as Promise<UpdateResult>,
     install: () => ipcRenderer.invoke(nativeIpcChannels.updatesInstall) as Promise<UpdateResult>,
+    setInstallOnQuit: (enabled: boolean) =>
+      ipcRenderer.invoke(
+        nativeIpcChannels.updatesSetInstallOnQuit,
+        enabled,
+      ) as Promise<UpdateResult>,
     onEvent: (handler: (payload: UpdateEventPayload) => void) => {
       const listener = (_event: IpcRendererEvent, payload: UpdateEventPayload) => {
         handler(payload)

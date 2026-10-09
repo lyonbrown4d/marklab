@@ -63,6 +63,18 @@ describe('WorkspaceMapFileNode interactions', () => {
     expect(editor.onClose).not.toHaveBeenCalled()
   })
 
+  it('keeps document find inside the embedded editor and releases workspace find', () => {
+    const onKeyDown = vi.fn()
+    renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor }, { onKeyDown })
+    const plate = screen.getByTestId('plate-editor')
+
+    fireEvent.keyDown(plate, { ctrlKey: true, key: 'f' })
+    expect(onKeyDown).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(plate, { ctrlKey: true, key: 'f', shiftKey: true })
+    expect(onKeyDown).toHaveBeenCalledOnce()
+  })
+
   it('keeps document scrolling local but lets modified wheel gestures reach canvas zoom', () => {
     const parentHandlers = {
       onClick: vi.fn(),

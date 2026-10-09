@@ -9,6 +9,7 @@ const DesktopNotificationsSettingsSection = () => {
   const backgroundOnly = usePreferencesStore((state) => state.desktopNotificationsBackgroundOnly)
   const exportsEnabled = usePreferencesStore((state) => state.desktopNotificationExportsEnabled)
   const syncEnabled = usePreferencesStore((state) => state.desktopNotificationSyncEnabled)
+  const updatesEnabled = usePreferencesStore((state) => state.desktopNotificationUpdatesEnabled)
   const setEnabled = usePreferencesStore((state) => state.setDesktopNotificationsEnabled)
   const setBackgroundOnly = usePreferencesStore(
     (state) => state.setDesktopNotificationsBackgroundOnly,
@@ -17,6 +18,9 @@ const DesktopNotificationsSettingsSection = () => {
     (state) => state.setDesktopNotificationExportsEnabled,
   )
   const setSyncEnabled = usePreferencesStore((state) => state.setDesktopNotificationSyncEnabled)
+  const setUpdatesEnabled = usePreferencesStore(
+    (state) => state.setDesktopNotificationUpdatesEnabled,
+  )
 
   return (
     <SettingsSection
@@ -50,6 +54,13 @@ const DesktopNotificationsSettingsSection = () => {
         description={t('settings.desktopNotificationSyncDescription')}
         checked={syncEnabled}
         onCheckedChange={setSyncEnabled}
+        disabled={!enabled}
+      />
+      <SettingsSwitchRow
+        title={t('settings.desktopNotificationUpdates')}
+        description={t('settings.desktopNotificationUpdatesDescription')}
+        checked={updatesEnabled}
+        onCheckedChange={setUpdatesEnabled}
         disabled={!enabled}
       />
     </SettingsSection>

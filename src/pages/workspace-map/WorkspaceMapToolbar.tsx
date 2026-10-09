@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import type { Node } from '@xyflow/react'
 import { Globe2, LayoutTemplate, Search } from 'lucide-react'
+import { useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -22,9 +22,17 @@ type WorkspaceMapToolbarProps = {
   onArrange: () => void
   onFocusNode: (node: Node<GraphNodeData>) => void
   onModeChange: (mode: WorkspaceMapMode) => void
+  onSearchOpenChange: (open: boolean) => void
   onToggleExternalResources: () => void
+  searchOpen: boolean
   showExternalResources: boolean
 }
+
+const isFindShortcut = (event: ReactKeyboardEvent) =>
+  (event.ctrlKey || event.metaKey) &&
+  !event.altKey &&
+  !event.shiftKey &&
+  event.key.toLowerCase() === 'f'
 
 export const WorkspaceMapToolbar = ({
   externalCount,
@@ -33,11 +41,13 @@ export const WorkspaceMapToolbar = ({
   onArrange,
   onFocusNode,
   onModeChange,
+  onSearchOpenChange,
   onToggleExternalResources,
+  searchOpen,
   showExternalResources,
 }: WorkspaceMapToolbarProps) => {
   const { t } = useI18n()
-  const [searchOpen, setSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const {
     ref: toolbarRef,
     onFocusCapture: handleToolbarFocus,
@@ -46,6 +56,13 @@ export const WorkspaceMapToolbar = ({
   const externalLabel = showExternalResources
     ? t('workspaceMap.hideExternalResources')
     : t('workspaceMap.showExternalResources')
+  const handleSearchKeyDown = (event: ReactKeyboardEvent) => {
+    if (!isFindShortcut(event)) return
+    event.preventDefault()
+    event.stopPropagation()
+    searchInputRef.current?.focus()
+    searchInputRef.current?.select()
+  }
 
   return (
     <div
@@ -56,7 +73,7 @@ export const WorkspaceMapToolbar = ({
       onKeyDown={handleToolbarKeyDown}
       role="toolbar"
     >
-      <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+      <Popover open={searchOpen} onOpenChange={onSearchOpenChange}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -70,10 +87,12 @@ export const WorkspaceMapToolbar = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[min(360px,calc(100vw-24px))] p-0">
-          <Command label={t('workspaceMap.searchNodes')}>
+          <Command label={t('workspaceMap.searchNodes')} onKeyDown={handleSearchKeyDown}>
             <CommandInput
               aria-label={t('workspaceMap.searchNodes')}
+              autoFocus
               placeholder={t('workspaceMap.searchPlaceholder')}
+              ref={searchInputRef}
             />
             <CommandList>
               <CommandEmpty>{t('workspaceMap.searchEmpty')}</CommandEmpty>
@@ -84,7 +103,7 @@ export const WorkspaceMapToolbar = ({
                       value={`${node.data.label} ${node.data.path ?? node.data.url ?? ''}`}
                       onSelect={() => {
                         onFocusNode(node)
-                        setSearchOpen(false)
+                        onSearchOpenChange(false)
                       }}
                     >
                       <span className="min-w-0 flex-1 truncate">{node.data.label}</span>
