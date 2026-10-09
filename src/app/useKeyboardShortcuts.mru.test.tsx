@@ -7,7 +7,7 @@ const hotkeys = vi.hoisted(() => ({
   definitions: [] as Array<{
     hotkey: string
     callback: () => void
-    options?: { ignoreInputs?: boolean }
+    options?: { ignoreInputs?: boolean; meta?: { name?: string } }
   }>,
 }))
 
@@ -159,5 +159,16 @@ describe('useKeyboardShortcuts MRU and history navigation', () => {
         .filter((definition) => definition.hotkey.startsWith('Alt+Arrow'))
         .map((definition) => definition.options?.ignoreInputs),
     ).toEqual([false, false])
+  })
+
+  it('keeps the sidebar toggle active after focus moves into file search', () => {
+    const props = createProps('file:edit:one.md')
+    renderHook(() => useKeyboardShortcuts(props))
+
+    const definition = hotkeys.definitions.find(
+      (candidate) => candidate.options?.meta?.name === 'view.toggleSidebar',
+    )
+
+    expect(definition?.options?.ignoreInputs).toBe(false)
   })
 })

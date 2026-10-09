@@ -59,6 +59,7 @@ export type MarkdownEditorProps = {
   activePath: string | null
   workspaceKey?: string
   autoFocus?: boolean
+  interactionActive?: boolean
   value: string
   onChange: (value: string) => void
   placeholder: string

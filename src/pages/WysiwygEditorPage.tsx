@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
 import type {
@@ -108,6 +109,8 @@ const WysiwygEditorPage = ({
   readOnly,
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
+  const keepAlive = useKeepAliveContext()
+  const interactionActive = !keepAlive.cacheKey || keepAlive.active
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
   const [editorStatus, setEditorStatus] = useState<{
     activePath: string | null
@@ -204,6 +207,7 @@ const WysiwygEditorPage = ({
             <MarkdownEditor
               ref={editorRef}
               activePath={activePath}
+              interactionActive={interactionActive}
               workspaceKey={workspaceKey}
               value={value}
               onChange={onChange}

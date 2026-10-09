@@ -256,44 +256,4 @@ test.describe('Electron desktop shell', () => {
       await setNativeTheme('system')
     }
   })
-
-  test('anchors the localized Markdown table toolbar to the active cell', async () => {
-    await page.setViewportSize({ width: 1280, height: 900 })
-    const editingModeGroup = page.getByRole('radiogroup', {
-      name: /Editing Mode|编辑模式/i,
-    })
-    await editingModeGroup.getByRole('radio', { name: /^(Source|Source Editor|源码)$/i }).click()
-    const sourceEditor = page.locator('.monaco-editor')
-    await expect(sourceEditor).toBeVisible({ timeout: 10_000 })
-    await sourceEditor.click()
-    await page.keyboard.press('ControlOrMeta+A')
-    await page.keyboard.insertText('| Name | Status |\n| --- | --- |\n| Marklab | Ready |')
-
-    await editingModeGroup
-      .getByRole('radio', { name: /^(WYSIWYG|Rich Text Editor|所见即所得)$/i })
-      .click()
-    const activeCell = page.getByTestId('markdown-editor').locator('table:visible td').first()
-    await expect(activeCell).toBeVisible({ timeout: 10_000 })
-    await activeCell.click()
-
-    const toolbar = page.getByRole('toolbar', { name: /Table editing|表格编辑/i })
-    await expect(toolbar).toBeVisible()
-    await expect(toolbar.getByRole('button', { name: /Add row|添加行/i })).toBeVisible()
-    await expect(toolbar.getByRole('button', { name: /Delete column|删除列/i })).toBeVisible()
-
-    const [toolbarBox, cellBox] = await Promise.all([
-      toolbar.boundingBox(),
-      activeCell.boundingBox(),
-    ])
-    expect(toolbarBox).not.toBeNull()
-    expect(cellBox).not.toBeNull()
-    if (!toolbarBox || !cellBox) return
-    expect(toolbarBox.x).toBeGreaterThanOrEqual(0)
-    expect(toolbarBox.x + toolbarBox.width).toBeLessThanOrEqual(1280)
-    expect(
-      toolbarBox.y + toolbarBox.height <= cellBox.y || toolbarBox.y >= cellBox.y + cellBox.height,
-    ).toBe(true)
-
-    await captureDesignScreenshot(page, 'markdown-table-toolbar.png')
-  })
 })

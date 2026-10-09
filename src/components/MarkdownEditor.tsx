@@ -131,6 +131,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             motionSmoothScrolling && 'is-smooth-editor',
           )}
           contentVisible={status.phase === 'ready'}
+          interactionActive={props.interactionActive}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
           onWorkspaceLink={props.onWorkspaceLink}

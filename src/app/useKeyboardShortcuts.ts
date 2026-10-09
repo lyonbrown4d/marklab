@@ -143,7 +143,9 @@ export const useKeyboardShortcuts = ({
           callback: () => execute(action.id),
           options: {
             ignoreInputs:
-              action.id === 'navigation.back' || action.id === 'navigation.forward'
+              action.id === 'navigation.back' ||
+              action.id === 'navigation.forward' ||
+              action.id === 'view.toggleSidebar'
                 ? false
                 : undefined,
             meta: { name: action.id },

@@ -28,6 +28,7 @@ import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
+import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 import {
   serializePlateMarkdown,
   shouldParsePlateMarkdownInWorker,
@@ -47,6 +48,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       autoFocus,
       className,
       contentVisible = true,
+      interactionActive = true,
       onCalendarFileCreate,
       onChange,
       onImageImport,
@@ -71,6 +73,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const localEchoRef = useRef<string | null>(null)
     const externalSyncRef = useRef<PlateExternalValueSyncHandle | null>(null)
     const externalLoadingRef = useRef(false)
+    const acceptsLocalChanges = useCachedEditorInteractionGate(interactionActive)
     const asyncInitialValue = shouldParsePlateMarkdownInWorker(value)
     const editor = useConfiguredPlateEditor({
       activePath,
@@ -200,12 +203,12 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     }))
 
     const handleValueChange = useCallback(() => {
-      if (externalApplyRef.current) return
+      if (externalApplyRef.current || !acceptsLocalChanges()) return
       markSnapshotDirty()
       changeRevisionRef.current += 1
       completion.onEditorChange()
       queueSnapshot()
-    }, [completion, markSnapshotDirty, queueSnapshot])
+    }, [acceptsLocalChanges, completion, markSnapshotDirty, queueSnapshot])
     const handleSelectionChange = useCallback(() => {
       completion.onSelectionChange()
       syncSlashFromEditor()

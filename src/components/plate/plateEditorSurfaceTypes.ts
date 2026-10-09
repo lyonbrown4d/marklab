@@ -17,6 +17,7 @@ export type PlateEditorSurfaceProps = {
   autoFocus?: boolean
   className?: string
   contentVisible?: boolean
+  interactionActive?: boolean
   onChange: (value: string) => void
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>

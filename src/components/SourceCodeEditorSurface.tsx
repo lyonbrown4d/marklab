@@ -1,4 +1,5 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import { AlertTriangle } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
 import { Spinner } from '@/components/ui/spinner'
@@ -8,9 +9,11 @@ import type { ShortcutBindings } from '@/logic/shortcuts'
 import { monacoLanguageForPath } from '@/logic/sourceLanguages'
 import type { EditorChangeHandler } from '@/types/editorChanges'
 import { toEditorTextChanges } from '@/components/sourceCodeChanges'
+import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 
 type SourceCodeEditorSurfaceProps = {
   activePath: string | null
+  interactionActive?: boolean
   workspaceKey: string
   darkMode: boolean
   errorMessage: string | null
@@ -32,6 +35,7 @@ type SourceCodeEditorSurfaceProps = {
 
 export const SourceCodeEditorSurface = ({
   activePath,
+  interactionActive,
   workspaceKey,
   darkMode,
   errorMessage,
@@ -50,6 +54,9 @@ export const SourceCodeEditorSurface = ({
   onMount,
   contextMenu,
 }: SourceCodeEditorSurfaceProps) => {
+  const keepAlive = useKeepAliveContext()
+  const routeInteractionActive = interactionActive ?? (!keepAlive.cacheKey || keepAlive.active)
+  const acceptsLocalChanges = useCachedEditorInteractionGate(routeInteractionActive)
   const language = monacoLanguageForPath(activePath ?? '')
   const modelPath = sourceCodeModelPath(workspaceKey, activePath)
   const surface = (
@@ -80,9 +87,10 @@ export const SourceCodeEditorSurface = ({
           theme={darkMode ? 'vs-dark' : 'vs'}
           path={modelPath}
           value={value}
-          onChange={(next, event) =>
+          onChange={(next, event) => {
+            if (!acceptsLocalChanges()) return
             onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
-          }
+          }}
           onMount={onMount}
           options={{
             contextmenu: false,

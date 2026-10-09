@@ -20,17 +20,24 @@ const editorMock = vi.hoisted(() => ({
 vi.mock('@monaco-editor/react', () => ({
   default: ({
     language,
+    onChange,
     options,
     path,
   }: {
     language?: string
+    onChange?: (value: string) => void
     options?: typeof editorMock.options
     path?: string
   }) => {
     editorMock.language = language
     editorMock.options = options
     editorMock.path = path
-    return <textarea aria-label="markdown source" />
+    return (
+      <textarea
+        aria-label="markdown source"
+        onChange={(event) => onChange?.(event.currentTarget.value)}
+      />
+    )
   },
 }))
 
@@ -188,5 +195,33 @@ describe('SourceCodeEditorSurface', () => {
     expect(editorMock.options?.domReadOnly).toBe(true)
     expect(container.querySelector('.source-code-editor')).toHaveClass('is-readonly-editor')
     expect(container.querySelector('.source-code-editor')).not.toHaveClass('is-typewriter-editor')
+  })
+
+  it('ignores Monaco change notifications while its cached route is inactive', () => {
+    const onChange = vi.fn()
+    render(
+      <SourceCodeEditorSurface
+        activePath="notes/current.md"
+        workspaceKey="external:C:/notes"
+        darkMode={false}
+        errorMessage={null}
+        immersiveFocusMode={false}
+        immersiveTypewriterMode={false}
+        immersiveZenMode={false}
+        interactionActive={false}
+        loadingLabel="Loading source editor..."
+        monacoReady
+        motionAnimatedCursor={false}
+        motionSmoothScrolling={false}
+        sourceCodeMiniMapEnabled={false}
+        value="# Current"
+        onChange={onChange}
+        onMount={vi.fn()}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('markdown source'), { target: { value: '# Stale' } })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 })
