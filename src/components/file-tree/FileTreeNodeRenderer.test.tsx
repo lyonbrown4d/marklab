@@ -14,6 +14,7 @@ vi.mock('@/components/file-tree/FileTreeContextMenu', () => ({
 describe('FileTreeNodeRenderer', () => {
   it('toggles an unloaded folder that reports backend children', () => {
     const toggle = vi.fn()
+    const onOpenFile = vi.fn()
     const node = {
       data: {
         name: 'notes',
@@ -36,7 +37,7 @@ describe('FileTreeNodeRenderer', () => {
         labels={{} as never}
         node={node as never}
         onInspectPath={vi.fn()}
-        onOpenFile={vi.fn()}
+        onOpenFile={onOpenFile}
         onOpenFileView={vi.fn()}
         onRequestCreate={vi.fn()}
         onRequestDelete={vi.fn()}
@@ -48,5 +49,6 @@ describe('FileTreeNodeRenderer', () => {
 
     fireEvent.click(screen.getByRole('button'))
     expect(toggle).toHaveBeenCalledOnce()
+    expect(onOpenFile).not.toHaveBeenCalled()
   })
 })

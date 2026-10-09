@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
+import { usePreferencesStore } from '@/store/usePreferencesStore'
+import type { FileViewKind } from '@/store/appTypes'
 
 const renderSpies = vi.hoisted(() => ({
   inspector: vi.fn(),
@@ -78,15 +80,22 @@ const baseState = {
   onOpenTab: action,
 }
 
-const renderPanels = (state: typeof baseState) => (
+const renderPanels = (
+  state: typeof baseState,
+  callbacks: {
+    onOpenFile?: (path: string) => void
+    onOpenFileView?: (path: string, view: FileViewKind) => void
+    onOpenSearchResult?: typeof action
+  } = {},
+) => (
   <AppWorkspacePanels
     state={state as never}
     outlet={<main>Editor</main>}
     totalFiles={1}
-    onOpenFile={action}
-    onOpenFileView={action}
+    onOpenFile={callbacks.onOpenFile ?? action}
+    onOpenFileView={callbacks.onOpenFileView ?? action}
     onOpenGitDiff={action}
-    onOpenSearchResult={action}
+    onOpenSearchResult={callbacks.onOpenSearchResult ?? action}
     immersiveZenMode={false}
   />
 )
@@ -96,7 +105,77 @@ describe('AppWorkspacePanels render isolation', () => {
     renderSpies.inspector.mockClear()
     renderSpies.shell.mockClear()
     renderSpies.sidebar.mockClear()
+    action.mockClear()
     persistedContentChange.mockClear()
+    usePreferencesStore.setState({ sidebarCollapsed: false })
+  })
+
+  it('keeps the sidebar open while the selected file is still loading', () => {
+    const onOpenFile = vi.fn()
+    render(renderPanels(baseState, { onOpenFile }))
+    const sidebarProps = renderSpies.sidebar.mock.calls.at(-1)?.[0] as {
+      onOpenFile: (path: string) => void
+    }
+
+    sidebarProps.onOpenFile('/notes/two.md')
+
+    expect(onOpenFile).toHaveBeenCalledExactlyOnceWith('/notes/two.md')
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
+  })
+
+  it('keeps the sidebar open when the file-tree open callback throws', () => {
+    const failure = new Error('open failed')
+    render(
+      renderPanels(baseState, {
+        onOpenFile: () => {
+          throw failure
+        },
+      }),
+    )
+    const sidebarProps = renderSpies.sidebar.mock.calls.at(-1)?.[0] as {
+      onOpenFile: (path: string) => void
+    }
+
+    expect(() => sidebarProps.onOpenFile('/notes/missing.md')).toThrow(failure)
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
+  })
+
+  it('keeps the sidebar open when the explicit file-view callback throws', () => {
+    const failure = new Error('open source failed')
+    render(
+      renderPanels(baseState, {
+        onOpenFileView: () => {
+          throw failure
+        },
+      }),
+    )
+    const sidebarProps = renderSpies.sidebar.mock.calls.at(-1)?.[0] as {
+      onOpenFileView: (path: string, view: 'source') => void
+    }
+
+    expect(() => sidebarProps.onOpenFileView('/notes/missing.md', 'source')).toThrow(failure)
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
+  })
+
+  it('waits for explicit file-tree views without affecting other sidebar navigation', () => {
+    const onOpenFileView = vi.fn()
+    const onOpenSearchResult = vi.fn()
+    render(renderPanels(baseState, { onOpenFileView, onOpenSearchResult }))
+    const sidebarProps = renderSpies.sidebar.mock.calls.at(-1)?.[0] as {
+      onOpenGitDiff: (request: { path: string; section: 'unstaged' }) => void
+      onOpenFileView: (path: string, view: 'source') => void
+      onOpenSearchResult: (result: { path: string }) => void
+      onRestoreHistoryContent: (path: string, content: string) => void
+    }
+
+    sidebarProps.onOpenSearchResult({ path: '/notes/search.md' })
+    sidebarProps.onOpenGitDiff({ path: '/notes/two.md', section: 'unstaged' })
+    sidebarProps.onRestoreHistoryContent('/notes/one.md', 'restored')
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
+
+    sidebarProps.onOpenFileView('/notes/two.md', 'source')
+    expect(onOpenFileView).toHaveBeenCalledExactlyOnceWith('/notes/two.md', 'source')
+    expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
   })
 
   it('does not rerender the sidebar for editor buffers while the inspector updates', () => {

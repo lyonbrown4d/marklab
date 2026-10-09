@@ -8,15 +8,13 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react'
-import type { Edge, Node, NodeTypes, ReactFlowInstance } from '@xyflow/react'
+import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
 import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/logic/graph'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import { GraphMiniMap, workspaceMiniMapOffsets } from '@/pages/graph/GraphMiniMapView'
-import { WorkspaceMapFileNode } from '@/pages/workspace-map/WorkspaceMapFileNode'
+import { GraphMiniMap } from '@/pages/graph/GraphMiniMapView'
 import { WorkspaceMapGroupRegions } from '@/pages/workspace-map/WorkspaceMapGroupRegions'
-import { WorkspaceMapReferenceNode } from '@/pages/workspace-map/WorkspaceMapReferenceNode'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
 import { WorkspaceMapToolbar } from '@/pages/workspace-map/WorkspaceMapToolbar'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
@@ -29,19 +27,13 @@ import { useWorkspaceMapNodeDetails } from '@/pages/workspace-map/useWorkspaceMa
 import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/workspaceMapNeighborhood'
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
+import {
+  workspaceMapNodeTypes,
+  workspaceMapToolbarAwareMiniMapOffsets,
+} from '@/pages/workspace-map/workspaceMapCanvasConfig'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
 
-const nodeTypes: NodeTypes = {
-  external: WorkspaceMapReferenceNode,
-  file: WorkspaceMapFileNode,
-  missing: WorkspaceMapReferenceNode,
-  preview: WorkspaceMapReferenceNode,
-}
-const workspaceMapToolbarAwareMiniMapOffsets = {
-  ...workspaceMiniMapOffsets,
-  'top-left': { marginTop: 52 },
-}
 type WorkspaceMapCanvasProps = {
   activePath: string | null
   editorLoadState: WorkspaceMapEditorLoadState
@@ -232,7 +224,7 @@ const WorkspaceMapCanvasContent = ({
         )}
         nodes={disclosedNodes}
         edges={presentedEdges}
-        nodeTypes={nodeTypes}
+        nodeTypes={workspaceMapNodeTypes}
         onNodesChange={persistence.handleNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={setFlow}
@@ -247,6 +239,7 @@ const WorkspaceMapCanvasContent = ({
         onMoveEnd={handleViewportMoveEnd}
         onPaneClick={interactions.onPaneClick}
         nodesDraggable
+        nodeDragThreshold={4}
         nodesConnectable={false}
         nodesFocusable
         elementsSelectable={false}

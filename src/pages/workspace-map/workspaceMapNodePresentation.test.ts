@@ -61,6 +61,32 @@ describe('workspace map node presentation', () => {
     expect(active.dragHandle).toBe('.workspace-map-resource-drag-handle')
   })
 
+  it('restores whole-node dragging when a rich preview is collapsed', () => {
+    const collapsed = presentWorkspaceMapNode(
+      node('ext:https://example.com', 'external', {
+        url: 'https://example.com',
+        workspaceMapDisclosure: { collapsed: true, toggle: () => undefined },
+      }),
+      null,
+    )
+
+    expect(collapsed.dragHandle).toBeUndefined()
+    expect(collapsed.draggable).toBe(true)
+  })
+
+  it.each([
+    ['external', { url: 'https://example.com' }],
+    ['preview', { path: 'guide.pdf', previewKind: 'pdf' }],
+  ] as const)('removes the %s drag handle when its preview is pinned', (type, data) => {
+    const pinned = presentWorkspaceMapNode(
+      node(`${type}:pinned`, type, { ...data, workspaceMapPinned: true }),
+      null,
+    )
+
+    expect(pinned.draggable).toBe(false)
+    expect(pinned.dragHandle).toBeUndefined()
+  })
+
   it('preserves user position and resized dimensions across graph refreshes', () => {
     const incoming = node('preview:guide.pdf', 'preview', {
       path: 'guide.pdf',

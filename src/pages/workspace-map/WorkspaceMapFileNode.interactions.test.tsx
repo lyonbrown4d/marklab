@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen } from '@testing-library/react'
 import { type ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReactFlowProvider } from '@xyflow/react'
@@ -68,30 +68,33 @@ describe('WorkspaceMapFileNode interactions', () => {
       onClick: vi.fn(),
       onDoubleClick: vi.fn(),
       onKeyDown: vi.fn(),
+      onMouseDown: vi.fn(),
+      onPointerDown: vi.fn(),
       onWheel: vi.fn(),
     }
-    const view = renderNode(
-      { label: 'a', path: 'notes/a.md', workspaceMapEditor: editor },
-      parentHandlers,
-    )
+    renderNode({ label: 'a', path: 'notes/a.md', workspaceMapEditor: editor }, parentHandlers)
     const content = screen.getByTestId('workspace-map-editor-content')
-    const nativeCanvasWheel = vi.fn()
-    view.container.firstElementChild?.addEventListener('wheel', nativeCanvasWheel)
+    expect(content).toHaveClass('nodrag', 'cursor-text')
+    expect(content).not.toHaveClass('nopan', 'nowheel')
     fireEvent.click(content)
     fireEvent.doubleClick(content)
     fireEvent.keyDown(content, { key: 'b' })
-    fireEvent.wheel(content, { deltaY: 40 })
+    fireEvent.mouseDown(content)
+    fireEvent.pointerDown(content)
+    const localWheel = createEvent.wheel(screen.getByTestId('plate-editor'), { deltaY: 40 })
+    fireEvent(screen.getByTestId('plate-editor'), localWheel)
 
     expect(parentHandlers.onClick).not.toHaveBeenCalled()
     expect(parentHandlers.onDoubleClick).not.toHaveBeenCalled()
     expect(parentHandlers.onKeyDown).not.toHaveBeenCalled()
+    expect(parentHandlers.onMouseDown).not.toHaveBeenCalled()
+    expect(parentHandlers.onPointerDown).not.toHaveBeenCalled()
     expect(parentHandlers.onWheel).not.toHaveBeenCalled()
-    expect(nativeCanvasWheel).not.toHaveBeenCalled()
+    expect(localWheel.defaultPrevented).toBe(false)
 
     fireEvent.wheel(content, { ctrlKey: true, deltaY: -40 })
     fireEvent.wheel(content, { deltaY: -40, metaKey: true })
     expect(parentHandlers.onWheel).toHaveBeenCalledTimes(2)
-    expect(nativeCanvasWheel).toHaveBeenCalledTimes(2)
   })
 
   it('lets inactive preview pointer and wheel gestures reach the canvas', () => {

@@ -45,11 +45,14 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     scopedStatus.activePath === props.activePath
       ? scopedStatus.status
       : ({ phase: 'loading' } as const)
+  const activePath = props.activePath
+  const onStatusChange = props.onStatusChange
   const handleStatusChange = useCallback(
     (nextStatus: MarkdownEditorStatus) => {
-      setScopedStatus({ activePath: props.activePath, status: nextStatus })
+      setScopedStatus({ activePath, status: nextStatus })
+      onStatusChange?.(nextStatus)
     },
-    [props.activePath],
+    [activePath, onStatusChange],
   )
   const getEditor = useCallback(() => surfaceRef.current?.getEditor() ?? null, [])
   usePlateFocusHeading(props.activePath, getEditor)

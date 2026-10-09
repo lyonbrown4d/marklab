@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import { ImmersiveWorkspaceShell } from '@/components/ImmersiveWorkspaceShell'
 import { AppWorkspaceSidebar } from '@/app/AppWorkspaceSidebar'
@@ -10,6 +10,10 @@ import { getWorkspaceTabId } from '@/logic/tabs'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import TabsBar from '@/components/TabsBar'
+import {
+  EditorFocusHandoffProvider,
+  useEditorFocusHandoffController,
+} from '@/app/EditorFocusHandoff'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -67,6 +71,7 @@ export const AppWorkspacePanels = ({
   immersiveZenMode,
 }: AppWorkspacePanelsProps) => {
   const { t } = useI18n()
+  const [sidebarDismissRequest, setSidebarDismissRequest] = useState(0)
   const tabIds = useMemo(() => state.tabs.map(getWorkspaceTabId), [state.tabs])
   const toggleSidebar = useCallback(() => {
     const { sidebarCollapsed } = usePreferencesStore.getState()
@@ -77,6 +82,44 @@ export const AppWorkspacePanels = ({
       current.sidebarCollapsed === !open ? current : { sidebarCollapsed: !open },
     )
   }, [])
+  const closeSidebarAfterOpen = useCallback(() => {
+    setSidebarOpen(false)
+    setSidebarDismissRequest((request) => request + 1)
+  }, [setSidebarOpen])
+  const activeFileTab = useMemo(
+    () =>
+      state.tabs.find((tab) => tab.kind === 'file' && getWorkspaceTabId(tab) === state.activeTabId),
+    [state.activeTabId, state.tabs],
+  )
+  const {
+    begin: beginFocusHandoff,
+    cancel: cancelFocusHandoff,
+    value: focusHandoffValue,
+  } = useEditorFocusHandoffController({
+    activePath: activeFileTab?.kind === 'file' ? activeFileTab.path : null,
+    activeView: activeFileTab?.kind === 'file' ? activeFileTab.view : null,
+    onComplete: closeSidebarAfterOpen,
+  })
+  const openFileFromSidebar = useCallback(
+    (path: string) => {
+      const focusOrigin =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      cancelFocusHandoff()
+      onOpenFile(path)
+      beginFocusHandoff(path, undefined, focusOrigin)
+    },
+    [beginFocusHandoff, cancelFocusHandoff, onOpenFile],
+  )
+  const openFileViewFromSidebar = useCallback(
+    (path: string, view: FileViewKind) => {
+      const focusOrigin =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      cancelFocusHandoff()
+      onOpenFileView(path, view)
+      beginFocusHandoff(path, view, focusOrigin)
+    },
+    [beginFocusHandoff, cancelFocusHandoff, onOpenFileView],
+  )
   const toggleInspector = useCallback(() => {
     const { rightSidebarCollapsed } = usePreferencesStore.getState()
     usePreferencesStore.setState({ rightSidebarCollapsed: !rightSidebarCollapsed })
@@ -87,8 +130,8 @@ export const AppWorkspacePanels = ({
       activeResourcePath={state.activeResourcePath}
       files={state.files}
       fileTree={state.fileTree}
-      onOpenFile={onOpenFile}
-      onOpenFileView={onOpenFileView}
+      onOpenFile={openFileFromSidebar}
+      onOpenFileView={openFileViewFromSidebar}
       onCreateFile={state.createFile}
       onCreateFolder={state.createFolder}
       onRenamePath={state.renamePath}
@@ -124,6 +167,7 @@ export const AppWorkspacePanels = ({
       sidebarOpen={!state.sidebarCollapsed && !immersiveZenMode}
       inspectorOpen={!state.rightSidebarCollapsed && !immersiveZenMode}
       sidebarLabel={t('actions.toggleSidebar')}
+      sidebarDismissRequest={sidebarDismissRequest}
       inspectorLabel={t('titlebar.documentOutline')}
       onToggleSidebar={toggleSidebar}
       onSidebarOpenChange={setSidebarOpen}
@@ -141,7 +185,9 @@ export const AppWorkspacePanels = ({
             onOpenTab={state.onOpenTab}
           />
         ) : null}
-        <div className="min-h-0 flex-1 overflow-hidden">{outlet}</div>
+        <EditorFocusHandoffProvider value={focusHandoffValue}>
+          <div className="min-h-0 flex-1 overflow-hidden">{outlet}</div>
+        </EditorFocusHandoffProvider>
       </section>
     </ImmersiveWorkspaceShell>
   )

@@ -12,6 +12,70 @@
   fill: hsl(var(--background) / 68%);
 }
 
+.workspace-map-canvas .react-flow__node.draggable:not(.dragging) {
+  cursor: grab;
+}
+
+.workspace-map-canvas .react-flow__node.draggable.dragging {
+  cursor: grabbing;
+}
+
+.workspace-map-canvas
+  .react-flow__node.draggable
+  :is(
+    .workspace-map-resource-drag-handle,
+    .embedded-preview-drag-handle,
+    .workspace-map-web-drag-handle
+  ) {
+  cursor: grab;
+}
+
+.workspace-map-canvas
+  .react-flow__node.draggable
+  :is(
+    .workspace-map-resource-drag-handle,
+    .embedded-preview-drag-handle,
+    .workspace-map-web-drag-handle
+  ):active {
+  cursor: grabbing;
+}
+
+.workspace-map-canvas
+  .react-flow__node:not(.draggable)
+  :is(
+    .workspace-map-resource-drag-handle,
+    .embedded-preview-drag-handle,
+    .workspace-map-web-drag-handle
+  ) {
+  cursor: default;
+}
+
+.workspace-map-node__resize-line:is(.left, .right) {
+  cursor: ew-resize;
+}
+
+.workspace-map-node__resize-line:is(.top, .bottom) {
+  cursor: ns-resize;
+}
+
+.workspace-map-node__resize-handle:is(.top.left, .bottom.right) {
+  cursor: nwse-resize;
+}
+
+.workspace-map-node__resize-handle:is(.top.right, .bottom.left) {
+  cursor: nesw-resize;
+}
+
+.workspace-map-node__resize-handle:hover,
+.workspace-map-node__resize-line:hover,
+.workspace-map-canvas
+  .react-flow__node:is(:focus-visible, :focus-within)
+  :is(.workspace-map-node__resize-handle, .workspace-map-node__resize-line) {
+  outline: 2px solid color-mix(in srgb, hsl(var(--primary)) 34%, transparent);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
 .graph-edge--reference .react-flow__edge-path {
   stroke-dasharray: 5 5;
   stroke-opacity: 0.66;

@@ -6,6 +6,7 @@ const readStyle = (file: string) => readFileSync(new URL(file, import.meta.url),
 
 describe('graph interaction styles', () => {
   const graphStyles = readStyle('./app/_graph.scss')
+  const graphNavigationStyles = readStyle('./app/_graph-navigation.scss')
   const workspaceMapGroupStyles = readStyle('./app/_workspace-map-groups.scss')
   const workspaceMapStyles = readStyle('./app/_workspace-map.scss')
 
@@ -18,6 +19,49 @@ describe('graph interaction styles', () => {
     expect(hoverRule).toContain('box-shadow:')
     expect(hoverRule).not.toContain('transform:')
     expect(hoverRule).not.toContain('translateY(-1px)')
+  })
+
+  it('uses stable drag feedback and directional resize affordances', () => {
+    const draggingRule = graphNavigationStyles.match(
+      /\.workspace-map-canvas \.react-flow__node\.draggable\.dragging\s*\{[\s\S]*?\n}/,
+    )?.[0]
+
+    expect(graphNavigationStyles).toMatch(
+      /\.workspace-map-canvas \.react-flow__node\.draggable:not\(\.dragging\)[\s\S]*?cursor: grab;/,
+    )
+    expect(graphNavigationStyles).toMatch(
+      /\.workspace-map-canvas \.react-flow__node\.draggable\.dragging[\s\S]*?cursor: grabbing;/,
+    )
+    expect(draggingRule).not.toContain('transform:')
+    expect(graphNavigationStyles).toMatch(
+      /resize-line:is\(\.left, \.right\)[\s\S]*?cursor: ew-resize;/,
+    )
+    expect(graphNavigationStyles).toMatch(
+      /resize-line:is\(\.top, \.bottom\)[\s\S]*?cursor: ns-resize;/,
+    )
+    expect(graphNavigationStyles).toMatch(/resize-handle:is\(\.top\.left, \.bottom\.right\)/)
+    expect(graphNavigationStyles).toMatch(/resize-handle:is\(\.top\.right, \.bottom\.left\)/)
+  })
+
+  it('only advertises preview drag handles from draggable React Flow nodes', () => {
+    expect(graphNavigationStyles).toMatch(
+      /\.react-flow__node\.draggable[\s\S]*?workspace-map-web-drag-handle[\s\S]*?cursor: grab;/,
+    )
+    expect(graphNavigationStyles).toMatch(
+      /\.react-flow__node:not\(\.draggable\)[\s\S]*?embedded-preview-drag-handle[\s\S]*?cursor: default;/,
+    )
+  })
+
+  it('drives every resize affordance from the focusable React Flow node', () => {
+    expect(graphNavigationStyles).toMatch(
+      /\.react-flow__node:is\(:focus-visible, :focus-within\)[\s\S]*?workspace-map-node__resize-handle/,
+    )
+    expect(graphNavigationStyles).toMatch(
+      /\.react-flow__node:is\(:focus-visible, :focus-within\)[\s\S]*?workspace-map-node__resize-line/,
+    )
+    expect(graphNavigationStyles).not.toContain(
+      '.workspace-map-node__resize-handle:is(:hover, :focus-visible)',
+    )
   })
 
   it('themes file graph nodes through the shared graph node shell', () => {

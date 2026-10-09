@@ -1,5 +1,12 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { themeFromActionId, themeModeFromActionId } from '@/logic/themes'
+import {
+  isAppActionEnabled,
+  isAppActionId,
+  isDispatchableAppActionId,
+  runAppAction,
+  type AppActionHandlers,
+} from '@/logic/appActionCatalog'
 import { isDesktopRuntime } from '@/runtime/window'
 import { appApi } from '@/services/appApi'
 import type { FsSearchResult } from '@/services/fsApi'
@@ -74,64 +81,55 @@ export const useTitlebarCommandActions = ({
     onCommandOpenChange(true)
   }, [onCommandOpenChange])
 
+  const actionHandlers = useMemo(
+    () =>
+      ({
+        'file.export_docx': () => onMenuAction('file.export_docx'),
+        'file.export_html': () => onMenuAction('file.export_html'),
+        'file.export_pdf': () => onMenuAction('file.export_pdf'),
+        'file.new': onCreateFile,
+        'file.new_folder': onCreateFolder,
+        'file.open_file': onSelectSingleFile,
+        'file.open_project': onSelectProject,
+        'help.about': () => onMenuAction('help.about'),
+        'settings.open': onOpenSettings,
+        'tab.close': onCloseActiveTab,
+        'view.focus_file_search': onFocusFileSearch,
+        'view.source': () => onChangeView('source'),
+        'view.toggle_readonly': onToggleReadOnly,
+        'view.toggle_right_sidebar': onToggleRightSidebar,
+        'view.toggle_sidebar': onToggleSidebar,
+        'view.toggle_status_bar': () => {
+          const preferences = usePreferencesStore.getState()
+          preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
+        },
+        'view.wysiwyg': () => onChangeView('wysiwyg'),
+        'window.open_current_workspace_in_new_window': () =>
+          onMenuAction('window.open_current_workspace_in_new_window'),
+      }) satisfies AppActionHandlers,
+    [
+      onChangeView,
+      onCloseActiveTab,
+      onCreateFile,
+      onCreateFolder,
+      onFocusFileSearch,
+      onMenuAction,
+      onOpenSettings,
+      onSelectProject,
+      onSelectSingleFile,
+      onToggleReadOnly,
+      onToggleRightSidebar,
+      onToggleSidebar,
+    ],
+  )
+
   const onCommandAction = useCallback(
     (id: string) => {
       onCommandOpenChange(false)
-      if (id === 'view.wysiwyg') {
-        onChangeView('wysiwyg')
-        return
-      }
-      if (id === 'view.source') {
-        onChangeView('source')
-        return
-      }
-      if (id === 'view.toggle_readonly') {
-        onToggleReadOnly()
-        return
-      }
-      if (id === 'view.toggle_status_bar') {
-        const preferences = usePreferencesStore.getState()
-        preferences.setShowEditorStatusBar(!preferences.showEditorStatusBar)
-        return
-      }
-      if (id === 'file.open_project') {
-        onSelectProject()
-        return
-      }
-      if (id === 'file.open_file') {
-        onSelectSingleFile()
-        return
-      }
-      if (id === 'file.new') {
-        if (canCreateWorkspaceEntries) onCreateFile()
-        return
-      }
-      if (id === 'file.new_folder') {
-        if (canCreateWorkspaceEntries) onCreateFolder()
-        return
-      }
-      if (id === 'window.open_current_workspace_in_new_window') {
-        onMenuAction(id)
-        return
-      }
-      if (id === 'tab.close') {
-        onCloseActiveTab()
-        return
-      }
-      if (id === 'view.toggle_sidebar') {
-        onToggleSidebar()
-        return
-      }
-      if (id === 'view.toggle_right_sidebar') {
-        onToggleRightSidebar()
-        return
-      }
-      if (id === 'view.focus_file_search') {
-        onFocusFileSearch()
-        return
-      }
-      if (id === 'settings.open') {
-        onOpenSettings()
+      if (isAppActionId(id)) {
+        if (isDispatchableAppActionId(id)) {
+          runAppAction(id, actionHandlers, isAppActionEnabled(id, canCreateWorkspaceEntries))
+        }
         return
       }
       if (id === 'workspace.open_graph') {
@@ -164,28 +162,14 @@ export const useTitlebarCommandActions = ({
         setTheme(selectedTheme)
         return
       }
-      if (id === 'help.about' || id.startsWith('file.export_')) {
-        onMenuAction(id)
-      }
     },
     [
+      actionHandlers,
       canCreateWorkspaceEntries,
-      onChangeView,
-      onCloseActiveTab,
-      onCreateFile,
-      onCreateFolder,
-      onFocusFileSearch,
-      onMenuAction,
-      onOpenSettings,
       onOpenTerminal,
       onOpenAllPages,
-      onToggleReadOnly,
       onOpenWorkspaceGraph,
       onRebuildSearchIndex,
-      onSelectProject,
-      onSelectSingleFile,
-      onToggleRightSidebar,
-      onToggleSidebar,
       onCommandOpenChange,
       setTheme,
     ],

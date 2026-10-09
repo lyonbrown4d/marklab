@@ -19,6 +19,7 @@ export type PlateSlashCommandLabels = Record<SlashCommandLabelKey, string> & {
   linkTextPrompt: string
   linkUrlPrompt: string
   listGroup: string
+  menuLabel: string
   noResults: string
   textGroup: string
 }

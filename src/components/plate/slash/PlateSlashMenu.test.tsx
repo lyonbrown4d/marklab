@@ -17,6 +17,7 @@ describe('PlateSlashMenu', () => {
         anchor={{ left: 20, top: 40 }}
         commands={commands}
         labels={labels}
+        menuId="slash-suggestions"
         onDismiss={vi.fn()}
         onSelect={onSelect}
         onSelectedIndexChange={vi.fn()}
@@ -25,11 +26,18 @@ describe('PlateSlashMenu', () => {
       />,
     )
 
+    expect(
+      screen
+        .getByRole('listbox', { name: 'Block suggestions' })
+        .closest('[data-editor-suggestion-menu]'),
+    ).toHaveAttribute('id', 'slash-suggestions')
     expect(screen.getByText(labels.textGroup)).toBeInTheDocument()
     expect(screen.getByText(labels.listGroup)).toBeInTheDocument()
     expect(screen.getByText(labels.advancedGroup)).toBeInTheDocument()
     await user.click(screen.getByRole('option', { name: labels.mermaid }))
     expect(onSelect).toHaveBeenCalledWith(commands[2])
+    expect(screen.getByRole('listbox').closest('[data-editor-suggestion-menu]')).toBeInTheDocument()
+    expect(screen.getAllByText('Enter').length).toBeGreaterThan(0)
   })
 
   it('shows an explicit empty result', () => {

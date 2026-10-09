@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createPlateEditor } from 'platejs/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
 import { plateSlashTestLabels as labels } from '@/components/plate/slash/testFixtures'
 import { usePlateSlashCommands } from '@/components/plate/slash/usePlateSlashCommands'
+
+let selectedDomNode: Node
 
 const createEditor = (text: string) => {
   const editor = createPlateEditor({
@@ -14,6 +16,10 @@ const createEditor = (text: string) => {
     anchor: { path: [0, 0], offset: text.length },
     focus: { path: [0, 0], offset: text.length },
   }
+  const root = document.createElement('div')
+  selectedDomNode = document.createTextNode(text)
+  root.append(selectedDomNode)
+  vi.spyOn(editor.api, 'toDOMNode').mockReturnValue(root)
   return editor
 }
 
@@ -21,7 +27,19 @@ const keyboardEvent = (key: string, init: KeyboardEventInit = {}) =>
   new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key, ...init })
 
 describe('usePlateSlashCommands', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'getSelection').mockReturnValue({
+      getRangeAt: () =>
+        ({
+          commonAncestorContainer: selectedDomNode,
+          getClientRects: () => [{ bottom: 40, height: 20, left: 20, width: 1 }],
+        }) as unknown as Range,
+      rangeCount: 1,
+    } as unknown as Selection)
+  })
+
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -182,22 +200,92 @@ describe('usePlateSlashCommands', () => {
     expect(result.current.menu.open).toBe(false)
   })
 
-  it.each(['scroll', 'resize'])('updates the menu anchor on %s', (eventName) => {
-    let rect = { bottom: 40, left: 20 }
-    vi.spyOn(window, 'getSelection').mockReturnValue({
-      getRangeAt: () => ({ getBoundingClientRect: () => rect }) as Range,
-      rangeCount: 1,
-    } as unknown as Selection)
+  it('discards a stale menu when the document context changes', () => {
+    const editor = createEditor('/head')
+    const { rerender, result } = renderHook(
+      ({ documentIdentity }) => usePlateSlashCommands({ documentIdentity, editor, labels }),
+      { initialProps: { documentIdentity: 'a.md' } },
+    )
+    act(() => result.current.syncFromEditor())
+    expect(result.current.menu.open).toBe(true)
+
+    rerender({ documentIdentity: 'b.md' })
+    rerender({ documentIdentity: 'a.md' })
+
+    expect(result.current.menu.open).toBe(false)
+  })
+
+  it('dismisses the menu when the application window loses focus', () => {
     const editor = createEditor('/head')
     const { result } = renderHook(() =>
       usePlateSlashCommands({ documentIdentity: 'a.md', editor, labels }),
     )
     act(() => result.current.syncFromEditor())
-    expect(result.current.menu.anchor).toEqual({ left: 20, top: 40 })
 
-    rect = { bottom: 120, left: 80 }
-    act(() => window.dispatchEvent(new Event(eventName)))
+    act(() => window.dispatchEvent(new Event('blur')))
 
-    expect(result.current.menu.anchor).toEqual({ left: 80, top: 120 })
+    expect(result.current.menu.open).toBe(false)
+  })
+
+  it('does not reopen from a queued microtask after editing becomes read-only', async () => {
+    const editor = createEditor('/head')
+    const { rerender, result } = renderHook(
+      ({ readOnly }) =>
+        usePlateSlashCommands({
+          canEdit: () => !readOnly,
+          documentIdentity: 'a.md',
+          editor,
+          labels,
+        }),
+      { initialProps: { readOnly: false } },
+    )
+
+    act(() => expect(result.current.onKeyDown(keyboardEvent('x'))).toBe(false))
+    rerender({ readOnly: true })
+    await act(async () => Promise.resolve())
+
+    expect(result.current.menu.open).toBe(false)
+  })
+
+  it('dismisses an open menu when editing becomes unavailable', () => {
+    const editor = createEditor('/head')
+    const { rerender, result } = renderHook(
+      ({ readOnly }) =>
+        usePlateSlashCommands({
+          canEdit: () => !readOnly,
+          documentIdentity: 'a.md',
+          editor,
+          labels,
+        }),
+      { initialProps: { readOnly: false } },
+    )
+    act(() => result.current.syncFromEditor())
+    expect(result.current.menu.open).toBe(true)
+    act(() => result.current.onKeyDown(keyboardEvent('ArrowDown')))
+    expect(result.current.menu.selectedIndex).toBe(1)
+
+    rerender({ readOnly: true })
+
+    expect(result.current.menu.open).toBe(false)
+    expect(result.current.menu.commands).toEqual([])
+    expect(result.current.menu.selectedIndex).toBe(0)
+  })
+
+  it('does not run a queued timeout after the document context changes', () => {
+    vi.useFakeTimers()
+    const editor = createEditor('/head')
+    const { rerender, result } = renderHook(
+      ({ documentIdentity }) => usePlateSlashCommands({ documentIdentity, editor, labels }),
+      { initialProps: { documentIdentity: 'a.md' } },
+    )
+    act(() => result.current.syncFromEditor())
+    vi.mocked(window.getSelection).mockClear()
+
+    act(() => expect(result.current.onKeyDown(keyboardEvent('Home'))).toBe(false))
+    rerender({ documentIdentity: 'b.md' })
+    act(() => vi.runAllTimers())
+
+    expect(window.getSelection).not.toHaveBeenCalled()
+    expect(result.current.menu.open).toBe(false)
   })
 })

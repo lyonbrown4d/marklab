@@ -40,6 +40,7 @@ export const plateSlashTestLabels: PlateSlashCommandLabels = {
   linkTextPrompt: 'Enter link text',
   linkUrlPrompt: 'Enter link URL',
   listGroup: 'List',
+  menuLabel: 'Block suggestions',
   mermaid: 'Mermaid diagram',
   noResults: 'No commands found',
   orderedList: 'Ordered list',

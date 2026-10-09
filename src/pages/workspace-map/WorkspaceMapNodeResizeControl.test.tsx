@@ -65,6 +65,14 @@ describe('WorkspaceMapNodeResizeControl', () => {
     screen.getAllByTestId(/resize-(line|handle)/).forEach((control) => {
       expect(control).toHaveClass('nodrag', 'nopan')
     })
+    screen.getAllByTestId('resize-line').forEach((line) => {
+      expect(line).toHaveClass('workspace-map-node__resize-line')
+      expect(line).not.toHaveAttribute('tabindex')
+    })
+    screen.getAllByTestId('resize-handle').forEach((handle) => {
+      expect(handle).toHaveClass('workspace-map-node__resize-handle')
+      expect(handle).not.toHaveAttribute('tabindex')
+    })
     expect(resizer).toHaveAttribute('data-min-height', '180')
     expect(resizer).toHaveAttribute('data-min-width', '300')
     expect(resizer).toHaveAttribute('data-max-height', '960')

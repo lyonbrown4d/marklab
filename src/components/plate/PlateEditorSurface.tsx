@@ -15,6 +15,7 @@ import {
   type PlateExternalValueSyncHandle,
 } from '@/components/plate/PlateExternalValueSyncController'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
+import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
@@ -216,7 +217,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       completion.onEditorChange()
       queueSnapshot()
     }, [completion, markSnapshotDirty, queueSnapshot])
-
     const handleSelectionChange = useCallback(() => {
       completion.onSelectionChange()
       syncSlashFromEditor()
@@ -224,7 +224,12 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     }, [completion, syncActiveFocusBlock, syncSlashFromEditor])
 
     return (
-      <div {...assetDrop.dropzoneRootProps} ref={assetDrop.setShellElement}>
+      <div
+        {...assetDrop.dropzoneRootProps}
+        data-plate-editor-shell="true"
+        data-testid="plate-editor-shell"
+        ref={assetDrop.setShellElement}
+      >
         <PlateDndProvider>
           <Plate
             decorate={completion.decorate}
@@ -255,6 +260,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               spellCheck
               tabIndex={readOnly ? 0 : undefined}
             />
+            <PlateDndEdgeScroller containerRef={editableRef} />
             {slashLabels && (
               <PlateEditorOverlays
                 activePath={activePath}
@@ -289,7 +295,5 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     )
   },
 )
-
 PlateEditorSurfaceImpl.displayName = 'PlateEditorSurface'
-
 export const PlateEditorSurface = memo(PlateEditorSurfaceImpl)

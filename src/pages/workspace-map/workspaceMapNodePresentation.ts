@@ -14,6 +14,8 @@ const EMBEDDED_PREVIEW_DRAG_HANDLE_CLASS = 'embedded-preview-drag-handle'
 const WEB_PREVIEW_DRAG_HANDLE_CLASS = 'workspace-map-web-drag-handle'
 
 const getWorkspaceMapNodeDragHandle = (node: Node<GraphNodeData>, editorActive: boolean) => {
+  if (node.data.workspaceMapPinned) return undefined
+  if (node.data.workspaceMapDisclosure?.collapsed) return undefined
   if (node.type === 'preview' && node.data.previewKind) {
     return `.${EMBEDDED_PREVIEW_DRAG_HANDLE_CLASS}`
   }

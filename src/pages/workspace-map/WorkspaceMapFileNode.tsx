@@ -105,6 +105,7 @@ const WorkspaceMapEmbeddedEditor = ({
   }
 
   const handleWheel = (event: WheelEvent<HTMLElement>) => {
+    // Static nowheel/nopan classes also suppress React Flow's modifier-driven pinch zoom.
     if (editor && !event.ctrlKey && !event.metaKey) event.stopPropagation()
   }
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -158,7 +159,7 @@ const WorkspaceMapEmbeddedEditor = ({
       <div
         className={cn(
           'relative min-h-0 flex-1 overflow-hidden rounded-b-[inherit] bg-background',
-          editor && 'nodrag nopan',
+          editor && 'nodrag cursor-text',
         )}
         data-testid="workspace-map-editor-content"
         onClick={editor ? stopGraphEvent : undefined}

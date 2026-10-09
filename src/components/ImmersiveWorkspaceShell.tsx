@@ -11,6 +11,7 @@ type ImmersiveWorkspaceShellProps = {
   sidebar: ReactNode
   inspector: ReactNode
   sidebarOpen: boolean
+  sidebarDismissRequest?: number
   inspectorOpen: boolean
   sidebarLabel: string
   inspectorLabel: string
@@ -24,6 +25,7 @@ export const ImmersiveWorkspaceShell = ({
   sidebar,
   inspector,
   sidebarOpen,
+  sidebarDismissRequest = 0,
   inspectorOpen,
   sidebarLabel,
   inspectorLabel,
@@ -38,6 +40,7 @@ export const ImmersiveWorkspaceShell = ({
     useSidebarHoverPreview({
       pinnedOpen: sidebarOpen,
       onPinOpen: pinSidebarOpen,
+      dismissRequest: sidebarDismissRequest,
     })
   const effectiveSidebarOpen = sidebarOpen || previewOpen
   const setNativeDrawers = useNativeSurfaceInsetsStore((state) => state.setDrawers)
@@ -101,7 +104,20 @@ export const ImmersiveWorkspaceShell = ({
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
-            returnFocusRef.current?.focus({ preventScroll: true })
+            const target = returnFocusRef.current
+            if (!target?.isConnected) return
+
+            const active = document.activeElement
+            const closingDrawer = event.currentTarget
+            if (
+              active instanceof HTMLElement &&
+              active !== document.body &&
+              active !== document.documentElement &&
+              !(closingDrawer instanceof HTMLElement && closingDrawer.contains(active))
+            ) {
+              return
+            }
+            target.focus({ preventScroll: true })
           }}
           onPointerEnter={enterDrawer}
           onPointerLeave={leaveHoverRegion}

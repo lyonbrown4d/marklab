@@ -28,12 +28,16 @@ export const WorkspaceMapReferenceNode = memo(
     const Icon = iconByType[kind]
     const subtitle = getSubtitle(data)
     const disclosure = data.workspaceMapDisclosure
+    const dragCursorClass = data.workspaceMapPinned
+      ? 'cursor-default'
+      : 'cursor-grab active:cursor-grabbing'
     if (disclosure?.collapsed) {
       return (
         <section
           aria-label={data.label}
           className={cn(
             'workspace-map-node flex h-[72px] w-[220px] items-center gap-2 overflow-visible rounded-lg px-3',
+            dragCursorClass,
             selected && 'workspace-map-node--selected',
           )}
           data-workspace-map-kind={kind}
@@ -133,6 +137,7 @@ export const WorkspaceMapReferenceNode = memo(
       <div
         className={cn(
           'workspace-map-node flex size-full min-h-20 min-w-44 items-start gap-2 overflow-visible rounded-lg px-3 py-3',
+          dragCursorClass,
           selected && 'workspace-map-node--selected',
         )}
         data-workspace-map-kind={kind}

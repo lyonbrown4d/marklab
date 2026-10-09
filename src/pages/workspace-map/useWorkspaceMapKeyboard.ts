@@ -27,6 +27,7 @@ export const useWorkspaceMapKeyboard = ({
       if (event.defaultPrevented || isImeKeyboardEvent(event.nativeEvent)) return
       if (event.key === 'Escape' && activePath) {
         event.preventDefault()
+        event.stopPropagation()
         onCloseEditor()
         return
       }
@@ -35,16 +36,19 @@ export const useWorkspaceMapKeyboard = ({
       }
       if (event.key === '+' || event.key === '=') {
         event.preventDefault()
+        event.stopPropagation()
         void flow?.zoomIn({ duration: 0 })
         return
       }
       if (event.key === '-') {
         event.preventDefault()
+        event.stopPropagation()
         void flow?.zoomOut({ duration: 0 })
         return
       }
       if (event.key === '0') {
         event.preventDefault()
+        event.stopPropagation()
         void flow?.fitView({ duration: 0, maxZoom: 1, minZoom: 0.35, padding: 0.22 })
         return
       }
@@ -54,6 +58,7 @@ export const useWorkspaceMapKeyboard = ({
       const node = nodesById.get(nodeElement.dataset.id ?? '')
       if (!node || !getWorkspaceMapNodeOpenPath(node)) return
       event.preventDefault()
+      event.stopPropagation()
       activateNode(node)
     },
     [activePath, activateNode, flow, nodesById, onCloseEditor],

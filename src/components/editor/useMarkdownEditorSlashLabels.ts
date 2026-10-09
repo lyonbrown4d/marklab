@@ -9,6 +9,7 @@ export const useMarkdownEditorSlashLabels = (): MarkdownEditorSlashLabels => {
       textGroup: t('slash.textGroup'),
       listGroup: t('slash.listGroup'),
       advancedGroup: t('slash.advancedGroup'),
+      menuLabel: t('slash.menuLabel'),
       text: t('slash.text'),
       heading1: t('slash.heading1'),
       heading2: t('slash.heading2'),

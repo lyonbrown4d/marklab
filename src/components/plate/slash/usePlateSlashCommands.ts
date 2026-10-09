@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { PlateEditor } from 'platejs/react'
+import { getEditorSuggestionOptionIdForIndex } from '@/components/menu/EditorSuggestionMenu'
+import { useEditorSuggestionAria } from '@/components/menu/useEditorSuggestionAria'
 import {
   createPlateSlashCommands,
   canRunPlateSlashCommand,
@@ -14,6 +16,7 @@ import type {
   PlateSlashTrigger,
   RunPlateSlashCommandOptions,
 } from '@/components/plate/slash/types'
+import { usePlateSlashDeferredTasks } from '@/components/plate/slash/usePlateSlashDeferredTasks'
 import { usePlateSlashUrlDialog } from '@/components/plate/slash/usePlateSlashUrlDialog'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
@@ -31,16 +34,28 @@ type UsePlateSlashCommandsOptions = Pick<
 
 type ActiveSlash = {
   anchor: PlateSlashAnchor
+  contextToken: object
   documentIdentity: string | null | undefined
   editor: PlateEditor
   trigger: PlateSlashTrigger
 }
 
-const captureAnchor = (): PlateSlashAnchor => {
+const captureAnchor = (editor: PlateEditor): PlateSlashAnchor | null => {
+  const root = editor.api.toDOMNode(editor)
   const selection = window.getSelection()
   const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-  const rect = range?.getBoundingClientRect?.()
-  return { left: rect?.left ?? 0, top: rect?.bottom ?? 0 }
+  const container = range?.commonAncestorContainer
+  if (!root || !container || (container !== root && !root.contains(container))) return null
+  const rect = Array.from(range.getClientRects()).find(
+    ({ bottom, height, left, width }) =>
+      Number.isFinite(left) &&
+      Number.isFinite(bottom) &&
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      (width > 0 || height > 0),
+  )
+  if (!rect || !Number.isFinite(rect.left) || !Number.isFinite(rect.bottom)) return null
+  return { left: rect.left, top: rect.bottom }
 }
 
 export const usePlateSlashCommands = ({
@@ -53,13 +68,24 @@ export const usePlateSlashCommands = ({
   onImageImport,
 }: UsePlateSlashCommandsOptions) => {
   const allCommands = useMemo(() => createPlateSlashCommands(labels), [labels])
+  const generatedId = useId()
+  const menuId = `marklab-slash-suggestions-${generatedId}`
+  const editingAllowed = !canEdit || canEdit()
+  const contextToken = useMemo(
+    () => ({ documentIdentity, editingAllowed, editor }),
+    [documentIdentity, editingAllowed, editor],
+  )
   const [active, setActive] = useState<ActiveSlash | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const urlDialog = usePlateSlashUrlDialog(documentIdentity)
-  const currentActive =
-    active && active.documentIdentity === documentIdentity && active.editor === editor
-      ? active
-      : null
+  const {
+    cancelAnimationFrameTask,
+    cancelPending,
+    scheduleAnimationFrame,
+    scheduleMicrotask,
+    scheduleTimeout,
+  } = usePlateSlashDeferredTasks({ canEdit, contextToken })
+  const currentActive = active && active.contextToken === contextToken ? active : null
   const commands = useMemo(
     () =>
       currentActive
@@ -70,48 +96,77 @@ export const usePlateSlashCommands = ({
     [allCommands, currentActive, editor],
   )
   const menuOpen = Boolean(currentActive)
+  const activeOptionId = getEditorSuggestionOptionIdForIndex(
+    menuId,
+    commands,
+    currentActive ? selectedIndex : 0,
+    (command) => command.key,
+  )
+  const dismiss = useCallback(() => {
+    cancelPending()
+    setActive(null)
+    setSelectedIndex(0)
+  }, [cancelPending])
+  useEditorSuggestionAria({ activeOptionId, editor, menuId, open: menuOpen })
 
   const refreshAnchor = useCallback(() => {
+    const anchor = captureAnchor(editor)
+    if (!anchor) {
+      dismiss()
+      return
+    }
     setActive((current) => {
       if (!current || current.documentIdentity !== documentIdentity || current.editor !== editor) {
         return current
       }
-      const anchor = captureAnchor()
       if (anchor.left === current.anchor.left && anchor.top === current.anchor.top) return current
       return { ...current, anchor }
     })
-  }, [documentIdentity, editor])
+  }, [dismiss, documentIdentity, editor])
+
+  const scheduleAnchorRefresh = useCallback(
+    () => scheduleAnimationFrame(refreshAnchor),
+    [refreshAnchor, scheduleAnimationFrame],
+  )
 
   useEffect(() => {
     if (!menuOpen) return
-    window.addEventListener('resize', refreshAnchor)
-    window.addEventListener('scroll', refreshAnchor, true)
-    return () => {
-      window.removeEventListener('resize', refreshAnchor)
-      window.removeEventListener('scroll', refreshAnchor, true)
+    const dismissOnVisibilityLoss = () => {
+      if (document.visibilityState === 'hidden') dismiss()
     }
-  }, [menuOpen, refreshAnchor])
+    window.addEventListener('blur', dismiss)
+    window.addEventListener('pagehide', dismiss)
+    window.addEventListener('resize', scheduleAnchorRefresh)
+    window.addEventListener('scroll', scheduleAnchorRefresh, true)
+    document.addEventListener('visibilitychange', dismissOnVisibilityLoss)
+    return () => {
+      window.removeEventListener('blur', dismiss)
+      window.removeEventListener('pagehide', dismiss)
+      window.removeEventListener('resize', scheduleAnchorRefresh)
+      window.removeEventListener('scroll', scheduleAnchorRefresh, true)
+      document.removeEventListener('visibilitychange', dismissOnVisibilityLoss)
+      cancelAnimationFrameTask()
+    }
+  }, [cancelAnimationFrameTask, dismiss, menuOpen, scheduleAnchorRefresh])
 
   const syncFromEditor = useCallback(() => {
     if (canEdit && !canEdit()) {
-      setActive(null)
-      setSelectedIndex(0)
+      dismiss()
       return
     }
     const trigger = getPlateSlashTrigger(editor)
     if (!trigger) {
-      setActive(null)
-      setSelectedIndex(0)
+      dismiss()
       return
     }
-    setActive({ anchor: captureAnchor(), documentIdentity, editor, trigger })
+    const anchor = captureAnchor(editor)
+    if (!anchor) {
+      dismiss()
+      return
+    }
+    setActive({ anchor, contextToken, documentIdentity, editor, trigger })
     setSelectedIndex(0)
-  }, [canEdit, documentIdentity, editor])
-
-  const dismiss = useCallback(() => {
-    setActive(null)
-    setSelectedIndex(0)
-  }, [])
+  }, [canEdit, contextToken, dismiss, documentIdentity, editor])
 
   const selectCommand = useCallback(
     (command: PlateSlashCommand) => {
@@ -154,7 +209,9 @@ export const usePlateSlashCommands = ({
     (event: KeyboardEvent) => {
       if (isImeKeyboardEvent(event)) return false
       if (!currentActive) {
-        if (event.key.length === 1 || event.key === 'Backspace') queueMicrotask(syncFromEditor)
+        if (event.key.length === 1 || event.key === 'Backspace') {
+          scheduleMicrotask(syncFromEditor)
+        }
         return false
       }
       if (event.key === 'Escape') {
@@ -177,7 +234,7 @@ export const usePlateSlashCommands = ({
         return true
       }
       if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
-        queueMicrotask(syncFromEditor)
+        scheduleMicrotask(syncFromEditor)
       }
       if (
         event.key === 'ArrowLeft' ||
@@ -187,11 +244,20 @@ export const usePlateSlashCommands = ({
         event.key === 'PageUp' ||
         event.key === 'PageDown'
       ) {
-        setTimeout(syncFromEditor, 0)
+        scheduleTimeout(syncFromEditor)
       }
       return false
     },
-    [commands, currentActive, dismiss, selectCommand, selectedIndex, syncFromEditor],
+    [
+      commands,
+      currentActive,
+      dismiss,
+      scheduleMicrotask,
+      scheduleTimeout,
+      selectCommand,
+      selectedIndex,
+      syncFromEditor,
+    ],
   )
 
   return {
@@ -199,9 +265,10 @@ export const usePlateSlashCommands = ({
     menu: {
       anchor: currentActive?.anchor ?? { left: 0, top: 0 },
       commands,
+      menuId,
       onSelectedIndexChange: setSelectedIndex,
       open: menuOpen,
-      selectedIndex,
+      selectedIndex: currentActive ? selectedIndex : 0,
       selectCommand,
     },
     onKeyDown,

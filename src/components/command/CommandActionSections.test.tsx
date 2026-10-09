@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { AriaAttributes, ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import CommandActionSections from '@/components/command/CommandActionSections'
 
@@ -10,6 +10,7 @@ const preferenceState = vi.hoisted(() => ({
   theme: 'ink',
   themeMode: 'dark',
 }))
+const catalogTestState = vi.hoisted(() => ({ createEnabled: undefined as boolean | undefined }))
 
 const messages: Record<string, string> = {
   'actions.about': 'About',
@@ -48,6 +49,27 @@ vi.mock('@/i18n/useI18n', () => ({
     t: (key: string) => messages[key] ?? key,
   }),
 }))
+
+vi.mock('@/logic/appActionCatalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/logic/appActionCatalog')>()
+  return {
+    ...actual,
+    createAppActionPresentations: (
+      options: Parameters<typeof actual.createAppActionPresentations>[0],
+    ) => {
+      const presentations = actual.createAppActionPresentations(options)
+      if (catalogTestState.createEnabled === undefined) return presentations
+      return {
+        ...presentations,
+        'file.new': { ...presentations['file.new'], enabled: catalogTestState.createEnabled },
+        'file.new_folder': {
+          ...presentations['file.new_folder'],
+          enabled: catalogTestState.createEnabled,
+        },
+      }
+    },
+  }
+})
 
 vi.mock('@/store/usePreferencesStore', () => ({
   usePreferencesStore: <T,>(selector: (state: typeof preferenceState) => T) =>
@@ -91,30 +113,6 @@ vi.mock('@/components/command/CommandWorkspaceSection', () => ({
 vi.mock('@/components/command/CommandActionHelpers', () => ({
   CommandActionShortcut: ({ label }: { label?: string }) => (label ? <kbd>{label}</kbd> : null),
   CurrentItemCheck: () => <span aria-hidden="true">Current</span>,
-  commandActionShortcutIds: {
-    closeTab: 'closeTab',
-    commandPalette: 'commandPalette',
-    newFile: 'newFile',
-    openFile: 'openFile',
-    openProject: 'openProject',
-    settings: 'settings',
-    toggleRightSidebar: 'toggleRightSidebar',
-    toggleSidebar: 'toggleSidebar',
-    viewSource: 'viewSource',
-    viewWysiwyg: 'viewWysiwyg',
-  },
-  createShortcutLabels: () => ({
-    closeTab: 'Ctrl+W',
-    commandPalette: 'Mod+K',
-    newFile: 'Ctrl+N',
-    openFile: 'Ctrl+O',
-    openProject: 'Ctrl+Shift+O',
-    settings: 'Ctrl+,',
-    toggleRightSidebar: 'Ctrl+Shift+R',
-    toggleSidebar: 'Ctrl+B',
-    viewSource: 'Ctrl+2',
-    viewWysiwyg: 'Ctrl+1',
-  }),
   currentCommandItemClassName: 'bg-accent text-accent-foreground',
 }))
 
@@ -179,6 +177,10 @@ const buttonFromText = (text: string) => {
 }
 
 describe('CommandActionSections', () => {
+  beforeEach(() => {
+    catalogTestState.createEnabled = undefined
+  })
+
   it('dispatches primary file and palette commands with localized labels', () => {
     const { onAction, onCommandPaletteAction } = renderActions()
 
@@ -220,6 +222,17 @@ describe('CommandActionSections', () => {
     fireEvent.click(buttonFromText('Open File'))
 
     expect(onAction).toHaveBeenCalledWith('file.open_file')
+  })
+
+  it('uses catalog availability as the single source for create actions', () => {
+    catalogTestState.createEnabled = true
+
+    renderActions({ canCreateWorkspaceEntries: false })
+
+    expect(screen.getByRole('button', { name: /New File/ })).toBeEnabled()
+    expect(
+      screen.queryByRole('button', { name: 'Open a folder to create files or folders.' }),
+    ).not.toBeInTheDocument()
   })
 
   it('marks current theme choices and dispatches theme selection actions', () => {

@@ -3,6 +3,8 @@ import type { Path } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import type { CompletionItem } from 'vscode-languageserver-types'
 import { embeddedLanguageClient } from '@/components/editor/language/embeddedLanguageClient'
+import { getEditorSuggestionOptionIdForIndex } from '@/components/menu/EditorSuggestionMenu'
+import { useEditorSuggestionAria } from '@/components/menu/useEditorSuggestionAria'
 import {
   applyPlateCodeCompletion,
   pointToEmbeddedPosition,
@@ -15,6 +17,7 @@ const SUPPORTED_LANGUAGES = new Map([
   ['mermaid', 'mermaid'],
   ['mmd', 'mermaid'],
 ])
+const EMPTY_COMPLETION_ITEMS: CompletionItem[] = []
 let documentSequence = 0
 
 type CompletionController = ReturnType<typeof createPlateCodeCompletionController>
@@ -32,11 +35,16 @@ export const usePlateCodeCompletion = ({
   path,
   source,
 }: UsePlateCodeCompletionOptions) => {
-  const [items, setItems] = useState<CompletionItem[]>([])
+  const [completionState, setCompletionState] = useState<{
+    contextToken: object
+    items: CompletionItem[]
+  } | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const generatedId = useId()
   const menuId = `marklab-code-completion-${generatedId}`
   const controllerRef = useRef<CompletionController | null>(null)
+  const sessionRevisionRef = useRef(0)
+  const acceptCompletionsRef = useRef(true)
   const composingRef = useRef(false)
   const completionTimerRef = useRef<number | null>(null)
   const pathKey = path.join('.')
@@ -45,82 +53,137 @@ export const usePlateCodeCompletion = ({
     [pathKey],
   )
   const normalizedLanguage = SUPPORTED_LANGUAGES.get(language.trim().toLowerCase()) ?? null
+  const contextToken = useMemo(
+    () => ({ blockPath, editor, normalizedLanguage }),
+    [blockPath, editor, normalizedLanguage],
+  )
+  const items =
+    completionState?.contextToken === contextToken ? completionState.items : EMPTY_COMPLETION_ITEMS
+  const resolvedActiveIndex = items.length > 0 ? Math.min(activeIndex, items.length - 1) : 0
+  const activeOptionId = getEditorSuggestionOptionIdForIndex(
+    menuId,
+    items,
+    resolvedActiveIndex,
+    (item) => item.label,
+  )
+  useEditorSuggestionAria({
+    activeOptionId,
+    editor,
+    menuId,
+    open: items.length > 0,
+  })
+
+  const clearCompletionTimer = useCallback(() => {
+    if (completionTimerRef.current == null) return
+    window.clearTimeout(completionTimerRef.current)
+    completionTimerRef.current = null
+  }, [])
+
+  const dismissCompletions = useCallback(() => {
+    acceptCompletionsRef.current = false
+    clearCompletionTimer()
+    controllerRef.current?.cancel()
+    setCompletionState(null)
+    setActiveIndex(0)
+  }, [clearCompletionTimer])
 
   useEffect(() => {
+    const sessionRevision = ++sessionRevisionRef.current
     if (!normalizedLanguage) return
+    acceptCompletionsRef.current = true
     const controller = createPlateCodeCompletionController({
       client: embeddedLanguageClient,
       uri: `marklab-embedded://plate/code-${++documentSequence}.${normalizedLanguage}`,
       languageId: normalizedLanguage,
       text: readPlateCodeSource(editor, blockPath) ?? '',
       onCompletions: (nextItems) => {
-        setItems(nextItems.slice(0, 8))
+        if (sessionRevisionRef.current !== sessionRevision || !acceptCompletionsRef.current) {
+          return
+        }
+        setCompletionState({ contextToken, items: nextItems.slice(0, 8) })
         setActiveIndex(0)
       },
       onError: console.error,
     })
     controllerRef.current = controller
     return () => {
-      controllerRef.current = null
+      acceptCompletionsRef.current = false
+      clearCompletionTimer()
+      controller.cancel()
+      setCompletionState(null)
+      setActiveIndex(0)
+      if (sessionRevisionRef.current === sessionRevision) sessionRevisionRef.current += 1
+      if (controllerRef.current === controller) controllerRef.current = null
       void controller.close().catch(console.error)
     }
-  }, [blockPath, editor, normalizedLanguage])
+  }, [blockPath, clearCompletionTimer, contextToken, editor, normalizedLanguage])
 
   useEffect(() => {
     controllerRef.current?.updateText(source)
   }, [source])
 
-  useEffect(
-    () => () => {
-      if (completionTimerRef.current != null) window.clearTimeout(completionTimerRef.current)
-    },
-    [],
-  )
-
   useEffect(() => {
-    const root = editor.api.toDOMNode(editor)
-    if (!root) return
-    const ownsActiveMenu = () => root.getAttribute('aria-controls') === menuId
-    if (items.length > 0) {
-      root.setAttribute('aria-activedescendant', `${menuId}-option-${activeIndex}`)
-      root.setAttribute('aria-autocomplete', 'list')
-      root.setAttribute('aria-controls', menuId)
-      root.setAttribute('aria-expanded', 'true')
-    } else if (ownsActiveMenu()) {
-      root.removeAttribute('aria-activedescendant')
-      root.removeAttribute('aria-autocomplete')
-      root.removeAttribute('aria-controls')
-      root.setAttribute('aria-expanded', 'false')
+    const dismissWhenHidden = () => {
+      if (document.visibilityState === 'hidden') dismissCompletions()
     }
+    window.addEventListener('blur', dismissCompletions)
+    window.addEventListener('pagehide', dismissCompletions)
+    document.addEventListener('visibilitychange', dismissWhenHidden)
     return () => {
-      if (!ownsActiveMenu()) return
-      root.removeAttribute('aria-activedescendant')
-      root.removeAttribute('aria-autocomplete')
-      root.removeAttribute('aria-controls')
-      root.setAttribute('aria-expanded', 'false')
+      window.removeEventListener('blur', dismissCompletions)
+      window.removeEventListener('pagehide', dismissCompletions)
+      document.removeEventListener('visibilitychange', dismissWhenHidden)
+      clearCompletionTimer()
     }
-  }, [activeIndex, editor, items.length, menuId])
+  }, [clearCompletionTimer, dismissCompletions])
 
   const requestCompletion = useCallback(() => {
+    const controller = controllerRef.current
+    const sessionRevision = sessionRevisionRef.current
+    if (!controller) return
     const position = editor.selection
       ? pointToEmbeddedPosition(blockPath, editor.selection.focus)
       : null
-    if (position) void controllerRef.current?.complete(position)
+    if (
+      position &&
+      sessionRevisionRef.current === sessionRevision &&
+      controllerRef.current === controller
+    ) {
+      acceptCompletionsRef.current = true
+      void controller.complete(position)
+    }
   }, [blockPath, editor])
 
   const requestCompletionAfterInput = useCallback(() => {
     if (composingRef.current) return
-    if (completionTimerRef.current != null) window.clearTimeout(completionTimerRef.current)
-    completionTimerRef.current = window.setTimeout(requestCompletion, 0)
-  }, [requestCompletion])
+    acceptCompletionsRef.current = false
+    clearCompletionTimer()
+    setCompletionState(null)
+    setActiveIndex(0)
+    const controller = controllerRef.current
+    const sessionRevision = sessionRevisionRef.current
+    if (!controller) return
+    completionTimerRef.current = window.setTimeout(() => {
+      completionTimerRef.current = null
+      if (
+        composingRef.current ||
+        sessionRevisionRef.current !== sessionRevision ||
+        controllerRef.current !== controller
+      ) {
+        return
+      }
+      requestCompletion()
+    }, 0)
+  }, [clearCompletionTimer, requestCompletion])
 
   const selectItem = useCallback(
     (item: CompletionItem) => {
+      acceptCompletionsRef.current = false
       controllerRef.current?.cancel()
-      setItems([])
+      setCompletionState({ contextToken, items: [] })
       applyPlateCodeCompletion(editor, blockPath, item)
     },
-    [blockPath, editor],
+    [blockPath, contextToken, editor],
   )
 
   const onKeyDown = useCallback(
@@ -135,20 +198,19 @@ export const usePlateCodeCompletion = ({
       event.preventDefault()
       event.stopPropagation()
       if (action === 'complete') requestCompletion()
-      if (action === 'cancel') {
-        controllerRef.current?.cancel()
-        setItems([])
-      }
+      if (action === 'cancel') dismissCompletions()
       if (action === 'next') setActiveIndex((index) => (index + 1) % items.length)
       if (action === 'previous')
         setActiveIndex((index) => (index - 1 + items.length) % items.length)
-      if (action === 'accept' && items[activeIndex]) selectItem(items[activeIndex])
+      if (action === 'accept' && items[resolvedActiveIndex]) {
+        selectItem(items[resolvedActiveIndex])
+      }
     },
-    [activeIndex, items, requestCompletion, selectItem],
+    [dismissCompletions, items, requestCompletion, resolvedActiveIndex, selectItem],
   )
 
   return {
-    activeIndex,
+    activeIndex: resolvedActiveIndex,
     items,
     menuId,
     onActiveIndexChange: setActiveIndex,
@@ -158,7 +220,7 @@ export const usePlateCodeCompletion = ({
     },
     onCompositionStart: () => {
       composingRef.current = true
-      controllerRef.current?.cancel()
+      dismissCompletions()
     },
     onInput: requestCompletionAfterInput,
     onKeyDown,

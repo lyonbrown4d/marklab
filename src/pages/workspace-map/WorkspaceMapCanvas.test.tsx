@@ -1,38 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import {
-  useEffect,
-  useState,
-  type Dispatch,
-  type KeyboardEventHandler,
-  type MouseEvent as ReactMouseEvent,
-  type SetStateAction,
-} from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
 import type { GraphData, GraphNodeData } from '@/logic/graph'
+import type {
+  WorkspaceMapFlowApi as FlowApi,
+  WorkspaceMapFlowProps as FlowProps,
+} from '@/pages/workspace-map/WorkspaceMapCanvas.testContracts'
 import { workspaceMapTestGraph as graph } from '@/pages/workspace-map/workspaceMapTestGraph'
-type FlowProps = {
-  elementsSelectable: boolean
-  nodes: GraphData['nodes']
-  nodesDraggable: boolean
-  nodesFocusable: boolean
-  onlyRenderVisibleElements: boolean
-  panOnScroll: boolean
-  panOnScrollMode: string
-  preventScrolling: boolean
-  onInit?: (flow: FlowApi) => void
-  onKeyDown?: KeyboardEventHandler<HTMLDivElement>
-  onNodeClick?: (event: ReactMouseEvent<HTMLDivElement>, node: GraphData['nodes'][number]) => void
-  onPaneClick?: () => void
-  tabIndex: number
-  zoomOnPinch: boolean
-  zoomOnScroll: boolean
-}
-type FlowApi = {
-  fitView: ReturnType<typeof vi.fn>
-  zoomIn: ReturnType<typeof vi.fn>
-  zoomOut: ReturnType<typeof vi.fn>
-}
 
 const flowPropsRef = vi.hoisted(() => ({ current: null as FlowProps | null }))
 const layoutStatusRef = vi.hoisted(() => ({ current: 'ready' as 'error' | 'loading' | 'ready' }))
@@ -174,6 +149,7 @@ describe('WorkspaceMapCanvas', () => {
     expect(flowPropsRef.current?.onlyRenderVisibleElements).toBe(true)
     expect(flowPropsRef.current?.nodesFocusable).toBe(true)
     expect(flowPropsRef.current?.nodesDraggable).toBe(true)
+    expect(flowPropsRef.current?.nodeDragThreshold).toBe(4)
     expect(flowPropsRef.current?.elementsSelectable).toBe(false)
     expect(flowPropsRef.current?.nodes[0]).toMatchObject({
       ariaLabel: 'A',

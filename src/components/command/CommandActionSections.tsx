@@ -4,8 +4,6 @@ import {
   FilePlus2,
   FolderPlus,
   FolderOpen,
-  Monitor,
-  Moon,
   LockKeyhole,
   PanelBottom,
   PanelLeft,
@@ -13,24 +11,17 @@ import {
   PenLine,
   Search,
   Settings2,
-  Sun,
   X,
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { CommandGroup, CommandItem, CommandSeparator } from '@/components/ui/command'
 import CommandWorkspaceSection from '@/components/command/CommandWorkspaceSection'
-import {
-  CommandActionShortcut,
-  commandActionShortcutIds,
-  createShortcutLabels,
-  currentCommandItemClassName,
-  CurrentItemCheck,
-} from '@/components/command/CommandActionHelpers'
+import { CommandActionShortcut } from '@/components/command/CommandActionHelpers'
+import CommandThemeSection from '@/components/command/CommandThemeSection'
 import { useI18n } from '@/i18n/useI18n'
-import { builtInThemes, themeActionId, themeModeActionId } from '@/logic/themes'
 import { preloadSourceEditor, preloadWysiwygEditor } from '@/lib/preloadFeatures'
-import { cn } from '@/lib/utils'
 import type { MarkdownCollectionSummary } from '@/logic/markdownCollections'
+import { createAppActionPresentations } from '@/logic/appActionCatalog'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 type CommandActionSectionsProps = {
@@ -49,40 +40,48 @@ const CommandActionSections = ({
   onAction,
 }: CommandActionSectionsProps) => {
   const { t } = useI18n()
-  const themeMode = usePreferencesStore((state) => state.themeMode)
-  const currentTheme = usePreferencesStore((state) => state.theme)
-  const customThemeId = usePreferencesStore((state) => state.customThemeId)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
-  const shortcutLabels = useMemo(() => createShortcutLabels(shortcutOverrides), [shortcutOverrides])
-  const builtInThemeIsCurrent = customThemeId === null
+  const actions = useMemo(
+    () =>
+      createAppActionPresentations({
+        canCreateWorkspaceEntries,
+        shortcutOverrides,
+        translate: t,
+      }),
+    [canCreateWorkspaceEntries, shortcutOverrides, t],
+  )
+  const createActionsEnabled = actions['file.new'].enabled && actions['file.new_folder'].enabled
 
   return (
     <>
       <CommandGroup>
-        <CommandItem value="command palette quick open search" onSelect={onCommandPaletteAction}>
+        <CommandItem
+          value={actions['app.command_palette'].searchValue}
+          onSelect={onCommandPaletteAction}
+        >
           <Search className="size-4" />
-          <span className="truncate">{t('shortcuts.commandPalette')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.commandPalette]} />
+          <span className="truncate">{actions['app.command_palette'].label}</span>
+          <CommandActionShortcut label={actions['app.command_palette'].shortcut} />
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading={t('menu.file')}>
-        {canCreateWorkspaceEntries ? (
+        {createActionsEnabled ? (
           <>
             <CommandItem
-              value="new file create note markdown"
-              onSelect={() => onAction('file.new')}
+              value={actions['file.new'].searchValue}
+              onSelect={() => onAction(actions['file.new'].id)}
             >
               <FilePlus2 className="size-4" />
-              <span className="truncate">{t('sidebar.newFile')}</span>
-              <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.newFile]} />
+              <span className="truncate">{actions['file.new'].label}</span>
+              <CommandActionShortcut label={actions['file.new'].shortcut} />
             </CommandItem>
             <CommandItem
-              value="new folder create directory"
-              onSelect={() => onAction('file.new_folder')}
+              value={actions['file.new_folder'].searchValue}
+              onSelect={() => onAction(actions['file.new_folder'].id)}
             >
               <FolderPlus className="size-4" />
-              {t('sidebar.newFolder')}
+              {actions['file.new_folder'].label}
             </CommandItem>
           </>
         ) : (
@@ -92,48 +91,63 @@ const CommandActionSections = ({
           </CommandItem>
         )}
         <CommandItem
-          value="new window open current workspace"
-          onSelect={() => onAction('window.open_current_workspace_in_new_window')}
+          value={actions['window.open_current_workspace_in_new_window'].searchValue}
+          onSelect={() => onAction(actions['window.open_current_workspace_in_new_window'].id)}
         >
           <PanelRight className="size-4" />
-          {t('actions.newWindow')}
+          {actions['window.open_current_workspace_in_new_window'].label}
         </CommandItem>
         <CommandItem
-          value="open project folder workspace"
-          onSelect={() => onAction('file.open_project')}
+          value={actions['file.open_project'].searchValue}
+          onSelect={() => onAction(actions['file.open_project'].id)}
         >
           <FolderOpen className="size-4" />
-          <span className="truncate">{t('actions.openProject')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.openProject]} />
-        </CommandItem>
-        <CommandItem value="open file select file" onSelect={() => onAction('file.open_file')}>
-          <FileText className="size-4" />
-          <span className="truncate">{t('actions.openFile')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.openFile]} />
+          <span className="truncate">{actions['file.open_project'].label}</span>
+          <CommandActionShortcut label={actions['file.open_project'].shortcut} />
         </CommandItem>
         <CommandItem
-          value="search files focus file search"
-          onSelect={() => onAction('view.focus_file_search')}
+          value={actions['file.open_file'].searchValue}
+          onSelect={() => onAction(actions['file.open_file'].id)}
+        >
+          <FileText className="size-4" />
+          <span className="truncate">{actions['file.open_file'].label}</span>
+          <CommandActionShortcut label={actions['file.open_file'].shortcut} />
+        </CommandItem>
+        <CommandItem
+          value={actions['view.focus_file_search'].searchValue}
+          onSelect={() => onAction(actions['view.focus_file_search'].id)}
         >
           <Search className="size-4" />
-          {t('sidebar.searchAction')}
+          {actions['view.focus_file_search'].label}
         </CommandItem>
-        <CommandItem value="close tab close active file" onSelect={() => onAction('tab.close')}>
+        <CommandItem
+          value={actions['tab.close'].searchValue}
+          onSelect={() => onAction(actions['tab.close'].id)}
+        >
           <X className="size-4" />
-          <span className="truncate">{t('actions.closeTab')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.closeTab]} />
+          <span className="truncate">{actions['tab.close'].label}</span>
+          <CommandActionShortcut label={actions['tab.close'].shortcut} />
         </CommandItem>
-        <CommandItem value="export pdf" onSelect={() => onAction('file.export_pdf')}>
+        <CommandItem
+          value={actions['file.export_pdf'].searchValue}
+          onSelect={() => onAction(actions['file.export_pdf'].id)}
+        >
           <FileText className="size-4" />
-          {t('actions.exportPdf')}
+          {actions['file.export_pdf'].label}
         </CommandItem>
-        <CommandItem value="export docx word" onSelect={() => onAction('file.export_docx')}>
+        <CommandItem
+          value={actions['file.export_docx'].searchValue}
+          onSelect={() => onAction(actions['file.export_docx'].id)}
+        >
           <FileText className="size-4" />
-          {t('actions.exportDocx')}
+          {actions['file.export_docx'].label}
         </CommandItem>
-        <CommandItem value="export html" onSelect={() => onAction('file.export_html')}>
+        <CommandItem
+          value={actions['file.export_html'].searchValue}
+          onSelect={() => onAction(actions['file.export_html'].id)}
+        >
           <FileText className="size-4" />
-          {t('actions.exportHtml')}
+          {actions['file.export_html'].label}
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
@@ -148,132 +162,77 @@ const CommandActionSections = ({
         <CommandItem
           onFocus={preloadWysiwygEditor}
           onMouseEnter={preloadWysiwygEditor}
-          value="wysiwyg editor rich text visual editor"
-          onSelect={() => onAction('view.wysiwyg')}
+          value={actions['view.wysiwyg'].searchValue}
+          onSelect={() => onAction(actions['view.wysiwyg'].id)}
         >
           <PenLine className="size-4" />
-          <span className="truncate">{t('editor.modeWysiwyg')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewWysiwyg]} />
+          <span className="truncate">{actions['view.wysiwyg'].label}</span>
+          <CommandActionShortcut label={actions['view.wysiwyg'].shortcut} />
         </CommandItem>
         <CommandItem
-          value="readonly reading typewriter rendered preview"
-          onSelect={() => onAction('view.toggle_readonly')}
+          value={actions['view.toggle_readonly'].searchValue}
+          onSelect={() => onAction(actions['view.toggle_readonly'].id)}
         >
           <LockKeyhole className="size-4" />
-          <span className="truncate">{t('titlebar.readOnly')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleReadonly]} />
+          <span className="truncate">{actions['view.toggle_readonly'].label}</span>
+          <CommandActionShortcut label={actions['view.toggle_readonly'].shortcut} />
         </CommandItem>
         <CommandItem
-          value="status bar bottom footer hide show"
-          onSelect={() => onAction('view.toggle_status_bar')}
+          value={actions['view.toggle_status_bar'].searchValue}
+          onSelect={() => onAction(actions['view.toggle_status_bar'].id)}
         >
           <PanelBottom className="size-4" />
-          <span className="truncate">{t('settings.statusBar')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleStatusBar]} />
+          <span className="truncate">{actions['view.toggle_status_bar'].label}</span>
+          <CommandActionShortcut label={actions['view.toggle_status_bar'].shortcut} />
         </CommandItem>
         <CommandItem
           onFocus={preloadSourceEditor}
           onMouseEnter={preloadSourceEditor}
-          value="source editor markdown source code"
-          onSelect={() => onAction('view.source')}
+          value={actions['view.source'].searchValue}
+          onSelect={() => onAction(actions['view.source'].id)}
         >
           <FileText className="size-4" />
-          <span className="truncate">{t('editor.modeSource')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.viewSource]} />
+          <span className="truncate">{actions['view.source'].label}</span>
+          <CommandActionShortcut label={actions['view.source'].shortcut} />
         </CommandItem>
         <CommandItem
-          value="toggle left sidebar explorer"
-          onSelect={() => onAction('view.toggle_sidebar')}
+          value={actions['view.toggle_sidebar'].searchValue}
+          onSelect={() => onAction(actions['view.toggle_sidebar'].id)}
         >
           <PanelLeft className="size-4" />
-          <span className="truncate">{t('actions.toggleSidebar')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.toggleSidebar]} />
+          <span className="truncate">{actions['view.toggle_sidebar'].label}</span>
+          <CommandActionShortcut label={actions['view.toggle_sidebar'].shortcut} />
         </CommandItem>
         <CommandItem
-          value="toggle right sidebar inspector details"
-          onSelect={() => onAction('view.toggle_right_sidebar')}
+          value={actions['view.toggle_right_sidebar'].searchValue}
+          onSelect={() => onAction(actions['view.toggle_right_sidebar'].id)}
         >
           <PanelRight className="size-4" />
-          <span className="truncate">{t('actions.toggleRightSidebar')}</span>
-          <CommandActionShortcut
-            label={shortcutLabels[commandActionShortcutIds.toggleRightSidebar]}
-          />
+          <span className="truncate">{actions['view.toggle_right_sidebar'].label}</span>
+          <CommandActionShortcut label={actions['view.toggle_right_sidebar'].shortcut} />
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
       <CommandGroup heading={t('menu.settings')}>
         <CommandItem
-          value="settings preferences options"
-          onSelect={() => onAction('settings.open')}
+          value={actions['settings.open'].searchValue}
+          onSelect={() => onAction(actions['settings.open'].id)}
         >
           <Settings2 className="size-4" />
-          <span className="truncate">{t('menu.settings')}</span>
-          <CommandActionShortcut label={shortcutLabels[commandActionShortcutIds.settings]} />
+          <span className="truncate">{actions['settings.open'].label}</span>
+          <CommandActionShortcut label={actions['settings.open'].shortcut} />
         </CommandItem>
       </CommandGroup>
       <CommandSeparator />
-      <CommandGroup heading={t('menu.theme')}>
-        <CommandItem
-          aria-current={themeMode === 'system' ? 'true' : undefined}
-          className={cn(themeMode === 'system' && currentCommandItemClassName)}
-          value="theme mode system follow system"
-          onSelect={() => onAction(themeModeActionId('system'))}
-        >
-          <Monitor className="size-4" />
-          <span className="truncate">{t('themeMode.system')}</span>
-          {themeMode === 'system' && <CurrentItemCheck />}
-        </CommandItem>
-        <CommandItem
-          aria-current={themeMode === 'light' ? 'true' : undefined}
-          className={cn(themeMode === 'light' && currentCommandItemClassName)}
-          value="theme mode light"
-          onSelect={() => onAction(themeModeActionId('light'))}
-        >
-          <Sun className="size-4" />
-          <span className="truncate">{t('themeMode.light')}</span>
-          {themeMode === 'light' && <CurrentItemCheck />}
-        </CommandItem>
-        <CommandItem
-          aria-current={themeMode === 'dark' ? 'true' : undefined}
-          className={cn(themeMode === 'dark' && currentCommandItemClassName)}
-          value="theme mode dark"
-          onSelect={() => onAction(themeModeActionId('dark'))}
-        >
-          <Moon className="size-4" />
-          <span className="truncate">{t('themeMode.dark')}</span>
-          {themeMode === 'dark' && <CurrentItemCheck />}
-        </CommandItem>
-        <CommandSeparator />
-        {builtInThemes.map((item) => {
-          const isCurrentTheme = builtInThemeIsCurrent && currentTheme === item.value
-          return (
-            <CommandItem
-              aria-current={isCurrentTheme ? 'true' : undefined}
-              className={cn(isCurrentTheme && currentCommandItemClassName)}
-              key={item.value}
-              value={`theme ${item.value} ${t(item.labelKey)}`}
-              onSelect={() => onAction(themeActionId(item.value))}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'theme-swatch block size-4 shrink-0 overflow-hidden rounded-sm border border-border',
-                  item.swatchClass,
-                )}
-              >
-                <span className="theme-swatch-preview relative block h-full w-full" />
-              </span>
-              <span className="truncate">{t(item.labelKey)}</span>
-              {isCurrentTheme && <CurrentItemCheck />}
-            </CommandItem>
-          )
-        })}
-      </CommandGroup>
+      <CommandThemeSection onAction={onAction} />
       <CommandSeparator />
       <CommandGroup heading={t('menu.help')}>
-        <CommandItem value="help about version" onSelect={() => onAction('help.about')}>
+        <CommandItem
+          value={actions['help.about'].searchValue}
+          onSelect={() => onAction(actions['help.about'].id)}
+        >
           <CircleHelp className="size-4" />
-          {t('actions.about')}
+          {actions['help.about'].label}
         </CommandItem>
       </CommandGroup>
     </>

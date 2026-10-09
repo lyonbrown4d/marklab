@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
@@ -207,9 +207,8 @@ describe('createPlateNodePlugins', () => {
     const blocks = view.container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
 
     expect(blocks).toHaveLength(2)
-    expect(screen.queryByRole('button', { name: 'Move block' })).not.toBeInTheDocument()
-    fireEvent.pointerEnter(blocks[0])
-    const handle = screen.getByRole('button', { name: 'Move block' })
+    expect(screen.getAllByRole('button', { name: 'Move block' })).toHaveLength(2)
+    const handle = within(blocks[0]).getByRole('button', { name: 'Move block' })
     expect(handle).toHaveAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown')
     expect(handle).toHaveAttribute('contenteditable', 'false')
     expect(handle).toHaveAttribute('data-block-id')
@@ -223,8 +222,7 @@ describe('createPlateNodePlugins', () => {
   it('moves a top-level block with the drag handle keyboard controls', async () => {
     const { container, editor } = renderMarkdown('First\n\nSecond\n\nThird', false)
     const blocks = container.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]')
-    fireEvent.pointerEnter(blocks[1])
-    const secondHandle = screen.getByRole('button', { name: 'Move block' })
+    const secondHandle = within(blocks[1]).getByRole('button', { name: 'Move block' })
 
     secondHandle.focus()
     fireEvent.keyDown(secondHandle, { key: 'ArrowUp' })
@@ -235,7 +233,9 @@ describe('createPlateNodePlugins', () => {
       'Third',
     ])
     await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move block' }))
+      expect(document.activeElement).toBe(
+        within(blocks[1]).getByRole('button', { name: 'Move block' }),
+      )
     })
 
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })

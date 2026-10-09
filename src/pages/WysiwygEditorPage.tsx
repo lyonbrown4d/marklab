@@ -1,8 +1,11 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useRef } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useLatest } from 'ahooks'
 import { basename, dirname, relative } from 'pathe'
 import { toast } from 'sonner'
-import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
+import type {
+  MarkdownEditorHandle,
+  MarkdownEditorStatus,
+} from '@/components/editor/markdownEditorTypes'
 import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import type { FileEntry } from '@/store/appTypes'
 import type { FileViewKind } from '@/store/appTypes'
@@ -15,6 +18,7 @@ import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
 import { resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
 import { isSourcePreviewFilePath } from '@/logic/fileTypes'
+import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
@@ -103,9 +107,26 @@ const WysiwygEditorPage = ({
 }: WysiwygEditorPageProps) => {
   const { t } = useI18n()
   const editorRef = useRef<MarkdownEditorHandle | null>(null)
+  const [editorStatus, setEditorStatus] = useState<{
+    activePath: string | null
+    status: MarkdownEditorStatus
+  }>({ activePath, status: { phase: 'loading' } })
+  const currentEditorStatus =
+    editorStatus.activePath === activePath ? editorStatus.status.phase : 'loading'
   const activePathRef = useLatest(activePath)
   const valueRef = useLatest(value)
   const stats = useDocumentStats(value, showStatusBar)
+  const focusEditor = useCallback(() => editorRef.current?.focus(), [])
+  useEditorFocusHandoffTarget({
+    focus: focusEditor,
+    path: activePath,
+    status: currentEditorStatus,
+    view: 'edit',
+  })
+  const handleEditorStatusChange = useCallback(
+    (status: MarkdownEditorStatus) => setEditorStatus({ activePath, status }),
+    [activePath],
+  )
   const handleWorkspaceLink = useCallback(
     (target: string, documentPath: string | null) => {
       const path = resolveLinkedFilePath(documentPath ?? activePath, target, files)
@@ -183,6 +204,7 @@ const WysiwygEditorPage = ({
               activePath={activePath}
               value={value}
               onChange={onChange}
+              onStatusChange={handleEditorStatusChange}
               placeholder={t('editor.placeholder')}
               slashLabels={slashLabels}
               onCalendarFileCreate={readOnly ? undefined : onCalendarFileCreate}

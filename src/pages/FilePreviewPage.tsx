@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileImage, FileText, Music, Video } from 'lucide-react'
 import { useParams } from 'react-router-dom'
@@ -13,6 +13,7 @@ import { fsApi } from '@/services/fsApi'
 import { useI18n } from '@/i18n/useI18n'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { EditorFocusHandoffFailure, useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 
 const FilePreviewPage = () => {
   const params = useParams()
@@ -25,6 +26,7 @@ const FilePreviewPage = () => {
     })),
   )
   const { t } = useI18n()
+  const previewSurfaceRef = useRef<HTMLElement | null>(null)
   const requestedPath = params['*'] || null
   const previewKind = requestedPath ? getPreviewFileKind(requestedPath) : null
   const previewFileExists = fileExists(context.files, requestedPath)
@@ -47,6 +49,19 @@ const FilePreviewPage = () => {
     staleTime: 0,
     refetchOnMount: 'always',
   })
+  const focusPreviewSurface = useCallback(() => previewSurfaceRef.current?.focus(), [])
+  const previewFocusStatus =
+    previewQuery.isError || (previewQuery.isSuccess && !previewQuery.data?.capability.url)
+      ? 'error'
+      : previewQuery.data?.capability.url
+        ? 'ready'
+        : 'loading'
+  useEditorFocusHandoffTarget({
+    focus: focusPreviewSurface,
+    path: requestedPath,
+    status: previewFocusStatus,
+    view: 'preview',
+  })
 
   const openInSystem = useCallback(() => {
     if (!requestedPath) return
@@ -54,21 +69,29 @@ const FilePreviewPage = () => {
   }, [requestedPath])
 
   if (!requestedPath || !previewFileExists) {
-    return <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+    return (
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="preview" />
+        <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+      </>
+    )
   }
   if (!previewKind) {
     return (
-      <div className="flex h-full items-center justify-center bg-background p-6">
-        <div className="max-w-md rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <FileText className="size-4 text-muted-foreground" />
-            {t('preview.unsupportedTitle')}
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="preview" />
+        <div className="flex h-full items-center justify-center bg-background p-6">
+          <div className="max-w-md rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FileText className="size-4 text-muted-foreground" />
+              {t('preview.unsupportedTitle')}
+            </div>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {t('preview.unsupportedDescription')}
+            </p>
           </div>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {t('preview.unsupportedDescription')}
-          </p>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -95,7 +118,12 @@ const FilePreviewPage = () => {
           {t('preview.openInSystem')}
         </Button>
       </header>
-      <main className="min-h-0 flex-1 overflow-auto p-4">
+      <main
+        aria-label={title}
+        className="min-h-0 flex-1 overflow-auto p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        ref={previewSurfaceRef}
+        tabIndex={-1}
+      >
         {previewQuery.isLoading ? (
           <PreviewLoadingFallback label={t('preview.loading')} />
         ) : previewQuery.isError || !previewQuery.data?.capability.url ? (

@@ -87,6 +87,7 @@ const slashLabels: MarkdownEditorSlashLabels = {
   textGroup: 'Text',
   listGroup: 'List',
   advancedGroup: 'Advanced',
+  menuLabel: 'Block suggestions',
   text: 'Text',
   heading1: 'Heading 1',
   heading2: 'Heading 2',

@@ -6,10 +6,16 @@ export const SIDEBAR_HOVER_CLOSE_DELAY_MS = 220
 type UseSidebarHoverPreviewArgs = {
   pinnedOpen: boolean
   onPinOpen: () => void
+  dismissRequest?: number
 }
 
-export const useSidebarHoverPreview = ({ pinnedOpen, onPinOpen }: UseSidebarHoverPreviewArgs) => {
+export const useSidebarHoverPreview = ({
+  pinnedOpen,
+  onPinOpen,
+  dismissRequest = 0,
+}: UseSidebarHoverPreviewArgs) => {
   const [previewOpen, setPreviewOpen] = useState(false)
+  const handledDismissRequestRef = useRef(dismissRequest)
   const previewOpenRef = useRef(false)
   const openTimerRef = useRef<number | null>(null)
   const closeTimerRef = useRef<number | null>(null)
@@ -71,6 +77,12 @@ export const useSidebarHoverPreview = ({ pinnedOpen, onPinOpen }: UseSidebarHove
     if (!pinnedOpen) return
     dismissPreview()
   }, [dismissPreview, pinnedOpen])
+
+  useEffect(() => {
+    if (handledDismissRequestRef.current === dismissRequest) return
+    handledDismissRequestRef.current = dismissRequest
+    dismissPreview()
+  }, [dismissPreview, dismissRequest])
 
   useEffect(
     () => () => {

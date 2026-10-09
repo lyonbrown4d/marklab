@@ -23,6 +23,7 @@ import {
   type MarkdownSourceDiagnosticHost,
 } from '@/components/useMarkdownSourceDiagnostics'
 import type { EditorChangeHandler } from '@/types/editorChanges'
+import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 
 type SourceCodeEditorProps = {
   activePath: string | null
@@ -78,6 +79,15 @@ const SourceCodeEditor = ({
   const pendingSourcePositionRef = useRef<FocusSourcePositionRequest | null>(null)
   const previousMarkdownEnabledRef = useRef(markdownEnabled)
   const contextMenu = useSourceCodeContextMenu(editorRef, readOnly)
+  const focusEditor = useCallback(() => editorRef.current?.focus(), [])
+  const isEditorMounted = useCallback(() => editorRef.current !== null, [])
+  const focusHandoff = useEditorFocusHandoffTarget({
+    focus: focusEditor,
+    isReady: isEditorMounted,
+    path: activePath,
+    status: monacoLoadError ? 'error' : 'loading',
+    view: 'source',
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +118,7 @@ const SourceCodeEditor = ({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    focusHandoff.reportReady()
     cursorSubscriptionRef.current?.dispose()
     cursorSubscriptionRef.current = editor.onDidChangeCursorPosition(({ position }) => {
       cursorCallbackRef.current?.(position)

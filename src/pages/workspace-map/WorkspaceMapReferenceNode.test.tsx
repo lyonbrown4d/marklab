@@ -66,6 +66,10 @@ describe('WorkspaceMapReferenceNode', () => {
     expect(screen.queryByTestId('graph-web-node')).not.toBeInTheDocument()
     expect(screen.getByText('Current page')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Current page' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current page' })).toHaveClass(
+      'cursor-grab',
+      'active:cursor-grabbing',
+    )
     expect(document.querySelector('.react-flow__resize-control')).toBeNull()
 
     const disclosure = screen.getByRole('button', { name: 'Expand node content' })
@@ -111,6 +115,7 @@ describe('WorkspaceMapReferenceNode', () => {
       const node = screen.getByText('Target').closest('.workspace-map-node')
       expect(node).not.toBeNull()
       expect(node).toHaveClass('workspace-map-node')
+      expect(node).toHaveClass('cursor-grab', 'active:cursor-grabbing')
       expect(node).toHaveClass('size-full', 'min-h-20', 'min-w-44')
       expect(screen.getByText('Reference path')).toBeInTheDocument()
       expect(document.querySelector('[data-preview-kind]')).not.toBeInTheDocument()
@@ -149,4 +154,17 @@ describe('WorkspaceMapReferenceNode', () => {
       expect(node?.querySelector('.react-flow__resize-control')).not.toBeNull()
     },
   )
+
+  it('does not advertise dragging for a pinned reference node', () => {
+    const props = {
+      id: 'missing:target',
+      type: 'missing',
+      selected: false,
+      data: { label: 'Pinned', workspaceMapPinned: true },
+    } as unknown as ComponentProps<typeof WorkspaceMapReferenceNode>
+
+    render(<WorkspaceMapReferenceNode {...props} />, { wrapper: ReactFlowProvider })
+
+    expect(screen.getByText('Pinned').closest('.workspace-map-node')).toHaveClass('cursor-default')
+  })
 })

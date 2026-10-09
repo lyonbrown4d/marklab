@@ -9,6 +9,7 @@ import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { EditorFocusHandoffFailure } from '@/app/EditorFocusHandoff'
 
 const SourceFilePage = () => {
   const params = useParams()
@@ -33,24 +34,32 @@ const SourceFilePage = () => {
   const { t } = useI18n()
 
   if (!requestedPath || !fileExists(context.files, requestedPath)) {
-    return <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+    return (
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="source" />
+        <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+      </>
+    )
   }
 
   if (!isTextFileViewPath(requestedPath)) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div
-          className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-          role="alert"
-        >
-          <p className="text-sm font-semibold text-foreground">
-            {t('preview.inlineReadonly', { path: requestedPath })}
-          </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground" title={requestedPath}>
-            {requestedPath}
-          </p>
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="source" />
+        <div className="flex h-full items-center justify-center p-6">
+          <div
+            className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-foreground">
+              {t('preview.inlineReadonly', { path: requestedPath })}
+            </p>
+            <p className="mt-1 truncate text-xs text-muted-foreground" title={requestedPath}>
+              {requestedPath}
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
   const loadState = resolveEditorLoadState({
@@ -80,23 +89,26 @@ const SourceFilePage = () => {
     }
 
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div
-          className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-          role="alert"
-        >
-          <p className="text-sm font-semibold text-foreground">{t('editor.openFileFailed')}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground" title={requestedPath}>
-            {requestedPath}
-          </p>
-          {loadState.message ? (
-            <p className="mt-3 break-words text-sm text-muted-foreground">{loadState.message}</p>
-          ) : null}
-          <Button className="mt-4" onClick={retryDocumentLoad} size="sm" variant="outline">
-            {t('app.restoreRetry')}
-          </Button>
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="source" />
+        <div className="flex h-full items-center justify-center p-6">
+          <div
+            className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-foreground">{t('editor.openFileFailed')}</p>
+            <p className="mt-1 truncate text-xs text-muted-foreground" title={requestedPath}>
+              {requestedPath}
+            </p>
+            {loadState.message ? (
+              <p className="mt-3 break-words text-sm text-muted-foreground">{loadState.message}</p>
+            ) : null}
+            <Button className="mt-4" onClick={retryDocumentLoad} size="sm" variant="outline">
+              {t('app.restoreRetry')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 

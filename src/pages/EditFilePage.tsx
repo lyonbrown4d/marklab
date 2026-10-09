@@ -12,6 +12,7 @@ import { pathToRoute } from '@/logic/routing'
 import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { EditorFocusHandoffFailure } from '@/app/EditorFocusHandoff'
 
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'))
 const CalendarFilePage = lazy(() => import('@/pages/CalendarFilePage'))
@@ -49,7 +50,12 @@ const EditFilePage = () => {
   }
 
   if (requestedPath && !fileExists(context.files, requestedPath)) {
-    return <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+    return (
+      <>
+        <EditorFocusHandoffFailure path={requestedPath} view="edit" />
+        <FileRouteNotFound files={context.files} onOpenFile={context.onOpenFile} />
+      </>
+    )
   }
 
   if (!activePath) {
@@ -63,19 +69,22 @@ const EditFilePage = () => {
 
   if (!isTextFileViewPath(activePath)) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div
-          className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-          role="alert"
-        >
-          <p className="text-sm font-semibold text-foreground">
-            {t('preview.inlineReadonly', { path: activePath })}
-          </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground" title={activePath}>
-            {activePath}
-          </p>
+      <>
+        <EditorFocusHandoffFailure path={activePath} view="edit" />
+        <div className="flex h-full items-center justify-center p-6">
+          <div
+            className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-foreground">
+              {t('preview.inlineReadonly', { path: activePath })}
+            </p>
+            <p className="mt-1 truncate text-xs text-muted-foreground" title={activePath}>
+              {activePath}
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
   const loadState = resolveEditorLoadState({
@@ -105,23 +114,26 @@ const EditFilePage = () => {
     }
 
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div
-          className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-          role="alert"
-        >
-          <p className="text-sm font-semibold text-foreground">{t('editor.openFileFailed')}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground" title={activePath}>
-            {activePath}
-          </p>
-          {loadState.message ? (
-            <p className="mt-3 break-words text-sm text-muted-foreground">{loadState.message}</p>
-          ) : null}
-          <Button className="mt-4" onClick={retryDocumentLoad} size="sm" variant="outline">
-            {t('app.restoreRetry')}
-          </Button>
+      <>
+        <EditorFocusHandoffFailure path={activePath} view="edit" />
+        <div className="flex h-full items-center justify-center p-6">
+          <div
+            className="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-foreground">{t('editor.openFileFailed')}</p>
+            <p className="mt-1 truncate text-xs text-muted-foreground" title={activePath}>
+              {activePath}
+            </p>
+            {loadState.message ? (
+              <p className="mt-3 break-words text-sm text-muted-foreground">{loadState.message}</p>
+            ) : null}
+            <Button className="mt-4" onClick={retryDocumentLoad} size="sm" variant="outline">
+              {t('app.restoreRetry')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 

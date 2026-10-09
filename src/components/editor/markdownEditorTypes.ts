@@ -42,6 +42,7 @@ export type MarkdownEditorSlashLabels = {
   linkTextPrompt: string
   linkUrlPrompt: string
   listGroup: string
+  menuLabel: string
   mermaid: string
   noResults: string
   orderedList: string
@@ -62,6 +63,7 @@ export type MarkdownEditorProps = {
   placeholder: string
   slashLabels: MarkdownEditorSlashLabels
   onCalendarFileCreate?: () => Promise<string | null>
+  onStatusChange?: (status: MarkdownEditorStatus) => void
   onWorkspaceLink?: (target: string, documentPath: string | null) => void
   readOnly?: boolean
   variant?: MarkdownEditorVariant

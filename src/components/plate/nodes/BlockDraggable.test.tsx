@@ -3,15 +3,18 @@ import type { PlateElementProps } from 'platejs/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dndMocks = vi.hoisted(() => ({
+  dropLine: '' as '' | 'bottom' | 'top',
   handleRef: vi.fn(),
   nodeRef: { current: null },
 }))
 
 vi.mock('@platejs/dnd', () => ({
-  DRAG_ITEM_BLOCK: 'block',
-  useDragNode: () => [{ isDragging: false }, dndMocks.handleRef, vi.fn()],
-  useDropLine: () => ({ dropLine: '' }),
-  useDropNode: () => [{ isOver: false }, vi.fn()],
+  useDraggable: () => ({
+    handleRef: dndMocks.handleRef,
+    isDragging: false,
+    nodeRef: dndMocks.nodeRef,
+  }),
+  useDropLine: () => ({ dropLine: dndMocks.dropLine }),
 }))
 
 vi.mock('platejs/react', () => ({
@@ -34,31 +37,50 @@ const renderBlock = () => {
 }
 
 beforeEach(() => {
+  dndMocks.dropLine = ''
   dndMocks.handleRef.mockClear()
 })
 
 describe('BlockDraggable', () => {
-  it('mounts the drag handle only while its block is interactive', () => {
+  it('keeps the drag source mounted when the pointer leaves the block', () => {
     const { container } = renderBlock()
     const wrapper = container.querySelector<HTMLElement>('[data-block-drag-wrapper="true"]')
 
-    expect(screen.queryByRole('button', { name: 'Move block' })).not.toBeInTheDocument()
-    fireEvent.pointerEnter(wrapper!)
-    expect(screen.getByRole('button', { name: 'Move block' })).toBeVisible()
+    const handle = screen.getByRole('button', { name: 'Move block' })
     fireEvent.pointerLeave(wrapper!)
-    expect(screen.queryByRole('button', { name: 'Move block' })).not.toBeInTheDocument()
+
+    expect(handle).toBeInTheDocument()
   })
 
   it('keeps the drag handle mounted while keyboard focus remains in the block', () => {
-    const { container } = renderBlock()
-    const wrapper = container.querySelector<HTMLElement>('[data-block-drag-wrapper="true"]')
+    renderBlock()
 
-    fireEvent.pointerEnter(wrapper!)
     const handle = screen.getByRole('button', { name: 'Move block' })
     handle.focus()
     expect(handle).toHaveFocus()
-    fireEvent.pointerLeave(wrapper!)
 
     expect(handle).toBeVisible()
+  })
+
+  it('keeps the transparent drag handle inside the block hit-test area', () => {
+    const { container } = renderBlock()
+
+    const handle = screen.getByRole('button', { name: 'Move block' })
+    const icon = handle.querySelector('svg')
+    const wrapper = container.querySelector<HTMLElement>('[data-block-drag-wrapper="true"]')
+
+    expect(wrapper).toHaveClass('pl-8')
+    expect(handle).toHaveClass('left-0')
+    expect(handle).not.toHaveClass('-left-9')
+    expect(handle).not.toHaveClass('pointer-events-none')
+    expect(handle).not.toHaveClass('opacity-0')
+    expect(icon).toHaveClass('opacity-0', 'group-hover/handle:opacity-100')
+  })
+
+  it('exposes the accepted drop edge for interaction tests and assistive styling', () => {
+    dndMocks.dropLine = 'bottom'
+    renderBlock()
+
+    expect(document.querySelector('[data-block-drop-line="bottom"]')).toBeInTheDocument()
   })
 })

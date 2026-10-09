@@ -192,6 +192,9 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
   TableCellPlugin.withComponent(TableCellElement),
   TableCellHeaderPlugin.withComponent(TableHeaderCellElement),
   DndPlugin.configure({
+    options: {
+      enableScroller: false,
+    },
     render: { aboveNodes: blockDraggableWrapper },
   }),
 ]

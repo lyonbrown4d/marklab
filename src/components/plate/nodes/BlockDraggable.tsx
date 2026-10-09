@@ -1,4 +1,4 @@
-import { DRAG_ITEM_BLOCK, useDragNode, useDropLine, useDropNode } from '@platejs/dnd'
+import { useDraggable, useDropLine } from '@platejs/dnd'
 import { GripVertical } from 'lucide-react'
 import type { TElement } from 'platejs'
 import {
@@ -7,16 +7,7 @@ import {
   type PlateElementProps,
   type RenderNodeWrapper,
 } from 'platejs/react'
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FocusEvent,
-  type KeyboardEvent,
-  type PointerEvent,
-  type RefObject,
-} from 'react'
-import { NativeTypes } from 'react-dnd-html5-backend'
+import type { KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -47,77 +38,13 @@ const restoreHandleFocus = (editor: PlateEditor, element: TElement) => {
   })
 }
 
-type BlockDragHandleProps = {
-  editor: PlateEditor
-  element: TElement
-  nodeRef: RefObject<HTMLDivElement | null>
-  onDraggingChange: (dragging: boolean) => void
-  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void
-}
-
-const BlockDragHandle = ({
-  editor,
-  element,
-  nodeRef,
-  onDraggingChange,
-  onKeyDown,
-}: BlockDragHandleProps) => {
-  const [{ isDragging }, handleRef, previewRef] = useDragNode(editor, {
-    element,
-    type: DRAG_ITEM_BLOCK,
-  })
-
-  useEffect(() => {
-    previewRef(nodeRef)
-  }, [nodeRef, previewRef])
-
-  useEffect(() => {
-    onDraggingChange(isDragging)
-  }, [isDragging, onDraggingChange])
-
-  return (
-    <Button
-      aria-keyshortcuts="ArrowUp ArrowDown"
-      aria-label="Move block"
-      className={cn(
-        'absolute -left-9 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
-        'active:cursor-grabbing motion-reduce:transition-none',
-      )}
-      contentEditable={false}
-      data-block-id={element.id as string}
-      data-block-drag-handle="true"
-      onKeyDown={onKeyDown}
-      ref={(button) => {
-        handleRef(button)
-      }}
-      size="icon"
-      title="Drag to move block. Use the arrow keys to move it up or down."
-      type="button"
-      variant="ghost"
-    >
-      <GripVertical aria-hidden="true" />
-    </Button>
-  )
-}
-
 export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   const editor = useEditorRef()
-  const [handleActive, setHandleActive] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const multiplePreviewRef = useRef<HTMLDivElement | null>(null)
-  const nodeRef = useRef<HTMLDivElement | null>(null)
   const { dropLine } = useDropLine({ id: element.id as string, orientation: 'vertical' })
-  const [, dropRef] = useDropNode(editor, {
-    accept: [DRAG_ITEM_BLOCK, NativeTypes.FILE],
+  const { handleRef, isDragging, nodeRef } = useDraggable({
     element,
-    multiplePreviewRef,
-    nodeRef,
     orientation: 'vertical',
   })
-
-  useEffect(() => {
-    dropRef(nodeRef)
-  }, [dropRef])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
@@ -128,40 +55,45 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
     }
   }
 
-  const handleBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setHandleActive(false)
-  }
-
-  const handlePointerLeave = (event: PointerEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(document.activeElement)) setHandleActive(false)
-  }
-
-  const handleVisible = handleActive || isDragging
-
   return (
     <div
-      className={cn('plate-block-draggable group/block relative', isDragging && 'opacity-50')}
+      className={cn('plate-block-draggable group/block relative pl-8', isDragging && 'opacity-50')}
       data-block-drag-wrapper="true"
       data-block-id={element.id as string}
-      onBlurCapture={handleBlurCapture}
-      onFocusCapture={() => setHandleActive(true)}
-      onPointerEnter={() => setHandleActive(true)}
-      onPointerLeave={handlePointerLeave}
       ref={nodeRef}
     >
-      {handleVisible ? (
-        <BlockDragHandle
-          editor={editor}
-          element={element}
-          nodeRef={nodeRef}
-          onDraggingChange={setIsDragging}
-          onKeyDown={handleKeyDown}
+      <Button
+        aria-keyshortcuts="ArrowUp ArrowDown"
+        aria-label="Move block"
+        className={cn(
+          'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
+          'active:cursor-grabbing',
+        )}
+        contentEditable={false}
+        data-block-id={element.id as string}
+        data-block-drag-handle="true"
+        onKeyDown={handleKeyDown}
+        ref={handleRef}
+        size="icon"
+        title="Drag to move block. Use the arrow keys to move it up or down."
+        type="button"
+        variant="ghost"
+      >
+        <GripVertical
+          aria-hidden="true"
+          className={cn(
+            'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
+            'group-hover/handle:opacity-100 group-hover/block:opacity-100',
+            'group-focus-within/block:opacity-100',
+            isDragging && 'opacity-100',
+          )}
         />
-      ) : null}
+      </Button>
       {dropLine === 'top' ? (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-primary"
+          data-block-drop-line="top"
         />
       ) : null}
       {children}
@@ -169,6 +101,7 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary"
+          data-block-drop-line="bottom"
         />
       ) : null}
     </div>
