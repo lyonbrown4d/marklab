@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import type { ViewMode } from '@/store/appTypes'
 
 type EditorStatusContextValue = {
@@ -58,7 +59,9 @@ export const EditorStatusBar = ({
   children: ReactNode
 }) => {
   const context = useContext(EditorStatusContext)
+  const keepAlive = useKeepAliveContext()
   if (
+    (keepAlive.cacheKey && !keepAlive.active) ||
     !context?.target ||
     !activePath ||
     activePath !== context.activePath ||

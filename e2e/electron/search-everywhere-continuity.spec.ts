@@ -34,6 +34,12 @@ const createWorkspace = () => {
     '# Search body\n\nEverywhere unique text needle.\n',
     'utf8',
   )
+  fs.mkdirSync(path.join(root, 'deep', 'nested'), { recursive: true })
+  fs.writeFileSync(
+    path.join(root, 'deep', 'nested', 'FirstClickTarget.md'),
+    '# First click target\n\nDeep indexed first click marker.\n',
+    'utf8',
+  )
   return root
 }
 
@@ -132,6 +138,36 @@ test.describe('Search Everywhere continuity', () => {
   test.afterAll(async () => {
     await closeRendererServer(server)
     removeWorkspace(workspaceRoot)
+  })
+
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.
+  test('opens a deep indexed result on the first selection before its tree branch loads', async ({}, testInfo) => {
+    if (!session) throw new Error('Electron test session is unavailable')
+    const diagnostics = monitorRuntime(session)
+    try {
+      const palette = await openPalette(session.page)
+      const fullTextTab = palette.getByRole('tab', { name: /Full-text search|全文搜索/i })
+      await fullTextTab.click()
+      await expect(fullTextTab).toHaveAttribute('aria-selected', 'true')
+      await palette.getByRole('combobox').fill('Deep indexed first click marker')
+      const result = palette
+        .getByRole('option')
+        .filter({ hasText: 'Deep indexed first click marker' })
+        .first()
+      await expect(result).toBeVisible({ timeout: 30_000 })
+
+      await result.click()
+
+      await expect(palette).toBeHidden()
+      const sourceEditor = session.page.locator('.monaco-editor')
+      await expect(sourceEditor).toBeVisible({ timeout: 15_000 })
+      await expect(sourceEditor.locator('.view-lines')).toContainText(
+        'Deep indexed first click marker',
+      )
+      assertNoRuntimeErrors(diagnostics)
+    } finally {
+      await attachDiagnostics(session, diagnostics, testInfo)
+    }
   })
 
   // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.

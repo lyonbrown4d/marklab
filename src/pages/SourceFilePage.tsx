@@ -5,7 +5,7 @@ import { resolveEditorLoadState } from '@/app/useEditorBufferState'
 import { Button } from '@/components/ui/button'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import SourceCodePage from '@/pages/SourceCodePage'
-import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
+import { FileRouteNotFound, isFileRouteAvailable } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { useLayoutContext } from '@/pages/useLayoutContext'
@@ -18,6 +18,7 @@ const SourceFilePage = () => {
   const requestedPath = params['*'] || null
   const context = useLayoutContext(
     useShallow((state) => ({
+      activePath: state.activePath,
       editorReadOnlyMode: state.editorReadOnlyMode,
       fileContents: state.fileContents,
       files: state.files,
@@ -33,7 +34,7 @@ const SourceFilePage = () => {
   )
   const { t } = useI18n()
 
-  if (!requestedPath || !fileExists(context.files, requestedPath)) {
+  if (!requestedPath || !isFileRouteAvailable(context.files, requestedPath, context.activePath)) {
     return (
       <>
         <EditorFocusHandoffFailure path={requestedPath} view="source" />

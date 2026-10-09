@@ -9,7 +9,7 @@ import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { isCalendarFilePath } from '@/logic/ics'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { pathToRoute } from '@/logic/routing'
-import { FileRouteNotFound, fileExists } from '@/pages/fileRouteHelpers'
+import { FileRouteNotFound, isFileRouteAvailable } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { EditorFocusHandoffFailure } from '@/app/EditorFocusHandoff'
@@ -51,7 +51,7 @@ const EditFilePage = () => {
     return <Navigate to={pathToRoute(context.activePath)} replace />
   }
 
-  if (requestedPath && !fileExists(context.files, requestedPath)) {
+  if (requestedPath && !isFileRouteAvailable(context.files, requestedPath, context.activePath)) {
     return (
       <>
         <EditorFocusHandoffFailure path={requestedPath} view="edit" />

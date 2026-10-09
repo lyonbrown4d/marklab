@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { KeepAlive } from 'keepalive-for-react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   AppStatusBarProvider,
@@ -105,5 +106,26 @@ describe('EditorStatusBar', () => {
       </EditorStatusBar>,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders status only for the active keep-alive editor instance', () => {
+    const CachedStatus = ({ cacheKey }: { cacheKey: string }) => (
+      <AppStatusBarProvider activePath="note.md" viewMode="wysiwyg">
+        <KeepAlive activeCacheKey={cacheKey} max={2}>
+          <EditorStatusBar activePath="note.md" viewMode="wysiwyg">
+            {cacheKey} status
+          </EditorStatusBar>
+        </KeepAlive>
+        <footer>
+          <EditorStatusBarSlot label="Document status" />
+        </footer>
+      </AppStatusBarProvider>
+    )
+    const view = render(<CachedStatus cacheKey="first" />)
+
+    view.rerender(<CachedStatus cacheKey="second" />)
+
+    expect(screen.getByText('second status')).toBeInTheDocument()
+    expect(screen.queryByText('first status')).not.toBeInTheDocument()
   })
 })

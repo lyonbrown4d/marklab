@@ -8,6 +8,46 @@ import {
 const uri = 'marklab:///notes/today.md'
 
 describe('LanguageIntelligenceService', () => {
+  it('shares identical document sessions opened by overlapping editor mounts', async () => {
+    const service = new LanguageIntelligenceService([
+      {
+        languageIds: ['markdown'],
+        completion: vi.fn(async ({ document }) => ({
+          isIncomplete: false,
+          items: [{ label: document.getText() }],
+        })),
+      },
+    ])
+    const request = {
+      uri,
+      languageId: 'markdown' as const,
+      path: 'notes/today.md',
+      version: 1,
+      text: 'Today',
+    }
+
+    expect(service.openDocument(11, request)).toEqual({ ok: true, version: 1 })
+    expect(service.openDocument(11, request)).toEqual({ ok: true, version: 1 })
+    service.closeDocument(11, { uri })
+
+    await expect(
+      service.completion(11, {} as never, {
+        uri,
+        version: 1,
+        position: { line: 0, character: 5 },
+      }),
+    ).resolves.toMatchObject({ items: [{ label: 'Today' }] })
+
+    service.closeDocument(11, { uri })
+    await expect(
+      service.completion(11, {} as never, {
+        uri,
+        version: 1,
+        position: { line: 0, character: 5 },
+      }),
+    ).rejects.toThrow('not open')
+  })
+
   it('adapts the embedded Mermaid provider through the same completion protocol', async () => {
     const service = new LanguageIntelligenceService()
     service.openDocument(11, {

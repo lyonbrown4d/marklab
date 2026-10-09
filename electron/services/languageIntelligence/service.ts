@@ -19,16 +19,19 @@ const MAX_DOCUMENTS_PER_CLIENT = 128
 const MAX_DOCUMENT_TEXT_PER_CLIENT = 64 * 1024 * 1024
 
 type DocumentSession = {
+  consumers: number
   document: TextDocument
   path: string | null
 }
 
-export type LanguageCompletionContext = DocumentSession & {
+type LanguageDocumentContext = Pick<DocumentSession, 'document' | 'path'>
+
+export type LanguageCompletionContext = LanguageDocumentContext & {
   position: Position
   workspace: WorkspaceService
 }
 
-export type LanguageDiagnosticsContext = DocumentSession & {
+export type LanguageDiagnosticsContext = LanguageDocumentContext & {
   workspace: WorkspaceService
 }
 
@@ -84,7 +87,18 @@ export class LanguageIntelligenceService implements LanguageIntelligenceServiceC
     const provider = this.providers.get(request.languageId)
     if (!provider) throw new Error(`Unsupported language: ${request.languageId}`)
     const documents = this.clients.get(ownerId) ?? new Map<string, DocumentSession>()
-    if (documents.has(request.uri)) throw new Error(`Document is already open: ${request.uri}`)
+    const existing = documents.get(request.uri)
+    if (existing) {
+      const identical =
+        existing.document.languageId === request.languageId &&
+        existing.document.version === request.version &&
+        existing.document.getText() === request.text &&
+        existing.path === (request.path ?? null)
+      if (!identical)
+        throw new Error(`Document is already open with different content: ${request.uri}`)
+      existing.consumers += 1
+      return { ok: true, version: existing.document.version }
+    }
     if (documents.size >= MAX_DOCUMENTS_PER_CLIENT) {
       throw new Error('Too many language documents are open for this renderer')
     }
@@ -92,6 +106,7 @@ export class LanguageIntelligenceService implements LanguageIntelligenceServiceC
       throw new Error('Language documents exceed the per-renderer text limit')
     }
     documents.set(request.uri, {
+      consumers: 1,
       document: TextDocument.create(request.uri, request.languageId, request.version, request.text),
       path: request.path ?? null,
     })
@@ -127,7 +142,12 @@ export class LanguageIntelligenceService implements LanguageIntelligenceServiceC
 
   closeDocument(ownerId: number, request: LanguageDocumentCloseRequest): LanguageDocumentCloseAck {
     const documents = this.clients.get(ownerId)
-    documents?.delete(request.uri)
+    const session = documents?.get(request.uri)
+    if (session && session.consumers > 1) {
+      session.consumers -= 1
+    } else {
+      documents?.delete(request.uri)
+    }
     if (documents?.size === 0) this.clients.delete(ownerId)
     return { ok: true }
   }

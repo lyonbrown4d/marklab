@@ -137,8 +137,8 @@ export const ImmersiveTitlebarChrome = ({
   const darkLogoUrl = new URL('marklab-dark.svg', document.baseURI).toString()
 
   return (
-    <div className="immersive-titlebar-chrome grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center">
-      <div className="flex min-w-0 items-center gap-2">
+    <div className="immersive-titlebar-chrome flex min-w-0 flex-1 items-center justify-between">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -200,7 +200,7 @@ export const ImmersiveTitlebarChrome = ({
         ) : null}
       </div>
 
-      <span className="pointer-events-none absolute left-1/2 block max-w-[28vw] -translate-x-1/2 truncate px-3 text-center text-sm font-medium text-foreground/85 sm:max-w-[36vw] sm:text-[15px]">
+      <span className="pointer-events-none absolute left-1/2 hidden max-w-[32vw] -translate-x-1/2 truncate px-3 text-center text-sm font-medium text-foreground/85 xl:block xl:text-[15px]">
         {documentTitle}
       </span>
 
@@ -265,7 +265,7 @@ export const ImmersiveTitlebarChrome = ({
         </Button>
       </div>
       <div
-        className="flex min-w-0 items-center justify-end lg:hidden"
+        className="flex shrink-0 items-center justify-end lg:hidden"
         data-slot="compact-titlebar-actions"
       >
         <TitlebarOverflowMenu
