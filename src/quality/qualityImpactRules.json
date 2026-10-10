@@ -10,7 +10,7 @@
       "^src/app/useAppMenuAction",
       "^src/components/WindowControls"
     ],
-    "checks": ["electron menu/window/preload tests", "pnpm exec tsc -b", "pnpm lint"]
+    "checks": ["electron menu/window/preload tests", "pnpm typecheck", "pnpm lint"]
   },
   {
     "area": "Source editor / Monaco",
@@ -24,7 +24,7 @@
       "^src/logic/sourceLanguages",
       "^src/pages/Source"
     ],
-    "checks": ["source editor tests", "focused edit tests", "pnpm exec tsc -b"]
+    "checks": ["source editor tests", "focused edit tests", "pnpm typecheck"]
   },
   {
     "area": "WYSIWYG / Plate",
@@ -45,7 +45,7 @@
       "Plate command/paste/sync tests",
       "preview/zoom tests",
       "pnpm test:perf:software",
-      "pnpm exec tsc -b"
+      "pnpm typecheck"
     ]
   },
   {
@@ -75,7 +75,7 @@
       "^src/store/preferences",
       "^src/store/usePreferencesStore"
     ],
-    "checks": ["settings tests", "affected component option tests", "pnpm exec tsc -b"]
+    "checks": ["settings tests", "affected component option tests", "pnpm typecheck"]
   },
   {
     "area": "Keyboard shortcuts",
@@ -93,7 +93,7 @@
       "shortcut catalog tests",
       "shortcut settings tests",
       "workspace map/editor shortcut tests",
-      "pnpm exec tsc -b"
+      "pnpm typecheck"
     ]
   },
   {
@@ -106,13 +106,13 @@
       "^src/runtime/",
       "^src/services/.+Api"
     ],
-    "checks": ["runtime/preload/service contract tests", "pnpm exec tsc -b"]
+    "checks": ["runtime/preload/service contract tests", "pnpm typecheck"]
   },
   {
     "area": "Workspace filesystem/services",
     "risk": "workspace boundary drift, path normalization mismatch, sidecar routing regression, or asset access bug",
     "patterns": ["^electron/services/workspace/"],
-    "checks": ["workspace service tests", "workspace sidecar/path tests", "pnpm exec tsc -b"]
+    "checks": ["workspace service tests", "workspace sidecar/path tests", "pnpm typecheck"]
   },
   {
     "area": "Knowledge engine / Node runtime",
@@ -137,7 +137,7 @@
     "checks": [
       "route cache and worker lifecycle tests",
       "pnpm test:electron:release",
-      "pnpm exec tsc -b"
+      "pnpm typecheck"
     ]
   },
   {
@@ -149,7 +149,7 @@
       "^src/services/fsApi",
       "^src/types/workspace.*Preview"
     ],
-    "checks": ["document preview component tests", "pnpm test:electron:release", "pnpm exec tsc -b"]
+    "checks": ["document preview component tests", "pnpm test:electron:release", "pnpm typecheck"]
   },
   {
     "area": "Build/package",
@@ -165,7 +165,7 @@
       "^tsconfig"
     ],
     "checks": [
-      "pnpm exec tsc -b",
+      "pnpm typecheck",
       "pnpm lint",
       "pnpm exec vite build --mode electron --logLevel error"
     ]

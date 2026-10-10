@@ -111,6 +111,6 @@ Focused verification:
 
 ```text
 pnpm test:knowledge:integration
-pnpm exec tsc -p tsconfig.electron.json
+node node_modules/typescript/bin/tsc6 -p tsconfig.electron.json
 pnpm exec vite build --mode electron
 ```

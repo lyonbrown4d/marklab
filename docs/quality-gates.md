@@ -49,7 +49,7 @@ untested boundary.
 
 | Impact area                      | Common risk                                                    | Required checks                                                 |
 | -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm exec tsc -b`             |
+| Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm typecheck`               |
 | Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                         |
 | WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests                  |
 | React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests            |
@@ -124,7 +124,7 @@ Use the narrowest checks while working, then broaden before committing:
 
 ```bash
 pnpm exec vitest run <affected tests>
-pnpm exec tsc -b
+pnpm typecheck
 pnpm lint
 pnpm exec vite build --mode electron --logLevel error
 git diff --check

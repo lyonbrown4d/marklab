@@ -35,7 +35,7 @@
     "typecheck": "moon run desktop:typecheck",
     "quality:impact": "node --experimental-strip-types scripts/quality-impact.ts",
     "quality:line-limits": "node --experimental-strip-types scripts/check-source-line-limits.ts",
-    "typecheck:scripts": "pnpm exec tsc -p tsconfig.scripts.json",
+    "typecheck:scripts": "node node_modules/typescript/bin/tsc6 -p tsconfig.scripts.json",
     "test": "moon run desktop:test",
     "test:coverage:critical": "vitest run --coverage --maxWorkers=2",
     "test:knowledge:integration": "moon run desktop:test-knowledge-integration",

@@ -71,7 +71,7 @@ const formatQualityImpactReport = (files: string[]) => {
       'Changed files did not match a known high-risk boundary.',
       '',
       'Run the standard baseline:',
-      '- pnpm exec tsc -b',
+      '- pnpm typecheck',
       '- pnpm lint',
       '- git diff --check',
     ].join('\n')

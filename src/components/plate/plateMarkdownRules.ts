@@ -8,7 +8,6 @@ import {
   type MdLink,
   type MdList,
   type MdListItem,
-  type MdParagraph,
   type MdRules,
   type MdYaml,
   type SerializeMdOptions,
@@ -82,18 +81,18 @@ const serializeClassicList = (node: TElement & { start?: number }, options: Seri
   const children = node.children
     .filter((child): child is TElement => 'type' in child && child.type === itemType)
     .map((item): MdListItem => {
-      const itemChildren = item.children.flatMap((child) => {
+      const itemChildren = item.children.flatMap<MdListItem['children'][number]>((child) => {
         if ('type' in child && child.type === contentType) {
           const content = child as TElement
           return [
             {
               children: convertNodesSerialize(content.children, options),
               type: 'paragraph' as const,
-            } as MdParagraph,
+            } as MdListItem['children'][number],
           ]
         }
-        return convertNodesSerialize([child] as Descendant[], options)
-      }) as MdListItem['children']
+        return convertNodesSerialize([child] as Descendant[], options) as MdListItem['children']
+      })
 
       return {
         checked: typeof item.checked === 'boolean' ? item.checked : null,

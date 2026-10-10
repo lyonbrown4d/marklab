@@ -126,7 +126,7 @@ describe('quality impact rules', () => {
     const report = formatQualityImpactReport(['docs/notes.md'])
 
     expect(report).toContain('Changed files did not match a known high-risk boundary.')
-    expect(report).toContain('pnpm exec tsc -b')
+    expect(report).toContain('pnpm typecheck')
     expect(report).toContain('git diff --check')
   })
 
