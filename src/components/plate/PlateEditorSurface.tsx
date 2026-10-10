@@ -15,7 +15,7 @@ import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
 import { PlateDocumentFind } from '@/components/plate/PlateDocumentFind'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
-import { PlateBlockSelectionCount } from '@/components/plate/selection/PlateBlockSelectionCount'
+import { PlateSelectionStats } from '@/components/plate/selection/PlateSelectionStats'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
 import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
@@ -268,7 +268,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
                 virtualized={readOnly}
               />
             )}
-            <PlateBlockSelectionCount />
+            <PlateSelectionStats />
             {interactionActive && contentReady && slashLabels && (
               <PlateEditorOverlays
                 activePath={activePath}

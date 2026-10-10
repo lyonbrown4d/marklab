@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import type http from 'node:http'
 // eslint-disable-next-line no-restricted-imports -- Electron E2E helpers stay outside production bundles.
@@ -20,6 +20,28 @@ import {
 import { blockByMarker } from './plateBlockDragHarness.js'
 
 const formattedPhrase = 'formatted phrase'
+
+const selectPhrase = (page: Page, phrase: string) =>
+  page.getByTestId('markdown-editor').evaluate((editor, target) => {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+    let textNode = walker.nextNode()
+    while (textNode) {
+      const start = textNode.textContent?.indexOf(target) ?? -1
+      if (start >= 0) {
+        const range = document.createRange()
+        const selection = window.getSelection()
+        editor.focus({ preventScroll: true })
+        range.setStart(textNode, start)
+        range.setEnd(textNode, start + target.length)
+        selection?.removeAllRanges()
+        selection?.addRange(range)
+        document.dispatchEvent(new Event('selectionchange'))
+        return
+      }
+      textNode = walker.nextNode()
+    }
+    throw new Error(`Unable to select phrase: ${target}`)
+  }, phrase)
 
 const readClipboardTextFormats = (session: ElectronTestSession) =>
   session.app.evaluate(async ({ clipboard }) => {
@@ -109,5 +131,15 @@ test.describe('Plate clipboard and block menu editing loop', () => {
     await blockByMarker(editor, 'DRAG-BLOCK-02').click()
     await page.keyboard.press('ControlOrMeta+Z')
     await expect(editor.getByText('DRAG-BLOCK-01', { exact: false })).toHaveCount(1)
+  })
+
+  test('shows word and character counts for a text selection', async () => {
+    if (!session) throw new Error('Selection stats test is not initialized')
+
+    await selectPhrase(session.page, formattedPhrase)
+
+    await expect(session.page.getByTestId('plate-selection-stats')).toHaveText(
+      /2 (words|词) · 15 (chars|字符)/,
+    )
   })
 })
