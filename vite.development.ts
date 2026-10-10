@@ -9,6 +9,8 @@ export const devOptimizeDepsInclude = [
   '@tanstack/react-query',
   'zustand',
   'ahooks',
+  'cn',
+  'radix-ui',
   'sonner',
   'lucide-react',
   '@xterm/xterm',
@@ -35,8 +37,12 @@ export const devOptimizeDepsInclude = [
   '@uiw/codemirror-theme-eclipse',
   'lodash-es/escape',
   'lodash-es/throttle',
+  'lru-cache',
   'mermaid',
   'fuse.js',
+  'remark-parse',
+  'remark-stringify',
+  'unified',
 ]
 
 export const devWarmupClientFiles = [
@@ -46,5 +52,6 @@ export const devWarmupClientFiles = [
   './src/app/AppShellPanels.tsx',
   './src/components/TerminalPanel.tsx',
   './src/components/MarkdownEditor.tsx',
+  './src/components/SettingsDialog.tsx',
   './src/components/TitlebarCommandDialog.tsx',
 ]

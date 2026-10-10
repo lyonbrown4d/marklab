@@ -54,6 +54,18 @@ describe('Vite production configuration', () => {
     expect(vite).toContain("dedupe: ['react', 'react-dom']")
   })
 
+  it('prebundles and warms the lazy settings dialog before its first interaction', async () => {
+    const development = await fs.readFile('vite.development.ts', 'utf8')
+
+    expect(development).toContain("'cn'")
+    expect(development).toContain("'radix-ui'")
+    expect(development).toContain("'lru-cache'")
+    expect(development).toContain("'remark-parse'")
+    expect(development).toContain("'remark-stringify'")
+    expect(development).toContain("'unified'")
+    expect(development).toContain("'./src/components/SettingsDialog.tsx'")
+  })
+
   it('resolves worker-safe package exports for the Plate Markdown worker', async () => {
     const vite = await fs.readFile('vite.config.ts', 'utf8')
 
