@@ -48,15 +48,12 @@ describe('Plate editor styles', () => {
   it('keeps focus mode compatible with chunks and reduced motion', () => {
     const styles = readFileSync(modesStylePath, 'utf8') as string
 
-    expect(styles).toMatch(
-      /\.markdown-editor\.is-focus-editor\[data-focus-active='true'\]\s*>\s*\.plate-block-draggable:not\(\[data-focus-active='true'\]\),\s*\.markdown-editor\.is-focus-editor\[data-focus-active='true'\]\s*>\s*\[data-slate-chunk='true'\]\s*>\s*\.plate-block-draggable:not\(\[data-focus-active='true'\]\)\s*\{\s*opacity:\s*0\.42;/s,
-    )
-    expect(styles).toMatch(
-      /\.markdown-editor\.is-focus-editor\s*>\s*\.plate-block-draggable,\s*\.markdown-editor\.is-focus-editor\s*>\s*\[data-slate-chunk='true'\]\s*>\s*\.plate-block-draggable\s*\{\s*transition:\s*opacity 160ms ease;/s,
-    )
-    expect(styles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.markdown-editor\.is-focus-editor > \.plate-block-draggable,[\s\S]*\.markdown-editor\.is-focus-editor > \[data-slate-chunk='true'\] > \.plate-block-draggable \{\s*transition:\s*none;/,
-    )
+    expect(styles).toContain('--focus-muted-opacity: 0.38')
+    expect(styles).toContain("[data-focus-context='true']")
+    expect(styles).toContain("[data-focus-primary='true']")
+    expect(styles).toContain("> [data-slate-chunk='true']")
+    expect(styles).toContain('opacity 160ms ease')
+    expect(styles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*transition: none;/)
   })
 
   it('keeps draggable blocks inside the normal and embedded reading widths', () => {

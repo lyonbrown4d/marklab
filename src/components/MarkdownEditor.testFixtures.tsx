@@ -17,6 +17,9 @@ const controllerMock = vi.hoisted(() => ({
     undo: true,
   })),
   aiDefaultProviderId: 'openai-main',
+  immersiveFocusIntensity: 'standard',
+  immersiveFocusMode: false,
+  immersiveFocusScope: 'block',
   runContextMenuAction: vi.fn(),
   shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
 }))

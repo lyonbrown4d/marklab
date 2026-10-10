@@ -34,6 +34,9 @@ vi.mock('@/components/plate/PlateEditorOverlays', () => ({
 describe('MarkdownEditor playground baseline', () => {
   beforeEach(() => {
     resetMarkdownEditorMocks()
+    preferencesMock.immersiveFocusIntensity = 'standard'
+    preferencesMock.immersiveFocusMode = false
+    preferencesMock.immersiveFocusScope = 'block'
     preferencesMock.immersiveTypewriterMode = false
     keepAliveState.active = true
     keepAliveState.cacheKey = undefined
@@ -119,6 +122,20 @@ describe('MarkdownEditor playground baseline', () => {
     expect(root).toHaveClass('markdown-editor')
     expect(root).toHaveAttribute('data-editor-engine', 'plate')
     expect(document.querySelector('[data-editor-engine="plate"]')).toBeInTheDocument()
+  })
+
+  it('applies the configured focus scope and intensity to editable documents', () => {
+    preferencesMock.immersiveFocusMode = true
+    preferencesMock.immersiveFocusScope = 'section'
+    preferencesMock.immersiveFocusIntensity = 'strong'
+
+    renderEditor()
+
+    expect(screen.getByTestId('markdown-editor')).toHaveClass(
+      'is-focus-editor',
+      'is-focus-scope-section',
+      'is-focus-intensity-strong',
+    )
   })
 
   it('scopes embedded presentation without creating a second editor path', () => {

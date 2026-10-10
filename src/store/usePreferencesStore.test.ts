@@ -40,6 +40,8 @@ describe('writing-first layout preferences', () => {
     expect(usePreferencesStore.getState().rightSidebarCollapsed).toBe(true)
     expect(usePreferencesStore.getState().showEditorStatusBar).toBe(true)
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(false)
+    expect(usePreferencesStore.getState().immersiveFocusScope).toBe('block')
+    expect(usePreferencesStore.getState().immersiveFocusIntensity).toBe('standard')
   })
 
   it('enables background-only desktop notifications by default', () => {
@@ -95,11 +97,20 @@ describe('writing-first layout preferences', () => {
   })
 
   it('preserves an existing explicit focus mode preference', async () => {
-    storage.getItem.mockReturnValue({ state: { immersiveFocusMode: true }, version: 2 })
+    storage.getItem.mockReturnValue({
+      state: {
+        immersiveFocusIntensity: 'strong',
+        immersiveFocusMode: true,
+        immersiveFocusScope: 'section',
+      },
+      version: 2,
+    })
 
     await usePreferencesStore.persist.rehydrate()
 
     expect(usePreferencesStore.getState().immersiveFocusMode).toBe(true)
+    expect(usePreferencesStore.getState().immersiveFocusScope).toBe('section')
+    expect(usePreferencesStore.getState().immersiveFocusIntensity).toBe('strong')
   })
 
   it('stores an optional terminal shell path', () => {

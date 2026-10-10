@@ -139,8 +139,9 @@ describe('PlateEditorSurface', () => {
     await waitFor(() => {
       expect(surface).toHaveAttribute('data-focus-active', 'true')
       const blocks = surface.querySelectorAll(":scope > [data-block-drag-wrapper='true']")
-      expect(blocks[0]).not.toHaveAttribute('data-focus-active')
+      expect(blocks[0]).toHaveAttribute('data-focus-context', 'true')
       expect(blocks[1]).toHaveAttribute('data-focus-active', 'true')
+      expect(blocks[1]).toHaveAttribute('data-focus-primary', 'true')
     })
   })
 

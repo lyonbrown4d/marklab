@@ -23,7 +23,9 @@ export type PreferencesPersistedState = Pick<
   | 'graphMiniMapPosition'
   | 'graphMiniMapSize'
   | 'hideMarkdownDefaultAppPrompt'
+  | 'immersiveFocusIntensity'
   | 'immersiveFocusMode'
+  | 'immersiveFocusScope'
   | 'immersiveTypewriterMode'
   | 'editorReadOnlyMode'
   | 'immersiveZenMode'
@@ -90,6 +92,8 @@ export const selectPreferencesPersistedState = (
   motionAnimatedPanels: state.motionAnimatedPanels,
   immersiveZenMode: state.immersiveZenMode,
   immersiveFocusMode: state.immersiveFocusMode,
+  immersiveFocusScope: state.immersiveFocusScope,
+  immersiveFocusIntensity: state.immersiveFocusIntensity,
   immersiveTypewriterMode: state.immersiveTypewriterMode,
   editorReadOnlyMode: state.editorReadOnlyMode,
   terminalShellPath: state.terminalShellPath,

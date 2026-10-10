@@ -36,6 +36,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     (state) => state.markdownAssetImportStrategy,
   )
   const immersiveFocusMode = usePreferencesStore((state) => state.immersiveFocusMode)
+  const immersiveFocusScope = usePreferencesStore((state) => state.immersiveFocusScope) ?? 'block'
+  const immersiveFocusIntensity =
+    usePreferencesStore((state) => state.immersiveFocusIntensity) ?? 'standard'
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
   const immersiveZenMode = usePreferencesStore((state) => state.immersiveZenMode)
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
@@ -130,6 +133,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             props.variant === 'embedded' && 'markdown-editor--embedded',
             props.readOnly && 'is-readonly-editor',
             !props.readOnly && immersiveFocusMode && 'is-focus-editor',
+            !props.readOnly && immersiveFocusMode && `is-focus-scope-${immersiveFocusScope}`,
+            !props.readOnly &&
+              immersiveFocusMode &&
+              `is-focus-intensity-${immersiveFocusIntensity}`,
             immersiveTypewriterMode && 'is-typewriter-editor',
             !props.readOnly && immersiveZenMode && 'is-zen-editor',
             motionSmoothScrolling && 'is-smooth-editor',

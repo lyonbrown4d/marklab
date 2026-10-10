@@ -36,6 +36,12 @@ describe('settingsPersistKeys', () => {
     expect(preferenceStateKeys.has('graphMiniMapSize')).toBe(true)
   })
 
+  it('allows focus mode presentation preferences through the renderer persist boundary', () => {
+    expect(preferenceStateKeys.has('immersiveFocusMode')).toBe(true)
+    expect(preferenceStateKeys.has('immersiveFocusScope')).toBe(true)
+    expect(preferenceStateKeys.has('immersiveFocusIntensity')).toBe(true)
+  })
+
   it('allows desktop notification preferences through the renderer persist boundary', () => {
     expect(preferenceStateKeys.has('desktopNotificationsEnabled')).toBe(true)
     expect(preferenceStateKeys.has('desktopNotificationsBackgroundOnly')).toBe(true)

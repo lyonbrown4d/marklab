@@ -1,6 +1,11 @@
 import type { PlateEditor } from 'platejs/react'
 import { useCallback, useEffect, useRef, type RefObject } from 'react'
-import { syncPlateFocusActiveBlock } from '@/components/plate/plateFocusMode'
+import {
+  clearPlateFocusMode,
+  EMPTY_PLATE_FOCUS_STATE,
+  syncPlateFocusMode,
+  type PlateFocusState,
+} from '@/components/plate/plateFocusMode'
 import { usePlateAnimatedCursor } from '@/components/plate/usePlateAnimatedCursor'
 
 type UsePlateEditorFocusLifecycleOptions = {
@@ -22,7 +27,8 @@ export const usePlateEditorFocusLifecycle = ({
   interactionActive,
   readOnly,
 }: UsePlateEditorFocusLifecycleOptions) => {
-  const activeFocusBlockRef = useRef<HTMLElement | null>(null)
+  const focusStateRef = useRef<PlateFocusState>(EMPTY_PLATE_FOCUS_STATE)
+  const focusSuppressedRef = useRef(false)
 
   usePlateAnimatedCursor({
     editableRef,
@@ -34,26 +40,42 @@ export const usePlateEditorFocusLifecycle = ({
   }, [autoFocus, contentReady, editableRef, editor, interactionActive, readOnly])
 
   const syncActiveFocusBlock = useCallback(() => {
-    if (!interactionActive) {
-      activeFocusBlockRef.current?.removeAttribute('data-focus-active')
-      editableRef.current?.removeAttribute('data-focus-active')
-      activeFocusBlockRef.current = null
+    if (!interactionActive || focusSuppressedRef.current) {
+      clearPlateFocusMode(editableRef.current, focusStateRef.current)
+      focusStateRef.current = EMPTY_PLATE_FOCUS_STATE
       return
     }
-    activeFocusBlockRef.current = syncPlateFocusActiveBlock(
-      editor,
-      editableRef.current,
-      activeFocusBlockRef.current,
-    )
+    focusStateRef.current = syncPlateFocusMode(editor, editableRef.current, focusStateRef.current)
   }, [editableRef, editor, interactionActive])
 
   useEffect(() => {
     const editable = editableRef.current
     syncActiveFocusBlock()
+    if (!editable) return
+
+    let blurTimer: number | null = null
+    const handleFocusIn = () => {
+      if (blurTimer !== null) window.clearTimeout(blurTimer)
+      focusSuppressedRef.current = false
+      syncActiveFocusBlock()
+    }
+    const handleFocusOut = () => {
+      blurTimer = window.setTimeout(() => {
+        if (editable.contains(document.activeElement)) return
+        focusSuppressedRef.current = true
+        clearPlateFocusMode(editable, focusStateRef.current)
+        focusStateRef.current = EMPTY_PLATE_FOCUS_STATE
+      }, 0)
+    }
+
+    editable.addEventListener('focusin', handleFocusIn)
+    editable.addEventListener('focusout', handleFocusOut)
     return () => {
-      activeFocusBlockRef.current?.removeAttribute('data-focus-active')
-      editable?.removeAttribute('data-focus-active')
-      activeFocusBlockRef.current = null
+      if (blurTimer !== null) window.clearTimeout(blurTimer)
+      editable.removeEventListener('focusin', handleFocusIn)
+      editable.removeEventListener('focusout', handleFocusOut)
+      clearPlateFocusMode(editable, focusStateRef.current)
+      focusStateRef.current = EMPTY_PLATE_FOCUS_STATE
     }
   }, [className, contentReady, editableRef, syncActiveFocusBlock])
 

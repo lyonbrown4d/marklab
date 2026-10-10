@@ -12,17 +12,71 @@
   width: min(100%, 760px);
 }
 
-.markdown-editor.is-focus-editor[data-focus-active='true']
-  > .plate-block-draggable:not([data-focus-active='true']),
-.markdown-editor.is-focus-editor[data-focus-active='true']
-  > [data-slate-chunk='true']
-  > .plate-block-draggable:not([data-focus-active='true']) {
-  opacity: 0.42;
+.markdown-editor.is-focus-editor {
+  --focus-muted-opacity: 0.38;
+  --focus-context-opacity: 0.68;
+  --focus-surface-strength: 5%;
+  --focus-edge-strength: 22%;
 }
 
-.markdown-editor.is-focus-editor > .plate-block-draggable,
-.markdown-editor.is-focus-editor > [data-slate-chunk='true'] > .plate-block-draggable {
-  transition: opacity 160ms ease;
+.markdown-editor.is-focus-editor.is-focus-intensity-soft {
+  --focus-muted-opacity: 0.58;
+  --focus-context-opacity: 0.8;
+  --focus-surface-strength: 3%;
+  --focus-edge-strength: 14%;
+}
+
+.markdown-editor.is-focus-editor.is-focus-intensity-strong {
+  --focus-muted-opacity: 0.22;
+  --focus-context-opacity: 0.54;
+  --focus-surface-strength: 7%;
+  --focus-edge-strength: 30%;
+}
+
+.markdown-editor.is-focus-editor > :is([data-slate-node='element'], .plate-block-draggable),
+.markdown-editor.is-focus-editor
+  > [data-slate-chunk='true']
+  > :is([data-slate-node='element'], .plate-block-draggable) {
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.markdown-editor.is-focus-editor[data-focus-active='true']
+  > :is([data-slate-node='element'], .plate-block-draggable):not([data-focus-active='true']):not(
+    [data-focus-context='true']
+  ),
+.markdown-editor.is-focus-editor[data-focus-active='true']
+  > [data-slate-chunk='true']
+  > :is([data-slate-node='element'], .plate-block-draggable):not([data-focus-active='true']):not(
+    [data-focus-context='true']
+  ) {
+  opacity: var(--focus-muted-opacity);
+}
+
+.markdown-editor.is-focus-editor[data-focus-active='true']
+  > :is([data-slate-node='element'], .plate-block-draggable)[data-focus-context='true'],
+.markdown-editor.is-focus-editor[data-focus-active='true']
+  > [data-slate-chunk='true']
+  > :is([data-slate-node='element'], .plate-block-draggable)[data-focus-context='true'] {
+  opacity: var(--focus-context-opacity);
+}
+
+.markdown-editor.is-focus-editor [data-focus-active='true'] {
+  opacity: 1;
+}
+
+.markdown-editor.is-focus-editor [data-focus-primary='true'] {
+  border-radius: 4px;
+  background-color: color-mix(
+    in srgb,
+    hsl(var(--foreground)) var(--focus-surface-strength),
+    transparent
+  );
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, hsl(var(--foreground)) var(--focus-surface-strength), transparent),
+    inset 2px 0 0 color-mix(in srgb, hsl(var(--primary)) var(--focus-edge-strength), transparent);
 }
 
 [data-drop-active='image'] .markdown-editor {
@@ -40,13 +94,22 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 36%, transparent);
 }
 
+[data-drop-active='image'] .markdown-editor.is-focus-editor [data-focus-active],
+[data-drop-active='image'] .markdown-editor.is-focus-editor [data-focus-context] {
+  opacity: 1;
+  background-color: transparent;
+  box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .markdown-editor.is-smooth-editor {
     scroll-behavior: auto;
   }
 
-  .markdown-editor.is-focus-editor > .plate-block-draggable,
-  .markdown-editor.is-focus-editor > [data-slate-chunk='true'] > .plate-block-draggable {
+  .markdown-editor.is-focus-editor > :is([data-slate-node='element'], .plate-block-draggable),
+  .markdown-editor.is-focus-editor
+    > [data-slate-chunk='true']
+    > :is([data-slate-node='element'], .plate-block-draggable) {
     transition: none;
   }
 }

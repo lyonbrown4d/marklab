@@ -89,6 +89,8 @@ export const settingsRoutes: SettingsRoute[] = [
       { labelKey: 'settings.immersiveEditing', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.zenMode', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.focusMode', targetId: 'settings-immersive-editing' },
+      { labelKey: 'settings.focusScope', targetId: 'settings-immersive-editing' },
+      { labelKey: 'settings.focusIntensity', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.typewriterMode', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.sourceCodeMiniMap', targetId: 'settings-source-code' },
       { labelKey: 'settings.motionSmoothScrolling', targetId: 'settings-motion' },
