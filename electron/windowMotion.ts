@@ -2,7 +2,7 @@ import type { BrowserWindow } from 'electron'
 import { isBackgroundElectronE2e } from '@electron/main/e2eRuntime'
 
 const SHOW_DURATION_MS = 140
-const HIDE_DURATION_MS = 110
+const HIDE_DURATION_MS = 160
 const FRAME_MS = 16
 
 const activeTimers = new WeakMap<BrowserWindow, ReturnType<typeof setTimeout>>()

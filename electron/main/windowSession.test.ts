@@ -1,7 +1,7 @@
 import type { BrowserWindow } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createMainWindowSession } from '@electron/main/windowSession'
+import { createMainWindowSession, createStartupWindowSession } from '@electron/main/windowSession'
 import { noopLogger } from '@electron/services/logger'
 import { DEFAULT_SESSION_KEY } from '@electron/services/settingsStoreValues'
 import { createMarklabWindows } from '@electron/window'
@@ -16,6 +16,28 @@ vi.mock('@electron/windowStateRestore', () => ({
 
 describe('createMainWindowSession', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('loads the splash before backend startup and main-window creation', async () => {
+    const order: string[] = []
+    const splash = {} as BrowserWindow
+    const main = {} as BrowserWindow
+    const windows = await createStartupWindowSession({
+      createSplash: async () => {
+        order.push('splash')
+        return splash
+      },
+      startRuntime: async () => {
+        order.push('runtime')
+      },
+      createSession: async (loadedSplash) => {
+        order.push('main')
+        return { main, splash: loadedSplash }
+      },
+    })
+
+    expect(order).toEqual(['splash', 'runtime', 'main'])
+    expect(windows).toEqual({ main, splash })
+  })
 
   it('does not prewarm while the primary renderer is still hydrating', async () => {
     const main = {} as BrowserWindow
@@ -38,9 +60,11 @@ describe('createMainWindowSession', () => {
       ensureWindowPool: () => pool,
       installManagedMainWindowLifecycle: vi.fn(),
       logger: noopLogger,
+      loadedSplash: splash,
     })
 
     expect(pool.prewarmMainWindow).not.toHaveBeenCalled()
+    expect(createMarklabWindows).toHaveBeenCalledWith(noopLogger, pool, splash)
   })
 
   it('registers the primary window with the stable persisted session key', async () => {
@@ -57,6 +81,7 @@ describe('createMainWindowSession', () => {
       ensureWindowPool: () => pool,
       installManagedMainWindowLifecycle,
       logger: noopLogger,
+      loadedSplash: splash,
     })
 
     expect(installManagedMainWindowLifecycle).toHaveBeenCalledWith(

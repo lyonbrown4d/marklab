@@ -139,8 +139,8 @@ const writeWindowState = (window: BrowserWindow, logger: Logger, stateKey: strin
 export const createSplashWindow = () => {
   installDevelopmentDockIcon()
   const splash = new BrowserWindow({
-    width: 360,
-    height: 220,
+    width: 344,
+    height: 196,
     title: MARKLAB_APP_NAME,
     icon: appIcon,
     resizable: false,
@@ -208,6 +208,16 @@ export const loadSplashWindow = async (splash: BrowserWindow) => {
   }
   await splash.loadFile(splashPage)
 }
+export const createLoadedSplashWindow = async (): Promise<BrowserWindow> => {
+  const splash = createSplashWindow()
+  try {
+    await loadSplashWindow(splash)
+    return splash
+  } catch (error) {
+    if (!splash.isDestroyed()) splash.destroy()
+    throw error
+  }
+}
 export const loadMainWindow = async (main: BrowserWindow, options: MainWindowLoadOptions = {}) => {
   if (isDevMode()) {
     await loadDevUrl(main, getMainRendererNavigationUrl(options.standby))
@@ -234,14 +244,15 @@ export const createLoadedMainWindow = async (logger: Logger = noopLogger) => {
 export const createMarklabWindows = async (
   logger: Logger = noopLogger,
   mainWindowPool?: MainWindowPool,
+  loadedSplash?: BrowserWindow,
 ): Promise<MarklabWindows> => {
-  const splash = createSplashWindow()
+  const splash = loadedSplash ?? (await createLoadedSplashWindow())
   const mainWindow = mainWindowPool
     ? mainWindowPool.acquireMainWindow().then(async (acquisition) => {
         await mainWindowPool.activateMainWindow(acquisition)
         return acquisition.window
       })
     : createLoadedMainWindow(logger)
-  const [main] = await Promise.all([mainWindow, loadSplashWindow(splash)])
+  const main = await mainWindow
   return { splash, main }
 }

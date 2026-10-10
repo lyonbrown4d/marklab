@@ -130,7 +130,7 @@ tasks:
       persistent: true
 
   electron-build:
-    command: pnpm exec vite build --mode electron
+    command: pnpm electron:build:artifacts
     deps:
       - ~:prepare
     inputs:
@@ -138,6 +138,8 @@ tasks:
       - electron/**/*
       - public/**/*
       - index.html
+      - splashscreen.html
+      - scripts/build-electron.ts
       - vite*.ts
       - postcss.config.ts
       - tailwind.config.ts

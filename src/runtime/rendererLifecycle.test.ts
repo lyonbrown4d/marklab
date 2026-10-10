@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   diagnosticsError: vi.fn(),
@@ -16,6 +16,37 @@ describe('renderer lifecycle initialization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+  })
+
+  afterEach(() => {
+    document.body.replaceChildren()
+    vi.restoreAllMocks()
+  })
+
+  it('waits for the initial Markdown surface to finish hydration before becoming interactive', async () => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0)
+      return 1
+    })
+    const editor = document.createElement('div')
+    editor.dataset.state = 'loading'
+    editor.dataset.testid = 'markdown-editor'
+    document.body.append(editor)
+    const { waitForWorkspaceInteractivePaint } = await import('@/runtime/rendererLifecycle')
+    let resolved = false
+
+    const pending = waitForWorkspaceInteractivePaint().then(() => {
+      resolved = true
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0))
+
+    expect(resolved).toBe(false)
+
+    editor.dataset.state = 'ready'
+    await pending
+    expect(resolved).toBe(true)
   })
 
   it('reports a seed bridge installation failure through diagnostics and workspace readiness', async () => {

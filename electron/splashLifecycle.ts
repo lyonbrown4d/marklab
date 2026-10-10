@@ -9,13 +9,25 @@ export const showSplashWithoutActivation = (splash: BrowserWindow): void => {
   splash.showInactive()
 }
 
-export const dismissSplashWindow = (splash: BrowserWindow, hideWindow: HideWindow): void => {
-  if (splash.isDestroyed()) return
-  const fallback = setTimeout(() => {
+export const dismissSplashWindow = (
+  splash: BrowserWindow,
+  hideWindow: HideWindow,
+  onDismissed?: () => void,
+): void => {
+  if (splash.isDestroyed()) {
+    onDismissed?.()
+    return
+  }
+
+  let completed = false
+  const complete = (): void => {
+    if (completed) return
+    completed = true
+    clearTimeout(fallback)
     if (!splash.isDestroyed()) splash.destroy()
-  }, SPLASH_DISMISS_FALLBACK_MS)
-  splash.once('closed', () => clearTimeout(fallback))
-  hideWindow(splash, () => {
-    if (!splash.isDestroyed()) splash.destroy()
-  })
+    onDismissed?.()
+  }
+  const fallback = setTimeout(complete, SPLASH_DISMISS_FALLBACK_MS)
+  splash.once('closed', complete)
+  hideWindow(splash, complete)
 }

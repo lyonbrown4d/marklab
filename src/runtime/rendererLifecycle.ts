@@ -91,7 +91,39 @@ export const signalRendererReady = async (signal: RendererReadySignal): Promise<
 const nextAnimationFrame = (): Promise<void> =>
   new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
 
+const INITIAL_CONTENT_LOADING_SELECTOR =
+  '[data-editor-loading="true"], [data-testid="markdown-editor"][data-state="loading"]'
+const INITIAL_CONTENT_READY_TIMEOUT_MS = 30_000
+
+const waitForInitialContentReady = (): Promise<void> => {
+  if (!document.querySelector(INITIAL_CONTENT_LOADING_SELECTOR)) return Promise.resolve()
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (): void => {
+      if (settled) return
+      settled = true
+      observer.disconnect()
+      window.clearTimeout(timeout)
+      resolve()
+    }
+    const check = (): void => {
+      if (!document.querySelector(INITIAL_CONTENT_LOADING_SELECTOR)) finish()
+    }
+    const observer = new MutationObserver(check)
+    const timeout = window.setTimeout(finish, INITIAL_CONTENT_READY_TIMEOUT_MS)
+    observer.observe(document.body, {
+      attributeFilter: ['data-editor-loading', 'data-state'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
+    check()
+  })
+}
+
 export const waitForWorkspaceInteractivePaint = async (): Promise<void> => {
   await nextAnimationFrame()
+  await nextAnimationFrame()
+  await waitForInitialContentReady()
   await nextAnimationFrame()
 }

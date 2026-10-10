@@ -47,6 +47,25 @@ describe('splash lifecycle', () => {
     expect(splash.close).not.toHaveBeenCalled()
   })
 
+  it('notifies the caller only after the splash renderer is destroyed', () => {
+    const splash = createSplash()
+    const events: string[] = []
+    let finishHide: (() => void) | undefined
+    const hide = vi.fn((_window, onHidden: () => void) => {
+      finishHide = onHidden
+    })
+
+    dismissSplashWindow(splash as unknown as BrowserWindow, hide, () => {
+      events.push('present-main')
+    })
+
+    expect(events).toEqual([])
+    finishHide?.()
+
+    expect(splash.destroy).toHaveBeenCalledOnce()
+    expect(events).toEqual(['present-main'])
+  })
+
   it('destroys a lingering splash when the hide callback never arrives', () => {
     vi.useFakeTimers()
     const splash = createSplash()

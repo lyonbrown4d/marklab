@@ -21,11 +21,15 @@ import {
   createInitialNativeOpenPresentationGate,
   installSingleInstanceAndDeepLinks,
 } from '@electron/main/singleInstance'
-import { createMainWindowSession } from '@electron/main/windowSession'
+import { createMainWindowSession, createStartupWindowSession } from '@electron/main/windowSession'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
 import { continueAppQuit } from '@electron/main/updateQuit'
-import { createAppWindowIcon, type MarklabWindows } from '@electron/window'
+import {
+  createAppWindowIcon,
+  createLoadedSplashWindow,
+  type MarklabWindows,
+} from '@electron/window'
 import {
   flushPersistedWindowState,
   releasePersistedWindowState,
@@ -37,7 +41,7 @@ import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
 import { createRendererReadyCoordinator } from '@electron/main/rendererReady'
 import type { RendererReadySignal } from '@/types/rendererReady'
 
-const APP_READY_FALLBACK_MS = 5000
+const APP_READY_FALLBACK_MS = 30_000
 
 let windows: MarklabWindows | null = null
 let didShowMain = false
@@ -91,21 +95,25 @@ const getServices = (): ElectronServices => getRuntime().services
 const presentMainWindow = (): void => {
   if (didShowMain || !windows) return
 
+  const activeWindows = windows
   didShowMain = true
   clearFallbackTimer()
 
-  if (!windows.main.isDestroyed()) {
-    showWindowWithMotion(windows.main, { focus: true })
+  const revealMainWindow = (): void => {
+    if (!activeWindows.main.isDestroyed()) {
+      showWindowWithMotion(activeWindows.main, { focus: true })
+    }
   }
-  if (!windows.splash.isDestroyed()) {
-    dismissSplashWindow(windows.splash, hideWindowWithMotion)
-  }
+  dismissSplashWindow(activeWindows.splash, hideWindowWithMotion, revealMainWindow)
 }
 
 const initialPresentationGate = createInitialNativeOpenPresentationGate(presentMainWindow)
-const showMainWindow = initialPresentationGate.requestPresentation
+const showMainWindow = (): void => {
+  if (!rendererReady) return
+  initialPresentationGate.requestPresentation()
+}
 
-const handlePrimaryRendererShellReady = (): void => {
+const handlePrimaryRendererWorkspaceSettled = (): void => {
   rendererReady = true
   showMainWindow()
   systemThemeMonitor.announceCurrent()
@@ -169,7 +177,7 @@ const rendererReadyCoordinator = createRendererReadyCoordinator({
   logger: {
     warn: (message, context) => getServices().logger.warn(message, context),
   },
-  onPrimaryShellReady: handlePrimaryRendererShellReady,
+  onPrimaryWorkspaceSettled: handlePrimaryRendererWorkspaceSettled,
 })
 
 const legacyShellIpc = createLegacyShellIpcRegistration({
@@ -179,21 +187,25 @@ const legacyShellIpc = createLegacyShellIpcRegistration({
 })
 
 const bootstrap = async (): Promise<void> => {
-  runtime = getRuntime()
-  const logger = runtime.services.logger
+  const activeRuntime = getRuntime()
+  const logger = activeRuntime.services.logger
   logger.info('bootstrap started')
-
-  await runtime.startup()
 
   didShowMain = false
   rendererReady = false
 
   try {
-    windows = await createMainWindowSession({
-      dispatchNativeMenuAction: windowCommandSetup.dispatchMenuAction,
-      ensureWindowPool: windowLifecycle.ensureWindowPool,
-      installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
-      logger,
+    windows = await createStartupWindowSession({
+      createSplash: createLoadedSplashWindow,
+      startRuntime: () => activeRuntime.startup(),
+      createSession: (loadedSplash) =>
+        createMainWindowSession({
+          dispatchNativeMenuAction: windowCommandSetup.dispatchMenuAction,
+          ensureWindowPool: windowLifecycle.ensureWindowPool,
+          installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
+          loadedSplash,
+          logger,
+        }),
     })
     rendererReadyCoordinator.flushPrimaryInteractive()
   } catch (error) {
@@ -202,7 +214,10 @@ const bootstrap = async (): Promise<void> => {
   }
 
   clearFallbackTimer()
-  fallbackTimer = setTimeout(showMainWindow, APP_READY_FALLBACK_MS)
+  fallbackTimer = setTimeout(() => {
+    rendererReady = true
+    showMainWindow()
+  }, APP_READY_FALLBACK_MS)
   if (rendererReady) showMainWindow()
   runtimeEvents.flushPendingRuntimeEvents()
   logger.info('bootstrap finished')

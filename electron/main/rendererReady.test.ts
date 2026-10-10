@@ -7,10 +7,59 @@ const createWindow = (id: number) =>
   ({ id, isDestroyed: () => false, webContents: { id: id * 10 } }) as unknown as BrowserWindow
 
 describe('renderer ready coordinator', () => {
+  it('keeps the primary splash visible until workspace content is interactive', () => {
+    const primary = createWindow(1)
+    const onPrimaryWorkspaceSettled = vi.fn()
+    const options = {
+      fromWebContents: vi.fn(() => primary),
+      getPrimaryWindow: () => primary,
+      getWindowPool: () => ({
+        markRendererInteractive: vi.fn(),
+        prewarmMainWindow: vi.fn(async () => undefined),
+      }),
+      getWorkspaceServiceForWindow: () => ({ markRendererInteractive: vi.fn() }),
+      isPrimaryBootstrapping: () => false,
+      logger: { warn: vi.fn() },
+      onPrimaryWorkspaceSettled,
+    }
+    const coordinator = createRendererReadyCoordinator(options)
+    const event = { sender: primary.webContents } as IpcMainInvokeEvent
+
+    coordinator.handle(event, { phase: 'shell' })
+    expect(onPrimaryWorkspaceSettled).not.toHaveBeenCalled()
+
+    coordinator.handle(event, { phase: 'workspace-interactive' })
+    expect(onPrimaryWorkspaceSettled).toHaveBeenCalledOnce()
+  })
+
+  it('releases the primary splash when workspace hydration fails', () => {
+    const primary = createWindow(1)
+    const onPrimaryWorkspaceSettled = vi.fn()
+    const coordinator = createRendererReadyCoordinator({
+      fromWebContents: vi.fn(() => primary),
+      getPrimaryWindow: () => primary,
+      getWindowPool: () => ({
+        markRendererInteractive: vi.fn(),
+        prewarmMainWindow: vi.fn(async () => undefined),
+      }),
+      getWorkspaceServiceForWindow: () => ({ markRendererInteractive: vi.fn() }),
+      isPrimaryBootstrapping: () => false,
+      logger: { warn: vi.fn() },
+      onPrimaryWorkspaceSettled,
+    })
+
+    coordinator.handle({ sender: primary.webContents } as IpcMainInvokeEvent, {
+      error: 'workspace unavailable',
+      phase: 'workspace-error',
+    })
+
+    expect(onPrimaryWorkspaceSettled).toHaveBeenCalledOnce()
+  })
+
   it('ignores standby shell readiness for primary splash semantics', () => {
     const primary = createWindow(1)
     const standby = createWindow(2)
-    const onPrimaryShellReady = vi.fn()
+    const onPrimaryWorkspaceSettled = vi.fn()
     const coordinator = createRendererReadyCoordinator({
       fromWebContents: vi.fn(() => standby),
       getPrimaryWindow: () => primary,
@@ -18,14 +67,14 @@ describe('renderer ready coordinator', () => {
       getWorkspaceServiceForWindow: vi.fn(),
       isPrimaryBootstrapping: () => false,
       logger: { warn: vi.fn() },
-      onPrimaryShellReady,
+      onPrimaryWorkspaceSettled,
     })
 
     coordinator.handle({ sender: standby.webContents } as IpcMainInvokeEvent, {
       phase: 'shell',
     })
 
-    expect(onPrimaryShellReady).not.toHaveBeenCalled()
+    expect(onPrimaryWorkspaceSettled).not.toHaveBeenCalled()
   })
 
   it('starts initial prewarm only after the primary workspace is interactive', async () => {
@@ -35,7 +84,7 @@ describe('renderer ready coordinator', () => {
       prewarmMainWindow: vi.fn(async () => undefined),
     }
     const workspace = { markRendererInteractive: vi.fn() }
-    const onPrimaryShellReady = vi.fn()
+    const onPrimaryWorkspaceSettled = vi.fn()
     const coordinator = createRendererReadyCoordinator({
       fromWebContents: vi.fn(() => primary),
       getPrimaryWindow: () => primary,
@@ -43,16 +92,17 @@ describe('renderer ready coordinator', () => {
       getWorkspaceServiceForWindow: () => workspace,
       isPrimaryBootstrapping: () => false,
       logger: { warn: vi.fn() },
-      onPrimaryShellReady,
+      onPrimaryWorkspaceSettled,
     })
     const event = { sender: primary.webContents } as IpcMainInvokeEvent
 
     coordinator.handle(event, { phase: 'shell' })
-    expect(onPrimaryShellReady).toHaveBeenCalledOnce()
+    expect(onPrimaryWorkspaceSettled).not.toHaveBeenCalled()
     expect(pool.prewarmMainWindow).not.toHaveBeenCalled()
 
     coordinator.handle(event, { phase: 'workspace-interactive' })
     await vi.waitFor(() => expect(pool.prewarmMainWindow).toHaveBeenCalledOnce())
+    expect(onPrimaryWorkspaceSettled).toHaveBeenCalledOnce()
     expect(pool.markRendererInteractive).toHaveBeenCalledWith(primary, undefined)
     expect(workspace.markRendererInteractive).toHaveBeenCalledOnce()
 
@@ -76,7 +126,7 @@ describe('renderer ready coordinator', () => {
       getWorkspaceServiceForWindow: () => workspace,
       isPrimaryBootstrapping: () => false,
       logger: { warn: vi.fn() },
-      onPrimaryShellReady: vi.fn(),
+      onPrimaryWorkspaceSettled: vi.fn(),
     })
     const event = { sender: secondary.webContents } as IpcMainInvokeEvent
 
@@ -106,7 +156,7 @@ describe('renderer ready coordinator', () => {
       getWorkspaceServiceForWindow: () => workspace,
       isPrimaryBootstrapping: () => false,
       logger: { warn: vi.fn() },
-      onPrimaryShellReady: vi.fn(),
+      onPrimaryWorkspaceSettled: vi.fn(),
     })
 
     coordinator.handle({ sender: first.webContents } as IpcMainInvokeEvent, {
@@ -137,7 +187,7 @@ describe('renderer ready coordinator', () => {
       getWorkspaceServiceForWindow: () => workspace,
       isPrimaryBootstrapping: () => primary === null,
       logger: { warn: vi.fn() },
-      onPrimaryShellReady: vi.fn(),
+      onPrimaryWorkspaceSettled: vi.fn(),
     })
 
     coordinator.handle({ sender: bootstrapping.webContents } as IpcMainInvokeEvent, {

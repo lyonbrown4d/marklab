@@ -17,6 +17,28 @@ type WindowSessionOptions = {
     sessionKey?: string,
   ) => void
   logger: Logger
+  loadedSplash?: BrowserWindow
+}
+
+type StartupWindowSessionOptions = {
+  createSession: (splash: BrowserWindow) => Promise<MarklabWindows>
+  createSplash: () => Promise<BrowserWindow>
+  startRuntime: () => Promise<void>
+}
+
+export const createStartupWindowSession = async ({
+  createSession,
+  createSplash,
+  startRuntime,
+}: StartupWindowSessionOptions): Promise<MarklabWindows> => {
+  const splash = await createSplash()
+  try {
+    await startRuntime()
+    return await createSession(splash)
+  } catch (error) {
+    if (!splash.isDestroyed()) splash.destroy()
+    throw error
+  }
 }
 
 export const createMainWindowSession = async (
@@ -25,6 +47,7 @@ export const createMainWindowSession = async (
   const windows = await createMarklabWindows(
     options.logger.child('window'),
     options.ensureWindowPool(),
+    options.loadedSplash,
   )
   installNativeMenu(windows.main, options.dispatchNativeMenuAction)
   activatePersistedWorkspaceWindowState(windows.main, DEFAULT_SESSION_KEY, options.logger)

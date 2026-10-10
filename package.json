@@ -8,13 +8,14 @@
   "main": "dist-electron/main.js",
   "packageManager": "pnpm@10.26.0",
   "engines": {
-    "node": "^22.13.0 || ^24.0.0"
+    "node": "^22.13.0 || ^24.0.0 || ^25.0.0"
   },
   "scripts": {
     "dev": "moon run desktop:electron-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
+    "electron:build:artifacts": "node --experimental-strip-types scripts/build-electron.ts",
     "icons:generate": "node --experimental-strip-types scripts/generate-app-icons.ts",
     "desktop:prepare": "moon run desktop:prepare",
     "desktop:prepare:dev": "moon run desktop:prepare-dev",
@@ -40,7 +41,7 @@
     "test:knowledge:integration": "moon run desktop:test-knowledge-integration",
     "test:ui": "vitest run .integration.test.",
     "test:electron": "pnpm test:electron:build && pnpm test:electron:run",
-    "test:electron:build": "pnpm icons:generate && pnpm exec vite build --mode electron",
+    "test:electron:build": "pnpm icons:generate && pnpm electron:build:artifacts",
     "test:electron:run": "node --experimental-strip-types scripts/run-electron-e2e.ts",
     "test:electron:release": "pnpm test:electron:build && pnpm test:electron:release:run",
     "test:electron:release:run": "pnpm test:electron:run release-regressions.spec.ts app-smoke.spec.ts plate-editor-integrations.spec.ts",

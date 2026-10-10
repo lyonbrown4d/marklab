@@ -13,7 +13,10 @@ const EditorPaneFallback = ({ label, path }: EditorPaneFallbackProps) => {
   const loadingLabel = label ?? t('editor.loading')
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+    <div
+      className="flex h-full flex-col items-center justify-center gap-4 bg-background p-6 text-center"
+      data-editor-loading="true"
+    >
       <Card className="w-full max-w-xl py-6">
         <CardContent className="flex flex-col items-center gap-4 px-6">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">

@@ -18,7 +18,7 @@ type RendererReadyCoordinatorOptions = {
   getWorkspaceServiceForWindow: (window: BrowserWindow) => RendererReadyWorkspace
   isPrimaryBootstrapping: () => boolean
   logger: { warn: (message: string, context?: Record<string, unknown>) => void }
-  onPrimaryShellReady: () => void
+  onPrimaryWorkspaceSettled: () => void
 }
 
 export const createRendererReadyCoordinator = (options: RendererReadyCoordinatorOptions) => {
@@ -43,20 +43,21 @@ export const createRendererReadyCoordinator = (options: RendererReadyCoordinator
     const primary = options.getPrimaryWindow()
     const isPrimary = primary ? target === primary : options.isPrimaryBootstrapping()
 
-    if (signal.phase === 'shell') {
-      if (isPrimary) options.onPrimaryShellReady()
-      return
-    }
+    if (signal.phase === 'shell') return
 
     const error =
       signal.phase === 'workspace-error'
         ? new Error(signal.error ?? 'Renderer workspace hydration failed.')
         : undefined
     options.getWindowPool().markRendererInteractive(target, error)
-    if (signal.phase !== 'workspace-interactive') return
+    if (signal.phase !== 'workspace-interactive') {
+      if (isPrimary) options.onPrimaryWorkspaceSettled()
+      return
+    }
     options.getWorkspaceServiceForWindow(target).markRendererInteractive()
     if (!isPrimary) return
     pendingPrimaryInteractive = target
+    options.onPrimaryWorkspaceSettled()
     flushPrimaryInteractive()
   }
 
