@@ -4,7 +4,11 @@ import { createFileLabel } from '@/logic/paths'
 import type { FileViewKind, ViewMode } from '@/store/appTypes'
 import { Button } from '@/components/ui/button'
 import { CircleAlert, LoaderCircle } from 'lucide-react'
-import { requestFocusHeading, requestFocusSourcePosition } from '@/utils/editorNavigation'
+import {
+  activeHeadingStore,
+  requestFocusHeading,
+  requestFocusSourcePosition,
+} from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
 import {
@@ -13,6 +17,7 @@ import {
   type SidebarBacklink,
 } from '@/components/RightSidebarContent'
 import { useRightSidebarData } from '@/components/useRightSidebarData'
+import { useStore } from 'zustand'
 
 type RightSidebarProps = {
   collapsed: boolean
@@ -78,6 +83,9 @@ const RightSidebarExpanded = ({
     fileContents,
   })
   const targetLabel = targetPath ? createFileLabel(targetPath) : t('inspector.none')
+  const activeHeadingSlug = useStore(activeHeadingStore, (state) =>
+    targetPath && targetPath === activePath ? (state.headings[targetPath] ?? null) : null,
+  )
 
   const handleOpenHeading = useCallback(
     (slug: string) => {
@@ -185,6 +193,7 @@ const RightSidebarExpanded = ({
           targetLabel={targetLabel}
           viewMode={viewMode}
           outline={outline}
+          activeHeadingSlug={activeHeadingSlug}
           backlinks={backlinks}
           problems={problems}
           errorProblems={errorProblems}

@@ -29,6 +29,7 @@ import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
+import { usePlateActiveHeading } from '@/components/plate/usePlateActiveHeading'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 import {
   serializePlateMarkdown,
@@ -91,6 +92,8 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       value,
     })
     const contentReady = ready && contentVisible
+    const headingTrackingEnabled = interactionActive && contentReady
+    const syncActiveHeading = usePlateActiveHeading(activePath, editor, headingTrackingEnabled)
     const getMarkdown = useCallback(
       () => Promise.resolve(serializePlateMarkdown(editor, editor.children as Value)),
       [editor],
@@ -215,7 +218,8 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       completion.onSelectionChange()
       syncSlashFromEditor()
       syncActiveFocusBlock()
-    }, [completion, syncActiveFocusBlock, syncSlashFromEditor])
+      syncActiveHeading()
+    }, [completion, syncActiveFocusBlock, syncActiveHeading, syncSlashFromEditor])
 
     return (
       <div

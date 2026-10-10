@@ -45,6 +45,7 @@ type RightSidebarContentProps = {
   targetLabel: string
   viewMode: ViewMode
   outline: SidebarHeading[]
+  activeHeadingSlug: string | null
   backlinks: SidebarBacklink[]
   problems: MarkdownSourceDiagnostic[]
   errorProblems: MarkdownSourceDiagnostic[]
@@ -74,6 +75,7 @@ export const RightSidebarContent = ({
   targetPath,
   targetLabel,
   outline,
+  activeHeadingSlug,
   backlinks,
   problems,
   errorProblems,
@@ -166,6 +168,8 @@ export const RightSidebarContent = ({
           </TooltipProvider>
           <TabsContent value="outline" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarOutlinePanel
+              key={targetPath}
+              activeHeadingSlug={activeHeadingSlug}
               outline={outline}
               targetLabel={targetLabel}
               onOpenHeading={onOpenHeading}

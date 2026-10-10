@@ -21,12 +21,33 @@ type SourcePositionNavigationState = {
   requests: Record<string, PendingFocusSourcePositionRequest>
 }
 
+type ActiveHeadingState = {
+  headings: Record<string, string | null>
+}
+
 const navigationKey = (workspaceKey: string, path: string) => `${workspaceKey}:${path}`
 
 export const headingNavigationStore = createStore<HeadingNavigationState>(() => ({ requests: {} }))
 export const sourcePositionNavigationStore = createStore<SourcePositionNavigationState>(() => ({
   requests: {},
 }))
+export const activeHeadingStore = createStore<ActiveHeadingState>(() => ({ headings: {} }))
+
+export const setActiveHeading = (path: string, slug: string | null) => {
+  if (activeHeadingStore.getState().headings[path] === slug) return
+  activeHeadingStore.setState((state) => ({
+    headings: { ...state.headings, [path]: slug },
+  }))
+}
+
+export const clearActiveHeading = (path: string) => {
+  if (!(path in activeHeadingStore.getState().headings)) return
+  activeHeadingStore.setState((state) => {
+    const headings = { ...state.headings }
+    delete headings[path]
+    return { headings }
+  })
+}
 export const requestFocusHeading = (request: FocusHeadingRequest) => {
   if (request.workspaceKey) {
     const pending = request as PendingFocusHeadingRequest
