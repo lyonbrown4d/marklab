@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { parseMarkdownDocument } from '@electron/services/workspace/markdown'
 import { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics'
 import type { FsWorkspaceIndex } from '@electron/services/workspace/types'
 
@@ -67,6 +68,19 @@ describe('diagnosticsForFile', () => {
         message: 'Linked file path casing differs from workspace path "docs/spec.pdf"',
         severity: 'warning',
       }),
+    ])
+  })
+
+  it('retains structural diagnostics in the rebuildable workspace index', () => {
+    const file = parseMarkdownDocument(
+      'notes/current.md',
+      ['# One', '### Three', '', '![](asset.png)'].join('\n'),
+    )
+    const index = { files: [file] } satisfies FsWorkspaceIndex
+
+    expect(diagnosticsForFile(index, 'notes/current.md')).toEqual([
+      expect.objectContaining({ line: 2, message: 'Heading level jumps from 1 to 3' }),
+      expect.objectContaining({ line: 4, message: 'Image is missing alternative text' }),
     ])
   })
 })

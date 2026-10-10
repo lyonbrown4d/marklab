@@ -17,6 +17,7 @@ export const diagnosticsForFile = (
   const file = filesByPath.get(filePath)
   if (!file) return diagnostics
 
+  diagnostics.push(...(file.structural_diagnostics ?? []))
   diagnostics.push(...duplicateHeadingDiagnostics(file))
 
   for (const link of file.links) {

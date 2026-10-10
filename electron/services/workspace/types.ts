@@ -92,6 +92,7 @@ export type FsIndexedMarkdownFile = {
   headings: FsMarkdownHeading[]
   links: FsMarkdownLink[]
   assets: FsMarkdownAsset[]
+  structural_diagnostics?: FsMarkdownDiagnostic[]
 }
 
 export type FsWorkspaceIndex = {

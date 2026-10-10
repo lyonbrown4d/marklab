@@ -63,6 +63,7 @@ export const pageSummary = (file: FsIndexedMarkdownFile): WorkspacePageSummary =
 })
 
 const pageIssueCount = (file: FsIndexedMarkdownFile): number =>
+  (file.structural_diagnostics?.length ?? 0) +
   file.links.filter(
     (link) =>
       !link.is_external &&

@@ -1,6 +1,7 @@
 import { parseMarkdownAst, type MarkdownRoot } from '@electron/services/workspace/markdown/ast'
 import { extractHeadingEntries } from '@electron/services/workspace/markdown/headings'
 import { extractMarkdownReferences } from '@electron/services/workspace/markdown/references'
+import { structuralDiagnosticsForMarkdown } from '@electron/services/workspace/markdown/structuralDiagnostics'
 import type { FsIndexedMarkdownFile } from '@electron/services/workspace/types'
 
 export { diagnosticsForFile } from '@electron/services/workspace/markdown/diagnostics'
@@ -18,6 +19,7 @@ export const parseMarkdownDocument = (
 ): FsIndexedMarkdownFile => {
   const headings = extractHeadingEntries(sourcePath, tree).map((entry) => entry.heading)
   const { links, assets } = extractMarkdownReferences(sourcePath, content, tree)
+  const structural_diagnostics = structuralDiagnosticsForMarkdown(content, tree)
 
-  return { path: sourcePath, headings, links, assets }
+  return { path: sourcePath, headings, links, assets, structural_diagnostics }
 }

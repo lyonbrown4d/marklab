@@ -65,7 +65,7 @@ Status: in progress
 
 - [x] Surface existing Markdown diagnostics directly in the rich editor with
       lightweight decorations and actions to navigate or apply safe quick fixes.
-- [ ] Extend diagnostics for heading-level gaps, duplicate or unresolved
+- [x] Extend diagnostics for heading-level gaps, duplicate or unresolved
       footnotes, malformed frontmatter, missing image alternative text, and other
       source-compatible structural issues.
 - [ ] Add rich-editor workspace-link completion for `[[file]]` and heading
