@@ -3,6 +3,7 @@ import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
 import {
+  controllerMock,
   inlineAiComposerHookMock,
   inlineAiMock,
   renderAutoFocusEmbeddedEditor,
@@ -10,6 +11,10 @@ import {
   renderEmbeddedEditor,
   resetMarkdownEditorMocks,
 } from '@/components/MarkdownEditor.testFixtures'
+
+const preferencesMock = Object.assign(controllerMock, {
+  immersiveTypewriterMode: false,
+})
 
 const keepAliveState = vi.hoisted(() => ({
   active: true,
@@ -29,6 +34,7 @@ vi.mock('@/components/plate/PlateEditorOverlays', () => ({
 describe('MarkdownEditor playground baseline', () => {
   beforeEach(() => {
     resetMarkdownEditorMocks()
+    preferencesMock.immersiveTypewriterMode = false
     keepAliveState.active = true
     keepAliveState.cacheKey = undefined
   })
@@ -39,15 +45,30 @@ describe('MarkdownEditor playground baseline', () => {
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-editor-engine', 'plate')
   })
 
-  it('marks the playground as a typewriter reading surface in read-only mode', () => {
+  it('prevents editing without enabling typewriter presentation in read-only mode', () => {
     renderEditor(undefined, true)
 
     const root = screen.getByTestId('markdown-editor')
     expect(root).toHaveAttribute('data-readonly', 'true')
     expect(root).toHaveClass('is-readonly-editor')
-    expect(root).toHaveClass('is-typewriter-editor')
+    expect(root).not.toHaveClass('is-typewriter-editor')
     expect(root).toHaveAttribute('tabindex', '0')
     expect(root).toHaveAttribute('contenteditable', 'false')
+  })
+
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])('keeps readOnly=%s independent from typewriter=%s', (readOnly, typewriter) => {
+    preferencesMock.immersiveTypewriterMode = typewriter
+    renderEditor(undefined, readOnly)
+
+    const root = screen.getByTestId('markdown-editor')
+    expect(root.classList.contains('is-readonly-editor')).toBe(readOnly)
+    expect(root.classList.contains('is-typewriter-editor')).toBe(typewriter)
+    expect(root).toHaveAttribute('contenteditable', String(!readOnly))
   })
 
   it('mounts the transient AI companion against the editor bridge', () => {

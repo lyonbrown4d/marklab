@@ -119,7 +119,9 @@ const AppStatusBarRightView = ({
           </TooltipContent>
         </Tooltip>
       )}
-      <AiCompletionStatusPopover onOpenSettings={onOpenSettings} />
+      <div className="flex shrink-0 items-center" data-status-priority="tertiary">
+        <AiCompletionStatusPopover onOpenSettings={onOpenSettings} />
+      </div>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

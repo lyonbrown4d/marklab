@@ -128,9 +128,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           className={cn(
             'markdown-editor flex-1',
             props.variant === 'embedded' && 'markdown-editor--embedded',
-            props.readOnly && 'is-readonly-editor is-typewriter-editor',
+            props.readOnly && 'is-readonly-editor',
             !props.readOnly && immersiveFocusMode && 'is-focus-editor',
-            !props.readOnly && immersiveTypewriterMode && 'is-typewriter-editor',
+            immersiveTypewriterMode && 'is-typewriter-editor',
             !props.readOnly && immersiveZenMode && 'is-zen-editor',
             motionSmoothScrolling && 'is-smooth-editor',
           )}

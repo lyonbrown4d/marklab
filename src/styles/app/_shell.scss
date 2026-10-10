@@ -213,6 +213,12 @@
   contain: layout paint;
 }
 
+@media (max-width: 960px) {
+  .app-status-bar [data-status-priority='tertiary'] {
+    display: none;
+  }
+}
+
 @media (max-width: 800px) {
   .app-status-bar [data-status-priority='secondary'] {
     display: none;

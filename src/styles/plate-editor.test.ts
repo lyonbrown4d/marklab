@@ -37,26 +37,22 @@ describe('Plate editor styles', () => {
     expect(styles).toContain('.markdown-editor .hljs-number')
   })
 
-  it('keeps readonly typewriter snapping and focus mode compatible with chunks', () => {
+  it('does not apply reading presentation to read-only editors', () => {
     const styles = readFileSync(modesStylePath, 'utf8') as string
 
-    expect(styles).toMatch(
-      /\.markdown-editor\.is-readonly-editor\s*\{[^}]*scroll-snap-type:\s*y proximity;/s,
-    )
-    expect(styles).toMatch(
-      /\.markdown-editor\.is-readonly-editor\s*>\s*\[data-slate-node='element'\],\s*\.markdown-editor\.is-readonly-editor\s*>\s*\[data-slate-chunk='true'\]\s*>\s*\[data-slate-node='element'\]\s*\{[^}]*scroll-snap-align:\s*center;/s,
-    )
-    expect(styles).not.toContain(
-      ".markdown-editor.is-readonly-editor > [data-slate-chunk='true'] {\n  scroll-margin-block",
-    )
+    expect(styles).not.toContain('.is-readonly-editor')
+    expect(styles).not.toContain('scroll-snap')
+    expect(styles).not.toContain('linear-gradient')
+  })
+
+  it('keeps focus mode compatible with chunks and reduced motion', () => {
+    const styles = readFileSync(modesStylePath, 'utf8') as string
+
     expect(styles).toMatch(
       /\.markdown-editor\.is-focus-editor\[data-focus-active='true'\]\s*>\s*\.plate-block-draggable:not\(\[data-focus-active='true'\]\),\s*\.markdown-editor\.is-focus-editor\[data-focus-active='true'\]\s*>\s*\[data-slate-chunk='true'\]\s*>\s*\.plate-block-draggable:not\(\[data-focus-active='true'\]\)\s*\{\s*opacity:\s*0\.42;/s,
     )
     expect(styles).toMatch(
       /\.markdown-editor\.is-focus-editor\s*>\s*\.plate-block-draggable,\s*\.markdown-editor\.is-focus-editor\s*>\s*\[data-slate-chunk='true'\]\s*>\s*\.plate-block-draggable\s*\{\s*transition:\s*opacity 160ms ease;/s,
-    )
-    expect(styles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.markdown-editor\.is-readonly-editor\s*\{\s*scroll-snap-type:\s*none;/,
     )
     expect(styles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.markdown-editor\.is-focus-editor > \.plate-block-draggable,[\s\S]*\.markdown-editor\.is-focus-editor > \[data-slate-chunk='true'\] > \.plate-block-draggable \{\s*transition:\s*none;/,

@@ -92,7 +92,11 @@ export const ImmersiveWorkspaceShell = ({
         </Button>
       </div>
 
-      <main className="min-h-0 min-w-0 flex-1 overflow-hidden" data-app-focus-zone="editor">
+      <main
+        className="min-h-0 min-w-0 flex-1 overflow-hidden lg:data-[sidebar-pinned=true]:ml-[22rem]"
+        data-app-focus-zone="editor"
+        data-sidebar-pinned={sidebarOpen}
+      >
         {children}
       </main>
 

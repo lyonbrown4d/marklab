@@ -77,7 +77,14 @@ const openWorkspaceInNewWindow = async (
 const openExplorer = async (page: Page) => {
   const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
   if (!(await explorer.isVisible().catch(() => false))) {
-    await page.keyboard.press('Control+Shift+L')
+    const toggle = page.getByRole('button', { name: /Toggle sidebar|切换侧边栏/i }).last()
+    await expect(toggle).toBeVisible()
+    // Electron app-region hit testing makes coordinate clicks flaky in automated macOS windows.
+    await toggle.evaluate((button: HTMLButtonElement) => button.click())
+    await expect(page.locator('main[data-app-focus-zone="editor"]')).toHaveAttribute(
+      'data-sidebar-pinned',
+      'true',
+    )
   }
   await expect(explorer).toBeVisible({ timeout: 5_000 })
   return explorer
@@ -194,11 +201,51 @@ test.describe('Workspace core product journeys', () => {
     })
 
     await test.step('switches Markdown between rich editing and source editing', async () => {
+      await openTreeFile(page, 'Topic-01.md')
       const modes = page.getByRole('radiogroup', { name: /Editing Mode|编辑模式/i })
-      await modes.getByRole('radio', { name: /Source Editor|源码/i }).click()
-      await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 15_000 })
+      const richEditor = page.getByTestId('markdown-editor')
+      const documentStats = page
+        .getByRole('contentinfo', { name: /Status bar|状态栏/i })
+        .locator('span')
+        .filter({ hasText: /^\d+\s+(?:lines|words|chars|行|词|字符)$/ })
       await modes.getByRole('radio', { name: /Rich Text Editor|所见即所得/i }).click()
-      await expect(page.getByTestId('markdown-editor')).toBeVisible({ timeout: 15_000 })
+      await expect(richEditor).toHaveAttribute('data-state', 'ready', { timeout: 15_000 })
+      await expect(richEditor).toContainText('Topic 01 contains')
+      await expect(richEditor.getByRole('heading', { name: 'Topic 01', exact: true })).toHaveCount(
+        1,
+      )
+      await expect(
+        richEditor.getByRole('link', { name: /^External reference 01\.[123]$/ }),
+      ).toHaveCount(3)
+      let sourceStats: string[] | null = null
+
+      for (let roundTrip = 0; roundTrip < 2; roundTrip += 1) {
+        await modes.getByRole('radio', { name: /Source Editor|源码/i }).click()
+        const sourceEditor = page.locator('.monaco-editor')
+        await expect(sourceEditor).toBeVisible({ timeout: 15_000 })
+        await expect(sourceEditor.locator('.view-lines')).toContainText('Topic 01 contains')
+        if (sourceStats) {
+          await expect(documentStats).toHaveText(sourceStats)
+        } else {
+          await expect(documentStats).toHaveText([
+            /^[1-9]\d*\s+(?:lines|行)$/,
+            /^[1-9]\d*\s+(?:words|词)$/,
+            /^[1-9]\d*\s+(?:chars|字符)$/,
+          ])
+          sourceStats = await documentStats.allTextContents()
+        }
+        await modes.getByRole('radio', { name: /Rich Text Editor|所见即所得/i }).click()
+        await expect(richEditor).toBeVisible({ timeout: 15_000 })
+        await expect(richEditor).toHaveAttribute('data-state', 'ready', { timeout: 15_000 })
+        await expect(richEditor).toContainText('Topic 01 contains')
+        await expect(
+          richEditor.getByRole('heading', { name: 'Topic 01', exact: true }),
+        ).toHaveCount(1)
+        await expect(
+          richEditor.getByRole('link', { name: /^External reference 01\.[123]$/ }),
+        ).toHaveCount(3)
+        await expect(documentStats).toHaveText(sourceStats)
+      }
     })
 
     await test.step('round-trips a source file between preview and source views', async () => {
