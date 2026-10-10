@@ -93,7 +93,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     })
     const contentReady = ready && contentVisible
     const headingTrackingEnabled = interactionActive && contentReady
-    const syncActiveHeading = usePlateActiveHeading(activePath, editor, headingTrackingEnabled)
+    const syncHeading = usePlateActiveHeading(activePath, editor, headingTrackingEnabled)
     const getMarkdown = useCallback(
       () => Promise.resolve(serializePlateMarkdown(editor, editor.children as Value)),
       [editor],
@@ -208,18 +208,19 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     }))
 
     const handleValueChange = useCallback(() => {
+      syncHeading()
       if (externalApplyRef.current || !acceptsLocalChanges()) return
       markSnapshotDirty()
       changeRevisionRef.current += 1
       completion.onEditorChange()
       queueSnapshot()
-    }, [acceptsLocalChanges, completion, markSnapshotDirty, queueSnapshot])
+    }, [acceptsLocalChanges, completion, markSnapshotDirty, queueSnapshot, syncHeading])
     const handleSelectionChange = useCallback(() => {
       completion.onSelectionChange()
       syncSlashFromEditor()
       syncActiveFocusBlock()
-      syncActiveHeading()
-    }, [completion, syncActiveFocusBlock, syncActiveHeading, syncSlashFromEditor])
+      syncHeading()
+    }, [completion, syncActiveFocusBlock, syncHeading, syncSlashFromEditor])
 
     return (
       <div

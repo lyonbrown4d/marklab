@@ -57,7 +57,6 @@ export const RightSidebarOutlinePanel = ({
 }: RightSidebarOutlinePanelProps) => {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
-  const [collapsedSlugs, setCollapsedSlugs] = useState<Set<string>>(() => new Set())
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
   const normalizedQuery = normalizeOutlineQuery(query)
   const collapsibleSlugs = useMemo(
@@ -69,6 +68,16 @@ export const RightSidebarOutlinePanel = ({
       ),
     [outline],
   )
+  const collapseKey = [...collapsibleSlugs].join('\n')
+  const [collapseState, setCollapseState] = useState({
+    key: collapseKey,
+    slugs: new Set<string>(),
+  })
+  let collapsedSlugs = collapseState.slugs
+  if (collapseState.key !== collapseKey) {
+    collapsedSlugs = new Set([...collapsedSlugs].filter((slug) => collapsibleSlugs.has(slug)))
+    setCollapseState({ key: collapseKey, slugs: collapsedSlugs })
+  }
   const activeAncestorSlugs = useMemo(
     () => getActiveAncestorSlugs(outline, activeHeadingSlug),
     [activeHeadingSlug, outline],
@@ -99,11 +108,11 @@ export const RightSidebarOutlinePanel = ({
   }, [activeHeadingSlug, filteredOutline])
 
   const toggleCollapsed = (slug: string) => {
-    setCollapsedSlugs((current) => {
-      const next = new Set([...current].filter((value) => collapsibleSlugs.has(value)))
+    setCollapseState((current) => {
+      const next = new Set([...current.slugs].filter((value) => collapsibleSlugs.has(value)))
       if (next.has(slug)) next.delete(slug)
       else next.add(slug)
-      return next
+      return { key: collapseKey, slugs: next }
     })
   }
 

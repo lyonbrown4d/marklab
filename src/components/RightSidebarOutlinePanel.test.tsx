@@ -73,6 +73,16 @@ describe('RightSidebarOutlinePanel', () => {
     expect(screen.getByText('Advanced Setup')).toBeInTheDocument()
   })
 
+  it('collapses a nested branch without hiding its parent peers', async () => {
+    renderPanel()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse Setup' }))
+
+    expect(screen.queryByText('Advanced Setup')).not.toBeInTheDocument()
+    expect(screen.getByText('Usage')).toBeInTheDocument()
+    expect(screen.getByText('Appendix')).toBeInTheDocument()
+  })
+
   it('keeps collapsed descendants discoverable and navigable during search', async () => {
     const onOpenHeading = vi.fn()
     renderPanel({ onOpenHeading })
@@ -131,5 +141,15 @@ describe('RightSidebarOutlinePanel', () => {
       />,
     )
     expect(screen.queryByRole('button', { name: 'Expand Introduction' })).not.toBeInTheDocument()
+
+    rerender(
+      <RightSidebarOutlinePanel
+        activeHeadingSlug={null}
+        onOpenHeading={vi.fn()}
+        outline={outline}
+        targetLabel="Guide"
+      />,
+    )
+    expect(screen.getByText('Setup')).toBeInTheDocument()
   })
 })
