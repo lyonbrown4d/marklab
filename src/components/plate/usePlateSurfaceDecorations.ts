@@ -1,14 +1,14 @@
 import { useMemoizedFn } from 'ahooks'
 import type { PlateEditorSurfaceProps } from '@/components/plate/plateEditorSurfaceTypes'
 import type { PlateEditor } from 'platejs/react'
-import type { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
+import type { PlateSurfaceCompletionBindings } from '@/components/plate/usePlateSurfaceCompletions'
 import { usePlateMarkdownDiagnostics } from '@/components/plate/usePlateMarkdownDiagnostics'
 
 type SurfaceDecorationOptions = Pick<
   PlateEditorSurfaceProps,
   'activePath' | 'readOnly' | 'value' | 'workspaceKey'
 > & {
-  completion: ReturnType<typeof usePlateInlineCompletion>
+  completion: PlateSurfaceCompletionBindings
   editor: PlateEditor
   enabled: boolean
   getMarkdown: () => Promise<string>

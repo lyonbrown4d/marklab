@@ -16,7 +16,7 @@ import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
 import { PlateDocumentFind } from '@/components/plate/PlateDocumentFind'
 import { PlateSelectionStats } from '@/components/plate/selection/PlateSelectionStats'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
-import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
+import { usePlateSurfaceCompletions } from '@/components/plate/usePlateSurfaceCompletions'
 import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
 import { usePlateMarkdownSnapshot } from '@/components/plate/usePlateMarkdownSnapshot'
 import { type PlateSlashCommandLabels, usePlateSlashCommands } from '@/components/plate/slash'
@@ -143,10 +143,12 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       enabled: typewriterScroll && !readOnly,
       smooth: smoothScrolling,
     })
-    const completion = usePlateInlineCompletion({
+    const completion = usePlateSurfaceCompletions({
       activePath,
       editor,
-      readOnly: readOnly || !contentReady,
+      enabled: interactionActive && contentReady,
+      getMarkdown,
+      readOnly,
       value,
     })
     const { decorate, scheduleDiagnostics } = usePlateSurfaceDecorations({

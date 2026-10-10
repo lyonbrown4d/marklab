@@ -9,6 +9,7 @@ import type {
   UsePlateInlineCompletionOptions,
 } from '@/components/plate/completion/types'
 import { usePlateDocumentCompletionIndex } from '@/components/plate/completion/usePlateDocumentCompletionIndex'
+import { plateWorkspaceLinkQuery } from '@/components/plate/workspaceLink/plateWorkspaceLinkCompletion'
 import { aiApi } from '@/services/aiApi'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -69,7 +70,8 @@ export const usePlateInlineCompletionOptions = ({
 
   const options = useMemo<PlateInlineCompletionControllerOptions>(
     () => ({
-      canComplete: (context) => context.before.trim().length >= 2,
+      canComplete: (context) =>
+        plateWorkspaceLinkQuery(context) == null && context.before.trim().length >= 2,
       debounceMs: () => plateInlineCompletionDebounceMs(configurationRef.current.triggerMode),
       enabled: () => {
         const config = configurationRef.current

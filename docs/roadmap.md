@@ -68,7 +68,7 @@ Status: in progress
 - [x] Extend diagnostics for heading-level gaps, duplicate or unresolved
       footnotes, malformed frontmatter, missing image alternative text, and other
       source-compatible structural issues.
-- [ ] Add rich-editor workspace-link completion for `[[file]]` and heading
+- [x] Add rich-editor workspace-link completion for `[[file]]` and heading
       anchors, with explicit create-file and replace-anchor actions for unresolved
       targets.
 - [ ] Add unlinked-mention discovery using the rebuildable workspace index,

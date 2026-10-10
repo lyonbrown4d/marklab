@@ -91,4 +91,40 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(accept).toHaveBeenCalledWith(0)
   })
+
+  it('renders workspace-link files and explicit create actions in the shared menu', () => {
+    const accept = vi.fn()
+    renderLeaf({
+      plateWorkspaceLinkAccept: accept,
+      plateWorkspaceLinkIndex: 1,
+      plateWorkspaceLinkItems: [
+        {
+          detail: 'notes/Target.md',
+          insertText: 'Target',
+          kind: 'file',
+          label: 'Target',
+          replacementLength: 3,
+        },
+        {
+          detail: 'Missing.md',
+          insertText: '',
+          kind: 'create-file',
+          label: 'Create missing Markdown file "Missing.md"',
+          replacementLength: 0,
+        },
+      ],
+    })
+
+    const listbox = screen.getByRole('listbox', { name: 'Workspace link suggestions' })
+    const options = screen.getAllByRole('option')
+    expect(listbox).toBeInTheDocument()
+    expect(options).toHaveLength(2)
+    expect(options[0]).toHaveTextContent('Targetnotes/Target.md')
+    expect(options[1]).toHaveAttribute('aria-selected', 'true')
+
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    options[1]?.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(accept).toHaveBeenCalledWith(1)
+  })
 })

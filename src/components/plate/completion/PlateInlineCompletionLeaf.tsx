@@ -1,9 +1,11 @@
 import type { TText } from 'platejs'
 import type { HTMLAttributes, ReactNode } from 'react'
+import { FilePlus2, FileText, Heading } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
 import type { PlateInlineDocumentCompletion } from '@/components/plate/completion/types'
+import type { PlateWorkspaceLinkItem } from '@/components/plate/workspaceLink/plateWorkspaceLinkCompletion'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
@@ -15,7 +17,76 @@ type CompletionLeaf = TText & {
   plateInlineCompletionIndex?: number
   plateInlineCompletion?: string
   plateInlineCompletionKind?: 'ai' | 'document'
+  plateWorkspaceLinkAccept?: (index?: number) => boolean
+  plateWorkspaceLinkIndex?: number
+  plateWorkspaceLinkItems?: readonly PlateWorkspaceLinkItem[]
 }
+
+const WorkspaceLinkCompletionMenu = ({
+  accept,
+  activeIndex,
+  items,
+}: {
+  accept?: (index: number) => void
+  activeIndex: number
+  items: readonly PlateWorkspaceLinkItem[]
+}) => (
+  <Popover open>
+    <PopoverAnchor asChild>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none inline-block size-0"
+        contentEditable={false}
+        data-workspace-link-completion-anchor=""
+      />
+    </PopoverAnchor>
+    <PopoverContent
+      align="start"
+      className={cn(menuSurfaceStyles(), 'w-[min(30rem,calc(100vw-2rem))]')}
+      contentEditable={false}
+      onCloseAutoFocus={(event) => event.preventDefault()}
+      onOpenAutoFocus={(event) => event.preventDefault()}
+      side="bottom"
+      sideOffset={6}
+    >
+      <div aria-label="Workspace link suggestions" role="listbox">
+        {items.map((item, index) => {
+          const Icon =
+            item.kind === 'create-file'
+              ? FilePlus2
+              : item.kind === 'heading' || item.kind === 'replace-anchor'
+                ? Heading
+                : FileText
+          return (
+            <Button
+              aria-selected={index === activeIndex}
+              className={cn(menuItemStyles(), 'h-auto w-full justify-start text-left font-normal')}
+              data-active={index === activeIndex ? 'true' : undefined}
+              key={`${item.kind}:${item.label}:${item.insertText}`}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                accept?.(index)
+              }}
+              role="option"
+              type="button"
+              variant="ghost"
+            >
+              <Icon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{item.label}</span>
+                {item.detail ? (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {item.detail}
+                  </span>
+                ) : null}
+              </span>
+            </Button>
+          )
+        })}
+      </div>
+    </PopoverContent>
+  </Popover>
+)
 
 type PlateInlineCompletionLeafProps = {
   attributes: HTMLAttributes<HTMLSpanElement>
@@ -99,6 +170,7 @@ export const PlateInlineCompletionLeaf = ({
   const { t } = useI18n()
   const completionLeaf = leaf as CompletionLeaf
   const candidates = completionLeaf.plateInlineCompletionCandidates ?? []
+  const workspaceLinkItems = completionLeaf.plateWorkspaceLinkItems ?? []
   const text = completionLeaf.plateInlineCompletion
   return (
     <span
@@ -115,7 +187,13 @@ export const PlateInlineCompletionLeaf = ({
       data-diagnostic-severity={completionLeaf.plateDiagnosticSeverity}
     >
       {children}
-      {completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
+      {workspaceLinkItems.length ? (
+        <WorkspaceLinkCompletionMenu
+          accept={completionLeaf.plateWorkspaceLinkAccept}
+          activeIndex={completionLeaf.plateWorkspaceLinkIndex ?? 0}
+          items={workspaceLinkItems}
+        />
+      ) : completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
         <DocumentCompletionMenu
           accept={completionLeaf.plateInlineCompletionAccept}
           activeIndex={completionLeaf.plateInlineCompletionIndex ?? 0}

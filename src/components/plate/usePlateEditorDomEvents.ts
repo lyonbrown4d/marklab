@@ -1,6 +1,6 @@
 import type { PlateEditor } from 'platejs/react'
 import { useEffect, type RefObject } from 'react'
-import type { PlateInlineCompletionBindings } from '@/components/plate/usePlateInlineCompletion'
+import type { PlateSurfaceCompletionBindings } from '@/components/plate/usePlateSurfaceCompletions'
 import { handlePlateEditorShortcut } from '@/components/plate/plateEditorShortcuts'
 import { setPlateMarkdownInputRulesComposing } from '@/components/plate/plateMarkdownInputRules'
 import {
@@ -13,7 +13,7 @@ import type { PlateSlashCommandsController } from '@/components/plate/slash'
 type PlateEditorDomEventsOptions = {
   applyPendingExternal: () => boolean
   completion: Pick<
-    PlateInlineCompletionBindings,
+    PlateSurfaceCompletionBindings,
     'onCompositionEnd' | 'onCompositionStart' | 'onKeyDown'
   >
   composingRef: RefObject<boolean>
