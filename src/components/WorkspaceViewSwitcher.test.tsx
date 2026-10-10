@@ -99,4 +99,27 @@ describe('WorkspaceViewSwitcher', () => {
     expect(preloadGraphView).toHaveBeenCalledTimes(2)
     expect(onPreloadMap).toHaveBeenCalledTimes(2)
   })
+
+  it('uses each measurable toggle button as its tooltip positioning anchor', () => {
+    render(
+      <WorkspaceViewSwitcher
+        activeView="files"
+        filesLabel="Files"
+        groupLabel="Workspace view"
+        mapLabel="Map"
+        onOpenFiles={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('radio', { name: 'Files' })).toHaveAttribute(
+      'data-slot',
+      'tooltip-trigger',
+    )
+    expect(screen.getByRole('radio', { name: 'Map' })).toHaveAttribute(
+      'data-slot',
+      'tooltip-trigger',
+    )
+    expect(document.querySelector('.contents[data-slot="tooltip-trigger"]')).toBeNull()
+  })
 })

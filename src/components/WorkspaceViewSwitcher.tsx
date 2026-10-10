@@ -45,33 +45,29 @@ export const WorkspaceViewSwitcher = ({
       >
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="contents">
-              <ToggleGroupItem
-                value="files"
-                aria-label={filesLabel}
-                className="size-6 rounded"
-                data-no-drag
-              >
-                <Files aria-hidden="true" />
-              </ToggleGroupItem>
-            </span>
+            <ToggleGroupItem
+              value="files"
+              aria-label={filesLabel}
+              className="size-6 rounded"
+              data-no-drag
+            >
+              <Files aria-hidden="true" />
+            </ToggleGroupItem>
           </TooltipTrigger>
           <TooltipContent>{filesLabel}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="contents">
-              <ToggleGroupItem
-                value="map"
-                aria-label={mapLabel}
-                className="size-6 rounded"
-                data-no-drag
-                onFocus={handlePreloadMap}
-                onPointerEnter={handlePreloadMap}
-              >
-                <Network aria-hidden="true" />
-              </ToggleGroupItem>
-            </span>
+            <ToggleGroupItem
+              value="map"
+              aria-label={mapLabel}
+              className="size-6 rounded"
+              data-no-drag
+              onFocus={handlePreloadMap}
+              onPointerEnter={handlePreloadMap}
+            >
+              <Network aria-hidden="true" />
+            </ToggleGroupItem>
           </TooltipTrigger>
           <TooltipContent>{mapLabel}</TooltipContent>
         </Tooltip>
