@@ -8,6 +8,7 @@ export const nativeIpcChannels = {
   assetsIssueCapability: 'marklab:assets:issue-capability',
   clipboardReadImage: 'marklab:clipboard:read-image',
   clipboardReadText: 'marklab:clipboard:read-text',
+  clipboardWrite: 'marklab:clipboard:write',
   clipboardWriteText: 'marklab:clipboard:write-text',
   commandInvoke: 'marklab:command:invoke',
   dialogOpen: 'marklab:dialog:open',

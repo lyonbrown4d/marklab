@@ -10,10 +10,15 @@ const image = vi.hoisted(() => ({
   getSize: vi.fn(),
   toDataURL: vi.fn(),
 }))
-vi.mock('electron', () => ({ nativeImage: { createFromBuffer: image.createFromBuffer } }))
+vi.mock('electron', () => ({
+  ClipboardItem: class {
+    constructor(readonly items: Record<string, string>) {}
+  },
+  nativeImage: { createFromBuffer: image.createFromBuffer },
+}))
 
 const handle = vi.fn<IpcMain['handle']>()
-const clipboard = { read: vi.fn(), readText: vi.fn(), writeText: vi.fn() }
+const clipboard = { read: vi.fn(), readText: vi.fn(), write: vi.fn(), writeText: vi.fn() }
 const invoke = (channel: string, ...args: unknown[]): unknown => {
   const registration = handle.mock.calls.find(([name]) => name === channel)
   if (!registration) throw new Error(`Missing handler: ${channel}`)
@@ -83,6 +88,50 @@ describe('Electron 44 clipboard IPC', () => {
     await expect(invoke(nativeIpcChannels.clipboardWriteText, 'text')).rejects.toThrow(
       'Clipboard unavailable',
     )
+  })
+  it('writes explicit plain-text and HTML formats', async () => {
+    await expect(
+      invoke(nativeIpcChannels.clipboardWrite, {
+        html: '<p><strong>hello</strong></p>',
+        markdown: '**hello**',
+        text: 'hello',
+      }),
+    ).resolves.toEqual({ ok: true })
+    expect(clipboard.write).toHaveBeenCalledWith([
+      {
+        items: {
+          'text/html': '<p><strong>hello</strong></p>',
+          'text/markdown': '**hello**',
+          'text/plain': 'hello',
+        },
+      },
+    ])
+  })
+  it('propagates rich clipboard write failures', async () => {
+    clipboard.write.mockRejectedValueOnce(new Error('Rich clipboard unavailable'))
+
+    await expect(
+      invoke(nativeIpcChannels.clipboardWrite, {
+        html: '<p>text</p>',
+        markdown: 'text',
+        text: 'text',
+      }),
+    ).rejects.toThrow('Rich clipboard unavailable')
+  })
+  it.each([
+    null,
+    'text',
+    {},
+    { text: 'x' },
+    { text: 42 },
+    { markdown: 'x', text: 42 },
+    { html: '<p>x</p>', markdown: 42, text: 'x' },
+    { html: 42, markdown: 'x', text: 'x' },
+  ])('rejects an invalid rich clipboard payload: %j', async (payload) => {
+    await expect(invoke(nativeIpcChannels.clipboardWrite, payload)).rejects.toThrow(
+      'Invalid clipboard write payload.',
+    )
+    expect(clipboard.write).not.toHaveBeenCalled()
   })
   it('forwards asynchronous text reads and sanitizes non-string writes', async () => {
     clipboard.readText.mockResolvedValueOnce('text')

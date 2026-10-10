@@ -10,9 +10,9 @@ import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview'
 import { createWebTabsPreloadSurface } from '@electron/preload/webTabs'
 import { createWorkspaceSyncPreloadSurface } from '@electron/preload/workspaceSync'
 import { createEditCommandsPreloadSurface } from '@electron/preload/editCommands'
+import { clipboardPreloadSurface } from '@electron/preload/clipboard'
 import type {
   AppLaunchInfo,
-  ClipboardImage,
   DialogFilter,
   OpenDialogOptions,
   PlatformInfo,
@@ -191,13 +191,7 @@ const desktopApi: RendererSafeElectronApi = {
       ipcRenderer.invoke(nativeIpcChannels.dialogSave, options) as Promise<string | null>,
   },
   edit: editCommandsSurface,
-  clipboard: {
-    readText: () => ipcRenderer.invoke(nativeIpcChannels.clipboardReadText) as Promise<string>,
-    writeText: (text: string) =>
-      ipcRenderer.invoke(nativeIpcChannels.clipboardWriteText, text) as Promise<{ ok: boolean }>,
-    readImage: () =>
-      ipcRenderer.invoke(nativeIpcChannels.clipboardReadImage) as Promise<ClipboardImage | null>,
-  },
+  clipboard: clipboardPreloadSurface,
   shell: {
     openPath: (path: string) => ipcRenderer.invoke(nativeIpcChannels.shellOpenPath, path),
     revealPath: (path: string) => ipcRenderer.invoke(nativeIpcChannels.shellRevealPath, path),

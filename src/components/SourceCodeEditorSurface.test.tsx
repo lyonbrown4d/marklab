@@ -166,7 +166,9 @@ describe('SourceCodeEditorSurface', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('markdown source'))
 
-    expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: /^Copy(?:Ctrl|⌘)/ })).toHaveAttribute(
+      'data-disabled',
+    )
     fireEvent.click(screen.getByRole('menuitem', { name: /Inline code/ }))
     expect(editorMock.onContextMenuAction).toHaveBeenCalledWith('inlineCode')
   })
@@ -176,7 +178,7 @@ describe('SourceCodeEditorSurface', () => {
 
     fireEvent.contextMenu(screen.getByLabelText('markdown source'))
 
-    expect(screen.getByRole('menuitem', { name: /Copy/ })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /^Copy(?:Ctrl|⌘)/ })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem', { name: /Inline code/ })).not.toBeInTheDocument()
   })
 

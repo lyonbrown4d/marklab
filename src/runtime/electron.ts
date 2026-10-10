@@ -45,6 +45,23 @@ export type ElectronLinkPreviewApi = {
   fetch: (url: string) => Promise<LinkPreviewResult>
 }
 
+export type ElectronClipboardContent = {
+  html?: string
+  markdown: string
+  text: string
+}
+
+export type ElectronClipboardApi = {
+  readImage: () => Promise<{
+    dataUrl: string
+    width: number
+    height: number
+  } | null>
+  readText: () => Promise<string>
+  write: (content: ElectronClipboardContent) => Promise<{ ok: boolean }>
+  writeText: (text: string) => Promise<{ ok: boolean }>
+}
+
 export type ElectronCommandArguments = Record<string, unknown> | undefined
 
 export type ElectronGitApi = {
@@ -170,15 +187,7 @@ export type RendererSafeElectronApi = {
   edit: {
     execute: (action: FocusedEditAction) => Promise<{ ok: true }>
   }
-  clipboard: {
-    readText: () => Promise<string>
-    writeText: (text: string) => Promise<{ ok: boolean }>
-    readImage: () => Promise<{
-      dataUrl: string
-      width: number
-      height: number
-    } | null>
-  }
+  clipboard: ElectronClipboardApi
   shell: {
     openPath: (path: string) => Promise<{
       ok: boolean

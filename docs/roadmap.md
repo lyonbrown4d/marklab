@@ -16,6 +16,78 @@ the workspace into a proprietary database model.
 
 ## Near Term
 
+### Markdown Editing Experience
+
+Goal: remove friction from daily Markdown editing before adding more block
+types. MarkLab should combine Typora-style Markdown interoperability, iA
+Writer-style focus, Obsidian-style document analysis, and a restrained subset
+of Notion-style block interactions while keeping plain Markdown as the source
+of truth.
+
+#### Priority 1: Editing Loop
+
+Status: in progress
+
+First iteration:
+
+- [x] Keep the document outline synchronized with the caret, highlight and
+      reveal the active heading, and allow heading branches to be collapsed without
+      weakening outline search or navigation.
+- [x] Complete clipboard semantics for rich editing: publish useful rich and
+      plain formats on normal copy, provide copy as Markdown, and provide explicit
+      paste-as-plain-text or paste-as-Markdown behavior.
+- [x] Add a click-activated block-handle menu for block conversion, duplication,
+      movement, deletion, and clipboard actions while preserving direct drag and
+      keyboard interaction.
+
+Follow-up editing-loop work:
+
+- [ ] Show word and character counts for text selections and block counts for
+      multi-block selections.
+- [ ] Preserve predictable selections and caret placement after cut, paste,
+      move, duplicate, and block conversion operations.
+- [ ] Group structural editor operations into coherent undo steps.
+
+Validation:
+
+- Component tests for outline tracking, collapse, search, and heading
+  navigation.
+- Clipboard contract and editor integration tests for rich copy, Markdown copy,
+  plain paste, empty selections, read-only mode, and code blocks.
+- Interaction tests proving that the block menu does not regress pointer drag,
+  keyboard movement, multi-block selection, focus restoration, or undo.
+- Playwright coverage for the complete rich-editor editing loop on macOS and
+  Windows keyboard conventions.
+
+#### Priority 2: Analysis In The Editor
+
+Status: planned
+
+- [ ] Surface existing Markdown diagnostics directly in the rich editor with
+      lightweight decorations and actions to navigate or apply safe quick fixes.
+- [ ] Extend diagnostics for heading-level gaps, duplicate or unresolved
+      footnotes, malformed frontmatter, missing image alternative text, and other
+      source-compatible structural issues.
+- [ ] Add rich-editor workspace-link completion for `[[file]]` and heading
+      anchors, with explicit create-file and replace-anchor actions for unresolved
+      targets.
+- [ ] Add unlinked-mention discovery using the rebuildable workspace index,
+      keeping probable mentions separate from explicit backlinks.
+- [ ] Provide a structured frontmatter editor for common scalar, date, boolean,
+      list, tag, and link values while preserving unsupported YAML losslessly and
+      retaining a source-mode escape hatch.
+
+Validation:
+
+- Keep analysis work incremental, cancellable, and outside React when it is
+  workspace-wide or parsing-heavy.
+- Every rich-editor diagnostic must map back to a stable Markdown source range
+  and must not change the document unless the user invokes a quick fix.
+- Round-trip tests must prove that link completion, frontmatter editing, and
+  quick fixes preserve unrelated Markdown syntax and unsupported constructs.
+- Large documents must retain the existing editor performance policy and avoid
+  mounting workspace-wide analysis plugins in the renderer.
+
 ### 0. Plate Markdown Editor Baseline
 
 Goal: keep the WYSIWYG editor aligned with Plate and Slate primitives while

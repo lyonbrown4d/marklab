@@ -1,10 +1,14 @@
 import { createEvent, fireEvent, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   controllerMock,
   renderEditor,
   resetMarkdownEditorMocks,
 } from '@/components/MarkdownEditor.testFixtures'
+
+vi.mock('@/components/plate/nodes/BlockDraggable', () => ({
+  blockDraggableWrapper: () => undefined,
+}))
 
 describe('MarkdownEditor context menu', () => {
   beforeEach(resetMarkdownEditorMocks)
@@ -19,6 +23,7 @@ describe('MarkdownEditor context menu', () => {
     expect(contextMenuEvent.defaultPrevented).toBe(true)
     expect(screen.getByRole('menuitem', { name: /Undo/ })).toBeEnabled()
     expect(screen.getByRole('menuitem', { name: /Redo/ })).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: 'Copy as Markdown' })).toBeEnabled()
     expect(screen.getByRole('menuitem', { name: /Insert link/ })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('menuitem', { name: /Bold/ }))
@@ -30,18 +35,25 @@ describe('MarkdownEditor context menu', () => {
   })
 
   it('disables unavailable selection actions and hides links without link capability', () => {
-    controllerMock.getContextMenuCapabilities.mockReturnValueOnce({
+    const capabilities = {
       copy: false,
+      copyAsMarkdown: false,
       cut: false,
       link: false,
       redo: false,
       undo: false,
-    })
+    }
+    controllerMock.getContextMenuCapabilities.mockReturnValueOnce(capabilities)
     renderEditor()
 
     fireEvent.contextMenu(screen.getByTestId('markdown-editor'))
 
-    expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveAttribute('data-disabled')
+    expect(screen.getByRole('menuitem', { name: /^Copy(?:Ctrl|⌘)/ })).toHaveAttribute(
+      'data-disabled',
+    )
+    expect(screen.getByRole('menuitem', { name: 'Copy as Markdown' })).toHaveAttribute(
+      'data-disabled',
+    )
     expect(screen.getByRole('menuitem', { name: /Cut/ })).toHaveAttribute('data-disabled')
     expect(screen.queryByRole('menuitem', { name: /Insert link/ })).not.toBeInTheDocument()
   })

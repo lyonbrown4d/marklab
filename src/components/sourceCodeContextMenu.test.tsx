@@ -23,7 +23,9 @@ describe('useSourceCodeContextMenu', () => {
 
     expect(result.current.getCapabilities()).toMatchObject({
       copy: true,
+      copyAsMarkdown: true,
       cut: true,
+      pasteAsPlainText: true,
       redo: false,
       undo: true,
     })
@@ -35,6 +37,19 @@ describe('useSourceCodeContextMenu', () => {
       'marklab.editor.bold',
       null,
     )
+
+    result.current.onAction('copyAsMarkdown')
+    result.current.onAction('pasteAsPlainText')
+    expect(editor.trigger).toHaveBeenCalledWith(
+      'marklab.editorContextMenu',
+      'editor.action.clipboardCopyAction',
+      null,
+    )
+    expect(editor.trigger).toHaveBeenCalledWith(
+      'marklab.editorContextMenu',
+      'editor.action.clipboardPasteAction',
+      null,
+    )
   })
 
   it('disables editor actions before Monaco mounts', () => {
@@ -44,8 +59,10 @@ describe('useSourceCodeContextMenu', () => {
     expect(result.current.getCapabilities()).toMatchObject({
       bold: false,
       copy: false,
+      copyAsMarkdown: false,
       link: false,
       paste: false,
+      pasteAsPlainText: false,
       undo: false,
     })
     expect(() => result.current.onAction('bold')).not.toThrow()

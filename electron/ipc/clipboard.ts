@@ -1,12 +1,35 @@
-import { nativeImage, type Clipboard, type IpcMain } from 'electron'
+import { ClipboardItem, nativeImage, type Clipboard, type IpcMain } from 'electron'
 import { Buffer } from 'node:buffer'
 import { nativeIpcChannels } from '@electron/channels'
 import type { ClipboardImage } from '@electron/types'
 export const registerClipboardIpc = (
   ipcMain: Pick<IpcMain, 'handle'>,
-  clipboard: Pick<Clipboard, 'read' | 'readText' | 'writeText'>,
+  clipboard: Pick<Clipboard, 'read' | 'readText' | 'write' | 'writeText'>,
 ): void => {
   ipcMain.handle(nativeIpcChannels.clipboardReadText, () => clipboard.readText())
+  ipcMain.handle(nativeIpcChannels.clipboardWrite, async (_event, input: unknown) => {
+    if (
+      !input ||
+      typeof input !== 'object' ||
+      !('text' in input) ||
+      typeof input.text !== 'string' ||
+      !('markdown' in input) ||
+      typeof input.markdown !== 'string' ||
+      ('html' in input && input.html !== undefined && typeof input.html !== 'string')
+    ) {
+      throw new TypeError('Invalid clipboard write payload.')
+    }
+
+    const html = 'html' in input ? input.html : undefined
+    await clipboard.write([
+      new ClipboardItem({
+        'text/plain': input.text,
+        'text/markdown': input.markdown,
+        ...(typeof html === 'string' && html ? { 'text/html': html } : {}),
+      }),
+    ])
+    return { ok: true }
+  })
   ipcMain.handle(nativeIpcChannels.clipboardWriteText, async (_event, text: unknown) => {
     await clipboard.writeText(typeof text === 'string' ? text : '')
     return { ok: true }

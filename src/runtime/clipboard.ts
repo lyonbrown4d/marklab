@@ -1,23 +1,32 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import {
+  getElectronRuntime,
+  isElectronRuntime,
+  type ElectronClipboardContent,
+} from '@/runtime/electron'
 export const readClipboardText = async () => {
-  const electron = getElectronRuntime()
-  if (electron) return electron.clipboard.readText()
+  if (isElectronRuntime()) return getElectronRuntime().clipboard.readText()
   if (typeof navigator === 'undefined' || !navigator.clipboard) return ''
   return navigator.clipboard.readText()
 }
 export const writeClipboardText = async (text: string) => {
-  const electron = getElectronRuntime()
-  if (electron) {
-    await electron.clipboard.writeText(text)
+  if (isElectronRuntime()) {
+    await getElectronRuntime().clipboard.writeText(text)
     return
   }
   if (typeof navigator === 'undefined' || !navigator.clipboard) return
   await navigator.clipboard.writeText(text)
 }
+export const writeClipboardContent = async (content: ElectronClipboardContent) => {
+  if (isElectronRuntime()) {
+    await getElectronRuntime().clipboard.write(content)
+    return
+  }
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  await navigator.clipboard.writeText(content.text)
+}
 export const readClipboardImagePng = async (): Promise<Blob | null> => {
-  const electron = getElectronRuntime()
-  if (electron) {
-    const image = await electron.clipboard.readImage()
+  if (isElectronRuntime()) {
+    const image = await getElectronRuntime().clipboard.readImage()
     if (!image) return null
     return dataUrlToBlob(image.dataUrl)
   }

@@ -36,7 +36,9 @@ export type EditorContextMenuAction =
   | 'redo'
   | 'cut'
   | 'copy'
+  | 'copyAsMarkdown'
   | 'paste'
+  | 'pasteAsPlainText'
   | 'selectAll'
   | 'bold'
   | 'italic'
@@ -72,7 +74,14 @@ const editEntries: readonly MenuEntry[] = [
 const clipboardEntries: readonly MenuEntry[] = [
   { action: 'cut', icon: Scissors, labelKey: 'edit.cut', shortcut: 'Mod+X' },
   { action: 'copy', icon: Copy, labelKey: 'edit.copy', shortcut: 'Mod+C' },
+  { action: 'copyAsMarkdown', icon: Copy, labelKey: 'edit.copyAsMarkdown', shortcut: '' },
   { action: 'paste', icon: ClipboardPaste, labelKey: 'edit.paste', shortcut: 'Mod+V' },
+  {
+    action: 'pasteAsPlainText',
+    icon: ClipboardPaste,
+    labelKey: 'edit.pasteAsPlainText',
+    shortcut: 'Mod+Shift+V',
+  },
   { action: 'selectAll', icon: TextSelect, labelKey: 'edit.selectAll', shortcut: 'Mod+A' },
 ]
 

@@ -20,8 +20,10 @@ const formatActionByMenuAction: Partial<
 
 const editorCommandByMenuAction: Partial<Record<EditorContextMenuAction, string>> = {
   copy: 'editor.action.clipboardCopyAction',
+  copyAsMarkdown: 'editor.action.clipboardCopyAction',
   cut: 'editor.action.clipboardCutAction',
   paste: 'editor.action.clipboardPasteAction',
+  pasteAsPlainText: 'editor.action.clipboardPasteAction',
   redo: 'redo',
   selectAll: 'editor.action.selectAll',
   undo: 'undo',
@@ -66,9 +68,11 @@ const getSourceCapabilities = (
   const hasSelection = !editor.getSelection()?.isEmpty()
   return {
     copy: hasSelection,
+    copyAsMarkdown: hasSelection,
     cut: !readOnly && hasSelection,
     link: !readOnly,
     paste: !readOnly,
+    pasteAsPlainText: !readOnly,
     redo: !readOnly && (model.canRedo?.() ?? true),
     undo: !readOnly && (model.canUndo?.() ?? true),
     bold: !readOnly,

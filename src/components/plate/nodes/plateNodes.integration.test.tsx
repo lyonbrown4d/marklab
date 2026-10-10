@@ -213,7 +213,7 @@ describe('createPlateNodePlugins', () => {
     const handle = within(blocks[0]).getByRole('button', { name: 'Move block' })
     expect(handle).toHaveAttribute(
       'aria-keyshortcuts',
-      'Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown',
+      'Enter Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown',
     )
     expect(handle).toHaveAttribute('contenteditable', 'false')
     expect(handle).toHaveAttribute('data-block-id')

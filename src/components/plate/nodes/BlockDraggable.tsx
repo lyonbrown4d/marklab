@@ -8,8 +8,9 @@ import {
   type PlateElementProps,
   type RenderNodeWrapper,
 } from 'platejs/react'
-import type { KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import {
   handlePlateBlockMoveShortcut,
@@ -17,6 +18,15 @@ import {
   selectBlockFromHandle,
 } from '@/components/plate/selection/plateBlockSelection'
 import i18n from '@/i18n/setup'
+import { BlockActionMenu } from '@/components/plate/nodes/BlockActionMenu'
+import {
+  getBlockActionAvailability,
+  isBlockClipboardAction,
+  runBlockAction,
+  type BlockMenuAction,
+} from '@/components/plate/nodes/blockActions'
+import { serializePlateBlockClipboard } from '@/components/plate/plateClipboardSerialization'
+import { writeClipboardContent, writeClipboardText } from '@/runtime/clipboard'
 
 const DRAG_HANDLE_SELECTOR = '[data-block-drag-handle="true"]'
 
@@ -57,6 +67,9 @@ const focusAdjacentHandle = (handle: HTMLButtonElement, direction: 'next' | 'pre
 
 export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   const editor = useEditorRef()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const draggedRef = useRef(false)
+  const handleElementRef = useRef<HTMLButtonElement | null>(null)
   const id = element.id as string
   const path = editor.api.findPath(element)
   const initialTabIndex = path?.length === 1 && path[0] === 0 ? 0 : -1
@@ -66,8 +79,56 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
     element,
     orientation: 'vertical',
   })
+  const availability = getBlockActionAvailability(editor, element)
+
+  const openMenu = () => {
+    if (!draggedRef.current) setMenuOpen(true)
+  }
+
+  const handleAction = (action: BlockMenuAction) => {
+    if (isBlockClipboardAction(action)) {
+      const content = serializePlateBlockClipboard(editor, element)
+      const write =
+        action.kind === 'copyAsMarkdown'
+          ? writeClipboardText(content.markdown)
+          : writeClipboardContent(content)
+      setMenuOpen(false)
+      if (action.kind === 'cut') {
+        void write
+          .then(() => {
+            const focusTarget = runBlockAction(editor, element, { kind: 'delete' })
+            if (focusTarget) restoreHandleFocus(editor, focusTarget)
+          })
+          .catch(() => undefined)
+      } else {
+        void write.catch(() => undefined)
+      }
+      return
+    }
+    const focusTarget = runBlockAction(editor, element, action)
+    setMenuOpen(false)
+    if (focusTarget) restoreHandleFocus(editor, focusTarget)
+  }
+
+  const handleDragEnd = () => {
+    queueMicrotask(() => {
+      draggedRef.current = false
+    })
+  }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (
+      event.key === 'Enter' &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault()
+      event.stopPropagation()
+      setMenuOpen(true)
+      return
+    }
     if (handlePlateBlockSelectionShortcut(editor, event, id)) {
       restoreHandleFocus(editor, element)
       return
@@ -95,38 +156,73 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
       data-block-selected={isSelected ? 'true' : 'false'}
       ref={nodeRef}
     >
-      <Button
-        aria-keyshortcuts="Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown"
-        aria-label={i18n.t('plate.blockDrag.moveLabel')}
-        aria-pressed={isSelected}
-        className={cn(
-          'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
-          'active:cursor-grabbing',
-          isSelected && 'bg-primary/10 text-primary',
-        )}
-        contentEditable={false}
-        data-block-id={id}
-        data-block-drag-handle="true"
-        data-plate-prevent-unselect="true"
-        onKeyDown={handleKeyDown}
-        onPointerDown={(event) => selectBlockFromHandle(editor, id, event)}
-        ref={handleRef}
-        size="icon"
-        tabIndex={initialTabIndex}
-        title={i18n.t('plate.blockDrag.instructions')}
-        type="button"
-        variant="ghost"
+      <DropdownMenu
+        open={menuOpen}
+        onOpenChange={(open) => {
+          if (open) return
+          setMenuOpen(false)
+          queueMicrotask(() => {
+            const handle = handleElementRef.current
+            if (!handle?.isConnected) return
+            activateRovingHandle(handle)
+            handle.focus()
+          })
+        }}
       >
-        <GripVertical
-          aria-hidden="true"
+        <DropdownMenuTrigger asChild>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-1 size-7"
+            tabIndex={-1}
+          />
+        </DropdownMenuTrigger>
+        <Button
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-keyshortcuts="Enter Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown"
+          aria-label={i18n.t('plate.blockDrag.moveLabel')}
+          aria-pressed={isSelected}
           className={cn(
-            'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
-            'group-hover/handle:opacity-100 group-hover/block:opacity-100',
-            'group-focus-within/block:opacity-100',
-            isDragging && 'opacity-100',
+            'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
+            'active:cursor-grabbing',
+            isSelected && 'bg-primary/10 text-primary',
           )}
-        />
-      </Button>
+          contentEditable={false}
+          data-block-id={id}
+          data-block-drag-handle="true"
+          data-plate-prevent-unselect="true"
+          onClick={openMenu}
+          onDragEnd={handleDragEnd}
+          onDragStart={() => {
+            draggedRef.current = true
+          }}
+          onKeyDown={handleKeyDown}
+          onPointerDown={(event) => {
+            draggedRef.current = false
+            selectBlockFromHandle(editor, id, event)
+          }}
+          ref={(handle) => {
+            handleElementRef.current = handle
+            handleRef(handle)
+          }}
+          size="icon"
+          tabIndex={initialTabIndex}
+          title={i18n.t('plate.blockDrag.instructions')}
+          type="button"
+          variant="ghost"
+        >
+          <GripVertical
+            aria-hidden="true"
+            className={cn(
+              'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
+              'group-hover/handle:opacity-100 group-hover/block:opacity-100',
+              'group-focus-within/block:opacity-100',
+              isDragging && 'opacity-100',
+            )}
+          />
+        </Button>
+        <BlockActionMenu {...availability} onAction={handleAction} />
+      </DropdownMenu>
       {dropLine === 'top' ? (
         <div
           aria-hidden="true"
