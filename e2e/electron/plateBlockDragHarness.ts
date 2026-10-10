@@ -78,7 +78,8 @@ export const openMarkdownDocument = async (
   await setWorkspaceRoot(session, workspacePath)
   const page = session.page
   const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
-  if (!(await explorer.isVisible().catch(() => false))) await page.keyboard.press('Control+Shift+L')
+  if (!(await explorer.isVisible().catch(() => false)))
+    await page.keyboard.press('ControlOrMeta+Shift+L')
   await expect(explorer).toBeVisible({ timeout: 10_000 })
   const file = explorer.getByRole('button', { exact: true, name: fileName })
   await expect(file).toBeVisible({ timeout: 20_000 })
@@ -94,9 +95,8 @@ export const blockByMarker = (editor: Locator, marker: string) =>
   editor.locator(BLOCK_WRAPPER).filter({ hasText: marker }).first()
 
 export const selectBlocksByMarker = async (editor: Locator, markers: [string, ...string[]]) => {
-  await blockByMarker(editor, markers[0]).locator(DRAG_HANDLE).click()
   const additiveModifier = process.platform === 'darwin' ? 'Meta' : 'Control'
-  for (const marker of markers.slice(1)) {
+  for (const marker of markers) {
     await blockByMarker(editor, marker)
       .locator(DRAG_HANDLE)
       .click({ modifiers: [additiveModifier] })

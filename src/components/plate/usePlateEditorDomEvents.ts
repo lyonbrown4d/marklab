@@ -14,7 +14,7 @@ type PlateEditorDomEventsOptions = {
   applyPendingExternal: () => boolean
   completion: Pick<
     PlateSurfaceCompletionBindings,
-    'onCompositionEnd' | 'onCompositionStart' | 'onKeyDown'
+    'onBlur' | 'onCompositionEnd' | 'onCompositionStart' | 'onKeyDown'
   >
   composingRef: RefObject<boolean>
   editableRef: RefObject<HTMLDivElement | null>
@@ -82,6 +82,7 @@ export const usePlateEditorDomEvents = ({
       })
     }
     const handleBlur = () => {
+      completion.onBlur()
       if (compositionEndTimer !== undefined) return
       if (!applyPendingExternal()) flushSnapshot()
     }

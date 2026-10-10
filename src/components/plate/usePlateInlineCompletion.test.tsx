@@ -75,7 +75,8 @@ describe('usePlateInlineCompletion', () => {
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
     )
 
-    await act(async () => vi.advanceTimersByTimeAsync(200))
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
 
     expect(result.current.state?.kind).toBe('document')
     if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
@@ -98,7 +99,7 @@ describe('usePlateInlineCompletion', () => {
     )
 
     act(() => result.current.onEditorChange())
-    await act(async () => vi.advanceTimersByTimeAsync(20))
+    await act(async () => vi.advanceTimersByTimeAsync(400))
 
     expect(result.current.state?.kind).toBe('document')
     if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
@@ -128,7 +129,8 @@ describe('usePlateInlineCompletion', () => {
 
     act(() => result.current.onEditorChange())
     rerender({ activePath: 'second.md', editor: secondEditor, value: 'second snapshot' })
-    await act(async () => vi.advanceTimersByTimeAsync(20))
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
 
     expect(result.current.state?.kind).toBe('document')
     if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
@@ -151,8 +153,8 @@ describe('usePlateInlineCompletion', () => {
     editor.children = restored.children
     editor.selection = restored.selection
     rerender({ value: 'restored external snapshot' })
-    act(() => result.current.onSelectionChange())
-    await act(async () => vi.advanceTimersByTimeAsync(20))
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
 
     expect(result.current.state?.kind).toBe('document')
     if (result.current.state?.kind !== 'document') throw new Error('Expected document suggestions')
@@ -169,7 +171,7 @@ describe('usePlateInlineCompletion', () => {
       documentCompletionEnabled: false,
     })
     const editor = createEditor('I plan to')
-    renderHook(() =>
+    const { result } = renderHook(() =>
       usePlateInlineCompletion({
         activePath: 'note.md',
         editor,
@@ -178,6 +180,7 @@ describe('usePlateInlineCompletion', () => {
       }),
     )
 
+    act(() => result.current.onEditorChange())
     await act(async () => vi.advanceTimersByTimeAsync(800))
 
     expect(requestAiInlineCompletion).toHaveBeenCalledWith(
@@ -197,27 +200,31 @@ describe('usePlateInlineCompletion', () => {
     const { result } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
     )
-    await act(async () => vi.advanceTimersByTimeAsync(200))
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
     expect(result.current.state).not.toBeNull()
 
     act(() => usePreferencesStore.getState().setDocumentCompletionEnabled(false))
     expect(result.current.state).toBeNull()
   })
 
-  it('defers value-change completion work until after the next paint', async () => {
+  it('waits for an input pause and dismisses stale suggestions immediately', async () => {
     const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'
     const { result } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
     )
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(200))
+    expect(result.current.state).toBeNull()
     await act(async () => vi.advanceTimersByTimeAsync(200))
     expect(result.current.state).not.toBeNull()
     editor.selection = null
 
     act(() => result.current.onEditorChange())
 
-    expect(result.current.state).not.toBeNull()
-    await act(async () => vi.advanceTimersByTimeAsync(20))
+    expect(result.current.state).toBeNull()
+    await act(async () => vi.advanceTimersByTimeAsync(400))
     expect(result.current.state).toBeNull()
   })
 
@@ -227,7 +234,8 @@ describe('usePlateInlineCompletion', () => {
     const { result, rerender } = renderHook(() =>
       usePlateInlineCompletion({ activePath: 'note.md', editor, readOnly: false, value }),
     )
-    await act(async () => vi.advanceTimersByTimeAsync(200))
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
     expect(result.current.state).not.toBeNull()
 
     act(() => {
@@ -242,6 +250,9 @@ describe('usePlateInlineCompletion', () => {
       rerender()
     })
     await act(async () => vi.advanceTimersByTimeAsync(200))
+    expect(result.current.state).toBeNull()
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(400))
     expect(result.current.state).not.toBeNull()
   })
 })

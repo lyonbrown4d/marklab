@@ -39,7 +39,11 @@ const nodeType = (node: TNode) => {
 
 const isDisabledNode = (node: TNode) => {
   const type = nodeType(node)
-  return DISABLED_NODE_TYPES.has(type) || type.startsWith('table_')
+  return (
+    DISABLED_NODE_TYPES.has(type) ||
+    type.startsWith('table_') ||
+    node.preservedMarkdownKind === 'yaml'
+  )
 }
 
 const hasDisabledAncestor = (editor: PlateEditor) => {

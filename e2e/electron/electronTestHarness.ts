@@ -177,7 +177,7 @@ export const launchElectronTestSession = async (
   app.process().stderr?.on('data', collect)
   try {
     const page = await waitForMainWindow(app, rendererUrl, output)
-    await page.setViewportSize({ width: 1280, height: 900 })
+    await revealElectronWindow(app, page, { width: 1280, height: 900 })
     await waitForRendererAppShell(page, output)
     return { app, output, page, testRunRoot }
   } catch (error) {

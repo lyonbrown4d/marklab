@@ -16,6 +16,7 @@ export type PlateEditorSurfaceProps = {
   assetImportStrategy?: MarkdownAssetImportStrategy
   autoFocus?: boolean
   className?: string
+  completionEnabled?: boolean
   contentVisible?: boolean
   interactionActive?: boolean
   onChange: (value: string) => void

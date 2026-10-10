@@ -8,7 +8,7 @@ import {
   type PlateElementProps,
   type RenderNodeWrapper,
 } from 'platejs/react'
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -82,7 +82,8 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   })
   const availability = getBlockActionAvailability(editor, element)
 
-  const openMenu = () => {
+  const openMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
     if (!draggedRef.current) setMenuOpen(true)
   }
 

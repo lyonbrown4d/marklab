@@ -5,6 +5,7 @@ import {
   closeElectronTestSession,
   closeRendererServer,
   launchElectronTestSession,
+  revealElectronWindow,
   startRendererServer,
   type ElectronTestSession,
 } from './electronTestHarness.js'
@@ -26,6 +27,7 @@ test.describe('Plate Markdown input rules', () => {
   test.beforeEach(async () => {
     session = await launchElectronTestSession(rendererUrl)
     page = session.page
+    await revealElectronWindow(session.app, page)
   })
 
   test.afterEach(async () => {
@@ -36,21 +38,21 @@ test.describe('Plate Markdown input rules', () => {
   test('recognizes block, inline, and fenced-code Markdown from real keyboard input', async () => {
     const editor = page.getByTestId('markdown-editor')
     await expect(editor).toBeVisible({ timeout: 10_000 })
-    await editor.click()
-
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')
-    await page.keyboard.press('Backspace')
-    await page.keyboard.type('# ')
+    await expect(editor).toHaveAttribute('data-state', 'ready')
+    await editor.locator('p').first().click()
+    await page.keyboard.insertText('#')
+    await page.keyboard.insertText(' ')
     await expect(editor.locator('h1')).toBeVisible()
-    await page.keyboard.type('Heading')
+    await page.keyboard.insertText('Heading')
     await expect(editor.locator('h1')).toHaveText('Heading')
 
-    await page.keyboard.type(' **bold**')
+    await page.keyboard.insertText(' **bold*')
+    await page.keyboard.insertText('*')
     await expect(editor.locator('strong')).toHaveText('bold')
 
     await page.keyboard.press('Enter')
     await page.keyboard.press('Enter')
-    await page.keyboard.type('```mermaid')
+    await page.keyboard.insertText('```mermaid')
     await page.keyboard.press('Enter')
     await expect(editor.locator('pre code[data-language="mermaid"]')).toBeVisible()
   })

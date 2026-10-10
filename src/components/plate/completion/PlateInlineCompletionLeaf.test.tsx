@@ -127,4 +127,32 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(accept).toHaveBeenCalledWith(1)
   })
+
+  it.each(['document', 'workspace-link'])(
+    'does not accept a %s option with a secondary mouse button',
+    (kind) => {
+      const accept = vi.fn()
+      renderLeaf(
+        kind === 'document'
+          ? {
+              plateInlineCompletionAccept: accept,
+              plateInlineCompletionCandidates: [{ source: 'document', text: ' write notes' }],
+              plateInlineCompletionKind: 'document',
+            }
+          : {
+              plateWorkspaceLinkAccept: accept,
+              plateWorkspaceLinkItems: [
+                { kind: 'file', label: 'Target', insertText: 'Target', replacementLength: 0 },
+              ],
+            },
+      )
+
+      for (const button of [1, 2]) {
+        const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button })
+        screen.getByRole('option').dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(false)
+      }
+      expect(accept).not.toHaveBeenCalled()
+    },
+  )
 })

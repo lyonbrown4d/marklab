@@ -45,6 +45,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       assetImportStrategy = 'copy-to-document-assets',
       autoFocus,
       className,
+      completionEnabled = true,
       contentVisible = true,
       interactionActive = true,
       onCalendarFileCreate,
@@ -146,7 +147,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     const completion = usePlateSurfaceCompletions({
       activePath,
       editor,
-      enabled: interactionActive && contentReady,
+      enabled: interactionActive && contentReady && completionEnabled,
       getMarkdown,
       readOnly,
       value,

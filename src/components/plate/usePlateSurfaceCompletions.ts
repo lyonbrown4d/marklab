@@ -40,6 +40,10 @@ export const usePlateSurfaceCompletions = ({
 
   return {
     decorate,
+    onBlur: useMemoizedFn(() => {
+      inline.onBlur()
+      workspaceLink.onBlur()
+    }),
     onCompositionEnd: useMemoizedFn(() => {
       inline.onCompositionEnd()
       workspaceLink.onCompositionEnd()

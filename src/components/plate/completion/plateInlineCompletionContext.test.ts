@@ -33,6 +33,7 @@ describe('Plate inline completion context', () => {
   it.each([
     [{ type: 'code_block', children: [{ text: 'const value = 1' }] }],
     [{ type: 'p', children: [{ code: true, text: 'inline code' }] }],
+    [{ type: 'p', preservedMarkdownKind: 'yaml', children: [{ text: 'title: Example' }] }],
   ])('rejects code contexts and expanded selections', (block) => {
     const editor = createEditor([block])
     editor.tf.select({

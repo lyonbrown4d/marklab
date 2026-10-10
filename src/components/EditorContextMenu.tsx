@@ -55,6 +55,7 @@ export type EditorContextMenuAdapter = {
 
 type EditorContextMenuProps = EditorContextMenuAdapter & {
   children: ReactElement
+  onOpenChange?: (open: boolean) => void
   showFormatting?: boolean
   shortcutOverrides?: ShortcutBindings
 }
@@ -109,6 +110,7 @@ export const EditorContextMenu = ({
   children,
   getCapabilities,
   onAction,
+  onOpenChange,
   showFormatting = true,
   shortcutOverrides = {},
 }: EditorContextMenuProps) => {
@@ -143,6 +145,7 @@ export const EditorContextMenu = ({
     <ContextMenu
       onOpenChange={(open) => {
         if (open) setCapabilities(getCapabilities())
+        onOpenChange?.(open)
       }}
     >
       <ContextMenuTrigger asChild onKeyDown={openContextMenuFromKeyboard}>

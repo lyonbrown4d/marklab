@@ -1,4 +1,4 @@
-import { validateHotkey } from '@tanstack/react-hotkeys'
+import { matchesKeyboardEvent, validateHotkey, type Hotkey } from '@tanstack/react-hotkeys'
 import { describe, expect, it } from 'vitest'
 import {
   defaultShortcutBindings,
@@ -46,6 +46,34 @@ describe('shortcuts', () => {
   it('keeps the command palette available through Ctrl/Cmd+P', () => {
     expect(defaultShortcutBindings['app.commandPalette']).toEqual(['Mod+P'])
   })
+
+  it.each(['mac', 'windows', 'linux'] as const)(
+    'matches settings and sidebar shortcuts with the native modifier on %s',
+    (platform) => {
+      for (const [action, key, code, shiftKey] of [
+        ['app.settings', ',', 'Comma', false],
+        ['view.toggleSidebar', 'L', 'KeyL', true],
+        ['view.toggleRightSidebar', 'R', 'KeyR', true],
+      ] as const) {
+        const binding = defaultShortcutBindings[action][0] as Hotkey
+        const event = new KeyboardEvent('keydown', {
+          key,
+          code,
+          shiftKey,
+          ctrlKey: platform !== 'mac',
+          metaKey: platform === 'mac',
+        })
+        expect(matchesKeyboardEvent(event, binding, platform)).toBe(true)
+        expect(
+          matchesKeyboardEvent(
+            new KeyboardEvent('keydown', { key, code, shiftKey }),
+            binding,
+            platform,
+          ),
+        ).toBe(false)
+      }
+    },
+  )
 
   it('provides a quick read-only browsing shortcut', () => {
     expect(defaultShortcutBindings['view.toggleReadonly']).toEqual(['Mod+Shift+E'])

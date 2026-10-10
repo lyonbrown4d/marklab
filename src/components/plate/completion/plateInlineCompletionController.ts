@@ -205,9 +205,9 @@ export const createPlateInlineCompletionController = (
     activate: () => {
       destroyed = false
     },
-    compositionEnd: () => {
+    compositionEnd: (schedule = true) => {
       composing = false
-      sync()
+      if (schedule) sync()
     },
     compositionStart: () => {
       composing = true
@@ -251,6 +251,7 @@ export const createPlateInlineCompletionController = (
       cancel()
       listeners.clear()
     },
+    dismiss: cancel,
     getSnapshot: () => state,
     keyDown: (event) => {
       if (isImeKeyboardEvent(event)) return false

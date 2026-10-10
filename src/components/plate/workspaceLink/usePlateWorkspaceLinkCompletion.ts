@@ -18,7 +18,7 @@ import {
   createPlateWorkspaceLinkSessionUri,
 } from '@/components/plate/workspaceLink/plateWorkspaceLinkCompletionSession'
 
-const COMPLETION_DELAY_MS = 80
+const COMPLETION_DELAY_MS = 250
 const MAX_ITEMS = 8
 
 type WorkspaceLinkState = {
@@ -46,6 +46,7 @@ export const usePlateWorkspaceLinkCompletion = ({
   const composingRef = useRef(false)
   const generationRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const triggerRef = useRef<PlateWorkspaceLinkTrigger | null>(null)
   const [state, setState] = useState<WorkspaceLinkState | null>(null)
   const session = useMemo(
     () =>
@@ -64,6 +65,7 @@ export const usePlateWorkspaceLinkCompletion = ({
     generationRef.current += 1
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = null
+    triggerRef.current = null
     setState(null)
   }, [])
 
@@ -76,6 +78,7 @@ export const usePlateWorkspaceLinkCompletion = ({
 
   const sync = useCallback(() => {
     const trigger = available && !composingRef.current ? getPlateWorkspaceLinkTrigger(editor) : null
+    triggerRef.current = trigger
     const generation = ++generationRef.current
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = null
@@ -105,9 +108,8 @@ export const usePlateWorkspaceLinkCompletion = ({
   }, [available, editor, getMarkdown, session])
 
   useEffect(() => {
-    sync()
     return cancel
-  }, [cancel, sync])
+  }, [available, cancel])
 
   useEffect(() => editor.api.redecorate(), [editor, state])
 
@@ -189,6 +191,7 @@ export const usePlateWorkspaceLinkCompletion = ({
   const decorate = useCallback(
     ({ entry: [node, path] }: { entry: NodeEntry }) => {
       if (
+        !available ||
         !state ||
         !isCurrent() ||
         !TextApi.isText(node) ||
@@ -206,11 +209,12 @@ export const usePlateWorkspaceLinkCompletion = ({
         },
       ]
     },
-    [accept, isCurrent, state],
+    [accept, available, isCurrent, state],
   )
 
   return {
     decorate,
+    onBlur: cancel,
     onCompositionEnd: () => {
       composingRef.current = false
       sync()
@@ -221,7 +225,13 @@ export const usePlateWorkspaceLinkCompletion = ({
     },
     onEditorChange: sync,
     onKeyDown,
-    onSelectionChange: sync,
+    onSelectionChange: () => {
+      if (
+        !isSamePlateWorkspaceLinkTrigger(triggerRef.current, getPlateWorkspaceLinkTrigger(editor))
+      ) {
+        cancel()
+      }
+    },
   }
 }
 

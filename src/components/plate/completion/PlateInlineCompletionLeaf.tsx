@@ -64,6 +64,7 @@ const WorkspaceLinkCompletionMenu = ({
               data-active={index === activeIndex ? 'true' : undefined}
               key={`${item.kind}:${item.label}:${item.insertText}`}
               onMouseDown={(event) => {
+                if (event.button !== 0) return
                 event.preventDefault()
                 accept?.(index)
               }}
@@ -138,6 +139,7 @@ const DocumentCompletionMenu = ({
               )}
               key={`${candidate.source}:${candidate.text}`}
               onMouseDown={(event) => {
+                if (event.button !== 0) return
                 event.preventDefault()
                 accept?.(index)
               }}

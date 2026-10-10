@@ -44,6 +44,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const surfaceRef = useRef<PlateEditorSurfaceHandle | null>(null)
+  const [contextMenuOpen, setContextMenuOpen] = useState(false)
   const [scopedStatus, setScopedStatus] = useState<ScopedEditorStatus>({
     activePath: props.activePath,
     status: { phase: 'loading' },
@@ -121,6 +122,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     <EditorContextMenu
       getCapabilities={contextMenu.getCapabilities}
       onAction={contextMenu.onAction}
+      onOpenChange={setContextMenuOpen}
       shortcutOverrides={shortcutOverrides}
     >
       <div className="relative flex h-full flex-1 flex-col" ref={rootRef}>
@@ -142,6 +144,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             motionSmoothScrolling && 'is-smooth-editor',
           )}
           contentVisible={status.phase === 'ready'}
+          completionEnabled={!contextMenuOpen}
           interactionActive={interactionActive}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}

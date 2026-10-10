@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import type http from 'node:http'
 import path from 'node:path'
+import { PANEL_TOGGLE_GUARD_MS } from '@/utils/toggleGuard'
 // eslint-disable-next-line no-restricted-imports -- Electron E2E helpers are colocated outside application aliases.
 import {
   closeElectronTestSession,
@@ -74,6 +75,23 @@ test.describe('Electron desktop shell', () => {
     })
   })
 
+  test('keeps the renderer viewport aligned with native window resizing', async () => {
+    if (!session) throw new Error('Electron test session is unavailable')
+    for (const size of [
+      { width: 1100, height: 720 },
+      { width: 1280, height: 900 },
+    ]) {
+      await revealElectronWindow(session.app, page, size)
+      const windowHandle = await session.app.browserWindow(page)
+      const nativeSize = await windowHandle.evaluate((window) => window.getContentSize())
+      await windowHandle.dispose()
+      await expect
+        .poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight]))
+        .toEqual(nativeSize)
+      await expect(page.getByTestId('markdown-editor')).toBeInViewport()
+    }
+  })
+
   test('opens modal shells promptly without blank first paint', async () => {
     await expect(page).toHaveTitle(/marklab/i)
     await expect(page.locator('.app-titlebar')).toBeVisible({ timeout: 10_000 })
@@ -86,7 +104,7 @@ test.describe('Electron desktop shell', () => {
     await page.keyboard.press('Escape')
     await expect(commandDialog).toBeHidden({ timeout: 2_000 })
     const settingsStartedAt = Date.now()
-    await page.keyboard.press('Control+Comma')
+    await page.keyboard.press('ControlOrMeta+Comma')
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     expect(Date.now() - settingsStartedAt).toBeLessThan(2_000)
@@ -99,7 +117,7 @@ test.describe('Electron desktop shell', () => {
     const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
     const palette = page.getByRole('dialog', { name: /Command palette|命令面板/i })
 
-    await page.keyboard.press('Control+Shift+L')
+    await page.keyboard.press('ControlOrMeta+Shift+L')
     await expect(drawer).toBeVisible({ timeout: 1_500 })
     await doubleTapShift(page)
 
@@ -110,7 +128,7 @@ test.describe('Electron desktop shell', () => {
     await page.keyboard.press('Escape')
     await expect(palette).toBeHidden()
     await expect(page.locator('[data-app-focus-fallback="sidebar-toggle"]')).toBeFocused()
-    await page.keyboard.press('Control+Comma')
+    await page.keyboard.press('ControlOrMeta+Comma')
     const settings = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settings).toBeVisible()
     await doubleTapShift(page)
@@ -123,8 +141,9 @@ test.describe('Electron desktop shell', () => {
   })
 
   test('centers the settings dialog within the Electron viewport', async () => {
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await page.keyboard.press('Control+Comma')
+    if (!session) throw new Error('Electron test session is unavailable')
+    await revealElectronWindow(session.app, page, { width: 1280, height: 900 })
+    await page.keyboard.press('ControlOrMeta+Comma')
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     const dialogBox = await settingsDialog.boundingBox()
@@ -215,10 +234,11 @@ test.describe('Electron desktop shell', () => {
     const editor = page.getByTestId('markdown-editor')
     const statusBar = page.getByRole('contentinfo', { name: /Status bar|状态栏/i })
     await expect(editor).toBeVisible({ timeout: 10_000 })
+    await expect(editor).toHaveAttribute('data-state', 'ready')
 
-    await editor.click()
-    await page.keyboard.press('ControlOrMeta+A')
+    await editor.locator('p').first().click()
     await page.keyboard.insertText('one two')
+    await expect(editor).toContainText('one two')
     await page.keyboard.press('Enter')
     await page.keyboard.insertText('three')
 
@@ -230,7 +250,8 @@ test.describe('Electron desktop shell', () => {
   })
 
   test('releases the canvas after a hover-preview sidebar closes', async () => {
-    await page.setViewportSize({ width: 1280, height: 900 })
+    if (!session) throw new Error('Electron test session is unavailable')
+    await revealElectronWindow(session.app, page, { width: 1280, height: 900 })
     const hoverZone = page.getByTestId('sidebar-hover-zone')
     const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
 
@@ -246,16 +267,24 @@ test.describe('Electron desktop shell', () => {
   })
 
   test('toggles and focuses the sidebar from its app shortcut', async () => {
+    await page.mouse.move(700, 450)
     const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
     const fileSearch = page.locator(
       'input[placeholder*="Search files"], input[placeholder*="搜索文件"]',
     )
 
-    await page.keyboard.press('Control+Shift+L')
+    await page.keyboard.press('ControlOrMeta+Shift+L')
     await expect(drawer).toBeVisible({ timeout: 1_500 })
     await expect(fileSearch).toBeFocused({ timeout: 1_500 })
 
-    await page.keyboard.press('Control+Shift+L')
+    // Panel toggles suppress duplicate activations during this interval.
+    await page.waitForTimeout(PANEL_TOGGLE_GUARD_MS)
+    await page.keyboard.press('ControlOrMeta+Shift+L')
+    await expect(page.locator('main[data-sidebar-pinned]')).toHaveAttribute(
+      'data-sidebar-pinned',
+      'false',
+      { timeout: 1_500 },
+    )
     await expect(drawer).toBeHidden({ timeout: 1_500 })
   })
 

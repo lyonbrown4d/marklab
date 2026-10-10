@@ -20,7 +20,7 @@ export const createPlateEditorPlugins = (previewOptions: PlatePreviewOptions = {
           startThreshold: 4,
         },
       },
-      enableContextMenu: true,
+      enableContextMenu: false,
       isSelectable: (_element, path) => path.length === 1,
       onKeyDownSelecting: (editor, event) => {
         handlePlateBlockMoveShortcut(editor as PlateEditor, event)

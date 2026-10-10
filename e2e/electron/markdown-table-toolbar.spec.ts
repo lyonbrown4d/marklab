@@ -57,7 +57,8 @@ const openWorkspace = async (session: ElectronTestSession, workspacePath: string
 
 const waitForWorkspace = async (page: Page) => {
   const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
-  if (!(await explorer.isVisible().catch(() => false))) await page.keyboard.press('Control+Shift+L')
+  if (!(await explorer.isVisible().catch(() => false)))
+    await page.keyboard.press('ControlOrMeta+Shift+L')
   await expect(explorer.getByRole('button', { exact: true, name: 'Table.md' })).toBeVisible({
     timeout: 30_000,
   })

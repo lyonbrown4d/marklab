@@ -77,11 +77,12 @@ export type PlateInlineCompletionControllerOptions = {
 
 export type PlateInlineCompletionController = {
   activate: () => void
-  compositionEnd: () => void
+  compositionEnd: (schedule?: boolean) => void
   compositionStart: () => void
   deactivate: () => void
   decorate: (entry: NodeEntry) => PlateInlineCompletionDecoration[]
   destroy: () => void
+  dismiss: () => void
   getSnapshot: () => PlateInlineCompletionState | null
   keyDown: (event: KeyboardEvent) => boolean
   subscribe: (listener: () => void) => () => void

@@ -253,6 +253,15 @@ describe('BlockDraggable', () => {
     await waitFor(() => expect(handle).toHaveFocus())
   })
 
+  it.each([{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }])(
+    'keeps modifier-assisted block selection free of menus for %j',
+    (modifiers) => {
+      renderBlock()
+      fireEvent.click(screen.getByRole('button', { name: 'Move block' }), modifiers)
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    },
+  )
+
   it('keeps one drag handle in the Tab order and roves focus with arrow keys', () => {
     renderBlocks()
     const handles = screen.getAllByRole('button', { name: 'Move block' })

@@ -57,7 +57,8 @@ const removeWorkspace = (root: string | undefined) => {
 
 const openFile = async (page: Page, fileName: string) => {
   const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
-  if (!(await explorer.isVisible().catch(() => false))) await page.keyboard.press('Control+Shift+L')
+  if (!(await explorer.isVisible().catch(() => false)))
+    await page.keyboard.press('ControlOrMeta+Shift+L')
   const file = explorer.getByRole('button', { exact: true, name: fileName })
   await expect(file).toBeVisible({ timeout: 30_000 })
   await file.click()
