@@ -3,38 +3,64 @@ import { create } from 'zustand'
 
 type OcclusionState = {
   reasons: Record<string, number>
-  occupy: (reason: string) => () => void
+  commandPaletteBlockers: Record<string, number>
+  occupy: (reason: string, options?: NativeSurfaceOcclusionOptions) => () => void
+}
+
+type NativeSurfaceOcclusionOptions = {
+  blocksCommandPalette?: boolean
+}
+
+const incrementReason = (reasons: Record<string, number>, reason: string) => ({
+  ...reasons,
+  [reason]: (reasons[reason] ?? 0) + 1,
+})
+
+const decrementReason = (reasons: Record<string, number>, reason: string) => {
+  const current = reasons[reason] ?? 0
+  if (current > 1) return { ...reasons, [reason]: current - 1 }
+  const next = { ...reasons }
+  delete next[reason]
+  return next
 }
 
 export const useNativeSurfaceOcclusionStore = create<OcclusionState>((set) => ({
   reasons: {},
-  occupy: (reason) => {
+  commandPaletteBlockers: {},
+  occupy: (reason, { blocksCommandPalette = false } = {}) => {
     set((state) => ({
-      reasons: { ...state.reasons, [reason]: (state.reasons[reason] ?? 0) + 1 },
+      reasons: incrementReason(state.reasons, reason),
+      commandPaletteBlockers: blocksCommandPalette
+        ? incrementReason(state.commandPaletteBlockers, reason)
+        : state.commandPaletteBlockers,
     }))
     let released = false
     return () => {
       if (released) return
       released = true
-      set((state) => {
-        const current = state.reasons[reason] ?? 0
-        if (current <= 1) {
-          const reasons = { ...state.reasons }
-          delete reasons[reason]
-          return { reasons }
-        }
-        return { reasons: { ...state.reasons, [reason]: current - 1 } }
-      })
+      set((state) => ({
+        reasons: decrementReason(state.reasons, reason),
+        commandPaletteBlockers: blocksCommandPalette
+          ? decrementReason(state.commandPaletteBlockers, reason)
+          : state.commandPaletteBlockers,
+      }))
     }
   },
 }))
 
-export const useNativeSurfaceOcclusion = (reason: string, active: boolean) => {
+export const useNativeSurfaceOcclusion = (
+  reason: string,
+  active: boolean,
+  { blocksCommandPalette = false }: NativeSurfaceOcclusionOptions = {},
+) => {
   useEffect(() => {
     if (!active) return
-    return useNativeSurfaceOcclusionStore.getState().occupy(reason)
-  }, [active, reason])
+    return useNativeSurfaceOcclusionStore.getState().occupy(reason, { blocksCommandPalette })
+  }, [active, blocksCommandPalette, reason])
 }
 
 export const useNativeSurfaceOccluded = () =>
   useNativeSurfaceOcclusionStore((state) => Object.keys(state.reasons).length > 0)
+
+export const isCommandPaletteBlockedByActiveSurface = () =>
+  Object.keys(useNativeSurfaceOcclusionStore.getState().commandPaletteBlockers).length > 0

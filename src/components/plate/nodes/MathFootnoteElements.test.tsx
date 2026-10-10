@@ -36,6 +36,27 @@ const renderMarkdown = (markdown: string, readOnly = true) =>
   )
 
 describe('Plate math and footnote elements', () => {
+  it.each([
+    [42, '42'],
+    [true, 'true'],
+    [{ unsafe: 'value' }, ''],
+  ])('normalizes a %j equation expression without exposing object data', (texExpression, label) => {
+    const editor = createPlateEditor({
+      plugins: createPlateEditorPlugins(),
+      value: [
+        {
+          type: 'equation',
+          texExpression,
+          children: [{ text: '' }],
+        },
+      ] as never,
+    })
+
+    const { container } = renderEditor(editor)
+    expect(container.querySelector('math')?.getAttribute('aria-label')).toBe(label)
+    expect(container).not.toHaveTextContent('unsafe')
+  })
+
   it('renders inline and display formulas as accessible KaTeX math', () => {
     renderMarkdown(['Inline $x^2$.', '', '$$', '\\sum_{i=1}^n i', '$$'].join('\n'))
 
@@ -81,6 +102,25 @@ describe('Plate math and footnote elements', () => {
       `#${definition.id}`,
     )
     expect(definition).toHaveTextContent('Supporting detail.')
+  })
+
+  it('renders missing footnote identifiers safely and leaves read-only clicks to the anchor', () => {
+    const editor = createPlateEditor({
+      plugins: createPlateEditorPlugins(),
+      value: [
+        {
+          type: 'p',
+          children: [{ type: 'footnoteReference', children: [{ text: '' }] }, { text: ' note' }],
+        },
+        { type: 'footnoteDefinition', children: [{ type: 'p', children: [{ text: 'Body' }] }] },
+      ] as never,
+    })
+    renderEditor(editor)
+
+    const link = screen.getByRole('link', { name: '[^]' })
+    expect(fireEvent.click(link)).toBe(true)
+    expect(link).toHaveAttribute('href', `#footnote-${encodeURIComponent(editor.id)}-`)
+    expect(screen.getByRole('doc-footnote', { name: '[^]' })).toHaveTextContent('Body')
   })
 
   it('scopes footnote targets to each editor instance', () => {

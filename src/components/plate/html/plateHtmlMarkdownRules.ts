@@ -1,11 +1,11 @@
 import {
   convertChildrenDeserialize,
-  serializeMd,
   type DeserializeMdOptions,
   type MdDecoration,
+  type MdRules,
   type SerializeMdOptions,
 } from '@platejs/markdown'
-import type { Descendant, TElement, TText, Value } from 'platejs'
+import type { Descendant, SlateEditor, TElement, TText, Value } from 'platejs'
 import { safeHtmlUrl } from '@/components/plate/html/plateHtmlAst'
 import {
   PLATE_HTML_BR,
@@ -78,85 +78,90 @@ export const serializeHtmlCommentParagraph = (node: TElement) => {
   }
 }
 
-export const plateHtmlMarkdownRules = {
-  [PLATE_HTML_COMMENT]: {
-    deserialize: (node: PlateHtmlCommentNode) => ({
-      htmlCommentSource: node.value,
-      text: '',
-    }),
-    mark: true,
-    serialize: (node: HtmlCommentText) => ({
-      type: 'html',
-      value: node.htmlCommentSource ?? '',
-    }),
-  },
-  [PLATE_HTML_DETAILS]: {
-    deserialize: (
-      node: PlateHtmlDetailsNode,
-      decoration: MdDecoration,
-      options: DeserializeMdOptions,
-    ) => ({
-      children: [
-        {
-          children: convertChildrenDeserialize(
-            node.summaryChildren as Parameters<typeof convertChildrenDeserialize>[0],
+type SerializeNestedMarkdown = (editor: SlateEditor, value: Value) => string
+
+export const createPlateHtmlMarkdownRules = (
+  serializeNestedMarkdown: SerializeNestedMarkdown,
+): MdRules =>
+  ({
+    [PLATE_HTML_COMMENT]: {
+      deserialize: (node: PlateHtmlCommentNode) => ({
+        htmlCommentSource: node.value,
+        text: '',
+      }),
+      mark: true,
+      serialize: (node: HtmlCommentText) => ({
+        type: 'html',
+        value: node.htmlCommentSource ?? '',
+      }),
+    },
+    [PLATE_HTML_DETAILS]: {
+      deserialize: (
+        node: PlateHtmlDetailsNode,
+        decoration: MdDecoration,
+        options: DeserializeMdOptions,
+      ) => ({
+        children: [
+          {
+            children: convertChildrenDeserialize(
+              node.summaryChildren as Parameters<typeof convertChildrenDeserialize>[0],
+              decoration,
+              options,
+            ),
+            type: editorType(options, PLATE_HTML_SUMMARY),
+          },
+          ...convertChildrenDeserialize(
+            node.children as Parameters<typeof convertChildrenDeserialize>[0],
             decoration,
             options,
           ),
-          type: editorType(options, PLATE_HTML_SUMMARY),
-        },
-        ...convertChildrenDeserialize(
-          node.children as Parameters<typeof convertChildrenDeserialize>[0],
+        ],
+        open: node.open,
+        type: editorType(options, PLATE_HTML_DETAILS),
+      }),
+      serialize: (node: TElement & { open?: boolean }, options: SerializeMdOptions) => {
+        const [summary, ...content] = node.children
+        const summarySource = `<summary>${serializeSummaryNode(summary)}</summary>`
+        if (!options.editor) throw new Error('Plate editor is required to serialize HTML details.')
+        const contentMarkdown = serializeNestedMarkdown(options.editor, content as Value).trimEnd()
+        return {
+          type: 'html',
+          value: [
+            node.open === true ? '<details open>' : '<details>',
+            summarySource,
+            ...(contentMarkdown ? ['', contentMarkdown, ''] : []),
+            '</details>',
+          ].join('\n'),
+        }
+      },
+    },
+    [PLATE_HTML_KBD]: {
+      deserialize: (
+        node: PlateHtmlInlineNode,
+        decoration: MdDecoration,
+        options: DeserializeMdOptions,
+      ) => ({
+        children: convertChildrenDeserialize(
+          (node.children ?? []) as Parameters<typeof convertChildrenDeserialize>[0],
           decoration,
           options,
         ),
-      ],
-      open: node.open,
-      type: editorType(options, PLATE_HTML_DETAILS),
-    }),
-    serialize: (node: TElement & { open?: boolean }, options: SerializeMdOptions) => {
-      const [summary, ...content] = node.children
-      const summarySource = `<summary>${serializeSummaryNode(summary)}</summary>`
-      if (!options.editor) throw new Error('Plate editor is required to serialize HTML details.')
-      const contentMarkdown = serializeMd(options.editor, { value: content as Value }).trimEnd()
-      return {
+        type: editorType(options, PLATE_HTML_KBD),
+      }),
+      serialize: (node: TElement) => ({
         type: 'html',
-        value: [
-          node.open === true ? '<details open>' : '<details>',
-          summarySource,
-          ...(contentMarkdown ? ['', contentMarkdown, ''] : []),
-          '</details>',
-        ].join('\n'),
-      }
+        value: `<kbd>${escapeHtmlText(readText(node))}</kbd>`,
+      }),
     },
-  },
-  [PLATE_HTML_KBD]: {
-    deserialize: (
-      node: PlateHtmlInlineNode,
-      decoration: MdDecoration,
-      options: DeserializeMdOptions,
-    ) => ({
-      children: convertChildrenDeserialize(
-        (node.children ?? []) as Parameters<typeof convertChildrenDeserialize>[0],
-        decoration,
-        options,
-      ),
-      type: editorType(options, PLATE_HTML_KBD),
-    }),
-    serialize: (node: TElement) => ({
-      type: 'html',
-      value: `<kbd>${escapeHtmlText(readText(node))}</kbd>`,
-    }),
-  },
-  [PLATE_HTML_BR]: {
-    deserialize: (
-      _node: PlateHtmlInlineNode,
-      _decoration: unknown,
-      options: DeserializeMdOptions,
-    ) => ({
-      children: [{ text: '' }],
-      type: editorType(options, PLATE_HTML_BR),
-    }),
-    serialize: () => ({ type: 'html', value: '<br>' }),
-  },
-}
+    [PLATE_HTML_BR]: {
+      deserialize: (
+        _node: PlateHtmlInlineNode,
+        _decoration: unknown,
+        options: DeserializeMdOptions,
+      ) => ({
+        children: [{ text: '' }],
+        type: editorType(options, PLATE_HTML_BR),
+      }),
+      serialize: () => ({ type: 'html', value: '<br>' }),
+    },
+  }) as MdRules

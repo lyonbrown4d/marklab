@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { nativeIpcChannels } from '@electron/channels'
 import { createAppWindowCommandHandlers } from '@electron/main/windowCommands'
+import { showWindowWithMotion } from '@electron/windowMotion'
 
 vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: vi.fn(), getFocusedWindow: vi.fn() },
@@ -243,6 +244,7 @@ describe('app window commands', () => {
       tabs: [],
     })
     expect(pool.acquireMainWindow).not.toHaveBeenCalled()
+    expect(showWindowWithMotion).toHaveBeenCalledWith(source, { focus: true })
   })
 
   it('keeps the current workspace when renderer flush rejects', async () => {

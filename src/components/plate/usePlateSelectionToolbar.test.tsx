@@ -191,4 +191,60 @@ describe('usePlateSelectionToolbar', () => {
 
     expect(result.current.open).toBe(false)
   })
+
+  it('rejects toolbar actions when editing is unavailable', () => {
+    const editor = createEditor()
+    const root = document.createElement('div')
+    const editableRef = createRef<HTMLElement>()
+    editableRef.current = root
+    document.body.append(root)
+    const { result } = renderHook(() =>
+      usePlateSelectionToolbar({ canEdit: () => false, editableRef, editor, readOnly: false }),
+    )
+
+    expect(result.current.runAction('bold')).toBe(false)
+    expect(editor.tf.toggleMark).not.toHaveBeenCalled()
+  })
+
+  it('runs an enabled action and reports an invalid editor selection as unhandled', async () => {
+    const editor = createEditor()
+    const root = document.createElement('div')
+    const editableRef = createRef<HTMLElement>()
+    editableRef.current = root
+    document.body.append(root)
+    const { result } = renderHook(() =>
+      usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
+    )
+
+    expect(result.current.runAction('bold')).toBe(true)
+    expect(editor.tf.toggleMark).toHaveBeenCalledWith('bold')
+    await act(async () => Promise.resolve())
+
+    editor.selection = null
+    expect(result.current.runAction('bold')).toBe(false)
+  })
+
+  it('synchronizes immediately when animation frames are unavailable', () => {
+    const editor = createEditor()
+    const root = document.createElement('div')
+    root.tabIndex = 0
+    root.textContent = 'text selection'
+    document.body.append(root)
+    installNativeSelection(root)
+    const editableRef = createRef<HTMLElement>()
+    editableRef.current = root
+    const originalAnimationFrame = window.requestAnimationFrame
+    Reflect.deleteProperty(window, 'requestAnimationFrame')
+
+    try {
+      const { result } = renderHook(() =>
+        usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
+      )
+      act(() => document.dispatchEvent(new Event('selectionchange')))
+      expect(result.current.open).toBe(true)
+      act(() => root.dispatchEvent(new Event('scroll')))
+    } finally {
+      window.requestAnimationFrame = originalAnimationFrame
+    }
+  })
 })

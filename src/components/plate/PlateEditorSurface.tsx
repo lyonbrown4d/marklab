@@ -114,8 +114,8 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onSnapshot: commitSnapshot,
     })
     const isEditorReady = useCallback(
-      () => contentReady && !externalLoadingRef.current,
-      [contentReady],
+      () => interactionActive && contentReady && !externalLoadingRef.current,
+      [contentReady, interactionActive],
     )
     const { assetDrop, pickAndImportImage } = usePlateEditorAssets({
       activePath,
@@ -130,6 +130,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       canEdit: isEditorReady,
       documentIdentity: activePath,
       editor,
+      interactionActive: interactionActive && contentReady,
       labels: slashLabels ?? ({} as PlateSlashCommandLabels),
       onCalendarFileCreate,
       onImageImport: onImageImport ?? pickAndImportImage,
@@ -167,6 +168,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       contentReady,
       editableRef,
       editor,
+      interactionActive,
       readOnly,
     })
 
@@ -262,7 +264,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               />
             )}
             <PlateBlockSelectionCount />
-            {slashLabels && (
+            {interactionActive && contentReady && slashLabels && (
               <PlateEditorOverlays
                 activePath={activePath}
                 canEdit={isEditorReady}

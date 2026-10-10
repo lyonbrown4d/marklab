@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiInlineComposer } from '@/components/ai/AiInlineComposer'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 
 const labels = {
   accept: 'Accept',
@@ -45,6 +49,18 @@ const baseProps = {
 }
 
 describe('AiInlineComposer', () => {
+  beforeEach(() => {
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
+  })
+
+  it('blocks the command palette for its full visible lifetime', () => {
+    const { unmount } = render(<AiInlineComposer {...baseProps} />)
+
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(true)
+    unmount()
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(false)
+  })
+
   it.each(['loading-provider', 'prompt', 'starting', 'streaming', 'proposal', 'error'] as const)(
     'offers a pointer-accessible close action during the %s phase',
     (phase) => {

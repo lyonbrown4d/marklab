@@ -81,6 +81,7 @@ export const ImmersiveWorkspaceShell = ({
           variant="ghost"
           size="icon"
           aria-label={sidebarLabel}
+          data-app-focus-fallback="sidebar-toggle"
           className="immersive-edge-handle absolute left-0 top-1/2 h-14 w-5 -translate-y-1/2 rounded-l-none rounded-r-lg border border-l-0 border-border/60 bg-background/80 text-muted-foreground shadow-sm backdrop-blur hover:w-7 hover:bg-background hover:text-foreground"
           onClick={() => {
             dismissPreview()

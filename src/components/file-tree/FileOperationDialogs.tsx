@@ -53,7 +53,7 @@ export const FileNameDialog = ({
   onSubmit,
 }: FileNameDialogProps) => {
   const { t } = useI18n()
-  useNativeSurfaceOcclusion('file-name-dialog', open)
+  useNativeSurfaceOcclusion('file-name-dialog', open, { blocksCommandPalette: true })
   const inputRef = useRef<HTMLInputElement | null>(null)
   const inFlight = useRef(false)
   const errorId = useId()
@@ -174,7 +174,7 @@ export const FileConfirmDialog = ({
   onConfirm,
 }: FileConfirmDialogProps) => {
   const { t } = useI18n()
-  useNativeSurfaceOcclusion('file-confirm-dialog', open)
+  useNativeSurfaceOcclusion('file-confirm-dialog', open, { blocksCommandPalette: true })
   const inFlight = useRef(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)

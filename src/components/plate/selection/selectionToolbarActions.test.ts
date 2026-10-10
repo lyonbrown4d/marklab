@@ -24,6 +24,28 @@ const createEditor = () => {
 }
 
 describe('Plate selection toolbar actions', () => {
+  it('ignores actions when the editor has no expanded selection', () => {
+    const editor = createEditor()
+    editor.selection = null
+    expect(runPlateSelectionToolbarAction(editor, 'bold')).toBe(false)
+
+    editor.tf.select({
+      anchor: { offset: 2, path: [0, 0] },
+      focus: { offset: 2, path: [0, 0] },
+    })
+    expect(runPlateSelectionToolbarAction(editor, 'bold')).toBe(false)
+  })
+
+  it('reports inactive marks for plain unlinked text', () => {
+    expect(getPlateSelectionToolbarMarks(createEditor())).toEqual({
+      bold: false,
+      code: false,
+      italic: false,
+      link: false,
+      strike: false,
+    })
+  })
+
   it.each([
     ['bold', 'bold'],
     ['italic', 'italic'],
@@ -47,6 +69,47 @@ describe('Plate selection toolbar actions', () => {
 
     expect(onLink).toHaveBeenCalledWith(editor)
     expect(editor.selection).toEqual(selection)
+  })
+
+  it('uses the Plate floating-link flow when no custom link handler is supplied', () => {
+    const editor = createEditor()
+
+    expect(runPlateSelectionToolbarAction(editor, 'link')).toBe(true)
+    expect(editor.selection).not.toBeNull()
+  })
+
+  it('unwraps an existing link instead of opening the link flow', () => {
+    const editor = createPlateEditor({
+      plugins: createPlateEditorPlugins(),
+      value: [
+        {
+          children: [
+            { children: [{ text: 'linked text' }], type: 'a', url: 'https://example.com' },
+          ],
+          type: 'p',
+        },
+      ],
+    })
+    editor.tf.select({
+      anchor: { offset: 0, path: [0, 0, 0] },
+      focus: { offset: 6, path: [0, 0, 0] },
+    })
+
+    expect(runPlateSelectionToolbarAction(editor, 'link')).toBe(true)
+    expect(JSON.stringify(editor.children)).not.toContain('https://example.com')
+  })
+
+  it('rejects an unsupported action without mutating the document', () => {
+    const editor = createEditor()
+    const before = structuredClone(editor.children)
+
+    expect(
+      runPlateSelectionToolbarAction(
+        editor,
+        'unsupported' as Parameters<typeof runPlateSelectionToolbarAction>[1],
+      ),
+    ).toBe(false)
+    expect(editor.children).toEqual(before)
   })
 
   it('clears inline marks, links, and the selected block style', () => {

@@ -17,7 +17,10 @@ import { registerMainNativeIpc } from '@electron/main/ipcBootstrap'
 import { createLegacyShellIpcRegistration } from '@electron/main/legacyShellIpc'
 import { createRuntimeLifecycleTasks } from '@electron/main/lifecycle/runtimeLifecycleTasks'
 import { createRuntimeEventQueue } from '@electron/main/runtimeEvents'
-import { installSingleInstanceAndDeepLinks } from '@electron/main/singleInstance'
+import {
+  createInitialNativeOpenPresentationGate,
+  installSingleInstanceAndDeepLinks,
+} from '@electron/main/singleInstance'
 import { createMainWindowSession } from '@electron/main/windowSession'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
 import { createWindowLifecycle } from '@electron/main/windowLifecycle'
@@ -85,7 +88,7 @@ const getRuntime = (): ElectronRuntime => {
 
 const getServices = (): ElectronServices => getRuntime().services
 
-const showMainWindow = (): void => {
+const presentMainWindow = (): void => {
   if (didShowMain || !windows) return
 
   didShowMain = true
@@ -98,6 +101,9 @@ const showMainWindow = (): void => {
     dismissSplashWindow(windows.splash, hideWindowWithMotion)
   }
 }
+
+const initialPresentationGate = createInitialNativeOpenPresentationGate(presentMainWindow)
+const showMainWindow = initialPresentationGate.requestPresentation
 
 const handlePrimaryRendererShellReady = (): void => {
   rendererReady = true
@@ -147,6 +153,11 @@ const windowCommandSetup = createWindowCommandSetup({
   getPrimaryWindow: () => windows?.main ?? null,
   getWindowPool: windowLifecycle.ensureWindowPool,
   installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
+  isPrimaryWindowBootstrapping: (window) =>
+    windows?.main === window && !didShowMain && !rendererReady,
+  presentPrimaryWindow: (window) => {
+    if (windows?.main === window) showMainWindow()
+  },
 })
 
 const rendererReadyCoordinator = createRendererReadyCoordinator({
@@ -201,6 +212,7 @@ installSingleInstanceAndDeepLinks({
   bootstrap,
   getLogger: () => getServices().logger,
   getMainWindow: () => windows?.main ?? null,
+  holdInitialPresentationUntil: initialPresentationGate.holdUntil,
   openSystemPath: windowCommandSetup.openSystemPath,
   queueDeepLinkPayload: runtimeEvents.queueDeepLinkPayload,
   queueOrSendRuntimeEvent: runtimeEvents.queueOrSendRuntimeEvent,

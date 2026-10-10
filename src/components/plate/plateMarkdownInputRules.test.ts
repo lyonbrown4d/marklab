@@ -2,7 +2,21 @@ import { serializeMd } from '@platejs/markdown'
 import { createPlateEditor } from 'platejs/react'
 import { describe, expect, it } from 'vitest'
 import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
-import { setPlateMarkdownInputRulesComposing } from '@/components/plate/plateMarkdownInputRules'
+import {
+  plateBlockMathMarkdownInputRules,
+  plateBlockquoteMarkdownInputRules,
+  plateBoldMarkdownInputRules,
+  plateCodeBlockMarkdownInputRules,
+  plateCodeMarkdownInputRules,
+  plateHeadingMarkdownInputRules,
+  plateHorizontalRuleMarkdownInputRules,
+  plateInlineMathMarkdownInputRules,
+  plateItalicMarkdownInputRules,
+  plateLinkMarkdownInputRules,
+  plateListMarkdownInputRules,
+  plateStrikethroughMarkdownInputRules,
+  setPlateMarkdownInputRulesComposing,
+} from '@/components/plate/plateMarkdownInputRules'
 import { serializePlateMarkdown } from '@/components/plate/plateMarkdownSerialization'
 
 const createEditor = () => {
@@ -36,6 +50,27 @@ const typeText = (editor: { tf: { insertText: (text: string) => void } }, text: 
 }
 
 describe('Plate Markdown input rules', () => {
+  it('keeps the guarded Markdown rule contract limited to typing and line breaks', () => {
+    const rules = [
+      ...plateHeadingMarkdownInputRules,
+      ...plateBlockquoteMarkdownInputRules,
+      ...plateHorizontalRuleMarkdownInputRules,
+      ...plateBoldMarkdownInputRules,
+      ...plateItalicMarkdownInputRules,
+      ...plateCodeMarkdownInputRules,
+      ...plateStrikethroughMarkdownInputRules,
+      ...plateListMarkdownInputRules,
+      ...plateCodeBlockMarkdownInputRules,
+      ...plateLinkMarkdownInputRules,
+      ...plateInlineMathMarkdownInputRules,
+      ...plateBlockMathMarkdownInputRules,
+    ]
+
+    expect(new Set(rules.map((rule) => rule.target))).toEqual(
+      new Set(['insertText', 'insertBreak']),
+    )
+  })
+
   it.each([
     ['# ', 'h1'],
     ['## ', 'h2'],
@@ -174,7 +209,7 @@ describe('Plate Markdown input rules', () => {
     expect(serializeMd(editor).trim()).toBe(`\`\`\`${expectedLanguage ?? ''}\n\`\`\``)
   })
 
-  it.each(['# ', '> ', '- ', '1. '])(
+  it.each(['# ', '> ', '- ', '+ ', '1. ', '- [ ] '])(
     'does not transform %s while an IME composition is active',
     (input) => {
       const editor = createEditor()

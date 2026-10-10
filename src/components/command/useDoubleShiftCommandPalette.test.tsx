@@ -1,5 +1,9 @@
 import { fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  useNativeSurfaceOcclusion,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import { useDoubleShiftCommandPalette } from '@/components/command/useDoubleShiftCommandPalette'
 
 const Harness = ({ enabled = true, onOpen }: { enabled?: boolean; onOpen: () => void }) => {
@@ -12,10 +16,16 @@ const tapShift = () => {
   fireEvent.keyUp(window, { key: 'Shift' })
 }
 
+const BlockingSurface = () => {
+  useNativeSurfaceOcclusion('test-blocking-surface', true, { blocksCommandPalette: true })
+  return <div role="dialog" aria-modal="true" />
+}
+
 describe('useDoubleShiftCommandPalette', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
   })
 
   afterEach(() => {
@@ -60,11 +70,26 @@ describe('useDoubleShiftCommandPalette', () => {
     ['dialog', <div role="dialog" />],
     ['alert dialog', <div role="alertdialog" />],
     ['aria modal', <div aria-modal="true" />],
-  ])('does not open over an existing %s', (_label, modal) => {
+  ])('does not treat an unregistered %s as a command-palette blocker', (_label, modal) => {
     const onOpen = vi.fn()
     render(
       <>
         {modal}
+        <Harness onOpen={onOpen} />
+      </>,
+    )
+
+    tapShift()
+    tapShift()
+
+    expect(onOpen).toHaveBeenCalledOnce()
+  })
+
+  it('does not open over an explicitly registered command-palette blocker', () => {
+    const onOpen = vi.fn()
+    render(
+      <>
+        <BlockingSurface />
         <Harness onOpen={onOpen} />
       </>,
     )

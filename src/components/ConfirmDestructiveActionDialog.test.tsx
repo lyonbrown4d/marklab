@@ -1,7 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRef, useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import { ConfirmDestructiveActionDialog } from '@/components/ConfirmDestructiveActionDialog'
 
 type HarnessProps = {
@@ -57,6 +61,18 @@ const RejectHarness = ({ onConfirm }: HarnessProps) => {
 }
 
 describe('ConfirmDestructiveActionDialog', () => {
+  beforeEach(() =>
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} }),
+  )
+
+  it('protects destructive confirmation from command-palette focus', async () => {
+    const { unmount } = render(<Harness onConfirm={vi.fn(async () => undefined)} />)
+
+    await waitFor(() => expect(isCommandPaletteBlockedByActiveSurface()).toBe(true))
+    unmount()
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(false)
+  })
+
   it('describes the resource and cancels without invoking the action', async () => {
     const onConfirm = vi.fn(async () => undefined)
     const user = userEvent.setup()

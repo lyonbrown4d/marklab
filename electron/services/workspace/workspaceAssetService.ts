@@ -5,6 +5,7 @@ import type {
   FsMarkdownAssetImportResult,
   FsMarkdownAssetResolveResult,
   FsRootInfo,
+  WorkspaceRootSwitchOptions,
 } from '@electron/services/workspace/types'
 import {
   WorkspaceAssetCapabilities,
@@ -31,18 +32,24 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     super.dispose()
   }
 
-  override async setRoot(value: unknown): Promise<FsRootInfo> {
+  override async setRoot(
+    value: unknown,
+    options: WorkspaceRootSwitchOptions = {},
+  ): Promise<FsRootInfo> {
     const previousIdentity = workspaceAssetIdentity(this.state)
-    const result = await super.setRoot(value)
+    const result = await super.setRoot(value, options)
     if (workspaceAssetIdentity(this.state) !== previousIdentity) {
       this.assetCapabilities.reset()
     }
     return result
   }
 
-  override async setSingleFile(value: unknown): Promise<FsRootInfo> {
+  override async setSingleFile(
+    value: unknown,
+    options: WorkspaceRootSwitchOptions = {},
+  ): Promise<FsRootInfo> {
     const previousIdentity = workspaceAssetIdentity(this.state)
-    const result = await super.setSingleFile(value)
+    const result = await super.setSingleFile(value, options)
     if (workspaceAssetIdentity(this.state) !== previousIdentity) {
       this.assetCapabilities.reset()
     }

@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { FileText } from 'lucide-react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import type { MarkdownLinkCompletionClient } from '@/components/editor/markdownLinkCompletionSession'
 import { useMarkdownLinkSuggestions } from '@/components/editor/useMarkdownLinkSuggestions'
 import type { PlateSlashCommandLabels, PlateSlashUrlValues } from '@/components/plate/slash/types'
@@ -42,6 +43,9 @@ export const PlateSlashUrlDialog = ({
 }: PlateSlashUrlDialogProps) => {
   const id = useId()
   const { cancel, failed, request, submit } = state
+  useNativeSurfaceOcclusion('plate-slash-url-dialog', Boolean(request), {
+    blocksCommandPalette: true,
+  })
   const client = completionClient === undefined ? languageIntelligenceApi : completionClient
   const {
     control,

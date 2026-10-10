@@ -74,6 +74,7 @@ export const usePlateSelectionToolbar = ({
   const toolbarElementRef = useRef<HTMLElement | null>(null)
   const composingRef = useRef(false)
   const frameRef = useRef<number | null>(null)
+  const updateFrameRef = useRef<number | null>(null)
   const lastSelectionRectRef = useRef<ReturnType<typeof getDOMSelectionBoundingClientRect> | null>(
     null,
   )
@@ -162,6 +163,18 @@ export const usePlateSelectionToolbar = ({
     })
   }, [sync])
 
+  const scheduleFloatingUpdate = useCallback(() => {
+    if (updateFrameRef.current !== null) return
+    if (typeof window.requestAnimationFrame !== 'function') {
+      void update()
+      return
+    }
+    updateFrameRef.current = window.requestAnimationFrame(() => {
+      updateFrameRef.current = null
+      void update()
+    })
+  }, [update])
+
   useEffect(() => {
     const root = editableRef.current
     if (!root) return
@@ -186,6 +199,23 @@ export const usePlateSelectionToolbar = ({
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
     }
   }, [editableRef, scheduleSync, sync])
+
+  useEffect(() => {
+    if (!state.open) return
+    const root = editableRef.current
+    if (!root) return
+    const visualViewport = window.visualViewport
+    root.addEventListener('scroll', scheduleFloatingUpdate, { passive: true })
+    visualViewport?.addEventListener('resize', scheduleFloatingUpdate)
+    return () => {
+      root.removeEventListener('scroll', scheduleFloatingUpdate)
+      visualViewport?.removeEventListener('resize', scheduleFloatingUpdate)
+      if (updateFrameRef.current !== null) {
+        window.cancelAnimationFrame(updateFrameRef.current)
+        updateFrameRef.current = null
+      }
+    }
+  }, [editableRef, scheduleFloatingUpdate, state.open])
 
   const runAction = useCallback(
     (action: PlateSelectionToolbarAction) => {

@@ -33,11 +33,19 @@ Use the helper before committing to map changed files to likely impact areas:
 pnpm quality:impact
 pnpm quality:impact --staged
 pnpm quality:impact --base origin/main
+pnpm quality:line-limits
+pnpm test:coverage:critical
 pnpm check
 ```
 
 `pnpm check` runs the quality impact helper as part of the project-level gate, so local
-verification and CI use the same entry point.
+verification and CI use the same entry point. It also rejects human-maintained TypeScript files
+over 300 non-blank effective lines, including root-level tooling and configuration files;
+downloaded shadcn source is kept intact and extended through composition.
+The unit-test task additionally collects coverage for critical Markdown-worker, startup-window,
+command-palette, Plate, and workspace-map integration surfaces. Every listed file must independently
+reach 85 percent for lines, functions, statements, and branches; aggregate coverage cannot mask an
+untested boundary.
 
 | Impact area                      | Common risk                                                    | Required checks                                                 |
 | -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -134,12 +142,12 @@ For dependency updates or packaging changes, prefer `pnpm build:desktop` or the 
 dist command after targeted tests pass.
 
 For release-critical renderer lifecycle changes, run the focused Electron gate. It builds the
-Electron bundles once, then verifies that source and preview state remain isolated while one window
-switches between workspaces with the same relative file path:
+Electron bundles once, then runs the release lifecycle regressions, the application smoke flow
+(including Double Shift command-palette focus), and Plate editor integration coverage:
 
 ```bash
 pnpm test:electron:release
 ```
 
-The release workflow runs this narrow gate once on Ubuntu under Xvfb before the three packaging
+The release workflow runs this focused gate once on Ubuntu under Xvfb before the three packaging
 jobs. Playwright retains traces and failure screenshots, and CI uploads them with the HTML report.

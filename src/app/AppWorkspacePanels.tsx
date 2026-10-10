@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import RightSidebar from '@/components/RightSidebar'
 import { ImmersiveWorkspaceShell } from '@/components/ImmersiveWorkspaceShell'
 import { AppWorkspaceSidebar } from '@/app/AppWorkspaceSidebar'
@@ -15,6 +15,7 @@ import {
   useEditorFocusHandoffController,
 } from '@/app/EditorFocusHandoff'
 import { EditorTransitionFrame, type EditorTransitionStatus } from '@/app/EditorTransitionFrame'
+import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
 
@@ -75,6 +76,9 @@ export const AppWorkspacePanels = ({
   onRetryActiveFile,
 }: AppWorkspacePanelsProps) => {
   const { t } = useI18n()
+  const commandPaletteOpen = useNativeSurfaceOcclusionStore(
+    (surface) => (surface.reasons['command-palette'] ?? 0) > 0,
+  )
   const [sidebarDismissRequest, setSidebarDismissRequest] = useState(0)
   const tabIds = useMemo(() => state.tabs.map(getWorkspaceTabId), [state.tabs])
   const toggleSidebar = useCallback(() => {
@@ -90,6 +94,11 @@ export const AppWorkspacePanels = ({
     setSidebarOpen(false)
     setSidebarDismissRequest((request) => request + 1)
   }, [setSidebarOpen])
+  useEffect(() => {
+    if (!commandPaletteOpen) return
+    setSidebarOpen(false)
+  }, [commandPaletteOpen, setSidebarOpen])
+  const effectiveSidebarDismissRequest = sidebarDismissRequest * 2 + Number(commandPaletteOpen)
   const activeFileTab = useMemo(() => {
     const tab = state.tabs.find((candidate) => getWorkspaceTabId(candidate) === state.activeTabId)
     return tab?.kind === 'file' ? tab : null
@@ -184,7 +193,7 @@ export const AppWorkspacePanels = ({
       sidebarOpen={!state.sidebarCollapsed && !immersiveZenMode}
       inspectorOpen={!state.rightSidebarCollapsed && !immersiveZenMode}
       sidebarLabel={t('actions.toggleSidebar')}
-      sidebarDismissRequest={sidebarDismissRequest}
+      sidebarDismissRequest={effectiveSidebarDismissRequest}
       inspectorLabel={t('titlebar.documentOutline')}
       onToggleSidebar={toggleSidebar}
       onSidebarOpenChange={setSidebarOpen}

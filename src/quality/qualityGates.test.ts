@@ -1,6 +1,4 @@
-// @ts-expect-error Vitest runs this repository guard in Node; the renderer tsconfig intentionally omits Node module types.
 import { execFileSync } from 'node:child_process'
-// @ts-expect-error Vitest runs this repository guard in Node; the renderer tsconfig intentionally omits Node module types.
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import qualityImpactRulesData from '@/quality/qualityImpactRules.json'
@@ -30,6 +28,7 @@ const boundaryContractTests = [
   '../components/previews/DrawioEditorSurface.test.tsx',
   '../components/previews/ExcalidrawEditorSurface.test.tsx',
   '../../e2e/electron/release-regressions.spec.ts',
+  '../../e2e/electron/plate-editor-integrations.spec.ts',
   '../../electron/services/settingsPersistKeys.test.ts',
   '../../electron/services/knowledgeEngine/workspaceGraphTopology.test.ts',
   '../../electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.test.ts',
@@ -76,6 +75,57 @@ describe('quality gates', () => {
     expect(fileExists('./qualityImpactRules.json')).toBe(true)
   })
 
+  it('keeps source line limits enforced with only the downloaded shadcn sidebar exempted', () => {
+    const packageJson = JSON.parse(fileText('../../package.json')) as {
+      scripts?: Record<string, string>
+    }
+    const lineLimitScript = fileText('../../scripts/check-source-line-limits.ts')
+    const guide = fileText('../../docs/quality-gates.md')
+
+    expect(packageJson.scripts?.['quality:line-limits']).toBe(
+      'node --experimental-strip-types scripts/check-source-line-limits.ts',
+    )
+    expect(lineLimitScript).toContain("'src/components/ui/sidebar.tsx'")
+    expect(lineLimitScript).toContain('MAX_EFFECTIVE_LINES = 300')
+    expect(lineLimitScript).toContain('filter((line) => line.trim().length > 0)')
+    expect(lineLimitScript).toContain("ROOT_SOURCE_DIRECTORY = '.'")
+    expect(lineLimitScript).toContain('collectRootSourceFiles()')
+    expect(lineLimitScript).toContain('entry.isFile()')
+    expect(lineLimitScript).toContain('...collectRootSourceFiles()')
+    expect(guide).toContain('root-level tooling and configuration files')
+  })
+
+  it('keeps critical editor integrations behind an 85 percent coverage gate', () => {
+    const packageJson = JSON.parse(fileText('../../package.json')) as {
+      scripts?: Record<string, string>
+    }
+    const viteConfig = fileText('../../vite.config.ts')
+
+    expect(packageJson.scripts?.['test:coverage:critical']).toBe(
+      'vitest run --coverage --maxWorkers=2',
+    )
+    expect(viteConfig).toContain("provider: 'v8'")
+    expect(viteConfig).toContain('perFile: true')
+    expect(viteConfig).toContain('lines: 85')
+    expect(viteConfig).toContain('functions: 85')
+    expect(viteConfig).toContain('statements: 85')
+    expect(viteConfig).toContain('branches: 85')
+    ;[
+      'initialNativeOpen.ts',
+      'plateMarkdownWorkerConfig.ts',
+      'plateMarkdownWorkerRuntime.ts',
+      'plateMarkdownWorker.ts',
+      'singleInstance.ts',
+      'windowCurrentPathOpen.ts',
+      'windowCommandTargets.ts',
+      'windowCommands.ts',
+      'workspaceRootTransitionGate.ts',
+      'nativeSurfaceOcclusion.ts',
+      'useDoubleShiftCommandPalette.ts',
+    ].forEach((criticalFile) => expect(viteConfig).toContain(criticalFile))
+    expect(fileText('../../moon.yml')).toContain('command: pnpm test:coverage:critical')
+  })
+
   it('keeps the project-level check wired to quality impact', () => {
     const moonConfig = fileText('../../moon.yml')
     const releaseWorkflow = fileText('../../.github/workflows/release.yml')
@@ -83,6 +133,9 @@ describe('quality gates', () => {
     expect(moonConfig).toContain('quality-impact:')
     expect(moonConfig).toContain('command: pnpm quality:impact')
     expect(moonConfig).toContain('- ~:quality-impact')
+    expect(moonConfig).toContain('quality-line-limits:')
+    expect(moonConfig).toContain('command: pnpm quality:line-limits')
+    expect(moonConfig).toContain('- ~:quality-line-limits')
     expect(releaseWorkflow).toContain('run: pnpm check')
     expect(releaseWorkflow).toContain('run: xvfb-run --auto-servernum pnpm test:electron:release')
     expect(releaseWorkflow).toContain('name: electron-release-regressions')
@@ -95,7 +148,10 @@ describe('quality gates', () => {
     const runner = fileText('../../scripts/run-electron-e2e.ts')
 
     expect(packageJson.scripts?.['test:electron:release']).toBe(
-      'pnpm test:electron:build && pnpm test:electron:run release-regressions.spec.ts',
+      'pnpm test:electron:build && pnpm test:electron:release:run',
+    )
+    expect(packageJson.scripts?.['test:electron:release:run']).toBe(
+      'pnpm test:electron:run release-regressions.spec.ts app-smoke.spec.ts plate-editor-integrations.spec.ts',
     )
     expect(runner).toContain('...process.argv.slice(2)')
   })

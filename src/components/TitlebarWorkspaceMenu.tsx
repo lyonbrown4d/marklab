@@ -77,7 +77,9 @@ export const TitlebarWorkspaceMenu = ({
   const [bindingOpen, setBindingOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   useNativeSurfaceOcclusion('workspace-menu', open)
-  useNativeSurfaceOcclusion('workspace-sync-dialog', bindingOpen)
+  useNativeSurfaceOcclusion('workspace-sync-dialog', bindingOpen, {
+    blocksCommandPalette: true,
+  })
   const configureWebDav = () => {
     setOpen(false)
     window.setTimeout(() => setBindingOpen(true), 0)

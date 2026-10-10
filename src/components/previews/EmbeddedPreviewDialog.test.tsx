@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import { EmbeddedPreviewDialog } from '@/components/previews/EmbeddedPreviewDialog'
 
 const filePreviewSurface = vi.hoisted(() => vi.fn(() => <div>File preview</div>))
@@ -30,6 +34,23 @@ const baseProps = {
 }
 
 describe('EmbeddedPreviewDialog', () => {
+  beforeEach(() => {
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
+  })
+
+  it('blocks Search Everywhere only while its modal is open', () => {
+    const props = {
+      ...baseProps,
+      resolved: null,
+    }
+    const { rerender } = render(<EmbeddedPreviewDialog {...props} />)
+
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(true)
+
+    rerender(<EmbeddedPreviewDialog {...props} open={false} />)
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(false)
+  })
+
   it('reuses its existing dialog for a zoomable image', () => {
     render(
       <EmbeddedPreviewDialog

@@ -1,8 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, expect, it, vi } from 'vitest'
-import type { ComponentProps } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRef, useState, type ComponentProps } from 'react'
 import Titlebar from '@/components/Titlebar'
+import type { TitlebarHandle } from '@/components/Titlebar'
+import {
+  useNativeSurfaceOcclusion,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 
 vi.mock('@/runtime/window', () => ({
   isDesktopRuntime: () => false,
@@ -62,8 +67,36 @@ const tapShift = () => {
   fireEvent.keyUp(window, { key: 'Shift' })
 }
 
+const BlockingSurfaceHarness = () => {
+  useNativeSurfaceOcclusion('settings-dialog', true, { blocksCommandPalette: true })
+  return <Titlebar {...createProps()} />
+}
+
+const ReverseBlockingSurfaceHarness = () => {
+  const [commandOpen, setCommandOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  useNativeSurfaceOcclusion('settings-dialog', settingsOpen, { blocksCommandPalette: true })
+  return (
+    <>
+      <button type="button" onClick={() => setSettingsOpen(true)}>
+        Open settings
+      </button>
+      <Titlebar {...createProps()} commandOpen={commandOpen} onCommandOpenChange={setCommandOpen} />
+    </>
+  )
+}
+
 describe('Titlebar double-Shift shortcut', () => {
+  beforeEach(() => {
+    useNativeSurfaceOcclusionStore.setState({
+      reasons: {},
+      commandPaletteBlockers: {},
+    })
+  })
+
   it('opens the existing command dialog in quick-open mode after the second tap', async () => {
+    // This test exercises the shortcut/mode contract, not the lazy chunk timing.
+    await import('@/components/TitlebarCommandDialog')
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
@@ -84,14 +117,14 @@ describe('Titlebar double-Shift shortcut', () => {
     )
   })
 
-  it('opens from an input that stops bubbling keyboard events', async () => {
+  it('opens from a non-modal navigation drawer that stops bubbling keyboard events', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
     render(
       <QueryClientProvider client={queryClient}>
         <Titlebar {...createProps()} />
-        <div aria-label="Non-modal sidebar" aria-modal="false" role="dialog">
+        <div aria-label="Navigation drawer" role="dialog">
           <input
             aria-label="File filter"
             onKeyDown={(event) => event.stopPropagation()}
@@ -108,5 +141,62 @@ describe('Titlebar double-Shift shortcut', () => {
     fireEvent.keyUp(input, { key: 'Shift' })
 
     expect(await screen.findByRole('dialog', { name: 'Command palette' })).toBeInTheDocument()
+  })
+
+  it('does not take keyboard priority from an explicitly blocking surface', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BlockingSurfaceHarness />
+      </QueryClientProvider>,
+    )
+
+    tapShift()
+    tapShift()
+
+    expect(screen.queryByRole('dialog', { name: 'Command palette' })).not.toBeInTheDocument()
+  })
+
+  it('blocks imperative shortcut entry points while a modal surface owns focus', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const titlebarRef = createRef<TitlebarHandle>()
+    const BlockingImperativeHarness = () => {
+      useNativeSurfaceOcclusion('settings-dialog', true, { blocksCommandPalette: true })
+      return <Titlebar {...createProps()} ref={titlebarRef} />
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BlockingImperativeHarness />
+      </QueryClientProvider>,
+    )
+
+    act(() => titlebarRef.current?.openCommandPalette())
+
+    expect(screen.queryByRole('dialog', { name: 'Command palette' })).not.toBeInTheDocument()
+  })
+
+  it('closes an open command palette when a blocking surface becomes active', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReverseBlockingSurfaceHarness />
+      </QueryClientProvider>,
+    )
+    const openSettings = screen.getByRole('button', { name: 'Open settings' })
+    tapShift()
+    tapShift()
+    expect(await screen.findByRole('dialog', { name: 'Command palette' })).toBeInTheDocument()
+
+    fireEvent.click(openSettings)
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Command palette' })).not.toBeInTheDocument(),
+    )
   })
 })

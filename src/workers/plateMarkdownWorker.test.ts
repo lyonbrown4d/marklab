@@ -53,6 +53,21 @@ describe('processPlateMarkdownWorkerRequest', () => {
     })
   })
 
+  it('returns a typed failure when serialization receives a malformed node', () => {
+    const result = processPlateMarkdownWorkerRequest({
+      id: 2,
+      operation: 'serialize',
+      value: [{ type: 'p' }] as unknown as Value,
+    })
+
+    expect(result).toMatchObject({
+      error: expect.any(String),
+      id: 2,
+      ok: false,
+      operation: 'serialize',
+    })
+  })
+
   it('keeps callout markers distinct from escaped marker literals', () => {
     const callout = processPlateMarkdownWorkerRequest({
       id: 1,
@@ -97,6 +112,72 @@ describe('processPlateMarkdownWorkerRequest', () => {
       value: parsed.value,
     })
 
+    expect(serialized).toMatchObject({ markdown: `${markdown}\n` })
+  })
+
+  it('round trips footnotes and math without renderer-only plugins', () => {
+    const markdown = [
+      'Energy is $E = mc^2$[^proof].',
+      '',
+      '$$',
+      '\\int_0^1 x^2\\,dx',
+      '$$',
+      '',
+      '[^proof]: Formula note.',
+    ].join('\n')
+    const parsed = processPlateMarkdownWorkerRequest({
+      id: 10,
+      markdown,
+      operation: 'parse',
+    })
+    if (!parsed.ok || parsed.operation !== 'parse') {
+      throw new Error(`Worker parse failed: ${'error' in parsed ? parsed.error : parsed.operation}`)
+    }
+
+    const serialized = processPlateMarkdownWorkerRequest({
+      id: 11,
+      operation: 'serialize',
+      value: parsed.value,
+    })
+
+    expect(JSON.stringify(parsed.value)).toContain('"type":"inline_equation"')
+    expect(JSON.stringify(parsed.value)).toContain('"type":"equation"')
+    expect(JSON.stringify(parsed.value)).toContain('"type":"footnoteReference"')
+    expect(serialized).toMatchObject({ markdown: `${markdown}\n` })
+  })
+
+  it('round trips links beside dates and GFM syntax', () => {
+    const markdown = [
+      'Visit [Marklab](https://marklab.app) on 2026-10-10.',
+      '',
+      '~~done~~',
+      '',
+      '- [x] shipped',
+      '',
+      '| A | B |',
+      '| - | - |',
+      '| 1 | 2 |',
+    ].join('\n')
+    const parsed = processPlateMarkdownWorkerRequest({
+      id: 12,
+      markdown,
+      operation: 'parse',
+    })
+    if (!parsed.ok || parsed.operation !== 'parse') {
+      throw new Error(`Worker parse failed: ${'error' in parsed ? parsed.error : parsed.operation}`)
+    }
+
+    const serialized = processPlateMarkdownWorkerRequest({
+      id: 13,
+      operation: 'serialize',
+      value: parsed.value,
+    })
+
+    expect(JSON.stringify(parsed.value)).toContain('https://marklab.app')
+    expect(JSON.stringify(parsed.value)).toContain('2026-10-10')
+    expect(JSON.stringify(parsed.value)).toContain('"strikethrough":true')
+    expect(JSON.stringify(parsed.value)).toContain('"checked":true')
+    expect(JSON.stringify(parsed.value)).toContain('"type":"table"')
     expect(serialized).toMatchObject({ markdown: `${markdown}\n` })
   })
 
@@ -170,6 +251,39 @@ describe('processPlateMarkdownWorkerRequest', () => {
 
     postMessage.mockRestore()
   })
+
+  it.each(['parse-stream', 'prepare-stream'] as const)(
+    'reports a non-Error transfer failure from %s without retaining broken state',
+    (operation) => {
+      const responses: PlateMarkdownWorkerResponse[] = []
+      const postMessage = vi
+        .spyOn(self, 'postMessage')
+        .mockImplementationOnce(() => {
+          throw 'transfer rejected'
+        })
+        .mockImplementation((message) => responses.push(message as PlateMarkdownWorkerResponse))
+
+      self.onmessage?.({
+        data: { id: 250, markdown: '# Transfer', operation },
+      } as MessageEvent<PlateMarkdownWorkerRequest>)
+
+      expect(responses).toContainEqual({
+        error: 'Markdown parse failed.',
+        id: 250,
+        ok: false,
+        operation,
+      })
+      const callsAfterFailure = postMessage.mock.calls.length
+      if (operation === 'parse-stream') {
+        self.onmessage?.({
+          data: { id: 250, operation: 'parse-next' },
+        } as MessageEvent<PlateMarkdownWorkerRequest>)
+        expect(postMessage).toHaveBeenCalledTimes(callsAfterFailure)
+      }
+
+      postMessage.mockRestore()
+    },
+  )
 
   it('keeps another stream intact when the first stream is cancelled', () => {
     const firstMarkdown = Array.from({ length: 21 }, (_, index) => `# First heading ${index}`).join(

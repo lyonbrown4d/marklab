@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import { AiInlineComposer, type AiComposerLabels } from '@/components/ai/AiInlineComposer'
 import { EditorContextMenu } from '@/components/EditorContextMenu'
 import MarkdownEditorStatusOverlay from '@/components/MarkdownEditorStatusOverlay'
@@ -26,6 +27,9 @@ type ScopedEditorStatus = {
 
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((props, ref) => {
   const { t } = useI18n()
+  const keepAlive = useKeepAliveContext()
+  const interactionActive =
+    (props.interactionActive ?? true) && (!keepAlive.cacheKey || keepAlive.active)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const aiDefaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const markdownAssetImportStrategy = usePreferencesStore(
@@ -131,7 +135,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             motionSmoothScrolling && 'is-smooth-editor',
           )}
           contentVisible={status.phase === 'ready'}
-          interactionActive={props.interactionActive}
+          interactionActive={interactionActive}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
           onWorkspaceLink={props.onWorkspaceLink}
@@ -150,7 +154,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           loadingLabel={t('editor.loading')}
           status={status}
         />
-        {aiComposer.isOpen && (
+        {interactionActive && aiComposer.isOpen && (
           <AiInlineComposer
             anchor={aiComposer.anchor}
             error={aiComposer.error}

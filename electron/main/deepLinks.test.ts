@@ -22,6 +22,38 @@ afterEach(() => {
 
 describe('Electron launch arguments', () => {
   it.each([
+    [
+      'Windows',
+      [
+        'C:\\Program Files\\Electron\\electron.exe',
+        '--user-data-dir=C:\\Temp\\marklab',
+        entry,
+        note,
+      ],
+    ],
+    [
+      'macOS',
+      [
+        '/Applications/Electron.app/Contents/MacOS/Electron',
+        '--no-sandbox',
+        '/Applications/Marklab/dist-electron/main.js',
+        '/Users/marklab/Notes',
+      ],
+    ],
+    [
+      'Linux',
+      [
+        '/usr/bin/electron',
+        '--ozone-platform-hint=auto',
+        '/opt/marklab/dist-electron/main.js',
+        '/home/marklab/notes/today.md',
+      ],
+    ],
+  ])('keeps only the explicit OS target from a %s development launch', (_platform, argv) => {
+    expect(createSingleInstancePayload(argv, '/work').args).toEqual([argv.at(-1)])
+  })
+
+  it.each([
     ['electron', entry, note],
     ['electron', '--user-data-dir=TEMP/user-data', entry, note],
     ['electron', '--inspect=0', '--no-sandbox', entry, note],

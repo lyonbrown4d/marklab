@@ -28,6 +28,7 @@ const createWindow = (id: number) => {
     }),
     isDestroyed: () => destroyed,
     isMinimized: () => false,
+    restore: vi.fn(),
   })
   return window as unknown as BrowserWindow
 }
@@ -62,11 +63,12 @@ const createHarness = () => {
     stats: vi.fn(() => ({ poolHits: 1 })),
     waitForRendererInteractive: vi.fn(() => interactive),
   }
+  const logger = { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }
   const handlers = createAppWindowCommandHandlers({
     activateWorkspaceWindowState: vi.fn(),
     copyWorkspaceSession: vi.fn(() => ({ state: { rootPath: '/notes' }, version: 1 })),
     getCurrentWorkspaceRoot: () => ({ kind: 'external' as const, path: '/notes' }),
-    getLogger: () => ({ debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+    getLogger: () => logger,
     getNativeIpc: () => null,
     getPrimaryWindow: () => source,
     getSessionKeyForWindow: (window: BrowserWindow) => `session-${window.id}`,
@@ -75,7 +77,7 @@ const createHarness = () => {
     installManagedMainWindowLifecycle: vi.fn(),
     writeWorkspaceSession: vi.fn(),
   } as never)
-  return { failInteractive, finishInteractive, handlers, pool, source, target, workspace }
+  return { failInteractive, finishInteractive, handlers, logger, pool, source, target, workspace }
 }
 
 describe('workspace window renderer lifecycle', () => {
@@ -98,6 +100,36 @@ describe('workspace window renderer lifecycle', () => {
     await expect(opened).resolves.toMatchObject({ ok: true })
     expect(workspace.markRendererInteractive).toHaveBeenCalledOnce()
     expect(pool.prewarmMainWindow).toHaveBeenCalledOnce()
+  })
+
+  it('reports a failed background pool replenishment without failing the opened window', async () => {
+    const { finishInteractive, handlers, logger, pool, source } = createHarness()
+    pool.prewarmMainWindow.mockRejectedValueOnce(new Error('prewarm failed'))
+    const opened = handlers.open_current_workspace_in_new_window(undefined, {
+      sender: source.webContents,
+    } as never)
+
+    finishInteractive()
+
+    await expect(opened).resolves.toMatchObject({ ok: true })
+    await vi.waitFor(() =>
+      expect(logger.warn).toHaveBeenCalledWith('unable to replenish window pool', {
+        error: expect.objectContaining({ message: 'prewarm failed' }),
+      }),
+    )
+  })
+
+  it('restores a minimized pooled window before opening and after hydration', async () => {
+    const { finishInteractive, handlers, source, target } = createHarness()
+    vi.spyOn(target, 'isMinimized').mockReturnValue(true)
+    const opened = handlers.open_current_workspace_in_new_window(undefined, {
+      sender: source.webContents,
+    } as never)
+
+    finishInteractive()
+
+    await expect(opened).resolves.toMatchObject({ ok: true })
+    expect(target.restore).toHaveBeenCalledTimes(2)
   })
 
   it('keeps the loading renderer retryable when hydration reports an error', async () => {

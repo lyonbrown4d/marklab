@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
+import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import type { FileViewKind } from '@/store/appTypes'
 
@@ -113,6 +114,7 @@ describe('AppWorkspacePanels render isolation', () => {
     renderSpies.sidebar.mockClear()
     action.mockClear()
     persistedContentChange.mockClear()
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
     usePreferencesStore.setState({ sidebarCollapsed: false })
   })
 
@@ -209,6 +211,13 @@ describe('AppWorkspacePanels render isolation', () => {
     expect(nextProps.onToggleSidebar).toBe(firstProps.onToggleSidebar)
     expect(nextProps.onSidebarOpenChange).toBe(firstProps.onSidebarOpenChange)
     expect(nextProps.onToggleInspector).toBe(firstProps.onToggleInspector)
+  })
+
+  it('dismisses the navigation drawer when the command palette takes focus', async () => {
+    useNativeSurfaceOcclusionStore.setState({ reasons: { 'command-palette': 1 } })
+    render(renderPanels(baseState))
+
+    await waitFor(() => expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true))
   })
 
   it('routes active history restores through the persisted-content callback', () => {

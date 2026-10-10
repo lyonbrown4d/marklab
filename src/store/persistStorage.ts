@@ -8,7 +8,7 @@ type IdleHandle =
     }
   | {
       kind: 'timeout'
-      id: number
+      id: ReturnType<typeof globalThis.setTimeout>
     }
 const scheduleIdle = (callback: () => void): IdleHandle => {
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {

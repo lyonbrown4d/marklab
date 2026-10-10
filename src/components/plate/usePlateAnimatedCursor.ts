@@ -26,7 +26,7 @@ export const usePlateAnimatedCursor = ({ editableRef, enabled }: PlateAnimatedCu
     document.body.append(caret)
 
     let animationFrame: number | null = null
-    let scrollTimer: ReturnType<typeof setTimeout> | null = null
+    let scrollTimer: number | null = null
     let composing = false
 
     const setVisible = (visible: boolean) => {

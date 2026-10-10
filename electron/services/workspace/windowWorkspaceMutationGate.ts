@@ -52,15 +52,17 @@ export const installWindowWorkspaceMutationGate = (
   const importAsset = service.importMarkdownAsset.bind(service)
   const importAssetBytes = service.importMarkdownAssetBytes.bind(service)
 
-  service.setRoot = (value) =>
+  service.setRoot = (value, options) =>
     gate.runAsync('switch workspace root', async () => {
-      const root = await setRoot(value)
+      const root = await setRoot(value, options)
+      options?.signal?.throwIfAborted()
       onRootChanged(root)
       return root
     })
-  service.setSingleFile = (value) =>
+  service.setSingleFile = (value, options) =>
     gate.runAsync('switch single-file workspace', async () => {
-      const root = await setSingleFile(value)
+      const root = await setSingleFile(value, options)
+      options?.signal?.throwIfAborted()
       onRootChanged(root)
       return root
     })

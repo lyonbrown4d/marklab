@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type RefObject } from 'react'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import {
   ZoomableVisualViewport,
   type ZoomableVisual,
@@ -28,6 +29,8 @@ export const DiagramPreviewDialog = ({
   returnFocusRef,
   visual,
 }: DiagramPreviewDialogProps) => {
+  useNativeSurfaceOcclusion('diagram-preview-dialog', open, { blocksCommandPalette: true })
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Escape') return
     event.stopPropagation()

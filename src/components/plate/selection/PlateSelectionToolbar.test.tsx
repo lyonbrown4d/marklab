@@ -57,6 +57,24 @@ describe('PlateSelectionToolbar', () => {
     expect(runAction).toHaveBeenCalledWith('link')
   })
 
+  it('runs clear formatting and accepts a computed floating position', () => {
+    const runAction = vi.fn(() => true)
+    render(
+      <PlateSelectionToolbar
+        {...createController({
+          floatingStyle: { left: 240, position: 'fixed', top: 120 },
+          runAction,
+        })}
+        labels={labels}
+      />,
+    )
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: labels.clear }))
+    fireEvent.click(screen.getByRole('button', { name: labels.clear }))
+
+    expect(runAction).toHaveBeenCalledExactlyOnceWith('clear')
+  })
+
   it('does not place a fixed viewport anchor inside transformed editor ancestors', () => {
     const { container } = render(
       <div style={{ transform: 'translateY(24px)' }}>

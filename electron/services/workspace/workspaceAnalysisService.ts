@@ -3,7 +3,12 @@ import type { App, Shell } from 'electron'
 import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import { noopLogger, type Logger } from '@electron/services/logger'
-import type { FsGraph, FsRootInfo, FsWorkspaceIndex } from '@electron/services/workspace/types'
+import type {
+  FsGraph,
+  FsRootInfo,
+  FsWorkspaceIndex,
+  WorkspaceRootSwitchOptions,
+} from '@electron/services/workspace/types'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 import { WorkspaceSearchIndex } from '@electron/services/workspace/workspaceSearchIndex'
 import { workspaceSearchKey } from '@electron/services/workspace/workspaceSearchIndexLifecycle'
@@ -185,9 +190,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     await this.searchIndex.rebuild()
   }
 
-  override async setRoot(value: unknown): Promise<FsRootInfo> {
+  override async setRoot(
+    value: unknown,
+    options: WorkspaceRootSwitchOptions = {},
+  ): Promise<FsRootInfo> {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
-    const result = await super.setRoot(value)
+    const result = await super.setRoot(value, options)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.beginRendererHydration()
     this.searchIndex.reset()
@@ -196,9 +204,12 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     return result
   }
 
-  override async setSingleFile(value: unknown): Promise<FsRootInfo> {
+  override async setSingleFile(
+    value: unknown,
+    options: WorkspaceRootSwitchOptions = {},
+  ): Promise<FsRootInfo> {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
-    const result = await super.setSingleFile(value)
+    const result = await super.setSingleFile(value, options)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
     this.beginRendererHydration()
     this.searchIndex.reset()

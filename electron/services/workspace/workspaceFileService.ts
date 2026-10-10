@@ -7,6 +7,7 @@ import type {
   FsBufferStatus,
   FsPathMetadataResult,
   FsRootInfo,
+  WorkspaceRootSwitchOptions,
   FsStateData,
 } from '@electron/services/workspace/types'
 import { WorkspaceMutationService } from '@electron/services/workspace/workspaceMutationService'
@@ -21,8 +22,8 @@ import { toPathMetadataResult } from '@electron/services/workspace/workspaceNode
 import { readWorkspacePathMetadata } from '@electron/services/workspace/workspacePathMetadata'
 import { createWorkspaceFileEntry } from '@electron/services/workspace/workspaceCreateFile'
 import {
-  selectWorkspaceRoot,
   selectSingleFileWorkspace,
+  selectWorkspaceRoot,
 } from '@electron/services/workspace/workspaceRootSelection'
 import {
   trySidecarPathMutation,
@@ -36,9 +37,11 @@ import { WorkspaceAccessPrewarmer } from '@electron/services/workspace/workspace
 import { createWorkspaceBufferUpdateHandler } from '@electron/services/workspace/workspaceBufferUpdateHandler'
 import { openWorkspacePath } from '@electron/services/workspace/workspaceSystemPath'
 import { WorkspaceFileReader } from '@electron/services/workspace/workspaceFileReader'
+import { WorkspaceRootTransitionGate } from '@electron/services/workspace/workspaceRootTransitionGate'
+import { runWorkspaceRootCommit } from '@electron/services/workspace/workspaceRootCommit'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
-  private rootTransitionInProgress = false
+  private readonly rootTransitions = new WorkspaceRootTransitionGate()
   private workspaceSessionGeneration = 0
   private readonly accessPrewarmer: WorkspaceAccessPrewarmer
   private readonly fileReader: WorkspaceFileReader
@@ -88,24 +91,26 @@ export class WorkspaceFileService extends WorkspaceMutationService {
 
   terminalCwd = () => workspaceTerminalCwd(this.state)
 
-  async setRoot(value: unknown): Promise<FsRootInfo> {
-    this.beginRootTransition()
-    try {
-      const nextState = await selectWorkspaceRoot(this.state, value)
-      return nextState ? this.commitWorkspaceState(nextState) : this.rootInfo()
-    } finally {
-      this.rootTransitionInProgress = false
-    }
+  async setRoot(value: unknown, options: WorkspaceRootSwitchOptions = {}): Promise<FsRootInfo> {
+    return this.switchRoot(() => selectWorkspaceRoot(this.state, value), options)
   }
 
-  async setSingleFile(value: unknown): Promise<FsRootInfo> {
-    this.beginRootTransition()
-    try {
-      const nextState = await selectSingleFileWorkspace(this.state, value)
-      return nextState ? this.commitWorkspaceState(nextState) : this.rootInfo()
-    } finally {
-      this.rootTransitionInProgress = false
-    }
+  async setSingleFile(
+    value: unknown,
+    options: WorkspaceRootSwitchOptions = {},
+  ): Promise<FsRootInfo> {
+    return this.switchRoot(() => selectSingleFileWorkspace(this.state, value), options)
+  }
+
+  private async switchRoot(
+    select: () => Promise<FsStateData | null>,
+    options: WorkspaceRootSwitchOptions,
+  ): Promise<FsRootInfo> {
+    return this.rootTransitions.run(options, async () => {
+      const nextState = await select()
+      options.signal?.throwIfAborted()
+      return nextState ? this.commitWorkspaceState(nextState, options) : this.rootInfo()
+    })
   }
 
   readonly openFile = (value: unknown): Promise<string> =>
@@ -123,7 +128,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   }
 
   updateBuffer(value: unknown): FsBufferStatus {
-    if (this.rootTransitionInProgress) {
+    if (this.rootTransitions.blocksMutations) {
       throw new Error('Workspace is switching; retry the buffer update')
     }
     const relativePath = stringArg(value, 'path')
@@ -285,32 +290,28 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   openPathInSystem = (value: unknown) =>
     openWorkspacePath(this.state, this.shell, this.logger, value)
 
-  private beginRootTransition(): void {
-    if (this.rootTransitionInProgress) {
-      throw new Error('Another workspace switch is already in progress')
-    }
-    this.rootTransitionInProgress = true
-  }
-
-  private async commitWorkspaceState(nextState: FsStateData): Promise<FsRootInfo> {
-    await this.buffers.flush()
-    const dirtyCount = this.buffers.getBackgroundDirtyCount()
-    if (dirtyCount > 0) {
-      throw new Error(`Workspace switch blocked by ${dirtyCount} unsaved buffer(s)`)
-    }
-
-    this.buffers.clear()
-    this.workspaceSessionGeneration += 1
-    this.state = nextState
-    this.tree.commitRoot()
-    this.pathSnapshots.invalidate()
-    this.watcher.restart()
-    this.accessPrewarmer.schedule()
-    this.scheduleSnapshotChanged()
-    this.logger.info('workspace root changed', {
-      rootKind: nextState.rootKind,
-      rootPath: nextState.rootPath,
+  private async commitWorkspaceState(
+    nextState: FsStateData,
+    options: WorkspaceRootSwitchOptions,
+  ): Promise<FsRootInfo> {
+    return runWorkspaceRootCommit({
+      buffers: this.buffers,
+      options,
+      commit: () => {
+        this.buffers.clear()
+        this.workspaceSessionGeneration += 1
+        this.state = nextState
+        this.tree.commitRoot()
+        this.pathSnapshots.invalidate()
+        this.watcher.restart()
+        this.accessPrewarmer.schedule()
+        this.scheduleSnapshotChanged()
+        this.logger.info('workspace root changed', {
+          rootKind: nextState.rootKind,
+          rootPath: nextState.rootPath,
+        })
+        return this.rootInfo()
+      },
     })
-    return this.rootInfo()
   }
 }

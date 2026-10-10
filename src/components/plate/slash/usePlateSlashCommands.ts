@@ -29,6 +29,7 @@ type UsePlateSlashCommandsOptions = Pick<
   canEdit?: () => boolean
   documentIdentity: string | null | undefined
   editor: PlateEditor
+  interactionActive?: boolean
   labels: PlateSlashCommandLabels
 }
 
@@ -62,6 +63,7 @@ export const usePlateSlashCommands = ({
   canEdit,
   documentIdentity,
   editor,
+  interactionActive = true,
   labels,
   onCalendarFileCreate,
   onError,
@@ -70,7 +72,7 @@ export const usePlateSlashCommands = ({
   const allCommands = useMemo(() => createPlateSlashCommands(labels), [labels])
   const generatedId = useId()
   const menuId = `marklab-slash-suggestions-${generatedId}`
-  const editingAllowed = !canEdit || canEdit()
+  const editingAllowed = interactionActive && (!canEdit || canEdit())
   const contextToken = useMemo(
     () => ({ documentIdentity, editingAllowed, editor }),
     [documentIdentity, editingAllowed, editor],
@@ -107,6 +109,16 @@ export const usePlateSlashCommands = ({
     setActive(null)
     setSelectedIndex(0)
   }, [cancelPending])
+  const invalidateUrlDialog = urlDialog.invalidate
+
+  useEffect(() => {
+    if (!interactionActive) return
+    return () => {
+      dismiss()
+      invalidateUrlDialog()
+    }
+  }, [dismiss, interactionActive, invalidateUrlDialog])
+
   useEditorSuggestionAria({ activeOptionId, editor, menuId, open: menuOpen })
 
   const refreshAnchor = useCallback(() => {

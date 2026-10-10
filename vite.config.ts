@@ -16,6 +16,8 @@ import {
   electronMainManualChunks,
   electronMainRequireBanner,
 } from './vite.electron.ts'
+// eslint-disable-next-line no-restricted-imports -- Worker config helpers live at repository root before app aliases are available.
+import { plateMarkdownWorkerPlugins } from './vite.worker.ts'
 
 const isNodeModule = (id: string) => id.includes('/node_modules/')
 
@@ -96,6 +98,9 @@ export default defineConfig(({ command, mode }) => {
     },
     optimizeDeps: {
       include: devOptimizeDepsInclude,
+    },
+    worker: {
+      plugins: plateMarkdownWorkerPlugins,
     },
     plugins: [
       isElectron && cleanElectronDistPlugin(),
@@ -186,6 +191,45 @@ export default defineConfig(({ command, mode }) => {
         '**/coverage/**',
       ],
       environment: 'jsdom',
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json-summary'],
+        reportsDirectory: 'coverage/critical',
+        include: [
+          'electron/main/initialNativeOpen.ts',
+          'electron/main/singleInstance.ts',
+          'electron/main/windowCurrentPathOpen.ts',
+          'electron/main/windowCommandSetup.ts',
+          'electron/main/windowCommandTargets.ts',
+          'electron/main/windowCommands.ts',
+          'electron/services/workspace/windowWorkspaceMutationGate.ts',
+          'electron/services/workspace/workspaceRootTransitionGate.ts',
+          'electron/services/workspace/workspaceRootCommit.ts',
+          'src/app/nativeSurfaceOcclusion.ts',
+          'src/components/command/useDoubleShiftCommandPalette.ts',
+          'src/components/plate/nodes/MathFootnoteElements.tsx',
+          'src/components/plate/plateMarkdownConfig.ts',
+          'src/components/plate/plateMarkdownInputRuleGuard.ts',
+          'src/components/plate/plateMarkdownInputRules.ts',
+          'src/components/plate/plateMarkdownWorkerConfig.ts',
+          'src/components/plate/plateMarkdownWorkerRuntime.ts',
+          'src/components/plate/selection/PlateSelectionToolbar.tsx',
+          'src/components/plate/selection/selectionToolbarActions.ts',
+          'src/components/plate/usePlateSelectionToolbar.ts',
+          'src/pages/workspace-map/WorkspaceMapFileNode.tsx',
+          'src/pages/workspace-map/WorkspaceMapStaticMarkdownPreview.tsx',
+          'src/workers/plateMarkdownWorker.ts',
+          'vite.worker.ts',
+          'vite.workerPlateTransforms.ts',
+        ],
+        thresholds: {
+          perFile: true,
+          lines: 85,
+          functions: 85,
+          statements: 85,
+          branches: 85,
+        },
+      },
       server: {
         deps: {
           inline: ['@platejs/math', 'katex'],

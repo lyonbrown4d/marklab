@@ -13,7 +13,7 @@ tasks:
       cache: true
 
   test:
-    command: pnpm exec vitest run
+    command: pnpm test:coverage:critical
     inputs:
       - src/**/*
       - electron/**/*
@@ -80,6 +80,17 @@ tasks:
       - src/quality/**/*
       - package.json
       - moon.yml
+    options:
+      cache: false
+
+  quality-line-limits:
+    command: pnpm quality:line-limits
+    inputs:
+      - electron/**/*
+      - e2e/**/*
+      - scripts/**/*
+      - src/**/*
+      - package.json
     options:
       cache: false
 
@@ -224,6 +235,7 @@ tasks:
   check:
     deps:
       - ~:quality-impact
+      - ~:quality-line-limits
       - ~:lint
       - ~:typecheck
       - ~:test

@@ -6,7 +6,11 @@ import {
   publishDeepLinkUrl,
   registerDeepLinkProtocol,
 } from '@electron/main/deepLinks'
-import { resolveExistingOpenTargets } from '@electron/main/openTargets'
+import {
+  runNativeOpenWithStartupTimeout,
+  scheduleInitialNativeOpenTimeout,
+} from '@electron/main/initialNativeOpen'
+import { collectOpenTargetCandidates, resolveExistingOpenTargets } from '@electron/main/openTargets'
 import type { RuntimeEventQueue } from '@electron/main/runtimeEvents'
 import type { Logger } from '@electron/services/logger'
 import type { DeepLinkPayload } from '@electron/types'
@@ -21,15 +25,23 @@ type SingleInstanceOptions = Pick<
     BrowserWindow,
     'focus' | 'isDestroyed' | 'isMinimized' | 'restore'
   > | null
-  openSystemPath: (path: string, disposition: NativeOpenDisposition) => Promise<unknown>
+  holdInitialPresentationUntil: (settled: Promise<void>) => void
+  openSystemPath: (
+    path: string,
+    disposition: NativeOpenDisposition,
+    options?: { signal?: AbortSignal; startup?: boolean },
+  ) => Promise<unknown>
   showMainWindow: () => void
 }
 
 export type NativeOpenDisposition = 'current' | 'new'
+export { createInitialNativeOpenPresentationGate } from '@electron/main/initialNativeOpen'
 
 type PendingOpenTarget = {
   disposition: NativeOpenDisposition
   path: string
+  settle?: () => void
+  startup: boolean
 }
 
 const focusMainWindow = (options: SingleInstanceOptions): boolean => {
@@ -43,10 +55,33 @@ const focusMainWindow = (options: SingleInstanceOptions): boolean => {
 }
 
 export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions): void => {
+  const initialOpenTargetCandidates = collectOpenTargetCandidates(launchInfo.args, launchInfo.cwd)
+  const initialFailoverOpenTargets = new Set<string>()
   const pendingOpenTargets: PendingOpenTarget[] = []
-  const queuedOpenTargets = new Set<string>()
+  const trackedOpenTargets = new Map<string, PendingOpenTarget>()
+  let activeInitialSettle: (() => void) | null = null
   let bootstrapPromise: Promise<void> | null = null
+  let initialOpenTargetResolutionCompleted = initialOpenTargetCandidates.length === 0
+  let initialOpenTargetResolutionPending = initialOpenTargetCandidates.length > 0
+  let initialOpenTargetResolutionTimedOut = false
+  let processingOpenTarget: PendingOpenTarget | null = null
   let primaryOpenTargetReserved = false
+
+  const ensureInitialPresentationGate = (): (() => void) => {
+    if (activeInitialSettle) return activeInitialSettle
+    let resolveGate!: () => void
+    const settled = new Promise<void>((resolve) => {
+      resolveGate = resolve
+    })
+    const settle = (): void => {
+      if (activeInitialSettle !== settle) return
+      activeInitialSettle = null
+      resolveGate()
+    }
+    activeInitialSettle = settle
+    options.holdInitialPresentationUntil(settled)
+    return settle
+  }
 
   const runBootstrap = (reason: string, afterBootstrap?: () => void): void => {
     if (!bootstrapPromise) {
@@ -69,48 +104,117 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
   }
 
   const flushOpenTargets = (): void => {
-    if (!options.getMainWindow()) return
+    if (initialOpenTargetResolutionPending || processingOpenTarget || !options.getMainWindow()) {
+      return
+    }
     const next = pendingOpenTargets.shift()
     if (!next) return
-    queuedOpenTargets.delete(next.path)
-    void options
-      .openSystemPath(next.path, next.disposition)
-      .catch((error) => {
-        options.getLogger().warn('native open target failed', {
-          error,
-          target: next.path,
-        })
-      })
-      .finally(flushOpenTargets)
+    if (initialOpenTargetResolutionTimedOut && !initialOpenTargetResolutionCompleted) {
+      initialFailoverOpenTargets.add(next.path)
+    }
+    processingOpenTarget = next
+    runNativeOpenWithStartupTimeout({
+      logger: options.getLogger(),
+      onFinished: () => {
+        if (trackedOpenTargets.get(next.path) === next) trackedOpenTargets.delete(next.path)
+        if (processingOpenTarget === next) processingOpenTarget = null
+        next.settle?.()
+        flushOpenTargets()
+      },
+      openSystemPath: options.openSystemPath,
+      request: next,
+    })
   }
 
-  const queueOpenTargets = (targets: string[], preferPrimaryWindow: boolean): void => {
+  const queueOpenTargets = (
+    targets: string[],
+    preferPrimaryWindow: boolean,
+    settleStartup?: () => void,
+    trackInitialFailover = true,
+  ): boolean => {
+    let retainedStartupTarget = false
     for (const target of targets) {
-      if (queuedOpenTargets.has(target)) continue
-      queuedOpenTargets.add(target)
+      if (
+        trackInitialFailover &&
+        initialOpenTargetResolutionTimedOut &&
+        !initialOpenTargetResolutionCompleted
+      ) {
+        initialFailoverOpenTargets.add(target)
+      }
+      const trackedTarget = trackedOpenTargets.get(target)
+      if (trackedTarget) {
+        if (preferPrimaryWindow) {
+          if (!trackedTarget.startup && !primaryOpenTargetReserved) {
+            trackedTarget.disposition = 'current'
+            trackedTarget.settle = settleStartup
+            trackedTarget.startup = true
+            primaryOpenTargetReserved = true
+          }
+          retainedStartupTarget ||= trackedTarget.startup && trackedTarget.settle === settleStartup
+        }
+        continue
+      }
       const usePrimaryWindow = preferPrimaryWindow && !primaryOpenTargetReserved
       if (usePrimaryWindow) primaryOpenTargetReserved = true
-      pendingOpenTargets.push({
+      retainedStartupTarget ||= usePrimaryWindow
+      const pendingTarget: PendingOpenTarget = {
         disposition: usePrimaryWindow ? 'current' : 'new',
         path: target,
-      })
+        settle: usePrimaryWindow ? settleStartup : undefined,
+        startup: usePrimaryWindow,
+      }
+      trackedOpenTargets.set(target, pendingTarget)
+      pendingOpenTargets.push(pendingTarget)
     }
     if (targets.length > 0) {
-      focusOrBootstrap('native-open-target', flushOpenTargets)
+      const main = options.getMainWindow()
+      if (retainedStartupTarget) {
+        if ((!main || main.isDestroyed()) && app.isReady()) {
+          runBootstrap('native-open-target', flushOpenTargets)
+        }
+      } else {
+        focusOrBootstrap('native-open-target', flushOpenTargets)
+      }
       flushOpenTargets()
     }
+    return retainedStartupTarget
   }
 
   const resolveAndQueueOpenTargets = (
     args: readonly unknown[],
     cwd: string,
     preferPrimaryWindow: boolean,
+    settleStartup?: () => void,
+    onSettled?: () => void,
+    isInitialResolution = false,
   ): void => {
     void resolveExistingOpenTargets(args, cwd)
-      .then((targets) => queueOpenTargets(targets, preferPrimaryWindow))
+      .then((targets) => {
+        const startupActive = !isInitialResolution || !initialOpenTargetResolutionTimedOut
+        const resolvedTargets =
+          isInitialResolution && !startupActive
+            ? targets.filter((target) => !initialFailoverOpenTargets.has(target))
+            : targets
+        const activeSettle = startupActive ? settleStartup : undefined
+        if (resolvedTargets.length === 0) {
+          if (!primaryOpenTargetReserved) activeSettle?.()
+          return
+        }
+        const retainedStartupTarget = queueOpenTargets(
+          resolvedTargets,
+          startupActive ? preferPrimaryWindow : false,
+          activeSettle,
+          !isInitialResolution,
+        )
+        if (activeSettle && !retainedStartupTarget && !primaryOpenTargetReserved) {
+          activeSettle()
+        }
+      })
       .catch((error) => {
         options.getLogger().warn('native open target resolution failed', { error })
+        if (!primaryOpenTargetReserved) settleStartup?.()
       })
+      .finally(onSettled)
   }
 
   const queueDeepLinkPayload = (payload: DeepLinkPayload): void => {
@@ -118,7 +222,33 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
   }
 
   publishDeepLinksFromArgs(launchInfo.args, 'startup', queueDeepLinkPayload)
-  resolveAndQueueOpenTargets(launchInfo.args, launchInfo.cwd, true)
+  if (initialOpenTargetCandidates.length > 0) {
+    const settleStartup = ensureInitialPresentationGate()
+    const cancelResolutionTimeout = scheduleInitialNativeOpenTimeout({
+      logger: options.getLogger(),
+      onTimeout: () => {
+        initialOpenTargetResolutionTimedOut = true
+        initialOpenTargetResolutionPending = false
+        if (!primaryOpenTargetReserved) settleStartup()
+        flushOpenTargets()
+      },
+      phase: 'resolution',
+    })
+    resolveAndQueueOpenTargets(
+      launchInfo.args,
+      launchInfo.cwd,
+      true,
+      settleStartup,
+      () => {
+        cancelResolutionTimeout()
+        initialOpenTargetResolutionCompleted = true
+        initialOpenTargetResolutionPending = false
+        initialFailoverOpenTargets.clear()
+        flushOpenTargets()
+      },
+      true,
+    )
+  }
 
   app.on('open-url', (event, url) => {
     event.preventDefault()
@@ -130,7 +260,8 @@ export const installSingleInstanceAndDeepLinks = (options: SingleInstanceOptions
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
     options.getLogger().info('native file open received')
-    queueOpenTargets([filePath], !app.isReady())
+    const startup = !app.isReady()
+    queueOpenTargets([filePath], startup, startup ? ensureInitialPresentationGate() : undefined)
   })
 
   if (!app.requestSingleInstanceLock()) {

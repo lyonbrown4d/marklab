@@ -1,9 +1,9 @@
-import { createSlateEditor, type Value } from 'platejs'
-import { plateMarkdownPlugins } from '@/components/plate/plateMarkdownConfig'
+import type { Value } from 'platejs'
 import {
-  deserializePlateMarkdown,
-  serializePlateMarkdown,
-} from '@/components/plate/plateMarkdownSerialization'
+  createPlateMarkdownWorkerEditor,
+  deserializePlateMarkdownInWorker,
+  serializePlateMarkdownInWorker,
+} from '@/components/plate/plateMarkdownWorkerConfig'
 import { PlateMarkdownStreamCache } from '@/workers/plateMarkdownStreamCache'
 import type {
   PlateMarkdownWorkerRequest,
@@ -18,9 +18,9 @@ type WorkerScope = {
 }
 
 const workerScope = self as unknown as WorkerScope
-const editor = createSlateEditor({ plugins: [...plateMarkdownPlugins] })
+const editor = createPlateMarkdownWorkerEditor()
 const streamCache = new PlateMarkdownStreamCache((markdown) =>
-  deserializePlateMarkdown(editor, markdown),
+  deserializePlateMarkdownInWorker(editor, markdown),
 )
 
 type ParseStream = {
@@ -37,7 +37,7 @@ export const processPlateMarkdownWorkerRequest = (
     if (data.operation === 'serialize') {
       return {
         id: data.id,
-        markdown: serializePlateMarkdown(editor, data.value),
+        markdown: serializePlateMarkdownInWorker(editor, data.value),
         ok: true,
         operation: 'serialize',
       }
@@ -46,7 +46,7 @@ export const processPlateMarkdownWorkerRequest = (
       id: data.id,
       ok: true,
       operation: 'parse',
-      value: deserializePlateMarkdown(editor, data.markdown),
+      value: deserializePlateMarkdownInWorker(editor, data.markdown),
     }
   } catch (error) {
     return {

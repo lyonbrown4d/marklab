@@ -117,7 +117,7 @@ describe('WorkspaceMapFileNode', () => {
   it('renders a safe lightweight Plate document while remaining draggable when inactive', () => {
     renderNode({
       content:
-        '# Project goals\n\nThe **next concrete** milestone with <kbd>Ctrl</kbd>.<br>\n\n$x^2$ has a note[^1].\n\n$$\ny = 2\n$$\n\n- Plan\n- Ship\n\n[Remote](https://example.com) ![Diagram](https://example.com/diagram.png)\n\n[^1]: Source\n\n<script>alert(1)</script>',
+        '# Project goals\n\nThe **next concrete** milestone with <kbd>Ctrl</kbd>.<br>\n\n$x^2$ has a note[^1].\n\n$$\ny = 2\n$$\n\n- Plan\n- Ship\n\n[Remote](https://example.com) ![Diagram](https://example.com/diagram.png)\n\n![](https://example.com/title.png "Fallback title") ![](https://example.com/url-only.png)\n\n[^1]: Source\n\n<script>alert(1)</script>',
       label: 'a',
       path: 'notes/a.md',
     })
@@ -148,7 +148,44 @@ describe('WorkspaceMapFileNode', () => {
     expect(document.querySelector('img')).toBeNull()
     expect(screen.getByText('Remote')).toBeInTheDocument()
     expect(screen.getByText('Diagram')).toBeInTheDocument()
+    expect(screen.getByText('Fallback title')).toBeInTheDocument()
+    expect(screen.getByText('https://example.com/url-only.png')).toBeInTheDocument()
     expect(screen.queryByTestId('plate-editor')).not.toBeInTheDocument()
+  })
+
+  it('renders structural Markdown blocks in the lightweight preview', () => {
+    renderNode({
+      content: [
+        '> Quoted',
+        '',
+        '---',
+        '',
+        '```ts',
+        'const answer = 42',
+        '```',
+        '',
+        '| Name | Value |',
+        '| --- | --- |',
+        '| answer | 42 |',
+        '',
+        '<details>',
+        '<summary>More</summary>',
+        '',
+        'Details',
+        '',
+        '</details>',
+      ].join('\n'),
+      label: 'structures',
+      path: 'notes/structures.md',
+    })
+
+    const preview = screen.getByTestId('workspace-map-document-preview')
+    expect(screen.getByText('Quoted').closest('blockquote')).not.toBeNull()
+    expect(preview.querySelector('hr')).not.toBeNull()
+    expect(screen.getByText('const answer = 42').closest('pre')).not.toBeNull()
+    expect(screen.getByRole('table')).toHaveTextContent('NameValueanswer42')
+    expect(screen.getByText('More').closest('summary')).not.toBeNull()
+    expect(screen.getByText('Details').closest('details')).not.toBeNull()
   })
 
   it('keeps one page surface mounted and activates one native editor in place', async () => {

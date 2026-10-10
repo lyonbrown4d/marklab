@@ -12,7 +12,7 @@ export type SettingsDialogHostHandle = {
 const SettingsDialogHostView = forwardRef<SettingsDialogHostHandle>((_, ref) => {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [initialSelection, setInitialSelection] = useState<SettingsSelection | undefined>()
-  useNativeSurfaceOcclusion('settings-dialog', settingsOpen)
+  useNativeSurfaceOcclusion('settings-dialog', settingsOpen, { blocksCommandPalette: true })
   const openSettings = useCallback((selection?: SettingsSelection) => {
     setInitialSelection(selection)
     setSettingsOpen(true)

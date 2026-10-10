@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CompletionItemKind } from 'vscode-languageserver-types'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import type { MarkdownLinkCompletionClient } from '@/components/editor/markdownLinkCompletionSession'
 import { PlateSlashUrlDialog } from '@/components/plate/slash/PlateSlashUrlDialog'
 import { plateSlashTestLabels as labels } from '@/components/plate/slash/testFixtures'
@@ -38,6 +42,10 @@ const Harness = ({
 }
 
 describe('Plate slash URL dialog', () => {
+  beforeEach(() => {
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
+  })
+
   it('offers local files and submits the selected relative path', async () => {
     const request = createRequest()
     const client: MarkdownLinkCompletionClient = {
@@ -109,10 +117,12 @@ describe('Plate slash URL dialog', () => {
     const user = userEvent.setup()
     render(<Harness request={request} />)
     await user.click(screen.getByText('Open'))
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(true)
 
     await user.click(screen.getByRole('button', { name: labels.cancel }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(false)
     expect(request.invalidate).toHaveBeenCalledOnce()
   })
 })

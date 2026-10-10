@@ -53,9 +53,17 @@ describe('native surface dialog occlusion', () => {
       </>,
     )
 
-    expect(useOcclusion).toHaveBeenCalledWith('file-name-dialog', true)
-    expect(useOcclusion).toHaveBeenCalledWith('file-confirm-dialog', true)
-    expect(useOcclusion).toHaveBeenCalledWith('git-commit-dialog', true)
-    expect(useOcclusion).toHaveBeenCalledWith('git-init-dialog', true)
+    expect(useOcclusion).toHaveBeenCalledWith('file-name-dialog', true, {
+      blocksCommandPalette: true,
+    })
+    expect(useOcclusion).toHaveBeenCalledWith('file-confirm-dialog', true, {
+      blocksCommandPalette: true,
+    })
+    expect(useOcclusion).toHaveBeenCalledWith('git-commit-dialog', true, {
+      blocksCommandPalette: true,
+    })
+    expect(useOcclusion).toHaveBeenCalledWith('git-init-dialog', true, {
+      blocksCommandPalette: true,
+    })
   })
 })

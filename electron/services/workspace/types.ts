@@ -8,6 +8,10 @@ export type FsRootInfo = {
   path: string
 }
 
+export type WorkspaceRootSwitchOptions = {
+  signal?: AbortSignal
+}
+
 export type FsEntry = {
   path: string
   name: string

@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import { localHistoryApi, type LocalHistoryEntry } from '@/services/localHistoryApi'
 import { prewarmPlateMarkdown } from '@/services/plateMarkdownWorkerClient'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 const createLocalHistoryPreviewDialog = () =>
   lazy(() => import('@/components/local-history/LocalHistoryPreviewDialog'))
@@ -48,6 +49,12 @@ const LocalHistoryTimeline = ({ path, onRestoreContent }: LocalHistoryTimelinePr
     createLocalHistoryPreviewDialog,
   )
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
+  useNativeSurfaceOcclusion('local-history-confirm-dialog', confirmRequest !== null, {
+    blocksCommandPalette: true,
+  })
+  useNativeSurfaceOcclusion('local-history-preview-dialog', selectedEntry !== null, {
+    blocksCommandPalette: true,
+  })
   const listQuery = useQuery({
     queryKey: ['local-history', path],
     queryFn: () => localHistoryApi.list(path),

@@ -16,50 +16,13 @@ import {
   toggleBulletedList,
   toggleTaskList,
 } from '@platejs/list-classic'
+import { KEYS, createBlockStartInputRule, defineInputRule, type Path, type TRange } from 'platejs'
 import {
-  KEYS,
-  createBlockStartInputRule,
-  defineInputRule,
-  type AnyInputRule,
-  type InsertBreakInputRuleContext,
-  type InsertDataInputRuleContext,
-  type InsertTextInputRuleContext,
-  type Path,
-  type SelectionInputRuleContext,
-  type SlateEditor,
-  type TRange,
-} from 'platejs'
+  setPlateMarkdownInputRulesComposing,
+  withPlateMarkdownInputRuleGuard,
+} from '@/components/plate/plateMarkdownInputRuleGuard'
 
-const composingEditors = new WeakSet<SlateEditor>()
-
-const inputRulesEnabled = ({ editor }: SelectionInputRuleContext) =>
-  !composingEditors.has(editor) &&
-  !editor.api.some({ match: { type: editor.getType(KEYS.codeBlock) } })
-
-const withInputRuleGuard = (rule: AnyInputRule): AnyInputRule => {
-  if (rule.target === 'insertText') {
-    const originalEnabled = rule.enabled
-    return {
-      ...rule,
-      enabled: (context: InsertTextInputRuleContext) =>
-        inputRulesEnabled(context) && (originalEnabled?.(context) ?? true),
-    }
-  }
-  if (rule.target === 'insertBreak') {
-    const originalEnabled = rule.enabled
-    return {
-      ...rule,
-      enabled: (context: InsertBreakInputRuleContext) =>
-        inputRulesEnabled(context) && (originalEnabled?.(context) ?? true),
-    }
-  }
-  const originalEnabled = rule.enabled
-  return {
-    ...rule,
-    enabled: (context: InsertDataInputRuleContext) =>
-      inputRulesEnabled(context) && (originalEnabled?.(context) ?? true),
-  }
-}
+export { setPlateMarkdownInputRulesComposing }
 
 const plusListRule = createBlockStartInputRule({
   apply: ({ editor }, match) => {
@@ -67,7 +30,6 @@ const plusListRule = createBlockStartInputRule({
     toggleBulletedList(editor)
     return true
   },
-  enabled: inputRulesEnabled,
   match: '+',
   trigger: ' ',
 })
@@ -82,7 +44,6 @@ const taskListRule = createBlockStartInputRule<{ checked: boolean }>({
     )
     return true
   },
-  enabled: inputRulesEnabled,
   match: /^\[(?: |x|X)?\]$/,
   resolveMatch: ({ text }) => ({ checked: /x/i.test(text) }),
   trigger: ' ',
@@ -109,7 +70,6 @@ const languageFenceRule = defineInputRule<LanguageFenceMatch>({
     if (start) editor.tf.select(start)
     return true
   },
-  enabled: inputRulesEnabled,
   resolve: ({ editor, getBlockEntry, getBlockStartRange, getBlockStartText, isCollapsed }) => {
     if (!isCollapsed || !editor.selection) return
     const entry = getBlockEntry()
@@ -124,54 +84,53 @@ const languageFenceRule = defineInputRule<LanguageFenceMatch>({
   target: 'insertBreak',
 })
 
-export const plateHeadingMarkdownInputRules = [withInputRuleGuard(HeadingRules.markdown())]
+export const plateHeadingMarkdownInputRules = [
+  withPlateMarkdownInputRuleGuard(HeadingRules.markdown()),
+]
 
-export const plateBlockquoteMarkdownInputRules = [withInputRuleGuard(BlockquoteRules.markdown())]
+export const plateBlockquoteMarkdownInputRules = [
+  withPlateMarkdownInputRuleGuard(BlockquoteRules.markdown()),
+]
 
 export const plateHorizontalRuleMarkdownInputRules = [
-  withInputRuleGuard(HorizontalRuleRules.markdown({ variant: '-' })),
+  withPlateMarkdownInputRuleGuard(HorizontalRuleRules.markdown({ variant: '-' })),
 ]
 
 export const plateBoldMarkdownInputRules = [
-  withInputRuleGuard(BoldRules.markdown({ variant: '*' })),
-  withInputRuleGuard(BoldRules.markdown({ variant: '_' })),
+  withPlateMarkdownInputRuleGuard(BoldRules.markdown({ variant: '*' })),
+  withPlateMarkdownInputRuleGuard(BoldRules.markdown({ variant: '_' })),
 ]
 
 export const plateItalicMarkdownInputRules = [
-  withInputRuleGuard(ItalicRules.markdown({ variant: '*' })),
-  withInputRuleGuard(ItalicRules.markdown({ variant: '_' })),
+  withPlateMarkdownInputRuleGuard(ItalicRules.markdown({ variant: '*' })),
+  withPlateMarkdownInputRuleGuard(ItalicRules.markdown({ variant: '_' })),
 ]
 
-export const plateCodeMarkdownInputRules = [withInputRuleGuard(CodeRules.markdown())]
+export const plateCodeMarkdownInputRules = [withPlateMarkdownInputRuleGuard(CodeRules.markdown())]
 
 export const plateStrikethroughMarkdownInputRules = [
-  withInputRuleGuard(StrikethroughRules.markdown()),
+  withPlateMarkdownInputRuleGuard(StrikethroughRules.markdown()),
 ]
 
 export const plateListMarkdownInputRules = [
-  withInputRuleGuard(BulletedListRules.markdown({ variant: '-' })),
-  withInputRuleGuard(BulletedListRules.markdown({ variant: '*' })),
-  plusListRule,
-  withInputRuleGuard(OrderedListRules.markdown({ variant: '.' })),
-  taskListRule,
+  withPlateMarkdownInputRuleGuard(BulletedListRules.markdown({ variant: '-' })),
+  withPlateMarkdownInputRuleGuard(BulletedListRules.markdown({ variant: '*' })),
+  withPlateMarkdownInputRuleGuard(plusListRule),
+  withPlateMarkdownInputRuleGuard(OrderedListRules.markdown({ variant: '.' })),
+  withPlateMarkdownInputRuleGuard(taskListRule),
 ]
 
 export const plateCodeBlockMarkdownInputRules = [
-  withInputRuleGuard(CodeBlockRules.markdown({ on: 'break' })),
-  languageFenceRule,
+  withPlateMarkdownInputRuleGuard(CodeBlockRules.markdown({ on: 'break' })),
+  withPlateMarkdownInputRuleGuard(languageFenceRule),
 ]
 
-export const plateLinkMarkdownInputRules = [withInputRuleGuard(LinkRules.markdown())]
+export const plateLinkMarkdownInputRules = [withPlateMarkdownInputRuleGuard(LinkRules.markdown())]
 
 export const plateInlineMathMarkdownInputRules = [
-  withInputRuleGuard(MathRules.markdown({ variant: '$' })),
+  withPlateMarkdownInputRuleGuard(MathRules.markdown({ variant: '$' })),
 ]
 
 export const plateBlockMathMarkdownInputRules = [
-  withInputRuleGuard(MathRules.markdown({ on: 'break', variant: '$$' })),
+  withPlateMarkdownInputRuleGuard(MathRules.markdown({ on: 'break', variant: '$$' })),
 ]
-
-export const setPlateMarkdownInputRulesComposing = (editor: SlateEditor, composing: boolean) => {
-  if (composing) composingEditors.add(editor)
-  else composingEditors.delete(editor)
-}

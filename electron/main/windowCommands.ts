@@ -12,6 +12,10 @@ import {
   createWindowOpeningProgressPublisher,
   sendWorkspaceSessionSeed,
 } from '@electron/main/windowCommandEvents'
+import {
+  openPathInCurrentWindow,
+  openStartupPathInCurrentWindow,
+} from '@electron/main/windowCurrentPathOpen'
 import { createWindowOpenTimings } from '@electron/main/windowOpenTimings'
 import {
   parsePathOpenTarget,
@@ -21,10 +25,7 @@ import {
   workspaceRootForTarget,
 } from '@electron/main/windowCommandTargets'
 
-type WorkspaceSessionSeed = {
-  state?: Record<string, unknown>
-  version?: number
-}
+type WorkspaceSessionSeed = { state?: Record<string, unknown>; version?: number }
 
 export type AppWindowOpenResult = {
   error?: string
@@ -37,7 +38,7 @@ export type AppWindowOpenResult = {
   workspacePath?: string
 }
 
-type AppWindowCommandDependencies = {
+export type AppWindowCommandDependencies = {
   activateWorkspaceWindowState: (
     window: BrowserWindow,
     root: Pick<FsRootInfo, 'kind' | 'path'>,
@@ -55,6 +56,8 @@ type AppWindowCommandDependencies = {
   getWorkspaceServiceForWindow: (window: BrowserWindow) => WorkspaceService
   getWindowPool: () => MarklabWindowPool
   installManagedMainWindowLifecycle: (main: BrowserWindow, logger?: Logger) => void
+  isPrimaryWindowBootstrapping: (window: BrowserWindow) => boolean
+  presentPrimaryWindow: (window: BrowserWindow) => void
   writeWorkspaceSession: (
     targetSessionKey: string,
     state: Record<string, unknown>,
@@ -75,6 +78,8 @@ const failure = (error: unknown, requestedPath?: string): AppWindowOpenResult =>
   requestedPath,
   sharedWorkspaceSession: false,
 })
+
+export { openStartupPathInCurrentWindow }
 
 export const createAppWindowCommandHandlers = (
   dependencies: AppWindowCommandDependencies,
@@ -220,47 +225,15 @@ export const createAppWindowCommandHandlers = (
     }
   }
 
-  const openPathInCurrentWindow = async (
-    value: unknown,
-    event: Electron.IpcMainInvokeEvent | null,
-  ): Promise<AppWindowOpenResult> => {
-    let requestedPath: string | undefined
-    try {
-      const target = await parsePathOpenTarget(value)
-      requestedPath = target.path
-      const main = sourceWindowForEvent(event, dependencies.getPrimaryWindow())
-      if (!main || main.isDestroyed()) throw new Error('No active window is available.')
-      const nativeIpc = dependencies.getNativeIpc()
-      if (!nativeIpc) throw new Error('Native IPC bridge is unavailable.')
-      await nativeIpc.windowClose.requestRendererFlush(main)
-      const root = await setWorkspaceTarget(dependencies.getWorkspaceServiceForWindow(main), target)
-      dependencies.activateWorkspaceWindowState(main, root)
-      const seed = dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(main), {
-        activeTabId: null,
-        rootKind: root.kind,
-        rootPath: root.path,
-        tabs: [],
-      })
-      sendWorkspaceSessionSeed(main, seed)
-      if (main.isMinimized()) main.restore()
-      showWindowWithMotion(main, { focus: true })
-      return {
-        ok: true,
-        requestedPath,
-        rootKind: root.kind,
-        sharedWorkspaceSession: false,
-        windowId: main.id,
-        workspacePath: root.path,
-      }
-    } catch (error) {
-      return failure(error, requestedPath)
-    }
-  }
-
   return {
     open_current_workspace_in_new_window: (_payload, event) =>
       openCurrent(event, 'open_current_workspace_in_new_window'),
-    open_path_in_current_window: (payload, event) => openPathInCurrentWindow(payload, event),
+    open_path_in_current_window: (payload, event) =>
+      openPathInCurrentWindow(
+        dependencies,
+        payload,
+        sourceWindowForEvent(event, dependencies.getPrimaryWindow()),
+      ),
     open_path_in_new_window: (payload) => openPath(payload, 'open_path_in_new_window'),
     retry_window_open: (_payload, event) => {
       const target = BrowserWindow.fromWebContents(event.sender)

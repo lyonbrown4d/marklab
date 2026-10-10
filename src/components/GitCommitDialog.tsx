@@ -53,7 +53,7 @@ export const GitCommitDialog = ({
   disabledReason,
 }: GitCommitDialogProps) => {
   const { t } = useI18n()
-  useNativeSurfaceOcclusion('git-commit-dialog', open)
+  useNativeSurfaceOcclusion('git-commit-dialog', open, { blocksCommandPalette: true })
   const messageId = useId()
   const messageDescriptionId = `${messageId}-description`
   const messageErrorId = `${messageId}-error`

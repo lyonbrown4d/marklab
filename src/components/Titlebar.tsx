@@ -4,6 +4,7 @@ import {
   memo,
   Suspense,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -23,7 +24,11 @@ import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
 import { ImmersiveTitlebarChrome } from '@/components/ImmersiveTitlebarChrome'
-import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusion,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import { useDoubleShiftCommandPalette } from '@/components/command/useDoubleShiftCommandPalette'
 import { preloadWorkspaceGraph } from '@/app/preloadWorkspaceGraph'
 
@@ -85,6 +90,9 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
     const [internalCommandOpen, setInternalCommandOpen] = useState(false)
     const { t } = useI18n()
     const commandOpen = controlledCommandOpen ?? internalCommandOpen
+    const commandPaletteBlocked = useNativeSurfaceOcclusionStore(
+      (state) => Object.keys(state.commandPaletteBlockers).length > 0,
+    )
     useNativeSurfaceOcclusion('command-palette', commandOpen)
     const activeWorkspaceView = workspaceView ?? 'files'
     const commandDataReady = commandOpen
@@ -97,7 +105,13 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       },
       [controlledCommandOpen, onCommandOpenChange],
     )
-    const openCommandPalette = useCallback(() => setCommandOpen(true), [setCommandOpen])
+    useEffect(() => {
+      if (commandOpen && commandPaletteBlocked) setCommandOpen(false)
+    }, [commandOpen, commandPaletteBlocked, setCommandOpen])
+    const openCommandPalette = useCallback(() => {
+      if (isCommandPaletteBlockedByActiveSurface()) return
+      setCommandOpen(true)
+    }, [setCommandOpen])
     const handlePreloadWorkspaceGraph = useCallback(() => {
       void preloadWorkspaceGraph(queryClient, workspaceKey)
     }, [queryClient, workspaceKey])

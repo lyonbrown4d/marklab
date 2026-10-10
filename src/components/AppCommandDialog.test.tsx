@@ -55,6 +55,42 @@ const FocusHarness = ({ loading = false }: { loading?: boolean }) => {
   )
 }
 
+const DisconnectedOriginHarness = ({ fallbackHidden = false }: { fallbackHidden?: boolean }) => {
+  const [open, setOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(true)
+
+  return (
+    <>
+      <button
+        aria-hidden={fallbackHidden || undefined}
+        data-app-focus-fallback="sidebar-toggle"
+        inert={fallbackHidden || undefined}
+        type="button"
+      >
+        Toggle sidebar
+      </button>
+      <main data-app-focus-zone="editor">
+        <div contentEditable role="textbox" suppressContentEditableWarning tabIndex={0}>
+          Editor fallback
+        </div>
+      </main>
+      {drawerOpen ? (
+        <button type="button" onClick={() => setOpen(true)}>
+          Search from drawer
+        </button>
+      ) : null}
+      {open ? (
+        <AppCommandDialog open onOpenChange={setOpen}>
+          <CommandInput aria-label="Search" />
+          <button type="button" onClick={() => setDrawerOpen(false)}>
+            Dismiss drawer
+          </button>
+        </AppCommandDialog>
+      ) : null}
+    </>
+  )
+}
+
 const openFromEditor = () => {
   const editor = screen.getByRole('textbox', { name: 'Document' })
   editor.focus()
@@ -110,6 +146,33 @@ describe('AppCommandDialog', () => {
     fireEvent.click(trigger)
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
     await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it('returns focus to the persistent sidebar toggle when the drawer origin disconnects', async () => {
+    render(<DisconnectedOriginHarness />)
+    const origin = screen.getByRole('button', { name: 'Search from drawer' })
+    origin.focus()
+    fireEvent.click(origin)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss drawer' }))
+    expect(origin.isConnected).toBe(false)
+
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Toggle sidebar' })).toHaveFocus(),
+    )
+  })
+
+  it('skips inert fallback controls and returns focus to the visible editor', async () => {
+    render(<DisconnectedOriginHarness fallbackHidden />)
+    const origin = screen.getByRole('button', { name: 'Search from drawer' })
+    origin.focus()
+    fireEvent.click(origin)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss drawer' }))
+
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
+
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus())
   })
 
   it('does not steal focus from a dialog opened by a command', async () => {

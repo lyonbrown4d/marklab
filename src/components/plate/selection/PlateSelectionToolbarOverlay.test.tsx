@@ -49,6 +49,7 @@ const labels = {
 }
 
 const originalRangeRect = Object.getOwnPropertyDescriptor(Range.prototype, 'getBoundingClientRect')
+const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport')
 
 const installNativeSelection = (root: HTMLElement) => {
   const rect = { bottom: 64, height: 20, left: 80, right: 144, top: 44, width: 64 }
@@ -84,6 +85,45 @@ const ToolbarHarness = ({ editableRef }: { editableRef: RefObject<HTMLDivElement
   </div>
 )
 
+const DualToolbarHarness = ({
+  activeRef,
+  inactiveRef,
+}: {
+  activeRef: RefObject<HTMLDivElement | null>
+  inactiveRef: RefObject<HTMLDivElement | null>
+}) => (
+  <div>
+    <div contentEditable data-testid="active-editor" ref={activeRef} tabIndex={0}>
+      active selection
+    </div>
+    <PlateSelectionToolbarOverlay canEdit={() => true} editableRef={activeRef} labels={labels} />
+    <div contentEditable data-testid="inactive-editor" ref={inactiveRef} tabIndex={0}>
+      inactive selection
+    </div>
+    <PlateSelectionToolbarOverlay canEdit={() => true} editableRef={inactiveRef} labels={labels} />
+  </div>
+)
+
+const createVisualViewport = () =>
+  Object.assign(new EventTarget(), {
+    height: 768,
+    offsetLeft: 0,
+    offsetTop: 0,
+    onresize: null,
+    onscroll: null,
+    onscrollend: null,
+    pageLeft: 0,
+    pageTop: 0,
+    scale: 1,
+    width: 1024,
+  }) as unknown as VisualViewport
+
+const waitForAnimationFrames = async (count = 2) => {
+  for (let frame = 0; frame < count; frame += 1) {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+  }
+}
+
 const renderToolbar = () => {
   const editableRef = createRef<HTMLDivElement>()
   const view = render(<ToolbarHarness editableRef={editableRef} />)
@@ -112,6 +152,11 @@ afterEach(() => {
   } else {
     Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect')
   }
+  if (originalVisualViewport) {
+    Object.defineProperty(window, 'visualViewport', originalVisualViewport)
+  } else {
+    Reflect.deleteProperty(window, 'visualViewport')
+  }
 })
 
 describe('PlateSelectionToolbarOverlay integration', () => {
@@ -128,6 +173,65 @@ describe('PlateSelectionToolbarOverlay integration', () => {
     fireEvent.scroll(screen.getByTestId('nested-scroller'))
 
     await waitFor(() => expect(floating.style.left).toBe('132px'))
+  })
+
+  it('repositions only the open toolbar for its editor root and visual viewport', async () => {
+    const visualViewport = createVisualViewport()
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: visualViewport,
+    })
+    const { rect, unmount } = renderToolbar()
+    const toolbar = await screen.findByRole('toolbar', { name: labels.toolbar })
+    const floating = toolbar.closest<HTMLElement>('[data-slot="popover-content"]')!
+    await waitFor(() => expect(floating.style.top).toBe('16px'))
+
+    rect.top = 84
+    rect.bottom = 104
+    fireEvent.scroll(screen.getByTestId('editor'))
+    await waitFor(() => expect(floating.style.top).toBe('56px'))
+
+    rect.top = 124
+    rect.bottom = 144
+    visualViewport.dispatchEvent(new Event('resize'))
+    await waitFor(() => expect(floating.style.top).toBe('96px'))
+
+    unmount()
+  })
+
+  it('does not update an active toolbar when a second inactive editor scrolls', async () => {
+    const activeRef = createRef<HTMLDivElement>()
+    const inactiveRef = createRef<HTMLDivElement>()
+    render(<DualToolbarHarness activeRef={activeRef} inactiveRef={inactiveRef} />)
+    const rect = installNativeSelection(screen.getByTestId('active-editor'))
+    act(() => document.dispatchEvent(new Event('selectionchange')))
+    const toolbar = await screen.findByRole('toolbar', { name: labels.toolbar })
+    const floating = toolbar.closest<HTMLElement>('[data-slot="popover-content"]')!
+    await waitFor(() => expect(floating.style.left).toBe('92px'))
+
+    rect.left = 120
+    rect.right = 184
+    fireEvent.scroll(screen.getByTestId('inactive-editor'))
+    await waitForAnimationFrames()
+    expect(floating.style.left).toBe('92px')
+
+    fireEvent.scroll(screen.getByTestId('active-editor'))
+    await waitFor(() => expect(floating.style.left).toBe('132px'))
+  })
+
+  it('does not schedule toolbar work from root scroll while the toolbar is closed', async () => {
+    const { editor } = renderToolbar()
+    expect(await screen.findByRole('toolbar', { name: labels.toolbar })).toBeVisible()
+    fireEvent.compositionStart(editor)
+    await waitFor(() =>
+      expect(screen.queryByRole('toolbar', { name: labels.toolbar })).not.toBeInTheDocument(),
+    )
+
+    const animationFrame = vi.spyOn(window, 'requestAnimationFrame')
+    animationFrame.mockClear()
+    fireEvent.scroll(editor)
+    expect(animationFrame).not.toHaveBeenCalled()
+    animationFrame.mockRestore()
   })
 
   it('hides during IME composition and restores afterward', async () => {

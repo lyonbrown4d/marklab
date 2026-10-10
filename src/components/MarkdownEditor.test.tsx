@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MarkdownEditorHandle } from '@/components/editor/markdownEditorTypes'
 import {
   inlineAiComposerHookMock,
@@ -11,8 +11,27 @@ import {
   resetMarkdownEditorMocks,
 } from '@/components/MarkdownEditor.testFixtures'
 
+const keepAliveState = vi.hoisted(() => ({
+  active: true,
+  cacheKey: undefined as string | undefined,
+}))
+
+vi.mock('keepalive-for-react', () => ({
+  useKeepAliveContext: () => keepAliveState,
+}))
+
+vi.mock('@/components/plate/PlateEditorOverlays', () => ({
+  PlateEditorOverlays: ({ activePath }: { activePath: string | null }) => (
+    <div aria-label={`Formatting ${activePath}`} role="toolbar" />
+  ),
+}))
+
 describe('MarkdownEditor playground baseline', () => {
-  beforeEach(resetMarkdownEditorMocks)
+  beforeEach(() => {
+    resetMarkdownEditorMocks()
+    keepAliveState.active = true
+    keepAliveState.cacheKey = undefined
+  })
 
   it('exposes the stable editor surface through the Plate engine', () => {
     renderEditor()
@@ -45,6 +64,30 @@ describe('MarkdownEditor playground baseline', () => {
       }),
     )
     expect(screen.getByRole('dialog', { name: 'ai.composer.label' })).toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: 'Formatting notes/example.md' })).toBeInTheDocument()
+  })
+
+  it('suspends overlays and the AI composer when its KeepAlive route becomes inactive', () => {
+    inlineAiMock.isOpen = true
+    keepAliveState.active = false
+    keepAliveState.cacheKey = 'workspace-map'
+    renderEditor()
+
+    expect(inlineAiComposerHookMock).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'ai.composer.label' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formatting notes/example.md' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('honors an explicitly inactive editor outside a KeepAlive route', () => {
+    inlineAiMock.isOpen = true
+    renderEditor(undefined, false, '# Heading', false)
+
+    expect(screen.queryByRole('dialog', { name: 'ai.composer.label' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formatting notes/example.md' }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders a single stable Plate editing surface', () => {

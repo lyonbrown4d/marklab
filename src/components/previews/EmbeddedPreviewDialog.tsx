@@ -1,4 +1,5 @@
 import AppAlert from '@/components/AppAlert'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import FilePreviewSurface from '@/components/previews/FilePreviewSurface'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { ZoomableVisualViewport } from '@/components/previews/ZoomableVisualViewport'
@@ -31,6 +32,7 @@ export const EmbeddedPreviewDialog = ({
 }: EmbeddedPreviewDialogProps) => {
   const { t } = useI18n()
   const imageReady = resolved?.kind === 'image' && ready
+  useNativeSurfaceOcclusion('embedded-preview-dialog', open, { blocksCommandPalette: true })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

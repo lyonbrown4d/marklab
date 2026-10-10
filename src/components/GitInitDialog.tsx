@@ -29,7 +29,7 @@ export const GitInitDialog = ({
   error,
 }: GitInitDialogProps) => {
   const { t } = useI18n()
-  useNativeSurfaceOcclusion('git-init-dialog', open)
+  useNativeSurfaceOcclusion('git-init-dialog', open, { blocksCommandPalette: true })
   const errorMessage = error ? String(error) : ''
 
   return (

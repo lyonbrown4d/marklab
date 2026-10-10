@@ -4,6 +4,7 @@ import type { NativeIpcRegistration } from '@electron/ipc'
 import {
   createAppWindowCommandHandlers,
   createNativeMenuActionDispatcher,
+  openStartupPathInCurrentWindow,
 } from '@electron/main/windowCommands'
 import type { MenuActionDispatcher } from '@electron/menu'
 import type { Logger } from '@electron/services/logger'
@@ -29,13 +30,19 @@ type WindowCommandSetupArgs = {
   getPrimaryWindow: () => BrowserWindow | null
   getWindowPool: () => MarklabWindowPool
   installManagedMainWindowLifecycle: (main: BrowserWindow, logger?: Logger) => void
+  isPrimaryWindowBootstrapping: (window: BrowserWindow) => boolean
+  presentPrimaryWindow: (window: BrowserWindow) => void
 }
 
 export type WindowCommandSetup = {
   commandHandlers: NativeCommandHandlers
   dispatchMenuAction: MenuActionDispatcher
   openPathInNewWindow: (path: string) => Promise<unknown>
-  openSystemPath: (path: string, disposition: 'current' | 'new') => Promise<unknown>
+  openSystemPath: (
+    path: string,
+    disposition: 'current' | 'new',
+    options?: { signal?: AbortSignal; startup?: boolean },
+  ) => Promise<unknown>
 }
 
 export const createWindowCommandSetup = ({
@@ -44,6 +51,8 @@ export const createWindowCommandSetup = ({
   getPrimaryWindow,
   getWindowPool,
   installManagedMainWindowLifecycle,
+  isPrimaryWindowBootstrapping,
+  presentPrimaryWindow,
 }: WindowCommandSetupArgs): WindowCommandSetup => {
   const dependencies = {
     activateWorkspaceWindowState: (
@@ -73,6 +82,8 @@ export const createWindowCommandSetup = ({
       getServices().workspaceRegistry.registerWindow(window),
     getWindowPool,
     installManagedMainWindowLifecycle,
+    isPrimaryWindowBootstrapping,
+    presentPrimaryWindow,
     writeWorkspaceSession: (targetSessionKey: string, state: Record<string, unknown>) =>
       writeRendererPersistSession('marklab.workspace', targetSessionKey, state),
   }
@@ -84,11 +95,17 @@ export const createWindowCommandSetup = ({
     dispatchMenuAction: createNativeMenuActionDispatcher(dependencies, commandHandlers),
     openPathInNewWindow: (path: string) =>
       Promise.resolve(commandHandlers.open_path_in_new_window({ path }, null as never)),
-    openSystemPath: (path: string, disposition: 'current' | 'new') =>
-      Promise.resolve(
+    openSystemPath: (path: string, disposition: 'current' | 'new', options) => {
+      if (disposition === 'current' && options?.startup) {
+        return options.signal
+          ? openStartupPathInCurrentWindow(dependencies, { path }, { signal: options.signal })
+          : openStartupPathInCurrentWindow(dependencies, { path })
+      }
+      return Promise.resolve(
         commandHandlers[
           disposition === 'current' ? 'open_path_in_current_window' : 'open_path_in_new_window'
         ]({ path }, null as never),
-      ),
+      )
+    },
   }
 }

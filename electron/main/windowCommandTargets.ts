@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { BrowserWindow } from 'electron'
 
-import type { FsRootInfo } from '@electron/services/workspace/types'
+import type { FsRootInfo, WorkspaceRootSwitchOptions } from '@electron/services/workspace/types'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 
 export type PathOpenTarget = { kind: 'directory' | 'file'; path: string }
@@ -11,13 +11,26 @@ export type PathOpenTarget = { kind: 'directory' | 'file'; path: string }
 export const setWorkspaceRoot = async (
   workspace: WorkspaceService,
   root: FsRootInfo,
+  options: WorkspaceRootSwitchOptions = {},
 ): Promise<FsRootInfo> => {
-  if (root.kind === 'single') return workspace.setSingleFile({ path: root.path })
-  if (root.kind === 'external') return workspace.setRoot({ path: root.path })
-  return workspace.setRoot(null)
+  if (root.kind === 'single') {
+    return options.signal
+      ? workspace.setSingleFile({ path: root.path }, options)
+      : workspace.setSingleFile({ path: root.path })
+  }
+  if (root.kind === 'external') {
+    return options.signal
+      ? workspace.setRoot({ path: root.path }, options)
+      : workspace.setRoot({ path: root.path })
+  }
+  return options.signal ? workspace.setRoot(null, options) : workspace.setRoot(null)
 }
 
-export const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarget> => {
+export const parsePathOpenTarget = async (
+  value: unknown,
+  options: WorkspaceRootSwitchOptions = {},
+): Promise<PathOpenTarget> => {
+  options.signal?.throwIfAborted()
   const raw =
     value && typeof value === 'object' && 'path' in value
       ? (value as Record<string, unknown>).path
@@ -27,6 +40,7 @@ export const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarge
 
   const resolved = path.resolve(raw)
   const stat = await fs.stat(resolved).catch(() => null)
+  options.signal?.throwIfAborted()
   if (!stat) throw new Error('path does not exist')
   if (stat.isDirectory()) return { kind: 'directory', path: resolved }
   if (stat.isFile()) return { kind: 'file', path: resolved }
@@ -36,10 +50,15 @@ export const parsePathOpenTarget = async (value: unknown): Promise<PathOpenTarge
 export const setWorkspaceTarget = async (
   workspace: WorkspaceService,
   target: PathOpenTarget,
+  options: WorkspaceRootSwitchOptions = {},
 ): Promise<FsRootInfo> =>
   target.kind === 'directory'
-    ? workspace.setRoot({ path: target.path })
-    : workspace.setSingleFile({ path: target.path })
+    ? options.signal
+      ? workspace.setRoot({ path: target.path }, options)
+      : workspace.setRoot({ path: target.path })
+    : options.signal
+      ? workspace.setSingleFile({ path: target.path }, options)
+      : workspace.setSingleFile({ path: target.path })
 
 export const workspaceRootForTarget = (
   target: PathOpenTarget,

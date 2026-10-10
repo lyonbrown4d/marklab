@@ -7,6 +7,7 @@ import {
   closeElectronTestSession,
   closeRendererServer,
   launchElectronTestSession,
+  revealElectronWindow,
   repoRoot,
   startRendererServer,
   type ElectronTestSession,
@@ -22,6 +23,14 @@ const captureDesignScreenshot = async (page: Page, fileName: string) => {
   const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
   fs.mkdirSync(captureDirectory, { recursive: true })
   await page.screenshot({ animations: 'disabled', path: path.join(captureDirectory, fileName) })
+}
+
+const doubleTapShift = async (page: Page) => {
+  await page.keyboard.down('Shift')
+  await page.keyboard.up('Shift')
+  await page.evaluate(() => new Promise(requestAnimationFrame))
+  await page.keyboard.down('Shift')
+  await page.keyboard.up('Shift')
 }
 
 test.describe('Electron desktop shell', () => {
@@ -82,6 +91,35 @@ test.describe('Electron desktop shell', () => {
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     expect(Date.now() - settingsStartedAt).toBeLessThan(2_000)
     await expect(settingsDialog.getByRole('tablist', { name: /Settings|设置/i })).toBeVisible()
+  })
+
+  test('hands navigation drawer focus to Search Everywhere without preempting settings', async () => {
+    if (!session) throw new Error('Electron test session is unavailable')
+    await revealElectronWindow(session.app, page, { height: 900, width: 1280 })
+    const drawer = page.getByRole('dialog', { name: /Toggle sidebar|切换侧边栏/i })
+    const palette = page.getByRole('dialog', { name: /Command palette|命令面板/i })
+
+    await page.keyboard.press('Control+Shift+L')
+    await expect(drawer).toBeVisible({ timeout: 1_500 })
+    await doubleTapShift(page)
+
+    await expect(palette).toBeVisible()
+    await expect(drawer).toBeHidden({ timeout: 1_500 })
+    await expect(palette.getByRole('combobox')).toBeFocused()
+
+    await page.keyboard.press('Escape')
+    await expect(palette).toBeHidden()
+    await expect(page.locator('[data-app-focus-fallback="sidebar-toggle"]')).toBeFocused()
+    await page.keyboard.press('Control+Comma')
+    const settings = page.getByRole('dialog', { name: /Settings|设置/i })
+    await expect(settings).toBeVisible()
+    await doubleTapShift(page)
+
+    await expect(settings).toBeVisible()
+    await expect(palette).toBeHidden()
+    await page.keyboard.press('ControlOrMeta+P')
+    await expect(settings).toBeVisible()
+    await expect(palette).toBeHidden()
   })
 
   test('centers the settings dialog within the Electron viewport', async () => {

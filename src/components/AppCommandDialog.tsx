@@ -20,6 +20,56 @@ const isValidSelectionPoint = (node: Node, offset: number) =>
 const filterCommand = (value: string, search: string, keywords?: string[]) =>
   defaultFilter(value, parseCommandSearchScope(search).query, keywords)
 
+const fallbackFocusSelectors = [
+  '[data-app-focus-fallback="sidebar-toggle"]',
+  '[data-app-focus-zone="editor"] [contenteditable="true"]',
+  '[data-app-focus-zone="editor"] textarea:not([disabled])',
+  '[data-app-focus-zone="editor"] input:not([disabled])',
+  '[data-app-focus-zone="editor"] [tabindex]:not([tabindex="-1"])',
+]
+
+const isAvailableFocusTarget = (target: HTMLElement | null): target is HTMLElement => {
+  if (
+    !target?.isConnected ||
+    target === document.body ||
+    target === document.documentElement ||
+    target.getAttribute('aria-disabled') === 'true'
+  ) {
+    return false
+  }
+  if (
+    (target instanceof HTMLButtonElement ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement ||
+      target instanceof HTMLTextAreaElement) &&
+    target.disabled
+  ) {
+    return false
+  }
+
+  let current: HTMLElement | null = target
+  while (current) {
+    if (
+      current.hidden ||
+      (current.hasAttribute('inert') && !current.hasAttribute('data-inert-ed')) ||
+      (current.getAttribute('aria-hidden') === 'true' && !current.hasAttribute('data-aria-hidden'))
+    ) {
+      return false
+    }
+    const style = getComputedStyle(current)
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false
+    }
+    current = current.parentElement
+  }
+  return true
+}
+
+const findFallbackFocusTarget = () =>
+  fallbackFocusSelectors
+    .flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
+    .find(isAvailableFocusTarget) ?? null
+
 const AppCommandDialog = ({ children, ...props }: DialogProps) => {
   const { t } = useI18n()
   const returnFocusRef = useRef<HTMLElement | null>(null)
@@ -50,8 +100,11 @@ const AppCommandDialog = ({ children, ...props }: DialogProps) => {
         }}
         onCloseAutoFocus={(event) => {
           event.preventDefault()
-          const target = returnFocusRef.current
-          if (!target?.isConnected) return
+          const originalTarget = returnFocusRef.current
+          const target = isAvailableFocusTarget(originalTarget)
+            ? originalTarget
+            : findFallbackFocusTarget()
+          if (!target) return
 
           // A selected command may already have focused another editor or dialog.
           const active = document.activeElement
@@ -60,7 +113,8 @@ const AppCommandDialog = ({ children, ...props }: DialogProps) => {
             active instanceof HTMLElement &&
             active !== document.body &&
             active !== document.documentElement &&
-            !(closingDialog instanceof HTMLElement && closingDialog.contains(active))
+            !(closingDialog instanceof HTMLElement && closingDialog.contains(active)) &&
+            isAvailableFocusTarget(active)
           ) {
             return
           }
@@ -68,6 +122,7 @@ const AppCommandDialog = ({ children, ...props }: DialogProps) => {
           const selection = returnSelectionRef.current
           if (
             selection &&
+            target === originalTarget &&
             target.contains(selection.anchorNode) &&
             target.contains(selection.focusNode) &&
             isValidSelectionPoint(selection.anchorNode, selection.anchorOffset) &&

@@ -1,8 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import { useProjectPathActions } from '@/app/useProjectPathActions'
-import type { NavigateFunction } from 'react-router-dom'
-import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
 import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
 import { fsApi } from '@/services/fsApi'
@@ -27,24 +25,7 @@ import {
 } from '@/app/projectLoaderUtils'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { flushEditorChanges } from '@/app/editorCloseLifecycle'
-
-type UseProjectLoaderArgs = {
-  rootPath: string
-  rootKind: 'internal' | 'external' | 'single'
-  entries: FileEntry[]
-  tabs: WorkspaceTab[]
-  activeTabId: string | null
-  locationPathname: string
-  preserveCurrentRoute: boolean
-  defaultFileView: FileViewKind
-  navigate: NavigateFunction
-  setEntries: (entries: FileEntry[]) => void
-  setRootPath: (path: string) => void
-  setRootKind: (kind: 'internal' | 'external' | 'single') => void
-  setTabs: (tabs: WorkspaceTab[]) => void
-  setActiveTabId: (id: string | null) => void
-  touchRecentProject: (path: string) => void
-}
+import type { UseProjectLoaderArgs } from '@/app/projectLoaderTypes'
 
 export const useProjectLoader = ({
   rootPath,

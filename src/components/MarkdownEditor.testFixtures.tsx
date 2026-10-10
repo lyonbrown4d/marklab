@@ -152,6 +152,7 @@ export const renderEditor = (
   ref?: Ref<MarkdownEditorHandle>,
   readOnly = false,
   value = '# Heading',
+  interactionActive = true,
 ) =>
   render(
     <MarkdownEditor
@@ -162,6 +163,7 @@ export const renderEditor = (
       slashLabels={slashLabels}
       readOnly={readOnly}
       ref={ref}
+      interactionActive={interactionActive}
     />,
   )
 

@@ -14,10 +14,7 @@ import {
   type SerializeMdOptions,
 } from '@platejs/markdown'
 import { KEYS, type Descendant, type TElement, type TText } from 'platejs'
-import {
-  plateHtmlMarkdownRules,
-  serializeHtmlCommentParagraph,
-} from '@/components/plate/html/plateHtmlMarkdownRules'
+import { serializeHtmlCommentParagraph } from '@/components/plate/html/plateHtmlMarkdownRules'
 import { tableMarkdownAlignmentRules } from '@/components/plate/nodes/tableMarkdownAlignmentRules'
 import { CALLOUT_MARKER_PROPERTY } from '@/components/plate/remarkCalloutMarker'
 
@@ -115,118 +112,120 @@ const serializeClassicList = (node: TElement & { start?: number }, options: Seri
   } satisfies MdList
 }
 
-const preservationRules = {
-  ...tableMarkdownAlignmentRules,
-  ...plateHtmlMarkdownRules,
-  a: {
-    ...defaultRules.a,
-    deserialize: (node: MdLink, decoration: MdDecoration, options: DeserializeMdOptions) => ({
-      children: convertChildrenDeserialize(node.children, decoration, options),
-      title: node.title,
-      type: options.editor?.getType('a') ?? 'a',
-      url: node.url,
-    }),
-    serialize: (
-      node: TElement & { title?: string | null; url: string },
-      options: SerializeMdOptions,
-    ) => {
-      if (!serializeLink) throw new Error('Plate link Markdown serializer is unavailable.')
-      if (node.title) {
-        return {
-          children: convertNodesSerialize(node.children, options),
-          title: node.title,
-          type: 'link',
-          url: node.url,
+export const createPlateMarkdownRules = (htmlRules: MdRules): MdRules =>
+  ({
+    ...tableMarkdownAlignmentRules,
+    ...htmlRules,
+    a: {
+      ...defaultRules.a,
+      deserialize: (node: MdLink, decoration: MdDecoration, options: DeserializeMdOptions) => ({
+        children: convertChildrenDeserialize(node.children, decoration, options),
+        title: node.title,
+        type: options.editor?.getType('a') ?? 'a',
+        url: node.url,
+      }),
+      serialize: (
+        node: TElement & { title?: string | null; url: string },
+        options: SerializeMdOptions,
+      ) => {
+        if (!serializeLink) throw new Error('Plate link Markdown serializer is unavailable.')
+        if (node.title) {
+          return {
+            children: convertNodesSerialize(node.children, options),
+            title: node.title,
+            type: 'link',
+            url: node.url,
+          }
         }
-      }
-      const link = serializeLink(node as Parameters<NonNullable<typeof serializeLink>>[0], options)
-      return link.type === 'link' ? { ...link, title: node.title } : link
-    },
-  },
-  [CALLOUT_MARKER_PROPERTY]: {
-    deserialize: (node: { value: string }) => ({
-      [CALLOUT_MARKER_PROPERTY]: true,
-      text: node.value,
-    }),
-    mark: true,
-    serialize: (node: TText) => ({ type: 'html', value: node.text }),
-  },
-  html: {
-    deserialize: (node: MdHtml) => ({
-      preservedMarkdownKind: 'html',
-      text: node.value ?? '',
-    }),
-  },
-  list: {
-    deserialize: (node: MdList, decoration: MdDecoration, options: DeserializeMdOptions) => {
-      const isTaskList = node.children.some(
-        (child) => child.type === 'listItem' && typeof child.checked === 'boolean',
-      )
-      let listType: string = KEYS.ulClassic
-      if (isTaskList) listType = KEYS.taskList
-      else if (node.ordered) listType = KEYS.olClassic
-
-      return {
-        children: node.children
-          .filter((child): child is MdListItem => child.type === 'listItem')
-          .map((child) => deserializeClassicListItem(child, decoration, options, isTaskList)),
-        ...(isTaskList && node.ordered ? { ordered: true } : {}),
-        ...(node.ordered && node.start !== null && node.start !== undefined
-          ? { start: node.start }
-          : {}),
-        type: editorType(options, listType),
-      }
-    },
-    serialize: serializeClassicList,
-  },
-  [KEYS.taskList]: {
-    serialize: serializeClassicList,
-  },
-  p: {
-    serialize: (node: TElement, options: SerializeMdOptions) => {
-      const preservedNode = node as PreservedMarkdownElement
-      if (preservedNode.preservedMarkdownKind === 'yaml') {
-        return { type: 'yaml', value: readText(preservedNode) }
-      }
-      const htmlComment = serializeHtmlCommentParagraph(node)
-      if (htmlComment) return htmlComment
-      if (
-        node.children.length > 0 &&
-        node.children.every(
-          (child) =>
-            'text' in child && (child as PreservedMarkdownText).preservedMarkdownKind === 'html',
+        const link = serializeLink(
+          node as Parameters<NonNullable<typeof serializeLink>>[0],
+          options,
         )
-      ) {
-        return { type: 'html', value: readText(node) }
-      }
-      if (
-        node.children.some((child) => 'text' in child && Boolean(child[CALLOUT_MARKER_PROPERTY]))
-      ) {
-        return { children: convertNodesSerialize(node.children, options), type: 'paragraph' }
-      }
-
-      if (!serializeParagraph)
-        throw new Error('Plate paragraph Markdown serializer is unavailable.')
-      return serializeParagraph(node, { ...options, preserveEmptyParagraphs: false })
+        return link.type === 'link' ? { ...link, title: node.title } : link
+      },
     },
-  },
-  preservedMarkdownKind: {
-    mark: true,
-    serialize: (node: PreservedMarkdownText) => {
-      const preservedNode = node as PreservedMarkdownText
-      if (preservedNode.preservedMarkdownKind === 'html') {
-        return { type: 'html', value: preservedNode.text }
-      }
-      return { type: 'text', value: preservedNode.text }
+    [CALLOUT_MARKER_PROPERTY]: {
+      deserialize: (node: { value: string }) => ({
+        [CALLOUT_MARKER_PROPERTY]: true,
+        text: node.value,
+      }),
+      mark: true,
+      serialize: (node: TText) => ({ type: 'html', value: node.text }),
     },
-  },
-  yaml: {
-    deserialize: (node: MdYaml, _decoration: unknown, options: DeserializeMdOptions) => ({
-      children: [{ text: node.value ?? '' }],
-      preservedMarkdownKind: 'yaml',
-      type: options.editor?.getType('p') ?? 'p',
-    }),
-  },
-}
+    html: {
+      deserialize: (node: MdHtml) => ({
+        preservedMarkdownKind: 'html',
+        text: node.value ?? '',
+      }),
+    },
+    list: {
+      deserialize: (node: MdList, decoration: MdDecoration, options: DeserializeMdOptions) => {
+        const isTaskList = node.children.some(
+          (child) => child.type === 'listItem' && typeof child.checked === 'boolean',
+        )
+        let listType: string = KEYS.ulClassic
+        if (isTaskList) listType = KEYS.taskList
+        else if (node.ordered) listType = KEYS.olClassic
 
-export const plateMarkdownRules = preservationRules as unknown as MdRules
+        return {
+          children: node.children
+            .filter((child): child is MdListItem => child.type === 'listItem')
+            .map((child) => deserializeClassicListItem(child, decoration, options, isTaskList)),
+          ...(isTaskList && node.ordered ? { ordered: true } : {}),
+          ...(node.ordered && node.start !== null && node.start !== undefined
+            ? { start: node.start }
+            : {}),
+          type: editorType(options, listType),
+        }
+      },
+      serialize: serializeClassicList,
+    },
+    [KEYS.taskList]: {
+      serialize: serializeClassicList,
+    },
+    p: {
+      serialize: (node: TElement, options: SerializeMdOptions) => {
+        const preservedNode = node as PreservedMarkdownElement
+        if (preservedNode.preservedMarkdownKind === 'yaml') {
+          return { type: 'yaml', value: readText(preservedNode) }
+        }
+        const htmlComment = serializeHtmlCommentParagraph(node)
+        if (htmlComment) return htmlComment
+        if (
+          node.children.length > 0 &&
+          node.children.every(
+            (child) =>
+              'text' in child && (child as PreservedMarkdownText).preservedMarkdownKind === 'html',
+          )
+        ) {
+          return { type: 'html', value: readText(node) }
+        }
+        if (
+          node.children.some((child) => 'text' in child && Boolean(child[CALLOUT_MARKER_PROPERTY]))
+        ) {
+          return { children: convertNodesSerialize(node.children, options), type: 'paragraph' }
+        }
+
+        if (!serializeParagraph)
+          throw new Error('Plate paragraph Markdown serializer is unavailable.')
+        return serializeParagraph(node, { ...options, preserveEmptyParagraphs: false })
+      },
+    },
+    preservedMarkdownKind: {
+      mark: true,
+      serialize: (node: PreservedMarkdownText) => {
+        const preservedNode = node as PreservedMarkdownText
+        if (preservedNode.preservedMarkdownKind === 'html') {
+          return { type: 'html', value: preservedNode.text }
+        }
+        return { type: 'text', value: preservedNode.text }
+      },
+    },
+    yaml: {
+      deserialize: (node: MdYaml, _decoration: unknown, options: DeserializeMdOptions) => ({
+        children: [{ text: node.value ?? '' }],
+        preservedMarkdownKind: 'yaml',
+        type: options.editor?.getType('p') ?? 'p',
+      }),
+    },
+  }) as unknown as MdRules

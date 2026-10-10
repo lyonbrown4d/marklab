@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createRef } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import { DiagramPreviewDialog } from '@/components/previews/DiagramPreviewDialog'
 
 const labels = {
@@ -12,6 +16,25 @@ const labels = {
 }
 
 describe('DiagramPreviewDialog', () => {
+  beforeEach(() => {
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
+  })
+
+  it('blocks Search Everywhere only while its modal is open', () => {
+    const props = {
+      labels,
+      onOpenChange: vi.fn(),
+      returnFocusRef: createRef<HTMLButtonElement>(),
+      visual: { alt: 'System map', kind: 'image', src: 'asset://map.png' } as const,
+    }
+    const { rerender } = render(<DiagramPreviewDialog {...props} open />)
+
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(true)
+
+    rerender(<DiagramPreviewDialog {...props} open={false} />)
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(false)
+  })
+
   it('renders an explicit image visual and contains editor events', () => {
     const onOpenChange = vi.fn()
     const parentPointerDown = vi.fn()

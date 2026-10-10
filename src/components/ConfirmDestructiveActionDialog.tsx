@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 
 type ConfirmDestructiveActionDialogProps = {
   open: boolean
@@ -42,6 +43,9 @@ export const ConfirmDestructiveActionDialog = ({
 }: ConfirmDestructiveActionDialogProps) => {
   const [confirming, setConfirming] = useState(false)
   const confirmInFlightRef = useRef(false)
+  useNativeSurfaceOcclusion('destructive-confirm-dialog', open, {
+    blocksCommandPalette: true,
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (confirmInFlightRef.current) return

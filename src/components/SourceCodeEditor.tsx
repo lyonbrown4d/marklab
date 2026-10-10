@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useLatest } from 'ahooks'
 import { useStore } from 'zustand'
 import type { EditorCursorPosition } from '@/components/EditorDocumentStatus'
@@ -28,6 +28,7 @@ import {
 } from '@/components/useMarkdownSourceDiagnostics'
 import type { EditorChangeHandler } from '@/types/editorChanges'
 import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
+import { useConfiguredMonaco } from '@/components/source-code/useConfiguredMonaco'
 
 type SourceCodeEditorProps = {
   activePath: string | null
@@ -62,8 +63,7 @@ const SourceCodeEditor = ({
   const immersiveTypewriterMode = usePreferencesStore((state) => state.immersiveTypewriterMode)
   const shortcutOverrides = usePreferencesStore((state) => state.shortcutOverrides)
   const markdownEnabled = isMarkdownFilePath(activePath ?? '')
-  const [monacoReady, setMonacoReady] = useState(false)
-  const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
+  const { error: monacoLoadError, ready: monacoReady } = useConfiguredMonaco()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const cursorCallbackRef = useLatest(onCursorChange)
   const workspaceKeyRef = useLatest(workspaceKey)
@@ -95,27 +95,6 @@ const SourceCodeEditor = ({
     status: monacoLoadError ? 'error' : 'loading',
     view: 'source',
   })
-
-  useEffect(() => {
-    let cancelled = false
-
-    void import('@/lib/monaco')
-      .then(({ configureMonaco }) => configureMonaco())
-      .then(() => {
-        if (!cancelled) {
-          setMonacoReady(true)
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setMonacoLoadError(error)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const navigationKey = activePath ? `${workspaceKey}:${activePath}` : null

@@ -1,6 +1,4 @@
-// @ts-expect-error Vitest runs this stylesheet regression in Node; the renderer tsconfig intentionally omits Node module types.
 import { readFileSync } from 'node:fs'
-// @ts-expect-error Vitest runs this stylesheet regression in Node; the renderer tsconfig intentionally omits Node module types.
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 

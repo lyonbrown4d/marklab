@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
 export type AiComposerPhase =
@@ -92,6 +93,7 @@ export const AiInlineComposer = ({
   providers,
   sourceText,
 }: AiInlineComposerProps) => {
+  useNativeSurfaceOcclusion('ai-inline-composer', true, { blocksCommandPalette: true })
   const inputRef = useRef<HTMLInputElement>(null)
   const stopRef = useRef<HTMLButtonElement>(null)
   const pending = phase === 'starting' || phase === 'streaming'

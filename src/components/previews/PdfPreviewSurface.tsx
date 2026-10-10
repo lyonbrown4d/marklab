@@ -5,6 +5,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import AppAlert from '@/components/AppAlert'
 import { PreviewLoadingFallback } from '@/components/previews/PreviewLoadingFallback'
 import { PdfThumbnailRail } from '@/components/previews/PdfThumbnailRail'
@@ -154,6 +155,7 @@ const MarkdownPdfPreview = ({
     key: '',
   })
   const [expanded, setExpanded] = useState(false)
+  useNativeSurfaceOcclusion('pdf-preview-dialog', expanded, { blocksCommandPalette: true })
   const expandedContentReady = useDeferredOpenContent(expanded)
   const fileUrl = resolvedSource.key === sourceKey ? resolvedSource.fileUrl : null
   const failed = resolvedSource.key === sourceKey ? resolvedSource.failed : false

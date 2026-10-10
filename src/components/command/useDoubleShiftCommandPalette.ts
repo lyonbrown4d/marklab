@@ -4,20 +4,15 @@ import {
   reduceDoubleShiftGesture,
   type DoubleShiftGestureAction,
 } from '@/components/command/doubleShiftGesture'
+import { isCommandPaletteBlockedByActiveSurface } from '@/app/nativeSurfaceOcclusion'
 
 type UseDoubleShiftCommandPaletteArgs = {
   enabled: boolean
   onOpen: () => void
 }
 
-const openModalSelector = [
-  '[role="dialog"]:not([aria-modal="false"]):not([data-state="closed"])',
-  '[role="alertdialog"]:not([aria-modal="false"]):not([data-state="closed"])',
-  '[aria-modal="true"]:not([data-state="closed"])',
-].join(',')
-
 const isCommandPaletteUnavailable = () =>
-  document.visibilityState === 'hidden' || document.querySelector(openModalSelector) !== null
+  document.visibilityState === 'hidden' || isCommandPaletteBlockedByActiveSurface()
 
 const keyboardAction = (
   type: 'keydown' | 'keyup',

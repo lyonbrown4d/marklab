@@ -1,5 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  isCommandPaletteBlockedByActiveSurface,
+  useNativeSurfaceOcclusionStore,
+} from '@/app/nativeSurfaceOcclusion'
 import MarkdownPdfPreview, { PdfPreviewSurface } from '@/components/previews/PdfPreviewSurface'
 
 const documentFile = vi.hoisted(() => vi.fn())
@@ -64,7 +68,27 @@ vi.mock('@/i18n/useI18n', () => ({
 
 describe('MarkdownPdfPreview', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     documentFixture.numPages = 3
+    useNativeSurfaceOcclusionStore.setState({ reasons: {}, commandPaletteBlockers: {} })
+  })
+
+  it('registers the expanded PDF viewer as a Search Everywhere blocker', async () => {
+    render(
+      <MarkdownPdfPreview
+        documentPath="D:/notes/readme.md"
+        href="brief.pdf"
+        resolvePdfSrc={async () => 'marklab-asset://local/v1/brief'}
+        title="Brief PDF"
+      />,
+    )
+
+    await waitFor(() => expect(documentFile).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'Expand view' }))
+
+    expect(isCommandPaletteBlockedByActiveSurface()).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(isCommandPaletteBlockedByActiveSurface()).toBe(false))
   })
 
   it('labels the PDF page navigation from i18n', async () => {
