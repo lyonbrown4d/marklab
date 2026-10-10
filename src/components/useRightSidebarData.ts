@@ -12,6 +12,8 @@ import type {
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import { plateDiagnosticsStore } from '@/components/plate/plateDiagnosticsStore'
 import { fsApi } from '@/services/fsApi'
+import { createFileLabel } from '@/logic/paths'
+import { useUnlinkedMentions } from '@/components/useUnlinkedMentions'
 import {
   workspaceAnalysisApi,
   type WorkspaceDocumentInsightsResult,
@@ -168,6 +170,16 @@ export const useRightSidebarData = ({
   const textAnalysis = useMarkdownTextAnalysis(statsContent, enabled, targetPath ?? 'empty')
   const outline = data?.found ? data.headings : []
   const backlinks = useMemo(() => (data?.found ? data.backlinks.map(mapBacklink) : []), [data])
+  const mentionLabel =
+    data?.headings.find((heading) => heading.level === 1)?.text ??
+    (targetPath ? createFileLabel(targetPath) : '')
+  const unlinkedMentions = useUnlinkedMentions({
+    backlinks,
+    enabled: enabled && Boolean(data?.found),
+    targetLabel: mentionLabel,
+    targetPath,
+    workspaceKey,
+  })
   const indexedProblems = useMemo(
     () => (data?.found ? data.diagnostics.map(mapDiagnostic) : []),
     [data],
@@ -190,6 +202,10 @@ export const useRightSidebarData = ({
   return {
     outline,
     backlinks,
+    unlinkedMentions: unlinkedMentions.mentions,
+    unlinkedMentionsLoading: unlinkedMentions.loading,
+    unlinkedMentionsError: unlinkedMentions.error,
+    retryUnlinkedMentions: unlinkedMentions.retry,
     problems,
     problemController,
     errorProblems,

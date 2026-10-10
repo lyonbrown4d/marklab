@@ -11,6 +11,10 @@ const retryInsights = vi.fn()
 const data = {
   outline: [],
   backlinks: [],
+  unlinkedMentions: [],
+  unlinkedMentionsLoading: false,
+  unlinkedMentionsError: null,
+  retryUnlinkedMentions: vi.fn(),
   problems: [],
   problemController: null,
   errorProblems: [],

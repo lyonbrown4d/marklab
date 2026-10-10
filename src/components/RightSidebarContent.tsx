@@ -14,7 +14,7 @@ import { RightSidebarProblemsPanel } from '@/components/RightSidebarProblemsPane
 import { RightSidebarSummary } from '@/components/RightSidebarSummary'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import type { BacklinkReference } from '@/logic/backlinks'
+import type { BacklinkReference, UnlinkedMentionReference } from '@/logic/backlinks'
 import type { MarkdownAssetReport } from '@/logic/assets'
 import type {
   KnowledgeInsights,
@@ -48,6 +48,9 @@ type RightSidebarContentProps = {
   outline: SidebarHeading[]
   activeHeadingSlug: string | null
   backlinks: SidebarBacklink[]
+  unlinkedMentions: UnlinkedMentionReference[]
+  unlinkedMentionsError: string | null
+  unlinkedMentionsLoading: boolean
   problems: MarkdownSourceDiagnostic[]
   problemController: PlateDiagnosticController | null
   errorProblems: MarkdownSourceDiagnostic[]
@@ -62,10 +65,12 @@ type RightSidebarContentProps = {
   assetReport: MarkdownAssetReport
   onOpenHeading: (slug: string) => void
   onOpenBacklink: (backlink: SidebarBacklink) => void
+  onOpenMention: (mention: UnlinkedMentionReference) => void
   onOpenKnowledgeFile: (path: string) => void
   onOpenKnowledgeReference: (reference: KnowledgeLinkReference) => void
   onOpenMissingLink: (reference: KnowledgeMissingReference) => void
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
+  onRetryUnlinkedMentions: () => void
 }
 
 type RightSidebarCollapsedProps = {
@@ -79,6 +84,9 @@ export const RightSidebarContent = ({
   outline,
   activeHeadingSlug,
   backlinks,
+  unlinkedMentions,
+  unlinkedMentionsError,
+  unlinkedMentionsLoading,
   problems,
   problemController,
   errorProblems,
@@ -90,10 +98,12 @@ export const RightSidebarContent = ({
   assetReport,
   onOpenHeading,
   onOpenBacklink,
+  onOpenMention,
   onOpenKnowledgeFile,
   onOpenKnowledgeReference,
   onOpenMissingLink,
   onOpenProblem,
+  onRetryUnlinkedMentions,
 }: RightSidebarContentProps) => {
   const { t } = useI18n()
   const getTabCount = (value: InspectorTabValue) => {
@@ -102,7 +112,7 @@ export const RightSidebarContent = ({
     }
 
     if (value === 'backlinks') {
-      return backlinks.length
+      return backlinks.length + unlinkedMentions.length
     }
 
     if (value === 'problems') {
@@ -181,8 +191,13 @@ export const RightSidebarContent = ({
           <TabsContent value="backlinks" className="m-0 min-h-0 flex-1 overflow-hidden">
             <RightSidebarBacklinksPanel
               backlinks={backlinks}
+              mentions={unlinkedMentions}
+              mentionsError={unlinkedMentionsError}
+              mentionsLoading={unlinkedMentionsLoading}
               targetLabel={targetLabel}
               onOpenBacklink={onOpenBacklink}
+              onOpenMention={onOpenMention}
+              onRetryMentions={onRetryUnlinkedMentions}
             />
           </TabsContent>
           <TabsContent value="knowledge" className="m-0 min-h-0 flex-1 overflow-hidden">

@@ -11,6 +11,7 @@ import {
 } from '@/utils/editorNavigation'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
 import type { KnowledgeLinkReference, KnowledgeMissingReference } from '@/logic/knowledge'
+import type { UnlinkedMentionReference } from '@/logic/backlinks'
 import {
   RightSidebarCollapsed,
   RightSidebarContent,
@@ -63,6 +64,10 @@ const RightSidebarExpanded = ({
   const {
     outline,
     backlinks,
+    unlinkedMentions,
+    unlinkedMentionsLoading,
+    unlinkedMentionsError,
+    retryUnlinkedMentions,
     problems,
     problemController,
     errorProblems,
@@ -106,6 +111,19 @@ const RightSidebarExpanded = ({
         workspaceKey,
       })
       onOpenFileView(backlink.sourcePath, 'source')
+    },
+    [onOpenFileView, workspaceKey],
+  )
+
+  const handleOpenMention = useCallback(
+    (mention: UnlinkedMentionReference) => {
+      requestFocusSourcePosition({
+        path: mention.sourcePath,
+        line: mention.line,
+        column: mention.column,
+        workspaceKey,
+      })
+      onOpenFileView(mention.sourcePath, 'source')
     },
     [onOpenFileView, workspaceKey],
   )
@@ -201,6 +219,9 @@ const RightSidebarExpanded = ({
           outline={outline}
           activeHeadingSlug={activeHeadingSlug}
           backlinks={backlinks}
+          unlinkedMentions={unlinkedMentions}
+          unlinkedMentionsError={unlinkedMentionsError}
+          unlinkedMentionsLoading={unlinkedMentionsLoading}
           problems={problems}
           problemController={problemController}
           errorProblems={errorProblems}
@@ -212,10 +233,12 @@ const RightSidebarExpanded = ({
           assetReport={assetReport}
           onOpenHeading={handleOpenHeading}
           onOpenBacklink={handleOpenBacklink}
+          onOpenMention={handleOpenMention}
           onOpenKnowledgeFile={handleOpenKnowledgeFile}
           onOpenKnowledgeReference={handleOpenKnowledgeReference}
           onOpenMissingLink={handleOpenMissingLink}
           onOpenProblem={handleOpenProblem}
+          onRetryUnlinkedMentions={() => void retryUnlinkedMentions()}
         />
       </div>
     </div>

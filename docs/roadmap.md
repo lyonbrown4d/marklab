@@ -71,7 +71,7 @@ Status: in progress
 - [x] Add rich-editor workspace-link completion for `[[file]]` and heading
       anchors, with explicit create-file and replace-anchor actions for unresolved
       targets.
-- [ ] Add unlinked-mention discovery using the rebuildable workspace index,
+- [x] Add unlinked-mention discovery using the rebuildable workspace index,
       keeping probable mentions separate from explicit backlinks.
 - [ ] Provide a structured frontmatter editor for common scalar, date, boolean,
       list, tag, and link values while preserving unsupported YAML losslessly and
