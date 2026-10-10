@@ -73,7 +73,7 @@ Status: in progress
       targets.
 - [x] Add unlinked-mention discovery using the rebuildable workspace index,
       keeping probable mentions separate from explicit backlinks.
-- [ ] Provide a structured frontmatter editor for common scalar, date, boolean,
+- [x] Provide a structured frontmatter editor for common scalar, date, boolean,
       list, tag, and link values while preserving unsupported YAML losslessly and
       retaining a source-mode escape hatch.
 

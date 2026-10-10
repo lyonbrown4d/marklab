@@ -1,6 +1,8 @@
 import { PlateElement, PlateLeaf, type PlateElementProps, type PlateLeafProps } from 'platejs/react'
+import { FrontmatterElement } from '@/components/plate/frontmatter/FrontmatterElement'
 
 export const ParagraphElement = (props: PlateElementProps) => {
+  if (props.element.preservedMarkdownKind === 'yaml') return <FrontmatterElement {...props} />
   return <PlateElement {...props} as="p" className="my-2 leading-7" />
 }
 
