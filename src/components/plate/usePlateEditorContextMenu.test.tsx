@@ -98,6 +98,12 @@ describe('usePlateEditorContextMenu', () => {
     act(() => result.current.onAction('pasteAsPlainText'))
 
     await waitFor(() => expect(editor.api.string([])).toBe('Hello **raw**'))
+    expect(editor.selection).toEqual({
+      anchor: { offset: 13, path: [0, 0] },
+      focus: { offset: 13, path: [0, 0] },
+    })
+    editor.undo()
+    expect(editor.api.string([])).toBe('Hello')
   })
 
   it('writes Markdown text and selected HTML through a native copy event', () => {
@@ -151,7 +157,28 @@ describe('usePlateEditorContextMenu', () => {
     expect(values.get('text/plain')).toBe('Hello')
     expect(values.get('text/markdown')).toBe('Hello')
     expect(editor.api.string([])).toBe('')
+    expect(editor.selection).toEqual({
+      anchor: { offset: 0, path: [0, 0] },
+      focus: { offset: 0, path: [0, 0] },
+    })
+    editor.undo()
+    expect(editor.api.string([])).toBe('Hello')
     target.remove()
+  })
+
+  it('places the caret at the cut start and undoes an explicit cut atomically', async () => {
+    const editor = createEditor()
+    const { result } = renderHook(() => usePlateEditorContextMenu({ getEditor: () => editor }))
+
+    act(() => result.current.onAction('cut'))
+
+    await waitFor(() => expect(editor.api.string([])).toBe(''))
+    expect(editor.selection).toEqual({
+      anchor: { offset: 0, path: [0, 0] },
+      focus: { offset: 0, path: [0, 0] },
+    })
+    editor.undo()
+    expect(editor.api.string([])).toBe('Hello')
   })
 
   it('leaves DOM paste events to Plate so rich HTML can be preserved', () => {

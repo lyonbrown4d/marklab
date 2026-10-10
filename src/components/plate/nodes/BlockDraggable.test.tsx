@@ -13,6 +13,7 @@ const editorMocks = vi.hoisted(() => ({
     const index = ['block-1', 'block-2', 'block-3'].indexOf(element.id ?? '')
     return index < 0 ? undefined : [index]
   }),
+  insertNodes: vi.fn(),
   setNodes: vi.fn(),
   removeNodes: vi.fn(),
 }))
@@ -69,7 +70,7 @@ vi.mock('platejs/react', () => ({
     getOptions: () => ({ selectedIds: new Set<string>() }),
     setOption: vi.fn(),
     tf: {
-      insertNodes: vi.fn(),
+      insertNodes: editorMocks.insertNodes,
       moveNodes: vi.fn(),
       removeNodes: editorMocks.removeNodes,
       setNodes: editorMocks.setNodes,
@@ -108,6 +109,7 @@ beforeEach(() => {
   dndMocks.dropLine = ''
   dndMocks.handleRef.mockClear()
   editorMocks.setNodes.mockClear()
+  editorMocks.insertNodes.mockClear()
   editorMocks.removeNodes.mockClear()
   clipboardMocks.writeContent.mockClear()
   clipboardMocks.writeText.mockClear()
@@ -177,6 +179,17 @@ describe('BlockDraggable', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Heading 2' }))
 
     expect(editorMocks.setNodes).toHaveBeenCalledWith({ type: 'h2' }, { at: [0] })
+    expect(blockSelectionMocks.set).toHaveBeenCalledWith(['block-1'])
+  })
+
+  it('selects the duplicate block after creating it', async () => {
+    renderBlock()
+    fireEvent.click(screen.getByRole('button', { name: 'Move block' }))
+
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Duplicate' }))
+
+    expect(editorMocks.insertNodes).toHaveBeenCalled()
+    expect(blockSelectionMocks.set).toHaveBeenCalledWith(['block-2'])
   })
 
   it('copies a block as rich content or Markdown from the menu', async () => {
@@ -205,6 +218,7 @@ describe('BlockDraggable', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Cut' }))
 
     await waitFor(() => expect(editorMocks.removeNodes).toHaveBeenCalledWith({ at: [0] }))
+    expect(blockSelectionMocks.set).toHaveBeenCalledWith(['block-2'])
   })
 
   it('keeps the block when a cut clipboard write fails', async () => {

@@ -29,6 +29,15 @@ describe('block actions', () => {
     expect(editor.children[0]).toMatchObject({ id: 'first', type })
   })
 
+  it('undoes block conversion as one history operation', () => {
+    const editor = createEditor()
+
+    runBlockAction(editor, editor.children[0] as TElement, { kind: 'setType', type: 'h2' })
+    editor.undo()
+
+    expect(editor.children[0]).toMatchObject({ id: 'first', type: 'p' })
+  })
+
   it('duplicates a block after the source with a fresh node id', () => {
     const editor = createEditor()
 
@@ -62,6 +71,8 @@ describe('block actions', () => {
 
     runBlockAction(editor, first, { kind: 'moveDown' })
     expect(editor.children.map((node) => (node as TElement).id)).toEqual(['second', 'first'])
+    editor.undo()
+    expect(editor.children.map((node) => (node as TElement).id)).toEqual(['first', 'second'])
   })
 
   it('reports movement availability at both boundaries', () => {
@@ -97,6 +108,8 @@ describe('block actions', () => {
 
     expect(editor.children.map((node) => (node as TElement).id)).toEqual(['second'])
     expect(focusTarget).toBe(second)
+    editor.undo()
+    expect(editor.children.map((node) => (node as TElement).id)).toEqual(['first', 'second'])
   })
 
   it('keeps an empty paragraph when deleting the final block', () => {
@@ -107,5 +120,7 @@ describe('block actions', () => {
     expect(editor.children).toEqual([
       expect.objectContaining({ children: [{ text: '' }], type: 'p' }),
     ])
+    editor.undo()
+    expect(editor.children).toEqual([paragraph('only', 'Only')])
   })
 })

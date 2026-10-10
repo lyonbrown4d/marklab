@@ -38,6 +38,19 @@ const syncDraggingIds = (editor: PlateEditor, ids: string[]) => {
   editor.setOption(DndPlugin, 'draggingId', ids.length === 1 ? ids[0] : ids)
 }
 
+export const setBlockSelectionTarget = (editor: PlateEditor, element: TElement) => {
+  const api = editor.getApi(BlockSelectionPlugin).blockSelection
+  const id = typeof element.id === 'string' ? element.id : undefined
+  if (!id) {
+    api.deselect()
+    syncDraggingIds(editor, [])
+    return
+  }
+  api.set([id])
+  editor.setOption(BlockSelectionPlugin, 'anchorId', id)
+  syncDraggingIds(editor, [id])
+}
+
 export const getFocusedTopLevelBlockId = (editor: PlateEditor) => {
   const index = editor.selection?.focus.path[0]
   if (index === undefined) return undefined

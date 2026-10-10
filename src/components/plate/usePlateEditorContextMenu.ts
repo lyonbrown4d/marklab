@@ -92,7 +92,9 @@ const handleClipboardEvent = (
   if (!content) return
   writeClipboardEvent(event, content)
   if (isElectronRuntime()) void writeClipboardContent(content).catch(() => undefined)
-  if (event.defaultPrevented && event.type === 'cut') editor.tf.deleteFragment()
+  if (event.defaultPrevented && event.type === 'cut') {
+    editor.tf.withNewBatch(() => editor.tf.deleteFragment())
+  }
 }
 
 const runAction = (
@@ -130,7 +132,7 @@ const runAction = (
   if (action === 'pasteAsPlainText') {
     void readClipboardText()
       .then((text) => {
-        if (text) editor.tf.insertText(text)
+        if (text) editor.tf.withNewBatch(() => editor.tf.insertText(text))
       })
       .catch(() => undefined)
     return
@@ -151,7 +153,7 @@ const runAction = (
     const selection = editor.selection
     if (!content || !selection) return
     void writeClipboardContent(content)
-      .then(() => editor.tf.delete({ at: selection }))
+      .then(() => editor.tf.withNewBatch(() => editor.tf.delete({ at: selection })))
       .catch(() => queueFocusedEditCommand('cut'))
   }
 }

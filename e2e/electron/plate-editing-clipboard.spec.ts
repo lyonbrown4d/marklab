@@ -126,7 +126,9 @@ test.describe('Plate clipboard and block menu editing loop', () => {
     await handle.click()
     await page.getByRole('menuitem', { name: /^(Duplicate|创建副本)$/ }).click()
     await expect(editor.getByText('DRAG-BLOCK-01', { exact: false })).toHaveCount(2)
-    await expect(editor.locator('button[data-block-drag-handle="true"]:focus')).toHaveCount(1)
+    const focusedHandle = editor.locator('button[data-block-drag-handle="true"]:focus')
+    await expect(focusedHandle).toHaveCount(1)
+    await expect(focusedHandle).toHaveAttribute('aria-pressed', 'true')
 
     await blockByMarker(editor, 'DRAG-BLOCK-02').click()
     await page.keyboard.press('ControlOrMeta+Z')

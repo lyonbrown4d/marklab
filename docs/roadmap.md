@@ -44,9 +44,9 @@ Follow-up editing-loop work:
 
 - [x] Show word and character counts for text selections and block counts for
       multi-block selections.
-- [ ] Preserve predictable selections and caret placement after cut, paste,
+- [x] Preserve predictable selections and caret placement after cut, paste,
       move, duplicate, and block conversion operations.
-- [ ] Group structural editor operations into coherent undo steps.
+- [x] Group structural editor operations into coherent undo steps.
 
 Validation:
 

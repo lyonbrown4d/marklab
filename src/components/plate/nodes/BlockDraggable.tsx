@@ -16,6 +16,7 @@ import {
   handlePlateBlockMoveShortcut,
   handlePlateBlockSelectionShortcut,
   selectBlockFromHandle,
+  setBlockSelectionTarget,
 } from '@/components/plate/selection/plateBlockSelection'
 import i18n from '@/i18n/setup'
 import { BlockActionMenu } from '@/components/plate/nodes/BlockActionMenu'
@@ -97,7 +98,10 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
         void write
           .then(() => {
             const focusTarget = runBlockAction(editor, element, { kind: 'delete' })
-            if (focusTarget) restoreHandleFocus(editor, focusTarget)
+            if (focusTarget) {
+              setBlockSelectionTarget(editor, focusTarget)
+              restoreHandleFocus(editor, focusTarget)
+            }
           })
           .catch(() => undefined)
       } else {
@@ -107,7 +111,10 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
     }
     const focusTarget = runBlockAction(editor, element, action)
     setMenuOpen(false)
-    if (focusTarget) restoreHandleFocus(editor, focusTarget)
+    if (focusTarget) {
+      setBlockSelectionTarget(editor, focusTarget)
+      restoreHandleFocus(editor, focusTarget)
+    }
   }
 
   const handleDragEnd = () => {

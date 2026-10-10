@@ -9,6 +9,7 @@ import {
   getFocusedTopLevelBlockId,
   moveSelectedBlocks,
   selectBlockFromHandle,
+  setBlockSelectionTarget,
 } from '@/components/plate/selection/plateBlockSelection'
 
 const paragraph = (id: string): TElement => ({
@@ -157,6 +158,18 @@ describe('Plate block selection', () => {
 
     expect(editor.selection).toEqual(textSelection)
     expect(selectedIds(editor)).toEqual(['b', 'c', 'd'])
+  })
+
+  it('replaces a stale block selection with the operation target', () => {
+    const editor = createEditor()
+    selectBlockFromHandle(editor, 'a', {})
+    selectBlockFromHandle(editor, 'c', { ctrlKey: true })
+
+    setBlockSelectionTarget(editor, editor.children[1] as TElement)
+
+    expect(selectedIds(editor)).toEqual(['b'])
+    expect(editor.getOption(BlockSelectionPlugin, 'anchorId')).toBe('b')
+    expect(editor.getOption(DndPlugin, 'draggingId')).toBe('b')
   })
 
   it('moves the focused block with Alt+Arrow and ignores IME composition', () => {
