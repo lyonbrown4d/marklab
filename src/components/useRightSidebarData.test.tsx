@@ -4,6 +4,10 @@ import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRightSidebarData } from '@/components/useRightSidebarData'
 import { workspaceAnalysisApi } from '@/services/workspaceAnalysisApi'
+import {
+  clearPlateDiagnostics,
+  publishPlateDiagnostics,
+} from '@/components/plate/plateDiagnosticsStore'
 
 vi.mock('@/services/workspaceAnalysisApi', () => ({
   workspaceAnalysisApi: {
@@ -85,7 +89,10 @@ const createArgs = (targetPath: string) => ({
 })
 
 describe('useRightSidebarData', () => {
-  beforeEach(() => getDocumentInsights.mockReset())
+  beforeEach(() => {
+    getDocumentInsights.mockReset()
+    clearPlateDiagnostics('live-test')
+  })
 
   it('maps bounded document insights while keeping editor statistics local', async () => {
     getDocumentInsights.mockResolvedValue({
@@ -133,6 +140,49 @@ describe('useRightSidebarData', () => {
     expect(result.current.problems).toEqual([
       expect.objectContaining({ startColumn: 2, endColumn: 12, severity: 'error' }),
     ])
+  })
+
+  it('uses current rich-editor diagnostics instead of stale indexed diagnostics', async () => {
+    getDocumentInsights.mockResolvedValue({
+      ...emptyInsights('target.md'),
+      diagnostics: [
+        {
+          line: 1,
+          start_column: 1,
+          end_column: 2,
+          message: 'Indexed problem',
+          severity: 'warning',
+        },
+      ],
+    })
+    publishPlateDiagnostics({
+      key: 'live-test',
+      workspaceKey: 'external:D:/wiki',
+      path: 'target.md',
+      content: '# Live',
+      diagnostics: [
+        {
+          line: 2,
+          startColumn: 3,
+          endColumn: 8,
+          message: 'Live problem',
+          severity: 'error',
+        },
+      ],
+      applyAction: vi.fn(),
+      focus: vi.fn(),
+      getActions: vi.fn(),
+    })
+
+    const { result } = renderHook(() => useRightSidebarData(createArgs('target.md')), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(result.current.insightsLoading).toBe(false))
+
+    expect(result.current.problems).toEqual([
+      expect.objectContaining({ message: 'Live problem', severity: 'error' }),
+    ])
+    expect(result.current.problemController?.key).toBe('live-test')
   })
 
   it('isolates workspace/path queries and ignores a late response for the previous path', async () => {

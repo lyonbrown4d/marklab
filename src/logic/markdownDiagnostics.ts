@@ -16,11 +16,14 @@ const MARKDOWN_EXTENSIONS = /\.(md|markdown)$/i
 export type MarkdownSourceDiagnosticSeverity = 'error' | 'warning'
 
 export type MarkdownSourceDiagnostic = {
+  code?: string
+  id?: string
   line: number
   startColumn: number
   endColumn: number
   message: string
   severity: MarkdownSourceDiagnosticSeverity
+  source?: string
 }
 
 export const MARKDOWN_SOURCE_LINK_DIAGNOSTIC_OWNER = 'markdown-source-link'

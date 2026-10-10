@@ -155,6 +155,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           smoothScrolling={motionSmoothScrolling}
           typewriterScroll={immersiveTypewriterMode}
           value={props.value}
+          workspaceKey={props.workspaceKey}
         />
         <MarkdownEditorStatusOverlay
           errorLabel={t('editor.loadFailed')}

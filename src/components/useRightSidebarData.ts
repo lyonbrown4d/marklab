@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useStore } from 'zustand'
 import { useMarkdownTextAnalysis } from '@/hooks/useMarkdownTextAnalysis'
 import type { MarkdownAssetReference, MarkdownAssetReport } from '@/logic/assets'
 import type { BacklinkReference } from '@/logic/backlinks'
@@ -9,6 +10,7 @@ import type {
   KnowledgeMissingReference,
 } from '@/logic/knowledge'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
+import { plateDiagnosticsStore } from '@/components/plate/plateDiagnosticsStore'
 import { fsApi } from '@/services/fsApi'
 import {
   workspaceAnalysisApi,
@@ -153,13 +155,24 @@ export const useRightSidebarData = ({
     staleTime: 10_000,
   })
   const data = insightsQuery.data?.path === targetPath ? insightsQuery.data : null
+  const liveDiagnostics = useStore(plateDiagnosticsStore, (state) => state.current)
+  const problemController =
+    liveDiagnostics?.workspaceKey === workspaceKey &&
+    liveDiagnostics.path === targetPath &&
+    targetPath === activePath
+      ? liveDiagnostics
+      : null
   const displayMetadata = metadataQuery.data?.path === targetPath ? metadataQuery.data : null
   const statsContent =
     targetPath === activePath ? editorValue : (fileContents[targetPath ?? ''] ?? '')
   const textAnalysis = useMarkdownTextAnalysis(statsContent, enabled, targetPath ?? 'empty')
   const outline = data?.found ? data.headings : []
   const backlinks = useMemo(() => (data?.found ? data.backlinks.map(mapBacklink) : []), [data])
-  const problems = useMemo(() => (data?.found ? data.diagnostics.map(mapDiagnostic) : []), [data])
+  const indexedProblems = useMemo(
+    () => (data?.found ? data.diagnostics.map(mapDiagnostic) : []),
+    [data],
+  )
+  const problems = problemController?.diagnostics ?? indexedProblems
   const assetReport = useMemo(
     () => (data?.found ? mapAssetReport(data) : emptyAssetReport(targetPath)),
     [data, targetPath],
@@ -178,6 +191,7 @@ export const useRightSidebarData = ({
     outline,
     backlinks,
     problems,
+    problemController,
     errorProblems,
     warningProblems,
     documentStats: enabled ? textAnalysis.stats : { lines: 0, words: 0 },

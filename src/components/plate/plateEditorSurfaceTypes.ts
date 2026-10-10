@@ -30,4 +30,5 @@ export type PlateEditorSurfaceProps = {
   shortcutOverrides?: ShortcutBindings
   typewriterScroll?: boolean
   value: string
+  workspaceKey?: string
 }

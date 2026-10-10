@@ -5,7 +5,9 @@ import { InspectorEmptyState, ProblemGroupHeader } from '@/components/RightSideb
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
+import type { MarkdownLanguageCodeAction } from '@/services/markdownLanguageApi'
 import { CheckCircle2, CircleAlert, CircleX, FileText } from 'lucide-react'
+import { ProblemQuickFixMenu } from '@/components/ProblemQuickFixMenu'
 
 type RightSidebarProblemsPanelProps = {
   targetPath: string | null
@@ -14,6 +16,11 @@ type RightSidebarProblemsPanelProps = {
   errorProblems: MarkdownSourceDiagnostic[]
   warningProblems: MarkdownSourceDiagnostic[]
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
+  onApplyProblemAction?: (
+    problem: MarkdownSourceDiagnostic,
+    action: MarkdownLanguageCodeAction,
+  ) => Promise<boolean>
+  onGetProblemActions?: (problem: MarkdownSourceDiagnostic) => Promise<MarkdownLanguageCodeAction[]>
 }
 
 const problemClasses = (severity: MarkdownSourceDiagnostic['severity']) => {
@@ -41,6 +48,8 @@ export const RightSidebarProblemsPanel = ({
   errorProblems,
   warningProblems,
   onOpenProblem,
+  onApplyProblemAction,
+  onGetProblemActions,
 }: RightSidebarProblemsPanelProps) => {
   const { t } = useI18n()
   const scrollParentRef = useRef<HTMLDivElement | null>(null)
@@ -89,7 +98,12 @@ export const RightSidebarProblemsPanel = ({
         tone={item.severity}
       />
     ) : (
-      <ProblemRow problem={item.problem} onOpenProblem={onOpenProblem} />
+      <ProblemRow
+        problem={item.problem}
+        onOpenProblem={onOpenProblem}
+        onApplyProblemAction={onApplyProblemAction}
+        onGetProblemActions={onGetProblemActions}
+      />
     )
 
   return (
@@ -148,35 +162,53 @@ export const RightSidebarProblemsPanel = ({
 type ProblemRowProps = {
   problem: MarkdownSourceDiagnostic
   onOpenProblem: (problem: MarkdownSourceDiagnostic) => void
+  onApplyProblemAction?: RightSidebarProblemsPanelProps['onApplyProblemAction']
+  onGetProblemActions?: RightSidebarProblemsPanelProps['onGetProblemActions']
 }
 
-const ProblemRow = ({ problem, onOpenProblem }: ProblemRowProps) => {
+const ProblemRow = ({
+  problem,
+  onOpenProblem,
+  onApplyProblemAction,
+  onGetProblemActions,
+}: ProblemRowProps) => {
   const { t } = useI18n()
   const iconClassName = cn('size-4 shrink-0', problemClasses(problem.severity))
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-auto min-h-9 w-full justify-start rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
-      onClick={() => onOpenProblem(problem)}
-    >
-      {problem.severity === 'error' ? (
-        <CircleX className={iconClassName} />
-      ) : (
-        <CircleAlert className={iconClassName} />
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">
-          {problem.severity === 'error'
-            ? t('inspector.problemError')
-            : t('inspector.problemWarning')}
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-auto min-h-9 min-w-0 flex-1 justify-start rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground"
+        onClick={() => onOpenProblem(problem)}
+      >
+        {problem.severity === 'error' ? (
+          <CircleX className={iconClassName} />
+        ) : (
+          <CircleAlert className={iconClassName} />
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs font-medium">
+            {problem.severity === 'error'
+              ? t('inspector.problemError')
+              : t('inspector.problemWarning')}
+          </span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {problem.message}
+          </span>
+          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground/80">
+            {t('tabs.editor')} · line {problem.line}:{problem.startColumn}
+          </span>
         </span>
-        <span className="block truncate text-[11px] text-muted-foreground">{problem.message}</span>
-        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground/80">
-          {t('tabs.editor')} · line {problem.line}:{problem.startColumn}
-        </span>
-      </span>
-    </Button>
+      </Button>
+      {onApplyProblemAction && onGetProblemActions ? (
+        <ProblemQuickFixMenu
+          problem={problem}
+          onApply={onApplyProblemAction}
+          onGetActions={onGetProblemActions}
+        />
+      ) : null}
+    </div>
   )
 }

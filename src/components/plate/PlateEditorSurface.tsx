@@ -1,5 +1,5 @@
 import type { Value } from 'platejs'
-import { Plate, PlateContent, type PlateEditor } from 'platejs/react'
+import { Plate, PlateContent } from 'platejs/react'
 import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import {
@@ -14,22 +14,19 @@ import {
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
 import { PlateDocumentFind } from '@/components/plate/PlateDocumentFind'
-import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
 import { PlateSelectionStats } from '@/components/plate/selection/PlateSelectionStats'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateInlineCompletion } from '@/components/plate/usePlateInlineCompletion'
 import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
 import { usePlateMarkdownSnapshot } from '@/components/plate/usePlateMarkdownSnapshot'
-import {
-  capturePlateSlashUrlInsertion,
-  type PlateSlashCommandLabels,
-  usePlateSlashCommands,
-} from '@/components/plate/slash'
+import { type PlateSlashCommandLabels, usePlateSlashCommands } from '@/components/plate/slash'
 import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
 import { usePlateActiveHeading } from '@/components/plate/usePlateActiveHeading'
+import { usePlateSurfaceDecorations } from '@/components/plate/usePlateSurfaceDecorations'
+import { usePlateSurfaceLinkDialog } from '@/components/plate/usePlateSurfaceLinkDialog'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 import {
   serializePlateMarkdown,
@@ -62,6 +59,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       smoothScrolling = false,
       typewriterScroll = false,
       value,
+      workspaceKey,
     },
     ref,
   ) => {
@@ -139,21 +137,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onImageImport: onImageImport ?? pickAndImportImage,
     })
     const { onKeyDown: onSlashKeyDown, syncFromEditor: syncSlashFromEditor } = slash
-    const openLinkDialog = useCallback(
-      (targetEditor: PlateEditor = editor) => {
-        if (!targetEditor.selection) return false
-        const request =
-          capturePlateSelectionLinkInsertion(targetEditor) ??
-          capturePlateSlashUrlInsertion(targetEditor, 'link', {
-            query: '',
-            range: targetEditor.selection,
-            slashText: '',
-          })
-        slash.urlDialog.open(request)
-        return true
-      },
-      [editor, slash.urlDialog],
-    )
+    const openLinkDialog = usePlateSurfaceLinkDialog(editor, slash.urlDialog)
     const scheduleTypewriterScroll = usePlateTypewriterScroll({
       editableRef,
       enabled: typewriterScroll && !readOnly,
@@ -164,6 +148,16 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       editor,
       readOnly: readOnly || !contentReady,
       value,
+    })
+    const { decorate, scheduleDiagnostics } = usePlateSurfaceDecorations({
+      activePath,
+      completion,
+      editor,
+      enabled: interactionActive && contentReady,
+      getMarkdown,
+      readOnly,
+      value,
+      workspaceKey,
     })
     const syncActiveFocusBlock = usePlateEditorFocusLifecycle({
       autoFocus,
@@ -179,8 +173,9 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       if (composingRef.current) return
       syncSlashFromEditor()
       scheduleTypewriterScroll()
+      scheduleDiagnostics()
       enqueueSnapshot()
-    }, [enqueueSnapshot, scheduleTypewriterScroll, syncSlashFromEditor])
+    }, [enqueueSnapshot, scheduleDiagnostics, scheduleTypewriterScroll, syncSlashFromEditor])
 
     usePlateEditorDomEvents({
       applyPendingExternal: () => externalSyncRef.current?.applyPending() ?? false,
@@ -231,7 +226,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       >
         <PlateDndProvider>
           <Plate
-            decorate={completion.decorate}
+            decorate={decorate}
             editor={editor}
             onSelectionChange={handleSelectionChange}
             onValueChange={handleValueChange}

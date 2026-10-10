@@ -8,6 +8,8 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
 type CompletionLeaf = TText & {
+  plateDiagnosticMessage?: string
+  plateDiagnosticSeverity?: 'error' | 'warning'
   plateInlineCompletionAccept?: (index?: number) => void
   plateInlineCompletionCandidates?: readonly PlateInlineDocumentCompletion[]
   plateInlineCompletionIndex?: number
@@ -99,7 +101,19 @@ export const PlateInlineCompletionLeaf = ({
   const candidates = completionLeaf.plateInlineCompletionCandidates ?? []
   const text = completionLeaf.plateInlineCompletion
   return (
-    <span {...attributes}>
+    <span
+      {...attributes}
+      aria-invalid={completionLeaf.plateDiagnosticSeverity === 'error' ? 'true' : undefined}
+      className={cn(
+        attributes.className,
+        completionLeaf.plateDiagnosticSeverity &&
+          'underline decoration-wavy decoration-1 underline-offset-[3px]',
+        completionLeaf.plateDiagnosticSeverity === 'error' && 'decoration-destructive',
+        completionLeaf.plateDiagnosticSeverity === 'warning' && 'decoration-amber-500',
+      )}
+      data-diagnostic-message={completionLeaf.plateDiagnosticMessage}
+      data-diagnostic-severity={completionLeaf.plateDiagnosticSeverity}
+    >
       {children}
       {completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
         <DocumentCompletionMenu

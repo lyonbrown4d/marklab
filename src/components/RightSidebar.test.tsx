@@ -14,6 +14,10 @@ import {
   type FocusHeadingRequest,
   type FocusSourcePositionRequest,
 } from '@/utils/editorNavigation'
+import {
+  plateDiagnosticsStore,
+  publishPlateDiagnostics,
+} from '@/components/plate/plateDiagnosticsStore'
 
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => false,
@@ -62,6 +66,7 @@ beforeEach(async () => {
   analysisApi.getDocumentInsights.mockReset()
   analysisApi.getDocumentInsights.mockResolvedValue(createRightSidebarInsights())
   usePreferencesStore.setState({ locale: 'en-US' })
+  plateDiagnosticsStore.setState({ current: null })
   await i18n.changeLanguage('en-US')
 })
 
@@ -274,5 +279,51 @@ describe('RightSidebar', () => {
     fireEvent.click(errorButton!)
 
     expect(onOpenFileView).toHaveBeenCalledWith('target.md', 'source')
+  })
+
+  it('navigates live problems in the rich editor and applies an explicit quick fix', async () => {
+    const onOpenFileView = vi.fn()
+    const focus = vi.fn(() => true)
+    const action = {
+      kind: 'replace-text' as const,
+      title: 'Remove missing heading anchor',
+      edit: {
+        path: 'target.md',
+        line: 1,
+        startColumn: 20,
+        endColumn: 28,
+        newText: '',
+      },
+    }
+    const applyAction = vi.fn().mockResolvedValue(true)
+    const getActions = vi.fn().mockResolvedValue([action])
+    const liveProblem = {
+      line: 1,
+      startColumn: 15,
+      endColumn: 28,
+      message: 'Live missing anchor',
+      severity: 'warning' as const,
+    }
+    publishPlateDiagnostics({
+      key: 'right-sidebar-live',
+      workspaceKey: 'external:D:/wiki',
+      path: 'target.md',
+      content: '[Target](target.md#missing)',
+      diagnostics: [liveProblem],
+      applyAction,
+      focus,
+      getActions,
+    })
+    renderRightSidebar(createProps({ onOpenFileView }))
+    await userEvent.click(screen.getByRole('tab', { name: /problems/i }))
+
+    fireEvent.click(await screen.findByText('Live missing anchor'))
+    expect(onOpenFileView).toHaveBeenCalledWith('target.md', 'edit')
+    expect(focus).toHaveBeenCalledWith(liveProblem)
+
+    await userEvent.click(screen.getByRole('button', { name: /More.*Live missing anchor/ }))
+    await userEvent.click(await screen.findByText('Remove missing heading anchor'))
+    expect(getActions).toHaveBeenCalledWith(liveProblem)
+    expect(applyAction).toHaveBeenCalledWith(liveProblem, action)
   })
 })

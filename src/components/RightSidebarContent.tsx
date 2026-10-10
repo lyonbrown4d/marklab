@@ -22,6 +22,7 @@ import type {
   KnowledgeMissingReference,
 } from '@/logic/knowledge'
 import type { MarkdownSourceDiagnostic } from '@/logic/markdownDiagnostics'
+import type { PlateDiagnosticController } from '@/components/plate/plateDiagnosticsStore'
 import type { FsPathMetadata } from '@/services/fsApi'
 import type { ViewMode } from '@/store/appTypes'
 import { CircleAlert, FileText, ImageIcon, Link2, ListTree, Network } from 'lucide-react'
@@ -48,6 +49,7 @@ type RightSidebarContentProps = {
   activeHeadingSlug: string | null
   backlinks: SidebarBacklink[]
   problems: MarkdownSourceDiagnostic[]
+  problemController: PlateDiagnosticController | null
   errorProblems: MarkdownSourceDiagnostic[]
   warningProblems: MarkdownSourceDiagnostic[]
   knowledge: KnowledgeInsights
@@ -78,6 +80,7 @@ export const RightSidebarContent = ({
   activeHeadingSlug,
   backlinks,
   problems,
+  problemController,
   errorProblems,
   warningProblems,
   knowledge,
@@ -200,6 +203,8 @@ export const RightSidebarContent = ({
               errorProblems={errorProblems}
               warningProblems={warningProblems}
               onOpenProblem={onOpenProblem}
+              onApplyProblemAction={problemController?.applyAction}
+              onGetProblemActions={problemController?.getActions}
             />
           </TabsContent>
           <TabsContent value="assets" className="m-0 min-h-0 flex-1 overflow-hidden">

@@ -12,6 +12,7 @@ const data = {
   outline: [],
   backlinks: [],
   problems: [],
+  problemController: null,
   errorProblems: [],
   warningProblems: [],
   documentStats: { lines: 2, words: 3 },

@@ -64,6 +64,7 @@ const RightSidebarExpanded = ({
     outline,
     backlinks,
     problems,
+    problemController,
     errorProblems,
     warningProblems,
     documentStats,
@@ -146,6 +147,11 @@ const RightSidebarExpanded = ({
   const handleOpenProblem = useCallback(
     (problem: MarkdownSourceDiagnostic) => {
       if (!targetPath) return
+      if (problemController) {
+        onOpenFileView(targetPath, 'edit')
+        problemController.focus(problem)
+        return
+      }
       requestFocusSourcePosition({
         path: targetPath,
         line: problem.line,
@@ -154,7 +160,7 @@ const RightSidebarExpanded = ({
       })
       onOpenFileView(targetPath, 'source')
     },
-    [onOpenFileView, targetPath, workspaceKey],
+    [onOpenFileView, problemController, targetPath, workspaceKey],
   )
 
   return (
@@ -196,6 +202,7 @@ const RightSidebarExpanded = ({
           activeHeadingSlug={activeHeadingSlug}
           backlinks={backlinks}
           problems={problems}
+          problemController={problemController}
           errorProblems={errorProblems}
           warningProblems={warningProblems}
           knowledge={knowledge}

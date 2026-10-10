@@ -61,9 +61,9 @@ Validation:
 
 #### Priority 2: Analysis In The Editor
 
-Status: planned
+Status: in progress
 
-- [ ] Surface existing Markdown diagnostics directly in the rich editor with
+- [x] Surface existing Markdown diagnostics directly in the rich editor with
       lightweight decorations and actions to navigate or apply safe quick fixes.
 - [ ] Extend diagnostics for heading-level gaps, duplicate or unresolved
       footnotes, malformed frontmatter, missing image alternative text, and other
