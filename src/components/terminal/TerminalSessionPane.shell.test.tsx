@@ -1,8 +1,10 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import TerminalSessionPane from '@/components/terminal/TerminalSessionPane'
+import { TERMINAL_FONT_FAMILY } from '@/components/terminal/terminalTheme'
 import { terminalApi } from '@/services/terminalApi'
 
+const terminalConstructor = vi.hoisted(() => vi.fn())
 const terminalInstance = vi.hoisted(() => ({
   cols: 100,
   rows: 30,
@@ -20,7 +22,8 @@ const terminalInstance = vi.hoisted(() => ({
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class Terminal {
-    constructor() {
+    constructor(options: unknown) {
+      terminalConstructor(options)
       return terminalInstance
     }
   },
@@ -70,5 +73,8 @@ describe('TerminalSessionPane shell selection', () => {
         'C:\\Program Files\\PowerShell\\7\\pwsh.exe',
       )
     })
+    expect(terminalConstructor).toHaveBeenCalledWith(
+      expect.objectContaining({ fontFamily: TERMINAL_FONT_FAMILY }),
+    )
   })
 })

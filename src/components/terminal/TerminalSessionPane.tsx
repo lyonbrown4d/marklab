@@ -13,7 +13,7 @@ import {
   primeTerminalEventListeners,
   subscribeTerminalSessionEvents,
 } from '@/components/terminal/terminalEvents'
-import { readTerminalTheme } from '@/components/terminal/terminalTheme'
+import { readTerminalTheme, TERMINAL_FONT_FAMILY } from '@/components/terminal/terminalTheme'
 
 export type TerminalStatus = 'connecting' | 'connected' | 'exited' | 'error' | 'unavailable'
 
@@ -112,7 +112,7 @@ const TerminalSessionPane = ({
       convertEol: true,
       cursorBlink: true,
       cursorStyle: 'bar',
-      fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+      fontFamily: TERMINAL_FONT_FAMILY,
       fontSize: 12,
       letterSpacing: 0,
       lineHeight: 1.24,

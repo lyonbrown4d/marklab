@@ -6,6 +6,7 @@ import type * as Electron from 'electron'
 import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 import { Subject, bufferTime, filter, map, type Subscription } from 'rxjs'
 import { noopLogger, type Logger } from '@electron/services/logger'
+import { buildTerminalEnvironment } from '@electron/services/terminal/environment'
 import { resolveTerminalShell } from '@electron/services/terminal/shellResolver'
 import type {
   TerminalExitEvent,
@@ -55,11 +56,7 @@ export class TerminalService {
         cols: size.cols,
         rows: size.rows,
         cwd,
-        env: {
-          ...process.env,
-          TERM: process.env.TERM || 'xterm-256color',
-          COLORTERM: process.env.COLORTERM || 'truecolor',
-        },
+        env: buildTerminalEnvironment(process.env, process.platform),
         name: 'xterm-256color',
       })
       const output = new Subject<string>()
