@@ -6,9 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const plateContext = vi.hoisted(() => ({
   editor: {
     api: {
+      hasRange: vi.fn(() => true),
       isExpanded: vi.fn(() => true),
       marks: vi.fn(() => ({ bold: true })),
       some: vi.fn(() => false),
+      toSlateRange: vi.fn(() => ({
+        anchor: { offset: 0, path: [0, 0] },
+        focus: { offset: 4, path: [0, 0] },
+      })),
     },
     selection: {
       anchor: { offset: 0, path: [0, 0] },
@@ -17,6 +22,7 @@ const plateContext = vi.hoisted(() => ({
     tf: {
       focus: vi.fn(),
       removeMarks: vi.fn(),
+      select: vi.fn(),
       setNodes: vi.fn(),
       toggleMark: vi.fn(),
       unwrapNodes: vi.fn(),

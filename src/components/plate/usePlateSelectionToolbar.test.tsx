@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { createRef } from 'react'
+import { createRef, StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPlateEditor, type PlateEditor } from 'platejs/react'
 import { usePlateSelectionToolbar } from '@/components/plate/usePlateSelectionToolbar'
@@ -69,7 +69,7 @@ const installNativeSelection = (root: HTMLElement) => {
 }
 
 describe('usePlateSelectionToolbar', () => {
-  it('uses Plate floating to reposition on editor scroll and viewport resize', async () => {
+  it('resumes Strict Mode synchronization and repositions with Plate floating', async () => {
     const editor = createEditor()
     const scroller = document.createElement('div')
     scroller.style.overflow = 'auto'
@@ -79,7 +79,6 @@ describe('usePlateSelectionToolbar', () => {
     root.textContent = 'text selection'
     scroller.append(root)
     document.body.append(scroller)
-    const rect = installNativeSelection(root)
     const editableRef = createRef<HTMLElement>()
     editableRef.current = root
     Object.defineProperties(document.documentElement, {
@@ -87,12 +86,14 @@ describe('usePlateSelectionToolbar', () => {
       clientWidth: { configurable: true, value: 1024 },
     })
 
-    const { result } = renderHook(() =>
-      usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
+    const { result } = renderHook(
+      () => usePlateSelectionToolbar({ editableRef, editor, readOnly: false }),
+      { wrapper: StrictMode },
     )
 
+    const rect = installNativeSelection(root)
     act(() => document.dispatchEvent(new Event('selectionchange')))
-    expect(result.current.open).toBe(true)
+    await waitFor(() => expect(result.current.open).toBe(true))
     const toolbar = document.createElement('div')
     toolbar.style.height = '20px'
     toolbar.style.width = '40px'

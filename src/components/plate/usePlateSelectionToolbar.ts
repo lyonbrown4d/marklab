@@ -239,7 +239,10 @@ export const usePlateSelectionToolbar = ({
       document.removeEventListener('focusin', scheduleSync)
       root.removeEventListener('compositionstart', handleCompositionStart)
       root.removeEventListener('compositionend', handleCompositionEnd)
-      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
     }
   }, [editableRef, scheduleSync, sync])
 
