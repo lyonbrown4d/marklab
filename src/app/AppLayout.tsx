@@ -20,7 +20,7 @@ import { useAppMenuEventSync } from '@/app/useAppMenuEventSync'
 import { useNativeMenuLocaleSync } from '@/app/useNativeMenuLocaleSync'
 import { useAppPendingHeading } from '@/app/useAppPendingHeading'
 import { useAppTerminalArea } from '@/app/useAppTerminalArea'
-import { SettingsDialogHost, type SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
+import { AppDialogHosts, type AppDialogHostsHandle } from '@/app/AppDialogHosts'
 import { useWorkspaceAnalysisInvalidation } from '@/app/useWorkspaceAnalysisInvalidation'
 import { useRetryActiveFile } from '@/app/useRetryActiveFile'
 import { useAppNavigationHistory } from '@/app/useAppNavigationHistory'
@@ -34,16 +34,14 @@ const AppLayout = () => {
   const queryClient = useQueryClient()
   useWorkspaceAnalysisInvalidation(state.workspaceKey)
   const titlebarRef = useRef<TitlebarHandle | null>(null)
-  const settingsDialogRef = useRef<SettingsDialogHostHandle | null>(null)
+  const settingsDialogRef = useRef<AppDialogHostsHandle | null>(null)
   const shellGroupElementRef = useRef<HTMLDivElement | null>(null)
   const terminalPanelRef = usePanelRef()
   const shellPanelLayout = useDefaultLayout({
     id: 'marklab-shell-panels',
     panelIds: ['workspace-area', 'terminal'],
   })
-  const { openCommandPalette, openSettings, toggleReadOnly, toggleStatusBar } = useAppChromeActions(
-    { titlebarRef, settingsDialogRef, stateRef },
-  )
+  const chrome = useAppChromeActions({ titlebarRef, settingsDialogRef, stateRef })
   const { immersiveZenMode } = useAppDocumentSync({ theme: state.theme })
   const editorChromeVisible = !immersiveZenMode && state.activeTab?.kind !== 'web'
   const {
@@ -61,7 +59,7 @@ const AppLayout = () => {
     shellGroupElementRef,
     terminalOpen: effectiveTerminalOpen,
   })
-  const handleMenuAction = useAppMenuAction({ stateRef, openSettings })
+  const handleMenuAction = useAppMenuAction({ stateRef, ...chrome })
   const {
     handleCreateFile,
     handleCreateFolder,
@@ -104,16 +102,16 @@ const AppLayout = () => {
     viewMode: state.viewMode,
     onCloseActiveTab: state.onCloseActiveTab,
     onCreateFile: () => handleMenuAction('file.new'),
-    onOpenCommandPalette: openCommandPalette,
+    onOpenCommandPalette: chrome.openCommandPalette,
     onOpenFile: () => handleMenuAction('file.open_file'),
     onOpenProject: () => handleMenuAction('file.open_project'),
-    onOpenSettings: openSettings,
+    onOpenSettings: chrome.openSettings,
     onOpenTab: state.onOpenTab,
     onSetViewMode: state.setViewMode,
     onToggleRightSidebar: state.toggleRightSidebar,
     onToggleSidebar: state.toggleSidebar,
     onToggleTerminal: toggleTerminalArea,
-    onToggleReadOnly: toggleReadOnly,
+    onToggleReadOnly: chrome.toggleReadOnly,
     onNavigateBack: navigationHistory.back,
     onNavigateForward: navigationHistory.forward,
   })
@@ -235,7 +233,7 @@ const AppLayout = () => {
         onOpenProject={state.onOpenProject}
         onOpenCurrentWorkspaceInNewWindow={state.onOpenCurrentWorkspaceInNewWindow}
         onSelectWorkspaceInNewWindow={state.onSelectWorkspaceInNewWindow}
-        onToggleReadOnly={toggleReadOnly}
+        onToggleReadOnly={chrome.toggleReadOnly}
         onCloseActiveTab={state.onCloseActiveTab}
         onOpenTerminal={openTerminalArea}
         onRebuildSearchIndex={handleRebuildSearchIndex}
@@ -249,14 +247,14 @@ const AppLayout = () => {
         setIsMaximized={state.setIsMaximized}
         theme={state.theme}
         setTheme={state.setTheme}
-        onOpenSettings={openSettings}
+        onOpenSettings={chrome.openSettings}
         recentProjects={state.recentProjects}
         rootKind={state.rootKind}
         rootPath={state.rootPath}
         workspaceWindowOpening={state.workspaceWindowOpening}
         workspaceView={state.workspaceView}
       />
-      <SettingsDialogHost ref={settingsDialogRef} />
+      <AppDialogHosts ref={settingsDialogRef} />
       <AppShellPanels
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}
@@ -282,8 +280,8 @@ const AppLayout = () => {
           terminalOpen={effectiveTerminalOpen}
           readOnlyMode={state.editorReadOnlyMode}
           onToggleTerminal={toggleTerminalArea}
-          onToggleReadOnly={toggleReadOnly}
-          onOpenSettings={openSettings}
+          onToggleReadOnly={chrome.toggleReadOnly}
+          onOpenSettings={chrome.openSettings}
           onRestoreSession={state.restoreSession}
           restoreStatusMessage={state.restoreStatusMessage}
           restoreStatusBusy={state.isRestoringSession}
@@ -291,7 +289,10 @@ const AppLayout = () => {
         />
       </AppStatusBarDock>
       {editorChromeVisible ? (
-        <AppStatusBarEdgeHandle open={state.showEditorStatusBar} onToggle={toggleStatusBar} />
+        <AppStatusBarEdgeHandle
+          open={state.showEditorStatusBar}
+          onToggle={chrome.toggleStatusBar}
+        />
       ) : null}
     </AppStatusBarProvider>
   )

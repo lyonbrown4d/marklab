@@ -16,6 +16,15 @@ type RenderPdfOptions = {
   workspaceRootPath?: string
 }
 
+type RenderPdfHtmlOptions = {
+  BrowserWindowClass: typeof BrowserWindow
+  html: string
+  landscape?: boolean
+  onProgress: (progress: number, message: string) => void
+  pageSize?: 'A4' | 'A5' | 'Letter'
+  signal: AbortSignal
+}
+
 export const renderPdfDocument = async ({
   BrowserWindowClass,
   markdown,
@@ -25,6 +34,23 @@ export const renderPdfDocument = async ({
   signal,
   workspaceRootPath,
 }: RenderPdfOptions): Promise<Buffer> => {
+  const html = await renderHtmlWithLocalImages(markdown, {
+    readImage,
+    resourceBasePath,
+    resolveRelativeResources: true,
+    workspaceRootPath,
+  })
+  return renderPdfHtmlDocument({ BrowserWindowClass, html, onProgress, signal })
+}
+
+export const renderPdfHtmlDocument = async ({
+  BrowserWindowClass,
+  html,
+  landscape = false,
+  onProgress,
+  pageSize = 'A4',
+  signal,
+}: RenderPdfHtmlOptions): Promise<Buffer> => {
   const window = new BrowserWindowClass({
     show: false,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
@@ -37,12 +63,6 @@ export const renderPdfDocument = async ({
   }
   signal.addEventListener('abort', destroyWindow, { once: true })
   try {
-    const html = await renderHtmlWithLocalImages(markdown, {
-      readImage,
-      resourceBasePath,
-      resolveRelativeResources: true,
-      workspaceRootPath,
-    })
     await fs.promises.writeFile(tempHtmlPath, html, { signal })
     onProgress(0.35, 'Rendering PDF document')
     await window.loadFile(tempHtmlPath)
@@ -53,7 +73,7 @@ export const renderPdfDocument = async ({
       )
       .catch(() => undefined)
     onProgress(0.7, 'Writing PDF')
-    const pdf = await window.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+    const pdf = await window.webContents.printToPDF({ landscape, printBackground: true, pageSize })
     signal.throwIfAborted()
     return pdf
   } finally {

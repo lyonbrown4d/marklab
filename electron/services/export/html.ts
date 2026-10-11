@@ -99,6 +99,13 @@ export const renderHtmlWithLocalImages = async (
   const embeddedImages = await loadLocalImages(parseMarkdown(markdown), options)
   return renderHtml(markdown, { ...options, embeddedImages })
 }
+export const renderHtmlFragmentWithLocalImages = async (
+  markdown: string,
+  options: RenderHtmlOptions,
+): Promise<string> => {
+  const embeddedImages = await loadLocalImages(parseMarkdown(markdown), options)
+  return renderMarkdownBody(markdown, { ...options, embeddedImages })
+}
 const renderMarkdownBody = (markdown: string, options: RenderHtmlOptions): string => {
   const file = unified()
     .use(remarkParse)

@@ -50,3 +50,60 @@
 - The settings implementation exposes additional existing controls below the captured viewport instead of removing capabilities to match the static design image.
 
 final result: passed
+
+---
+
+# Workspace Publication Dialog Design QA
+
+## Evidence
+
+- Source visual truth: `/Users/daiyuang/.codex/generated_images/019e92f7-bfce-72b1-90b4-85207fd9bd5b/exec-8464733c-19da-4cae-b447-5042ef7ccf69.png`
+- Implementation screenshot: `/Users/daiyuang/Projects/marklab/output/playwright/design-qa/workspace-publication-option-3.png`
+- Combined comparison: `/Users/daiyuang/Projects/marklab/output/playwright/design-qa/workspace-publication-comparison.png`
+- CSS viewport: 1440 x 900
+- Source pixels: 1487 x 1058; source density was not specified.
+- Implementation pixels: 2880 x 1800 at device scale factor 2.
+- Normalization: both images were resized to 1058 px high. The normalized implementation is 1693 x 1058; the combined comparison is 3180 x 1058.
+- State: Chinese locale, light application theme, ten selected Markdown documents, one unlinked document, PDF/A4/portrait/normal-margin defaults, two-page preview.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain.
+
+- Typography: the implementation uses the application's existing UI font and weight tokens. Heading, control, metadata, and miniature page text preserve the source hierarchy without clipping or negative letter spacing.
+- Spacing and layout: the chapter rail, preview canvas, settings rail, warning, thumbnail strip, and footer actions preserve the source composition. The dialog intentionally uses more of the available viewport than the source mock to keep all persistent controls visible.
+- Colors and tokens: the implementation follows the active application theme instead of fixing the dialog to the dark mock. Semantic foreground, border, muted, success, warning, and primary tokens remain legible in the captured light theme.
+- Image quality: the design contains no product imagery or custom illustration requiring asset fidelity. Lucide and existing shadcn icons are used consistently.
+- Copy and content: visible controls are localized. The earlier Chinese-state `Contents` thumbnail and exported `chapters` labels were replaced by locale-aware preview, PDF, and Word labels.
+
+## Focused Comparison
+
+The full-resolution capture is sufficient to inspect all three rails, page controls, switches, warning text, thumbnails, and footer actions. No separate crop was needed because the 2880 x 1800 implementation evidence keeps control labels and alignment readable.
+
+## Comparison History
+
+1. Initial implementation: the shadcn dialog's default `sm:max-w-lg` constrained the business dialog and clipped the persistent settings rail. This was a P1 functional layout issue.
+2. Fix: the business wrapper now explicitly overrides responsive maximum width while leaving the shared shadcn component unchanged.
+3. Post-fix evidence: the implementation screenshot shows the complete three-column composition. The Electron Playwright assertion confirms that dialog `scrollWidth` and `scrollHeight` do not exceed its client bounds.
+4. Localization pass: the Chinese implementation retained English preview/export labels. Locale is now carried through the typed request and validated at IPC; the final screenshot shows the corrected `目录` thumbnail.
+
+## Primary Interactions Tested
+
+- Open the dialog from the left titlebar workspace menu.
+- Pinch-to-zoom is available in the page preview while ordinary two-finger scrolling remains intact.
+- Load the workspace publication plan from the current workspace index.
+- Render linked and unlinked documents in the proposed order.
+- Exclude a chapter and submit the remaining ordered selection.
+- Verify the PDF export action is available.
+- Verify the dialog has no horizontal or vertical container overflow.
+
+No renderer console errors were observed by the Electron Playwright run.
+
+## Follow-up Polish
+
+- P3: page previews intentionally use title and excerpt estimates. A later iteration can generate paginated thumbnails from the same print HTML when exact WYSIWYG pagination is worth the extra rendering cost.
+- P3: a full-screen preview action can be added if testing shows the current viewport-sized dialog is insufficient for dense documents.
+
+## Final Result
+
+final result: passed

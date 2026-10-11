@@ -56,6 +56,10 @@ const appActionDefinitions = {
   'file.export_pdf': { keywords: 'export pdf', labelKey: 'actions.exportPdf' },
   'file.export_docx': { keywords: 'export docx word', labelKey: 'actions.exportDocx' },
   'file.export_html': { keywords: 'export html', labelKey: 'actions.exportHtml' },
+  'file.export_workspace': {
+    keywords: 'export workspace book publication pdf word',
+    labelKey: 'actions.exportWorkspace',
+  },
   'view.wysiwyg': {
     keywords: 'wysiwyg editor rich text visual editor',
     labelKey: 'editor.modeWysiwyg',

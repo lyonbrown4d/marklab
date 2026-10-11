@@ -223,6 +223,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           newWorkspaceLabel={t('actions.newWorkspace')}
           openFileLabel={t('actions.openFile')}
           newFileLabel={t('sidebar.newFile')}
+          exportWorkspaceLabel={t('actions.exportWorkspace')}
           exportLabel={t('actions.export')}
           exportPdfLabel={t('actions.exportPdf')}
           exportDocxLabel={t('actions.exportDocx')}
@@ -240,6 +241,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onNewWorkspace={onSelectProject}
           onOpenFile={onSelectSingleFile}
           onCreateFile={onCreateFile}
+          onExportWorkspace={() => onMenuAction('file.export_workspace')}
           onExport={(format) => onMenuAction(`file.export_${format}`)}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}

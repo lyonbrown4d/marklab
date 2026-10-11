@@ -5,15 +5,18 @@ import { noopLogger, type Logger } from '@electron/services/logger'
 import type { DesktopNotificationServiceContract } from '@electron/services/desktopNotificationService'
 import type { ExportTaskPayload } from '@electron/types'
 import { validateExistingLocalPath } from '@electron/services/pathValidation'
-import { renderDocx } from '@electron/services/export/docx'
 import { ExportQueue } from '@electron/services/export/exportQueue'
-import { renderHtmlWithLocalImages } from '@electron/services/export/html'
 import { applyWindowExportProgress } from '@electron/services/nativeExportProgress'
 import {
   notifyExportFailed,
   notifyExportFinished,
 } from '@electron/services/export/exportNotifications'
-import { renderPdfDocument } from '@electron/services/export/pdf'
+import {
+  renderMarkdownExport,
+  renderWorkspacePublicationExport,
+} from '@electron/services/export/exportWriters'
+import type { WorkspacePublicationSource } from '@electron/services/export/workspacePublicationHtml'
+import type { ActiveExport } from '@electron/services/export/exportTaskTypes'
 import {
   createExportTaskId,
   parseExportFormat,
@@ -23,15 +26,7 @@ import {
   type ExportFormat,
   type ExportResourceContext,
 } from '@electron/services/export/exportRequest'
-type ActiveExport = {
-  controller: AbortController
-  format: ExportFormat
-  outputPath: string
-  cancellationReported: boolean
-  committing: boolean
-  ownerId?: number
-  progress: number
-}
+import type { WorkspacePublicationOptions } from '@/types/workspacePublication'
 export class ExportService {
   private readonly allowedOutputPaths = new Map<string, number | undefined>()
   private readonly queue = new ExportQueue(1)
@@ -49,6 +44,27 @@ export class ExportService {
     const format = parseExportFormat(value)
     const outputPath = validateExportOutputPath(value)
     validateExportOutputExtension(outputPath, format)
+    return this.queueExport(format, outputPath, resources, (taskId, task) =>
+      this.writeExport(taskId, markdown, task, resources),
+    )
+  }
+  exportWorkspacePublication(
+    chapters: WorkspacePublicationSource[],
+    options: WorkspacePublicationOptions,
+    outputPath: string,
+    resources: ExportResourceContext,
+  ): string {
+    validateExportOutputExtension(outputPath, options.format)
+    return this.queueExport(options.format, outputPath, resources, (taskId, task) =>
+      this.writePublicationExport(taskId, chapters, options, task, resources),
+    )
+  }
+  private queueExport(
+    format: ExportFormat,
+    outputPath: string,
+    resources: ExportResourceContext,
+    write: (taskId: string, task: ActiveExport) => Promise<void>,
+  ): string {
     const taskId = createExportTaskId(format)
     const task: ActiveExport = {
       controller: new AbortController(),
@@ -77,7 +93,7 @@ export class ExportService {
       task.ownerId,
     )
     void this.queue
-      .enqueue(() => this.runExport(taskId, markdown, task, resources))
+      .enqueue(() => this.runExport(taskId, task, resources, () => write(taskId, task)))
       .catch((error) => {
         this.logger.error('queued export task failed unexpectedly', { error, taskId })
       })
@@ -130,14 +146,14 @@ export class ExportService {
   }
   private async runExport(
     taskId: string,
-    markdown: string,
     task: ActiveExport,
     resources: ExportResourceContext,
+    write: () => Promise<void>,
   ): Promise<void> {
     const { format, outputPath } = task
     try {
       task.controller.signal.throwIfAborted()
-      await this.writeExport(taskId, markdown, format, outputPath, task, resources)
+      await write()
       task.controller.signal.throwIfAborted()
       this.allowedOutputPaths.set(outputPath, task.ownerId)
       this.logger.info('export task finished', {
@@ -203,52 +219,43 @@ export class ExportService {
   private async writeExport(
     taskId: string,
     markdown: string,
-    format: ExportFormat,
-    outputPath: string,
     task: ActiveExport,
     resources: ExportResourceContext,
   ): Promise<void> {
-    const { resourceBasePath, workspaceRootPath } = resources
+    const { format, outputPath } = task
     const signal = task.controller.signal
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
     this.emitExportProgress(taskId, format, outputPath, 0.15, 'Preparing export')
-    if (format === 'html') {
-      this.emitExportProgress(taskId, format, outputPath, 0.45, 'Rendering HTML document')
-      const html = await renderHtmlWithLocalImages(markdown, {
-        readImage: resources.readImage,
-        resourceBasePath,
-        resolveRelativeResources: true,
-        workspaceRootPath,
-      })
-      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
-      await this.commitOutput(resources, task, html)
-      return
-    }
-    if (format === 'pdf') {
-      const pdf = await renderPdfDocument({
-        BrowserWindowClass: this.BrowserWindowClass,
-        markdown,
-        onProgress: (progress, message) =>
-          this.emitExportProgress(taskId, format, outputPath, progress, message),
-        resourceBasePath,
-        readImage: resources.readImage,
-        signal,
-        workspaceRootPath,
-      })
-      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
-      await this.commitOutput(resources, task, pdf)
-      return
-    }
-    if (format === 'docx') {
-      this.emitExportProgress(taskId, format, outputPath, 0.45, 'Rendering Word document')
-      const document = await renderDocx(markdown, {
-        readImage: resources.readImage,
-      })
-      this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
-      await this.commitOutput(resources, task, document)
-      return
-    }
-    throw new Error(`Unsupported export format: ${format}`)
+    const data = await renderMarkdownExport(
+      this.BrowserWindowClass,
+      format,
+      markdown,
+      resources,
+      signal,
+      (progress, message) => this.emitExportProgress(taskId, format, outputPath, progress, message),
+    )
+    this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
+    await this.commitOutput(resources, task, data)
+  }
+  private async writePublicationExport(
+    taskId: string,
+    chapters: WorkspacePublicationSource[],
+    options: WorkspacePublicationOptions,
+    task: ActiveExport,
+    resources: ExportResourceContext,
+  ): Promise<void> {
+    const { format, outputPath } = task
+    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
+    this.emitExportProgress(taskId, format, outputPath, 0.15, 'Preparing publication')
+    const data = await renderWorkspacePublicationExport(
+      this.BrowserWindowClass,
+      chapters,
+      options,
+      task.controller.signal,
+      (progress, message) => this.emitExportProgress(taskId, format, outputPath, progress, message),
+    )
+    this.emitExportProgress(taskId, format, outputPath, 0.9, 'Saving exported file')
+    await this.commitOutput(resources, task, data)
   }
   private async commitOutput(
     resources: ExportResourceContext,

@@ -18,6 +18,7 @@ const messages: Record<string, string> = {
   'actions.exportDocx': 'Export DOCX',
   'actions.exportHtml': 'Export HTML',
   'actions.exportPdf': 'Export PDF',
+  'actions.exportWorkspace': 'Export Workspace',
   'actions.newWindow': 'New Window',
   'actions.openFile': 'Open File',
   'actions.openProject': 'Open Project',

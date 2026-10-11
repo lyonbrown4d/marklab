@@ -43,6 +43,7 @@ const renderMenu = () => {
         newWorkspaceLabel="New workspace"
         openFileLabel="Open file"
         newFileLabel="New file"
+        exportWorkspaceLabel="Export workspace"
         recentWorkspaces={{
           currentLabel: 'Current',
           emptyLabel: 'Empty',
@@ -57,6 +58,7 @@ const renderMenu = () => {
         onNewWorkspace={vi.fn()}
         onOpenFile={vi.fn()}
         onCreateFile={vi.fn()}
+        onExportWorkspace={vi.fn()}
         onOpenProject={vi.fn()}
         onOpenCurrentWorkspaceInNewWindow={vi.fn()}
         onSelectWorkspaceInNewWindow={vi.fn()}
@@ -75,11 +77,18 @@ describe('TitlebarWorkspaceMenu sync flow', () => {
 
     await user.keyboard('{ArrowDown}')
     const configure = await screen.findByRole('menuitem', { name: /sync\.binding\.configure/ })
-    await user.keyboard('{ArrowUp}')
+    const menuItems = await screen.findAllByRole('menuitem')
+    for (
+      let index = 0;
+      index < menuItems.length && document.activeElement !== configure;
+      index += 1
+    ) {
+      await user.keyboard('{ArrowDown}')
+    }
     await waitFor(() => expect(configure).toHaveFocus())
     await user.keyboard('{Enter}')
 
-    expect(await screen.findByRole('dialog', { name: 'sync.binding.title' })).toBeInTheDocument()
+    await screen.findByRole('dialog', { name: 'sync.binding.title' })
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'sync.binding.title' })).not.toBeInTheDocument()

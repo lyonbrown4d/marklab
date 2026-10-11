@@ -1,4 +1,3 @@
-import path from 'node:path'
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import type { ExportService } from '@electron/services/export/exportService'
@@ -13,13 +12,7 @@ import type { LocalHistoryServiceContract } from '@electron/services/localHistor
 import { EmbeddedMarkdownLanguageService } from '@electron/services/markdownLanguage/service'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
-import {
-  commitSavePathCapability,
-  consumeSavePathCapability,
-  releaseSavePathCapability,
-} from '@electron/ipc/savePathCapabilities'
-import { validateExportOutputPath } from '@electron/services/export/exportRequest'
-import { maxLocalImageBytes } from '@electron/services/export/docxImages'
+import { createWorkspaceExportCommandHandlers } from '@electron/ipc/workspaceExportCommands'
 import {
   parseWorkspaceDocumentInsightsRequest,
   parseWorkspaceNavigationQuery,
@@ -212,42 +205,7 @@ const createWorkspaceCommandHandlers = (
       markdownLanguageService.getCodeActions(workspaceForEvent(event), payload),
     markdown_language_get_hover: (payload, event) =>
       markdownLanguageService.getHover(workspaceForEvent(event), payload),
-    export_markdown: async (payload, event) => {
-      const capability = await consumeSavePathCapability(
-        event.sender.id,
-        validateExportOutputPath(payload),
-      )
-      try {
-        const workspace = workspaceForEvent(event)
-        const sourceDocumentPath = readRequiredString(payload, 'sourceDocumentPath')
-        const markdown = await workspace.readFile({ path: sourceDocumentPath })
-        const resourceBasePath = path.dirname(workspace.resolveCoordinatorPath(sourceDocumentPath))
-        const root = workspace.rootInfo()
-        const workspaceRootPath = root.kind === 'single' ? path.dirname(root.path) : root.path
-        return exportService.exportMarkdown(
-          {
-            format: readRequiredString(payload, 'format'),
-            markdown,
-            outputPath: validateExportOutputPath(payload),
-          },
-          {
-            commitOutput: (data) => commitSavePathCapability(capability, data),
-            ownerId: event.sender.id,
-            readImage: (url) =>
-              workspace.readMarkdownExportAsset(sourceDocumentPath, url, maxLocalImageBytes),
-            resourceBasePath,
-            releaseOutput: () => releaseSavePathCapability(capability),
-            workspaceRootPath,
-          },
-        )
-      } catch (error) {
-        await releaseSavePathCapability(capability)
-        throw error
-      }
-    },
-    export_cancel: (payload, event) => exportService.cancelExport(payload, event.sender.id),
-    export_open_output_path: (payload, event) =>
-      exportService.openOutputPath(payload, event.sender.id),
+    ...createWorkspaceExportCommandHandlers(workspaceForEvent, exportService),
   }
 }
 

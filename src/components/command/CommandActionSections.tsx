@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   CircleHelp,
   FileText,
   FilePlus2,
@@ -147,6 +148,13 @@ const CommandActionSections = ({
           <X className="size-4" />
           <span className="truncate">{actions['tab.close'].label}</span>
           <CommandActionShortcut label={actions['tab.close'].shortcut} />
+        </CommandItem>
+        <CommandItem
+          value={actions['file.export_workspace'].searchValue}
+          onSelect={() => onAction(actions['file.export_workspace'].id)}
+        >
+          <BookOpen className="size-4" />
+          {actions['file.export_workspace'].label}
         </CommandItem>
         <CommandItem
           value={actions['file.export_pdf'].searchValue}

@@ -71,6 +71,7 @@ describe('appActionCatalog', () => {
       'file.export_docx': vi.fn(),
       'file.export_html': vi.fn(),
       'file.export_pdf': vi.fn(),
+      'file.export_workspace': vi.fn(),
       'file.new': vi.fn(),
       'file.new_folder': vi.fn(),
       'file.open_file': openFile,

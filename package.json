@@ -245,6 +245,7 @@
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-virtual": "^3.14.14",
     "@uiw/codemirror-theme-eclipse": "^4.25.12",
+    "@use-gesture/react": "10.3.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-unicode11": "^0.9.0",
     "@xterm/addon-web-links": "^0.12.0",

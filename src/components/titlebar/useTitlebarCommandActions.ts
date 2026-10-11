@@ -92,6 +92,7 @@ export const useTitlebarCommandActions = ({
         'file.export_docx': () => onMenuAction('file.export_docx'),
         'file.export_html': () => onMenuAction('file.export_html'),
         'file.export_pdf': () => onMenuAction('file.export_pdf'),
+        'file.export_workspace': () => onMenuAction('file.export_workspace'),
         'file.new': onCreateFile,
         'file.new_folder': onCreateFolder,
         'file.open_file': onSelectSingleFile,

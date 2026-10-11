@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
+import type { AppDialogHostsHandle } from '@/app/AppDialogHosts'
 import type { SettingsDialogHostHandle } from '@/app/SettingsDialogHost'
 import type { TitlebarHandle } from '@/components/Titlebar'
 import type { SettingsSelection } from '@/components/settings/settingsRoutes'
 
 type ChromeActionState = {
   activePath: string | null
+  rootPath?: string
   editorReadOnlyMode: boolean
   showEditorStatusBar: boolean
   setEditorReadOnlyMode: (value: boolean) => void
@@ -14,7 +16,9 @@ type ChromeActionState = {
 
 type UseAppChromeActionsOptions = {
   titlebarRef: { current: TitlebarHandle | null }
-  settingsDialogRef: { current: SettingsDialogHostHandle | null }
+  settingsDialogRef: {
+    current: (SettingsDialogHostHandle & Partial<AppDialogHostsHandle>) | null
+  }
   stateRef: { readonly current: ChromeActionState }
 }
 
@@ -31,6 +35,10 @@ export const useAppChromeActions = ({
     (selection?: SettingsSelection) => settingsDialogRef.current?.openSettings(selection),
     [settingsDialogRef],
   )
+  const openWorkspacePublication = useCallback(() => {
+    const rootPath = stateRef.current.rootPath
+    if (rootPath) settingsDialogRef.current?.openWorkspacePublication?.(rootPath)
+  }, [settingsDialogRef, stateRef])
   const toggleReadOnly = useCallback(() => {
     const state = stateRef.current
     const nextReadOnly = !state.editorReadOnlyMode
@@ -42,5 +50,11 @@ export const useAppChromeActions = ({
     state.setShowEditorStatusBar(!state.showEditorStatusBar)
   }, [stateRef])
 
-  return { openCommandPalette, openSettings, toggleReadOnly, toggleStatusBar }
+  return {
+    openCommandPalette,
+    openSettings,
+    openWorkspacePublication,
+    toggleReadOnly,
+    toggleStatusBar,
+  }
 }

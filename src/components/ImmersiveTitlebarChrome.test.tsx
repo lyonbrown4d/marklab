@@ -42,6 +42,7 @@ const createProps = () => ({
   newWorkspaceLabel: '新建工作区',
   openFileLabel: '打开文件',
   newFileLabel: '新建文件',
+  exportWorkspaceLabel: '导出工作区…',
   exportLabel: '导出',
   exportPdfLabel: '导出为 PDF',
   exportDocxLabel: '导出为 Word',
@@ -55,6 +56,7 @@ const createProps = () => ({
   onNewWorkspace: vi.fn(),
   onOpenFile: vi.fn(),
   onCreateFile: vi.fn(),
+  onExportWorkspace: vi.fn(),
   onExport: vi.fn(),
   onOpenProject: vi.fn(),
   onOpenCurrentWorkspaceInNewWindow: vi.fn(),
@@ -99,6 +101,17 @@ describe('ImmersiveTitlebarChrome', () => {
     rerender(<ImmersiveTitlebarChrome {...props} activeWorkspaceView="map" />)
     await user.click(screen.getByRole('radio', { name: '文件' }))
     expect(props.onOpenWorkspaceFiles).toHaveBeenCalledOnce()
+  })
+
+  it('exports the workspace from the left workspace menu', async () => {
+    const props = createProps()
+    const user = userEvent.setup()
+    render(<ImmersiveTitlebarChrome {...props} />)
+
+    await user.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await user.click(screen.getByRole('menuitem', { name: '导出工作区…' }))
+
+    expect(props.onExportWorkspace).toHaveBeenCalledOnce()
   })
 
   it('shows the workspace map title and hides document-only actions on the map', async () => {
@@ -152,6 +165,19 @@ describe('ImmersiveTitlebarChrome', () => {
 
     expect(screen.queryByRole('radio', { name: '文件' })).not.toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: '地图' })).not.toBeInTheDocument()
+  })
+
+  it('disables workspace export in single-file mode', async () => {
+    const user = userEvent.setup()
+    render(
+      <ImmersiveTitlebarChrome
+        {...createProps()}
+        recentWorkspaces={{ ...createProps().recentWorkspaces, rootKind: 'single' }}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    expect(screen.getByRole('menuitem', { name: '导出工作区…' })).toHaveAttribute('data-disabled')
   })
 
   it('uses a generic local-library context when no document is active', () => {
@@ -267,6 +293,8 @@ describe('ImmersiveTitlebarChrome', () => {
 
     screen.getByRole('button', { name: '工作区: 随笔' }).focus()
     await user.keyboard('{ArrowDown}')
+    await screen.findByRole('menuitem', { name: '在新窗口打开工作区：随笔' })
+    await user.keyboard('{ArrowDown}{ArrowDown}')
     await user.keyboard('{Enter}')
 
     expect(props.onOpenProject).toHaveBeenCalledWith('D:/随笔')

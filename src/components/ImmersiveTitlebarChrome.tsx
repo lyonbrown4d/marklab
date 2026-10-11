@@ -34,6 +34,7 @@ type ImmersiveTitlebarChromeProps = {
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
+  exportWorkspaceLabel: string
   exportLabel: string
   exportPdfLabel: string
   exportDocxLabel: string
@@ -51,6 +52,7 @@ type ImmersiveTitlebarChromeProps = {
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
+  onExportWorkspace: () => void
   onExport: (format: Extract<ExportFormat, 'pdf' | 'docx'>) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
@@ -104,6 +106,7 @@ export const ImmersiveTitlebarChrome = ({
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
+  exportWorkspaceLabel,
   exportLabel,
   exportPdfLabel,
   exportDocxLabel,
@@ -121,6 +124,7 @@ export const ImmersiveTitlebarChrome = ({
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
+  onExportWorkspace,
   onExport,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
@@ -176,12 +180,14 @@ export const ImmersiveTitlebarChrome = ({
           newWorkspaceLabel={newWorkspaceLabel}
           openFileLabel={openFileLabel}
           newFileLabel={newFileLabel}
+          exportWorkspaceLabel={exportWorkspaceLabel}
           recentWorkspaces={recentWorkspaces}
           openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
           openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
           onNewWorkspace={onNewWorkspace}
           onOpenFile={onOpenFile}
           onCreateFile={onCreateFile}
+          onExportWorkspace={onExportWorkspace}
           onOpenProject={onOpenProject}
           onOpenCurrentWorkspaceInNewWindow={onOpenCurrentWorkspaceInNewWindow}
           onSelectWorkspaceInNewWindow={onSelectWorkspaceInNewWindow}

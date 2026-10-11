@@ -14,9 +14,14 @@ type AppLayoutState = ReturnType<typeof useAppLayoutState>
 type UseAppMenuActionArgs = {
   stateRef: { current: AppLayoutState }
   openSettings: () => void
+  openWorkspacePublication?: () => void
 }
 
-export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArgs) => {
+export const useAppMenuAction = ({
+  stateRef,
+  openSettings,
+  openWorkspacePublication,
+}: UseAppMenuActionArgs) => {
   const { t } = useI18n()
   const setImmersiveZenMode = usePreferencesStore((state) => state.setImmersiveZenMode)
   const setImmersiveFocusMode = usePreferencesStore((state) => state.setImmersiveFocusMode)
@@ -56,6 +61,10 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
       if (id === 'file.new') {
         const next = createUntitledPath()
         void currentState.createFile(next).then(() => currentState.onOpenFile(next))
+        return
+      }
+      if (id === 'file.export_workspace') {
+        openWorkspacePublication?.()
         return
       }
       if (id === 'file.export_pdf' || id === 'file.export_docx' || id === 'file.export_html') {
@@ -109,6 +118,7 @@ export const useAppMenuAction = ({ stateRef, openSettings }: UseAppMenuActionArg
     },
     [
       openSettings,
+      openWorkspacePublication,
       setImmersiveFocusMode,
       setImmersiveTypewriterMode,
       setImmersiveZenMode,

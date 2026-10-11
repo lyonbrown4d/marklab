@@ -73,6 +73,72 @@ describe('workspace export IPC', () => {
     }
     await context.releaseOutput?.()
   })
+
+  it('reads each selected chapter in main and scopes image loading to its source file', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-publication-ipc-'))
+    temporaryRoots.push(root)
+    const outputPath = path.join(root, 'book.docx')
+    await issueSavePathCapability(7, outputPath)
+    const handlers = new Map<string, Handler>()
+    const exportWorkspacePublication = vi.fn((...args: [unknown, unknown, string, unknown]) => {
+      void args
+      return 'export-docx-1'
+    })
+    const readFile = vi.fn(async ({ path: filePath }: { path: string }) => `# ${filePath}`)
+    const readMarkdownExportAsset = vi.fn(async () => Buffer.from('image'))
+    registerWorkspaceCommandsIpc(
+      { handle: (command: string, handler: Handler) => handlers.set(command, handler) } as never,
+      {
+        app: { addRecentDocument: vi.fn() },
+        exportService: { exportWorkspacePublication } as never,
+        graphLayoutStore: {} as never,
+        localHistoryService: {} as never,
+        logger: { info: vi.fn() } as never,
+        workspaceRegistry: {
+          serviceForWebContents: vi.fn(() => ({
+            readFile,
+            readMarkdownExportAsset,
+          })),
+        } as never,
+      },
+    )
+
+    await expect(
+      handlers.get('export_workspace_publication')?.(event(), {
+        chapters: [
+          { path: 'one.md', title: 'One' },
+          { path: 'nested/two.md', title: 'Two' },
+        ],
+        options: {
+          cover: true,
+          format: 'docx',
+          locale: 'en-US',
+          margin: 'normal',
+          orientation: 'portrait',
+          pageBreaks: true,
+          pageNumbers: true,
+          pageSize: 'a4',
+          tableOfContents: true,
+          title: 'Book',
+        },
+        outputPath,
+      }),
+    ).resolves.toBe('export-docx-1')
+
+    expect(readFile).toHaveBeenNthCalledWith(1, { path: 'one.md' })
+    expect(readFile).toHaveBeenNthCalledWith(2, { path: 'nested/two.md' })
+    const chapters = exportWorkspacePublication.mock.calls[0]?.[0] as
+      Array<{ readImage: (url: string) => Promise<Buffer | null> }> | undefined
+    await chapters?.[1]?.readImage('image.png')
+    expect(readMarkdownExportAsset).toHaveBeenCalledWith(
+      'nested/two.md',
+      'image.png',
+      expect.any(Number),
+    )
+    const context = exportWorkspacePublication.mock.calls[0]?.[3] as
+      { releaseOutput?: () => Promise<void> } | undefined
+    await context?.releaseOutput?.()
+  })
 })
 
 type Handler = (event: { sender: { id: number } }, payload: unknown) => unknown

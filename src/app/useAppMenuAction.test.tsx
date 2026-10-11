@@ -83,4 +83,19 @@ describe('useAppMenuAction', () => {
       activePath: 'notes/readme.md',
     })
   })
+
+  it('opens the workspace publication flow without requiring an active file', () => {
+    const openWorkspacePublication = vi.fn()
+    const { result } = renderHook(() =>
+      useAppMenuAction({
+        stateRef: { current: createState({ activePath: null }) as never },
+        openSettings: vi.fn(),
+        openWorkspacePublication,
+      }),
+    )
+
+    act(() => result.current('file.export_workspace'))
+
+    expect(openWorkspacePublication).toHaveBeenCalledOnce()
+  })
 })

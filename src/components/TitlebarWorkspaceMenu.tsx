@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronDown,
+  Download,
   ExternalLink,
   FilePlus2,
   FileText,
@@ -44,12 +45,14 @@ type TitlebarWorkspaceMenuProps = {
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
+  exportWorkspaceLabel: string
   recentWorkspaces: RecentWorkspaceMenuData
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
   onNewWorkspace: () => void
   onOpenFile: () => void
   onCreateFile: () => void
+  onExportWorkspace: () => void
   onOpenProject: (path: string) => void
   onOpenCurrentWorkspaceInNewWindow: () => void
   onSelectWorkspaceInNewWindow: () => void
@@ -62,12 +65,14 @@ export const TitlebarWorkspaceMenu = ({
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
+  exportWorkspaceLabel,
   recentWorkspaces,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
+  onExportWorkspace,
   onOpenProject,
   onOpenCurrentWorkspaceInNewWindow,
   onSelectWorkspaceInNewWindow,
@@ -119,6 +124,15 @@ export const TitlebarWorkspaceMenu = ({
               <span className="block truncate text-sm font-medium text-foreground">{section}</span>
             </span>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator className={menuSeparatorStyles} />
+          <DropdownMenuItem
+            className={menuItemStyles({ className: 'py-2' })}
+            disabled={recentWorkspaces.rootKind === 'single'}
+            onSelect={onExportWorkspace}
+          >
+            <Download aria-hidden="true" />
+            {exportWorkspaceLabel}
+          </DropdownMenuItem>
           <DropdownMenuSeparator className={menuSeparatorStyles} />
           <WorkspaceSyncMenuSection
             rootKind={recentWorkspaces.rootKind}
