@@ -1,7 +1,9 @@
 import {
   detectPlatform,
   formatForDisplay,
+  matchesKeyboardEvent,
   normalizeHotkey,
+  parseHotkey,
   validateHotkey,
   type RegisterableHotkey,
 } from '@tanstack/react-hotkeys'
@@ -28,6 +30,7 @@ export const shortcutActions = [
   { id: 'view.toggleTerminal', scope: 'app', labelKey: 'shortcuts.toggleTerminal' },
   { id: 'view.toggleReadonly', scope: 'app', labelKey: 'shortcuts.toggleReadonly' },
   { id: 'view.toggleStatusBar', scope: 'app', labelKey: 'shortcuts.toggleStatusBar' },
+  { id: 'editor.inlineAiComposer', scope: 'editor', labelKey: 'shortcuts.inlineAiComposer' },
   { id: 'editor.paragraph', scope: 'editor', labelKey: 'shortcuts.paragraph' },
   { id: 'editor.heading1', scope: 'editor', labelKey: 'shortcuts.heading1' },
   { id: 'editor.heading2', scope: 'editor', labelKey: 'shortcuts.heading2' },
@@ -81,6 +84,7 @@ export const shortcutCategories = [
     id: 'editor',
     labelKey: 'shortcuts.editorCategory',
     actions: [
+      'editor.inlineAiComposer',
       'editor.paragraph',
       'editor.heading1',
       'editor.heading2',
@@ -127,6 +131,7 @@ export const defaultShortcutBindings: Record<ShortcutActionId, string[]> = {
   'view.toggleTerminal': ['Mod+J'],
   'view.toggleReadonly': ['Mod+Shift+E'],
   'view.toggleStatusBar': ['Mod+Shift+B'],
+  'editor.inlineAiComposer': ['Mod+Shift+J'],
   'editor.paragraph': ['Mod+0'],
   'editor.heading1': ['Mod+1'],
   'editor.heading2': ['Mod+2'],
@@ -232,6 +237,16 @@ export const normalizeShortcut = (shortcut: string): string | null => {
 export const isShortcutActionId = (input: string): input is ShortcutActionId => {
   return shortcutActionIdSet.has(input as ShortcutActionId)
 }
+
+export const matchesShortcutAction = (
+  event: KeyboardEvent,
+  action: ShortcutActionId,
+  overrides: ShortcutBindings = {},
+  platform: ShortcutPlatform = detectPlatform(),
+) =>
+  resolveShortcutBindings(overrides)[action].some((binding) =>
+    matchesKeyboardEvent(event, parseHotkey(binding, platform), platform),
+  )
 
 export const formatShortcut = (shortcut: string, platform: ShortcutPlatform = detectPlatform()) => {
   if (!shortcut) return ''

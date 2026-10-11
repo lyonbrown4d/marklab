@@ -23,6 +23,7 @@ describe('AI completion preferences', () => {
 
     expect(store.documentCompletionEnabled).toBe(true)
     expect(store.aiCompletionEnabled).toBe(false)
+    expect(store.aiCompletionSnoozedUntil).toBeNull()
     expect(store.aiCompletionProviderId).toBeNull()
     expect(store.aiCompletionTriggerMode).toBe('balanced')
     expect(store.aiCompletionLength).toBe('medium')
@@ -31,6 +32,7 @@ describe('AI completion preferences', () => {
 
     store.setDocumentCompletionEnabled(false)
     store.setAiCompletionEnabled(true)
+    store.setAiCompletionSnoozedUntil(1_000)
     store.setAiCompletionProviderId('ollama-local')
     store.setAiCompletionTriggerMode('fast')
     store.setAiCompletionLength('long')
@@ -40,12 +42,22 @@ describe('AI completion preferences', () => {
     expect(usePreferencesStore.getState()).toMatchObject({
       documentCompletionEnabled: false,
       aiCompletionEnabled: true,
+      aiCompletionSnoozedUntil: 1_000,
       aiCompletionProviderId: 'ollama-local',
       aiCompletionTriggerMode: 'fast',
       aiCompletionLength: 'long',
       aiCompletionNearbyContextEnabled: false,
       aiCompletionCloudContextConsent: true,
     })
+  })
+
+  it('keeps a temporary completion pause out of persisted preferences', () => {
+    usePreferencesStore.getState().setAiCompletionSnoozedUntil(1_000)
+
+    expect(usePreferencesStore.getState().aiCompletionSnoozedUntil).toBe(1_000)
+    expect(selectPreferencesPersistedState(usePreferencesStore.getState())).not.toHaveProperty(
+      'aiCompletionSnoozedUntil',
+    )
   })
 
   it('includes every completion preference in persisted state', () => {

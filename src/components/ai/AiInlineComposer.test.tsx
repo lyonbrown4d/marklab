@@ -10,9 +10,12 @@ const labels = {
   accept: 'Accept',
   abandon: 'Abandon',
   concise: 'Make concise',
+  configuration: 'Model and privacy',
   dialog: 'AI writing assistant',
   diff: 'AI proposal diff',
+  done: 'Done',
   explain: 'Explain',
+  explanation: 'AI explanation',
   findingModel: 'Finding model…',
   generate: 'Generate',
   instruction: 'AI instruction',
@@ -38,6 +41,7 @@ const baseProps = {
   onRetry: vi.fn(),
   onStop: vi.fn(),
   onSubmit: vi.fn(),
+  outputKind: 'replacement' as const,
   phase: 'prompt' as const,
   proposal: '',
   providerId: 'openai-main',
@@ -124,6 +128,8 @@ describe('AiInlineComposer', () => {
     const onProviderChange = vi.fn()
     render(<AiInlineComposer {...baseProps} onProviderChange={onProviderChange} />)
 
+    expect(screen.queryByRole('combobox', { name: labels.provider })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: labels.configuration }))
     fireEvent.click(screen.getByRole('combobox', { name: labels.provider }))
     fireEvent.click(screen.getByRole('option', { name: 'Ollama · qwen3:8b' }))
     expect(onProviderChange).toHaveBeenCalledWith('ollama-local')
@@ -176,6 +182,29 @@ describe('AiInlineComposer', () => {
     fireEvent.click(screen.getByRole('button', { name: labels.abandon }))
     fireEvent.click(screen.getByRole('button', { name: labels.retry }))
     expect(baseProps.onAccept).toHaveBeenCalled()
+    expect(baseProps.onDismiss).toHaveBeenCalled()
+    expect(baseProps.onRetry).toHaveBeenCalled()
+  })
+
+  it('renders Explain as a read-only result without a replacement action', () => {
+    const onAccept = vi.fn()
+    render(
+      <AiInlineComposer
+        {...baseProps}
+        onAccept={onAccept}
+        outputKind="explanation"
+        phase="proposal"
+        proposal="This passage describes the release process."
+      />,
+    )
+
+    expect(screen.getByRole('region', { name: labels.explanation })).toHaveTextContent(
+      'This passage describes the release process.',
+    )
+    expect(screen.queryByRole('button', { name: labels.accept })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: labels.done }))
+    fireEvent.click(screen.getByRole('button', { name: labels.retry }))
+    expect(onAccept).not.toHaveBeenCalled()
     expect(baseProps.onDismiss).toHaveBeenCalled()
     expect(baseProps.onRetry).toHaveBeenCalled()
   })

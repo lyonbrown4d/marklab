@@ -4,10 +4,12 @@ import { FilePlus2, FileText, Heading } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
+import { InlineCompletionGhost } from '@/components/plate/completion/InlineCompletionGhost'
 import type { PlateInlineDocumentCompletion } from '@/components/plate/completion/types'
 import type { PlateWorkspaceLinkItem } from '@/components/plate/workspaceLink/plateWorkspaceLinkCompletion'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
+import { inferPlatformFromUserAgent } from '@/runtime/environment'
 
 type CompletionLeaf = TText & {
   plateDiagnosticMessage?: string
@@ -120,7 +122,7 @@ const DocumentCompletionMenu = ({
       </PopoverAnchor>
       <PopoverContent
         align="start"
-        className={cn(menuSurfaceStyles(), 'w-[min(28rem,calc(100vw-2rem))]')}
+        className={cn(menuSurfaceStyles(), 'w-auto min-w-64 max-w-[min(24rem,calc(100vw-2rem))]')}
         contentEditable={false}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onOpenAutoFocus={(event) => event.preventDefault()}
@@ -153,13 +155,19 @@ const DocumentCompletionMenu = ({
                 {candidate.text.replace(/\s+/gu, ' ').trim()}
               </span>
               <span
-                className="shrink-0 text-[0.6875rem] text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+                className="shrink-0 text-[0.6875rem] text-muted-foreground"
                 data-completion-meta=""
               >
                 {t('editor.completionSourceDocument')}
               </span>
             </Button>
           ))}
+        </div>
+        <div
+          className="border-t border-border/60 px-2 pt-1.5 text-[0.6875rem] text-muted-foreground"
+          data-completion-footer=""
+        >
+          {t('editor.completionHint')}
         </div>
       </PopoverContent>
     </Popover>
@@ -176,6 +184,10 @@ export const PlateInlineCompletionLeaf = ({
   const candidates = completionLeaf.plateInlineCompletionCandidates ?? []
   const workspaceLinkItems = completionLeaf.plateWorkspaceLinkItems ?? []
   const text = completionLeaf.plateInlineCompletion
+  const singleDocumentCandidate =
+    completionLeaf.plateInlineCompletionKind === 'document' && candidates.length === 1
+      ? candidates[0]
+      : null
   return (
     <span
       {...attributes}
@@ -198,22 +210,31 @@ export const PlateInlineCompletionLeaf = ({
           items={workspaceLinkItems}
           label={t('editor.workspaceLinkSuggestions')}
         />
-      ) : completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
+      ) : singleDocumentCandidate ? (
+        <InlineCompletionGhost
+          accept={() => completionLeaf.plateInlineCompletionAccept?.(0)}
+          acceptLabel={t('editor.completionAccept')}
+          dismissLabel={t('editor.completionDismiss')}
+          source="document"
+          sourceLabel={t('editor.completionSourceDocument')}
+          text={singleDocumentCandidate.text}
+        />
+      ) : completionLeaf.plateInlineCompletionKind === 'document' && candidates.length > 1 ? (
         <DocumentCompletionMenu
           accept={completionLeaf.plateInlineCompletionAccept}
           activeIndex={completionLeaf.plateInlineCompletionIndex ?? 0}
           candidates={candidates}
         />
       ) : completionLeaf.plateInlineCompletionKind === 'ai' && text ? (
-        <span aria-hidden="true" contentEditable={false} data-completion-kind="ai">
-          <span className="marklab-ai-ghost-text">{text}</span>
-          <span className="marklab-ai-ghost-meta" data-ai-completion-hint="">
-            <span data-ai-completion-source="">{t('editor.completionSourceAi')}</span>
-            <span>Tab {t('editor.completionAccept')}</span>
-            <span>Ctrl+→ {t('editor.completionAcceptWord')}</span>
-            <span>Esc {t('editor.completionDismiss')}</span>
-          </span>
-        </span>
+        <InlineCompletionGhost
+          acceptLabel={t('editor.completionAccept')}
+          acceptWordLabel={t('editor.completionAcceptWord')}
+          dismissLabel={t('editor.completionDismiss')}
+          partialAcceptShortcut={inferPlatformFromUserAgent() === 'macos' ? '⌘→' : 'Ctrl+→'}
+          source="ai"
+          sourceLabel={t('editor.completionSourceAi')}
+          text={text}
+        />
       ) : null}
     </span>
   )

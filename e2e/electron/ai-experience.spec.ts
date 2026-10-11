@@ -45,7 +45,7 @@ test.describe('Electron AI experience', () => {
 
   test('opens the transient AI companion from the Markdown editor', async () => {
     if (!mockAiServer) throw new Error('Mock AI server was not started')
-    await page.keyboard.press('Control+Comma')
+    await page.keyboard.press('ControlOrMeta+Comma')
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
     await settingsDialog.getByRole('tab', { name: /^AI$/ }).click()
@@ -84,8 +84,9 @@ test.describe('Electron AI experience', () => {
     await expect(editor).toBeVisible({ timeout: 10_000 })
     await editor.click()
     await page.keyboard.type('Writing should return to the content itself.')
-    await page.keyboard.press('Control+A')
-    await page.keyboard.press('Control+J')
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.press('ControlOrMeta+Shift+J')
 
     const companion = page.getByRole('dialog', {
       name: /AI writing assistant|AI 写作助手/i,
@@ -95,13 +96,18 @@ test.describe('Electron AI experience', () => {
     await expect(companion.getByRole('button', { name: /Rewrite|改写/i })).toBeVisible()
     await expect(companion.getByRole('button', { name: /Make concise|更简洁/i })).toBeVisible()
     await expect(companion.getByRole('button', { name: /Explain|解释/i })).toBeVisible()
-    await expect(companion.getByText(/Local E2E · marklab-e2e/i)).toBeVisible()
-    await expect(companion.getByRole('combobox', { name: /^Model$|^模型$/i })).toBeVisible()
+    const configuration = companion.getByRole('button', {
+      name: /Model and privacy|模型与隐私/i,
+    })
+    await configuration.click()
+    await expect(page.getByText(/Local E2E · marklab-e2e/i)).toBeVisible()
+    await expect(page.getByRole('combobox', { name: /^Model$|^模型$/i })).toBeVisible()
     await expect(
-      companion.getByText(
+      page.getByText(
         /Only the selected text is sent to the selected provider|仅将选中的文本发送给当前选择的模型提供商/i,
       ),
     ).toBeVisible()
+    await configuration.click()
     const captureDirectory = path.join(repoRoot, '.tmp', 'design-qa')
     fs.mkdirSync(captureDirectory, { recursive: true })
     await page.screenshot({

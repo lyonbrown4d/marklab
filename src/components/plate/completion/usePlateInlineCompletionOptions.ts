@@ -38,6 +38,7 @@ export const usePlateInlineCompletionOptions = ({
 }: UsePlateInlineCompletionOptions) => {
   const documentEnabled = usePreferencesStore((state) => state.documentCompletionEnabled)
   const aiEnabled = usePreferencesStore((state) => state.aiCompletionEnabled)
+  const aiSnoozedUntil = usePreferencesStore((state) => state.aiCompletionSnoozedUntil)
   const dedicatedProviderId = usePreferencesStore((state) => state.aiCompletionProviderId)
   const defaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const triggerMode = usePreferencesStore((state) => state.aiCompletionTriggerMode)
@@ -47,6 +48,7 @@ export const usePlateInlineCompletionOptions = ({
   const configurationRef = useLatest({
     activePath,
     aiEnabled,
+    aiSnoozedUntil,
     cloudConsent,
     documentEnabled,
     length,
@@ -82,7 +84,13 @@ export const usePlateInlineCompletionOptions = ({
       getDocumentKey: () => configurationRef.current.activePath,
       requestCompletion: async (context, excluded, signal) => {
         const config = configurationRef.current
-        if (!config.aiEnabled || !config.providerId || config.readOnly) return null
+        if (
+          !config.aiEnabled ||
+          (config.aiSnoozedUntil !== null && config.aiSnoozedUntil > Date.now()) ||
+          !config.providerId ||
+          config.readOnly
+        )
+          return null
         if (!(await canUseProvider(config.providerId, config.cloudConsent)) || signal.aborted) {
           return null
         }
@@ -110,6 +118,7 @@ export const usePlateInlineCompletionOptions = ({
     syncKey: [
       activePath,
       aiEnabled,
+      aiSnoozedUntil,
       cloudConsent,
       dedicatedProviderId,
       defaultProviderId,

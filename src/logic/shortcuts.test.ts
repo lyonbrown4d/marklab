@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   defaultShortcutBindings,
   detectShortcutConflicts,
+  matchesShortcutAction,
   resolveShortcutBindings,
   sanitizeShortcutOverrides,
   shortcutActions,
@@ -10,6 +11,7 @@ import {
 } from '@/logic/shortcuts'
 import { markdownEditorShortcutActionIds } from '@/components/editor/editorCommandCatalog'
 import enUS from '@/i18n/locales/en-US.json'
+import zhCN from '@/i18n/locales/zh-CN.json'
 
 describe('shortcuts', () => {
   it('keeps each shortcut action wired to defaults, categories, and translations', () => {
@@ -22,9 +24,11 @@ describe('shortcuts', () => {
     expect(categorizedActionIds.sort()).toEqual([...actionIds].sort())
     shortcutActions.forEach((action) => {
       expect(enUS).toHaveProperty(action.labelKey)
+      expect(zhCN).toHaveProperty(action.labelKey)
     })
     shortcutCategories.forEach((category) => {
       expect(enUS).toHaveProperty(category.labelKey)
+      expect(zhCN).toHaveProperty(category.labelKey)
     })
   })
 
@@ -41,6 +45,57 @@ describe('shortcuts', () => {
     expect(shortcutCategories.find((category) => category.id === 'workspace')?.actions).toContain(
       'view.toggleTerminal',
     )
+  })
+
+  it('keeps inline AI customizable without claiming the terminal shortcut', () => {
+    expect(defaultShortcutBindings['view.toggleTerminal']).toEqual(['Mod+J'])
+    expect(defaultShortcutBindings['editor.inlineAiComposer']).toEqual(['Mod+Shift+J'])
+    expect(shortcutCategories.find((category) => category.id === 'editor')?.actions).toContain(
+      'editor.inlineAiComposer',
+    )
+
+    const defaultEvent = new KeyboardEvent('keydown', {
+      ctrlKey: true,
+      key: 'J',
+      shiftKey: true,
+    })
+    const terminalEvent = new KeyboardEvent('keydown', { ctrlKey: true, key: 'J' })
+    const customEvent = new KeyboardEvent('keydown', { key: 'F8' })
+
+    expect(matchesShortcutAction(defaultEvent, 'editor.inlineAiComposer', {}, 'windows')).toBe(true)
+    expect(matchesShortcutAction(terminalEvent, 'editor.inlineAiComposer', {}, 'windows')).toBe(
+      false,
+    )
+    expect(
+      matchesShortcutAction(
+        defaultEvent,
+        'editor.inlineAiComposer',
+        {
+          'editor.inlineAiComposer': ['F8'],
+        },
+        'windows',
+      ),
+    ).toBe(false)
+    expect(
+      matchesShortcutAction(
+        customEvent,
+        'editor.inlineAiComposer',
+        {
+          'editor.inlineAiComposer': ['F8'],
+        },
+        'windows',
+      ),
+    ).toBe(true)
+    expect(
+      matchesShortcutAction(
+        customEvent,
+        'editor.inlineAiComposer',
+        {
+          'editor.inlineAiComposer': [],
+        },
+        'windows',
+      ),
+    ).toBe(false)
   })
 
   it('keeps the command palette available through Ctrl/Cmd+P', () => {
@@ -86,13 +141,15 @@ describe('shortcuts', () => {
     expect(defaultShortcutBindings['view.toggleStatusBar']).toEqual(['Mod+Shift+B'])
   })
 
-  it('keeps scoped shortcut consumers aligned with the action catalog', () => {
+  it('keeps formatting shortcut consumers aligned with their editor actions', () => {
     const editorActionIds = shortcutActions
       .filter((action) => action.scope === 'editor')
       .map((action) => action.id)
       .sort()
 
-    expect([...markdownEditorShortcutActionIds].sort()).toEqual(editorActionIds)
+    expect(editorActionIds).toEqual(
+      [...markdownEditorShortcutActionIds, 'editor.inlineAiComposer'].sort(),
+    )
   })
 
   it('supports clearing a shortcut through persisted overrides', () => {

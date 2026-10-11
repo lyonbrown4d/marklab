@@ -10,9 +10,14 @@ import {
 import { useAiGenerationEvents } from '@/components/ai/useAiGenerationEvents'
 import {
   buildAiReplacementPrompt,
+  getAiComposerSystemPrompt,
+  getAiQuickActionOutputKind,
+  isAiReplacementOutput,
+  type AiComposerOutputKind,
   type InlineAiComposerMessages,
 } from '@/components/ai/inlineAiComposerPrompt'
 import { aiApi, type AiGenerationEvent } from '@/services/aiApi'
+import { matchesShortcutAction, type ShortcutBindings } from '@/logic/shortcuts'
 import {
   applyPlateAiReplacement,
   capturePlateAiSelection,
@@ -28,6 +33,7 @@ type UsePlateInlineAiComposerOptions = {
   readOnly: boolean
   ready: boolean
   rootRef: RefObject<HTMLDivElement | null>
+  shortcutOverrides: ShortcutBindings
 }
 
 export const usePlateInlineAiComposer = ({
@@ -38,10 +44,12 @@ export const usePlateInlineAiComposer = ({
   readOnly,
   ready,
   rootRef,
+  shortcutOverrides,
 }: UsePlateInlineAiComposerOptions) => {
   const [capture, setCapture] = useState<PlateAiSelectionCapture | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [instruction, setInstruction] = useState('')
+  const [outputKind, setOutputKind] = useState<AiComposerOutputKind>('replacement')
   const [phase, setPhase] = useState<AiComposerPhase>('prompt')
   const [proposal, setProposal] = useState('')
   const [provider, setProvider] = useState<InlineAiProvider | null>(null)
@@ -92,6 +100,7 @@ export const usePlateInlineAiComposer = ({
       setCapture(null)
       setError(null)
       setInstruction('')
+      setOutputKind('replacement')
       setProposal('')
       setProvider(null)
       setPhase('prompt')
@@ -123,6 +132,7 @@ export const usePlateInlineAiComposer = ({
     setCapture(nextCapture)
     setError(null)
     setInstruction('')
+    setOutputKind('replacement')
     setProposal('')
     setProvider(null)
     setPhase('loading-provider')
@@ -163,10 +173,7 @@ export const usePlateInlineAiComposer = ({
       if (
         event.defaultPrevented ||
         event.isComposing ||
-        event.key.toLowerCase() !== 'j' ||
-        (!event.ctrlKey && !event.metaKey) ||
-        event.altKey ||
-        event.shiftKey ||
+        !matchesShortcutAction(event, 'editor.inlineAiComposer', shortcutOverrides) ||
         !(event.target instanceof Node) ||
         !root.contains(event.target)
       )
@@ -177,10 +184,10 @@ export const usePlateInlineAiComposer = ({
     }
     root.addEventListener('keydown', handleKeyDown)
     return () => root.removeEventListener('keydown', handleKeyDown)
-  }, [open, readOnly, ready, rootRef])
+  }, [open, readOnly, ready, rootRef, shortcutOverrides])
 
   const submit = useCallback(
-    async (nextInstruction: string) => {
+    async (nextInstruction: string, nextOutputKind: AiComposerOutputKind = 'replacement') => {
       const currentCapture = captureRef.current
       if (!currentCapture || !provider || requestIdRef.current || !nextInstruction.trim()) return
       if (!isPlateAiSelectionCaptureUsable(getEditor(), currentCapture)) {
@@ -191,6 +198,7 @@ export const usePlateInlineAiComposer = ({
       requestVersionRef.current = requestVersion
       clearBufferedDeltas()
       setInstruction(nextInstruction)
+      setOutputKind(nextOutputKind)
       setError(null)
       setProposal('')
       setPhase('starting')
@@ -199,7 +207,7 @@ export const usePlateInlineAiComposer = ({
         const result = await aiApi.startGeneration({
           providerId: provider.id,
           prompt: buildAiReplacementPrompt(nextInstruction, currentCapture.sourceText),
-          system: 'Return only plain replacement text. Do not include HTML or commentary.',
+          system: getAiComposerSystemPrompt(nextOutputKind),
           maxOutputTokens: 2_048,
         })
         if (
@@ -231,6 +239,7 @@ export const usePlateInlineAiComposer = ({
   )
 
   const accept = useCallback(() => {
+    if (!isAiReplacementOutput(outputKind)) return
     const currentCapture = captureRef.current
     if (!currentCapture) return
     const result = applyPlateAiReplacement(
@@ -245,13 +254,22 @@ export const usePlateInlineAiComposer = ({
       return
     }
     reset(false)
-  }, [activePathRef, captureRef, getEditor, messages.staleSelection, proposalRef, reset])
+  }, [
+    activePathRef,
+    captureRef,
+    getEditor,
+    messages.staleSelection,
+    outputKind,
+    proposalRef,
+    reset,
+  ])
 
   const quickAction = useCallback(
     (action: AiQuickAction) => {
       const nextInstruction = messages.quickActionInstructions[action]
+      const nextOutputKind = getAiQuickActionOutputKind(action)
       setInstruction(nextInstruction)
-      void submit(nextInstruction)
+      void submit(nextInstruction, nextOutputKind)
     },
     [messages.quickActionInstructions, submit],
   )
@@ -265,12 +283,13 @@ export const usePlateInlineAiComposer = ({
     isOpen: capture !== null,
     modelLabel: provider?.label ?? '',
     open,
+    outputKind,
     providerId: provider?.id ?? '',
     providers,
     phase,
     proposal,
     quickAction,
-    retry: () => void submit(instruction),
+    retry: () => void submit(instruction, outputKind),
     setInstruction,
     setProviderId: (providerId: string) =>
       setProvider(providers.find((candidate) => candidate.id === providerId) ?? null),

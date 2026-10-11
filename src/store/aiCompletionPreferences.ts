@@ -7,6 +7,7 @@ export type AiCompletionLength = 'short' | 'medium' | 'long'
 export type AiCompletionPreferencesState = {
   documentCompletionEnabled: boolean
   aiCompletionEnabled: boolean
+  aiCompletionSnoozedUntil: number | null
   aiCompletionProviderId: string | null
   aiCompletionTriggerMode: AiCompletionTriggerMode
   aiCompletionLength: AiCompletionLength
@@ -14,6 +15,7 @@ export type AiCompletionPreferencesState = {
   aiCompletionCloudContextConsent: boolean
   setDocumentCompletionEnabled: (enabled: boolean) => void
   setAiCompletionEnabled: (enabled: boolean) => void
+  setAiCompletionSnoozedUntil: (until: number | null) => void
   setAiCompletionProviderId: (providerId: string | null) => void
   setAiCompletionTriggerMode: (mode: AiCompletionTriggerMode) => void
   setAiCompletionLength: (length: AiCompletionLength) => void
@@ -29,6 +31,7 @@ export const createAiCompletionPreferencesSlice: StateCreator<
 > = (set) => ({
   documentCompletionEnabled: true,
   aiCompletionEnabled: false,
+  aiCompletionSnoozedUntil: null,
   aiCompletionProviderId: null,
   aiCompletionTriggerMode: 'balanced',
   aiCompletionLength: 'medium',
@@ -43,6 +46,12 @@ export const createAiCompletionPreferencesSlice: StateCreator<
   setAiCompletionEnabled: (aiCompletionEnabled) =>
     set((state) =>
       state.aiCompletionEnabled === aiCompletionEnabled ? state : { aiCompletionEnabled },
+    ),
+  setAiCompletionSnoozedUntil: (aiCompletionSnoozedUntil) =>
+    set((state) =>
+      state.aiCompletionSnoozedUntil === aiCompletionSnoozedUntil
+        ? state
+        : { aiCompletionSnoozedUntil },
     ),
   setAiCompletionProviderId: (aiCompletionProviderId) =>
     set((state) =>

@@ -76,9 +76,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
       accept: t('ai.composer.accept'),
       abandon: t('ai.composer.abandon'),
       concise: t('ai.composer.actionConcise'),
+      configuration: t('ai.composer.configuration'),
       dialog: t('ai.composer.label'),
       diff: t('ai.composer.diffLabel'),
+      done: t('ai.composer.done'),
       explain: t('ai.composer.actionExplain'),
+      explanation: t('ai.composer.explanationLabel'),
       findingModel: t('ai.composer.findingModel'),
       generate: t('ai.composer.generate'),
       instruction: t('ai.composer.instructionLabel'),
@@ -112,6 +115,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     readOnly: props.readOnly ?? false,
     ready: status.phase === 'ready',
     rootRef,
+    shortcutOverrides,
   })
   const selectionToolbarLabels = useMemo<PlateSelectionToolbarLabels>(
     () => ({
@@ -205,6 +209,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
             onRetry={aiComposer.retry}
             onStop={aiComposer.stop}
             onSubmit={aiComposer.submit}
+            outputKind={aiComposer.outputKind}
             phase={aiComposer.phase}
             proposal={aiComposer.proposal}
             providerId={aiComposer.providerId}

@@ -13,6 +13,7 @@ import {
 import { AiProposalDiff } from '@/components/ai/AiProposalDiff'
 import { AiComposerConfiguration } from '@/components/ai/AiComposerConfiguration'
 import type { InlineAiProvider } from '@/components/ai/aiProviderSelection'
+import type { AiComposerOutputKind } from '@/components/ai/inlineAiComposerPrompt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
@@ -29,9 +30,12 @@ export type AiComposerLabels = {
   accept: string
   abandon: string
   concise: string
+  configuration: string
   dialog: string
   diff: string
+  done: string
   explain: string
+  explanation: string
   findingModel: string
   generate: string
   instruction: string
@@ -57,6 +61,7 @@ type AiInlineComposerProps = {
   onRetry: () => void
   onStop: () => void
   onSubmit: (instruction: string) => void
+  outputKind: AiComposerOutputKind
   phase: AiComposerPhase
   proposal: string
   providerId: string
@@ -87,6 +92,7 @@ export const AiInlineComposer = ({
   onRetry,
   onStop,
   onSubmit,
+  outputKind,
   phase,
   proposal,
   providerId,
@@ -98,6 +104,7 @@ export const AiInlineComposer = ({
   const stopRef = useRef<HTMLButtonElement>(null)
   const pending = phase === 'starting' || phase === 'streaming'
   const inputDisabled = pending || phase === 'loading-provider'
+  const isExplanation = outputKind === 'explanation'
 
   useEffect(() => {
     if (pending) stopRef.current?.focus()
@@ -207,9 +214,18 @@ export const AiInlineComposer = ({
           {proposal}
         </div>
       )}
-      {phase === 'proposal' && (
-        <AiProposalDiff label={labels.diff} original={sourceText} proposal={proposal} />
-      )}
+      {phase === 'proposal' &&
+        (isExplanation ? (
+          <div
+            aria-label={labels.explanation}
+            className="max-h-52 overflow-y-auto whitespace-pre-wrap border-l-2 border-primary/25 px-4 py-3 text-sm leading-7"
+            role="region"
+          >
+            {proposal}
+          </div>
+        ) : (
+          <AiProposalDiff label={labels.diff} original={sourceText} proposal={proposal} />
+        ))}
       {error && (
         <p
           className="mx-3 mb-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive"
@@ -222,40 +238,44 @@ export const AiInlineComposer = ({
       <div className="flex flex-wrap items-center gap-2 border-t bg-muted/20 p-2">
         {phase === 'proposal' ? (
           <>
-            <Button onClick={onAccept} size="sm" type="button">
-              <Check aria-hidden="true" /> {labels.accept}
-            </Button>
+            {!isExplanation && (
+              <Button onClick={onAccept} size="sm" type="button">
+                <Check aria-hidden="true" /> {labels.accept}
+              </Button>
+            )}
             <Button onClick={onDismiss} size="sm" type="button" variant="outline">
-              <X aria-hidden="true" /> {labels.abandon}
+              <X aria-hidden="true" /> {isExplanation ? labels.done : labels.abandon}
             </Button>
             <Button onClick={onRetry} size="sm" type="button" variant="outline">
               <RotateCcw aria-hidden="true" /> {labels.retry}
             </Button>
           </>
         ) : (
-          quickActions.map(({ id, icon: Icon }) => (
-            <Button
-              disabled={inputDisabled || !modelLabel}
-              key={id}
-              onClick={() => onQuickAction(id)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <Icon aria-hidden="true" /> {labels[id]}
-            </Button>
-          ))
+          <>
+            {quickActions.map(({ id, icon: Icon }) => (
+              <Button
+                disabled={inputDisabled || !modelLabel}
+                key={id}
+                onClick={() => onQuickAction(id)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <Icon aria-hidden="true" /> {labels[id]}
+              </Button>
+            ))}
+            <span className="ml-auto">
+              <AiComposerConfiguration
+                disabled={inputDisabled}
+                labels={labels}
+                onProviderChange={onProviderChange}
+                providerId={providerId}
+                providers={providers}
+              />
+            </span>
+          </>
         )}
       </div>
-      {phase !== 'proposal' && (
-        <AiComposerConfiguration
-          disabled={inputDisabled}
-          labels={labels}
-          onProviderChange={onProviderChange}
-          providerId={providerId}
-          providers={providers}
-        />
-      )}
     </section>
   )
 }

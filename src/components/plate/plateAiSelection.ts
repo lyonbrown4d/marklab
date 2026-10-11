@@ -9,7 +9,6 @@ export type PlateAiSelectionCapture = {
   documentSnapshot: string
   editor: PlateEditor
   range: TRange
-  selectionSnapshot: TRange
   sourceText: string
 }
 
@@ -29,20 +28,20 @@ const PANEL_WIDTH = 576
 const PANEL_MIN_HEIGHT = 180
 const VIEWPORT_GUTTER = 8
 
-const samePoint = (left: TRange['anchor'], right: TRange['anchor']) =>
-  left.offset === right.offset &&
-  left.path.length === right.path.length &&
-  left.path.every((segment, index) => segment === right.path[index])
-
-const sameRange = (left: TRange | null, right: TRange) =>
-  left !== null && samePoint(left.anchor, right.anchor) && samePoint(left.focus, right.focus)
-
 const captureRange = (editor: PlateEditor): TRange | null => {
   const selection = editor.selection
   if (!selection) return null
   if (editor.api.isExpanded()) return selection
   const block = editor.api.block()
   return block ? (editor.api.range(block[1]) ?? null) : selection
+}
+
+const readRangeText = (editor: PlateEditor, range: TRange): string | null => {
+  try {
+    return editor.api.string(range)
+  } catch {
+    return null
+  }
 }
 
 const captureAnchor = (root: HTMLElement) => {
@@ -82,7 +81,6 @@ export const capturePlateAiSelection = (
     documentSnapshot: serializeMd(editor),
     editor,
     range,
-    selectionSnapshot: editor.selection,
     sourceText: editor.api.string(range),
   }
 }
@@ -90,7 +88,10 @@ export const capturePlateAiSelection = (
 export const isPlateAiSelectionCaptureUsable = (
   editor: PlateEditor | null,
   capture: PlateAiSelectionCapture,
-) => editor === capture.editor && editor.selection !== null
+) =>
+  editor === capture.editor &&
+  serializeMd(editor) === capture.documentSnapshot &&
+  readRangeText(editor, capture.range) === capture.sourceText
 
 export const applyPlateAiReplacement = (
   editor: PlateEditor | null,
@@ -98,13 +99,13 @@ export const applyPlateAiReplacement = (
   documentPath: string | null,
   replacement: string,
 ): PlateAiReplacementResult => {
-  if (!editor || !editor.selection) return { ok: false, reason: 'editor-unavailable' }
+  if (!editor) return { ok: false, reason: 'editor-unavailable' }
   if (editor !== capture.editor) return { ok: false, reason: 'editor-changed' }
   if (documentPath !== capture.documentPath) return { ok: false, reason: 'path-changed' }
   if (serializeMd(editor) !== capture.documentSnapshot) {
     return { ok: false, reason: 'document-changed' }
   }
-  if (!sameRange(editor.selection, capture.selectionSnapshot)) {
+  if (readRangeText(editor, capture.range) !== capture.sourceText) {
     return { ok: false, reason: 'selection-changed' }
   }
 

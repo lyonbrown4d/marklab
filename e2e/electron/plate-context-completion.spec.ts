@@ -19,6 +19,8 @@ import {
 
 const prefix = 'Project notes continue'
 const suffix = ' with the release checklist.'
+const documentCompletion = (page: ElectronTestSession['page']) =>
+  page.locator('[data-completion-kind="document"]')
 
 test.describe('Plate context menu and completion interaction', () => {
   let fixture: PlateBlockDragFixture | undefined
@@ -42,7 +44,7 @@ test.describe('Plate context menu and completion interaction', () => {
     await editor.locator('p').last().click()
     await session.page.keyboard.press('End')
     await session.page.keyboard.insertText(` ${prefix}`)
-    await expect(session.page.getByRole('listbox')).toBeVisible()
+    await expect(documentCompletion(session.page)).toBeVisible()
   })
 
   test.afterEach(async () => {
@@ -58,11 +60,11 @@ test.describe('Plate context menu and completion interaction', () => {
     if (!session) throw new Error('Electron test session is unavailable')
     const { page } = session
     const draft = page.getByTestId('markdown-editor').locator('p').last()
-    await page.getByRole('option').first().click({ button: 'right' })
+    await documentCompletion(page).click({ button: 'right' })
     await expect(draft).toHaveText(`Draft: ${prefix}`)
     if (!(await page.getByRole('menu').isVisible())) await draft.click({ button: 'right' })
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await expect(documentCompletion(page)).toHaveCount(0)
   })
 
   test('context menu owns keyboard input and completion resumes after dismissal', async () => {
@@ -71,7 +73,7 @@ test.describe('Plate context menu and completion interaction', () => {
     const draft = page.getByTestId('markdown-editor').locator('p').last()
     await page.keyboard.press('Shift+F10')
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await expect(documentCompletion(page)).toHaveCount(0)
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menu')).toHaveCount(0)
@@ -79,7 +81,7 @@ test.describe('Plate context menu and completion interaction', () => {
     await draft.click()
     await page.keyboard.press('End')
     await page.keyboard.insertText(' with')
-    await expect(page.getByRole('listbox')).toBeVisible()
+    await expect(documentCompletion(page)).toBeVisible()
     await page.keyboard.press('Tab')
     await expect(draft).toHaveText(`Draft: ${prefix}${suffix}`)
   })
@@ -87,7 +89,7 @@ test.describe('Plate context menu and completion interaction', () => {
   test('left-clicking a suggestion still accepts its content', async () => {
     if (!session) throw new Error('Electron test session is unavailable')
     const { page } = session
-    await page.getByRole('option').first().click()
+    await documentCompletion(page).dispatchEvent('mousedown', { button: 0 })
     await expect(page.getByTestId('markdown-editor').locator('p').last()).toHaveText(
       `Draft: ${prefix}${suffix}`,
     )
@@ -100,6 +102,6 @@ test.describe('Plate context menu and completion interaction', () => {
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowRight')
     await page.waitForTimeout(600)
-    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await expect(documentCompletion(page)).toHaveCount(0)
   })
 })

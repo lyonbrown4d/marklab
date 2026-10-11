@@ -122,6 +122,8 @@ export const registerMarkdownSourceInlineCompletion = (
         if (!isCurrent(snapshot, token) || requestGeneration !== generation) return
         const latestPreferences = options.getPreferences()
         if (
+          (latestPreferences.aiCompletionSnoozedUntil !== null &&
+            latestPreferences.aiCompletionSnoozedUntil > Date.now()) ||
           locality === 'unavailable' ||
           (locality === 'remote' && !latestPreferences.aiCompletionCloudContextConsent)
         ) {
@@ -224,7 +226,12 @@ export const registerMarkdownSourceInlineCompletion = (
         cancelActive()
         return { items: completionItems(snapshot, documentTexts) }
       }
-      if (preferences.aiCompletionEnabled && providerId) {
+      if (
+        preferences.aiCompletionEnabled &&
+        (preferences.aiCompletionSnoozedUntil === null ||
+          preferences.aiCompletionSnoozedUntil <= Date.now()) &&
+        providerId
+      ) {
         scheduleAi(
           snapshot,
           documentTexts,

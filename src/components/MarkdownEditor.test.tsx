@@ -85,6 +85,7 @@ describe('MarkdownEditor playground baseline', () => {
         getEditor: expect.any(Function),
         readOnly: false,
         ready: true,
+        shortcutOverrides: { 'editor.clearFormat': ['Control+Shift+X'] },
       }),
     )
     expect(screen.getByRole('dialog', { name: 'ai.composer.label' })).toBeInTheDocument()

@@ -131,6 +131,26 @@ Project plan includes`)
     expect(refreshed.items.map(({ insertText }) => insertText)).toEqual([' with a clear next step'])
   })
 
+  it('does not schedule AI while suggestions are temporarily paused', async () => {
+    const harness = createHarness('Compose an original ending')
+    const requestCompletion = vi.fn().mockResolvedValue(' with a clear next step')
+    registerMarkdownSourceInlineCompletion({
+      editor: harness.editor as never,
+      getDocumentKey: () => 'notes/current.md',
+      getPreferences: () => ({
+        ...preferences(),
+        aiCompletionSnoozedUntil: Date.now() + 60_000,
+      }),
+      monaco: harness.monaco as never,
+      requestCompletion,
+      resolveProviderLocality: vi.fn().mockResolvedValue('remote'),
+    })
+
+    expect(harness.complete().items).toEqual([])
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(requestCompletion).not.toHaveBeenCalled()
+  })
+
   it('cancels and discards AI work after token, version, or path becomes stale', async () => {
     const harness = createHarness('Compose an original ending')
     let resolve: (value: string | null) => void = () => undefined

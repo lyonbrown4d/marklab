@@ -11,6 +11,7 @@ export const sourceCompletionPreferences = () => ({
   aiCompletionLength: 'short' as const,
   aiCompletionNearbyContextEnabled: true,
   aiCompletionProviderId: 'provider-1',
+  aiCompletionSnoozedUntil: null,
   aiCompletionTriggerMode: 'fast' as const,
   aiDefaultProviderId: null,
   documentCompletionEnabled: true,

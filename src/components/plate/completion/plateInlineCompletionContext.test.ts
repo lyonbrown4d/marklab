@@ -34,7 +34,9 @@ describe('Plate inline completion context', () => {
     [{ type: 'code_block', children: [{ text: 'const value = 1' }] }],
     [{ type: 'p', children: [{ code: true, text: 'inline code' }] }],
     [{ type: 'p', preservedMarkdownKind: 'yaml', children: [{ text: 'title: Example' }] }],
-  ])('rejects code contexts and expanded selections', (block) => {
+    [{ type: 'h2', children: [{ text: 'Heading text' }] }],
+    [{ type: 'a', url: 'https://example.com', children: [{ text: 'linked text' }] }],
+  ])('rejects unsupported contexts and expanded selections', (block) => {
     const editor = createEditor([block])
     editor.tf.select({
       anchor: { path: [0, 0], offset: 2 },

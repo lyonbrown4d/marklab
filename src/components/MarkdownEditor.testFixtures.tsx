@@ -39,6 +39,7 @@ const inlineAiMock = vi.hoisted(() => ({
   instruction: '',
   isOpen: false,
   modelLabel: 'OpenAI · gpt-5-mini',
+  outputKind: 'replacement' as const,
   providerId: 'openai-main',
   providers: [{ id: 'openai-main', label: 'OpenAI · gpt-5-mini', locality: 'remote' as const }],
   phase: 'prompt' as const,

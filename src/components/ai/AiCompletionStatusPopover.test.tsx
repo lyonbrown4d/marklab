@@ -41,6 +41,7 @@ describe('AiCompletionStatusPopover', () => {
     ])
     usePreferencesStore.setState({
       aiCompletionEnabled: false,
+      aiCompletionSnoozedUntil: null,
       aiCompletionProviderId: 'ollama-local',
       aiCompletionTriggerMode: 'balanced',
     })
@@ -51,10 +52,19 @@ describe('AiCompletionStatusPopover', () => {
     const trigger = await screen.findByRole('button', { name: 'statusBar.aiCompletion' })
 
     expect(trigger).toHaveAttribute('aria-pressed', 'false')
+    expect(trigger.querySelector('[data-status-label]')).toHaveClass('sr-only')
     fireEvent.click(trigger)
     expect(await screen.findByText('Ollama · qwen3:8b')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('switch', { name: 'statusBar.aiCompletionEnabled' }))
     expect(usePreferencesStore.getState().aiCompletionEnabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'statusBar.aiCompletionPause5' }))
+    expect(usePreferencesStore.getState().aiCompletionSnoozedUntil).toBeGreaterThan(Date.now())
+    expect(trigger.querySelector('[data-status-label]')).toHaveTextContent(
+      'statusBar.aiCompletionPaused',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'statusBar.aiCompletionResume' }))
+    expect(usePreferencesStore.getState().aiCompletionSnoozedUntil).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'statusBar.aiCompletionSettings' }))
     expect(onOpenSettings).toHaveBeenCalledOnce()

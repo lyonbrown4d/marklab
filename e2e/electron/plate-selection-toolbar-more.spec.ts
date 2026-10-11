@@ -19,13 +19,6 @@ import {
 
 const phrase = 'selection toolbar workflow'
 
-type GeometryRect = {
-  bottom: number
-  left: number
-  right: number
-  top: number
-}
-
 const findPhrasePoints = (page: Page, target: string) =>
   page.getByTestId('markdown-editor').evaluate((editor, text) => {
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
@@ -86,29 +79,6 @@ const selectParagraphText = async (page: Page, target: string) => {
   }).toPass({ intervals: [100, 250, 500], timeout: 10_000 })
 }
 
-const readSelectionRect = (page: Page) =>
-  page.evaluate((): GeometryRect => {
-    const selection = window.getSelection()
-    if (!selection?.rangeCount) throw new Error('Text selection geometry is unavailable')
-    const rect = selection.getRangeAt(0).getBoundingClientRect()
-    return { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top }
-  })
-
-const expectComposerNearSelection = async (page: Page, selection: GeometryRect) => {
-  const dialog = page.getByRole('dialog', { name: /^(AI writing assistant|AI 写作助手)$/ })
-  await expect(dialog).toBeVisible()
-  await expect
-    .poll(async () => {
-      const box = await dialog.boundingBox()
-      if (!box) return false
-      const verticalGap = box.y - selection.bottom
-      const overlapsHorizontally =
-        box.x <= selection.right + 12 && box.x + box.width >= selection.left - 12
-      return verticalGap >= -1 && verticalGap <= 40 && overlapsHorizontally
-    })
-    .toBe(true)
-}
-
 const openMoreMenu = async (page: Page) => {
   await page.getByRole('button', { name: /^(More actions|更多操作)$/ }).click()
 }
@@ -144,7 +114,7 @@ test.describe('Plate selection toolbar More menu', () => {
 
   test.afterAll(async () => closeRendererServer(server))
 
-  test('transforms blocks, copies Markdown, and opens the active AI composer', async () => {
+  test('transforms blocks and copies Markdown', async () => {
     if (!session) throw new Error('Selection toolbar test is not initialized')
     const { app, page } = session
 
@@ -179,11 +149,5 @@ test.describe('Plate selection toolbar More menu', () => {
     await expect
       .poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
       .toBe(`- ${phrase}`)
-
-    await selectParagraphText(page, phrase)
-    const selection = await readSelectionRect(page)
-    await openMoreMenu(page)
-    await page.getByRole('menuitem', { name: /^(Ask AI|询问 AI)$/ }).click()
-    await expectComposerNearSelection(page, selection)
   })
 })

@@ -194,6 +194,30 @@ describe('usePlateInlineCompletion', () => {
     )
   })
 
+  it('does not request AI completion while suggestions are temporarily paused', async () => {
+    usePreferencesStore.setState({
+      aiCompletionEnabled: true,
+      aiCompletionCloudContextConsent: true,
+      aiCompletionProviderId: 'openai-main',
+      aiCompletionSnoozedUntil: Date.now() + 60_000,
+      documentCompletionEnabled: false,
+    })
+    const editor = createEditor('I plan to')
+    const { result } = renderHook(() =>
+      usePlateInlineCompletion({
+        activePath: 'note.md',
+        editor,
+        readOnly: false,
+        value: 'I plan to',
+      }),
+    )
+
+    act(() => result.current.onEditorChange())
+    await act(async () => vi.advanceTimersByTimeAsync(1_500))
+
+    expect(requestAiInlineCompletion).not.toHaveBeenCalled()
+  })
+
   it('cancels and clears completion when preferences disable it', async () => {
     const editor = createEditorWithReference('I plan to review notes.', 'I plan to')
     const value = 'I plan to review notes.\n\nI plan to'

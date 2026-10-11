@@ -1,4 +1,5 @@
-import { Settings2, Sparkles } from 'lucide-react'
+import { useEffect } from 'react'
+import { Clock3, Play, Settings2, Sparkles } from 'lucide-react'
 import { useAiProvidersQuery } from '@/components/ai/aiProviderQuery'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -20,27 +21,43 @@ type AiCompletionStatusPopoverProps = {
 }
 
 const triggerModes: AiCompletionTriggerMode[] = ['fast', 'balanced', 'battery-saver']
+const FIVE_MINUTES_MS = 5 * 60 * 1_000
+const THIRTY_MINUTES_MS = 30 * 60 * 1_000
 
 export const AiCompletionStatusPopover = ({ onOpenSettings }: AiCompletionStatusPopoverProps) => {
   const { t } = useI18n()
   const enabled = usePreferencesStore((state) => state.aiCompletionEnabled)
+  const snoozedUntil = usePreferencesStore((state) => state.aiCompletionSnoozedUntil)
   const providerId = usePreferencesStore((state) => state.aiCompletionProviderId)
   const defaultProviderId = usePreferencesStore((state) => state.aiDefaultProviderId)
   const triggerMode = usePreferencesStore((state) => state.aiCompletionTriggerMode)
   const setEnabled = usePreferencesStore((state) => state.setAiCompletionEnabled)
+  const setSnoozedUntil = usePreferencesStore((state) => state.setAiCompletionSnoozedUntil)
   const setTriggerMode = usePreferencesStore((state) => state.setAiCompletionTriggerMode)
   const providersQuery = useAiProvidersQuery(isDesktopRuntime())
   const provider = providersQuery.data?.find(
     (candidate) => candidate.id === (providerId ?? defaultProviderId),
   )
+  const snoozed = enabled && snoozedUntil !== null
+
+  useEffect(() => {
+    if (!snoozed || snoozedUntil === null) return
+    const timer = window.setTimeout(
+      () => setSnoozedUntil(null),
+      Math.max(0, snoozedUntil - Date.now()),
+    )
+    return () => window.clearTimeout(timer)
+  }, [setSnoozedUntil, snoozed, snoozedUntil])
   const providerLabel = provider
     ? `${provider.label} · ${provider.model}`
     : t('statusBar.aiNoModel')
-  const stateLabel = enabled
-    ? provider?.locality === 'local'
-      ? t('statusBar.aiCompletionLocal')
-      : t('statusBar.aiCompletionOn')
-    : t('statusBar.aiCompletion')
+  const stateLabel = snoozed
+    ? t('statusBar.aiCompletionPaused')
+    : enabled
+      ? provider?.locality === 'local'
+        ? t('statusBar.aiCompletionLocal')
+        : t('statusBar.aiCompletionOn')
+      : t('statusBar.aiCompletion')
 
   return (
     <Popover>
@@ -58,7 +75,9 @@ export const AiCompletionStatusPopover = ({ onOpenSettings }: AiCompletionStatus
             className={enabled ? 'size-1.5 rounded-full bg-status-success' : 'hidden'}
           />
           <Sparkles aria-hidden="true" className="size-3.5" />
-          <span data-status-label>{stateLabel}</span>
+          <span className={enabled ? undefined : 'sr-only'} data-status-label>
+            {stateLabel}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0" side="top" sideOffset={8}>
@@ -73,9 +92,51 @@ export const AiCompletionStatusPopover = ({ onOpenSettings }: AiCompletionStatus
             aria-label={t('statusBar.aiCompletionEnabled')}
             checked={enabled}
             disabled={!provider}
-            onCheckedChange={setEnabled}
+            onCheckedChange={(checked) => {
+              if (!checked) setSnoozedUntil(null)
+              setEnabled(checked)
+            }}
           />
         </div>
+        {enabled && (
+          <div className="grid grid-cols-2 gap-1 border-t border-border/70 p-1.5">
+            {snoozed ? (
+              <Button
+                className="col-span-2 h-8 justify-start text-xs"
+                onClick={() => setSnoozedUntil(null)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <Play aria-hidden="true" />
+                {t('statusBar.aiCompletionResume')}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  className="h-8 justify-start text-xs"
+                  onClick={() => setSnoozedUntil(Date.now() + FIVE_MINUTES_MS)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Clock3 aria-hidden="true" />
+                  {t('statusBar.aiCompletionPause5')}
+                </Button>
+                <Button
+                  className="h-8 justify-start text-xs"
+                  onClick={() => setSnoozedUntil(Date.now() + THIRTY_MINUTES_MS)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Clock3 aria-hidden="true" />
+                  {t('statusBar.aiCompletionPause30')}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
         <div className="border-t border-border/70 p-3">
           <label className="mb-1.5 block text-xs text-muted-foreground" htmlFor="ai-trigger-mode">
             {t('statusBar.aiCompletionDelay')}

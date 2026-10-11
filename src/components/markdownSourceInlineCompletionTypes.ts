@@ -32,6 +32,7 @@ export type InlineCompletionPreferences = Pick<
   | 'aiCompletionLength'
   | 'aiCompletionNearbyContextEnabled'
   | 'aiCompletionProviderId'
+  | 'aiCompletionSnoozedUntil'
   | 'aiCompletionTriggerMode'
   | 'aiDefaultProviderId'
   | 'documentCompletionEnabled'
@@ -57,6 +58,7 @@ export const completionPreferenceKey = (preferences: InlineCompletionPreferences
     preferences.aiCompletionLength,
     preferences.aiCompletionNearbyContextEnabled,
     preferences.aiCompletionProviderId,
+    preferences.aiCompletionSnoozedUntil,
     preferences.aiCompletionTriggerMode,
     preferences.aiDefaultProviderId,
     preferences.documentCompletionEnabled,

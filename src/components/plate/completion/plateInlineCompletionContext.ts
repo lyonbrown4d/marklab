@@ -9,11 +9,20 @@ const DISABLED_NODE_TYPES = new Set([
   'codeBlock',
   'frontmatter',
   'front_matter',
+  'a',
+  'link',
   'yaml',
   'table',
   'tr',
   'td',
   'th',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'heading',
 ])
 
 export type PlateInlineCompletionContext = {
