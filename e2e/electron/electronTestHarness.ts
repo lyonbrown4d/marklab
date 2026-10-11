@@ -12,7 +12,6 @@ import { fileURLToPath } from 'node:url'
 import { isMainRendererUrl } from '@/quality/electronWindowUrl'
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-
 const electronMain = path.join(repoRoot, 'dist-electron', 'main.js')
 const rendererDistRoot = path.join(repoRoot, 'dist')
 const configuredE2eOutputRoot = process.env.MARKLAB_E2E_OUTPUT_ROOT?.trim()
@@ -26,6 +25,7 @@ const contentTypeByExtension = new Map([
   ['.ico', 'image/x-icon'],
   ['.js', 'text/javascript; charset=utf-8'],
   ['.json', 'application/json'],
+  ['.mjs', 'text/javascript; charset=utf-8'],
   ['.png', 'image/png'],
   ['.svg', 'image/svg+xml'],
   ['.ttf', 'font/ttf'],

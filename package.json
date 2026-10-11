@@ -297,7 +297,7 @@
     "p-queue": "^9.3.3",
     "papaparse": "5.7.0",
     "pathe": "^2.0.3",
-    "pdfjs-dist": "6.4.299",
+    "pdfjs-dist": "6.3.289",
     "picomatch": "^4.0.7",
     "platejs": "^53.3.15",
     "radix-ui": "^1.7.0",

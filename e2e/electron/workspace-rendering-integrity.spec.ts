@@ -12,8 +12,15 @@ import {
   startRendererServer,
   type ElectronTestSession,
 } from './electronTestHarness.js'
+// eslint-disable-next-line no-restricted-imports -- Electron E2E diagnostics stay outside production bundles.
+import {
+  assertNoRuntimeErrors,
+  attachDiagnostics,
+  monitorRuntime,
+} from './electronRuntimeDiagnostics.js'
 
 const workspaceRoot = process.env.MARKLAB_E2E_WORKSPACE?.trim()
+const pdfDocument = process.env.MARKLAB_E2E_PDF?.trim()
 const mermaidDocument = 'architecture-overview.md'
 const drawioDocument = 'third-party-client-route-overview.drawio'
 const openTreeFile = async (page: Page, fileName: string) => {
@@ -247,5 +254,25 @@ test.describe('Real workspace rendering integrity', () => {
       path.join(auditDirectory, 'rendering-integrity-electron.log'),
       session.output.join('\n'),
     )
+  })
+
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructured fixtures argument before testInfo.
+  test('renders a real workspace PDF without worker protocol errors', async ({}, testInfo) => {
+    test.skip(!pdfDocument, 'Set MARKLAB_E2E_PDF to a PDF path relative to the workspace.')
+    test.setTimeout(120_000)
+    session = await launchElectronTestSession(rendererUrl, { openTargets: [workspaceRoot!] })
+    const diagnostics = monitorRuntime(session)
+    const page = session.page
+    await revealElectronWindow(session.app, page, { width: 1280, height: 900 })
+    await openTreeFile(page, pdfDocument!)
+
+    const viewer = page.locator('.marklab-pdf-viewer').first()
+    await expect(viewer).toBeVisible({ timeout: 45_000 })
+    await expect(viewer.locator('.react-pdf__Page__canvas').first()).toBeVisible({
+      timeout: 60_000,
+    })
+    await attachDiagnostics(session, diagnostics, testInfo)
+    assertNoRuntimeErrors(diagnostics)
+    expect(session.output.join('\n')).not.toContain('Unknown action from worker')
   })
 })
