@@ -35,6 +35,7 @@ describe('PlateSelectionToolbar value synchronization', () => {
       <PlateSelectionToolbar
         activeMarks={{ bold: true, code: false, italic: false, link: false, strike: false }}
         anchor={{ left: 0, top: 0 }}
+        captureSelection={vi.fn(() => true)}
         labels={{
           blockStyle: 'Block style',
           bold: 'Bold',

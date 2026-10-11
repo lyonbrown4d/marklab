@@ -56,6 +56,7 @@ const markItems: readonly {
 export const PlateSelectionToolbar = ({
   activeMarks,
   anchor,
+  captureSelection,
   floatingStyle,
   labels,
   open,
@@ -79,6 +80,7 @@ export const PlateSelectionToolbar = ({
       <div
         className="z-50 w-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-hidden"
         data-slot="popover-content"
+        onMouseDownCapture={captureSelection}
         ref={setToolbarElement}
         style={floatingStyle ?? { left: anchor.left, position: 'fixed', top: anchor.top }}
       >

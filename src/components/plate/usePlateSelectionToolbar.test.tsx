@@ -25,14 +25,17 @@ afterEach(() => {
 const createEditor = () =>
   ({
     api: {
+      hasRange: vi.fn(() => true),
       isExpanded: vi.fn(() => true),
       marks: vi.fn(() => ({ bold: true })),
       some: vi.fn(() => false),
+      toSlateRange: vi.fn(() => expandedSelection),
     },
     selection: expandedSelection,
     tf: {
       focus: vi.fn(),
       removeMarks: vi.fn(),
+      select: vi.fn(),
       setNodes: vi.fn(),
       toggleMark: vi.fn(),
       unwrapNodes: vi.fn(),
@@ -106,6 +109,8 @@ describe('usePlateSelectionToolbar', () => {
         top: 16,
       }),
     )
+    expect(result.current.runAction('bold')).toBe(true)
+    expect(editor.tf.select).toHaveBeenCalledWith(expandedSelection)
 
     rect.left = 120
     rect.right = 184

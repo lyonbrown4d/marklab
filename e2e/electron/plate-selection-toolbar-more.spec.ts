@@ -45,7 +45,7 @@ const findPhrasePoints = (page: Page, target: string) =>
   }, target)
 
 const expectTextSelection = async (page: Page, target: string) => {
-  expect(await page.evaluate(() => window.getSelection()?.toString())).toContain(target)
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(target)
   await expect(page.getByRole('toolbar', { name: /^(Text|文本)$/ })).toBeVisible()
 }
 
@@ -149,5 +149,20 @@ test.describe('Plate selection toolbar More menu', () => {
     await expect
       .poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
       .toBe(`- ${phrase}`)
+  })
+
+  test('formats and clears the active text selection', async () => {
+    if (!session) throw new Error('Selection toolbar test is not initialized')
+    const { page } = session
+    const editor = page.getByTestId('markdown-editor')
+
+    await selectPhraseByDragging(page, phrase)
+    await page.getByRole('button', { name: /^(Bold|加粗)$/ }).click()
+    await expect(editor.locator('strong')).toContainText(phrase)
+
+    await selectPhraseByDragging(page, phrase)
+    await page.getByRole('button', { name: /^(Clear formatting|清除格式)$/ }).click()
+    await expect(editor.locator('strong')).toHaveCount(0)
+    await expect(editor.locator('p')).toContainText(phrase)
   })
 })

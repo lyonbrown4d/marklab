@@ -45,6 +45,7 @@ type ToolbarState = {
 
 export type PlateSelectionToolbarController = ToolbarState & {
   anchor: { left: number; top: number }
+  captureSelection: () => boolean
   floatingStyle?: CSSProperties
   runAction: (action: PlateSelectionToolbarAction) => boolean
   runMoreAction: (action: PlateSelectionToolbarMoreAction) => boolean
@@ -82,6 +83,7 @@ export const usePlateSelectionToolbar = ({
 }: UsePlateSelectionToolbarOptions): PlateSelectionToolbarController => {
   const [state, setState] = useState<ToolbarState>(closedState)
   const toolbarElementRef = useRef<HTMLElement | null>(null)
+  const actionSelectionRef = useRef<TRange | null>(null)
   const composingRef = useRef(false)
   const frameRef = useRef<number | null>(null)
   const updateFrameRef = useRef<number | null>(null)
@@ -119,6 +121,25 @@ export const usePlateSelectionToolbar = ({
   })
   const { setFloating } = refs
 
+  const captureSelection = useCallback(() => {
+    const root = editableRef.current
+    const selection = window.getSelection()
+    if (
+      !root ||
+      !selection?.rangeCount ||
+      !containsSelectionNode(root, selection.anchorNode) ||
+      !containsSelectionNode(root, selection.focusNode)
+    ) {
+      return false
+    }
+    actionSelectionRef.current =
+      editor.api.toSlateRange(selection, {
+        exactMatch: false,
+        suppressThrow: true,
+      }) ?? null
+    return actionSelectionRef.current !== null
+  }, [editableRef, editor])
+
   useLayoutEffect(() => {
     const virtualElement = virtualElementRef.current
     virtualElement.contextElement = editableRef.current ?? undefined
@@ -143,6 +164,9 @@ export const usePlateSelectionToolbar = ({
       containsSelectionNode(root, selection.anchorNode) &&
       containsSelectionNode(root, selection.focusNode),
     )
+    if (selectionInside && selection) {
+      captureSelection()
+    }
     if (
       readOnly ||
       (canEdit && !canEdit()) ||
@@ -153,6 +177,7 @@ export const usePlateSelectionToolbar = ({
       !editor.api.isExpanded() ||
       (!toolbarFocused && !selectionInside)
     ) {
+      if (!toolbarFocused) actionSelectionRef.current = null
       setState((current) => (current.open ? closedState : current))
       return
     }
@@ -163,7 +188,7 @@ export const usePlateSelectionToolbar = ({
     }
     setState((current) => (equalState(current, next) ? current : next))
     if (next.open) void update()
-  }, [canEdit, editableRef, editor, getSelectionRect, readOnly, update])
+  }, [canEdit, captureSelection, editableRef, editor, getSelectionRect, readOnly, update])
 
   const scheduleSync = useCallback(() => {
     if (frameRef.current !== null) return
@@ -235,24 +260,31 @@ export const usePlateSelectionToolbar = ({
     }
   }, [editableRef, scheduleFloatingUpdate, state.open])
 
+  const restoreActionSelection = useCallback(() => {
+    const selection = actionSelectionRef.current
+    if (selection && editor.api.hasRange(selection)) editor.tf.select(selection)
+  }, [editor])
+
   const runAction = useCallback(
     (action: PlateSelectionToolbarAction) => {
       if (canEdit && !canEdit()) return false
+      restoreActionSelection()
       const handled = runPlateSelectionToolbarAction(editor, action, { onLink })
       if (handled) queueMicrotask(sync)
       return handled
     },
-    [canEdit, editor, onLink, sync],
+    [canEdit, editor, onLink, restoreActionSelection, sync],
   )
 
   const runMoreAction = useCallback(
     (action: PlateSelectionToolbarMoreAction) => {
       if (canEdit && !canEdit()) return false
+      restoreActionSelection()
       const handled = runPlateSelectionToolbarMoreAction(editor, action, { onError })
       if (handled) queueMicrotask(sync)
       return handled
     },
-    [canEdit, editor, onError, sync],
+    [canEdit, editor, onError, restoreActionSelection, sync],
   )
 
   const setToolbarElement = useCallback(
@@ -266,6 +298,7 @@ export const usePlateSelectionToolbar = ({
   return {
     ...state,
     anchor: { left: x ?? 0, top: y ?? 0 },
+    captureSelection,
     floatingStyle,
     runAction,
     runMoreAction,

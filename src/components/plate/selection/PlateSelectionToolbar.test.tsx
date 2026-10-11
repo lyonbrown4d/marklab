@@ -30,6 +30,7 @@ const createController = (
 ): PlateSelectionToolbarController => ({
   activeMarks: { bold: true, code: false, italic: false, link: false, strike: false },
   anchor: { left: 160, top: 90 },
+  captureSelection: vi.fn(() => true),
   open: true,
   runAction: vi.fn(() => true),
   runMoreAction: vi.fn(() => true),
@@ -51,6 +52,7 @@ describe('PlateSelectionToolbar', () => {
     fireEvent.mouseDown(screen.getByRole('button', { name: labels.italic }))
     fireEvent.click(screen.getByRole('button', { name: labels.italic }))
 
+    expect(controller.captureSelection).toHaveBeenCalledOnce()
     expect(controller.runAction).toHaveBeenCalledWith('italic')
   })
 
