@@ -9,6 +9,7 @@ export type TableGutterOperations = {
   moveRow: (direction: Extract<TableMoveDirection, 'down' | 'up'>, index?: number) => boolean
   selectColumn: (index: number) => boolean
   selectRow: (index: number) => boolean
+  supportsGridOperations: boolean
 }
 
 type TableGutterControlsProps = {
@@ -55,6 +56,7 @@ export const TableGutterControls = ({
           aria-label={t('editor.tableSelectRow', { index: rowIndex + 1 })}
           className="absolute top-1/2 -left-5 z-20 size-5 -translate-y-1/2 opacity-0 transition-opacity group-hover/table-cell:opacity-100 focus:opacity-100"
           contentEditable={false}
+          disabled={!operations.supportsGridOperations}
           onClick={() => operations.selectRow(rowIndex)}
           onKeyDown={(event) =>
             handleMoveKey(event, (direction) => {
@@ -77,6 +79,7 @@ export const TableGutterControls = ({
           aria-label={t('editor.tableSelectColumn', { index: columnIndex + 1 })}
           className="absolute -top-5 left-1/2 z-20 size-5 -translate-x-1/2 opacity-0 transition-opacity group-hover/table-cell:opacity-100 focus:opacity-100"
           contentEditable={false}
+          disabled={!operations.supportsGridOperations}
           onClick={() => operations.selectColumn(columnIndex)}
           onKeyDown={(event) =>
             handleMoveKey(event, (direction) => {

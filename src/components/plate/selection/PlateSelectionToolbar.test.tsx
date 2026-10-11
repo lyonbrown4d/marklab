@@ -5,7 +5,6 @@ import { PlateSelectionToolbar } from '@/components/plate/selection/PlateSelecti
 import type { PlateSelectionToolbarController } from '@/components/plate/usePlateSelectionToolbar'
 
 const labels = {
-  ai: 'Ask AI',
   blockStyle: 'Block style',
   bold: 'Bold',
   bulletList: 'Bullet list',
@@ -89,7 +88,7 @@ describe('PlateSelectionToolbar', () => {
     expect(runAction).toHaveBeenCalledExactlyOnceWith('clear')
   })
 
-  it('offers keyboard-accessible block, clipboard, and AI actions in More', async () => {
+  it('offers block and clipboard actions without an AI entry in More', async () => {
     const user = userEvent.setup()
     const runMoreAction = vi.fn(() => true)
     render(<PlateSelectionToolbar {...createController({ runMoreAction })} labels={labels} />)
@@ -103,8 +102,9 @@ describe('PlateSelectionToolbar', () => {
     expect(runMoreAction).toHaveBeenCalledWith('copyMarkdown')
 
     await user.click(screen.getByRole('button', { name: labels.more }))
-    await user.click(await screen.findByRole('menuitem', { name: labels.ai }))
-    expect(runMoreAction).toHaveBeenCalledWith('ai')
+    expect(await screen.findByRole('menuitem', { name: labels.copyMarkdown })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: /AI/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('menuitem')).toHaveLength(8)
   })
 
   it('does not place a fixed viewport anchor inside transformed editor ancestors', () => {

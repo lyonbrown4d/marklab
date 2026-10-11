@@ -26,10 +26,12 @@ const WorkspaceLinkCompletionMenu = ({
   accept,
   activeIndex,
   items,
+  label,
 }: {
   accept?: (index: number) => void
   activeIndex: number
   items: readonly PlateWorkspaceLinkItem[]
+  label: string
 }) => (
   <Popover open>
     <PopoverAnchor asChild>
@@ -49,7 +51,7 @@ const WorkspaceLinkCompletionMenu = ({
       side="bottom"
       sideOffset={6}
     >
-      <div aria-label="Workspace link suggestions" role="listbox">
+      <div aria-label={label} role="listbox">
         {items.map((item, index) => {
           const Icon =
             item.kind === 'create-file'
@@ -194,6 +196,7 @@ export const PlateInlineCompletionLeaf = ({
           accept={completionLeaf.plateWorkspaceLinkAccept}
           activeIndex={completionLeaf.plateWorkspaceLinkIndex ?? 0}
           items={workspaceLinkItems}
+          label={t('editor.workspaceLinkSuggestions')}
         />
       ) : completionLeaf.plateInlineCompletionKind === 'document' && candidates.length ? (
         <DocumentCompletionMenu

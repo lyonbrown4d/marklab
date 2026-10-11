@@ -1,5 +1,6 @@
 import { CalendarDays, Link2, List, Tags, ToggleLeft, Type, type LucideIcon } from 'lucide-react'
-import type { ChangeEvent } from 'react'
+import { useState, type KeyboardEvent } from 'react'
+import { useI18n } from '@/i18n/useI18n'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,13 +13,13 @@ type FrontmatterFieldControlProps = {
 }
 
 const fieldPresentation: Record<FrontmatterField['kind'], [LucideIcon, string]> = {
-  boolean: [ToggleLeft, 'Boolean'],
-  date: [CalendarDays, 'Date'],
-  link: [Link2, 'Link'],
-  list: [List, 'List'],
-  scalar: [Type, 'Text'],
-  tag: [Tags, 'Tag'],
-  tags: [Tags, 'Tags'],
+  boolean: [ToggleLeft, 'editor.frontmatter.types.boolean'],
+  date: [CalendarDays, 'editor.frontmatter.types.date'],
+  link: [Link2, 'editor.frontmatter.types.link'],
+  list: [List, 'editor.frontmatter.types.list'],
+  scalar: [Type, 'editor.frontmatter.types.scalar'],
+  tag: [Tags, 'editor.frontmatter.types.tag'],
+  tags: [Tags, 'editor.frontmatter.types.tags'],
 }
 
 export const FrontmatterFieldControl = ({
@@ -26,13 +27,44 @@ export const FrontmatterFieldControl = ({
   field,
   onChange,
 }: FrontmatterFieldControlProps) => {
+  const { t } = useI18n()
+  const savedValue = Array.isArray(field.value) ? field.value.join('\n') : String(field.value)
+  const [draft, setDraft] = useState<{ base: string; value: string } | null>(null)
+  const value = draft?.base === savedValue ? draft.value : savedValue
+  const commit = () => {
+    if (!disabled && value !== savedValue) {
+      onChange(
+        field.kind === 'list' || field.kind === 'tags'
+          ? value === ''
+            ? []
+            : value.split('\n')
+          : value,
+      )
+    }
+    setDraft(null)
+  }
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.nativeEvent.isComposing) return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      setDraft(null)
+    } else if (
+      event.key === 'Enter' &&
+      (event.currentTarget.tagName === 'INPUT' || event.ctrlKey || event.metaKey)
+    ) {
+      event.preventDefault()
+      event.stopPropagation()
+      commit()
+    }
+  }
   const [Icon, typeLabel] = fieldPresentation[field.kind]
-  const label = `${field.key} frontmatter value`
+  const label = t('editor.frontmatter.fieldValue', { key: field.key })
   const heading = (
     <div className="flex min-w-0 items-center gap-2">
       <Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="truncate text-sm font-medium text-foreground">{field.key}</span>
-      <span className="text-[11px] text-muted-foreground">{typeLabel}</span>
+      <span className="text-[11px] text-muted-foreground">{t(typeLabel)}</span>
     </div>
   )
 
@@ -51,10 +83,6 @@ export const FrontmatterFieldControl = ({
   }
 
   if (field.kind === 'list' || field.kind === 'tags') {
-    const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-      const value = event.currentTarget.value
-      onChange(value === '' ? [] : value.split('\n'))
-    }
     return (
       <label className="grid gap-1.5 py-1.5">
         {heading}
@@ -62,10 +90,12 @@ export const FrontmatterFieldControl = ({
           aria-label={label}
           className="min-h-20 resize-y font-mono text-xs leading-5"
           disabled={disabled}
-          onChange={handleChange}
+          onChange={(event) => setDraft({ base: savedValue, value: event.currentTarget.value })}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
           rows={Math.max(2, field.value.length)}
           spellCheck={false}
-          value={field.value.join('\n')}
+          value={value}
         />
       </label>
     )
@@ -79,10 +109,12 @@ export const FrontmatterFieldControl = ({
         aria-label={label}
         disabled={disabled}
         inputMode={valueType === 'number' ? 'decimal' : undefined}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        onChange={(event) => setDraft({ base: savedValue, value: event.currentTarget.value })}
+        onBlur={commit}
+        onKeyDown={handleKeyDown}
         spellCheck={field.kind === 'scalar'}
         type={field.kind === 'date' ? 'date' : 'text'}
-        value={field.value}
+        value={value}
       />
     </label>
   )

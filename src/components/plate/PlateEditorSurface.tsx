@@ -48,7 +48,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onCalendarFileCreate,
       onChange,
       onImageImport,
-      onSelectionAi,
       onStatusChange,
       onWorkspaceLink,
       placeholder,
@@ -265,7 +264,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               editor={editor}
               interactionActive={interactionActive}
               labels={slashLabels}
-              onAi={onSelectionAi}
               onLink={openLinkDialog}
               readOnly={readOnly}
               selectionLabels={selectionToolbarLabels}

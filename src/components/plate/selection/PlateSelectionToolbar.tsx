@@ -17,7 +17,6 @@ import type { PlateSelectionToolbarController } from '@/components/plate/usePlat
 import type { PlateSelectionToolbarAction } from '@/components/plate/selection/selectionToolbarActions'
 
 export type PlateSelectionToolbarLabels = {
-  ai: string
   blockStyle: string
   bold: string
   bulletList: string

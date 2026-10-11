@@ -8,6 +8,64 @@ import {
 describe('createTableOperations', () => {
   const table = { children: [], type: 'table' } as TElement
 
+  it.each([
+    { colSpan: 2 },
+    { rowSpan: 2 },
+    { attributes: { colspan: '2' } },
+    { attributes: { rowspan: '2' } },
+  ])('does not select paths or transform a merged table: %j', (span) => {
+    const mergedTable = {
+      children: [
+        { children: [{ type: 'td' }, { type: 'td' }], type: 'tr' },
+        { children: [{ type: 'td', ...span }], type: 'tr' },
+        { children: [{ type: 'td' }, { type: 'td' }], type: 'tr' },
+      ],
+      type: 'table',
+    } as TElement
+    const transforms = {
+      deleteColumn: vi.fn(),
+      deleteRow: vi.fn(),
+      insertColumn: vi.fn(),
+      insertRow: vi.fn(),
+    }
+    const api = { findPath: vi.fn(() => [2]), start: vi.fn(), end: vi.fn() }
+    const tf = {
+      select: vi.fn(),
+      moveNodes: vi.fn(),
+      setNodes: vi.fn(),
+      withNewBatch: vi.fn(),
+      withoutNormalizing: vi.fn(),
+    }
+    const editor = { api, tf, selection: null } as unknown as SlateEditor
+    const operations = createTableOperations(editor, mergedTable, transforms)
+    expect(operations.supportsGridOperations).toBe(false)
+
+    for (const path of [
+      [0, 0],
+      [2, 0, 1, 0, 0],
+    ]) {
+      editor.selection = { anchor: { path, offset: 0 }, focus: { path, offset: 0 } }
+      operations.addColumn()
+      operations.removeColumn()
+      operations.addRow()
+      operations.removeRow()
+      operations.align('center')
+      expect(operations.moveColumn('right', 0)).toBe(false)
+      expect(operations.moveColumn('left', 1)).toBe(false)
+      expect(operations.moveColumn('left')).toBe(false)
+      expect(operations.moveRow('down', 1)).toBe(false)
+      expect(operations.moveRow('up', 2)).toBe(false)
+      expect(operations.selectColumn(1)).toBe(false)
+      expect(operations.selectRow(1)).toBe(false)
+    }
+
+    for (const transform of [...Object.values(tf), ...Object.values(transforms)]) {
+      expect(transform).not.toHaveBeenCalled()
+    }
+    expect(api.start).not.toHaveBeenCalled()
+    expect(api.end).not.toHaveBeenCalled()
+  })
+
   it('delegates structural changes to Plate table transforms', () => {
     const transforms = {
       deleteColumn: vi.fn(),
@@ -29,6 +87,7 @@ describe('createTableOperations', () => {
       },
     } as unknown as SlateEditor
     const operations = createTableOperations(editor, table, transforms)
+    expect(operations.supportsGridOperations).toBe(true)
 
     operations.addRow()
     operations.addColumn()

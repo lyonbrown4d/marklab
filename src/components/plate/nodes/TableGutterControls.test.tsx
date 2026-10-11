@@ -12,6 +12,7 @@ const createOperations = () => ({
   moveRow: vi.fn(),
   selectColumn: vi.fn(),
   selectRow: vi.fn(),
+  supportsGridOperations: true,
 })
 
 describe('TableGutterControls', () => {
@@ -56,5 +57,12 @@ describe('TableGutterControls', () => {
 
     rerender(<TableGutterControls columnIndex={0} operations={operations} rowIndex={0} />)
     expect(screen.getAllByRole('button')).toHaveLength(2)
+  })
+
+  it('disables handles when merged cells make grid indexes ambiguous', () => {
+    const operations = { ...createOperations(), supportsGridOperations: false }
+    render(<TableGutterControls columnIndex={0} operations={operations} rowIndex={0} />)
+
+    for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled()
   })
 })

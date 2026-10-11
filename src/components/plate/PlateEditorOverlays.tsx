@@ -14,7 +14,6 @@ export type PlateEditorOverlaysProps = {
   canEdit: () => boolean
   editableRef: RefObject<HTMLElement | null>
   labels: PlateSlashCommandLabels
-  onAi?: () => void
   onLink: (editor: PlateEditor) => void
   selectionLabels?: PlateSelectionToolbarLabels
   slash: PlateSlashCommandsController
@@ -25,7 +24,6 @@ export const PlateEditorOverlays = ({
   canEdit,
   editableRef,
   labels,
-  onAi,
   onLink,
   selectionLabels,
   slash,
@@ -35,7 +33,6 @@ export const PlateEditorOverlays = ({
       canEdit={canEdit}
       editableRef={editableRef}
       labels={selectionLabels ?? createPlateSelectionToolbarFallbackLabels(labels)}
-      onAi={onAi}
       onLink={onLink}
     />
     <PlateSlashOverlays activePath={activePath} controller={slash} labels={labels} />

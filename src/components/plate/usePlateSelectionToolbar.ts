@@ -32,7 +32,6 @@ type UsePlateSelectionToolbarOptions = {
   canEdit?: () => boolean
   editableRef: RefObject<HTMLElement | null>
   editor: PlateEditor
-  onAi?: () => void
   onError?: (error: unknown) => void
   onLink?: (editor: PlateEditor) => void
   readOnly: boolean
@@ -76,7 +75,6 @@ export const usePlateSelectionToolbar = ({
   canEdit,
   editableRef,
   editor,
-  onAi,
   onError,
   onLink,
   readOnly,
@@ -250,11 +248,11 @@ export const usePlateSelectionToolbar = ({
   const runMoreAction = useCallback(
     (action: PlateSelectionToolbarMoreAction) => {
       if (canEdit && !canEdit()) return false
-      const handled = runPlateSelectionToolbarMoreAction(editor, action, { onAi, onError })
-      if (handled && action !== 'ai') queueMicrotask(sync)
+      const handled = runPlateSelectionToolbarMoreAction(editor, action, { onError })
+      if (handled) queueMicrotask(sync)
       return handled
     },
-    [canEdit, editor, onAi, onError, sync],
+    [canEdit, editor, onError, sync],
   )
 
   const setToolbarElement = useCallback(

@@ -40,6 +40,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
     >
       <Button
         aria-label={t('editor.tableAddRow')}
+        disabled={!operations.supportsGridOperations}
         onClick={operations.addRow}
         onPointerDown={preserveEditorSelection}
         size="sm"
@@ -51,6 +52,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
       </Button>
       <Button
         aria-label={t('editor.tableDeleteRow')}
+        disabled={!operations.supportsGridOperations}
         onClick={operations.removeRow}
         onPointerDown={preserveEditorSelection}
         size="sm"
@@ -62,6 +64,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
       </Button>
       <Button
         aria-label={t('editor.tableAddColumn')}
+        disabled={!operations.supportsGridOperations}
         onClick={operations.addColumn}
         onPointerDown={preserveEditorSelection}
         size="sm"
@@ -73,6 +76,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
       </Button>
       <Button
         aria-label={t('editor.tableDeleteColumn')}
+        disabled={!operations.supportsGridOperations}
         onClick={operations.removeColumn}
         onPointerDown={preserveEditorSelection}
         size="sm"
@@ -86,6 +90,7 @@ export const TableToolbar = ({ table }: TableToolbarProps) => {
       {alignmentActions.map(({ icon: Icon, labelKey, value }) => (
         <Button
           aria-label={t(labelKey)}
+          disabled={!operations.supportsGridOperations}
           key={value}
           onClick={() => operations.align(value)}
           onPointerDown={preserveEditorSelection}

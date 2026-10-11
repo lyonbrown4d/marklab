@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createPlateEditor } from 'platejs/react'
 import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
-import { runPlateSelectionToolbarMoreAction } from '@/components/plate/selection/selectionToolbarMoreActions'
+import {
+  plateSelectionToolbarMoreActions,
+  runPlateSelectionToolbarMoreAction,
+} from '@/components/plate/selection/selectionToolbarMoreActions'
 
 const createEditor = () => {
   const editor = createPlateEditor({
@@ -74,14 +77,8 @@ describe('selection toolbar more actions', () => {
     await vi.waitFor(() => expect(onError).toHaveBeenCalledWith(failure))
   })
 
-  it('opens the existing AI composer without changing the selection', () => {
-    const editor = createEditor()
-    const selection = structuredClone(editor.selection)
-    const onAi = vi.fn()
-
-    expect(runPlateSelectionToolbarMoreAction(editor, 'ai', { onAi })).toBe(true)
-    expect(onAi).toHaveBeenCalledOnce()
-    expect(editor.selection).toEqual(selection)
+  it('does not expose an AI action', () => {
+    expect(plateSelectionToolbarMoreActions).not.toContain('ai')
   })
 
   it('does nothing without an expanded selection', () => {

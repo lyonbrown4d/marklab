@@ -1,5 +1,10 @@
 import type { BacklinkReference, UnlinkedMentionReference } from '@/logic/backlinks'
 import type { FsSearchResult } from '@/services/fsApi'
+import remarkParse from 'remark-parse'
+import { unified } from 'unified'
+import { visit } from 'unist-util-visit'
+
+const parser = unified().use(remarkParse)
 
 export const buildUnlinkedMentions = ({
   backlinks,
@@ -10,15 +15,19 @@ export const buildUnlinkedMentions = ({
   results: FsSearchResult[]
   targetPath: string
 }): UnlinkedMentionReference[] => {
-  const explicitLines = new Set(
-    backlinks.map((backlink) => `${backlink.sourcePath}\0${backlink.line}`),
-  )
+  const explicitLineContexts = new Map<string, string>()
+  for (const backlink of backlinks) {
+    if (backlink.context) {
+      explicitLineContexts.set(`${backlink.sourcePath}\0${backlink.line}`, backlink.context)
+    }
+  }
   return results.flatMap((result) => {
     const highlight = result.snippet_highlights[0]
+    const lineContext = explicitLineContexts.get(`${result.path}\0${result.line}`)
     if (
       result.path === targetPath ||
-      explicitLines.has(`${result.path}\0${result.line}`) ||
       !highlight ||
+      (lineContext && isMarkdownLinkMatch(lineContext, result.column - 1, result.end_column - 1)) ||
       isMarkdownLinkMatch(result.snippet, highlight.start, highlight.end)
     ) {
       return []
@@ -37,15 +46,21 @@ export const buildUnlinkedMentions = ({
 }
 
 const isMarkdownLinkMatch = (text: string, start: number, end: number): boolean => {
-  const before = text.slice(0, start)
-  const after = text.slice(end)
-  const wikiOpen = before.lastIndexOf('[[')
-  if (wikiOpen > before.lastIndexOf(']]') && after.includes(']]')) return true
+  const overlaps = (from: number, to: number) => start < to && end > from
+  let linked = false
+  visit(parser.parse(text), (node) => {
+    if (!['link', 'linkReference', 'image', 'imageReference', 'definition'].includes(node.type)) {
+      return
+    }
+    const from = node.position?.start.offset
+    const to = node.position?.end.offset
+    if (from !== undefined && to !== undefined && overlaps(from, to)) linked = true
+  })
+  if (linked) return true
 
-  const destinationOpen = before.lastIndexOf('](')
-  if (destinationOpen > before.lastIndexOf(')') && after.includes(')')) return true
-
-  const labelOpen = before.lastIndexOf('[')
-  if (labelOpen <= before.lastIndexOf(']')) return false
-  return /^\][ \t]*(?:\(|\[)/u.test(after)
+  // A search snippet omits reference definitions elsewhere in the document.
+  const explicitSyntax = /(?<!\\)(?:\[\[[^\]\n]+\]\]|\[[^\]\n]+\][ \t]*\[[^\]\n]*\])/gu
+  return Array.from(text.matchAll(explicitSyntax)).some((match) =>
+    overlaps(match.index, match.index + match[0].length),
+  )
 }

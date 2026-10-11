@@ -23,7 +23,6 @@ export type PlateEditorSurfaceProps = {
   onChange: (value: string) => void
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>
-  onSelectionAi?: () => void
   onStatusChange?: (status: MarkdownEditorStatus) => void
   onWorkspaceLink?: (target: string, documentPath: string | null) => void
   placeholder: string

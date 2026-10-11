@@ -29,29 +29,34 @@ type TextEntry = { path: Path; text: string }
 
 const processor = unified().use(remarkParse).use(plateMarkdownPluginOptions.remarkPlugins)
 
-const sourceBlocks = (markdown: string): SourceBlock[] => {
+const sourceBlocks = (markdown: string) => {
   const tree = processor.parse(markdown) as {
     children?: Array<{ position?: { start?: SourcePosition; end?: SourcePosition } }>
   }
-  return (tree.children ?? []).flatMap((node) => {
+  const blocks: SourceBlock[] = (tree.children ?? []).flatMap((node) => {
     const start = node.position?.start
     const end = node.position?.end
     return start && end ? [{ start, end, text: toString(node as never) }] : []
   })
+  const byLine = new Map<number, number>()
+  blocks.forEach(({ start, end }, index) => {
+    for (let line = start.line; line <= end.line; line += 1) {
+      if (!byLine.has(line)) byLine.set(line, index)
+    }
+  })
+  return { blocks, byLine }
 }
 
 const normalizeText = (value: string) => value.replace(/\s+/gu, ' ').trim()
 
 const diagnosticBlockIndex = (
   editor: PlateEditor,
-  markdown: string,
+  source: ReturnType<typeof sourceBlocks>,
   diagnostic: MarkdownSourceDiagnostic,
 ) => {
-  const blocks = sourceBlocks(markdown)
-  const sourceIndex = blocks.findIndex(
-    ({ start, end }) => diagnostic.line >= start.line && diagnostic.line <= end.line,
-  )
-  if (sourceIndex < 0) return null
+  const { blocks, byLine } = source
+  const sourceIndex = byLine.get(diagnostic.line)
+  if (sourceIndex === undefined) return null
   const sourceText = normalizeText(blocks[sourceIndex]?.text ?? '')
   if (sourceText) {
     const matches = (_: unknown, index: number) => {
@@ -95,17 +100,17 @@ const findUrlElementPath = (node: unknown, path: Path, target: string): Path | n
   return null
 }
 
-const sourceLinkAtDiagnostic = (markdown: string, diagnostic: MarkdownSourceDiagnostic) => {
-  const line = markdown.split(/\r?\n/u)[diagnostic.line - 1] ?? ''
-  return (
-    extractLinks(markdown).find((link) => {
-      if (link.line !== diagnostic.line) return false
-      const start = line.indexOf(link.target, Math.max(0, link.column - 1))
-      if (start < 0) return false
-      const diagnosticStart = diagnostic.startColumn - 1
-      return diagnosticStart >= start && diagnosticStart <= start + link.target.length
-    }) ?? null
-  )
+const sourceLinksByLine = (markdown: string, lines: string[]) => {
+  const byLine = new Map<number, Array<{ target: string; start: number }>>()
+  for (const link of extractLinks(markdown)) {
+    const line = lines[link.line - 1] ?? ''
+    const start = line.indexOf(link.target, Math.max(0, link.column - 1))
+    if (start < 0) continue
+    const entries = byLine.get(link.line) ?? []
+    entries.push({ target: link.target, start })
+    byLine.set(link.line, entries)
+  }
+  return byLine
 }
 
 const diagnosticProps = (diagnostic: MarkdownSourceDiagnostic) => ({
@@ -158,12 +163,19 @@ export const createPlateDiagnosticRanges = (
   editor: PlateEditor,
   markdown: string,
   diagnostics: MarkdownSourceDiagnostic[],
-): PlateDiagnosticRange[] =>
-  diagnostics.flatMap((diagnostic) => {
-    const blockIndex = diagnosticBlockIndex(editor, markdown, diagnostic)
+): PlateDiagnosticRange[] => {
+  if (!diagnostics.length) return []
+  const source = sourceBlocks(markdown)
+  const lines = markdown.split(/\r?\n/u)
+  const links = sourceLinksByLine(markdown, lines)
+  return diagnostics.flatMap((diagnostic) => {
+    const blockIndex = diagnosticBlockIndex(editor, source, diagnostic)
     if (blockIndex === null) return []
     const block = editor.children[blockIndex]
-    const link = sourceLinkAtDiagnostic(markdown, diagnostic)
+    const link = links.get(diagnostic.line)?.find(({ start, target }) => {
+      const diagnosticStart = diagnostic.startColumn - 1
+      return diagnosticStart >= start && diagnosticStart <= start + target.length
+    })
     const linkPath = link ? findUrlElementPath(block, [blockIndex], link.target) : null
     const linkEntries: TextEntry[] = []
     if (linkPath) collectTextEntries(editor.api.node(linkPath)?.[0], linkPath, linkEntries)
@@ -171,12 +183,13 @@ export const createPlateDiagnosticRanges = (
 
     const entries: TextEntry[] = []
     collectTextEntries(block, [blockIndex], entries)
-    const line = markdown.split(/\r?\n/u)[diagnostic.line - 1] ?? ''
+    const line = lines[diagnostic.line - 1] ?? ''
     const sourceText = line.slice(diagnostic.startColumn - 1, diagnostic.endColumn - 1)
     const visible = visibleTextRanges(entries, sourceText, diagnostic)
     const fallback = entries.find((entry) => entry.text.length > 0)
     return visible.length ? visible : fullTextRanges(fallback ? [fallback] : [], diagnostic)
   })
+}
 
 export const focusPlateDiagnostic = (
   editor: PlateEditor,
@@ -228,7 +241,7 @@ export const applyPlateDiagnosticAction = (
 ) => {
   if (action.kind !== 'replace-text') return false
   const target = editedLinkTarget(markdown, action)
-  const blockIndex = diagnosticBlockIndex(editor, markdown, problem)
+  const blockIndex = diagnosticBlockIndex(editor, sourceBlocks(markdown), problem)
   if (!target || blockIndex === null) return false
   const path = findUrlElementPath(editor.children[blockIndex], [blockIndex], target.current)
   if (!path) return false

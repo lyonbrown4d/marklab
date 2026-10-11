@@ -213,7 +213,7 @@ export const RightSidebarBacklinksPanel = ({
             {filteredMentions.length > 0 ? (
               <section className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  <span className="truncate">Unlinked mentions</span>
+                  <span className="truncate">{t('inspector.unlinkedMentions')}</span>
                   <Badge className="h-4 min-w-4 rounded px-1 text-[10px]" variant="outline">
                     {filteredMentions.length}
                   </Badge>
@@ -238,7 +238,7 @@ export const RightSidebarBacklinksPanel = ({
           role="status"
         >
           <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
-          Searching for unlinked mentions
+          {t('inspector.unlinkedMentionsLoading')}
         </div>
       ) : null}
       {mentionsError ? (

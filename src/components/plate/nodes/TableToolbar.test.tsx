@@ -10,6 +10,7 @@ const operations = {
   align: vi.fn(),
   removeColumn: vi.fn(),
   removeRow: vi.fn(),
+  supportsGridOperations: true,
 }
 const editor = {} as SlateEditor
 
@@ -39,5 +40,14 @@ describe('TableToolbar', () => {
 
     expect(operations.addRow).toHaveBeenCalledOnce()
     expect(operations.removeColumn).toHaveBeenCalledOnce()
+  })
+
+  it('disables structural and alignment actions when the table contains merged cells', () => {
+    operations.supportsGridOperations = false
+    render(<TableToolbar table={{ children: [], type: 'table' } as TElement} />)
+
+    expect(screen.getAllByRole('button')).toHaveLength(7)
+    for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled()
+    operations.supportsGridOperations = true
   })
 })

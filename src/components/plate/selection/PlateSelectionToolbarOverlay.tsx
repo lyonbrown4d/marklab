@@ -17,7 +17,6 @@ type PlateSelectionToolbarOverlayProps = {
   canEdit: () => boolean
   editableRef: RefObject<HTMLElement | null>
   labels: PlateSelectionToolbarLabels
-  onAi?: Parameters<typeof usePlateSelectionToolbar>[0]['onAi']
   onLink?: Parameters<typeof usePlateSelectionToolbar>[0]['onLink']
 }
 
@@ -25,7 +24,6 @@ export const PlateSelectionToolbarOverlay = ({
   canEdit,
   editableRef,
   labels,
-  onAi,
   onLink,
 }: PlateSelectionToolbarOverlayProps) => {
   const editor = useEditorRef()
@@ -44,7 +42,6 @@ export const PlateSelectionToolbarOverlay = ({
     canEdit,
     editableRef,
     editor,
-    onAi,
     onError: handleError,
     onLink,
     readOnly,

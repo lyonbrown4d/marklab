@@ -2,12 +2,30 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
 import {
   deserializePlateMarkdown,
   serializePlateMarkdown,
 } from '@/components/plate/plateMarkdownSerialization'
+
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string, values?: { key?: string; count?: number }) => {
+      const labels: Record<string, string> = {
+        title: 'Frontmatter',
+        view: 'Frontmatter view',
+        structured: 'Structured frontmatter',
+        source: 'Frontmatter source',
+        yamlSource: 'Frontmatter YAML source',
+      }
+      const name = key.replace('editor.frontmatter.', '')
+      if (name === 'fieldValue') return `${values?.key} frontmatter value`
+      if (name === 'sourceOnly') return `${values?.count} source-only`
+      return labels[name] ?? `translated:${key}`
+    },
+  }),
+}))
 
 const markdown = [
   '---',
@@ -77,10 +95,12 @@ describe('FrontmatterElement', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'title frontmatter value' }), {
       target: { value: 'A: safer title' },
     })
+    fireEvent.blur(screen.getByRole('textbox', { name: 'title frontmatter value' }))
     fireEvent.click(screen.getByRole('switch', { name: 'published frontmatter value' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'aliases frontmatter value' }), {
       target: { value: 'first\nsecond value\nthird' },
     })
+    fireEvent.blur(screen.getByRole('textbox', { name: 'aliases frontmatter value' }))
 
     const serialized = serializePlateMarkdown(editor)
     expect(serialized).toContain('title: "A: safer title" # keep title comment')
@@ -117,5 +137,38 @@ describe('FrontmatterElement', () => {
     expect(screen.getByRole('textbox', { name: 'title frontmatter value' })).toBeDisabled()
     expect(screen.getByRole('switch', { name: 'published frontmatter value' })).toBeDisabled()
     expect(screen.getByRole('textbox', { name: 'tags frontmatter value' })).toBeDisabled()
+  })
+
+  it('keeps numeric and date semantics while clearing and retyping drafts', () => {
+    const { editor } = renderFrontmatter(markdown.replace('tag: note', 'priority: 2'))
+    const number = screen.getByLabelText('priority frontmatter value')
+    fireEvent.change(number, { target: { value: '' } })
+    expect(serializePlateMarkdown(editor)).toContain('priority: 2')
+    fireEvent.change(number, { target: { value: '3' } })
+    fireEvent.keyDown(number, { key: 'Enter' })
+    expect(serializePlateMarkdown(editor)).toContain('priority: 3\n')
+    const date = screen.getByLabelText('date frontmatter value')
+    fireEvent.change(date, { target: { value: '' } })
+    expect(date).toHaveAttribute('type', 'date')
+    expect(serializePlateMarkdown(editor)).toContain('date: 2026-10-11')
+    fireEvent.change(date, { target: { value: '2026-11-12' } })
+    fireEvent.blur(date)
+    expect(screen.getByLabelText('date frontmatter value')).toHaveAttribute('type', 'date')
+    expect(serializePlateMarkdown(editor)).toContain('date: 2026-11-12')
+  })
+
+  it('discards invalid numeric commits and cancels drafts with Escape', () => {
+    const { editor } = renderFrontmatter(markdown.replace('tag: note', 'priority: 2'))
+    const number = screen.getByLabelText('priority frontmatter value')
+    fireEvent.change(number, { target: { value: '-' } })
+    fireEvent.blur(number)
+    expect(number).toHaveValue('2')
+    fireEvent.change(number, { target: { value: '42' } })
+    fireEvent.keyDown(number, { key: 'Escape' })
+    fireEvent.blur(number)
+    expect(serializePlateMarkdown(editor)).toContain('priority: 2')
+    expect(
+      screen.getAllByText('translated:editor.frontmatter.types.scalar').length,
+    ).toBeGreaterThan(0)
   })
 })

@@ -36,7 +36,6 @@ describe('PlateSelectionToolbar value synchronization', () => {
         activeMarks={{ bold: true, code: false, italic: false, link: false, strike: false }}
         anchor={{ left: 0, top: 0 }}
         labels={{
-          ai: 'Ask AI',
           blockStyle: 'Block style',
           bold: 'Bold',
           bulletList: 'Bullet list',

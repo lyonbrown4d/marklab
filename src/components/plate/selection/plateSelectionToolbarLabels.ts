@@ -4,7 +4,6 @@ import type { PlateSelectionToolbarLabels } from '@/components/plate/selection/P
 export const createPlateSelectionToolbarFallbackLabels = (
   labels: PlateSlashCommandLabels,
 ): PlateSelectionToolbarLabels => ({
-  ai: 'AI',
   blockStyle: labels.textGroup,
   bold: labels.bold,
   bulletList: labels.bulletList,

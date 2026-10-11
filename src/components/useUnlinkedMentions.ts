@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useI18n } from '@/i18n/useI18n'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 import type { BacklinkReference } from '@/logic/backlinks'
@@ -23,6 +24,7 @@ export const useUnlinkedMentions = ({
   targetPath: string | null
   workspaceKey: string
 }) => {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const query = targetLabel.trim()
   const queryKey = useMemo(
@@ -78,7 +80,7 @@ export const useUnlinkedMentions = ({
       search.error instanceof Error
         ? search.error.message
         : search.error
-          ? 'Unlinked mention search failed.'
+          ? t('inspector.unlinkedMentionsError')
           : null,
     retry: search.refetch,
   }

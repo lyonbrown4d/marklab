@@ -6,6 +6,12 @@ import { useUnlinkedMentions } from '@/components/useUnlinkedMentions'
 import { fsApi } from '@/services/fsApi'
 
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/i18n/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string) =>
+      key === 'inspector.unlinkedMentionsError' ? 'Unlinked mention search failed.' : key,
+  }),
+}))
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     searchWorkspaceOccurrences: vi.fn(),
@@ -89,5 +95,22 @@ describe('useUnlinkedMentions', () => {
     unmount()
 
     await waitFor(() => expect(cancel).toHaveBeenCalledWith(requestId))
+  })
+
+  it('localizes non-Error search failures', async () => {
+    search.mockRejectedValue('unavailable')
+    const { result } = renderHook(
+      () =>
+        useUnlinkedMentions({
+          backlinks: [],
+          enabled: true,
+          targetLabel: 'Target',
+          targetPath: 'target.md',
+          workspaceKey: 'external:/wiki',
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.error).toBe('Unlinked mention search failed.'))
   })
 })

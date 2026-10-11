@@ -2,6 +2,7 @@ import { Braces, Code2, ListTree } from 'lucide-react'
 import type { TElement } from 'platejs'
 import { PlateElement, type PlateElementProps, useEditorRef, useReadOnly } from 'platejs/react'
 import { useMemo, useState } from 'react'
+import { useI18n } from '@/i18n/useI18n'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { FrontmatterFieldControl } from '@/components/plate/frontmatter/FrontmatterFieldControl'
@@ -22,6 +23,7 @@ const nodeText = (node: unknown): string => {
 }
 
 export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNode>) => {
+  const { t } = useI18n()
   const editor = useEditorRef()
   const readOnly = useReadOnly()
   const source = nodeText(props.element)
@@ -51,7 +53,7 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
       as="section"
       attributes={{
         ...props.attributes,
-        'aria-label': 'Frontmatter',
+        'aria-label': t('editor.frontmatter.title'),
         'data-frontmatter-mode': visibleMode,
       }}
       className="my-4 overflow-hidden rounded-md border border-border bg-muted/20"
@@ -62,16 +64,16 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
       >
         <div className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
           <Braces aria-hidden="true" className="size-3.5" />
-          <span>Frontmatter</span>
+          <span>{t('editor.frontmatter.title')}</span>
           {model.unsupportedCount > 0 && (
             <span className="truncate text-[11px] font-normal">
-              {model.unsupportedCount} source-only
+              {t('editor.frontmatter.sourceOnly', { count: model.unsupportedCount })}
             </span>
           )}
         </div>
         <TooltipProvider>
           <ToggleGroup
-            aria-label="Frontmatter view"
+            aria-label={t('editor.frontmatter.view')}
             onValueChange={(value) => value && setMode(value as FrontmatterMode)}
             size="sm"
             type="single"
@@ -81,7 +83,7 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
             <Tooltip>
               <TooltipTrigger asChild>
                 <ToggleGroupItem
-                  aria-label="Structured frontmatter"
+                  aria-label={t('editor.frontmatter.structured')}
                   className="size-6 px-0"
                   disabled={Boolean(model.error)}
                   value="structured"
@@ -89,19 +91,19 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
                   <ListTree aria-hidden="true" />
                 </ToggleGroupItem>
               </TooltipTrigger>
-              <TooltipContent>Structured fields</TooltipContent>
+              <TooltipContent>{t('editor.frontmatter.structured')}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <ToggleGroupItem
-                  aria-label="Frontmatter source"
+                  aria-label={t('editor.frontmatter.source')}
                   className="size-6 px-0"
                   value="source"
                 >
                   <Code2 aria-hidden="true" />
                 </ToggleGroupItem>
               </TooltipTrigger>
-              <TooltipContent>YAML source</TooltipContent>
+              <TooltipContent>{t('editor.frontmatter.source')}</TooltipContent>
             </Tooltip>
           </ToggleGroup>
         </TooltipProvider>
@@ -117,12 +119,12 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
             />
           ))}
           {model.fields.length === 0 && (
-            <p className="py-2 text-xs text-muted-foreground">No structured fields</p>
+            <p className="py-2 text-xs text-muted-foreground">{t('editor.frontmatter.empty')}</p>
           )}
         </div>
       ) : (
         <pre
-          aria-label="Frontmatter YAML source"
+          aria-label={t('editor.frontmatter.yamlSource')}
           className="m-0 min-h-12 overflow-x-auto whitespace-pre-wrap px-3 py-2 font-mono text-xs leading-5 outline-none"
           spellCheck={false}
         >

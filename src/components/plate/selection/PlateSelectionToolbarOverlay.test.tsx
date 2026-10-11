@@ -39,7 +39,6 @@ vi.mock('platejs/react', async (importOriginal) => {
 import { PlateSelectionToolbarOverlay } from '@/components/plate/selection/PlateSelectionToolbarOverlay'
 
 const labels = {
-  ai: 'Ask AI',
   blockStyle: 'Block style',
   bold: 'Bold',
   bulletList: 'Bullet list',

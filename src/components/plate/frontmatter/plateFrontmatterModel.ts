@@ -88,6 +88,8 @@ export const parseFrontmatter = (source: string): FrontmatterModel => {
     }
     if (
       isSeq(value) &&
+      !value.anchor &&
+      !value.tag &&
       value.range &&
       value.items.every(
         (item) =>
@@ -95,6 +97,8 @@ export const parseFrontmatter = (source: string): FrontmatterModel => {
           typeof item.value === 'string' &&
           !item.anchor &&
           !item.tag &&
+          !item.comment &&
+          !item.commentBefore &&
           Boolean(item.range),
       )
     ) {
@@ -116,8 +120,14 @@ const renderScalar = (field: FrontmatterField, nextValue: string | boolean | str
   if (field.kind === 'list' || field.kind === 'tags') return null
   if (!('valueType' in field)) return null
   const value = String(nextValue)
-  if (field.valueType === 'number' && /^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(value.trim())) {
-    return value.trim()
+  if (field.kind === 'date' && !isDateValue(value)) return null
+  if (field.valueType === 'number') {
+    const parsed = parseDocument(value.trim())
+    return parsed.errors.length === 0 &&
+      isScalar(parsed.contents) &&
+      typeof parsed.contents.value === 'number'
+      ? stringify(parsed.contents.value).trimEnd()
+      : null
   }
   return stringify(value).trimEnd()
 }
@@ -135,6 +145,7 @@ export const updateFrontmatterField = (
 ): string => {
   const document = parseDocument(source, { keepSourceTokens: true, uniqueKeys: true })
   if (document.errors.length > 0 || !isMap(document.contents)) return source
+  if (!parseFrontmatter(source).fields.some(({ key }) => key === field.key)) return source
   const pair = document.contents.items.find(
     (item) => isScalar(item.key) && item.key.value === field.key,
   )

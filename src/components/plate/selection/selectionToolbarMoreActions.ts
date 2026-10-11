@@ -14,13 +14,11 @@ export const plateSelectionToolbarMoreActions = [
   'bulletList',
   'orderedList',
   'copyMarkdown',
-  'ai',
 ] as const
 
 export type PlateSelectionToolbarMoreAction = (typeof plateSelectionToolbarMoreActions)[number]
 
 type RunMoreActionOptions = {
-  onAi?: () => void
   onError?: (error: unknown) => void
   writeText?: (text: string) => Promise<void>
 }
@@ -93,7 +91,7 @@ const wrapSelectionInQuote = (editor: PlateEditor) => {
 export const runPlateSelectionToolbarMoreAction = (
   editor: PlateEditor,
   action: PlateSelectionToolbarMoreAction,
-  { onAi, onError, writeText = writeClipboardText }: RunMoreActionOptions = {},
+  { onError, writeText = writeClipboardText }: RunMoreActionOptions = {},
 ) => {
   if (!editor.selection || !editor.api.isExpanded()) return false
 
@@ -106,11 +104,6 @@ export const runPlateSelectionToolbarMoreAction = (
     const markdown = serializePlateSelectionMarkdown(editor)
     if (markdown === null) return false
     void writeText(markdown).catch((error: unknown) => onError?.(error))
-    return true
-  }
-
-  if (action === 'ai' && onAi) {
-    onAi()
     return true
   }
 

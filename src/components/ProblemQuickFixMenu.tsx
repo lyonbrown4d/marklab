@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { LoaderCircle, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,23 +21,60 @@ type ProblemQuickFixMenuProps = {
   onGetActions: (problem: MarkdownSourceDiagnostic) => Promise<MarkdownLanguageCodeAction[]>
 }
 
-export const ProblemQuickFixMenu = ({
+export const ProblemQuickFixMenu = (props: ProblemQuickFixMenuProps) => (
+  <ProblemQuickFixMenuSession
+    key={JSON.stringify([
+      props.problem.id,
+      props.problem.code,
+      props.problem.source,
+      props.problem.line,
+      props.problem.startColumn,
+      props.problem.endColumn,
+      props.problem.message,
+      props.problem.severity,
+    ])}
+    {...props}
+  />
+)
+
+const ProblemQuickFixMenuSession = ({
   problem,
   onApply,
   onGetActions,
 }: ProblemQuickFixMenuProps) => {
   const { t } = useI18n()
   const requestRef = useRef(0)
+  const busyRef = useRef(false)
   const [actions, setActions] = useState<MarkdownLanguageCodeAction[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
 
-  const loadActions = () => {
-    const request = ++requestRef.current
+  useLayoutEffect(
+    () => () => {
+      requestRef.current += 1
+    },
+    [],
+  )
+
+  const beginRequest = () => {
+    busyRef.current = true
+    setActions([])
     setError(null)
     setLoading(true)
-    void onGetActions(problem)
+    return ++requestRef.current
+  }
+
+  const finishRequest = (request: number) => {
+    if (request !== requestRef.current) return
+    busyRef.current = false
+    setLoading(false)
+  }
+
+  const loadActions = () => {
+    const request = beginRequest()
+    void Promise.resolve()
+      .then(() => (request === requestRef.current ? onGetActions(problem) : []))
       .then((nextActions) => {
         if (request !== requestRef.current) return
         setActions(nextActions)
@@ -45,29 +82,38 @@ export const ProblemQuickFixMenu = ({
       })
       .catch((reason: unknown) => {
         if (request !== requestRef.current) return
-        setError(reason instanceof Error ? reason.message : t('inspector.problems'))
+        setError(reason instanceof Error ? reason.message : t('context.actionFailed'))
       })
-      .finally(() => {
-        if (request === requestRef.current) setLoading(false)
-      })
+      .finally(() => finishRequest(request))
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
     if (nextOpen) loadActions()
-    else requestRef.current += 1
+    else {
+      requestRef.current += 1
+      busyRef.current = false
+      setLoading(false)
+      setActions([])
+      setError(null)
+    }
   }
 
   const apply = (action: MarkdownLanguageCodeAction) => {
-    setLoading(true)
-    void onApply(problem, action)
+    if (busyRef.current || !open || !actions.includes(action)) return
+    const request = beginRequest()
+    void Promise.resolve()
+      .then(() => (request === requestRef.current ? onApply(problem, action) : false))
       .then((applied) => {
+        if (request !== requestRef.current) return
         if (applied) setOpen(false)
+        else setError(t('context.actionFailed'))
       })
       .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : t('inspector.problems'))
+        if (request !== requestRef.current) return
+        setError(reason instanceof Error ? reason.message : t('context.actionFailed'))
       })
-      .finally(() => setLoading(false))
+      .finally(() => finishRequest(request))
   }
 
   return (
@@ -94,10 +140,17 @@ export const ProblemQuickFixMenu = ({
           <TooltipContent side="left">{t('actions.more')}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DropdownMenuContent align="end" className="max-w-80">
+      <DropdownMenuContent align="end" aria-busy={loading} className="max-w-80">
         {error ? <DropdownMenuItem disabled>{error}</DropdownMenuItem> : null}
         {actions.map((action) => (
-          <DropdownMenuItem key={`${action.kind}:${action.title}`} onSelect={() => apply(action)}>
+          <DropdownMenuItem
+            disabled={loading}
+            key={`${action.kind}:${action.title}`}
+            onSelect={(event) => {
+              event.preventDefault()
+              apply(action)
+            }}
+          >
             <span className="whitespace-normal">{action.title}</span>
           </DropdownMenuItem>
         ))}

@@ -240,21 +240,6 @@ describe('usePlateSelectionToolbar', () => {
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure))
   })
 
-  it('runs the AI More action without scheduling a formatting resync', () => {
-    const editor = createCopyEditor()
-    const onAi = vi.fn()
-    const root = document.createElement('div')
-    const editableRef = createRef<HTMLElement>()
-    editableRef.current = root
-    document.body.append(root)
-    const { result } = renderHook(() =>
-      usePlateSelectionToolbar({ editableRef, editor, onAi, readOnly: false }),
-    )
-
-    expect(result.current.runMoreAction('ai')).toBe(true)
-    expect(onAi).toHaveBeenCalledOnce()
-  })
-
   it('runs an enabled action and reports an invalid editor selection as unhandled', async () => {
     const editor = createEditor()
     const root = document.createElement('div')

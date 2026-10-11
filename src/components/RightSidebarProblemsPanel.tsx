@@ -99,6 +99,7 @@ export const RightSidebarProblemsPanel = ({
       />
     ) : (
       <ProblemRow
+        key={targetPath}
         problem={item.problem}
         onOpenProblem={onOpenProblem}
         onApplyProblemAction={onApplyProblemAction}

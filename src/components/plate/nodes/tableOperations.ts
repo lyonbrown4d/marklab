@@ -1,5 +1,12 @@
-import { deleteColumn, deleteRow, insertTableColumn, insertTableRow } from '@platejs/table'
-import type { Path, SlateEditor, TElement } from 'platejs'
+import {
+  deleteColumn,
+  deleteRow,
+  getColSpan,
+  getRowSpan,
+  insertTableColumn,
+  insertTableRow,
+} from '@platejs/table'
+import type { Path, SlateEditor, TElement, TTableCellElement } from 'platejs'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
 export type TableAlignment = 'left' | 'center' | 'right'
@@ -24,12 +31,22 @@ export const createTableOperations = (
   table: TElement,
   transforms: TableTransforms = defaultTransforms,
 ) => {
+  // Child indexes are only logical grid indexes when every cell occupies one slot.
+  const hasMergedCells = () =>
+    table.children.some((row) =>
+      (row as TElement).children.some(
+        (cell) =>
+          getColSpan(cell as TTableCellElement) !== 1 ||
+          getRowSpan(cell as TTableCellElement) !== 1,
+      ),
+    )
   const getTablePath = () => editor.api.findPath(table)
   const selectionBelongsToTable = (tablePath: Path) => {
     const selectionPath = editor.selection?.anchor.path
     return Boolean(selectionPath && tablePath.every((part, index) => selectionPath[index] === part))
   }
   const activateTable = () => {
+    if (hasMergedCells()) return false
     const tablePath = getTablePath()
     if (!tablePath) return false
     if (!selectionBelongsToTable(tablePath)) editor.tf.select(editor.api.start(tablePath))
@@ -63,6 +80,7 @@ export const createTableOperations = (
     return true
   }
   const moveRow = (direction: Extract<TableMoveDirection, 'down' | 'up'>, index?: number) => {
+    if (hasMergedCells()) return false
     const tablePath = getTablePath()
     const row = index ?? currentCellIndices()?.row
     const { rows } = getGridSize()
@@ -79,6 +97,7 @@ export const createTableOperations = (
     return true
   }
   const moveColumn = (direction: Extract<TableMoveDirection, 'left' | 'right'>, index?: number) => {
+    if (hasMergedCells()) return false
     const tablePath = getTablePath()
     const column = index ?? currentCellIndices()?.column
     const { columns, rows } = getGridSize()
@@ -118,17 +137,20 @@ export const createTableOperations = (
     removeColumn: () => runForTable(transforms.deleteColumn),
     removeRow: () => runForTable(transforms.deleteRow),
     selectColumn: (columnIndex: number) => {
+      if (hasMergedCells()) return false
       const tablePath = getTablePath()
       const { columns, rows } = getGridSize()
       if (!tablePath || columnIndex < 0 || columnIndex >= columns || rows === 0) return false
       return selectGridRange([...tablePath, 0, columnIndex], [...tablePath, rows - 1, columnIndex])
     },
     selectRow: (rowIndex: number) => {
+      if (hasMergedCells()) return false
       const tablePath = getTablePath()
       const { columns, rows } = getGridSize()
       if (!tablePath || rowIndex < 0 || rowIndex >= rows || columns === 0) return false
       return selectGridRange([...tablePath, rowIndex, 0], [...tablePath, rowIndex, columns - 1])
     },
+    supportsGridOperations: !hasMergedCells(),
   }
 }
 

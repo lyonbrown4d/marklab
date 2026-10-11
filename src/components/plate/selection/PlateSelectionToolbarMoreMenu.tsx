@@ -1,5 +1,4 @@
 import {
-  Bot,
   Copy,
   Heading1,
   Heading2,
@@ -68,10 +67,6 @@ export const PlateSelectionToolbarMoreMenu = ({ labels, onAction }: MoreMenuProp
       <DropdownMenuItem onSelect={() => onAction('copyMarkdown')}>
         <Copy aria-hidden="true" />
         {labels.copyMarkdown}
-      </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onAction('ai')}>
-        <Bot aria-hidden="true" />
-        {labels.ai}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

@@ -115,7 +115,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
   })
   const selectionToolbarLabels = useMemo<PlateSelectionToolbarLabels>(
     () => ({
-      ai: t('editor.selectionAskAi'),
       blockStyle: t('editor.selectionBlockStyle'),
       bold: t('slash.bold'),
       bulletList: t('slash.bulletList'),
@@ -173,7 +172,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           interactionActive={interactionActive}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
-          onSelectionAi={() => void aiComposer.open()}
           onWorkspaceLink={props.onWorkspaceLink}
           onStatusChange={handleStatusChange}
           placeholder={props.placeholder}
