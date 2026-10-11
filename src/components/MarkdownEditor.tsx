@@ -16,6 +16,7 @@ import {
 import { usePlateEditorContextMenu } from '@/components/plate/usePlateEditorContextMenu'
 import { usePlateFocusHeading } from '@/components/plate/usePlateFocusHeading'
 import { usePlateInlineAiComposer } from '@/components/plate/usePlateInlineAiComposer'
+import type { PlateSelectionToolbarLabels } from '@/components/plate/selection/PlateSelectionToolbar'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -112,6 +113,30 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
     ready: status.phase === 'ready',
     rootRef,
   })
+  const selectionToolbarLabels = useMemo<PlateSelectionToolbarLabels>(
+    () => ({
+      ai: t('editor.selectionAskAi'),
+      blockStyle: t('editor.selectionBlockStyle'),
+      bold: t('slash.bold'),
+      bulletList: t('slash.bulletList'),
+      clear: t('slash.clearFormat'),
+      code: t('slash.inlineCode'),
+      copyError: t('editor.selectionCopyFailed'),
+      copyMarkdown: t('edit.copyAsMarkdown'),
+      heading1: t('slash.heading1'),
+      heading2: t('slash.heading2'),
+      heading3: t('slash.heading3'),
+      italic: t('slash.italic'),
+      link: t('slash.link'),
+      more: t('editor.selectionMore'),
+      orderedList: t('slash.orderedList'),
+      paragraph: t('slash.text'),
+      quote: t('slash.quote'),
+      strike: t('slash.strike'),
+      toolbar: t('slash.textGroup'),
+    }),
+    [t],
+  )
 
   useImperativeHandle(ref, () => ({
     focus: () => surfaceRef.current?.focus(),
@@ -148,10 +173,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>((pr
           interactionActive={interactionActive}
           onChange={props.onChange}
           onCalendarFileCreate={props.onCalendarFileCreate}
+          onSelectionAi={() => void aiComposer.open()}
           onWorkspaceLink={props.onWorkspaceLink}
           onStatusChange={handleStatusChange}
           placeholder={props.placeholder}
           readOnly={props.readOnly}
+          selectionToolbarLabels={selectionToolbarLabels}
           ref={surfaceRef}
           shortcutOverrides={shortcutOverrides}
           slashLabels={props.slashLabels}

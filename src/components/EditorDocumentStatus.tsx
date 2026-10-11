@@ -2,6 +2,8 @@ import { EditorStatusBar } from '@/components/EditorStatusBar'
 import { useI18n } from '@/i18n/useI18n'
 import type { DocumentStats } from '@/pages/useDocumentStats'
 import type { ViewMode } from '@/store/appTypes'
+import { useStore } from 'zustand'
+import { activeHeadingStore } from '@/utils/editorNavigation'
 
 export type EditorCursorPosition = {
   lineNumber: number
@@ -22,6 +24,12 @@ export const EditorDocumentStatus = ({
   cursor?: EditorCursorPosition | null
 }) => {
   const { t } = useI18n()
+  const activeHeading = useStore(activeHeadingStore, (state) =>
+    activePath ? state.headingDetails[activePath] : null,
+  )
+  const scrollProgress = useStore(activeHeadingStore, (state) =>
+    activePath ? state.scrollProgress[activePath] : undefined,
+  )
   const extension = activePath?.split(/[\\/]/).pop()?.split('.').pop()?.toLowerCase()
   const format =
     extension === 'md' || extension === 'markdown'
@@ -34,6 +42,12 @@ export const EditorDocumentStatus = ({
 
   return (
     <EditorStatusBar activePath={activePath} viewMode={viewMode}>
+      {viewMode === 'wysiwyg' && activeHeading && (
+        <span className="max-w-40 truncate" title={activeHeading.text}>
+          # {activeHeading.text}
+        </span>
+      )}
+      {viewMode === 'wysiwyg' && scrollProgress !== undefined && <span>{scrollProgress}%</span>}
       {cursor && (
         <span>
           Ln {cursor.lineNumber}, Col {cursor.column}

@@ -169,6 +169,23 @@ describe('PlateEditorSurface document find', () => {
     expect(query.selectionEnd).toBe(query.value.length)
   })
 
+  it('ignores Enter and Escape while the find query is composing text', async () => {
+    const { editor } = renderEditor()
+    const surface = screen.getByTestId('markdown-editor')
+    fireEvent.keyDown(surface, { ctrlKey: true, key: 'f' })
+    const query = screen.getByRole('searchbox', { name: 'Find in document' })
+    fireEvent.change(query, { target: { value: 'alpha' } })
+    await waitFor(() => expect(screen.getByText('1 / 2')).toBeVisible())
+
+    const selectionBeforeComposition = editor.selection
+    fireEvent.keyDown(query, { isComposing: true, key: 'Enter' })
+    expect(editor.selection).toEqual(selectionBeforeComposition)
+    expect(screen.getByText('1 / 2')).toBeVisible()
+
+    fireEvent.keyDown(query, { isComposing: true, key: 'Escape' })
+    expect(screen.getByRole('searchbox', { name: 'Find in document' })).toBeVisible()
+  })
+
   it('rescans once per value version, clamps the index, and never rescans on navigation', async () => {
     const collectMatches = vi.spyOn(plateDocumentFindModel, 'collectPlateDocumentFindMatches')
     const { editor } = renderEditor()

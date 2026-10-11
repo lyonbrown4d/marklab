@@ -29,6 +29,7 @@ import {
 import type { EditorChangeHandler } from '@/types/editorChanges'
 import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 import { useConfiguredMonaco } from '@/components/source-code/useConfiguredMonaco'
+import { useSourceCodeEditorExternalValue } from '@/components/source-code/useSourceCodeEditorExternalValue'
 
 type SourceCodeEditorProps = {
   activePath: string | null
@@ -65,6 +66,7 @@ const SourceCodeEditor = ({
   const markdownEnabled = isMarkdownFilePath(activePath ?? '')
   const { error: monacoLoadError, ready: monacoReady } = useConfiguredMonaco()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const syncExternalValue = useSourceCodeEditorExternalValue({ editorRef, value })
   const cursorCallbackRef = useLatest(onCursorChange)
   const workspaceKeyRef = useLatest(workspaceKey)
   const cursorSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
@@ -109,6 +111,7 @@ const SourceCodeEditor = ({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    syncExternalValue(editor)
     focusHandoff.reportReady()
     cursorSubscriptionRef.current?.dispose()
     cursorSubscriptionRef.current = editor.onDidChangeCursorPosition(({ position }) => {

@@ -3,6 +3,7 @@ import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readPlateCodeSource } from '@/components/plate/code/plateCodeCompletionEdits'
 import { createPlateNodePlugins } from '@/components/plate/nodes/plateNodePlugins'
 
 const languageClient = vi.hoisted(() => ({
@@ -58,6 +59,16 @@ vi.mock('@/components/previews/MermaidCodeEditor', () => ({
     />
   ),
 }))
+vi.mock('@monaco-editor/react', () => ({
+  default: ({ onChange, value }: { onChange?: (value: string) => void; value?: string }) => (
+    <textarea
+      aria-label="Expanded code editor"
+      onChange={(event) => onChange?.(event.currentTarget.value)}
+      value={value}
+    />
+  ),
+}))
+vi.mock('@/lib/monaco', () => ({ configureMonaco: vi.fn().mockResolvedValue(undefined) }))
 
 const renderCodeBlock = ({ language = 'mermaid', readOnly = false, source = 'fl' } = {}) => {
   const editor = createPlateEditor({
@@ -177,5 +188,78 @@ describe('CodeBlockElement language intelligence', () => {
 
     expect(container.querySelector('code[data-language="typescript"]')).toBeVisible()
     expect(screen.queryByText('Mermaid preview')).not.toBeInTheDocument()
+  })
+
+  it('changes the fenced-code language without changing its source', async () => {
+    const { editor } = renderCodeBlock({ language: 'typescript', source: 'const ready = true' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'TypeScript' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Python' }))
+
+    await waitFor(() =>
+      expect((editor.api.node([0])?.[0] as { lang?: string }).lang).toBe('python'),
+    )
+    expect(editor.api.string([0])).toBe('const ready = true')
+  })
+
+  it('copies code and announces clipboard failures accessibly', async () => {
+    const writeText = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('no'))
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    renderCodeBlock({ language: 'typescript', source: 'const ready = true' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }))
+    await screen.findByText('Code copied')
+    expect(writeText).toHaveBeenCalledWith('const ready = true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }))
+    expect(await screen.findByText('Could not copy code')).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('toggles wrapping and line numbers for ordinary code blocks', () => {
+    const { container } = renderCodeBlock({ language: 'typescript', source: 'const ready = true' })
+    const pre = container.querySelector('pre')!
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wrap lines' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show line numbers' }))
+
+    expect(pre).toHaveAttribute('data-wrap', 'true')
+    expect(pre).toHaveAttribute('data-line-numbers', 'true')
+  })
+
+  it('applies or cancels a local draft from the expanded Monaco editor', async () => {
+    const { editor } = renderCodeBlock({ language: 'typescript', source: 'const ready = true' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open expanded editor' }))
+    const expandedEditor = await screen.findByRole('textbox', { name: 'Expanded code editor' })
+    fireEvent.change(expandedEditor, { target: { value: 'const ready = false' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(editor.api.string([0])).toBe('const ready = true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open expanded editor' }))
+    const originalDocument = structuredClone(editor.children)
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Expanded code editor' }), {
+      target: { value: 'const ready = false\nreturn ready' },
+    })
+    const newBatchSpy = vi.spyOn(editor.tf, 'withNewBatch')
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(readPlateCodeSource(editor, [0])).toBe('const ready = false\nreturn ready')
+    expect(newBatchSpy).toHaveBeenCalledOnce()
+
+    editor.tf.undo()
+    expect(editor.children).toEqual(originalDocument)
+  })
+
+  it('hides ordinary code modification actions when read only', () => {
+    renderCodeBlock({ language: 'typescript', readOnly: true, source: 'const ready = true' })
+
+    expect(screen.queryByRole('button', { name: 'TypeScript' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Wrap lines' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open expanded editor' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy code' })).toBeInTheDocument()
   })
 })

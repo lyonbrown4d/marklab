@@ -8,4 +8,5 @@ export type RendererPersistKey = (typeof RENDERER_PERSIST_KEYS)[keyof typeof REN
 
 export const LOCAL_STORAGE_KEYS = {
   commandSearchHistory: 'marklab.command.searchHistory',
+  slashCommandHistory: 'marklab.editor.slashCommandHistory',
 } as const

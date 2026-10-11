@@ -1,34 +1,93 @@
 import { useCallback, useEffect } from 'react'
 import type { PlateEditor } from 'platejs/react'
-import { slugify } from '@/logic/paths'
 import { clearActiveHeading, setActiveHeading } from '@/utils/editorNavigation'
+import {
+  buildPlateHeadingIndex,
+  findPlateActiveHeading,
+  type PlateHeadingIndexEntry,
+} from '@/components/plate/plateDocumentHeadingIndex'
 
-const isHeadingNode = (node: unknown): node is { type: string } => {
-  if (!node || typeof node !== 'object' || !('type' in node)) return false
-  return /^h[1-6]$/.test(String(node.type))
+const headingIndexes = new WeakMap<PlateEditor, readonly PlateHeadingIndexEntry[]>()
+type PlateOperation = {
+  newPath?: number[]
+  newProperties?: Record<string, unknown>
+  node?: unknown
+  path?: number[]
+  properties?: Record<string, unknown>
+  type: string
 }
 
-export const getPlateActiveHeadingSlug = (editor: PlateEditor): string | null => {
+const isHeadingNode = (node: unknown) => {
+  if (!node || typeof node !== 'object' || !('type' in node)) return false
+  return typeof node.type === 'string' && /^h[1-6]$/u.test(node.type)
+}
+
+const pathTouchesHeading = (editor: PlateEditor, path?: readonly number[]) => {
+  const blockIndex = path?.[0]
+  return typeof blockIndex === 'number' && isHeadingNode(editor.children[blockIndex])
+}
+
+const isTopLevelPath = (path?: readonly number[]) => path?.length === 1
+
+const operationChangesHeadingIndex = (editor: PlateEditor, operation: PlateOperation) => {
+  if (operation.type === 'set_selection') return false
+  if (operation.type === 'insert_text' || operation.type === 'remove_text') {
+    return pathTouchesHeading(editor, operation.path)
+  }
+  if (operation.type === 'set_node') {
+    return (
+      isHeadingNode(operation.properties) ||
+      isHeadingNode(operation.newProperties) ||
+      (isTopLevelPath(operation.path) && pathTouchesHeading(editor, operation.path))
+    )
+  }
+  if (
+    operation.type === 'insert_node' ||
+    operation.type === 'merge_node' ||
+    operation.type === 'move_node' ||
+    operation.type === 'remove_node' ||
+    operation.type === 'split_node'
+  ) {
+    return (
+      isTopLevelPath(operation.path) ||
+      isTopLevelPath(operation.newPath) ||
+      pathTouchesHeading(editor, operation.path) ||
+      pathTouchesHeading(editor, operation.newPath) ||
+      isHeadingNode(operation.node)
+    )
+  }
+  return true
+}
+
+export const getPlateActiveHeading = (editor: PlateEditor) => {
   const blockIndex = editor.selection?.focus.path[0]
   if (typeof blockIndex !== 'number' || blockIndex < 0) return null
-
-  const usedSlugs = new Map<string, number>()
-  let headingIndex = 0
-  let activeSlug: string | null = null
-
-  for (let index = 0; index < editor.children.length && index <= blockIndex; index += 1) {
-    const node = editor.children[index]
-    if (!isHeadingNode(node)) continue
-
-    const baseSlug = slugify(editor.api.string([index]).trim()) || `heading-${headingIndex + 1}`
-    const usedCount = usedSlugs.get(baseSlug) ?? 0
-    usedSlugs.set(baseSlug, usedCount + 1)
-    activeSlug = usedCount === 0 ? baseSlug : `${baseSlug}-${usedCount}`
-    headingIndex += 1
+  let index = headingIndexes.get(editor)
+  if (!index) {
+    index = buildPlateHeadingIndex(editor.children)
+    headingIndexes.set(editor, index)
   }
-
-  return activeSlug
+  return findPlateActiveHeading(index, blockIndex)
 }
+
+export const invalidatePlateHeadingIndex = (editor: PlateEditor) => {
+  headingIndexes.delete(editor)
+}
+
+export const invalidateChangedPlateHeadingIndex = (
+  editor: PlateEditor,
+  forceEmptyOperationBatch = false,
+) => {
+  const operations = editor.operations as PlateOperation[]
+  const shouldInvalidate =
+    (forceEmptyOperationBatch && operations.length === 0) ||
+    operations.some((operation) => operationChangesHeadingIndex(editor, operation))
+  if (shouldInvalidate) invalidatePlateHeadingIndex(editor)
+  return shouldInvalidate
+}
+
+export const getPlateActiveHeadingSlug = (editor: PlateEditor): string | null =>
+  getPlateActiveHeading(editor)?.slug ?? null
 
 export const usePlateActiveHeading = (
   activePath: string | null,
@@ -37,7 +96,7 @@ export const usePlateActiveHeading = (
 ) => {
   const syncActiveHeading = useCallback(() => {
     if (!activePath || !enabled) return
-    setActiveHeading(activePath, getPlateActiveHeadingSlug(editor))
+    setActiveHeading(activePath, getPlateActiveHeading(editor))
   }, [activePath, editor, enabled])
 
   useEffect(() => {

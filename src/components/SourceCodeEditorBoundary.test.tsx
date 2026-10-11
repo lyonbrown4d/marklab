@@ -12,9 +12,19 @@ const markdownFeatures = vi.hoisted(() => ({
 }))
 
 const editor = vi.hoisted(() => ({
-  getModel: vi.fn(() => ({ getValue: () => 'export const value = 1' })),
+  executeEdits: vi.fn(),
+  getModel: vi.fn(() => ({
+    getFullModelRange: () => ({
+      endColumn: 23,
+      endLineNumber: 1,
+      startColumn: 1,
+      startLineNumber: 1,
+    }),
+    getValue: () => 'export const value = 1',
+  })),
   getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
   onDidChangeCursorPosition: vi.fn(() => ({ dispose: vi.fn() })),
+  pushUndoStop: vi.fn(),
 }))
 
 const monaco = vi.hoisted(() => ({

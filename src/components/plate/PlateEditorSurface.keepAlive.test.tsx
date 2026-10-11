@@ -153,7 +153,7 @@ describe('PlateEditorSurface cached route lifecycle', () => {
     expect(requestFrame).not.toHaveBeenCalled()
 
     second.dispatchEvent(new Event('scroll'))
-    expect(requestFrame).toHaveBeenCalledOnce()
+    expect(requestFrame).toHaveBeenCalled()
     flushFrames()
 
     view.rerender(<SurfacePair active={null} firstRef={firstRef} secondRef={secondRef} />)

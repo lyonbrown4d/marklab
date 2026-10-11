@@ -63,6 +63,18 @@ start an external LSP process for now.
     ranges. These ranges align with hover previews, Ctrl/Cmd click navigation,
     quick fixes, and rename/reference providers.
 
+## Editor Usability 1.0
+
+Status: implemented
+
+- [x] Rich-text find/replace with literal and regex modes, read-only safety,
+      virtualized reveal, and single-step undo.
+- [x] Code-block language, copy, wrap, line-number, and lazy Monaco actions.
+- [x] Lossless GFM table resize, row/column controls, and safe CSV/TSV paste.
+- [x] Fuzzy/recent slash commands and contextual block/list/Markdown/AI actions.
+- [x] Active-heading and scroll-progress feedback in the compact status surface.
+- [x] Unit, component, and Electron E2E regression coverage for these workflows.
+
 ## Embedded Non-Markdown Document Previews
 
 Status: planned

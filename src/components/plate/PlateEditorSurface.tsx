@@ -6,15 +6,13 @@ import {
   renderPlateEditorChunk,
   renderReadOnlyPlateEditorChunk,
 } from '@/components/plate/plateEditorConfig'
-import { PlateEditorOverlays } from '@/components/plate/PlateEditorOverlays'
+import { PlateEditorInteractionOverlays } from '@/components/plate/PlateEditorInteractionOverlays'
 import {
   PlateExternalValueSyncController,
   type PlateExternalValueSyncHandle,
 } from '@/components/plate/PlateExternalValueSyncController'
 import { PlateDndProvider } from '@/components/plate/PlateDndProvider'
 import { PlateDndEdgeScroller } from '@/components/plate/PlateDndEdgeScroller'
-import { PlateDocumentFind } from '@/components/plate/PlateDocumentFind'
-import { PlateSelectionStats } from '@/components/plate/selection/PlateSelectionStats'
 import { usePlateTypewriterScroll } from '@/components/plate/usePlateTypewriterScroll'
 import { usePlateSurfaceCompletions } from '@/components/plate/usePlateSurfaceCompletions'
 import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncInitialValue'
@@ -24,7 +22,7 @@ import { usePlateEditorAssets } from '@/components/plate/usePlateEditorAssets'
 import { usePlateEditorFocusLifecycle } from '@/components/plate/usePlateEditorFocusLifecycle'
 import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEvents'
 import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
-import { usePlateActiveHeading } from '@/components/plate/usePlateActiveHeading'
+import { usePlateEditorChangeHandlers } from '@/components/plate/usePlateEditorChangeHandlers'
 import { usePlateSurfaceDecorations } from '@/components/plate/usePlateSurfaceDecorations'
 import { usePlateSurfaceLinkDialog } from '@/components/plate/usePlateSurfaceLinkDialog'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
@@ -36,7 +34,6 @@ import type {
   PlateEditorSurfaceHandle,
   PlateEditorSurfaceProps,
 } from '@/components/plate/plateEditorSurfaceTypes'
-
 export type { PlateEditorSurfaceHandle } from '@/components/plate/plateEditorSurfaceTypes'
 const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorSurfaceProps>(
   (
@@ -51,10 +48,12 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onCalendarFileCreate,
       onChange,
       onImageImport,
+      onSelectionAi,
       onStatusChange,
       onWorkspaceLink,
       placeholder,
       readOnly = false,
+      selectionToolbarLabels,
       shortcutOverrides,
       slashLabels,
       smoothScrolling = false,
@@ -92,7 +91,6 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
     })
     const contentReady = ready && contentVisible
     const headingTrackingEnabled = interactionActive && contentReady
-    const syncHeading = usePlateActiveHeading(activePath, editor, headingTrackingEnabled)
     const getMarkdown = useCallback(
       () => Promise.resolve(serializePlateMarkdown(editor, editor.children as Value)),
       [editor],
@@ -205,20 +203,21 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       openLinkDialog,
     }))
 
-    const handleValueChange = useCallback(() => {
-      syncHeading()
-      if (externalApplyRef.current || !acceptsLocalChanges()) return
-      markSnapshotDirty()
-      changeRevisionRef.current += 1
-      completion.onEditorChange()
-      queueSnapshot()
-    }, [acceptsLocalChanges, completion, markSnapshotDirty, queueSnapshot, syncHeading])
-    const handleSelectionChange = useCallback(() => {
-      completion.onSelectionChange()
-      syncSlashFromEditor()
-      syncActiveFocusBlock()
-      syncHeading()
-    }, [completion, syncActiveFocusBlock, syncHeading, syncSlashFromEditor])
+    const { handleSelectionChange, handleValueChange } = usePlateEditorChangeHandlers({
+      acceptsLocalChanges,
+      activePath,
+      changeRevisionRef,
+      editableRef,
+      editor,
+      externalApplyRef,
+      headingTrackingEnabled,
+      markSnapshotDirty,
+      onEditorChange: completion.onEditorChange,
+      onSelectionChange: completion.onSelectionChange,
+      queueSnapshot,
+      syncActiveFocusBlock,
+      syncSlashFromEditor,
+    })
 
     return (
       <div
@@ -258,25 +257,20 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               tabIndex={readOnly ? 0 : undefined}
             />
             <PlateDndEdgeScroller containerRef={editableRef} />
-            {interactionActive && contentReady && (
-              <PlateDocumentFind
-                editableRef={editableRef}
-                editor={editor}
-                key={activePath ?? ''}
-                virtualized={readOnly}
-              />
-            )}
-            <PlateSelectionStats />
-            {interactionActive && contentReady && slashLabels && (
-              <PlateEditorOverlays
-                activePath={activePath}
-                canEdit={isEditorReady}
-                editableRef={editableRef}
-                labels={slashLabels}
-                onLink={openLinkDialog}
-                slash={slash}
-              />
-            )}
+            <PlateEditorInteractionOverlays
+              activePath={activePath}
+              canEdit={isEditorReady}
+              contentReady={contentReady}
+              editableRef={editableRef}
+              editor={editor}
+              interactionActive={interactionActive}
+              labels={slashLabels}
+              onAi={onSelectionAi}
+              onLink={openLinkDialog}
+              readOnly={readOnly}
+              selectionLabels={selectionToolbarLabels}
+              slash={slash}
+            />
           </Plate>
           <PlateExternalValueSyncController
             key={activePath}

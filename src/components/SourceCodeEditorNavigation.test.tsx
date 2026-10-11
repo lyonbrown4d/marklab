@@ -15,6 +15,7 @@ const monacoEditor = vi.hoisted(() => ({
     clear: vi.fn(),
     set: vi.fn(),
   })),
+  executeEdits: vi.fn(),
   focus: vi.fn(),
   getModel: vi.fn(),
   getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
@@ -22,6 +23,7 @@ const monacoEditor = vi.hoisted(() => ({
   onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),
   onMouseDown: vi.fn(() => ({ dispose: vi.fn() })),
   revealRangeInCenter: vi.fn(),
+  pushUndoStop: vi.fn(),
   setPosition: vi.fn(),
   setSelection: vi.fn(),
 }))
@@ -103,6 +105,12 @@ vi.mock('@monaco-editor/react', () => {
     }, [value])
     useEffect(() => {
       monacoEditor.getModel = vi.fn(() => ({
+        getFullModelRange: () => ({
+          endColumn: 1,
+          endLineNumber: 1,
+          startColumn: 1,
+          startLineNumber: 1,
+        }),
         getValue: () => valueRef.current,
         getVersionId: () => 1,
         isDisposed: () => false,

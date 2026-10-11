@@ -1,14 +1,27 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { PlateSelectionToolbar } from '@/components/plate/selection/PlateSelectionToolbar'
 import type { PlateSelectionToolbarController } from '@/components/plate/usePlateSelectionToolbar'
 
 const labels = {
+  ai: 'Ask AI',
+  blockStyle: 'Block style',
   bold: 'Bold',
+  bulletList: 'Bullet list',
   clear: 'Clear formatting',
   code: 'Inline code',
+  copyError: 'Could not copy Markdown',
+  copyMarkdown: 'Copy as Markdown',
+  heading1: 'Heading 1',
+  heading2: 'Heading 2',
+  heading3: 'Heading 3',
   italic: 'Italic',
   link: 'Link',
+  more: 'More',
+  orderedList: 'Ordered list',
+  paragraph: 'Paragraph',
+  quote: 'Quote',
   strike: 'Strikethrough',
   toolbar: 'Text formatting',
 }
@@ -20,6 +33,7 @@ const createController = (
   anchor: { left: 160, top: 90 },
   open: true,
   runAction: vi.fn(() => true),
+  runMoreAction: vi.fn(() => true),
   setToolbarElement: vi.fn(),
   ...overrides,
 })
@@ -73,6 +87,24 @@ describe('PlateSelectionToolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: labels.clear }))
 
     expect(runAction).toHaveBeenCalledExactlyOnceWith('clear')
+  })
+
+  it('offers keyboard-accessible block, clipboard, and AI actions in More', async () => {
+    const user = userEvent.setup()
+    const runMoreAction = vi.fn(() => true)
+    render(<PlateSelectionToolbar {...createController({ runMoreAction })} labels={labels} />)
+
+    await user.click(screen.getByRole('button', { name: labels.more }))
+    await user.click(await screen.findByRole('menuitem', { name: labels.heading2 }))
+    expect(runMoreAction).toHaveBeenCalledWith('heading2')
+
+    await user.click(screen.getByRole('button', { name: labels.more }))
+    await user.click(await screen.findByRole('menuitem', { name: labels.copyMarkdown }))
+    expect(runMoreAction).toHaveBeenCalledWith('copyMarkdown')
+
+    await user.click(screen.getByRole('button', { name: labels.more }))
+    await user.click(await screen.findByRole('menuitem', { name: labels.ai }))
+    expect(runMoreAction).toHaveBeenCalledWith('ai')
   })
 
   it('does not place a fixed viewport anchor inside transformed editor ancestors', () => {

@@ -1,31 +1,50 @@
+import {
+  TableProvider,
+  useTableColSizes,
+  useTableElement,
+  useTableSelectionDom,
+} from '@platejs/table/react'
 import type { TElement } from 'platejs'
-import { PlateElement, type PlateElementProps, useReadOnly } from 'platejs/react'
+import { useRef } from 'react'
+import { PlateElement, type PlateElementProps, useReadOnly, withHOC } from 'platejs/react'
+import { TableCellResizable } from '@/components/plate/nodes/TableCellResizable'
 import { TableToolbar } from '@/components/plate/nodes/TableToolbar'
 
 export type TableElementNode = TElement
-type TableCellNode = TElement & {
-  align?: 'left' | 'center' | 'right'
-  colSpan?: number
-  rowSpan?: number
-}
+const DEFAULT_COLUMN_WIDTH = 160
 
-const cellAlignmentClass = {
-  center: 'text-center',
-  left: 'text-left',
-  right: 'text-right',
-} as const
+const TableElementBase = (props: PlateElementProps<TableElementNode>) => {
+  const tableRef = useRef<HTMLTableElement>(null)
+  const { marginLeft, props: tableProps } = useTableElement()
+  const configuredColSizes = useTableColSizes()
+  const columnCount = (props.element.children[0] as TElement | undefined)?.children.length ?? 0
+  const colSizes = Array.from(
+    { length: columnCount },
+    (_, index) => configuredColSizes[index] || DEFAULT_COLUMN_WIDTH,
+  )
+  useTableSelectionDom(tableRef)
 
-export const TableElement = (props: PlateElementProps<TableElementNode>) => {
   return (
-    <PlateElement
-      {...props}
-      as="table"
-      className="w-max min-w-full border-collapse overflow-hidden rounded-lg border border-border"
-    >
-      <tbody>{props.children}</tbody>
+    <PlateElement {...props} className="overflow-x-auto py-5">
+      <table
+        {...tableProps}
+        ref={tableRef}
+        className="table-fixed border-collapse overflow-hidden rounded-lg border border-border"
+        data-slate-node="element"
+        style={{ marginLeft, width: colSizes.reduce((total, size) => total + size, 0) }}
+      >
+        <colgroup>
+          {colSizes.map((size, index) => (
+            <col key={index} style={{ width: size }} />
+          ))}
+        </colgroup>
+        <tbody>{props.children}</tbody>
+      </table>
     </PlateElement>
   )
 }
+
+export const TableElement = withHOC(TableProvider, TableElementBase)
 
 export const TableContainer = ({ children, element }: PlateElementProps) => {
   const readOnly = useReadOnly()
@@ -42,23 +61,6 @@ export const TableRowElement = (props: PlateElementProps) => (
   <PlateElement {...props} as="tr" className="border-b border-border last:border-b-0" />
 )
 
-const cellProps = (element: TableCellNode) => ({
-  className: `min-w-24 border-r border-border px-3 py-2 align-top last:border-r-0 ${
-    cellAlignmentClass[element.align ?? 'left']
-  }`,
-  colSpan: element.colSpan,
-  rowSpan: element.rowSpan,
-})
+export const TableCellElement = TableCellResizable
 
-export const TableCellElement = (props: PlateElementProps<TableCellNode>) => (
-  <PlateElement {...props} {...cellProps(props.element)} as="td" />
-)
-
-export const TableHeaderCellElement = (props: PlateElementProps<TableCellNode>) => (
-  <PlateElement
-    {...props}
-    {...cellProps(props.element)}
-    as="th"
-    className={`${cellProps(props.element).className} bg-muted/60 font-semibold`}
-  />
-)
+export const TableHeaderCellElement = TableCellResizable

@@ -8,6 +8,7 @@ import {
   getPlateSlashTrigger,
   runPlateSlashCommand,
 } from '@/components/plate/slash/plateSlashCommands'
+import { rankPlateSlashCommands } from '@/components/plate/slash/plateSlashCommandRanking'
 import { plateSlashTestLabels as labels } from '@/components/plate/slash/testFixtures'
 
 const createEditor = (text: string) => {
@@ -46,6 +47,20 @@ describe('Plate slash commands', () => {
     ])
   })
 
+  it('keeps stable English heading aliases searchable when labels are localized', () => {
+    const commands = createPlateSlashCommands({
+      ...labels,
+      heading1: '一级标题',
+      heading2: '二级标题',
+      heading3: '三级标题',
+      heading4: '四级标题',
+      heading5: '五级标题',
+      heading6: '六级标题',
+    })
+
+    expect(rankPlateSlashCommands(commands, 'hading', [])[0]?.key).toBe('h1')
+  })
+
   it('finds a slash trigger after whitespace in a collapsed block selection', () => {
     const editor = createEditor('/hea')
     expect(getPlateSlashTrigger(editor)).toMatchObject({ query: 'hea', slashText: '/hea' })
@@ -75,6 +90,20 @@ describe('Plate slash commands', () => {
     await runPlateSlashCommand({ editor, command, trigger: getPlateSlashTrigger(editor)! })
 
     expect(editor.children[0]).toMatchObject(node)
+  })
+
+  it('places the caret in the editable paragraph created by the quote command', async () => {
+    const editor = createEditor('/quote')
+    const command = createPlateSlashCommands(labels).find((item) => item.key === 'quote')!
+
+    await runPlateSlashCommand({ editor, command, trigger: getPlateSlashTrigger(editor)! })
+
+    expect(editor.selection).toEqual({
+      anchor: { path: [0, 0, 0], offset: 0 },
+      focus: { path: [0, 0, 0], offset: 0 },
+    })
+    editor.tf.insertText('Fuzzy quote')
+    expect(editor.api.string([0])).toBe('Fuzzy quote')
   })
 
   it('inserts advanced Markdown templates through Plate deserialization', async () => {

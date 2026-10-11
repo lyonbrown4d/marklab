@@ -16,19 +16,27 @@ import {
   type RefObject,
 } from 'react'
 import type { PlateEditor } from 'platejs/react'
+import type { TRange } from 'platejs'
 import {
   getPlateSelectionToolbarMarks,
   runPlateSelectionToolbarAction,
   type PlateSelectionToolbarAction,
   type PlateSelectionToolbarMarks,
 } from '@/components/plate/selection/selectionToolbarActions'
+import {
+  runPlateSelectionToolbarMoreAction,
+  type PlateSelectionToolbarMoreAction,
+} from '@/components/plate/selection/selectionToolbarMoreActions'
 
 type UsePlateSelectionToolbarOptions = {
   canEdit?: () => boolean
   editableRef: RefObject<HTMLElement | null>
   editor: PlateEditor
+  onAi?: () => void
+  onError?: (error: unknown) => void
   onLink?: (editor: PlateEditor) => void
   readOnly: boolean
+  selectionVersion?: TRange | null
 }
 
 type ToolbarState = {
@@ -40,6 +48,7 @@ export type PlateSelectionToolbarController = ToolbarState & {
   anchor: { left: number; top: number }
   floatingStyle?: CSSProperties
   runAction: (action: PlateSelectionToolbarAction) => boolean
+  runMoreAction: (action: PlateSelectionToolbarMoreAction) => boolean
   setToolbarElement: (element: HTMLElement | null) => void
 }
 
@@ -67,8 +76,11 @@ export const usePlateSelectionToolbar = ({
   canEdit,
   editableRef,
   editor,
+  onAi,
+  onError,
   onLink,
   readOnly,
+  selectionVersion,
 }: UsePlateSelectionToolbarOptions): PlateSelectionToolbarController => {
   const [state, setState] = useState<ToolbarState>(closedState)
   const toolbarElementRef = useRef<HTMLElement | null>(null)
@@ -121,7 +133,11 @@ export const usePlateSelectionToolbar = ({
     const root = editableRef.current
     const selection = window.getSelection()
     const activeElement = document.activeElement
-    const toolbarFocused = Boolean(toolbarElementRef.current?.contains(activeElement))
+    const toolbarFocused = Boolean(
+      toolbarElementRef.current?.contains(activeElement) ||
+      (activeElement instanceof Element &&
+        activeElement.closest('[data-plate-selection-toolbar-menu="true"]')),
+    )
     const focusInside = Boolean(root?.contains(activeElement) || toolbarFocused)
     const selectionInside = Boolean(
       root &&
@@ -176,6 +192,10 @@ export const usePlateSelectionToolbar = ({
   }, [update])
 
   useEffect(() => {
+    scheduleSync()
+  }, [scheduleSync, selectionVersion])
+
+  useEffect(() => {
     const root = editableRef.current
     if (!root) return
     const handleCompositionStart = () => {
@@ -227,6 +247,16 @@ export const usePlateSelectionToolbar = ({
     [canEdit, editor, onLink, sync],
   )
 
+  const runMoreAction = useCallback(
+    (action: PlateSelectionToolbarMoreAction) => {
+      if (canEdit && !canEdit()) return false
+      const handled = runPlateSelectionToolbarMoreAction(editor, action, { onAi, onError })
+      if (handled && action !== 'ai') queueMicrotask(sync)
+      return handled
+    },
+    [canEdit, editor, onAi, onError, sync],
+  )
+
   const setToolbarElement = useCallback(
     (element: HTMLElement | null) => {
       toolbarElementRef.current = element
@@ -240,6 +270,7 @@ export const usePlateSelectionToolbar = ({
     anchor: { left: x ?? 0, top: y ?? 0 },
     floatingStyle,
     runAction,
+    runMoreAction,
     setToolbarElement,
   }
 }

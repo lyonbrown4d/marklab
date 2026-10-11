@@ -28,6 +28,7 @@ const keyboardEvent = (key: string, init: KeyboardEventInit = {}) =>
 
 describe('usePlateSlashCommands', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.spyOn(window, 'getSelection').mockReturnValue({
       getRangeAt: () =>
         ({
@@ -68,6 +69,29 @@ describe('usePlateSlashCommands', () => {
     act(() => expect(result.current.onKeyDown(enter)).toBe(true))
     await waitFor(() => expect(editor.children[0]).toMatchObject({ type: 'h2' }))
     expect(result.current.menu.open).toBe(false)
+  })
+
+  it('persists successful commands and ranks recent choices first for an empty query', async () => {
+    const editor = createEditor('/')
+    const { result } = renderHook(() =>
+      usePlateSlashCommands({ documentIdentity: 'a.md', editor, labels }),
+    )
+    act(() => result.current.syncFromEditor())
+    const quote = result.current.menu.commands.find((command) => command.key === 'quote')
+    expect(quote).toBeDefined()
+
+    act(() => expect(quote && result.current.menu.selectCommand(quote)).toBe(true))
+    await waitFor(() => expect(editor.children[0]).toMatchObject({ type: 'blockquote' }))
+    act(() => {
+      editor.children = [{ type: 'p', children: [{ text: '/' }] }]
+      editor.selection = {
+        anchor: { path: [0, 0], offset: 1 },
+        focus: { path: [0, 0], offset: 1 },
+      }
+      result.current.syncFromEditor()
+    })
+
+    expect(result.current.menu.commands[0]?.key).toBe('quote')
   })
 
   it('wraps keyboard selection and closes on Escape', () => {

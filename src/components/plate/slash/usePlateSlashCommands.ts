@@ -5,11 +5,11 @@ import { useEditorSuggestionAria } from '@/components/menu/useEditorSuggestionAr
 import {
   createPlateSlashCommands,
   canRunPlateSlashCommand,
-  filterPlateSlashCommands,
   getPlateSlashTrigger,
   isSamePlateSlashTrigger,
   runPlateSlashCommand,
 } from '@/components/plate/slash/plateSlashCommands'
+import { rankPlateSlashCommands } from '@/components/plate/slash/plateSlashCommandRanking'
 import type {
   PlateSlashCommand,
   PlateSlashCommandLabels,
@@ -18,6 +18,7 @@ import type {
 } from '@/components/plate/slash/types'
 import { usePlateSlashDeferredTasks } from '@/components/plate/slash/usePlateSlashDeferredTasks'
 import { usePlateSlashUrlDialog } from '@/components/plate/slash/usePlateSlashUrlDialog'
+import { usePlateSlashCommandHistory } from '@/components/plate/slash/usePlateSlashCommandHistory'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
 type PlateSlashAnchor = { left: number; top: number }
@@ -79,6 +80,7 @@ export const usePlateSlashCommands = ({
   )
   const [active, setActive] = useState<ActiveSlash | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const commandHistory = usePlateSlashCommandHistory()
   const urlDialog = usePlateSlashUrlDialog(documentIdentity)
   const {
     cancelAnimationFrameTask,
@@ -91,11 +93,15 @@ export const usePlateSlashCommands = ({
   const commands = useMemo(
     () =>
       currentActive
-        ? filterPlateSlashCommands(allCommands, currentActive.trigger.query).filter((command) =>
-            canRunPlateSlashCommand(editor, command, currentActive.trigger),
+        ? rankPlateSlashCommands(
+            allCommands.filter((command) =>
+              canRunPlateSlashCommand(editor, command, currentActive.trigger),
+            ),
+            currentActive.trigger.query,
+            commandHistory.recentKeys,
           )
         : [],
-    [allCommands, currentActive, editor],
+    [allCommands, commandHistory.recentKeys, currentActive, editor],
   )
   const menuOpen = Boolean(currentActive)
   const activeOptionId = getEditorSuggestionOptionIdForIndex(
@@ -193,6 +199,7 @@ export const usePlateSlashCommands = ({
         dismiss()
         return false
       }
+      commandHistory.record(command.key)
       dismiss()
       void runPlateSlashCommand({
         command,
@@ -207,6 +214,7 @@ export const usePlateSlashCommands = ({
     },
     [
       canEdit,
+      commandHistory,
       currentActive,
       dismiss,
       editor,

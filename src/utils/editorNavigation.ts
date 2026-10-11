@@ -1,5 +1,6 @@
 import { APP_EVENT, emitAppEvent, onAppEvent, type AppEventMap } from '@/utils/appEvents'
 import { createStore } from 'zustand/vanilla'
+import type { PlateHeadingIndexEntry } from '@/components/plate/plateDocumentHeadingIndex'
 export const FOCUS_HEADING_EVENT = APP_EVENT.focusHeading
 export const FOCUS_SOURCE_POSITION_EVENT = APP_EVENT.focusSourcePosition
 export type FocusHeadingRequest = AppEventMap[typeof FOCUS_HEADING_EVENT] & {
@@ -22,7 +23,9 @@ type SourcePositionNavigationState = {
 }
 
 type ActiveHeadingState = {
+  headingDetails: Record<string, PlateHeadingIndexEntry | null>
   headings: Record<string, string | null>
+  scrollProgress: Record<string, number>
 }
 
 const navigationKey = (workspaceKey: string, path: string) => `${workspaceKey}:${path}`
@@ -31,11 +34,28 @@ export const headingNavigationStore = createStore<HeadingNavigationState>(() => 
 export const sourcePositionNavigationStore = createStore<SourcePositionNavigationState>(() => ({
   requests: {},
 }))
-export const activeHeadingStore = createStore<ActiveHeadingState>(() => ({ headings: {} }))
+export const activeHeadingStore = createStore<ActiveHeadingState>(() => ({
+  headingDetails: {},
+  headings: {},
+  scrollProgress: {},
+}))
 
-export const setActiveHeading = (path: string, slug: string | null) => {
-  if (activeHeadingStore.getState().headings[path] === slug) return
+export const setActiveHeading = (path: string, heading: PlateHeadingIndexEntry | null) => {
+  const slug = heading?.slug ?? null
+  const current = activeHeadingStore.getState().headingDetails[path]
+  if (
+    (current === null && heading === null) ||
+    (current &&
+      heading &&
+      current.blockIndex === heading.blockIndex &&
+      current.level === heading.level &&
+      current.slug === heading.slug &&
+      current.text === heading.text)
+  ) {
+    return
+  }
   activeHeadingStore.setState((state) => ({
+    headingDetails: { ...state.headingDetails, [path]: heading },
     headings: { ...state.headings, [path]: slug },
   }))
 }
@@ -43,9 +63,28 @@ export const setActiveHeading = (path: string, slug: string | null) => {
 export const clearActiveHeading = (path: string) => {
   if (!(path in activeHeadingStore.getState().headings)) return
   activeHeadingStore.setState((state) => {
+    const headingDetails = { ...state.headingDetails }
     const headings = { ...state.headings }
+    delete headingDetails[path]
     delete headings[path]
-    return { headings }
+    return { headingDetails, headings }
+  })
+}
+
+export const setDocumentScrollProgress = (path: string, progress: number) => {
+  const current = activeHeadingStore.getState().scrollProgress[path]
+  if (current === progress) return
+  activeHeadingStore.setState((state) => ({
+    scrollProgress: { ...state.scrollProgress, [path]: progress },
+  }))
+}
+
+export const clearDocumentNavigation = (path: string) => {
+  if (!(path in activeHeadingStore.getState().scrollProgress)) return
+  activeHeadingStore.setState((state) => {
+    const scrollProgress = { ...state.scrollProgress }
+    delete scrollProgress[path]
+    return { scrollProgress }
   })
 }
 export const requestFocusHeading = (request: FocusHeadingRequest) => {

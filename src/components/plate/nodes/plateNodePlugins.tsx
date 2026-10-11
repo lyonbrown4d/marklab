@@ -74,6 +74,7 @@ import {
   TableRowElement,
 } from '@/components/plate/nodes/TableElements'
 import { isImeCompositionEvent } from '@/components/plate/nodes/tableOperations'
+import { handleDelimitedTablePaste } from '@/components/plate/nodes/tableClipboard'
 import {
   HtmlBreakElement,
   HtmlDetailsElement,
@@ -199,6 +200,15 @@ export const createPlateNodePlugins = (previewOptions: PlatePreviewOptions = {})
         }
         return onKeyDownTable(context as Parameters<typeof onKeyDownTable>[0])
       },
+      onPaste: ({ editor, event }) => {
+        return handleDelimitedTablePaste(editor, event.nativeEvent)
+      },
+    },
+    options: {
+      disableMarginLeft: true,
+      disableMerge: true,
+      initialTableWidth: 480,
+      minColumnWidth: 96,
     },
     render: {
       aboveNodes: (props) => {

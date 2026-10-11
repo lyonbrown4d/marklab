@@ -39,11 +39,23 @@ vi.mock('platejs/react', async (importOriginal) => {
 import { PlateSelectionToolbarOverlay } from '@/components/plate/selection/PlateSelectionToolbarOverlay'
 
 const labels = {
+  ai: 'Ask AI',
+  blockStyle: 'Block style',
   bold: 'Bold',
+  bulletList: 'Bullet list',
   clear: 'Clear formatting',
   code: 'Inline code',
+  copyError: 'Could not copy Markdown',
+  copyMarkdown: 'Copy as Markdown',
+  heading1: 'Heading 1',
+  heading2: 'Heading 2',
+  heading3: 'Heading 3',
   italic: 'Italic',
   link: 'Link',
+  more: 'More actions',
+  orderedList: 'Ordered list',
+  paragraph: 'Paragraph',
+  quote: 'Quote',
   strike: 'Strikethrough',
   toolbar: 'Text formatting',
 }

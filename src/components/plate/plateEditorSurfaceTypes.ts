@@ -1,5 +1,6 @@
 import type { PlateEditor } from 'platejs/react'
 import type { PlateSlashCommandLabels } from '@/components/plate/slash'
+import type { PlateSelectionToolbarLabels } from '@/components/plate/selection/PlateSelectionToolbar'
 import type { MarkdownEditorStatus } from '@/components/editor/markdownEditorTypes'
 import type { ShortcutBindings } from '@/logic/shortcuts'
 import type { MarkdownAssetImportStrategy } from '@/store/appTypes'
@@ -22,10 +23,12 @@ export type PlateEditorSurfaceProps = {
   onChange: (value: string) => void
   onCalendarFileCreate?: () => Promise<string | null>
   onImageImport?: () => Promise<boolean>
+  onSelectionAi?: () => void
   onStatusChange?: (status: MarkdownEditorStatus) => void
   onWorkspaceLink?: (target: string, documentPath: string | null) => void
   placeholder: string
   readOnly?: boolean
+  selectionToolbarLabels?: PlateSelectionToolbarLabels
   slashLabels?: PlateSlashCommandLabels
   smoothScrolling?: boolean
   shortcutOverrides?: ShortcutBindings

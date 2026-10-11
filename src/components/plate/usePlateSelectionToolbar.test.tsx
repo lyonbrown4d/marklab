@@ -1,8 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PlateEditor } from 'platejs/react'
+import { createPlateEditor, type PlateEditor } from 'platejs/react'
 import { usePlateSelectionToolbar } from '@/components/plate/usePlateSelectionToolbar'
+import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
+
+const clipboardMocks = vi.hoisted(() => ({ writeText: vi.fn<(text: string) => Promise<void>>() }))
+
+vi.mock('@/runtime/clipboard', () => ({ writeClipboardText: clipboardMocks.writeText }))
 
 const expandedSelection = {
   anchor: { offset: 0, path: [0, 0] },
@@ -10,6 +15,7 @@ const expandedSelection = {
 }
 
 afterEach(() => {
+  clipboardMocks.writeText.mockReset()
   window.getSelection()?.removeAllRanges()
   document.body.innerHTML = ''
   Reflect.deleteProperty(document.documentElement, 'clientHeight')
@@ -32,6 +38,15 @@ const createEditor = () =>
       unwrapNodes: vi.fn(),
     },
   }) as unknown as PlateEditor
+
+const createCopyEditor = () => {
+  const editor = createPlateEditor({
+    plugins: createPlateEditorPlugins(),
+    value: [{ children: [{ text: 'text selection' }], type: 'p' }],
+  })
+  editor.tf.select(expandedSelection)
+  return editor
+}
 
 const installNativeSelection = (root: HTMLElement) => {
   const text = root.firstChild!
@@ -203,7 +218,41 @@ describe('usePlateSelectionToolbar', () => {
     )
 
     expect(result.current.runAction('bold')).toBe(false)
+    expect(result.current.runMoreAction('copyMarkdown')).toBe(false)
     expect(editor.tf.toggleMark).not.toHaveBeenCalled()
+    expect(clipboardMocks.writeText).not.toHaveBeenCalled()
+  })
+
+  it('forwards copy failures to the selection action error callback', async () => {
+    const editor = createCopyEditor()
+    const failure = new Error('clipboard unavailable')
+    clipboardMocks.writeText.mockRejectedValueOnce(failure)
+    const onError = vi.fn()
+    const root = document.createElement('div')
+    const editableRef = createRef<HTMLElement>()
+    editableRef.current = root
+    document.body.append(root)
+    const { result } = renderHook(() =>
+      usePlateSelectionToolbar({ editableRef, editor, onError, readOnly: false }),
+    )
+
+    expect(result.current.runMoreAction('copyMarkdown')).toBe(true)
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure))
+  })
+
+  it('runs the AI More action without scheduling a formatting resync', () => {
+    const editor = createCopyEditor()
+    const onAi = vi.fn()
+    const root = document.createElement('div')
+    const editableRef = createRef<HTMLElement>()
+    editableRef.current = root
+    document.body.append(root)
+    const { result } = renderHook(() =>
+      usePlateSelectionToolbar({ editableRef, editor, onAi, readOnly: false }),
+    )
+
+    expect(result.current.runMoreAction('ai')).toBe(true)
+    expect(onAi).toHaveBeenCalledOnce()
   })
 
   it('runs an enabled action and reports an invalid editor selection as unhandled', async () => {
@@ -222,6 +271,7 @@ describe('usePlateSelectionToolbar', () => {
 
     editor.selection = null
     expect(result.current.runAction('bold')).toBe(false)
+    expect(result.current.runMoreAction('copyMarkdown')).toBe(false)
   })
 
   it('synchronizes immediately when animation frames are unavailable', () => {

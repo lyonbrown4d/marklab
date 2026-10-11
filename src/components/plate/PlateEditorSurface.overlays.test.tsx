@@ -25,7 +25,10 @@ vi.mock('@/components/plate/PlateEditorOverlays', () => ({
 
 import { PlateEditorSurface } from '@/components/plate/PlateEditorSurface'
 
-const slashLabels = {} as PlateSlashCommandLabels
+const slashLabels = new Proxy(
+  {},
+  { get: (_target, property) => String(property) },
+) as PlateSlashCommandLabels
 
 const SurfacePair = ({
   activePath,

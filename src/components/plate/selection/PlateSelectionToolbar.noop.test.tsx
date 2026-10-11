@@ -36,16 +36,29 @@ describe('PlateSelectionToolbar value synchronization', () => {
         activeMarks={{ bold: true, code: false, italic: false, link: false, strike: false }}
         anchor={{ left: 0, top: 0 }}
         labels={{
+          ai: 'Ask AI',
+          blockStyle: 'Block style',
           bold: 'Bold',
+          bulletList: 'Bullet list',
           clear: 'Clear',
           code: 'Code',
+          copyError: 'Could not copy Markdown',
+          copyMarkdown: 'Copy as Markdown',
+          heading1: 'Heading 1',
+          heading2: 'Heading 2',
+          heading3: 'Heading 3',
           italic: 'Italic',
           link: 'Link',
+          more: 'More actions',
+          orderedList: 'Ordered list',
+          paragraph: 'Paragraph',
+          quote: 'Quote',
           strike: 'Strike',
           toolbar: 'Formatting',
         }}
         open
         runAction={runAction}
+        runMoreAction={vi.fn(() => true)}
         setToolbarElement={vi.fn()}
       />,
     )

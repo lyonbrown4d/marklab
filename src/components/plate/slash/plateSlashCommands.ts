@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { deserializeMd } from '@platejs/markdown'
 import { FootnoteReferencePlugin } from '@platejs/footnote/react'
-import { ElementApi, type TRange } from 'platejs'
+import { ElementApi, TextApi, type Descendant, type Path, type TRange } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import {
   markdownEditorCommandCatalog,
@@ -142,6 +142,22 @@ const consumeTrigger = (editor: PlateEditor, trigger: PlateSlashTrigger) => {
   editor.tf.delete()
 }
 
+const findTextPath = (node: Descendant, path: Path, preferEmpty: boolean): Path | null => {
+  if (TextApi.isText(node)) return !preferEmpty || node.text.length === 0 ? path : null
+  if (!ElementApi.isElement(node)) return null
+  for (let index = 0; index < node.children.length; index += 1) {
+    const match = findTextPath(node.children[index]!, [...path, index], preferEmpty)
+    if (match) return match
+  }
+  return null
+}
+
+const getBlockquoteInsertionPoint = (node: Descendant | undefined, path: Path) => {
+  if (!node || !ElementApi.isElement(node) || node.type !== 'blockquote') return null
+  const textPath = findTextPath(node, path, true) ?? findTextPath(node, path, false)
+  return textPath ? { path: textPath, offset: 0 } : null
+}
+
 const isBlockCommand = (command: PlateSlashCommand) =>
   command.key !== 'footnote' && (command.kind === 'block' || command.kind === 'insert')
 
@@ -185,7 +201,11 @@ const insertMarkdown = (editor: PlateEditor, trigger: PlateSlashTrigger, markdow
     editor.tf.insertNodes(nodes, { at: path })
   })
   const lastPath = [...path.slice(0, -1), path.at(-1)! + nodes.length - 1]
-  editor.tf.select(editor.api.end(lastPath))
+  const insertionPoint =
+    getBlockquoteInsertionPoint(nodes.at(-1), lastPath) ??
+    editor.api.end(lastPath) ??
+    editor.api.start(lastPath)
+  if (insertionPoint) editor.tf.select(insertionPoint)
 }
 
 const insertInlineMarkdown = (
@@ -202,6 +222,7 @@ const insertInlineMarkdown = (
 
 const markdownByKey: Record<string, string> = {
   divider: '---\n',
+  quote: '> \n',
   taskList: '- [ ] Task\n',
   ...markdownTemplates,
 }

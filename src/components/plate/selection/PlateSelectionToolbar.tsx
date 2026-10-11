@@ -12,15 +12,28 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
+import { PlateSelectionToolbarMoreMenu } from '@/components/plate/selection/PlateSelectionToolbarMoreMenu'
 import type { PlateSelectionToolbarController } from '@/components/plate/usePlateSelectionToolbar'
 import type { PlateSelectionToolbarAction } from '@/components/plate/selection/selectionToolbarActions'
 
 export type PlateSelectionToolbarLabels = {
+  ai: string
+  blockStyle: string
   bold: string
+  bulletList: string
   clear: string
   code: string
+  copyError: string
+  copyMarkdown: string
+  heading1: string
+  heading2: string
+  heading3: string
   italic: string
   link: string
+  more: string
+  orderedList: string
+  paragraph: string
+  quote: string
   strike: string
   toolbar: string
 }
@@ -48,6 +61,7 @@ export const PlateSelectionToolbar = ({
   labels,
   open,
   runAction,
+  runMoreAction,
   setToolbarElement,
 }: PlateSelectionToolbarProps) => {
   const activeValues = markItems
@@ -109,6 +123,7 @@ export const PlateSelectionToolbar = ({
               </TooltipTrigger>
               <TooltipContent>{labels.clear}</TooltipContent>
             </Tooltip>
+            <PlateSelectionToolbarMoreMenu labels={labels} onAction={runMoreAction} />
           </div>
         </TooltipProvider>
       </div>

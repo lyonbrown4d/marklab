@@ -264,6 +264,7 @@ export const usePlateInlineAiComposer = ({
     instruction,
     isOpen: capture !== null,
     modelLabel: provider?.label ?? '',
+    open,
     providerId: provider?.id ?? '',
     providers,
     phase,
