@@ -1,6 +1,9 @@
 packages:
   - native/*
 
+# Allow newly published versions immediately for this project's update workflow.
+minimumReleaseAge: 0
+
 overrides:
   '@excalidraw/excalidraw>sass': 1.105.1
   '@excalidraw/excalidraw>nanoid': 3.3.18
@@ -8,15 +11,17 @@ overrides:
   '@codemirror/view': 6.43.14
   esbuild: 0.28.2
   katex: 0.18.2
-  monaco-editor>dompurify: 3.4.16
+  monaco-editor>dompurify: 3.4.17
+  react-pdf>pdfjs-dist: 6.4.299
   rollup: 4.59.0
   lodash-es: 4.18.1
 
-onlyBuiltDependencies:
-  - '@homebridge/node-pty-prebuilt-multiarch'
-  - '@parcel/watcher'
-  - better-sqlite3
-  - electron
-  - electron-winstaller
-  - esbuild
-  - msgpackr-extract
+allowBuilds:
+  '@homebridge/node-pty-prebuilt-multiarch': true
+  '@parcel/watcher': true
+  better-sqlite3: true
+  canvas: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  msgpackr-extract: true

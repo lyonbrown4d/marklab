@@ -22,9 +22,25 @@ the React editor and typed runtime boundary explicit.
 
 ## Development
 
+Use Node.js 24 LTS and pnpm 12.11.2 (the version pinned in `package.json`).
+Dependency build permissions, including `canvas`, are declared in
+`pnpm-workspace.yaml` using `allowBuilds`. Newly published packages can be installed
+immediately because this project sets `minimumReleaseAge: 0`.
+
 ```bash
+pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+For Electron downloads through npmmirror, set the `ELECTRON_MIRROR` environment
+variable before installing. pnpm 12 no longer reads custom settings from `.npmrc`.
+
+```bash
+ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ pnpm install --frozen-lockfile
+```
+
+In PowerShell, set `$env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'`
+before running `pnpm install --frozen-lockfile`.
 
 ## Desktop (Electron)
 

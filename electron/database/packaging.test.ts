@@ -12,11 +12,11 @@ describe('SQLite packaging', () => {
       build: { asarUnpack: string[]; files: string[] }
     }
     const pnpmWorkspace = parse(await fs.readFile('pnpm-workspace.yaml', 'utf8')) as {
-      onlyBuiltDependencies: string[]
+      allowBuilds: Record<string, boolean>
     }
 
     expect(electronMainExternal).toContain('better-sqlite3')
-    expect(pnpmWorkspace.onlyBuiltDependencies).toContain('better-sqlite3')
+    expect(pnpmWorkspace.allowBuilds['better-sqlite3']).toBe(true)
     expect(packageJson.build.files).toContain('node_modules/better-sqlite3/lib/**/*')
     expect(packageJson.build.files).toContain(
       'node_modules/better-sqlite3/prebuilds/*-${arch}.node',

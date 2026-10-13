@@ -10,12 +10,12 @@ describe('embedded local AI runtime boundary', () => {
       dependencies: Record<string, string>
     }
     const pnpmWorkspace = parse(await fs.readFile('pnpm-workspace.yaml', 'utf8')) as {
-      onlyBuiltDependencies: string[]
+      allowBuilds: Record<string, boolean>
     }
     const electronVite = await fs.readFile('vite.electron.ts', 'utf8')
 
     expect(packageJson.dependencies).not.toHaveProperty('node-llama-cpp')
-    expect(pnpmWorkspace.onlyBuiltDependencies).not.toContain('node-llama-cpp')
+    expect(pnpmWorkspace.allowBuilds['node-llama-cpp']).not.toBe(true)
     expect(JSON.stringify(packageJson.build)).not.toContain('node-llama-cpp')
     expect(electronVite).not.toContain('localAiUtilityEntry')
     expect(electronVite).not.toContain('node-llama-cpp')

@@ -1,6 +1,18 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterAll, afterEach, vi } from 'vitest'
+
+// p-queue 10 uses Node's listener limit API when process is available. jsdom's
+// EventTarget belongs to a different realm and Node cannot set its limit.
+const nodeEvents = process.getBuiltinModule('node:events')
+const setMaxListeners = nodeEvents.setMaxListeners
+nodeEvents.setMaxListeners = (limit, ...targets) => {
+  const nodeTargets = targets.filter((target) => !(target instanceof window.EventTarget))
+  if (targets.length === 0 || nodeTargets.length > 0) setMaxListeners(limit, ...nodeTargets)
+}
+afterAll(() => {
+  nodeEvents.setMaxListeners = setMaxListeners
+})
 
 // Keep async DOM assertions resilient under the full 1,000+ test suite on
 // slower Windows CI hosts. Individual tests still use Vitest's 10s ceiling.
