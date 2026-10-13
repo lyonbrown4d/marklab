@@ -13,16 +13,16 @@ import {
 } from './electronTestHarness.js'
 
 const openFile = async (page: Page, name: string) => {
-  const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
-  if (!(await explorer.isVisible().catch(() => false))) {
-    await page
-      .getByRole('button', { name: /toggle sidebar|切换侧边栏/i })
-      .first()
-      .click()
-  }
-  const file = explorer.getByRole('button', { name, exact: true })
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: /Search files|搜索文件/i })
+    .click()
+  const picker = page.getByRole('dialog')
+  await picker.getByRole('combobox').fill(name)
+  const file = picker.locator(`[data-open-new-window-path="${name}"]`).first()
   await expect(file).toBeVisible({ timeout: 30_000 })
   await file.click()
+  await expect(picker).toHaveCount(0)
   await expect(page).toHaveURL(new RegExp(`/files/edit/${name.replace('.', '\\.')}(?:\\?.*)?$`))
   const richView = page.getByRole('radio', { name: /^(WYSIWYG|所见即所得)$/i })
   if ((await richView.getAttribute('aria-checked')) !== 'true') await richView.click()
@@ -92,7 +92,6 @@ test.describe('Vim source editors', () => {
         .evaluate(() => ({
           url: location.href,
           focus: document.activeElement?.outerHTML,
-          events: (window as Window & { vimTestEvents?: unknown[] }).vimTestEvents,
           text: document.body.innerText,
         }))
         .catch(() => null)
@@ -184,25 +183,6 @@ test.describe('Vim source editors', () => {
 
   test('Mermaid uses CodeMirror Vim and code-block Escape returns to Normal without closing', async () => {
     const page = session!.page
-    await page.evaluate(() => {
-      const testWindow = window as Window & { vimTestEvents?: unknown[] }
-      const events: unknown[] = []
-      testWindow.vimTestEvents = events
-      for (const name of ['keydown', 'focusin', 'focusout'])
-        document.addEventListener(
-          name,
-          (event) => {
-            const target = event.target as HTMLElement | null
-            events.push({
-              event: name,
-              key: (event as KeyboardEvent).key,
-              target: target?.outerHTML.slice(0, 450),
-              active: document.activeElement?.outerHTML.slice(0, 450),
-            })
-          },
-          true,
-        )
-    })
     await openFile(page, 'Code.md')
     await toggle(page, 'vim-global-toggle', true)
     const preview = page.locator('[data-plate-preview="mermaid"]')
@@ -224,7 +204,7 @@ test.describe('Vim source editors', () => {
       .filter({ has: page.locator('code[data-language="typescript"]') })
       .first()
     await code.click()
-    await code.getByRole('button', { name: /expand|扩展|展开/i }).click()
+    await page.getByRole('button', { name: /expanded editor|扩展编辑器/i }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog.locator('[data-vim-active]')).toBeVisible()
     await dialog.locator('.view-lines').click()

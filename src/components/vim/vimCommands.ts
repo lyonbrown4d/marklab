@@ -15,6 +15,49 @@ export const executeVimCommand = async (
   if (command !== 'write') await handlers.quit()
 }
 
+// Preserve different commands issued during a save; repeated pending commands
+// share that operation instead of starting duplicate writes.
+export const createVimCommandRunner = ({
+  handlers,
+  isCurrent,
+  onError,
+  onSuccess,
+}: {
+  handlers: VimCommandHandlers
+  isCurrent: () => boolean
+  onError: (error: unknown) => void
+  onSuccess?: () => void
+}): ((command: VimCommand) => void) => {
+  let pending: VimCommand | null = null
+  let queued: VimCommand | null = null
+  const run = (command: VimCommand): void => {
+    if (!isCurrent()) return
+    if (pending) {
+      if (command !== pending) queued = command
+      return
+    }
+    pending = command
+    const guarded: VimCommandHandlers = {
+      write: () => (isCurrent() ? handlers.write() : undefined),
+      quit: () => (isCurrent() ? handlers.quit() : undefined),
+    }
+    void executeVimCommand(command, guarded)
+      .then(() => {
+        if (isCurrent()) onSuccess?.()
+      })
+      .catch((error: unknown) => {
+        if (isCurrent()) onError(error)
+      })
+      .finally(() => {
+        pending = null
+        const next = queued
+        queued = null
+        if (next) run(next)
+      })
+  }
+  return run
+}
+
 export const createSourceVimCommands = ({
   path,
   workspaceKey,

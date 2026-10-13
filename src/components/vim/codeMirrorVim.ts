@@ -2,7 +2,7 @@ import type { Compartment } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import type { CM5EditorInterface } from '@replit/codemirror-vim'
 import {
-  executeVimCommand,
+  createVimCommandRunner,
   type VimCommand,
   type VimCommandHandlers,
 } from '@/components/vim/vimCommands'
@@ -11,12 +11,7 @@ import { registerVimKeyboardScope, reportVimMode } from '@/components/vim/vimKey
 
 type VimModule = typeof import('@replit/codemirror-vim')
 export type CodeMirrorVimStatus = 'loading' | 'ready' | 'loadError' | 'commandError'
-type CommandSession = {
-  handlers: VimCommandHandlers
-  reportError: (error: unknown) => void
-  pending: boolean
-}
-const sessions = new WeakMap<CM5EditorInterface, CommandSession>()
+const sessions = new WeakMap<CM5EditorInterface, (command: VimCommand) => void>()
 const configured = new WeakSet<VimModule['Vim']>()
 
 const configureCommands = (module: VimModule) => {
@@ -30,14 +25,7 @@ const configureCommands = (module: VimModule) => {
   ]
   for (const [name, prefix, command] of commands) {
     module.Vim.defineEx(name, prefix, (cm) => {
-      const session = sessions.get(cm)
-      if (!session || session.pending) return
-      session.pending = true
-      void executeVimCommand(command, session.handlers)
-        .catch(session.reportError)
-        .finally(() => {
-          session.pending = false
-        })
+      sessions.get(cm)?.(command)
     })
   }
 }
@@ -101,6 +89,8 @@ export const attachCodeMirrorVim = ({
   let removeScope: (() => void) | undefined
   let observer: MutationObserver | undefined
   let removeDock: (() => void) | undefined
+  let panel: HTMLElement | undefined
+  let nativePanel: HTMLElement | null = null
   let cm: CM5EditorInterface | null = null
   const modeChanged = (event: { mode: string; subMode?: string }) => {
     if (current())
@@ -126,14 +116,31 @@ export const attachCodeMirrorVim = ({
           if (current()) return handlers.quit()
         },
       }
-      sessions.set(cm, { handlers: guardedHandlers, reportError, pending: false })
+      sessions.set(
+        cm,
+        createVimCommandRunner({
+          handlers: guardedHandlers,
+          isCurrent: current,
+          onError: reportError,
+          onSuccess: () => onStatus('ready'),
+        }),
+      )
       removeScope = registerVimKeyboardScope(root)
       cm.on('vim-mode-change', modeChanged)
       reportVimMode(root, 'normal')
-      const panel = view.dom.querySelector<HTMLElement>('.cm-vim-panel')
-      if (panel) {
+      nativePanel = view.dom.querySelector<HTMLElement>('.cm-vim-panel')
+      if (nativePanel) {
+        // CodeMirror reclaims its own panel DOM during view updates. Keep that
+        // shell in place and give Vim a separate status host that we can dock.
+        panel = document.createElement('div')
+        panel.className = 'cm-vim-panel'
+        panel.append(...nativePanel.childNodes)
+        nativePanel.hidden = true
+        root.append(panel)
+        cm.state.statusbar = panel
         removeDock = registerVimCommandPanel(root, panel)
-        observer = new MutationObserver(() => decoratePanel(panel, labels))
+        const statusPanel = panel
+        observer = new MutationObserver(() => decoratePanel(statusPanel, labels))
         observer.observe(panel, { childList: true, subtree: true })
         decoratePanel(panel, labels)
       }
@@ -151,6 +158,12 @@ export const attachCodeMirrorVim = ({
     observer?.disconnect()
     removeDock?.()
     removeScope?.()
+    if (cm && nativePanel && panel) {
+      cm.state.statusbar = nativePanel
+      nativePanel.append(...panel.childNodes)
+      nativePanel.hidden = false
+      panel.remove()
+    }
     if (isCurrent()) view.dispatch({ effects: compartment.reconfigure([]) })
   }
 }

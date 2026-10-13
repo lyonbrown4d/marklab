@@ -3,7 +3,7 @@ import type { VimAdapterInstance } from 'monaco-vim'
 import { isImeKeyboardEvent } from '@/logic/ime'
 import { sanitizeMonacoVimStatus } from '@/components/vim/monacoVimStatusSanitizer'
 import {
-  executeVimCommand,
+  createVimCommandRunner,
   type VimCommand,
   type VimCommandHandlers,
 } from '@/components/vim/vimCommands'
@@ -17,12 +17,7 @@ type MonacoVim = typeof import('monaco-vim')
 type VimApi = {
   defineEx: (name: string, prefix: string, run: (adapter: VimAdapterInstance) => void) => void
 }
-type CommandSession = {
-  handlers: VimCommandHandlers
-  isCurrent: () => boolean
-  busy: boolean
-}
-const sessions = new WeakMap<MonacoEditor.IStandaloneCodeEditor, CommandSession>()
+const sessions = new WeakMap<MonacoEditor.IStandaloneCodeEditor, (command: VimCommand) => void>()
 const configured = new WeakSet<object>()
 
 const configureCommands = (plugin: MonacoVim) => {
@@ -31,26 +26,7 @@ const configureCommands = (plugin: MonacoVim) => {
   const vim = (plugin.VimMode as unknown as { Vim: VimApi }).Vim
   const define = (name: string, prefix: string, command: VimCommand) =>
     vim.defineEx(name, prefix, (adapter) => {
-      const session = sessions.get((adapter as VimAdapter).editor)
-      if (!session || !session.isCurrent() || session.busy) return
-      session.busy = true
-      const guarded: VimCommandHandlers = {
-        write: async () => {
-          if (session.isCurrent()) await session.handlers.write()
-        },
-        quit: async () => {
-          if (session.isCurrent()) await session.handlers.quit()
-        },
-      }
-      void executeVimCommand(command, guarded)
-        .catch((error: unknown) => {
-          if (session.isCurrent()) {
-            adapter.openNotification(error instanceof Error ? error.message : String(error))
-          }
-        })
-        .finally(() => {
-          session.busy = false
-        })
+      sessions.get((adapter as VimAdapter).editor)?.(command)
     })
   define('write', 'w', 'write')
   define('quit', 'q', 'quit')
@@ -156,7 +132,12 @@ export const attachMonacoVim = ({
   const modeNode = statusNode.firstElementChild
   if (modeNode) modeNode.textContent = '--NORMAL--'
   onMode('NORMAL')
-  const session: CommandSession = { handlers, isCurrent, busy: false }
+  const session = createVimCommandRunner({
+    handlers,
+    isCurrent,
+    onError: (error) =>
+      adapter?.openNotification(error instanceof Error ? error.message : String(error)),
+  })
   sessions.set(editor, session)
   return () => {
     if (sessions.get(editor) === session) sessions.delete(editor)
