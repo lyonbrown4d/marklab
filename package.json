@@ -78,6 +78,12 @@
       "zh-CN"
     ],
     "asar": true,
+    "extraResources": [
+      {
+        "from": "resources/workspace-guide",
+        "to": "workspace-guide"
+      }
+    ],
     "asarUnpack": [
       "node_modules/@parcel/watcher*/**/*",
       "node_modules/detect-libc/**/*",

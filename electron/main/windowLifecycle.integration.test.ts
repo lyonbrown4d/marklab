@@ -59,6 +59,7 @@ describe('window lifecycle composition', () => {
       logger,
       tasks: createMainLifecycleTasks({
         configureSettingsStore: vi.fn(),
+        prepareWorkspaceUserGuide: vi.fn(async () => undefined),
         getKnowledgeEngineService: () => ({
           dispose: vi.fn(async () => undefined),
           initialize: vi.fn(async () => ({ ok: true })),

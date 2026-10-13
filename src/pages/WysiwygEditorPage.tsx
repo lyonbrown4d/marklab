@@ -17,8 +17,7 @@ import { normalizePath } from '@/logic/paths'
 import { onExportContentRequest } from '@/utils/exportContent'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus } from '@/components/EditorDocumentStatus'
-import { resolveLinkedFilePath } from '@/logic/markdownCompletionPaths'
-import { isSourcePreviewFilePath } from '@/logic/fileTypes'
+import { useWorkspaceLinkNavigation } from '@/pages/hooks/useWorkspaceLinkNavigation'
 import { useEditorFocusHandoffTarget } from '@/app/EditorFocusHandoff'
 
 const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
@@ -132,18 +131,14 @@ const WysiwygEditorPage = ({
     (status: MarkdownEditorStatus) => setEditorStatus({ activePath, status }),
     [activePath],
   )
-  const handleWorkspaceLink = useCallback(
-    (target: string, documentPath: string | null) => {
-      const path = resolveLinkedFilePath(documentPath ?? activePath, target, files)
-      if (!path) return
-      if (isSourcePreviewFilePath(path) && onOpenFileView) {
-        onOpenFileView(path, 'source')
-        return
-      }
-      onOpenFile(path)
-    },
-    [activePath, files, onOpenFile, onOpenFileView],
-  )
+  const { openLink: handleWorkspaceLink, pending: linkPending } = useWorkspaceLinkNavigation({
+    activePath,
+    workspaceKey,
+    interactionActive,
+    files,
+    onOpenFile,
+    onOpenFileView,
+  })
 
   const slashLabels = useMarkdownEditorSlashLabels()
   const onCalendarFileCreate = useCallback(async () => {
@@ -199,8 +194,14 @@ const WysiwygEditorPage = ({
   return (
     <div
       className="flex h-full flex-col overflow-hidden"
+      aria-busy={linkPending}
       data-editor-document-path={activePath ?? undefined}
     >
+      {linkPending && (
+        <span role="status" className="sr-only">
+          {t('editor.transition.loading')}
+        </span>
+      )}
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full">
           <Suspense fallback={<EditorPaneFallback />}>

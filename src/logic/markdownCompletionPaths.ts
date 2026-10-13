@@ -52,6 +52,22 @@ const createRelativeLinkTarget = (activePath: string | null, targetPath: string)
   return relative(dirname(activePath), targetPath) || targetPath
 }
 
+export const linkedFilePathCandidates = (activePath: string | null, target: string): string[] => {
+  if (!activePath) return []
+  if (!target.trim()) return [activePath]
+
+  const normalized = resolveRelativePath(activePath, localLinkPath(target))
+  return Array.from(
+    new Set(
+      [
+        normalized,
+        MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.md`,
+        MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.markdown`,
+      ].map(normalizePath),
+    ),
+  )
+}
+
 export const resolveLinkedFilePath = (
   activePath: string | null,
   target: string,
@@ -60,16 +76,13 @@ export const resolveLinkedFilePath = (
   if (!activePath) return null
   if (!target.trim()) return activePath
 
-  const normalized = resolveRelativePath(activePath, localLinkPath(target))
-  const candidates = [
-    normalized,
-    MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.md`,
-    MARKDOWN_EXTENSIONS.test(normalized) ? normalized : `${normalized}.markdown`,
-  ].map(normalizePath)
   const existing = new Set(
     files.filter((file) => file.kind === 'file').map((file) => normalizePath(file.path)),
   )
-  return candidates.find((candidate) => existing.has(candidate)) ?? null
+  return (
+    linkedFilePathCandidates(activePath, target).find((candidate) => existing.has(candidate)) ??
+    null
+  )
 }
 
 const localLinkPath = (target: string) => {

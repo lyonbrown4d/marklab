@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createMainLifecycleTasks } from '@electron/main/lifecycle/mainLifecycleTasks'
+import { LifecycleCoordinator } from '@electron/main/lifecycle/lifecycleCoordinator'
+import { noopLogger } from '@electron/services/logger'
 
 describe('main lifecycle tasks', () => {
   it('describes database and service lifecycle dependencies explicitly', async () => {
@@ -28,6 +30,13 @@ describe('main lifecycle tasks', () => {
         dependencies: ['local-database'],
         name: 'settings-store',
         order: 20,
+        phase: 'infrastructure',
+      },
+      {
+        critical: false,
+        dependencies: ['settings-store'],
+        name: 'workspace-user-guide',
+        order: 30,
         phase: 'infrastructure',
       },
       {
@@ -70,6 +79,13 @@ describe('main lifecycle tasks', () => {
 
     expect(dependencies.localDatabaseService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.configureSettingsStore).toHaveBeenCalledWith(dependencies.settingsStore)
+    expect(dependencies.prepareWorkspaceUserGuide).toHaveBeenCalledOnce()
+    expect(dependencies.prepareWorkspaceUserGuide.mock.invocationCallOrder[0]).toBeGreaterThan(
+      dependencies.configureSettingsStore.mock.invocationCallOrder[0]!,
+    )
+    expect(dependencies.prepareWorkspaceUserGuide.mock.invocationCallOrder[0]).toBeLessThan(
+      dependencies.knowledgeEngineService.initialize.mock.invocationCallOrder[0]!,
+    )
     expect(dependencies.knowledgeEngineService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.initialize).toHaveBeenCalledOnce()
     expect(dependencies.localHistoryService.dispose).toHaveBeenCalledOnce()
@@ -79,17 +95,34 @@ describe('main lifecycle tasks', () => {
     expect(dependencies.localDatabaseService.close).toHaveBeenCalledOnce()
   })
 
-  it('fails the critical knowledge-engine task when initialization is not ok', async () => {
-    const dependencies = createDependencies()
-    dependencies.knowledgeEngineService.initialize.mockResolvedValue({
-      error: 'sidecar missing',
-      ok: false,
-    })
-    const knowledgeEngine = createMainLifecycleTasks(dependencies).find(
-      ({ name }) => name === 'knowledge-engine',
-    )
+  it.each(['sidecar missing', undefined])(
+    'fails the critical knowledge-engine task with error %s',
+    async (error) => {
+      const dependencies = createDependencies()
+      dependencies.knowledgeEngineService.initialize.mockResolvedValue({
+        error,
+        ok: false,
+      })
+      const knowledgeEngine = createMainLifecycleTasks(dependencies).find(
+        ({ name }) => name === 'knowledge-engine',
+      )
 
-    await expect(knowledgeEngine?.start()).rejects.toThrow('sidecar missing')
+      await expect(knowledgeEngine?.start()).rejects.toThrow(
+        error ?? 'Knowledge engine startup failed',
+      )
+    },
+  )
+
+  it('continues opening workspaces when bundled guides cannot be prepared', async () => {
+    const dependencies = createDependencies()
+    dependencies.prepareWorkspaceUserGuide.mockRejectedValue(new Error('resources missing'))
+    const coordinator = new LifecycleCoordinator({
+      logger: noopLogger,
+      tasks: createMainLifecycleTasks(dependencies),
+    })
+    await expect(coordinator.startup()).resolves.toBeUndefined()
+    expect(dependencies.getWorkspaceRegistry).toHaveBeenCalledOnce()
+    await coordinator.shutdown()
   })
 })
 
@@ -122,6 +155,7 @@ const createDependencies = () => {
       initialize: vi.fn(async () => undefined),
     },
     localHistoryService,
+    prepareWorkspaceUserGuide: vi.fn(async () => undefined),
     settingsStore,
     workspaceRegistry,
   }

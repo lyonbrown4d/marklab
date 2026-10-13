@@ -13,6 +13,7 @@ type WorkspaceRegistry = {
 }
 
 type MainLifecycleDependencies<TSettings> = {
+  prepareWorkspaceUserGuide: () => Promise<void>
   configureSettingsStore: (settingsStore: TSettings) => unknown
   getKnowledgeEngineService: () => Disposable & {
     initialize: () => Promise<{ error?: string; ok: boolean }>
@@ -48,6 +49,14 @@ export const createMainLifecycleTasks = <TSettings>(
     start: () => {
       dependencies.configureSettingsStore(dependencies.getSettingsStore())
     },
+  },
+  {
+    critical: false,
+    dependencies: ['settings-store'],
+    name: 'workspace-user-guide',
+    order: 30,
+    phase: 'infrastructure',
+    start: dependencies.prepareWorkspaceUserGuide,
   },
   knowledgeEngineTask(dependencies.getKnowledgeEngineService),
   disposalTask('link-preview', 20, dependencies.getLinkPreviewService),
