@@ -1,6 +1,14 @@
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { registerWorkspaceCommandsIpc } from '@electron/ipc/workspaceCommands'
+import { createGraphLayoutWorkspaceKey } from '@electron/services/graphLayout/workspaceIdentity'
+
+const workspaceRoot = {
+  kind: 'external' as const,
+  path: path.join(os.tmpdir(), 'marklab-graph-layout-ipc', 'notes'),
+}
 
 describe('workspace graph layout IPC', () => {
   it('derives workspace identity from the sender-owned workspace', async () => {
@@ -9,7 +17,10 @@ describe('workspace graph layout IPC', () => {
 
     await handlers.get('fs_get_workspace_graph_layout')?.(event(), payload)
 
-    expect(graphLayoutStore.get).toHaveBeenCalledWith('external:c:/notes', payload)
+    expect(graphLayoutStore.get).toHaveBeenCalledWith(
+      createGraphLayoutWorkspaceKey(workspaceRoot),
+      payload,
+    )
   })
 
   it('strictly rejects renderer-supplied workspace identity and non-finite geometry', async () => {
@@ -18,7 +29,10 @@ describe('workspace graph layout IPC', () => {
     await expect(
       handlers.get('fs_get_workspace_graph_layout')?.(event(), {
         ...request(),
-        workspaceKey: 'external:D:/other',
+        workspaceKey: createGraphLayoutWorkspaceKey({
+          kind: 'external',
+          path: path.join(os.tmpdir(), 'marklab-graph-layout-ipc', 'other'),
+        }),
       }),
     ).rejects.toThrow()
     await expect(
@@ -38,7 +52,10 @@ describe('workspace graph layout IPC', () => {
 
     await handlers.get('fs_save_workspace_graph_layout')?.(event(), payload)
 
-    expect(graphLayoutStore.save).toHaveBeenCalledWith('external:c:/notes', payload)
+    expect(graphLayoutStore.save).toHaveBeenCalledWith(
+      createGraphLayoutWorkspaceKey(workspaceRoot),
+      payload,
+    )
   })
 })
 
@@ -59,7 +76,7 @@ const register = () => {
       logger: { info: vi.fn() } as never,
       workspaceRegistry: {
         serviceForWebContents: vi.fn(() => ({
-          rootInfo: () => ({ kind: 'external', path: 'C:\\notes' }),
+          rootInfo: () => workspaceRoot,
         })),
       } as never,
     },

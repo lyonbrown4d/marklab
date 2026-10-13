@@ -86,12 +86,18 @@ describe('SettingsStore SQLite persistence', () => {
   })
 
   it('deduplicates canonical aliases in recent workspaces', () => {
+    const rootPath = path.join(directory, 'Notes', 'Café')
+    const unicodeAlias = `${path.join(directory, 'Notes', 'Cafe\u0301')}${path.sep}`
+    const caseAlias =
+      process.platform === 'win32' || process.platform === 'darwin'
+        ? rootPath.toUpperCase()
+        : rootPath
     store.setRendererPersistValue(
       'marklab.workspace',
       {
         state: {
-          recentProjects: ['C:\\Notes\\Cafe\u0301\\', 'c:/notes/Café'],
-          rootPath: 'C:/NOTES/Café',
+          recentProjects: [unicodeAlias, caseAlias.replaceAll('\\', '/')],
+          rootPath,
           tabs: [],
         },
       },
@@ -99,7 +105,7 @@ describe('SettingsStore SQLite persistence', () => {
     )
 
     expect(store.getRendererPersistValue('marklab.workspace', 'window-one')).toMatchObject({
-      state: { recentProjects: ['C:/NOTES/Café'] },
+      state: { recentProjects: [rootPath] },
     })
   })
 

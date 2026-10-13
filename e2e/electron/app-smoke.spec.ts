@@ -14,6 +14,9 @@ import {
   type ElectronTestSession,
 } from './electronTestHarness.js'
 
+// eslint-disable-next-line no-restricted-imports -- Electron E2E assertions and fixtures are colocated outside application aliases.
+import { createStatisticsDocument, expectCenteredInViewport } from './appSmokeAssertions.js'
+
 type RendererWindow = Window & {
   ipcRenderer?: unknown
   marklabElectron?: unknown
@@ -39,6 +42,7 @@ test.describe('Electron desktop shell', () => {
   let rendererUrl = ''
   let server: http.Server | undefined
   let session: ElectronTestSession | undefined
+  let statisticsDocument: ReturnType<typeof createStatisticsDocument> | undefined
 
   test.beforeAll(async () => {
     const renderer = await startRendererServer()
@@ -49,13 +53,21 @@ test.describe('Electron desktop shell', () => {
   test.afterAll(async () => closeRendererServer(server))
 
   test.beforeEach(async () => {
-    session = await launchElectronTestSession(rendererUrl)
+    statisticsDocument =
+      test.info().title === 'updates document statistics after normal rich-text typing'
+        ? createStatisticsDocument()
+        : undefined
+    session = await launchElectronTestSession(rendererUrl, {
+      openTargets: statisticsDocument ? [statisticsDocument.file] : undefined,
+    })
     page = session.page
   })
 
   test.afterEach(async () => {
     await closeElectronTestSession(session)
     session = undefined
+    statisticsDocument?.dispose()
+    statisticsDocument = undefined
   })
 
   test('loads the renderer through a narrow secure preload bridge', async () => {
@@ -146,13 +158,7 @@ test.describe('Electron desktop shell', () => {
     await page.keyboard.press('ControlOrMeta+Comma')
     const settingsDialog = page.getByRole('dialog', { name: /Settings|设置/i })
     await expect(settingsDialog).toBeVisible({ timeout: 2_000 })
-    const dialogBox = await settingsDialog.boundingBox()
-    expect(dialogBox).not.toBeNull()
-    if (!dialogBox) return
-    const expectedX = (1280 - dialogBox.width) / 2
-    const expectedY = (900 - dialogBox.height) / 2
-    expect(Math.abs(dialogBox.x - expectedX)).toBeLessThanOrEqual(1)
-    expect(Math.abs(dialogBox.y - expectedY)).toBeLessThanOrEqual(1)
+    await expectCenteredInViewport(settingsDialog)
     await captureDesignScreenshot(page, 'settings-dialog-position.png')
   })
 
@@ -245,8 +251,10 @@ test.describe('Electron desktop shell', () => {
     await expect(editor).toContainText('one two')
     await expect(editor).toContainText('three')
     await expect(statusBar).toContainText(/[1-9]\d*\s+(Lines|行)/i, { timeout: 5_000 })
-    await expect(statusBar).toContainText(/3\s+(Words|词)/i)
-    await expect(statusBar).toContainText(/11\s+(Characters|字符)/i)
+    await expect(statusBar.locator('span').filter({ hasText: /^3\s+(Words|词)$/i })).toBeVisible()
+    await expect(
+      statusBar.locator('span').filter({ hasText: /^11\s+(Characters|字符)$/i }),
+    ).toBeVisible()
   })
 
   test('releases the canvas after a hover-preview sidebar closes', async () => {

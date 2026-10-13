@@ -13,6 +13,7 @@ const electron = vi.hoisted(() => ({
   notificationSupported: vi.fn(() => false),
 }))
 const commitOutput = vi.hoisted(() => vi.fn(async () => undefined))
+const exportPath = (filename: string) => path.join(os.tmpdir(), 'marklab-test-exports', filename)
 
 vi.mock('electron', () => ({
   Notification: class {
@@ -125,8 +126,8 @@ describe('ExportService PDF lifecycle', () => {
     )
 
     service.exportMarkdown(
-      { markdown: '# Safe', format: 'pdf', outputPath: 'D:/exports/safe.pdf' },
-      { commitOutput, resourceBasePath: 'D:/notes' },
+      { markdown: '# Safe', format: 'pdf', outputPath: exportPath('safe.pdf') },
+      { commitOutput, resourceBasePath: path.join(os.tmpdir(), 'marklab-test-notes') },
     )
 
     await vi.waitFor(() => expect(sent.some((task) => task.status === 'finished')).toBe(true))
@@ -154,7 +155,7 @@ describe('ExportService PDF lifecycle', () => {
       {
         markdown: '# Cancel',
         format: 'pdf',
-        outputPath: 'D:/exports/cancel.pdf',
+        outputPath: exportPath('cancel.pdf'),
       },
       { commitOutput },
     )
@@ -174,7 +175,7 @@ describe('ExportService PDF lifecycle', () => {
       service.exportMarkdown({
         markdown: '# Wrong extension',
         format: 'pdf',
-        outputPath: 'D:/exports/wrong.docx',
+        outputPath: exportPath('wrong.docx'),
       }),
     ).toThrow('extension')
   })
@@ -184,7 +185,7 @@ describe('ExportService PDF lifecycle', () => {
       { openPath: vi.fn() } as unknown as Shell,
       FakeBrowserWindow as unknown as typeof BrowserWindow,
     )
-    const outputPath = 'D:/exports/existing.pdf'
+    const outputPath = exportPath('existing.pdf')
     const taskId = service.exportMarkdown(
       {
         markdown: '# Cancel safely',
@@ -207,7 +208,7 @@ describe('ExportService PDF lifecycle', () => {
       FakeBrowserWindow as unknown as typeof BrowserWindow,
     )
     const taskId = service.exportMarkdown(
-      { markdown: '# Private', format: 'pdf', outputPath: 'D:/exports/private.pdf' },
+      { markdown: '# Private', format: 'pdf', outputPath: exportPath('private.pdf') },
       { commitOutput, ownerId: 7 },
     )
 
@@ -224,7 +225,7 @@ describe('ExportService PDF lifecycle', () => {
     )
 
     service.exportMarkdown(
-      { markdown: '# Progress', format: 'html', outputPath: 'D:/exports/progress.html' },
+      { markdown: '# Progress', format: 'html', outputPath: exportPath('progress.html') },
       { commitOutput },
     )
 
@@ -262,7 +263,7 @@ describe('ExportService PDF lifecycle', () => {
     )
 
     service.exportMarkdown(
-      { markdown: '# Done', format: 'html', outputPath: 'D:/exports/done.html' },
+      { markdown: '# Done', format: 'html', outputPath: exportPath('done.html') },
       { commitOutput, ownerId: 7 },
     )
 
@@ -274,6 +275,6 @@ describe('ExportService PDF lifecycle', () => {
     )
     expect(nativeWindows.get(7)?.show).not.toHaveBeenCalled()
     expect(nativeWindows.get(7)?.focus).not.toHaveBeenCalled()
-    expect(shell.showItemInFolder).toHaveBeenCalledWith(path.resolve('D:/exports/done.html'))
+    expect(shell.showItemInFolder).toHaveBeenCalledWith(path.resolve(exportPath('done.html')))
   })
 })

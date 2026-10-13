@@ -1,4 +1,6 @@
 import { EventEmitter } from 'node:events'
+import os from 'node:os'
+import path from 'node:path'
 import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -7,6 +9,7 @@ import {
   restoreMaximizedOnFirstShow,
 } from '@electron/windowStateRestore'
 import { installWindowStatePersistence } from '@electron/windowStatePersistence'
+import { createWorkspaceStorageKey } from '@electron/services/workspace/workspaceIdentity'
 
 const settings = vi.hoisted(() => ({
   getRendererPersistValue: vi.fn(),
@@ -22,6 +25,15 @@ vi.mock('@electron/services/settingsStore', () => ({
   getRendererPersistValue: settings.getRendererPersistValue,
   getWindowState: settings.getWindowState,
 }))
+
+const notesRoot = {
+  kind: 'external' as const,
+  path: path.join(os.tmpdir(), 'marklab-window-state-restore', 'notes'),
+}
+const wikiRoot = {
+  kind: 'external' as const,
+  path: path.join(os.tmpdir(), 'marklab-window-state-restore', 'wiki'),
+}
 
 describe('restoreMaximizedOnFirstShow', () => {
   it('keeps prewarmed windows hidden until their first explicit show', () => {
@@ -80,12 +92,12 @@ describe('restoreMaximizedOnFirstShow', () => {
       x: 120,
       y: 80,
     })
-    installWindowStatePersistence(window, writeState, 100, 'external:c:/notes')
+    installWindowStatePersistence(window, writeState, 100, createWorkspaceStorageKey(notesRoot))
 
-    activateWorkspaceWindowState(window, { kind: 'external', path: 'D:\\wiki' }, { warn: vi.fn() })
+    activateWorkspaceWindowState(window, wikiRoot, { warn: vi.fn() })
 
-    expect(writeState).toHaveBeenCalledWith('external:c:/notes')
-    expect(settings.getWindowState).toHaveBeenCalledWith('external:d:/wiki')
+    expect(writeState).toHaveBeenCalledWith(createWorkspaceStorageKey(notesRoot))
+    expect(settings.getWindowState).toHaveBeenCalledWith(createWorkspaceStorageKey(wikiRoot))
     expect(window.setBounds).toHaveBeenCalledWith({
       height: 900,
       width: 1440,
@@ -107,7 +119,7 @@ describe('restoreMaximizedOnFirstShow', () => {
       unmaximize: vi.fn(),
     }) as unknown as BrowserWindow
     settings.getRendererPersistValue.mockReturnValue({
-      state: { rootKind: 'external', rootPath: 'D:\\wiki' },
+      state: { rootKind: wikiRoot.kind, rootPath: wikiRoot.path },
       version: 1,
     })
     settings.getWindowState.mockReturnValue({
@@ -122,7 +134,7 @@ describe('restoreMaximizedOnFirstShow', () => {
     activatePersistedWorkspaceWindowState(window, 'main', { warn: vi.fn() })
 
     expect(settings.getRendererPersistValue).toHaveBeenCalledWith('marklab.workspace', 'main')
-    expect(settings.getWindowState).toHaveBeenCalledWith('external:d:/wiki')
+    expect(settings.getWindowState).toHaveBeenCalledWith(createWorkspaceStorageKey(wikiRoot))
     expect(window.setBounds).toHaveBeenCalledWith({ height: 800, width: 1200, x: 40, y: 60 })
   })
 })

@@ -54,11 +54,18 @@ describe('MarklabWindowPool failure recovery', () => {
     const damaged = createWindow(1)
     const cold = createWindow(2)
     const createMainWindow = vi.fn().mockReturnValueOnce(damaged).mockReturnValueOnce(cold)
-    const loadMainWindow = vi.fn().mockRejectedValueOnce(new Error('standby load failed'))
+    let rejectPrewarm: (error: Error) => void = () => undefined
+    const loadMainWindow = vi.fn(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectPrewarm = reject
+        }),
+    )
     const loadOpeningWindow = vi.fn(async () => undefined)
     const logger = createLogger()
     const pool = createMarklabWindowPool(logger, {
       createMainWindow,
+      hasMemoryHeadroom: () => true,
       loadMainWindow,
       loadOpeningWindow,
     })
@@ -66,7 +73,11 @@ describe('MarklabWindowPool failure recovery', () => {
     const prewarm = pool.prewarmMainWindow()
     const acquisition = pool.acquireMainWindow()
 
-    await expect(prewarm).rejects.toThrow('standby load failed')
+    const prewarmFailure = expect(prewarm).rejects.toThrow('standby load failed')
+    expect(loadMainWindow).toHaveBeenCalledWith(damaged, { standby: true })
+    expect(createMainWindow).toHaveBeenCalledOnce()
+    rejectPrewarm(new Error('standby load failed'))
+    await prewarmFailure
     await expect(acquisition).resolves.toMatchObject({ source: 'cold', window: cold })
     expect(damaged.destroy).toHaveBeenCalledOnce()
     expect(loadOpeningWindow).toHaveBeenCalledWith(cold)
@@ -85,20 +96,29 @@ describe('MarklabWindowPool failure recovery', () => {
       .mockReturnValueOnce(active)
       .mockReturnValueOnce(damaged)
       .mockReturnValueOnce(replacement)
+    let rejectReplacement: (error: Error) => void = () => undefined
+    const replacementLoad = new Promise<void>((_, reject) => {
+      rejectReplacement = reject
+    })
     const loadMainWindow = vi
       .fn()
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('replacement failed'))
+      .mockReturnValueOnce(replacementLoad)
     const logger = createLogger()
     const pool = createMarklabWindowPool(logger, {
       createMainWindow,
+      hasMemoryHeadroom: () => true,
       loadMainWindow,
       loadOpeningWindow: vi.fn(async () => undefined),
     })
 
     await pool.acquireMainWindow()
     await pool.prewarmMainWindow()
+    expect(pool.stats().idleMainWindows).toBe(1)
+    expect(loadMainWindow).toHaveBeenCalledWith(damaged, { standby: true })
     damaged.webContents.emit('render-process-gone')
+    expect(loadMainWindow).toHaveBeenCalledWith(replacement, { standby: true })
+    rejectReplacement(new Error('replacement failed'))
 
     await vi.waitFor(() =>
       expect(logger.warn).toHaveBeenCalledWith(
@@ -106,5 +126,7 @@ describe('MarklabWindowPool failure recovery', () => {
         expect.objectContaining({ error: expect.any(Error) }),
       ),
     )
+    expect(replacement.destroy).toHaveBeenCalledOnce()
+    expect(pool.stats().idleMainWindows).toBe(0)
   })
 })

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { scanWorkspace } from '@electron/services/sync/webdavSync/localScanner'
 
@@ -55,16 +55,40 @@ describe('scanWorkspace', () => {
     expect(result.entries.map((entry) => entry.path)).toEqual(['visible.md'])
   })
 
-  it('fails closed when local paths alias on portable filesystems', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-sync-alias-'))
-    roots.push(root)
-    await fs.writeFile(path.join(root, 'caf\u00e9.md'), 'one')
-    await fs.writeFile(path.join(root, 'cafe\u0301.md'), 'two')
-
-    await expect(scanWorkspace(root, { deviceId: 'device-a', maxFileSize: 32 })).rejects.toThrow(
-      /conflict|alias/i,
-    )
-  })
+  it.each([
+    ['caf\u00e9.md', 'cafe\u0301.md'],
+    ['Note.md', 'note.md'],
+  ])(
+    'fails closed when local paths alias on portable filesystems: %s and %s',
+    async (first, second) => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-sync-alias-'))
+      roots.push(root)
+      await fs.writeFile(path.join(root, first), 'one')
+      const [entry] = await fs.readdir(root, { withFileTypes: true })
+      const handle = await fs.opendir(root)
+      // Some host filesystems cannot store these aliases together. Simulate only enumeration;
+      // the first candidate still goes through real containment checks, stats, and streaming hashing.
+      const iterator = vi
+        .spyOn(handle, Symbol.asyncIterator)
+        .mockImplementation(async function* (): AsyncGenerator<typeof entry, undefined, unknown> {
+          for (const name of [first, second]) {
+            entry.name = name
+            yield entry
+          }
+          return undefined
+        })
+      const openDirectory = vi.spyOn(fs, 'opendir').mockResolvedValueOnce(handle)
+      try {
+        await expect(
+          scanWorkspace(root, { deviceId: 'device-a', maxFileSize: 32 }),
+        ).rejects.toThrow(/conflict|alias/i)
+      } finally {
+        iterator.mockRestore()
+        openDirectory.mockRestore()
+        await handle.close()
+      }
+    },
+  )
 
   it('uses NFC manifest paths without losing decomposed on-disk directories', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-sync-nfc-'))

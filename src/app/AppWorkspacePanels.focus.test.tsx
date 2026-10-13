@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -128,6 +129,17 @@ const FocusHandoffHarness = () => {
   )
 }
 
+const renderFocusHandoff = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <FocusHandoffHarness />
+    </QueryClientProvider>,
+  )
+}
+
 describe('AppWorkspacePanels editor focus handoff', () => {
   beforeEach(() => {
     editorBridge.statusChange = null
@@ -135,7 +147,7 @@ describe('AppWorkspacePanels editor focus handoff', () => {
   })
 
   it('closes the sidebar and focuses the selected editor only after it reports ready', async () => {
-    render(<FocusHandoffHarness />)
+    renderFocusHandoff()
     const openButton = screen.getByRole('button', { name: 'Open second file' })
     openButton.focus()
     fireEvent.click(openButton)
@@ -157,7 +169,7 @@ describe('AppWorkspacePanels editor focus handoff', () => {
   })
 
   it('keeps the sidebar and tree focus when the selected editor reports an error', async () => {
-    render(<FocusHandoffHarness />)
+    renderFocusHandoff()
     const openButton = screen.getByRole('button', { name: 'Open second file' })
     openButton.focus()
     fireEvent.click(openButton)
@@ -172,7 +184,7 @@ describe('AppWorkspacePanels editor focus handoff', () => {
   })
 
   it('does not steal focus when the user moves on before the editor is ready', async () => {
-    render(<FocusHandoffHarness />)
+    renderFocusHandoff()
     fireEvent.click(screen.getByRole('button', { name: 'Open second file' }))
     await waitFor(() =>
       expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),

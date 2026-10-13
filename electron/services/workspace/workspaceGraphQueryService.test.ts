@@ -1,7 +1,16 @@
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
 import { WorkspaceGraphQueryService } from '@electron/services/workspace/workspaceGraphQueryService'
-import type { FsGraph } from '@electron/services/workspace/types'
+import type { FsGraph, FsStateData } from '@electron/services/workspace/types'
+
+const getState = (): FsStateData => ({
+  internalRoot: path.join(os.tmpdir(), 'marklab-graph-query-service', 'app', 'workspace'),
+  rootKind: 'external',
+  rootPath: path.join(os.tmpdir(), 'marklab-graph-query-service', 'notes'),
+  singleFile: null,
+})
 
 describe('WorkspaceGraphQueryService', () => {
   it('retries when the workspace changes while the first graph request is pending', async () => {
@@ -20,12 +29,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput,
       getNodeDocuments: vi.fn(),
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: graphResolver as never,
       knowledgeEngineService: {} as never,
       logger: {} as never,
@@ -68,12 +72,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput,
       getNodeDocuments,
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: graphResolver as never,
       logger: {} as never,
       runNodeDetails,
@@ -106,12 +105,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
       getNodeDocuments: vi.fn(),
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: { resolve: vi.fn(async () => graph('Alpha', 'revision-2')) } as never,
       logger: {} as never,
       runNodeDetails,
@@ -139,12 +133,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
       getNodeDocuments,
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: {
         resolve: vi.fn(async () => ({
           ...graph('Topology', 'revision-1'),
@@ -190,12 +179,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
       getNodeDocuments: vi.fn(),
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: graphResolver as never,
       logger: {} as never,
       runNodeDetails: vi.fn(),
@@ -213,12 +197,7 @@ describe('WorkspaceGraphQueryService', () => {
       analysisCache: cache,
       getInput: vi.fn().mockResolvedValue(input('# Alpha')),
       getNodeDocuments: vi.fn(),
-      getState: () => ({
-        internalRoot: 'C:/app/workspace',
-        rootKind: 'external',
-        rootPath: 'C:/notes',
-        singleFile: null,
-      }),
+      getState,
       graphResolver: {
         resolve: vi.fn(async () => ({
           mode: 'mindmap' as const,

@@ -1,3 +1,5 @@
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { WorkspaceAnalysisCache } from '@electron/services/workspace/workspaceAnalysisCache'
@@ -13,9 +15,9 @@ describe('WorkspaceGraphQueryService topology validation', () => {
       }),
       getNodeDocuments: vi.fn(),
       getState: () => ({
-        internalRoot: 'C:/app/workspace',
+        internalRoot: path.join(os.tmpdir(), 'marklab-graph-query-validation', 'app', 'workspace'),
         rootKind: 'external',
-        rootPath: 'C:/notes',
+        rootPath: path.join(os.tmpdir(), 'marklab-graph-query-validation', 'notes'),
         singleFile: null,
       }),
       graphResolver: {
