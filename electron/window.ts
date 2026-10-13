@@ -23,6 +23,7 @@ import {
   restoreMaximizedOnFirstShow,
 } from '@electron/windowStateRestore'
 import { installWindowStatePersistence } from '@electron/windowStatePersistence'
+import { installWindowDragOpacity } from '@electron/windowMotion'
 const DEV_SERVER_URL = 'http://localhost:5173'
 const DEV_LOAD_RETRIES = 25
 const DEV_LOAD_RETRY_MS = 200
@@ -198,6 +199,7 @@ export const createMainWindow = (logger: Logger = noopLogger) => {
     WINDOW_STATE_SAVE_DELAY_MS,
   )
   restoreMaximizedOnFirstShow(main, restored.isMaximized)
+  installWindowDragOpacity(main)
   return main
 }
 export const loadSplashWindow = async (splash: BrowserWindow) => {
