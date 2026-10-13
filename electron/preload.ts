@@ -3,6 +3,7 @@ import { nativeIpcChannels } from '@electron/channels'
 import { allowedCommands, allowedEvents } from '@electron/preload/allowlists'
 import { onFileDrop } from '@electron/preload/fileDrop'
 import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
+import { createRecentWorkspacesPreloadSurface } from '@electron/preload/recentWorkspaces'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
 import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence'
@@ -197,6 +198,7 @@ const desktopApi: RendererSafeElectronApi = {
     revealPath: (path: string) => ipcRenderer.invoke(nativeIpcChannels.shellRevealPath, path),
   },
   settings: {
+    recentWorkspaces: createRecentWorkspacesPreloadSurface(),
     persist: {
       getItem: (key: string) => ipcRenderer.invoke(nativeIpcChannels.settingsPersistGet, key),
       setItem: (key: string, value: unknown) =>

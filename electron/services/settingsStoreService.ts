@@ -1,4 +1,4 @@
-import { RecentWorkspaceRepository } from '@electron/database/repositories/recentWorkspaceRepository'
+import { RecentWorkspaceHistory } from '@electron/services/recentWorkspaceHistory'
 import { SessionTabRepository } from '@electron/database/repositories/sessionTabRepository'
 import { SettingsRepository } from '@electron/database/repositories/settingsRepository'
 import { WindowSessionRepository } from '@electron/database/repositories/windowSessionRepository'
@@ -19,7 +19,6 @@ import {
   LAST_WORKSPACE_SETTING_KEY,
   WORKSPACE_WINDOWS_SETTING_KEY,
   MAIN_WINDOW_ID,
-  MAX_RECENT_WORKSPACES,
   normalizeSessionKey,
   parseRecord,
   parseTab,
@@ -30,18 +29,18 @@ import {
   tabRecord,
 } from '@electron/services/settingsStoreValues'
 import type { PersistedWindowState, RendererPersistKey } from '@electron/types'
-import { canonicalWorkspacePath } from '@electron/services/workspace/workspaceIdentity'
+import type { RecentWorkspace } from '@/types/recentWorkspaces'
 
 export class SettingsStore {
   private lastWorkspaceSessionKey = DEFAULT_SESSION_KEY
-  private readonly recents: RecentWorkspaceRepository
+  private readonly recents: RecentWorkspaceHistory
   private readonly sessions: WindowSessionRepository
   private readonly settings: SettingsRepository
   private readonly tabs: SessionTabRepository
   private readonly windows: WindowStateRepository
 
   constructor(private readonly localDatabase: LocalDatabaseService) {
-    this.recents = new RecentWorkspaceRepository(localDatabase)
+    this.recents = new RecentWorkspaceHistory(localDatabase)
     this.sessions = new WindowSessionRepository(localDatabase)
     this.settings = new SettingsRepository(localDatabase)
     this.tabs = new SessionTabRepository(localDatabase)
@@ -126,6 +125,18 @@ export class SettingsStore {
     if (id !== DEFAULT_SESSION_KEY) this.sessions.remove(id)
   }
 
+  listRecentWorkspaces(): Promise<RecentWorkspace[]> {
+    return this.recents.list()
+  }
+
+  onRecentWorkspacesChanged(listener: () => void): () => void {
+    return this.recents.onChanged(listener)
+  }
+
+  removeRecentWorkspace(path: string): void {
+    this.recents.remove(path)
+  }
+
   saveWorkspaceWindowSessions(sessionKeys: string[]): void {
     const orderedKeys = [
       ...sessionKeys.filter((key) => key !== this.lastWorkspaceSessionKey),
@@ -168,7 +179,7 @@ export class SettingsStore {
 
   private readWorkspace(sessionKey?: string | null): PersistedRendererValue | null {
     const session = this.readSession(sessionKey)
-    const recentProjects = this.recents.list(MAX_RECENT_WORKSPACES)
+    const recentProjects = this.recents.listPaths()
     if (!session && recentProjects.length === 0) return null
     return persistValue(
       { ...(session?.state ?? {}), ...(recentProjects.length ? { recentProjects } : {}) },
@@ -212,6 +223,13 @@ export class SettingsStore {
           previous?.root_path !== path ||
           previous?.root_kind !== kind))
     this.localDatabase.sqlite.transaction(() => {
+      if (
+        path &&
+        (selectWorkspace === true ||
+          (updateRecents && (previous?.root_path !== path || previous?.root_kind !== kind)))
+      ) {
+        this.recents.allowOpenedPath(path)
+      }
       this.sessions.upsert({
         active_tab_id: stringOrNull(state.activeTabId),
         id,
@@ -220,40 +238,13 @@ export class SettingsStore {
         version: value.version ?? 1,
       })
       this.tabs.replace(id, toTabRows(id, tabs))
-      if (updateRecents) this.updateRecentWorkspaces(value.state ?? {})
+      if (updateRecents) this.recents.update(value.state ?? {})
       if (rememberWorkspace) {
         this.settings.upsert(LAST_WORKSPACE_SETTING_KEY, JSON.stringify(state), value.version ?? 1)
       }
     })()
     if (rememberWorkspace) this.lastWorkspaceSessionKey = id
   }
-
-  private updateRecentWorkspaces(state: Record<string, unknown>): void {
-    const existing = this.recents.list(MAX_RECENT_WORKSPACES)
-    const supplied = Array.isArray(state.recentProjects)
-      ? state.recentProjects.filter(
-          (value): value is string => typeof value === 'string' && !!value,
-        )
-      : []
-    const rootPath = stringOrNull(state.rootPath)
-    const paths = rootPath ? [rootPath, ...existing, ...supplied] : [...existing, ...supplied]
-    this.recents.replace(dedupeWorkspacePaths(paths).slice(0, MAX_RECENT_WORKSPACES))
-  }
-}
-
-const dedupeWorkspacePaths = (paths: string[]): string[] => {
-  const seen = new Set<string>()
-  return paths.filter((workspacePath) => {
-    let key: string
-    try {
-      key = canonicalWorkspacePath(workspacePath)
-    } catch {
-      key = workspacePath.normalize('NFC')
-    }
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }
 
 const toTabRows = (sessionId: string, tabs: unknown[]) =>

@@ -4,9 +4,12 @@ import {
   getRendererPersistValue,
   removeRendererPersistValue,
   setRendererPersistValue,
+  listRecentWorkspaces,
+  removeRecentWorkspace,
 } from '@electron/services/settingsStore'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import type { SettingsPersistResult } from '@electron/types'
+import { registerRecentWorkspaceWatchIpc } from '@electron/ipc/recentWorkspaceWatch'
 
 const toSettingsPersistResult = (action: () => void): SettingsPersistResult => {
   try {
@@ -31,6 +34,20 @@ export const registerSettingsIpc = (
   ipcMain: IpcMain,
   workspaceRegistry: WindowWorkspaceRegistry,
 ): void => {
+  registerRecentWorkspaceWatchIpc(ipcMain, workspaceRegistry)
+  ipcMain.handle(nativeIpcChannels.recentWorkspacesList, (event) => {
+    sessionKeyForEvent(event, workspaceRegistry)
+    return listRecentWorkspaces()
+  })
+  ipcMain.handle(nativeIpcChannels.recentWorkspacesRemove, (event, path: unknown) =>
+    toSettingsPersistResult(() => {
+      sessionKeyForEvent(event, workspaceRegistry)
+      if (typeof path !== 'string' || !path.trim() || path.includes('\0')) {
+        throw new Error('Invalid recent workspace path')
+      }
+      removeRecentWorkspace(path)
+    }),
+  )
   ipcMain.handle(nativeIpcChannels.settingsPersistGet, (event, key: string) =>
     getRendererPersistValue(key, sessionKeyForEvent(event, workspaceRegistry)),
   )

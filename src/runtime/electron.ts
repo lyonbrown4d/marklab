@@ -13,6 +13,7 @@ import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
 import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 import type { RendererReadySignal } from '@/types/rendererReady'
+import type { RecentWorkspacesApi } from '@/types/recentWorkspaces'
 import type {
   ElectronUpdateEvent,
   ElectronUpdateResult,
@@ -201,6 +202,7 @@ export type RendererSafeElectronApi = {
     }>
   }
   settings: {
+    recentWorkspaces?: RecentWorkspacesApi
     persist: {
       getItem: (key: string) => Promise<unknown>
       setItem: (

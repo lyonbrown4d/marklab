@@ -1,5 +1,4 @@
 import {
-  Check,
   ChevronDown,
   Download,
   ExternalLink,
@@ -28,6 +27,7 @@ import { useRef, useState } from 'react'
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { WorkspaceSyncBindingDialog } from '@/features/workspace-sync/WorkspaceSyncBindingDialog'
 import { WorkspaceSyncMenuSection } from '@/features/workspace-sync/WorkspaceSyncMenuSection'
+import { RecentWorkspaceMenuSection } from '@/components/titlebar/RecentWorkspaceMenuSection'
 
 export type RecentWorkspaceMenuData = {
   currentLabel: string
@@ -144,41 +144,13 @@ export const TitlebarWorkspaceMenu = ({
             {recentWorkspaces.sectionLabel}
           </DropdownMenuLabel>
           <DropdownMenuGroup>
-            {recentWorkspaces.paths.length > 0 ? (
-              recentWorkspaces.paths.map((path) => {
-                const label = workspaceName(path)
-                const current =
-                  recentWorkspaces.rootKind !== 'internal' && path === recentWorkspaces.rootPath
-                return (
-                  <DropdownMenuItem
-                    key={path}
-                    aria-current={current ? 'page' : undefined}
-                    aria-label={recentWorkspaces.openLabel.replace('{name}', label)}
-                    className={menuItemStyles({ className: 'py-2' })}
-                    disabled={workspaceWindowOpening}
-                    onSelect={() => onOpenProject(path)}
-                  >
-                    <FolderOpen aria-hidden="true" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{label}</span>
-                      <span className="block truncate text-[10px] text-muted-foreground">
-                        {path}
-                      </span>
-                    </span>
-                    {current ? (
-                      <span className="flex shrink-0 items-center gap-1 text-[10px] text-primary">
-                        <Check aria-hidden="true" className="size-3" />
-                        {recentWorkspaces.currentLabel}
-                      </span>
-                    ) : null}
-                  </DropdownMenuItem>
-                )
-              })
-            ) : (
-              <DropdownMenuItem disabled className={menuItemStyles({ className: 'py-2 text-xs' })}>
-                {recentWorkspaces.emptyLabel}
-              </DropdownMenuItem>
-            )}
+            <RecentWorkspaceMenuSection
+              data={recentWorkspaces}
+              enabled={open}
+              opening={workspaceWindowOpening}
+              onOpenProject={onOpenProject}
+              onRemoved={() => setOpen(false)}
+            />
             <DropdownMenuSeparator className={menuSeparatorStyles} />
             <DropdownMenuItem
               className={menuItemStyles()}
@@ -221,12 +193,4 @@ export const TitlebarWorkspaceMenu = ({
       ) : null}
     </>
   )
-}
-
-const workspaceName = (path: string) => {
-  const parts = path
-    .replace(/[\\/]+$/, '')
-    .split(/[\\/]/)
-    .filter(Boolean)
-  return parts.at(-1) ?? path
 }

@@ -2,6 +2,7 @@ import { rendererPersistKeys } from '@electron/services/settingsPersistKeys'
 import { SettingsStore } from '@electron/services/settingsStoreService'
 import type { PersistedRendererValue } from '@electron/services/settingsStoreSchemas'
 import type { PersistedWindowState, RendererPersistKey } from '@electron/types'
+import type { RecentWorkspace } from '@/types/recentWorkspaces'
 
 export { SettingsStore } from '@electron/services/settingsStoreService'
 
@@ -67,3 +68,8 @@ export const restoreLastWorkspaceSession = (): PersistedRendererValue[] =>
 
 export const saveWorkspaceWindowSessions = (sessionKeys: string[]): void =>
   store().saveWorkspaceWindowSessions(sessionKeys)
+
+export const listRecentWorkspaces = (): Promise<RecentWorkspace[]> => store().listRecentWorkspaces()
+export const removeRecentWorkspace = (path: string): void => store().removeRecentWorkspace(path)
+export const onRecentWorkspacesChanged = (listener: () => void): (() => void) =>
+  store().onRecentWorkspacesChanged(listener)
