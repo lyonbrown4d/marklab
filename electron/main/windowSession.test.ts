@@ -4,18 +4,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMainWindowSession, createStartupWindowSession } from '@electron/main/windowSession'
 import { noopLogger } from '@electron/services/logger'
 import { DEFAULT_SESSION_KEY } from '@electron/services/settingsStoreValues'
+import { restoreLastWorkspaceSession } from '@electron/services/settingsStore'
 import { createMarklabWindows } from '@electron/window'
 import { activatePersistedWorkspaceWindowState } from '@electron/windowStateRestore'
 import type { MarklabWindowPool } from '@electron/windowPool'
 
 vi.mock('@electron/menu', () => ({ installNativeMenu: vi.fn() }))
 vi.mock('@electron/window', () => ({ createMarklabWindows: vi.fn() }))
+vi.mock('@electron/services/settingsStore', () => ({ restoreLastWorkspaceSession: vi.fn() }))
 vi.mock('@electron/windowStateRestore', () => ({
   activatePersistedWorkspaceWindowState: vi.fn(),
 }))
 
 describe('createMainWindowSession', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(restoreLastWorkspaceSession).mockReturnValue([])
+  })
 
   it('loads the splash before backend startup and main-window creation', async () => {
     const order: string[] = []
@@ -38,6 +43,26 @@ describe('createMainWindowSession', () => {
     expect(order).toEqual(['splash', 'runtime', 'main'])
     expect(windows).toEqual({ main, splash })
   })
+
+  it.each([true, false])(
+    'cleans up the startup splash on failure when destroyed=%s',
+    async (destroyed) => {
+      const destroy = vi.fn()
+      const splash = { isDestroyed: () => destroyed, destroy } as unknown as BrowserWindow
+      const createSession = vi.fn()
+      await expect(
+        createStartupWindowSession({
+          createSplash: async () => splash,
+          startRuntime: async () => {
+            throw new Error('startup failed')
+          },
+          createSession,
+        }),
+      ).rejects.toThrow('startup failed')
+      expect(createSession).not.toHaveBeenCalled()
+      expect(destroy).toHaveBeenCalledTimes(destroyed ? 0 : 1)
+    },
+  )
 
   it('does not prewarm while the primary renderer is still hydrating', async () => {
     const main = {} as BrowserWindow
@@ -64,6 +89,10 @@ describe('createMainWindowSession', () => {
     })
 
     expect(pool.prewarmMainWindow).not.toHaveBeenCalled()
+    expect(restoreLastWorkspaceSession).toHaveBeenCalledOnce()
+    expect(vi.mocked(restoreLastWorkspaceSession).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(createMarklabWindows).mock.invocationCallOrder[0]!,
+    )
     expect(createMarklabWindows).toHaveBeenCalledWith(noopLogger, pool, splash)
   })
 
@@ -71,6 +100,9 @@ describe('createMainWindowSession', () => {
     const main = {} as BrowserWindow
     const splash = {} as BrowserWindow
     const installManagedMainWindowLifecycle = vi.fn()
+    const onAdditionalWorkspaceSessions = vi.fn()
+    const additionalSessions = [{ state: { rootKind: 'external', rootPath: '/other', tabs: [] } }]
+    vi.mocked(restoreLastWorkspaceSession).mockReturnValueOnce(additionalSessions)
     vi.mocked(createMarklabWindows).mockResolvedValue({ main, splash })
     const pool = {
       prewarmMainWindow: vi.fn(async () => undefined),
@@ -80,6 +112,7 @@ describe('createMainWindowSession', () => {
       dispatchNativeMenuAction: vi.fn(),
       ensureWindowPool: () => pool,
       installManagedMainWindowLifecycle,
+      onAdditionalWorkspaceSessions,
       logger: noopLogger,
       loadedSplash: splash,
     })
@@ -89,6 +122,7 @@ describe('createMainWindowSession', () => {
       noopLogger,
       DEFAULT_SESSION_KEY,
     )
+    expect(onAdditionalWorkspaceSessions).toHaveBeenCalledWith(additionalSessions)
     expect(activatePersistedWorkspaceWindowState).toHaveBeenCalledWith(
       main,
       DEFAULT_SESSION_KEY,

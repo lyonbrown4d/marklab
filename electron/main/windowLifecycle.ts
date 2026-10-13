@@ -42,6 +42,7 @@ type WindowLifecycleOptions = {
   getNativeIpc: () => WindowLifecycleIpc | null
   getWindows: () => MarklabWindows | null
   setWindows: (windows: MarklabWindows | null) => void
+  persistWorkspaceSessions?: (windows: BrowserWindow[]) => void
 }
 
 export type WindowLifecycle = {
@@ -191,6 +192,9 @@ export const createWindowLifecycle = (options: WindowLifecycleOptions): WindowLi
           Array.from(managedMainWindows, (window) =>
             window.isDestroyed() ? Promise.resolve() : options.flushWindowState(window),
           ),
+        )
+        options.persistWorkspaceSessions?.(
+          Array.from(managedMainWindows).filter((window) => !window.isDestroyed()),
         )
         await shutdownApplication()
         await Promise.all(

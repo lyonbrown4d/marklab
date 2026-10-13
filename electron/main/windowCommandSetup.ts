@@ -2,7 +2,7 @@ import { BrowserWindow } from 'electron'
 import type { NativeCommandHandlers } from '@electron/ipc/commandInvoke'
 import type { NativeIpcRegistration } from '@electron/ipc'
 import {
-  createAppWindowCommandHandlers,
+  createAppWindowCommands,
   createNativeMenuActionDispatcher,
   openStartupPathInCurrentWindow,
 } from '@electron/main/windowCommands'
@@ -15,6 +15,7 @@ import {
 import type { MarklabWindowPool } from '@electron/windowPool'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
+import type { PersistedRendererValue } from '@electron/services/settingsStoreSchemas'
 
 type WindowCommandServices = {
   logger: Logger
@@ -37,6 +38,7 @@ type WindowCommandSetupArgs = {
 export type WindowCommandSetup = {
   commandHandlers: NativeCommandHandlers
   dispatchMenuAction: MenuActionDispatcher
+  restoreWorkspaceWindows: (sessions: PersistedRendererValue[]) => Promise<void>
   openPathInNewWindow: (path: string) => Promise<unknown>
   openSystemPath: (
     path: string,
@@ -84,14 +86,37 @@ export const createWindowCommandSetup = ({
     installManagedMainWindowLifecycle,
     isPrimaryWindowBootstrapping,
     presentPrimaryWindow,
-    writeWorkspaceSession: (targetSessionKey: string, state: Record<string, unknown>) =>
-      writeRendererPersistSession('marklab.workspace', targetSessionKey, state),
+    writeWorkspaceSession: (
+      targetSessionKey: string,
+      state: Record<string, unknown>,
+      selectWorkspace = true,
+    ) =>
+      selectWorkspace
+        ? writeRendererPersistSession('marklab.workspace', targetSessionKey, state)
+        : writeRendererPersistSession(
+            'marklab.workspace',
+            targetSessionKey,
+            state,
+            undefined,
+            false,
+          ),
   }
 
-  const commandHandlers = createAppWindowCommandHandlers(dependencies)
+  const { handlers: commandHandlers, restoreWorkspaceWindow } =
+    createAppWindowCommands(dependencies)
 
   return {
     commandHandlers,
+    restoreWorkspaceWindows: async (sessions) => {
+      for (const session of sessions) {
+        const path = session.state?.rootPath
+        if (typeof path !== 'string' || !path) continue
+        const result = await restoreWorkspaceWindow(session)
+        if (!result.ok) {
+          getServices().logger.warn('unable to restore workspace window', { path, result })
+        }
+      }
+    },
     dispatchMenuAction: createNativeMenuActionDispatcher(dependencies, commandHandlers),
     openPathInNewWindow: (path: string) =>
       Promise.resolve(commandHandlers.open_path_in_new_window({ path }, null as never)),

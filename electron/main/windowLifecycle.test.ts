@@ -46,6 +46,7 @@ const createHarness = () => {
   })
   const flushWindowState = vi.fn(async () => undefined)
   const finalizeWindowState = vi.fn(async () => undefined)
+  const persistWorkspaceSessions = vi.fn()
   const logger = {
     child: vi.fn(),
     debug: vi.fn(),
@@ -56,6 +57,7 @@ const createHarness = () => {
   const nativeIpc = { commands: { workspace }, windowClose: { requestRendererFlush } }
   let servicesAvailable = true
   const options = {
+    persistWorkspaceSessions,
     finalizeWindowState,
     flushWindowState,
     getServices: () => {
@@ -81,6 +83,7 @@ const createHarness = () => {
   })
   const window = windowEmitter as unknown as BrowserWindow & typeof windowEmitter
   return {
+    persistWorkspaceSessions,
     finalizeWindowState,
     flushWindowState,
     gate,
@@ -153,11 +156,14 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('persists managed window state before application services shut down', async () => {
-    const { flushWindowState, lifecycle, window } = createHarness()
+    const { flushWindowState, lifecycle, persistWorkspaceSessions, window } = createHarness()
     lifecycle.installManagedMainWindowLifecycle(window)
     const order: string[] = []
     flushWindowState.mockImplementationOnce(async () => {
       order.push('window-state')
+    })
+    persistWorkspaceSessions.mockImplementationOnce(() => {
+      order.push('workspace-sessions')
     })
     const shutdown = vi.fn(async () => {
       order.push('shutdown')
@@ -166,7 +172,8 @@ describe('window persistence shutdown barrier', () => {
     lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, vi.fn(), shutdown)
 
     await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
-    expect(order).toEqual(['window-state', 'shutdown'])
+    expect(order).toEqual(['window-state', 'workspace-sessions', 'shutdown'])
+    expect(persistWorkspaceSessions).toHaveBeenCalledWith([window])
   })
 
   it('disposes the window pool after application services shut down', async () => {
@@ -230,7 +237,7 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('cancels quit on a real save failure, unfreezes, and permits a later retry', async () => {
-    const { gate, lifecycle, logger, save, workspace } = createHarness()
+    const { gate, lifecycle, logger, persistWorkspaceSessions, save, workspace } = createHarness()
     const error = new Error('ENOSPC: disk full')
     save.mockRejectedValueOnce(error)
     const continueQuit = vi.fn()
@@ -242,6 +249,7 @@ describe('window persistence shutdown barrier', () => {
       ),
     )
     expect(continueQuit).not.toHaveBeenCalled()
+    expect(persistWorkspaceSessions).not.toHaveBeenCalled()
     expect(workspace.cancelShutdownBarrier).toHaveBeenCalledTimes(1)
     expect(gate.reason).toBeNull()
     lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, continueQuit)
@@ -266,7 +274,8 @@ describe('window persistence shutdown barrier', () => {
   })
 
   it('flushes only the closing window and does not freeze other workspace sessions', async () => {
-    const { lifecycle, requestRendererFlush, window, workspace } = createHarness()
+    const { lifecycle, persistWorkspaceSessions, requestRendererFlush, window, workspace } =
+      createHarness()
     lifecycle.installManagedMainWindowLifecycle(window)
 
     window.close()
@@ -276,6 +285,8 @@ describe('window persistence shutdown barrier', () => {
     expect(workspace.flushWindowForClose).toHaveBeenCalledWith(window)
     expect(workspace.beginShutdownBarrier).not.toHaveBeenCalled()
     expect(workspace.flushBuffersForShutdown).not.toHaveBeenCalled()
+    lifecycle.handleBeforeQuit({ preventDefault: vi.fn() }, vi.fn())
+    await vi.waitFor(() => expect(persistWorkspaceSessions).toHaveBeenCalledWith([]))
   })
 
   it('waits for the renderer snapshot and buffer flush before closing the workspace', async () => {

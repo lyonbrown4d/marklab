@@ -3,6 +3,8 @@ import type { PersistedRendererValue } from '@electron/services/settingsStoreSch
 import type { RendererPersistKey } from '@electron/types'
 
 export const DEFAULT_SESSION_KEY = 'main'
+export const LAST_WORKSPACE_SETTING_KEY = 'marklab.last-workspace-session'
+export const WORKSPACE_WINDOWS_SETTING_KEY = 'marklab.workspace-window-sessions'
 export const MAIN_WINDOW_ID = 'main'
 export const MAX_RECENT_WORKSPACES = 8
 

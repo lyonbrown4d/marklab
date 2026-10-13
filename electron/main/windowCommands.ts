@@ -61,6 +61,7 @@ export type AppWindowCommandDependencies = {
   writeWorkspaceSession: (
     targetSessionKey: string,
     state: Record<string, unknown>,
+    selectWorkspace?: boolean,
   ) => WorkspaceSessionSeed
 }
 
@@ -81,9 +82,7 @@ const failure = (error: unknown, requestedPath?: string): AppWindowOpenResult =>
 
 export { openStartupPathInCurrentWindow }
 
-export const createAppWindowCommandHandlers = (
-  dependencies: AppWindowCommandDependencies,
-): NativeCommandHandlers => {
+export const createAppWindowCommands = (dependencies: AppWindowCommandDependencies) => {
   const retries = new Map<number, () => Promise<AppWindowOpenResult>>()
 
   const openWindow = async (request: OpenWindowRequest): Promise<AppWindowOpenResult> => {
@@ -204,28 +203,47 @@ export const createAppWindowCommandHandlers = (
     }
   }
 
-  const openPath = async (value: unknown, reason: string): Promise<AppWindowOpenResult> => {
+  const openPath = async (
+    value: unknown,
+    reason: string,
+    restoredSession?: WorkspaceSessionSeed,
+  ): Promise<AppWindowOpenResult> => {
     try {
       const target = await parsePathOpenTarget(value)
+      const restoredKind = restoredSession?.state?.rootKind
+      const restoredRoot: FsRootInfo | null =
+        restoredSession &&
+        (restoredKind === 'internal' || restoredKind === 'external' || restoredKind === 'single')
+          ? { kind: restoredKind, path: target.path }
+          : null
       return openWindow({
-        createSeed: (window, root) =>
-          dependencies.writeWorkspaceSession(dependencies.getSessionKeyForWindow(window), {
+        createSeed: (window, root) => {
+          const state = {
             activeTabId: null,
+            tabs: [],
+            ...restoredSession?.state,
             rootKind: root.kind,
             rootPath: root.path,
-            tabs: [],
-          }),
-        initializeWorkspace: (workspace) => setWorkspaceTarget(workspace, target),
+          }
+          const key = dependencies.getSessionKeyForWindow(window)
+          return restoredSession
+            ? dependencies.writeWorkspaceSession(key, state, false)
+            : dependencies.writeWorkspaceSession(key, state)
+        },
+        initializeWorkspace: (workspace) =>
+          restoredRoot
+            ? setWorkspaceRoot(workspace, restoredRoot)
+            : setWorkspaceTarget(workspace, target),
         reason,
         requestedPath: target.path,
-        windowStateRoot: workspaceRootForTarget(target),
+        windowStateRoot: restoredRoot ?? workspaceRootForTarget(target),
       })
     } catch (error) {
       return failure(error)
     }
   }
 
-  return {
+  const handlers: NativeCommandHandlers = {
     open_current_workspace_in_new_window: (_payload, event) =>
       openCurrent(event, 'open_current_workspace_in_new_window'),
     open_path_in_current_window: (payload, event) =>
@@ -241,7 +259,16 @@ export const createAppWindowCommandHandlers = (
       return retry?.() ?? failure('No failed workspace open is available to retry.')
     },
   }
+  return {
+    handlers,
+    restoreWorkspaceWindow: (session: WorkspaceSessionSeed) =>
+      openPath({ path: session.state?.rootPath }, 'restore_workspace_window', session),
+  }
 }
+
+export const createAppWindowCommandHandlers = (
+  dependencies: AppWindowCommandDependencies,
+): NativeCommandHandlers => createAppWindowCommands(dependencies).handlers
 
 export const createNativeMenuActionDispatcher = (
   dependencies: AppWindowCommandDependencies,

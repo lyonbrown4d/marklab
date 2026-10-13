@@ -2,6 +2,8 @@ import type { BrowserWindow } from 'electron'
 import { installNativeMenu } from '@electron/menu'
 import type { Logger } from '@electron/services/logger'
 import { DEFAULT_SESSION_KEY } from '@electron/services/settingsStoreValues'
+import { restoreLastWorkspaceSession } from '@electron/services/settingsStore'
+import type { PersistedRendererValue } from '@electron/services/settingsStoreSchemas'
 import { createMarklabWindows, type MarklabWindows } from '@electron/window'
 import { activatePersistedWorkspaceWindowState } from '@electron/windowStateRestore'
 import type { MarklabWindowPool } from '@electron/windowPool'
@@ -18,6 +20,7 @@ type WindowSessionOptions = {
   ) => void
   logger: Logger
   loadedSplash?: BrowserWindow
+  onAdditionalWorkspaceSessions?: (sessions: PersistedRendererValue[]) => void
 }
 
 type StartupWindowSessionOptions = {
@@ -44,6 +47,8 @@ export const createStartupWindowSession = async ({
 export const createMainWindowSession = async (
   options: WindowSessionOptions,
 ): Promise<MarklabWindows> => {
+  const additionalSessions = restoreLastWorkspaceSession()
+  options.onAdditionalWorkspaceSessions?.(additionalSessions)
   const windows = await createMarklabWindows(
     options.logger.child('window'),
     options.ensureWindowPool(),

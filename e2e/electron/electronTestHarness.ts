@@ -134,6 +134,7 @@ const waitForRendererAppShell = async (page: Page, output: string[]) => {
 
 type ElectronTestLaunchOptions = {
   openTargets?: string[]
+  testRunRoot?: string
   trustedCertificateSpki?: string
 }
 
@@ -141,7 +142,8 @@ export const launchElectronTestSession = async (
   rendererUrl: string,
   options: ElectronTestLaunchOptions = {},
 ): Promise<ElectronTestSession> => {
-  const testRunRoot = path.join(e2eOutputRoot, `${Date.now()}-${process.pid}`)
+  const testRunRoot =
+    options.testRunRoot ?? path.join(e2eOutputRoot, `${Date.now()}-${process.pid}`)
   fs.mkdirSync(testRunRoot, { recursive: true })
   const output: string[] = []
   const app = await electron.launch({
@@ -262,6 +264,7 @@ export const snapshotStartupOpenTargetState = (page: Page) =>
 
 export const closeElectronTestSession = async (
   session: Pick<ElectronTestSession, 'app' | 'testRunRoot'> | undefined,
+  options: { preserveProfile?: boolean } = {},
 ) => {
   if (!session) return
   let timer: NodeJS.Timeout | undefined
@@ -284,6 +287,7 @@ export const closeElectronTestSession = async (
     }
   }
   await new Promise((resolve) => setTimeout(resolve, 1_000))
+  if (options.preserveProfile) return
   try {
     fs.rmSync(session.testRunRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
   } catch (error) {

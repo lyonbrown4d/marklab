@@ -47,8 +47,9 @@ export const writeRendererPersistSession = (
   sessionKey: string | undefined | null,
   state: Record<string, unknown>,
   version?: number,
+  selectWorkspace = true,
 ): PersistedRendererValue =>
-  store().writeRendererPersistSession(persistKey(key), sessionKey, state, version)
+  store().writeRendererPersistSession(persistKey(key), sessionKey, state, version, selectWorkspace)
 
 export const copyRendererPersistSession = (
   key: string,
@@ -60,3 +61,9 @@ export const copyRendererPersistSession = (
 
 export const removeRendererSession = (sessionKey: string | undefined | null): void =>
   store().removeRendererSession(sessionKey)
+
+export const restoreLastWorkspaceSession = (): PersistedRendererValue[] =>
+  store().restoreLastWorkspaceSession()
+
+export const saveWorkspaceWindowSessions = (sessionKeys: string[]): void =>
+  store().saveWorkspaceWindowSessions(sessionKeys)

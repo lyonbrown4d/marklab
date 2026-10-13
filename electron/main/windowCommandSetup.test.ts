@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWindowCommandSetup } from '@electron/main/windowCommandSetup'
-import { createAppWindowCommandHandlers } from '@electron/main/windowCommands'
+import { createAppWindowCommands } from '@electron/main/windowCommands'
 import { createNativeMenuActionDispatcher } from '@electron/main/windowCommands'
 import { noopLogger } from '@electron/services/logger'
 import {
@@ -17,10 +17,11 @@ const commandHandlers = vi.hoisted(() => ({
   open_path_in_new_window: vi.fn(),
 }))
 const openStartupPathInCurrentWindow = vi.hoisted(() => vi.fn())
+const restoreWorkspaceWindow = vi.hoisted(() => vi.fn())
 
 vi.mock('electron', () => ({ BrowserWindow: { getFocusedWindow: vi.fn() } }))
 vi.mock('@electron/main/windowCommands', () => ({
-  createAppWindowCommandHandlers: vi.fn(() => commandHandlers),
+  createAppWindowCommands: vi.fn(() => ({ handlers: commandHandlers, restoreWorkspaceWindow })),
   createNativeMenuActionDispatcher: vi.fn(() => vi.fn()),
   openStartupPathInCurrentWindow,
 }))
@@ -62,7 +63,7 @@ const createHarness = (primary: BrowserWindow | null) => {
     presentPrimaryWindow,
   } satisfies Parameters<typeof createWindowCommandSetup>[0]
   const setup = createWindowCommandSetup(options)
-  const dependencies = vi.mocked(createAppWindowCommandHandlers).mock.calls[0][0]
+  const dependencies = vi.mocked(createAppWindowCommands).mock.calls[0][0]
   return {
     dependencies,
     installManagedMainWindowLifecycle,
@@ -80,10 +81,11 @@ const createHarness = (primary: BrowserWindow | null) => {
 }
 
 beforeEach(() => {
-  vi.mocked(createAppWindowCommandHandlers).mockClear()
+  vi.mocked(createAppWindowCommands).mockClear()
   commandHandlers.open_path_in_current_window.mockClear()
   commandHandlers.open_path_in_new_window.mockClear()
   openStartupPathInCurrentWindow.mockClear()
+  restoreWorkspaceWindow.mockReset()
   vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(null)
   vi.mocked(copyRendererPersistSession).mockClear()
   vi.mocked(writeRendererPersistSession).mockClear()
@@ -91,6 +93,17 @@ beforeEach(() => {
 })
 
 describe('window command workspace selection', () => {
+  it('restores saved windows sequentially and continues after an unavailable workspace', async () => {
+    const { setup } = createHarness(createWindow())
+    const first = { state: { rootKind: 'external', rootPath: '/first', tabs: [] } }
+    const second = { state: { rootKind: 'single', rootPath: '/second.md', tabs: [] } }
+    restoreWorkspaceWindow.mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true })
+
+    await setup.restoreWorkspaceWindows([first, { state: { rootPath: '' } }, second])
+
+    expect(restoreWorkspaceWindow.mock.calls).toEqual([[first], [second]])
+  })
+
   it('routes native paths according to the requested window disposition', async () => {
     const setup = createWindowCommandSetup({
       getServices: () => ({
@@ -137,7 +150,7 @@ describe('window command workspace selection', () => {
 
     expect(createNativeMenuActionDispatcher).toHaveBeenCalledWith(
       expect.any(Object),
-      vi.mocked(createAppWindowCommandHandlers).mock.results[0].value,
+      commandHandlers,
     )
   })
 

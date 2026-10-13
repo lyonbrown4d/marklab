@@ -16,6 +16,8 @@ import {
 import {
   assertWorkspaceKey,
   DEFAULT_SESSION_KEY,
+  LAST_WORKSPACE_SETTING_KEY,
+  WORKSPACE_WINDOWS_SETTING_KEY,
   MAIN_WINDOW_ID,
   MAX_RECENT_WORKSPACES,
   normalizeSessionKey,
@@ -31,6 +33,7 @@ import type { PersistedWindowState, RendererPersistKey } from '@electron/types'
 import { canonicalWorkspacePath } from '@electron/services/workspace/workspaceIdentity'
 
 export class SettingsStore {
+  private lastWorkspaceSessionKey = DEFAULT_SESSION_KEY
   private readonly recents: RecentWorkspaceRepository
   private readonly sessions: WindowSessionRepository
   private readonly settings: SettingsRepository
@@ -94,10 +97,11 @@ export class SettingsStore {
     sessionKey: string | undefined | null,
     state: Record<string, unknown>,
     version?: number,
+    selectWorkspace = true,
   ): PersistedRendererValue {
     assertWorkspaceKey(key)
     const value = persistValue(pickState(state, workspaceSessionStateKeys), version)
-    this.writeWorkspace(sessionKey, value, false)
+    this.writeWorkspace(sessionKey, value, false, selectWorkspace)
     return value
   }
 
@@ -122,7 +126,37 @@ export class SettingsStore {
     if (id !== DEFAULT_SESSION_KEY) this.sessions.remove(id)
   }
 
-  private readSetting(key: RendererPersistKey): PersistedRendererValue | null {
+  saveWorkspaceWindowSessions(sessionKeys: string[]): void {
+    const orderedKeys = [
+      ...sessionKeys.filter((key) => key !== this.lastWorkspaceSessionKey),
+      ...sessionKeys.filter((key) => key === this.lastWorkspaceSessionKey),
+    ]
+    const sessions = orderedKeys.flatMap((key) => {
+      const session = this.readSession(key)
+      return stringOrNull(session?.state?.rootPath) ? [session] : []
+    })
+    this.settings.upsert(WORKSPACE_WINDOWS_SETTING_KEY, JSON.stringify({ sessions }), 1)
+  }
+
+  restoreLastWorkspaceSession(): PersistedRendererValue[] {
+    const saved = this.readSetting(WORKSPACE_WINDOWS_SETTING_KEY)?.state?.sessions
+    const sessions = Array.isArray(saved)
+      ? saved.flatMap((entry) => {
+          const session = normalizePersistedRendererValue(entry)
+          return session && stringOrNull(session.state?.rootPath) ? [session] : []
+        })
+      : []
+    const value = sessions.pop() ?? this.readSetting(LAST_WORKSPACE_SETTING_KEY)
+    if (!value || !stringOrNull(value.state?.rootPath)) return []
+    this.writeWorkspace(DEFAULT_SESSION_KEY, value, false)
+    this.settings.remove(WORKSPACE_WINDOWS_SETTING_KEY)
+    return sessions
+  }
+
+  private readSetting(
+    key:
+      RendererPersistKey | typeof LAST_WORKSPACE_SETTING_KEY | typeof WORKSPACE_WINDOWS_SETTING_KEY,
+  ): PersistedRendererValue | null {
     const row = this.settings.get(key)
     return row ? persistValue(parseRecord(row.value_json), row.version ?? undefined) : null
   }
@@ -161,10 +195,22 @@ export class SettingsStore {
     sessionKey: string | undefined | null,
     value: PersistedRendererValue,
     updateRecents: boolean,
+    selectWorkspace?: boolean,
   ): void {
     const id = normalizeSessionKey(sessionKey)
     const state = pickState(value.state ?? {}, workspaceSessionStateKeys)
     const tabs = Array.isArray(state.tabs) ? state.tabs : []
+    const previous = this.sessions.get(id)
+    const path = stringOrNull(state.rootPath)
+    const kind = rootKind(state.rootKind)
+    // Follow the last opened session without letting saves from older windows select it again.
+    const rememberWorkspace =
+      path &&
+      (selectWorkspace ??
+        (!updateRecents ||
+          id === this.lastWorkspaceSessionKey ||
+          previous?.root_path !== path ||
+          previous?.root_kind !== kind))
     this.localDatabase.sqlite.transaction(() => {
       this.sessions.upsert({
         active_tab_id: stringOrNull(state.activeTabId),
@@ -175,7 +221,11 @@ export class SettingsStore {
       })
       this.tabs.replace(id, toTabRows(id, tabs))
       if (updateRecents) this.updateRecentWorkspaces(value.state ?? {})
+      if (rememberWorkspace) {
+        this.settings.upsert(LAST_WORKSPACE_SETTING_KEY, JSON.stringify(state), value.version ?? 1)
+      }
     })()
+    if (rememberWorkspace) this.lastWorkspaceSessionKey = id
   }
 
   private updateRecentWorkspaces(state: Record<string, unknown>): void {

@@ -40,6 +40,8 @@ import { syncNativeWindowBackgrounds, syncNativeWindowIcons } from '@electron/wi
 import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
 import { createRendererReadyCoordinator } from '@electron/main/rendererReady'
 import type { RendererReadySignal } from '@/types/rendererReady'
+import { saveWorkspaceWindowSessions } from '@electron/services/settingsStore'
+import type { PersistedRendererValue } from '@electron/services/settingsStoreSchemas'
 
 const APP_READY_FALLBACK_MS = 30_000
 
@@ -49,6 +51,7 @@ let rendererReady = false
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null
 let nativeIpc: NativeIpcRegistration | null = null
 let runtime: ElectronRuntime | null = null
+let pendingWorkspaceSessions: PersistedRendererValue[] = []
 
 installElectronE2eRuntimeFlags()
 configureAppIdentity(app)
@@ -117,6 +120,16 @@ const handlePrimaryRendererWorkspaceSettled = (): void => {
   rendererReady = true
   showMainWindow()
   systemThemeMonitor.announceCurrent()
+  const sessions = pendingWorkspaceSessions
+  pendingWorkspaceSessions = []
+  void windowCommandSetup
+    .restoreWorkspaceWindows(sessions)
+    .then(() => {
+      if (sessions.length && windows && !windows.main.isDestroyed()) windows.main.focus()
+    })
+    .catch((error) => {
+      getServices().logger.warn('unable to restore workspace windows', { error })
+    })
 }
 
 const handleRendererReady = (
@@ -144,6 +157,10 @@ const systemThemeMonitor = createSystemThemeMonitor({
 })
 
 const windowLifecycle = createWindowLifecycle({
+  persistWorkspaceSessions: (activeWindows) =>
+    saveWorkspaceWindowSessions(
+      activeWindows.map((window) => getServices().workspaceRegistry.sessionKeyForWindow(window)),
+    ),
   finalizeWindowState: releasePersistedWindowState,
   flushWindowState: flushPersistedWindowState,
   getServices,
@@ -204,6 +221,9 @@ const bootstrap = async (): Promise<void> => {
           ensureWindowPool: windowLifecycle.ensureWindowPool,
           installManagedMainWindowLifecycle: windowLifecycle.installManagedMainWindowLifecycle,
           loadedSplash,
+          onAdditionalWorkspaceSessions: (sessions) => {
+            pendingWorkspaceSessions = sessions
+          },
           logger,
         }),
     })
