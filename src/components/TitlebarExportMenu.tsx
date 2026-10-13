@@ -1,3 +1,5 @@
+import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
+import { cn } from '@/lib/utils'
 import { FileDown, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
@@ -37,7 +39,7 @@ export const TitlebarExportMenu = ({
           size="icon"
           aria-label={exportLabel}
           title={exportLabel}
-          className="chrome-button size-8 rounded-full"
+          className={cn(chromeButtonClassName, 'size-8 rounded-full')}
           data-no-drag
           disabled={disabled}
         >

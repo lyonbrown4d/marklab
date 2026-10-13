@@ -1,9 +1,27 @@
 import { render, screen } from '@testing-library/react'
+import { parse } from 'postcss'
+import { compile } from 'tailwindcss'
 import { describe, expect, it } from 'vitest'
+import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { SplashScreen } from '@/splash/SplashScreen'
 
 describe('shared document loading', () => {
+  it.each([false, true])('keeps the bold markers monospaced with compact=%s', async (compact) => {
+    render(<DocumentLoadingLines compact={compact} />)
+    const marker = screen.getByText('#')
+    const compiler = await compile('@theme { --font-weight-bold: 700; } @tailwind utilities;')
+    const declarations = new Map<string, string>()
+    parse(compiler.build([...marker.classList])).walkDecls((declaration) => {
+      declarations.set(declaration.prop, declaration.value)
+    })
+
+    expect(declarations.get('font-family')).toContain('Cascadia Code')
+    expect(declarations.get('font-family')).toContain('SFMono-Regular')
+    expect(declarations.get('font-family')).toContain('Consolas,monospace')
+    expect(declarations.get('font-weight')).toBe('var(--font-weight-bold)')
+  })
+
   it('announces one loading state while hiding composing lines from assistive technology', () => {
     render(<DocumentLoadingState label="Loading preview" description="notes/guide.md" />)
     const status = screen.getByRole('status', { name: 'Loading preview' })

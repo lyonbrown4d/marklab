@@ -126,7 +126,7 @@ const AppStatusBar = ({
         id="app-status-bar"
         data-app-focus-zone="statusbar"
         aria-label={t('statusBar.label')}
-        className="app-status-bar flex min-h-7 shrink-0 items-center justify-between gap-2 overflow-hidden border-t border-border/60 px-2 text-[11px] text-muted-foreground"
+        className="app-status-bar [@media(max-width:640px)]:[&_[data-status-label]]:hidden flex min-h-7 shrink-0 items-center justify-between gap-2 overflow-hidden bg-background border-t border-t-[color-mix(in_srgb,hsl(var(--border))_68%,transparent)] shadow-none [contain:layout_paint] backdrop-filter-[saturate(1.12)_blur(12px)] px-2 text-[11px] text-muted-foreground"
       >
         <AppStatusBarLeft
           gitBranch={gitBranch}

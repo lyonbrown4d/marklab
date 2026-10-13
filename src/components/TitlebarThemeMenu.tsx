@@ -1,3 +1,5 @@
+import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
+import { cn } from '@/lib/utils'
 import { CircleHelp, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,7 +43,7 @@ const TitlebarThemeMenu = ({ theme, setTheme, onAbout }: TitlebarThemeMenuProps)
           type="button"
           variant="ghost"
           size="icon"
-          className="chrome-button size-8 rounded-md"
+          className={cn(chromeButtonClassName, 'size-8 rounded-md')}
           aria-label={triggerLabel}
           title={triggerLabel}
         >

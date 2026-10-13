@@ -104,7 +104,33 @@ Avoid:
 - large custom CSS files
 - inline style-heavy implementations
 
-Prefer utility-first styling.
+Tailwind CSS is the default and first choice for new styles and migration of
+existing styles. Reuse existing shadcn/ui components, Tailwind utilities,
+variants, and project theme tokens before adding custom CSS/SCSS.
+
+- Express ordinary layout, spacing, sizing, typography, colors, borders,
+  responsive behavior, focus, hover, disabled, and data-driven states in
+  component className values. Use the existing cn helper for conditional classes.
+- Prefer existing theme tokens and utility scales. Use arbitrary values only
+  when necessary to preserve a deliberate visual or runtime requirement.
+- Keep downloaded shadcn components in src/components/ui unchanged during
+  styling migrations. Compose Tailwind classes in business components and at
+  their call sites instead of changing the downloaded primitives.
+- Migrate existing custom rules incrementally when touching a component or
+  during a scoped styling migration. Remove the replaced rules and unused
+  classes after checking all consumers, including standalone HTML entries.
+- Keep custom styles only for shared theme tokens, necessary animation
+  keyframes, global browser/accessibility defaults, or third-party editor/native
+  integration selectors that cannot be expressed clearly with Tailwind. Keep
+  these exceptions focused and shared; explain their purpose in code rather
+  than duplicating utility declarations.
+- Compose repeated styling through existing components and variants. Do not
+  introduce a parallel styling framework or use large @apply blocks to retain
+  redundant custom classes.
+- Preserve visual layout, keyboard focus, loading/error states, accessibility,
+  reduced-motion preferences, and light/dark themes during migration.
+- Independent HTML pages must use the Vite build pipeline and shared source
+  components/styles; do not place inline application CSS/JS in public HTML.
 
 ## Code Style
 

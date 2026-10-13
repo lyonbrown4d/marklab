@@ -41,10 +41,12 @@ const CommandEmptyState = ({
               size="sm"
               variant="outline"
               aria-label={`${suggestion.marker} ${suggestion.label}`}
-              className="command-empty-scope-button h-7 rounded px-2"
+              className="h-7 rounded px-2 text-[0.6875rem] leading-4"
               onClick={() => onSelectScope(suggestion.value)}
             >
-              <span className="command-empty-scope-marker">{suggestion.marker}</span>
+              <span className="font-[family-name:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace)]">
+                {suggestion.marker}
+              </span>
               <span>{suggestion.label}</span>
             </Button>
           ))}

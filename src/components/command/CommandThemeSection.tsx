@@ -66,11 +66,11 @@ const CommandThemeSection = ({ onAction }: CommandThemeSectionProps) => {
             <span
               aria-hidden="true"
               className={cn(
-                'theme-swatch block size-4 shrink-0 overflow-hidden rounded-sm border border-border',
+                'block size-4 shrink-0 overflow-hidden rounded-sm border border-border/85 bg-background',
                 item.swatchClass,
               )}
             >
-              <span className="theme-swatch-preview relative block h-full w-full" />
+              <span className="relative block h-full w-full bg-[var(--swatch-bg)]" />
             </span>
             <span className="truncate">{t(item.labelKey)}</span>
             {isCurrentTheme && <CurrentItemCheck />}

@@ -82,7 +82,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
 
   return (
     <section aria-label={diffTitle} className="flex h-full flex-col overflow-hidden">
-      <div className="tab-strip flex h-10 items-center justify-between gap-3 border-b border-border/80 px-3">
+      <div className="tab-strip bg-card backdrop-filter-[saturate(1.12)_blur(12px)] flex h-10 items-center justify-between gap-3 border-b border-border/80 px-3">
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <FileText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate font-medium">{request.path}</span>

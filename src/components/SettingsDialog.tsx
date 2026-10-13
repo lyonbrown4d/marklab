@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n/useI18n'
 import {
   SettingsDialogLoadingPanel,
   settingsDialogContentClassName,
+  settingsScrollViewportClassName,
 } from '@/components/settings/SettingsDialogLoading'
 import { SettingsSearch } from '@/components/settings/SettingsSearch'
 import {
@@ -127,7 +128,7 @@ const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialog
           <TabsList
             ref={tabsListRef}
             aria-label={t('settings.title')}
-            className="settings-dialog-tabs flex h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b bg-muted/20 px-3 py-2 md:h-full md:flex-col md:gap-0 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:px-3 md:py-4"
+            className="flex [scroll-padding-inline:0.5rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b bg-muted/20 px-3 py-2 md:h-full md:flex-col md:gap-0 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:px-3 md:py-4"
           >
             {settingsGroups.map((group) => {
               const routes = settingsRoutes.filter((entry) => entry.group === group.value)
@@ -148,7 +149,7 @@ const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialog
                           aria-current={isActive ? 'page' : undefined}
                           data-settings-route={routeConfig.value}
                           title={label}
-                          className="settings-dialog-tab-trigger relative h-9 flex-none cursor-pointer justify-start gap-2 rounded-md border-0 px-2.5 text-muted-foreground shadow-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none md:w-full md:data-[state=active]:before:absolute md:data-[state=active]:before:-left-3 md:data-[state=active]:before:h-5 md:data-[state=active]:before:w-0.5 md:data-[state=active]:before:rounded-full md:data-[state=active]:before:bg-primary motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0"
+                          className="relative h-9 flex-none cursor-pointer justify-start gap-2 rounded-md border-0 px-2.5 text-muted-foreground shadow-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none md:w-full md:data-[state=active]:before:absolute md:data-[state=active]:before:-left-3 md:data-[state=active]:before:h-5 md:data-[state=active]:before:w-0.5 md:data-[state=active]:before:rounded-full md:data-[state=active]:before:bg-primary motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0"
                         >
                           <Icon aria-hidden="true" />
                           <span className="truncate">{label}</span>
@@ -162,10 +163,7 @@ const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialog
           </TabsList>
           <div className="h-full min-h-0 min-w-0 overflow-hidden bg-card">
             <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
-              <div
-                ref={scrollViewportRef}
-                className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable] [scrollbar-width:thin]"
-              >
+              <div ref={scrollViewportRef} className={settingsScrollViewportClassName}>
                 <header className="sticky top-0 z-10 border-b bg-card/95 px-5 py-5 backdrop-blur-sm md:px-8">
                   <div
                     id={activeRoute.pageTargetId}

@@ -1,5 +1,7 @@
 import { access, readFile } from 'node:fs/promises'
 import path from 'node:path'
+import postcss from 'postcss'
+import tailwindcss from '@tailwindcss/postcss'
 import { describe, expect, it } from 'vitest'
 
 describe('logo design preview build', () => {
@@ -21,8 +23,31 @@ describe('logo design preview build', () => {
     expect(html).not.toContain('<style>')
     expect(entry).toContain("import '@/design-preview/logo-preview.css'")
     expect(entry).not.toContain('react')
-    expect(css).toContain('.theme-card.dark')
-    expect(css).toContain('@media (max-width: 900px)')
+    expect(css).toContain("@import 'tailwindcss' source(none)")
+    expect(css).toContain("@source '../../logo-preview.html'")
+    expect(css).not.toContain('.theme-card')
+    const generated = await postcss([tailwindcss()]).process(css, {
+      from: path.join(root, 'src/design-preview/logo-preview.css'),
+    })
+    expect(generated.warnings()).toEqual([])
+    const declarations: string[] = []
+    const breakpoints: string[] = []
+    generated.root.walkDecls((declaration) => {
+      declarations.push(declaration.value)
+    })
+    generated.root.walkAtRules('media', (rule) => {
+      breakpoints.push(rule.params)
+    })
+    expect(declarations).toEqual(
+      expect.arrayContaining([
+        'min(1080px, calc(100vw - 40px))',
+        'var(--color-preview-dark)',
+        'var(--background-image-preview-checkerboard)',
+        '0 0,0 10px,10px -10px,-10px 0',
+        'normal',
+      ]),
+    )
+    expect(breakpoints).toContain('(max-width:900px)')
     expect(config).toContain("logo: path.resolve(import.meta.dirname, 'logo-preview.html')")
     expect(config).toContain("outDir: '.tmp/design-preview'")
     expect(config).not.toContain('electron(')

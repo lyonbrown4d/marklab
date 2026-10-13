@@ -74,7 +74,7 @@ const AppearanceSettingsPage = () => {
                   selected={lightTheme === item.value}
                   selectedVariant="ghost"
                   unselectedVariant="ghost"
-                  className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
+                  className="theme-choice h-auto gap-3 border-border bg-card p-2 text-left shadow-none transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:border-border hover:bg-card data-[selected=true]:border-primary data-[selected=true]:bg-card data-[selected=true]:![box-shadow:0_0_0_1px_hsl(var(--primary))] data-[selected=true]:hover:border-primary motion-reduce:transition-none"
                   onClick={() => setLightTheme(item.value)}
                 >
                   <ThemePreview swatchClass={item.swatchClass} />
@@ -93,7 +93,7 @@ const AppearanceSettingsPage = () => {
                   selected={darkTheme === item.value}
                   selectedVariant="ghost"
                   unselectedVariant="ghost"
-                  className="theme-choice h-auto gap-3 p-2 text-left shadow-none"
+                  className="theme-choice h-auto gap-3 border-border bg-card p-2 text-left shadow-none transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:border-border hover:bg-card data-[selected=true]:border-primary data-[selected=true]:bg-card data-[selected=true]:![box-shadow:0_0_0_1px_hsl(var(--primary))] data-[selected=true]:hover:border-primary motion-reduce:transition-none"
                   onClick={() => setDarkTheme(item.value)}
                 >
                   <ThemePreview swatchClass={item.swatchClass} />
@@ -138,9 +138,12 @@ export default AppearanceSettingsPage
 const ThemePreview = ({ swatchClass }: { swatchClass: string }) => {
   return (
     <span
-      className={cn('theme-swatch block h-9 w-12 shrink-0 overflow-hidden rounded', swatchClass)}
+      className={cn(
+        'block h-9 w-12 shrink-0 overflow-hidden rounded border border-border/85 bg-background',
+        swatchClass,
+      )}
     >
-      <span className="theme-swatch-preview relative block h-full w-full">
+      <span className="relative block h-full w-full bg-[var(--swatch-bg)]">
         <span className="absolute inset-y-0 left-0 w-4 bg-[var(--swatch-rail)]" />
         <span className="absolute left-5 top-2 h-1.5 w-5 rounded-full bg-[var(--swatch-accent)]" />
         <span className="absolute bottom-2 left-5 h-1 w-3 rounded-full bg-[var(--swatch-accent)] opacity-60" />

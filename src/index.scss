@@ -387,32 +387,6 @@
   }
 }
 
-@layer components {
-  .app-shell {
-    background-color: hsl(var(--background));
-  }
-
-  .app-titlebar,
-  .tab-strip,
-  .app-status-bar {
-    background-color: hsl(var(--background) / 0.88);
-    backdrop-filter: saturate(1.12) blur(12px);
-  }
-
-  .layout-rail {
-    background-color: hsl(var(--sidebar));
-  }
-
-  .workspace-main {
-    background-color: hsl(var(--background));
-  }
-
-  .chrome-button {
-    transition-duration: 160ms;
-    transition-property: background-color, border-color, color, opacity;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -6,6 +6,11 @@ import { GraphWebNode } from '@/components/GraphWebNode'
 import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import type { GraphNodeData } from '@/logic/graph'
 import { cn } from '@/lib/utils'
+import {
+  workspaceMapHandleClass,
+  workspaceMapSurfaceClass,
+  workspaceMapNodeClass,
+} from '@/pages/workspace-map/workspaceMapNodeStyles'
 import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
 import { WorkspaceMapNodeDisclosure } from '@/pages/workspace-map/WorkspaceMapNodeDisclosure'
 
@@ -36,6 +41,8 @@ export const WorkspaceMapReferenceNode = memo(
         <section
           aria-label={data.label}
           className={cn(
+            workspaceMapSurfaceClass,
+            workspaceMapNodeClass,
             'workspace-map-node flex h-[72px] w-[220px] items-center gap-2 overflow-visible rounded-lg px-3',
             dragCursorClass,
             selected && 'workspace-map-node--selected',
@@ -44,9 +51,9 @@ export const WorkspaceMapReferenceNode = memo(
           data-workspace-map-collapsed="true"
           data-graph-node-selected={selected}
         >
-          <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-          <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
-          <div className="workspace-map-node__icon flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/45">
+          <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+          <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
+          <div className="workspace-map-node__icon text-[var(--workspace-map-node-accent)] flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/45">
             <Icon aria-hidden="true" className="size-4" />
           </div>
           <div className="min-w-0 flex-1">
@@ -64,6 +71,8 @@ export const WorkspaceMapReferenceNode = memo(
         <section
           aria-label={data.label}
           className={cn(
+            workspaceMapSurfaceClass,
+            workspaceMapNodeClass,
             'workspace-map-node size-full min-h-[180px] min-w-[300px] overflow-visible rounded-xl',
             selected && 'workspace-map-node--selected',
           )}
@@ -71,8 +80,8 @@ export const WorkspaceMapReferenceNode = memo(
           data-graph-node-selected={selected}
         >
           <WorkspaceMapNodeResizeControl minHeight={180} minWidth={300} />
-          <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-          <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
+          <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+          <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
           {disclosure ? (
             <div className="absolute right-2 top-2 z-10">
               <WorkspaceMapNodeDisclosure
@@ -103,6 +112,8 @@ export const WorkspaceMapReferenceNode = memo(
         <section
           aria-label={data.label}
           className={cn(
+            workspaceMapSurfaceClass,
+            workspaceMapNodeClass,
             'workspace-map-node flex size-full min-h-[180px] min-w-[280px] flex-col overflow-visible rounded-lg',
             selected && 'workspace-map-node--selected',
           )}
@@ -110,8 +121,8 @@ export const WorkspaceMapReferenceNode = memo(
           data-graph-node-selected={selected}
         >
           <WorkspaceMapNodeResizeControl minHeight={180} minWidth={280} />
-          <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-          <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
+          <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+          <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
           {disclosure ? (
             <div className="absolute right-2 top-2 z-10">
               <WorkspaceMapNodeDisclosure
@@ -136,6 +147,8 @@ export const WorkspaceMapReferenceNode = memo(
     return (
       <div
         className={cn(
+          workspaceMapSurfaceClass,
+          workspaceMapNodeClass,
           'workspace-map-node flex size-full min-h-20 min-w-44 items-start gap-2 overflow-visible rounded-lg px-3 py-3',
           dragCursorClass,
           selected && 'workspace-map-node--selected',
@@ -149,9 +162,9 @@ export const WorkspaceMapReferenceNode = memo(
           maxHeight={480}
           maxWidth={640}
         />
-        <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-        <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
-        <div className="workspace-map-node__icon flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/45">
+        <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+        <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
+        <div className="workspace-map-node__icon text-[var(--workspace-map-node-accent)] flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/45">
           <Icon aria-hidden="true" className="size-4" />
         </div>
         <div className="min-w-0 flex-1 pt-0.5">

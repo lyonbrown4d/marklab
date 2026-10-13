@@ -38,7 +38,7 @@ const AppShellPanelsView = ({
   return (
     <div className="terminal-dock relative flex min-h-0 flex-1">
       <ResizableGroup
-        className="workspace-shell-panels motion-panel-group min-h-0 flex-1"
+        className="workspace-shell-panels motion-panel-group min-h-0 flex-1 [:root[data-immersive-zen=true]_&]:p-0"
         defaultLayout={shellPanelLayout.defaultLayout}
         elementRef={shellGroupElementRef}
         id="marklab-shell-panels"
@@ -55,7 +55,7 @@ const AppShellPanelsView = ({
         </ResizablePanel>
         <ResizableSeparator
           className={cn(
-            'resize-handle resize-handle-horizontal',
+            'resize-handle resize-handle-horizontal relative z-[5] flex h-[7px] shrink-0 basis-auto -my-[3px] cursor-row-resize touch-none items-center justify-center bg-border/18 outline-none transition-[background-color,opacity] duration-[var(--motion-duration-fast)] ease-[ease] after:h-0.5 after:w-9 after:rounded-[999px] after:bg-transparent after:content-[""] after:transition-[background-color,transform] after:duration-[var(--motion-duration-fast)] after:ease-[ease] [&:hover]:bg-ring/12 focus-visible:bg-ring/12 data-[resize-handle-active]:bg-ring/12 [&:hover]:after:bg-ring/72 focus-visible:after:bg-ring/72 data-[resize-handle-active]:after:bg-ring/72 [&:hover]:after:[transform:scaleY(1.35)] focus-visible:after:[transform:scaleY(1.35)] data-[disabled]:cursor-default data-[disabled]:opacity-0 motion-reduce:transition-none motion-reduce:after:transition-none [:root[data-immersive-zen=true]_&]:!hidden',
             !terminalOpen && 'pointer-events-none opacity-0',
           )}
           disabled={!terminalOpen}

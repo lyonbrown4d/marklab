@@ -9,6 +9,7 @@ import {
   SettingsDialogLoadingPanel,
   SettingsDialogLoadingTabs,
   settingsDialogContentClassName,
+  settingsScrollViewportClassName,
 } from '@/components/settings/SettingsDialogLoading'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -30,7 +31,7 @@ const SettingsDialogFallback = ({ open, onOpenChange }: SettingsDialogFallbackPr
         <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[152px_minmax(0,1fr)] md:grid-rows-1">
           <SettingsDialogLoadingTabs />
           <div className="h-full min-h-0 min-w-0 overflow-hidden bg-card">
-            <div className="settings-scroll-viewport h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-0 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+            <div className={settingsScrollViewportClassName}>
               <div className="mx-auto min-h-full w-full max-w-2xl px-5 pb-8 pt-2 md:px-7">
                 <SettingsDialogLoadingPanel />
               </div>

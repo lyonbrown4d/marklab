@@ -58,7 +58,7 @@ export const GraphMiniMap = ({ narrowFallbacks, nodeCount, offsets, show }: Grap
   return (
     <MiniMap
       ariaLabel={t('graph.minimapLabel')}
-      className="graph-minimap"
+      className="graph-minimap overflow-hidden rounded-[calc(var(--radius)+2px)] border border-[color-mix(in_srgb,hsl(var(--border))_82%,transparent)] !bg-[color-mix(in_srgb,hsl(var(--card))_94%,transparent)] shadow-[0_12px_28px_-20px_hsl(var(--foreground)/42%)] backdrop-blur-[12px] [&_.react-flow__minimap-mask]:!fill-[hsl(var(--background)/68%)]"
       nodeColor={getMiniMapNodeColor}
       pannable
       position={position}

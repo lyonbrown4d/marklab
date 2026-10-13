@@ -69,7 +69,7 @@ export const ImmersiveWorkspaceShell = ({
   }, [effectiveSidebarOpen])
 
   return (
-    <div className="immersive-workspace relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div className="immersive-workspace bg-background relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <div
         data-testid="sidebar-hover-zone"
         className="absolute inset-y-0 left-0 z-30 w-5"

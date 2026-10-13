@@ -10,7 +10,6 @@ import {
 import { useI18n } from '@/i18n/useI18n'
 import { userThemeApi, type UserThemeInfo } from '@/services/userThemeApi'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
-import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const CustomThemesSettingsSection = () => {
@@ -137,7 +136,7 @@ const CustomThemesSettingsSection = () => {
         </SettingsActionButton>
       </div>
       {customThemesSupported && customThemes.length > 0 ? (
-        <div className="settings-theme-list flex flex-col gap-2">
+        <div className="mt-2 flex flex-col gap-2">
           {customThemes.map((item) => {
             const removeLabel = t('settings.removeCustomTheme', { name: item.name })
             const selected = customThemeId === item.id
@@ -145,14 +144,11 @@ const CustomThemesSettingsSection = () => {
               <div
                 key={item.id}
                 data-selected={selected ? 'true' : 'false'}
-                className={cn(
-                  'settings-theme-item flex items-center gap-2 rounded-md px-3 py-2.5',
-                  selected && 'settings-theme-item-selected',
-                )}
+                className="settings-theme-item flex items-center gap-2 rounded-md border border-[color-mix(in_srgb,hsl(var(--border))_78%,transparent)] bg-background px-3 py-2.5 transition-[background-color,border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:-translate-y-px hover:border-[color-mix(in_srgb,hsl(var(--border))_56%,hsl(var(--foreground))_44%)] hover:shadow-[0_1px_2px_color-mix(in_srgb,hsl(var(--foreground))_12%,transparent)] active:translate-y-0 data-[selected=true]:border-[color-mix(in_srgb,hsl(var(--primary))_54%,hsl(var(--border))_46%)] data-[selected=true]:bg-[color-mix(in_srgb,hsl(var(--primary))_8%,hsl(var(--card))_92%)] data-[selected=true]:hover:border-[color-mix(in_srgb,hsl(var(--primary))_64%,hsl(var(--border))_36%)] motion-reduce:transition-none motion-reduce:hover:translate-none motion-reduce:active:translate-none"
               >
                 <button
                   type="button"
-                  className="settings-theme-item-trigger min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left text-sm"
+                  className="min-w-0 flex-1 cursor-pointer rounded-sm px-1 py-0.5 text-left text-sm text-inherit hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:![box-shadow:0_0_0_2px_color-mix(in_srgb,hsl(var(--ring))_26%,transparent)]"
                   aria-label={item.name}
                   aria-pressed={selected}
                   onClick={() => setCustomThemeId(item.id)}
@@ -161,7 +157,10 @@ const CustomThemesSettingsSection = () => {
                   <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
                 </button>
                 {selected && (
-                  <Check className="settings-theme-check size-4 shrink-0" aria-hidden="true" />
+                  <Check
+                    className="settings-theme-check size-4 shrink-0 animate-[settings-theme-check-in_var(--motion-duration-fast)_var(--motion-ease-standard)_both] text-primary motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
                 )}
                 <SettingsIconButton
                   type="button"

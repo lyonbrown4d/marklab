@@ -1,79 +1,127 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="[color-scheme:light]">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>marklab logo directions</title>
     <script type="module" src="/src/design-preview/main.ts"></script>
   </head>
-  <body>
-    <main>
-      <header>
-        <h1>marklab<br />logo directions</h1>
-        <p class="note">
+  <body
+    class="m-0 min-h-screen leading-[normal] bg-preview-bg font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe_UI,sans-serif] text-preview-text"
+  >
+    <main class="mx-auto w-[min(1080px,calc(100vw-40px))] py-[52px]">
+      <header class="mb-7 flex items-end justify-between gap-6 [@media(max-width:900px)]:block">
+        <h1 class="m-0 text-[clamp(32px,5vw,56px)] leading-none font-bold tracking-[-0.055em]">
+          marklab<br />logo directions
+        </h1>
+        <p
+          class="m-0 max-w-[390px] text-sm leading-[1.6] text-preview-muted [@media(max-width:900px)]:mt-4"
+        >
           Transparent logo assets for light and dark app themes. The app component switches between
           these two files when the workspace theme changes.
         </p>
       </header>
 
-      <section class="theme-grid" aria-label="Theme-aware logo assets">
-        <article class="theme-card">
-          <div class="stage">
-            <img class="large" src="/marklab-light.svg" alt="Light theme transparent logo" />
+      <section
+        class="mb-4 grid grid-cols-2 gap-4 [@media(max-width:900px)]:grid-cols-1"
+        aria-label="Theme-aware logo assets"
+      >
+        <article
+          class="rounded-3xl border border-preview-line bg-preview-surface p-5 shadow-[0_18px_46px_rgba(15,23,42,0.07)]"
+        >
+          <div
+            class="grid min-h-[220px] place-items-center rounded-[20px] border border-preview-stage bg-preview-checkerboard bg-size-[20px_20px] bg-position-[0_0,0_10px,10px_-10px,-10px_0]"
+          >
+            <img
+              class="size-32 drop-shadow-[0_18px_28px_rgba(15,23,42,0.12)]"
+              src="/marklab-light.svg"
+              alt="Light theme transparent logo"
+            />
           </div>
-          <h2>Light theme</h2>
-          <p>Transparent asset using dark slate strokes and a restrained blue node accent.</p>
+          <h2 class="mt-5 mb-2 text-[17px] font-bold tracking-[-0.03em]">Light theme</h2>
+          <p class="m-0 text-[13px] leading-[1.6] text-preview-muted">
+            Transparent asset using dark slate strokes and a restrained blue node accent.
+          </p>
         </article>
 
-        <article class="theme-card dark">
-          <div class="stage">
-            <img class="large" src="/marklab-dark.svg" alt="Dark theme transparent logo" />
+        <article
+          class="rounded-3xl border border-preview-text bg-preview-dark p-5 text-preview-bg shadow-[0_18px_46px_rgba(15,23,42,0.07)]"
+        >
+          <div
+            class="grid min-h-[220px] place-items-center rounded-[20px] border border-preview-text bg-preview-dark bg-preview-checkerboard bg-size-[20px_20px] bg-position-[0_0,0_10px,10px_-10px,-10px_0]"
+          >
+            <img
+              class="size-32 drop-shadow-[0_18px_28px_rgba(0,0,0,0.28)]"
+              src="/marklab-dark.svg"
+              alt="Dark theme transparent logo"
+            />
           </div>
-          <h2>Dark theme</h2>
-          <p>Transparent asset using light strokes so the mark stays clear on dark surfaces.</p>
+          <h2 class="mt-5 mb-2 text-[17px] font-bold tracking-[-0.03em]">Dark theme</h2>
+          <p class="m-0 text-[13px] leading-[1.6] text-preview-dark-muted">
+            Transparent asset using light strokes so the mark stays clear on dark surfaces.
+          </p>
         </article>
       </section>
 
-      <section class="grid" aria-label="Logo directions">
-        <article class="card">
-          <div class="mini-stage">
-            <img src="/marklab-logo-direction-1.svg" alt="Direction 1 logo" />
+      <section
+        class="grid grid-cols-3 gap-4 [@media(max-width:900px)]:grid-cols-1"
+        aria-label="Logo directions"
+      >
+        <article
+          class="rounded-3xl border border-preview-line bg-preview-surface p-5 shadow-[0_18px_46px_rgba(15,23,42,0.07)]"
+        >
+          <div
+            class="grid min-h-[164px] place-items-center rounded-[20px] border border-preview-stage bg-preview-mini"
+          >
+            <img class="size-[104px]" src="/marklab-logo-direction-1.svg" alt="Direction 1 logo" />
           </div>
-          <div class="sizes" aria-label="Direction 1 small sizes">
-            <img src="/marklab-logo-direction-1.svg" alt="" />
-            <img src="/marklab-logo-direction-1.svg" alt="" />
-            <img src="/marklab-logo-direction-1.svg" alt="" />
+          <div class="mt-[18px] flex items-center gap-[14px]" aria-label="Direction 1 small sizes">
+            <img class="size-12" src="/marklab-logo-direction-1.svg" alt="" />
+            <img class="size-8" src="/marklab-logo-direction-1.svg" alt="" />
+            <img class="size-5" src="/marklab-logo-direction-1.svg" alt="" />
           </div>
-          <h2>1. Clean mind map</h2>
-          <p>Current default shape. Minimal M plus small graph cue.</p>
+          <h2 class="mt-5 mb-2 text-[17px] font-bold tracking-[-0.03em]">1. Clean mind map</h2>
+          <p class="m-0 text-[13px] leading-[1.6] text-preview-muted">
+            Current default shape. Minimal M plus small graph cue.
+          </p>
         </article>
 
-        <article class="card">
-          <div class="mini-stage">
-            <img src="/marklab-logo-direction-2.svg" alt="Direction 2 logo" />
+        <article
+          class="rounded-3xl border border-preview-line bg-preview-surface p-5 shadow-[0_18px_46px_rgba(15,23,42,0.07)]"
+        >
+          <div
+            class="grid min-h-[164px] place-items-center rounded-[20px] border border-preview-stage bg-preview-mini"
+          >
+            <img class="size-[104px]" src="/marklab-logo-direction-2.svg" alt="Direction 2 logo" />
           </div>
-          <div class="sizes" aria-label="Direction 2 small sizes">
-            <img src="/marklab-logo-direction-2.svg" alt="" />
-            <img src="/marklab-logo-direction-2.svg" alt="" />
-            <img src="/marklab-logo-direction-2.svg" alt="" />
+          <div class="mt-[18px] flex items-center gap-[14px]" aria-label="Direction 2 small sizes">
+            <img class="size-12" src="/marklab-logo-direction-2.svg" alt="" />
+            <img class="size-8" src="/marklab-logo-direction-2.svg" alt="" />
+            <img class="size-5" src="/marklab-logo-direction-2.svg" alt="" />
           </div>
-          <h2>2. Solid workspace</h2>
-          <p>
+          <h2 class="mt-5 mb-2 text-[17px] font-bold tracking-[-0.03em]">2. Solid workspace</h2>
+          <p class="m-0 text-[13px] leading-[1.6] text-preview-muted">
             Heavier and more block-like, useful if the product wants a stronger app icon silhouette.
           </p>
         </article>
 
-        <article class="card">
-          <div class="mini-stage">
-            <img src="/marklab-logo-direction-3.svg" alt="Direction 3 logo" />
+        <article
+          class="rounded-3xl border border-preview-line bg-preview-surface p-5 shadow-[0_18px_46px_rgba(15,23,42,0.07)]"
+        >
+          <div
+            class="grid min-h-[164px] place-items-center rounded-[20px] border border-preview-stage bg-preview-mini"
+          >
+            <img class="size-[104px]" src="/marklab-logo-direction-3.svg" alt="Direction 3 logo" />
           </div>
-          <div class="sizes" aria-label="Direction 3 small sizes">
-            <img src="/marklab-logo-direction-3.svg" alt="" />
-            <img src="/marklab-logo-direction-3.svg" alt="" />
-            <img src="/marklab-logo-direction-3.svg" alt="" />
+          <div class="mt-[18px] flex items-center gap-[14px]" aria-label="Direction 3 small sizes">
+            <img class="size-12" src="/marklab-logo-direction-3.svg" alt="" />
+            <img class="size-8" src="/marklab-logo-direction-3.svg" alt="" />
+            <img class="size-5" src="/marklab-logo-direction-3.svg" alt="" />
           </div>
-          <h2>3. Light graph tool</h2>
-          <p>More graph-editor oriented, still transparent and low-noise.</p>
+          <h2 class="mt-5 mb-2 text-[17px] font-bold tracking-[-0.03em]">3. Light graph tool</h2>
+          <p class="m-0 text-[13px] leading-[1.6] text-preview-muted">
+            More graph-editor oriented, still transparent and low-noise.
+          </p>
         </article>
       </section>
     </main>

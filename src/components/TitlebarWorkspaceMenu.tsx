@@ -1,3 +1,5 @@
+import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
+import { cn } from '@/lib/utils'
 import {
   ChevronDown,
   Download,
@@ -109,7 +111,10 @@ export const TitlebarWorkspaceMenu = ({
             type="button"
             variant="ghost"
             aria-label={`${workspaceMenuLabel}: ${section}`}
-            className="chrome-button h-8 min-w-0 max-w-28 gap-1 rounded-full px-2 text-xs font-normal text-muted-foreground lg:max-w-48"
+            className={cn(
+              chromeButtonClassName,
+              'h-8 min-w-0 max-w-28 gap-1 rounded-full px-2 text-xs font-normal text-muted-foreground lg:max-w-48',
+            )}
             data-no-drag
           >
             <span className="truncate">{section}</span>

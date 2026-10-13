@@ -68,7 +68,7 @@ export const TitlebarCommandCenter = ({
         type="button"
         variant="outline"
         aria-label={commandLabel}
-        className="command-trigger group h-8 min-w-0 max-w-xl flex-1 justify-start rounded-md border-border/80 bg-background/80 px-3 text-left text-[13px] font-normal text-muted-foreground shadow-none transition-colors duration-150 hover:border-primary/25 hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="command-trigger border border-transparent bg-muted dark:border-transparent dark:bg-muted transition-[background-color,border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[ease] [&:hover]:border-border [&:hover]:bg-secondary dark:[&:hover]:border-border dark:[&:hover]:bg-secondary focus-visible:border-border focus-visible:bg-secondary dark:focus-visible:border-border dark:focus-visible:bg-secondary motion-reduce:transition-none group h-8 min-w-0 max-w-xl flex-1 justify-start rounded-md px-3 text-left text-[13px] font-normal text-muted-foreground shadow-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         onClick={onOpenSearch}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2.5">
