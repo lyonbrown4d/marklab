@@ -5,61 +5,35 @@ tags: [guide, writing]
 
 # Writing and editing
 
-Open a Markdown page from the file list and type in the editor.
-For a new note, use the new-file action in the workspace menu.
-In single-file mode, [open a workspace folder](04-Workspaces.md) before creating workspace files.
+Open a Markdown file from the sidebar. The workspace menu provides the new-file action; creating files requires a [workspace folder](04-Workspaces.md).
 
-## Choose a mode
+## Editor modes
 
-- Editing mode: edit formatted headings, paragraphs, lists, and tables directly.
-- Source mode: inspect and change the raw Markdown, including link paths and code fences.
-- Read-only browsing: read the formatted page and check its appearance without editing.
+**Editing mode** shows formatted text while you write. **Source mode** exposes the Markdown. **Read-only browsing** displays the page without editing. The document view controls switch modes.
 
-Use the document view controls to choose editing or source mode.
-Enable read-only browsing for reading; supported attachments such as images and PDFs have their own previews.
-If read-only browsing is enabled, turn it off before making changes.
-For keyboard access, check your current bindings in Settings → Shortcuts.
+On an empty line, `/` opens the block menu for headings, lists, tables, code, [diagrams, and math](06-More-Tools.md).
 
-## Type / on an empty line
+## Sample note: Autumn release
 
-In editing mode, type `/` on a new empty line to open the block menu.
-Find a heading, list, task list, or code block, then select the block to insert.
-See [More tools](06-More-Tools.md) for diagrams and math.
+The release draft is **ready for review**. The _installation section_ still needs screenshots.
 
-## A small example
+- [x] Finish the release summary
+- [x] Review the migration notes
+- [ ] Add installation screenshots
 
-Switch to source mode and copy this Markdown into your own note:
+> Keep the summary short enough to read before downloading.
 
-```markdown
-# This week
+| Section         | Owner | Status              |
+| --------------- | ----- | ------------------- |
+| Release summary | Maya  | Approved            |
+| Installation    | Theo  | Screenshots pending |
 
-## Ideas
-
-Break one large problem into **three small steps**.
-
-- Gather material
-- Write a draft
-
-- [ ] Review the draft
-- [x] Create a note
-
-> Capture first, organize later.
+```typescript
+const release = { version: '1.4', status: 'review' }
 ```
 
-Return to editing mode and check the headings, bold text, quote, and checkboxes.
+## Images and saves
 
-## Images and saving
+Pasting or dropping an image imports it into the workspace. The save status shows whether changes reached disk; a save error leaves content unsaved. Earlier saved versions are available in [local history](05-Sync-and-History.md).
 
-Paste or drop an image, wait for import to finish, then check how it appears.
-After editing, watch the save status. Address any save error before closing or switching files.
-Treat content that is still unsaved as not yet written to disk.
-To recover an earlier saved version, see [Local history](05-Sync-and-History.md).
-
-## Try it
-
-- [ ] Add a second-level heading at the end of this page
-- [ ] Insert a task list using `/`
-- [ ] Inspect the Markdown in source mode
-- [ ] Open [Links and the map](02-Links-and-Map.md) and add a note link
-
-[Guide contents](00-Start-Here.md) · [Next: Links and the map](02-Links-and-Map.md)
+[Guide contents](00-Start-Here.md) · [Links and the map](02-Links-and-Map.md)

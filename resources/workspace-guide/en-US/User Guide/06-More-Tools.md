@@ -5,63 +5,36 @@ tags: [guide, tools]
 
 # More tools
 
-Get comfortable with [Writing and editing](01-Writing.md), then use diagrams, math, AI, and the terminal as needed.
-You can keep writing ordinary Markdown notes without setting these tools up.
+## Mermaid: release flow
 
-## Mermaid diagrams
-
-In source mode, write a fenced code block labeled `mermaid`.
-Check the diagram in a rendered view, or insert a Mermaid block from the slash menu.
+A fenced `mermaid` block renders a diagram. The slash menu can also insert a Mermaid block; its preview offers zoom and expand controls.
 
 ```mermaid
 flowchart LR
-    Idea[Idea] --> Draft[Draft]
-    Draft --> Review[Review]
+    Draft[Release draft] --> Review[Editorial review]
+    Review --> Export[Export document]
 ```
 
-Edit the Mermaid source to change the diagram.
-The preview offers zoom and expand controls. Check the code if you see a syntax error.
-Arrows inside the diagram are diagram content; they do not automatically link workspace notes.
-For actual note relationships, see [Links and the map](02-Links-and-Map.md).
+The arrows belong to the diagram. Connections between notes use [Markdown links](02-Links-and-Map.md).
 
-## Math
+## Math: review progress
 
-Write inline math as `$E = mc^2$`, for example $E = mc^2$.
-For a separate equation, surround it with two `$$` lines:
+Inline math uses single dollar signs, as in $p = c / n$. Block math uses double dollar signs:
 
 $$
-a^2 + b^2 = c^2
+p = \frac{6}{8} = 75\%
 $$
 
-You can also choose inline or block math from the slash menu.
-Change the equation in source mode, then check the rendered result.
+In this sample, six of eight sections have been reviewed. Both math forms are available from the slash menu in [editing mode](01-Writing.md).
 
 ## AI writing assistant
 
-AI needs separate setup. Add an available provider or configure a local model in Settings first.
-Select text, choose Ask AI, and request a rewrite, a shorter version, or an explanation.
-Review the result before accepting it. You can also stop generation or abandon the suggestion.
-Before using a remote provider, review the selected model and privacy information to understand what text is sent.
-If no model is configured or a service is unavailable, check the settings indicated by the error.
+Configure a provider or local model in **Settings**, then select text and choose **Ask AI** for a rewrite, summary, or explanation. Suggestions can be accepted, abandoned, or stopped during generation. A remote provider receives text used for the request; the selected model and privacy information describe that use.
 
-## Terminal
+## Terminal and settings
 
-Use the Open Terminal command or view action to show the terminal panel.
-The terminal runs commands on your computer. Check the current path and understand each command before running it.
-Choose a default shell in Settings; new or restarted terminal tabs use that setting.
-Close the terminal panel when you just want to write in the editor.
+**Open Terminal** shows a panel for commands on your computer. Its current directory determines where commands run. The default shell in Settings applies to new or restarted terminal tabs.
 
-## Adjust settings as needed
+Settings also include appearance, editor behavior, and shortcuts. WebDAV connections are covered in [Sync, history, and export](05-Sync-and-History.md).
 
-Settings include appearance, editor behavior, shortcuts, and terminal options.
-Change the options you need, then return to your document to check the effect.
-See [Sync, history, and export](05-Sync-and-History.md) for connection profiles and workspace bindings.
-
-## Try it
-
-- [ ] Change a node label in the Mermaid diagram above
-- [ ] Edit an equation in source mode
-- [ ] Check your current shortcuts in Settings
-- [ ] Return to [Guide contents](00-Start-Here.md) and choose your next exercise
-
-[Guide contents](00-Start-Here.md) · [Review: Search, tasks, and pages](03-Search-and-Tasks.md)
+[Guide contents](00-Start-Here.md)

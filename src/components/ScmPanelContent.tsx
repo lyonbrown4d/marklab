@@ -61,8 +61,12 @@ export const ScmSingleFilePanel = ({
   regionLabel,
   title,
 }: ScmSingleFilePanelProps) => (
-  <SidebarGroup aria-label={regionLabel} role="region" className="sidebar-section rounded-md p-1">
-    <SidebarGroupLabel className="sidebar-section-header flex h-7 items-center justify-between px-2 text-[11px] uppercase">
+  <SidebarGroup
+    aria-label={regionLabel}
+    role="region"
+    className="sidebar-section border border-[color-mix(in_srgb,hsl(var(--sidebar-border))_78%,transparent)] bg-sidebar rounded-md p-1"
+  >
+    <SidebarGroupLabel className="sidebar-section-header text-[color-mix(in_srgb,hsl(var(--sidebar-foreground))_56%,transparent)] flex h-7 items-center justify-between px-2 text-[11px] uppercase">
       <span>{regionLabel}</span>
     </SidebarGroupLabel>
     <SidebarGroupContent>
@@ -136,9 +140,9 @@ export const ScmRepositoryPanel = ({
     <SidebarGroup
       aria-label={t('scm.title')}
       role="region"
-      className="sidebar-section rounded-md p-1"
+      className="sidebar-section border border-[color-mix(in_srgb,hsl(var(--sidebar-border))_78%,transparent)] bg-sidebar rounded-md p-1"
     >
-      <SidebarGroupLabel className="sidebar-section-header flex h-7 items-center justify-between px-2 text-[11px] uppercase">
+      <SidebarGroupLabel className="sidebar-section-header text-[color-mix(in_srgb,hsl(var(--sidebar-foreground))_56%,transparent)] flex h-7 items-center justify-between px-2 text-[11px] uppercase">
         <span>{t('scm.title')}</span>
         <div className="flex items-center gap-1">
           {isRepository && (

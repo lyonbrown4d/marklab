@@ -104,7 +104,7 @@ export const TabsBarVirtualList = ({
       ref={viewportRef}
       role="tablist"
       aria-label={tablistLabel}
-      className="tabs-scrollbar min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+      className="tabs-scrollbar [scrollbar-width:thin] [scrollbar-color:color-mix(in_srgb,hsl(var(--foreground))_22%,transparent)_transparent] [&::-webkit-scrollbar]:h-1.5! [&::-webkit-scrollbar-thumb]:rounded-[999px] [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,hsl(var(--foreground))_22%,transparent)]! [&::-webkit-scrollbar-track]:bg-transparent min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
       onKeyDown={handleKeyDown}
       onWheel={handleWheel}
     >

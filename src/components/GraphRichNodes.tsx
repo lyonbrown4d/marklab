@@ -6,11 +6,15 @@ import EmbeddedFilePreview from '@/components/previews/EmbeddedFilePreview'
 import { GraphWebNode } from '@/components/GraphWebNode'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import {
+  graphHandleClass,
+  graphNodeSelectedClass,
+  graphNodeShellClass,
+} from '@/components/GraphNodeStyles'
 
 type ExternalGraphNode = Node<GraphNodeData, 'external'>
 type PreviewGraphNode = Node<GraphNodeData, 'preview'>
 
-const graphHandleClass = 'graph-node-handle'
 const resizeHandleClass = '!size-2 !border-primary/70 !bg-background'
 const resizeLineClass = '!border-primary/55'
 
@@ -48,8 +52,9 @@ export const ExternalNode = memo(({ id, data, selected }: NodeProps<ExternalGrap
     return (
       <div
         className={cn(
-          'graph-node-shell graph-node-shell--external size-full min-h-[180px] min-w-[300px] overflow-visible rounded-lg p-0',
-          selected && 'graph-node-shell--selected',
+          graphNodeShellClass,
+          'graph-node-shell graph-node-shell--external [--graph-node-accent:hsl(45_93%_47%)] data-[graph-node-kind=external]:border-[color-mix(in_srgb,hsl(var(--primary))_36%,hsl(var(--border)))] data-[graph-node-kind=external]:bg-[color-mix(in_srgb,hsl(var(--card))_90%,hsl(var(--primary))_10%)] size-full min-h-[180px] min-w-[300px] overflow-visible rounded-lg p-0',
+          selected && graphNodeSelectedClass,
         )}
         data-graph-node-selected={selected}
         data-graph-node-kind="external"
@@ -76,8 +81,9 @@ export const ExternalNode = memo(({ id, data, selected }: NodeProps<ExternalGrap
   return (
     <div
       className={cn(
-        'graph-node-shell graph-node-shell--external flex w-[190px] cursor-pointer flex-col gap-1 rounded-md px-3 py-2',
-        selected && 'graph-node-shell--selected',
+        graphNodeShellClass,
+        'graph-node-shell graph-node-shell--external [--graph-node-accent:hsl(45_93%_47%)] data-[graph-node-kind=external]:border-[color-mix(in_srgb,hsl(var(--primary))_36%,hsl(var(--border)))] data-[graph-node-kind=external]:bg-[color-mix(in_srgb,hsl(var(--card))_90%,hsl(var(--primary))_10%)] flex w-[190px] cursor-pointer flex-col gap-1 rounded-md px-3 py-2',
+        selected && graphNodeSelectedClass,
       )}
       data-graph-node-selected={selected}
       data-graph-node-kind="external"
@@ -105,8 +111,9 @@ export const PreviewNode = memo(({ data, selected }: NodeProps<PreviewGraphNode>
   return (
     <div
       className={cn(
-        'graph-node-shell graph-node-shell--preview size-full min-h-[140px] min-w-[280px] overflow-visible rounded-md',
-        selected && 'graph-node-shell--selected',
+        graphNodeShellClass,
+        'graph-node-shell graph-node-shell--preview data-[graph-node-selected=true]:bg-[color-mix(in_srgb,var(--graph-node-accent)_8%,hsl(var(--card)))] size-full min-h-[140px] min-w-[280px] overflow-visible rounded-md',
+        selected && graphNodeSelectedClass,
       )}
       data-graph-node-selected={selected}
       data-graph-node-kind="preview"

@@ -153,7 +153,7 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
         }}
         aria-hidden={!visible}
         className={cn(
-          'terminal-panel flex shrink-0 flex-col overflow-hidden border-t border-border/80',
+          'terminal-panel h-full min-h-0 bg-[color-mix(in_srgb,hsl(var(--background))_94%,hsl(var(--card)))] shadow-[inset_0_1px_0_color-mix(in_srgb,hsl(var(--card))_76%,transparent)] flex shrink-0 flex-col overflow-hidden border-t border-border/80',
           !visible && 'hidden',
         )}
       >
@@ -161,7 +161,7 @@ const TerminalPanel = ({ focusRequest = 0, onClose, theme, visible }: TerminalPa
           <TerminalIcon className="size-4 shrink-0 text-muted-foreground" />
           <TabsList
             aria-label={t('terminal.title')}
-            className="terminal-tab-strip h-7 min-w-0 flex-1 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 text-xs text-muted-foreground"
+            className="terminal-tab-strip [scrollbar-width:thin] [scrollbar-color:color-mix(in_srgb,hsl(var(--foreground))_18%,transparent)_transparent]! [&::-webkit-scrollbar]:h-1! [&::-webkit-scrollbar-thumb]:rounded-[999px] [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,hsl(var(--foreground))_18%,transparent)]! h-7 min-w-0 flex-1 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 text-xs text-muted-foreground"
           >
             {tabs.map((tab) => {
               const title = tab.session

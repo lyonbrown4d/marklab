@@ -199,7 +199,7 @@ export const AppWorkspacePanels = ({
       onSidebarOpenChange={setSidebarOpen}
       onToggleInspector={toggleInspector}
     >
-      <section className="workspace-main relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+      <section className="workspace-main [:root[data-immersive-zen=true]_&]:[border-inline:0] bg-background [&_[data-panel-content]]:outline-none relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         {!immersiveZenMode && state.workspaceView !== 'map' ? (
           <TabsBar
             activeTabId={state.activeTabId}

@@ -56,14 +56,18 @@ const AppStatusBarRightView = ({
           data-status-priority="primary"
         >
           <AlertTriangle aria-hidden="true" className="size-3.5" />
-          <span data-status-label data-status-priority="primary">
+          <span
+            className="[@media(max-width:640px)]:hidden"
+            data-status-label
+            data-status-priority="primary"
+          >
             {t('statusBar.unsavedFiles', { count: String(dirtyCount) })}
           </span>
         </span>
       )}
       {activeSaveState?.status === 'saving' && (
         <span
-          className="shrink-0 text-status-info"
+          className="shrink-0 text-status-info [@media(max-width:800px)]:hidden"
           data-status-priority="secondary"
           title={activePath ?? undefined}
         >
@@ -79,19 +83,27 @@ const AppStatusBarRightView = ({
           title={activePath ?? undefined}
         >
           <AlertTriangle aria-hidden="true" className="size-3.5" />
-          <span data-status-label data-status-priority="primary">
+          <span
+            className="[@media(max-width:640px)]:hidden"
+            data-status-label
+            data-status-priority="primary"
+          >
             {t('save.error')}
           </span>
         </span>
       )}
       {activePath && activeSaveState?.status === 'saved' && !dirtyPaths[activePath] && (
-        <span className="shrink-0" data-status-priority="secondary" title={activePath}>
+        <span
+          className="shrink-0 [@media(max-width:800px)]:hidden"
+          data-status-priority="secondary"
+          title={activePath}
+        >
           {t('save.saved')}
         </span>
       )}
       {assetSyncPending > 0 && (
         <span
-          className="inline-flex shrink-0 items-center gap-1.5 text-status-info"
+          className="inline-flex shrink-0 items-center gap-1.5 text-status-info [@media(max-width:800px)]:hidden"
           data-status-priority="secondary"
         >
           <Spinner aria-hidden="true" role="presentation" className="size-3.5" />
@@ -109,7 +121,11 @@ const AppStatusBarRightView = ({
               title={assetSyncLastError ?? t('statusBar.assetsFailedTooltip')}
             >
               <AlertTriangle aria-hidden="true" className="size-3.5" />
-              <span data-status-label data-status-priority="primary">
+              <span
+                className="[@media(max-width:640px)]:hidden"
+                data-status-label
+                data-status-priority="primary"
+              >
                 {t('statusBar.assetsFailed', { count: String(assetSyncFailed) })}
               </span>
             </span>
@@ -119,7 +135,10 @@ const AppStatusBarRightView = ({
           </TooltipContent>
         </Tooltip>
       )}
-      <div className="flex shrink-0 items-center" data-status-priority="tertiary">
+      <div
+        className="flex shrink-0 items-center [@media(max-width:960px)]:hidden"
+        data-status-priority="tertiary"
+      >
         <AiCompletionStatusPopover onOpenSettings={onOpenSettings} />
       </div>
       <Tooltip>
@@ -149,7 +168,9 @@ const AppStatusBarRightView = ({
             ) : (
               <LockKeyholeOpen aria-hidden="true" data-icon="read-only-unlocked" />
             )}
-            <span data-status-label>{readOnlyLabel}</span>
+            <span className="[@media(max-width:640px)]:hidden" data-status-label>
+              {readOnlyLabel}
+            </span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>{readOnlyAction}</TooltipContent>

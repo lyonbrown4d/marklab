@@ -1,10 +1,7 @@
 @use './app/base';
 @use './app/shell';
 @use './app/terminal';
-@use './app/resize';
 @use './app/settings';
-@use './app/command';
-@use './app/tabs';
 @use './app/theme';
 @use './app/graph';
 @use './app/graph-navigation';
@@ -14,4 +11,3 @@
 @use './app/window';
 @use './app/motion';
 @use './app/menu-motion';
-@use './app/polish';

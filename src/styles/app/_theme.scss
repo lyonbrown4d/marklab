@@ -1,22 +1,4 @@
-.theme-choice {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  transition:
-    border-color var(--motion-duration-fast) ease,
-    box-shadow var(--motion-duration-fast) ease,
-    transform var(--motion-duration-fast) ease;
-}
-
-.theme-choice[data-selected='true'] {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 1px hsl(var(--primary));
-}
-
-.theme-swatch {
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 85%, transparent);
-  background: hsl(var(--background));
-}
-
+// Exact built-in palette tokens are shared by settings and command previews.
 .theme-swatch-paper {
   --swatch-bg: hsl(0 0% 98%);
   --swatch-rail: hsl(0 0% 96%);
@@ -75,8 +57,4 @@
   --swatch-bg: hsl(260 12% 7%);
   --swatch-rail: hsl(260 11% 9%);
   --swatch-accent: hsl(35 75% 62%);
-}
-
-.theme-swatch-preview {
-  background: var(--swatch-bg);
 }

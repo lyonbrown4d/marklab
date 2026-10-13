@@ -31,10 +31,17 @@ const WindowControls = ({
   const minimizeLabel = t('actions.minimize')
   const maximizeRestoreLabel = isMaximized ? t('actions.restore') : t('actions.maximize')
   const closeLabel = t('actions.close')
-  const captionButtonClassName = cn('win-caption-btn', isWindows ? 'is-windows' : 'size-8')
+  const captionButtonClassName = cn(
+    'win-caption-btn',
+    isWindows
+      ? 'is-windows h-8 w-[46px] rounded-none text-inherit [&:hover]:bg-[color-mix(in_srgb,hsl(var(--foreground))_10%,transparent)] dark:[&:hover]:bg-[color-mix(in_srgb,hsl(var(--foreground))_10%,transparent)]'
+      : 'size-8',
+  )
   const closeButtonClassName = cn(
     'win-caption-btn win-caption-close',
-    isWindows ? 'is-windows' : 'size-8 hover:bg-destructive hover:text-destructive-foreground',
+    isWindows
+      ? 'is-windows h-8 w-[46px] rounded-none text-inherit [&:hover]:bg-[#e81123] dark:[&:hover]:bg-[#e81123] [&:hover]:text-white'
+      : 'size-8 hover:bg-destructive hover:text-destructive-foreground',
   )
 
   if ((platform !== 'windows' && platform !== 'linux') || !isDesktopRuntime()) {
@@ -63,7 +70,10 @@ const WindowControls = ({
         title={minimizeLabel}
       >
         {isWindows ? (
-          <span className="win-caption-glyph" aria-hidden="true">
+          <span
+            className="win-caption-glyph font-[Segoe_MDL2_Assets,Segoe_Fluent_Icons,sans-serif] text-[10px] leading-none [transform:translateY(-0.5px)]"
+            aria-hidden="true"
+          >
             {'\uE921'}
           </span>
         ) : (
@@ -90,7 +100,10 @@ const WindowControls = ({
         title={maximizeRestoreLabel}
       >
         {isWindows ? (
-          <span className="win-caption-glyph" aria-hidden="true">
+          <span
+            className="win-caption-glyph font-[Segoe_MDL2_Assets,Segoe_Fluent_Icons,sans-serif] text-[10px] leading-none [transform:translateY(-0.5px)]"
+            aria-hidden="true"
+          >
             {isMaximized ? '\uE923' : '\uE922'}
           </span>
         ) : isMaximized ? (
@@ -114,7 +127,10 @@ const WindowControls = ({
         title={closeLabel}
       >
         {isWindows ? (
-          <span className="win-caption-glyph" aria-hidden="true">
+          <span
+            className="win-caption-glyph font-[Segoe_MDL2_Assets,Segoe_Fluent_Icons,sans-serif] text-[10px] leading-none [transform:translateY(-0.5px)]"
+            aria-hidden="true"
+          >
             {'\uE8BB'}
           </span>
         ) : (

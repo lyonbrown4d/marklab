@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { parse } from 'postcss'
-import { compileString } from 'sass'
+import { compile } from 'tailwindcss'
 import { describe, expect, it, vi } from 'vitest'
 import { AppStatusBarRight } from '@/components/AppStatusBarRight'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -60,27 +59,48 @@ describe('status bar information priority', () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 
-  it('hides tertiary controls before secondary information without hiding primary controls', () => {
-    const css = parse(compileString(readFileSync('src/styles/app/_shell.scss', 'utf8')).css)
-    const hiddenPriorities = new Map<string, string[]>()
+  it('hides tertiary controls before secondary information without hiding primary controls', async () => {
+    const { container } = render(
+      <AppStatusBarRight
+        activePath="README.md"
+        activeSaveState={{ status: 'saving' }}
+        assetSyncFailed={0}
+        assetSyncLastError={null}
+        assetSyncPending={0}
+        dirtyCount={1}
+        dirtyPaths={{ 'README.md': true }}
+        saveStates={{}}
+        terminalOpen={false}
+        workspaceKey="notes"
+        statusBarVisible
+        readOnlyMode={false}
+        onToggleReadOnly={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+      { wrapper: TooltipProvider },
+    )
+    const elements = [...container.querySelectorAll<HTMLElement>('[class]')]
+    const compiler = await compile('@tailwind utilities;')
+    const css = parse(compiler.build(elements.flatMap((element) => [...element.classList])))
+    const hiddenAtWidth = new Map<string, Element[]>()
     css.walkAtRules('media', (media) => {
-      const selectors: string[] = []
+      const hidden: Element[] = []
       media.walkRules((rule) => {
         rule.walkDecls('display', (declaration) => {
-          if (declaration.value === 'none') selectors.push(...rule.selectors)
+          if (declaration.value === 'none') {
+            hidden.push(...elements.filter((element) => element.matches(rule.selector)))
+          }
         })
       })
-      hiddenPriorities.set(media.params, selectors)
+      hiddenAtWidth.set(media.params.replaceAll(' ', ''), hidden)
     })
-
-    expect(hiddenPriorities.get('(max-width: 960px)')).toContain(
-      '.app-status-bar [data-status-priority=tertiary]',
-    )
-    expect(hiddenPriorities.get('(max-width: 800px)')).toContain(
-      '.app-status-bar [data-status-priority=secondary]',
-    )
-    expect([...hiddenPriorities.values()].flat().join(' ')).not.toContain(
-      'data-status-priority=primary',
-    )
+    const ai = screen.getByRole('button', { name: 'AI completion' }).parentElement
+    const saving = screen.getByText('save.saving')
+    expect(hiddenAtWidth.get('(max-width:960px)')).toContain(ai)
+    expect(hiddenAtWidth.get('(max-width:960px)')).not.toContain(saving)
+    expect(hiddenAtWidth.get('(max-width:800px)')).toContain(saving)
+    const hidden = [...hiddenAtWidth.values()].flat()
+    expect(hidden).not.toContain(screen.getByRole('status'))
+    expect(hidden).not.toContain(screen.getByRole('button', { name: 'statusBar.enableReadOnly' }))
   })
 })

@@ -1,3 +1,5 @@
+import { chromeButtonClassName } from '@/components/titlebar/chromeStyles'
+import { cn } from '@/lib/utils'
 import { useCallback, useRef, useState } from 'react'
 import {
   Code2,
@@ -107,7 +109,7 @@ const TitlebarOverflowMenu = ({
           variant="ghost"
           size="icon"
           aria-label={moreLabel}
-          className="chrome-button size-8 rounded-full"
+          className={cn(chromeButtonClassName, 'size-8 rounded-full')}
           data-no-drag
         >
           <MoreHorizontal aria-hidden="true" />

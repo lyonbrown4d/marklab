@@ -1,9 +1,13 @@
+import { chromeButtonClassName as chromeButton } from '@/components/titlebar/chromeStyles'
+import { cn } from '@/lib/utils'
 import { ListTree, PanelLeft, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ViewMode } from '@/store/appTypes'
 import { TabsBarViewModeControls } from '@/components/TabsBarViewModeControls'
-import { TitlebarWorkspaceMenu } from '@/components/TitlebarWorkspaceMenu'
-import type { RecentWorkspaceMenuData } from '@/components/TitlebarWorkspaceMenu'
+import {
+  TitlebarWorkspaceMenu,
+  type RecentWorkspaceMenuData,
+} from '@/components/TitlebarWorkspaceMenu'
 import TitlebarOverflowMenu from '@/components/TitlebarOverflowMenu'
 import { TitlebarExportMenu } from '@/components/TitlebarExportMenu'
 import { WorkspaceViewSwitcher } from '@/components/WorkspaceViewSwitcher'
@@ -152,7 +156,7 @@ export const ImmersiveTitlebarChrome = ({
           variant="ghost"
           size="icon"
           aria-label={toggleSidebarLabel}
-          className="chrome-button size-8 shrink-0 rounded-full"
+          className={cn(chromeButton, 'size-8 shrink-0 rounded-full')}
           data-no-drag
           onClick={onToggleSidebar}
         >
@@ -225,7 +229,7 @@ export const ImmersiveTitlebarChrome = ({
           variant="ghost"
           size="icon"
           aria-label={searchLabel}
-          className="chrome-button size-8 rounded-full"
+          className={cn(chromeButton, 'size-8 rounded-full')}
           data-no-drag
           onClick={onOpenSearch}
         >
@@ -254,7 +258,7 @@ export const ImmersiveTitlebarChrome = ({
               variant="ghost"
               size="icon"
               aria-label={toggleOutlineLabel}
-              className="chrome-button size-8 rounded-full xl:w-auto xl:gap-2 xl:px-3"
+              className={cn(chromeButton, 'size-8 rounded-full xl:w-auto xl:gap-2 xl:px-3')}
               data-no-drag
               onClick={onToggleOutline}
             >
@@ -269,7 +273,7 @@ export const ImmersiveTitlebarChrome = ({
           size="icon"
           aria-label={settingsLabel}
           title={settingsLabel}
-          className="chrome-button size-8 rounded-full"
+          className={cn(chromeButton, 'size-8 rounded-full')}
           data-no-drag
           onClick={onOpenSettings}
         >

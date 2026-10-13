@@ -1,41 +1,4 @@
-.settings-scroll-viewport {
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 28%, transparent)
-    color-mix(in srgb, hsl(var(--muted)) 38%, transparent);
-}
-
-.settings-scroll-viewport::-webkit-scrollbar {
-  width: 0.625rem;
-}
-
-.settings-scroll-viewport::-webkit-scrollbar-track {
-  background: color-mix(in srgb, hsl(var(--muted)) 30%, transparent);
-}
-
-.settings-scroll-viewport::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, hsl(var(--foreground)) 26%, transparent);
-  border: 0.1875rem solid hsl(var(--card));
-  border-radius: 999px;
-}
-
-// Large dialogs stay crisp in Chromium when their resting state is not a transformed GPU layer.
-.settings-dialog-content {
-  inset: 0;
-  margin: auto;
-  transform: none;
-  will-change: auto;
-}
-
-.settings-dialog-content[data-state='open'] {
-  animation-name: settings-dialog-content-in;
-}
-
-.settings-dialog-content[data-state='closed'] {
-  animation-name: settings-dialog-content-out;
-}
-
+// Opacity-only entry keeps large settings dialogs crisp in Chromium.
 @keyframes settings-dialog-content-in {
   from {
     opacity: 0;
@@ -56,95 +19,6 @@
   }
 }
 
-.settings-dialog-tab-trigger svg {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
-.settings-theme-check {
-  color: hsl(var(--primary));
-  animation: settings-theme-check-in var(--motion-duration-fast) var(--motion-ease-standard) both;
-}
-
-.settings-dialog-tabs {
-  scroll-padding-inline: 0.5rem;
-  scrollbar-width: none;
-}
-
-.settings-dialog-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.activity-rail-button {
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    color var(--motion-duration-fast) ease,
-    box-shadow var(--motion-duration-fast) ease;
-}
-
-.activity-rail-button::before {
-  content: '';
-  position: absolute;
-  left: -0.375rem;
-  top: 50%;
-  width: 2px;
-  height: 1.25rem;
-  border-radius: 999px;
-  background: hsl(var(--primary));
-  opacity: 0;
-  transform: translateY(-50%);
-  transition: opacity var(--motion-duration-fast) ease;
-}
-
-.settings-theme-list {
-  margin-top: 0.5rem;
-}
-
-.settings-theme-item {
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
-  background: hsl(var(--background));
-  transition:
-    background-color var(--motion-duration-fast) ease,
-    border-color var(--motion-duration-fast) ease,
-    box-shadow var(--motion-duration-fast) ease,
-    transform var(--motion-duration-fast) ease;
-}
-
-.settings-theme-item:hover {
-  border-color: color-mix(in srgb, hsl(var(--border)) 56%, hsl(var(--foreground)) 44%);
-  box-shadow: 0 1px 2px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
-  transform: translateY(-1px);
-}
-
-.settings-theme-item:active {
-  transform: translateY(0);
-}
-
-.settings-theme-item[data-selected='true'] {
-  border-color: color-mix(in srgb, hsl(var(--primary)) 54%, hsl(var(--border)) 46%);
-  background: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--card)) 92%);
-}
-
-.settings-theme-item[data-selected='true']:hover {
-  border-color: color-mix(in srgb, hsl(var(--primary)) 64%, hsl(var(--border)) 36%);
-}
-
-.settings-theme-item-trigger {
-  cursor: pointer;
-  color: inherit;
-}
-
-.settings-theme-item-trigger:hover,
-.settings-theme-item-trigger:focus-visible {
-  color: hsl(var(--foreground));
-}
-
-.settings-theme-item-trigger:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--ring)) 26%, transparent);
-}
-
 @keyframes settings-theme-check-in {
   from {
     opacity: 0;
@@ -157,6 +31,7 @@
   }
 }
 
+// Shortcut styles remain until their independently owned settings migration.
 .settings-shortcuts-toolbar {
   align-items: center;
 }

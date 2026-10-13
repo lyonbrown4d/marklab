@@ -1,3 +1,5 @@
+// Global native scrollbar and accessibility defaults also cover library-created markup.
+// Keep these defaults stable; migrated business utilities override them where needed.
 * {
   scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 22%, transparent) transparent;
 }

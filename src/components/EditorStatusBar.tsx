@@ -29,7 +29,7 @@ export const AppStatusBarProvider = ({
 
   return (
     <EditorStatusContext.Provider value={context}>
-      <div className="app-shell relative flex h-full flex-col">{children}</div>
+      <div className="app-shell bg-background relative flex h-full flex-col">{children}</div>
     </EditorStatusContext.Provider>
   )
 }
@@ -41,7 +41,7 @@ export const EditorStatusBarSlot = ({ label }: { label: string }) => {
     <div
       ref={context?.setTarget}
       aria-label={label}
-      className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-1 outline-none focus-visible:ring-1 focus-visible:ring-ring empty:hidden"
+      className="[@media(max-width:800px)]:hidden min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-1 outline-none focus-visible:ring-1 focus-visible:ring-ring empty:hidden"
       data-status-priority="secondary"
       role="group"
       tabIndex={0}

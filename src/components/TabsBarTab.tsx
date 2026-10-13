@@ -114,7 +114,7 @@ export const WorkspaceTabButton = memo(
         aria-setsize={setSize}
         data-state={isActive ? 'active' : 'inactive'}
         data-tab-id={id}
-        className="tab-item group relative inline-flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground outline-none transition-[background-color,color,box-shadow] duration-150 hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm after:absolute after:bottom-0.5 after:left-3 after:right-3 after:hidden after:h-0.5 after:rounded-full after:bg-primary data-[state=active]:after:block motion-reduce:transition-none"
+        className="tab-item group relative inline-flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-lg px-2 text-xs text-[color-mix(in_srgb,hsl(var(--foreground))_70%,transparent)] outline-none transition-[background-color,color] duration-[var(--motion-duration-fast)] ease-[ease] [&:hover]:bg-muted [&:hover]:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-muted data-[state=active]:shadow-sm after:absolute after:bottom-0.5 after:left-3 after:right-3 after:hidden after:h-0.5 after:rounded-full after:bg-primary data-[state=active]:after:block motion-reduce:transition-none"
         style={{ width }}
         title={tab.kind === 'file' || tab.kind === 'git-diff' ? tab.path : label}
         onClick={openTab}

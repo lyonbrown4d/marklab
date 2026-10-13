@@ -93,7 +93,7 @@ const SidebarComponent = ({
   return (
     <aside
       className={cn(
-        'layout-rail workspace-rail flex h-full w-full overflow-hidden border-r border-sidebar-border text-sidebar-foreground',
+        'layout-rail workspace-rail bg-background [border-inline-color:transparent] transition-shadow duration-[var(--motion-duration-base)] ease-[ease] motion-reduce:transition-none flex h-full w-full overflow-hidden border-r border-sidebar-border text-sidebar-foreground',
         !collapsed && 'flex-col',
       )}
       data-collapsed={collapsed ? 'true' : 'false'}

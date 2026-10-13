@@ -108,7 +108,7 @@ describe('AppCommandDialog', () => {
     const dialog = screen.getByRole('dialog', { name: 'Command palette' })
     expect(dialog).toBeInTheDocument()
     expect(dialog).toHaveClass('rounded-2xl')
-    expect(dialog).toHaveClass('border-border/70')
+    expect(dialog).toHaveClass('border-border')
     expect(dialog).toHaveClass('[&>button:last-child]:hidden')
   })
 

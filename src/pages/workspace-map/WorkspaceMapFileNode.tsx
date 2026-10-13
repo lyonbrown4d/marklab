@@ -15,6 +15,11 @@ import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import type { GraphNodeData } from '@/logic/graph'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
+import {
+  workspaceMapHandleClass,
+  workspaceMapSurfaceClass,
+  workspaceMapEditorClass,
+} from '@/pages/workspace-map/workspaceMapNodeStyles'
 import { isImeKeyboardEvent } from '@/logic/ime'
 import { WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMapNodeResizeControl'
@@ -75,17 +80,20 @@ const WorkspaceMapEmbeddedEditor = ({
       <section
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
+          workspaceMapSurfaceClass,
+          workspaceMapEditorClass,
           'workspace-map-editor flex h-[112px] w-[248px] flex-col overflow-visible rounded-lg px-3 py-2.5',
           data.workspaceMapPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
           selected && 'workspace-map-editor--selected',
         )}
         aria-label={data.label}
         data-editor-active="false"
+        data-graph-node-selected={selected}
         data-workspace-map-collapsed="true"
         data-testid="workspace-map-editor-surface"
       >
-        <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-        <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
+        <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+        <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
         <div className="flex w-full items-center gap-2">
           <FileText aria-hidden="true" className="size-4 shrink-0 text-primary" />
           <div className="min-w-0 flex-1">
@@ -129,6 +137,8 @@ const WorkspaceMapEmbeddedEditor = ({
   return (
     <section
       className={cn(
+        workspaceMapSurfaceClass,
+        workspaceMapEditorClass,
         'workspace-map-editor flex flex-col overflow-visible rounded-lg',
         !editor &&
           (data.workspaceMapPinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'),
@@ -136,11 +146,12 @@ const WorkspaceMapEmbeddedEditor = ({
       )}
       aria-label={editor ? `${t('workspaceMap.editing')} ${data.label}` : data.label}
       data-editor-active={editor ? 'true' : 'false'}
+      data-graph-node-selected={selected}
       data-testid="workspace-map-editor-surface"
     >
       {editor ? <WorkspaceMapNodeResizeControl minHeight={240} minWidth={320} /> : null}
-      <Handle type="target" position={Position.Left} className="workspace-map-node__handle" />
-      <Handle type="source" position={Position.Right} className="workspace-map-node__handle" />
+      <Handle type="target" position={Position.Left} className={workspaceMapHandleClass} />
+      <Handle type="source" position={Position.Right} className={workspaceMapHandleClass} />
       <header
         className={cn(
           WORKSPACE_MAP_RESOURCE_DRAG_HANDLE_CLASS,
