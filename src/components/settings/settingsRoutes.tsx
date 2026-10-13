@@ -92,6 +92,7 @@ export const settingsRoutes: SettingsRoute[] = [
       { labelKey: 'settings.focusScope', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.focusIntensity', targetId: 'settings-immersive-editing' },
       { labelKey: 'settings.typewriterMode', targetId: 'settings-immersive-editing' },
+      { labelKey: 'settings.vimMode', targetId: 'settings-source-code' },
       { labelKey: 'settings.sourceCodeMiniMap', targetId: 'settings-source-code' },
       { labelKey: 'settings.motionSmoothScrolling', targetId: 'settings-motion' },
       { labelKey: 'settings.motionAnimatedCursor', targetId: 'settings-motion' },

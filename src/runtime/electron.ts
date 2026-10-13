@@ -254,6 +254,7 @@ export type RendererSafeElectronApi = {
   workspace: ElectronWorkspacePathApi
   workspaceTree: WorkspaceTreeApi
   window: {
+    setVimKeyboardOwnership: (active: boolean) => Promise<void>
     onPresented: (handler: () => void) => () => void
     minimize: () => Promise<void>
     maximize: () => Promise<void>

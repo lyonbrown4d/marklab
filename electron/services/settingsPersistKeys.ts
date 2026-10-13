@@ -44,6 +44,7 @@ export const preferenceStateKeys = new Set([
   'sidebarCollapsed',
   'silentSave',
   'sourceCodeMiniMapEnabled',
+  'vimModeEnabled',
   'terminalShellPath',
   'theme',
   'themeMode',

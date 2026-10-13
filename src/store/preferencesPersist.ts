@@ -40,6 +40,7 @@ export type PreferencesPersistedState = Pick<
   | 'sidebarCollapsed'
   | 'silentSave'
   | 'sourceCodeMiniMapEnabled'
+  | 'vimModeEnabled'
   | 'theme'
   | 'themeMode'
   | 'lightTheme'
@@ -80,6 +81,7 @@ export const selectPreferencesPersistedState = (
   silentSave: state.silentSave,
   showEditorStatusBar: state.showEditorStatusBar,
   sourceCodeMiniMapEnabled: state.sourceCodeMiniMapEnabled,
+  vimModeEnabled: state.vimModeEnabled,
   defaultFileView: state.defaultFileView,
   graphMiniMapEnabled: state.graphMiniMapEnabled,
   graphMiniMapPosition: state.graphMiniMapPosition,

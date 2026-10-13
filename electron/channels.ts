@@ -69,6 +69,7 @@ export const nativeIpcChannels = {
   webTabsSetShortcutBindings: 'marklab:web-tabs:set-shortcut-bindings',
   webTabsState: 'marklab:web-tabs:state',
   webTabsStop: 'marklab:web-tabs:stop',
+  windowSetVimKeyboardOwnership: 'marklab:window:vim-keyboard-ownership',
   windowClose: 'marklab:window:close',
   windowCloseFlushReady: 'marklab:window:close-flush-ready',
   windowCloseFlushRequest: 'marklab:window:close-flush-request',

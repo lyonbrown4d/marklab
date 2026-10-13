@@ -1,7 +1,11 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { TooltipProvider } from '@/components/AppTooltip'
+import { VimCommandStatusSlot } from '@/components/vim/VimCommandStatusSlot'
+import { VimStatusBarControl } from '@/components/vim/VimStatusBarControl'
+import { useVimModeStore } from '@/store/useVimModeStore'
+import { getWorkspaceTabId } from '@/logic/tabs'
 import { AppStatusBarLeft } from '@/components/AppStatusBarLeft'
 import { AppStatusBarRight } from '@/components/AppStatusBarRight'
 import { EditorStatusBarSlot } from '@/components/EditorStatusBar'
@@ -46,7 +50,10 @@ const AppStatusBar = ({
   rootKind,
   rootPath,
   files,
+  tabs,
+  activeTab,
   activePath,
+  viewMode,
   dirtyPaths,
   saveStates,
   terminalOpen,
@@ -60,6 +67,11 @@ const AppStatusBar = ({
   statusBarVisible = true,
 }: AppStatusBarProps) => {
   const { t } = useI18n()
+  const workspaceKey = `${rootKind}:${rootPath}`
+  const pruneTabOverrides = useVimModeStore((state) => state.pruneTabOverrides)
+  useEffect(() => {
+    pruneTabOverrides(workspaceKey, tabs.map(getWorkspaceTabId))
+  }, [pruneTabOverrides, tabs, workspaceKey])
   const [, setSearchParams] = useSearchParams()
   const assetSyncPending = useMarkdownAssetSyncStore((state) => state.pending)
   const assetSyncFailed = useMarkdownAssetSyncStore((state) => state.failed)
@@ -153,6 +165,7 @@ const AppStatusBar = ({
           onToggleTerminal={onToggleTerminal}
         />
         <EditorStatusBarSlot label={t('statusBar.label')} />
+        <VimCommandStatusSlot visible={statusBarVisible} />
         <div className="flex shrink-0 items-center gap-1 pr-1">
           <AppStatusBarRight
             activePath={activePath}
@@ -170,6 +183,14 @@ const AppStatusBar = ({
             onToggleReadOnly={onToggleReadOnly}
             onOpenSettings={onOpenSettings}
           />
+          {activeTab?.kind === 'file' && (
+            <VimStatusBarControl
+              workspaceKey={workspaceKey}
+              tabId={getWorkspaceTabId(activeTab)}
+              sourceEditor={viewMode === 'source'}
+              readOnlyMode={readOnlyMode}
+            />
+          )}
         </div>
       </footer>
     </TooltipProvider>

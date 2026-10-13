@@ -23,6 +23,17 @@ export const registerWindowControlsIpc = (
   ipcMain: Electron.IpcMain,
   BrowserWindowCtor: typeof Electron.BrowserWindow,
 ): void => {
+  ipcMain.handle(
+    nativeIpcChannels.windowSetVimKeyboardOwnership,
+    (event, active: unknown): WindowActionResult => {
+      if (typeof active !== 'boolean' || event.senderFrame !== event.sender.mainFrame) {
+        return { ok: false, error: 'Invalid Vim keyboard ownership request.' }
+      }
+      return withWindow(event, BrowserWindowCtor, (window) => {
+        window.webContents.setIgnoreMenuShortcuts(active)
+      })
+    },
+  )
   ipcMain.handle(nativeIpcChannels.windowMinimize, (event) =>
     withWindow(event, BrowserWindowCtor, (window) => window.minimize()),
   )

@@ -61,6 +61,7 @@ export type PreferencesState = AiCompletionPreferencesState &
     silentSave: boolean
     showEditorStatusBar: boolean
     sourceCodeMiniMapEnabled: boolean
+    vimModeEnabled: boolean
     defaultFileView: FileViewKind
     hideMarkdownDefaultAppPrompt: boolean
     markdownAssetImportStrategy: MarkdownAssetImportStrategy
@@ -80,6 +81,7 @@ export type PreferencesState = AiCompletionPreferencesState &
     setSilentSave: (silent: boolean) => void
     setShowEditorStatusBar: (show: boolean) => void
     setSourceCodeMiniMapEnabled: (enabled: boolean) => void
+    setVimModeEnabled: (enabled: boolean) => void
     setDefaultFileView: (view: FileViewKind) => void
     setHideMarkdownDefaultAppPrompt: (hidden: boolean) => void
     setMarkdownAssetImportStrategy: (strategy: MarkdownAssetImportStrategy) => void
@@ -113,6 +115,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       silentSave: true,
       showEditorStatusBar: true,
       sourceCodeMiniMapEnabled: true,
+      vimModeEnabled: false,
       defaultFileView: 'edit',
       hideMarkdownDefaultAppPrompt: false,
       markdownAssetImportStrategy: 'copy-to-document-assets',
@@ -192,6 +195,8 @@ export const usePreferencesStore = create<PreferencesState>()(
             ? state
             : { sourceCodeMiniMapEnabled },
         ),
+      setVimModeEnabled: (vimModeEnabled) =>
+        set((state) => (state.vimModeEnabled === vimModeEnabled ? state : { vimModeEnabled })),
       setDefaultFileView: (defaultFileView) =>
         set((state) => (state.defaultFileView === defaultFileView ? state : { defaultFileView })),
       setHideMarkdownDefaultAppPrompt: (hideMarkdownDefaultAppPrompt) =>

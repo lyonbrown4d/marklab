@@ -1,4 +1,9 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
+import { useRef, useState } from 'react'
+import { useMonacoVim } from '@/components/vim/useMonacoVim'
+import { MonacoVimStatus } from '@/components/vim/MonacoVimStatus'
+import { createSourceVimCommands } from '@/components/vim/vimCommands'
+import { useEditorVimMode } from '@/components/vim/useEditorVimMode'
 import { useKeepAliveContext } from 'keepalive-for-react'
 import { AlertTriangle } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
@@ -57,12 +62,32 @@ export const SourceCodeEditorSurface = ({
   const keepAlive = useKeepAliveContext()
   const routeInteractionActive = interactionActive ?? (!keepAlive.cacheKey || keepAlive.active)
   const acceptsLocalChanges = useCachedEditorInteractionGate(routeInteractionActive)
+  const [editor, setEditor] = useState<Parameters<OnMount>[0] | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const statusRef = useRef<HTMLDivElement>(null)
+  const vimEnabled = useEditorVimMode({ workspaceKey, path: activePath ?? '' })
   const language = monacoLanguageForPath(activePath ?? '')
   const modelPath = sourceCodeModelPath(workspaceKey, activePath)
+  const vimError = useMonacoVim({
+    editor,
+    enabled: vimEnabled && monacoReady && !readOnly && !errorMessage,
+    interactive: routeInteractionActive,
+    modelKey: modelPath,
+    rootRef,
+    statusRef,
+    acceptsChanges: acceptsLocalChanges,
+    createCommands: (isCurrent) =>
+      createSourceVimCommands({
+        path: activePath,
+        workspaceKey,
+        isCurrent,
+      }),
+  })
   const surface = (
     <div
+      ref={rootRef}
       className={cn(
-        'source-code-editor h-full overflow-hidden',
+        'source-code-editor flex h-full flex-col overflow-hidden',
         immersiveZenMode && 'is-zen-editor',
         immersiveFocusMode && 'is-focus-editor',
         immersiveTypewriterMode && 'is-typewriter-editor',
@@ -81,49 +106,55 @@ export const SourceCodeEditorSurface = ({
           </AppAlert>
         </div>
       ) : monacoReady ? (
-        <Editor
-          height="100%"
-          loading={<DocumentLoadingState className="h-full p-6" label={loadingLabel} />}
-          language={language}
-          theme={darkMode ? 'vs-dark' : 'vs'}
-          path={modelPath}
-          value={value}
-          onChange={(next, event) => {
-            if (!acceptsLocalChanges()) return
-            onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
-          }}
-          onMount={onMount}
-          options={{
-            contextmenu: false,
-            readOnly,
-            domReadOnly: readOnly,
-            minimap: { enabled: sourceCodeMiniMapEnabled },
-            inlineSuggest: { enabled: true, showToolbar: 'onHover' },
-            suggest: { preview: true },
-            wordWrap: 'on',
-            tabSize: 2,
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            lineNumbers: 'on',
-            renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
-            smoothScrolling: motionSmoothScrolling,
-            cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
-            cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
-            cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
-            cursorSurroundingLinesStyle: 'all',
-            cursorWidth: 2,
-            renderWhitespace: 'selection',
-            automaticLayout: true,
-            lineNumbersMinChars: 3,
-            padding: {
-              top: immersiveTypewriterMode ? 120 : 24,
-              bottom: immersiveTypewriterMode ? 180 : 24,
-            },
-          }}
-        />
+        <div className="min-h-0 flex-1">
+          <Editor
+            height="100%"
+            loading={<DocumentLoadingState className="h-full p-6" label={loadingLabel} />}
+            language={language}
+            theme={darkMode ? 'vs-dark' : 'vs'}
+            path={modelPath}
+            value={value}
+            onChange={(next, event) => {
+              if (!acceptsLocalChanges()) return
+              onChange(next ?? '', event ? toEditorTextChanges(event.changes) : undefined)
+            }}
+            onMount={(host, monaco) => {
+              setEditor(host)
+              onMount(host, monaco)
+            }}
+            options={{
+              contextmenu: false,
+              readOnly,
+              domReadOnly: readOnly,
+              minimap: { enabled: sourceCodeMiniMapEnabled },
+              inlineSuggest: { enabled: true, showToolbar: 'onHover' },
+              suggest: { preview: true },
+              wordWrap: 'on',
+              tabSize: 2,
+              scrollBeyondLastLine: false,
+              fontSize: 14,
+              lineNumbers: 'on',
+              renderLineHighlight: immersiveFocusMode ? 'all' : 'line',
+              smoothScrolling: motionSmoothScrolling,
+              cursorBlinking: motionAnimatedCursor ? 'smooth' : 'blink',
+              cursorSmoothCaretAnimation: motionAnimatedCursor ? 'on' : 'off',
+              cursorSurroundingLines: immersiveTypewriterMode ? 8 : 3,
+              cursorSurroundingLinesStyle: 'all',
+              cursorWidth: 2,
+              renderWhitespace: 'selection',
+              automaticLayout: true,
+              lineNumbersMinChars: 3,
+              padding: {
+                top: immersiveTypewriterMode ? 120 : 24,
+                bottom: immersiveTypewriterMode ? 180 : 24,
+              },
+            }}
+          />
+        </div>
       ) : (
         <DocumentLoadingState className="h-full p-6" label={loadingLabel} />
       )}
+      <MonacoVimStatus statusRef={statusRef} error={vimError} />
     </div>
   )
 

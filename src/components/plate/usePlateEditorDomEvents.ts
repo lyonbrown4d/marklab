@@ -1,3 +1,4 @@
+import { isVimKeyboardTarget } from '@/components/vim/vimKeyboardScope'
 import type { PlateEditor } from 'platejs/react'
 import { useEffect, type RefObject } from 'react'
 import type { PlateSurfaceCompletionBindings } from '@/components/plate/usePlateSurfaceCompletions'
@@ -49,6 +50,7 @@ export const usePlateEditorDomEvents = ({
     if (!editable) return
     let compositionEndTimer: number | undefined
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isVimKeyboardTarget(event.target)) return
       if (!isReady()) {
         event.preventDefault()
         return

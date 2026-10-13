@@ -17,6 +17,44 @@ beforeEach(() => {
 })
 
 describe('writing-first layout preferences', () => {
+  it('defaults Vim mode off and persists both enabled and disabled values', () => {
+    expect(usePreferencesStore.getState().vimModeEnabled).toBe(false)
+
+    usePreferencesStore.getState().setVimModeEnabled(true)
+    expect(usePreferencesStore.getState().vimModeEnabled).toBe(true)
+    expect(storage.setItem).toHaveBeenLastCalledWith(
+      'marklab.preferences',
+      expect.objectContaining({ state: expect.objectContaining({ vimModeEnabled: true }) }),
+    )
+
+    usePreferencesStore.getState().setVimModeEnabled(false)
+    expect(usePreferencesStore.getState().vimModeEnabled).toBe(false)
+    expect(storage.setItem).toHaveBeenLastCalledWith(
+      'marklab.preferences',
+      expect.objectContaining({ state: expect.objectContaining({ vimModeEnabled: false }) }),
+    )
+  })
+
+  it('rehydrates the Vim preference and keeps it off for older settings', async () => {
+    storage.getItem.mockReturnValue({ state: { vimModeEnabled: true }, version: 2 })
+    await usePreferencesStore.persist.rehydrate()
+    expect(usePreferencesStore.getState().vimModeEnabled).toBe(true)
+
+    usePreferencesStore.setState(usePreferencesStore.getInitialState(), true)
+    storage.getItem.mockReturnValue({ state: { silentSave: false }, version: 2 })
+    await usePreferencesStore.persist.rehydrate()
+    expect(usePreferencesStore.getState().vimModeEnabled).toBe(false)
+    expect(usePreferencesStore.getState().silentSave).toBe(false)
+  })
+
+  it('does not notify subscribers when the Vim preference has not changed', () => {
+    const listener = vi.fn()
+    const unsubscribe = usePreferencesStore.subscribe(listener)
+    usePreferencesStore.getState().setVimModeEnabled(false)
+    expect(listener).not.toHaveBeenCalled()
+    unsubscribe()
+  })
+
   it('stores the default AI provider as an optional persisted preference', () => {
     const store = usePreferencesStore.getState()
 

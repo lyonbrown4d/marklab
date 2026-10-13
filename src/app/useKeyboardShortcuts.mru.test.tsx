@@ -11,7 +11,8 @@ const hotkeys = vi.hoisted(() => ({
   }>,
 }))
 
-vi.mock('@tanstack/react-hotkeys', () => ({
+vi.mock('@tanstack/react-hotkeys', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tanstack/react-hotkeys')>()),
   useHotkeys: (definitions: typeof hotkeys.definitions) => {
     hotkeys.definitions = definitions
   },

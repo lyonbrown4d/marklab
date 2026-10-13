@@ -10,6 +10,7 @@ the React editor and typed runtime boundary explicit.
 - Markdown editing with block, source, and graph-oriented views.
 - Graph view built on React Flow for navigating relationships.
 - Tabs, recent projects, and theme switching.
+- [Vim mode](docs/vim-mode.md) for source editors, with global and per-tab controls.
 - Desktop app targeting Windows, macOS, and Linux.
 
 ## Tech Stack

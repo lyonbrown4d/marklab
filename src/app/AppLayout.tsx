@@ -10,6 +10,7 @@ import { useAppLayoutState } from '@/app/useAppLayoutState'
 import { useWorkspacePanelState } from '@/app/useWorkspacePanelState'
 import { WorkspaceRecoveryPanel } from '@/app/WorkspaceRecoveryPanel'
 import { useLatest } from 'ahooks'
+import { useVimEditorCommands } from '@/app/useVimEditorCommands'
 import { useKeyboardShortcuts } from '@/app/useKeyboardShortcuts'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
 import { AppShellPanels } from '@/app/AppShellPanels'
@@ -97,6 +98,7 @@ const AppLayout = () => {
     onOpenFileView: handleOpenFileView,
     state,
   })
+  useVimEditorCommands(state)
   useKeyboardShortcuts({
     activeTabId: state.activeTabId,
     shortcutOverrides: state.shortcutOverrides,

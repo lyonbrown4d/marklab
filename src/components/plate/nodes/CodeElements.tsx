@@ -174,6 +174,11 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
               )
               setEditingExpanded(false)
             }}
+            onWrite={(nextSource) => {
+              props.editor.tf.withNewBatch(() =>
+                replacePlateCodeSource(props.editor, path, nextSource),
+              )
+            }}
             onCancel={() => setEditingExpanded(false)}
           />
         </Suspense>

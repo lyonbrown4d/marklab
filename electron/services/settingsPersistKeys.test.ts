@@ -6,6 +6,10 @@ import {
 } from '@electron/services/settingsPersistKeys'
 
 describe('settingsPersistKeys', () => {
+  it('allows the Vim source editor preference through the renderer persist boundary', () => {
+    expect(preferenceStateKeys.has('vimModeEnabled')).toBe(true)
+  })
+
   it('allows drawio settings through the renderer persist boundary', () => {
     expect(rendererPersistKeys.has('marklab.drawio')).toBe(true)
     expect(drawioStateKeys.has('drawioEditorMode')).toBe(true)

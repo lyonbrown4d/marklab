@@ -25,3 +25,10 @@ export const getCurrentRuntimeWindow = async (): Promise<RuntimeWindowHandle | n
   if (electron) return electron.window
   return null
 }
+
+export const setVimKeyboardOwnership = async (active: boolean): Promise<void> => {
+  if (!isElectronRuntime()) return
+  const api = getElectronRuntime().window.setVimKeyboardOwnership
+  // A development hot reload may still use the previous preload.
+  if (typeof api === 'function') await api(active)
+}

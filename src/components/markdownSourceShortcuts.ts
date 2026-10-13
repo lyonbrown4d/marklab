@@ -13,6 +13,7 @@ import {
   type ShortcutPlatform,
 } from '@/logic/shortcuts'
 import { isImeKeyboardEvent } from '@/logic/ime'
+import { isVimKeyboardTarget } from '@/components/vim/vimKeyboardScope'
 
 type MarkdownSourceShortcutOptions = {
   editor: MonacoEditor.IStandaloneCodeEditor
@@ -64,7 +65,12 @@ export const registerMarkdownSourceShortcuts = ({
   )
   const keydown = editor.onKeyDown((event) => {
     const keyboardEvent = event.browserEvent
-    if (keyboardEvent.defaultPrevented || isImeKeyboardEvent(keyboardEvent)) return
+    if (
+      keyboardEvent.defaultPrevented ||
+      isImeKeyboardEvent(keyboardEvent) ||
+      isVimKeyboardTarget(editor.getDomNode?.() ?? null)
+    )
+      return
 
     const match = resolved.bindings.find(({ hotkey }) =>
       matchesKeyboardEvent(keyboardEvent, hotkey, resolved.platform),

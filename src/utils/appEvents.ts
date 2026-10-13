@@ -7,6 +7,7 @@ export const APP_EVENT = {
   focusHeading: 'marklab:focus-heading',
   focusSourcePosition: 'marklab:focus-source-position',
   menuAction: 'marklab:menu-action',
+  closeVimSource: 'marklab:close-vim-source',
 } as const
 
 export type AppEventMap = {
@@ -27,6 +28,7 @@ export type AppEventMap = {
     endColumn?: number
     workspaceKey?: string
   }
+  [APP_EVENT.closeVimSource]: { path: string; workspaceKey: string }
   [APP_EVENT.menuAction]: string
 }
 

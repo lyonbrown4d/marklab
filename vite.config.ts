@@ -29,6 +29,14 @@ const alias = {
   '@': path.resolve(import.meta.dirname, 'src'),
   '@electron': path.resolve(import.meta.dirname, 'electron'),
   'decode-named-character-reference': workerCharacterReferencePath,
+  // Use the plugin's ESM entry and map its legacy Monaco paths to 0.57 exports.
+  'monaco-vim': fileURLToPath(import.meta.resolve('monaco-vim')),
+  'monaco-editor/esm/vs/editor/editor.api': fileURLToPath(
+    import.meta.resolve('monaco-editor/editor/editor.api.js'),
+  ),
+  'monaco-editor/esm/vs/editor/common/commands/shiftCommand': fileURLToPath(
+    import.meta.resolve('monaco-editor/editor/common/commands/shiftCommand.js'),
+  ),
 }
 
 const distElectronDir = path.resolve(import.meta.dirname, 'dist-electron')

@@ -254,6 +254,13 @@ const desktopApi: RendererSafeElectronApi = {
   webTabs: webTabsSurface,
   workspaceSync: workspaceSyncSurface,
   window: {
+    setVimKeyboardOwnership: async (active: boolean) => {
+      const result = (await ipcRenderer.invoke(
+        nativeIpcChannels.windowSetVimKeyboardOwnership,
+        active,
+      )) as WindowActionResult
+      if (!result.ok) throw new Error(result.error ?? 'Vim keyboard ownership failed.')
+    },
     onPresented: windowPresentationSurface.onPresented,
     minimize: () => runWindowAction(nativeIpcChannels.windowMinimize),
     maximize: () => runWindowAction(nativeIpcChannels.windowMaximize),

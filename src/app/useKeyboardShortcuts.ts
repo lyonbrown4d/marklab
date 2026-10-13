@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   useHotkeys,
+  parseHotkey,
   type RegisterableHotkey,
   type UseHotkeyDefinition,
 } from '@tanstack/react-hotkeys'
@@ -17,6 +18,9 @@ import { toggleSidebarFromShortcut } from '@/app/sidebarShortcut'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { requestFileSearchFocus } from '@/utils/appEvents'
 import { useWebTabShortcutBridge } from '@/app/useWebTabShortcutBridge'
+import { useVimKeyboardOwnership } from '@/app/useVimKeyboardOwnership'
+import { isVimKeyboardTarget } from '@/components/vim/vimKeyboardScope'
+import { isImeKeyboardEvent } from '@/logic/ime'
 import { nextTabInMru, updateTabMru } from '@/app/workspaceTabMru'
 
 type UseKeyboardShortcutsArgs = {
@@ -60,6 +64,7 @@ export const useKeyboardShortcuts = ({
   onNavigateBack,
   onNavigateForward,
 }: UseKeyboardShortcutsArgs) => {
+  const vimFocused = useVimKeyboardOwnership()
   const argsRef = useLatest<UseKeyboardShortcutsArgs>({
     activeTabId,
     shortcutOverrides,
@@ -140,26 +145,40 @@ export const useKeyboardShortcuts = ({
       .flatMap((action) =>
         bindings[action.id].map((hotkey) => ({
           hotkey: hotkey as RegisterableHotkey,
-          callback: () => execute(action.id),
+          callback: (event) => {
+            if (
+              event &&
+              (isImeKeyboardEvent(event) ||
+                (isVimKeyboardTarget(event.target) && event.defaultPrevented))
+            )
+              return
+            event?.preventDefault()
+            event?.stopPropagation()
+            execute(action.id)
+          },
           options: {
             ignoreInputs:
+              vimFocused ||
               action.id === 'navigation.back' ||
               action.id === 'navigation.forward' ||
-              action.id === 'view.toggleSidebar'
+              action.id === 'view.toggleSidebar' ||
+              parseHotkey(hotkey).ctrl ||
+              parseHotkey(hotkey).meta ||
+              hotkey === 'Escape'
                 ? false
-                : undefined,
+                : true,
             meta: { name: action.id },
           },
         })),
       )
-  }, [bindings, execute])
+  }, [bindings, execute, vimFocused])
 
   useWebTabShortcutBridge({ activeTabId, bindings, execute })
 
   useHotkeys(definitions, {
     conflictBehavior: 'replace',
-    preventDefault: true,
-    stopPropagation: true,
+    preventDefault: false,
+    stopPropagation: false,
   })
 }
 

@@ -22,6 +22,8 @@ import {
 import { eclipse } from '@uiw/codemirror-theme-eclipse'
 import { useEffect, useMemo, useRef } from 'react'
 import { createMermaidCodeMirrorIntelligence } from '@/components/plate/code/mermaidCodeMirrorLanguage'
+import { getVimEditorRoot } from '@/components/vim/vimKeyboardScope'
+import { useCodeMirrorVim } from '@/components/vim/useCodeMirrorVim'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -80,12 +82,14 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
   const { t } = useI18n()
   const darkMode = useDarkMode()
   const rootRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const blurTimerRef = useRef<number | null>(null)
   const onBlurRef = useRef(onBlur)
   const onChangeRef = useRef(onChange)
   const setupRef = useRef({ darkMode, value })
   const themeCompartment = useMemo(() => new Compartment(), [])
+  const vimCompartment = useMemo(() => new Compartment(), [])
 
   useEffect(() => {
     onBlurRef.current = onBlur
@@ -107,7 +111,10 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
       blurTimerRef.current = window.setTimeout(() => {
         blurTimerRef.current = null
         const active = document.activeElement
-        const focusStayedInside = active instanceof Element && root.contains(active)
+        const focusStayedInside =
+          active instanceof Element &&
+          (containerRef.current?.contains(active) ||
+            getVimEditorRoot(active) === containerRef.current)
         if (!view.hasFocus && !focusStayedInside) onBlurRef.current()
       }, 0)
     }
@@ -127,6 +134,7 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
         closeBrackets(),
         EditorView.lineWrapping,
         highlightActiveLine(),
+        vimCompartment.of([]),
         keymap.of([
           ...completionKeymap,
           ...closeBracketsKeymap,
@@ -154,7 +162,7 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
       view.destroy()
       intelligence.dispose()
     }
-  }, [t, themeCompartment, uri])
+  }, [t, themeCompartment, uri, vimCompartment])
 
   useEffect(() => {
     viewRef.current?.dispatch({ effects: themeCompartment.reconfigure(editorTheme(darkMode)) })
@@ -166,21 +174,39 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
     view.dispatch({ changes: { from: 0, insert: value, to: view.state.doc.length } })
   }, [value])
 
+  const vimStatus = useCodeMirrorVim(viewRef, containerRef, vimCompartment, onBlurRef, uri, t)
+
   const height = Math.min(420, Math.max(200, value.split('\n').length * 20 + 64))
   return (
     <div
       aria-label={t('preview.mermaidEditSource')}
-      className="mt-2 overflow-hidden rounded-lg border border-border bg-background"
+      className="mt-2 flex flex-col overflow-hidden rounded-lg border border-border bg-background"
       contentEditable={false}
       data-mermaid-code-editor
       onClick={stopEditorEvent}
       onContextMenu={stopEditorEvent}
       onKeyDown={stopEditorEvent}
       onPointerDown={stopEditorEvent}
-      ref={rootRef}
+      ref={containerRef}
       role="region"
       style={{ height }}
-    />
+    >
+      <div className="min-h-0 flex-1" ref={rootRef} />
+      {vimStatus && vimStatus !== 'ready' && (
+        <div
+          className="border-t border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
+          role="status"
+        >
+          {t(
+            vimStatus === 'loading'
+              ? 'editor.vimLoading'
+              : vimStatus === 'loadError'
+                ? 'editor.vimLoadFailed'
+                : 'editor.vimCommandFailed',
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

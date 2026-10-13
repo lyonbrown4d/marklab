@@ -18,6 +18,8 @@ const EditingSettingsPage = () => {
   const setSourceCodeMiniMapEnabled = usePreferencesStore(
     (state) => state.setSourceCodeMiniMapEnabled,
   )
+  const vimModeEnabled = usePreferencesStore((state) => state.vimModeEnabled)
+  const setVimModeEnabled = usePreferencesStore((state) => state.setVimModeEnabled)
   const motionAnimatedPanels = usePreferencesStore((state) => state.motionAnimatedPanels)
   const setMotionAnimatedPanels = usePreferencesStore((state) => state.setMotionAnimatedPanels)
 
@@ -31,6 +33,12 @@ const EditingSettingsPage = () => {
         description={t('settings.sourceCodeDescription')}
       >
         <SettingsFieldGroup>
+          <SettingsSwitchRow
+            title={t('settings.vimMode')}
+            description={t('settings.vimModeDescription')}
+            checked={vimModeEnabled}
+            onCheckedChange={setVimModeEnabled}
+          />
           <SettingsSwitchRow
             title={t('settings.sourceCodeMiniMap')}
             description={t('settings.sourceCodeMiniMapDescription')}

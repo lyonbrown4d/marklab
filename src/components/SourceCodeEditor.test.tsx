@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from 'react'
 import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourceCodeEditor from '@/components/SourceCodeEditor'
@@ -98,8 +99,8 @@ vi.mock('@/services/markdownLanguageApi', () => ({
   },
 }))
 
-vi.mock('@monaco-editor/react', () => ({
-  default: ({
+vi.mock('@monaco-editor/react', () => {
+  const MockMonacoEditor = ({
     onMount,
     onChange,
     value,
@@ -108,14 +109,23 @@ vi.mock('@monaco-editor/react', () => ({
     onChange?: (value?: string) => void
     value: string
   }) => {
-    monacoEditor.getModel = vi.fn(() => ({
-      getValue: () => value,
-      getVersionId: () => 1,
-      isDisposed: () => false,
-      uri: { toString: () => 'file:///notes/current.md' },
-    }))
+    const model = useMemo(
+      () => ({
+        getValue: () => value,
+        getVersionId: () => 1,
+        isDisposed: () => false,
+        uri: { toString: () => 'file:///notes/current.md' },
+      }),
+      [value],
+    )
+    monacoEditor.getModel = vi.fn(() => model)
     monacoEditor.onDidChangeModelContent = vi.fn(() => ({ dispose: vi.fn() }))
-    onMount?.(monacoEditor, monaco)
+    const mounted = useRef(false)
+    useEffect(() => {
+      if (mounted.current) return
+      mounted.current = true
+      onMount?.(monacoEditor, monaco)
+    }, [onMount])
     return (
       <textarea
         aria-label="markdown source"
@@ -123,8 +133,9 @@ vi.mock('@monaco-editor/react', () => ({
         onChange={(event) => onChange?.(event.currentTarget.value)}
       />
     )
-  },
-}))
+  }
+  return { default: MockMonacoEditor }
+})
 
 beforeEach(() => {
   vi.mocked(configureMonaco).mockReset()
