@@ -31,6 +31,7 @@ type ImmersiveTitlebarChromeProps = {
   moreLabel: string
   recentWorkspaces: RecentWorkspaceMenuData
   workspaceMenuLabel: string
+  openWorkspaceLabel: string
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
@@ -49,7 +50,8 @@ type ImmersiveTitlebarChromeProps = {
   onOpenSettings: () => void
   onChangeView: (mode: ViewMode) => void
   onOpenProject: (path: string) => void
-  onNewWorkspace: () => void
+  onOpenWorkspace: () => void
+  onNewWorkspace: (name: string) => Promise<boolean>
   onOpenFile: () => void
   onCreateFile: () => void
   onExportWorkspace: () => void
@@ -103,6 +105,7 @@ export const ImmersiveTitlebarChrome = ({
   moreLabel,
   recentWorkspaces,
   workspaceMenuLabel,
+  openWorkspaceLabel,
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
@@ -121,6 +124,7 @@ export const ImmersiveTitlebarChrome = ({
   onOpenSettings,
   onChangeView,
   onOpenProject,
+  onOpenWorkspace,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
@@ -177,6 +181,7 @@ export const ImmersiveTitlebarChrome = ({
         <TitlebarWorkspaceMenu
           section={workspaceLabel}
           workspaceMenuLabel={workspaceMenuLabel}
+          openWorkspaceLabel={openWorkspaceLabel}
           newWorkspaceLabel={newWorkspaceLabel}
           openFileLabel={openFileLabel}
           newFileLabel={newFileLabel}
@@ -184,6 +189,7 @@ export const ImmersiveTitlebarChrome = ({
           recentWorkspaces={recentWorkspaces}
           openCurrentWorkspaceInNewWindowLabel={openCurrentWorkspaceInNewWindowLabel}
           openWorkspaceInNewWindowLabel={openWorkspaceInNewWindowLabel}
+          onOpenWorkspace={onOpenWorkspace}
           onNewWorkspace={onNewWorkspace}
           onOpenFile={onOpenFile}
           onCreateFile={onCreateFile}

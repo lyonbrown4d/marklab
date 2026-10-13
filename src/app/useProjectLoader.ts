@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { useLatest } from 'ahooks'
+import { useCreateWorkspace } from '@/app/useCreateWorkspace'
 import { useProjectPathActions } from '@/app/useProjectPathActions'
 import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useI18n } from '@/i18n/useI18n'
@@ -8,12 +9,7 @@ import { openDialog } from '@/runtime/dialog'
 import { runInDesktop } from '@/runtime/environment'
 import { createFileTab, getWorkspaceTabId } from '@/logic/tabs'
 import { getWorkspaceFilesTarget } from '@/logic/workspaceFilesTarget'
-import {
-  MARKLAB_DOCUMENT_EXTENSIONS,
-  fileViewForOpenPath,
-  isMarkdownFilePath,
-  isPreviewableFilePath,
-} from '@/logic/fileTypes'
+import { MARKLAB_DOCUMENT_EXTENSIONS, fileViewForOpenPath } from '@/logic/fileTypes'
 import { toast } from 'sonner'
 import {
   areWorkspaceEntriesEqual,
@@ -21,6 +17,8 @@ import {
   fetchWorkspaceLoadProjection,
   isWorkspaceFileEntry,
   projectLoaderErrorMessage,
+  selectProjectRoot,
+  setRootSwitching,
   type LoadWorkspaceOptions,
 } from '@/app/projectLoaderUtils'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
@@ -28,6 +26,9 @@ import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 import type { UseProjectLoaderArgs } from '@/app/projectLoaderTypes'
 
 export const useProjectLoader = ({
+  onWorkspaceOpened,
+  onBeforeWorkspaceOpen,
+  rootSwitchingRef: externalRootSwitchingRef,
   rootPath,
   rootKind,
   entries,
@@ -53,7 +54,8 @@ export const useProjectLoader = ({
   const locationPathnameRef = useLatest(locationPathname)
   const preserveCurrentRouteRef = useLatest(preserveCurrentRoute)
   const defaultFileViewRef = useLatest(defaultFileView)
-  const internalRootSwitchingRef = useRef(false)
+  const localRootSwitchingRef = useRef(false)
+  const rootSwitchingRef = externalRootSwitchingRef ?? localRootSwitchingRef
   const pathMutationInProgress = useRef(false)
   const loadRequest = useRef(0)
 
@@ -97,6 +99,11 @@ export const useProjectLoader = ({
         }
         const filesOnly = nextEntries.filter(isWorkspaceFileEntry)
 
+        if (filesOnly.length === 0 && options?.tabs) {
+          setTabs(options.tabs)
+          setActiveTabId(options.activeTabId ?? null)
+          if (!options.preserveCurrentRoute) navigate('/', { replace: true })
+        }
         if (filesOnly.length > 0) {
           const available = new Set(filesOnly.map((file) => file.path))
           const seedTabs = options?.tabs ?? tabsRef.current
@@ -157,43 +164,43 @@ export const useProjectLoader = ({
   )
 
   const openFolder = useCallback(
-    async (path: string) => {
+    async (path: string, options: { preserveTabs?: boolean } = {}): Promise<boolean> => {
+      if (rootSwitchingRef.current) return false
+      setRootSwitching(rootSwitchingRef, true)
       try {
-        await runInDesktop(async () => {
+        const opened = await runInDesktop(async () => {
+          await onBeforeWorkspaceOpen?.()
           await flushEditorChanges()
-          const preferSingleFile = isMarkdownFilePath(path) || isPreviewableFilePath(path)
-          if (preferSingleFile) {
-            try {
-              await fsApi.setSingleFile(path)
-            } catch (singleFileError) {
-              try {
-                await fsApi.setRoot(path)
-              } catch {
-                throw singleFileError
-              }
-            }
-          } else {
-            try {
-              await fsApi.setRoot(path)
-            } catch (folderError) {
-              try {
-                await fsApi.setSingleFile(path)
-              } catch {
-                throw folderError
-              }
-            }
-          }
+          await selectProjectRoot(path)
           touchRecentProject(path)
-          await loadWorkspace({ preserveCurrentRoute: false })
+          await loadWorkspace({
+            preserveCurrentRoute: false,
+            ...(options.preserveTabs ? {} : { tabs: [], activeTabId: null }),
+          })
+          await onWorkspaceOpened?.()
+          return true
         })
+        return opened === true
       } catch (error) {
         toast.error(t('projectLoader.openPathFailed'), {
           description: `${path}\n${projectLoaderErrorMessage(error)}`,
         })
+        return false
+      } finally {
+        setRootSwitching(rootSwitchingRef, false)
       }
     },
-    [loadWorkspace, t, touchRecentProject],
+    [
+      loadWorkspace,
+      onBeforeWorkspaceOpen,
+      onWorkspaceOpened,
+      rootSwitchingRef,
+      t,
+      touchRecentProject,
+    ],
   )
+
+  const onCreateWorkspace = useCreateWorkspace(openFolder, rootSwitchingRef, onBeforeWorkspaceOpen)
 
   const onSelectFolder = useCallback(async () => {
     try {
@@ -239,27 +246,31 @@ export const useProjectLoader = ({
     }
   }, [openFolder, t])
 
-  const onUseInternalRoot = useCallback(async () => {
-    if (rootKindRef.current === 'internal') {
-      await loadWorkspace({ preserveCurrentRoute: false })
-      return
-    }
-    if (internalRootSwitchingRef.current) return
-    internalRootSwitchingRef.current = true
+  const onUseInternalRoot = useCallback(async (): Promise<boolean> => {
+    if (rootSwitchingRef.current) return false
+    setRootSwitching(rootSwitchingRef, true)
     try {
-      await runInDesktop(async () => {
+      const opened = await runInDesktop(async () => {
+        await onBeforeWorkspaceOpen?.()
         await flushEditorChanges()
-        await fsApi.setRoot(null)
-        await loadWorkspace({ preserveCurrentRoute: false })
+        if (rootKindRef.current !== 'internal') await fsApi.setRoot(null)
+        await loadWorkspace({
+          preserveCurrentRoute: false,
+          ...(rootKindRef.current === 'internal' ? {} : { tabs: [], activeTabId: null }),
+        })
+        await onWorkspaceOpened?.()
+        return true
       })
+      return opened === true
     } catch (error) {
       toast.error(t('projectLoader.openLocalWorkspaceFailed'), {
         description: projectLoaderErrorMessage(error),
       })
+      return false
     } finally {
-      internalRootSwitchingRef.current = false
+      setRootSwitching(rootSwitchingRef, false)
     }
-  }, [loadWorkspace, rootKindRef, t])
+  }, [loadWorkspace, onBeforeWorkspaceOpen, onWorkspaceOpened, rootKindRef, rootSwitchingRef, t])
 
   const { createFile, createFolder, renamePath, movePath, deletePath } = useProjectPathActions({
     rootPath,
@@ -272,6 +283,7 @@ export const useProjectLoader = ({
   })
   return {
     loadWorkspace,
+    onCreateWorkspace,
     onSelectFolder,
     onSelectSingleFile,
     onUseInternalRoot,

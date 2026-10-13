@@ -182,6 +182,7 @@ export type RendererSafeElectronApi = {
     retry: () => Promise<WindowOpeningRetryResult>
   }
   dialog: {
+    createWorkspace: (options: { name: string; title?: string }) => Promise<string | null>
     open: (options?: ElectronOpenDialogOptions) => Promise<string | string[] | null>
     save: (options?: ElectronSaveDialogOptions) => Promise<string | null>
   }

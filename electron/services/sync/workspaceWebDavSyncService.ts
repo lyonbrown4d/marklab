@@ -1,4 +1,12 @@
 import path from 'node:path'
+import {
+  compareSyncConflict,
+  resolveSyncConflict,
+} from '@electron/services/sync/webdavSync/conflictResolution'
+import type {
+  WorkspaceSyncConflictRequest,
+  WorkspaceSyncConflictResolution,
+} from '@/types/workspaceSync'
 
 import type {
   LocalSyncStateStore,
@@ -28,6 +36,8 @@ type WorkspaceTarget = Pick<
   WorkspaceFileService,
   'flushBuffers' | 'invalidateExternalPaths' | 'rootInfo' | 'runExternalPathMutation'
 >
+
+type ConflictWorkspaceTarget = WorkspaceTarget & { getSessionGeneration?: () => number }
 
 type SyncEngine = Pick<WebDavSyncEngine, 'sync'>
 
@@ -120,6 +130,106 @@ export class WorkspaceWebDavSyncService {
         return result
       },
       { signal: options.signal },
+    )
+  }
+
+  async listConflicts(workspace: ConflictWorkspaceTarget, expectedRoot: string) {
+    const root = workspaceRoot(workspace)
+    assertSameRoot(expectedRoot, root)
+    const generation = workspace.getSessionGeneration?.()
+    const state = await this.dependencies.stateStore.load(root)
+    const binding = (await this.dependencies.configStore.getChannels(root)).webdav
+    assertWorkspaceRoot(workspace, root)
+    if (generation !== workspace.getSessionGeneration?.())
+      throw new Error('Workspace sync session changed')
+    return {
+      conflicts: state?.unresolvedConflicts ?? [],
+      binding: binding ? { profileId: binding.profileId, remoteRoot: binding.remoteRoot } : null,
+    }
+  }
+
+  readConflict(workspace: ConflictWorkspaceTarget, request: WorkspaceSyncConflictRequest) {
+    return this.runConflictOperation(workspace, request, async (root, signal, assertContext) => {
+      await workspace.flushBuffers()
+      await assertContext()
+      const result = await compareSyncConflict(
+        root,
+        request.path,
+        this.dependencies.stateStore,
+        signal,
+      )
+      await assertContext()
+      return result
+    })
+  }
+
+  resolveConflict(workspace: ConflictWorkspaceTarget, request: WorkspaceSyncConflictResolution) {
+    return this.runConflictOperation(workspace, request, async (root, signal, assertContext) => {
+      const profile = await this.requiredProfile(request.binding.profileId)
+      const password = await this.dependencies.profileStore.resolvePassword(profile.id)
+      const client = await this.createRemoteClient(profile, password)
+      const remote = this.createRemoteStore(client, request.binding.remoteRoot)
+      await workspace.flushBuffers()
+      await assertContext()
+      const state = await this.dependencies.stateStore.load(root)
+      const conflict = state?.unresolvedConflicts?.find((entry) => entry.path === request.path)
+      const paths = [request.path, ...(conflict?.conflictPath ? [conflict.conflictPath] : [])]
+      const generation = workspace.getSessionGeneration?.()
+      return workspace.runExternalPathMutation(paths, async () => {
+        const changedPaths = new Set<string>()
+        try {
+          return await resolveSyncConflict({
+            root,
+            request,
+            remote,
+            signal,
+            assertContext,
+            stateStore: this.dependencies.stateStore,
+            onChangedPath: (relativePath) => changedPaths.add(relativePath),
+          })
+        } finally {
+          const current = workspace.rootInfo()
+          if (
+            changedPaths.size > 0 &&
+            current.kind !== 'single' &&
+            normalizeRoot(current.path) === normalizeRoot(root) &&
+            generation === workspace.getSessionGeneration?.()
+          ) {
+            workspace.invalidateExternalPaths([...changedPaths])
+          }
+        }
+      })
+    })
+  }
+
+  private runConflictOperation<T>(
+    workspace: ConflictWorkspaceTarget,
+    request: WorkspaceSyncConflictRequest,
+    work: (root: string, signal: AbortSignal, assertContext: () => Promise<void>) => Promise<T>,
+  ): Promise<T> {
+    const root = workspaceRoot(workspace)
+    const generation = workspace.getSessionGeneration?.()
+    assertSameRoot(request.rootPath, root)
+    const assertContext = async () => {
+      assertWorkspaceRoot(workspace, root)
+      if (generation !== workspace.getSessionGeneration?.())
+        throw new Error('Workspace sync session changed')
+      const binding = (await this.dependencies.configStore.getChannels(root)).webdav
+      if (
+        !binding ||
+        binding.profileId !== request.binding.profileId ||
+        binding.remoteRoot !== request.binding.remoteRoot
+      ) {
+        throw new Error('Workspace sync binding changed; refresh the conflicts')
+      }
+      assertWorkspaceRoot(workspace, root)
+    }
+    return this.coordinator.runSync(root, (signal) =>
+      this.coordinator.runConfigurationMutation(async () => {
+        signal.throwIfAborted()
+        await assertContext()
+        return work(root, signal, assertContext)
+      }),
     )
   }
 

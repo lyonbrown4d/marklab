@@ -1,7 +1,11 @@
+import type { RefObject } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import type { FileEntry, FileViewKind, WorkspaceTab } from '@/store/appTypes'
 
 export type UseProjectLoaderArgs = {
+  rootSwitchingRef?: RefObject<boolean>
+  onBeforeWorkspaceOpen?: () => Promise<void>
+  onWorkspaceOpened?: () => Promise<void>
   rootPath: string
   rootKind: 'internal' | 'external' | 'single'
   entries: FileEntry[]

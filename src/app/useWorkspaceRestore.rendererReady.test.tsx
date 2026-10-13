@@ -129,6 +129,31 @@ describe('workspace renderer readiness', () => {
     )
   })
 
+  it('reports the root from a failed native session rather than the previous root', async () => {
+    const { result } = renderHook(() =>
+      useWorkspaceRestore({
+        hasHydrated: true,
+        loadWorkspace: vi.fn(async () => {
+          throw new Error('native root unavailable')
+        }),
+        rootKind: 'external',
+        rootPath: '/previous',
+      }),
+    )
+    act(() =>
+      lifecycle.seedListener?.({
+        state: { rootKind: 'external', rootPath: '/unavailable-native' },
+        version: 8,
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current.restoreFailure).toMatchObject({
+        rootPath: '/unavailable-native',
+        detail: 'native root unavailable',
+      }),
+    )
+  })
+
   it('waits for a committed workspace frame before signaling interactive', async () => {
     let finishPaint!: () => void
     lifecycle.waitForWorkspaceInteractivePaint.mockReturnValueOnce(

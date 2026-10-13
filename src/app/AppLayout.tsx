@@ -7,6 +7,8 @@ import AppStatusBar from '@/components/AppStatusBar'
 import { AppStatusBarDock } from '@/components/AppStatusBarDock'
 import { AppStatusBarEdgeHandle } from '@/components/AppStatusBarEdgeHandle'
 import { useAppLayoutState } from '@/app/useAppLayoutState'
+import { useWorkspacePanelState } from '@/app/useWorkspacePanelState'
+import { WorkspaceRecoveryPanel } from '@/app/WorkspaceRecoveryPanel'
 import { useLatest } from 'ahooks'
 import { useKeyboardShortcuts } from '@/app/useKeyboardShortcuts'
 import { AppWorkspacePanels } from '@/app/AppWorkspacePanels'
@@ -117,70 +119,7 @@ const AppLayout = () => {
   })
   useAppMenuEventSync(handleMenuAction)
   useNativeMenuLocaleSync()
-  const workspacePanelState = useMemo(
-    () => ({
-      activePath: state.activePath,
-      activeTabId: state.activeTabId,
-      activeResourcePath: state.activeResourcePath,
-      createFile: state.createFile,
-      createFolder: state.createFolder,
-      deletePath: state.deletePath,
-      dirtyPaths: state.dirtyPaths,
-      editorValue: state.editorValue,
-      fileContents: state.fileContents,
-      fileTree: state.fileTree,
-      files: state.files,
-      inspectedPath: state.inspectedPath,
-      loadingPaths: state.loadingPaths,
-      movePath: state.movePath,
-      onCloseTab: state.onCloseTab,
-      onPersistedContentChange: state.onPersistedContentChange,
-      onInspectPath: state.onInspectPath,
-      onOpenTab: state.onOpenTab,
-      renamePath: state.renamePath,
-      rightSidebarCollapsed: state.rightSidebarCollapsed,
-      rootKind: state.rootKind,
-      rootPath: state.rootPath,
-      saveStates: state.saveStates,
-      sidebarCollapsed: state.sidebarCollapsed,
-      silentSave: state.silentSave,
-      tabs: state.tabs,
-      viewMode: state.viewMode,
-      workspaceView: state.workspaceView,
-      workspaceKey: state.workspaceKey,
-    }),
-    [
-      state.activePath,
-      state.activeTabId,
-      state.activeResourcePath,
-      state.createFile,
-      state.createFolder,
-      state.deletePath,
-      state.dirtyPaths,
-      state.editorValue,
-      state.fileContents,
-      state.fileTree,
-      state.files,
-      state.inspectedPath,
-      state.loadingPaths,
-      state.movePath,
-      state.onCloseTab,
-      state.onPersistedContentChange,
-      state.onInspectPath,
-      state.onOpenTab,
-      state.renamePath,
-      state.rightSidebarCollapsed,
-      state.rootKind,
-      state.rootPath,
-      state.saveStates,
-      state.sidebarCollapsed,
-      state.silentSave,
-      state.tabs,
-      state.viewMode,
-      state.workspaceView,
-      state.workspaceKey,
-    ],
-  )
+  const workspacePanelState = useWorkspacePanelState(state)
   const workspacePanels = useMemo(
     () => (
       <AppWorkspacePanels
@@ -219,6 +158,7 @@ const AppLayout = () => {
         onToggleSidebar={state.toggleSidebar}
         onToggleRightSidebar={state.toggleRightSidebar}
         onSelectProject={state.onSelectProject}
+        onNewWorkspace={state.onCreateWorkspace}
         onSelectSingleFile={state.onSelectSingleFile}
         onCreateFile={handleCreateFile}
         onCreateFolder={handleCreateFolder}
@@ -259,7 +199,19 @@ const AppLayout = () => {
         shellPanelLayout={shellPanelLayout}
         shellGroupElementRef={shellGroupElementRef}
         terminalPanelRef={terminalPanelRef}
-        workspacePanels={workspacePanels}
+        workspacePanels={
+          state.restoreFailure ? (
+            <WorkspaceRecoveryPanel
+              failure={state.restoreFailure}
+              busyAction={state.workspaceRecovery.busyAction}
+              restoring={state.isRestoringSession}
+              error={state.workspaceRecovery.error}
+              onRecover={state.workspaceRecovery.recover}
+            />
+          ) : (
+            workspacePanels
+          )
+        }
         terminalOpen={effectiveTerminalOpen}
         terminalInitialized={terminalInitialized}
         terminalFocusRequest={terminalFocusRequest}

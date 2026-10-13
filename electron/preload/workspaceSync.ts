@@ -9,6 +9,11 @@ type WorkspaceSyncIpcRenderer = Pick<IpcRenderer, 'invoke' | 'on' | 'removeListe
 export const createWorkspaceSyncPreloadSurface = (
   ipcRenderer: WorkspaceSyncIpcRenderer,
 ): WorkspaceSyncApi => ({
+  conflicts: {
+    list: (rootPath) => ipcRenderer.invoke(nativeIpcChannels.syncConflictsList, { rootPath }),
+    read: (request) => ipcRenderer.invoke(nativeIpcChannels.syncConflictRead, request),
+    resolve: (request) => ipcRenderer.invoke(nativeIpcChannels.syncConflictResolve, request),
+  },
   channels: {
     get: () => ipcRenderer.invoke(nativeIpcChannels.syncChannelsGet),
     remove: () => ipcRenderer.invoke(nativeIpcChannels.syncChannelRemove),

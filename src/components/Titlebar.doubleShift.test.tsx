@@ -27,6 +27,7 @@ const createProps = (): TitlebarProps => ({
   tabs: [],
   onToggleSidebar: vi.fn(),
   onToggleRightSidebar: vi.fn(),
+  onNewWorkspace: vi.fn(async () => true),
   onSelectProject: vi.fn(),
   onSelectSingleFile: vi.fn(),
   onCreateFile: vi.fn(),

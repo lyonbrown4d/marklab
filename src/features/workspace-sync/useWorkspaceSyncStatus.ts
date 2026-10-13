@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { useSyncChannels, useWebDavProfiles } from '@/features/workspace-sync/syncQueries'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useSyncConflicts,
+  useSyncChannels,
+  useWebDavProfiles,
+} from '@/features/workspace-sync/syncQueries'
 import {
   createRootSyncState,
   normalizeSyncRoot,
@@ -8,11 +12,7 @@ import {
   updateRootSyncState,
 } from '@/features/workspace-sync/workspaceSyncRuntimeState'
 import { workspaceSyncApi } from '@/services/workspaceSyncApi'
-import type {
-  WebDavWorkspaceSyncChannel,
-  WorkspaceSyncProgress,
-  WorkspaceSyncResult,
-} from '@/types/workspaceSync'
+import type { WebDavWorkspaceSyncChannel, WorkspaceSyncProgress } from '@/types/workspaceSync'
 
 type WebDavStatus =
   | { status: 'unbound' }
@@ -24,7 +24,7 @@ type ResolveWebDavStatusOptions = {
   channel: WebDavWorkspaceSyncChannel | null | undefined
   profileLabel?: string
   progress: WorkspaceSyncProgress | null
-  result: WorkspaceSyncResult | null
+  conflictCount: number
   syncError: unknown
   syncing: boolean
   unavailable: boolean
@@ -39,7 +39,7 @@ const resolveWebDavStatus = ({
   channel,
   profileLabel,
   progress,
-  result,
+  conflictCount,
   syncError,
   syncing,
   unavailable,
@@ -52,7 +52,7 @@ const resolveWebDavStatus = ({
     return { status: 'syncing', label, progress: percent, stage: progress?.stage ?? 'flushing' }
   }
   if (syncError) return { status: 'error', label, message: errorMessage(syncError) }
-  return { status: 'idle', label, conflictCount: result?.conflicts.length ?? 0 }
+  return { status: 'idle', label, conflictCount }
 }
 
 type UseWorkspaceSyncStatusOptions = {
@@ -67,6 +67,8 @@ export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncS
   const enabled = rootKind !== 'single' && Boolean(rootPath)
   const channels = useSyncChannels(rootPath, enabled)
   const profiles = useWebDavProfiles(enabled)
+  const conflicts = useSyncConflicts(rootPath, enabled && Boolean(channels.data?.webdav))
+  const client = useQueryClient()
   const rootKey = normalizeSyncRoot(rootPath)
   const [syncStates, setSyncStates] = useState<Map<string, RootSyncState>>(() => new Map())
   const startPendingRoots = useRef(new Set<string>())
@@ -107,6 +109,7 @@ export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncS
       }))
     },
     onSuccess: (result, request) => {
+      void client.invalidateQueries({ queryKey: ['workspace-sync', 'conflicts'] })
       startPendingRoots.current.delete(request.rootKey)
       cancelPendingRoots.current.delete(request.rootKey)
       updateRoot(request.rootKey, (current) =>
@@ -166,10 +169,10 @@ export const useWorkspaceSyncStatus = ({ rootKind, rootPath }: UseWorkspaceSyncS
     channel: webdavChannel,
     profileLabel,
     progress: visibleState.progress,
-    result: visibleState.result,
+    conflictCount: conflicts.data?.conflicts.length ?? visibleState.result?.conflicts.length ?? 0,
     syncError: visibleState.error,
     syncing: visibleState.phase === 'syncing',
-    unavailable: channels.isError || profiles.isError,
+    unavailable: channels.isError || profiles.isError || conflicts.isError,
   })
 
   return {

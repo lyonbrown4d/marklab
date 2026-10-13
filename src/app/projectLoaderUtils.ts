@@ -1,3 +1,5 @@
+import type { RefObject } from 'react'
+import { isMarkdownFilePath, isPreviewableFilePath } from '@/logic/fileTypes'
 import isEqual from 'lodash-es/isEqual'
 import { fsApi, type FsSnapshot } from '@/services/fsApi'
 import { getWorkspaceTabId } from '@/logic/tabs'
@@ -152,3 +154,22 @@ const toEntryIdentity = (entry: FileEntry) => [
   entry.hasChildren,
   entry.childrenLoaded,
 ]
+
+export const selectProjectRoot = async (path: string): Promise<void> => {
+  const singleFile = isMarkdownFilePath(path) || isPreviewableFilePath(path)
+  try {
+    if (singleFile) await fsApi.setSingleFile(path)
+    else await fsApi.setRoot(path)
+  } catch (error) {
+    try {
+      if (singleFile) await fsApi.setRoot(path)
+      else await fsApi.setSingleFile(path)
+    } catch {
+      throw error
+    }
+  }
+}
+
+export const setRootSwitching = (guard: RefObject<boolean>, switching: boolean): void => {
+  guard.current = switching
+}

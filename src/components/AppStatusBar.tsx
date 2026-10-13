@@ -10,7 +10,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { useMarkdownAssetSyncStore } from '@/store/useMarkdownAssetSyncStore'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isDesktopRuntime } from '@/runtime/environment'
-import { SyncCenterPopover } from '@/features/workspace-sync/SyncCenterPopover'
+import { WorkspaceSyncStatusControl } from '@/features/workspace-sync/WorkspaceSyncStatusControl'
 import { useWorkspaceSyncStatus } from '@/features/workspace-sync/useWorkspaceSyncStatus'
 import { countChangedFiles, countGitConflicts, gitStatusQueryKey } from '@/logic/gitStatus'
 import { gitApi } from '@/services/gitApi'
@@ -141,13 +141,10 @@ const AppStatusBar = ({
           workspaceLabel={workspaceLabel}
           syncControl={
             desktopWorkspaceEnabled ? (
-              <SyncCenterPopover
-                loading={workspaceSync.loading}
-                webdav={workspaceSync.webdav}
-                onCancel={workspaceSync.onCancel}
-                cancelError={workspaceSync.cancelError}
-                cancelPending={workspaceSync.cancelPending}
-                onStart={workspaceSync.onStart}
+              <WorkspaceSyncStatusControl
+                key={`${rootKind}:${rootPath}`}
+                rootPath={rootPath}
+                status={workspaceSync}
               />
             ) : null
           }

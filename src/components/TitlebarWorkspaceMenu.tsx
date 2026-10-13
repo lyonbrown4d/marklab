@@ -27,6 +27,7 @@ import { useRef, useState } from 'react'
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { WorkspaceSyncBindingDialog } from '@/features/workspace-sync/WorkspaceSyncBindingDialog'
 import { WorkspaceSyncMenuSection } from '@/features/workspace-sync/WorkspaceSyncMenuSection'
+import { NewWorkspaceDialog } from '@/components/titlebar/NewWorkspaceDialog'
 import { RecentWorkspaceMenuSection } from '@/components/titlebar/RecentWorkspaceMenuSection'
 
 export type RecentWorkspaceMenuData = {
@@ -42,6 +43,7 @@ export type RecentWorkspaceMenuData = {
 type TitlebarWorkspaceMenuProps = {
   section: string
   workspaceMenuLabel: string
+  openWorkspaceLabel: string
   newWorkspaceLabel: string
   openFileLabel: string
   newFileLabel: string
@@ -49,7 +51,8 @@ type TitlebarWorkspaceMenuProps = {
   recentWorkspaces: RecentWorkspaceMenuData
   openCurrentWorkspaceInNewWindowLabel: string
   openWorkspaceInNewWindowLabel: string
-  onNewWorkspace: () => void
+  onOpenWorkspace: () => void
+  onNewWorkspace: (name: string) => Promise<boolean>
   onOpenFile: () => void
   onCreateFile: () => void
   onExportWorkspace: () => void
@@ -62,6 +65,7 @@ type TitlebarWorkspaceMenuProps = {
 export const TitlebarWorkspaceMenu = ({
   section,
   workspaceMenuLabel,
+  openWorkspaceLabel,
   newWorkspaceLabel,
   openFileLabel,
   newFileLabel,
@@ -69,6 +73,7 @@ export const TitlebarWorkspaceMenu = ({
   recentWorkspaces,
   openCurrentWorkspaceInNewWindowLabel,
   openWorkspaceInNewWindowLabel,
+  onOpenWorkspace,
   onNewWorkspace,
   onOpenFile,
   onCreateFile,
@@ -79,6 +84,7 @@ export const TitlebarWorkspaceMenu = ({
   workspaceWindowOpening,
 }: TitlebarWorkspaceMenuProps) => {
   const [open, setOpen] = useState(false)
+  const [creationOpen, setCreationOpen] = useState(false)
   const [bindingOpen, setBindingOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   useNativeSurfaceOcclusion('workspace-menu', open)
@@ -169,7 +175,17 @@ export const TitlebarWorkspaceMenu = ({
               {openWorkspaceInNewWindowLabel}
             </DropdownMenuItem>
             <DropdownMenuSeparator className={menuSeparatorStyles} />
-            <DropdownMenuItem className={menuItemStyles()} onSelect={onNewWorkspace}>
+            <DropdownMenuItem className={menuItemStyles()} onSelect={onOpenWorkspace}>
+              <FolderOpen aria-hidden="true" />
+              {openWorkspaceLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className={menuItemStyles()}
+              onSelect={() => {
+                setOpen(false)
+                window.setTimeout(() => setCreationOpen(true), 0)
+              }}
+            >
               <FolderPlus aria-hidden="true" />
               {newWorkspaceLabel}
             </DropdownMenuItem>
@@ -184,6 +200,9 @@ export const TitlebarWorkspaceMenu = ({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      {creationOpen ? (
+        <NewWorkspaceDialog onOpenChange={setCreationOpen} onCreate={onNewWorkspace} />
+      ) : null}
       {bindingOpen ? (
         <WorkspaceSyncBindingDialog
           open

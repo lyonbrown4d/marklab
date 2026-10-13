@@ -20,6 +20,7 @@ export type TitlebarProps = {
   tabs: WorkspaceTab[]
   onToggleSidebar: () => void
   onToggleRightSidebar: () => void
+  onNewWorkspace: (name: string) => Promise<boolean>
   onSelectProject: () => void
   onSelectSingleFile: () => void
   onCreateFile: () => void
@@ -57,4 +58,8 @@ export type TitlebarProps = {
   rootPath: string
   workspaceWindowOpening: boolean
   workspaceView?: WorkspaceView
+}
+
+export type TitlebarHandle = {
+  openCommandPalette: () => void
 }

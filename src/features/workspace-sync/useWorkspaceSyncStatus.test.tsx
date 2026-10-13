@@ -11,6 +11,7 @@ let progressHandler: ((event: WorkspaceSyncProgressEvent) => void) | undefined
 vi.mock('@/services/workspaceSyncApi', () => ({
   workspaceSyncApi: {
     getChannels: vi.fn(),
+    listConflicts: vi.fn(),
     listWebDavProfiles: vi.fn(),
     onProgress: vi.fn((handler) => {
       progressHandler = handler
@@ -31,6 +32,10 @@ describe('useWorkspaceSyncStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     progressHandler = undefined
+    vi.mocked(workspaceSyncApi.listConflicts).mockResolvedValue({
+      conflicts: [],
+      binding: { profileId: 'cloud', remoteRoot: '/' },
+    })
     vi.mocked(workspaceSyncApi.getChannels).mockResolvedValue({
       webdav: { provider: 'webdav', profileId: 'cloud', remoteRoot: '/', autoSync: false },
     })
@@ -147,6 +152,10 @@ describe('useWorkspaceSyncStatus', () => {
       deleted: 0,
       retries: 0,
     }
+    vi.mocked(workspaceSyncApi.listConflicts).mockImplementation(async (rootPath) => ({
+      conflicts: rootPath === 'C:/one' ? firstResult.conflicts : [],
+      binding: { profileId: 'cloud', remoteRoot: '/' },
+    }))
     vi.mocked(workspaceSyncApi.start)
       .mockResolvedValueOnce(firstResult)
       .mockRejectedValueOnce(new Error('second workspace failed'))

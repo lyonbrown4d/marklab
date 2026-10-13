@@ -3,6 +3,8 @@ import type {
   WebDavProfile,
   WebDavProfileInput,
   WorkspaceSyncChannel,
+  WorkspaceSyncConflictRequest,
+  WorkspaceSyncConflictResolution,
   WorkspaceSyncChannels,
   WorkspaceSyncProgressEvent,
   WorkspaceSyncResult,
@@ -11,6 +13,10 @@ import type {
 const runtime = () => getElectronRuntime().workspaceSync
 
 export const workspaceSyncApi = {
+  listConflicts: (rootPath: string) => runtime().conflicts.list(rootPath),
+  readConflict: (request: WorkspaceSyncConflictRequest) => runtime().conflicts.read(request),
+  resolveConflict: (request: WorkspaceSyncConflictResolution) =>
+    runtime().conflicts.resolve(request),
   listWebDavProfiles: (): Promise<WebDavProfile[]> => runtime().webDavProfiles.list(),
   saveWebDavProfile: (input: WebDavProfileInput): Promise<WebDavProfile> =>
     runtime().webDavProfiles.update(input),

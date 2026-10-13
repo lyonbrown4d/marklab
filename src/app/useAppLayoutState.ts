@@ -9,7 +9,8 @@ import { getWorkspaceTabId } from '@/logic/tabs'
 import { useEditorRoutes } from '@/app/useEditorRoutes'
 import { useRouteTabSync } from '@/app/useRouteTabSync'
 import { useWorkspaceTabActions } from '@/app/useWorkspaceTabActions'
-import { useWorkspaceRestore } from '@/app/useWorkspaceRestore'
+import { useWorkspaceRestoreRecovery } from '@/app/useWorkspaceRestoreRecovery'
+import { useWorkspaceRecoveryBridge } from '@/app/useWorkspaceRecoveryBridge'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { useWorkspaceWindowActions } from '@/components/titlebar/useWorkspaceWindowActions'
 import { useMarkdownFileDrop } from '@/app/useMarkdownFileDrop'
@@ -19,6 +20,7 @@ import { pathToWorkspaceTabRoute } from '@/logic/routing'
 import { useAppLayoutGraphState } from '@/app/useAppLayoutGraphState'
 
 export const useAppLayoutState = () => {
+  const recoveryBridge = useWorkspaceRecoveryBridge()
   const workspaceWindowActions = useWorkspaceWindowActions()
   const {
     rootPath,
@@ -99,17 +101,7 @@ export const useAppLayoutState = () => {
   const inspectedPathRef = useLatest(inspectedPath)
   const locationPathnameRef = useLatest(location.pathname)
   const tabsRef = useLatest(tabs)
-  const {
-    setViewMode,
-    onOpenFile,
-    onOpenFileView,
-    onOpenGitDiff,
-    onOpenWorkspaceGraph,
-    onOpenAllPages,
-    onOpenTab,
-    onCloseTab,
-    onCloseActiveTab,
-  } = useWorkspaceTabActions({
+  const workspaceTabActions = useWorkspaceTabActions({
     activeTabIdRef,
     currentFilePathRef,
     inspectedPathRef,
@@ -122,6 +114,7 @@ export const useAppLayoutState = () => {
     setInspectedPath,
     defaultFileView,
   })
+  const { onOpenFileView } = workspaceTabActions
   const workspaceKey = `${rootKind}:${rootPath}`
   const markRouteHandled = useCallback(() => setHasHandledRoute(true), [])
   const { editorPath: graphEditorPath } = useWorkspaceMapEditorRoute({
@@ -152,6 +145,8 @@ export const useAppLayoutState = () => {
     onSelectFolder,
     onSelectSingleFile,
     openFolder,
+    onCreateWorkspace,
+    onUseInternalRoot,
     createFile,
     createFolder,
     renamePath,
@@ -173,18 +168,30 @@ export const useAppLayoutState = () => {
     setTabs,
     setActiveTabId,
     touchRecentProject,
+    onWorkspaceOpened: recoveryBridge.onWorkspaceOpened,
+    onBeforeWorkspaceOpen: recoveryBridge.onBeforeWorkspaceOpen,
+    rootSwitchingRef: recoveryBridge.rootSwitchingRef,
   })
   useMarkdownFileDrop(openFolder)
-  const { isSessionRestored, restoreStatusMessage, isRestoringSession, restoreWorkspaceSession } =
-    useWorkspaceRestore({
-      hasHydrated,
-      rootPath,
-      rootKind,
-      loadWorkspace,
-      dirtyPaths,
-      onTreeActiveTabChanged: (tab) =>
-        navigate(tab ? pathToWorkspaceTabRoute(tab) : '/', { replace: true }),
-    })
+  const {
+    isSessionRestored,
+    restoreStatusMessage,
+    isRestoringSession,
+    restoreWorkspaceSession,
+    restoreFailure,
+    workspaceRecovery,
+  } = useWorkspaceRestoreRecovery({
+    hasHydrated,
+    rootPath,
+    rootKind,
+    loadWorkspace,
+    dirtyPaths,
+    openFolder,
+    onUseInternalRoot,
+    recoveryBridge,
+    onTreeActiveTabChanged: (tab) =>
+      navigate(tab ? pathToWorkspaceTabRoute(tab) : '/', { replace: true }),
+  })
   const onOpenWorkspaceFiles = useCallback(() => {
     const target = getWorkspaceFilesTarget(
       tabsRef.current,
@@ -261,24 +268,20 @@ export const useAppLayoutState = () => {
     ...graphState,
     workspaceKey,
     restoreStatusMessage,
+    restoreFailure,
+    workspaceRecovery,
     isRestoringSession,
     restoreSession: restoreWorkspaceSession,
     inspectedPath: inspectedPath ?? activeResourcePath,
     editorValue,
     isMaximized,
     setIsMaximized,
+    ...workspaceTabActions,
     onEditorChange,
     onPersistedContentChange,
-    onOpenFile,
-    onOpenFileView,
-    onOpenGitDiff,
-    onOpenWorkspaceGraph,
-    onOpenAllPages,
     onOpenWorkspaceFiles,
-    onOpenTab,
-    onCloseTab,
-    onCloseActiveTab,
     onSelectProject: onSelectFolder,
+    onCreateWorkspace,
     onSelectSingleFile,
     onOpenProject: workspaceWindowActions.openWorkspacePathInNewWindow,
     onOpenProjectInCurrentWindow: openFolder,
@@ -295,7 +298,6 @@ export const useAppLayoutState = () => {
     setTheme,
     setEditorReadOnlyMode,
     setShowEditorStatusBar,
-    setViewMode,
     toggleSidebar,
     toggleRightSidebar,
   }

@@ -28,3 +28,12 @@ export const saveDialog = (options?: SaveDialogOptions): Promise<string | null> 
   void options
   return Promise.resolve(null)
 }
+
+export const createWorkspaceDialog = async (options: {
+  name: string
+  title?: string
+}): Promise<string | null> => {
+  const electron = getElectronRuntime()
+  if (!electron) return null
+  return electron.dialog.createWorkspace(options)
+}

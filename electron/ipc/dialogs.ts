@@ -1,6 +1,10 @@
 import type * as Electron from 'electron'
 import { nativeIpcChannels } from '@electron/channels'
 import type { OpenDialogOptions, SaveDialogOptions } from '@electron/types'
+import {
+  createWorkspaceDirectory,
+  validateWorkspaceName,
+} from '@electron/ipc/createWorkspaceDirectory'
 import { issueSavePathCapability } from '@electron/ipc/savePathCapabilities'
 const openProperties = (
   options: OpenDialogOptions,
@@ -24,6 +28,31 @@ export const registerDialogIpc = (
   dialog: Electron.Dialog,
   BrowserWindowCtor: typeof Electron.BrowserWindow,
 ): void => {
+  ipcMain.handle(
+    nativeIpcChannels.dialogCreateWorkspace,
+    async (event, options: { name: string; title?: string }) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.sender.isDestroyed()
+      ) {
+        throw new Error('Workspace creation requires the main workspace frame')
+      }
+      const parent = BrowserWindowCtor.fromWebContents(event.sender)
+      if (!parent || parent.isDestroyed())
+        throw new Error('Workspace creation requires an active window')
+      const name = validateWorkspaceName(options?.name)
+      const dialogOptions: Electron.OpenDialogOptions = {
+        title: typeof options.title === 'string' ? options.title : undefined,
+        properties: ['openDirectory'],
+      }
+      const result = await dialog.showOpenDialog(parent, dialogOptions)
+      if (result.canceled || !result.filePaths[0]) return null
+      if (parent.isDestroyed() || event.sender.isDestroyed())
+        throw new Error('Workspace window closed before creation')
+      return createWorkspaceDirectory(result.filePaths[0], name)
+    },
+  )
   ipcMain.handle(nativeIpcChannels.dialogOpen, async (event, options: OpenDialogOptions = {}) => {
     const parent = BrowserWindowCtor.fromWebContents(event.sender) ?? undefined
     const dialogOptions = {

@@ -39,6 +39,8 @@ const createProps = () => ({
     sectionLabel: '最近打开',
   },
   workspaceMenuLabel: '工作区',
+  openWorkspaceLabel: '打开工作区…',
+  onOpenWorkspace: vi.fn(),
   newWorkspaceLabel: '新建工作区',
   openFileLabel: '打开文件',
   newFileLabel: '新建文件',
@@ -87,7 +89,24 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(props.onToggleOutline).toHaveBeenCalledOnce()
     expect(props.onOpenSettings).toHaveBeenCalledOnce()
     expect(props.onChangeView).toHaveBeenCalledWith('source')
-    expect(props.onNewWorkspace).toHaveBeenCalledOnce()
+    const nameInput = await screen.findByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'New Notes' } })
+    fireEvent.submit(nameInput.closest('form')!)
+    expect(props.onNewWorkspace).toHaveBeenCalledWith('New Notes')
+  })
+
+  it('distinguishes opening in this window from creation and opening in a new window', async () => {
+    const props = createProps()
+    render(<ImmersiveTitlebarChrome {...props} />)
+    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '打开工作区…' }))
+    expect(props.onOpenWorkspace).toHaveBeenCalledOnce()
+    expect(props.onNewWorkspace).not.toHaveBeenCalled()
+    expect(props.onSelectWorkspaceInNewWindow).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Open Workspace in New Window…' }))
+    expect(props.onSelectWorkspaceInNewWindow).toHaveBeenCalledOnce()
+    expect(props.onNewWorkspace).not.toHaveBeenCalled()
   })
 
   it('switches between workspace files and map beside the workspace menu', async () => {

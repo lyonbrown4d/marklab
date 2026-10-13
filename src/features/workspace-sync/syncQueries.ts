@@ -3,6 +3,7 @@ import { workspaceSyncApi } from '@/services/workspaceSyncApi'
 import type { WorkspaceSyncChannel } from '@/types/workspaceSync'
 
 export const syncQueryKeys = {
+  conflicts: (rootPath: string) => ['workspace-sync', 'conflicts', rootPath] as const,
   channels: (rootPath: string) => ['workspace-sync', 'channels', rootPath] as const,
   profiles: ['workspace-sync', 'webdav-profiles'] as const,
 }
@@ -37,3 +38,11 @@ export const useRemoveSyncChannel = (rootPath: string) => {
     onSuccess: (channels) => client.setQueryData(syncQueryKeys.channels(rootPath), channels),
   })
 }
+
+export const useSyncConflicts = (rootPath: string, enabled: boolean) =>
+  useQuery({
+    queryKey: syncQueryKeys.conflicts(rootPath),
+    queryFn: () => workspaceSyncApi.listConflicts(rootPath),
+    enabled,
+    staleTime: 2_000,
+  })

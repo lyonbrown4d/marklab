@@ -2,12 +2,23 @@ import type {
   WebDavProfile,
   WebDavProfileInput,
   WorkspaceSyncChannel,
+  WorkspaceSyncConflictList,
+  WorkspaceSyncConflictRequest,
+  WorkspaceSyncConflictComparison,
+  WorkspaceSyncConflictResolution,
   WorkspaceSyncChannels,
   WorkspaceSyncProgressEvent,
   WorkspaceSyncStartOutcome,
 } from '@/types/workspaceSync'
 
 export type WorkspaceSyncApi = {
+  conflicts: {
+    list: (rootPath: string) => Promise<WorkspaceSyncConflictList>
+    read: (request: WorkspaceSyncConflictRequest) => Promise<WorkspaceSyncConflictComparison>
+    resolve: (
+      request: WorkspaceSyncConflictResolution,
+    ) => Promise<{ ok: true; backupPath?: string }>
+  }
   channels: {
     get: () => Promise<WorkspaceSyncChannels>
     remove: () => Promise<WorkspaceSyncChannels>

@@ -43,6 +43,8 @@ import { runWorkspaceRootCommit } from '@electron/services/workspace/workspaceRo
 export class WorkspaceFileService extends WorkspaceMutationService {
   private readonly rootTransitions = new WorkspaceRootTransitionGate()
   private workspaceSessionGeneration = 0
+
+  readonly getSessionGeneration = (): number => this.workspaceSessionGeneration
   private readonly accessPrewarmer: WorkspaceAccessPrewarmer
   private readonly fileReader: WorkspaceFileReader
   readonly applyBufferUpdate = createWorkspaceBufferUpdateHandler(

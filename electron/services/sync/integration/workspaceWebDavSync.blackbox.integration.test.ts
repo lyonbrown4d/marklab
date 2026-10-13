@@ -75,6 +75,55 @@ describe('WebDAV synchronization protocol', { timeout: 30_000 }, () => {
       code: 'AUTHENTICATION_FAILED',
     })
   })
+
+  it.each(['local', 'remote'] as const)(
+    'settles the %s conflict choice over WebDAV without losing versions',
+    async (choice) => {
+      const server = await startWebDavServer()
+      serverClosers.push(server.close)
+      const first = await createWorkspace(`resolve-${choice}-first`, server.endpoint)
+      const second = await createWorkspace(`resolve-${choice}-second`, server.endpoint)
+      await fs.writeFile(path.join(first.root, 'note.md'), 'shared baseline\n')
+      await first.service.sync(first.workspace)
+      await second.service.sync(second.workspace)
+      await fs.writeFile(path.join(first.root, 'note.md'), 'remote choice\n')
+      await fs.writeFile(path.join(second.root, 'note.md'), 'local choice\n')
+      await first.service.sync(first.workspace)
+      await second.service.sync(second.workspace)
+      const persisted = await second.service.listConflicts(second.workspace, second.root)
+      expect(persisted.conflicts).toHaveLength(1)
+      if (!persisted.binding) throw new Error('The sync binding is unavailable')
+      const request = { rootPath: second.root, binding: persisted.binding, path: 'note.md' }
+      const reviewed = await second.service.readConflict(second.workspace, request)
+      expect(reviewed.local.text).toBe('local choice\n')
+      expect(reviewed.savedRemote.text).toBe('remote choice\n')
+      const resolved = await second.service.resolveConflict(second.workspace, {
+        ...request,
+        choice,
+        confirmDelete: false,
+        expectedLocalHash: reviewed.local.hash,
+        expectedRemoteHash: reviewed.savedRemote.hash,
+      })
+      expect((await second.service.listConflicts(second.workspace, second.root)).conflicts).toEqual(
+        [],
+      )
+      const next = await second.service.sync(second.workspace)
+      expect(next.conflicts).toEqual([])
+      await first.service.sync(first.workspace)
+      expect(await fs.readFile(path.join(first.root, 'note.md'), 'utf8')).toBe(
+        choice === 'local' ? 'local choice\n' : 'remote choice\n',
+      )
+      const savedPath = reviewed.conflict.conflictPath
+      if (!savedPath) throw new Error('The saved remote copy is unavailable')
+      expect(await fs.readFile(path.join(second.root, savedPath), 'utf8')).toBe('remote choice\n')
+      if (choice === 'remote') {
+        if (!resolved.backupPath) throw new Error('The local backup is unavailable')
+        expect(await fs.readFile(path.join(second.root, resolved.backupPath), 'utf8')).toBe(
+          'local choice\n',
+        )
+      }
+    },
+  )
 })
 
 const createWorkspace = async (name: string, endpoint: string, password = 'secret') => {

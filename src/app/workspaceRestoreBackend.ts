@@ -1,6 +1,39 @@
 import { isDesktopRuntime } from '@/runtime/environment'
 import { fsApi } from '@/services/fsApi'
 import type { ParsedWorkspaceSessionSeed } from '@/app/workspaceSessionSeed'
+import type { LoadWorkspace, RestoreResult } from '@/app/workspaceRestoreTypes'
+import type { RootKind } from '@/store/appTypes'
+import { flushEditorChanges } from '@/app/editorCloseLifecycle'
+
+export const restoreDefaultWorkspace = async ({
+  isCurrent,
+  loadWorkspace,
+  rootKind,
+  rootPath,
+}: {
+  isCurrent: () => boolean
+  loadWorkspace: LoadWorkspace
+  rootKind: RootKind
+  rootPath: string
+}): Promise<RestoreResult> => {
+  if (isDesktopRuntime() && rootPath) {
+    try {
+      await flushEditorChanges()
+      if (!isCurrent()) return { ok: true }
+      if (rootKind === 'single') await fsApi.setSingleFile(rootPath)
+      else if (rootKind === 'external') await fsApi.setRoot(rootPath)
+    } catch (error) {
+      return { error, failure: 'root', ok: false }
+    }
+  }
+  if (!isCurrent()) return { ok: true }
+  try {
+    await loadWorkspace()
+    return { ok: true }
+  } catch (error) {
+    return { error, failure: 'session', ok: false }
+  }
+}
 
 export type WorkspaceRestoreBackendBarrier = {
   promise: Promise<void>

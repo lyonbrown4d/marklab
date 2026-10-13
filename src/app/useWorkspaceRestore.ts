@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fsApi, type FsSnapshot } from '@/services/fsApi'
 import { isDesktopRuntime } from '@/runtime/environment'
 import {
   consumeWorkspaceSessionSeed,
@@ -8,56 +7,25 @@ import {
   waitForWorkspaceInteractivePaint,
 } from '@/runtime/rendererLifecycle'
 import { getWorkspaceTabId } from '@/logic/tabs'
-import type { RootKind, WorkspaceTab } from '@/store/appTypes'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import { useI18n } from '@/i18n/useI18n'
 import { workspaceTreeApi } from '@/services/workspaceTreeApi'
-import { flushEditorChanges } from '@/app/editorCloseLifecycle'
 import { applyWorkspaceSessionSeed } from '@/app/workspaceSessionSeed'
 import {
   alignWorkspaceSessionBackendRoot,
   createWorkspaceRestoreBackendBarrier,
+  restoreDefaultWorkspace,
   type WorkspaceRestoreBackendBarrier,
 } from '@/app/workspaceRestoreBackend'
 import { reportWorkspaceRendererReady } from '@/app/workspaceRestoreReady'
-
-type LoadWorkspace = (options?: {
-  activeTabId?: string | null
-  preserveCurrentRoute?: boolean
-  snapshot?: FsSnapshot
-  tabs?: WorkspaceTab[]
-}) => Promise<void>
-
-type UseWorkspaceRestoreArgs = {
-  hasHydrated: boolean
-  rootPath: string
-  rootKind: RootKind
-  loadWorkspace: LoadWorkspace
-  dirtyPaths?: Record<string, true>
-  onTreeActiveTabChanged?: (tab: WorkspaceTab | null) => void
-}
-
-type UseWorkspaceRestoreResult = {
-  isSessionRestored: boolean
-  restoreStatusMessage: string | null
-  isRestoringSession: boolean
-  restoreWorkspaceSession: () => Promise<boolean>
-}
-
-type RestoreFailure = 'root' | 'session'
-type RestoreResult = { ok: true } | { error: unknown; failure: RestoreFailure; ok: false }
-type RestoreOperation = {
-  backendAlignment?: WorkspaceRestoreBackendBarrier
-  generation: number
-  kind: 'default' | 'seed'
-  payload?: Parameters<typeof applyWorkspaceSessionSeed>[0]
-  promise: Promise<RestoreResult>
-  settled: boolean
-}
-type QueuedSeed = {
-  generation: number
-  payload: Parameters<typeof applyWorkspaceSessionSeed>[0]
-}
+import type {
+  QueuedSeed,
+  RestoreOperation,
+  RestoreResult,
+  UseWorkspaceRestoreArgs,
+  UseWorkspaceRestoreResult,
+  WorkspaceRestoreFailure,
+} from '@/app/workspaceRestoreTypes'
 
 export const useWorkspaceRestore = ({
   hasHydrated,
@@ -66,9 +34,11 @@ export const useWorkspaceRestore = ({
   loadWorkspace,
   dirtyPaths = {},
   onTreeActiveTabChanged,
+  rootSwitchingRef,
 }: UseWorkspaceRestoreArgs): UseWorkspaceRestoreResult => {
   const { t } = useI18n()
   const [restoreStatusMessage, setRestoreStatusMessage] = useState<string | null>(null)
+  const [restoreFailure, setRestoreFailure] = useState<WorkspaceRestoreFailure | null>(null)
   const [isRestoringSession, setIsRestoringSession] = useState(false)
   const [isSessionRestored, setIsSessionRestored] = useState(false)
   const [queuedSeed, setQueuedSeed] = useState<QueuedSeed | null>(null)
@@ -92,26 +62,13 @@ export const useWorkspaceRestore = ({
   }, [])
 
   const runDefaultRestore = useCallback(
-    async (generation: number): Promise<RestoreResult> => {
-      if (isDesktopRuntime() && rootPath) {
-        try {
-          await flushEditorChanges()
-          if (generationRef.current !== generation) return { ok: true }
-          if (rootKind === 'single') await fsApi.setSingleFile(rootPath)
-          else if (rootKind === 'external') await fsApi.setRoot(rootPath)
-          if (generationRef.current !== generation) return { ok: true }
-        } catch (error) {
-          return { error, failure: 'root', ok: false }
-        }
-      }
-      if (generationRef.current !== generation) return { ok: true }
-      try {
-        await loadWorkspace()
-        return { ok: true }
-      } catch (error) {
-        return { error, failure: 'session', ok: false }
-      }
-    },
+    (generation: number): Promise<RestoreResult> =>
+      restoreDefaultWorkspace({
+        isCurrent: () => generationRef.current === generation,
+        loadWorkspace,
+        rootKind,
+        rootPath,
+      }),
     [loadWorkspace, rootKind, rootPath],
   )
 
@@ -171,6 +128,13 @@ export const useWorkspaceRestore = ({
         const messageKey =
           result.failure === 'root' ? 'app.restoreRootFailed' : 'app.restoreSessionFailed'
         setRestoreStatusMessage(translateRef.current(messageKey))
+        setRestoreFailure({
+          phase: result.failure,
+          rootKind: operation.rootKind,
+          rootPath: operation.rootPath,
+          message: translateRef.current(messageKey),
+          detail: result.error instanceof Error ? result.error.message : String(result.error),
+        })
         await reportWorkspaceRendererReady({
           error: result.error instanceof Error ? result.error.message : String(result.error),
           phase: 'workspace-error',
@@ -178,6 +142,8 @@ export const useWorkspaceRestore = ({
         return
       }
       if (operation.payload) consumeWorkspaceSessionSeed(operation.payload)
+      else if (latestSeedRef.current) consumeWorkspaceSessionSeed(latestSeedRef.current)
+      setRestoreFailure(null)
       setRestoreStatusMessage(null)
       setIsSessionRestored(true)
       await reportWorkspaceRendererReady({ phase: 'workspace-interactive' })
@@ -191,15 +157,18 @@ export const useWorkspaceRestore = ({
     const operation: RestoreOperation = {
       generation,
       kind: 'default',
+      rootKind,
+      rootPath,
       promise: runDefaultRestore(generation),
       settled: false,
     }
     defaultRestorePromiseRef.current = operation.promise
     activeOperationRef.current = operation
     setIsRestoringSession(true)
+    setIsSessionRestored(false)
     observeOperation(operation)
     return operation
-  }, [observeOperation, runDefaultRestore])
+  }, [observeOperation, rootKind, rootPath, runDefaultRestore])
 
   const beginSeedRestore = useCallback(
     (seed: QueuedSeed): RestoreOperation => {
@@ -211,17 +180,20 @@ export const useWorkspaceRestore = ({
           : null
       const previousBackendWork = pendingSeedAlignment ?? defaultRestorePromiseRef.current
       const backendAlignment = createWorkspaceRestoreBackendBarrier()
+      const promise = runSeedRestore(
+        seed.payload,
+        seed.generation,
+        previousBackendWork,
+        backendAlignment,
+      )
       const operation: RestoreOperation = {
         backendAlignment,
         generation: seed.generation,
         kind: 'seed',
+        rootKind: useWorkspaceStore.getState().rootKind,
+        rootPath: useWorkspaceStore.getState().rootPath,
         payload: seed.payload,
-        promise: runSeedRestore(
-          seed.payload,
-          seed.generation,
-          previousBackendWork,
-          backendAlignment,
-        ),
+        promise,
         settled: false,
       }
       activeOperationRef.current = operation
@@ -234,10 +206,31 @@ export const useWorkspaceRestore = ({
   )
 
   const restoreWorkspaceSession = useCallback(async (): Promise<boolean> => {
+    if (rootSwitchingRef?.current) return false
     const operation = beginDefaultRestore()
     const result = await operation.promise
     return result.ok && operation.generation === generationRef.current
-  }, [beginDefaultRestore])
+  }, [beginDefaultRestore, rootSwitchingRef])
+
+  const completeWorkspaceRecovery = useCallback(async () => {
+    if (automaticRestoreCompletedRef.current && activeOperationRef.current === null) return
+    const generation = ++generationRef.current
+    activeOperationRef.current = null
+    automaticRestoreCompletedRef.current = true
+    if (latestSeedRef.current) consumeWorkspaceSessionSeed(latestSeedRef.current)
+    setQueuedSeed(null)
+    setRestoreFailure(null)
+    setRestoreStatusMessage(null)
+    setIsRestoringSession(false)
+    setIsSessionRestored(true)
+    await waitForWorkspaceInteractivePaint()
+    if (!mountedRef.current || generationRef.current !== generation) return
+    await reportWorkspaceRendererReady({ phase: 'workspace-interactive' })
+  }, [])
+
+  const waitForWorkspaceRestore = useCallback(async () => {
+    await activeOperationRef.current?.promise
+  }, [])
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -259,6 +252,8 @@ export const useWorkspaceRestore = ({
       const generation = ++generationRef.current
       automaticRestoreCompletedRef.current = false
       setQueuedSeed({ generation, payload })
+      setRestoreFailure(null)
+      setRestoreStatusMessage(null)
       setIsSessionRestored(false)
     })
 
@@ -295,5 +290,8 @@ export const useWorkspaceRestore = ({
     restoreStatusMessage,
     isRestoringSession,
     restoreWorkspaceSession,
+    restoreFailure,
+    completeWorkspaceRecovery,
+    waitForWorkspaceRestore,
   }
 }

@@ -53,6 +53,7 @@ const createProps = (overrides: Partial<TitlebarProps> = {}): TitlebarProps => (
   tabs: [],
   onToggleSidebar: vi.fn(),
   onToggleRightSidebar: vi.fn(),
+  onNewWorkspace: vi.fn(async () => true),
   onSelectProject: vi.fn(),
   onSelectSingleFile: vi.fn(),
   onCreateFile: vi.fn(),
@@ -319,7 +320,9 @@ describe('Titlebar command palette', () => {
     await user.click(screen.getByRole('button', { name: 'Search files...' }))
     await user.click(screen.getByRole('radio', { name: 'Source' }))
     await user.click(screen.getByRole('button', { name: 'Workspace: workspace' }))
-    await user.click(screen.getByRole('menuitem', { name: 'New Workspace' }))
+    await user.click(
+      screen.getByRole('menuitem', { name: /^(actions.openWorkspace|Open workspace…)$/i }),
+    )
 
     expect(props.onToggleSidebar).toHaveBeenCalledTimes(1)
     expect(props.onToggleRightSidebar).toHaveBeenCalledTimes(1)

@@ -14,7 +14,7 @@ import WindowControls from '@/components/WindowControls'
 import AppCommandDialog from '@/components/AppCommandDialog'
 import TitlebarCommandDialogFallback from '@/components/TitlebarCommandDialogFallback'
 import { isDesktopRuntime } from '@/runtime/window'
-import type { TitlebarProps } from '@/components/titlebar/titlebarTypes'
+import type { TitlebarHandle, TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandModel } from '@/components/titlebar/useTitlebarCommandModel'
 import {
   navigationBacklinkToSearchResult,
@@ -35,9 +35,7 @@ import { preloadWorkspaceGraph } from '@/app/preloadWorkspaceGraph'
 const TitlebarCommandDialog = lazy(() => import('@/components/TitlebarCommandDialog'))
 const noop = () => undefined
 
-export type TitlebarHandle = {
-  openCommandPalette: () => void
-}
+export type { TitlebarHandle } from '@/components/titlebar/titlebarTypes'
 
 const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
   (
@@ -47,6 +45,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       tabs,
       onToggleSidebar,
       onToggleRightSidebar,
+      onNewWorkspace,
       onSelectProject,
       onSelectSingleFile,
       onCreateFile,
@@ -220,6 +219,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
             sectionLabel: t('workspace.recent'),
           }}
           workspaceMenuLabel={t('menu.workspace')}
+          openWorkspaceLabel={t('actions.openWorkspace')}
           newWorkspaceLabel={t('actions.newWorkspace')}
           openFileLabel={t('actions.openFile')}
           newFileLabel={t('sidebar.newFile')}
@@ -238,7 +238,8 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           onOpenSettings={onOpenSettings}
           onChangeView={onChangeView}
           onOpenProject={onOpenProject}
-          onNewWorkspace={onSelectProject}
+          onOpenWorkspace={onSelectProject}
+          onNewWorkspace={onNewWorkspace}
           onOpenFile={onSelectSingleFile}
           onCreateFile={onCreateFile}
           onExportWorkspace={() => onMenuAction('file.export_workspace')}

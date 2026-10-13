@@ -65,6 +65,8 @@ const renderMenu = () => {
         }}
         openCurrentWorkspaceInNewWindowLabel="Open current in new window"
         openWorkspaceInNewWindowLabel="Open workspace in new window"
+        onOpenWorkspace={vi.fn()}
+        openWorkspaceLabel="打开工作区…"
         onNewWorkspace={vi.fn()}
         onOpenFile={vi.fn()}
         onCreateFile={vi.fn()}

@@ -1,9 +1,11 @@
+import { useState, type RefObject } from 'react'
 import { AlertTriangle, Cloud, RefreshCw, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
+import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { useI18n } from '@/i18n/useI18n'
 
 type WebDavStatus =
@@ -14,6 +16,9 @@ type WebDavStatus =
 
 type SyncCenterPopoverProps = {
   webdav: WebDavStatus
+  onConfigure: () => void
+  onReviewConflicts?: () => void
+  triggerRef?: RefObject<HTMLButtonElement | null>
   onStart: () => void
   onCancel: () => void
   loading?: boolean
@@ -23,6 +28,9 @@ type SyncCenterPopoverProps = {
 
 export const SyncCenterPopover = ({
   webdav,
+  onConfigure,
+  onReviewConflicts,
+  triggerRef,
   onStart,
   onCancel,
   loading = false,
@@ -30,13 +38,20 @@ export const SyncCenterPopover = ({
   cancelError = null,
 }: SyncCenterPopoverProps) => {
   const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  useNativeSurfaceOcclusion('statusbar-sync-center', open)
+  const openDialog = (action: (() => void) | undefined) => {
+    setOpen(false)
+    window.setTimeout(() => action?.(), 0)
+  }
   const problem = webdav.status === 'error'
   const syncing = webdav.status === 'syncing'
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="ghost"
           size="icon"
@@ -92,9 +107,13 @@ export const SyncCenterPopover = ({
               </p>
             ) : null}
             {webdav.status === 'idle' && webdav.conflictCount ? (
-              <p className="mt-1 text-[11px] text-status-warning">
+              <Button
+                variant="link"
+                className="mt-1 h-auto p-0 text-[11px] text-status-warning"
+                onClick={() => openDialog(onReviewConflicts)}
+              >
                 {t('sync.center.conflicts', { count: String(webdav.conflictCount) })}
-              </p>
+              </Button>
             ) : null}
           </div>
           {webdav.status === 'syncing' ? (
@@ -118,8 +137,31 @@ export const SyncCenterPopover = ({
             >
               <RefreshCw aria-hidden="true" />
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={loading}
+              onClick={() => openDialog(onConfigure)}
+            >
+              {t('sync.center.configure')}
+            </Button>
+          )}
         </div>
+        {onReviewConflicts &&
+        webdav.status !== 'unbound' &&
+        webdav.status !== 'syncing' &&
+        !(webdav.status === 'idle' && webdav.conflictCount) ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={() => openDialog(onReviewConflicts)}
+          >
+            {t('sync.conflicts.title')}
+          </Button>
+        ) : null}
       </PopoverContent>
     </Popover>
   )

@@ -33,6 +33,7 @@ vi.mock('@/runtime/environment', () => ({
 vi.mock('@/services/fsApi', () => ({
   fsApi: {
     getSnapshot: vi.fn(),
+    createFile: vi.fn(),
     setRoot: vi.fn(),
     setSingleFile: vi.fn(),
   },
@@ -270,5 +271,41 @@ describe('useProjectLoader', () => {
     expect(toast.error).toHaveBeenCalledWith('Failed to open path', {
       description: 'D:/next\nEditor buffer update cancelled',
     })
+  })
+  it('clears obsolete tabs when opening an empty workspace and completes recovery only on success', async () => {
+    vi.mocked(workspaceTreeApi.listChildren).mockResolvedValue({
+      entries: [],
+      nextCursor: null,
+      parent: '',
+      generation: 2,
+      revision: 1,
+      root: { kind: 'external', path: 'D:/empty' },
+    })
+    vi.mocked(workspaceTreeApi.initialFile).mockResolvedValue({
+      generation: 2,
+      path: null,
+      revision: 1,
+      root: { kind: 'external', path: 'D:/empty' },
+    })
+    vi.mocked(workspaceTreeApi.pathsExist).mockResolvedValue({
+      existing: [],
+      generation: 2,
+      revision: 1,
+      root: { kind: 'external', path: 'D:/empty' },
+    })
+    const onWorkspaceOpened = vi.fn(async () => undefined)
+    const props = createProps({
+      tabs: [{ kind: 'file', path: 'old.md', view: 'edit' }],
+      activeTabId: 'file:edit:old.md',
+      onWorkspaceOpened,
+    })
+    const { result } = renderHook(() => useProjectLoader(props as never))
+    await act(async () => {
+      expect(await result.current.openFolder('D:/empty')).toBe(true)
+    })
+    expect(props.setTabs).toHaveBeenCalledWith([])
+    expect(props.setActiveTabId).toHaveBeenCalledWith(null)
+    expect(props.navigate).toHaveBeenCalledWith('/', { replace: true })
+    expect(onWorkspaceOpened).toHaveBeenCalledOnce()
   })
 })

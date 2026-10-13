@@ -1,5 +1,6 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 
 import { nativeIpcChannels } from '@electron/channels'
@@ -27,6 +28,28 @@ type WorkspaceSyncIpcDependencies = {
 const profileIdSchema = z.object({ id: z.string().trim().min(1).max(128) }).strict()
 const noPayloadSchema = z.undefined()
 const syncStartSchema = z.object({ requestId: z.uuid() }).strict()
+const rootPathSchema = z.string().min(1).max(32_768)
+const conflictRequestSchema = z
+  .object({
+    rootPath: rootPathSchema,
+    path: z.string().min(1).max(4_096),
+    binding: z
+      .object({ profileId: z.string().min(1).max(128), remoteRoot: z.string().min(1).max(4_096) })
+      .strict(),
+  })
+  .strict()
+const hashSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/)
+  .nullable()
+const conflictResolutionSchema = conflictRequestSchema
+  .extend({
+    choice: z.enum(['local', 'remote']),
+    expectedLocalHash: hashSchema,
+    expectedRemoteHash: hashSchema,
+    confirmDelete: z.boolean(),
+  })
+  .strict()
 const syncCancelSchema = z.object({ requestId: z.uuid() }).strict()
 
 export const registerWorkspaceSyncIpc = (
@@ -39,6 +62,17 @@ export const registerWorkspaceSyncIpc = (
     const root = workspaceFor(event).rootInfo()
     if (root.kind === 'single') throw new Error('Sync is unavailable in single-file mode')
     return root.path
+  }
+
+  const trackConflictOperation = async <T>(event: IpcMainInvokeEvent, work: () => Promise<T>) => {
+    const requestId = randomUUID()
+    trackSync(event.sender, requestId, rootFor(event))
+    subscribeToDestruction(event, dependencies.syncService)
+    try {
+      return await work()
+    } finally {
+      untrackSync(event.sender, requestId)
+    }
   }
 
   ipcMain.handle(nativeIpcChannels.webDavProfileList, () => dependencies.profileStore.list())
@@ -81,6 +115,25 @@ export const registerWorkspaceSyncIpc = (
     const root = rootFor(event)
     return dependencies.workspaceMutationCoordinator.runConfigurationMutation(() =>
       dependencies.configStore.removeChannel(root),
+    )
+  })
+  ipcMain.handle(nativeIpcChannels.syncConflictsList, (event, payload: unknown) => {
+    assertMainFrame(event)
+    const { rootPath } = z.object({ rootPath: rootPathSchema }).strict().parse(payload)
+    return dependencies.syncService.listConflicts(workspaceFor(event), rootPath)
+  })
+  ipcMain.handle(nativeIpcChannels.syncConflictRead, (event, payload: unknown) => {
+    assertMainFrame(event)
+    const request = conflictRequestSchema.parse(payload)
+    return trackConflictOperation(event, () =>
+      dependencies.syncService.readConflict(workspaceFor(event), request),
+    )
+  })
+  ipcMain.handle(nativeIpcChannels.syncConflictResolve, (event, payload: unknown) => {
+    assertMainFrame(event)
+    const request = conflictResolutionSchema.parse(payload)
+    return trackConflictOperation(event, () =>
+      dependencies.syncService.resolveConflict(workspaceFor(event), request),
     )
   })
   ipcMain.handle(nativeIpcChannels.syncStart, async (event, payload: unknown) => {
@@ -188,4 +241,9 @@ const cancelTrackedSyncs = (
     if (root && syncService.cancel(root)) cancelled = true
   }
   return cancelled
+}
+
+const assertMainFrame = (event: IpcMainInvokeEvent): void => {
+  if (event.senderFrame !== event.sender.mainFrame)
+    throw new Error('Sync conflicts require the main workspace frame')
 }

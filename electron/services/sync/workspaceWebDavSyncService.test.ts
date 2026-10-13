@@ -131,6 +131,79 @@ describe('WorkspaceWebDavSyncService', () => {
     )
   })
 
+  it('lists durable conflicts and rejects descriptors from another root', async () => {
+    const fixture = createFixture()
+    const conflict = { path: 'note.md', status: 'unresolved', reason: 'both_changed' }
+    fixture.dependencies.stateStore = {
+      load: vi.fn(async () => ({ unresolvedConflicts: [conflict] })),
+    } as never
+    await expect(
+      fixture.service.listConflicts(fixture.workspace as never, 'D:/notes'),
+    ).resolves.toEqual({
+      conflicts: [conflict],
+      binding: { profileId: 'dav-main', remoteRoot: '/documents' },
+    })
+    await expect(
+      fixture.service.listConflicts(fixture.workspace as never, 'D:/other'),
+    ).rejects.toThrow('root changed')
+  })
+
+  it('lists an uninitialized workspace after its WebDAV binding is removed without network access', async () => {
+    const fixture = createFixture()
+    fixture.dependencies.stateStore = { load: vi.fn(async () => null) } as never
+    fixture.dependencies.configStore.getChannels.mockResolvedValueOnce({ webdav: null })
+    await expect(
+      fixture.service.listConflicts(fixture.workspace as never, 'D:/notes'),
+    ).resolves.toEqual({ conflicts: [], binding: null })
+    expect(fixture.dependencies.createRemoteClient).not.toHaveBeenCalled()
+  })
+
+  it('refuses stale bindings and changed sessions before reading any conflict files', async () => {
+    const fixture = createFixture()
+    const request = {
+      rootPath: 'D:/notes',
+      path: 'note.md',
+      binding: { profileId: 'other', remoteRoot: '/documents' },
+    }
+    await expect(fixture.service.readConflict(fixture.workspace as never, request)).rejects.toThrow(
+      'binding changed',
+    )
+    let generation = 1
+    const workspace = { ...fixture.workspace, getSessionGeneration: () => generation }
+    workspace.flushBuffers.mockImplementationOnce(async () => {
+      generation += 1
+    })
+    await expect(
+      fixture.service.readConflict(workspace as never, {
+        ...request,
+        binding: { profileId: 'dav-main', remoteRoot: '/documents' },
+      }),
+    ).rejects.toThrow('session changed')
+  })
+
+  it('reports busy while sync owns the workspace mutation boundary', async () => {
+    const fixture = createFixture()
+    let finish: (() => void) | undefined
+    fixture.dependencies.createEngine = vi.fn(() => ({
+      sync: () =>
+        new Promise((resolve) => {
+          finish = () => resolve(emptyResult)
+        }),
+    }))
+    const service = new WorkspaceWebDavSyncService(fixture.dependencies as never)
+    const pending = service.sync(fixture.workspace as never)
+    await vi.waitFor(() => expect(finish).toBeDefined())
+    await expect(
+      service.readConflict(fixture.workspace as never, {
+        rootPath: 'D:/notes',
+        path: 'note.md',
+        binding: { profileId: 'dav-main', remoteRoot: '/documents' },
+      }),
+    ).rejects.toMatchObject({ code: 'workspace_sync_busy' })
+    finish?.()
+    await pending
+  })
+
   it('cancels by the initiating root rather than the mutable workspace root', () => {
     const fixture = createFixture()
     const cancel = vi.fn(() => true)

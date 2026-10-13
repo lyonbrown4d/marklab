@@ -79,3 +79,39 @@ export type WorkspaceSyncProgressEvent = {
   requestId: string
   progress: WorkspaceSyncProgress
 }
+
+export type WorkspaceSyncBindingIdentity = Pick<
+  WebDavWorkspaceSyncChannel,
+  'profileId' | 'remoteRoot'
+>
+
+export type WorkspaceSyncConflictList = {
+  conflicts: WorkspaceSyncConflict[]
+  binding: WorkspaceSyncBindingIdentity | null
+}
+
+export type WorkspaceSyncConflictRequest = {
+  rootPath: string
+  path: string
+  binding: WorkspaceSyncBindingIdentity
+}
+
+export type WorkspaceSyncConflictVersion = {
+  hash: string | null
+  size: number
+  text: string | null
+  unavailable: 'deleted' | 'too_large' | 'binary' | null
+}
+
+export type WorkspaceSyncConflictComparison = {
+  conflict: WorkspaceSyncConflict
+  local: WorkspaceSyncConflictVersion
+  savedRemote: WorkspaceSyncConflictVersion
+}
+
+export type WorkspaceSyncConflictResolution = WorkspaceSyncConflictRequest & {
+  choice: 'local' | 'remote'
+  expectedLocalHash: string | null
+  expectedRemoteHash: string | null
+  confirmDelete: boolean
+}

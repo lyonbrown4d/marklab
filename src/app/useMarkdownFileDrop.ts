@@ -4,7 +4,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { isMarkdownFilePath } from '@/logic/fileTypes'
 import { onRuntimeWebviewFileDrop } from '@/runtime/webview'
 
-export const useMarkdownFileDrop = (openPath: (path: string) => Promise<void>): void => {
+export const useMarkdownFileDrop = (openPath: (path: string) => Promise<void | boolean>): void => {
   const { t } = useI18n()
 
   useEffect(() => {

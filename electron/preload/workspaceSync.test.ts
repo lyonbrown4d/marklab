@@ -33,6 +33,35 @@ describe('workspace sync preload surface', () => {
     expect(surface).not.toHaveProperty('gitSummary')
   })
 
+  it('keeps conflict requests on a narrow typed IPC surface', async () => {
+    const invoke = vi.fn(async () => ({ ok: true }))
+    const surface = createWorkspaceSyncPreloadSurface({
+      invoke,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    } as never)
+    const request = {
+      rootPath: '/notes',
+      path: 'note.md',
+      binding: { profileId: 'cloud', remoteRoot: '/documents' },
+    }
+    await surface.conflicts.list('/notes')
+    await surface.conflicts.read(request)
+    const decision = {
+      ...request,
+      choice: 'remote' as const,
+      expectedLocalHash: null,
+      expectedRemoteHash: 'a'.repeat(64),
+      confirmDelete: false,
+    }
+    await surface.conflicts.resolve(decision)
+    expect(invoke).toHaveBeenNthCalledWith(1, nativeIpcChannels.syncConflictsList, {
+      rootPath: '/notes',
+    })
+    expect(invoke).toHaveBeenNthCalledWith(2, nativeIpcChannels.syncConflictRead, request)
+    expect(invoke).toHaveBeenNthCalledWith(3, nativeIpcChannels.syncConflictResolve, decision)
+  })
+
   it('subscribes to progress and removes the exact listener', () => {
     const listeners = new Map<string, (...args: unknown[]) => void>()
     const removeListener = vi.fn()

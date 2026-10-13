@@ -184,6 +184,10 @@ const desktopApi: RendererSafeElectronApi = {
     },
   },
   dialog: {
+    createWorkspace: (options: { name: string; title?: string }) =>
+      ipcRenderer.invoke(nativeIpcChannels.dialogCreateWorkspace, options) as Promise<
+        string | null
+      >,
     open: (options?: OpenDialogOptions) =>
       ipcRenderer.invoke(nativeIpcChannels.dialogOpen, options) as Promise<
         string | string[] | null
