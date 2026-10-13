@@ -34,7 +34,7 @@ describe('VercelAiProviderResolver', () => {
     ['deepseek', 'deepseek-chat', undefined],
     ['ollama', 'qwen3', 'http://127.0.0.1:11434/v1'],
     ['openai-compatible', 'qwen3', 'http://127.0.0.1:11434/v1'],
-  ] as const)('creates an AI SDK model for %s', (kind, model, baseUrl) => {
+  ] as const)('creates an AI SDK model for %s', async (kind, model, baseUrl) => {
     const provider: StoredAiProvider = {
       id: `${kind}-main`,
       label: kind,
@@ -45,7 +45,7 @@ describe('VercelAiProviderResolver', () => {
       updatedAt: '2026-09-30T00:00:00.000Z',
     }
 
-    const resolved = new VercelAiProviderResolver().resolve(provider, 'not-a-real-key')
+    const resolved = await new VercelAiProviderResolver().resolve(provider, 'not-a-real-key')
 
     const modelMetadata = resolved as { modelId: string; provider: string }
     expect(modelMetadata.modelId).toBe(model)
@@ -64,7 +64,7 @@ describe('VercelAiProviderResolver', () => {
     ['openai', sdkFactories.openai],
     ['anthropic', sdkFactories.anthropic],
     ['google', sdkFactories.google],
-  ] as const)('never forwards a custom base URL to the built-in %s SDK', (kind, factory) => {
+  ] as const)('never forwards a custom base URL to the built-in %s SDK', async (kind, factory) => {
     const provider: StoredAiProvider = {
       id: `${kind}-main`,
       label: kind,
@@ -75,7 +75,7 @@ describe('VercelAiProviderResolver', () => {
       updatedAt: '2026-09-30T00:00:00.000Z',
     }
 
-    new VercelAiProviderResolver().resolve(provider, 'secret')
+    await new VercelAiProviderResolver().resolve(provider, 'secret')
 
     expect(factory).toHaveBeenCalledWith({ apiKey: 'secret' })
   })

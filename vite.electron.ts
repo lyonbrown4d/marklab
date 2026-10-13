@@ -53,9 +53,9 @@ export const electronMainManualChunks = (id: string) => {
     return 'main-markdown-language'
   }
   if (!isNodeModule(normalizedId)) return undefined
-  if (includesAny(normalizedId, ['/ai/', '@ai-sdk/', '@vercel/oidc', '@workflow/serde'])) {
-    return 'main-ai'
-  }
+  // Let the import graph split AI generation and each provider. Named groups
+  // absorb shared dependencies such as Zod, making startup schemas eagerly
+  // import the generation SDK through their shared chunk.
   if (normalizedId.includes('inversify')) return 'main-di'
   if (
     includesAny(normalizedId, [

@@ -15,6 +15,7 @@ afterEach(async () => {
 
 const createCache = async (
   options: {
+    initialMaintenanceDelayMs?: number
     maintenanceIntervalMs?: number
     maintenanceScheduler?: SchedulerLike
     maxBytes?: number
@@ -58,7 +59,7 @@ describe('WebPreviewDiskCache', () => {
   })
 
   it('cleans expired rebuildable captures on startup and on a background schedule', async () => {
-    const { cache, root } = await createCache({ ttlMs: 1_000 })
+    const { cache, root } = await createCache({ ttlMs: 1_000, initialMaintenanceDelayMs: 0 })
     await cache.set('https://example.com/stale', new Uint8Array([1, 2, 3]))
     const cachedFile = (await fs.readdir(root)).find((file) => file.endsWith('.jpg'))
     if (!cachedFile) throw new Error('Expected cached preview')
@@ -75,6 +76,7 @@ describe('WebPreviewDiskCache', () => {
     const intervalMs = 10_000
     const scheduler = new VirtualTimeScheduler(undefined, intervalMs)
     const { cache, root } = await createCache({
+      initialMaintenanceDelayMs: intervalMs,
       maintenanceIntervalMs: intervalMs,
       maintenanceScheduler: scheduler,
       ttlMs: 1_000,
@@ -96,6 +98,7 @@ describe('WebPreviewDiskCache', () => {
     const intervalMs = 10_000
     const scheduler = new VirtualTimeScheduler(undefined, intervalMs)
     const { cache } = await createCache({
+      initialMaintenanceDelayMs: intervalMs,
       maintenanceIntervalMs: intervalMs,
       maintenanceScheduler: scheduler,
     })
@@ -121,6 +124,7 @@ describe('WebPreviewDiskCache', () => {
     const intervalMs = 10_000
     const scheduler = new VirtualTimeScheduler(undefined, intervalMs)
     const { cache, root } = await createCache({
+      initialMaintenanceDelayMs: intervalMs,
       maintenanceIntervalMs: intervalMs,
       maintenanceScheduler: scheduler,
       ttlMs: 1_000,
@@ -137,5 +141,65 @@ describe('WebPreviewDiskCache', () => {
     scheduler.flush()
 
     await expect(fs.readdir(root)).resolves.toEqual([cachedFile])
+  })
+})
+
+describe('deferred cache maintenance', () => {
+  it('waits thirty seconds by default, deduplicates starts, and keeps periodic cleanup', async () => {
+    const scheduler = new VirtualTimeScheduler(undefined, 29_999)
+    const { cache } = await createCache({
+      maintenanceScheduler: scheduler,
+      maintenanceIntervalMs: 10_000,
+    })
+    const read = vi.spyOn(fs, 'readdir')
+    cache.startMaintenance()
+    cache.startMaintenance()
+    expect(read).not.toHaveBeenCalled()
+    scheduler.flush()
+    expect(read).not.toHaveBeenCalled()
+    scheduler.maxFrames = 30_000
+    scheduler.flush()
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(1))
+    await cache.runMaintenance()
+    await new Promise((resolve) => setImmediate(resolve))
+    scheduler.maxFrames = 40_000
+    scheduler.flush()
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(2))
+    cache.dispose()
+  })
+
+  it('cancels the pending native initial timer on disposal', async () => {
+    vi.useFakeTimers()
+    const { cache } = await createCache()
+    const read = vi.spyOn(fs, 'readdir')
+    try {
+      cache.startMaintenance()
+      cache.dispose()
+      cache.dispose()
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(read).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('logs a maintenance failure and retries on the next explicit cleanup', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-web-preview-'))
+    roots.push(root)
+    const warn = vi.fn()
+    const cache = new WebPreviewDiskCache({ root, logger: { warn } })
+    const read = vi
+      .spyOn(fs, 'readdir')
+      .mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'EACCES' }))
+    const first = cache.runMaintenance()
+    expect(cache.runMaintenance()).toBe(first)
+    await first
+    expect(warn).toHaveBeenCalledWith(
+      'web preview cache maintenance failed',
+      expect.objectContaining({ errorCode: 'EACCES' }),
+    )
+    await cache.runMaintenance()
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 })

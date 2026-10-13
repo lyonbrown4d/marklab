@@ -9,6 +9,7 @@ import type {
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 
 const editorBridge = vi.hoisted(() => ({
+  activePath: null as string | null,
   statusChange: null as ((status: MarkdownEditorStatus) => void) | null,
 }))
 
@@ -19,11 +20,15 @@ vi.mock('@/components/MarkdownEditor', () => ({
   >(({ activePath, onStatusChange }, ref) => {
     const editorRef = useRef<HTMLDivElement | null>(null)
     useEffect(() => {
+      editorBridge.activePath = activePath
       editorBridge.statusChange = onStatusChange ?? null
       return () => {
-        if (editorBridge.statusChange === onStatusChange) editorBridge.statusChange = null
+        if (editorBridge.statusChange === onStatusChange) {
+          editorBridge.activePath = null
+          editorBridge.statusChange = null
+        }
       }
-    }, [onStatusChange])
+    }, [activePath, onStatusChange])
     useImperativeHandle(ref, () => ({
       focus: () => editorRef.current?.focus(),
       getMarkdown: async () => '',
@@ -140,8 +145,27 @@ const renderFocusHandoff = () => {
   )
 }
 
+const waitForSelectedEditor = async () => {
+  await waitFor(() =>
+    expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
+  )
+  // The lazy editor can commit its DOM before its passive effect installs the
+  // selected document's callback. Sending readiness earlier can hit the old one.
+  await waitFor(() => {
+    expect(editorBridge.activePath).toBe('notes/two.md')
+    expect(editorBridge.statusChange).toBeTypeOf('function')
+  })
+}
+
+const reportEditorStatus = (status: MarkdownEditorStatus) => {
+  const callback = editorBridge.statusChange
+  if (!callback) throw new Error('Selected editor status callback is unavailable')
+  act(() => callback(status))
+}
+
 describe('AppWorkspacePanels editor focus handoff', () => {
   beforeEach(() => {
+    editorBridge.activePath = null
     editorBridge.statusChange = null
     usePreferencesStore.setState({ sidebarCollapsed: false })
   })
@@ -154,11 +178,9 @@ describe('AppWorkspacePanels editor focus handoff', () => {
 
     expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
     expect(document.activeElement).toBe(openButton)
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
-    )
+    await waitForSelectedEditor()
 
-    act(() => editorBridge.statusChange?.({ phase: 'ready' }))
+    reportEditorStatus({ phase: 'ready' })
 
     await waitFor(() => {
       expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true)
@@ -173,11 +195,9 @@ describe('AppWorkspacePanels editor focus handoff', () => {
     const openButton = screen.getByRole('button', { name: 'Open second file' })
     openButton.focus()
     fireEvent.click(openButton)
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
-    )
+    await waitForSelectedEditor()
 
-    act(() => editorBridge.statusChange?.({ message: 'load failed', phase: 'error' }))
+    reportEditorStatus({ message: 'load failed', phase: 'error' })
 
     expect(usePreferencesStore.getState().sidebarCollapsed).toBe(false)
     expect(document.activeElement).toBe(openButton)
@@ -186,14 +206,12 @@ describe('AppWorkspacePanels editor focus handoff', () => {
   it('does not steal focus when the user moves on before the editor is ready', async () => {
     renderFocusHandoff()
     fireEvent.click(screen.getByRole('button', { name: 'Open second file' }))
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Editor notes/two.md' })).toBeInTheDocument(),
-    )
+    await waitForSelectedEditor()
     const otherAction = screen.getByRole('button', { name: 'Other action' })
     fireEvent.pointerDown(otherAction)
     otherAction.focus()
 
-    act(() => editorBridge.statusChange?.({ phase: 'ready' }))
+    reportEditorStatus({ phase: 'ready' })
 
     await waitFor(() => expect(usePreferencesStore.getState().sidebarCollapsed).toBe(true))
     expect(document.activeElement).toBe(otherAction)

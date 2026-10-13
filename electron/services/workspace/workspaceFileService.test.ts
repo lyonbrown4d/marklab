@@ -292,6 +292,7 @@ describe('WorkspaceFileService root switching', () => {
     const { logger, root, workspace } = await createWorkspace(service)
     await settleWatcherTasks()
     const subscribe = vi.mocked(watcher.subscribe)
+    await vi.waitFor(() => expect(subscribe).toHaveBeenCalled())
     const subscribeCalls = subscribe.mock.calls.length
     logger.info.mockClear()
 

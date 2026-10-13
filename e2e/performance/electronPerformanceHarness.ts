@@ -116,7 +116,7 @@ const waitForLauncherPage = async (
 export const launchPerformanceSession = async (
   rendererUrl: string,
   graphicsMode: GraphicsMode,
-  options: { trustedCertificateSpki?: string } = {},
+  options: { trustedCertificateSpki?: string; mainEntryPath?: string } = {},
 ): Promise<ElectronPerformanceSession> => {
   fs.mkdirSync(runtimeParent, { recursive: true })
   const runtimeRoot = fs.mkdtempSync(path.join(runtimeParent, 'run-'))
@@ -151,7 +151,7 @@ export const launchPerformanceSession = async (
         : []),
       '--enable-precise-memory-info',
       `--user-data-dir=${isolation.userData}`,
-      electronMain,
+      options.mainEntryPath ?? electronMain,
     ],
     cwd: repoRoot,
     env,

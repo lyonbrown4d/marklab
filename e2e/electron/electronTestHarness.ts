@@ -41,18 +41,18 @@ export type ElectronTestSession = {
   testRunRoot: string
 }
 
-const resolveDistFile = (requestUrl: string | undefined) => {
+const resolveDistFile = (requestUrl: string | undefined, distRoot: string) => {
   const parsedUrl = new URL(requestUrl ?? '/', 'http://127.0.0.1')
   const pathname = parsedUrl.pathname === '/' ? '/index.html' : parsedUrl.pathname
-  const filePath = path.normalize(path.join(rendererDistRoot, decodeURIComponent(pathname)))
-  const relativePath = path.relative(rendererDistRoot, filePath)
+  const filePath = path.normalize(path.join(distRoot, decodeURIComponent(pathname)))
+  const relativePath = path.relative(distRoot, filePath)
   return relativePath.startsWith('..') || path.isAbsolute(relativePath) ? null : filePath
 }
 
-export const startRendererServer = () =>
+export const startRendererServer = (distRoot = rendererDistRoot) =>
   new Promise<{ server: http.Server; url: string }>((resolve, reject) => {
     const server = http.createServer((request, response) => {
-      const filePath = resolveDistFile(request.url)
+      const filePath = resolveDistFile(request.url, path.resolve(distRoot))
       if (!filePath || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         response.writeHead(404)
         response.end('Not found')

@@ -19,12 +19,6 @@ import {
 // eslint-disable-next-line no-restricted-imports -- Worker config helpers live at repository root before app aliases are available.
 import { plateMarkdownWorkerPlugins } from './vite.worker.ts'
 
-const isNodeModule = (id: string) => id.includes('/node_modules/')
-
-const includesAny = (id: string, values: string[]) => values.some((value) => id.includes(value))
-
-const packagePathMatches = (id: string, pattern: RegExp) => pattern.test(id)
-
 const isEnabled = (value: string | undefined) => value === '1' || value === 'true'
 
 const workerCharacterReferencePath = fileURLToPath(
@@ -244,60 +238,12 @@ export default defineConfig(({ command, mode }) => {
     build: {
       chunkSizeWarningLimit: isElectron ? 7000 : 500,
       reportCompressedSize: shouldReportCompressedSize,
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks(id) {
-            const normalizedId = id.replaceAll('\\', '/')
-            if (!isNodeModule(normalizedId)) return undefined
-            if (normalizedId.includes('/node_modules/lodash-es/')) return 'vendor-lodash'
-            if (includesAny(normalizedId, ['reactflow', '@xyflow/react', '@xyflow/system'])) {
-              return 'vendor-graph'
-            }
-            if (normalizedId.includes('lucide-react')) return 'vendor-icons'
-            if (
-              packagePathMatches(
-                normalizedId,
-                /\/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler|use-sync-external-store|zustand|@tanstack\/react-query|@tanstack\/query-core)\//,
-              )
-            ) {
-              return 'vendor-react'
-            }
-            if (
-              packagePathMatches(
-                normalizedId,
-                /\/node_modules\/(platejs|@platejs\/[^/]+|@udecode\/[^/]+|slate(?:-[^/]+)?)\//,
-              )
-            ) {
-              return 'vendor-plate'
-            }
-            if (includesAny(normalizedId, ['monaco-editor', '@monaco-editor'])) {
-              return 'vendor-monaco'
-            }
-            if (normalizedId.includes('@codemirror/language-data')) {
-              return 'vendor-codemirror-language-data'
-            }
-            const codemirrorLanguageMatch = normalizedId.match(/@codemirror\/(lang-[^/]+)/)
-            if (codemirrorLanguageMatch?.[1]) {
-              return `vendor-codemirror-${codemirrorLanguageMatch[1]}`
-            }
-            const lezerLanguageMatch = normalizedId.match(/@lezer\/([^/]+)/)
-            if (lezerLanguageMatch?.[1]) {
-              return `vendor-lezer-${lezerLanguageMatch[1]}`
-            }
-            if (includesAny(normalizedId, ['@codemirror', 'style-mod', 'w3c-keyname'])) {
-              return 'vendor-codemirror-core'
-            }
-            if (includesAny(normalizedId, ['katex', 'mhchem'])) return 'vendor-katex'
-            if (includesAny(normalizedId, ['d3-', '/d3/'])) return 'vendor-d3'
-            if (normalizedId.includes('elkjs')) return 'vendor-elk'
-            if (normalizedId.includes('cytoscape')) return 'vendor-cytoscape'
-            if (includesAny(normalizedId, ['dagre', 'graphlib', 'layout-base', 'cose-base'])) {
-              return 'vendor-graph-layout'
-            }
-            if (normalizedId.includes('mermaid')) return 'vendor-mermaid'
-            if (normalizedId.includes('@radix-ui')) return 'vendor-radix'
-            return undefined
-          },
+          // Let the import graph keep editor, diagram, and graph dependencies lazy.
+          // Named vendor groups absorb shared dependencies and can make React
+          // statically import the entire feature group during startup.
+          codeSplitting: true,
         },
       },
     },

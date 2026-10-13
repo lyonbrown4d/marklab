@@ -1,4 +1,3 @@
-import fs from 'node:fs'
 import path from 'node:path'
 import type { App, Shell } from 'electron'
 
@@ -30,16 +29,13 @@ import {
   type SearchIndexTaskState,
 } from '@electron/services/workspace/workspaceTaskUtils'
 import {
-  ensureDefaultFile,
   errorMessage,
   type WorkspaceKnownPaths,
   type WatchEventName,
 } from '@electron/services/workspace/workspaceUtils'
-import {
-  createWorkspacePathSnapshotCache,
-  type WorkspacePathSnapshotCache,
-} from '@electron/services/workspace/workspacePathSnapshotCache'
+import type { WorkspacePathSnapshotCache } from '@electron/services/workspace/workspacePathSnapshotCache'
 import { WorkspaceWatcher } from '@electron/services/workspace/workspaceWatcher'
+import { WorkspaceInitialization } from '@electron/services/workspace/workspaceInitialization'
 import { WorkspaceTreeProjection } from '@electron/services/workspace/workspaceTreeProjection'
 import type { WorkspaceTreeDeltaEvent } from '@/types/workspaceTree'
 
@@ -63,6 +59,7 @@ export class WorkspaceBase {
   protected pendingSnapshotWatcherRestart = false
   protected disposed = false
   protected state: FsStateData
+  private readonly initialization: WorkspaceInitialization
 
   constructor(
     protected readonly app: App,
@@ -76,9 +73,14 @@ export class WorkspaceBase {
       internalRoot,
       singleFile: null,
     }
-    fs.mkdirSync(internalRoot, { recursive: true })
-    ensureDefaultFile(internalRoot)
-    this.pathSnapshots = createWorkspacePathSnapshotCache(() => this.state, this.logger)
+    this.initialization = new WorkspaceInitialization(
+      this.state,
+      () => this.state,
+      () => this.disposed,
+      () => this.watcher.restart(),
+      this.logger,
+    )
+    this.pathSnapshots = this.initialization.pathSnapshots
     this.documents = new WorkspaceDocumentCatalog(
       () => this.pathSnapshots.get(),
       (entryPath) => this.readFileForAnalysis(entryPath),
@@ -110,7 +112,6 @@ export class WorkspaceBase {
       rootKind: this.state.rootKind,
       rootPath: this.state.rootPath,
     })
-    this.watcher.restart()
     app.on('will-quit', this.disposeOnWillQuit)
   }
 
@@ -212,6 +213,8 @@ export class WorkspaceBase {
     }
   }
 
+  protected ensureWorkspaceReady = (): Promise<void> => this.initialization.ensureReady()
+
   protected runSearchIndexTask<T>(work: () => Promise<T>, taskName = 'search-index'): Promise<T> {
     return runSearchIndexTaskWithStatus({
       getStatus: () => this.tasks.get('search-index')?.status,
@@ -263,10 +266,6 @@ export class WorkspaceBase {
     }
 
     this.tasks.set(id, { id, label, status, message })
-    this.emitBackgroundTasksChanged()
-  }
-
-  private emitBackgroundTasksChanged(): void {
     const tasks = [...this.tasks.values()].sort((left, right) => left.id.localeCompare(right.id))
     for (const listener of this.backgroundTasksListeners) listener(tasks)
   }

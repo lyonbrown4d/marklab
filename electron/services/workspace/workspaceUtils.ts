@@ -11,7 +11,6 @@ import {
   isDocxPath,
   isDrawioPath,
   isImagePath,
-  isMarkdownPath,
   isPdfPath,
   isVideoPath,
   isWorkspaceDocumentPath,
@@ -132,11 +131,6 @@ export const errorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error)
 }
 
-export const ensureDefaultFile = (root: string): void => {
-  const hasMarkdown = findMarkdownFile(root)
-  if (!hasMarkdown) fs.writeFileSync(path.join(root, 'Untitled.md'), '')
-}
-
 export const listWorkspaceEntries = async (state: FsStateData): Promise<FsEntry[]> => {
   if (state.rootKind === 'single') return singleFilePathSnapshot(state.singleFile).entries
   return (await walkWorkspace(state.rootPath, { entries: true, knownPaths: false })).entries
@@ -218,15 +212,4 @@ const walkWorkspace = async (
       assetPaths: assetPaths.sort((a, b) => a.localeCompare(b)),
     },
   }
-}
-
-const findMarkdownFile = (root: string): boolean => {
-  if (!fs.existsSync(root)) return false
-  for (const name of fs.readdirSync(root, { withFileTypes: true })) {
-    if (name.name.startsWith('.')) continue
-    const absolutePath = path.join(root, name.name)
-    if (name.isDirectory() && findMarkdownFile(absolutePath)) return true
-    if (name.isFile() && isMarkdownPath(name.name)) return true
-  }
-  return false
 }

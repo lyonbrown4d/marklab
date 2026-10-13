@@ -7,7 +7,8 @@ import {
   isSameInternalRoot,
   isSameSingleFileRoot,
 } from '@electron/services/workspace/workspaceRootState'
-import { ensureDefaultFile, stringArg } from '@electron/services/workspace/workspaceUtils'
+import { stringArg } from '@electron/services/workspace/workspaceUtils'
+import { ensureDefaultFile } from '@electron/services/workspace/workspaceDefaultRoot'
 
 export const selectWorkspaceRoot = async (
   state: FsStateData,
@@ -26,8 +27,7 @@ export const selectWorkspaceRoot = async (
       : { ...state, rootKind: 'external', rootPath: resolved, singleFile: null }
   }
   if (isSameInternalRoot(state)) return null
-  fs.mkdirSync(state.internalRoot, { recursive: true })
-  ensureDefaultFile(state.internalRoot)
+  await ensureDefaultFile(state.internalRoot)
   return { ...state, rootKind: 'internal', rootPath: state.internalRoot, singleFile: null }
 }
 

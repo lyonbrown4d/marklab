@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import { readAiEnvironment } from '@electron/services/ai/environment'
 import { getAiProviderAdapter } from '@electron/services/ai/providerAdapters'
+import type { AiProviderKind } from '@electron/services/ai/providerCatalog'
 import { AI_PROVIDER_KINDS, getAiProviderPolicy } from '@electron/services/ai/providerCatalog'
 
 describe('AI provider adapter registry', () => {
+  it('rejects unsupported runtime provider kinds', () => {
+    expect(() => getAiProviderAdapter('unsupported' as AiProviderKind)).toThrow(
+      'Unsupported AI provider kind',
+    )
+  })
+
   it('registers every supported provider with its environment credential source', () => {
     expect(AI_PROVIDER_KINDS.map((kind) => getAiProviderAdapter(kind).kind)).toEqual(
       AI_PROVIDER_KINDS,

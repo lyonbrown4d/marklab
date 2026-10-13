@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import type http from 'node:http'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 // eslint-disable-next-line no-restricted-imports -- Electron E2E helpers are colocated outside application aliases.
 import {
   closeElectronTestSession,
@@ -58,11 +61,21 @@ test.describe('Workspace map', () => {
 
   test.afterAll(async () => closeRendererServer(server))
 
-  test.beforeEach(async () => {
-    session = await launchElectronTestSession(rendererUrl)
+  const launchMapFixture = async (content = '') => {
+    // Geometry assertions require a single document. The default workspace now
+    // includes the bundled user guide, so use an explicit isolated fixture.
+    const testRunRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'marklab-map-'))
+    const workspace = path.join(testRunRoot, 'workspace')
+    fs.mkdirSync(workspace)
+    fs.writeFileSync(path.join(workspace, 'Untitled.md'), content)
+    session = await launchElectronTestSession(rendererUrl, {
+      testRunRoot,
+      openTargets: [workspace],
+    })
     page = session.page
     await page.setViewportSize({ width: 1280, height: 900 })
-  })
+    await expect(page.getByTestId('markdown-editor')).toHaveAttribute('data-state', 'ready')
+  }
 
   test.afterEach(async () => {
     await closeElectronTestSession(session)
@@ -70,6 +83,7 @@ test.describe('Workspace map', () => {
   })
 
   test('keeps the native editor stable, zoomable, responsive, and represented once', async () => {
+    await launchMapFixture()
     const tabsDock = page.getByTestId('tabs-dock')
     await expect(tabsDock).toBeVisible()
 
@@ -142,14 +156,14 @@ test.describe('Workspace map', () => {
   })
 
   test('keeps a long embedded document inside the React Flow node viewport', async () => {
-    const pageEditor = page.getByTestId('markdown-editor')
     const longDocument = Array.from(
       { length: 180 },
       (_, index) => `Workspace map viewport regression line ${index + 1}`,
     ).join('\n')
-    await pageEditor.click()
-    await page.keyboard.press('ControlOrMeta+A')
-    await page.keyboard.insertText(longDocument)
+    // This verifies long-document geometry; keyboard.insertText bypasses Plate's
+    // keydown-based block selection when Cmd+A selects an empty paragraph.
+    await launchMapFixture(longDocument)
+    const pageEditor = page.getByTestId('markdown-editor')
     await expect(pageEditor).toContainText('Workspace map viewport regression line 180')
 
     await page.getByRole('radio', { name: /^(Map|地图)$/i }).click()

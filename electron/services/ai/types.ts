@@ -36,7 +36,7 @@ export type AiProviderStoreContract = {
 }
 
 export type AiModelResolverContract = {
-  resolve: (provider: StoredAiProvider, apiKey: string) => LanguageModel
+  resolve: (provider: StoredAiProvider, apiKey: string) => LanguageModel | Promise<LanguageModel>
 }
 
 export type AiGenerateOptions = Pick<

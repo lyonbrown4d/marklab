@@ -1,0 +1,489 @@
+{
+  "baselineCommit": "d67d3ed",
+  "platform": "darwin",
+  "arch": "arm64",
+  "runtime": {
+    "before": {
+      "summary": {
+        "startupToEditorReadyMs": {
+          "coefficientOfVariation": 0.0068,
+          "firstMs": 2633.23,
+          "maxMs": 2660.55,
+          "meanMs": 2639.23,
+          "medianMs": 2640.83,
+          "minMs": 2608.72,
+          "p95Ms": 2660.55,
+          "sampleCount": 5,
+          "standardDeviationMs": 17.94
+        },
+        "coldWindowReadyMs": {
+          "coefficientOfVariation": 0.0109,
+          "firstMs": 1194,
+          "maxMs": 1229,
+          "meanMs": 1204.8,
+          "medianMs": 1199,
+          "minMs": 1194,
+          "p95Ms": 1229,
+          "sampleCount": 5,
+          "standardDeviationMs": 13.14
+        },
+        "pooledWindowReadyMs": {
+          "coefficientOfVariation": 0.0104,
+          "firstMs": 761,
+          "maxMs": 769,
+          "meanMs": 759.4,
+          "medianMs": 761,
+          "minMs": 745,
+          "p95Ms": 769,
+          "sampleCount": 5,
+          "standardDeviationMs": 7.86
+        }
+      },
+      "attemptCount": 6,
+      "failures": [],
+      "median": {
+        "startupToEditorReadyMs": 2640.83,
+        "coldWindowReadyMs": 1199,
+        "pooledWindowReadyMs": 761,
+        "startupResidentMiB": 1200.77,
+        "startupProcessCount": 6,
+        "withStandbyResidentMiB": 1923.08,
+        "withoutStandbyResidentMiB": 1669.02,
+        "releasedResidentMiB": 253.84,
+        "standbyRendererResidentMiB": 258.81,
+        "mainResidentMiB": 326.53,
+        "idleLoopP95Ms": 12.21,
+        "idleLoopMaxMs": 12.66,
+        "javascriptRequests": 124,
+        "removedStandby": 1
+      },
+      "samples": [
+        {
+          "startupToEditorReadyMs": 2633.231334,
+          "coldWindowReadyMs": 1194,
+          "pooledWindowReadyMs": 761,
+          "startupResidentMiB": 1188.41,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1923.08,
+          "withoutStandbyResidentMiB": 1672.38,
+          "releasedResidentMiB": 250.7,
+          "standbyRendererResidentMiB": 255.7,
+          "mainResidentMiB": 326.53,
+          "idleLoopP95Ms": 12.238847,
+          "idleLoopMaxMs": 12.779519,
+          "javascriptRequests": 124,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 2608.715959000001,
+          "coldWindowReadyMs": 1199,
+          "pooledWindowReadyMs": 769,
+          "startupResidentMiB": 1209.84,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1925.14,
+          "withoutStandbyResidentMiB": 1670.67,
+          "releasedResidentMiB": 254.47,
+          "standbyRendererResidentMiB": 259.39,
+          "mainResidentMiB": 329.14,
+          "idleLoopP95Ms": 12.189695,
+          "idleLoopMaxMs": 12.656639,
+          "javascriptRequests": 124,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 2660.550500000001,
+          "coldWindowReadyMs": 1229,
+          "pooledWindowReadyMs": 745,
+          "startupResidentMiB": 1188.41,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1918.56,
+          "withoutStandbyResidentMiB": 1665.47,
+          "releasedResidentMiB": 253.09,
+          "standbyRendererResidentMiB": 253.25,
+          "mainResidentMiB": 324.83,
+          "idleLoopP95Ms": 12.214271,
+          "idleLoopMaxMs": 12.574719,
+          "javascriptRequests": 124,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 2640.8282090000066,
+          "coldWindowReadyMs": 1208,
+          "pooledWindowReadyMs": 762,
+          "startupResidentMiB": 1200.77,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1925.48,
+          "withoutStandbyResidentMiB": 1669.02,
+          "releasedResidentMiB": 256.47,
+          "standbyRendererResidentMiB": 261.25,
+          "mainResidentMiB": 327.61,
+          "idleLoopP95Ms": 12.189695,
+          "idleLoopMaxMs": 13.090815,
+          "javascriptRequests": 124,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 2652.800500000005,
+          "coldWindowReadyMs": 1194,
+          "pooledWindowReadyMs": 760,
+          "startupResidentMiB": 1201.33,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1909.72,
+          "withoutStandbyResidentMiB": 1655.88,
+          "releasedResidentMiB": 253.84,
+          "standbyRendererResidentMiB": 258.81,
+          "mainResidentMiB": 325.13,
+          "idleLoopP95Ms": 12.206079,
+          "idleLoopMaxMs": 12.345343,
+          "javascriptRequests": 124,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        }
+      ]
+    },
+    "after": {
+      "summary": {
+        "startupToEditorReadyMs": {
+          "coefficientOfVariation": 0.0946,
+          "firstMs": 1828.62,
+          "maxMs": 2273.1,
+          "meanMs": 1915.61,
+          "medianMs": 1828.62,
+          "minMs": 1796.44,
+          "p95Ms": 2273.1,
+          "sampleCount": 5,
+          "standardDeviationMs": 181.24
+        },
+        "coldWindowReadyMs": {
+          "coefficientOfVariation": 0.0223,
+          "firstMs": 994,
+          "maxMs": 1013,
+          "meanMs": 992.4,
+          "medianMs": 994,
+          "minMs": 951,
+          "p95Ms": 1013,
+          "sampleCount": 5,
+          "standardDeviationMs": 22.15
+        },
+        "pooledWindowReadyMs": {
+          "coefficientOfVariation": 0.0214,
+          "firstMs": 789,
+          "maxMs": 789,
+          "meanMs": 768.6,
+          "medianMs": 765,
+          "minMs": 747,
+          "p95Ms": 789,
+          "sampleCount": 5,
+          "standardDeviationMs": 16.48
+        }
+      },
+      "attemptCount": 6,
+      "failures": [],
+      "median": {
+        "startupToEditorReadyMs": 1828.62,
+        "coldWindowReadyMs": 994,
+        "pooledWindowReadyMs": 765,
+        "startupResidentMiB": 964.61,
+        "startupProcessCount": 6,
+        "withStandbyResidentMiB": 1543.89,
+        "withoutStandbyResidentMiB": 1410.48,
+        "releasedResidentMiB": 133.5,
+        "standbyRendererResidentMiB": 138.08,
+        "mainResidentMiB": 310.92,
+        "idleLoopP95Ms": 12.19,
+        "idleLoopMaxMs": 13.03,
+        "javascriptRequests": 170,
+        "removedStandby": 1
+      },
+      "samples": [
+        {
+          "startupToEditorReadyMs": 1828.6232909999999,
+          "coldWindowReadyMs": 994,
+          "pooledWindowReadyMs": 789,
+          "startupResidentMiB": 961.34,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1540.25,
+          "withoutStandbyResidentMiB": 1406.14,
+          "releasedResidentMiB": 134.11,
+          "standbyRendererResidentMiB": 138.47,
+          "mainResidentMiB": 310.88,
+          "idleLoopP95Ms": 12.181503,
+          "idleLoopMaxMs": 13.033471,
+          "javascriptRequests": 170,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 1880.1099590000013,
+          "coldWindowReadyMs": 994,
+          "pooledWindowReadyMs": 756,
+          "startupResidentMiB": 971.06,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1550.08,
+          "withoutStandbyResidentMiB": 1416.86,
+          "releasedResidentMiB": 133.22,
+          "standbyRendererResidentMiB": 137.75,
+          "mainResidentMiB": 311.23,
+          "idleLoopP95Ms": 12.206079,
+          "idleLoopMaxMs": 13.475839,
+          "javascriptRequests": 170,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 1796.4358750000029,
+          "coldWindowReadyMs": 1010,
+          "pooledWindowReadyMs": 765,
+          "startupResidentMiB": 964.61,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1543.89,
+          "withoutStandbyResidentMiB": 1410.48,
+          "releasedResidentMiB": 133.41,
+          "standbyRendererResidentMiB": 137.88,
+          "mainResidentMiB": 310.92,
+          "idleLoopP95Ms": 12.189695,
+          "idleLoopMaxMs": 12.328959,
+          "javascriptRequests": 170,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 1799.7852920000005,
+          "coldWindowReadyMs": 1013,
+          "pooledWindowReadyMs": 786,
+          "startupResidentMiB": 960.11,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1541.61,
+          "withoutStandbyResidentMiB": 1407.31,
+          "releasedResidentMiB": 134.3,
+          "standbyRendererResidentMiB": 138.78,
+          "mainResidentMiB": 310.36,
+          "idleLoopP95Ms": 12.189695,
+          "idleLoopMaxMs": 12.353535,
+          "javascriptRequests": 170,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        },
+        {
+          "startupToEditorReadyMs": 2273.096166000003,
+          "coldWindowReadyMs": 951,
+          "pooledWindowReadyMs": 747,
+          "startupResidentMiB": 985.39,
+          "startupProcessCount": 6,
+          "withStandbyResidentMiB": 1548.84,
+          "withoutStandbyResidentMiB": 1415.34,
+          "releasedResidentMiB": 133.5,
+          "standbyRendererResidentMiB": 138.08,
+          "mainResidentMiB": 312.25,
+          "idleLoopP95Ms": 12.279807,
+          "idleLoopMaxMs": 49.905663,
+          "javascriptRequests": 170,
+          "removedStandby": 1,
+          "poolEligibilityControlled": true
+        }
+      ]
+    }
+  },
+  "bundles": {
+    "before": {
+      "renderer": {
+        "bytes": 9620043,
+        "files": [
+          "index-BiQtcf7x.js",
+          "rolldown-runtime-Dd_uD5pT.js",
+          "vendor-graph-CfpaRJFx.js",
+          "vendor-d3-CPqVvhhZ.js",
+          "vendor-react-DaILnJCg.js",
+          "vendor-graph-layout-Bst5aGZ_.js",
+          "vendor-plate-C60vN5cV.js",
+          "vendor-mermaid-CZDwWk9O.js",
+          "vendor-cytoscape-Da1CfGgS.js",
+          "vendor-elk-Cx7XLAB_.js",
+          "vendor-codemirror-core-DffQr-8K.js",
+          "vendor-lezer-lr-Qx7Gja0j.js",
+          "vendor-katex-C9D6cqU4.js",
+          "electron-B2IFzJvl.js",
+          "rendererDiagnostics-DSHq5q2H.js",
+          "environment-B5Id-Utz.js",
+          "rendererLifecycle-DrvOh9AO.js",
+          "events-BarFlUlz.js",
+          "ipc-CC8R8nox.js",
+          "appEvents-1MXPZl9A.js",
+          "mitt-BvUamYTi.js",
+          "button-PdC31_E2.js",
+          "dist-CzQc05mA.js",
+          "dist-DuLxksy6.js",
+          "card-D9ZWYFTo.js",
+          "skeleton-Dzi_mRUm.js",
+          "spinner-D8bjteHz.js",
+          "vendor-icons-DteCFAAs.js"
+        ]
+      },
+      "main": {
+        "bytes": 5260963,
+        "files": [
+          "main.js",
+          "rolldown-runtime-DGmbU8II.js",
+          "main-knowledge-engine-9D9KPfU4.js",
+          "main-glob-CtfcGD0m.js",
+          "main-ai-C-YkMPRX.js",
+          "main-markdown-html-CLxqMRUW.js",
+          "main-di-BaW1K7wB.js",
+          "iso-B8z_XuYW.js",
+          "main-electron-runtime-CQ6kDco6.js",
+          "main-markdown-language-D6Pu40VC.js",
+          "main-http-CDdOVylZ.js",
+          "main-rxjs-CoSHI8Mt.js",
+          "main-git-BMx7u75A.js",
+          "from-D-qH_xI4.js"
+        ]
+      }
+    },
+    "after": {
+      "renderer": {
+        "bytes": 273957,
+        "files": [
+          "index-WvERE3FM.js",
+          "rolldown-runtime-Dd_uD5pT.js",
+          "react-CQOZoUwg.js",
+          "react-dom-pEVw9mjF.js",
+          "preload-helper-CRzLMJPS.js",
+          "electron-B2IFzJvl.js",
+          "rendererDiagnostics-DSHq5q2H.js",
+          "environment-B5Id-Utz.js",
+          "rendererLifecycle-DrvOh9AO.js",
+          "events-BarFlUlz.js",
+          "ipc-CC8R8nox.js",
+          "appEvents-1MXPZl9A.js",
+          "mitt-BvUamYTi.js",
+          "jsx-runtime-DREnUpxT.js",
+          "button-D1uxfeWb.js",
+          "dist-BTDqmYkl.js",
+          "createLucideIcon-BGl874yk.js",
+          "dist-BSdTw7T3.js",
+          "card-B9reTLq1.js",
+          "skeleton-j08iEWr2.js",
+          "spinner-ntsCd0b_.js",
+          "loader-circle-CQqRGX0c.js"
+        ]
+      },
+      "main": {
+        "bytes": 4320194,
+        "files": [
+          "main.js",
+          "rolldown-runtime-DGmbU8II.js",
+          "main-knowledge-engine-DihgjrkY.js",
+          "main-glob-CtfcGD0m.js",
+          "main-markdown-html-ZO6mqo5p.js",
+          "main-di-BaW1K7wB.js",
+          "iso-DYkILSMa.js",
+          "main-electron-runtime-CQ6kDco6.js",
+          "main-markdown-language-CruXN3C7.js",
+          "main-http-CDdOVylZ.js",
+          "main-rxjs-CoSHI8Mt.js",
+          "main-git-BMx7u75A.js",
+          "from-D-qH_xI4.js"
+        ]
+      }
+    }
+  },
+  "filesystem": {
+    "fixture": {
+      "visibleDirectories": 800,
+      "nonMarkdownFiles": 12800
+    },
+    "defaultRoot": {
+      "before": {
+        "durationMs": 38.95229100000006,
+        "heartbeatDelayMs": 39.81962500000009,
+        "maxEventLoopDelayMs": 40.206335
+      },
+      "after": {
+        "durationMs": 74.43183299999987,
+        "heartbeatDelayMs": 0.33866600000010294,
+        "maxEventLoopDelayMs": 2.559999
+      }
+    },
+    "watcher": {
+      "before": {
+        "durationMs": 175.48070800000005,
+        "heartbeatDelayMs": 0.3232499999999163,
+        "maxEventLoopDelayMs": 21.577727,
+        "deliveredCreates": 1024
+      },
+      "after": {
+        "durationMs": 204.92258300000026,
+        "heartbeatDelayMs": 0.4952920000000631,
+        "maxEventLoopDelayMs": 23.511039,
+        "deliveredCreates": 1024
+      }
+    }
+  },
+  "cache": {
+    "fixture": {
+      "fileCount": 1000,
+      "bytesPerFile": 32,
+      "ageHours": 48
+    },
+    "methodology": "Compare HEAD and working source transpiled to isolated ESM modules, using independent temporary directories of identical expired jpg files. Count actual fs.readdir/stat/rm calls from startMaintenance through 200ms; then await explicit runMaintenance and verify identical cleanup. Source module imports/fixture setup excluded from timing. Dispose scheduled timers and delete every fixture. Single run reports service I/O scheduling, not whole-app startup performance.",
+    "measurements": [
+      {
+        "version": "before",
+        "initial": {
+          "elapsedMs": 200.22412500000019,
+          "ioCalls": {
+            "readdir": 1,
+            "stat": 1000,
+            "rm": 464
+          },
+          "remainingExpiredFiles": 536
+        },
+        "explicit": {
+          "elapsedMs": 245.93324999999982,
+          "ioCallsTotal": {
+            "readdir": 1,
+            "stat": 1000,
+            "rm": 1000
+          },
+          "remainingExpiredFiles": 0
+        }
+      },
+      {
+        "version": "after",
+        "initial": {
+          "elapsedMs": 201.16095800000016,
+          "ioCalls": {
+            "readdir": 0,
+            "stat": 0,
+            "rm": 0
+          },
+          "remainingExpiredFiles": 1000
+        },
+        "explicit": {
+          "elapsedMs": 371.23016600000005,
+          "ioCallsTotal": {
+            "readdir": 1,
+            "stat": 1000,
+            "rm": 1000
+          },
+          "remainingExpiredFiles": 0
+        }
+      }
+    ]
+  },
+  "verification": {
+    "unitTestFiles": 843,
+    "unitTests": 4492,
+    "nativeElectronUniqueScenarios": 31,
+    "criticalCoverage": {
+      "statements": 97.69,
+      "branches": 90.73,
+      "functions": 98.98,
+      "lines": 98.76
+    }
+  }
+}

@@ -116,7 +116,12 @@ test.describe('Workspace product readiness', () => {
       const canvas = page.getByLabel(/Workspace map canvas|工作区地图画布/i)
       await expect(canvas).toBeVisible({ timeout: 60_000 })
       const nodes = canvas.locator('.react-flow__node')
-      await expect.poll(() => nodes.count(), { timeout: 60_000 }).toBeGreaterThan(10)
+      // The main canvas virtualizes offscreen nodes. The minimap represents the
+      // full graph, so count its nodes rather than requiring 11 visible cards.
+      await expect
+        .poll(() => canvas.locator('.react-flow__minimap-node').count(), { timeout: 60_000 })
+        .toBeGreaterThan(10)
+      await expect(nodes.first()).toBeVisible()
       await expect(page.getByRole('button', { name: /Overview mode|总览/i })).toHaveAttribute(
         'aria-pressed',
         'true',
@@ -183,7 +188,14 @@ test.describe('Workspace product readiness', () => {
         await page.getByRole('option', { name: /pipeline\.yml/i }).click()
         const sourceNode = canvas.getByRole('group', { name: /^pipeline\.yml$/i }).first()
         await expect(sourceNode).toBeVisible()
-        await sourceNode.getByRole('button', { name: /Expand node content|展开节点内容/i }).click()
+        // Search navigation can already expand the focused resource node.
+        const contentToggle = sourceNode.getByRole('button', {
+          name: /(?:Expand|Collapse) node content|(?:展开|收起)节点内容/i,
+        })
+        await expect(contentToggle).toBeVisible()
+        if ((await contentToggle.getAttribute('aria-expanded')) === 'false') {
+          await contentToggle.click()
+        }
         const sourcePreview = sourceNode.getByRole('article', { name: /pipeline\.yml/i })
         await expect(sourcePreview).toBeVisible()
         await expect(sourcePreview.getByText('YAML', { exact: true })).toBeVisible()

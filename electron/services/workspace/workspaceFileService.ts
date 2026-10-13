@@ -27,13 +27,15 @@ import {
 } from '@electron/services/workspace/workspaceRootSelection'
 import {
   trySidecarPathMutation,
-  tryPrewarmSidecarFileAccess,
   trySidecarWriteFile,
 } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
-import { WorkspaceAccessPrewarmer } from '@electron/services/workspace/workspaceAccessPrewarmer'
+import {
+  createWorkspaceFileAccessPrewarmer,
+  type WorkspaceAccessPrewarmer,
+} from '@electron/services/workspace/workspaceAccessPrewarmer'
 import { createWorkspaceBufferUpdateHandler } from '@electron/services/workspace/workspaceBufferUpdateHandler'
 import { openWorkspacePath } from '@electron/services/workspace/workspaceSystemPath'
 import { WorkspaceFileReader } from '@electron/services/workspace/workspaceFileReader'
@@ -69,20 +71,12 @@ export class WorkspaceFileService extends WorkspaceMutationService {
       logger: this.logger,
       resolvePath: (relativePath) => this.resolve(relativePath),
     })
-    this.accessPrewarmer = new WorkspaceAccessPrewarmer({
-      logger: this.logger,
-      prepare: async () => {
-        await Promise.all([
-          this.pathSnapshots.get(),
-          tryPrewarmSidecarFileAccess({
-            knowledgeEngineService: this.knowledgeEngineService,
-            logger: this.logger,
-            state: this.state,
-          }),
-        ])
-      },
-      rootKind: () => this.state.rootKind,
-    })
+    this.accessPrewarmer = createWorkspaceFileAccessPrewarmer(
+      () => this.state,
+      this.pathSnapshots,
+      this.logger,
+      this.knowledgeEngineService,
+    )
     this.accessPrewarmer.schedule()
   }
 
@@ -110,22 +104,27 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   ): Promise<FsRootInfo> {
     return this.rootTransitions.run(options, async () => {
       const nextState = await select()
+      if (!nextState) await this.ensureWorkspaceReady()
       options.signal?.throwIfAborted()
       return nextState ? this.commitWorkspaceState(nextState, options) : this.rootInfo()
     })
   }
 
-  readonly openFile = (value: unknown): Promise<string> =>
-    this.fileReader.open(stringArg(value, 'path'))
-
-  override async readFile(value: unknown): Promise<string> {
-    return this.fileReader.open(stringArg(value, 'path'))
+  readonly openFile = async (value: unknown): Promise<string> => {
+    const relativePath = stringArg(value, 'path')
+    await this.ensureWorkspaceReady()
+    return this.fileReader.open(relativePath)
   }
 
-  protected override readonly readFileForAnalysis = (relativePath: string): Promise<string> =>
-    this.fileReader.readForAnalysis(relativePath)
+  override readFile = this.openFile
 
-  readTextPreview(value: unknown): Promise<WorkspaceTextPreview> {
+  protected override readonly readFileForAnalysis = async (relativePath: string) => {
+    await this.ensureWorkspaceReady()
+    return this.fileReader.readForAnalysis(relativePath)
+  }
+
+  async readTextPreview(value: unknown): Promise<WorkspaceTextPreview> {
+    await this.ensureWorkspaceReady()
     return readWorkspaceTextPreview(this.state, value)
   }
 
@@ -187,7 +186,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   }
 
   async createFile(value: unknown): Promise<void> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     await createWorkspaceFileEntry({
       hasDirtyBuffer: (relativePath) => this.buffers.getStatus(relativePath)?.dirty === true,
       knowledgeEngineService: this.knowledgeEngineService,
@@ -202,7 +201,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     this.tree.invalidateQueries()
   }
   async createDir(value: unknown): Promise<void> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     const relativePath = stringArg(value, 'path')
     const sidecarMutation = await trySidecarPathMutation({
       knowledgeEngineService: this.knowledgeEngineService,
@@ -221,7 +220,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     this.logger.info('folder created', { path: relativePath })
   }
   async renamePath(value: unknown): Promise<void> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     const from = stringArg(value, 'from')
     const to = stringArg(value, 'to')
     const workspaceIndex = await getOptionalWorkspaceIndex(this)
@@ -259,7 +258,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   }
 
   async deletePath(value: unknown): Promise<void> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     const relativePath = stringArg(value, 'path')
     const sidecarMutation = await trySidecarPathMutation({
       knowledgeEngineService: this.knowledgeEngineService,
@@ -278,6 +277,7 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     this.logger.info('path deleted', { path: relativePath, kind })
   }
   async pathMetadata(value: unknown): Promise<FsPathMetadataResult> {
+    await this.ensureWorkspaceReady()
     const relativePath = stringArg(value, 'path')
     const metadata = await readWorkspacePathMetadata({
       absolutePath: this.resolve(relativePath),
@@ -289,8 +289,10 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     return toPathMetadataResult(metadata)
   }
 
-  openPathInSystem = (value: unknown) =>
-    openWorkspacePath(this.state, this.shell, this.logger, value)
+  openPathInSystem = async (value: unknown) => {
+    await this.ensureWorkspaceReady()
+    return openWorkspacePath(this.state, this.shell, this.logger, value)
+  }
 
   private async commitWorkspaceState(
     nextState: FsStateData,

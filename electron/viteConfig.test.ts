@@ -16,17 +16,6 @@ describe('Vite production configuration', () => {
     expect(vite).not.toContain("mode === 'compressed'")
   })
 
-  it('keeps React separate from the coherent Plate editor chunk', async () => {
-    const vite = await fs.readFile('vite.config.ts', 'utf8')
-    const reactChunkRule = vite.indexOf("return 'vendor-react'")
-    const plateChunkRule = vite.indexOf("return 'vendor-plate'")
-
-    expect(reactChunkRule).toBeGreaterThan(-1)
-    expect(plateChunkRule).toBeGreaterThan(-1)
-    expect(reactChunkRule).toBeLessThan(plateChunkRule)
-    expect(vite).not.toMatch(/Milkdown|milkdown|ProseMirror|prosemirror/)
-  })
-
   it('prebundles the Plate entry points used by the editor without legacy editor entries', async () => {
     const development = await fs.readFile('vite.development.ts', 'utf8')
 

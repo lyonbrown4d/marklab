@@ -1,4 +1,3 @@
-import { generateText as vercelGenerateText } from 'ai'
 import pLimit, { type LimitFunction } from 'p-limit'
 
 import { readAiEnvironment } from '@electron/services/ai/environment'
@@ -108,7 +107,8 @@ export class AiService implements AiServiceContract {
     const apiKey = policy.resolveApiKey(provider, configuredApiKey)
     if (!apiKey) throw new Error('AI provider API key is not configured')
     try {
-      const model = this.options.resolver.resolve(provider, apiKey)
+      const model = await this.options.resolver.resolve(provider, apiKey)
+      abortSignal?.throwIfAborted()
       const result = await this.generate({
         model,
         prompt: request.prompt,
@@ -158,8 +158,16 @@ export class AiService implements AiServiceContract {
   }
 }
 
+let generationSdk: Promise<typeof import('ai')> | undefined
+
 const generateWithVercelAiSdk: AiGenerateAdapter = async (options: AiGenerateOptions) => {
-  const result = await vercelGenerateText(options)
+  generationSdk ??= import('ai').catch((error: unknown) => {
+    generationSdk = undefined
+    throw error
+  })
+  const { generateText } = await generationSdk
+  options.abortSignal?.throwIfAborted()
+  const result = await generateText(options)
   return {
     text: result.text,
     finishReason: result.finishReason,

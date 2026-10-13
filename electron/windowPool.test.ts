@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 
 import type { BrowserWindow } from 'electron'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createMarklabWindowPool } from '@electron/windowPool'
 
@@ -63,6 +63,38 @@ const createHarness = (memoryHeadroom = true, visible = false) => {
 }
 
 describe('MarklabWindowPool', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('releases an unused standby after two minutes without touching active windows', async () => {
+    vi.useFakeTimers()
+    const { pool, createMainWindow } = createHarness()
+    const active = await pool.acquireMainWindow()
+    await pool.prewarmMainWindow()
+    const standby = createMainWindow.mock.results[1].value
+    vi.advanceTimersByTime(119_999)
+    expect(standby.isDestroyed()).toBe(false)
+    vi.advanceTimersByTime(1)
+    expect(standby.isDestroyed()).toBe(true)
+    expect(active.window.isDestroyed()).toBe(false)
+    expect(pool.stats()).toMatchObject({ activeMainWindows: 1, idleMainWindows: 0 })
+    expect((await pool.acquireMainWindow()).source).toBe('cold')
+    await pool.dispose()
+  })
+
+  it('cancels standby expiry when acquired and clears pending expiry on disposal', async () => {
+    vi.useFakeTimers()
+    const { pool } = createHarness()
+    await pool.acquireMainWindow()
+    await pool.prewarmMainWindow()
+    vi.advanceTimersByTime(119_000)
+    const active = await pool.acquireMainWindow()
+    expect(active.source).toBe('pool')
+    vi.advanceTimersByTime(1_000)
+    expect(active.window.isDestroyed()).toBe(false)
+    await pool.prewarmMainWindow()
+    await pool.dispose()
+    expect(vi.getTimerCount()).toBe(0)
+  })
   it('prewarms one standby renderer without loading the opening document', async () => {
     const { createMainWindow, loadMainWindow, loadOpeningWindow, pool } = createHarness()
 

@@ -9,6 +9,7 @@ import {
   loadWindowOpeningShell as loadDefaultOpeningWindow,
 } from '@electron/window'
 import { createWindowPoolReadiness } from '@electron/windowPoolReadiness'
+import { createWindowPoolIdleRetention } from '@electron/windowPoolIdleRetention'
 
 const DEFAULT_MAX_IDLE_MAIN_WINDOWS = 1
 const DEFAULT_MINIMUM_FREE_MEMORY_BYTES = 512 * 1024 * 1024
@@ -52,6 +53,7 @@ export type MarklabWindowPool = {
 type MarklabWindowPoolOptions = {
   createMainWindow?: (logger: Logger) => BrowserWindow
   hasMemoryHeadroom?: () => boolean
+  idleWindowTtlMs?: number
   loadMainWindow?: (window: BrowserWindow, options?: { standby?: boolean }) => Promise<void>
   loadOpeningWindow?: (window: BrowserWindow) => Promise<void>
   maxIdleMainWindows?: number
@@ -87,8 +89,13 @@ export const createMarklabWindowPool = (
   let openingShellLoads = 0
   let poolHits = 0
   let disposed = false
+  const idleRetention = createWindowPoolIdleRetention((window) => {
+    idleMainWindows = idleMainWindows.filter((candidate) => candidate !== window)
+    destroyWindow(window)
+  }, options.idleWindowTtlMs)
 
   const destroyWindow = (window: BrowserWindow): void => {
+    idleRetention.cancel(window)
     rendererReadiness.cancel(window)
     if (!window.isDestroyed()) window.destroy()
   }
@@ -114,6 +121,7 @@ export const createMarklabWindowPool = (
   }
 
   const forgetWindow = (window: BrowserWindow): void => {
+    idleRetention.cancel(window)
     rendererReadiness.cancel(window)
     activeMainWindows.delete(window)
     idleMainWindows = idleMainWindows.filter((candidate) => candidate !== window)
@@ -178,6 +186,7 @@ export const createMarklabWindowPool = (
           return
         }
         idleMainWindows.push(window)
+        idleRetention.retain(window)
         logger.debug('prewarmed standby main renderer', stats())
       } catch (error) {
         const cancelled = disposed || prewarmWindow !== window || !isUsableWindow(window)
@@ -209,6 +218,7 @@ export const createMarklabWindowPool = (
     pruneWindows()
     const pooledWindow = idleMainWindows.shift()
     if (pooledWindow) {
+      idleRetention.cancel(pooledWindow)
       activeMainWindows.add(pooledWindow)
       poolHits += 1
       return {

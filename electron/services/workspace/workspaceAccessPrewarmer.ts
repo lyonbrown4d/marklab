@@ -1,5 +1,9 @@
 import type { Logger } from '@electron/services/logger'
 import { scheduleWorkspacePrewarm } from '@electron/services/workspace/workspacePrewarmScheduler'
+import type { FsStateData } from '@electron/services/workspace/types'
+import type { WorkspacePathSnapshotCache } from '@electron/services/workspace/workspacePathSnapshotCache'
+import type { KnowledgeEngineService } from '@electron/services/knowledgeEngine/service'
+import { tryPrewarmSidecarFileAccess } from '@electron/services/workspace/workspaceSidecarFileBridge'
 
 type WorkspaceAccessPrewarmerOptions = {
   delayMs?: number
@@ -9,6 +13,23 @@ type WorkspaceAccessPrewarmerOptions = {
 }
 
 const DEFAULT_PREWARM_DELAY_MS = 75
+
+export const createWorkspaceFileAccessPrewarmer = (
+  getState: () => FsStateData,
+  snapshots: WorkspacePathSnapshotCache,
+  logger: Logger,
+  knowledgeEngineService?: KnowledgeEngineService,
+): WorkspaceAccessPrewarmer =>
+  new WorkspaceAccessPrewarmer({
+    logger,
+    prepare: async () => {
+      await Promise.all([
+        snapshots.get(),
+        tryPrewarmSidecarFileAccess({ knowledgeEngineService, logger, state: getState() }),
+      ])
+    },
+    rootKind: () => getState().rootKind,
+  })
 
 export class WorkspaceAccessPrewarmer {
   private disposed = false

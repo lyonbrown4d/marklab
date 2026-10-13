@@ -50,6 +50,46 @@ const createLogger = () => {
 }
 
 describe('MarklabWindowPool failure recovery', () => {
+  it('rejects retry, activation and readiness for a closed acquired window', async () => {
+    const window = createWindow(1)
+    const loadMainWindow = vi.fn(async () => undefined)
+    const loadOpeningWindow = vi.fn(async () => undefined)
+    const pool = createMarklabWindowPool(createLogger(), {
+      createMainWindow: () => window,
+      hasMemoryHeadroom: () => true,
+      loadMainWindow,
+      loadOpeningWindow,
+    })
+    const acquisition = await pool.acquireMainWindow()
+    await pool.activateMainWindow(acquisition)
+    await pool.restoreOpeningWindow(acquisition)
+    expect(loadMainWindow).toHaveBeenCalledWith(window, undefined)
+    expect(loadOpeningWindow).toHaveBeenCalledTimes(2)
+    window.destroy()
+    await expect(pool.activateMainWindow(acquisition)).rejects.toThrow('unavailable')
+    await expect(pool.restoreOpeningWindow(acquisition)).rejects.toThrow('unavailable')
+    await expect(pool.waitForRendererInteractive(acquisition)).rejects.toThrow('unavailable')
+    await pool.dispose()
+    await pool.dispose()
+    await pool.prewarmMainWindow()
+    await expect(pool.acquireMainWindow()).rejects.toThrow('disposed')
+  })
+
+  it('rejects activation when its web contents have crashed without a window close event', async () => {
+    const window = createWindow(1)
+    const pool = createMarklabWindowPool(createLogger(), {
+      createMainWindow: () => window,
+      hasMemoryHeadroom: () => true,
+      loadMainWindow: vi.fn(async () => undefined),
+      loadOpeningWindow: vi.fn(async () => undefined),
+    })
+    const acquisition = await pool.acquireMainWindow()
+    window.webContents.isDestroyed = () => true
+    await expect(pool.activateMainWindow(acquisition)).rejects.toThrow('unavailable')
+    await expect(pool.waitForRendererInteractive(acquisition)).rejects.toThrow('unavailable')
+    await pool.dispose()
+  })
+
   it('falls back to a cold window when an in-flight prewarm rejects', async () => {
     const damaged = createWindow(1)
     const cold = createWindow(2)

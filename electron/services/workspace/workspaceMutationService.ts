@@ -3,12 +3,17 @@ import { stringArg } from '@electron/services/workspace/workspaceUtils'
 import { runWorkspacePathMutation } from '@electron/services/workspace/workspaceWriteCoordinator'
 
 export class WorkspaceMutationService extends WorkspaceBase {
+  protected readonly ensureWritableWorkspace = (): Promise<void> => {
+    this.ensureWorkspaceMode()
+    return this.ensureWorkspaceReady()
+  }
+
   writeCoordinatorOwnerId(): string {
     return this.buffers.getWriteOwnerId()
   }
 
   async runExternalPathMutation<T>(relativePaths: string[], work: () => Promise<T>): Promise<T> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     const paths = uniqueRelativePaths(relativePaths)
     if (paths.length === 0) throw new Error('External workspace mutation requires a path')
     const absolutePaths = paths.map((relativePath) => this.resolve(relativePath))
@@ -21,7 +26,7 @@ export class WorkspaceMutationService extends WorkspaceBase {
   }
 
   async runExternalWorkspaceMutation<T>(work: () => Promise<T>): Promise<T> {
-    this.ensureWorkspaceMode()
+    await this.ensureWritableWorkspace()
     return await runWorkspacePathMutation({
       ownerId: this.writeCoordinatorOwnerId(),
       paths: [{ absolutePath: this.state.rootPath, includeDescendants: true }],

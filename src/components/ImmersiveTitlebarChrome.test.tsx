@@ -1,4 +1,4 @@
-import { fireEvent, render as renderTestingLibrary, screen } from '@testing-library/react'
+import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -302,10 +302,15 @@ describe('ImmersiveTitlebarChrome', () => {
     expect(screen.queryByRole('menuitem', { name: '工作区历史' })).not.toBeInTheDocument()
 
     await userEvent.click(current)
-    expect(props.onOpenProject).toHaveBeenCalledWith('D:/随笔')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    expect(props.onOpenProject).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: '工作区: 随笔' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '在新窗口打开工作区：研究' }))
+    expect(props.onOpenProject).toHaveBeenCalledExactlyOnceWith('D:/研究')
   })
 
-  it('supports keyboard entry into the most recent workspace', async () => {
+  it('closes the menu on keyboard selection of the current workspace without reopening it', async () => {
     const props = createProps()
     const user = userEvent.setup()
     render(<ImmersiveTitlebarChrome {...props} />)
@@ -314,9 +319,11 @@ describe('ImmersiveTitlebarChrome', () => {
     await user.keyboard('{ArrowDown}')
     await screen.findByRole('menuitem', { name: '在新窗口打开工作区：随笔' })
     await user.keyboard('{ArrowDown}{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: '在新窗口打开工作区：随笔' })).toHaveFocus()
     await user.keyboard('{Enter}')
 
-    expect(props.onOpenProject).toHaveBeenCalledWith('D:/随笔')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    expect(props.onOpenProject).not.toHaveBeenCalled()
   })
 
   it('disables new-window actions while one workspace is opening', async () => {

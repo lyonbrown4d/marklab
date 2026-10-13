@@ -69,9 +69,10 @@ export class WorkspacePathSnapshotCache {
 export const createWorkspacePathSnapshotCache = (
   getState: () => FsStateData,
   logger: Logger,
+  load = listWorkspacePathSnapshot,
 ): WorkspacePathSnapshotCache =>
   new WorkspacePathSnapshotCache({
     getState,
-    load: listWorkspacePathSnapshot,
+    load,
     logger,
   })

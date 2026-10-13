@@ -12,7 +12,6 @@ import {
   isTempWritePath,
   type WatchEventName,
   normalizeAbsolutePath,
-  safeStatSync,
 } from '@electron/services/workspace/workspaceUtils'
 
 type WorkspaceWatcherOptions = {
@@ -23,6 +22,7 @@ type WorkspaceWatcherOptions = {
 }
 
 const OWN_WRITE_EVENT_SUPPRESS_MS = 1500
+const WATCH_EVENT_CHUNK_SIZE = 16
 type ParcelWatcherOptions = NonNullable<Parameters<typeof watcher.subscribe>[2]>
 type ParcelWatcherBackend = NonNullable<ParcelWatcherOptions['backend']>
 
@@ -44,6 +44,7 @@ export class WorkspaceWatcher {
   private ownWriteSuppressUntil = 0
   private watcherVersion = 0
   private disposed = false
+  private pendingEvents: Promise<void> = Promise.resolve()
 
   constructor(private readonly options: WorkspaceWatcherOptions) {
     this.logger = options.logger ?? noopLogger
@@ -53,6 +54,7 @@ export class WorkspaceWatcher {
     if (this.disposed) return
     this.logger.info('watcher restarting')
     this.watcherVersion += 1
+    this.pendingEvents = Promise.resolve()
     this.stop()
     this.currentWatchRoot = null
     this.options.setStatus('running', 'Starting watcher')
@@ -100,9 +102,8 @@ export class WorkspaceWatcher {
 
     const watchRoot =
       state.rootKind === 'single' && state.singleFile ? path.dirname(state.singleFile) : rootPath
-    if (!fs.existsSync(watchRoot)) return
-
-    const stat = safeStatSync(watchRoot)
+    const stat = await fs.promises.stat(watchRoot).catch(() => null)
+    if (this.disposed || version !== this.watcherVersion) return
     if (!stat?.isDirectory()) return
     this.currentWatchRoot = path.resolve(watchRoot)
     this.logger.info('watcher starting', { watchRoot: this.currentWatchRoot })
@@ -120,13 +121,15 @@ export class WorkspaceWatcher {
           return
         }
 
-        events.forEach((event) => this.handleWatchEvent(event, version))
+        this.enqueueWatchEvents(events, version)
       },
       nativeWatcherOptions,
     )
 
     if (this.disposed || version !== this.watcherVersion) {
-      void subscription.unsubscribe()
+      void subscription.unsubscribe().catch((error) => {
+        this.logger.warn('stale watcher close failed', { error })
+      })
       return
     }
 
@@ -145,13 +148,36 @@ export class WorkspaceWatcher {
     this.options.setStatus('running', message ?? 'Watcher active')
   }
 
-  private handleWatchEvent(event: ParcelWatchEvent, version: number): void {
-    if (this.disposed || version !== this.watcherVersion) return
-
-    const changedPath = this.resolveWatchedPath(event.path)
-    if (changedPath === 'ignore') return
-    if (this.isOwnWriteEvent(changedPath)) return
-    this.options.onChanged(changedPath, this.toWorkspaceWatchEvent(event))
+  private enqueueWatchEvents(events: ParcelWatchEvent[], version: number): void {
+    const accepted = events.flatMap((event) => {
+      const changedPath = this.resolveWatchedPath(event.path)
+      return changedPath === 'ignore' || this.isOwnWriteEvent(changedPath)
+        ? []
+        : [{ changedPath, event }]
+    })
+    if (accepted.length === 0) return
+    // Serialize callbacks so a later delete/update cannot overtake create metadata.
+    this.pendingEvents = this.pendingEvents
+      .then(async () => {
+        for (let offset = 0; offset < accepted.length; offset += WATCH_EVENT_CHUNK_SIZE) {
+          if (this.disposed || version !== this.watcherVersion) return
+          const chunk = accepted.slice(offset, offset + WATCH_EVENT_CHUNK_SIZE)
+          // Parcel supplies no directory flag. Node has no bulk stat API, so only
+          // creates need metadata, with a small fixed limit on concurrent I/O.
+          const names = await Promise.all(
+            chunk.map(({ event }) => this.toWorkspaceWatchEvent(event)),
+          )
+          for (const [index, item] of chunk.entries()) {
+            if (this.disposed || version !== this.watcherVersion) return
+            this.options.onChanged(item.changedPath, names[index])
+          }
+        }
+      })
+      .catch((error) => {
+        if (this.disposed || version !== this.watcherVersion) return
+        this.options.setStatus('error', errorMessage(error))
+        this.logger.error('watcher event processing failed', { error })
+      })
   }
 
   private resolveWatchedPath(watchedPath: string): string | 'ignore' | null {
@@ -173,11 +199,11 @@ export class WorkspaceWatcher {
     return isTempWritePath(relativePath) || hasHiddenPathSegment(relativePath)
   }
 
-  private toWorkspaceWatchEvent(event: ParcelWatchEvent): WatchEventName {
+  private async toWorkspaceWatchEvent(event: ParcelWatchEvent): Promise<WatchEventName> {
     if (event.type === 'update') return 'change'
     if (event.type === 'delete') return 'unlink'
 
-    const stat = safeStatSync(event.path)
+    const stat = await fs.promises.stat(event.path).catch(() => null)
     return stat?.isDirectory() ? 'addDir' : 'add'
   }
 
