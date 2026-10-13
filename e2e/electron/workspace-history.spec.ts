@@ -69,6 +69,62 @@ test.describe('Recent workspace history management', () => {
     return target
   }
 
+  test('selecting the current history entry preserves its editor and only explicit new-window actions duplicate it', async () => {
+    if (!directory) throw new Error('Fixture directory is unavailable')
+    const validPath = path.join(directory, 'ValidNotes')
+    session = await launchElectronTestSession(rendererUrl, { openTargets: [validPath] })
+    try {
+      const { app, page } = session
+      const editor = page.getByTestId('markdown-editor')
+      await expect(editor).toHaveAttribute('data-state', 'ready')
+      await expect(editor).toContainText('Keep this workspace')
+      const element = await editor.elementHandle()
+      if (!element) throw new Error('Editor was not mounted')
+      const originalUrl = page.url()
+      const workspaceWindows = async () => {
+        let count = 0
+        for (const candidate of app.windows()) {
+          if (await candidate.getByRole('button', { name: /^(Workspace|工作区):/i }).isVisible()) {
+            count += 1
+          }
+        }
+        return count
+      }
+      await expect.poll(workspaceWindows).toBe(1)
+      const trigger = page.getByRole('button', { name: /^(Workspace|工作区):/i })
+      await trigger.click()
+      const current = page.getByRole('menuitem', {
+        name: /(?:Open in new window|在新窗口打开：).*ValidNotes/i,
+      })
+      await expect(current).toHaveAttribute('aria-current', 'page')
+      await expect(current).not.toHaveAttribute('aria-disabled', 'true')
+      await current.click()
+      await expect(page.getByRole('menu')).toBeHidden()
+      expect(page.url()).toBe(originalUrl)
+      expect(await element.evaluate((node) => node.isConnected)).toBe(true)
+      expect(await workspaceWindows()).toBe(1)
+      await trigger.click()
+      await page
+        .getByRole('menuitem', {
+          name: /Open Current Workspace in New Window|在新窗口打开当前工作区/i,
+        })
+        .click()
+      await expect(
+        page.getByText(/Workspace opened in a new window|已在新窗口打开工作区/, {
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 60_000 })
+      expect(await workspaceWindows()).toBe(2)
+      expect(page.url()).toBe(originalUrl)
+      expect(await element.evaluate((node) => node.isConnected)).toBe(true)
+      await expect(editor).toContainText('Keep this workspace')
+      await element.dispose()
+    } finally {
+      await closeElectronTestSession(session)
+      session = undefined
+    }
+  })
+
   test('greys out missing paths and removes valid or invalid history across windows and restarts', async () => {
     if (!directory) throw new Error('Fixture directory is unavailable')
     session = await launchElectronTestSession(rendererUrl)

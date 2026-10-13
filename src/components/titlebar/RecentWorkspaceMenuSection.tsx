@@ -55,7 +55,7 @@ export const RecentWorkspaceMenuSection = ({
       {history.entries.length ? (
         history.entries.map(({ path, status }) => {
           const label = workspaceName(path)
-          const current = data.rootKind !== 'internal' && path === data.rootPath
+          const current = path === data.rootPath
           return (
             <div key={path} className="flex min-w-0 items-stretch gap-0.5">
               <DropdownMenuItem
@@ -65,7 +65,9 @@ export const RecentWorkspaceMenuSection = ({
                 disabled={
                   opening || history.checking || history.loadFailed || status !== 'available'
                 }
-                onSelect={() => onOpenProject(path)}
+                onSelect={() => {
+                  if (!current) onOpenProject(path)
+                }}
               >
                 <FolderOpen aria-hidden="true" />
                 <span className="min-w-0 flex-1">

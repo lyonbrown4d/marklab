@@ -1,14 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { RecentWorkspaceMenuSection } from '@/components/titlebar/RecentWorkspaceMenuSection'
+import { entries, renderMenu } from '@/components/titlebar/RecentWorkspaceMenuSection.testSupport'
 import { recentWorkspaceApi } from '@/services/recentWorkspaceApi'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
 import type { RecentWorkspace } from '@/types/recentWorkspaces'
@@ -26,53 +18,6 @@ vi.mock('@/i18n/useI18n', () => ({
     t: (key: string, values?: { name: string }) => (values ? `${key}: ${values.name}` : key),
   }),
 }))
-
-const entries: RecentWorkspace[] = [
-  { path: '/notes', status: 'available' },
-  { path: '/missing', status: 'missing' },
-  { path: '/private', status: 'unavailable' },
-]
-
-const Harness = ({ onOpenProject }: { onOpenProject: (path: string) => void }) => {
-  const [open, setOpen] = useState(false)
-  return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger>Workspaces</DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <RecentWorkspaceMenuSection
-          data={{
-            paths: entries.map((entry) => entry.path),
-            rootPath: '/notes',
-            rootKind: 'external',
-            currentLabel: 'Current',
-            openLabel: 'Open {name}',
-            emptyLabel: 'No history',
-            sectionLabel: 'Recent',
-          }}
-          enabled={open}
-          opening={false}
-          onOpenProject={onOpenProject}
-          onRemoved={() => setOpen(false)}
-        />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-const renderMenu = async () => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  const onOpenProject = vi.fn()
-  render(
-    <QueryClientProvider client={client}>
-      <Harness onOpenProject={onOpenProject} />
-    </QueryClientProvider>,
-  )
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: 'Workspaces' }))
-  return { user, onOpenProject }
-}
 
 describe('recent workspace history menu', () => {
   beforeEach(() => {
@@ -109,15 +54,35 @@ describe('recent workspace history menu', () => {
     )
     expect(screen.getByText('workspace.historyMissing')).toBeVisible()
     expect(screen.getByText('workspace.historyUnavailable')).toBeVisible()
-    for (const name of ['notes', 'missing', 'private'])
+    for (const name of ['notes', 'other', 'missing', 'private'])
       expect(
         screen.getByRole('menuitem', { name: `workspace.removeHistory: ${name}` }),
       ).not.toHaveAttribute('aria-disabled', 'true')
     fireEvent.click(screen.getByRole('menuitem', { name: 'Open missing' }))
     expect(onOpenProject).not.toHaveBeenCalled()
     await user.click(screen.getByRole('menuitem', { name: 'Open notes' }))
-    expect(onOpenProject).toHaveBeenCalledWith('/notes')
+    expect(onOpenProject).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Workspaces' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open other' }))
+    expect(onOpenProject).toHaveBeenCalledExactlyOnceWith('/other')
   })
+
+  it.each(['internal', 'external', 'single'] as const)(
+    'selecting the current %s workspace closes the menu without opening a window',
+    async (rootKind) => {
+      useWorkspaceStore.setState({ rootKind })
+      const { user, onOpenProject } = await renderMenu(rootKind)
+      await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+      const current = screen.getByRole('menuitem', { name: 'Open notes' })
+      expect(current).toHaveAttribute('aria-current', 'page')
+      current.focus()
+      await user.keyboard('{Enter}')
+      await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+      expect(onOpenProject).not.toHaveBeenCalled()
+      expect(recentWorkspaceApi.remove).not.toHaveBeenCalled()
+      expect(useWorkspaceStore.getState().rootPath).toBe('/notes')
+    },
+  )
 
   it.each(['notes', 'missing'])(
     'removes %s history and keeps the active workspace open',
