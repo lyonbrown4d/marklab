@@ -132,7 +132,18 @@ describe('ExcalidrawEditorSurface', () => {
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(status).toHaveTextContent('Loading whiteboard...')
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
-    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(status.querySelector('[data-document-loading]')).toHaveAttribute('aria-hidden', 'true')
+    expect(status.querySelectorAll('[data-splash-line]')).toHaveLength(3)
+  })
+
+  it('replaces the busy state with an alert when the document cannot be opened', async () => {
+    vi.mocked(fsApi.readFile).mockRejectedValue(new Error('Whiteboard unavailable'))
+    const { container } = renderSurface()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Whiteboard unavailable')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull()
   })
 
   it('loads a scene and persists explicit saves', async () => {

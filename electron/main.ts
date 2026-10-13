@@ -34,8 +34,7 @@ import {
   flushPersistedWindowState,
   releasePersistedWindowState,
 } from '@electron/windowStatePersistence'
-import { hideWindowWithMotion, showWindowWithMotion } from '@electron/windowMotion'
-import { dismissSplashWindow } from '@electron/splashLifecycle'
+import { revealMainWindowFromSplash } from '@electron/splashLifecycle'
 import { syncNativeWindowBackgrounds, syncNativeWindowIcons } from '@electron/windowTheme'
 import { createSystemThemeMonitor } from '@electron/main/systemThemeMonitor'
 import { createRendererReadyCoordinator } from '@electron/main/rendererReady'
@@ -102,12 +101,7 @@ const presentMainWindow = (): void => {
   didShowMain = true
   clearFallbackTimer()
 
-  const revealMainWindow = (): void => {
-    if (!activeWindows.main.isDestroyed()) {
-      showWindowWithMotion(activeWindows.main, { focus: true })
-    }
-  }
-  dismissSplashWindow(activeWindows.splash, hideWindowWithMotion, revealMainWindow)
+  revealMainWindowFromSplash(activeWindows.main, activeWindows.splash)
 }
 
 const initialPresentationGate = createInitialNativeOpenPresentationGate(presentMainWindow)

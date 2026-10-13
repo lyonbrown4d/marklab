@@ -12,8 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { configureMonaco } from '@/lib/monaco'
@@ -89,6 +88,7 @@ const LocalHistoryDiffEditor = ({
   path,
   smoothScrolling,
 }: LocalHistoryDiffEditorProps) => {
+  const { t } = useI18n()
   const editorRef = useRef<MonacoDiffEditor | null>(null)
   const handleMount = useCallback<DiffOnMount>((editor) => {
     editorRef.current = editor
@@ -108,6 +108,7 @@ const LocalHistoryDiffEditor = ({
   return (
     <DiffEditor
       height="100%"
+      loading={<DocumentLoadingState className="h-full p-6" label={t('localHistory.loading')} />}
       language={language}
       theme={darkMode ? 'vs-dark' : 'vs'}
       original={original}
@@ -199,11 +200,7 @@ const LocalHistoryPreviewDialog = ({
             <span className="px-4 py-2">{t('localHistory.current')}</span>
           </div>
           {previewQuery.isLoading ? (
-            <div role="status" aria-label={t('localHistory.loading')} className="space-y-3 p-6">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
+            <DocumentLoadingState className="h-full p-6" label={t('localHistory.loading')} />
           ) : previewQuery.isError || monacoError ? (
             <div className="flex h-full items-center justify-center p-6">
               <AppAlert
@@ -221,10 +218,7 @@ const LocalHistoryPreviewDialog = ({
               modified={previewData?.current ?? ''}
             />
           ) : !monacoReady ? (
-            <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Spinner aria-hidden="true" role="presentation" />
-              {t('localHistory.loading')}
-            </div>
+            <DocumentLoadingState className="h-full p-6" label={t('localHistory.loading')} />
           ) : (
             <LocalHistoryDiffEditor
               darkMode={darkMode}

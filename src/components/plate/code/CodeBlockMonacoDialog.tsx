@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 
 type CodeBlockMonacoDialogProps = {
   cancelLabel: string
@@ -59,6 +59,7 @@ const CodeBlockMonacoDialog = ({
           ) : ready ? (
             <Editor
               height="100%"
+              loading={<DocumentLoadingState className="h-full p-6" label={loadingLabel} />}
               language={monacoCodeLanguage(language)}
               onChange={(value) => setDraft(value ?? '')}
               options={{
@@ -73,13 +74,7 @@ const CodeBlockMonacoDialog = ({
               value={draft}
             />
           ) : (
-            <div
-              className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
-              role="status"
-            >
-              <Spinner aria-hidden="true" />
-              {loadingLabel}
-            </div>
+            <DocumentLoadingState className="h-full p-6" label={loadingLabel} />
           )}
         </div>
         <DialogFooter>

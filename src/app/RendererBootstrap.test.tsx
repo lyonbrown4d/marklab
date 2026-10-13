@@ -14,6 +14,12 @@ const runtime = vi.hoisted(() => ({
 vi.mock('@/runtime/electron', () => ({
   getElectronRuntime: () => ({
     appReady: runtime.appReady,
+    window: {
+      onPresented: (handler: () => void) => {
+        handler()
+        return () => undefined
+      },
+    },
     opening: {
       onProgress: runtime.onProgress,
       retry: runtime.retry,

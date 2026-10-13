@@ -52,7 +52,9 @@ describe('SourceCodeEditor status states', () => {
     const status = screen.getByRole('status', { name: 'Loading source editor...' })
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(status).toHaveTextContent('Loading source editor...')
-    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    const loadingLines = status.querySelector('[data-document-loading]')
+    expect(loadingLines).toHaveAttribute('aria-hidden', 'true')
+    expect(loadingLines?.querySelectorAll('[data-splash-line]')).toHaveLength(3)
   })
 
   it('uses a localized source editor failure state', async () => {

@@ -80,4 +80,26 @@ describe('WorkspacePublicationDialog', () => {
     expect(flushEditorChanges).toHaveBeenCalledOnce()
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
+
+  it('announces document preparation once and allows closing while loading', () => {
+    vi.mocked(workspacePublicationApi.loadPlan).mockReturnValue(new Promise(() => {}))
+    const onOpenChange = vi.fn()
+    render(<WorkspacePublicationDialog onOpenChange={onOpenChange} open rootPath="/workspace" />)
+
+    const status = screen.getByRole('status', { name: 'workspaceExport.preparing' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(status.querySelectorAll('[data-splash-line]')).toHaveLength(3)
+    expect(status.querySelector('[data-document-loading]')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('clears the busy status when preparation fails', async () => {
+    vi.mocked(workspacePublicationApi.loadPlan).mockRejectedValue(new Error('Plan unavailable'))
+    render(<WorkspacePublicationDialog onOpenChange={vi.fn()} open rootPath="/workspace" />)
+
+    expect(await screen.findByText(/Plan unavailable/)).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
 })

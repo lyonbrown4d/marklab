@@ -16,7 +16,10 @@ export default defineConfig({
     emptyOutDir: false,
     outDir: 'dist',
     rollupOptions: {
-      input: path.resolve(import.meta.dirname, 'splashscreen.html'),
+      input: {
+        splash: path.resolve(import.meta.dirname, 'splashscreen.html'),
+        opening: path.resolve(import.meta.dirname, 'window-opening.html'),
+      },
     },
   },
 })

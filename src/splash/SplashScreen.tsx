@@ -1,19 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-
-type DocumentRowProps = {
-  caret?: boolean
-  marker: string
-  width: string
-}
-
-const DocumentRow = ({ caret = false, marker, width }: DocumentRowProps) => (
-  <div className="splash-document-row">
-    <span className="splash-syntax">{marker}</span>
-    <Skeleton className={width} data-splash-line />
-    {caret ? <span className="splash-caret" aria-hidden="true" /> : null}
-  </div>
-)
+import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
 
 export const SplashScreen = () => (
   <main className="splash-shell">
@@ -34,9 +20,7 @@ export const SplashScreen = () => (
         <CardDescription>Loading the initial document</CardDescription>
       </CardHeader>
       <CardContent className="splash-document-content">
-        <DocumentRow marker="#" width="splash-line-title" />
-        <DocumentRow marker="—" width="splash-line-body" />
-        <DocumentRow caret marker="·" width="splash-line-short" />
+        <DocumentLoadingLines />
       </CardContent>
     </Card>
 

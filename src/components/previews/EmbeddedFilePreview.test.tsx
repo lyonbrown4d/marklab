@@ -146,7 +146,8 @@ describe('EmbeddedFilePreview', () => {
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(status).toHaveTextContent('preview.inlineLoading')
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
-    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(status.querySelector('[data-document-loading]')).toHaveAttribute('aria-hidden', 'true')
+    expect(status.querySelectorAll('[data-splash-line]')).toHaveLength(3)
   })
 
   it('announces modal resolve failures as an alert', async () => {

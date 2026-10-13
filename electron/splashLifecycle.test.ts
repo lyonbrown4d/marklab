@@ -3,6 +3,12 @@ import type { BrowserWindow } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dismissSplashWindow, showSplashWithoutActivation } from '@electron/splashLifecycle'
 
+vi.mock('@electron/windowMotion', () => ({
+  hideWindowWithMotion: vi.fn(),
+  showWindowWithMotion: vi.fn(),
+  notifyWindowPresented: vi.fn(),
+}))
+
 const createSplash = () => {
   let destroyed = false
   let visible = false
@@ -74,5 +80,103 @@ describe('splash lifecycle', () => {
     vi.runAllTimers()
 
     expect(splash.destroy).toHaveBeenCalledOnce()
+    expect(splash.listenerCount('closed')).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('waits for the actual closed event after asynchronous native destruction', () => {
+    vi.useFakeTimers()
+    const splash = createSplash()
+    const dismissed = vi.fn()
+    splash.destroy.mockImplementation(() => {})
+    dismissSplashWindow(
+      splash as unknown as BrowserWindow,
+      (_window, onHidden) => onHidden(),
+      dismissed,
+    )
+    expect(splash.destroy).toHaveBeenCalledOnce()
+    expect(dismissed).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+    splash.emit('closed')
+    expect(dismissed).toHaveBeenCalledOnce()
+    expect(splash.listenerCount('closed')).toBe(0)
+  })
+
+  it('cleans up a failed native destroy without reporting a completed dismissal', () => {
+    vi.useFakeTimers()
+    const splash = createSplash()
+    const dismissed = vi.fn()
+    splash.destroy.mockImplementation(() => {
+      throw new Error('Native destroy failed')
+    })
+    expect(() =>
+      dismissSplashWindow(
+        splash as unknown as BrowserWindow,
+        (_window, onHidden) => onHidden(),
+        dismissed,
+      ),
+    ).not.toThrow()
+    expect(dismissed).not.toHaveBeenCalled()
+    expect(splash.listenerCount('closed')).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('still waits for closed if external native destruction occurs during the hide callback', () => {
+    vi.useFakeTimers()
+    const splash = createSplash()
+    const dismissed = vi.fn()
+    dismissSplashWindow(
+      splash as unknown as BrowserWindow,
+      (_window, onHidden) => {
+        vi.spyOn(splash, 'isDestroyed').mockReturnValue(true)
+        onHidden()
+      },
+      dismissed,
+    )
+    expect(dismissed).not.toHaveBeenCalled()
+    expect(splash.destroy).not.toHaveBeenCalled()
+    splash.emit('closed')
+    expect(dismissed).toHaveBeenCalledOnce()
+    expect(splash.listenerCount('closed')).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('completes once and clears the fallback when the splash closes during its exit', () => {
+    vi.useFakeTimers()
+    const splash = createSplash()
+    let finishHide: (() => void) | undefined
+    const dismissed = vi.fn()
+    dismissSplashWindow(
+      splash as unknown as BrowserWindow,
+      (_window, onHidden) => {
+        finishHide = onHidden
+      },
+      dismissed,
+    )
+    splash.close()
+    finishHide?.()
+    expect(dismissed).toHaveBeenCalledOnce()
+    expect(splash.destroy).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+    expect(splash.listenerCount('closed')).toBe(0)
+  })
+
+  it('completes immediately when native hiding throws or the splash is already destroyed', () => {
+    vi.useFakeTimers()
+    const splash = createSplash()
+    const dismissed = vi.fn()
+    dismissSplashWindow(
+      splash as unknown as BrowserWindow,
+      () => {
+        throw new Error('Native window unavailable')
+      },
+      dismissed,
+    )
+    const hide = vi.fn()
+    dismissSplashWindow(splash as unknown as BrowserWindow, hide, dismissed)
+    expect(splash.destroy).toHaveBeenCalledOnce()
+    expect(dismissed).toHaveBeenCalledTimes(2)
+    expect(hide).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

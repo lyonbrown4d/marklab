@@ -40,14 +40,22 @@ describe('startup splash window', () => {
     ])
     expect(html).toContain('/src/splash/main.tsx')
     expect(component).toContain("from '@/components/ui/card'")
-    expect(component).toContain("from '@/components/ui/skeleton'")
+    expect(component).toContain("from '@/components/loading/DocumentLoadingLines'")
     expect(component).toContain('data-splash-document')
     expect(component).toContain('role="status"')
     expect(component).toContain('aria-live="polite"')
     expect(stylesheet).toContain('prefers-color-scheme: dark')
-    expect(stylesheet).toContain('prefers-reduced-motion: reduce')
+    const sharedMotion = await fs.readFile(
+      path.join(root, 'src/styles/document-loading.css'),
+      'utf8',
+    )
+    expect(stylesheet).toContain("@import '../styles/document-loading.css'")
+    expect(sharedMotion).toContain('prefers-reduced-motion: reduce')
     expect(stylesheet).toContain("@import 'tailwindcss' source(none)")
-    expect(buildConfig).toContain("input: path.resolve(import.meta.dirname, 'splashscreen.html')")
+    expect(buildConfig).toContain("splash: path.resolve(import.meta.dirname, 'splashscreen.html')")
+    expect(buildConfig).toContain(
+      "opening: path.resolve(import.meta.dirname, 'window-opening.html')",
+    )
     expect(buildConfig).toContain('emptyOutDir: false')
     expect(buildScript).toContain("configFile: 'vite.splash.config.ts'")
     expect(component).not.toContain('monaco')

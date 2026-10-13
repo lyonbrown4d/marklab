@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import { CheckCircle2, LoaderCircle } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { WorkspacePublicationChapterPanel } from '@/components/workspace-publication/WorkspacePublicationChapterPanel'
@@ -52,10 +53,10 @@ const WorkspacePublicationDialog = ({
           </DialogDescription>
         </header>
         {controller.loading ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
-            <LoaderCircle className="size-4 animate-spin" />
-            {t('workspaceExport.preparing')}
-          </div>
+          <DocumentLoadingState
+            className="min-h-0 flex-1 p-6"
+            label={t('workspaceExport.preparing')}
+          />
         ) : controller.chapters.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
             <p className="text-sm font-medium">

@@ -1,4 +1,5 @@
-import { AlertCircle, LoaderCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { Button } from '@/components/ui/button'
 
 type WorkspaceMapStateProps = {
@@ -16,11 +17,13 @@ export const WorkspaceMapState = ({
 }: WorkspaceMapStateProps) => (
   <div className="flex h-full flex-col items-center justify-center gap-3 bg-background p-6 text-center text-sm text-muted-foreground">
     {loading ? (
-      <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+      <DocumentLoadingState label={label} />
     ) : (
-      <AlertCircle aria-hidden="true" className="size-5" />
+      <>
+        <AlertCircle aria-hidden="true" className="size-5" />
+        <p>{label}</p>
+      </>
     )}
-    <p>{label}</p>
     {actionLabel && onAction ? (
       <Button type="button" variant="outline" size="sm" onClick={onAction}>
         {actionLabel}

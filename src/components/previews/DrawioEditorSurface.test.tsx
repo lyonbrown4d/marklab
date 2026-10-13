@@ -174,9 +174,11 @@ describe('DrawioEditorSurface', () => {
       )
     })
     expect(postMessage.mock.calls[0]?.[0]).toContain('<mxfile />')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Save|保存/ })).toBeEnabled()
   })
 
-  it('announces the loading overlay without a duplicate spinner status', () => {
+  it('announces the document loading overlay once while keeping the iframe mounted', () => {
     vi.mocked(fsApi.readFile).mockReturnValue(new Promise<string>(() => undefined))
 
     renderSurface()
@@ -185,8 +187,14 @@ describe('DrawioEditorSurface', () => {
       name: /Reading diagram file|正在读取图表文件/,
     })
     expect(loadingStatus).toHaveAttribute('aria-busy', 'true')
-    expect(loadingStatus.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+    expect(loadingStatus.querySelector('[data-document-loading]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+    expect(loadingStatus.querySelectorAll('[data-splash-line]')).toHaveLength(3)
     expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getByTitle(/flow\.drawio/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Save|保存/ })).toBeDisabled()
   })
 
   it('uses badges for save and read-only editor states', () => {
@@ -230,11 +238,13 @@ describe('DrawioEditorSurface', () => {
   it('uses an alert when the remote drawio document fails to load', async () => {
     vi.mocked(fsApi.readFile).mockRejectedValue(new Error('diagram unreadable'))
 
-    renderSurface()
+    const { container } = renderSurface()
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent(/Failed|失败/)
     expect(alert).toHaveClass('bg-destructive/10')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull()
   })
 
   it('flushes workspace buffers when the iframe sends exported xml', async () => {

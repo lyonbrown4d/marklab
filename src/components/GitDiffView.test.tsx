@@ -126,6 +126,12 @@ describe('GitDiffView', () => {
     const loadingRegion = screen.getByRole('status', { name: 'Git Diff: docs/guide.md' })
 
     expect(loadingRegion).toHaveAttribute('aria-busy', 'true')
+    expect(loadingRegion.querySelectorAll('[data-splash-line]')).toHaveLength(3)
+    expect(loadingRegion.querySelector('[data-document-loading]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+    expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
 
@@ -139,6 +145,7 @@ describe('GitDiffView', () => {
 
     expect(alert).toHaveTextContent('Git Diff')
     expect(alert).toHaveTextContent('diff failed')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('renders Monaco load errors as alerts after the diff query succeeds', async () => {
@@ -150,9 +157,10 @@ describe('GitDiffView', () => {
     const alert = await screen.findByRole('alert')
 
     expect(alert).toHaveTextContent('Failed to load diff editor: monaco failed')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  it('keeps the Monaco loading spinner decorative', async () => {
+  it('uses decorative document lines while Monaco is configured', async () => {
     vi.mocked(configureMonaco).mockImplementation(() => new Promise(() => undefined))
     vi.mocked(gitApi.getFileDiff).mockResolvedValue(createDiff())
 
@@ -161,6 +169,10 @@ describe('GitDiffView', () => {
     const loadingText = await screen.findByText(/Loading Markdown/)
 
     expect(loadingText.closest('[role="status"]')).toHaveAttribute('aria-busy', 'true')
+    expect(
+      loadingText.closest('[role="status"]')?.querySelectorAll('[data-splash-line]'),
+    ).toHaveLength(3)
+    expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
 })

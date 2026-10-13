@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 
@@ -15,15 +15,8 @@ type EditorTransitionFrameProps = {
   status: EditorTransitionStatus
 }
 
-type TransitionPhase = 'idle' | 'loading' | 'parsing' | 'restoring' | 'error'
-
-const TRANSITION_PHASE_MS = 70
 const EDITOR_FOCUS_TARGET =
   '[data-focus-entry], button:not([disabled]), a[href], [contenteditable="true"], textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export const EditorTransitionFrame = ({
   children,
@@ -34,57 +27,23 @@ export const EditorTransitionFrame = ({
 }: EditorTransitionFrameProps) => {
   const { t } = useI18n()
   const [committed, setCommitted] = useState(() => ({ children, requestKey }))
-  const [timedPhase, setTimedPhase] = useState<{
-    requestKey: string
-    phase: 'restoring'
-  } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
   const restoreFocusRef = useRef(false)
-  const reducedMotion = prefersReducedMotion()
 
-  useEffect(() => {
-    if (requestKey === committed.requestKey || status !== 'ready') return
-    const restoreTimer = reducedMotion
-      ? null
-      : window.setTimeout(
-          () => setTimedPhase({ phase: 'restoring', requestKey }),
-          TRANSITION_PHASE_MS,
-        )
-    const commitTimer = window.setTimeout(
-      () => {
-        setCommitted({ children, requestKey })
-        setTimedPhase(null)
-      },
-      reducedMotion ? 0 : TRANSITION_PHASE_MS * 2,
-    )
+  // Keep the last ready surface, including live edits, available during the next load.
+  if (
+    status === 'ready' &&
+    (committed.children !== children || committed.requestKey !== requestKey)
+  ) {
+    setCommitted({ children, requestKey })
+  }
 
-    return () => {
-      if (restoreTimer !== null) window.clearTimeout(restoreTimer)
-      window.clearTimeout(commitTimer)
-    }
-  }, [children, committed.requestKey, reducedMotion, requestKey, status])
-
-  const phase: TransitionPhase =
-    requestKey === committed.requestKey
-      ? status === 'ready'
-        ? 'idle'
-        : status
-      : status !== 'ready'
-        ? status
-        : reducedMotion
-          ? 'idle'
-          : timedPhase?.requestKey === requestKey
-            ? timedPhase.phase
-            : 'parsing'
-  const displayedChildren =
-    status === 'ready' && (reducedMotion || requestKey === committed.requestKey)
-      ? children
-      : committed.children
-
-  const busy = phase === 'loading' || phase === 'parsing' || phase === 'restoring'
-  const transitioning = busy || phase === 'error' || requestKey !== committed.requestKey
-  const statusLabel = busy ? t(`editor.transition.${phase}`) : ''
+  const phase = status === 'ready' ? 'idle' : status
+  const displayedChildren = status === 'ready' ? children : committed.children
+  const busy = status === 'loading'
+  const transitioning = status !== 'ready'
+  const statusLabel = busy ? t('editor.transition.loading') : ''
   const handleContentFocusCapture = () => {
     restoreFocusRef.current = true
   }
@@ -96,22 +55,29 @@ export const EditorTransitionFrame = ({
     const frame = frameRef.current
     const content = contentRef.current
     if (!frame || !content) return
-    if (busy || phase === 'error') {
-      if (restoreFocusRef.current) frame.focus({ preventScroll: true })
-      return
-    }
-    if (!restoreFocusRef.current) return
     const activeElement = document.activeElement
     if (
+      restoreFocusRef.current &&
       activeElement !== frame &&
       activeElement !== document.body &&
-      activeElement !== document.documentElement
+      activeElement !== document.documentElement &&
+      !content.contains(activeElement)
     ) {
       restoreFocusRef.current = false
-      return
     }
+    if (transitioning) {
+      if (restoreFocusRef.current) frame.focus({ preventScroll: true })
+      const handleFocusOutside = (event: FocusEvent) => {
+        if (event.target !== frame && !content.contains(event.target as Node)) {
+          restoreFocusRef.current = false
+        }
+      }
+      document.addEventListener('focusin', handleFocusOutside)
+      return () => document.removeEventListener('focusin', handleFocusOutside)
+    }
+    if (!restoreFocusRef.current || content.contains(activeElement)) return
     content.querySelector<HTMLElement>(EDITOR_FOCUS_TARGET)?.focus({ preventScroll: true })
-  }, [busy, phase, requestKey])
+  }, [requestKey, transitioning])
 
   return (
     <div
@@ -139,7 +105,7 @@ export const EditorTransitionFrame = ({
           busy && 'pointer-events-none select-none opacity-70',
         )}
         data-testid="editor-transition-content"
-        inert={busy || phase === 'error' ? true : undefined}
+        inert={transitioning ? true : undefined}
         ref={contentRef}
         onBlurCapture={handleContentBlurCapture}
         onFocusCapture={handleContentFocusCapture}
@@ -149,11 +115,11 @@ export const EditorTransitionFrame = ({
       {busy ? (
         <div
           aria-live="polite"
-          className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center"
+          className="editor-transition-loading pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center"
           role="status"
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-popover/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
-            <Spinner aria-hidden="true" className="size-3.5" />
+            <DocumentLoadingLines compact />
             <span>{statusLabel}</span>
           </div>
         </div>

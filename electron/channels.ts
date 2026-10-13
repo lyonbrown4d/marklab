@@ -73,6 +73,7 @@ export const nativeIpcChannels = {
   windowCloseFlushReady: 'marklab:window:close-flush-ready',
   windowCloseFlushRequest: 'marklab:window:close-flush-request',
   windowIsMaximized: 'marklab:window:is-maximized',
+  windowPresented: 'marklab:window:presented',
   windowMaximize: 'marklab:window:maximize',
   windowMinimize: 'marklab:window:minimize',
   windowStartDrag: 'marklab:window:start-drag',

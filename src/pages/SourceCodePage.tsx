@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
+import { useKeepAliveContext } from 'keepalive-for-react'
 import type { FileEntry, FileViewKind } from '@/store/appTypes'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useDocumentStats } from '@/pages/useDocumentStats'
@@ -27,6 +28,8 @@ const SourceCodePage = ({
   showStatusBar,
   readOnly,
 }: SourceCodePageProps) => {
+  const keepAlive = useKeepAliveContext()
+  const interactionActive = !keepAlive.cacheKey || keepAlive.active
   const [cursor, setCursor] = useState<{
     path: string | null
     position: EditorCursorPosition | null
@@ -37,7 +40,7 @@ const SourceCodePage = ({
     },
     [activePath],
   )
-  const stats = useDocumentStats(value, showStatusBar)
+  const stats = useDocumentStats(value, showStatusBar && interactionActive)
   const sourceFileContents = useMemo(
     () =>
       activePath

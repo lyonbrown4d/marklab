@@ -1,6 +1,7 @@
-import { AlertCircle, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, RefreshCw } from 'lucide-react'
 
 import AppEmptyState from '@/components/AppEmptyState'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { Button } from '@/components/ui/button'
 
 type Props = {
@@ -13,12 +14,10 @@ type Props = {
 export const AllPagesIndexState = ({ error, loading, onRetry, t }: Props) => {
   if (loading) {
     return (
-      <AppEmptyState
-        compact
-        role="status"
-        title={t('allPages.loadingTitle')}
+      <DocumentLoadingState
+        className="rounded-xl border border-dashed p-6"
+        label={t('allPages.loadingTitle')}
         description={t('allPages.loadingDescription')}
-        icon={<LoaderCircle className="animate-spin" aria-hidden="true" />}
       />
     )
   }

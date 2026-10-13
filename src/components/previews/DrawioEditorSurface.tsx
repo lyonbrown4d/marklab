@@ -20,7 +20,7 @@ import DrawioEditorToolbar, {
   type DrawioEditorSaveState,
 } from '@/components/previews/DrawioEditorToolbar'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { useActiveWorkspaceKey } from '@/app/AppCachedOutlet'
 
@@ -229,15 +229,10 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
       ) : (
         <div className="relative min-h-0 flex-1 bg-background">
           {(documentQuery.isLoading || !frameReady) && (
-            <div
-              aria-busy="true"
-              aria-label={loadingLabel}
-              className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-sm"
-              role="status"
-            >
-              <Spinner aria-hidden="true" role="presentation" />
-              {loadingLabel}
-            </div>
+            <DocumentLoadingState
+              className="absolute inset-0 z-10 bg-background/70 p-6 backdrop-blur-sm"
+              label={loadingLabel}
+            />
           )}
           <iframe
             key={sessionKey}

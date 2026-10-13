@@ -9,6 +9,14 @@ import {
 
 const backgroundE2e = vi.hoisted(() => vi.fn(() => false))
 vi.mock('@electron/main/e2eRuntime', () => ({ isBackgroundElectronE2e: backgroundE2e }))
+vi.mock('electron', () => ({
+  systemPreferences: {
+    getAnimationSettings: () => ({
+      prefersReducedMotion: false,
+      shouldRenderRichAnimation: true,
+    }),
+  },
+}))
 
 const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
 const usePlatform = (platform: NodeJS.Platform) =>
@@ -24,12 +32,14 @@ const createWindow = () => {
     }),
     show: vi.fn(() => {
       state.visible = true
+      events.emit('show')
     }),
     hide: vi.fn(() => {
       state.visible = false
       events.emit('hide')
     }),
     focus: vi.fn(),
+    webContents: { isDestroyed: () => state.destroyed, send: vi.fn() },
   })
   return { state, events, window: events as unknown as BrowserWindow }
 }

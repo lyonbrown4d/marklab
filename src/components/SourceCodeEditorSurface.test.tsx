@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { SourceCodeEditorSurface } from '@/components/SourceCodeEditorSurface'
 
 const editorMock = vi.hoisted(() => ({
   language: undefined as string | undefined,
+  initializing: false,
   path: undefined as string | undefined,
   onContextMenuAction: vi.fn(),
   options: undefined as
@@ -20,11 +22,13 @@ const editorMock = vi.hoisted(() => ({
 vi.mock('@monaco-editor/react', () => ({
   default: ({
     language,
+    loading,
     onChange,
     options,
     path,
   }: {
     language?: string
+    loading?: ReactNode
     onChange?: (value: string) => void
     options?: typeof editorMock.options
     path?: string
@@ -32,6 +36,7 @@ vi.mock('@monaco-editor/react', () => ({
     editorMock.language = language
     editorMock.options = options
     editorMock.path = path
+    if (editorMock.initializing) return loading
     return (
       <textarea
         aria-label="markdown source"
@@ -46,6 +51,7 @@ const renderSurface = (
   readOnly = false,
   shortcutOverrides = {},
   activePath = 'notes/current.md',
+  state: { monacoReady?: boolean; errorMessage?: string } = {},
 ) =>
   render(
     <SourceCodeEditorSurface
@@ -70,10 +76,42 @@ const renderSurface = (
         onAction: editorMock.onContextMenuAction,
       }}
       onMount={vi.fn()}
+      {...state}
     />,
   )
 
 describe('SourceCodeEditorSurface', () => {
+  it('keeps the shared loading state while Monaco initializes after configuration', () => {
+    editorMock.initializing = true
+    try {
+      renderSurface(false)
+      const status = screen.getByRole('status', { name: 'Loading source editor...' })
+      expect(status.querySelectorAll('[data-splash-line]')).toHaveLength(3)
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+      expect(screen.queryByLabelText('markdown source')).not.toBeInTheDocument()
+    } finally {
+      editorMock.initializing = false
+    }
+  })
+
+  it('announces the document loader once and clears busy state for errors', () => {
+    const view = renderSurface(false, false, {}, 'notes/current.md', { monacoReady: false })
+    const status = screen.getByRole('status', { name: 'Loading source editor...' })
+    expect(status).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(status.querySelector('[data-document-loading]')).toHaveAttribute('aria-hidden', 'true')
+    expect(status.querySelectorAll('[data-splash-line]')).toHaveLength(3)
+    view.unmount()
+
+    const errorView = renderSurface(false, false, {}, 'notes/current.md', {
+      monacoReady: false,
+      errorMessage: 'Source unavailable',
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('Source unavailable')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(errorView.container.querySelector('[aria-busy="true"]')).toBeNull()
+  })
+
   it('selects the Monaco language from the active source path', () => {
     const view = renderSurface(false, false, {}, 'src/example.ts')
     expect(editorMock.language).toBe('typescript')

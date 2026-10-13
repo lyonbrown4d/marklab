@@ -70,7 +70,9 @@ describe('FilePreviewPage', () => {
     const openButton = screen.getByRole('button', { name: 'Open in system' })
 
     expect(status).toHaveAttribute('aria-busy', 'true')
-    expect(status.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    const loadingLines = status.querySelector('[data-document-loading]')
+    expect(loadingLines).toHaveAttribute('aria-hidden', 'true')
+    expect(loadingLines?.querySelectorAll('[data-splash-line]')).toHaveLength(3)
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
     expect(openButton.querySelector('[data-icon="inline-start"]')).not.toBeNull()
   })

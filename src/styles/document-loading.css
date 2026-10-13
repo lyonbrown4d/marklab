@@ -1,0 +1,150 @@
+/* Shared by the splash, React loading surfaces and the lightweight opening shell. */
+.document-loading-lines {
+  width: 100%;
+  flex: none;
+}
+
+.document-loading-lines[hidden] {
+  display: none;
+}
+
+.splash-document-row {
+  display: flex;
+  height: 15px;
+  align-items: center;
+  gap: 7px;
+  padding-left: 8px;
+}
+
+.splash-syntax {
+  width: 8px;
+  color: hsl(var(--muted-foreground));
+  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+[data-splash-line] {
+  height: 3px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: splash-compose 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.splash-line-title {
+  width: 42%;
+}
+
+.splash-line-body {
+  width: 76%;
+  animation-delay: 120ms;
+}
+
+.splash-line-short {
+  width: 58%;
+  animation-delay: 240ms;
+}
+
+.splash-caret {
+  width: 1px;
+  height: 9px;
+  margin-left: -3px;
+  border-radius: 1px;
+  background: hsl(var(--muted-foreground));
+  animation: splash-caret 900ms steps(1, end) infinite;
+}
+
+@keyframes splash-compose {
+  0%,
+  12% {
+    opacity: 0.35;
+    transform: scaleX(0);
+  }
+  48%,
+  82% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.45;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes splash-caret {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  49%,
+  100% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-splash-line] {
+    animation: none;
+    transform: scaleX(1);
+  }
+
+  .splash-caret {
+    animation: none;
+  }
+}
+
+.document-loading-lines--compact {
+  width: 48px;
+}
+
+.document-loading-lines--compact .splash-document-row {
+  height: 8px;
+  gap: 4px;
+  padding-left: 0;
+}
+
+.document-loading-lines--compact .splash-syntax {
+  width: 5px;
+  font-size: 7px;
+}
+
+.document-loading-lines--compact [data-splash-line] {
+  height: 2px;
+}
+
+.document-loading-lines--compact .splash-caret {
+  height: 6px;
+}
+
+.editor-transition-loading {
+  animation: document-loading-notice 140ms ease-out 120ms both;
+}
+
+@keyframes document-loading-notice {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+:root[data-motion-panels='false'] .document-loading-lines [data-splash-line],
+:root[data-motion-panels='false'] .document-loading-lines .splash-caret,
+:root[data-motion-panels='false'] .editor-transition-loading {
+  animation: none;
+}
+
+:root[data-motion-panels='false'] .document-loading-lines [data-splash-line] {
+  transform: scaleX(1);
+}
+
+:root[data-motion-panels='false'] [data-testid='editor-transition-content'] {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-transition-loading {
+    animation: none;
+  }
+}

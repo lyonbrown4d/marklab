@@ -254,6 +254,7 @@ export type RendererSafeElectronApi = {
   workspace: ElectronWorkspacePathApi
   workspaceTree: WorkspaceTreeApi
   window: {
+    onPresented: (handler: () => void) => () => void
     minimize: () => Promise<void>
     maximize: () => Promise<void>
     unmaximize: () => Promise<void>

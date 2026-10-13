@@ -1,3 +1,5 @@
+@import './document-loading.css';
+
 @layer base {
   :root {
     --motion-duration-instant: 80ms;
@@ -51,6 +53,33 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes window-presentation-enter {
+  from {
+    opacity: 0.6;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.window-presentation-pending {
+  opacity: 0.6;
+  transform: translateY(6px);
+}
+
+.window-presentation-enter {
+  animation: window-presentation-enter 260ms var(--motion-ease-emphasized) both;
+}
+
+:root[data-motion-panels='false'] .window-presentation-pending,
+:root[data-motion-panels='false'] .window-presentation-enter {
+  animation: none;
+  opacity: 1;
+  transform: none;
 }
 
 .motion-scroll-viewport,
@@ -199,6 +228,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .window-presentation-pending,
+  .window-presentation-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
   .motion-scroll-viewport,
   [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'] {
     scroll-behavior: auto;

@@ -119,7 +119,7 @@ const WysiwygEditorPage = ({
     editorStatus.activePath === activePath ? editorStatus.status.phase : 'loading'
   const activePathRef = useLatest(activePath)
   const valueRef = useLatest(value)
-  const stats = useDocumentStats(value, showStatusBar)
+  const stats = useDocumentStats(value, showStatusBar && interactionActive)
   const focusEditor = useCallback(() => editorRef.current?.focus(), [])
   useEditorFocusHandoffTarget({
     focus: focusEditor,

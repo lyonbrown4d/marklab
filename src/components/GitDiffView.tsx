@@ -4,8 +4,7 @@ import { AlertTriangle, FileText, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import AppAlert from '@/components/AppAlert'
 import AppButton from '@/components/AppButton'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { gitApi, type GitDiffRequest } from '@/services/gitApi'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
@@ -116,16 +115,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         {diffQuery.isLoading ? (
-          <div
-            role="status"
-            aria-busy="true"
-            aria-label={diffTitle}
-            className="flex h-full flex-col gap-3 p-6"
-          >
-            <Skeleton aria-hidden="true" className="h-5 w-48" />
-            <Skeleton aria-hidden="true" className="h-4 w-2/3" />
-            <Skeleton aria-hidden="true" className="h-4 w-1/2" />
-          </div>
+          <DocumentLoadingState className="h-full p-6" label={diffTitle} />
         ) : diffQuery.isError ? (
           <div className="flex h-full items-center justify-center p-6">
             <AppAlert
@@ -151,18 +141,14 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
             </AppAlert>
           </div>
         ) : !monacoReady ? (
-          <div
-            role="status"
-            aria-busy="true"
-            className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
-          >
-            <Spinner aria-hidden="true" role="presentation" />
-            <span>{t('editor.loadingDocument')}</span>
-          </div>
+          <DocumentLoadingState className="h-full p-6" label={t('editor.loadingDocument')} />
         ) : (
           <div role="region" aria-label={diffTitle} className="h-full">
             <DiffEditor
               height="100%"
+              loading={
+                <DocumentLoadingState className="h-full p-6" label={t('editor.loadingDocument')} />
+              }
               language={languageForPath(request.path)}
               theme={darkMode ? 'vs-dark' : 'vs'}
               original={diffQuery.data?.original_content ?? ''}

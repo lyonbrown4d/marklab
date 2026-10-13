@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, type ComponentProps } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import AppAlert from '@/components/AppAlert'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { fsApi } from '@/services/fsApi'
@@ -74,17 +75,7 @@ const ExcalidrawEditorSurface = ({
   }, [documentQuery.data?.content, path, readonly, t])
 
   if (documentQuery.isLoading) {
-    return (
-      <div
-        aria-busy="true"
-        aria-label={t('preview.excalidrawLoading')}
-        className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
-        role="status"
-      >
-        <Spinner aria-hidden="true" role="presentation" />
-        <span>{t('preview.excalidrawLoading')}</span>
-      </div>
-    )
+    return <DocumentLoadingState className="h-full p-6" label={t('preview.excalidrawLoading')} />
   }
 
   if (documentQuery.isError || !documentQuery.data) {

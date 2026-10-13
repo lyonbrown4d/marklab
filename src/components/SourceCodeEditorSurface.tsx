@@ -2,7 +2,7 @@ import Editor, { type OnMount } from '@monaco-editor/react'
 import { useKeepAliveContext } from 'keepalive-for-react'
 import { AlertTriangle } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { cn } from '@/lib/utils'
 import { EditorContextMenu, type EditorContextMenuAdapter } from '@/components/EditorContextMenu'
 import type { ShortcutBindings } from '@/logic/shortcuts'
@@ -83,6 +83,7 @@ export const SourceCodeEditorSurface = ({
       ) : monacoReady ? (
         <Editor
           height="100%"
+          loading={<DocumentLoadingState className="h-full p-6" label={loadingLabel} />}
           language={language}
           theme={darkMode ? 'vs-dark' : 'vs'}
           path={modelPath}
@@ -121,15 +122,7 @@ export const SourceCodeEditorSurface = ({
           }}
         />
       ) : (
-        <div
-          aria-busy="true"
-          aria-label={loadingLabel}
-          className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
-          role="status"
-        >
-          <Spinner aria-hidden="true" role="presentation" />
-          <span>{loadingLabel}</span>
-        </div>
+        <DocumentLoadingState className="h-full p-6" label={loadingLabel} />
       )}
     </div>
   )

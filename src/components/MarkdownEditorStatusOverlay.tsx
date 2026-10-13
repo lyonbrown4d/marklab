@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react'
-import { Spinner } from '@/components/ui/spinner'
+import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
 import type { MarkdownEditorStatus } from '@/components/editor/markdownEditorTypes'
 
 type MarkdownEditorStatusOverlayProps = {
@@ -28,7 +28,7 @@ const MarkdownEditorStatusOverlay = ({
         {isError ? (
           <AlertCircle className="size-4 text-destructive" aria-hidden="true" />
         ) : (
-          <Spinner aria-hidden="true" />
+          <DocumentLoadingLines compact />
         )}
         <span>{isError ? status.message || errorLabel : loadingLabel}</span>
       </div>

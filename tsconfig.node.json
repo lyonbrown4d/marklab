@@ -24,6 +24,7 @@
   },
   "include": [
     "vite.config.ts",
+    "vite.design-preview.config.ts",
     "tailwind.config.ts",
     "postcss.config.ts",
     "playwright.electron.config.ts",

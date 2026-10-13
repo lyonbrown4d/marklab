@@ -6,6 +6,7 @@ import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
 import { createRecentWorkspacesPreloadSurface } from '@electron/preload/recentWorkspaces'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
 import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle'
+import { createWindowPresentationPreloadSurface } from '@electron/preload/windowPresentation'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence'
 import { createLinkPreviewPreloadSurface } from '@electron/preload/linkPreview'
 import { createWebTabsPreloadSurface } from '@electron/preload/webTabs'
@@ -122,6 +123,7 @@ const listenToRuntimeEvent = <T>(
 const workspacePreloadSurfaces = createWorkspacePreloadSurfaces()
 const windowOpeningSurface = createWindowOpeningPreloadSurface(ipcRenderer)
 const windowCloseLifecycleSurface = createWindowCloseLifecyclePreloadSurface(ipcRenderer)
+const windowPresentationSurface = createWindowPresentationPreloadSurface(ipcRenderer)
 const languageIntelligenceSurface = createLanguageIntelligencePreloadSurface(ipcRenderer)
 const linkPreviewSurface = createLinkPreviewPreloadSurface(ipcRenderer)
 const webTabsSurface = createWebTabsPreloadSurface(ipcRenderer)
@@ -252,6 +254,7 @@ const desktopApi: RendererSafeElectronApi = {
   webTabs: webTabsSurface,
   workspaceSync: workspaceSyncSurface,
   window: {
+    onPresented: windowPresentationSurface.onPresented,
     minimize: () => runWindowAction(nativeIpcChannels.windowMinimize),
     maximize: () => runWindowAction(nativeIpcChannels.windowMaximize),
     unmaximize: () => runWindowAction(nativeIpcChannels.windowUnmaximize),
