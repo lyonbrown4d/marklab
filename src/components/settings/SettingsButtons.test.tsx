@@ -8,6 +8,6 @@ describe('SettingsEmptyState', () => {
 
     expect(screen.getByRole('note')).toHaveTextContent('No matches')
     expect(screen.getByRole('heading', { name: 'No matches' })).toHaveAttribute('aria-level', '3')
-    expect(container.querySelector('[data-slot="empty"]')).toHaveClass('min-h-0', 'bg-muted/30')
+    expect(container.querySelector('[data-slot="empty"]')).toHaveClass('min-h-0', 'bg-transparent')
   })
 })

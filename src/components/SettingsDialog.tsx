@@ -107,9 +107,9 @@ const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialog
           searchInputRef.current?.focus()
         }}
       >
-        <DialogHeader className="grid grid-cols-1 items-center gap-3 border-b px-5 py-4 pr-14 text-left md:grid-cols-[176px_minmax(0,1fr)]">
+        <DialogHeader className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 border-b border-border/60 px-4 py-3 pr-12 text-left md:grid-cols-[144px_minmax(0,1fr)]">
           <div>
-            <DialogTitle className="text-base font-semibold">{t('settings.title')}</DialogTitle>
+            <DialogTitle className="text-sm font-semibold">{t('settings.title')}</DialogTitle>
             <DialogDescription className="sr-only">{t('settings.description')}</DialogDescription>
           </div>
           <SettingsSearch
@@ -123,68 +123,62 @@ const SettingsDialog = ({ open, onOpenChange, initialSelection }: SettingsDialog
           value={section}
           orientation={isMobile ? 'horizontal' : 'vertical'}
           onValueChange={onSectionChange}
-          className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[196px_minmax(0,1fr)] md:grid-rows-1"
+          className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden md:grid-cols-[176px_minmax(0,1fr)] md:grid-rows-1"
         >
-          <TabsList
-            ref={tabsListRef}
-            aria-label={t('settings.title')}
-            className="flex [scroll-padding-inline:0.5rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden h-auto flex-row items-stretch justify-start gap-1 overflow-x-auto rounded-none border-b bg-muted/20 px-3 py-2 md:h-full md:flex-col md:gap-0 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:px-3 md:py-4"
-          >
-            {settingsGroups.map((group) => {
-              const routes = settingsRoutes.filter((entry) => entry.group === group.value)
-              return (
-                <div key={group.value} className="contents md:mb-4 md:block md:last:mb-0">
-                  <div className="hidden px-2 pb-1.5 text-[11px] font-medium text-muted-foreground md:block">
-                    {t(group.labelKey)}
+          <div className="min-h-0 min-w-0 overflow-hidden border-b border-border/60 bg-muted/20 md:border-b-0 md:border-r">
+            <TabsList
+              ref={tabsListRef}
+              aria-label={t('settings.title')}
+              className="settings-navigation flex h-auto max-h-full min-h-0 w-full flex-row items-stretch justify-start gap-1 overflow-x-auto overflow-y-hidden overscroll-contain rounded-none bg-transparent px-2 py-2 [scroll-padding:0.5rem] [scrollbar-width:thin] group-data-[orientation=horizontal]/tabs:h-auto group-data-[orientation=vertical]/tabs:h-full md:flex-col md:gap-0 md:overflow-x-hidden md:overflow-y-auto md:py-3 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5"
+            >
+              {settingsGroups.map((group) => {
+                const routes = settingsRoutes.filter((entry) => entry.group === group.value)
+                return (
+                  <div
+                    key={group.value}
+                    className="contents md:mb-3 md:block md:shrink-0 md:last:mb-0"
+                  >
+                    <div className="hidden px-2 pb-1 text-[11px] font-medium text-muted-foreground md:block">
+                      {t(group.labelKey)}
+                    </div>
+                    <div className="contents md:flex md:flex-col md:gap-0.5">
+                      {routes.map((routeConfig) => {
+                        const Icon = routeConfig.icon
+                        const label = t(routeConfig.labelKey)
+                        const isActive = section === routeConfig.value
+                        return (
+                          <TabsTrigger
+                            key={routeConfig.value}
+                            value={routeConfig.value}
+                            aria-current={isActive ? 'page' : undefined}
+                            data-settings-route={routeConfig.value}
+                            title={label}
+                            className="relative h-8 flex-none cursor-pointer justify-start gap-2 rounded-md border-0 px-2 text-[13px] text-muted-foreground shadow-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none md:w-full motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0"
+                          >
+                            <Icon aria-hidden="true" />
+                            <span className="truncate">{label}</span>
+                          </TabsTrigger>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div className="contents md:flex md:flex-col md:gap-0.5">
-                    {routes.map((routeConfig) => {
-                      const Icon = routeConfig.icon
-                      const label = t(routeConfig.labelKey)
-                      const isActive = section === routeConfig.value
-                      return (
-                        <TabsTrigger
-                          key={routeConfig.value}
-                          value={routeConfig.value}
-                          aria-current={isActive ? 'page' : undefined}
-                          data-settings-route={routeConfig.value}
-                          title={label}
-                          className="relative h-9 flex-none cursor-pointer justify-start gap-2 rounded-md border-0 px-2.5 text-muted-foreground shadow-none transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none md:w-full md:data-[state=active]:before:absolute md:data-[state=active]:before:-left-3 md:data-[state=active]:before:h-5 md:data-[state=active]:before:w-0.5 md:data-[state=active]:before:rounded-full md:data-[state=active]:before:bg-primary motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0"
-                        >
-                          <Icon aria-hidden="true" />
-                          <span className="truncate">{label}</span>
-                        </TabsTrigger>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </TabsList>
+                )
+              })}
+            </TabsList>
+          </div>
           <div className="h-full min-h-0 min-w-0 overflow-hidden bg-card">
             <TabsContent value={section} className="m-0 h-full min-h-0 overflow-hidden">
               <div ref={scrollViewportRef} className={settingsScrollViewportClassName}>
-                <header className="sticky top-0 z-10 border-b bg-card/95 px-5 py-5 backdrop-blur-sm md:px-8">
+                <header className="sticky top-0 z-10 border-b border-border/50 bg-card px-4 py-3 md:px-6">
                   <div
                     id={activeRoute.pageTargetId}
                     tabIndex={-1}
-                    className="mx-auto flex w-full max-w-3xl items-start gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mx-auto w-full max-w-3xl rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <activeRoute.icon
-                      aria-hidden="true"
-                      className="mt-0.5 size-5 shrink-0 text-muted-foreground"
-                    />
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-semibold tracking-tight">
-                        {t(activeRoute.labelKey)}
-                      </h2>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {t(activeRoute.descriptionKey)}
-                      </p>
-                    </div>
+                    <h2 className="text-sm font-semibold">{t(activeRoute.labelKey)}</h2>
                   </div>
                 </header>
-                <div className="mx-auto min-h-full w-full max-w-3xl px-5 pb-10 pt-6 md:px-8">
+                <div className="mx-auto w-full max-w-3xl px-4 pb-6 pt-3 md:px-6">
                   {contentReady ? activeRoute.render() : <SettingsDialogLoadingPanel />}
                 </div>
               </div>

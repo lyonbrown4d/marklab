@@ -45,14 +45,13 @@ const SoftwareUpdateSettingsSection = () => {
     >
       <SettingsField
         title={t('settings.softwareUpdateCurrentVersion')}
-        description={t('settings.softwareUpdateCurrentVersionDescription')}
         control={
           <span className="font-mono text-xs">
             {t('settings.softwareUpdateCurrentVersionValue', { version: state.currentVersion })}
           </span>
         }
       />
-      <div className="flex flex-col gap-3 border-t py-3.5">
+      <div className="flex flex-col gap-3 border-t border-border/50 py-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge variant={state.status === 'error' ? 'destructive' : 'outline'}>
             {t(`settings.softwareUpdateStatus.${state.status}`)}

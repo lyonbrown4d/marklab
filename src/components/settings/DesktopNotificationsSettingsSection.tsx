@@ -26,7 +26,6 @@ const DesktopNotificationsSettingsSection = () => {
     <SettingsSection
       targetId="settings-desktop-notifications"
       title={t('settings.desktopNotificationsSection')}
-      description={t('settings.desktopNotificationsSectionDescription')}
       icon={Bell}
     >
       <SettingsSwitchRow

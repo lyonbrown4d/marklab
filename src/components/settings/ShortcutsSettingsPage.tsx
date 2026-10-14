@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Keyboard, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import AppSearchField from '@/components/AppSearchField'
 import { useI18n } from '@/i18n/useI18n'
 import {
@@ -103,36 +103,30 @@ const ShortcutsSettingsPage = () => {
     <SettingsPageStack className="gap-5">
       <SettingsSection
         targetId="settings-shortcuts"
-        title={t('settings.shortcuts')}
         description={t('settings.shortcutsDescription')}
-        icon={Keyboard}
-        bodyClassName="gap-4"
+        bodyClassName="gap-2"
       >
-        <AppSearchField
-          value={keyword}
-          aria-label={t('shortcuts.searchPlaceholder')}
-          onChange={(event) => setKeyword(event.target.value)}
-          onClear={() => setKeyword('')}
-          clearLabel={t('shortcuts.clearSearch')}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              setKeyword('')
-            }
-          }}
-          placeholder={t('shortcuts.searchPlaceholder')}
-        />
-        <div className="settings-shortcuts-toolbar flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-xs text-muted-foreground">
-              {t('settings.shortcutsDescription')}
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AppSearchField
+            containerClassName="min-w-40 flex-1"
+            value={keyword}
+            aria-label={t('shortcuts.searchPlaceholder')}
+            onChange={(event) => setKeyword(event.target.value)}
+            onClear={() => setKeyword('')}
+            clearLabel={t('shortcuts.clearSearch')}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setKeyword('')
+              }
+            }}
+            placeholder={t('shortcuts.searchPlaceholder')}
+          />
           <SettingsActionButton
             type="button"
             variant="outline"
             size="sm"
-            className="settings-shortcuts-reset h-8 shrink-0 rounded-md"
+            className="h-8 shrink-0 rounded-md"
             disabled={!hasOverrides}
             onClick={resetShortcutOverrides}
           >
@@ -146,11 +140,9 @@ const ShortcutsSettingsPage = () => {
         <SettingsEmptyState>{t('shortcuts.noMatches')}</SettingsEmptyState>
       )}
       {filteredSections.map((category) => (
-        <section key={category.id} className="settings-shortcut-category">
-          <div className="settings-shortcut-category-title">{t(category.labelKey)}</div>
-          <div className="settings-shortcut-list rounded-md border border-border">
-            {category.rows}
-          </div>
+        <section key={category.id} className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium text-muted-foreground">{t(category.labelKey)}</h3>
+          <div className="divide-y divide-border/60">{category.rows}</div>
         </section>
       ))}
     </SettingsPageStack>

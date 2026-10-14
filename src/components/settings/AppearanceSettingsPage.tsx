@@ -1,4 +1,4 @@
-import { Check, Languages, Monitor, Moon, Palette, Sun } from 'lucide-react'
+import { Languages, Monitor, Moon, Palette, Sun } from 'lucide-react'
 import {
   SettingsChoiceButton,
   SettingsChoiceGrid,
@@ -34,7 +34,6 @@ const AppearanceSettingsPage = () => {
       <SettingsSection
         targetId="settings-theme"
         title={t('menu.theme')}
-        description={t('settings.themeDescription')}
         icon={Palette}
         surface={false}
       >
@@ -72,14 +71,11 @@ const AppearanceSettingsPage = () => {
                 <SettingsChoiceButton
                   key={item.value}
                   selected={lightTheme === item.value}
-                  selectedVariant="ghost"
-                  unselectedVariant="ghost"
-                  className="theme-choice h-auto gap-3 border-border bg-card p-2 text-left shadow-none transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:border-border hover:bg-card data-[selected=true]:border-primary data-[selected=true]:bg-card data-[selected=true]:![box-shadow:0_0_0_1px_hsl(var(--primary))] data-[selected=true]:hover:border-primary motion-reduce:transition-none"
+                  className="gap-2"
                   onClick={() => setLightTheme(item.value)}
                 >
-                  <ThemePreview swatchClass={item.swatchClass} />
-                  <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
-                  {lightTheme === item.value && <Check data-icon="inline-end" />}
+                  <ThemeSwatch swatchClass={item.swatchClass} />
+                  <span className="truncate">{t(item.labelKey)}</span>
                 </SettingsChoiceButton>
               ))}
             </SettingsChoiceGrid>
@@ -91,14 +87,11 @@ const AppearanceSettingsPage = () => {
                 <SettingsChoiceButton
                   key={item.value}
                   selected={darkTheme === item.value}
-                  selectedVariant="ghost"
-                  unselectedVariant="ghost"
-                  className="theme-choice h-auto gap-3 border-border bg-card p-2 text-left shadow-none transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:border-border hover:bg-card data-[selected=true]:border-primary data-[selected=true]:bg-card data-[selected=true]:![box-shadow:0_0_0_1px_hsl(var(--primary))] data-[selected=true]:hover:border-primary motion-reduce:transition-none"
+                  className="gap-2"
                   onClick={() => setDarkTheme(item.value)}
                 >
-                  <ThemePreview swatchClass={item.swatchClass} />
-                  <span className="min-w-0 flex-1 truncate text-sm">{t(item.labelKey)}</span>
-                  {darkTheme === item.value && <Check data-icon="inline-end" />}
+                  <ThemeSwatch swatchClass={item.swatchClass} />
+                  <span className="truncate">{t(item.labelKey)}</span>
                 </SettingsChoiceButton>
               ))}
             </SettingsChoiceGrid>
@@ -111,7 +104,6 @@ const AppearanceSettingsPage = () => {
       <SettingsSection
         targetId="settings-language"
         title={t('menu.language')}
-        description={t('settings.languageDescription')}
         icon={Languages}
         surface={false}
       >
@@ -135,19 +127,17 @@ const AppearanceSettingsPage = () => {
 
 export default AppearanceSettingsPage
 
-const ThemePreview = ({ swatchClass }: { swatchClass: string }) => {
+const ThemeSwatch = ({ swatchClass }: { swatchClass: string }) => {
   return (
     <span
+      aria-hidden="true"
       className={cn(
-        'block h-9 w-12 shrink-0 overflow-hidden rounded border border-border/85 bg-background',
+        'flex size-4 shrink-0 overflow-hidden rounded-sm border border-foreground/20',
         swatchClass,
       )}
     >
-      <span className="relative block h-full w-full bg-[var(--swatch-bg)]">
-        <span className="absolute inset-y-0 left-0 w-4 bg-[var(--swatch-rail)]" />
-        <span className="absolute left-5 top-2 h-1.5 w-5 rounded-full bg-[var(--swatch-accent)]" />
-        <span className="absolute bottom-2 left-5 h-1 w-3 rounded-full bg-[var(--swatch-accent)] opacity-60" />
-      </span>
+      <span className="w-1/2 bg-[var(--swatch-bg)]" />
+      <span className="w-1/2 bg-[var(--swatch-accent)]" />
     </span>
   )
 }

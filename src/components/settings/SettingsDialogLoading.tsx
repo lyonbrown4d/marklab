@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 
 export const settingsDialogContentClassName =
-  'settings-dialog-content inset-0 m-auto translate-none transform-none will-change-auto data-[state=open]:[animation-name:settings-dialog-content-in] data-[state=closed]:[animation-name:settings-dialog-content-out] grid h-[calc(100dvh-1rem)] max-h-none w-[calc(100vw-1rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 text-card-foreground shadow-[0_24px_80px_-30px_hsl(var(--foreground)/0.42)] sm:max-w-none md:h-[84dvh] md:max-h-[780px] md:w-[86vw] md:max-w-[1180px]'
+  'settings-dialog-content inset-0 m-auto translate-none transform-none will-change-auto data-[state=open]:[animation-name:settings-dialog-content-in] data-[state=closed]:[animation-name:settings-dialog-content-out] grid h-[calc(100dvh-1rem)] max-h-[680px] w-[calc(100vw-1rem)] max-w-[1000px] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 text-card-foreground shadow-[0_24px_80px_-30px_hsl(var(--foreground)/0.42)] sm:max-w-[1000px] md:h-[calc(100dvh-3rem)] md:w-[calc(100vw-3rem)]'
 
 // Preserve the shared native scrollbar; scoped important values override unlayered base rules.
 export const settingsScrollViewportClassName =
@@ -13,16 +13,16 @@ export const SettingsDialogLoadingPanel = () => {
   const { t } = useI18n()
   const label = t('settings.loading')
 
-  return <DocumentLoadingState className="min-h-[320px]" label={label} />
+  return <DocumentLoadingState className="min-h-[200px]" label={label} />
 }
 
 export const SettingsDialogLoadingTabs = () => (
   <div
-    className="flex h-auto flex-row gap-1 overflow-hidden px-3 pb-3 md:h-full md:flex-col"
+    className="flex h-auto min-h-0 flex-row gap-1 overflow-hidden px-2 py-2 md:h-full md:flex-col md:py-3"
     aria-hidden="true"
   >
     {Array.from({ length: 7 }).map((_, index) => (
-      <Skeleton className="h-9 w-28 flex-none motion-reduce:animate-none md:w-full" key={index} />
+      <Skeleton className="h-8 w-28 flex-none motion-reduce:animate-none md:w-full" key={index} />
     ))}
   </div>
 )

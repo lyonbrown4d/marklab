@@ -14,9 +14,9 @@ type SettingsChoiceButtonProps = ComponentProps<typeof Button> & {
 }
 
 const gridColumnClass: Record<NonNullable<SettingsChoiceGridProps['columns']>, string> = {
-  1: 'sm:grid-cols-1',
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-3',
+  1: 'flex-col items-start',
+  2: 'flex-row flex-wrap',
+  3: 'flex-row flex-wrap',
 }
 
 const choiceButtonSelector = '[role="radio"]:not(:disabled):not([aria-disabled="true"])'
@@ -72,7 +72,7 @@ export const SettingsChoiceGrid = ({
   return (
     <div
       role="radiogroup"
-      className={cn('grid grid-cols-1 gap-2', gridColumnClass[columns], className)}
+      className={cn('flex max-w-full gap-1.5', gridColumnClass[columns], className)}
       onKeyDown={(event) => {
         onKeyDown?.(event)
 
@@ -107,10 +107,10 @@ export const SettingsChoiceButton = ({
       data-selected={selected ? 'true' : 'false'}
       aria-checked={selected}
       className={cn(
-        'min-h-10 justify-start rounded-md border border-border/70 text-foreground shadow-none transition-[background-color,border-color,color,box-shadow]',
-        'hover:border-primary/40 hover:bg-accent hover:text-accent-foreground',
+        'h-8 max-w-full justify-start rounded-md border border-border/60 px-2.5 text-xs text-foreground shadow-none transition-colors motion-reduce:transition-none',
+        'hover:border-border hover:bg-accent hover:text-accent-foreground',
         'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1',
-        'data-[selected=true]:border-primary/55 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground',
+        'data-[selected=true]:border-primary/50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground',
         isDisabled && 'opacity-[0.55]',
         className,
       )}

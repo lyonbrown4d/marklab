@@ -15,12 +15,12 @@ export const SettingsEmptyState = ({
     <Empty
       role={role}
       className={cn(
-        'min-h-0 flex-none gap-0 rounded-md border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground',
+        'min-h-0 flex-none items-start justify-start gap-0 rounded-none border-0 bg-transparent px-0 py-2 text-left text-xs text-muted-foreground md:p-0 md:py-2',
         className,
       )}
       {...props}
     >
-      <EmptyHeader className="max-w-none items-stretch gap-0 text-inherit">
+      <EmptyHeader className="max-w-none items-stretch gap-0 text-left text-inherit">
         <EmptyTitle
           aria-level={3}
           className="text-inherit text-xs leading-5 font-normal"

@@ -14,6 +14,8 @@ describe('ShortcutsSettingsPage', () => {
   it('uses compact shadcn sizing for shortcut search affordances and clears search text', () => {
     render(<ShortcutsSettingsPage />)
 
+    expect(screen.getAllByText(i18n.t('settings.shortcutsDescription'))).toHaveLength(1)
+
     const searchField = document.querySelector('[data-slot="app-search-field"]')
     expect(searchField).toBeInTheDocument()
 

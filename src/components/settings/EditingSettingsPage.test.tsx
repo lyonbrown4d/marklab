@@ -17,12 +17,11 @@ beforeEach(async () => {
 })
 
 describe('EditingSettingsPage', () => {
-  it('toggles Vim mode for the documented source editor surfaces', () => {
+  it('toggles the global Vim default', () => {
     render(<EditingSettingsPage />)
-    const vimMode = screen.getByRole('switch', { name: 'Vim mode (source editors)' })
+    const vimMode = screen.getByRole('switch', { name: 'Vim mode' })
     expect(vimMode).not.toBeChecked()
-    expect(screen.getByText(/Normal mode for commands.*Mermaid source/)).toBeInTheDocument()
-    expect(screen.getByText(/Rich text editing is unchanged/)).toBeInTheDocument()
+    expect(screen.getByText(i18n.t('settings.vimModeDescription'))).toBeInTheDocument()
 
     fireEvent.click(vimMode)
     expect(vimMode).toBeChecked()
@@ -37,8 +36,8 @@ describe('EditingSettingsPage', () => {
     usePreferencesStore.getState().setLocale('zh-CN')
     await i18n.changeLanguage('zh-CN')
     render(<EditingSettingsPage />)
-    expect(screen.getByRole('switch', { name: 'Vim 模式（源码编辑器）' })).not.toBeChecked()
-    expect(screen.getByText(/Normal（普通）.*Insert（插入）.*Visual（可视）/)).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Vim 模式' })).not.toBeChecked()
+    expect(screen.getByText(i18n.t('settings.vimModeDescription'))).toBeInTheDocument()
   })
 
   it('finds Vim mode in settings search and navigates to the source editor section', () => {
@@ -52,7 +51,7 @@ describe('EditingSettingsPage', () => {
         onSelect={onSelect}
       />,
     )
-    fireEvent.click(screen.getByRole('option', { name: 'Vim mode (source editors) · Editing' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Vim mode · Editing' }))
     expect(onSelect).toHaveBeenCalledWith('editing', 'settings-source-code')
     expect(onQueryChange).toHaveBeenCalledWith('')
   })

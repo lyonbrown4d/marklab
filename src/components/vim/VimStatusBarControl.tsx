@@ -57,7 +57,11 @@ export const VimStatusBarControl = ({
           <span aria-live="polite">{modeLabel}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="end" className="w-80 space-y-3 p-3 text-xs">
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-72 max-w-[calc(100vw-2rem)] space-y-3 p-3 text-xs"
+      >
         <p className="font-medium">{t('settings.vimMode')}</p>
         <p className="text-muted-foreground">{t('statusBar.vimScope')}</p>
         <div className="flex items-center justify-between gap-3">
@@ -82,7 +86,7 @@ export const VimStatusBarControl = ({
         <p className="text-muted-foreground">
           {t(override === undefined ? 'statusBar.vimFollowingGlobal' : 'statusBar.vimTabOverride')}
         </p>
-        <div className="flex items-center justify-between gap-3 border-t pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3">
           <label htmlFor={globalSwitchId}>{t('statusBar.vimGlobalDefault')}</label>
           <Switch
             data-testid="vim-global-toggle"

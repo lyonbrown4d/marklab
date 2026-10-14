@@ -1,4 +1,3 @@
-import { MonitorCog } from 'lucide-react'
 import MarkdownDefaultAppPrompt from '@/components/MarkdownDefaultAppPrompt'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
@@ -18,11 +17,7 @@ const GeneralSettingsPage = () => {
 
   return (
     <SettingsPageStack>
-      <SettingsSection
-        targetId="settings-status-bar"
-        title={t('settings.general')}
-        icon={MonitorCog}
-      >
+      <SettingsSection targetId="settings-status-bar">
         <SettingsSwitchRow
           title={t('settings.statusBar')}
           description={t('settings.statusBarDescription')}

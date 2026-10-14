@@ -91,6 +91,15 @@ describe('ShortcutRecorderRow', () => {
     expect(onChange).toHaveBeenCalledWith(action, null)
   })
 
+  it('keeps unchanged bindings concise without a redundant default description', () => {
+    renderShortcutRecorderRow({ overrides: {} as ShortcutBindings })
+
+    expect(screen.queryByText('Default shortcut')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open Command Palette, F1' })).not.toHaveAttribute(
+      'aria-describedby',
+    )
+  })
+
   it('announces recording state through the recorder button name', () => {
     recorderMock.isRecording = true
 
@@ -114,7 +123,7 @@ describe('ShortcutRecorderRow', () => {
     const conflict = screen.getByRole('alert')
 
     expect(conflict).toHaveTextContent('Conflicts with Toggle Terminal')
-    expect(conflict).toHaveClass('settings-shortcut-conflict', 'text-destructive')
+    expect(conflict).toHaveClass('text-destructive')
     expect(
       screen.getByRole('button', { name: 'Open Command Palette, Clear shortcut' }),
     ).toBeDisabled()

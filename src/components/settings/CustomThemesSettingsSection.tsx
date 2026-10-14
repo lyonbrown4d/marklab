@@ -136,7 +136,7 @@ const CustomThemesSettingsSection = () => {
         </SettingsActionButton>
       </div>
       {customThemesSupported && customThemes.length > 0 ? (
-        <div className="mt-2 flex flex-col gap-2">
+        <div className="mt-2 flex flex-col divide-y divide-border/50">
           {customThemes.map((item) => {
             const removeLabel = t('settings.removeCustomTheme', { name: item.name })
             const selected = customThemeId === item.id
@@ -144,7 +144,7 @@ const CustomThemesSettingsSection = () => {
               <div
                 key={item.id}
                 data-selected={selected ? 'true' : 'false'}
-                className="settings-theme-item flex items-center gap-2 rounded-md border border-[color-mix(in_srgb,hsl(var(--border))_78%,transparent)] bg-background px-3 py-2.5 transition-[background-color,border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] ease-[ease] hover:-translate-y-px hover:border-[color-mix(in_srgb,hsl(var(--border))_56%,hsl(var(--foreground))_44%)] hover:shadow-[0_1px_2px_color-mix(in_srgb,hsl(var(--foreground))_12%,transparent)] active:translate-y-0 data-[selected=true]:border-[color-mix(in_srgb,hsl(var(--primary))_54%,hsl(var(--border))_46%)] data-[selected=true]:bg-[color-mix(in_srgb,hsl(var(--primary))_8%,hsl(var(--card))_92%)] data-[selected=true]:hover:border-[color-mix(in_srgb,hsl(var(--primary))_64%,hsl(var(--border))_36%)] motion-reduce:transition-none motion-reduce:hover:translate-none motion-reduce:active:translate-none"
+                className="settings-theme-item flex items-center gap-2 px-1 py-2 transition-colors hover:bg-accent/30 data-[selected=true]:bg-accent/50 motion-reduce:transition-none"
               >
                 <button
                   type="button"
@@ -154,7 +154,6 @@ const CustomThemesSettingsSection = () => {
                   onClick={() => setCustomThemeId(item.id)}
                 >
                   <span className="block truncate font-medium">{item.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{item.id}</span>
                 </button>
                 {selected && (
                   <Check
@@ -179,7 +178,7 @@ const CustomThemesSettingsSection = () => {
           })}
         </div>
       ) : (
-        <SettingsEmptyState className="px-3 py-4 text-left">
+        <SettingsEmptyState>
           {customThemesSupported
             ? t('settings.noCustomThemes')
             : t('settings.customThemesDesktopOnly')}

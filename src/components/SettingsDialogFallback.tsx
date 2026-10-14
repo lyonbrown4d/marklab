@@ -24,15 +24,15 @@ const SettingsDialogFallback = ({ open, onOpenChange }: SettingsDialogFallbackPr
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={settingsDialogContentClassName}>
-        <DialogHeader className="px-5 py-4 pr-12 text-left">
-          <DialogTitle className="text-sm font-medium">{t('settings.title')}</DialogTitle>
+        <DialogHeader className="border-b border-border/60 px-4 py-3 pr-12 text-left">
+          <DialogTitle className="text-sm font-semibold">{t('settings.title')}</DialogTitle>
           <DialogDescription className="sr-only">{t('settings.description')}</DialogDescription>
         </DialogHeader>
-        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[152px_minmax(0,1fr)] md:grid-rows-1">
+        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[176px_minmax(0,1fr)] md:grid-rows-1">
           <SettingsDialogLoadingTabs />
           <div className="h-full min-h-0 min-w-0 overflow-hidden bg-card">
             <div className={settingsScrollViewportClassName}>
-              <div className="mx-auto min-h-full w-full max-w-2xl px-5 pb-8 pt-2 md:px-7">
+              <div className="mx-auto w-full max-w-3xl px-4 pb-6 pt-3 md:px-6">
                 <SettingsDialogLoadingPanel />
               </div>
             </div>

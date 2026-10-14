@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage'
@@ -41,7 +41,7 @@ describe('AppearanceSettingsPage', () => {
     render(<AppearanceSettingsPage />)
 
     const choices = screen.getByRole('radiogroup', { name: 'Theme' })
-    expect(choices).toHaveClass('sm:grid-cols-3')
+    expect(within(choices).getAllByRole('radio')).toHaveLength(3)
     expect(screen.getByRole('radio', { name: /Follow System/ })).toHaveAttribute(
       'aria-checked',
       'true',

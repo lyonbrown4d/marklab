@@ -80,7 +80,8 @@ const openWorkspaceSession = async (rendererUrl: string, workspaceRoot: string) 
 
 const expectSelectedMode = async (dialog: Locator, selected: RegExp) => {
   const tabs = dialog.getByRole('tab')
-  await expect(tabs).toHaveCount(3)
+  await expect(tabs).toHaveCount(4)
+  await expect(dialog.getByRole('tab', { selected: true })).toHaveCount(1)
   for (const tab of await tabs.all()) {
     const name = await tab.getAttribute('aria-label')
     await expect(tab).toHaveAttribute('aria-selected', selected.test(name ?? '') ? 'true' : 'false')
@@ -161,6 +162,8 @@ test.describe('Search and settings redesign', () => {
 
     await input.press('ControlOrMeta+3')
     await expectSelectedMode(dialog, /Commands|命令/i)
+    await input.press('ControlOrMeta+4')
+    await expectSelectedMode(dialog, /Settings|设置/i)
     await input.press('ControlOrMeta+1')
     await expectSelectedMode(dialog, /Quick open|快速打开/i)
     await expect(
@@ -197,6 +200,7 @@ test.describe('Search and settings redesign', () => {
     const appearanceTab = dialog.getByRole('tab', { name: /Appearance|外观/i })
     await appearanceTab.click()
     await expect(appearanceTab).toHaveAttribute('aria-selected', 'true')
+    await dialog.getByRole('tab', { name: /^(Editing|编辑)$/i }).click()
     const viewport = dialog.locator('.settings-scroll-viewport')
     const scrolled = await viewport.evaluate((element) => {
       element.scrollTop = element.scrollHeight
@@ -235,24 +239,14 @@ test.describe('Search and settings redesign', () => {
     session = await openWorkspaceSession(rendererUrl, workspaceRoot!)
     const page = session.page
     const panel = page.getByRole('region', { name: /Workspace Search|工作区搜索/i })
-    const searchActivity = page.getByRole('button', { name: /^(Search|搜索)$/i })
-    if (await searchActivity.isVisible().catch(() => false)) {
-      await searchActivity.click()
-    } else if (!(await panel.isVisible().catch(() => false))) {
-      const workspaceMenu = page
-        .locator('aside')
-        .getByRole('button')
-        .filter({ hasText: path.basename(workspaceRoot!) })
-      if (!(await workspaceMenu.isVisible().catch(() => false))) {
-        await page.keyboard.press('Control+Shift+L')
-      }
-      await page
-        .locator('aside')
-        .getByRole('button')
-        .filter({ hasText: path.basename(workspaceRoot!) })
-        .click()
-      await page.getByRole('menuitem', { name: /^(Search|搜索)$/i }).click()
-    }
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: /^(Toggle sidebar|切换侧边栏)$/i })
+      .click()
+    const sidebar = page.getByRole('dialog', { name: /^(Toggle sidebar|切换侧边栏)$/i })
+    await expect(sidebar).toBeVisible()
+    await sidebar.getByRole('button', { name: path.basename(workspaceRoot!), exact: true }).click()
+    await page.getByRole('menuitem', { name: /^(Search|搜索)$/i }).click()
 
     await expect(panel).toBeVisible()
     const input = panel.getByRole('searchbox', { name: /Full Text|全文搜索/i })

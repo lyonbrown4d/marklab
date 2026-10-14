@@ -138,24 +138,19 @@ describe('settings rendering', () => {
     expect(baseThumb.every((declaration) => !declaration.important)).toBe(true)
   })
 
-  it('preserves the local custom theme focus shadow and selected appearance shadow', () => {
+  it('preserves the local custom theme focus shadow', () => {
     expectScopedOverride(
       'focus-visible',
       'box-shadow',
       '0 0 0 2px color-mix(in srgb,hsl(var(--ring)) 26%,transparent)',
       'button:focus-visible',
     )
-    expectScopedOverride(
-      'selected',
-      'box-shadow',
-      '0 0 0 1px hsl(var(--primary))',
-      'button:focus-visible',
-    )
   })
 
-  it('keeps compact settings labels on an integer-pixel type step', () => {
-    expect(settingsStyles).toMatch(
-      /\.settings-shortcut-category-title\s*\{[^}]*font-size:\s*0\.75rem;/s,
+  it('keeps shortcut category labels in the component utility styles', () => {
+    expect(readSource('src/components/settings/ShortcutsSettingsPage.tsx')).toContain(
+      'text-xs font-medium text-muted-foreground',
     )
+    expect(settingsStyles).not.toContain('.settings-shortcut-')
   })
 })

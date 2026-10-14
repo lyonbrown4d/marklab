@@ -2,7 +2,7 @@ import FileSettingsPage from '@/components/settings/FileSettingsPage'
 import SavingSettingsPage from '@/components/settings/SavingSettingsPage'
 
 const FileAndSavingSettingsPage = () => (
-  <div className="flex flex-col gap-8">
+  <div className="flex flex-col gap-5">
     <FileSettingsPage />
     <SavingSettingsPage />
   </div>

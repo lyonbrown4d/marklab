@@ -52,32 +52,29 @@ const ShortcutRecorderRow = ({
     ? `${label}, ${t('shortcuts.recording')}`
     : `${label}, ${display}`
 
-  const description = (
+  const hasDescription = hasOverride || hasConflict
+  const description = hasDescription ? (
     <span id={descriptionId} className="flex flex-col gap-1">
-      <span>
-        {hasOverride
-          ? t('shortcuts.defaultValue', { value: defaultDisplay })
-          : t('shortcuts.default')}
-      </span>
+      {hasOverride && <span>{t('shortcuts.defaultValue', { value: defaultDisplay })}</span>}
       {hasConflict && (
         <AppAlert
           tone="destructive"
-          className="settings-shortcut-conflict px-2 py-1.5 text-xs"
+          className="px-2 py-1.5 text-xs"
           icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
         >
           {conflictDescription}
         </AppAlert>
       )}
     </span>
-  )
+  ) : undefined
 
   return (
     <SettingsField
       title={label}
       description={description}
       className={cn(
-        'settings-shortcut-row',
-        hasConflict && 'border-destructive/40 bg-destructive/5',
+        'rounded-none px-1 py-2 transition-colors hover:bg-accent/30 focus-within:bg-accent/30 motion-reduce:transition-none',
+        hasConflict && 'bg-destructive/5',
       )}
       control={
         <div
@@ -90,7 +87,7 @@ const ShortcutRecorderRow = ({
             size="sm"
             className="h-8 min-w-[112px] max-w-full justify-center rounded-md font-mono text-xs"
             aria-label={recorderLabel}
-            aria-describedby={descriptionId}
+            aria-describedby={hasDescription ? descriptionId : undefined}
             data-recording={recorder.isRecording ? 'true' : 'false'}
             onClick={recorder.startRecording}
           >

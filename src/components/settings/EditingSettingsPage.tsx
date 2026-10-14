@@ -27,11 +27,7 @@ const EditingSettingsPage = () => {
     <SettingsPageStack>
       <ImmersiveSettingsSection />
 
-      <SettingsSection
-        targetId="settings-source-code"
-        title={t('settings.sourceCode')}
-        description={t('settings.sourceCodeDescription')}
-      >
+      <SettingsSection targetId="settings-source-code" title={t('settings.sourceCode')}>
         <SettingsFieldGroup>
           <SettingsSwitchRow
             title={t('settings.vimMode')}
@@ -41,22 +37,16 @@ const EditingSettingsPage = () => {
           />
           <SettingsSwitchRow
             title={t('settings.sourceCodeMiniMap')}
-            description={t('settings.sourceCodeMiniMapDescription')}
             checked={sourceCodeMiniMapEnabled}
             onCheckedChange={setSourceCodeMiniMapEnabled}
           />
         </SettingsFieldGroup>
       </SettingsSection>
 
-      <SettingsSection
-        targetId="settings-motion"
-        title={t('settings.motion')}
-        description={t('settings.motionDescription')}
-      >
+      <SettingsSection targetId="settings-motion" title={t('settings.motion')}>
         <SettingsFieldGroup>
           <SettingsSwitchRow
             title={t('settings.motionSmoothScrolling')}
-            description={t('settings.motionSmoothScrollingDescription')}
             checked={motionSmoothScrolling}
             onCheckedChange={setMotionSmoothScrolling}
           />
