@@ -40,7 +40,7 @@ pnpm --filter @marklab/website releases:sync
 
 这个命令在构建时读取 GitHub Releases，排除草稿和预发布版本，校验官方仓库链接。下载版本按平台分别选择；不会把 GitHub 全局 Latest 当成所有平台的最新版本。
 
-本地构建使用已提交快照，不依赖网络。部署工作流会先刷新；刷新失败会中止该次部署，保留已上线站点。发布后通过 GitHub Actions 的 Website 工作流更新下载入口。
+本地构建使用已提交快照，不依赖网络。发布前刷新快照；刷新失败时保留已上线站点。当前通过 `gh-pages` 分支发布，操作步骤与恢复 Actions 自动部署的条件见 [docs/website.md](../docs/website.md)。
 
 如需认证，可通过进程环境或本地 `.env` 设置 `GITHUB_TOKEN`；令牌只用于刷新脚本，不进入页面代码或静态产物。
 
