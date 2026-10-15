@@ -1,0 +1,13 @@
+@layer base, starlight, theme, components, utilities;
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Starlight theme tokens preserve its built-in light/dark and accessibility behavior. */
+@theme {
+  --color-accent-200: #bfdbfe;
+  --color-accent-600: #2563eb;
+  --color-accent-900: #1e3a8a;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}

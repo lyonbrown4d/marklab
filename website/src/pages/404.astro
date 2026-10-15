@@ -1,0 +1,22 @@
+---
+import SiteLayout from '@site/layouts/SiteLayout.astro'
+import { localPath } from '#site/lib/links'
+---
+
+<SiteLayout
+  locale="zh-CN"
+  title="页面未找到 — Marklab"
+  description="回到 Marklab 首页，或阅读使用指南。"
+>
+  <main id="main" class="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-20">
+    <p class="mb-6 font-mono text-sm text-accent">404 / Marklab</p>
+    <h1 class="mb-6 text-3xl font-semibold">页面未找到</h1>
+    <p class="mb-8 text-muted">Page not found. 回到首页，继续了解 Marklab。</p>
+    <a
+      class="w-fit rounded-sm bg-accent px-5 py-3 text-white"
+      href={localPath(import.meta.env.BASE_URL)}
+    >
+      返回首页 / Home →
+    </a>
+  </main>
+</SiteLayout>

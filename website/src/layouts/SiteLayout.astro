@@ -1,0 +1,52 @@
+---
+import '@site/styles/home.css'
+import { localPath } from '#site/lib/links'
+import { homeCopy, type Locale } from '#site/lib/homeCopy'
+import appEditor from '@site/assets/app-editor.png'
+
+interface Props {
+  locale: Locale
+  title?: string
+  description?: string
+}
+const {
+  locale,
+  title = homeCopy[locale].title,
+  description = homeCopy[locale].description,
+} = Astro.props
+const base = import.meta.env.BASE_URL
+const canonical = new URL(Astro.url.pathname, Astro.site)
+const image = new URL(appEditor.src, Astro.site)
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" type="image/svg+xml" href={localPath(base, 'favicon.svg')} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="zh-CN" href={new URL(localPath(base), Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(localPath(base, 'en/'), Astro.site)} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:alt" content={homeCopy[locale].screenshot} />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body class="bg-paper font-sans text-ink antialiased">
+    <a
+      href="#main"
+      class="sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:not-sr-only focus:rounded focus:bg-white focus:px-4 focus:py-3"
+    >
+      {homeCopy[locale].skip}
+    </a>
+    <slot />
+  </body>
+</html>

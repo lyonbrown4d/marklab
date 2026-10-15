@@ -156,3 +156,6 @@ Temporary Items
 resources/icons/
 # Moon cache artifacts
 .moon/cache
+
+# Astro generated types and content caches
+website/.astro/

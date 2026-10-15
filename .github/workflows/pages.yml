@@ -1,0 +1,86 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/pages.yml']
+  pull_request:
+    branches: [main]
+    paths: ['website/**', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/pages.yml']
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build:
+    name: Build website
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Release tags can precede the website. Always rebuild main after a published release.
+          ref: ${{ github.event_name == 'release' && 'main' || github.ref }}
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install website dependencies
+        run: pnpm install --frozen-lockfile --filter @marklab/website...
+      - name: Refresh published downloads
+        run: pnpm --filter @marklab/website releases:sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Check website
+        run: |
+          pnpm --filter @marklab/website format:check
+          pnpm --filter @marklab/website check
+          pnpm --filter @marklab/website test
+      - name: Build static pages
+        run: pnpm --filter @marklab/website build
+      - name: Install browser for website checks
+        run: pnpm --filter @marklab/website exec playwright install --with-deps chromium
+      - name: Check desktop and mobile pages
+        run: |
+          pnpm --filter @marklab/website preview --background --host 127.0.0.1 --port 4322
+          pnpm --filter @marklab/website test:e2e
+      - name: Upload browser evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-browser-evidence
+          path: output/playwright/website
+          if-no-files-found: ignore
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'release')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

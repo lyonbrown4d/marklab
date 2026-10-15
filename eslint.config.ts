@@ -25,7 +25,7 @@ const legacyOversizedFiles: string[] = [
 ]
 
 export default defineConfig([
-  globalIgnores(['dist', 'dist-electron', 'node_modules', 'target']),
+  globalIgnores(['dist', 'dist-electron', 'node_modules', 'target', '**/.astro/**', '**/dist/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

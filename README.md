@@ -2,6 +2,9 @@
 
 A desktop Markdown workspace that blends immersive editing with a project graph.
 
+[Website and user guide](https://lyonbrown4d.github.io/marklab/) ·
+[Downloads](https://github.com/lyonbrown4d/marklab/releases)
+
 Marklab uses Electron for its desktop runtime and native integration while keeping
 the React editor and typed runtime boundary explicit.
 
@@ -64,6 +67,12 @@ See [docs/electron-migration.md](docs/electron-migration.md).
 
 See [docs/quality-gates.md](docs/quality-gates.md) for the change impact checklist, ownership
 boundaries, and desktop smoke checks used to prevent cross-boundary regressions.
+
+## Website
+
+The Astro website and Starlight user guide are maintained in the independent
+`website/` workspace. See [website/README.md](website/README.md) for development
+and [docs/website.md](docs/website.md) for deployment boundaries.
 
 ## Build
 

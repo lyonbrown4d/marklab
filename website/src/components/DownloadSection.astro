@@ -1,0 +1,83 @@
+---
+import { getDownload, downloadSize, platforms } from '#site/lib/downloads'
+import { releases } from '#site/lib/siteData'
+import { releasesUrl } from '#site/lib/releases'
+import { homeCopy, type Locale } from '#site/lib/homeCopy'
+import { localPath } from '#site/lib/links'
+
+interface Props {
+  locale: Locale
+}
+const { locale } = Astro.props
+const copy = homeCopy[locale]
+const guide = localPath(
+  import.meta.env.BASE_URL,
+  `${locale === 'en' ? 'en/' : ''}guide/installation/`,
+)
+const labels = {
+  'mac-arm64': 'macOS · Apple Silicon',
+  'win-x64': 'Windows · x64',
+  'linux-x64': 'Linux · x64',
+}
+---
+
+<section id="download" aria-labelledby="download-title" class="border-t border-rule py-8">
+  <h2 id="download-title" class="text-xl font-semibold">
+    {copy.download}
+  </h2>
+  <p class="mt-2 mb-4 text-sm leading-6 text-muted">{copy.downloadIntro}</p>
+  <table class="w-full text-left text-sm">
+    <thead class="sr-only">
+      <tr>
+        <th>{copy.platform}</th>
+        <th>{copy.version}</th>
+        <th>{copy.download}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {platforms.map((platform) => {
+        const download = getDownload(releases, platform)
+        return (
+          <tr class="border-t border-rule">
+            <th scope="row" class="py-4 pr-3 font-medium">
+              {labels[platform]}
+            </th>
+            <td class="py-4 pr-3 text-muted">
+              {download ? (
+                <>
+                  <span class="text-ink">v{download.version}</span>
+                  <span class="mt-1 block text-xs">{downloadSize(download.size)}</span>
+                </>
+              ) : (
+                copy.unavailable
+              )}
+            </td>
+            <td class="py-4 text-right">
+              <a
+                href={download?.url ?? guide}
+                aria-label={`${labels[platform]} · ${download ? copy.install : copy.installation}`}
+                class="text-accent underline underline-offset-4"
+              >
+                {download ? copy.install : copy.installation}
+              </a>
+            </td>
+          </tr>
+        )
+      })}
+    </tbody>
+  </table>
+  <div class="mt-4 space-y-2 text-xs leading-6 text-muted">
+    <p>{copy.macSupport}</p>
+    <p>
+      {copy.macNote}{' '}
+      <a href={guide} class="text-accent underline underline-offset-4">
+        {copy.installation}
+      </a>
+    </p>
+    <p>
+      <a href={releasesUrl} class="text-accent underline underline-offset-4">
+        {copy.allReleases}
+      </a>
+    </p>
+  </div>
+</section>

@@ -1,5 +1,6 @@
 packages:
   - native/*
+  - website
 
 # Allow newly published versions immediately for this project's update workflow.
 minimumReleaseAge: 0

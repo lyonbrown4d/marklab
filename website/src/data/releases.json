@@ -1,0 +1,364 @@
+[
+  {
+    "tag_name": "app-v0.2.7",
+    "name": "Marklab 0.2.7 (macOS arm64)",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-15T06:20:49Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.7",
+    "assets": [
+      {
+        "name": "latest-mac.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/latest-mac.yml",
+        "size": 509,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.7-mac-arm64.dmg",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/Marklab-0.2.7-mac-arm64.dmg",
+        "size": 134837312,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.7-mac-arm64.dmg.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/Marklab-0.2.7-mac-arm64.dmg.blockmap",
+        "size": 142195,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.7-mac-arm64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/Marklab-0.2.7-mac-arm64.zip",
+        "size": 134768601,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.7-mac-arm64.zip.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/Marklab-0.2.7-mac-arm64.zip.blockmap",
+        "size": 140925,
+        "state": "uploaded"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.7/SHA256SUMS.txt",
+        "size": 475,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.6",
+    "name": "Marklab 0.2.6 (macOS arm64)",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-13T09:22:29Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.6",
+    "assets": [
+      {
+        "name": "latest-mac.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/latest-mac.yml",
+        "size": 509,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.6-mac-arm64.dmg",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/Marklab-0.2.6-mac-arm64.dmg",
+        "size": 135841797,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.6-mac-arm64.dmg.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/Marklab-0.2.6-mac-arm64.dmg.blockmap",
+        "size": 144363,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.6-mac-arm64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/Marklab-0.2.6-mac-arm64.zip",
+        "size": 135801963,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.6-mac-arm64.zip.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/Marklab-0.2.6-mac-arm64.zip.blockmap",
+        "size": 143540,
+        "state": "uploaded"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.6/SHA256SUMS.txt",
+        "size": 475,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.5",
+    "name": "Marklab 0.2.5 (macOS arm64)",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-13T08:30:23Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.5",
+    "assets": [
+      {
+        "name": "latest-mac.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/latest-mac.yml",
+        "size": 509,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.5-mac-arm64.dmg",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/Marklab-0.2.5-mac-arm64.dmg",
+        "size": 135841909,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.5-mac-arm64.dmg.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/Marklab-0.2.5-mac-arm64.dmg.blockmap",
+        "size": 143911,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.5-mac-arm64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/Marklab-0.2.5-mac-arm64.zip",
+        "size": 135801959,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.5-mac-arm64.zip.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/Marklab-0.2.5-mac-arm64.zip.blockmap",
+        "size": 143681,
+        "state": "uploaded"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.5/SHA256SUMS.txt",
+        "size": 188,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.4",
+    "name": "Marklab 0.2.4",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-08T08:51:01Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.4",
+    "assets": [
+      {
+        "name": "latest.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.4/latest.yml",
+        "size": 359,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.4-win-x64-setup.exe",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.4/Marklab-0.2.4-win-x64-setup.exe",
+        "size": 120256704,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.4-win-x64-setup.exe.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.4/Marklab-0.2.4-win-x64-setup.exe.blockmap",
+        "size": 126211,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.4-win-x64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.4/Marklab-0.2.4-win-x64.zip",
+        "size": 163023129,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.3",
+    "name": "Marklab 0.2.3",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-08T08:16:11Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.3",
+    "assets": [
+      {
+        "name": "latest.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.3/latest.yml",
+        "size": 359,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.3-win-x64-setup.exe",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.3/Marklab-0.2.3-win-x64-setup.exe",
+        "size": 120098456,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.3-win-x64-setup.exe.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.3/Marklab-0.2.3-win-x64-setup.exe.blockmap",
+        "size": 125655,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.3-win-x64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.3/Marklab-0.2.3-win-x64.zip",
+        "size": 162825081,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.2",
+    "name": "marklab app-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-08T07:47:44Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.2",
+    "assets": [
+      {
+        "name": "latest.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.2/latest.yml",
+        "size": 359,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.2-win-x64-setup.exe",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.2/Marklab-0.2.2-win-x64-setup.exe",
+        "size": 120097596,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.2-win-x64-setup.exe.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.2/Marklab-0.2.2-win-x64-setup.exe.blockmap",
+        "size": 125624,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.2-win-x64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.2/Marklab-0.2.2-win-x64.zip",
+        "size": 162824951,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.1",
+    "name": "marklab app-v0.2.1",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-08T01:34:42Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.1",
+    "assets": [
+      {
+        "name": "latest.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.1/latest.yml",
+        "size": 359,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.1-win-x64-setup.exe",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.1/Marklab-0.2.1-win-x64-setup.exe",
+        "size": 120085643,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.1-win-x64-setup.exe.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.1/Marklab-0.2.1-win-x64-setup.exe.blockmap",
+        "size": 125056,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.1-win-x64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.1/Marklab-0.2.1-win-x64.zip",
+        "size": 162783103,
+        "state": "uploaded"
+      }
+    ]
+  },
+  {
+    "tag_name": "app-v0.2.0",
+    "name": "marklab app-v0.2.0",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-06-09T03:33:30Z",
+    "html_url": "https://github.com/lyonbrown4d/marklab/releases/tag/app-v0.2.0",
+    "assets": [
+      {
+        "name": "latest-linux.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/latest-linux.yml",
+        "size": 552,
+        "state": "uploaded"
+      },
+      {
+        "name": "latest-mac.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/latest-mac.yml",
+        "size": 509,
+        "state": "uploaded"
+      },
+      {
+        "name": "latest.yml",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/latest.yml",
+        "size": 347,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-linux-amd64.deb",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-linux-amd64.deb",
+        "size": 109955924,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-linux-x64.tar.gz",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-linux-x64.tar.gz",
+        "size": 131014258,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-linux-x86_64.AppImage",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-linux-x86_64.AppImage",
+        "size": 138173423,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-mac-arm64.dmg",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-mac-arm64.dmg",
+        "size": 125284411,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-mac-arm64.dmg.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-mac-arm64.dmg.blockmap",
+        "size": 132679,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-mac-arm64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-mac-arm64.zip",
+        "size": 121494672,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-mac-arm64.zip.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-mac-arm64.zip.blockmap",
+        "size": 128274,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-win-x64.exe",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-win-x64.exe",
+        "size": 119989219,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-win-x64.exe.blockmap",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-win-x64.exe.blockmap",
+        "size": 124846,
+        "state": "uploaded"
+      },
+      {
+        "name": "Marklab-0.2.0-win-x64.zip",
+        "browser_download_url": "https://github.com/lyonbrown4d/marklab/releases/download/app-v0.2.0/Marklab-0.2.0-win-x64.zip",
+        "size": 159646191,
+        "state": "uploaded"
+      }
+    ]
+  }
+]
