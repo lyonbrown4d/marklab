@@ -1,11 +1,9 @@
 import { loader } from '@monaco-editor/react'
-import type * as Monaco from 'monaco-editor'
+import type * as Monaco from '@/lib/monacoRuntime'
+import { loadMonacoWorker } from '@/lib/monacoWorkers'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
 type MonacoApi = typeof Monaco
-type MonacoWorkerModule = {
-  default: new () => Worker
-}
-
 type MonacoGlobal = typeof globalThis & {
   MonacoEnvironment?: typeof self.MonacoEnvironment
   monaco?: MonacoApi
@@ -14,35 +12,17 @@ type MonacoGlobal = typeof globalThis & {
 let monacoLoader: Promise<MonacoApi> | null = null
 
 const loadLocalMonaco = async () => {
-  const [monaco, editorWorker, cssWorker, htmlWorker, jsonWorker, tsWorker] = (await Promise.all([
-    import('monaco-editor'),
-    import('monaco-editor/editor/editor.worker.js?worker'),
-    import('monaco-editor/languages/features/css/css.worker.js?worker'),
-    import('monaco-editor/languages/features/html/html.worker.js?worker'),
-    import('monaco-editor/languages/features/json/json.worker.js?worker'),
-    import('monaco-editor/languages/features/typescript/ts.worker.js?worker'),
-  ])) as [
-    MonacoApi,
-    MonacoWorkerModule,
-    MonacoWorkerModule,
-    MonacoWorkerModule,
-    MonacoWorkerModule,
-    MonacoWorkerModule,
-  ]
+  const monaco = await import('@/lib/monacoRuntime')
 
   const monacoGlobal = globalThis as MonacoGlobal
 
   monacoGlobal.monaco = monaco
   monacoGlobal.MonacoEnvironment = {
-    getWorker: (_workerId, label) => {
-      if (label === 'json') return new jsonWorker.default()
-      if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker.default()
-      if (label === 'html' || label === 'handlebars' || label === 'razor') {
-        return new htmlWorker.default()
-      }
-      if (label === 'typescript' || label === 'javascript') return new tsWorker.default()
-      return new editorWorker.default()
-    },
+    getWorker: (workerId, label) =>
+      loadMonacoWorker(workerId, label).catch((error: unknown) => {
+        rendererDiagnostics.error('editor.monaco', 'worker-load-failed', error)
+        throw error
+      }),
   }
 
   loader.config({ monaco })
@@ -53,6 +33,7 @@ const loadLocalMonaco = async () => {
 export const configureMonaco = () => {
   monacoLoader ??= loadLocalMonaco().catch((error: unknown) => {
     monacoLoader = null
+    rendererDiagnostics.error('editor.monaco', 'runtime-load-failed', error)
     throw error
   })
 

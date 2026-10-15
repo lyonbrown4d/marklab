@@ -44,7 +44,9 @@ export const useGitFileConflict = ({
     queryFn: () => gitApiForWorkspace(rootPath).getStatus(rootPath),
     enabled: (query) => available && (candidate || query.state.data?.repo.is_repository === true),
     refetchInterval: (query) =>
-      query.state.data?.repo.is_repository ? refresh.refetchInterval : false,
+      query.state.data?.repo.is_repository && refresh.refetchInterval
+        ? refresh.refetchInterval(query)
+        : false,
     staleTime: 2_000,
     retry: false,
   })

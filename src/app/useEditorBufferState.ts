@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type SetStateAction } from 'react'
+import type { EditorBufferCacheEntry } from '@/app/editorBufferCachePolicy'
 import { produce } from 'immer'
 import { useLatest } from 'ahooks'
 
@@ -52,8 +53,8 @@ type ConfirmRevisions = (snapshots: EditorRevisionSnapshot[]) => Promise<void>
 export const editorBufferIdentity = (workspace: string, path: string) =>
   workspace.length + ':' + workspace + path
 
-export const createEditorBufferPersistence = () => {
-  const pendingUpdates = new Set<Promise<void>>()
+export const createEditorBufferPersistence = (onUpdateSettled?: () => void) => {
+  const pendingUpdates = new Map<Promise<void>, string>()
   const updateFailures = new Map<string, unknown>()
   const revisions = new Map<string, EditorRevisionSnapshot>()
   let activeFlush: Promise<void> | null = null
@@ -61,15 +62,17 @@ export const createEditorBufferPersistence = () => {
 
   const trackUpdate = (operation: Promise<void>, identity = '') => {
     updateSequence += 1
-    pendingUpdates.add(operation)
+    pendingUpdates.set(operation, identity)
     void operation.then(
       () => {
         pendingUpdates.delete(operation)
         updateFailures.delete(identity)
+        onUpdateSettled?.()
       },
       (error) => {
         pendingUpdates.delete(operation)
         updateFailures.set(identity, error)
+        onUpdateSettled?.()
       },
     )
   }
@@ -98,7 +101,7 @@ export const createEditorBufferPersistence = () => {
       while (true) {
         const observedSequence = updateSequence
         while (pendingUpdates.size > 0) {
-          await Promise.allSettled(Array.from(pendingUpdates))
+          await Promise.allSettled(Array.from(pendingUpdates.keys()))
         }
         if (updateFailures.size > 0) {
           throw new AggregateError(
@@ -121,6 +124,8 @@ export const createEditorBufferPersistence = () => {
   }
 
   return {
+    isPending: (identity: string) =>
+      revisions.has(identity) || [...pendingUpdates.values()].includes(identity),
     clearRevisions: () => revisions.clear(),
     deleteRevision,
     flush,
@@ -139,11 +144,90 @@ const EMPTY_DIRTY_PATHS: Record<string, true> = {}
 const EMPTY_LOADING_PATHS: Record<string, true> = {}
 const EMPTY_SAVE_STATES: Record<string, SaveState> = {}
 
+type StoredBuffers = {
+  contents: WorkspaceContents
+  dirty: WorkspaceDirtyPaths
+  loading: WorkspaceLoadingPaths
+  saves: WorkspaceSaveStates
+  loadedVersions: Record<string, number>
+}
+const updateSection = <K extends keyof StoredBuffers>(
+  previous: StoredBuffers,
+  section: K,
+  update: SetStateAction<StoredBuffers[K]>,
+): StoredBuffers => {
+  const next = typeof update === 'function' ? update(previous[section]) : update
+  return next === previous[section] ? previous : { ...previous, [section]: next }
+}
 export const useEditorBufferState = (workspaceKey: string) => {
-  const [workspaceFileContents, setWorkspaceFileContents] = useState<WorkspaceContents>({})
-  const [workspaceDirtyPaths, setWorkspaceDirtyPaths] = useState<WorkspaceDirtyPaths>({})
-  const [workspaceLoadingPaths, setWorkspaceLoadingPaths] = useState<WorkspaceLoadingPaths>({})
-  const [workspaceSaveStates, setWorkspaceSaveStates] = useState<WorkspaceSaveStates>({})
+  const [stored, setStored] = useState<StoredBuffers>({
+    contents: {},
+    dirty: {},
+    loading: {},
+    saves: {},
+    loadedVersions: {},
+  })
+  const {
+    contents: workspaceFileContents,
+    dirty: workspaceDirtyPaths,
+    loading: workspaceLoadingPaths,
+    saves: workspaceSaveStates,
+    loadedVersions,
+  } = stored
+  const setWorkspaceFileContents = useCallback(
+    (update: SetStateAction<WorkspaceContents>) =>
+      setStored((previous) => updateSection(previous, 'contents', update)),
+    [],
+  )
+  const setWorkspaceDirtyPaths = useCallback(
+    (update: SetStateAction<WorkspaceDirtyPaths>) =>
+      setStored((previous) => updateSection(previous, 'dirty', update)),
+    [],
+  )
+  const setWorkspaceLoadingPaths = useCallback(
+    (update: SetStateAction<WorkspaceLoadingPaths>) =>
+      setStored((previous) => updateSection(previous, 'loading', update)),
+    [],
+  )
+  const setWorkspaceSaveStates = useCallback(
+    (update: SetStateAction<WorkspaceSaveStates>) =>
+      setStored((previous) => updateSection(previous, 'saves', update)),
+    [],
+  )
+  const setLoadedVersions = useCallback(
+    (update: SetStateAction<Record<string, number>>) =>
+      setStored((previous) => updateSection(previous, 'loadedVersions', update)),
+    [],
+  )
+  const evictSavedBuffers = useCallback(
+    (entries: EditorBufferCacheEntry[], isPending: (identity: string) => boolean) => {
+      setStored((previous) =>
+        produce(previous, (draft) => {
+          for (const { workspace, path, content } of entries) {
+            const identity = editorBufferIdentity(workspace, path)
+            const status = draft.saves[workspace]?.[path]?.status
+            // Recheck the latest queued edits atomically before removing any metadata.
+            if (
+              draft.contents[workspace]?.[path] !== content ||
+              draft.dirty[workspace]?.[path] ||
+              draft.loading[workspace]?.[path] ||
+              (status && status !== 'saved') ||
+              isPending(identity)
+            )
+              continue
+            delete draft.contents[workspace][path]
+            if (!Object.keys(draft.contents[workspace]).length) delete draft.contents[workspace]
+            if (draft.saves[workspace]) {
+              delete draft.saves[workspace][path]
+              if (!Object.keys(draft.saves[workspace]).length) delete draft.saves[workspace]
+            }
+            delete draft.loadedVersions[identity]
+          }
+        }),
+      )
+    },
+    [],
+  )
   const workspaceFileContentsRef = useLatest(workspaceFileContents)
   const workspaceLoadingPathsRef = useLatest(workspaceLoadingPaths)
 
@@ -164,35 +248,49 @@ export const useEditorBufferState = (workspaceKey: string) => {
     [workspaceSaveStates, workspaceKey],
   )
 
-  const setPathSaveState = useCallback((workspace: string, path: string, next: SaveState) => {
-    setWorkspaceSaveStates((prev) =>
-      produce(prev, (draft) => {
-        const currentWorkspaceStates = draft[workspace] ?? (draft[workspace] = {})
-        const current = currentWorkspaceStates[path]
-        if (current?.status === next.status && current.message === next.message) return
-        currentWorkspaceStates[path] = next
-      }),
-    )
-  }, [])
+  const setPathSaveState = useCallback(
+    (workspace: string, path: string, next: SaveState) => {
+      setWorkspaceSaveStates((prev) =>
+        produce(prev, (draft) => {
+          const currentWorkspaceStates = draft[workspace] ?? (draft[workspace] = {})
+          const current = currentWorkspaceStates[path]
+          if (current?.status === next.status && current.message === next.message) return
+          currentWorkspaceStates[path] = next
+        }),
+      )
+    },
+    [setWorkspaceSaveStates],
+  )
 
-  const setPathLoading = useCallback((workspace: string, path: string, loading: boolean) => {
-    setWorkspaceLoadingPaths((prev) =>
-      produce(prev, (draft) => {
-        if (loading) {
-          const currentWorkspaceLoading = draft[workspace] ?? (draft[workspace] = {})
-          currentWorkspaceLoading[path] = true
-          return
-        }
+  const setPathLoading = useCallback(
+    (workspace: string, path: string, loading: boolean) => {
+      setWorkspaceLoadingPaths((prev) =>
+        produce(prev, (draft) => {
+          if (loading) {
+            const currentWorkspaceLoading = draft[workspace] ?? (draft[workspace] = {})
+            currentWorkspaceLoading[path] = true
+            return
+          }
 
-        const currentWorkspaceLoading = draft[workspace]
-        if (!currentWorkspaceLoading?.[path]) return
-        delete currentWorkspaceLoading[path]
-        if (Object.keys(currentWorkspaceLoading).length === 0) delete draft[workspace]
-      }),
-    )
-  }, [])
+          const currentWorkspaceLoading = draft[workspace]
+          if (!currentWorkspaceLoading?.[path]) return
+          delete currentWorkspaceLoading[path]
+          if (Object.keys(currentWorkspaceLoading).length === 0) delete draft[workspace]
+        }),
+      )
+    },
+    [setWorkspaceLoadingPaths],
+  )
 
   return {
+    loadedVersions,
+    setLoadedVersions,
+    evictSavedBuffers,
+    workspaceFileContents,
+    workspaceDirtyPaths,
+    workspaceLoadingPaths,
+    workspaceSaveStates,
+    setWorkspaceSaveStates,
     dirtyPaths,
     fileContents,
     loadingPaths,

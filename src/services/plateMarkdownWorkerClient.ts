@@ -31,6 +31,7 @@ type PendingRequestInput = WithoutCleanup<PendingRequest>
 const LARGE_DOCUMENT_CHARACTERS = 128_000
 const LARGE_DOCUMENT_NODES = 2_000
 const STREAM_WORKER_POOL_SIZE = 3
+const WORKER_IDLE_TTL_MS = 30_000
 const WORKER_UNAVAILABLE_MESSAGE = 'Markdown worker is unavailable for a large document.'
 
 const createAbortError = () => new DOMException('Aborted', 'AbortError')
@@ -71,6 +72,7 @@ export class PlateMarkdownWorkerClient {
   private readonly pending = new Map<number, PendingRequest>()
   private readonly streamClient: PlateMarkdownStreamClient
   private worker: WorkerPort | null = null
+  private idleTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(createWorker: () => WorkerPort = () => new PlateMarkdownWorker()) {
     this.createWorker = createWorker
@@ -112,25 +114,27 @@ export class PlateMarkdownWorkerClient {
   }
 
   terminate(error = new Error('Plate Markdown worker terminated.')) {
-    this.worker?.terminate()
-    this.worker = null
+    this.failRequests(error)
+    this.streamClient.terminate(error)
+  }
+
+  private failRequests(error: Error) {
+    this.releaseWorker()
     const pending = [...this.pending.values()]
     this.pending.clear()
     pending.forEach((request) => {
       request.cleanup()
       request.reject(error)
     })
-    this.streamClient.terminate(error)
   }
 
   private addPending(id: number, request: PendingRequestInput, signal?: AbortSignal) {
+    this.clearIdleTimer()
     const onAbort = () => {
+      this.pending.get(id)?.cleanup()
       this.pending.delete(id)
       request.reject(createAbortError())
-      if (this.pending.size === 0) {
-        this.worker?.terminate()
-        this.worker = null
-      }
+      if (this.pending.size === 0) this.releaseWorker()
     }
     signal?.addEventListener('abort', onAbort, { once: true })
     this.pending.set(id, {
@@ -142,9 +146,14 @@ export class PlateMarkdownWorkerClient {
   private ensureWorker() {
     if (this.worker) return this.worker
     const worker = this.createWorker()
-    worker.onmessage = ({ data }) => this.handleMessage(data as WorkerResponse)
-    worker.onerror = (event) =>
-      this.terminate(new Error(event.message || 'Markdown worker failed.'))
+    worker.onmessage = ({ data }) => {
+      if (this.worker === worker) this.handleMessage(data as WorkerResponse)
+    }
+    worker.onerror = (event) => {
+      if (this.worker === worker) {
+        this.failRequests(new Error(event.message || 'Markdown worker failed.'))
+      }
+    }
     this.worker = worker
     return worker
   }
@@ -153,27 +162,26 @@ export class PlateMarkdownWorkerClient {
     try {
       this.ensureWorker().postMessage(message)
     } catch (error) {
-      this.terminate(error instanceof Error ? error : new Error('Markdown worker request failed.'))
+      this.failRequests(
+        error instanceof Error ? error : new Error('Markdown worker request failed.'),
+      )
     }
   }
 
   private handleMessage(message: WorkerResponse) {
     const pending = this.pending.get(message.id)
     if (!pending) return
+    this.pending.delete(message.id)
+    pending.cleanup()
+    this.scheduleIdleRelease()
     if (message.operation !== pending.operation) {
-      this.pending.delete(message.id)
-      pending.cleanup()
       pending.reject(new Error('Unexpected Markdown worker response.'))
       return
     }
     if (!message.ok) {
-      this.pending.delete(message.id)
-      pending.cleanup()
       pending.reject(new Error(message.error))
       return
     }
-    this.pending.delete(message.id)
-    pending.cleanup()
     if (message.operation === 'parse' && pending.operation === 'parse') {
       pending.resolve(message.value)
       return
@@ -181,6 +189,30 @@ export class PlateMarkdownWorkerClient {
     if (message.operation === 'serialize' && pending.operation === 'serialize') {
       pending.resolve(message.markdown)
     }
+  }
+
+  private scheduleIdleRelease() {
+    if (this.pending.size > 0 || !this.worker) return
+    this.clearIdleTimer()
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null
+      if (this.pending.size === 0) this.releaseWorker()
+    }, WORKER_IDLE_TTL_MS)
+  }
+
+  private clearIdleTimer() {
+    if (this.idleTimer === null) return
+    clearTimeout(this.idleTimer)
+    this.idleTimer = null
+  }
+
+  private releaseWorker() {
+    this.clearIdleTimer()
+    if (!this.worker) return
+    this.worker.onmessage = null
+    this.worker.onerror = null
+    this.worker.terminate()
+    this.worker = null
   }
 }
 

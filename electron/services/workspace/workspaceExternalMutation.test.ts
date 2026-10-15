@@ -30,7 +30,7 @@ describe('WorkspaceFileService external mutations', () => {
     await expect(workspace.openFile({ path: 'note.md' })).resolves.toBe('before')
 
     await workspace.runExternalPathMutation(['note.md'], () => fs.writeFile(absolutePath, 'after'))
-    await expect(workspace.openFile({ path: 'note.md' })).resolves.toBe('before')
+    await expect(workspace.openFile({ path: 'note.md' })).resolves.toBe('after')
 
     workspace.invalidateExternalPaths(['note.md'])
     await expect(workspace.openFile({ path: 'note.md' })).resolves.toBe('after')

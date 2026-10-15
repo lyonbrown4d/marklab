@@ -2,10 +2,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { FsGraph } from '@electron/services/workspace/types'
 import {
   cleanupWorkspaceFixtures,
-  createGraph,
   createKnowledgeServiceMock,
   createWorkspace,
 } from '@electron/services/workspace/workspaceAnalysisServiceTestUtils'
@@ -54,8 +52,27 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
 
       await vi.waitFor(() => {
         expect(indexStartCount(logger)).toBe(1)
-        expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+        expect(service.buildWorkspaceGraph).not.toHaveBeenCalled()
       })
+    } finally {
+      workspace.dispose()
+    }
+  })
+
+  it('waits 1500 ms before optional index prewarming but serves an explicit query immediately', async () => {
+    const service = createKnowledgeServiceMock()
+    const { logger, workspace } = await createWorkspace(service, [
+      { path: 'alpha.md', content: '# Alpha' },
+    ])
+    vi.useFakeTimers()
+    try {
+      workspace.markRendererInteractive()
+      await vi.advanceTimersByTimeAsync(1499)
+      expect(indexStartCount(logger)).toBe(0)
+      await workspace.workspaceIndex()
+      expect(indexStartCount(logger)).toBe(1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(indexStartCount(logger)).toBe(1)
     } finally {
       workspace.dispose()
     }
@@ -77,7 +94,7 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
 
       await vi.waitFor(() => {
         expect(indexStartCount(logger)).toBe(1)
-        expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+        expect(service.buildWorkspaceGraph).not.toHaveBeenCalled()
       })
     } finally {
       workspace.dispose()
@@ -105,73 +122,6 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
     }
   })
 
-  it('keeps a running graph task visible until it settles after hydration begins', async () => {
-    vi.useFakeTimers()
-    let finishGraph!: (graph: FsGraph) => void
-    const pendingGraph = new Promise<FsGraph>((resolve) => {
-      finishGraph = resolve
-    })
-    const service = createKnowledgeServiceMock()
-    service.buildWorkspaceGraph.mockReturnValueOnce(pendingGraph)
-    const { workspace } = await createWorkspace(
-      service,
-      [{ path: 'alpha.md', content: '# Alpha' }],
-      { graphPrecomputeDelayMs: 0, workspaceIndexPrecomputeDelayMs: 60_000 },
-    )
-
-    try {
-      workspace.markRendererInteractive()
-      await vi.advanceTimersByTimeAsync(0)
-      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
-      expect(graphTaskStatus(workspace)).toBe('running')
-      const graphRequest = workspace.workspaceGraph()
-
-      workspace.beginRendererHydration()
-      expect(graphTaskStatus(workspace)).toBe('running')
-
-      finishGraph(createGraph('mindmap'))
-      await graphRequest
-
-      expect(graphTaskStatus(workspace)).toBe('idle')
-    } finally {
-      finishGraph(createGraph('mindmap'))
-      workspace.dispose()
-    }
-  })
-
-  it('keeps a running graph task visible until it settles while switching to a single file', async () => {
-    vi.useFakeTimers()
-    let finishGraph!: (graph: FsGraph) => void
-    const pendingGraph = new Promise<FsGraph>((resolve) => {
-      finishGraph = resolve
-    })
-    const service = createKnowledgeServiceMock()
-    service.buildWorkspaceGraph.mockReturnValueOnce(pendingGraph)
-    const { root, workspace } = await createWorkspace(
-      service,
-      [{ path: 'alpha.md', content: '# Alpha' }],
-      { graphPrecomputeDelayMs: 0, workspaceIndexPrecomputeDelayMs: 60_000 },
-    )
-
-    try {
-      workspace.markRendererInteractive()
-      await vi.advanceTimersByTimeAsync(0)
-      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
-      const graphRequest = workspace.workspaceGraph()
-
-      await workspace.setSingleFile({ path: path.join(root, 'alpha.md') })
-      expect(graphTaskStatus(workspace)).toBe('running')
-
-      finishGraph(createGraph('mindmap'))
-      await graphRequest
-
-      expect(graphTaskStatus(workspace)).toBe('idle')
-    } finally {
-      finishGraph(createGraph('mindmap'))
-      workspace.dispose()
-    }
-  })
-
   it('returns to waiting after switching the workspace root', async () => {
     vi.useFakeTimers()
     const service = createKnowledgeServiceMock()
@@ -185,6 +135,7 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
     await fs.writeFile(path.join(nextRoot, 'beta.md'), '# Beta', 'utf8')
 
     try {
+      await workspace.workspaceGraph()
       workspace.markRendererInteractive()
       await vi.runAllTimersAsync()
       await vi.waitFor(() => {
@@ -205,7 +156,7 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
 
       await vi.waitFor(() => {
         expect(indexStartCount(logger)).toBe(1)
-        expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
+        expect(service.buildWorkspaceGraph).not.toHaveBeenCalled()
       })
     } finally {
       workspace.dispose()
@@ -222,6 +173,7 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
     )
 
     try {
+      await workspace.workspaceGraph()
       workspace.markRendererInteractive()
       await vi.runAllTimersAsync()
       await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
@@ -257,6 +209,3 @@ describe('WorkspaceAnalysisService renderer hydration gate', () => {
     }
   })
 })
-
-const graphTaskStatus = (workspace: Awaited<ReturnType<typeof createWorkspace>>['workspace']) =>
-  workspace.getBackgroundTasks().find(({ id }) => id === 'workspace-graph')?.status

@@ -21,6 +21,7 @@ const monacoEditor = vi.hoisted(() => ({
   })),
   getModel: vi.fn(),
   getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
+  onDidFocusEditorText: vi.fn(() => ({ dispose: vi.fn() })),
   onDidChangeCursorPosition: vi.fn(() => ({ dispose: vi.fn() })),
   addCommand: vi.fn(() => 'mock.command'),
   onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),

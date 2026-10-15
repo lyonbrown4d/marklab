@@ -139,6 +139,7 @@ export const useAppLayoutState = () => {
   } = useEditorBuffer({
     activePath: editorBufferPath,
     workspaceKey,
+    openPaths: tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
   })
 
   const {

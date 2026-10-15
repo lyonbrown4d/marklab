@@ -77,7 +77,7 @@ export const useEditorRoutes = ({
   const editPath = editMatch?.params['*'] || null
   const sourcePath = sourceMatch?.params['*'] || null
   const previewPath = previewMatch?.params['*'] || null
-  const routePath = editPath ?? previewPath ?? routeSegment ?? null
+  const routePath = editPath ?? sourcePath ?? previewPath ?? routeSegment ?? null
   const routeFilePath = editPath ?? sourcePath ?? previewPath
   const routeFileView: FileViewKind | null = sourceMatch
     ? 'source'

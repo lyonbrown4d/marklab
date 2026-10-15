@@ -61,6 +61,30 @@ afterEach(() => {
 })
 
 describe('foreground Git query refresh', () => {
+  it('reduces unchanged polls and detects an external change within the bounded fallback', async () => {
+    let disk = 'initial'
+    const read = vi.fn(async () => disk)
+    const { wrapper } = setup()
+    const { result } = renderHook(() => useLocalRead(read), { wrapper })
+    await tick()
+    await tick(15_000)
+    expect(read).toHaveBeenCalledTimes(4)
+    await tick(14_999)
+    expect(read).toHaveBeenCalledTimes(4)
+    await tick(1)
+    expect(read).toHaveBeenCalledTimes(5)
+    await tick(30_000)
+    expect(read).toHaveBeenCalledTimes(7)
+    disk = 'external index-only update'
+    await tick(29_999)
+    expect(read).toHaveBeenCalledTimes(7)
+    await tick(2)
+    expect(result.current.data).toBe(disk)
+    expect(read).toHaveBeenCalledTimes(8)
+    await tick(5_000)
+    expect(read).toHaveBeenCalledTimes(9)
+  })
+
   it('observes external local changes every five seconds even while cached data is fresh', async () => {
     let disk = 'initial'
     const read = vi.fn(async () => disk)

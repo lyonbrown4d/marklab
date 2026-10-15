@@ -69,6 +69,7 @@ const SourceCodeEditor = ({
   const syncExternalValue = useSourceCodeEditorExternalValue({ editorRef, value })
   const cursorCallbackRef = useLatest(onCursorChange)
   const workspaceKeyRef = useLatest(workspaceKey)
+  const focusSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
   const cursorSubscriptionRef = useRef<{ dispose: () => void } | null>(null)
   const diagnosticHostRef = useRef<MarkdownSourceDiagnosticHost | null>(null)
   const providersDisposableRef = useRef<{ dispose: () => void } | null>(null)
@@ -119,6 +120,8 @@ const SourceCodeEditor = ({
     })
     cursorCallbackRef.current?.(editor.getPosition())
     setFocusedCodeEditor(editor)
+    focusSubscriptionRef.current?.dispose()
+    focusSubscriptionRef.current = editor.onDidFocusEditorText(() => setFocusedCodeEditor(editor))
     diagnosticHostRef.current = { editor, monaco: monaco as typeof import('monaco-editor') }
 
     providersDisposableRef.current?.dispose()
@@ -183,6 +186,7 @@ const SourceCodeEditor = ({
 
   useEffect(() => {
     return () => {
+      focusSubscriptionRef.current?.dispose()
       cursorSubscriptionRef.current?.dispose()
       providersDisposableRef.current?.dispose()
       providersDisposableRef.current = null

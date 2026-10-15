@@ -15,6 +15,7 @@ import {
   useEditorFocusHandoffController,
 } from '@/app/EditorFocusHandoff'
 import { EditorTransitionFrame, type EditorTransitionStatus } from '@/app/EditorTransitionFrame'
+import { useEditorRouteSnapshot } from '@/app/useEditorRouteSnapshot'
 import { useNativeSurfaceOcclusionStore } from '@/app/nativeSurfaceOcclusion'
 
 type AppLayoutState = ReturnType<typeof useAppLayoutState>
@@ -76,6 +77,7 @@ export const AppWorkspacePanels = ({
   onRetryActiveFile,
 }: AppWorkspacePanelsProps) => {
   const { t } = useI18n()
+  const outletSnapshot = useEditorRouteSnapshot(outlet)
   const commandPaletteOpen = useNativeSurfaceOcclusionStore(
     (surface) => (surface.reasons['command-palette'] ?? 0) > 0,
   )
@@ -219,7 +221,7 @@ export const AppWorkspacePanels = ({
               requestKey={transitionKey}
               status={transitionStatus}
             >
-              {outlet}
+              {outletSnapshot}
             </EditorTransitionFrame>
           </div>
         </EditorFocusHandoffProvider>

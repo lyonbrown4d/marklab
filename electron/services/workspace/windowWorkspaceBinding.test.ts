@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   constructorArgs: [] as unknown[][],
   dirty: true,
   flush: vi.fn<() => Promise<void>>(),
+  foreground: vi.fn<(foreground: boolean) => void>(),
   snapshotListener: null as
     ((snapshot: { root: { kind: 'external'; path: string } }) => void) | null,
 }))
@@ -19,6 +20,7 @@ vi.mock('@electron/services/workspace/workspaceService', () => ({
       state.constructorArgs.push(args)
     }
     flushBuffers = state.flush
+    setWindowForeground = state.foreground
     bufferMutationEpoch = () => 1
     rootInfo = () => ({ kind: 'internal', path: '/workspace' })
     hasDirtyBuffers = () => state.dirty
@@ -106,6 +108,7 @@ const createHarness = () => {
 beforeEach(() => {
   state.constructorArgs.length = 0
   state.dirty = true
+  state.foreground.mockReset()
   state.flush.mockReset().mockResolvedValue(undefined)
   state.snapshotListener = null
   vi.mocked(activateWorkspaceWindowState).mockReset()
@@ -176,6 +179,7 @@ describe('workspace window blur persistence', () => {
     const { binding, window } = createHarness()
     window.emit('blur')
     expect(state.flush).toHaveBeenCalledTimes(1)
+    expect(state.foreground).toHaveBeenLastCalledWith(false)
     await binding.mutationGate.freezeAndDrain('quit')
     binding.dispose()
   })
@@ -246,6 +250,13 @@ describe('workspace window blur persistence', () => {
     window.emit('blur')
     expect(state.flush).not.toHaveBeenCalled()
     expect(window.listenerCount('blur')).toBe(0)
+    expect(state.foreground).toHaveBeenLastCalledWith(false)
+    const updates = state.foreground.mock.calls.length
+    for (const event of ['focus', 'show', 'restore', 'hide', 'minimize']) {
+      expect(window.listenerCount(event)).toBe(0)
+      window.emit(event)
+    }
+    expect(state.foreground).toHaveBeenCalledTimes(updates)
     binding.dispose()
   })
 })

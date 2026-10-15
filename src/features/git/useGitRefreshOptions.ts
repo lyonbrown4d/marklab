@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useIsMutating, useQueryClient } from '@tanstack/react-query'
+import { createGitPollingCadence } from '@/features/git/gitPollingCadence'
 
 const isForeground = () => document.visibilityState !== 'hidden' && document.hasFocus()
 const POLLED_QUERIES = new Set([
@@ -16,11 +17,16 @@ export const useGitRefreshOptions = (rootPath: string) => {
   const client = useQueryClient()
   const pending = useIsMutating({ mutationKey: ['git-repository-action'] }) > 0
   const [foreground, setForeground] = useState(isForeground)
+  const cadence = useMemo(() => createGitPollingCadence(), [])
+  useEffect(() => {
+    cadence.reset()
+  }, [cadence, pending, rootPath])
   useEffect(() => {
     const update = () => {
       const active = isForeground()
       setForeground(active)
       if (!active || client.isMutating({ mutationKey: ['git-repository-action'] })) return
+      cadence.reset()
       void client.refetchQueries(
         {
           type: 'active',
@@ -40,9 +46,9 @@ export const useGitRefreshOptions = (rootPath: string) => {
       window.removeEventListener('blur', update)
       document.removeEventListener('visibilitychange', update)
     }
-  }, [client, rootPath])
+  }, [cadence, client, rootPath])
   return {
-    refetchInterval: foreground && !pending ? 5_000 : (false as const),
+    refetchInterval: foreground && !pending ? cadence.interval : (false as const),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: foreground && !pending ? ('always' as const) : (false as const),
   }

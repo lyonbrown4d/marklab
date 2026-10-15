@@ -16,6 +16,9 @@ export type EditorWorkspaceBinding = { workspace: string }
 
 type EditorBufferChangesOptions = {
   activePath: string | null
+  loadedContent: string | undefined
+  loadedVersion: number | undefined
+  loadedVersionsRef: RefObject<Record<string, number>>
   binding: EditorWorkspaceBinding
   currentBindingRef: RefObject<EditorWorkspaceBinding>
   workspaceFileContentsRef: RefObject<WorkspaceContents>
@@ -33,6 +36,9 @@ type EditorBufferChangesOptions = {
 
 export const useEditorBufferChanges = ({
   activePath,
+  loadedContent,
+  loadedVersion,
+  loadedVersionsRef,
   binding,
   currentBindingRef,
   workspaceFileContentsRef,
@@ -55,17 +61,20 @@ export const useEditorBufferChanges = ({
       if (!path) return
       const contents = workspaceFileContentsRef.current[workspace]
       if (
-        !contents ||
         workspaceLoadingPathsRef.current[workspace]?.[path] ||
-        !Object.prototype.hasOwnProperty.call(contents, path)
+        ((!contents || !Object.prototype.hasOwnProperty.call(contents, path)) &&
+          loadedContent === undefined)
       )
         return
 
       const identity = editorBufferIdentity(workspace, path)
+      const currentLoadedVersion = loadedVersionsRef.current[identity]
+      // A disposed editor must not overwrite a newer disk load of the same path.
+      if (currentLoadedVersion !== undefined && currentLoadedVersion !== loadedVersion) return
       const isActiveBinding = currentBindingRef.current === binding
       const previous = isActiveBinding
-        ? (latestContentsRef.current[identity] ?? contents[path])
-        : contents[path]
+        ? (latestContentsRef.current[identity] ?? contents?.[path] ?? loadedContent!)
+        : (contents?.[path] ?? loadedContent!)
       // Avoid state notifications and IPC for duplicate serialization results.
       if (previous === value) return
 
@@ -137,6 +146,9 @@ export const useEditorBufferChanges = ({
     },
     [
       activePath,
+      loadedContent,
+      loadedVersion,
+      loadedVersionsRef,
       bufferSync,
       binding,
       currentBindingRef,

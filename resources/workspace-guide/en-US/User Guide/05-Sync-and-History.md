@@ -33,7 +33,7 @@ Choose **Source Control** in the workspace menu. The workspace folder must be th
 
 Commit or stash changes before switching branches, merging, rebasing, or resetting. Discarding an untracked file deletes it. Applying a stash keeps the stash entry.
 
-The panel refreshes local Git state every 5 seconds while the window is active and immediately when it regains focus. Polling pauses in the background and during Git operations.
+The panel checks local Git state every 5 seconds while the window is active, slowing to at most 30 seconds when nothing changes. File changes and Git actions trigger a refresh, and returning to the window refreshes immediately. Polling pauses in the background and during Git operations.
 
 ## Export
 

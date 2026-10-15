@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppCachedOutlet } from '@/app/AppCachedOutlet'
 import type { LayoutContext, LayoutContextStore } from '@/app/AppLayoutContext'
-import { ROUTE_CACHE_LIMITS, ROUTE_CACHE_TTL_SECONDS } from '@/app/routeCachePolicy'
 
 const keepAliveProps = vi.hoisted(() => vi.fn())
 const keepAliveUnmounts = vi.hoisted(() => vi.fn())
@@ -58,15 +57,12 @@ describe('AppCachedOutlet cache policy', () => {
     keepAliveUnmounts.mockClear()
   })
 
-  it('bounds editor caches and applies route-specific TTLs', () => {
+  it('leaves eviction to the controller so dirty editors cannot expire in KeepAlive', () => {
     const { props } = renderOutlet('/files/edit/note.md')
 
-    expect(props.max).toBe(ROUTE_CACHE_LIMITS.maxEntries)
+    expect(props.max).toBe(Number.POSITIVE_INFINITY)
     expect(props.include).toEqual(expect.any(Array))
-    expect(props.maxAliveTime).toEqual([
-      expect.objectContaining({ expire: ROUTE_CACHE_TTL_SECONDS.workspaceGraph }),
-      expect.objectContaining({ expire: ROUTE_CACHE_TTL_SECONDS.editor }),
-    ])
+    expect(props.maxAliveTime).toBeUndefined()
   })
 
   it('uses a stable allowlist that excludes lightweight routes', () => {

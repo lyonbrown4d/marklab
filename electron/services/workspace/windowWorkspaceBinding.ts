@@ -22,6 +22,7 @@ import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
 import { WorkspaceMutationGate } from '@electron/services/workspace/workspaceShutdownBarrier'
 import { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import { bindWorkspaceRendererEvents } from '@electron/services/workspace/workspaceRendererEvents'
+import { bindWindowWorkspaceAnalysisForeground } from '@electron/services/workspace/windowWorkspaceAnalysisForeground'
 import { installWindowWorkspaceMutationGate } from '@electron/services/workspace/windowWorkspaceMutationGate'
 
 export type WindowWorkspaceBinding = {
@@ -176,6 +177,11 @@ export const createWindowWorkspaceBinding = (
       })
     })
   }
+  nativeDisposers.push(
+    bindWindowWorkspaceAnalysisForeground(options.window, (foreground) =>
+      service.setWindowForeground(foreground),
+    ),
+  )
   options.window.on('blur', flushOnBlur)
   nativeDisposers.push(
     bindWorkspaceRendererEvents({ window: options.window, service, logger: options.logger }),

@@ -150,6 +150,7 @@ export const createEditorBufferSync = (api: EditorBufferSyncApi) => {
 
   return {
     clear: () => documents.clear(),
+    forget: (identity: string) => documents.delete(identity),
     enqueue,
   }
 }

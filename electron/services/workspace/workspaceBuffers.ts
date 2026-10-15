@@ -64,7 +64,9 @@ export class WorkspaceBufferStore {
       }
       return current.content
     }
-    this.records.set(key, this.cleanRecord(relativePath, content, current?.revision ?? 0))
+    // A fresh persisted read changes the patch baseline for other retained views.
+    const revision = (current?.revision ?? 0) + (current && current.content !== content ? 1 : 0)
+    this.records.set(key, this.cleanRecord(relativePath, content, revision))
     return content
   }
 

@@ -23,6 +23,7 @@ const editor = vi.hoisted(() => ({
     getValue: () => 'export const value = 1',
   })),
   getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
+  onDidFocusEditorText: vi.fn(() => ({ dispose: vi.fn() })),
   onDidChangeCursorPosition: vi.fn(() => ({ dispose: vi.fn() })),
   pushUndoStop: vi.fn(),
 }))

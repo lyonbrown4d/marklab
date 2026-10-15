@@ -21,7 +21,10 @@ vi.mock('@electron/services/workspace/workspaceAnalysisWorkerClient', () => ({
   },
 }))
 
-afterEach(cleanupWorkspaceFixtures)
+afterEach(async () => {
+  vi.useRealTimers()
+  await cleanupWorkspaceFixtures()
+})
 
 describe('WorkspaceAnalysisService background precompute', () => {
   it('precomputes the workspace index after the renderer becomes interactive', async () => {
@@ -45,7 +48,7 @@ describe('WorkspaceAnalysisService background precompute', () => {
     }
   })
 
-  it('precomputes the graph without blocking the renderer', async () => {
+  it('loads the graph only when requested and shares an in-flight request', async () => {
     let finishGraph!: (graph: FsGraph) => void
     const pendingGraph = new Promise<FsGraph>((resolve) => {
       finishGraph = resolve
@@ -53,26 +56,28 @@ describe('WorkspaceAnalysisService background precompute', () => {
     const graph = createGraph('mindmap')
     const service = createKnowledgeServiceMock()
     service.buildWorkspaceGraph.mockReturnValueOnce(pendingGraph)
-
     const { workspace } = await createWorkspace(
       service,
       [{ path: 'alpha.md', content: '# Alpha' }],
-      { graphPrecomputeDelayMs: 0 },
+      {
+        graphPrecomputeDelayMs: 0,
+      },
     )
-
     try {
+      vi.useFakeTimers()
       workspace.markRendererInteractive()
-      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      await vi.runAllTimersAsync()
+      await workspace.workspaceIndex()
+      expect(service.buildWorkspaceGraph).not.toHaveBeenCalled()
       const request = workspace.workspaceGraph()
-      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
-
+      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      const secondRequest = workspace.workspaceGraph()
       finishGraph(graph)
-
       await expectGraphWithRevision(request, graph)
+      await expectGraphWithRevision(secondRequest, graph)
       expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
     } finally {
       finishGraph(graph)
-      await workspace.flushBuffers()
       workspace.dispose()
     }
   })
@@ -86,8 +91,9 @@ describe('WorkspaceAnalysisService background precompute', () => {
     )
 
     try {
+      await workspace.workspaceGraph()
       workspace.markRendererInteractive()
-      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
 
       await workspace.openFile({ path: 'alpha.md' })
       workspace.updateBuffer({ path: 'alpha.md', content: '# Changed Alpha' })
@@ -116,8 +122,9 @@ describe('WorkspaceAnalysisService background precompute', () => {
     )
 
     try {
+      await workspace.workspaceGraph()
       workspace.markRendererInteractive()
-      await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce())
+      expect(service.buildWorkspaceGraph).toHaveBeenCalledOnce()
       await fs.writeFile(path.join(root, 'alpha.md'), '# External Alpha', 'utf8')
 
       workspace.invalidateAllExternalPaths()
@@ -135,4 +142,44 @@ describe('WorkspaceAnalysisService background precompute', () => {
       workspace.dispose()
     }
   })
+
+  it.each(['hydration', 'single file'] as const)(
+    'keeps a started graph prewarm visible until it settles during %s',
+    async (transition) => {
+      const service = createKnowledgeServiceMock()
+      const { root, workspace } = await createWorkspace(
+        service,
+        [{ path: 'alpha.md', content: '# Alpha' }],
+        {
+          graphPrecomputeDelayMs: 0,
+          workspaceIndexPrecomputeDelayMs: 60_000,
+        },
+      )
+      let finish!: (graph: FsGraph) => void
+      const pendingGraph = new Promise<FsGraph>((resolve) => {
+        finish = resolve
+      })
+      try {
+        await workspace.workspaceGraph()
+        service.buildWorkspaceGraph.mockReturnValueOnce(pendingGraph)
+        await fs.writeFile(path.join(root, 'alpha.md'), '# Changed Alpha', 'utf8')
+        vi.useFakeTimers()
+        workspace.markRendererInteractive()
+        workspace.invalidateAllExternalPaths()
+        await vi.advanceTimersByTimeAsync(0)
+        await vi.waitFor(() => expect(service.buildWorkspaceGraph).toHaveBeenCalledTimes(2))
+        const graphTaskStatus = () =>
+          workspace.getBackgroundTasks().find(({ id }) => id === 'workspace-graph')?.status
+        expect(graphTaskStatus()).toBe('running')
+        if (transition === 'hydration') workspace.beginRendererHydration()
+        else await workspace.setSingleFile({ path: path.join(root, 'alpha.md') })
+        expect(graphTaskStatus()).toBe('running')
+        finish(createGraph('mindmap'))
+        await vi.waitFor(() => expect(graphTaskStatus()).toBe('idle'))
+      } finally {
+        finish(createGraph('mindmap'))
+        workspace.dispose()
+      }
+    },
+  )
 })

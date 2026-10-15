@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLatest, useUnmount } from 'ahooks'
 import { produce } from 'immer'
@@ -7,6 +7,8 @@ import { isDesktopRuntime } from '@/runtime/environment'
 import { useI18n } from '@/i18n/useI18n'
 import { isTextFileViewPath } from '@/logic/fileTypes'
 import { toast } from 'sonner'
+import { useEditorBufferMarkers } from '@/app/useEditorBufferMarkers'
+import { useEditorBufferCache } from '@/app/useEditorBufferCache'
 import { useEditorBufferChanges } from '@/app/useEditorBufferChanges'
 import { registerEditorBufferFlusher } from '@/app/editorCloseLifecycle'
 import { editorLoadGenerationFromState } from '@/app/editorLoadRouteState'
@@ -17,7 +19,6 @@ import {
   createEditorBufferPersistence,
   editorBufferIdentity,
   useEditorBufferState,
-  type SaveState,
 } from '@/app/useEditorBufferState'
 import { createEditorBufferSync } from '@/app/editorBufferSync'
 export type { SaveState } from '@/app/useEditorBufferState'
@@ -28,13 +29,17 @@ const BUFFER_ERROR_TOAST_ID_PREFIX = 'editor-buffer-error'
 type UseEditorBufferArgs = {
   activePath: string | null
   workspaceKey: string
+  openPaths?: readonly string[]
 }
 
-export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArgs) => {
+export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEditorBufferArgs) => {
   const { t } = useI18n()
   const location = useLocation()
   const loadGeneration = editorLoadGenerationFromState(location.state)
+  const state = useEditorBufferState(workspaceKey)
   const {
+    loadedVersions,
+    setLoadedVersions,
     dirtyPaths,
     fileContents,
     loadingPaths,
@@ -45,10 +50,14 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     setWorkspaceFileContents,
     workspaceFileContentsRef,
     workspaceLoadingPathsRef,
-  } = useEditorBufferState(workspaceKey)
+  } = state
   const editorValue = activePath ? (fileContents[activePath] ?? '') : ''
 
-  const persistence = useMemo(() => createEditorBufferPersistence(), [])
+  const [settledUpdates, setSettledUpdates] = useState(0)
+  const persistence = useMemo(
+    () => createEditorBufferPersistence(() => setSettledUpdates((count) => count + 1)),
+    [],
+  )
   const bufferSync = useMemo(
     () =>
       createEditorBufferSync({
@@ -67,6 +76,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
   const syncedContentsRef = useRef<Record<string, string>>({})
   const latestContentsRef = useRef<Record<string, string>>({})
   const changeVersionRef = useRef<Record<string, number>>({})
+  const loadedVersionsRef = useLatest(loadedVersions)
   const loadToken = useRef(0)
   const activeLoadRef = useRef<{ path: string; token: number; workspace: string } | null>(null)
   const workspaceSessionRef = useRef(workspaceKey)
@@ -76,34 +86,12 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     activePath,
   )
 
-  const markPathClean = useCallback(
-    (workspace: string, path: string, content: string) => {
-      if (workspaceKeyRef.current === workspace) {
-        syncedContentsRef.current[editorBufferIdentity(workspace, path)] = content
-      }
-      setWorkspaceDirtyPaths((prev) =>
-        produce(prev, (draft) => {
-          const currentWorkspaceDirty = draft[workspace]
-          if (!currentWorkspaceDirty?.[path]) return
-          delete currentWorkspaceDirty[path]
-        }),
-      )
-      setPathSaveState(workspace, path, { status: 'saved' })
-    },
-    [setPathSaveState, setWorkspaceDirtyPaths, workspaceKeyRef],
-  )
-  const markPathDirty = useCallback(
-    (workspace: string, path: string, nextState: SaveState) => {
-      setWorkspaceDirtyPaths((prev) =>
-        produce(prev, (draft) => {
-          const currentWorkspaceDirty = draft[workspace] ?? (draft[workspace] = {})
-          currentWorkspaceDirty[path] = true
-        }),
-      )
-      setPathSaveState(workspace, path, nextState)
-    },
-    [setPathSaveState, setWorkspaceDirtyPaths],
-  )
+  const { markPathClean, markPathDirty } = useEditorBufferMarkers({
+    workspaceKeyRef,
+    syncedContentsRef,
+    setPathSaveState,
+    setWorkspaceDirtyPaths,
+  })
 
   const confirmFlushedRevisions = useEditorBufferStatus({
     changeVersionRef,
@@ -196,6 +184,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
             contents[activePath] = content
           }),
         )
+        setLoadedVersions((previous) => ({ ...previous, [identity]: token }))
         latestContentsRef.current[identity] = content
         syncedContentsRef.current[identity] = content
         delete changeVersionRef.current[identity]
@@ -253,6 +242,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     setPathSaveState,
     setWorkspaceDirtyPaths,
     setWorkspaceFileContents,
+    setLoadedVersions,
     tRef,
     workspaceKey,
   ])
@@ -263,9 +253,27 @@ export const useEditorBuffer = ({ activePath, workspaceKey }: UseEditorBufferArg
     void flushNow().catch(reportFlushError)
   })
 
+  useEditorBufferCache({
+    activePath,
+    workspaceKey,
+    openPaths,
+    settledUpdates,
+    state,
+    persistence,
+    bufferSync,
+    syncedContentsRef,
+    latestContentsRef,
+    changeVersionRef,
+  })
+
   const updateErrorMessage = useCallback(() => tRef.current('editor.updateFileFailed'), [tRef])
   const onEditorChange = useEditorBufferChanges({
     activePath,
+    loadedContent: activePath ? fileContents[activePath] : undefined,
+    loadedVersion: activePath
+      ? loadedVersions[editorBufferIdentity(workspaceKey, activePath)]
+      : undefined,
+    loadedVersionsRef,
     binding,
     currentBindingRef,
     workspaceFileContentsRef,

@@ -12,15 +12,16 @@ import {
 afterEach(cleanupWorkspaceFileServiceFixtures)
 
 describe('WorkspaceFileService analysis reads', () => {
-  it('keeps public file reads cache-backed for renderer latency', async () => {
+  it('refreshes clean public reads before watcher invalidation', async () => {
     const service = createKnowledgeServiceMock()
     const { root, workspace } = await createWorkspace(service)
     const file = path.join(root, 'note.md')
     await fs.writeFile(file, '# Before')
 
     await expect(workspace.readFile({ path: 'note.md' })).resolves.toBe('# Before')
-    await expect(workspace.readFile({ path: 'note.md' })).resolves.toBe('# Before')
-    expect(service.readWorkspaceFile).toHaveBeenCalledOnce()
+    await fs.writeFile(file, '# After')
+    await expect(workspace.readFile({ path: 'note.md' })).resolves.toBe('# After')
+    expect(service.readWorkspaceFile).toHaveBeenCalledTimes(2)
     expect(workspace.getBufferStatus({ path: 'note.md' })).toMatchObject({ dirty: false })
     workspace.dispose()
   })

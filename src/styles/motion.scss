@@ -146,7 +146,9 @@
     box-shadow var(--motion-duration-base) var(--motion-ease-standard);
 }
 
-.motion-view {
+// KeepAlive portal nodes keep a stable class; their container opts into motion.
+.motion-view,
+.motion-view-stack > .route-cache-node {
   animation: view-fade var(--motion-duration-fast) var(--motion-ease-standard) both;
   contain: layout;
 }
@@ -158,6 +160,7 @@
 
 :root[data-motion-panels='true'] .motion-panel-surface,
 :root[data-motion-panels='true'] .motion-view,
+:root[data-motion-panels='true'] .motion-view-stack > .route-cache-node,
 :root[data-motion-panels='true'] .motion-view-stack,
 :root[data-motion-panels='true'] .motion-scroll-viewport,
 :root[data-motion-panels='true'] [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'],
@@ -193,6 +196,7 @@
 :root[data-motion-panels='false'] .motion-panel,
 :root[data-motion-panels='false'] .motion-panel-surface,
 :root[data-motion-panels='false'] .motion-view,
+:root[data-motion-panels='false'] .route-cache-node,
 :root[data-motion-panels='false'] .is-panel-layout-animating > [data-panel],
 :root[data-motion-panels='false'] .is-panel-layout-animating .resize-handle {
   animation: none;
@@ -225,6 +229,7 @@
   .motion-panel,
   .motion-panel-surface,
   .motion-view,
+  .route-cache-node,
   .motion-view-stack,
   .motion-scroll-viewport,
   [data-slot='app-scroll-area'] > [data-slot='scroll-area-viewport'],

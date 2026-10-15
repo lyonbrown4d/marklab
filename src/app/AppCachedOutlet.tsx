@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useLatest } from 'ahooks'
 import { flushSync } from 'react-dom'
 import { useOutlet } from 'react-router-dom'
 import {
@@ -16,9 +17,9 @@ import {
   type LayoutContextStore,
 } from '@/app/AppLayoutContext'
 import {
-  ROUTE_CACHE_LIMITS,
-  ROUTE_CACHE_TTL_SECONDS,
+  estimateEditorTextBytes,
   getRouteCacheEvictionKeys,
+  getNextRouteCacheExpiryDelay,
   getRouteCachePolicy,
 } from '@/app/routeCachePolicy'
 import { cn } from '@/lib/utils'
@@ -33,10 +34,17 @@ type AppCachedOutletProps = {
 
 const ROUTE_CACHE_INCLUDES = [/:\/workspace\/graph$/, /:\/files\/(?:edit|source|graph)\/.+$/]
 
-const ROUTE_CACHE_TTLS = [
-  { match: /:\/workspace\/graph$/, expire: ROUTE_CACHE_TTL_SECONDS.workspaceGraph },
-  { match: /:\/files\/(?:edit|source|graph)\/.+$/, expire: ROUTE_CACHE_TTL_SECONDS.editor },
-]
+const EMPTY_CACHED_VALUES = {}
+const pickCachedDocumentState = <T,>(
+  previous: Record<string, T> | undefined,
+  current: Record<string, T> | undefined,
+  path: string | null,
+) => {
+  const value = path ? current?.[path] : undefined
+  if (!path || value === undefined) return EMPTY_CACHED_VALUES
+  if (previous && Object.keys(previous).length === 1 && previous[path] === value) return previous
+  return { [path]: value }
+}
 const ROUTE_CACHE_EVICTION_GRACE_MS = 80
 const ActiveWorkspaceContext = createContext<string | null>(null)
 export const ActiveWorkspaceProvider = ActiveWorkspaceContext.Provider
@@ -58,6 +66,7 @@ export const AppCachedOutlet = ({
   workspaceKey,
 }: AppCachedOutletProps) => {
   const aliveRef = useKeepAliveRef()
+  const latestContext = useLatest(context)
   const [contextStores] = useState(() => new Map<string, LayoutContextStore>())
   const cachePathnamesRef = useRef(new Map<string, string>())
   const cacheRouteKeysRef = useRef(new Map<string, string>())
@@ -98,6 +107,31 @@ export const AppCachedOutlet = ({
     cacheWorkspaceKeysRef.current.set(activeCacheKey, workspaceKey)
     cacheWorkspaceSessionsRef.current.set(activeCacheKey, workspaceSession)
     contextStore.setState(context, true)
+    // Inactive stores keep their document callback and view state, but must not pin
+    // snapshots of every other document that was loaded while they were active.
+    contextStores.forEach((store, key) => {
+      if (key === activeCacheKey) return
+      const previous = store.getState()
+      const path = previous.editorBufferPath
+      const contentSource =
+        path && context.fileContents?.[path] !== undefined
+          ? context.fileContents
+          : previous.fileContents
+      const fileContents = pickCachedDocumentState(previous.fileContents, contentSource, path)
+      const saveStates = pickCachedDocumentState(previous.saveStates, context.saveStates, path)
+      const loadingPaths = pickCachedDocumentState(
+        previous.loadingPaths,
+        context.loadingPaths,
+        path,
+      )
+      if (
+        fileContents === previous.fileContents &&
+        saveStates === previous.saveStates &&
+        loadingPaths === previous.loadingPaths
+      )
+        return
+      store.setState({ fileContents, saveStates, loadingPaths })
+    })
   }, [
     activeCacheKey,
     context,
@@ -150,8 +184,9 @@ export const AppCachedOutlet = ({
     }
     previousRouteRef.current = { cacheKey: activeCacheKey, pathname: routePathname }
 
-    evictionTimerRef.current = window.setTimeout(() => {
+    const enforceCachePolicy = () => {
       evictionTimerRef.current = null
+      const currentContext = latestContext.current
       const cacheNodes = aliveRef.current?.getCacheNodes() ?? []
       const liveKeys = new Set(cacheNodes.map((node) => node.cacheKey))
       liveKeys.add(activeCacheKeyRef.current)
@@ -165,15 +200,40 @@ export const AppCachedOutlet = ({
       })
       const entries = cacheNodes.flatMap((node) => {
         const pathname = cachePathnamesRef.current.get(node.cacheKey)
-        return pathname
-          ? [{ cacheKey: node.cacheKey, pathname, lastActiveAtMs: node.lastActiveTime }]
-          : []
+        if (!pathname) return []
+        const snapshot = contextStores.get(node.cacheKey)?.getState()
+        const path = snapshot?.editorBufferPath
+        const content = path ? currentContext.fileContents?.[path] : undefined
+        const saveState = path ? currentContext.saveStates?.[path] : undefined
+        return [
+          {
+            cacheKey: node.cacheKey,
+            pathname,
+            lastActiveAtMs: node.lastActiveTime,
+            textBytes: content === undefined ? 0 : estimateEditorTextBytes(content),
+            protected: Boolean(
+              path &&
+              (currentContext.loadingPaths?.[path] || (saveState && saveState.status !== 'saved')),
+            ),
+            bufferMissing: Boolean(path && currentContext.fileContents && content === undefined),
+          },
+        ]
       })
       const evictionKeys = getRouteCacheEvictionKeys(entries, {
         activeCacheKey: activeCacheKeyRef.current,
         nowMs: Date.now(),
       })
       const inactiveKeys = evictionKeys.filter((key) => key !== activeCacheKeyRef.current)
+      const nextExpiryDelay = getNextRouteCacheExpiryDelay(
+        entries.filter((entry) => !inactiveKeys.includes(entry.cacheKey)),
+        { activeCacheKey: activeCacheKeyRef.current, nowMs: Date.now() },
+      )
+      if (nextExpiryDelay !== null) {
+        evictionTimerRef.current = window.setTimeout(
+          enforceCachePolicy,
+          Math.max(ROUTE_CACHE_EVICTION_GRACE_MS, nextExpiryDelay),
+        )
+      }
       if (inactiveKeys.length === 0) return
       flushSync(() => {
         setCacheEpochs((current) => {
@@ -207,24 +267,35 @@ export const AppCachedOutlet = ({
           contextStores.delete(key)
         })
       })
-    }, ROUTE_CACHE_EVICTION_GRACE_MS)
+    }
+    evictionTimerRef.current = window.setTimeout(enforceCachePolicy, ROUTE_CACHE_EVICTION_GRACE_MS)
     return () => {
       if (evictionTimerRef.current === null) return
       window.clearTimeout(evictionTimerRef.current)
       evictionTimerRef.current = null
     }
-  }, [activeCacheKey, aliveRef, contextStores, routePathname])
+  }, [
+    activeCacheKey,
+    aliveRef,
+    contextStores,
+    latestContext,
+    routePathname,
+    context.fileContents,
+    context.loadingPaths,
+    context.saveStates,
+  ])
   const outlet = useOutlet(contextStore)
 
   return (
     <ActiveWorkspaceProvider key={workspaceSession} value={workspaceKey}>
       <KeepAlive
         activeCacheKey={activeCacheKey}
-        cacheNodeClassName={cn('h-full', shouldAnimateRouteCache && 'motion-view')}
+        // KeepAlive recreates its portal target when this class changes.
+        cacheNodeClassName="h-full route-cache-node"
         containerClassName={cn('h-full', shouldAnimateRouteCache && 'motion-view-stack')}
         include={ROUTE_CACHE_INCLUDES}
-        max={ROUTE_CACHE_LIMITS.maxEntries}
-        maxAliveTime={ROUTE_CACHE_TTLS}
+        // Our controller owns limits so the library cannot evict dirty editors.
+        max={Number.POSITIVE_INFINITY}
         aliveRef={aliveRef}
       >
         {outlet}

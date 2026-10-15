@@ -22,6 +22,16 @@ const renderDialog = (rootPath = '/repo') => {
 }
 
 describe('GitManagementDialog', () => {
+  it('releases full historical file contents when the preview closes', async () => {
+    const { client, unmount } = renderDialog()
+    await screen.findByLabelText('Changes in note.md')
+    const key = ['git-commit-diff', '/repo', commit.hash, 'note.md', undefined]
+    expect(client.getQueryData(key)).toBeDefined()
+    unmount()
+    await waitFor(() => expect(client.getQueryData(key)).toBeUndefined())
+    client.clear()
+  })
+
   it('loads history, files and a readable actual diff in the workspace scope', async () => {
     const { client } = renderDialog()
     expect(await screen.findByText('Add note')).toBeInTheDocument()

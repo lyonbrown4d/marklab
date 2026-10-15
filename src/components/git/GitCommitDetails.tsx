@@ -15,6 +15,9 @@ const CommitFileDiff = ({ rootPath, commit, file }: Props & { file: GitCommitFil
   const query = useQuery({
     queryKey: ['git-commit-diff', rootPath, commit.hash, file.path, file.old_path],
     queryFn: () => api.getCommitDiff(commit.hash, file.path, file.old_path ?? undefined),
+    // Each preview can contain two MiB of source; release it when switching files.
+    gcTime: 0,
+    staleTime: Infinity,
   })
   const patch =
     query.data &&
@@ -56,6 +59,8 @@ export const GitCommitDetails = ({ rootPath, commit }: Props) => {
   const query = useQuery({
     queryKey: ['git-commit-files', rootPath, commit.hash],
     queryFn: () => api.getCommitFiles(commit.hash),
+    gcTime: 30_000,
+    staleTime: Infinity,
   })
   const file = selected ?? query.data?.[0]
   return (

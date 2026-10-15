@@ -1,3 +1,4 @@
+import { estimateEditorTextBytes } from '@/app/editorBufferCachePolicy'
 import {
   FILE_ROUTE_PATTERN,
   GRAPH_WORKSPACE_ROUTE_PATTERN,
@@ -7,6 +8,7 @@ import {
 export const ROUTE_CACHE_LIMITS = {
   maxEntries: 6,
   weightBudget: 12,
+  maxTextBytes: 16 * 1024 * 1024,
 } as const
 
 export const ROUTE_CACHE_TTL_SECONDS = {
@@ -29,6 +31,9 @@ export type RouteCacheEntry = Readonly<{
   cacheKey: string
   pathname: string
   lastActiveAtMs: number
+  textBytes?: number
+  protected?: boolean
+  bufferMissing?: boolean
 }>
 
 export type RouteCacheEvictionOptions = Readonly<{
@@ -86,6 +91,8 @@ const compareLeastRecentlyUsed = (left: ClassifiedEntry, right: ClassifiedEntry)
   return 0
 }
 
+export { estimateEditorTextBytes }
+
 const isExpired = (candidate: ClassifiedEntry, nowMs: number) => {
   if (!candidate.policy.cacheable) return false
   const ttlMs = candidate.policy.ttlSeconds * 1_000
@@ -104,13 +111,23 @@ export const getRouteCacheEvictionKeys = (
 
   for (const candidate of candidates) {
     const isActive = candidate.entry.cacheKey === options.activeCacheKey
-    if (!isActive && (!candidate.policy.cacheable || isExpired(candidate, options.nowMs))) {
+    if (
+      !isActive &&
+      !candidate.entry.protected &&
+      (candidate.entry.bufferMissing ||
+        !candidate.policy.cacheable ||
+        isExpired(candidate, options.nowMs))
+    ) {
       evictedKeys.push(candidate.entry.cacheKey)
       continue
     }
     if (candidate.policy.cacheable) retained.push(candidate)
   }
 
+  let retainedBytes = retained.reduce(
+    (total, candidate) => total + (candidate.entry.textBytes ?? 0),
+    0,
+  )
   let retainedCount = retained.length
   let retainedWeight = retained.reduce(
     (total, candidate) => total + (candidate.policy.cacheable ? candidate.policy.weight : 0),
@@ -120,15 +137,37 @@ export const getRouteCacheEvictionKeys = (
   for (const candidate of retained) {
     if (
       retainedCount <= ROUTE_CACHE_LIMITS.maxEntries &&
-      retainedWeight <= ROUTE_CACHE_LIMITS.weightBudget
+      retainedWeight <= ROUTE_CACHE_LIMITS.weightBudget &&
+      retainedBytes <= ROUTE_CACHE_LIMITS.maxTextBytes
     ) {
       break
     }
-    if (candidate.entry.cacheKey === options.activeCacheKey || !candidate.policy.cacheable) continue
+    if (
+      candidate.entry.cacheKey === options.activeCacheKey ||
+      candidate.entry.protected ||
+      !candidate.policy.cacheable
+    )
+      continue
     evictedKeys.push(candidate.entry.cacheKey)
     retainedCount -= 1
     retainedWeight -= candidate.policy.weight
+    retainedBytes -= candidate.entry.textBytes ?? 0
   }
 
   return evictedKeys
+}
+
+// One wakeup at the next unprotected inactive expiry also releases idle caches.
+export const getNextRouteCacheExpiryDelay = (
+  entries: readonly RouteCacheEntry[],
+  options: RouteCacheEvictionOptions,
+): number | null => {
+  let nextExpiry = Infinity
+  for (const entry of entries) {
+    if (entry.cacheKey === options.activeCacheKey || entry.protected) continue
+    const policy = getRouteCachePolicy(entry.pathname)
+    if (!policy.cacheable) continue
+    nextExpiry = Math.min(nextExpiry, entry.lastActiveAtMs + policy.ttlSeconds * 1000)
+  }
+  return Number.isFinite(nextExpiry) ? Math.max(0, nextExpiry - options.nowMs) : null
 }

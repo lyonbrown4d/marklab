@@ -74,7 +74,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
       canPrecomputeGraph: () =>
         Boolean(this.analysisKnowledgeEngineService) && this.state.rootKind !== 'single',
       graphDelayMs: this.options.graphPrecomputeDelayMs ?? 750,
-      indexDelayMs: this.options.workspaceIndexPrecomputeDelayMs ?? 100,
+      indexDelayMs: this.options.workspaceIndexPrecomputeDelayMs ?? 1500,
       logger: this.logger,
       precomputeGraph: ({ markStarted, signal }) =>
         this.graphQueries
@@ -111,8 +111,14 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   readonly workspaceKnowledgeSummary = this.indexQuery.workspaceKnowledgeSummary.bind(
     this.indexQuery,
   )
-  workspaceGraphNodeDetails(value: unknown) {
-    return this.graphQueries.loadNodeDetails(value)
+  async workspaceGraphNodeDetails(value: unknown) {
+    const revision = this.analysisPrewarm.markGraphRequested()
+    const result = await this.graphQueries.loadNodeDetails(value)
+    this.analysisPrewarm.markGraphLoaded(revision)
+    return result
+  }
+  setWindowForeground(foreground: boolean): void {
+    if (!this.disposed) this.analysisPrewarm.setWindowForeground(foreground)
   }
   beginRendererHydration(): void {
     this.analysisPrewarm.beginRendererHydration()
@@ -152,7 +158,10 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
   }
 
   async workspaceGraph(): Promise<FsGraph> {
-    return this.graphQueries.load('interactive')
+    const revision = this.analysisPrewarm.markGraphRequested()
+    const graph = await this.graphQueries.load('interactive')
+    this.analysisPrewarm.markGraphLoaded(revision)
+    return graph
   }
 
   override updateBuffer(value: unknown): ReturnType<WorkspaceFileService['updateBuffer']> {
@@ -197,7 +206,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setRoot(value, options)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
-    this.beginRendererHydration()
+    this.analysisPrewarm.resetWorkspace()
     this.searchIndex.reset()
     this.analysisCache.invalidate()
     this.graphResolver.clear()
@@ -211,7 +220,7 @@ export class WorkspaceAnalysisService extends WorkspaceFileService {
     const previousWorkspaceSearchKey = workspaceSearchKey(this.state)
     const result = await super.setSingleFile(value, options)
     if (workspaceSearchKey(this.state) === previousWorkspaceSearchKey) return result
-    this.beginRendererHydration()
+    this.analysisPrewarm.resetWorkspace()
     this.searchIndex.reset()
     this.analysisCache.invalidate()
     this.graphResolver.clear()

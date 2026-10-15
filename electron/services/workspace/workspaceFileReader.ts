@@ -7,7 +7,10 @@ import type { WorkspaceBufferStore } from '@electron/services/workspace/workspac
 import { trySidecarReadFile } from '@electron/services/workspace/workspaceSidecarFileBridge'
 
 type WorkspaceFileReaderOptions = {
-  buffers: Pick<WorkspaceBufferStore, 'cacheCleanFile' | 'readCached' | 'reconcilePersistedRead'>
+  buffers: Pick<
+    WorkspaceBufferStore,
+    'cacheCleanFile' | 'getStatus' | 'readCached' | 'reconcilePersistedRead'
+  >
   getState: () => FsStateData
   knowledgeEngineService?: KnowledgeEngineService
   logger: Logger
@@ -28,7 +31,15 @@ export class WorkspaceFileReader {
   ): Promise<string> => {
     const absolutePath = this.options.resolvePath(relativePath)
     const cached = this.options.buffers.readCached(relativePath)
-    if (cached != null) return cached
+    const revision = this.options.buffers.getStatus(relativePath)?.revision
+    // Explicit opens must see persisted changes even before a watcher invalidates the cache.
+    // Unsaved buffers remain authoritative, including edits made during the async read below.
+    if (
+      cached != null &&
+      (!cacheCleanFile || this.options.buffers.getStatus(relativePath)?.dirty)
+    ) {
+      return cached
+    }
     const sidecarContent = await trySidecarReadFile({
       knowledgeEngineService: this.options.knowledgeEngineService,
       logger: this.options.logger,
@@ -36,7 +47,15 @@ export class WorkspaceFileReader {
       state: this.options.getState(),
     })
     const content = sidecarContent ?? (await fs.promises.readFile(absolutePath, 'utf8'))
-    if (cacheCleanFile) return this.options.buffers.cacheCleanFile(relativePath, content)
+    if (cacheCleanFile) {
+      // A newer edit can finish saving while this read is still in flight.
+      if (this.options.buffers.getStatus(relativePath)?.revision !== revision) {
+        const latest = this.options.buffers.readCached(relativePath)
+        if (latest != null)
+          return this.options.buffers.reconcilePersistedRead(relativePath, content)
+      }
+      return this.options.buffers.cacheCleanFile(relativePath, content)
+    }
     return this.options.buffers.reconcilePersistedRead(relativePath, content)
   }
 }

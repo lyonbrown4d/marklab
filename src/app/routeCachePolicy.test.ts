@@ -43,7 +43,11 @@ describe('route cache policy', () => {
   })
 
   it('publishes the bounded heavy-cache limits and TTLs used by the controller', () => {
-    expect(ROUTE_CACHE_LIMITS).toEqual({ maxEntries: 6, weightBudget: 12 })
+    expect(ROUTE_CACHE_LIMITS).toEqual({
+      maxEntries: 6,
+      weightBudget: 12,
+      maxTextBytes: 16 * 1024 * 1024,
+    })
     expect(ROUTE_CACHE_TTL_SECONDS).toEqual({ editor: 600, workspaceGraph: 300 })
   })
 })
@@ -121,5 +125,43 @@ describe('getRouteCacheEvictionKeys', () => {
         nowMs: 500,
       }),
     ).toEqual(['old-edit'])
+  })
+  it('uses document bytes as an additional budget even with only two editor routes', () => {
+    const entries = [
+      {
+        ...entry('old', '/files/source/large.md', 100),
+        textBytes: ROUTE_CACHE_LIMITS.maxTextBytes,
+      },
+      { ...entry('active', '/files/edit/current.md', 200), textBytes: 10 },
+    ]
+    expect(getRouteCacheEvictionKeys(entries, { activeCacheKey: 'active', nowMs: 300 })).toEqual([
+      'old',
+    ])
+  })
+
+  it('protects dirty and loading editor routes from TTL and size pressure', () => {
+    const entries = [
+      {
+        ...entry('dirty', '/files/edit/draft.md', 0),
+        protected: true,
+        textBytes: ROUTE_CACHE_LIMITS.maxTextBytes * 2,
+      },
+      { ...entry('active', '/files/source/current.md', 1), textBytes: 10 },
+      entry('clean', '/files/edit/clean.md', 699_999),
+    ]
+    expect(
+      getRouteCacheEvictionKeys(entries, { activeCacheKey: 'active', nowMs: 700_000 }),
+    ).toEqual(['clean'])
+  })
+
+  it('destroys an inactive route after its saved buffer has been released, keeping a recent hot editor', () => {
+    const entries = [
+      { ...entry('closed', '/files/edit/closed.md', 100), bufferMissing: true },
+      entry('recent', '/files/source/recent.md', 200),
+      entry('active', '/files/edit/current.md', 300),
+    ]
+    expect(getRouteCacheEvictionKeys(entries, { activeCacheKey: 'active', nowMs: 400 })).toEqual([
+      'closed',
+    ])
   })
 })
