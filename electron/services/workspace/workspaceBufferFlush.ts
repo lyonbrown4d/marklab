@@ -59,9 +59,15 @@ export const flushWorkspaceBufferPass = async (context: FlushContext): Promise<v
   const results = await Promise.allSettled(entries.map((entry) => writeEntry(entry, context)))
   const savedPaths: string[] = []
   const errors: unknown[] = []
+  const failures: string[] = []
   results.forEach((result, index) => {
     if (result.status === 'fulfilled') savedPaths.push(entries[index].record.relativePath)
-    else errors.push(result.reason)
+    else {
+      errors.push(result.reason)
+      failures.push(
+        entries[index].record.relativePath + ': ' + context.options.errorMessage(result.reason),
+      )
+    }
   })
   context.syncWriteClaims()
   if (savedPaths.length > 0) {
@@ -77,6 +83,13 @@ export const flushWorkspaceBufferPass = async (context: FlushContext): Promise<v
     }
   }
   if (errors.length > 0) {
-    throw new AggregateError(errors, 'Failed to save ' + errors.length + ' workspace buffer(s)')
+    const details =
+      failures.length > 0
+        ? failures.join('; ')
+        : errors.map(context.options.errorMessage).join('; ')
+    throw new AggregateError(
+      errors,
+      'Failed to save ' + errors.length + ' workspace buffer(s): ' + details,
+    )
   }
 }

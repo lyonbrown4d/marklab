@@ -81,6 +81,31 @@ describe('workspace write identity compatibility', () => {
 })
 
 describe('workspace coordinated writes', () => {
+  it('accepts a freshly read external baseline after an earlier successful save', async () => {
+    const target = path.join(root, 'refreshed.md')
+    await fs.writeFile(target, 'original')
+    const ownerId = owner()
+    const save = (baselineContent: string, content: string) =>
+      commitWorkspaceWrite({
+        absolutePath: target,
+        baselineContent,
+        content,
+        ownerId,
+        recordKey: 'refreshed.md',
+        write: (writePath) => writeWorkspaceFileAtomically(writePath, content),
+      })
+    await save('original', 'first save')
+    // An external in-place write preserves the inode used by the coordinator.
+    await fs.writeFile(target, 'external update')
+    const freshBaseline = await fs.readFile(target, 'utf8')
+    await expect(save(freshBaseline, 'second save')).resolves.toBeDefined()
+    expect(await fs.readFile(target, 'utf8')).toBe('second save')
+    await expect(save(freshBaseline, 'stale edit')).rejects.toBeInstanceOf(
+      WorkspaceWriteConflictError,
+    )
+    expect(await fs.readFile(target, 'utf8')).toBe('second save')
+  })
+
   it('writes atomically without leaving temporary files', async () => {
     const target = path.join(root, 'atomic', 'Draft.md')
     await writeWorkspaceFileAtomically(target, 'saved')

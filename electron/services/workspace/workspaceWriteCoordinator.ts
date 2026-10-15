@@ -44,7 +44,6 @@ export class WorkspaceWriteConflictError extends Error {
 }
 
 const claimsByOwner = new Map<string, WorkspaceWriteClaim[]>()
-const persistedBaselines = new Map<string, string | null>()
 type ProcessMutationContext = { active: boolean; ownerId: string }
 type ActiveWriter =
   | { kind: 'buffer'; ownerId: string; recordKey: string }
@@ -101,15 +100,8 @@ const commitWorkspaceWriteNow = async (
         commit.absolutePath,
       )
     }
-    if (
-      persistedBaselines.has(identity.key) &&
-      persistedBaselines.get(identity.key) !== commit.baselineContent
-    ) {
-      throw new WorkspaceWriteConflictError(
-        'The in-process persisted baseline changed for ' + commit.absolutePath,
-        commit.absolutePath,
-      )
-    }
+    // The current disk content is authoritative. A previous write's inode baseline
+    // becomes stale after an external edit, even when a fresh open read that edit.
     if (diskContent !== commit.baselineContent) {
       throw new WorkspaceWriteConflictError(
         'The file changed outside this buffer: ' + commit.absolutePath,
@@ -135,8 +127,6 @@ const commitWorkspaceWriteNow = async (
   }
 
   const committedIdentity = await canonicalWorkspaceWriteIdentity(identity.writePath)
-  persistedBaselines.set(identity.key, commit.content)
-  persistedBaselines.set(committedIdentity.key, commit.content)
   return { identityKey: committedIdentity.key }
 }
 

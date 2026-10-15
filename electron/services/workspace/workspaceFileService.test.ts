@@ -229,7 +229,7 @@ describe('WorkspaceFileService root switching', () => {
     await fs.mkdir(nextRoot)
 
     await expect(workspace.setRoot({ path: nextRoot })).rejects.toThrow(
-      'Failed to save 1 workspace buffer(s)',
+      'Failed to save 1 workspace buffer(s): notes/a.md: disk full',
     )
 
     expect(workspace.rootInfo()).toEqual({ kind: 'external', path: root })
