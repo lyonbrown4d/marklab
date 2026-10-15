@@ -10,6 +10,9 @@ import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { configureMonaco } from '@/lib/monaco'
+import { GitFilePreview } from '@/components/git/GitFilePreview'
+import { getPreviewFileKind } from '@/logic/fileTypes'
+import { useGitDiffEditorLifecycle } from '@/features/git/useGitDiffEditorLifecycle'
 
 type GitDiffViewProps = {
   rootPath: string
@@ -39,11 +42,16 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
   const [monacoLoadError, setMonacoLoadError] = useState<unknown>(null)
   const motionSmoothScrolling = usePreferencesStore((state) => state.motionSmoothScrolling)
   const motionAnimatedCursor = usePreferencesStore((state) => state.motionAnimatedCursor)
+  const previewKind = getPreviewFileKind(request.path)
+  const preferFilePreview = Boolean(previewKind && previewKind !== 'source')
   const diffQuery = useQuery({
     queryKey: ['git-file-diff', rootPath, request.path, request.section],
     queryFn: () => gitApi.getFileDiff(rootPath, request.path, request.section),
-    enabled: Boolean(rootPath && request.path),
+    enabled: Boolean(rootPath && request.path && !preferFilePreview),
   })
+  const unavailableReason = diffQuery.data?.unavailable_reason
+  const canPreview = diffQuery.isSuccess && !unavailableReason && !preferFilePreview
+  const diffEditor = useGitDiffEditorLifecycle(canPreview)
 
   const diffTitle = `${t('scm.diffTitle')}: ${request.path}`
   const diffRange = diffQuery.data
@@ -58,6 +66,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
   }, [onOpenFile, request.path])
 
   useEffect(() => {
+    if (!canPreview) return
     let cancelled = false
 
     void configureMonaco()
@@ -75,7 +84,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [canPreview])
 
   const editorLoadError =
     monacoLoadError instanceof Error ? monacoLoadError.message : String(monacoLoadError)
@@ -89,17 +98,19 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
           <span className="shrink-0 text-muted-foreground">{diffRange}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <AppButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 rounded-md px-2 text-xs"
-            aria-label={`${t('scm.openFile')}: ${request.path}`}
-            title={`${t('scm.openFile')}: ${request.path}`}
-            onClick={openFile}
-          >
-            {t('scm.openFile')}
-          </AppButton>
+          {canPreview && request.status !== 'deleted' && (
+            <AppButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 rounded-md px-2 text-xs"
+              aria-label={`${t('scm.openFile')}: ${request.path}`}
+              title={`${t('scm.openFile')}: ${request.path}`}
+              onClick={openFile}
+            >
+              {t('scm.openFile')}
+            </AppButton>
+          )}
           <AppButton
             type="button"
             variant="ghost"
@@ -114,7 +125,12 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        {diffQuery.isLoading ? (
+        {preferFilePreview ? (
+          <GitFilePreview
+            rootPath={rootPath}
+            file={{ path: request.path, section: request.section }}
+          />
+        ) : diffQuery.isLoading ? (
           <DocumentLoadingState className="h-full p-6" label={diffTitle} />
         ) : diffQuery.isError ? (
           <div className="flex h-full items-center justify-center p-6">
@@ -128,6 +144,12 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
               {String(diffQuery.error)}
             </AppAlert>
           </div>
+        ) : unavailableReason ? (
+          <GitFilePreview
+            rootPath={rootPath}
+            file={{ path: request.path, section: request.section }}
+            reason={unavailableReason}
+          />
         ) : monacoLoadError ? (
           <div className="flex h-full items-center justify-center p-6">
             <AppAlert
@@ -143,7 +165,7 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
         ) : !monacoReady ? (
           <DocumentLoadingState className="h-full p-6" label={t('editor.loadingDocument')} />
         ) : (
-          <div role="region" aria-label={diffTitle} className="h-full">
+          <div className="h-full">
             <DiffEditor
               height="100%"
               loading={
@@ -153,8 +175,11 @@ const GitDiffView = ({ rootPath, request, onClose, onOpenFile }: GitDiffViewProp
               theme={darkMode ? 'vs-dark' : 'vs'}
               original={diffQuery.data?.original_content ?? ''}
               modified={diffQuery.data?.modified_content ?? ''}
-              originalModelPath={`git://${rootPath}/HEAD/${request.path}`}
-              modifiedModelPath={`git://${rootPath}/worktree/${request.path}`}
+              originalModelPath={`git://${encodeURIComponent(rootPath)}/${diffEditor.instanceId}/${request.section}/original/${encodeURIComponent(request.path)}`}
+              modifiedModelPath={`git://${encodeURIComponent(rootPath)}/${diffEditor.instanceId}/${request.section}/modified/${encodeURIComponent(request.path)}`}
+              keepCurrentOriginalModel
+              keepCurrentModifiedModel
+              onMount={diffEditor.onMount}
               options={{
                 readOnly: true,
                 renderSideBySide: true,

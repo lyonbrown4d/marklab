@@ -4,24 +4,38 @@ import path from 'node:path'
 
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 import { GitOperationError } from '@electron/services/git/errors'
+import type { GitPreviewUnavailable, GitPreviewUnavailableReason } from '@/types/gitPreview'
 
 export const MAX_GIT_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 
-export const assertPreviewSize = (size: number | bigint): void => {
-  if (size > MAX_GIT_PREVIEW_BYTES)
-    throw new GitOperationError(
+export class GitPreviewUnavailableError extends GitOperationError {
+  constructor(readonly reason: GitPreviewUnavailableReason) {
+    super(
       'git_invalid_input',
-      'Diff preview unavailable: file exceeds the 1 MiB text preview limit',
+      reason === 'too_large'
+        ? 'Diff preview unavailable: file exceeds the 1 MiB text preview limit'
+        : 'Diff preview unavailable: binary or non-UTF-8 file cannot be displayed as text',
     )
+  }
+}
+
+export const gitPreviewUnavailable = (error: unknown, filePath: string): GitPreviewUnavailable => {
+  // Files that cannot be rendered are expected outcomes; safety and Git errors still fail.
+  if (!(error instanceof GitPreviewUnavailableError)) throw error
+  return { path: filePath, unavailable_reason: error.reason }
+}
+
+export const assertPreviewSize = (size: number | bigint): void => {
+  if (size > MAX_GIT_PREVIEW_BYTES) throw new GitPreviewUnavailableError('too_large')
 }
 
 export const decodeTextPreview = (bytes: Buffer): string => {
   assertPreviewSize(bytes.length)
-  if (bytes.includes(0) || !isUtf8(bytes))
-    throw new GitOperationError(
-      'git_invalid_input',
-      'Diff preview unavailable: binary or non-UTF-8 file cannot be displayed as text',
-    )
+  const utf16Bom =
+    (bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)
+  if (utf16Bom) throw new GitPreviewUnavailableError('unsupported_encoding')
+  if (bytes.includes(0)) throw new GitPreviewUnavailableError('binary')
+  if (!isUtf8(bytes)) throw new GitPreviewUnavailableError('unsupported_encoding')
   return bytes.toString('utf8')
 }
 

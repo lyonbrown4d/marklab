@@ -1,3 +1,4 @@
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -5,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExcalidrawEditorSurface from '@/components/previews/ExcalidrawEditorSurface'
 
 import { fsApi } from '@/services/fsApi'
+
+vi.mock('@/services/readPreviewAsset', () => ({ readPreviewTextAsset: vi.fn() }))
 
 const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
 
@@ -82,6 +85,28 @@ const renderSurface = () => {
 }
 
 describe('ExcalidrawEditorSurface', () => {
+  it('reads immutable snapshot content instead of the same-named worktree file', async () => {
+    vi.mocked(readPreviewTextAsset).mockResolvedValue({
+      content: '{"type":"excalidraw","version":2,"elements":[]}',
+      truncated: false,
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const src = 'marklab-asset://local/v1/' + 'a'.repeat(43)
+    render(
+      <QueryClientProvider client={client}>
+        <ExcalidrawEditorSurface
+          path="same.excalidraw"
+          title="same.excalidraw"
+          readonly
+          src={src}
+        />
+      </QueryClientProvider>,
+    )
+    await screen.findByTestId('excalidraw-editor')
+    await waitFor(() => expect(readPreviewTextAsset).toHaveBeenCalled())
+    expect(fsApi.readFile).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'

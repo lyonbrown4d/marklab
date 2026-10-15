@@ -1,3 +1,5 @@
+import type { GitPreviewUnavailableReason } from '@/types/gitPreview'
+
 export type GitRepoInfo = {
   is_repository: boolean
   workdir?: string | null
@@ -38,6 +40,7 @@ export type GitFileDiff = {
   modified_label: string
   original_content: string
   modified_content: string
+  unavailable_reason?: GitPreviewUnavailableReason
 }
 
 export type GitRemote = {

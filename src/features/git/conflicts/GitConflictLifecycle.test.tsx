@@ -33,6 +33,45 @@ const show = async () => {
 }
 
 describe('Git conflict draft lifecycle', () => {
+  it('keeps unsupported conflicts out of the editable merge surface', async () => {
+    conflictApi.getConflict.mockResolvedValue({ path: 'example.ts', unavailable_reason: 'binary' })
+    const onClose = vi.fn()
+    renderConflict(view(onClose))
+    const status = await screen.findByRole('status', { name: 'Text diff unavailable' })
+    expect(status).toHaveTextContent('Binary files cannot be compared as text.')
+    expect(status).toHaveTextContent(
+      'Resolve this conflict in an external tool, then stage the file.',
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save and stage' })).toBeDisabled()
+    expect(configure).not.toHaveBeenCalled()
+    const user = userEvent.setup()
+    await user.keyboard('{Control>}s{/Control}')
+    expect(conflictApi.saveConflict).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('retains an existing draft but blocks writes when refreshed content becomes unsupported', async () => {
+    const { client, user } = await show()
+    await user.clear(screen.getByRole('textbox'))
+    await user.type(screen.getByRole('textbox'), 'retained draft')
+    conflictApi.getConflict.mockResolvedValue({ path: 'example.ts', unavailable_reason: 'binary' })
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['git-conflict', '/repo', 'example.ts'] })
+    })
+    await screen.findByText('Binary files cannot be compared as text.')
+    expect(screen.getByRole('textbox')).toHaveValue('retained draft')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByText('Binary files cannot be compared as text.')).toBeInTheDocument()
+    expect(hasGitConflictDraft('/repo', 'example.ts')).toBe(true)
+    await act(async () => {
+      await saveMountedGitConflictDraft('/repo', 'example.ts')
+    })
+    expect(conflictApi.saveConflict).not.toHaveBeenCalled()
+  })
   it('requires Save, Discard or Cancel before closing a dirty resolution', async () => {
     const { user, onClose } = await show()
     await user.clear(screen.getByRole('textbox'))

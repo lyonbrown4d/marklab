@@ -12,6 +12,7 @@ import { resolveCommit } from '@electron/services/git/operationValidation'
 import { validateFilePath } from '@electron/services/git/pathSafety'
 import { gitValue } from '@electron/services/git/repositoryState'
 import type { GitFileDiff } from '@electron/services/git/types'
+import { gitPreviewUnavailable } from '@electron/services/git/textPreview'
 
 export const readHistory = async (
   root: string,
@@ -124,16 +125,24 @@ export const readCommitDiff = async (
   const parent = (await runGit(root, ['rev-list', '--parents', '-n', '1', hash])).stdout
     .trim()
     .split(' ')[1]
-  const [original, modified] = await Promise.all([
-    parent ? readGitTextBlob(root, parent, oldPath ?? filePath) : Promise.resolve(''),
-    readGitTextBlob(root, hash, filePath),
-  ])
-  return {
+  const metadata = {
     path: filePath,
     old_path: oldPath,
     original_label: parent ? parent.slice(0, 8) : 'Empty',
     modified_label: hash.slice(0, 8),
-    original_content: original ?? '',
-    modified_content: modified ?? '',
+  }
+  try {
+    const [original, modified] = await Promise.all([
+      parent ? readGitTextBlob(root, parent, oldPath ?? filePath) : Promise.resolve(''),
+      readGitTextBlob(root, hash, filePath),
+    ])
+    return { ...metadata, original_content: original ?? '', modified_content: modified ?? '' }
+  } catch (error) {
+    return {
+      ...metadata,
+      ...gitPreviewUnavailable(error, filePath),
+      original_content: '',
+      modified_content: '',
+    }
   }
 }

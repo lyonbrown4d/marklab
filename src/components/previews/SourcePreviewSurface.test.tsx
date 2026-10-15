@@ -1,3 +1,4 @@
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,6 +12,8 @@ import SourcePreviewSurface, {
 } from '@/components/previews/SourcePreviewSurface'
 import { writeClipboardText } from '@/runtime/clipboard'
 import { fsApi } from '@/services/fsApi'
+
+vi.mock('@/services/readPreviewAsset', () => ({ readPreviewTextAsset: vi.fn() }))
 
 const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
 
@@ -68,6 +71,23 @@ const renderPreview = (
 }
 
 describe('SourcePreviewSurface', () => {
+  it('reads immutable snapshot content instead of the same-named worktree file', async () => {
+    vi.mocked(readPreviewTextAsset).mockResolvedValue({
+      content: 'Historical source',
+      truncated: false,
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const src = 'marklab-asset://local/v1/' + 'a'.repeat(43)
+    render(
+      <QueryClientProvider client={client}>
+        <SourcePreviewSurface path="same.ts" title="same.ts" src={src} />
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Historical source')).toBeInTheDocument()
+    await waitFor(() => expect(readPreviewTextAsset).toHaveBeenCalled())
+    expect(fsApi.readTextPreview).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'

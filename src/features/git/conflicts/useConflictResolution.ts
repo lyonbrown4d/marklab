@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { gitApiForWorkspace } from '@/services/gitApi'
-import type { GitConflictSnapshot } from '@/types/gitConflicts'
+import type { GitConflictSnapshot, GitConflictPreview } from '@/types/gitConflicts'
 import { useI18n } from '@/i18n/useI18n'
 import { hasConflictMarkers, parseConflictMarkers } from '@/features/git/conflicts/conflictMarkers'
 import {
@@ -34,6 +34,8 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
     refetchOnReconnect: false,
     gcTime: 0,
   })
+  const unavailableReason =
+    query.data && 'unavailable_reason' in query.data ? query.data.unavailable_reason : undefined
   const publish = (next: Draft) => {
     latest.current = next
     if (next.dirty) storeGitConflictDraft(rootPath, path, next, t('scm.merge.unsavedClose'))
@@ -44,13 +46,15 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
     let mounted = true
     const initialize = () => {
       if (!mounted || latest.current) return
-      const current = client.getQueryState<GitConflictSnapshot>(['git-conflict', rootPath, path])
+      const current = client.getQueryState<GitConflictPreview>(['git-conflict', rootPath, path])
       if (!current || current.fetchStatus === 'fetching') return
       const restored = readGitConflictDraft(rootPath, path)
-      if (!current.data && !restored) return
+      const textSnapshot =
+        current.data && !('unavailable_reason' in current.data) ? current.data : null
+      if (!textSnapshot && !restored) return
       // An externally resolved index must not hide the only surviving draft.
       // Null fallback sides are unavailable, rather than verified deletions.
-      const snapshot: GitConflictSnapshot = current.data ?? {
+      const snapshot: GitConflictSnapshot = textSnapshot ?? {
         path,
         base: null,
         ours: null,
@@ -69,7 +73,7 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
         savedContent: snapshot.result,
         savedDeleted: snapshot.deleted,
         dirty: Boolean(restored),
-        verified: Boolean(current.data && current.status === 'success'),
+        verified: Boolean(textSnapshot && current.status === 'success'),
       }
       latest.current = next
       setDraft(next)
@@ -129,6 +133,7 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
       !value ||
       !value.verified ||
       !query.isSuccess ||
+      unavailableReason ||
       query.isFetching ||
       saving.current ||
       client.isMutating({ mutationKey: ['git-repository-action'] }) ||
@@ -182,7 +187,7 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
   const reload = async () => {
     if (pending || saving.current) return false
     const refreshed = await query.refetch()
-    if (!refreshed.data || refreshed.error) return false
+    if (!refreshed.data || refreshed.error || 'unavailable_reason' in refreshed.data) return false
     const snapshot = refreshed.data
     publish({
       content: snapshot.result,
@@ -201,8 +206,11 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
   return {
     draft,
     query,
+    unavailableReason,
     pending,
-    canWrite: Boolean(draft?.verified && query.isSuccess && !query.isFetching),
+    canWrite: Boolean(
+      draft?.verified && query.isSuccess && !query.isFetching && !unavailableReason,
+    ),
     error: mutation.error,
     update,
     save,
@@ -211,7 +219,11 @@ export const useConflictResolution = (rootPath: string, path: string, onStaged: 
     blocks: parseConflictMarkers(draft?.content ?? '', draft?.snapshot.markerSize ?? 7),
     unresolved: hasConflictMarkers(draft?.content ?? '', draft?.snapshot.markerSize ?? 7),
     stale: Boolean(
-      draft && query.data && draft.revision !== query.data.revision && !query.isFetching,
+      draft &&
+      query.data &&
+      !('unavailable_reason' in query.data) &&
+      draft.revision !== query.data.revision &&
+      !query.isFetching,
     ),
   }
 }

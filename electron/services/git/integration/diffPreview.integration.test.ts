@@ -36,39 +36,64 @@ describe('Git text diff preview boundaries', { timeout: 30_000 }, () => {
     })
   })
 
-  it('rejects oversized historical/index/worktree text while history metadata stays available', async () => {
+  it('reports oversized historical/index/worktree previews while keeping history available', async () => {
     const { root, service, commit, write } = await createLocalFixture(roots)
     const hash = await commit('large.md', 'a'.repeat(MAX_GIT_PREVIEW_BYTES + 1), 'large text')
-    await expect(service.commitDiff(root, hash, 'large.md')).rejects.toMatchObject({
-      code: 'git_invalid_input',
-      message: expect.stringContaining('1 MiB'),
+    await expect(service.commitDiff(root, hash, 'large.md')).resolves.toMatchObject({
+      unavailable_reason: 'too_large',
+      original_content: '',
+      modified_content: '',
     })
     expect((await service.history(root))[0]!.subject).toBe('large text')
     expect(await service.commitFiles(root, hash)).toEqual([{ path: 'large.md', status: 'A' }])
     await write('base.md', 'b'.repeat(MAX_GIT_PREVIEW_BYTES + 1))
-    await expect(service.fileDiff(root, 'base.md', 'unstaged')).rejects.toThrow('1 MiB')
+    await expect(service.fileDiff(root, 'base.md', 'unstaged')).resolves.toMatchObject({
+      unavailable_reason: 'too_large',
+    })
     await service.stage(root, ['base.md'])
-    await expect(service.fileDiff(root, 'base.md', 'staged')).rejects.toThrow('1 MiB')
+    await expect(service.fileDiff(root, 'base.md', 'staged')).resolves.toMatchObject({
+      unavailable_reason: 'too_large',
+    })
   })
 
-  it.each([Buffer.from('binary\0content'), Buffer.from([0xff, 0xfe, 0xfd])])(
-    'rejects NUL or invalid UTF-8 bytes without corrupting them into text',
-    async (bytes) => {
+  it.each([
+    { bytes: Buffer.from('binary\0content'), reason: 'binary' },
+    { bytes: Buffer.from([0xff, 0xfe, 0xfd]), reason: 'unsupported_encoding' },
+  ])(
+    'reports $reason without corrupting bytes or blocking Git operations',
+    async ({ bytes, reason }) => {
       const { root, service } = await createLocalFixture(roots)
       await fs.writeFile(path.join(root, 'binary.bin'), bytes)
-      await expect(service.fileDiff(root, 'binary.bin', 'untracked')).rejects.toThrow(
-        'binary or non-UTF-8',
-      )
+      await expect(service.fileDiff(root, 'binary.bin', 'untracked')).resolves.toMatchObject({
+        unavailable_reason: reason,
+        original_content: '',
+        modified_content: '',
+      })
       await service.stage(root, ['binary.bin'])
-      await expect(service.fileDiff(root, 'binary.bin', 'staged')).rejects.toThrow(
-        'binary or non-UTF-8',
-      )
+      await expect(service.fileDiff(root, 'binary.bin', 'staged')).resolves.toMatchObject({
+        unavailable_reason: reason,
+        original_content: '',
+        modified_content: '',
+      })
       await service.commitStaged(root, 'binary commit')
       const hash = (await service.history(root))[0]!.hash
-      await expect(service.commitDiff(root, hash, 'binary.bin')).rejects.toThrow(
-        'binary or non-UTF-8',
-      )
+      await expect(service.commitDiff(root, hash, 'binary.bin')).resolves.toMatchObject({
+        unavailable_reason: reason,
+        original_content: '',
+        modified_content: '',
+      })
       expect(await service.commitFiles(root, hash)).toEqual([{ path: 'binary.bin', status: 'A' }])
+      expect(await fs.readFile(path.join(root, 'binary.bin'))).toEqual(bytes)
+      await fs.unlink(path.join(root, 'binary.bin'))
+      await expect(service.fileDiff(root, 'binary.bin', 'unstaged')).resolves.toMatchObject({
+        unavailable_reason: reason,
+      })
+      await service.stage(root, ['binary.bin'])
+      await service.commitStaged(root, 'delete binary')
+      const deleted = (await service.history(root))[0]!.hash
+      await expect(service.commitDiff(root, deleted, 'binary.bin')).resolves.toMatchObject({
+        unavailable_reason: reason,
+      })
     },
   )
 

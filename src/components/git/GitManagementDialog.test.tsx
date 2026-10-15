@@ -22,6 +22,22 @@ const renderDialog = (rootPath = '/repo') => {
 }
 
 describe('GitManagementDialog', () => {
+  it('shows unavailable historical previews without generating an empty text patch', async () => {
+    managementApi.getCommitDiff.mockResolvedValue({
+      path: 'note.md',
+      original_label: 'HEAD~1',
+      modified_label: 'HEAD',
+      original_content: '',
+      modified_content: '',
+      unavailable_reason: 'binary',
+    })
+    renderDialog()
+    expect(await screen.findByRole('status', { name: 'Text diff unavailable' })).toHaveTextContent(
+      'Binary files cannot be compared as text.',
+    )
+    expect(screen.queryByLabelText('Changes in note.md')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
   it('releases full historical file contents when the preview closes', async () => {
     const { client, unmount } = renderDialog()
     await screen.findByLabelText('Changes in note.md')

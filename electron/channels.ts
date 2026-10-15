@@ -44,6 +44,7 @@ export const nativeIpcChannels = {
   gitDiscover: 'marklab:git:discover',
   gitFetch: 'marklab:git:fetch',
   gitFileDiff: 'marklab:git:file-diff',
+  gitOpenFile: 'marklab:git:open-file',
   gitInit: 'marklab:git:init',
   gitPull: 'marklab:git:pull',
   gitPush: 'marklab:git:push',

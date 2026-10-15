@@ -21,13 +21,53 @@ import {
 import { WorkspaceAnalysisService } from '@electron/services/workspace/workspaceAnalysisService'
 import { nullableStringArg, stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceExportAsset } from '@electron/services/workspace/workspaceExportAsset'
+import { WorkspaceGitPreviewFiles } from '@electron/services/workspace/workspaceGitPreviewFiles'
+import type { GitService } from '@electron/services/git/service'
+import type { GitOpenFileRequest, GitOpenFileResult } from '@/types/gitPreview'
 
 const MAX_IMPORTED_ASSET_BYTES = 32 * 1024 * 1024
 
 export class WorkspaceAssetService extends WorkspaceAnalysisService {
   private readonly assetCapabilities = new WorkspaceAssetCapabilities(() => this.state)
+  private gitPreviewFiles: WorkspaceGitPreviewFiles | null = null
+
+  async openGitFile(git: GitService, request: GitOpenFileRequest): Promise<GitOpenFileResult> {
+    const owner = (this.gitPreviewFiles ??= new WorkspaceGitPreviewFiles(this.shell, this.logger))
+    const source = await git.filePreviewSource(this.rootInfo().path, request)
+    if (owner !== this.gitPreviewFiles)
+      throw new Error('Workspace changed before opening the Git file')
+    if (source.kind === 'blob') return owner.open(source, request.action)
+    if (request.action === 'system') {
+      const error = await this.shell.openPath(source.absolutePath)
+      if (error) throw new Error(`Unable to open file: ${error}`)
+      return { kind: 'opened' }
+    }
+    const [capability, metadata] = await Promise.all([
+      this.issueAssetCapability({ path: source.path }),
+      this.pathMetadata({ path: source.path }),
+    ])
+    if (owner !== this.gitPreviewFiles)
+      throw new Error('Workspace changed before opening the Git file')
+    return {
+      kind: 'preview',
+      path: source.path,
+      label: source.label,
+      readonly: metadata.readonly,
+      snapshot: false,
+      url: capability.url,
+    }
+  }
+
+  private resetGitPreviewFiles(): void {
+    const files = this.gitPreviewFiles
+    this.gitPreviewFiles = null
+    void files
+      ?.dispose()
+      .catch((error: unknown) => this.logger.warn('git preview cleanup failed', { error }))
+  }
 
   override dispose(): void {
+    this.resetGitPreviewFiles()
     this.assetCapabilities.dispose()
     super.dispose()
   }
@@ -40,6 +80,7 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     const result = await super.setRoot(value, options)
     if (workspaceAssetIdentity(this.state) !== previousIdentity) {
       this.assetCapabilities.reset()
+      this.resetGitPreviewFiles()
     }
     return result
   }
@@ -52,6 +93,7 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
     const result = await super.setSingleFile(value, options)
     if (workspaceAssetIdentity(this.state) !== previousIdentity) {
       this.assetCapabilities.reset()
+      this.resetGitPreviewFiles()
     }
     return result
   }
@@ -62,10 +104,15 @@ export class WorkspaceAssetService extends WorkspaceAnalysisService {
 
   revokeAssetCapabilities(): void {
     this.assetCapabilities.revoke()
+    this.resetGitPreviewFiles()
   }
 
-  resolveAssetCapabilityToken(token: string): Promise<WorkspaceOpenedAsset | null> {
-    return this.assetCapabilities.resolveToken(token)
+  async resolveAssetCapabilityToken(token: string): Promise<WorkspaceOpenedAsset | null> {
+    return (
+      (await this.assetCapabilities.resolveToken(token)) ??
+      this.gitPreviewFiles?.resolveToken(token) ??
+      null
+    )
   }
 
   readMarkdownExportAsset(

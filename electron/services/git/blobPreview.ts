@@ -4,7 +4,7 @@ import { assertPreviewSize, decodeTextPreview } from '@electron/services/git/tex
 
 type GitObjectMetadata = { hash: string; type: string; size: number }
 
-const readObjectMetadata = async (
+export const readObjectMetadata = async (
   root: string,
   spec: string,
 ): Promise<GitObjectMetadata | null> => {
@@ -24,7 +24,7 @@ const readObjectMetadata = async (
   return { hash: match[1]!, type: match[2]!, size: Number(match[3]) }
 }
 
-const resolveBlob = async (
+export const resolveGitBlob = async (
   root: string,
   revision: string | null,
   file: string,
@@ -73,7 +73,7 @@ export const readGitTextBlob = async (
   revision: string | null,
   file: string,
 ): Promise<string | null> => {
-  const hash = await resolveBlob(root, revision, file)
+  const hash = await resolveGitBlob(root, revision, file)
   if (!hash) return null // Only a missing tree/index entry represents an empty side.
   return readGitObjectTextBlob(root, hash)
 }

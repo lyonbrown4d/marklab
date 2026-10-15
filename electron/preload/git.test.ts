@@ -19,6 +19,13 @@ describe('named Git preload', () => {
       mode: 'soft',
       expectedRoot: '/workspace',
     })
+    await api.openFile({ path: 'cover.png', section: 'staged', action: 'system' }, '/workspace')
+    expect(invoke).toHaveBeenLastCalledWith(channels.gitOpenFile, {
+      path: 'cover.png',
+      section: 'staged',
+      action: 'system',
+      expectedRoot: '/workspace',
+    })
     expect(Object.keys(api)).not.toContain('invoke')
   })
   it('binds stash selections to both workspace and immutable identity', async () => {

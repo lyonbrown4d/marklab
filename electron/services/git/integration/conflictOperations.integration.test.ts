@@ -1,3 +1,4 @@
+import { gitConflictSnapshotSchema } from '@/types/gitConflicts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -17,7 +18,7 @@ afterEach(() => removeLocalFixtures(roots))
 describe('Git editable conflict snapshots and selected saves', { timeout: 30_000 }, () => {
   it('reads true index versions, saves manually without staging, and stages only the resolved selected file', async () => {
     const { root, service, write, file } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(view).toMatchObject({
       path: file,
       base: 'base\n',
@@ -39,7 +40,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     expect(saved.status.conflicts).toHaveLength(1)
     expect(saved.status.staged.map((change) => change.path)).toEqual(['independent.md'])
     expect(await fs.readFile(path.join(root, file), 'utf8')).toBe('current\nincoming\n')
-    const edited = await service.conflict(root, file)
+    const edited = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(edited.revision).toBe(saved.revision)
     expect(edited.revision).not.toBe(view.revision)
     const staged = await service.saveConflict(root, {
@@ -62,7 +63,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     'saves a complete %s version as an explicitly staged resolution',
     async (side) => {
       const { root, service, file } = await createConflictFixture(roots)
-      const view = await service.conflict(root, file)
+      const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
       const content = view[side]!
       const result = await service.saveConflict(root, {
         path: file,
@@ -78,7 +79,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
 
   it('rejects an external result edit without overwriting it and refreshes after the failed mutation', async () => {
     const { root, service, write, file } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     await write(file, 'external result\n')
     await expect(
       service.saveConflict(root, {
@@ -89,21 +90,21 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
       }),
     ).rejects.toThrow('Conflict changed outside')
     expect(await fs.readFile(path.join(root, file), 'utf8')).toBe('external result\n')
-    const current = await service.conflict(root, file)
+    const current = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(current.result).toBe('external result\n')
     expect(current.revision).not.toBe(view.revision)
   })
 
   it('includes index modes and hashes in the revision and rejects an external stage change', async () => {
     const { root, service, file } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     const ours = (await gitTestCommand(root, ['rev-parse', `:2:${file}`])).trim()
     await runGit(root, ['update-index', '--index-info'], { input: `100755 ${ours} 2\t${file}\n` })
     await expect(
       service.saveConflict(root, { path: file, content: 'overwrite\n', revision: view.revision }),
     ).rejects.toThrow('Conflict changed outside')
     expect(await fs.readFile(path.join(root, file), 'utf8')).toBe(view.result)
-    const current = await service.conflict(root, file)
+    const current = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(current.ours).toBe(view.ours)
     expect(current.revision).not.toBe(view.revision)
   })
@@ -112,7 +113,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     'allows saving %s markers but refuses staging them',
     async (style) => {
       const { root, service, file } = await createConflictFixture(roots, { style })
-      const view = await service.conflict(root, file)
+      const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
       await service.saveConflict(root, {
         path: file,
         content: view.result,
@@ -133,7 +134,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
 
   it('honors custom conflict marker widths from Git attributes', async () => {
     const { root, service, file } = await createConflictFixture(roots, { markerSize: 3 })
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(view.result).toContain('<<< HEAD')
     expect(view.markerSize).toBe(3)
     await expect(
@@ -148,7 +149,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
 
   it('guards marker configuration changes and still rejects the earlier narrower conflict block after refresh', async () => {
     const { root, service, file, write } = await createConflictFixture(roots, { markerSize: 3 })
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     await write('.gitattributes', `${file} conflict-marker-size=5\n`)
     await expect(
       service.saveConflict(root, {
@@ -158,7 +159,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
         stage: true,
       }),
     ).rejects.toThrow('Conflict changed outside')
-    const refreshed = await service.conflict(root, file)
+    const refreshed = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(refreshed.markerSize).toBe(5)
     expect(refreshed.revision).not.toBe(view.revision)
     await expect(
@@ -177,7 +178,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
       file: 'nested/selected.md',
     })
     await fs.rm(path.join(root, 'nested'), { recursive: true })
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(view.deleted).toBe(true)
     const saved = await service.saveConflict(root, {
       path: file,
@@ -186,7 +187,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     })
     expect(saved.staged).toBe(false)
     expect(await fs.readFile(path.join(root, file), 'utf8')).toBe('incoming\n')
-    expect((await service.conflict(root, file)).deleted).toBe(false)
+    expect(gitConflictSnapshotSchema.parse(await service.conflict(root, file)).deleted).toBe(false)
   })
 
   it('restores the preferred executable index mode when creating a missing conflict result', async () => {
@@ -194,7 +195,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     const ours = (await gitTestCommand(root, ['rev-parse', `:2:${file}`])).trim()
     await runGit(root, ['update-index', '--index-info'], { input: `100755 ${ours} 2\t${file}\n` })
     await fs.unlink(path.join(root, file))
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     expect(view.deleted).toBe(true)
     const saved = await service.saveConflict(root, {
       path: file,
@@ -212,7 +213,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     'supports modify/delete null sides and explicit deletion: %o',
     async (options) => {
       const { root, service, file } = await createConflictFixture(roots, options)
-      const view = await service.conflict(root, file)
+      const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
       expect(view.base).toBe('base\n')
       expect(options.oursDeleted ? view.ours : view.theirs).toBeNull()
       const deleted = await service.saveConflict(root, {
@@ -223,7 +224,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
       })
       expect(deleted.staged).toBe(false)
       await expect(fs.access(path.join(root, file))).rejects.toThrow()
-      const refreshed = await service.conflict(root, file)
+      const refreshed = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
       expect(refreshed).toMatchObject({ deleted: true, result: '', revision: deleted.revision })
       const staged = await service.saveConflict(root, {
         path: file,
@@ -244,7 +245,7 @@ describe('Git editable conflict snapshots and selected saves', { timeout: 30_000
     await service.switchBranch(root, 'main')
     await commit('added.md', 'current\n')
     await expect(service.merge(root, 'incoming')).rejects.toThrow()
-    const view = await service.conflict(root, 'added.md')
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, 'added.md'))
     expect(view).toMatchObject({ base: null, ours: 'current\n', theirs: 'incoming\n' })
     await service.saveConflict(root, { path: 'added.md', content: '', revision: view.revision })
     expect(await service.conflict(root, 'added.md')).toMatchObject({ result: '', deleted: false })

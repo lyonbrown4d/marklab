@@ -20,6 +20,8 @@ type FilePreviewSurfaceProps = {
   path: string
   presentation?: 'embedded' | 'full' | 'graph'
   readonly?: boolean
+  snapshot?: boolean
+  onOpenInSystem?: () => void
   src: string
   title: string
 }
@@ -29,6 +31,8 @@ const FilePreviewSurface = ({
   path,
   presentation = 'full',
   readonly = false,
+  snapshot = false,
+  onOpenInSystem,
   src,
   title,
 }: FilePreviewSurfaceProps) => {
@@ -37,7 +41,12 @@ const FilePreviewSurface = ({
   if (kind === 'source') {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-        <SourcePreviewSurface path={path} presentation={presentation} title={title} />
+        <SourcePreviewSurface
+          path={path}
+          presentation={presentation}
+          title={title}
+          src={snapshot ? src : undefined}
+        />
       </Suspense>
     )
   }
@@ -70,7 +79,13 @@ const FilePreviewSurface = ({
   if (kind === 'drawio') {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-        <DrawioEditorSurface path={path} readonly={readonly} title={title} />
+        <DrawioEditorSurface
+          onOpenInSystem={onOpenInSystem}
+          path={path}
+          readonly={readonly || snapshot}
+          title={title}
+          src={snapshot ? src : undefined}
+        />
       </Suspense>
     )
   }
@@ -79,7 +94,13 @@ const FilePreviewSurface = ({
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
         <div className={presentation === 'embedded' ? 'h-[32rem]' : 'h-full min-h-[32rem]'}>
-          <ExcalidrawEditorSurface key={path} path={path} readonly={readonly} title={title} />
+          <ExcalidrawEditorSurface
+            key={path}
+            path={path}
+            readonly={readonly || snapshot}
+            title={title}
+            src={snapshot ? src : undefined}
+          />
         </div>
       </Suspense>
     )

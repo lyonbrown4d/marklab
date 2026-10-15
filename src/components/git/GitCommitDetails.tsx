@@ -6,21 +6,27 @@ import { useI18n } from '@/i18n/useI18n'
 import { gitApiForWorkspace } from '@/services/gitApi'
 import type { GitCommitSummary, GitCommitFile } from '@/types/gitOperations'
 import { GitQueryState } from '@/components/git/GitQueryState'
+import { GitFilePreview } from '@/components/git/GitFilePreview'
+import { getPreviewFileKind } from '@/logic/fileTypes'
 
 type Props = { rootPath: string; commit: GitCommitSummary }
 
 const CommitFileDiff = ({ rootPath, commit, file }: Props & { file: GitCommitFile }) => {
   const { t } = useI18n()
   const api = useMemo(() => gitApiForWorkspace(rootPath), [rootPath])
+  const kind = getPreviewFileKind(file.path)
+  const preferFilePreview = Boolean(kind && kind !== 'source')
   const query = useQuery({
     queryKey: ['git-commit-diff', rootPath, commit.hash, file.path, file.old_path],
     queryFn: () => api.getCommitDiff(commit.hash, file.path, file.old_path ?? undefined),
     // Each preview can contain two MiB of source; release it when switching files.
     gcTime: 0,
     staleTime: Infinity,
+    enabled: !preferFilePreview,
   })
   const patch =
     query.data &&
+    !query.data.unavailable_reason &&
     createTwoFilesPatch(
       query.data.original_label,
       query.data.modified_label,
@@ -39,6 +45,13 @@ const CommitFileDiff = ({ rootPath, commit, file }: Props & { file: GitCommitFil
           void query.refetch()
         }}
       />
+      {(preferFilePreview || query.data?.unavailable_reason) && (
+        <GitFilePreview
+          rootPath={rootPath}
+          file={{ path: file.path, commit: commit.hash, oldPath: file.old_path ?? undefined }}
+          reason={query.data?.unavailable_reason}
+        />
+      )}
       {patch && (
         <pre
           tabIndex={0}

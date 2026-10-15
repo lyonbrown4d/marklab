@@ -1,3 +1,4 @@
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +7,8 @@ import { DEFAULT_DRAWIO_EMBED_URL } from '@/logic/drawioEmbed'
 import { fsApi } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { ActiveWorkspaceProvider } from '@/app/AppCachedOutlet'
+
+vi.mock('@/services/readPreviewAsset', () => ({ readPreviewTextAsset: vi.fn() }))
 
 const workspaceIdentity = vi.hoisted(() => ({ rootKind: 'external', rootPath: 'C:/one' }))
 
@@ -56,6 +59,38 @@ const drawioMessage = (
 }
 
 describe('DrawioEditorSurface', () => {
+  it('reads immutable snapshot content instead of the same-named worktree file', async () => {
+    useDrawioSettingsStore.setState({
+      drawioEditorMode: 'remote',
+      drawioEmbedUrl: DEFAULT_DRAWIO_EMBED_URL,
+    })
+    vi.mocked(readPreviewTextAsset).mockResolvedValue({
+      content: '<mxfile>Historical diagram</mxfile>',
+      truncated: false,
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const src = 'marklab-asset://local/v1/' + 'a'.repeat(43)
+    const openVersion = vi.fn()
+    render(
+      <QueryClientProvider client={client}>
+        <DrawioEditorSurface
+          path="same.drawio"
+          title="same.drawio"
+          readonly
+          src={src}
+          onOpenInSystem={openVersion}
+        />
+      </QueryClientProvider>,
+    )
+    await screen.findByTitle(/same\.drawio/)
+    await waitFor(() => expect(readPreviewTextAsset).toHaveBeenCalled())
+    expect(fsApi.readFile).not.toHaveBeenCalled()
+    act(() => useDrawioSettingsStore.setState({ drawioEditorMode: 'system' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Open in system|系统/ }))
+    expect(openVersion).toHaveBeenCalledOnce()
+    expect(fsApi.openPathInSystem).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'

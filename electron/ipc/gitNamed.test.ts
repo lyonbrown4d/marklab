@@ -4,6 +4,31 @@ import { nativeIpcChannels } from '@electron/channels'
 import { registerGitNamedIpc } from '@electron/ipc/gitNamed'
 
 describe('named Git IPC', () => {
+  it('opens version-aware files only in the sender workspace', async () => {
+    const fixture = createFixture()
+    const handlers = register(fixture)
+    const request = { path: 'cover.png', section: 'staged', action: 'preview' }
+    await handlers.get(nativeIpcChannels.gitOpenFile)?.(event(15), {
+      ...request,
+      expectedRoot: 'D:/notes',
+    })
+    expect(fixture.workspace.openGitFile).toHaveBeenCalledWith(fixture.gitService, request)
+    await expect(
+      Promise.resolve().then(() =>
+        handlers.get(nativeIpcChannels.gitOpenFile)?.(event(15), {
+          ...request,
+          expectedRoot: 'D:/other',
+        }),
+      ),
+    ).rejects.toThrow('Workspace changed')
+    await expect(
+      Promise.resolve().then(() =>
+        handlers.get(nativeIpcChannels.gitOpenFile)?.(event(15), { ...request, command: 'unsafe' }),
+      ),
+    ).rejects.toThrow()
+    expect(fixture.workspace.openGitFile).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps discovery, status, remote, fetch, pull and push on the SCM API', async () => {
     const fixture = createFixture()
     const handlers = register(fixture)
@@ -174,6 +199,7 @@ const event = (id: number) => ({ sender: { id } })
 
 const createFixture = () => {
   const workspace = {
+    openGitFile: vi.fn(async () => ({ kind: 'opened' })),
     flushBuffers: vi.fn(async () => undefined),
     invalidateAllExternalPaths: vi.fn(),
     rootInfo: vi.fn(() => ({ kind: 'external', path: 'D:/notes' })),

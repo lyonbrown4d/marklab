@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/i18n/useI18n'
 import type { GitDiffRequest } from '@/services/gitApi'
 import { GitQueryState } from '@/components/git/GitQueryState'
+import { GitFilePreview } from '@/components/git/GitFilePreview'
+import { GitConflictHeader } from '@/components/git/GitConflictHeader'
 import { useConflictResolution } from '@/features/git/conflicts/useConflictResolution'
 import {
   conflictChoiceContent,
@@ -101,41 +103,25 @@ const ConflictWorkspaceView = ({ rootPath, request, onClose }: Props) => {
         }
       }}
     >
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="min-w-0 flex-1 text-xs">
-          <h2 className="truncate font-medium">
-            {t('scm.merge.title')}: {request.path}
-          </h2>
-          <p className="text-muted-foreground">
-            {t(draft?.dirty ? 'scm.merge.unsaved' : 'scm.merge.saved')}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={pending || !canSave}
-            onClick={() => {
-              void save()
-            }}
-          >
-            {t('scm.merge.save')}
-          </Button>
-          <Button
-            size="sm"
-            disabled={pending || !canSave || unresolved}
-            onClick={() => {
-              void save(true)
-            }}
-          >
-            {t('scm.merge.saveAndStage')}
-          </Button>
-          <Button size="sm" variant="ghost" disabled={pending} onClick={askClose}>
-            {t('scm.management.close')}
-          </Button>
-        </div>
-      </header>
-      {!draft ? (
+      <GitConflictHeader
+        path={request.path}
+        dirty={draft ? draft.dirty : null}
+        pending={pending}
+        canSave={canSave}
+        unresolved={unresolved}
+        onSave={(stage) => {
+          void save(stage)
+        }}
+        onClose={askClose}
+      />
+      {!draft && state.unavailableReason ? (
+        <GitFilePreview
+          rootPath={rootPath}
+          file={{ path: request.path, section: 'conflicts' }}
+          reason={state.unavailableReason}
+          conflict
+        />
+      ) : !draft ? (
         <GitQueryState
           loading={query.isLoading || query.isFetching}
           error={query.error}
@@ -215,6 +201,9 @@ const ConflictWorkspaceView = ({ rootPath, request, onClose }: Props) => {
                 {String(error ?? query.error)}
               </p>
             ) : null}
+            {state.unavailableReason && (
+              <p role="status">{t(`scm.diffUnavailable.${state.unavailableReason}`)}</p>
+            )}
             {pending && <p role="status">{t('scm.management.working')}</p>}
           </div>
           <ConflictChoiceList

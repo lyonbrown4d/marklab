@@ -1,8 +1,10 @@
 import type { GitHistoryOptions, GitResetMode } from '@/types/gitOperations'
 import type { GitConflictSaveRequest } from '@/types/gitConflicts'
+import type { GitOpenFileRequest } from '@/types/gitPreview'
 
 type Scope = string | undefined
 export type ElectronGitApi = {
+  openFile: (request: GitOpenFileRequest, expectedRoot?: Scope) => Promise<unknown>
   discover: (expectedRoot?: Scope) => Promise<unknown>
   init: (expectedRoot?: Scope) => Promise<unknown>
   status: (expectedRoot?: Scope) => Promise<unknown>

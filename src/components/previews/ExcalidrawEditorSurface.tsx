@@ -13,8 +13,10 @@ import { useI18n } from '@/i18n/useI18n'
 
 import { parseExcalidrawDocument } from '@/components/previews/excalidrawDocument'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 
 type ExcalidrawEditorSurfaceProps = {
+  src?: string
   path: string
   readonly?: boolean
   title: string
@@ -29,6 +31,7 @@ const errorMessage = (error: unknown, fallback: string) =>
 const ExcalidrawEditorSurface = ({
   path,
   readonly = false,
+  src,
   title,
 }: ExcalidrawEditorSurfaceProps) => {
   const { t } = useI18n()
@@ -41,8 +44,11 @@ const ExcalidrawEditorSurface = ({
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const documentQuery = useQuery({
-    queryKey: ['file-preview', 'excalidraw', rootKind, rootPath, path],
-    queryFn: async () => parseExcalidrawDocument(await fsApi.readFile(path)),
+    queryKey: ['file-preview', 'excalidraw', rootKind, rootPath, path, ...(src ? [src] : [])],
+    queryFn: async () =>
+      parseExcalidrawDocument(
+        src ? (await readPreviewTextAsset(src)).content : await fsApi.readFile(path),
+      ),
     retry: false,
     gcTime: 0,
   })
@@ -124,7 +130,7 @@ const ExcalidrawEditorSurface = ({
       )}
       <div className="min-h-0 flex-1">
         <Excalidraw
-          key={`${workspaceKey}:${path}`}
+          key={`${workspaceKey}:${path}:${src ?? 'worktree'}`}
           initialData={documentQuery.data.initialData as ExcalidrawInitialData}
           onChange={handleChange}
           viewModeEnabled={readonly}

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { gitStatusSnapshotSchema } from '@/services/gitSchemas'
+import { gitPreviewUnavailableSchema } from '@/types/gitPreview'
 
 export const gitConflictSnapshotSchema = z.object({
   path: z.string(),
@@ -27,5 +28,10 @@ export const gitConflictSaveResultSchema = z.object({
   staged: z.boolean(),
 })
 export type GitConflictSnapshot = z.infer<typeof gitConflictSnapshotSchema>
+export const gitConflictPreviewSchema = z.union([
+  gitPreviewUnavailableSchema,
+  gitConflictSnapshotSchema,
+])
+export type GitConflictPreview = z.infer<typeof gitConflictPreviewSchema>
 export type GitConflictSaveRequest = z.infer<typeof gitConflictSaveRequestSchema>
 export type GitConflictSaveResult = z.infer<typeof gitConflictSaveResultSchema>

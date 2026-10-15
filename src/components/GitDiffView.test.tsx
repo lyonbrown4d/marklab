@@ -32,7 +32,21 @@ vi.mock('@/lib/monaco', () => ({
   configureMonaco: vi.fn(),
 }))
 
+vi.mock('@/components/previews/FilePreviewSurface', () => ({
+  default: () => <div data-testid="file-preview" />,
+}))
+
 vi.mock('@/services/gitApi', () => ({
+  gitApiForWorkspace: () => ({
+    openFile: async () => ({
+      kind: 'preview',
+      url: 'marklab-asset://local/v1/' + 'a'.repeat(43),
+      path: 'docs/guide.md',
+      label: 'Working Tree',
+      readonly: false,
+      snapshot: false,
+    }),
+  }),
   gitApi: {
     getFileDiff: vi.fn(),
   },
@@ -95,9 +109,8 @@ describe('GitDiffView', () => {
 
     const handlers = renderDiffView()
 
-    expect(
-      await screen.findByRole('region', { name: 'Git Diff: docs/guide.md' }),
-    ).toBeInTheDocument()
+    await screen.findByTestId('diff-editor')
+    expect(screen.getByRole('region', { name: 'Git Diff: docs/guide.md' })).toBeInTheDocument()
     expect(screen.getByText('HEAD ↔ Worktree')).toBeInTheDocument()
 
     const openButton = screen.getByRole('button', { name: 'Open File: docs/guide.md' })
@@ -146,6 +159,45 @@ describe('GitDiffView', () => {
     expect(alert).toHaveTextContent('Git Diff')
     expect(alert).toHaveTextContent('diff failed')
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(configureMonaco).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['binary', 'Binary files cannot be compared as text.'],
+    ['unsupported_encoding', 'This file is not UTF-8 text.'],
+  ] as const)(
+    'shows %s as a normal outcome without loading a text editor',
+    async (reason, message) => {
+      vi.mocked(gitApi.getFileDiff).mockResolvedValue(
+        createDiff({
+          original_content: '',
+          modified_content: '',
+          unavailable_reason: reason,
+        }),
+      )
+      const { onClose, onOpenFile } = renderDiffView()
+      expect(
+        await screen.findByRole('status', { name: 'Text diff unavailable' }),
+      ).toHaveTextContent(message)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('diff-editor')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Open File: docs/guide.md' }),
+      ).not.toBeInTheDocument()
+      expect(configureMonaco).not.toHaveBeenCalled()
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Close Diff' }))
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(onOpenFile).not.toHaveBeenCalled()
+    },
+  )
+
+  it('uses the existing source preview for large text files', async () => {
+    vi.mocked(gitApi.getFileDiff).mockResolvedValue(
+      createDiff({ unavailable_reason: 'too_large', original_content: '', modified_content: '' }),
+    )
+    renderDiffView()
+    expect(await screen.findByTestId('file-preview')).toBeInTheDocument()
+    expect(configureMonaco).not.toHaveBeenCalled()
   })
 
   it('renders Monaco load errors as alerts after the diff query succeeds', async () => {

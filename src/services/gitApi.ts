@@ -1,7 +1,8 @@
 import { getElectronRuntime } from '@/runtime/electron'
+import { gitOpenFileResultSchema, type GitOpenFileRequest } from '@/types/gitPreview'
 import { z } from 'zod'
 import {
-  gitConflictSnapshotSchema,
+  gitConflictPreviewSchema,
   gitConflictSaveResultSchema,
   type GitConflictSaveRequest,
 } from '@/types/gitConflicts'
@@ -35,6 +36,11 @@ const resetResultSchema = z.object({ status: gitStatusSnapshotSchema, backupBran
 
 // A bound facade prevents a stale UI action from targeting a newly selected workspace.
 export const gitApiForWorkspace = (expectedRoot?: string) => ({
+  async openFile(request: GitOpenFileRequest) {
+    return gitOpenFileResultSchema.parse(
+      await getElectronRuntime().git.openFile(request, expectedRoot),
+    )
+  },
   async discoverRepo(rootPath: string) {
     return gitRepoInfoSchema.parse(
       await getElectronRuntime().git.discover(expectedRoot ?? rootPath),
@@ -170,7 +176,7 @@ export const gitApiForWorkspace = (expectedRoot?: string) => ({
     )
   },
   async getConflict(path: string) {
-    return gitConflictSnapshotSchema.parse(
+    return gitConflictPreviewSchema.parse(
       await getElectronRuntime().git.conflict(path, expectedRoot),
     )
   },

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GitDiffSection } from '@/store/appTypes'
+import { gitPreviewUnavailableReasonSchema } from '@/types/gitPreview'
 
 export const gitRepoInfoSchema = z.object({
   is_repository: z.boolean(),
@@ -42,6 +43,7 @@ export const gitFileDiffSchema = z.object({
   modified_label: z.string(),
   original_content: z.string(),
   modified_content: z.string(),
+  unavailable_reason: gitPreviewUnavailableReasonSchema.optional(),
 })
 
 export const gitRemoteStatusSchema = z.object({

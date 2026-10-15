@@ -13,6 +13,7 @@ import { writeClipboardText } from '@/runtime/clipboard'
 import { fsApi } from '@/services/fsApi'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 
 export const MAX_SOURCE_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 export const MAX_SOURCE_PREVIEW_CHARACTERS = 200_000
@@ -22,6 +23,7 @@ export const GRAPH_SOURCE_PREVIEW_CHARACTERS = 8_000
 export const GRAPH_SOURCE_PREVIEW_LINES = 40
 
 type SourcePreviewSurfaceProps = {
+  src?: string
   path: string
   presentation?: 'embedded' | 'full' | 'graph'
   title: string
@@ -48,6 +50,7 @@ const stopChromeEvent = (event: SyntheticEvent) => {
 }
 
 const SourcePreviewSurface = ({
+  src,
   path,
   presentation = 'full',
   title,
@@ -65,9 +68,11 @@ const SourcePreviewSurface = ({
   const [copyState, setCopyState] = useState<CopyState>({ path, status: 'idle' })
   const currentCopyStatus = copyState.path === path ? copyState.status : 'idle'
   const sourceQuery = useQuery({
-    queryKey: ['source-preview', rootKind, rootPath, path, byteLimit],
+    queryKey: ['source-preview', rootKind, rootPath, path, byteLimit, ...(src ? [src] : [])],
     queryFn: async () => {
-      const preview = await fsApi.readTextPreview(path, byteLimit)
+      const preview = src
+        ? await readPreviewTextAsset(src, byteLimit)
+        : await fsApi.readTextPreview(path, byteLimit)
       const rendered = previewLines(preview.content, maxCharacters, maxLines)
       return {
         ...preview,

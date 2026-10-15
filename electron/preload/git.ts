@@ -20,6 +20,7 @@ export const createGitPreloadSurface = (ipc: Pick<IpcRenderer, 'invoke'>): Elect
     status: (root) => invoke(nativeIpcChannels.gitStatus, undefined, root),
     fileDiff: (path, section, root) =>
       invoke(nativeIpcChannels.gitFileDiff, { path, section }, root),
+    openFile: (request, root) => invoke(nativeIpcChannels.gitOpenFile, request, root),
     commitAll: (message, root) => invoke(nativeIpcChannels.gitCommitAll, { message }, root),
     remoteStatus: (root) => invoke(nativeIpcChannels.gitRemoteStatus, undefined, root),
     setRemote: (name, url, root) => invoke(nativeIpcChannels.gitRemoteSet, { name, url }, root),

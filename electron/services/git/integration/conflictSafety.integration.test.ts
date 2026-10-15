@@ -1,3 +1,4 @@
+import { gitConflictSnapshotSchema } from '@/types/gitConflicts'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -16,7 +17,7 @@ afterEach(() => removeLocalFixtures(roots))
 describe('Git conflict editing text and filesystem boundaries', { timeout: 30_000 }, () => {
   it('refuses invalid or unbounded marker-width attributes before exposing or saving a conflict', async () => {
     const { root, service, file, write } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     for (const width of ['0', '-1', '1025', '999999999999999999', 'not-a-number']) {
       await write('.gitattributes', `${file} conflict-marker-size=${width}\n`)
       await expect(
@@ -28,7 +29,7 @@ describe('Git conflict editing text and filesystem boundaries', { timeout: 30_00
   })
   it('refuses invalid requests and oversized/non-text results before changing files', async () => {
     const { root, service, file } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     for (const content of [
       'a'.repeat(MAX_GIT_PREVIEW_BYTES + 1),
       '文'.repeat(MAX_GIT_PREVIEW_BYTES / 2),
@@ -55,16 +56,28 @@ describe('Git conflict editing text and filesystem boundaries', { timeout: 30_00
   })
 
   it.each([Buffer.from('binary\0stage'), Buffer.alloc(MAX_GIT_PREVIEW_BYTES + 1, 'x')])(
-    'rejects binary or large index versions using the bounded blob reader',
+    'reports binary or large index versions without exposing editable content',
     async (bytes) => {
       const { root, service, file } = await createConflictFixture(roots)
       const fixturePath = path.join(root, 'unsafe-stage.fixture')
       await fs.writeFile(fixturePath, bytes)
       const hash = (await gitTestCommand(root, ['hash-object', '-w', fixturePath])).trim()
       await runGit(root, ['update-index', '--index-info'], { input: `100644 ${hash} 3\t${file}\n` })
-      await expect(service.conflict(root, file)).rejects.toMatchObject({
-        code: 'git_invalid_input',
+      await expect(service.conflict(root, file)).resolves.toEqual({
+        path: file,
+        unavailable_reason: bytes.includes(0) ? 'binary' : 'too_large',
       })
+      const before = await fs.readFile(path.join(root, file))
+      await expect(
+        service.saveConflict(root, {
+          path: file,
+          content: 'unsafe text',
+          revision: '0'.repeat(64),
+          stage: true,
+        }),
+      ).rejects.toMatchObject({ code: 'git_invalid_input' })
+      expect(await fs.readFile(path.join(root, file))).toEqual(before)
+      expect((await service.status(root)).conflicts).toHaveLength(1)
     },
   )
 
@@ -86,7 +99,7 @@ describe('Git conflict editing text and filesystem boundaries', { timeout: 30_00
 
   it('refuses non-conflicts, metadata, traversal, directory replacements and escaping symlinks', async () => {
     const { root, service, file } = await createConflictFixture(roots)
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     for (const unsafe of ['.git/config', '../outside.md', 'nested/../base.md', '/tmp/outside.md']) {
       await expect(service.conflict(root, unsafe)).rejects.toThrow()
       await expect(
@@ -118,7 +131,7 @@ describe('Git conflict editing text and filesystem boundaries', { timeout: 30_00
     const { root, service, file } = await createConflictFixture(roots, {
       file: ':(glob)selected.md',
     })
-    const view = await service.conflict(root, file)
+    const view = gitConflictSnapshotSchema.parse(await service.conflict(root, file))
     const resolved = await service.saveConflict(root, {
       path: file,
       content: view.theirs!,
@@ -131,7 +144,9 @@ describe('Git conflict editing text and filesystem boundaries', { timeout: 30_00
 
   it('rejects symlink ancestors before saving a conflict', async () => {
     const nested = await createConflictFixture(roots, { file: 'nested/selected.md' })
-    const nestedView = await nested.service.conflict(nested.root, nested.file)
+    const nestedView = gitConflictSnapshotSchema.parse(
+      await nested.service.conflict(nested.root, nested.file),
+    )
     const moved = path.join(nested.root, 'original-directory')
     await fs.rename(path.join(nested.root, 'nested'), moved)
     await fs.symlink(moved, path.join(nested.root, 'nested'), 'dir')

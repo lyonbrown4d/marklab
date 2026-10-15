@@ -23,14 +23,23 @@ import { Button } from '@/components/ui/button'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { useActiveWorkspaceKey } from '@/app/AppCachedOutlet'
+import { readPreviewTextAsset } from '@/services/readPreviewAsset'
 
 type DrawioEditorSurfaceProps = {
+  onOpenInSystem?: () => void
+  src?: string
   path: string
   readonly: boolean
   title: string
 }
 
-const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps) => {
+const DrawioEditorSurface = ({
+  path,
+  readonly,
+  title,
+  src,
+  onOpenInSystem,
+}: DrawioEditorSurfaceProps) => {
   const { t } = useI18n()
   const rootKind = useLayoutContext((state) => state.rootKind)
   const rootPath = useLayoutContext((state) => state.rootPath)
@@ -45,11 +54,12 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
   const [saveState, setSaveState] = useState<DrawioEditorSaveState>('clean')
   const [message, setMessage] = useState<string | null>(null)
   const remoteEnabled = drawioEditorMode === 'remote' && embedUrl.ok
-  const sessionKey = `${workspaceKey}:${path}:${embedUrl.ok ? embedUrl.url : 'unavailable'}`
+  const sessionKey = `${workspaceKey}:${path}:${src ?? 'worktree'}:${embedUrl.ok ? embedUrl.url : 'unavailable'}`
   const sessionKeyRef = useLatest(sessionKey)
   const documentQuery = useQuery({
-    queryKey: ['drawio-document', rootKind, rootPath, path],
-    queryFn: () => drawioDocumentApi.load(path),
+    queryKey: ['drawio-document', rootKind, rootPath, path, ...(src ? [src] : [])],
+    queryFn: () =>
+      src ? readPreviewTextAsset(src).then((value) => value.content) : drawioDocumentApi.load(path),
     enabled: remoteEnabled,
     gcTime: 0,
     staleTime: 0,
@@ -180,7 +190,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
         title={t('preview.drawioDisabledTitle')}
         description={t('preview.drawioDisabledDescription')}
         actionLabel={t('preview.openInSystem')}
-        onAction={openInSystem}
+        onAction={src ? onOpenInSystem : openInSystem}
       />
     )
   }
@@ -191,7 +201,7 @@ const DrawioEditorSurface = ({ path, readonly, title }: DrawioEditorSurfaceProps
         title={t('preview.drawioRemoteUrlInvalid')}
         description={embedUrl.error}
         actionLabel={t('preview.openInSystem')}
-        onAction={openInSystem}
+        onAction={src ? onOpenInSystem : openInSystem}
       />
     )
   }
@@ -262,16 +272,18 @@ const DrawioMessageCard = ({
 }: {
   actionLabel: string
   description: string
-  onAction: () => void
+  onAction?: () => void
   title: string
 }) => (
   <div className="flex min-h-full items-center justify-center p-4">
     <AppEmptyState
       action={
-        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onAction}>
-          <ExternalLink data-icon="inline-start" />
-          {actionLabel}
-        </Button>
+        onAction && (
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onAction}>
+            <ExternalLink data-icon="inline-start" />
+            {actionLabel}
+          </Button>
+        )
       }
       className="w-full max-w-lg border-solid bg-card text-card-foreground shadow-sm"
       description={description}

@@ -1,5 +1,9 @@
 import type { GitHistoryOptions, GitResetMode } from '@/types/gitOperations'
-import type { GitConflictSnapshot, GitConflictSaveResult } from '@/types/gitConflicts'
+import type { GitConflictPreview, GitConflictSaveResult } from '@/types/gitConflicts'
+import { gitPreviewUnavailable } from '@electron/services/git/textPreview'
+import { validateFilePath } from '@electron/services/git/pathSafety'
+import { resolveGitFilePreview } from '@electron/services/git/filePreview'
+import { gitOpenFileRequestSchema } from '@/types/gitPreview'
 import { noopLogger, type Logger } from '@electron/services/logger'
 import { cloneRepository } from '@electron/services/git/clone'
 import { GitOperationCoordinator } from '@electron/services/git/coordinator'
@@ -33,6 +37,10 @@ import {
 } from '@electron/services/git/helpers'
 
 export class GitService {
+  async filePreviewSource(rootPath: unknown, value: unknown) {
+    const root = await this.requireRepositoryRoot(rootPath)
+    return resolveGitFilePreview(root, gitOpenFileRequestSchema.parse(value))
+  }
   private readonly coordinator = new GitOperationCoordinator()
   private readonly localOperations = new GitLocalOperations(this.coordinator)
   private readonly diffReader = new GitDiffReader()
@@ -76,13 +84,16 @@ export class GitService {
     return this.coordinator.mutate(root, () => this.commitAllNow(root, commitMessage))
   }
 
-  async conflict(rootPath: unknown, filePath: unknown): Promise<GitConflictSnapshot> {
+  async conflict(rootPath: unknown, filePath: unknown): Promise<GitConflictPreview> {
     const root = await this.requireRepositoryRoot(rootPath)
-    return this.coordinator.query(
-      root,
-      `conflict:${String(filePath)}`,
-      async () => (await readConflictDetails(root, filePath)).snapshot,
-    )
+    const file = validateFilePath(filePath)
+    return this.coordinator.query(root, `conflict:${String(filePath)}`, async () => {
+      try {
+        return (await readConflictDetails(root, file)).snapshot
+      } catch (error) {
+        return gitPreviewUnavailable(error, file)
+      }
+    })
   }
 
   async saveConflict(rootPath: unknown, request: unknown): Promise<GitConflictSaveResult> {

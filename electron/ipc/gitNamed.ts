@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createGitWorkspaceContext } from '@electron/ipc/gitWorkspaceContext'
 import { gitScopeSchema, withGitScope } from '@electron/ipc/gitIpcScope'
 import { registerGitOperationsIpc } from '@electron/ipc/gitOperations'
+import { gitOpenFileRequestSchema } from '@/types/gitPreview'
 
 import { nativeIpcChannels } from '@electron/channels'
 import type { GitService } from '@electron/services/git/service'
@@ -41,6 +42,15 @@ export const registerGitNamedIpc = (
   const { rootFor, mutateWorkspace } = createGitWorkspaceContext(dependencies)
   const git = dependencies.gitService
   registerGitOperationsIpc(ipcMain, { git, rootFor, mutateWorkspace })
+  ipcMain.handle(nativeIpcChannels.gitOpenFile, (event, payload: unknown) => {
+    const input = withGitScope(gitOpenFileRequestSchema).parse(payload)
+    rootFor(event, input.expectedRoot)
+    const request = { ...input }
+    delete request.expectedRoot
+    return dependencies.workspaceRegistry
+      .serviceForWebContents(event.sender)
+      .openGitFile(git, request)
+  })
   ipcMain.handle(nativeIpcChannels.gitDiscover, (event, payload: unknown) =>
     git.discover(rootFor(event, gitScopeSchema.parse(payload ?? {}).expectedRoot)),
   )
