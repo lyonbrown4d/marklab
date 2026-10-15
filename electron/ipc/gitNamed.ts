@@ -1,11 +1,12 @@
-import type { IpcMain, IpcMainInvokeEvent } from 'electron'
-import path from 'node:path'
+import type { IpcMain } from 'electron'
 import { z } from 'zod'
+import { createGitWorkspaceContext } from '@electron/ipc/gitWorkspaceContext'
+import { gitScopeSchema, withGitScope } from '@electron/ipc/gitIpcScope'
+import { registerGitOperationsIpc } from '@electron/ipc/gitOperations'
 
 import { nativeIpcChannels } from '@electron/channels'
 import type { GitService } from '@electron/services/git/service'
 import type { WorkspaceSyncCoordinator } from '@electron/services/sync/core/coordinator'
-import type { FsRootInfo } from '@electron/services/workspace/types'
 import type { WindowWorkspaceRegistry } from '@electron/services/workspace/windowWorkspaceRegistry'
 
 type GitNamedIpcDependencies = {
@@ -33,103 +34,76 @@ const pushSchema = z
   })
   .strict()
 
-type GitMutationOptions = {
-  flush?: boolean
-  invalidate?: boolean
-  lockWorkspace?: boolean
-}
-
 export const registerGitNamedIpc = (
   ipcMain: IpcMain,
   dependencies: GitNamedIpcDependencies,
 ): void => {
-  const rootFor = (event: IpcMainInvokeEvent): string => {
-    const root = dependencies.workspaceRegistry.serviceForWebContents(event.sender).rootInfo()
-    if (root.kind === 'single') throw new Error('Git is unavailable in single-file mode')
-    return root.path
-  }
+  const { rootFor, mutateWorkspace } = createGitWorkspaceContext(dependencies)
   const git = dependencies.gitService
-  const mutateWorkspace = async <T>(
-    event: IpcMainInvokeEvent,
-    work: (root: string) => Promise<T>,
-    options: GitMutationOptions = {},
-  ): Promise<T> => {
-    const workspace = dependencies.workspaceRegistry.serviceForWebContents(event.sender)
-    const initialRoot = workspace.rootInfo()
-    if (initialRoot.kind === 'single') throw new Error('Git is unavailable in single-file mode')
-    return dependencies.workspaceMutationCoordinator.runMutation(initialRoot.path, async () => {
-      const activeRoot = workspace.rootInfo()
-      if (!hasWorkspaceRoot(activeRoot, initialRoot.path)) {
-        throw new Error('Workspace changed before the Git operation started')
-      }
-      if (options.flush) await workspace.flushBuffers()
-      if (!hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
-        throw new Error('Workspace changed before the Git operation started')
-      }
-      try {
-        const result = options.lockWorkspace
-          ? await workspace.runExternalWorkspaceMutation(() => work(initialRoot.path))
-          : await work(initialRoot.path)
-        if (!hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
-          throw new Error('Workspace changed during the Git operation')
-        }
-        return result
-      } finally {
-        if (options.invalidate && hasWorkspaceRoot(workspace.rootInfo(), initialRoot.path)) {
-          workspace.invalidateAllExternalPaths()
-        }
-      }
-    })
-  }
-
-  ipcMain.handle(nativeIpcChannels.gitDiscover, (event) => git.discover(rootFor(event)))
-  ipcMain.handle(nativeIpcChannels.gitInit, (event) =>
-    mutateWorkspace(event, (root) => git.init(root)),
+  registerGitOperationsIpc(ipcMain, { git, rootFor, mutateWorkspace })
+  ipcMain.handle(nativeIpcChannels.gitDiscover, (event, payload: unknown) =>
+    git.discover(rootFor(event, gitScopeSchema.parse(payload ?? {}).expectedRoot)),
   )
-  ipcMain.handle(nativeIpcChannels.gitStatus, (event) => git.status(rootFor(event)))
-  ipcMain.handle(nativeIpcChannels.gitRemoteStatus, (event) => git.remoteStatus(rootFor(event)))
+  ipcMain.handle(nativeIpcChannels.gitInit, (event, payload: unknown) =>
+    mutateWorkspace(event, (root) => git.init(root), {
+      expectedRoot: gitScopeSchema.parse(payload ?? {}).expectedRoot,
+    }),
+  )
+  ipcMain.handle(nativeIpcChannels.gitStatus, (event, payload: unknown) =>
+    git.status(rootFor(event, gitScopeSchema.parse(payload ?? {}).expectedRoot)),
+  )
+  ipcMain.handle(nativeIpcChannels.gitRemoteStatus, (event, payload: unknown) =>
+    git.remoteStatus(rootFor(event, gitScopeSchema.parse(payload ?? {}).expectedRoot)),
+  )
   ipcMain.handle(nativeIpcChannels.gitFileDiff, async (event, payload: unknown) => {
-    const input = diffSchema.parse(payload)
-    return git.fileDiff(rootFor(event), input.path, input.section)
+    const input = withGitScope(diffSchema).parse(payload)
+    return git.fileDiff(rootFor(event, input.expectedRoot), input.path, input.section)
   })
   ipcMain.handle(nativeIpcChannels.gitCommitAll, async (event, payload: unknown) => {
-    const input = commitSchema.parse(payload)
+    const input = withGitScope(commitSchema).parse(payload)
     return mutateWorkspace(event, (root) => git.commitAll(root, input.message), {
+      expectedRoot: input.expectedRoot,
       flush: true,
       lockWorkspace: true,
     })
   })
   ipcMain.handle(nativeIpcChannels.gitRemoteSet, async (event, payload: unknown) => {
-    const input = remoteSchema.parse(payload)
-    return mutateWorkspace(event, (root) => git.setRemote(root, input.name, input.url))
+    const input = withGitScope(remoteSchema).parse(payload)
+    return mutateWorkspace(event, (root) => git.setRemote(root, input.name, input.url), {
+      expectedRoot: input.expectedRoot,
+    })
   })
   ipcMain.handle(nativeIpcChannels.gitRemoteRemove, async (event, payload: unknown) => {
-    const input = remoteNameSchema.parse(payload)
-    return mutateWorkspace(event, (root) => git.removeRemote(root, input.name))
+    const input = withGitScope(remoteNameSchema).parse(payload)
+    return mutateWorkspace(event, (root) => git.removeRemote(root, input.name), {
+      expectedRoot: input.expectedRoot,
+    })
   })
   ipcMain.handle(nativeIpcChannels.gitFetch, async (event, payload: unknown) => {
-    const input = optionalRemoteSchema.parse(payload ?? {})
-    return mutateWorkspace(event, (root) => git.fetch(root, input.remote))
+    const input = withGitScope(optionalRemoteSchema).parse(payload ?? {})
+    return mutateWorkspace(event, (root) => git.fetch(root, input.remote), {
+      expectedRoot: input.expectedRoot,
+    })
   })
-  ipcMain.handle(nativeIpcChannels.gitPull, async (event) => {
+  ipcMain.handle(nativeIpcChannels.gitPull, async (event, payload: unknown) => {
+    const input = gitScopeSchema.parse(payload ?? {})
     return mutateWorkspace(event, (root) => git.pull(root), {
+      expectedRoot: input.expectedRoot,
       flush: true,
       invalidate: true,
       lockWorkspace: true,
     })
   })
   ipcMain.handle(nativeIpcChannels.gitPush, async (event, payload: unknown) => {
-    const input = pushSchema.parse(payload ?? {})
-    return mutateWorkspace(event, (root) => git.push(root, input))
+    const input = withGitScope(pushSchema).parse(payload ?? {})
+    return mutateWorkspace(
+      event,
+      (root) =>
+        git.push(root, {
+          ...(input.remote === undefined ? {} : { remote: input.remote }),
+          ...(input.setUpstream === undefined ? {} : { setUpstream: input.setUpstream }),
+        }),
+      { expectedRoot: input.expectedRoot },
+    )
   })
 }
-
-const canonicalRoot = (value: string): string => {
-  const resolved = path.resolve(value).normalize('NFC')
-  return process.platform === 'win32' || process.platform === 'darwin'
-    ? resolved.toLowerCase()
-    : resolved
-}
-
-const hasWorkspaceRoot = (root: FsRootInfo, expected: string): boolean =>
-  root.kind !== 'single' && canonicalRoot(root.path) === canonicalRoot(expected)

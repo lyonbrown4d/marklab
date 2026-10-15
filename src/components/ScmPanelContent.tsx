@@ -1,7 +1,12 @@
+import type { ReactNode } from 'react'
 import { GitBranch, GitCommitHorizontal, RefreshCw } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
 import AppEmptyState from '@/components/AppEmptyState'
-import { ScmChangeGroups, type ScmChangeGroup } from '@/components/ScmChangeGroups'
+import {
+  ScmChangeGroups,
+  type ScmChangeGroup,
+  type ScmChangeActions,
+} from '@/components/ScmChangeGroups'
 import { GitRepositoryEmptyState } from '@/components/GitRepositoryEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -93,7 +98,12 @@ const ScmStatusLoading = ({ label }: { label: string }) => (
   </div>
 )
 
-type ScmRepositoryPanelProps = {
+type ScmRepositoryPanelProps = ScmChangeActions & {
+  stagedCount: number
+  toolbar: ReactNode
+  operationControls: ReactNode
+  onOpenManagement: () => void
+  actionError: unknown
   branch: string
   commitDisabledReason?: string
   commitDisabledReasonId: string
@@ -116,6 +126,16 @@ type ScmRepositoryPanelProps = {
 
 export const ScmRepositoryPanel = ({
   branch,
+  stagedCount,
+  toolbar,
+  operationControls,
+  onOpenManagement,
+  actionError,
+  busy,
+  onStage,
+  onUnstage,
+  onDiscard,
+  onOpenFile,
   commitDisabledReason,
   commitDisabledReasonId,
   groups,
@@ -159,7 +179,7 @@ export const ScmRepositoryPanel = ({
             aria-label={t('scm.refresh')}
             title={t('scm.refresh')}
             onClick={onRefresh}
-            disabled={isStatusFetching}
+            disabled={isStatusFetching || busy}
           >
             {isStatusFetching ? (
               <Spinner aria-hidden="true" role="presentation" />
@@ -201,6 +221,22 @@ export const ScmRepositoryPanel = ({
               </div>
               <div className="text-[11px] text-muted-foreground">{t('scm.workflowHint')}</div>
             </div>
+            {toolbar}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mx-2 h-7 justify-start px-2 text-xs"
+              disabled={busy}
+              onClick={onOpenManagement}
+            >
+              {t('scm.historyAndBranches')}
+            </Button>
+            {operationControls}
+            {actionError ? (
+              <p role="alert" className="break-words px-2 text-xs text-destructive">
+                {String(actionError)}
+              </p>
+            ) : null}
             <Separator className="bg-sidebar-border/70" />
             {totalChanges > 0 && (
               <div className="flex flex-col gap-1.5 px-2">
@@ -209,9 +245,9 @@ export const ScmRepositoryPanel = ({
                   variant="secondary"
                   size="sm"
                   className="h-7 w-full justify-start rounded-md px-2 text-xs"
-                  aria-describedby={hasConflicts ? commitDisabledReasonId : undefined}
-                  disabled={isCommitting || hasConflicts}
-                  title={commitDisabledReason ?? t('scm.commitAll')}
+                  aria-describedby={commitDisabledReason ? commitDisabledReasonId : undefined}
+                  disabled={busy || isCommitting || hasConflicts || stagedCount === 0}
+                  title={commitDisabledReason ?? t('scm.commitStaged')}
                   onClick={onOpenCommitDialog}
                 >
                   {isCommitting ? (
@@ -219,15 +255,15 @@ export const ScmRepositoryPanel = ({
                   ) : (
                     <GitCommitHorizontal data-icon="inline-start" />
                   )}
-                  {isCommitting ? t('scm.committing') : t('scm.openCommitDialog')}
+                  {isCommitting ? t('scm.committing') : t('scm.commitStaged')}
                 </Button>
-                {hasConflicts && (
+                {commitDisabledReason && (
                   <div
                     id={commitDisabledReasonId}
                     role="alert"
                     className="text-[11px] text-destructive"
                   >
-                    {t('scm.commitBlockedConflicts')}
+                    {commitDisabledReason}
                   </div>
                 )}
               </div>
@@ -246,7 +282,15 @@ export const ScmRepositoryPanel = ({
                 titleLevel={3}
               />
             ) : (
-              <ScmChangeGroups groups={groups} onOpenDiff={onOpenDiff} />
+              <ScmChangeGroups
+                groups={groups}
+                onOpenDiff={onOpenDiff}
+                busy={busy}
+                onStage={onStage}
+                onUnstage={onUnstage}
+                onDiscard={onDiscard}
+                onOpenFile={onOpenFile}
+              />
             )}
           </div>
         )}

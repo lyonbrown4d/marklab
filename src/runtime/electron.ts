@@ -1,3 +1,4 @@
+import type { ElectronGitApi } from '@/runtime/git'
 import type { AssetApi } from '@/types/workspaceSession'
 import type { WindowOpeningProgress, WindowOpeningRetryResult } from '@/types/windowOpening'
 import type { FocusedEditAction } from '@/types/editCommand'
@@ -65,22 +66,7 @@ export type ElectronClipboardApi = {
 
 export type ElectronCommandArguments = Record<string, unknown> | undefined
 
-export type ElectronGitApi = {
-  commitAll: (message: string) => Promise<unknown>
-  discover: () => Promise<unknown>
-  fetch: (remote?: string) => Promise<unknown>
-  fileDiff: (
-    path: string,
-    section: 'staged' | 'unstaged' | 'untracked' | 'conflicts',
-  ) => Promise<unknown>
-  init: () => Promise<unknown>
-  pull: () => Promise<unknown>
-  push: (options?: { remote?: string; setUpstream?: boolean }) => Promise<unknown>
-  removeRemote: (name: string) => Promise<unknown>
-  remoteStatus: () => Promise<unknown>
-  setRemote: (name: string, url: string) => Promise<unknown>
-  status: () => Promise<unknown>
-}
+export type { ElectronGitApi } from '@/runtime/git'
 
 export type ElectronOpenDialogOptions = {
   title?: string

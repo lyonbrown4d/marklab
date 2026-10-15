@@ -72,7 +72,7 @@ export const GitCommitDialog = ({
     mode: 'onChange',
   })
   const messageValue = useWatch({ control, name: 'message' }) ?? ''
-  const canSubmit = canCommit && messageValue.trim().length > 0
+  const canSubmit = canCommit && !isCommitting && messageValue.trim().length > 0
   const hasMessageError = Boolean(touchedFields.message && errors.message)
   const messageDescribedBy = hasMessageError
     ? `${messageDescriptionId} ${messageErrorId}`
@@ -98,9 +98,9 @@ export const GitCommitDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-busy={isCommitting} className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('scm.commitDialogTitle')}</DialogTitle>
+          <DialogTitle>{t('scm.stagedDialogTitle')}</DialogTitle>
           <DialogDescription>
-            {t('scm.commitDialogDescription', {
+            {t('scm.stagedDialogDescription', {
               count: String(changedFilesCount),
               branch,
             })}
@@ -170,14 +170,14 @@ export const GitCommitDialog = ({
               type="submit"
               disabled={!canSubmit}
               aria-describedby={commitButtonDescribedBy || undefined}
-              title={disabledReason ?? t('scm.commitAll')}
+              title={disabledReason ?? t('scm.commitStaged')}
             >
               {isCommitting ? (
                 <Spinner aria-hidden="true" role="presentation" data-icon="inline-start" />
               ) : (
                 <GitCommitHorizontal data-icon="inline-start" />
               )}
-              {isCommitting ? t('scm.committing') : t('scm.commitAll')}
+              {isCommitting ? t('scm.committing') : t('scm.commitStaged')}
             </AppButton>
           </DialogFooter>
         </form>

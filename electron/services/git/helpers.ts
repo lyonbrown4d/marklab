@@ -1,21 +1,10 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { simpleGit } from 'simple-git'
-
-import { GitOperationError, redactGitCredentials } from '@electron/services/git/errors'
-import { buildSafeGitArgs, SAFE_SIMPLE_GIT_OPTIONS } from '@electron/services/git/gitPolicy'
 import type { GitFileChange, GitRepoInfo, GitStatusSnapshot } from '@electron/services/git/types'
 
-type GitExecResult = {
-  stdout: string
-  stderr: string
-}
-
-type GitExecOptions = {
-  allowFailure?: boolean
-  signal?: AbortSignal
-}
+export { runGit, runGitBlobBuffer } from '@electron/services/git/command'
+export { readUtf8RepoFile } from '@electron/services/git/textPreview'
 
 export const emptyRepoInfo: GitRepoInfo = {
   is_repository: false,
@@ -23,45 +12,6 @@ export const emptyRepoInfo: GitRepoInfo = {
   git_dir: null,
   branch: null,
   head: null,
-}
-
-export const runGit = async (
-  cwd: string,
-  args: string[],
-  options: GitExecOptions = {},
-): Promise<GitExecResult> => {
-  const git = simpleGit({
-    baseDir: cwd,
-    binary: 'git',
-    abort: options.signal,
-    ...SAFE_SIMPLE_GIT_OPTIONS,
-  })
-  try {
-    const stdout = await git.raw(await buildSafeGitArgs(args))
-    return {
-      stdout: outputToString(stdout),
-      stderr: '',
-    }
-  } catch (error) {
-    const failure = error as Error & {
-      stdout?: string | Buffer
-      stderr?: string | Buffer
-      message?: string
-    }
-    if (options.allowFailure) {
-      return {
-        stdout: outputToString(failure.stdout),
-        stderr: redactGitCredentials(outputToString(failure.stderr, failure.message)),
-      }
-    }
-    const message = redactGitCredentials(outputToString(failure.stderr, failure.message))
-    const command = redactGitCredentials(args.join(' '))
-    throw new GitOperationError(
-      'git_command_failed',
-      `Git command failed: git ${command} (cwd: ${cwd})${message ? ` - ${message.trim()}` : ''}`,
-      error,
-    )
-  }
 }
 
 export const validateRootPath = async (
@@ -96,58 +46,6 @@ export const normalizeRepoRelativePath = (value: unknown): string => {
     throw new Error(`Invalid git path: ${value}`)
   }
   return normalized
-}
-
-export const readUtf8RepoFile = async (root: string, relativePath: string): Promise<string> => {
-  const canonicalRoot = await fs.realpath(root)
-  const segments = relativePath.split('/').filter(Boolean)
-  let candidate = canonicalRoot
-  let expectedFileIdentity: { dev: bigint; ino: bigint } | null = null
-
-  for (const [index, segment] of segments.entries()) {
-    candidate = path.join(candidate, segment)
-    let stat
-    try {
-      stat = await fs.lstat(candidate, { bigint: true })
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''
-      throw error
-    }
-    if (stat.isSymbolicLink()) {
-      throw new Error(`Refusing to read a symbolic link from the Git worktree: ${relativePath}`)
-    }
-    if (index < segments.length - 1 && !stat.isDirectory()) return ''
-    if (index === segments.length - 1) {
-      if (!stat.isFile()) return ''
-      expectedFileIdentity = { dev: stat.dev, ino: stat.ino }
-    }
-  }
-
-  const canonicalFile = await fs.realpath(candidate)
-  const relativeCanonical = path.relative(canonicalRoot, canonicalFile)
-  if (
-    relativeCanonical === '..' ||
-    relativeCanonical.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relativeCanonical)
-  ) {
-    throw new Error(`Refusing to read outside the Git worktree: ${relativePath}`)
-  }
-
-  const handle = await fs.open(candidate, 'r')
-  try {
-    const opened = await handle.stat({ bigint: true })
-    if (
-      !expectedFileIdentity ||
-      expectedFileIdentity.dev !== opened.dev ||
-      expectedFileIdentity.ino !== opened.ino ||
-      !opened.isFile()
-    ) {
-      throw new Error(`Git worktree path changed while being read: ${relativePath}`)
-    }
-    return await handle.readFile('utf8')
-  } finally {
-    await handle.close()
-  }
 }
 
 export const parsePorcelainStatus = (stdout: string) => {
@@ -224,14 +122,6 @@ export const allCommitChanges = (snapshot: GitStatusSnapshot): GitFileChange[] =
     byPath.set(change.path, change)
   }
   return [...byPath.values()]
-}
-
-const outputToString = (output: string | Buffer | undefined, fallback = ''): string => {
-  if (typeof output === 'string') return output
-  if (output && typeof output === 'object') {
-    return output.toString('utf8')
-  }
-  return fallback
 }
 
 const statusFromCode = (code: string): GitFileChange['status'] | null => {

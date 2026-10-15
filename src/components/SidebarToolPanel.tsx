@@ -40,6 +40,7 @@ const SidebarToolPanel = ({
           rootKind={rootKind}
           rootPath={rootPath}
           onOpenDiff={onOpenGitDiff}
+          onOpenFile={(path) => onOpenFileView(path, 'source')}
         />
       ) : (
         <SidebarExplorerPanel

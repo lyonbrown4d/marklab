@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { nextEditorLoadRouteState } from '@/app/useEditorBuffer'
 import { resolveEditorLoadState } from '@/app/useEditorBufferState'
@@ -8,6 +8,8 @@ import SourceCodePage from '@/pages/SourceCodePage'
 import { FileRouteNotFound, isFileRouteAvailable } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
 import { isTextFileViewPath } from '@/logic/fileTypes'
+import { pathToGitDiffRoute } from '@/logic/routing'
+import { useGitFileConflict } from '@/pages/useGitFileConflict'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { EditorFocusHandoffFailure } from '@/app/EditorFocusHandoff'
 
@@ -33,6 +35,12 @@ const SourceFilePage = () => {
     })),
   )
   const { t } = useI18n()
+  const gitConflict = useGitFileConflict({
+    rootKind: context.rootKind,
+    rootPath: context.rootPath,
+    path: requestedPath,
+    content: requestedPath ? context.fileContents[requestedPath] : undefined,
+  })
 
   if (!requestedPath || !isFileRouteAvailable(context.files, requestedPath, context.activePath)) {
     return (
@@ -111,6 +119,13 @@ const SourceFilePage = () => {
         </div>
       </>
     )
+  }
+
+  if (gitConflict.conflict) {
+    return <Navigate to={pathToGitDiffRoute('conflicts', requestedPath)} replace />
+  }
+  if (gitConflict.checking) {
+    return <EditorPaneFallback label={t('editor.loadingDocument')} path={requestedPath} />
   }
 
   return (

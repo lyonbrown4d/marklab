@@ -47,7 +47,7 @@ describe('GitCommitDialog integration', () => {
     const handlers = renderDialog()
 
     const messageInput = screen.getByRole('textbox', { name: 'Commit message' })
-    const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+    const commitButton = screen.getByRole('button', { name: 'Commit staged changes' })
 
     expect(messageInput).toHaveAccessibleDescription('Describe the change')
     expect(commitButton).toBeDisabled()
@@ -66,7 +66,7 @@ describe('GitCommitDialog integration', () => {
       message: 'Try commit',
     })
 
-    const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+    const commitButton = screen.getByRole('button', { name: 'Commit staged changes' })
     const disabledReason = screen.getByText('Resolve merge conflicts before committing.')
 
     expect(disabledReason.closest('[role="alert"]')).toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('GitCommitDialog integration', () => {
       message: 'Try commit',
     })
 
-    const commitButton = screen.getByRole('button', { name: 'Stage and commit all changes' })
+    const commitButton = screen.getByRole('button', { name: 'Commit staged changes' })
     const error = screen.getByText('Git author identity is missing.')
 
     expect(error.closest('[role="alert"]')).toBeInTheDocument()
@@ -96,11 +96,18 @@ describe('GitCommitDialog integration', () => {
       message: 'Commit in progress',
     })
 
-    expect(screen.getByRole('dialog', { name: 'Commit all changes' })).toHaveAttribute(
+    expect(screen.getByRole('dialog', { name: 'Commit staged changes' })).toHaveAttribute(
       'aria-busy',
       'true',
     )
     expect(screen.getByRole('button', { name: 'Committing' })).toBeDisabled()
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+  })
+  it('lets the user cancel a draft without committing', async () => {
+    const user = userEvent.setup()
+    const handlers = renderDialog({ message: 'Keep draft' })
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(handlers.onOpenChange).toHaveBeenCalledWith(false)
+    expect(handlers.onCommit).not.toHaveBeenCalled()
   })
 })

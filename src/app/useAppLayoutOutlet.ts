@@ -55,6 +55,7 @@ export const useAppLayoutOutlet = ({
       graphContentMode: state.graphContentMode,
       editorReadOnlyMode: state.editorReadOnlyMode,
       onCloseActiveTab: state.onCloseActiveTab,
+      onCloseTab: state.onCloseTab,
       onOpenProject: state.onOpenProject,
       onOpenProjectInCurrentWindow: state.onOpenProjectInCurrentWindow,
     }
@@ -79,6 +80,7 @@ export const useAppLayoutOutlet = ({
     state.graphMiniMapEnabled,
     state.loadingPaths,
     state.onCloseActiveTab,
+    state.onCloseTab,
     state.onEditorChange,
     state.onOpenProject,
     state.onOpenProjectInCurrentWindow,

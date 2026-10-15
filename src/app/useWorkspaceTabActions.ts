@@ -1,4 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
+import { useLatest } from 'ahooks'
+import { closeWorkspaceTab } from '@/app/workspaceTabClose'
 import type { NavigateFunction } from 'react-router-dom'
 import {
   pathToAllPagesRoute,
@@ -9,18 +11,13 @@ import {
 } from '@/logic/routing'
 import { createGitDiffTab, createWebTab, getWorkspaceTabId, gitDiffTabId } from '@/logic/tabs'
 import { fileViewForOpenPath } from '@/logic/fileTypes'
-import {
-  navigateIfNeeded,
-  navigateToTab,
-  openFileView,
-  type LatestRef,
-} from '@/app/workspaceTabNavigation'
+import { navigateIfNeeded, openFileView, type LatestRef } from '@/app/workspaceTabNavigation'
 import type { FileViewKind, GitDiffSection, ViewMode, WorkspaceTab } from '@/store/appTypes'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
 import { fileViewForMode, resolveWorkspaceFileViewMode } from '@/app/workspaceFileViewMode'
 
 type UseWorkspaceTabActionsArgs = {
+  rootPath?: string
   activeTabIdRef: LatestRef<string | null>
   currentFilePathRef: LatestRef<string | null>
   inspectedPathRef: LatestRef<string | null>
@@ -37,6 +34,7 @@ type UseWorkspaceTabActionsArgs = {
 type WebTab = Extract<WorkspaceTab, { kind: 'web' }>
 
 export const useWorkspaceTabActions = ({
+  rootPath,
   activeTabIdRef,
   currentFilePathRef,
   inspectedPathRef,
@@ -49,6 +47,7 @@ export const useWorkspaceTabActions = ({
   setInspectedPath,
   defaultFileView,
 }: UseWorkspaceTabActionsArgs) => {
+  const rootPathRef = useLatest(rootPath)
   const setViewMode = useCallback(
     (mode: ViewMode) => {
       const tab = tabsRef.current.find((item) => getWorkspaceTabId(item) === activeTabIdRef.current)
@@ -201,36 +200,29 @@ export const useWorkspaceTabActions = ({
   )
 
   const onCloseTab = useCallback(
-    (tabId: string) => {
-      const currentTabs = tabsRef.current
-      const closedIndex = currentTabs.findIndex((tab) => getWorkspaceTabId(tab) === tabId)
-      const closedTab = currentTabs.find((tab) => getWorkspaceTabId(tab) === tabId)
-      if (closedTab?.kind === 'web' && isElectronRuntime()) {
-        void getElectronRuntime()
-          .webTabs.close({ tabId: closedTab.id })
-          .catch(() => undefined)
-      }
-      const nextTabs = currentTabs.filter((tab) => getWorkspaceTabId(tab) !== tabId)
-      setTabs(nextTabs)
-      const closedPath =
-        closedTab?.kind === 'file' || closedTab?.kind === 'git-diff' ? closedTab.path : null
-      if (closedPath && inspectedPathRef.current === closedPath) {
-        setInspectedPath(
-          nextTabs.find((tab) => tab.kind === 'file' || tab.kind === 'git-diff')?.path ?? null,
-        )
-      }
-      if (activeTabIdRef.current !== tabId) return
-
-      const nextActive = nextTabs[Math.max(0, closedIndex - 1)] ?? nextTabs[0] ?? null
-      const nextActiveId = nextActive ? getWorkspaceTabId(nextActive) : null
-      setActiveTabId(nextActiveId)
-      navigateToTab(nextActive, locationPathnameRef.current, navigate)
+    (tabId: string, expectedRoot?: string) => {
+      closeWorkspaceTab(
+        {
+          rootPathRef,
+          activeTabIdRef,
+          inspectedPathRef,
+          locationPathnameRef,
+          tabsRef,
+          navigate,
+          setTabs,
+          setActiveTabId,
+          setInspectedPath,
+        },
+        tabId,
+        expectedRoot,
+      )
     },
     [
       activeTabIdRef,
       inspectedPathRef,
       locationPathnameRef,
       navigate,
+      rootPathRef,
       setActiveTabId,
       setInspectedPath,
       setTabs,

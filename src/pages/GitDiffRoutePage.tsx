@@ -4,6 +4,7 @@ import GitDiffPage from '@/pages/GitDiffPage'
 import { isGitDiffSection } from '@/logic/routing'
 import { FileRouteNotFound } from '@/pages/fileRouteHelpers'
 import { useLayoutContext } from '@/pages/useLayoutContext'
+import { gitDiffTabId } from '@/logic/tabs'
 
 const GitDiffRoutePage = () => {
   const params = useParams()
@@ -11,6 +12,7 @@ const GitDiffRoutePage = () => {
     useShallow((state) => ({
       files: state.files,
       onCloseActiveTab: state.onCloseActiveTab,
+      onCloseTab: state.onCloseTab,
       onOpenFile: state.onOpenFile,
       rootPath: state.rootPath,
     })),
@@ -26,7 +28,11 @@ const GitDiffRoutePage = () => {
     <GitDiffPage
       rootPath={context.rootPath}
       request={{ path, section }}
-      onClose={context.onCloseActiveTab}
+      onClose={() =>
+        context.onCloseTab
+          ? context.onCloseTab(gitDiffTabId(section, path), context.rootPath)
+          : context.onCloseActiveTab()
+      }
       onOpenFile={context.onOpenFile}
     />
   )

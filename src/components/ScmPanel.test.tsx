@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ScmPanel from '@/components/ScmPanel'
@@ -23,13 +23,28 @@ vi.mock('@/services/fsApi', () => ({
   },
 }))
 
-vi.mock('@/services/gitApi', () => ({
-  gitApi: {
+vi.mock('@/services/gitApi', () => {
+  const gitApi = {
     commitAll: vi.fn(),
+    commitStaged: vi.fn(),
+    stage: vi.fn(),
+    unstage: vi.fn(),
+    discard: vi.fn(),
+    getRemoteStatus: vi.fn(),
+    getOperationState: vi.fn(),
+    fetch: vi.fn(),
+    pull: vi.fn(),
+    push: vi.fn(),
+    setRemote: vi.fn(),
+    removeRemote: vi.fn(),
+    continueOperation: vi.fn(),
+    abortOperation: vi.fn(),
     getStatus: vi.fn(),
     initRepo: vi.fn(),
-  },
-}))
+  }
+  return { gitApi, gitApiForWorkspace: () => gitApi }
+})
+vi.mock('@/components/git/GitManagementDialog', () => ({ GitManagementDialog: () => null }))
 
 const createSnapshot = (overrides: Partial<GitStatusSnapshot> = {}): GitStatusSnapshot => ({
   repo: {
@@ -82,6 +97,15 @@ describe('ScmPanel', () => {
     localStorage.clear()
     usePreferencesStore.setState({ locale: 'en-US' })
     await i18n.changeLanguage('en-US')
+    vi.mocked(gitApi.getOperationState).mockResolvedValue({ operation: null })
+    vi.mocked(gitApi.getRemoteStatus).mockResolvedValue({
+      remotes: [],
+      branch: 'main',
+      upstream: null,
+      ahead: 0,
+      behind: 0,
+      detached: false,
+    })
   })
 
   it('shows a single-file source-control empty state without querying Git', () => {
@@ -203,11 +227,36 @@ describe('ScmPanel', () => {
 
     renderPanel()
 
-    const commitButton = await screen.findByRole('button', { name: 'Commit all changes' })
+    const commitButton = await screen.findByRole('button', { name: 'Commit staged changes' })
     const conflictAlert = screen.getByRole('alert')
 
     expect(commitButton).toBeDisabled()
     expect(commitButton).toHaveAccessibleDescription('Resolve conflicts before committing.')
     expect(conflictAlert).toHaveTextContent('Resolve conflicts before committing.')
+  })
+  it('keeps staged commit blocked when operation state cannot be checked', async () => {
+    vi.mocked(gitApi.getStatus).mockResolvedValue(
+      createSnapshot({ staged: [{ path: 'ready.md', status: 'modified', detail: '' }] }),
+    )
+    vi.mocked(gitApi.getOperationState).mockRejectedValue(
+      new Error('Cannot inspect operation state'),
+    )
+    renderPanel()
+    const button = await screen.findByRole('button', { name: 'Commit staged changes' })
+    await waitFor(() =>
+      expect(button).toHaveAccessibleDescription('Error: Cannot inspect operation state'),
+    )
+    expect(button).toBeDisabled()
+    expect(gitApi.commitStaged).not.toHaveBeenCalled()
+  })
+  it('keeps staged commit blocked while operation state is loading', async () => {
+    vi.mocked(gitApi.getStatus).mockResolvedValue(
+      createSnapshot({ staged: [{ path: 'ready.md', status: 'modified', detail: '' }] }),
+    )
+    vi.mocked(gitApi.getOperationState).mockImplementation(() => new Promise(() => undefined))
+    renderPanel()
+    const button = await screen.findByRole('button', { name: 'Commit staged changes' })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAccessibleDescription('Checking Git status')
   })
 })

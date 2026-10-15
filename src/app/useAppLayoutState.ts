@@ -102,6 +102,7 @@ export const useAppLayoutState = () => {
   const locationPathnameRef = useLatest(location.pathname)
   const tabsRef = useLatest(tabs)
   const workspaceTabActions = useWorkspaceTabActions({
+    rootPath,
     activeTabIdRef,
     currentFilePathRef,
     inspectedPathRef,

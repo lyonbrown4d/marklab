@@ -1,22 +1,16 @@
-import { normalizeRepoRelativePath, readUtf8RepoFile, runGit } from '@electron/services/git/helpers'
+import { readGitTextBlob } from '@electron/services/git/blobPreview'
+import { readUtf8RepoFile } from '@electron/services/git/helpers'
+import { validateFilePath } from '@electron/services/git/pathSafety'
 import type { GitFileDiff } from '@electron/services/git/types'
 
 export class GitDiffReader {
   async fileDiff(rootPath: unknown, filePath: unknown, section: unknown): Promise<GitFileDiff> {
     if (typeof rootPath !== 'string') throw new Error('Git repository root is required')
     const root = rootPath
-    const safePath = normalizeRepoRelativePath(filePath)
+    const safePath = validateFilePath(filePath)
     const diffSection = typeof section === 'string' ? section : 'unstaged'
     const labelsAndContent = await this.readSection(root, safePath, diffSection)
     return { path: safePath, old_path: null, ...labelsAndContent }
-  }
-
-  private async readGitBlob(root: string, spec: string): Promise<string | null> {
-    const result = await runGit(root, ['show', '--no-ext-diff', '--no-textconv', spec], {
-      allowFailure: true,
-    })
-    if (result.stderr || !result.stdout) return null
-    return result.stdout
   }
 
   private async readSection(
@@ -34,8 +28,8 @@ export class GitDiffReader {
     }
     if (section === 'staged') {
       const [headContent, indexContent] = await Promise.all([
-        this.readGitBlob(root, `HEAD:${filePath}`),
-        this.readGitBlob(root, `:${filePath}`),
+        readGitTextBlob(root, 'HEAD', filePath),
+        readGitTextBlob(root, null, filePath),
       ])
       return {
         original_label: 'HEAD',
@@ -46,7 +40,7 @@ export class GitDiffReader {
     }
     if (section === 'conflicts') {
       const [headContent, worktreeContent] = await Promise.all([
-        this.readGitBlob(root, `HEAD:${filePath}`),
+        readGitTextBlob(root, 'HEAD', filePath),
         readUtf8RepoFile(root, filePath),
       ])
       return {
@@ -58,10 +52,10 @@ export class GitDiffReader {
     }
 
     const [indexContent, worktreeContent] = await Promise.all([
-      this.readGitBlob(root, `:${filePath}`),
+      readGitTextBlob(root, null, filePath),
       readUtf8RepoFile(root, filePath),
     ])
-    const originalContent = indexContent ?? (await this.readGitBlob(root, `HEAD:${filePath}`)) ?? ''
+    const originalContent = indexContent ?? (await readGitTextBlob(root, 'HEAD', filePath)) ?? ''
     return {
       original_label: 'Index',
       modified_label: 'Working Tree',

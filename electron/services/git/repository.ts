@@ -12,7 +12,8 @@ const UNSAFE_CONFIG_PATTERNS = [
   /^diff\.external$/,
   /^difftool\..*\.cmd$/,
   /^filter\..*\.(clean|process|smudge)$/,
-  /^gpg\.program$/,
+  /^gpg\.(?:(?:openpgp|x509|ssh)\.)?program$/,
+  /^gpg\.ssh\.defaultkeycommand$/,
   /^include\.path$/,
   /^includeif\./,
   /^merge\..*\.driver$/,
@@ -30,19 +31,57 @@ const canonicalKey = (value: string): string => {
 }
 
 export const assertSafeRepositoryConfig = async (root: string): Promise<void> => {
-  const result = await runGit(root, ['config', '--local', '--name-only', '-z', '--list'], {
-    allowFailure: true,
-  })
-  const unsafe = result.stdout
+  const localNames = await scanRepositoryConfig(root, '--local')
+  if (!localNames.includes('extensions.worktreeconfig')) return
+  const enabled = await runGit(root, [
+    'config',
+    '--local',
+    '--bool',
+    '--get',
+    'extensions.worktreeConfig',
+  ])
+  if (enabled.stdout.trim() !== 'true') return
+  const overlay = (await runGit(root, ['rev-parse', '--git-path', 'config.worktree'])).stdout.trim()
+  try {
+    await fs.lstat(path.resolve(root, overlay))
+  } catch (error) {
+    // Enabling worktree config does not create an overlay until its first write.
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw new GitOperationError(
+      'git_unsafe_configuration',
+      'Cannot inspect Git worktree configuration',
+      error,
+    )
+  }
+  await scanRepositoryConfig(root, '--worktree')
+}
+
+const scanRepositoryConfig = async (
+  root: string,
+  scope: '--local' | '--worktree',
+): Promise<string[]> => {
+  let result
+  try {
+    result = await runGit(root, ['config', scope, '--name-only', '-z', '--list'])
+  } catch (error) {
+    throw new GitOperationError(
+      'git_unsafe_configuration',
+      `Cannot safely inspect Git ${scope.slice(2)} configuration`,
+      error,
+    )
+  }
+  const names = result.stdout
     .split('\0')
     .map((name) => name.trim().toLowerCase())
-    .find((name) => UNSAFE_CONFIG_PATTERNS.some((pattern) => pattern.test(name)))
+    .filter(Boolean)
+  const unsafe = names.find((name) => UNSAFE_CONFIG_PATTERNS.some((pattern) => pattern.test(name)))
   if (unsafe) {
     throw new GitOperationError(
       'git_unsafe_configuration',
       `Repository contains unsafe Git configuration: ${unsafe}`,
     )
   }
+  return names
 }
 
 export const resolveExactRepositoryRoot = async (

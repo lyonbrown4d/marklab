@@ -13,6 +13,7 @@ export class WorkspaceTreeProjection {
   private readonly listeners = new Set<(event: WorkspaceTreeDeltaEvent) => void>()
   private readonly tracker = new WorkspaceTreeDeltaTracker()
   private generation = 0
+  private contentInvalidated = false
   private readonly queries: WorkspaceTreeQueryService
 
   constructor(
@@ -56,6 +57,11 @@ export class WorkspaceTreeProjection {
     this.queries.invalidate()
   }
 
+  invalidateContent(): void {
+    this.contentInvalidated = true
+    this.queries.invalidate()
+  }
+
   commitRoot(): void {
     this.generation += 1
     this.queries.invalidate()
@@ -79,7 +85,18 @@ export class WorkspaceTreeProjection {
     )
     this.changedPaths.clear()
     this.explicitRenames.length = 0
-    for (const listener of this.listeners) listener(event)
+    // Git and sync may change bytes without changing any tree entries.
+    const published: WorkspaceTreeDeltaEvent = this.contentInvalidated
+      ? {
+          generation: event.generation,
+          kind: 'invalidated',
+          previousRevision: event.previousRevision,
+          revision: event.revision,
+          root: event.root,
+        }
+      : event
+    this.contentInvalidated = false
+    for (const listener of this.listeners) listener(published)
   }
 
   dispose(): void {

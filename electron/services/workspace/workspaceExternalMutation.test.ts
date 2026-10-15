@@ -6,6 +6,7 @@ import type { App, Shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
+import type { WorkspaceTreeDeltaEvent } from '@/types/workspaceTree'
 import type { Logger } from '@electron/services/logger'
 import { WorkspaceFileService } from '@electron/services/workspace/workspaceFileService'
 
@@ -55,6 +56,50 @@ describe('WorkspaceFileService external mutations', () => {
     workspace.invalidateAllExternalPaths()
 
     await expect(workspace.openFile({ path: 'note.md' })).resolves.toBe('after')
+    workspace.dispose()
+  })
+
+  it('notifies open editors when an external mutation changes only file contents', async () => {
+    const { root, workspace } = await createWorkspace()
+    await fs.writeFile(path.join(root, 'note.md'), 'before')
+    await workspace.openFile({ path: 'note.md' })
+    await workspace.listTreeChildren({ parent: null })
+    const events: WorkspaceTreeDeltaEvent[] = []
+    workspace.onTreeChanged((event) => events.push(event))
+
+    await workspace.runExternalWorkspaceMutation(() =>
+      fs.writeFile(
+        path.join(root, 'note.md'),
+        '<<<<<<< HEAD\nconflict\n=======\nother\n>>>>>>> feature',
+      ),
+    )
+    workspace.invalidateAllExternalPaths()
+
+    await vi.waitFor(() => expect(events.some((event) => event.kind === 'invalidated')).toBe(true))
+    await expect(workspace.openFile({ path: 'note.md' })).resolves.toContain('<<<<<<< HEAD')
+    workspace.dispose()
+  })
+
+  it('publishes changed paths after selected-file external mutations', async () => {
+    const { root, workspace } = await createWorkspace()
+    await fs.writeFile(path.join(root, 'note.md'), 'before')
+    await workspace.openFile({ path: 'note.md' })
+    await workspace.listTreeChildren({ parent: null })
+    const events: WorkspaceTreeDeltaEvent[] = []
+    workspace.onTreeChanged((event) => events.push(event))
+
+    await fs.writeFile(path.join(root, 'note.md'), 'after')
+    workspace.invalidateExternalPaths(['note.md'])
+
+    await vi.waitFor(() =>
+      expect(
+        events.some(
+          (event) =>
+            event.kind === 'changes' &&
+            event.changes.some((change) => change.type === 'changed' && change.path === 'note.md'),
+        ),
+      ).toBe(true),
+    )
     workspace.dispose()
   })
 })

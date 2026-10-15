@@ -1,3 +1,4 @@
+import { createGitPreloadSurface } from '@electron/preload/git'
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { nativeIpcChannels } from '@electron/channels'
 import { allowedCommands, allowedEvents } from '@electron/preload/allowlists'
@@ -279,20 +280,7 @@ const desktopApi: RendererSafeElectronApi = {
   events: {
     listen: listenToRuntimeEvent,
   },
-  git: {
-    commitAll: (message) => ipcRenderer.invoke(nativeIpcChannels.gitCommitAll, { message }),
-    discover: () => ipcRenderer.invoke(nativeIpcChannels.gitDiscover),
-    fetch: (remote) => ipcRenderer.invoke(nativeIpcChannels.gitFetch, remote ? { remote } : {}),
-    fileDiff: (path, section) =>
-      ipcRenderer.invoke(nativeIpcChannels.gitFileDiff, { path, section }),
-    init: () => ipcRenderer.invoke(nativeIpcChannels.gitInit),
-    pull: () => ipcRenderer.invoke(nativeIpcChannels.gitPull),
-    push: (options) => ipcRenderer.invoke(nativeIpcChannels.gitPush, options ?? {}),
-    removeRemote: (name) => ipcRenderer.invoke(nativeIpcChannels.gitRemoteRemove, { name }),
-    remoteStatus: () => ipcRenderer.invoke(nativeIpcChannels.gitRemoteStatus),
-    setRemote: (name, url) => ipcRenderer.invoke(nativeIpcChannels.gitRemoteSet, { name, url }),
-    status: () => ipcRenderer.invoke(nativeIpcChannels.gitStatus),
-  },
+  git: createGitPreloadSurface(ipcRenderer),
   assets: workspacePreloadSurfaces.assets,
   workspace: workspacePreloadSurfaces.workspace,
   workspaceTree: workspacePreloadSurfaces.workspaceTree,

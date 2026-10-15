@@ -28,11 +28,15 @@ describe('named Git IPC', () => {
     const fixture = createFixture()
     const handlers = register(fixture)
 
-    await handlers.get(nativeIpcChannels.gitStatus)?.(event(7), { rootPath: 'C:/escape' })
+    await expect(
+      Promise.resolve().then(() =>
+        handlers.get(nativeIpcChannels.gitStatus)?.(event(7), { rootPath: 'C:/escape' }),
+      ),
+    ).rejects.toThrow('Unrecognized key')
     await handlers.get(nativeIpcChannels.gitFetch)?.(event(7), { remote: 'origin' })
 
-    expect(fixture.workspaceRegistry.serviceForWebContents).toHaveBeenCalledTimes(2)
-    expect(fixture.gitService.status).toHaveBeenCalledWith('D:/notes')
+    expect(fixture.workspaceRegistry.serviceForWebContents).toHaveBeenCalledTimes(1)
+    expect(fixture.gitService.status).not.toHaveBeenCalled()
     expect(fixture.gitService.fetch).toHaveBeenCalledWith('D:/notes', 'origin')
   })
 

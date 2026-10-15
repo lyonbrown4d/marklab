@@ -67,7 +67,7 @@ const TabsBarComponent = ({
     >
       <Collapsible
         open={disclosure.expanded}
-        className="pointer-events-auto relative flex min-h-11 w-full max-w-[min(56rem,calc(100vw-3rem))] justify-center"
+        className="pointer-events-none relative flex min-h-11 w-full max-w-[min(56rem,calc(100vw-3rem))] justify-center"
       >
         {!disclosure.expanded ? (
           <Button
@@ -76,7 +76,7 @@ const TabsBarComponent = ({
             size="sm"
             aria-label={`${t('tabs.showOpenFiles')}: ${activeLabel}`}
             aria-expanded="false"
-            className="absolute left-1/2 top-0 z-0 h-7 max-w-64 -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
+            className="pointer-events-auto absolute left-1/2 top-0 z-0 h-7 max-w-64 -translate-x-1/2 gap-1.5 rounded-full border-border/60 bg-background/88 px-3 text-xs font-normal text-muted-foreground shadow-sm backdrop-blur-xl transition-[background-color,color,box-shadow] duration-[180ms] ease-out hover:bg-background hover:text-foreground hover:shadow-md motion-reduce:transition-none"
             onClick={disclosure.pinOpen}
           >
             <Files aria-hidden="true" className="size-3.5 shrink-0" />
@@ -84,7 +84,7 @@ const TabsBarComponent = ({
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary/70" />
           </Button>
         ) : null}
-        <CollapsibleContent className="relative z-10 w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 data-[state=open]:duration-[180ms] data-[state=closed]:duration-100 motion-reduce:animate-none">
+        <CollapsibleContent className="pointer-events-auto relative z-10 w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 data-[state=open]:duration-[180ms] data-[state=closed]:duration-100 motion-reduce:animate-none">
           <div className="flex h-11 w-full items-center gap-1.5 rounded-xl border border-border/65 bg-background/92 p-1.5 shadow-lg shadow-foreground/10 backdrop-blur-xl">
             <TabsBarVirtualList
               activeTabId={activeTabId}

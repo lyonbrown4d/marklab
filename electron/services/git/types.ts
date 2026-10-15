@@ -76,3 +76,13 @@ export type GitErrorCode =
   | 'git_upstream_missing'
   | 'git_workspace_boundary'
   | 'git_command_failed'
+
+export type {
+  GitCommitSummary,
+  GitBranchSummary,
+  GitStashEntry,
+  GitOperationState,
+  GitHistoryOptions,
+  GitResetMode,
+  GitCommitFile,
+} from '@/types/gitOperations'

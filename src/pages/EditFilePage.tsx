@@ -8,9 +8,10 @@ import EditorEmptyState from '@/pages/EditorEmptyState'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { isCalendarFilePath } from '@/logic/ics'
 import { isTextFileViewPath } from '@/logic/fileTypes'
-import { pathToRoute } from '@/logic/routing'
+import { pathToGitDiffRoute, pathToRoute } from '@/logic/routing'
 import { FileRouteNotFound, isFileRouteAvailable } from '@/pages/fileRouteHelpers'
 import { useI18n } from '@/i18n/useI18n'
+import { useGitFileConflict } from '@/pages/useGitFileConflict'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { EditorFocusHandoffFailure } from '@/app/EditorFocusHandoff'
 
@@ -46,6 +47,12 @@ const EditFilePage = () => {
   )
   const { t } = useI18n()
   const activePath = requestedPath ?? context.activePath
+  const gitConflict = useGitFileConflict({
+    rootKind: context.rootKind,
+    rootPath: context.rootPath,
+    path: activePath,
+    content: context.fileContent,
+  })
 
   if (!requestedPath && context.activePath) {
     return <Navigate to={pathToRoute(context.activePath)} replace />
@@ -137,6 +144,13 @@ const EditFilePage = () => {
         </div>
       </>
     )
+  }
+
+  if (gitConflict.conflict) {
+    return <Navigate to={pathToGitDiffRoute('conflicts', activePath)} replace />
+  }
+  if (gitConflict.checking) {
+    return <EditorPaneFallback label={t('editor.loadingDocument')} path={activePath} />
   }
 
   const fallback = <EditorPaneFallback label={t('editor.loadingDocument')} path={activePath} />

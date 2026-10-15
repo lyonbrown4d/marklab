@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { FileDiff } from 'lucide-react'
+import { FileDiff, FilePenLine, Plus, Minus, Undo2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { GitDiffRequest, GitFileChange } from '@/services/gitApi'
@@ -10,6 +10,13 @@ type GitChangeRowProps = {
   onOpenDiff: (request: GitDiffRequest) => void
   diffLabel: string
   renamedFromLabel: string
+  busy?: boolean
+  actionLabel?: string
+  discardLabel?: string
+  openFileLabel?: string
+  onAction?: () => void
+  onDiscard?: () => void
+  onOpenFile?: () => void
 }
 
 const statusLabels: Record<GitFileChange['status'], string> = {
@@ -44,6 +51,13 @@ export const GitChangeRow = ({
   onOpenDiff,
   diffLabel,
   renamedFromLabel,
+  busy,
+  actionLabel,
+  discardLabel,
+  openFileLabel,
+  onAction,
+  onDiscard,
+  onOpenFile,
 }: GitChangeRowProps) => {
   const detailId = useId()
   const statusDescription = statusDescriptions[change.status]
@@ -81,6 +95,48 @@ export const GitChangeRow = ({
           </span>
         </span>
       </button>
+      {onOpenFile && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0"
+          aria-label={`${openFileLabel}: ${change.path}`}
+          title={`${openFileLabel}: ${change.path}`}
+          disabled={busy}
+          onClick={onOpenFile}
+        >
+          <FilePenLine aria-hidden="true" />
+        </Button>
+      )}
+      {onAction && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0"
+          aria-label={`${actionLabel}: ${change.path}`}
+          title={`${actionLabel}: ${change.path}`}
+          disabled={busy}
+          onClick={onAction}
+        >
+          {section === 'staged' ? <Minus aria-hidden="true" /> : <Plus aria-hidden="true" />}
+        </Button>
+      )}
+      {onDiscard && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0"
+          aria-label={`${discardLabel}: ${change.path}`}
+          title={`${discardLabel}: ${change.path}`}
+          disabled={busy}
+          onClick={onDiscard}
+        >
+          <Undo2 aria-hidden="true" />
+        </Button>
+      )}
       <Button
         type="button"
         variant="ghost"

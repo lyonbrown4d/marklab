@@ -41,6 +41,7 @@ export type LayoutContext = {
   graphContentMode: GraphContentMode
   editorReadOnlyMode: boolean
   onCloseActiveTab: () => void
+  onCloseTab?: (tabId: string, expectedRoot?: string) => void
   onOpenProject: (path: string) => void
   onOpenProjectInCurrentWindow: (path: string) => void
 }

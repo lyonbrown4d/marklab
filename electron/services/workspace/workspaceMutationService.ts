@@ -40,6 +40,9 @@ export class WorkspaceMutationService extends WorkspaceBase {
     if (paths.length === 0) return
     for (const relativePath of paths) this.resolve(relativePath)
     this.buffers.invalidateCleanForRelativePaths(paths)
+    this.pathSnapshots.invalidate()
+    this.tree.invalidateQueries()
+    for (const relativePath of paths) this.tree.recordChangedPath(relativePath)
     this.onWorkspacePathChanged(null)
     this.scheduleSnapshotChanged()
   }
@@ -47,6 +50,8 @@ export class WorkspaceMutationService extends WorkspaceBase {
   invalidateAllExternalPaths(): void {
     this.ensureWorkspaceMode()
     this.buffers.invalidateAllClean()
+    this.pathSnapshots.invalidate()
+    this.tree.invalidateContent()
     this.onWorkspacePathChanged(null)
     this.scheduleSnapshotChanged()
   }
