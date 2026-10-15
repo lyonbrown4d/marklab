@@ -253,7 +253,7 @@ test.describe('Electron desktop shell', () => {
     await expect(statusBar).toContainText(/[1-9]\d*\s+(Lines|行)/i, { timeout: 5_000 })
     await expect(statusBar.locator('span').filter({ hasText: /^3\s+(Words|词)$/i })).toBeVisible()
     await expect(
-      statusBar.locator('span').filter({ hasText: /^11\s+(Characters|字符)$/i }),
+      statusBar.locator('span').filter({ hasText: /^11\s+(Chars|字符)$/i }),
     ).toBeVisible()
   })
 
