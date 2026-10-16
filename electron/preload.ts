@@ -6,6 +6,7 @@ import { onFileDrop } from '@electron/preload/fileDrop'
 import { createWorkspacePreloadSurfaces } from '@electron/preload/workspaceApi'
 import { createRecentWorkspacesPreloadSurface } from '@electron/preload/recentWorkspaces'
 import { createWindowOpeningPreloadSurface } from '@electron/preload/windowOpening'
+import { createWorkspaceSessionSeedSubscription } from '@electron/preload/workspaceSessionSeed'
 import { createWindowCloseLifecyclePreloadSurface } from '@electron/preload/windowCloseLifecycle'
 import { createWindowPresentationPreloadSurface } from '@electron/preload/windowPresentation'
 import { createLanguageIntelligencePreloadSurface } from '@electron/preload/languageIntelligence'
@@ -89,11 +90,17 @@ const emitRuntimeEvent = <T>(
   nextRuntimeEventId += 1
 }
 
+const subscribeWorkspaceSessionSeed = createWorkspaceSessionSeedSubscription(ipcRenderer)
+
 const listenToRuntimeEvent = <T>(
   eventName: string,
   handler: RuntimeEventHandler<T>,
 ): (() => void) => {
   assertAllowedEvent(eventName)
+
+  if (eventName === 'workspace-session-seed') {
+    return subscribeWorkspaceSessionSeed((seed) => emitRuntimeEvent(eventName, seed as T, handler))
+  }
 
   if (eventName === 'menu-action') {
     const menuCommandListener = (_event: IpcRendererEvent, payload: unknown) => {

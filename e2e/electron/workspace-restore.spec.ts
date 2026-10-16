@@ -26,8 +26,12 @@ test.describe('Workspace restore after restart', () => {
     await fs.writeFile(path.join(directory, 'LastWorkspace.md'), '# Restored workspace document\n')
   })
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await closeElectronTestSession(session)
+    session = undefined
+  })
+
+  test.afterAll(async () => {
     await closeRendererServer(server)
     if (directory) await fs.rm(directory, { recursive: true, force: true })
   })
@@ -114,5 +118,32 @@ test.describe('Workspace restore after restart', () => {
       )
       .toBe(2)
     expect(restoredOriginal).toBeDefined()
+  })
+
+  test('opens an explicit single file instead of the previous workspace after restart', async () => {
+    if (!directory) throw new Error('Workspace fixture is unavailable')
+    const file = path.join(directory, 'Standalone.md')
+    await fs.writeFile(file, '# Explicit single document\n')
+    session = await launchElectronTestSession(rendererUrl, { openTargets: [directory] })
+    const profile = session.testRunRoot
+    await closeElectronTestSession(session, { preserveProfile: true })
+    session = undefined
+
+    session = await launchElectronTestSession(rendererUrl, {
+      testRunRoot: profile,
+      openTargets: [file],
+    })
+    await expect(session.page.getByTestId('markdown-editor')).toContainText(
+      'Explicit single document',
+    )
+    const root = await session.page.evaluate(async () => {
+      const bridge = (
+        window as Window & {
+          marklabElectron?: { commands: { invoke: (name: string) => Promise<unknown> } }
+        }
+      ).marklabElectron
+      return bridge?.commands.invoke('fs_get_root_info')
+    })
+    expect(root).toEqual({ kind: 'single', path: file })
   })
 })
