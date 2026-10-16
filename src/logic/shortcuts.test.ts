@@ -1,4 +1,4 @@
-import { matchesKeyboardEvent, validateHotkey, type Hotkey } from '@tanstack/react-hotkeys'
+import { matchesKeyboardEvent, validateHotkey, type HotkeyChord } from '@tanstack/react-hotkeys'
 import { describe, expect, it } from 'vitest'
 import {
   defaultShortcutBindings,
@@ -110,7 +110,7 @@ describe('shortcuts', () => {
         ['view.toggleSidebar', 'L', 'KeyL', true],
         ['view.toggleRightSidebar', 'R', 'KeyR', true],
       ] as const) {
-        const binding = defaultShortcutBindings[action][0] as Hotkey
+        const binding = defaultShortcutBindings[action][0] as HotkeyChord
         const event = new KeyboardEvent('keydown', {
           key,
           code,

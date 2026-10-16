@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": "^22.13.0 || ^24.0.0 || ^25.0.0"
+    "node": "^22.22.0 || ^24.0.0 || ^25.0.0"
   },
   "imports": {
     "#site/*": "./src/*.ts"
@@ -20,16 +20,16 @@
     "releases:sync": "node --env-file-if-exists=.env --experimental-strip-types scripts/sync-releases.ts"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "7.3.2",
+    "@astrojs/markdown-remark": "7.3.3",
     "@astrojs/starlight": "0.42.6",
     "@astrojs/starlight-tailwind": "5.0.0",
-    "astro": "7.3.8",
+    "astro": "7.4.0",
     "sharp": "0.35.5",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
-    "@playwright/test": "1.64.0",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.5",
     "prettier": "3.9.10",

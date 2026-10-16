@@ -14,7 +14,7 @@ type DeadExportTarget = {
 
 export const expectedPlateMarkdownWorkerVersions = {
   '@platejs/date': '53.0.0',
-  '@platejs/markdown': '53.3.15',
+  '@platejs/markdown': '53.3.17',
   platejs: '53.3.15',
 } as const
 
@@ -135,7 +135,7 @@ export const transformPlateMarkdownWorkerDependency = (code: string, id: string)
 }
 
 /**
- * Plate 53.3.15 builds renderer plugins at module scope in otherwise pure
+ * Plate Markdown 53.3.17 builds renderer plugins at module scope in otherwise pure
  * Markdown/date modules. This worker-only transform removes exactly those two
  * dead exports. Missing markers fail the build so Plate upgrades are reviewed.
  */
