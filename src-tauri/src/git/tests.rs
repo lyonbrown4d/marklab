@@ -15,7 +15,10 @@ fn rejects_unsafe_paths() {
     ] {
         assert!(safety::file_path(value).is_err(), "{value}");
     }
+    #[cfg(unix)]
     assert!(safety::file_path(":(glob)**").is_ok());
+    #[cfg(windows)]
+    assert!(safety::file_path(":(glob)**").is_err());
 }
 #[test]
 fn preview_rejects_binary_encoding_and_size() {
@@ -53,7 +56,17 @@ async fn repository_boundary_and_unsafe_configuration() {
 async fn clean_worktree_and_literal_pathspec() {
     let repo = Repository::new().await;
     repo.commit("one").await;
-    std::fs::write(repo.root().join(":(glob)**"), "literal").unwrap();
+    assert_literal_stage(&repo, "literal[1].md").await;
+}
+#[cfg(unix)]
+#[tokio::test]
+async fn unix_pathspec_prefix_is_a_literal_filename() {
+    let repo = Repository::new().await;
+    repo.commit("one").await;
+    assert_literal_stage(&repo, ":(glob)**").await;
+}
+async fn assert_literal_stage(repo: &Repository, name: &str) {
+    std::fs::write(repo.root().join(name), "literal").unwrap();
     assert!(
         process::repository(repo.root(), |repository| status::clean_now(repository))
             .await
@@ -64,13 +77,13 @@ async fn clean_worktree_and_literal_pathspec() {
         "stage",
         &types::PathsRequest {
             expected_root: None,
-            paths: vec![":(glob)**".into()],
+            paths: vec![name.into()],
         },
     )
     .await
     .unwrap();
     assert_eq!(snapshot.staged.len(), 1);
-    assert_eq!(snapshot.staged[0].path, ":(glob)**");
+    assert_eq!(snapshot.staged[0].path, name);
 }
 #[cfg(unix)]
 #[tokio::test]

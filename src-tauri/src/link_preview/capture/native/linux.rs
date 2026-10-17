@@ -48,7 +48,7 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
                 let native = u32::from_ne_bytes([pixel[0], pixel[1], pixel[2], pixel[3]]);
                 let alpha = if opaque { 255 } else { (native >> 24) as u8 };
                 let channel = |shift| {
-                    let value = ((native >> shift) & 255) as u32;
+                    let value = (native >> shift) & 255;
                     if alpha == 0 {
                         0
                     } else {

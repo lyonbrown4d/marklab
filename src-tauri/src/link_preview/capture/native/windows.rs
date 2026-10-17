@@ -26,10 +26,10 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
                 let result = status
                     .map_err(native_error)
                     .and_then(|_| read_stream(&captured));
-                if let Ok(mut sender) = completed.lock() {
-                    if let Some(sender) = sender.take() {
-                        let _ = sender.send(result);
-                    }
+                if let Ok(mut sender) = completed.lock()
+                    && let Some(sender) = sender.take()
+                {
+                    let _ = sender.send(result);
                 }
                 Ok(())
             }));
@@ -43,12 +43,11 @@ pub async fn snapshot(view: &tauri::Webview) -> BackendResult<Vec<u8>> {
             }
             .map_err(native_error)
         })();
-        if let Err(error) = result {
-            if let Ok(mut sender) = sender.lock() {
-                if let Some(sender) = sender.take() {
-                    let _ = sender.send(Err(error));
-                }
-            }
+        if let Err(error) = result
+            && let Ok(mut sender) = sender.lock()
+            && let Some(sender) = sender.take()
+        {
+            let _ = sender.send(Err(error));
         }
     })?;
     receiver

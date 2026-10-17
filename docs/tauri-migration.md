@@ -83,3 +83,9 @@ https://github.com/lyonbrown4d/marklab/releases/latest/download/latest.json
 后续需在各目标系统验证多窗口、工作区切换、保存与取消、Git、PTY、同步、预览、原生菜单、安装包、签名及更新。测试结果应随对应提交记录。Linux/macOS/Windows 的 CI 静态检查也不能代替这些运行验证。
 
 `Plate performance (software rendering)` 仍是 Electron 软件渲染性能基线，其原预算和必需状态检查保持不变。Tauri 的启动、内存和编辑性能尚需单独采集；不能用该 Electron 结果代替 Tauri 性能验收。现有质量门禁见[质量检查说明](quality-gates.md)。
+
+## 分支原生 CI
+
+`.github/workflows/native.yml` 在 `main`、`codex/**` 分支推送、PR 和手动触发时，分别使用 Linux x64、Windows x64、macOS ARM 本机 runner 执行 Rust 格式检查、严格 Clippy 和 `cargo test --lib`。macOS 显式检查 runner 为 ARM，不增加 Intel 目标；runner 标签依据 [GitHub 官方说明](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)。
+
+这些库测试覆盖不创建 Tauri 窗口的服务、临时工作区、Git 仓库、同步测试服务器及 Unix PTY；Windows 按源码中的平台条件编译测试。CI 不启动应用事件循环、不安装或发布应用，也不使用签名密钥。它补充现有覆盖率、Electron 回归和性能门禁；真实窗口、WebView、安装包及更新仍需独立验收。工作流配置已静态解析，实际三平台结果以推送后的 Actions 记录为准。
