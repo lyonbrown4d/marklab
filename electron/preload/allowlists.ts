@@ -20,6 +20,7 @@ const allowedCommandNames = [
   'fs_set_root',
   'fs_set_single_file',
   'fs_open_file',
+  'fs_open_buffer_snapshot',
   'fs_read_file',
   'fs_query_workspace_pages',
   'fs_query_workspace_navigation',

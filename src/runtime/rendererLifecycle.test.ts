@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   diagnosticsError: vi.fn(),
+  tauri: false,
   listen: vi.fn(),
   signalAppReady: vi.fn(async () => undefined),
 }))
+
+vi.mock('@/runtime/environment', () => ({ isTauriRuntime: () => mocks.tauri }))
+vi.mock('@/runtime/tauri/window', () => ({ isTauriWindowVisible: async () => false }))
 
 vi.mock('@/runtime/events', () => ({ listen: mocks.listen }))
 vi.mock('@/runtime/app', () => ({ signalAppReady: mocks.signalAppReady }))
@@ -15,12 +19,14 @@ vi.mock('@/services/rendererDiagnostics', () => ({
 describe('renderer lifecycle initialization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.tauri = false
     vi.resetModules()
   })
 
   afterEach(() => {
     document.body.replaceChildren()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('waits for the initial Markdown surface to finish hydration before becoming interactive', async () => {
@@ -47,6 +53,28 @@ describe('renderer lifecycle initialization', () => {
     editor.dataset.state = 'ready'
     await pending
     expect(resolved).toBe(true)
+  })
+
+  it('yields hidden native frames while still waiting for the initial editor DOM to become ready', async () => {
+    mocks.tauri = true
+    vi.useFakeTimers()
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)
+    const editor = document.createElement('div')
+    editor.dataset.state = 'loading'
+    editor.dataset.testid = 'markdown-editor'
+    document.body.append(editor)
+    const { waitForWorkspaceInteractivePaint } = await import('@/runtime/rendererLifecycle')
+    let resolved = false
+    const pending = waitForWorkspaceInteractivePaint().then(() => {
+      resolved = true
+    })
+    await vi.advanceTimersByTimeAsync(100)
+    expect(resolved).toBe(false)
+    editor.dataset.state = 'ready'
+    await vi.advanceTimersByTimeAsync(50)
+    await pending
+    expect(resolved).toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('reports a seed bridge installation failure through diagnostics and workspace readiness', async () => {

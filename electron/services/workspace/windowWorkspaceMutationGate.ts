@@ -41,6 +41,7 @@ export const installWindowWorkspaceMutationGate = (
   const setRoot = service.setRoot.bind(service)
   const setSingleFile = service.setSingleFile.bind(service)
   const readFile = service.readFile.bind(service)
+  const openBufferSnapshot = service.openBufferSnapshot.bind(service)
   const updateBuffer = service.updateBuffer.bind(service)
   const writeFile = service.writeFile.bind(service)
   const flushBuffers = service.flushBuffers.bind(service)
@@ -67,6 +68,8 @@ export const installWindowWorkspaceMutationGate = (
       return root
     })
   service.readFile = (value) => gate.runAsync('complete workspace file read', () => readFile(value))
+  service.openBufferSnapshot = (value) =>
+    gate.runAsync('open workspace buffer snapshot', () => openBufferSnapshot(value))
   service.updateBuffer = (value) =>
     gate.runSync('update workspace buffer', () => updateBuffer(value))
   service.writeFile = (value) => gate.runSync('write workspace file', () => writeFile(value))

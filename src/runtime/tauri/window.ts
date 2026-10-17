@@ -3,6 +3,9 @@ import { getCurrentWebview } from '@tauri-apps/api/webview'
 import type { ElectronFileDropEvent, RendererSafeElectronApi } from '@/runtime/electron'
 import { request, type TauriEventHub } from '@/runtime/tauri/transport'
 
+// Keep visibility native and current across attempts that hide/reuse a renderer.
+export const isTauriWindowVisible = (): Promise<boolean> => getCurrentWindow().isVisible()
+
 type CloseHandler = () => Promise<void> | void
 
 export const createWindowApis = (events: TauriEventHub) => {

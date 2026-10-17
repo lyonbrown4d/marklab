@@ -1,13 +1,25 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
 
-describe('local Windows code-signing contract', () => {
-  it('keeps CI signing disabled and does not reference remote signing secrets', () => {
+describe('Windows Authenticode and retained local Electron signing contract', () => {
+  it('keeps Windows OS signing unconfigured while preserving Tauri updater signing', () => {
     const workflow = fileText('../../.github/workflows/release.yml')
 
-    expect(workflow).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
+    const native = JSON.parse(fileText('../../src-tauri/tauri.conf.json')) as {
+      bundle: { windows?: { certificateThumbprint?: string; signCommand?: string } }
+    }
+    const release = parse(workflow) as {
+      jobs: { build: { steps: { uses?: string; env?: Record<string, string> }[] } }
+    }
+    const action = release.jobs.build.steps.find(
+      (step) => step.uses === 'tauri-apps/tauri-action@v1',
+    )
+    expect(native.bundle.windows?.certificateThumbprint).toBeUndefined()
+    expect(native.bundle.windows?.signCommand).toBeUndefined()
+    expect(action?.env?.TAURI_SIGNING_PRIVATE_KEY).toBe('${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}')
     expect(workflow).not.toContain('WINDOWS_CSC_LINK')
     expect(workflow).not.toContain('WINDOWS_CSC_KEY_PASSWORD')
   })
@@ -16,7 +28,9 @@ describe('local Windows code-signing contract', () => {
     const packageJson = fileText('../../package.json')
     const packager = fileText('../../scripts/package-signed-windows.ps1')
 
-    expect(packageJson).toContain('dist:win:signed')
+    const scripts = (JSON.parse(packageJson) as { scripts: Record<string, string> }).scripts
+    expect(scripts['electron:dist:win:signed']).toContain('scripts/package-signed-windows.ps1')
+    expect(scripts['dist:win']).toBe('moon run desktop:dist-win')
     expect(packager).toContain('MARKLAB_WINDOWS_CERTIFICATE_SHA1')
     expect(packager).toContain('Cert:\\CurrentUser\\My')
     expect(packager).toContain('Cert:\\LocalMachine\\My')

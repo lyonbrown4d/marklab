@@ -80,6 +80,20 @@ const createWorkspaceCommandHandlers = (
   platform: NodeJS.Platform,
 ): NativeCommandHandlers => {
   const markdownLanguageService = new EmbeddedMarkdownLanguageService()
+  const registerRecentFile = (workspace: WorkspaceService, payload: unknown): void => {
+    try {
+      const relativePath = readRequiredString(payload, 'path')
+      applyAppRecentWorkspaceFile(
+        app,
+        workspace.rootInfo(),
+        workspace.resolveCoordinatorPath(relativePath),
+        recentDocumentState,
+        platform,
+      )
+    } catch (error) {
+      logger.warn('failed to register native recent document', { error })
+    }
+  }
 
   return {
     fs_get_root_info: (_payload, event) => workspaceForEvent(event).rootInfo(),
@@ -90,19 +104,16 @@ const createWorkspaceCommandHandlers = (
     fs_open_file: async (payload, event) => {
       const workspace = workspaceForEvent(event)
       const content = await workspace.openFile(payload)
-      try {
-        const relativePath = readRequiredString(payload, 'path')
-        applyAppRecentWorkspaceFile(
-          app,
-          workspace.rootInfo(),
-          workspace.resolveCoordinatorPath(relativePath),
-          recentDocumentState,
-          platform,
-        )
-      } catch (error) {
-        logger.warn('failed to register native recent document', { error })
-      }
+      registerRecentFile(workspace, payload)
       return content
+    },
+    fs_open_buffer_snapshot: async (payload, event) => {
+      const workspace = workspaceForEvent(event)
+      const snapshot = await workspace.openBufferSnapshot(payload)
+      if (workspace.getSessionGeneration() === snapshot.session_generation) {
+        registerRecentFile(workspace, payload)
+      }
+      return snapshot
     },
     fs_read_file: (payload, event) => workspaceForEvent(event).readFile(payload),
     fs_query_workspace_pages: (payload, event) =>

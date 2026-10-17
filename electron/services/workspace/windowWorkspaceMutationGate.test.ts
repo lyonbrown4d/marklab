@@ -32,6 +32,7 @@ const createService = (setRoot: RootSetter, setSingleFile: RootSetter): Workspac
     importMarkdownAsset: vi.fn(async () => undefined),
     importMarkdownAssetBytes: vi.fn(async () => undefined),
     movePath: vi.fn(async () => undefined),
+    openBufferSnapshot: vi.fn(),
     readFile: vi.fn(async () => ''),
     renamePath: vi.fn(async () => undefined),
     resolveCoordinatorPath: vi.fn((value: string) => value),
@@ -98,6 +99,31 @@ describe('installWindowWorkspaceMutationGate root cancellation', () => {
 
     await expect(switching).rejects.toMatchObject({ name: 'AbortError' })
     expect(onRootChanged).not.toHaveBeenCalled()
+  })
+
+  it('drains an accepted snapshot before shutdown and rejects a later read', async () => {
+    const snapshot = deferred<Awaited<ReturnType<WorkspaceService['openBufferSnapshot']>>>()
+    const service = createService(vi.fn(), vi.fn())
+    service.openBufferSnapshot = vi.fn(() => snapshot.promise)
+    const gate = new WorkspaceMutationGate()
+    installWindowWorkspaceMutationGate(service, gate, vi.fn())
+    const reading = service.openBufferSnapshot({ path: 'note.md' })
+    let drained = false
+    const closing = gate.freezeAndDrain('close').then(() => {
+      drained = true
+    })
+    await expect(service.openBufferSnapshot({ path: 'note.md' })).rejects.toThrow('frozen')
+    expect(drained).toBe(false)
+    snapshot.resolve({
+      path: 'note.md',
+      content: '# Note',
+      revision: 0,
+      dirty: false,
+      session_generation: 1,
+    })
+    await reading
+    await closing
+    expect(drained).toBe(true)
   })
 
   it('forwards setSingleFile signal and skips onRootChanged after abort', async () => {

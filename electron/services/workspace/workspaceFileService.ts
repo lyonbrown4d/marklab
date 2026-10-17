@@ -25,10 +25,7 @@ import {
   selectSingleFileWorkspace,
   selectWorkspaceRoot,
 } from '@electron/services/workspace/workspaceRootSelection'
-import {
-  trySidecarPathMutation,
-  trySidecarWriteFile,
-} from '@electron/services/workspace/workspaceSidecarFileBridge'
+import { trySidecarPathMutation } from '@electron/services/workspace/workspaceSidecarFileBridge'
 import { stringArg } from '@electron/services/workspace/workspaceUtils'
 import { readWorkspaceTextPreview } from '@electron/services/workspace/workspaceTextPreview'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
@@ -41,6 +38,8 @@ import { openWorkspacePath } from '@electron/services/workspace/workspaceSystemP
 import { WorkspaceFileReader } from '@electron/services/workspace/workspaceFileReader'
 import { WorkspaceRootTransitionGate } from '@electron/services/workspace/workspaceRootTransitionGate'
 import { runWorkspaceRootCommit } from '@electron/services/workspace/workspaceRootCommit'
+import { writeBufferedWorkspaceFile } from '@electron/services/workspace/workspaceBufferedFileWrite'
+import type { FsBufferSnapshot } from '@/services/fsBufferSchemas'
 
 export class WorkspaceFileService extends WorkspaceMutationService {
   private readonly rootTransitions = new WorkspaceRootTransitionGate()
@@ -67,6 +66,12 @@ export class WorkspaceFileService extends WorkspaceMutationService {
     this.fileReader = new WorkspaceFileReader({
       buffers: this.buffers,
       getState: () => this.state,
+      getSessionGeneration: this.getSessionGeneration,
+      assertCurrentRoot: (state) => {
+        if (this.disposed || this.rootTransitions.blocksMutations || this.state !== state) {
+          throw new Error('Workspace changed; retry the operation')
+        }
+      },
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
       resolvePath: (relativePath) => this.resolve(relativePath),
@@ -118,6 +123,16 @@ export class WorkspaceFileService extends WorkspaceMutationService {
 
   override readFile = this.openFile
 
+  openBufferSnapshot = async (value: unknown): Promise<FsBufferSnapshot> => {
+    const relativePath = stringArg(value, 'path')
+    const generation = this.workspaceSessionGeneration
+    await this.ensureWorkspaceReady()
+    if (generation !== this.workspaceSessionGeneration) {
+      throw new Error('Workspace changed; retry the operation')
+    }
+    return this.fileReader.openSnapshot(relativePath)
+  }
+
   protected override readonly readFileForAnalysis = async (relativePath: string) => {
     await this.ensureWorkspaceReady()
     return this.fileReader.readForAnalysis(relativePath)
@@ -152,30 +167,13 @@ export class WorkspaceFileService extends WorkspaceMutationService {
   protected override async writeBufferedFile(
     args: Parameters<WorkspaceBufferWriteFile>[0],
   ): Promise<void> {
-    if (!args.state) {
-      throw new Error(`Missing workspace session for buffered write: ${args.relativePath}`)
-    }
-    const sidecarWritten = await trySidecarWriteFile({
+    await writeBufferedWorkspaceFile({
+      args,
       knowledgeEngineService: this.knowledgeEngineService,
       logger: this.logger,
-      path: args.relativePath,
-      state: args.state,
-      content: args.content,
+      localHistory: this.localHistory,
       beforeWrite: () => this.watcher.markOwnWrite(args.absolutePath),
     })
-    if (!sidecarWritten) await args.writeWithNode()
-    try {
-      await this.localHistory.capture(
-        { kind: args.state.rootKind, path: args.state.rootPath },
-        args.relativePath,
-        args.content,
-      )
-    } catch (error) {
-      this.logger.warn('local history snapshot failed', {
-        error,
-        path: args.relativePath,
-      })
-    }
   }
 
   getBufferStatus(value: unknown): (FsBufferStatus & { session_generation: number }) | null {

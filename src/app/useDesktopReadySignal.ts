@@ -2,17 +2,13 @@ import { useEffect } from 'react'
 import { signalAppReady } from '@/runtime/app'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
+import { nextRendererFrame } from '@/runtime/rendererFrame'
 
 const READY_TIMEOUT_MS = 900
 
-const nextFrame = () =>
-  new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve())
-  })
-
 const waitForFirstStablePaint = async () => {
-  await nextFrame()
-  await nextFrame()
+  await nextRendererFrame()
+  await nextRendererFrame()
 
   const fonts = document.fonts
   if (!fonts) return
