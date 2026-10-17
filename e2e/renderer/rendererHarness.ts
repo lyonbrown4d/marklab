@@ -33,8 +33,19 @@ export const launchRendererSession = async (
     })
     const backend = await createFixtureBackend(root, file, allowedRoots)
     const origin = new URL(url).origin
-    await page.route('**/*', (route) => {
+    await page.route('**/*', async (route) => {
       const request = new URL(route.request().url())
+      if (request.protocol === 'marklab-asset:') {
+        const body = await backend.assets.read(request.href).catch(() => null)
+        return body
+          ? route.fulfill({
+              status: 200,
+              body,
+              contentType: 'text/plain; charset=utf-8',
+              headers: { 'Access-Control-Allow-Origin': origin },
+            })
+          : route.abort('blockedbyclient')
+      }
       return ['data:', 'blob:'].includes(request.protocol) || request.origin === origin
         ? route.continue()
         : route.abort('blockedbyclient')

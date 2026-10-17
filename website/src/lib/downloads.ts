@@ -11,20 +11,27 @@ export type Download = {
   releaseUrl: string
 }
 
-const suffixes: Record<Platform, readonly string[]> = {
-  'mac-arm64': ['mac-arm64.dmg'],
-  'win-x64': ['win-x64-setup.exe', 'win-x64.exe'],
-  'linux-x64': ['linux-x64.AppImage', 'linux-x86_64.AppImage'],
+const assetNames: Record<Platform, (version: string) => readonly string[]> = {
+  'mac-arm64': (version) => [`Marklab_${version}_aarch64.dmg`, `Marklab-${version}-mac-arm64.dmg`],
+  'win-x64': (version) => [
+    `Marklab_${version}_x64-setup.exe`,
+    `Marklab-${version}-win-x64-setup.exe`,
+    `Marklab-${version}-win-x64.exe`,
+  ],
+  'linux-x64': (version) => [
+    `Marklab_${version}_amd64.AppImage`,
+    `marklab_${version}_amd64.AppImage`,
+    `Marklab-${version}-linux-x64.AppImage`,
+    `Marklab-${version}-linux-x86_64.AppImage`,
+  ],
 }
 
 // Resolve each platform separately: GitHub's global "Latest" can refer to an older Windows release.
 export const getDownload = (releases: readonly Release[], platform: Platform): Download | null => {
   for (const release of releases) {
     const version = release.tag_name.slice(5)
-    const asset = suffixes[platform]
-      .map((suffix) =>
-        release.assets.find((entry) => entry.name === `Marklab-${version}-${suffix}`),
-      )
+    const asset = assetNames[platform](version)
+      .map((name) => release.assets.find((entry) => entry.name === name))
       .find(Boolean)
     if (asset)
       return {

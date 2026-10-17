@@ -2,6 +2,8 @@ import fs from 'node:fs/promises'
 import { rendererReadyPhases, type RendererReadySignal } from '@/types/rendererReady'
 // eslint-disable-next-line no-restricted-imports -- Node-run test fixtures remain outside production.
 import { createFixtureBuffers } from './fixtureBuffers.js'
+// eslint-disable-next-line no-restricted-imports -- Test-only capability store serves only generated fixture files.
+import { createFixtureAssets } from './fixtureAssets.js'
 
 type Payload = Record<string, unknown>
 const record = (value: unknown): Payload => {
@@ -31,6 +33,7 @@ export const createFixtureBackend = async (
     () => root,
     () => generation,
   )
+  const assets = createFixtureAssets(buffers.target)
   const rootInfo = () => ({ kind: 'external' as const, path: root })
   const treeBase = () => ({ root: rootInfo(), generation, revision: treeRevision })
   const seed = () => ({
@@ -65,6 +68,7 @@ export const createFixtureBackend = async (
     generation += 1
     treeRevision = 0
     buffers.clear()
+    assets.clear()
     return seed()
   }
   const invoke = async (command: string, args: Payload): Promise<unknown> => {
@@ -143,6 +147,8 @@ export const createFixtureBackend = async (
         return buffers.flush()
       case 'fs_get_background_tasks':
         return []
+      case 'assets_issue_capability':
+        return assets.issue(text(request.path))
       case 'fs_get_path_metadata': {
         const stat = await fs.stat(buffers.target(text(request.path)))
         return {
@@ -210,7 +216,7 @@ export const createFixtureBackend = async (
         throw new Error(`Unimplemented renderer fixture command: ${command}`)
     }
   }
-  return { bind, buffers, diagnostics, invoke, phases, seed }
+  return { assets, bind, buffers, diagnostics, invoke, phases, seed }
 }
 
 export type FixtureBackend = Awaited<ReturnType<typeof createFixtureBackend>>

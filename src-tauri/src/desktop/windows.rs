@@ -87,7 +87,7 @@ pub async fn create(
     title: Option<&str>,
 ) -> BackendResult<WebviewWindow> {
     let state = super::geometry::restore(app, label).await?;
-    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+    let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
         .title(title.unwrap_or("Marklab"))
         .inner_size(state.width.max(640) as f64, state.height.max(480) as f64)
         .min_inner_size(640.0, 480.0)
@@ -96,15 +96,13 @@ pub async fn create(
         .on_navigation(workspace_navigation)
         .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
     #[cfg(target_os = "macos")]
-    {
-        builder = builder
-            .title_bar_style(tauri::TitleBarStyle::Overlay)
-            .hidden_title(true)
-            // Wry's vertical inset positions the native titlebar container,
-            // rather than the button's top edge. Center the controls in our
-            // 52-point titlebar (the old inset was 10pt high).
-            .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
-    }
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        // Wry's vertical inset positions the native titlebar container,
+        // rather than the button's top edge. Center the controls in our
+        // 52-point titlebar (the old inset was 10pt high).
+        .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
     let window = builder.build()?;
     crate::native_window::register(&window)?;
     if let (Some(x), Some(y)) = (state.x, state.y) {

@@ -29,7 +29,7 @@ pnpm dev
 
 Rust 服务通过 FluxDI 2 的 `static_module` 宏声明依赖。`composition/core.rs` 组装配置、数据库、设置、工作区注册表和分析服务；桌面模块导入同一核心上下文，再组装窗口所需的原生服务。数据库与分析初始化保持异步，文件系统构造通过受控的阻塞任务执行。全部桌面服务解析完成后转为具体的 Tauri `State<T>`，现有命令不通过容器动态查找依赖。
 
-只读 MCP 复用核心模块中的数据库与分析服务，不创建窗口、工作区监听器或桌面句柄。桌面初始化仍在 splash 创建后异步进行。上述组装变更尚待本轮统一编译和测试，不计入此前的库测试结果。
+只读 MCP 复用核心模块中的数据库与分析服务，不创建窗口、工作区监听器或桌面句柄。桌面初始化仍在 splash 创建后异步进行。服务组装已通过本轮 Rust 库测试，覆盖共享数据库连接池、具体 Tauri 状态转交、初始化失败后重试和无界面 MCP 组装；实际 WebView 启动另行验收。
 
 ## Markdown 编辑能力
 
@@ -41,7 +41,7 @@ AI 请求与响应由 Rig 0.44.0 的供应商客户端及 completion 模型处�
 
 内联补全继续沿用生成完成后发布结果的原行为，单条结果按前端 UTF-16 长度限制为 512。模型不支持的采样参数会省略并返回解释警告；Anthropic 旧模型的 temperature 上限为 1。探测供应商不重试，普通生成最多重试一次，总超时为 120 秒，所有状态的响应均限制为 4 MiB。凭据不进入前端 DTO 或错误正文。
 
-这些 AI 变更及新 MCP 入口尚需本轮统一编译和测试，不能沿用之前的原生测试数字视为已验收。MCP 使用原生 `marklab-desktop mcp` 子命令和 rmcp stdio，只暴露工作区状态与搜索；参数及只读范围见[工作区分析与 MCP](architecture/node-knowledge-sidecar.md)。
+这些 AI 变更已通过本轮 Rust 测试中的本地 HTTP 供应商协议、超时、重试、响应上限和日志脱敏检查，未使用真实供应商凭据。MCP 使用原生 `marklab-desktop mcp` 子命令和 rmcp stdio，只暴露工作区状态与搜索；SDK 会话和只读搜索测试通过，参数及范围见[工作区分析与 MCP](architecture/node-knowledge-sidecar.md)。
 
 ## 文件监听、通知与日志
 
@@ -128,4 +128,8 @@ https://github.com/lyonbrown4d/marklab/releases/latest/download/latest.json
 
 清理前的完整前端基线已执行：942 个测试文件、5,102 项测试通过，逐文件 lines、functions、statements、branches 四项 85% 门禁通过。该结果只对应清理前工作树；删除旧后端、替换 renderer harness、迁移运行时命名和新增 AI/MCP 之后，需要对最终源码重新执行检查。当前文档不预先将这些新检查记为通过。
 
-Windows 自定义窗口在本轮仅做静态审查，不执行 Windows 集成验收。生产 renderer 的 Chromium 测试、真实 Tauri WebDriver 测试与人工原生操作应分别记录，不能相互代替。
+本轮清理后，`6423f7f` 的 212 项 Rust 库测试全部通过。测试使用仓库内 `src-tauri/target`，覆盖新增服务组装、AI SDK、MCP、搜索兼容和显示器缩放处理；该结果不代表原生窗口或全部用户流程已验收。
+
+Windows 自定义窗口在本轮仅做静态审查，不执行 Windows 集成验收。已检查无边框窗口配置、标题栏拖动与双击、最小化／最大化／还原、关闭前保存、各窗口事件与订阅清理，以及多显示器位置恢复。最大化状态改为读取原生窗口事件；保存的逻辑尺寸在位置恢复检查中按目标显示器缩放比例换算。相关单元测试通过，静态审查未发现其他待修复问题。跨屏 DPI 切换、原生拖动和系统关闭行为仍未在 Windows 实机验证。
+
+生产 renderer 的 Chromium 测试、真实 Tauri WebDriver 测试与人工原生操作应分别记录，不能相互代替。

@@ -36,7 +36,10 @@ test('fixture preserves UTF-16 patches, revisions, flush and workspace isolation
     })
     expect(await backend.buffers.flush()).toBe(1)
     expect(await fs.readFile(path.join(roots[0], 'same.md'), 'utf8')).toBe('😀 changed\n')
+    const capability = await backend.assets.issue('same.md')
+    expect((await backend.assets.read(capability.url)).toString('utf8')).toBe('😀 changed\n')
     await backend.bind(roots[1], 'same.md')
+    await expect(backend.assets.read(capability.url)).rejects.toThrow('Unknown or stale')
     expect(await backend.buffers.apply({ ...request, base_revision: 1 })).toMatchObject({
       kind: 'session_mismatch',
     })

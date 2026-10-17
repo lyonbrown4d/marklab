@@ -8,7 +8,9 @@ command enters the application build.
 
 The fixture backend operates only on isolated temporary workspaces. Its buffer
 tests verify revision checks, UTF-16 patches, stale generation rejection and the
-renderer flush contract. They do not verify the native Rust save implementation,
+renderer flush contract. Test-only opaque asset capabilities serve bounded fixture
+files and expire when their workspace changes. They do not verify native asset
+issuance, the native Rust save implementation,
 OS clipboard, native window permissions, or filesystem durability.
 
 ## Running

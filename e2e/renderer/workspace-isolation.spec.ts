@@ -42,12 +42,13 @@ test('isolates source models and previews after the workspace seed changes', asy
           await backend.bind(roots[index], 'README.md'),
         )
       await expect(
-        page.getByRole('button', { name: new RegExp(`^Workspace:.*${name}`, 'i') }),
+        page.getByRole('button', { name: new RegExp(`^(?:Workspace|工作区): *${name}$`, 'i') }),
       ).toBeVisible()
       const explorer = page.getByRole('region', { name: /^(Files|文件)$/i })
       if (!(await explorer.isVisible())) await page.keyboard.press('ControlOrMeta+Shift+L')
       await explorer.getByRole('button', { name: 'shared.ts', exact: true }).click()
       const modes = page.getByRole('radiogroup', { name: /Editing Mode|编辑模式/i })
+      await modes.getByRole('radio', { name: /^(Rich Text Editor|WYSIWYG|所见即所得)$/i }).click()
       const preview = page.getByRole('article', {
         name: /shared\.ts.*(?:source preview|源码预览)/i,
       })
