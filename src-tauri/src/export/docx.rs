@@ -19,6 +19,12 @@ pub fn render(
     let margin = twips(options.margin_mm() as f64) as i32;
     let mut docx = Docx::new()
         .default_size(22)
+        .default_line_spacing(
+            LineSpacing::new()
+                .after(120)
+                .line(276)
+                .line_rule(LineSpacingType::Auto),
+        )
         .page_size(twips(width), twips(height))
         .page_margin(
             PageMargin::new()
@@ -27,6 +33,18 @@ pub fn render(
                 .left(margin)
                 .right(margin),
         );
+    for (index, size) in [32, 26, 24, 22, 22, 22].into_iter().enumerate() {
+        docx = docx.add_style(
+            docx_rs::Style::new(format!("Heading{}", index + 1), StyleType::Paragraph)
+                .name(format!("heading {}", index + 1))
+                .based_on("Normal")
+                .next("Normal")
+                .size(size)
+                .bold()
+                .outline_lvl(index)
+                .line_spacing(LineSpacing::new().before(240).after(120)),
+        );
+    }
     if options.orientation == "landscape" {
         docx = docx.page_orient(PageOrientationType::Landscape);
     }
@@ -70,6 +88,7 @@ pub fn render(
             document,
             notes: markdown::footnotes(&nodes),
             cancelled,
+            max_image_width_pt: ((width - 2.0 * options.margin_mm() as f64) / 25.4 * 72.0).max(1.0),
         };
         if index > 0 && options.page_breaks {
             docx = docx.add_paragraph(Paragraph::new().page_break_before(true));
@@ -110,6 +129,7 @@ pub(super) struct Context<'a> {
     pub(super) document: &'a SourceDocument,
     pub(super) notes: BTreeMap<String, Vec<Node>>,
     pub(super) cancelled: &'a AtomicBool,
+    pub(super) max_image_width_pt: f64,
 }
 fn twips(mm: f64) -> u32 {
     (mm / 25.4 * 1440.0).round() as u32
@@ -118,13 +138,6 @@ fn heading(paragraph: Paragraph, level: u8) -> Paragraph {
     paragraph
         .style(&format!("Heading{level}"))
         .outline_lvl((level - 1) as usize)
-        .size(match level {
-            1 => 40,
-            2 => 32,
-            3 => 28,
-            _ => 24,
-        })
-        .bold()
         .keep_next(true)
 }
 
@@ -157,7 +170,7 @@ fn blocks(nodes: &[Node], context: &Context<'_>, depth: u32) -> BackendResult<Ve
                                     return Ok(TableCell::new());
                                 };
                                 Ok(TableCell::new().add_paragraph(inlines(
-                                    Paragraph::new(),
+                                    Paragraph::new().line_spacing(LineSpacing::new().after(0)),
                                     content,
                                     Style::default(),
                                     context,
@@ -232,6 +245,8 @@ fn blocks(nodes: &[Node], context: &Context<'_>, depth: u32) -> BackendResult<Ve
                 )?;
                 if let Kind::Heading(level) = kind {
                     paragraph = heading(paragraph, *level);
+                } else if matches!(kind, Kind::CodeBlock(_)) {
+                    paragraph = paragraph.line_spacing(LineSpacing::new().before(40).after(40));
                 }
                 output.push(Block::paragraph(paragraph));
             }

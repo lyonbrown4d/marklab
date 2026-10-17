@@ -41,7 +41,12 @@ pub(super) async fn fixture() -> (tempfile::TempDir, Arc<Workspace>, AnalysisSer
     let workspace = Arc::new(Workspace::new(
         RootInfo {
             kind: "external".into(),
-            path: directory.path().to_string_lossy().into_owned(),
+            path: directory
+                .path()
+                .canonicalize()
+                .expect("canonical fixture root")
+                .to_string_lossy()
+                .into_owned(),
         },
         1,
     ));

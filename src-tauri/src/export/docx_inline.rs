@@ -47,7 +47,10 @@ pub(super) fn inlines(
                 }
             }
             Node::Math(value, block) => {
-                paragraph = paragraph.add_run(image_run(typst_engine::equation_png(value, *block)?))
+                paragraph = paragraph.add_run(image_run(
+                    typst_engine::equation_png(value, *block)?,
+                    context.max_image_width_pt,
+                ))
             }
             Node::Break(hard) => {
                 paragraph = paragraph.add_run(if *hard {
@@ -71,6 +74,7 @@ pub(super) fn inlines(
                     document: context.document,
                     notes: BTreeMap::new(),
                     cancelled: context.cancelled,
+                    max_image_width_pt: context.max_image_width_pt,
                 };
                 let note = Footnote::new().add_content(inlines(
                     Paragraph::new(),
@@ -82,7 +86,10 @@ pub(super) fn inlines(
             }
             Node::Element(Kind::Image(url), children) => {
                 if let Some(bytes) = context.document.assets.get(url) {
-                    paragraph = paragraph.add_run(image_run(typst_engine::asset_png(bytes)?));
+                    paragraph = paragraph.add_run(image_run(
+                        typst_engine::asset_png(bytes)?,
+                        context.max_image_width_pt,
+                    ));
                 } else {
                     paragraph = inlines(paragraph, children, style, context)?;
                 }
@@ -115,12 +122,14 @@ pub(super) fn inlines(
     Ok(paragraph)
 }
 
-fn image_run(image: typst_engine::RasterImage) -> Run {
+fn image_run(image: typst_engine::RasterImage, max_width_pt: f64) -> Run {
     // The rasterizer validated and encoded PNG bytes; unlike Pic::new, this
     // constructor does not decode with an infallible image API.
     let width = image.width.max(1);
     let height = image.height.max(1);
-    let display_width = (width as f64 / 2.0).min(520.0);
+    // The Electron image width was 520 CSS pixels (390pt). Also honor the
+    // actual text area, including narrow paper and wide publication margins.
+    let display_width = (width as f64 / 2.0).min(390.0).min(max_width_pt);
     let display_height = display_width * height as f64 / width as f64;
     Run::new().add_image(Pic::new_with_dimensions(image.png, width, height).size(
         (display_width * 12700.0) as u32,

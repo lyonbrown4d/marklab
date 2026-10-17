@@ -41,7 +41,7 @@ pnpm check
 
 `pnpm check` runs the quality impact helper as part of the project-level gate, so local
 verification and CI use the same entry point. It also rejects human-maintained TypeScript and Rust
-source files over 300 non-blank effective lines, including root-level TypeScript tooling and configuration;
+source files over 300 non-blank effective lines, including root-level tooling and configuration files;
 downloaded shadcn source is kept intact and extended through composition.
 The unit-test task additionally collects coverage for critical Markdown-worker, startup-window,
 command-palette, Plate, and workspace-map integration surfaces. Every listed file must independently
@@ -50,7 +50,8 @@ untested boundary.
 
 | Impact area                      | Common risk                                                    | Required checks                                                 |
 | -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Tauri native / Electron baseline | double dispatch, unsafe IPC, platform mismatch                 | Rust checks, native acceptance, retained Electron/preload tests |
+| Tauri native runtime             | workspace isolation, unsafe IPC, platform or cache mismatch    | Rust checks, native window/edit/save/cache acceptance           |
+| Electron menu/window/preload     | double dispatch, unsafe IPC, baseline regression               | retained Electron menu, window, and preload tests               |
 | Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                         |
 | WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests                  |
 | React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests            |
@@ -58,7 +59,7 @@ untested boundary.
 | Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, workspace map/editor shortcut tests |
 | IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                          |
 | Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                        |
-| Knowledge engine / Rust runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Rust service tests, typecheck, retained Node baseline tests     |
+| Knowledge engine / Node runtime  | retained Electron indexing, worker, or lifecycle regression    | Node baseline service tests and typecheck                       |
 | Renderer lifecycle / route cache | stale workspace routes or retained workers                     | route cache/worker tests, focused release Electron regression   |
 | Document preview lifecycle       | cross-workspace preview data or retained preview resources     | preview component tests, focused release Electron regression    |
 | Build/package                    | CI/task drift, missing resources, oversized bundles            | Tauri static/build checks, native packaging acceptance          |

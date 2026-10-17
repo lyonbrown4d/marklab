@@ -140,12 +140,21 @@ async fn restores_through_the_authoritative_buffer_and_reports_disk_conflicts() 
     let notes = directory.path().join("notes");
     tokio::fs::create_dir(&notes).await?;
     tokio::fs::write(notes.join("note.md"), "original").await?;
+    let notes = tokio::fs::canonicalize(notes).await?;
     let info = root(&notes.to_string_lossy());
     store
         .capture_at(&info, "note.md", "original", 1_700_000_000_000)
         .await?;
     let id = store.list(&info, "note.md").await?[0].id.clone();
     let workspace = crate::workspace::Workspace::new(info, 1);
+    // A first restore initializes an absent buffer from the current disk state.
+    tokio::fs::write(notes.join("note.md"), "before first open").await?;
+    assert!(workspace.buffer_status("note.md").await?.is_none());
+    store.restore(&workspace, "note.md", &id).await?;
+    assert_eq!(
+        tokio::fs::read_to_string(notes.join("note.md")).await?,
+        "original"
+    );
     workspace.write_file("note.md", "edited").await?;
     workspace.flush_buffers().await?;
     let restored = store.restore(&workspace, "note.md", &id).await?;
@@ -156,11 +165,45 @@ async fn restores_through_the_authoritative_buffer_and_reports_disk_conflicts() 
         "original"
     );
     tokio::fs::write(notes.join("note.md"), "external edit").await?;
-    assert!(store.restore(&workspace, "note.md", &id).await.is_err());
+    assert_eq!(
+        store
+            .restore(&workspace, "note.md", &id)
+            .await
+            .expect_err("clean buffer disk conflict")
+            .code,
+        "history_restore_conflict"
+    );
     assert_eq!(
         tokio::fs::read_to_string(notes.join("note.md")).await?,
         "external edit"
     );
+    // A failed restore must also preserve an existing unsaved draft.
+    workspace.write_file("note.md", "unsaved draft").await?;
+    let revision = workspace
+        .buffer_status("note.md")
+        .await?
+        .expect("loaded draft")
+        .revision;
+    tokio::fs::write(notes.join("note.md"), "another external edit").await?;
+    assert_eq!(
+        store
+            .restore(&workspace, "note.md", &id)
+            .await
+            .expect_err("dirty buffer disk conflict")
+            .code,
+        "FILE_CONFLICT"
+    );
+    assert_eq!(
+        tokio::fs::read_to_string(notes.join("note.md")).await?,
+        "another external edit"
+    );
+    assert_eq!(workspace.read_file("note.md").await?, "unsaved draft");
+    let status = workspace
+        .buffer_status("note.md")
+        .await?
+        .expect("retained draft");
+    assert!(status.dirty);
+    assert!(status.revision > revision);
     database.pool.close().await;
     Ok(())
 }

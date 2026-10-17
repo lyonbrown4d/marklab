@@ -92,13 +92,38 @@ impl Workspace {
     }
 
     pub async fn write_file_under_lock(&self, path: &str, content: &str) -> BackendResult<()> {
+        self.replace_content_under_lock(path, content, true).await
+    }
+
+    /// History replacement preserves a loaded buffer's disk baseline for save CAS.
+    /// Caller holds mutation and has verified the current window binding.
+    pub(crate) async fn restore_file_under_lock(
+        &self,
+        path: &str,
+        content: &str,
+    ) -> BackendResult<()> {
+        self.replace_content_under_lock(path, content, false).await
+    }
+
+    async fn replace_content_under_lock(
+        &self,
+        path: &str,
+        content: &str,
+        refresh: bool,
+    ) -> BackendResult<()> {
         if content.len() > MAX_DOCUMENT_BYTES {
             return Err(BackendError::new(
                 "FILE_TOO_LARGE",
                 "Document exceeds text editor limit",
             ));
         }
-        self.open_file_under_lock(path).await?;
+        let initialize = refresh || !self.buffers.lock().await.contains_key(path);
+        if initialize {
+            self.open_file_under_lock(path).await?;
+        } else {
+            // Revalidate root/symlink safety without accepting new disk content.
+            self.resolve_async(path).await?;
+        }
         let buffers = self.buffers.clone();
         let key = path.to_owned();
         let content = content.to_owned();

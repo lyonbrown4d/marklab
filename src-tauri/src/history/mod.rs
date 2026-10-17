@@ -157,25 +157,49 @@ impl HistoryStore {
     ) -> BackendResult<HistorySnapshot> {
         let path = normalize_path(path)?;
         workspace.ensure_active()?;
-        let target = workspace.resolve(&path)?;
+        let target = workspace.resolve_async(&path).await?;
         let snapshot = self.read(&workspace.root_info(), &path, id).await?;
-        workspace
-            .write_file_under_lock(&path, &snapshot.content)
-            .await?;
-        workspace.flush_buffers_under_lock().await?;
-        // A clean buffer can make flush a no-op even if an external writer changed the file.
-        // Verify only the bounded snapshot length so a replaced large file cannot cause a large allocation.
-        use tokio::io::AsyncReadExt;
-        let file = tokio::fs::File::open(target).await?;
-        let mut persisted = Vec::with_capacity(snapshot.content.len().saturating_add(1));
-        file.take(snapshot.content.len() as u64 + 1)
-            .read_to_end(&mut persisted)
-            .await?;
-        if persisted != snapshot.content.as_bytes() {
-            return Err(BackendError::new(
-                "history_restore_conflict",
-                "File changed on disk while restoring local history",
-            ));
+        let buffers = workspace.buffers.clone();
+        let key = path.clone();
+        let previous =
+            crate::blocking::run(move || Ok(buffers.blocking_lock().get(&key).cloned())).await?;
+        let result: BackendResult<()> = async {
+            workspace
+                .restore_file_under_lock(&path, &snapshot.content)
+                .await?;
+            workspace.flush_buffers_under_lock().await?;
+            // Even an identical clean buffer must detect a changed disk file.
+            // Bound the read by the <=256 KiB history snapshot, not external size.
+            use tokio::io::AsyncReadExt;
+            let file = tokio::fs::File::open(target).await?;
+            let mut persisted = Vec::with_capacity(snapshot.content.len().saturating_add(1));
+            file.take(snapshot.content.len() as u64 + 1)
+                .read_to_end(&mut persisted)
+                .await?;
+            if persisted != snapshot.content.as_bytes() {
+                return Err(BackendError::new(
+                    "history_restore_conflict",
+                    "File changed on disk while restoring local history",
+                ));
+            }
+            Ok(())
+        }
+        .await;
+        if let Err(error) = result {
+            // Preserve the prior draft only if this target did not commit: a
+            // successful target save may precede an unrelated buffer's failure.
+            if let Some(mut previous) = previous {
+                let mut buffers = workspace.buffers.lock().await;
+                if let Some(current) = buffers.get_mut(&path)
+                    && current.baseline == previous.baseline
+                    && current.content == snapshot.content
+                {
+                    previous.revision = current.revision.saturating_add(1);
+                    *current = previous;
+                    workspace.next_revision();
+                }
+            }
+            return Err(error);
         }
         Ok(snapshot)
     }

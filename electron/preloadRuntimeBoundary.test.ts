@@ -109,7 +109,10 @@ describe('Electron preload/runtime boundary', () => {
 
   it('keeps the preload global behind the renderer runtime adapter', () => {
     const offenders = walkSourceFiles('src').filter((file) => {
-      if (path.normalize(file) === path.normalize('src/runtime/electron.ts')) return false
+      // The asset adapter test supplies the legacy preload only as a runtime fixture.
+      // Keep this list exact: renderer components and other source files stay covered.
+      const allowed = ['src/runtime/electron.ts', 'src/runtime/assetUrl.test.ts']
+      if (allowed.some((adapter) => path.normalize(file) === path.normalize(adapter))) return false
       return readText(file).includes('marklabElectron')
     })
 

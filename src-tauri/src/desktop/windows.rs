@@ -20,6 +20,17 @@ fn trusted_navigation(url: &url::Url) -> bool {
         && url.port() == Some(5173);
     page_ok && url.username().is_empty() && url.password().is_none() && (local || development)
 }
+fn workspace_navigation(url: &url::Url) -> bool {
+    // WKWebView and WebKitGTK report iframe navigations through this same
+    // URL-only callback. Drawio accepts user-configured HTTPS embeds. The
+    // sandbox denies top navigation; Tauri's origin ACL and TrustedWindow
+    // independently deny native commands to every remote document.
+    trusted_navigation(url)
+        || (url.scheme() == "https"
+            && url.has_host()
+            && url.username().is_empty()
+            && url.password().is_none())
+}
 pub fn create_splash(app: &AppHandle) -> BackendResult<()> {
     let window =
         WebviewWindowBuilder::new(app, "splash", WebviewUrl::App("splashscreen.html".into()))
@@ -82,7 +93,7 @@ pub async fn create(
         .min_inner_size(640.0, 480.0)
         .visible(false)
         .decorations(cfg!(target_os = "macos"))
-        .on_navigation(trusted_navigation)
+        .on_navigation(workspace_navigation)
         .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
     #[cfg(target_os = "macos")]
     {
@@ -203,5 +214,19 @@ mod tests {
         assert!(trusted_navigation(
             &url::Url::parse("tauri://localhost/index.html").unwrap()
         ));
+    }
+    #[test]
+    fn configured_https_diagram_frames_are_permitted_without_trusting_their_origin() {
+        let remote = url::Url::parse("https://diagrams.example.test/?embed=1").unwrap();
+        assert!(workspace_navigation(&remote));
+        assert!(!trusted_navigation(&remote));
+        for target in [
+            "http://diagrams.example.test/",
+            "https://user:secret@diagrams.example.test/",
+            "javascript:alert(1)",
+            "file:///tmp/private.md",
+        ] {
+            assert!(!workspace_navigation(&url::Url::parse(target).unwrap()));
+        }
     }
 }

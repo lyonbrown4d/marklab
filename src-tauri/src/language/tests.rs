@@ -217,7 +217,12 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
     let workspace = Arc::new(Workspace::new(
         RootInfo {
             kind: "external".into(),
-            path: directory.path().to_string_lossy().into_owned(),
+            path: directory
+                .path()
+                .canonicalize()
+                .expect("canonical workspace root")
+                .to_string_lossy()
+                .into_owned(),
         },
         2,
     ));

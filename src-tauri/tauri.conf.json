@@ -12,7 +12,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost data: blob: https:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost; worker-src 'self' blob:; media-src 'self' asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost data: blob: https:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost; worker-src 'self' blob:; media-src 'self' asset: http://asset.localhost marklab-asset: http://marklab-asset.localhost blob:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     }
   },
   "bundle": {

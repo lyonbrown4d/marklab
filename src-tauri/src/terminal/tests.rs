@@ -43,18 +43,41 @@ fn session_owner_is_enforced() {
 #[cfg(all(test, unix))]
 mod pty_tests {
     use std::io::{Read, Write};
+    use std::time::{Duration, Instant};
+
+    struct KillOnFailure(Option<Box<dyn portable_pty::ChildKiller + Send + Sync>>);
+    impl Drop for KillOnFailure {
+        fn drop(&mut self) {
+            if let Some(killer) = self.0.as_mut() {
+                let _ = killer.kill();
+            }
+        }
+    }
+    fn has_output_line(bytes: &[u8]) -> bool {
+        bytes
+            .split(|byte| *byte == b'\n')
+            .any(|line| line.strip_suffix(b"\r").unwrap_or(line) == b"marklab-pty-ok")
+    }
     #[test]
     fn real_pty_runs_shell_and_reports_exit() {
         let pair = portable_pty::native_pty_system()
             .openpty(super::size(24, 80))
             .unwrap();
-        let command = portable_pty::CommandBuilder::new("/bin/sh");
-        let mut child = pair.slave.spawn_command(command).unwrap();
-        drop(pair.slave);
         let mut reader = pair.master.try_clone_reader().unwrap();
         let mut writer = pair.master.take_writer().unwrap();
+        let mut command = portable_pty::CommandBuilder::new("/bin/sh");
+        // Only "ok" is written to the terminal. Its echo cannot satisfy the
+        // expected line; the shell must read it and execute printf successfully.
+        command.args([
+            "-c",
+            "IFS= read -r value; printf 'marklab-pty-%s\\n' \"$value\"; exit 7",
+        ]);
+        let mut child = pair.slave.spawn_command(command).unwrap();
+        let mut cleanup = KillOnFailure(Some(child.clone_killer()));
+        drop(pair.slave);
+        let deadline = Instant::now() + Duration::from_secs(5);
         let (sender, receiver) = std::sync::mpsc::channel();
-        let thread = std::thread::spawn(move || {
+        let reader_thread = std::thread::spawn(move || {
             let mut output = Vec::new();
             let mut chunk = [0u8; 1024];
             while let Ok(count) = reader.read(&mut chunk) {
@@ -62,23 +85,31 @@ mod pty_tests {
                     break;
                 }
                 output.extend_from_slice(&chunk[..count]);
-                if String::from_utf8_lossy(&output).contains("marklab-pty-ok") {
-                    let _ = sender.send(output);
-                    return;
+                if has_output_line(&output) || output.len() >= 64 * 1024 {
+                    break;
                 }
             }
+            let _ = sender.send(output);
         });
-        writer
-            .write_all(b"printf 'marklab-pty-ok\\n'; exit 7\n")
-            .unwrap();
+        writer.write_all(b"ok\n").unwrap();
         writer.flush().unwrap();
-        let output = receiver.recv_timeout(std::time::Duration::from_secs(5));
-        if output.is_err() {
-            let _ = child.kill();
-        }
-        assert!(output.is_ok());
-        let status = child.wait().unwrap();
+        let output = receiver
+            .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+            .expect("PTY did not produce an actual output line within five seconds");
+        assert!(has_output_line(&output), "PTY output: {output:?}");
+        let status = loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                cleanup.0 = None;
+                break status;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "PTY child did not exit within five seconds"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        };
         assert_eq!(status.exit_code(), 7);
-        let _ = thread.join();
+        // Receipt means the reader has finished its blocking read loop.
+        reader_thread.join().unwrap();
     }
 }
