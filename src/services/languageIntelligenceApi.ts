@@ -1,10 +1,10 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 
 export const languageIntelligenceApi: LanguageIntelligenceApi = {
-  openDocument: (request) => getElectronRuntime().languageIntelligence.openDocument(request),
-  changeDocument: (request) => getElectronRuntime().languageIntelligence.changeDocument(request),
-  closeDocument: (request) => getElectronRuntime().languageIntelligence.closeDocument(request),
-  completion: (request) => getElectronRuntime().languageIntelligence.completion(request),
-  diagnostics: (request) => getElectronRuntime().languageIntelligence.diagnostics(request),
+  openDocument: (request) => getDesktopRuntime().languageIntelligence.openDocument(request),
+  changeDocument: (request) => getDesktopRuntime().languageIntelligence.changeDocument(request),
+  closeDocument: (request) => getDesktopRuntime().languageIntelligence.closeDocument(request),
+  completion: (request) => getDesktopRuntime().languageIntelligence.completion(request),
+  diagnostics: (request) => getDesktopRuntime().languageIntelligence.diagnostics(request),
 }

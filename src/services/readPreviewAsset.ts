@@ -1,3 +1,4 @@
+import { toWebviewAssetUrl } from '@/runtime/assetUrl'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
 
 export const readPreviewTextAsset = async (
@@ -5,7 +6,7 @@ export const readPreviewTextAsset = async (
   limit?: number,
 ): Promise<WorkspaceTextPreview> => {
   const response = await fetch(
-    src,
+    toWebviewAssetUrl(src),
     limit ? { headers: { Range: `bytes=0-${limit - 1}` } } : undefined,
   )
   if (!response.ok) throw new Error('Unable to read the selected file version')

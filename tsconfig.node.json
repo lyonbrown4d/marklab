@@ -27,8 +27,7 @@
     "vite.design-preview.config.ts",
     "tailwind.config.ts",
     "postcss.config.ts",
-    "playwright.electron.config.ts",
-    "playwright.performance.config.ts",
+    "playwright.renderer.config.ts",
     "eslint.config.ts"
   ]
 }

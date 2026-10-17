@@ -31,7 +31,10 @@ vi.mock('@/runtime/rendererLifecycle', () => ({
 vi.mock('@/app/workspaceSessionSeed', () => ({
   applyWorkspaceSessionSeed: lifecycle.applySeed,
 }))
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/app/editorCloseLifecycle', () => ({ flushEditorChanges: vi.fn() }))
 vi.mock('@/services/fsApi', () => ({ fsApi: workspaceApi }))
 vi.mock('@/services/workspaceTreeApi', () => ({

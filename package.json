@@ -5,31 +5,24 @@
   "description": "Desktop-first local Markdown workspace for Marklab.",
   "author": "Marklab",
   "type": "module",
-  "main": "dist-electron/main.js",
   "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": "^22.22.0 || ^24.0.0 || ^25.0.0"
   },
   "scripts": {
-    "dev": "moon run desktop:electron-dev",
+    "dev": "moon run desktop:tauri-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
     "build:design-preview": "vite build --config vite.design-preview.config.ts",
-    "electron:build:artifacts": "node --experimental-strip-types scripts/build-electron.ts",
     "icons:generate": "node --experimental-strip-types scripts/generate-app-icons.ts",
     "desktop:prepare": "moon run desktop:prepare",
     "desktop:prepare:dev": "moon run desktop:prepare-dev",
-    "build:electron": "moon run desktop:electron-build",
-    "electron:dev": "moon run desktop:electron-dev",
-    "electron:build": "moon run desktop:electron-build",
-    "electron:start": "pnpm electron:build && electron .",
-    "dev:desktop": "moon run desktop:electron-dev",
+    "dev:desktop": "moon run desktop:tauri-dev",
     "build:desktop": "moon run desktop:build",
     "package": "moon run desktop:package",
     "dist": "moon run desktop:dist",
     "dist:win": "moon run desktop:dist-win",
-    "dist:win:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-signed-windows.ps1",
     "dist:mac": "moon run desktop:dist-mac",
     "dist:linux": "moon run desktop:dist-linux",
     "lint": "moon run desktop:lint",
@@ -39,21 +32,16 @@
     "typecheck:scripts": "node node_modules/typescript/bin/tsc6 -p tsconfig.scripts.json",
     "test": "moon run desktop:test",
     "test:coverage:critical": "vitest run --coverage --maxWorkers=2",
-    "test:knowledge:integration": "moon run desktop:test-knowledge-integration",
+    "test:knowledge:integration": "pnpm tauri:test --lib analysis::",
     "test:ui": "vitest run .integration.test.",
-    "test:electron": "pnpm test:electron:build && pnpm test:electron:run",
-    "test:electron:build": "pnpm icons:generate && pnpm electron:build:artifacts",
-    "test:electron:run": "node --experimental-strip-types scripts/run-electron-e2e.ts",
-    "test:electron:release": "pnpm test:electron:build && pnpm test:electron:release:run",
-    "test:electron:release:run": "pnpm test:electron:run release-regressions.spec.ts app-smoke.spec.ts plate-editor-integrations.spec.ts",
-    "test:perf": "pnpm test:electron:build && pnpm test:perf:run",
-    "test:perf:all": "pnpm test:electron:build && pnpm test:perf:all:run",
-    "test:perf:all:run": "pnpm exec playwright test --config playwright.performance.config.ts",
-    "test:perf:run": "pnpm exec playwright test --config playwright.performance.config.ts --project native-gpu",
-    "test:perf:software": "pnpm test:electron:build && pnpm test:perf:software:run",
-    "test:perf:software:run": "pnpm exec playwright test --config playwright.performance.config.ts --project software-rendering",
+    "test:perf": "pnpm build:renderer && pnpm test:perf:run",
+    "test:perf:all": "pnpm build:renderer && pnpm test:perf:all:run",
+    "test:perf:all:run": "pnpm exec playwright test --config playwright.renderer.config.ts --project renderer-gpu --project software-rendering",
+    "test:perf:run": "pnpm exec playwright test --config playwright.renderer.config.ts --project renderer-gpu",
+    "test:perf:software": "pnpm build:renderer && pnpm test:perf:software:run",
+    "test:perf:software:run": "pnpm exec playwright test --config playwright.renderer.config.ts --project software-rendering",
     "test:perf:ci": "pnpm test:perf:software",
-    "test:integration": "pnpm test:ui && pnpm test:electron",
+    "test:integration": "pnpm test:ui && pnpm tauri:test && pnpm test:renderer:e2e && pnpm test:tauri:e2e",
     "test:watch": "vitest",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
@@ -61,7 +49,19 @@
     "prepare": "husky install",
     "moon": "moon",
     "check": "moon run desktop:check",
-    "lint:check": "moon run desktop:lint"
+    "lint:check": "moon run desktop:lint",
+    "dev:renderer": "vite --mode tauri",
+    "build:renderer": "node --experimental-strip-types scripts/build-renderer.ts",
+    "tauri:dev": "moon run desktop:tauri-dev",
+    "tauri:build": "moon run desktop:build",
+    "tauri:check": "pnpm icons:generate && cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri:test": "pnpm icons:generate && cargo test --manifest-path src-tauri/Cargo.toml",
+    "tauri:bundle": "moon run desktop:package",
+    "test:renderer:e2e": "pnpm build:renderer && pnpm test:renderer:e2e:run",
+    "test:renderer:e2e:run": "pnpm exec playwright test --config playwright.renderer.config.ts --project smoke",
+    "build:tauri:e2e": "tauri build --debug --no-bundle --features e2e-testing --config e2e/tauri/tauri.e2e.conf.json",
+    "test:tauri:e2e:run": "node --experimental-strip-types e2e/tauri/run.ts",
+    "test:tauri:e2e": "pnpm build:tauri:e2e && pnpm test:tauri:e2e:run"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,css,md,json,yml,yaml}": [
@@ -71,153 +71,7 @@
       "eslint --fix"
     ]
   },
-  "build": {
-    "appId": "app.marklab.desktop",
-    "productName": "Marklab",
-    "electronLanguages": [
-      "en-US",
-      "zh-CN"
-    ],
-    "asar": true,
-    "extraResources": [
-      {
-        "from": "resources/workspace-guide",
-        "to": "workspace-guide"
-      }
-    ],
-    "asarUnpack": [
-      "node_modules/@parcel/watcher*/**/*",
-      "node_modules/detect-libc/**/*",
-      "node_modules/is-extglob/**/*",
-      "node_modules/is-glob/**/*",
-      "node_modules/node-addon-api/**/*",
-      "node_modules/picomatch/**/*",
-      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
-      "node_modules/better-sqlite3/prebuilds/**/*",
-      "node_modules/@reflink/**/*"
-    ],
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "resources/icons/**/*",
-      "!node_modules/**/*",
-      "node_modules/@homebridge/node-pty-prebuilt-multiarch/**/*",
-      "node_modules/better-sqlite3/lib/**/*",
-      "node_modules/better-sqlite3/prebuilds/*-${arch}.node",
-      "node_modules/better-sqlite3/package.json",
-      "node_modules/@parcel/watcher/**/*",
-      "node_modules/@parcel/watcher-*/**/*",
-      "node_modules/detect-libc/**/*",
-      "node_modules/is-extglob/**/*",
-      "node_modules/is-glob/**/*",
-      "node_modules/node-addon-api/**/*",
-      "node_modules/picomatch/**/*",
-      "node_modules/{@huggingface,@isaacs,@kwsites,@reflink,@simple-git,@tinyhttp}/**/*",
-      "node_modules/{ansi-escapes,ansi-regex,ansi-styles,async-retry,bytes,chalk,chmodrp,chownr,ci-info,cli-cursor,cli-spinners,cliui,cmake-js,color-convert,color-name,commander,cross-spawn,debug,deep-extend,emoji-regex,env-var,escalade,eventemitter3,filename-reserved-regex,filenamify,fs-extra,get-caller-file,graceful-fs,ignore,ini,ipull,is-fullwidth-code-point,is-interactive,is-unicode-supported,isexe,jsonfile,lifecycle-utils,lodash.debounce,log-symbols,lowdb,mimic-function,minimist,minipass,minizlib,ms,nanoid,node-api-headers,onetime,ora,parse-ms,path-key,pretty-bytes,pretty-ms,proper-lockfile,rc,require-directory,restore-cursor,retry,semver,shebang-command,shebang-regex,signal-exit,simple-git,sleep-promise,slice-ansi,stdin-discarder,stdout-update,steno,string-width,strip-ansi,strip-json-comments,tar,universalify,url-join,validate-npm-package-name,which,wrap-ansi,y18n,yallist,yargs,yargs-parser,yoctocolors}/**/*",
-      "!dist/**/*.map",
-      "!dist-electron/**/*.map",
-      "package.json"
-    ],
-    "npmRebuild": false,
-    "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false,
-    "publish": [
-      {
-        "owner": "lyonbrown4d",
-        "provider": "github",
-        "publishAutoUpdate": true,
-        "repo": "marklab",
-        "releaseType": "release",
-        "tagNamePrefix": "app-v"
-      }
-    ],
-    "protocols": [
-      {
-        "name": "Marklab Deep Links",
-        "schemes": [
-          "marklab"
-        ]
-      }
-    ],
-    "win": {
-      "signAndEditExecutable": true,
-      "icon": "resources/icons/marklab.ico",
-      "fileAssociations": [
-        {
-          "ext": [
-            "md",
-            "markdown"
-          ],
-          "name": "Markdown Document",
-          "description": "Markdown document",
-          "icon": "resources/icons/marklab.ico"
-        }
-      ],
-      "signtoolOptions": {
-        "signingHashAlgorithms": [
-          "sha256"
-        ],
-        "rfc3161TimeStampServer": "http://timestamp.digicert.com"
-      },
-      "target": [
-        "nsis",
-        "zip"
-      ]
-    },
-    "nsis": {
-      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}",
-      "createDesktopShortcut": "always",
-      "createStartMenuShortcut": true,
-      "oneClick": false,
-      "perMachine": true,
-      "allowToChangeInstallationDirectory": true,
-      "runAfterFinish": true,
-      "shortcutName": "Marklab",
-      "uninstallDisplayName": "Marklab"
-    },
-    "mac": {
-      "category": "public.app-category.productivity",
-      "icon": "resources/icons/marklab.icns",
-      "fileAssociations": [
-        {
-          "ext": [
-            "md",
-            "markdown"
-          ],
-          "name": "Markdown Document",
-          "icon": "resources/icons/marklab.icns",
-          "role": "Editor"
-        }
-      ],
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "linux": {
-      "icon": "resources/icons/marklab.png",
-      "category": "Office",
-      "mimeTypes": [
-        "text/markdown",
-        "text/x-markdown"
-      ],
-      "maintainer": "Marklab Maintainers <lyonbrown4d@users.noreply.github.com>",
-      "target": [
-        "AppImage",
-        "deb",
-        "tar.gz"
-      ]
-    }
-  },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.81",
-    "@ai-sdk/google": "^4.0.98",
-    "@ai-sdk/openai": "^4.0.95",
-    "@ai-sdk/openai-compatible": "^3.0.70",
     "@codemirror/autocomplete": "6.20.3",
     "@codemirror/commands": "6.11.1",
     "@codemirror/language": "^6.13.1",
@@ -229,11 +83,8 @@
     "@dagrejs/dagre": "^3.1.1",
     "@excalidraw/excalidraw": "^0.18.1",
     "@fontsource/jetbrains-mono": "5.3.0",
-    "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
     "@hookform/resolvers": "^5.9.1",
-    "@modelcontextprotocol/sdk": "^1.32.1",
     "@monaco-editor/react": "^4.7.0",
-    "@parcel/watcher": "2.6.0",
     "@platejs/basic-nodes": "^53.0.0",
     "@platejs/code-block": "^53.0.0",
     "@platejs/dnd": "^53.3.8",
@@ -252,6 +103,7 @@
     "@tanstack/react-hotkeys": "^0.14.3",
     "@tanstack/react-query": "5.104.3",
     "@tanstack/react-virtual": "^3.14.20",
+    "@tauri-apps/api": "^2.12.4",
     "@uiw/codemirror-theme-eclipse": "^4.25.12",
     "@use-gesture/react": "10.3.1",
     "@xterm/addon-fit": "^0.11.0",
@@ -260,54 +112,36 @@
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "12.12.0",
     "ahooks": "^3.10.0",
-    "ai": "^7.0.142",
-    "axios": "1.20.0",
-    "better-sqlite3": "13.0.3",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.4.0",
     "codemirror-lang-mermaid": "0.5.0",
     "date-fns": "^4.4.0",
     "decode-named-character-reference": "1.3.0",
-    "detect-libc": "^2.1.2",
     "diff": "^9.0.0",
-    "docx": "^9.11.0",
     "docx-preview": "^0.4.1",
     "dompurify": "3.4.17",
-    "electron-log": "^5.4.4",
-    "electron-updater": "^6.8.9",
     "elkjs": "^0.12.0",
     "fuse.js": "^7.5.0",
-    "github-slugger": "^2.0.0",
-    "graphology": "0.26.0",
-    "graphology-communities-louvain": "2.0.2",
     "hast-util-from-html": "^2.0.3",
     "i18next": "26.4.7",
     "immer": "^11.1.21",
-    "inversify": "^8.2.3",
-    "ipaddr.js": "^2.5.0",
-    "is-extglob": "^2.1.1",
-    "is-glob": "^4.0.3",
     "keepalive-for-react": "^6.0.0",
-    "kysely": "0.29.6",
     "lodash-es": "4.18.1",
     "lowlight": "^3.3.0",
     "lru-cache": "^11.5.3",
     "lucide-react": "^1.58.0",
-    "markdown-it": "^15.0.3",
     "mdast-util-to-string": "^4.0.0",
     "mermaid": "^12.2.0",
     "mitt": "3.0.1",
     "monaco-editor": "^0.57.0",
     "monaco-vim": "0.4.4",
     "next-themes": "^0.4.6",
-    "node-addon-api": "^8.9.2",
     "p-limit": "^7.3.3",
     "p-queue": "^10.0.0",
     "papaparse": "5.7.0",
     "pathe": "^2.0.3",
     "pdfjs-dist": "6.4.299",
-    "picomatch": "^4.0.7",
     "platejs": "^53.3.15",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
@@ -324,25 +158,19 @@
     "react-resizable-panels": "^4.14.5",
     "react-router-dom": "^7.18.4",
     "react-virtualized-auto-sizer": "^2.0.3",
-    "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-inline-links": "^7.0.0",
     "remark-math": "6.0.0",
     "remark-parse": "^11.0.0",
-    "remark-rehype": "^11.1.2",
     "remark-stringify": "^11.0.0",
     "rxjs": "^7.8.2",
-    "simple-git": "^4.0.2",
     "smol-toml": "1.9.1",
     "sonner": "^2.0.8",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
     "vscode-languageserver-textdocument": "^1.0.15",
     "vscode-languageserver-types": "^3.18.4",
-    "vscode-markdown-languageservice": "^0.5.0",
-    "webdav": "^5.11.0",
-    "which": "7.0.0",
     "yaml": "2.9.1",
     "zod": "^4.6.7",
     "zustand": "^5.0.15"
@@ -356,13 +184,13 @@
     "@rolldown/plugin-babel": "0.2.4",
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query-devtools": "5.104.3",
+    "@tauri-apps/cli": "^2.12.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/babel__core": "7.20.5",
-    "@types/better-sqlite3": "9.6.0",
     "@types/lodash-es": "^4.17.12",
-    "@types/markdown-it": "^14.2.0",
+    "@types/mocha": "10.0.10",
     "@types/node": "26.6.5",
     "@types/papaparse": "5.5.2",
     "@types/react": "^19.3.0",
@@ -370,16 +198,19 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitejs/plugin-react": "6.1.2",
     "@vitest/coverage-v8": "5.0.5",
+    "@wdio/cli": "9.31.9",
+    "@wdio/globals": "9.31.3",
+    "@wdio/local-runner": "9.31.9",
+    "@wdio/mocha-framework": "9.31.9",
+    "@wdio/spec-reporter": "9.31.2",
+    "@wdio/tauri-service": "1.5.0",
+    "@wdio/types": "9.31.2",
     "autoprefixer": "10.6.1",
     "babel-plugin-react-compiler": "1.0.0",
-    "electron": "44.8.0",
-    "electron-builder": "^26.15.3",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
-    "execa": "^10.1.1",
-    "get-port": "^7.2.0",
     "globals": "^17.13.0",
     "husky": "^9.1.7",
     "jiti": "^2.7.0",
@@ -398,8 +229,8 @@
     "typescript-eslint": "8.71.2",
     "unplugin-turbo-console": "^3.0.0",
     "vite": "8.3.4",
-    "vite-plugin-electron": "^1.1.2",
-    "vite-plugin-electron-renderer": "^1.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "webdriverio": "9.31.9",
+    "zx": "^8.8.5"
   }
 }

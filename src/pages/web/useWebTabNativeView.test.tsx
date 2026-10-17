@@ -19,9 +19,9 @@ const workspace = vi.hoisted(() => ({
   tabs: [{ kind: 'web', id: 'web-id', title: 'Docs', url: 'https://example.com/docs' }],
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({ webTabs }),
-  isElectronRuntime: () => false,
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({ webTabs }),
+  isDesktopRuntime: () => false,
 }))
 vi.mock('@/store/useWorkspaceStore', () => ({
   useWorkspaceStore: { getState: () => workspace },

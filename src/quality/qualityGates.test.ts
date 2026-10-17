@@ -7,8 +7,8 @@ const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 
 const fileExists = (file: string) => existsSync(new URL(file, import.meta.url))
 
 const boundaryContractTests = [
-  '../../electron/menu.test.ts',
-  '../../electron/preloadRuntimeBoundary.test.ts',
+  '../runtime/tauri/transport.test.ts',
+  '../runtime/tauri/index.test.ts',
   '../app/focusedEditCommand.test.ts',
   '../components/SourceCodeEditorSurface.test.tsx',
   '../components/settings/EditingSettingsPage.test.tsx',
@@ -27,12 +27,13 @@ const boundaryContractTests = [
   '../components/previews/DocxPreviewSurface.test.tsx',
   '../components/previews/DrawioEditorSurface.test.tsx',
   '../components/previews/ExcalidrawEditorSurface.test.tsx',
-  '../../e2e/electron/release-regressions.spec.ts',
-  '../../e2e/electron/plate-editor-integrations.spec.ts',
-  '../../electron/services/settingsPersistKeys.test.ts',
-  '../../electron/services/knowledgeEngine/workspaceGraphTopology.test.ts',
-  '../../electron/services/knowledgeEngine/workspaceSidecarSpawnPlan.test.ts',
-  '../../electron/services/workspace/workspaceSearchIndexUpdateQueue.test.ts',
+  '../../e2e/renderer/workspace-isolation.spec.ts',
+  '../../e2e/renderer/editor-integrations.spec.ts',
+  '../../src-tauri/src/settings/tests.rs',
+  '../../src-tauri/src/analysis/cache_tests.rs',
+  '../../src-tauri/src/workspace/shared_tests.rs',
+  '../../src-tauri/src/workspace/lifecycle_tests.rs',
+  '../../src-tauri/src/workspace/event_tests.rs',
 ] as const
 
 describe('quality gates', () => {
@@ -110,19 +111,35 @@ describe('quality gates', () => {
     expect(viteConfig).toContain('functions: 85')
     expect(viteConfig).toContain('statements: 85')
     expect(viteConfig).toContain('branches: 85')
-    ;[
-      'initialNativeOpen.ts',
-      'plateMarkdownWorkerConfig.ts',
-      'plateMarkdownWorkerRuntime.ts',
-      'plateMarkdownWorker.ts',
-      'singleInstance.ts',
-      'windowCurrentPathOpen.ts',
-      'windowCommandTargets.ts',
-      'windowCommands.ts',
-      'workspaceRootTransitionGate.ts',
-      'nativeSurfaceOcclusion.ts',
-      'useDoubleShiftCommandPalette.ts',
-    ].forEach((criticalFile) => expect(viteConfig).toContain(criticalFile))
+    const coverageInclude = viteConfig.match(/coverage:\s*\{[\s\S]*?include:\s*\[([\s\S]*?)\]/)
+    expect(coverageInclude).not.toBeNull()
+    const files = Array.from(coverageInclude?.[1].matchAll(/'([^']+)'/g) ?? [], (match) => match[1])
+    expect(files.sort()).toEqual(
+      [
+        'src/runtime/desktop.ts',
+        'src/runtime/rendererFrame.ts',
+        'src/runtime/rendererLifecycle.ts',
+        'src/runtime/tauri/index.ts',
+        'src/runtime/tauri/transport.ts',
+        'src/runtime/tauri/window.ts',
+        'src/app/nativeSurfaceOcclusion.ts',
+        'src/components/command/useDoubleShiftCommandPalette.ts',
+        'src/components/plate/nodes/MathFootnoteElements.tsx',
+        'src/components/plate/plateMarkdownConfig.ts',
+        'src/components/plate/plateMarkdownInputRuleGuard.ts',
+        'src/components/plate/plateMarkdownInputRules.ts',
+        'src/components/plate/plateMarkdownWorkerConfig.ts',
+        'src/components/plate/plateMarkdownWorkerRuntime.ts',
+        'src/components/plate/selection/PlateSelectionToolbar.tsx',
+        'src/components/plate/selection/selectionToolbarActions.ts',
+        'src/components/plate/usePlateSelectionToolbar.ts',
+        'src/pages/workspace-map/WorkspaceMapFileNode.tsx',
+        'src/pages/workspace-map/WorkspaceMapStaticMarkdownPreview.tsx',
+        'src/workers/plateMarkdownWorker.ts',
+        'vite.worker.ts',
+        'vite.workerPlateTransforms.ts',
+      ].sort(),
+    )
     expect(fileText('../../moon.yml')).toContain('command: pnpm test:coverage:critical')
   })
 
@@ -137,34 +154,36 @@ describe('quality gates', () => {
     expect(moonConfig).toContain('command: pnpm quality:line-limits')
     expect(moonConfig).toContain('- ~:quality-line-limits')
     expect(releaseWorkflow).toContain('run: pnpm check')
-    expect(releaseWorkflow).toContain('run: xvfb-run --auto-servernum pnpm test:electron:release')
-    expect(releaseWorkflow).toContain('name: electron-release-regressions')
+    expect(releaseWorkflow).toContain('run: pnpm test:renderer:e2e')
+    expect(releaseWorkflow).toContain('name: renderer-release-regressions')
   })
 
-  it('keeps the focused Electron release regression command build-once and discoverable', () => {
+  it('builds the production renderer once before the focused Chromium smoke gate', () => {
     const packageJson = JSON.parse(fileText('../../package.json')) as {
-      scripts?: Record<string, string>
+      scripts: Record<string, string>
     }
-    const runner = fileText('../../scripts/run-electron-e2e.ts')
-
-    expect(packageJson.scripts?.['test:electron:release']).toBe(
-      'pnpm test:electron:build && pnpm test:electron:release:run',
+    expect(packageJson.scripts['test:renderer:e2e']).toBe(
+      'pnpm build:renderer && pnpm test:renderer:e2e:run',
     )
-    expect(packageJson.scripts?.['test:electron:release:run']).toBe(
-      'pnpm test:electron:run release-regressions.spec.ts app-smoke.spec.ts plate-editor-integrations.spec.ts',
+    expect(packageJson.scripts['test:renderer:e2e:run']).toBe(
+      'pnpm exec playwright test --config playwright.renderer.config.ts --project smoke',
     )
-    expect(runner).toContain('...process.argv.slice(2)')
+    expect(packageJson.scripts['test:integration']).toContain('pnpm tauri:test')
+    expect(packageJson.scripts['test:integration']).toContain('pnpm test:renderer:e2e')
   })
 
-  it('keeps Electron Playwright deterministic and retains CI failure evidence', () => {
-    const config = fileText('../../playwright.electron.config.ts')
-
-    expect(config).toContain('forbidOnly: !!process.env.CI')
+  it('keeps Chromium deterministic and preserves failure evidence plus separate native tests', () => {
+    const config = fileText('../../playwright.renderer.config.ts')
+    const nativeWorkflow = fileText('../../.github/workflows/native.yml')
+    expect(config).toMatch(/forbidOnly:\s*(Boolean\(process.env.CI\)|!!process.env.CI)/)
     expect(config).toContain('retries: 0')
     expect(config).toContain('workers: 1')
     expect(config).toContain("screenshot: 'only-on-failure'")
     expect(config).toContain("trace: 'retain-on-failure'")
-    expect(config).toContain("['github']")
+    expect(config).toContain('test-results/renderer')
+    expect(nativeWorkflow).toContain('cargo test --manifest-path src-tauri/Cargo.toml')
+    expect(nativeWorkflow).toContain('--lib --locked')
+    expect(nativeWorkflow).toContain('--all-targets --locked -- -D warnings')
   })
 
   it('keeps the change impact CLI backed by the shared rule data', () => {
@@ -181,7 +200,7 @@ describe('quality gates', () => {
         '--experimental-strip-types',
         'scripts/quality-impact.ts',
         '--files',
-        'electron/menu.ts',
+        'src-tauri/src/desktop/menus.rs',
         'src/components/SourceCodeEditorSurface.tsx',
         'docs/quality-gates.md',
       ],
@@ -190,7 +209,7 @@ describe('quality gates', () => {
       },
     )
 
-    expect(output).toContain('Electron menu/window/preload')
+    expect(output).toContain('Native menus / windows')
     expect(output).toContain('Source editor / Monaco')
     expect(output).toContain('Quality gates')
   })

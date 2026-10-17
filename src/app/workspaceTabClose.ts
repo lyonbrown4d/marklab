@@ -1,7 +1,7 @@
 import type { NavigateFunction } from 'react-router-dom'
 import type { WorkspaceTab } from '@/store/appTypes'
 import { getWorkspaceTabId } from '@/logic/tabs'
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 import { navigateToTab, type LatestRef } from '@/app/workspaceTabNavigation'
 import { requestGitConflictClose } from '@/features/git/conflicts/conflictDraftStore'
 
@@ -40,8 +40,8 @@ export const closeWorkspaceTab = (
     const closedIndex = currentTabs.findIndex((tab) => getWorkspaceTabId(tab) === tabId)
     if (closedIndex < 0) return
     const closedTab = currentTabs[closedIndex]!
-    if (closedTab.kind === 'web' && isElectronRuntime()) {
-      void getElectronRuntime()
+    if (closedTab.kind === 'web' && isDesktopRuntime()) {
+      void getDesktopRuntime()
         .webTabs.close({ tabId: closedTab.id })
         .catch(() => undefined)
     }

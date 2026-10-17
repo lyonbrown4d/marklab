@@ -14,7 +14,10 @@ const runtime = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/runtime/electron', () => ({ getElectronRuntime: () => runtime }))
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => true,
+  getDesktopRuntime: () => runtime,
+}))
 
 describe('fsApi named IPC', () => {
   beforeEach(() => vi.clearAllMocks())

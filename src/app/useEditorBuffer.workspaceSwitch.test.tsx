@@ -8,7 +8,13 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/app/editorBufferSync', () => ({
-  createEditorBufferSync: () => ({ clear: mocks.clear, enqueue: vi.fn() }),
+  createEditorBufferSync: () => ({
+    clear: mocks.clear,
+    clearWorkspace: mocks.clear,
+    enqueue: vi.fn(),
+    seed: vi.fn(),
+    revisionFor: vi.fn(),
+  }),
 }))
 vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
 vi.mock('@/runtime/events', () => ({ listen: vi.fn(async () => vi.fn()) }))

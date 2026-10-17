@@ -4,11 +4,14 @@ import '@/index.scss'
 import { initializeReactScan } from '@/dev/reactScan'
 import { installRendererDiagnostics, reportReactError } from '@/services/rendererDiagnostics'
 import RendererBootstrap from '@/app/RendererBootstrap'
+import { initializeDesktopRuntime } from '@/runtime/tauri'
 import {
   initializeRendererLifecycle,
   isStandbyRenderer,
   onRendererInteractive,
 } from '@/runtime/rendererLifecycle'
+
+await initializeDesktopRuntime()
 
 const standby = isStandbyRenderer()
 const RendererApplication = standby

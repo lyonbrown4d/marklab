@@ -5,6 +5,10 @@ import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { isDesktopRuntime } from '@/runtime/window'
 import type { AppPlatform } from '@/services/appApi'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
+import { useWindowMaximizedState } from '@/components/titlebar/useWindowMaximizedState'
 
 type WindowControlsProps = {
   platform: AppPlatform
@@ -28,6 +32,48 @@ const WindowControls = ({
   getAppWindow,
 }: WindowControlsProps) => {
   const { t } = useI18n()
+  const enabled = (platform === 'windows' || platform === 'linux') && isDesktopRuntime()
+  useWindowMaximizedState(enabled, setIsMaximized)
+  const [pending, setPending] = useState(false)
+  const busy = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const perform = (action: 'minimize' | 'maximize' | 'close') => {
+    if (busy.current) return
+    busy.current = true
+    setPending(true)
+    void getAppWindow()
+      .then(async (windowHandle) => {
+        if (!mounted.current || !windowHandle) return
+        if (action === 'minimize') await windowHandle.minimize()
+        else if (action === 'close') await windowHandle.close()
+        else {
+          const maximized = await windowHandle.isMaximized()
+          if (!mounted.current) return
+          if (maximized) await windowHandle.unmaximize()
+          else await windowHandle.maximize()
+        }
+      })
+      .catch((error: unknown) => {
+        rendererDiagnostics.warn('window.controls', 'native-action-failed', error)
+        if (mounted.current)
+          toast.error(
+            t(action === 'close' ? 'editor.flushBuffersFailed' : 'context.actionFailed'),
+            {
+              description: error instanceof Error ? error.message : String(error),
+            },
+          )
+      })
+      .finally(() => {
+        busy.current = false
+        if (mounted.current) setPending(false)
+      })
+  }
   const minimizeLabel = t('actions.minimize')
   const maximizeRestoreLabel = isMaximized ? t('actions.restore') : t('actions.maximize')
   const closeLabel = t('actions.close')
@@ -44,7 +90,7 @@ const WindowControls = ({
       : 'size-8 hover:bg-destructive hover:text-destructive-foreground',
   )
 
-  if ((platform !== 'windows' && platform !== 'linux') || !isDesktopRuntime()) {
+  if (!enabled) {
     return null
   }
 
@@ -52,6 +98,7 @@ const WindowControls = ({
     <div
       className="window-controls flex items-center"
       role="group"
+      aria-busy={pending}
       aria-label={t('actions.windowControls')}
     >
       <Separator orientation="vertical" className="mr-1 h-6" />
@@ -60,12 +107,8 @@ const WindowControls = ({
         variant="ghost"
         size="icon"
         className={captionButtonClassName}
-        onClick={async () => {
-          const windowHandle = await getAppWindow()
-          if (windowHandle) {
-            await windowHandle.minimize()
-          }
-        }}
+        disabled={pending}
+        onClick={() => perform('minimize')}
         aria-label={minimizeLabel}
         title={minimizeLabel}
       >
@@ -85,17 +128,8 @@ const WindowControls = ({
         variant="ghost"
         size="icon"
         className={captionButtonClassName}
-        onClick={async () => {
-          const windowHandle = await getAppWindow()
-          if (!windowHandle) return
-          const next = !(await windowHandle.isMaximized())
-          if (next) {
-            await windowHandle.maximize()
-          } else {
-            await windowHandle.unmaximize()
-          }
-          setIsMaximized(next)
-        }}
+        disabled={pending}
+        onClick={() => perform('maximize')}
         aria-label={maximizeRestoreLabel}
         title={maximizeRestoreLabel}
       >
@@ -117,12 +151,8 @@ const WindowControls = ({
         variant="ghost"
         size="icon"
         className={closeButtonClassName}
-        onClick={async () => {
-          const windowHandle = await getAppWindow()
-          if (windowHandle) {
-            await windowHandle.close()
-          }
-        }}
+        disabled={pending}
+        onClick={() => perform('close')}
         aria-label={closeLabel}
         title={closeLabel}
       >

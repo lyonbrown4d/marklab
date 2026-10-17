@@ -43,8 +43,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Chromium and browser dependencies
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run software-rendering performance gate
-        run: xvfb-run --auto-servernum pnpm test:perf:ci
+        run: pnpm test:perf:ci
 
       - name: Upload performance evidence
         if: ${{ !cancelled() }}
@@ -54,5 +57,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           path: |
-            test-results/electron-performance/
-            playwright-report/performance/
+            test-results/renderer/
+            playwright-report/renderer/
+
+  native-checks:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/native.yml
+    permissions:
+      contents: read

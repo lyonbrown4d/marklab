@@ -7,19 +7,18 @@ import {
   useEffect,
   useImperativeHandle,
   useState,
-  type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import WindowControls from '@/components/WindowControls'
 import AppCommandDialog from '@/components/AppCommandDialog'
 import TitlebarCommandDialogFallback from '@/components/TitlebarCommandDialogFallback'
-import { isDesktopRuntime } from '@/runtime/window'
 import type { TitlebarHandle, TitlebarProps } from '@/components/titlebar/titlebarTypes'
 import { useTitlebarCommandModel } from '@/components/titlebar/useTitlebarCommandModel'
 import {
   navigationBacklinkToSearchResult,
   navigationMissingLinkToSearchResult,
 } from '@/components/titlebar/titlebarCommandNavigation'
+import { useTitlebarDrag } from '@/components/titlebar/useTitlebarDrag'
 import { useTitlebarPlatform } from '@/components/titlebar/useTitlebarPlatform'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/useI18n'
@@ -166,21 +165,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       rootPath,
     })
 
-    const handleTitlebarMouseDown = useCallback(
-      (e: ReactMouseEvent) => {
-        if (!isDesktopRuntime() || platform !== 'macos') return
-        if (e.button !== 0) return
-        const target = e.target as HTMLElement
-        if (
-          target.closest(
-            'button, a, input, select, textarea, [role="button"], [role="menuitem"], [data-no-drag]',
-          )
-        )
-          return
-        void getAppWindow().then((windowHandle) => windowHandle?.startDragging())
-      },
-      [getAppWindow, platform],
-    )
+    const handleTitlebarMouseDown = useTitlebarDrag(platform, getAppWindow)
     return (
       <header
         data-app-focus-zone="titlebar"

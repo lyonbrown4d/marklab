@@ -19,6 +19,7 @@ vi.mock('@/services/fsApi', () => ({
   fsApi: {
     flushBuffers: vi.fn(),
     readFile: vi.fn(),
+    openBufferSnapshot: vi.fn(),
     updateBuffer: vi.fn(),
   },
 }))
@@ -108,6 +109,13 @@ describe('ExcalidrawEditorSurface', () => {
   })
 
   beforeEach(() => {
+    vi.mocked(fsApi.openBufferSnapshot).mockImplementation(async (path: string) => ({
+      content: await fsApi.readFile(path),
+      path,
+      revision: 0,
+      dirty: false,
+      session_generation: 1,
+    }))
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'
     vi.mocked(fsApi.flushBuffers).mockReset()
@@ -177,6 +185,7 @@ describe('ExcalidrawEditorSurface', () => {
       dirty: false,
       path: 'diagram.excalidraw',
       revision: 1,
+      session_generation: 1,
     })
     vi.mocked(fsApi.flushBuffers).mockResolvedValue(1)
 
@@ -191,6 +200,7 @@ describe('ExcalidrawEditorSurface', () => {
       expect(fsApi.updateBuffer).toHaveBeenCalledWith(
         'diagram.excalidraw',
         '{"type":"excalidraw","version":2,"source":"marklab","elements":[]}',
+        { path: 'diagram.excalidraw', revision: 0, dirty: false, session_generation: 1 },
       )
     })
     expect(fsApi.flushBuffers).toHaveBeenCalled()

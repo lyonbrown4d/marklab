@@ -50,6 +50,9 @@ This document records the current UI foundation decisions so future UI work uses
 
 ## Existing-style migration
 
+This section records the 2026-10-14 pre-Tauri styling verification. Its Electron
+startup and test counts are historical evidence, not current native acceptance.
+
 The 2026-10-14 migration covers loading/splash, standalone preview entries, shell
 and titlebar business components, tabs and status bars, terminal chrome, settings
 and theme previews, graph nodes, and workspace-map nodes. Layout and interaction

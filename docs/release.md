@@ -1,95 +1,60 @@
-# Release Packaging
+# Tauri Desktop Packaging
 
-Marklab uses Vite for the renderer, Electron main, and preload bundles. The
-release package step is intended to run after that build and produce desktop
-artifacts with `electron-builder`.
+The current runtime and bundler are Tauri 2. Node.js and pnpm are build tools;
+Electron, its Node backend, and its packaging commands have been removed.
+See [Tauri configuration and credentials](tauri-migration.md) for the complete
+platform and updater configuration.
 
-## Required Package
+## Build and artifact paths
 
-Install before using the package scripts:
-
-```sh
-pnpm add -D electron-builder
+```bash
+pnpm build:desktop # host release executable, without installers
+pnpm package       # build, then bundle for the host
+pnpm dist:mac      # macOS ARM app/dmg
+pnpm dist:win      # Windows x64 NSIS/MSI
+pnpm dist:linux    # Linux x64 AppImage/deb
 ```
 
-`electron-builder` creates the app bundles and installers.
+Install the Tauri platform prerequisites and build on the target OS. Host builds
+use `src-tauri/target/release/`; target-specific builds use
+`src-tauri/target/<target>/release/`. Installers live below `bundle/`. The native
+executable is `marklab-desktop` (`marklab-desktop.exe` on Windows).
 
-## Scripts
+## Release workflow
 
-- `pnpm build:desktop`: build `dist` and `dist-electron`.
-- `pnpm package`: create an unpacked app directory for local inspection.
-- `pnpm dist`: build distributable artifacts for the current host platform.
-- `pnpm dist:win`: build Windows `nsis` and `zip` artifacts.
-- `pnpm dist:mac`: build macOS `dmg` and `zip` artifacts.
-- `pnpm dist:linux`: build Linux `AppImage`, `deb`, and `tar.gz` artifacts.
+The release workflow validates the repository and matching package/Tauri/Cargo
+versions, runs the renderer coverage and Chromium smoke checks, then builds on
+Linux x64, macOS ARM, and Windows x64. Each native job runs formatting, strict
+Clippy and library tests before the official Tauri action uploads artifacts to a
+draft release. Publication remains a separate review step.
 
-All packaged artifacts are written to `release/`. Artifact names use:
+Updater private/public keys are required by the release preparation script.
+macOS additionally requires the configured Developer ID and notarization
+credentials. The script writes only public updater configuration to a temporary
+file. Source builds have no updater public key or endpoint and report updates
+unavailable until configured. An updater signature does not establish an OS code
+signature or prove that installation/update acceptance has been performed.
 
-```text
-Marklab-${version}-${os}-${arch}.${ext}
-```
+GitHub Actions is currently unavailable because the account is disabled. Workflow
+configuration is retained, but there is no successful hosted result for the
+current cleanup; local evidence and remaining platform checks must be reviewed.
 
-## Native Modules
+## Windows Authenticode
 
-Workspace knowledge and search run in the bundled Node.js utility-process
-entry. There is no native knowledge-engine binary, Cargo build, or
-`resources/engine` packaging step.
+Windows Authenticode signing is not configured. Existing Windows builds must not
+be described as signed because Tauri updater signing is enabled. Configuring a
+certificate and SHA-256 signing with RFC 3161 timestamping is a separate release
+prerequisite.
 
-`electron-builder` has `npmRebuild` disabled because a full native rebuild also
-tries to compile `@homebridge/node-pty-prebuilt-multiarch`, which is intended to
-ship prebuilt binaries and should not be forced through a local compiler during
-release packaging.
-
-The config also unpacks native module payloads from asar:
-
-- `@homebridge/node-pty-prebuilt-multiarch`
-
-The builder file list includes the app bundles plus the prebuilt terminal
-runtime package. This keeps native `.node` binaries loadable at runtime while
-avoiding a full production dependency copy.
-
-## Windows Signing
-
-Signed Windows releases use a certificate installed in the local user's Windows
-certificate store. CI remains unsigned and does not receive signing credentials.
-
-The certificate must be in `Cert:\CurrentUser\My` or
-`Cert:\LocalMachine\My`, be currently valid, include an accessible private key,
-and include the Code Signing EKU (`1.3.6.1.5.5.7.3.3`). List suitable
-certificates and copy the thumbprint:
+A verifier is available for a future signed build:
 
 ```powershell
-Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
-  Select-Object Subject, Thumbprint, NotAfter, HasPrivateKey
-Get-ChildItem Cert:\LocalMachine\My -CodeSigningCert |
-  Select-Object Subject, Thumbprint, NotAfter, HasPrivateKey
+./scripts/verify-windows-signatures.ps1 -ReleaseDirectory ./src-tauri/target/x86_64-pc-windows-msvc/release
 ```
 
-Set the thumbprint for the current shell and run the local signed package task:
-
-```powershell
-$env:MARKLAB_WINDOWS_CERTIFICATE_SHA1 = '<certificate-thumbprint>'
-pnpm dist:win:signed
-```
-
-The task validates the certificate before building, requires Electron Builder to
-sign, uses SHA-256 with an RFC 3161 timestamp, then verifies both the NSIS setup
-executable and `release/win-unpacked/Marklab.exe` with SignTool and
-`Get-AuthenticodeSignature`. Missing, expired, invalid, unsigned, or
-non-timestamped artifacts fail the task. A Windows SDK installation providing
-`signtool.exe` is required for verification; the script can also use Electron
-Builder's cached x64 SignTool.
-
-Normal `pnpm dist:win` builds remain unsigned for development. Private-key
-containers (`*.pfx` and `*.p12`) are ignored by Git even though this workflow
-does not read them directly.
-
-## Platform Notes
-
-- Windows builds produce an NSIS installer and a zip archive.
-- macOS builds produce a dmg and a zip archive. Signing and notarization are not
-  configured yet.
-- Linux builds produce AppImage, deb, and tar.gz artifacts.
-
-Cross-platform artifacts should be built on their target OS unless CI provides
-the necessary platform toolchain and signing assets.
+It locates SignTool only in the Windows SDK, requires the native executable and
+at least one NSIS/MSI installer, rejects ambiguous stale installer sets, and
+checks every artifact with SignTool and `Get-AuthenticodeSignature`. Unsigned,
+invalid or non-timestamped artifacts fail. This script does not sign files and
+has not been executed on Windows as part of the current cleanup. Private-key
+containers remain excluded from version control.

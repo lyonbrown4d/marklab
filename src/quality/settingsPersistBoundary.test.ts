@@ -1,32 +1,35 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
-
-const quotedKeys = (source: string) =>
-  Array.from(source.matchAll(/'([^']+)'/g), (match) => match[1]).sort()
-
-const pickBody = (source: string, typeName: string) => {
-  const match = source.match(new RegExp(`export type ${typeName} = Pick<[\\s\\S]*?>`))
-  if (!match) throw new Error(`Unable to find ${typeName}.`)
-  return match[0]
+const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8')
+const persistedPreferenceKeys = () => {
+  const source = fileText('../store/preferencesPersist.ts')
+  const pick = source.match(/export type PreferencesPersistedState = Pick<[\s\S]*?>/)
+  if (!pick) throw new Error('PreferencesPersistedState is missing')
+  return Array.from(pick[0].matchAll(/'([^']+)'/g), (match) => match[1]).sort()
 }
-
-const setBody = (source: string, exportName: string) => {
-  const match = source.match(
-    new RegExp(`export const ${exportName} = new Set\\(\\[[\\s\\S]*?\\]\\)`),
-  )
-  if (!match) throw new Error(`Unable to find ${exportName}.`)
-  return match[0]
+const rustPreferenceKeys = () => {
+  const source = fileText('../../src-tauri/src/settings/types.rs')
+  const branch = source.match(/"marklab\.preferences"\s*=>\s*Ok\(&\[([\s\S]*?)\]\)/)
+  if (!branch) throw new Error('Rust preference allowlist is missing')
+  return Array.from(branch[1].matchAll(/"([^"]+)"/g), (match) => match[1]).sort()
 }
 
 describe('settings persist boundary', () => {
-  it('keeps renderer preference persisted fields allowed by Electron settings storage', () => {
-    const rendererPreferences = fileText('../store/preferencesPersist.ts')
-    const electronSettingsKeys = fileText('../../electron/services/settingsPersistKeys.ts')
+  it('allows exactly the renderer persisted preferences in native SQLite storage', () => {
+    const keys = rustPreferenceKeys()
+    expect(keys).toEqual(persistedPreferenceKeys())
+    expect(new Set(keys).size).toBe(keys.length)
+  })
 
-    expect(quotedKeys(setBody(electronSettingsKeys, 'preferenceStateKeys'))).toEqual(
-      quotedKeys(pickBody(rendererPreferences, 'PreferencesPersistedState')),
+  it('applies the allowlist when writing and scopes workspace sessions by their owner', () => {
+    const storage = fileText('../../src-tauri/src/settings/mod.rs')
+    const commands = fileText('../../src-tauri/src/settings/commands.rs')
+    expect(storage).toContain('parsed.state.retain(|key, _| keys.contains(&key.as_str()))')
+    expect(storage).toContain('self.write_session(session, parsed, None, true)')
+    expect(commands).toContain('window.label()')
+    expect(fileText('../../src-tauri/src/settings/tests.rs')).toContain(
+      'windows_remain_isolated_and_old_saves_do_not_select_the_workspace',
     )
   })
 })

@@ -4,74 +4,59 @@ tasks:
     inputs:
       - tsconfig*.json
       - src/**/*
-      - electron/**/*
       - scripts/**/*
       - '*.ts'
       - package.json
       - pnpm-lock.yaml
     options:
       cache: true
-
   test:
     command: pnpm test:coverage:critical
     inputs:
       - src/**/*
-      - electron/**/*
       - vite.config.ts
       - package.json
       - pnpm-lock.yaml
     options:
       cache: false
-
   test-ui:
-    command: pnpm exec playwright test
+    command: pnpm test:tauri:e2e
     options:
       cache: false
-
-  test-electron:
-    command: pnpm exec playwright test --config playwright.electron.config.ts
-    options:
-      cache: false
-
   test-performance-software:
     command: pnpm test:perf:software
     inputs:
       - e2e/performance/**/*
-      - electron/**/*
       - src/**/*
-      - playwright.performance.config.ts
+      - playwright.renderer.config.ts
+      - e2e/renderer/**/*
       - package.json
       - pnpm-lock.yaml
     options:
       cache: false
-
   test-knowledge-integration:
-    command: pnpm exec vitest run electron/services/knowledgeEngine
+    command: pnpm test:knowledge:integration
     inputs:
-      - electron/services/knowledgeEngine/**/*
-      - electron/services/workspace/**/*
-      - package.json
-      - pnpm-lock.yaml
+      - src-tauri/src/analysis/**/*
+      - src-tauri/src/workspace/**/*
+      - src-tauri/Cargo.toml
+      - src-tauri/Cargo.lock
     options:
       cache: false
-
   lint:
     command: pnpm exec eslint .
     inputs:
       - src/**/*
-      - electron/**/*
       - scripts/**/*
       - eslint.config.ts
       - package.json
       - pnpm-lock.yaml
     options:
       cache: false
-
   lint-fix:
     command: pnpm exec eslint . --fix
     options:
       cache: false
-
   quality-impact:
     command: pnpm quality:impact
     inputs:
@@ -82,18 +67,16 @@ tasks:
       - moon.yml
     options:
       cache: false
-
   quality-line-limits:
     command: pnpm quality:line-limits
     inputs:
-      - electron/**/*
+      - src-tauri/src/**/*
       - e2e/**/*
       - scripts/**/*
       - src/**/*
       - package.json
     options:
       cache: false
-
   icons-generate:
     command: node --experimental-strip-types scripts/generate-app-icons.ts
     inputs:
@@ -101,139 +84,61 @@ tasks:
       - resources/icon-sources/*.svg
     outputs:
       - resources/icons/**/*
-
   prepare:
     deps:
       - ~:icons-generate
     inputs: []
     options:
       cache: false
-
   prepare-dev:
     deps:
       - ~:icons-generate
     inputs: []
     options:
       cache: false
-
-  electron-dev:
-    command: node --experimental-strip-types scripts/run-electron-dev.ts
-    inputs:
-      - scripts/run-electron-dev.ts
-      - vite.config.ts
-      - package.json
-      - pnpm-lock.yaml
+  tauri-dev:
+    command: pnpm exec tauri dev
     deps:
       - ~:prepare-dev
     options:
       cache: false
       persistent: true
-
-  electron-build:
-    command: pnpm electron:build:artifacts
+  build:
+    command: pnpm exec tauri build --no-bundle
     deps:
       - ~:prepare
-    inputs:
-      - src/**/*
-      - electron/**/*
-      - public/**/*
-      - index.html
-      - splashscreen.html
-      - scripts/build-electron.ts
-      - vite*.ts
-      - postcss.config.ts
-      - tailwind.config.ts
-      - tsconfig*.json
-      - package.json
-      - pnpm-lock.yaml
-    outputs:
-      - dist/**/*
-      - dist-electron/**/*
-
-  build:
-    deps:
-      - ~:typecheck
-      - ~:electron-build
-    inputs: []
     options:
       cache: false
-      runDepsInParallel: false
-
   package:
-    command: pnpm exec electron-builder --dir --publish never
+    command: pnpm exec tauri bundle
     deps:
       - ~:build
-    inputs:
-      - package.json
-      - pnpm-lock.yaml
-      - dist/**/*
-      - dist-electron/**/*
-      - resources/icons/**/*
-    outputs:
-      - release/**/*
     options:
       cache: false
-
   dist:
-    command: pnpm exec electron-builder --publish never
     deps:
-      - ~:build
-    inputs:
-      - package.json
-      - pnpm-lock.yaml
-      - dist/**/*
-      - dist-electron/**/*
-      - resources/icons/**/*
-    outputs:
-      - release/**/*
+      - ~:package
     options:
       cache: false
-
   dist-win:
-    command: pnpm exec electron-builder --win --publish never
+    command: pnpm exec tauri build --target x86_64-pc-windows-msvc --bundles nsis,msi
     deps:
-      - ~:build
-    inputs:
-      - package.json
-      - pnpm-lock.yaml
-      - dist/**/*
-      - dist-electron/**/*
-      - resources/icons/**/*
-    outputs:
-      - release/**/*
+      - ~:prepare
     options:
       cache: false
-
   dist-mac:
-    command: pnpm exec electron-builder --mac --publish never
+    command: pnpm exec tauri build --target aarch64-apple-darwin --bundles app,dmg
     deps:
-      - ~:build
-    inputs:
-      - package.json
-      - pnpm-lock.yaml
-      - dist/**/*
-      - dist-electron/**/*
-      - resources/icons/**/*
-    outputs:
-      - release/**/*
+      - ~:prepare
     options:
       cache: false
-
   dist-linux:
-    command: pnpm exec electron-builder --linux --publish never
+    command: pnpm exec tauri build --target x86_64-unknown-linux-gnu --bundles
+      appimage,deb
     deps:
-      - ~:build
-    inputs:
-      - package.json
-      - pnpm-lock.yaml
-      - dist/**/*
-      - dist-electron/**/*
-      - resources/icons/**/*
-    outputs:
-      - release/**/*
+      - ~:prepare
     options:
       cache: false
-
   check:
     deps:
       - ~:quality-impact

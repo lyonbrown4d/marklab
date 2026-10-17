@@ -1,5 +1,7 @@
 # Electron 启动与资源优化验证
 
+> 历史记录：本页数据与命令对应当时的 Electron 实现。该实现、构建配置和测试入口现已移除；保留原始测量，不作为当前 Tauri 或 Chromium renderer 的验收结果。当前验证范围见[质量检查](../quality-gates.md)。
+
 本轮以 `d67d3ed` 为基线，针对 Electron 官方性能建议中“延后非必要加载”和“避免阻塞主进程”落地六项优化。没有新增运行时依赖、生产调试接口或通用 IPC 能力。
 
 参考：[Electron Performance](https://www.electronjs.org/docs/latest/tutorial/performance)。

@@ -1,4 +1,4 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 export type RuntimeWebviewDropEvent = {
   paths: string[]
   position: {
@@ -9,6 +9,6 @@ export type RuntimeWebviewDropEvent = {
 export const onRuntimeWebviewFileDrop = async (
   handler: (event: RuntimeWebviewDropEvent) => void,
 ): Promise<(() => void) | null> => {
-  const electron = getElectronRuntime()
-  return electron?.webview?.onFileDrop?.(handler) ?? null
+  const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
+  return desktop?.webview?.onFileDrop?.(handler) ?? null
 }

@@ -25,7 +25,7 @@ const legacyOversizedFiles: string[] = [
 ]
 
 export default defineConfig([
-  globalIgnores(['dist', 'dist-electron', 'node_modules', 'target', '**/.astro/**', '**/dist/**']),
+  globalIgnores(['dist', 'node_modules', '**/target/**', '**/.astro/**', '**/dist/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -54,7 +54,7 @@ export default defineConfig([
           patterns: [
             {
               group: ['./*', '../*'],
-              message: 'Use @ or @electron path aliases instead of relative TypeScript imports.',
+              message: 'Use the @ path alias instead of relative TypeScript imports.',
             },
           ],
         },
@@ -63,7 +63,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/**/*.{ts,tsx}', 'electron/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
         projectService: true,

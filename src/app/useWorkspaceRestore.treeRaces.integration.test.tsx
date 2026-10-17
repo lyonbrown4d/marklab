@@ -30,6 +30,7 @@ vi.mock('@/runtime/rendererLifecycle', async (original) => ({
 vi.mock('@/app/workspaceRestoreReady', () => ({ reportWorkspaceRendererReady: lifecycle.ready }))
 vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
   runInDesktop: async (callback: () => Promise<unknown>) => callback(),
 }))
 vi.mock('@/app/editorCloseLifecycle', () => ({ flushEditorChanges: vi.fn(async () => undefined) }))

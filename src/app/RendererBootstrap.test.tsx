@@ -11,8 +11,8 @@ const runtime = vi.hoisted(() => ({
   retry: vi.fn(async () => ({ ok: true })),
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({
     appReady: runtime.appReady,
     window: {
       onPresented: (handler: () => void) => {
@@ -25,7 +25,7 @@ vi.mock('@/runtime/electron', () => ({
       retry: runtime.retry,
     },
   }),
-  isElectronRuntime: () => true,
+  isDesktopRuntime: () => true,
 }))
 
 describe('RendererBootstrap', () => {

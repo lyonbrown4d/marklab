@@ -5,9 +5,9 @@ import type { WorkspaceTab } from '@/store/appTypes'
 
 const closeNativeWebTab = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({ webTabs: { close: closeNativeWebTab } }),
-  isElectronRuntime: () => true,
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({ webTabs: { close: closeNativeWebTab } }),
+  isDesktopRuntime: () => true,
 }))
 
 describe('useWorkspaceTabActions workspace map', () => {

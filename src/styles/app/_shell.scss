@@ -71,14 +71,6 @@
     0 12px 28px -24px color-mix(in srgb, hsl(var(--foreground)) 22%, transparent);
 }
 
-// Native Electron drag regions and portaled Sheet overlay coordination.
-.immersive-titlebar-chrome button,
-.immersive-titlebar-chrome [data-no-drag],
-.immersive-edge-handle,
-.immersive-drawer {
-  -webkit-app-region: no-drag;
-}
-
 [data-slot='sheet-overlay']:has(+ [data-slot='sheet-content'][data-overlay='hidden']) {
   display: none;
 }

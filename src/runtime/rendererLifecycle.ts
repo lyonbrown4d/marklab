@@ -2,6 +2,7 @@ import { signalAppReady } from '@/runtime/app'
 import { listen } from '@/runtime/events'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 import type { RendererReadySignal } from '@/types/rendererReady'
+import { nextRendererFrame } from '@/runtime/rendererFrame'
 
 export type WorkspaceSessionSeedPayload = {
   state?: Record<string, unknown>
@@ -88,9 +89,6 @@ export const signalRendererReady = async (signal: RendererReadySignal): Promise<
   if (signal.phase === 'workspace-interactive') notifyRendererInteractive()
 }
 
-const nextAnimationFrame = (): Promise<void> =>
-  new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
-
 const INITIAL_CONTENT_LOADING_SELECTOR =
   '[data-editor-loading="true"], [data-testid="markdown-editor"][data-state="loading"]'
 const INITIAL_CONTENT_READY_TIMEOUT_MS = 30_000
@@ -122,8 +120,8 @@ const waitForInitialContentReady = (): Promise<void> => {
 }
 
 export const waitForWorkspaceInteractivePaint = async (): Promise<void> => {
-  await nextAnimationFrame()
-  await nextAnimationFrame()
+  await nextRendererFrame()
+  await nextRendererFrame()
   await waitForInitialContentReady()
-  await nextAnimationFrame()
+  await nextRendererFrame()
 }

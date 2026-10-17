@@ -136,7 +136,7 @@ Scope:
 - Keep editor navigation actions source-compatible: clicking outline,
   backlinks, mentions, or problems should jump to the file and source position
   without requiring a custom block model.
-- Use sidecar/workspace-index data for cross-file information and only parse the
+- Use the Rust analysis/workspace index for cross-file information and only parse the
   active dirty buffer locally when needed for immediate editing feedback.
 
 Validation:
@@ -170,29 +170,27 @@ Validation:
 - Keep large graph rendering incremental and avoid eager workspace-wide React
   rerenders.
 
-Sidecar migration contract:
+Native analysis boundary:
 
 - Markdown parsing, workspace graph derivation, outline graph derivation,
   diagnostics, and search are pure projections from document content plus known
-  workspace paths, so they can move behind the existing worker/sidecar boundary.
-- The sidecar should output a stable canonical Markdown graph snapshot: files,
+  workspace paths, so they run in the Rust analysis/language services behind typed commands.
+- Rust analysis should output a stable canonical Markdown graph snapshot: files,
   headings, links, anchors, source ranges, content blocks, and semantic edge
   kinds such as `contains`, `links_to`, and `references_heading`.
-- The sidecar must not output ReactFlow-specific layout, viewport, curve,
+- Rust analysis must not output ReactFlow-specific layout, viewport, curve,
   selection, hover, or animation data; those are renderer responsibilities.
-- Electron main should keep ownership of workspace root state, filesystem reads,
+- Rust workspace services keep ownership of workspace root state, filesystem reads,
   dirty-buffer merging, known path collection, path validation, and DTO
-  conversion between sidecar contracts and renderer-facing IPC contracts.
-- Electron main may use worker threads or child processes for expensive buffer
-  assembly and DTO conversion, but it should not grow a duplicate Markdown
-  parser once sidecar parity is reached.
+  conversion between Rust domain results and renderer-facing command DTOs.
+- CPU-heavy assembly and parsing use bounded blocking jobs outside the async
+  event loop. Reuse the Rust document parser instead of adding a parallel parser.
 - Regression coverage should preserve heading-link graph semantics, outline
   hierarchy, heading content ranges, parsed outline content blocks, dirty-buffer
-  outline input, sidecar document/known-path handoff, and no-fallback behavior on
-  sidecar graph failures.
-- Cleanup should avoid duplicate parser implementations in the renderer; keep
-  `workspaceAnalysisService` as an orchestration layer and remove TypeScript
-  parser code only after sidecar parity tests pass.
+  outline input, document/known-path handoff, and explicit native graph errors.
+- Renderer services orchestrate typed analysis calls; workspace-wide parsing and
+  indexing remain native. Editor serialization and its Markdown worker retain
+  their separate rendering responsibility.
 
 ### 3. All Pages
 

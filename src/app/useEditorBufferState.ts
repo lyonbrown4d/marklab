@@ -56,6 +56,7 @@ export const editorBufferIdentity = (workspace: string, path: string) =>
 export const createEditorBufferPersistence = (onUpdateSettled?: () => void) => {
   const pendingUpdates = new Map<Promise<void>, string>()
   const updateFailures = new Map<string, unknown>()
+  const updateTokens = new Map<string, object>()
   const revisions = new Map<string, EditorRevisionSnapshot>()
   let activeFlush: Promise<void> | null = null
   let updateSequence = 0
@@ -63,15 +64,20 @@ export const createEditorBufferPersistence = (onUpdateSettled?: () => void) => {
   const trackUpdate = (operation: Promise<void>, identity = '') => {
     updateSequence += 1
     pendingUpdates.set(operation, identity)
+    const token = {}
+    updateTokens.set(identity, token)
     void operation.then(
       () => {
         pendingUpdates.delete(operation)
-        updateFailures.delete(identity)
+        if (updateTokens.get(identity) === token) {
+          updateFailures.delete(identity)
+          updateTokens.delete(identity)
+        }
         onUpdateSettled?.()
       },
       (error) => {
         pendingUpdates.delete(operation)
-        updateFailures.set(identity, error)
+        if (updateTokens.get(identity) === token) updateFailures.set(identity, error)
         onUpdateSettled?.()
       },
     )
@@ -127,6 +133,11 @@ export const createEditorBufferPersistence = (onUpdateSettled?: () => void) => {
     isPending: (identity: string) =>
       revisions.has(identity) || [...pendingUpdates.values()].includes(identity),
     clearRevisions: () => revisions.clear(),
+    resetDocument: (identity: string) => {
+      revisions.delete(identity)
+      updateFailures.delete(identity)
+      updateTokens.delete(identity)
+    },
     deleteRevision,
     flush,
     revisionFor,

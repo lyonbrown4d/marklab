@@ -1,9 +1,4 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 export type RuntimeCommandArgs = Record<string, unknown>
-export const invoke = <T = unknown>(command: string, args?: RuntimeCommandArgs): Promise<T> => {
-  const electron = getElectronRuntime()
-  if (!electron?.commands?.invoke) {
-    return Promise.reject(new Error(`Electron command bridge is not available: ${command}`))
-  }
-  return electron.commands.invoke<T>(command, args)
-}
+export const invoke = async <T = unknown>(command: string, args?: RuntimeCommandArgs): Promise<T> =>
+  getDesktopRuntime().commands.invoke<T>(command, args)

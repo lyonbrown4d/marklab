@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import { workspaceSyncApi } from '@/services/workspaceSyncApi'
 
-vi.mock('@/runtime/electron', () => ({ getElectronRuntime: vi.fn() }))
+vi.mock('@/runtime/desktop', () => ({ isDesktopRuntime: () => true, getDesktopRuntime: vi.fn() }))
 
 describe('workspaceSyncApi start outcomes', () => {
   const start = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getElectronRuntime).mockReturnValue({ workspaceSync: { start } } as never)
+    vi.mocked(getDesktopRuntime).mockReturnValue({ workspaceSync: { start } } as never)
   })
 
   it('unwraps a completed sync result', async () => {

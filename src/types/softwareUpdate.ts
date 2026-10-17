@@ -1,4 +1,4 @@
-export type ElectronUpdateStatus =
+export type DesktopUpdateStatus =
   | 'idle'
   | 'checking'
   | 'available'
@@ -9,21 +9,21 @@ export type ElectronUpdateStatus =
   | 'error'
   | 'unavailable'
 
-export type ElectronUpdateInfo = {
+export type DesktopUpdateInfo = {
   releaseDate?: string
   releaseName?: string
   releaseNotes?: string
   version: string
 }
 
-export type ElectronUpdateProgress = {
+export type DesktopUpdateProgress = {
   bytesPerSecond: number
   percent: number
   transferred: number
   total: number
 }
 
-export type ElectronUpdateError = {
+export type DesktopUpdateError = {
   code:
     | 'CHECK_FAILED'
     | 'DOWNLOAD_FAILED'
@@ -35,20 +35,20 @@ export type ElectronUpdateError = {
   operation: 'availability' | 'check' | 'download' | 'install' | 'install-on-quit'
 }
 
-export type ElectronUpdateState = {
+export type DesktopUpdateState = {
   currentVersion: string
-  error?: ElectronUpdateError
-  info?: ElectronUpdateInfo
+  error?: DesktopUpdateError
+  info?: DesktopUpdateInfo
   installOnQuit: boolean
-  progress?: ElectronUpdateProgress
-  status: ElectronUpdateStatus
+  progress?: DesktopUpdateProgress
+  status: DesktopUpdateStatus
 }
 
-export type ElectronUpdateResult = ElectronUpdateState & {
+export type DesktopUpdateResult = DesktopUpdateState & {
   ok: boolean
 }
 
-export type ElectronUpdateEvent = ElectronUpdateState & {
+export type DesktopUpdateEvent = DesktopUpdateState & {
   event:
     | 'checking'
     | 'available'

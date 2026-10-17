@@ -6,14 +6,14 @@ const persist = vi.hoisted(() => ({
   setItem: vi.fn<(key: string, value: unknown) => Promise<{ ok: true }>>(),
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({ settings: { persist } }),
-  isElectronRuntime: () => true,
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({ settings: { persist } }),
+  isDesktopRuntime: () => true,
 }))
 
-import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { createDesktopSettingsJsonStorage } from '@/store/persistStorage'
 
-describe('createElectronSettingsJsonStorage', () => {
+describe('createDesktopSettingsJsonStorage', () => {
   beforeEach(() => {
     persist.getItem.mockReset().mockResolvedValue(null)
     persist.removeItem.mockReset().mockResolvedValue({ ok: true })
@@ -21,7 +21,7 @@ describe('createElectronSettingsJsonStorage', () => {
   })
 
   it('does not repeat native writes when the partialized value is unchanged', async () => {
-    const storage = createElectronSettingsJsonStorage<{ count: number }>()
+    const storage = createDesktopSettingsJsonStorage<{ count: number }>()
     const value = { state: { count: 1 }, version: 0 }
 
     await storage?.setItem('workspace', value)
@@ -32,7 +32,7 @@ describe('createElectronSettingsJsonStorage', () => {
   })
 
   it('allows the same value to be written again after removal', async () => {
-    const storage = createElectronSettingsJsonStorage<{ count: number }>()
+    const storage = createDesktopSettingsJsonStorage<{ count: number }>()
     const value = { state: { count: 1 }, version: 0 }
 
     await storage?.setItem('workspace', value)
@@ -50,7 +50,7 @@ describe('createElectronSettingsJsonStorage', () => {
           resolveHydration = resolve
         }),
     )
-    const storage = createElectronSettingsJsonStorage<{ recentProjects: string[] }>()
+    const storage = createDesktopSettingsJsonStorage<{ recentProjects: string[] }>()
     const restored = { state: { recentProjects: ['D:/workspace'] }, version: 1 }
     const premature = { state: { recentProjects: [] }, version: 1 }
     let persisted: unknown = restored

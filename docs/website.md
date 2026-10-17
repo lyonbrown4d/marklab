@@ -6,7 +6,7 @@
 
 ```text
 website → Astro / Starlight / Tailwind
-desktop → Electron / React / 编辑器与本地服务
+desktop → Tauri / Rust / React / 编辑器与本地服务
 ```
 
 两者不互相导入运行时代码。官网新增依赖只声明在 `website/package.json`；共享根目录的锁文件、Node 版本和 pnpm 版本约束。

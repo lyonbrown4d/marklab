@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ElectronUpdateEvent, ElectronUpdateState } from '@/runtime/electron'
+import type { DesktopUpdateEvent, DesktopUpdateState } from '@/runtime/desktop'
 import SoftwareUpdateSettingsSection from '@/components/settings/SoftwareUpdateSettingsSection'
 
 vi.mock('@/i18n/useI18n', () => ({
@@ -17,15 +17,15 @@ const updates = vi.hoisted(() => ({
   setInstallOnQuit: vi.fn(),
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({ updates }),
-  isElectronRuntime: () => true,
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({ updates }),
+  isDesktopRuntime: () => true,
 }))
 
-let updateHandler: ((event: ElectronUpdateEvent) => void) | undefined
+let updateHandler: ((event: DesktopUpdateEvent) => void) | undefined
 const unsubscribe = vi.fn()
 
-const idleState = (): ElectronUpdateState => ({
+const idleState = (): DesktopUpdateState => ({
   currentVersion: '0.2.4',
   installOnQuit: false,
   status: 'idle',
@@ -47,7 +47,7 @@ describe('SoftwareUpdateSettingsSection', () => {
   })
 
   it('shows loading, current version, and every service status', async () => {
-    let resolveState!: (state: ElectronUpdateState) => void
+    let resolveState!: (state: DesktopUpdateState) => void
     updates.getState.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveState = resolve

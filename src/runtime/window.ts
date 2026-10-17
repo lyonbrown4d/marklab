@@ -1,4 +1,4 @@
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 export type RuntimeWindowHandle = {
   minimize: () => Promise<void>
   maximize: () => Promise<void>
@@ -7,28 +7,21 @@ export type RuntimeWindowHandle = {
   close: () => Promise<void>
   startDragging: () => Promise<void>
 }
-export const isDesktopRuntime = () => {
-  return isElectronRuntime()
-}
+export { isDesktopRuntime } from '@/runtime/desktop'
+
 export const onWindowPresented = (handler: () => void): (() => void) => {
-  if (isElectronRuntime()) {
-    const onPresented = getElectronRuntime().window.onPresented
-    if (typeof onPresented === 'function') return onPresented(handler)
-    // A renderer can hot-reload while the old preload is still installed.
-    // Keep that development session usable until Electron is restarted.
-  }
+  if (isDesktopRuntime()) return getDesktopRuntime().window.onPresented(handler)
   handler()
   return () => {}
 }
-export const getCurrentRuntimeWindow = async (): Promise<RuntimeWindowHandle | null> => {
-  const electron = getElectronRuntime()
-  if (electron) return electron.window
-  return null
-}
+export const getCurrentRuntimeWindow = async (): Promise<RuntimeWindowHandle | null> =>
+  isDesktopRuntime() ? getDesktopRuntime().window : null
 
 export const setVimKeyboardOwnership = async (active: boolean): Promise<void> => {
-  if (!isElectronRuntime()) return
-  const api = getElectronRuntime().window.setVimKeyboardOwnership
-  // A development hot reload may still use the previous preload.
-  if (typeof api === 'function') await api(active)
+  if (isDesktopRuntime()) await getDesktopRuntime().window.setVimKeyboardOwnership(active)
 }
+
+export const onWindowMaximizedChanged = async (
+  handler: (maximized: boolean) => void,
+): Promise<() => void> =>
+  isDesktopRuntime() ? getDesktopRuntime().window.onMaximizedChanged(handler) : () => {}

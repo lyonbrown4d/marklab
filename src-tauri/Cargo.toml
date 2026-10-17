@@ -1,0 +1,112 @@
+[package]
+name = "marklab-desktop"
+version = "0.2.8"
+description = "Marklab desktop application"
+authors = ["Marklab"]
+edition = "2024"
+rust-version = "1.99.1"
+
+[lib]
+name = "marklab_desktop"
+crate-type = ["rlib"]
+
+[features]
+e2e-testing = ["dep:tauri-plugin-wdio-webdriver", "tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.4", features = ["unstable"] }
+tauri-plugin-dialog = "2.8.3"
+tauri-plugin-opener = "2.7.2"
+tauri-plugin-clipboard-manager = "2.5.0"
+tauri-plugin-deep-link = "2.6.2"
+tauri-plugin-single-instance = { version = "2.5.4", features = ["deep-link"] }
+tauri-plugin-log = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-wdio-webdriver = { version = "=1.5.0", optional = true }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1.53.3", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono"] }
+portable-pty = "0.9"
+sha2 = "0.10"
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+notify = "8.2.0"
+ignore = "0.4.33"
+pulldown-cmark = "0.13.4"
+regex = "1"
+strsim = "0.11.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream", "form"] }
+url = "2.5.8"
+base64 = "0.22"
+bytes = "1"
+mime_guess = "2.0.5"
+pathdiff = "0.2"
+percent-encoding = "2"
+git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl"] }
+futures-util = "0.3"
+fluxdi = { version = "=2.0.0", default-features = false, features = ["macros", "thread-safe", "async-factory"] }
+moka = { version = "0.12.16", default-features = false, features = ["future", "sync"] }
+clipboard-rs = { version = "0.3.5", default-features = false, features = ["wayland"] }
+cssparser = "0.38"
+log = "0.4"
+keyring = "4.2.0"
+tempfile = "3.27.0"
+quick-xml = { version = "0.40", features = ["serialize"] }
+typst = "0.15"
+typst-layout = "0.15"
+typst-pdf = "0.15"
+typst-render = "0.15"
+mitex = "0.2.4"
+merman-core = "0.7.0"
+typst-as-lib = { version = "0.16.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
+docx-rs = "0.4.22"
+same-file = "1"
+trash = "5"
+unicode-normalization = "0.1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+scraper = "0.27"
+ammonia = "4.1"
+imagesize = "0.15"
+rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io"] }
+rig-core = { version = "=0.44.0", default-features = false }
+rig-reqwest = { version = "=0.44.0", default-features = false, features = ["rustls"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-plugin-macos-fps = "0.1.0"
+objc2 = "0.6.4"
+block2 = "0.6.2"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSBundle", "NSData", "NSDictionary", "NSError", "NSString", "NSValue"] }
+objc2-web-kit = { version = "0.3.2", default-features = false, features = ["std", "WKWebView", "WKSnapshotConfiguration", "WKNavigation", "objc2-app-kit", "block2"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSEvent", "NSResponder", "NSView", "NSWindow", "block2"] }
+objc2-user-notifications = { version = "0.3.2", default-features = false, features = ["std", "block2", "UNUserNotificationCenter", "UNNotification", "UNNotificationContent", "UNNotificationRequest", "UNNotificationResponse", "UNNotificationSettings", "UNNotificationSound", "UNNotificationCategory", "UNNotificationAction", "UNNotificationTrigger"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+webview2-com = "0.39.1"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Memory", "UI_Notifications", "Data_Xml_Dom", "Foundation", "Win32_UI_Notifications", "Win32_UI_Shell", "Win32_System_Registry", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Variant", "Win32_System_WinRT"] }
+
+windows-core = "0.62"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2.0.2", features = ["v2_40"] }
+gtk = "0.18"
+cairo-rs = { version = "0.18", features = ["png"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = true
+
+[dev-dependencies]
+rmcp = { version = "3.5.1", default-features = false, features = ["client"] }
+tauri = { version = "2.12.4", features = ["test"] }
+tempfile = "3.27.0"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }

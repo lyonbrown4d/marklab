@@ -10,8 +10,8 @@ import {
   resolveDrawioEmbedUrl,
   serializeDrawioMessage,
 } from '@/logic/drawioEmbed'
-import { drawioDocumentApi } from '@/services/drawioDocumentApi'
-import { fsApi } from '@/services/fsApi'
+import { createDrawioDocumentSession, drawioDocumentApi } from '@/services/drawioDocumentApi'
+import { fsApi, type FsBufferSnapshot } from '@/services/fsApi'
 import { useDrawioSettingsStore } from '@/store/useDrawioSettingsStore'
 import { useI18n } from '@/i18n/useI18n'
 import AppAlert from '@/components/AppAlert'
@@ -56,10 +56,18 @@ const DrawioEditorSurface = ({
   const remoteEnabled = drawioEditorMode === 'remote' && embedUrl.ok
   const sessionKey = `${workspaceKey}:${path}:${src ?? 'worktree'}:${embedUrl.ok ? embedUrl.url : 'unavailable'}`
   const sessionKeyRef = useLatest(sessionKey)
-  const documentQuery = useQuery({
+  const documentSession = useMemo(
+    () => createDrawioDocumentSession(workspaceKey, path),
+    [workspaceKey, path],
+  )
+  const documentQuery = useQuery<{ content: string; snapshot: FsBufferSnapshot | null }>({
     queryKey: ['drawio-document', rootKind, rootPath, path, ...(src ? [src] : [])],
     queryFn: () =>
-      src ? readPreviewTextAsset(src).then((value) => value.content) : drawioDocumentApi.load(path),
+      src
+        ? readPreviewTextAsset(src).then((value) => ({ content: value.content, snapshot: null }))
+        : drawioDocumentApi
+            .load(path)
+            .then((snapshot) => ({ content: snapshot.content, snapshot })),
     enabled: remoteEnabled,
     gcTime: 0,
     staleTime: 0,
@@ -91,7 +99,7 @@ const DrawioEditorSurface = ({
       setSaveState(flush ? 'saving' : 'dirty')
       setMessage(flush ? t('preview.drawioSaving') : t('preview.drawioUnsaved'))
       try {
-        const result = await drawioDocumentApi.save({ flush, path, xml })
+        const result = await documentSession.save(xml, flush)
         if (sessionKeyRef.current !== sourceSession) return
         setSaveState(result.dirty ? 'dirty' : 'clean')
         setMessage(result.dirty ? t('preview.drawioUnsaved') : t('preview.drawioSaved'))
@@ -104,7 +112,7 @@ const DrawioEditorSurface = ({
         postToFrame(createDrawioStatusMessage(errorMessage, true))
       }
     },
-    [path, postToFrame, readonly, sessionKeyRef, t],
+    [documentSession, postToFrame, readonly, sessionKeyRef, t],
   )
 
   useEffect(() => {
@@ -160,6 +168,10 @@ const DrawioEditorSurface = ({
   ])
 
   useEffect(() => {
+    if (documentQuery.data?.snapshot) documentSession.seed(documentQuery.data.snapshot)
+  }, [documentQuery.data, documentQuery.dataUpdatedAt, documentSession])
+
+  useEffect(() => {
     if (!remoteEnabled || !embedUrl.ok || !frameReady || documentQuery.data == null) return
 
     const loadKey = `${sessionKey}:${documentQuery.dataUpdatedAt}`
@@ -168,12 +180,13 @@ const DrawioEditorSurface = ({
     postToFrame(
       createDrawioLoadMessage({
         title,
-        xml: documentQuery.data,
+        xml: documentQuery.data.content,
       }),
     )
   }, [
     documentQuery.data,
     documentQuery.dataUpdatedAt,
+    documentSession,
     embedUrl,
     frameReady,
     path,

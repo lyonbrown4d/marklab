@@ -1,4 +1,4 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 export type RuntimeUnlistenFn = () => void
 export type RuntimeEvent<T> = {
   event: string
@@ -38,16 +38,9 @@ export const listen = <T>(
   options?: RuntimeListenOptions,
 ): Promise<RuntimeUnlistenFn> => {
   void options
-  const electron = getElectronRuntime()
-  if (electron?.events?.listen) {
-    return Promise.resolve(electron.events.listen<T>(event, handler))
-  }
-  if (event === 'menu-action' && electron?.menu.onCommand) {
-    return Promise.resolve(
-      electron.menu.onCommand((id) => {
-        handler(toRuntimeEvent(event, id as T))
-      }),
-    )
+  const desktop = isDesktopRuntime() ? getDesktopRuntime() : null
+  if (desktop) {
+    return Promise.resolve(desktop.events.listen<T>(event, handler))
   }
   if (typeof window !== 'undefined') {
     const domEventName = `marklab:${event}`
@@ -60,10 +53,6 @@ export const listen = <T>(
   return Promise.resolve(() => {})
 }
 export const emit = <T>(event: string, payload?: T): Promise<void> => {
-  const electron = getElectronRuntime()
-  if (electron?.events?.emit) {
-    return Promise.resolve(electron.events.emit(event, payload))
-  }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(`marklab:${event}`, { detail: payload }))
   }

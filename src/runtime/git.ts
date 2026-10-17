@@ -3,7 +3,7 @@ import type { GitConflictSaveRequest } from '@/types/gitConflicts'
 import type { GitOpenFileRequest } from '@/types/gitPreview'
 
 type Scope = string | undefined
-export type ElectronGitApi = {
+export type DesktopGitApi = {
   openFile: (request: GitOpenFileRequest, expectedRoot?: Scope) => Promise<unknown>
   discover: (expectedRoot?: Scope) => Promise<unknown>
   init: (expectedRoot?: Scope) => Promise<unknown>
