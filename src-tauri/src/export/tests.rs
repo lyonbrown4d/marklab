@@ -247,7 +247,7 @@ fn docx_images_and_footnotes_fit_narrow_page_text_area_without_stretching() {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("DOCX ZIP");
     let image_name = archive
         .file_names()
-        .find(|name| name.starts_with("word/media/"))
+        .find(|name| name.starts_with("word/media/") && name.ends_with(".png"))
         .expect("embedded chart")
         .to_owned();
     let mut png = Vec::new();
