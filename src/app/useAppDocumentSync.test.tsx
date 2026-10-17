@@ -26,7 +26,10 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('@/app/useDesktopReadySignal', () => ({ useDesktopReadySignal: vi.fn() }))
 vi.mock('@/hooks/useUserThemeCss', () => ({ useUserThemeCss: vi.fn() }))
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/runtime/electron', () => ({
   getElectronRuntime: () => ({
     window: {

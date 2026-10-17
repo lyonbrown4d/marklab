@@ -17,7 +17,10 @@ vi.mock('@/components/source-code/useConfiguredMonaco', () => ({
 vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => false }))
 vi.mock('@/store/usePreferencesStore', () => ({ usePreferencesStore: () => false }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => false }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => false,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/components/SourceCodeEditorSurface', () => ({
   SourceCodeEditorSurface: ({
     activePath,

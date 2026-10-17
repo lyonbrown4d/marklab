@@ -4,33 +4,14 @@ use crate::{
     error::BackendResult,
 };
 use serde_json::{Value, json};
-
-const LANGUAGES: &[&str] = &[
-    "bash",
-    "c",
-    "cpp",
-    "css",
-    "diff",
-    "go",
-    "html",
-    "java",
-    "javascript",
-    "json",
-    "kotlin",
-    "markdown",
-    "mermaid",
-    "python",
-    "rust",
-    "shell",
-    "sql",
-    "swift",
-    "text",
-    "toml",
-    "tsx",
-    "typescript",
-    "xml",
-    "yaml",
-];
+#[path = "completion_fences.rs"]
+mod fences;
+#[path = "completion_files.rs"]
+mod files;
+#[path = "completion_headings.rs"]
+mod headings;
+#[path = "completion_snippets.rs"]
+mod snippets;
 
 pub fn completion(index: &Index, document: &Document, position: Position) -> BackendResult<Value> {
     let offset = utf16::offset(&document.text, position)?;
@@ -64,23 +45,12 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
         .rfind('\n')
         .map_or(0, |index| index + 1);
     let before = &document.text[line_start..offset];
+    if let Some(items) = snippets::completions(&document.uri, before, position) {
+        return Ok(json!({"isIncomplete":false,"items":items}));
+    }
     let mut items = Vec::new();
-    if let Some(fence) = before.find("```") {
-        let start = fence + 3;
-        let query = before[start..].to_lowercase();
-        for language in LANGUAGES
-            .iter()
-            .filter(|language| language.starts_with(&query))
-        {
-            items.push(item(
-                language,
-                language,
-                "Code block language",
-                14,
-                position,
-                before[..start].encode_utf16().count(),
-            ));
-        }
+    if let Some(languages) = fences::completions(before, position) {
+        items = languages;
     } else if let Some((start, wiki)) = link_prefix(before) {
         let fragment = &before[start..];
         let path = document.path.as_deref().unwrap_or("");
@@ -113,72 +83,27 @@ pub fn completion(index: &Index, document: &Document, position: Position) -> Bac
                 link.target_path
             };
             if let Some(file) = target.and_then(|path| index.files.get(&path)) {
-                for heading in file.headings.iter().filter(|heading| {
-                    heading.text.to_lowercase().contains(&query.to_lowercase())
-                        || heading.slug.contains(&query.to_lowercase())
-                }) {
-                    items.push(item(
-                        &heading.text,
-                        &heading.slug,
-                        &file.path,
-                        18,
-                        position,
-                        before[..start + fragment.find('#').unwrap_or(0) + 1]
-                            .encode_utf16()
-                            .count(),
-                    ));
-                }
+                items = headings::completions(
+                    file,
+                    query,
+                    position,
+                    before[..start + fragment.find('#').unwrap_or(0) + 1]
+                        .encode_utf16()
+                        .count(),
+                );
             }
         } else {
-            let query = fragment.to_lowercase();
-            for file in index
-                .files
-                .values()
-                .filter(|file| {
-                    file.path.to_lowercase().contains(&query)
-                        || file.title.to_lowercase().contains(&query)
-                })
-                .take(200)
-            {
-                let insert = if wiki {
-                    file.path
-                        .trim_end_matches(".md")
-                        .trim_end_matches(".markdown")
-                        .to_owned()
-                } else {
-                    relative(path, &file.path)
-                };
-                items.push(item(
-                    &file.title,
-                    &insert,
-                    &file.path,
-                    17,
-                    position,
-                    before[..start].encode_utf16().count(),
-                ));
-            }
-        }
-    } else if before.trim().is_empty() {
-        for (label, text) in [
-            ("heading", "# ${1:Heading}"),
-            ("link", "[${1:label}](${2:target})"),
-            ("image", "![${1:alt}](${2:path})"),
-            ("code block", "```${1:language}\n${0}\n```"),
-            ("table", "| ${1:Heading} |\n| --- |\n| ${0} |"),
-        ] {
-            let mut completion = item(
-                label,
-                text,
-                "Markdown snippet",
-                15,
+            items = files::completions(
+                index,
+                path,
+                fragment,
+                wiki,
                 position,
-                position.character,
+                before[..start].encode_utf16().count(),
             );
-            completion["insertTextFormat"] = json!(2);
-            items.push(completion);
         }
     }
-    Ok(json!({"isIncomplete":items.len()>=200,"items":items}))
+    Ok(json!({"isIncomplete":items.len()>=files::LIMIT,"items":items}))
 }
 fn item(
     label: &str,
@@ -204,20 +129,6 @@ fn link_prefix(before: &str) -> Option<(usize, bool)> {
         _ => None,
     }
 }
-fn relative(source: &str, target: &str) -> String {
-    let source: Vec<_> = source
-        .rsplit_once('/')
-        .map_or("", |(parent, _)| parent)
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect();
-    let target: Vec<_> = target.split('/').collect();
-    let common = source
-        .iter()
-        .zip(&target)
-        .take_while(|(a, b)| a == b)
-        .count();
-    let mut output = vec![".."; source.len() - common];
-    output.extend_from_slice(&target[common..]);
-    output.join("/")
-}
+#[cfg(test)]
+#[path = "completion_tests.rs"]
+mod tests;

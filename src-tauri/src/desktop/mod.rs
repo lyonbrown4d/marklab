@@ -8,6 +8,8 @@ mod geometry;
 mod invoke;
 mod launch;
 mod lifecycle;
+mod log_redaction;
+pub(crate) mod logging;
 mod menu_sections;
 mod menus;
 mod native_edit;
@@ -25,14 +27,7 @@ pub fn run() -> BackendResult<()> {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Info)
-                .max_file_size(2 * 1024 * 1024)
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(2))
-                .build(),
-        )
+        .plugin(logging::builder().build())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -54,7 +49,8 @@ pub fn run() -> BackendResult<()> {
                         let _ = window.unminimize();
                         let _ = window.show();
                         let _ = window.set_focus();
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            tauri::EventTarget::webview_window(window.label()),
                             "single-instance",
                             serde_json::json!({"args":args,"cwd":cwd}),
                         );
@@ -79,7 +75,14 @@ pub fn run() -> BackendResult<()> {
         }))
         .register_asynchronous_uri_scheme_protocol("marklab-asset", protocol::serve)
         .setup(|app| {
+            logging::install_panic_hook();
             app.manage(crate::native_window::NativeWindows::default());
+            match crate::notifications::DesktopNotifications::new(app.handle()) {
+                Ok(notifications) => {
+                    app.manage(notifications);
+                }
+                Err(error) => log::warn!("Native notifications unavailable: {}", error.code),
+            }
             app.manage(startup::StartupState::default());
             app.manage(launch::LaunchState::default());
             for argument in std::env::args().skip(1) {

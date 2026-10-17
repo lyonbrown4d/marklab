@@ -161,7 +161,7 @@ fn close(window: &TrustedWindow, manager: &WebTabs, id: &str) -> BackendResult<(
         entry.state.active = false;
         entry.state.status = "closed".into();
         window.emit_to(
-            window.label(),
+            tauri::EventTarget::webview_window(window.label()),
             "web-tabs-state",
             Event::State { state: entry.state },
         )?;

@@ -38,7 +38,11 @@ impl AiService {
             for id in previous {
                 if let Some(job) = jobs.remove(&id) {
                     let _ = job.cancel.send(true);
-                    let _ = window.emit(job.channel, GenerationEvent::Cancelled { request_id: id });
+                    let _ = window.emit_to(
+                        tauri::EventTarget::webview_window(window.label()),
+                        job.channel,
+                        GenerationEvent::Cancelled { request_id: id },
+                    );
                 }
             }
         }
@@ -81,7 +85,8 @@ impl AiService {
                         result.text = prompt::clean(&result.text, &input);
                     }
                     if !result.text.is_empty() {
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            tauri::EventTarget::webview_window(window.label()),
                             channel,
                             GenerationEvent::Delta {
                                 request_id: id.clone(),
@@ -89,7 +94,8 @@ impl AiService {
                             },
                         );
                     }
-                    let _ = window.emit(
+                    let _ = window.emit_to(
+                        tauri::EventTarget::webview_window(window.label()),
                         channel,
                         GenerationEvent::Finish {
                             request_id: id,
@@ -100,7 +106,8 @@ impl AiService {
                     );
                 }
                 Some(Err(_)) => {
-                    let _ = window.emit(
+                    let _ = window.emit_to(
+                        tauri::EventTarget::webview_window(window.label()),
                         channel,
                         GenerationEvent::Error {
                             request_id: id,
@@ -183,7 +190,8 @@ impl AiService {
             && let Some(job) = jobs.remove(id)
         {
             let _ = job.cancel.send(true);
-            let _ = window.emit(
+            let _ = window.emit_to(
+                tauri::EventTarget::webview_window(window.label()),
                 job.channel,
                 GenerationEvent::Cancelled {
                     request_id: id.into(),
@@ -204,7 +212,11 @@ impl AiService {
         for id in ids {
             if let Some(job) = jobs.remove(&id) {
                 let _ = job.cancel.send(true);
-                let _ = window.emit(job.channel, GenerationEvent::Cancelled { request_id: id });
+                let _ = window.emit_to(
+                    tauri::EventTarget::webview_window(window.label()),
+                    job.channel,
+                    GenerationEvent::Cancelled { request_id: id },
+                );
             }
         }
     }

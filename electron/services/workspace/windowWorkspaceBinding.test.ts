@@ -3,6 +3,7 @@ import type { App, BrowserWindow, Shell } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalHistoryServiceContract } from '@electron/services/localHistory/types'
 import { createWindowWorkspaceBinding } from '@electron/services/workspace/windowWorkspaceBinding'
+import type { WorkspaceService } from '@electron/services/workspace/workspaceService'
 import { flushWindowWorkspaceBindingForClose } from '@electron/services/workspace/windowWorkspaceClose'
 import { activateWorkspaceWindowState } from '@electron/windowStateRestore'
 
@@ -44,6 +45,7 @@ vi.mock('@electron/services/workspace/workspaceService', () => ({
       path,
     }))
     readFile = vi.fn()
+    openBufferSnapshot = vi.fn<WorkspaceService['openBufferSnapshot']>()
     updateBuffer = vi.fn()
     writeFile = vi.fn()
     createFile = vi.fn()

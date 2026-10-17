@@ -62,7 +62,15 @@ pub fn publish(app: &AppHandle, value: &str, source: Source) -> BackendResult<()
             app.state::<super::startup::StartupState>()
                 .interactive(window.label())
         })
-        .is_some_and(|window| window.emit("deep-link", &payload).is_ok());
+        .is_some_and(|window| {
+            window
+                .emit_to(
+                    tauri::EventTarget::webview_window(window.label()),
+                    "deep-link",
+                    &payload,
+                )
+                .is_ok()
+        });
     if !delivered {
         links.pending.push(payload);
         if links.pending.len() > 20 {
@@ -78,7 +86,11 @@ pub fn flush(app: &AppHandle, window: &tauri::WebviewWindow) -> BackendResult<()
         .lock()
         .map_err(|_| BackendError::new("STATE_ERROR", "Launch history is unavailable"))?;
     while let Some(payload) = links.pending.first() {
-        window.emit("deep-link", payload)?;
+        window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
+            "deep-link",
+            payload,
+        )?;
         links.pending.remove(0);
     }
     Ok(())

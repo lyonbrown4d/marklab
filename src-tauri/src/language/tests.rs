@@ -285,4 +285,9 @@ async fn definitions_references_heading_completion_and_quick_fixes_use_native_in
         markdown::code_actions(&index, &request)[0]["kind"],
         "create-file"
     );
+    assert!(
+        markdown::code_actions(&index, &request)[0]
+            .get("content")
+            .is_none()
+    );
 }

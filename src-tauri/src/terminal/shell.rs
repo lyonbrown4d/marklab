@@ -73,12 +73,12 @@ pub fn resolve(requested: Option<&str>) -> BackendResult<PathBuf> {
                 }
             }
         }
-        if let Some(root) = std::env::var_os("SYSTEMROOT") {
-            if let Ok(shell) = validate(
+        if let Some(root) = std::env::var_os("SYSTEMROOT")
+            && let Ok(shell) = validate(
                 &PathBuf::from(root).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
-            ) {
-                return Ok(shell);
-            }
+            )
+        {
+            return Ok(shell);
         }
     }
     Err(BackendError::new(

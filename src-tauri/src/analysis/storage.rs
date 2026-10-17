@@ -7,6 +7,7 @@ use std::{collections::BTreeMap, sync::Arc};
 const MAX_ENTRY: usize = 16 * 1024 * 1024;
 const MAX_DISK: i64 = 128 * 1024 * 1024;
 const TTL_MS: i64 = 30 * 24 * 60 * 60 * 1000;
+const ARCHIVE_VERSION: u8 = 3;
 #[derive(Serialize, Deserialize)]
 struct Archive {
     version: u8,
@@ -24,7 +25,7 @@ fn encode(document: &Document) -> BackendResult<String> {
         .map(|link| [link.offset, link.end_offset, link.span_start, link.span_end])
         .collect();
     Ok(serde_json::to_string(&Archive {
-        version: 1,
+        version: ARCHIVE_VERSION,
         document: document.clone(),
         positions,
     })?)
@@ -40,7 +41,7 @@ fn decode(
     }
     let mut archive: Archive = serde_json::from_str(payload).ok()?;
     let document = &mut archive.document;
-    if archive.version != 1
+    if archive.version != ARCHIVE_VERSION
         || document.path != path
         || hash(document.content.as_bytes()) != expected_content
         || archive.positions.len() != document.links.len() + document.assets.len()
@@ -132,11 +133,10 @@ impl AnalysisService {
                 ))
             })
             .collect::<Result<_, sqlx::Error>>()?;
-        let fts_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM analysis_fts WHERE scope=?")
-            .bind(&index.scope)
-            .fetch_one(&self.pool)
-            .await?;
-        let repair_fts = fts_count != saved.len() as i64;
+        let repair_fts = !self
+            .fts_matches_documents(&index.scope, raw.len())
+            .await
+            .unwrap_or(false);
         let mut writes = Vec::new();
         let mut estimated = 0i64;
         for (path, document) in raw {
@@ -177,6 +177,12 @@ impl AnalysisService {
             ));
         }
         let mut transaction = self.pool.begin().await?;
+        if repair_fts {
+            sqlx::query("DELETE FROM analysis_fts WHERE scope=?")
+                .bind(&index.scope)
+                .execute(&mut *transaction)
+                .await?;
+        }
         for removed in saved.keys().filter(|path| !raw.contains_key(*path)) {
             sqlx::query("DELETE FROM analysis_cache_documents WHERE scope=? AND path=?")
                 .bind(&index.scope)
@@ -263,12 +269,31 @@ impl AnalysisService {
         .await
         .ok()
         .flatten();
-        let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM analysis_fts WHERE scope=?")
-            .bind(&index.scope)
-            .fetch_one(&self.pool)
-            .await
-            .ok();
         fingerprint.is_some_and(|fingerprint| fingerprint == index.fingerprint)
-            && count == Some(index.files.len() as i64)
+            && self
+                .fts_matches_documents(&index.scope, index.files.len())
+                .await
+                .unwrap_or(false)
+    }
+    async fn fts_matches_documents(&self, scope: &str, expected: usize) -> BackendResult<bool> {
+        // Row counts alone cannot detect a damaged FTS body. Compare against
+        // the source archive already protected by the AST payload/content hashes.
+        // Keep the comparison inside SQLite rather than transferring all text.
+        let row = sqlx::query(
+            "SELECT COUNT(*) AS total,COUNT(DISTINCT f.path) AS paths,
+             COALESCE(SUM(CASE WHEN d.path IS NOT NULL AND json_valid(d.payload) THEN
+               CASE WHEN f.title=json_extract(d.payload,'$.document.title')
+                 AND f.content=json_extract(d.payload,'$.document.content') THEN 1 ELSE 0 END
+               ELSE 0 END),0) AS matching
+             FROM analysis_fts f LEFT JOIN analysis_cache_documents d
+               ON d.scope=f.scope AND d.path=f.path WHERE f.scope=?",
+        )
+        .bind(scope)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(["total", "paths", "matching"].iter().all(|column| {
+            row.try_get::<i64, _>(*column)
+                .is_ok_and(|count| count == expected as i64)
+        }))
     }
 }

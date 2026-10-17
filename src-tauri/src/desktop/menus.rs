@@ -117,7 +117,11 @@ pub fn dispatch(app: &AppHandle, id: &str) -> BackendResult<()> {
                 }
             });
         }
-        _ => window.emit("menu-action", id)?,
+        _ => window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
+            "menu-action",
+            id,
+        )?,
     }
     Ok(())
 }

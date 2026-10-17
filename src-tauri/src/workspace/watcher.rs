@@ -1,8 +1,16 @@
 use super::Workspace;
 use crate::error::{BackendError, BackendResult};
 use notify::{RecursiveMode, Watcher};
-use std::{collections::BTreeSet, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 use tauri::Manager;
+
+const MAX_BATCH_PATHS: usize = 4096;
+const EVENT_QUEUE_CAPACITY: usize = 256;
 
 impl Workspace {
     pub(super) async fn start_watcher(
@@ -45,17 +53,29 @@ impl Workspace {
                 }
                 let mut paths = BTreeSet::new();
                 let mut invalidated = overflow.swap(false, std::sync::atomic::Ordering::AcqRel);
-                collect(first, &mut paths, &mut invalidated);
+                let mut git_changed = invalidated;
+                let root = workspace.root_directory();
+                git_changed |= collect(first, &root, &mut paths, &mut invalidated);
                 tokio::time::sleep(Duration::from_millis(120)).await;
-                while let Ok(event) = receiver.try_recv() {
-                    collect(event, &mut paths, &mut invalidated);
+                // A continuously refilled channel must not starve refresh/publication.
+                for _ in 0..EVENT_QUEUE_CAPACITY {
+                    let Ok(event) = receiver.try_recv() else {
+                        break;
+                    };
+                    git_changed |= collect(event, &root, &mut paths, &mut invalidated);
                 }
                 invalidated |= overflow.swap(false, std::sync::atomic::Ordering::AcqRel);
-                let root = workspace.root_directory();
+                git_changed |= invalidated;
+                if invalidated {
+                    paths.clear();
+                }
                 let git = app.try_state::<crate::git::GitState>();
                 // Git metadata is omitted from the tree but still changes
                 // cached branch/history/status queries, even for ignored paths.
-                let _git_invalidation = git.as_ref().map(|git| git.invalidation(&root));
+                let _git_invalidation = git
+                    .as_ref()
+                    .filter(|_| git_changed)
+                    .map(|git| git.invalidation(&root));
                 let single = workspace.root_info();
                 let relative: Vec<String> = paths
                     .iter()
@@ -87,7 +107,7 @@ impl Workspace {
                 let _ = workspace.invalidate(&app);
                 for path in &relative {
                     if let Ok(Some(status)) = workspace.buffer_status(path).await {
-                        let _ = workspace.emit(&app, "fs-buffer-status", status);
+                        let _ = workspace.emit_to_owners(&app, "fs-buffer-status", status);
                     }
                 }
             }
@@ -107,14 +127,53 @@ fn ignored(relative: &str) -> bool {
         .split('/')
         .any(|part| matches!(part, ".git" | ".marklab") || part.starts_with(".tmp"))
 }
+fn changes_filesystem(event: &notify::Result<notify::Event>) -> bool {
+    match event {
+        Ok(event) => event.need_rescan() || !matches!(event.kind, notify::EventKind::Access(_)),
+        Err(_) => true,
+    }
+}
 fn collect(
     event: notify::Result<notify::Event>,
+    root: &Path,
     paths: &mut BTreeSet<PathBuf>,
     invalidated: &mut bool,
-) {
+) -> bool {
+    // Keep Git metadata changes even when omitted from the workspace tree, but
+    // never invalidate queries just because reading .git opened a file.
+    let changed = changes_filesystem(&event);
+    if *invalidated {
+        paths.clear();
+        return changed;
+    }
     match event {
+        // Rescan outranks Access: the native backend has lost its event history.
+        Ok(event) if event.need_rescan() => {
+            *invalidated = true;
+        }
         Ok(event) if !matches!(event.kind, notify::EventKind::Access(_)) => {
-            paths.extend(event.paths);
+            if event.paths.is_empty() {
+                *invalidated = true;
+            }
+            for path in event.paths {
+                // The root represents all descendants, not a valid empty buffer
+                // key. An unidentifiable event likewise requires a full refresh.
+                if path == root || !path.is_absolute() {
+                    *invalidated = true;
+                    break;
+                }
+                let Ok(relative) = super::paths::display_relative(root, &path) else {
+                    continue;
+                };
+                if ignored(&relative) {
+                    continue;
+                }
+                paths.insert(path);
+                if paths.len() > MAX_BATCH_PATHS {
+                    *invalidated = true;
+                    break;
+                }
+            }
         }
         Ok(_) => {}
         Err(error) => {
@@ -122,6 +181,10 @@ fn collect(
             log::warn!("Filesystem watcher lost events: {}", error);
         }
     }
+    if *invalidated {
+        paths.clear();
+    }
+    changed
 }
 fn watch_error(error: notify::Error) -> BackendError {
     BackendError::new("WATCH_FAILED", error.to_string())
@@ -135,7 +198,7 @@ pub(super) async fn watch_directory(
     tokio::sync::mpsc::Receiver<notify::Result<notify::Event>>,
     Arc<std::sync::atomic::AtomicBool>,
 )> {
-    let (sender, receiver) = tokio::sync::mpsc::channel(256);
+    let (sender, receiver) = tokio::sync::mpsc::channel(EVENT_QUEUE_CAPACITY);
     let overflow = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let overrun = overflow.clone();
     let watcher = crate::blocking::run(move || {
@@ -160,3 +223,7 @@ pub(super) async fn watch_directory(
     .await?;
     Ok((watcher, receiver, overflow))
 }
+
+#[cfg(test)]
+#[path = "watcher_tests.rs"]
+mod tests;

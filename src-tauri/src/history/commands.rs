@@ -43,13 +43,13 @@ pub async fn local_history_restore(
         .restore_under_lock(&workspace, &request.path, &request.entry_id)
         .await;
     if let Ok(Some(status)) = workspace.buffer_status(&request.path).await {
-        let _ = workspace.emit(window.app_handle(), "fs-buffer-status", status);
+        let _ = workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status);
     }
     let revision = workspace.current_revision();
     if revision != previous_revision && workspace.ensure_active().is_ok() {
         let payload = serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous_revision,"revision":revision});
-        let _ = workspace.emit(window.app_handle(), "fs-changed", &payload);
-        let _ = workspace.emit(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous_revision,"revision":revision}));
+        let _ = workspace.emit_to_owners(window.app_handle(), "fs-changed", &payload);
+        let _ = workspace.emit_to_owners(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous_revision,"revision":revision}));
     }
     result
 }

@@ -11,6 +11,7 @@ pub mod history;
 pub mod language;
 pub mod link_preview;
 pub mod native_window;
+pub mod notifications;
 pub mod platform;
 pub mod settings;
 pub mod sync;
@@ -20,7 +21,7 @@ pub mod workspace;
 
 pub fn run() {
     if let Err(error) = desktop::run() {
-        eprintln!("Marklab could not start: {error}");
+        desktop::logging::report_startup_failure(&error);
         std::process::exit(1);
     }
 }

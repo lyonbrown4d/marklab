@@ -51,6 +51,19 @@ impl UpdateService {
                 event: event.into(),
             },
         )?;
+        if event == "downloaded" {
+            let owner = app
+                .windows()
+                .into_keys()
+                .find(|label| crate::native_window::get(app, label).is_some());
+            crate::notifications::notify(
+                app,
+                crate::notifications::Request::update(
+                    state.info.as_ref().map(|info| info.version.as_str()),
+                    owner,
+                ),
+            );
+        }
         Ok(UpdateResult {
             ok: state.error.is_none(),
             state,

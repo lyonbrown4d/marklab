@@ -51,7 +51,7 @@ pub async fn fs_apply_buffer_update(
         session_generation,
     } = &result
     {
-        workspace.emit(
+        workspace.emit_to_owners(
             window.app_handle(),
             "fs-buffer-status",
             BufferStatus {
@@ -97,7 +97,7 @@ pub async fn fs_flush_buffers(
     let count = workspace.flush_buffers_under_lock().await?;
     for path in dirty {
         if let Some(status) = workspace.buffer_status(&path).await? {
-            workspace.emit(window.app_handle(), "fs-buffer-status", status)?;
+            workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status)?;
         }
     }
     if count > 0 {

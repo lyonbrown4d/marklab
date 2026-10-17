@@ -45,7 +45,7 @@ impl Workspace {
                     })
                     .collect();
                 for status in statuses {
-                    let _ = workspace.emit(&app, "fs-buffer-status", status);
+                    let _ = workspace.emit_to_owners(&app, "fs-buffer-status", status);
                 }
                 match result {
                     Ok(count) => {

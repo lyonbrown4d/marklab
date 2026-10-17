@@ -163,7 +163,11 @@ impl WebTabs {
             None
         };
         if let Some(state) = state {
-            let _ = window.emit_to(window.label(), "web-tabs-state", Event::State { state });
+            let _ = window.emit_to(
+                tauri::EventTarget::webview_window(window.label()),
+                "web-tabs-state",
+                Event::State { state },
+            );
         }
     }
     fn loading(&self, window: &TrustedWindow, id: &str, url: String) {
@@ -253,7 +257,7 @@ impl WebTabs {
         });
         if let Some(action) = action {
             let _ = window.emit_to(
-                window.label(),
+                tauri::EventTarget::webview_window(window.label()),
                 "web-tabs-state",
                 Event::Shortcut {
                     action,

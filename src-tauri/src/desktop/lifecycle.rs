@@ -82,7 +82,8 @@ pub async fn request_renderer_flush(window: &WebviewWindow) -> BackendResult<()>
         id: id.clone(),
     };
     async {
-        window.emit(
+        window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
             "window-flush-requested",
             serde_json::json!({"requestId":id}),
         )?;
@@ -124,7 +125,8 @@ pub fn request_quit(app: &AppHandle) -> BackendResult<()> {
                 .unwrap_or_default()
             {
                 if let Some(window) = crate::native_window::get(&app, &label) {
-                    let _ = window.emit(
+                    let _ = window.emit_to(
+                        tauri::EventTarget::webview_window(window.label()),
                         "window-close-error",
                         serde_json::json!({"message":error.message}),
                     );

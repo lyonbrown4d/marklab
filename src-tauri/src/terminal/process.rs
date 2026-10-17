@@ -106,7 +106,7 @@ pub(super) fn create(
                     if !data.is_empty()
                         && output_window
                             .emit_to(
-                                output_window.label(),
+                                tauri::EventTarget::webview_window(output_window.label()),
                                 "terminal-output",
                                 Output {
                                     id: output_id.clone(),
@@ -123,7 +123,7 @@ pub(super) fn create(
         let data = drain_utf8(&mut pending, true);
         if !data.is_empty() {
             let _ = output_window.emit_to(
-                output_window.label(),
+                tauri::EventTarget::webview_window(output_window.label()),
                 "terminal-output",
                 Output {
                     id: output_id,
@@ -143,7 +143,7 @@ pub(super) fn create(
             Err(_) => (None, Some("PTY wait failed".into())),
         };
         let _ = window.emit_to(
-            window.label(),
+            tauri::EventTarget::webview_window(window.label()),
             "terminal-exit",
             Exit {
                 id,

@@ -66,7 +66,15 @@ pub fn resolve(link: &mut Link, documents: &[String], paths: &BTreeSet<String>) 
                 })
             })
     } else {
-        relative
+        relative.and_then(|relative| {
+            if paths.contains(&relative) {
+                return Some(relative);
+            }
+            [format!("{relative}.md"), format!("{relative}.markdown")]
+                .into_iter()
+                .find(|candidate| documents.contains(candidate))
+                .or(Some(relative))
+        })
     };
     link.target_path = target;
 }

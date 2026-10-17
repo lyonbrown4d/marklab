@@ -105,7 +105,8 @@ pub async fn sync_start(
     let outcome = {
         let _configuration = service.inner.configuration.read().await;
         let on_progress = |progress: SyncProgress| {
-            let _ = window.emit(
+            let _ = window.emit_to(
+                tauri::EventTarget::webview_window(window.label()),
                 "sync-progress",
                 serde_json::json!({"requestId":request.request_id,"progress":progress}),
             );
@@ -121,7 +122,7 @@ pub async fn sync_start(
     };
     announce_changes(&window, &workspace, before_revision).await;
     service.finish_run(&root, &request.request_id).await;
-    Ok(match outcome {
+    let outcome = match outcome {
         Ok(result) => SyncOutcome::Completed { result },
         Err(error)
             if error.code == "ABORTED"
@@ -133,7 +134,23 @@ pub async fn sync_start(
         Err(error) => SyncOutcome::Failed {
             message: error.message,
         },
-    })
+    };
+    if matches!(
+        outcome,
+        SyncOutcome::Completed { .. } | SyncOutcome::Failed { .. }
+    ) {
+        crate::notifications::notify(
+            window.app_handle(),
+            crate::notifications::Request::sync(
+                &request.request_id,
+                std::path::Path::new(&workspace.root_info().path),
+                window.label(),
+                matches!(outcome, SyncOutcome::Completed { .. }),
+            )
+            .with_owner(&window),
+        );
+    }
+    Ok(outcome)
 }
 #[tauri::command]
 pub async fn sync_cancel(
@@ -272,6 +289,6 @@ async fn announce_changes(
         return;
     }
     let payload = serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous,"revision":revision});
-    let _ = workspace.emit(window.app_handle(), "fs-changed", &payload);
-    let _ = workspace.emit(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous,"revision":revision}));
+    let _ = workspace.emit_to_owners(window.app_handle(), "fs-changed", &payload);
+    let _ = workspace.emit_to_owners(window.app_handle(), "workspace-tree-changed", serde_json::json!({"kind":"invalidated","root":workspace.root_info(),"generation":workspace.generation,"previousRevision":previous,"revision":revision}));
 }

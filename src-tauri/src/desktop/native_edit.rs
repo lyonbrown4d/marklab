@@ -28,7 +28,11 @@ pub(super) async fn dispatch_menu(window: &TrustedWindow, id: &str) -> BackendRe
     if focused_child(window).await?.is_some() {
         execute(window, action).await
     } else {
-        window.emit("menu-action", id)?;
+        window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
+            "menu-action",
+            id,
+        )?;
         Ok(())
     }
 }
@@ -141,22 +145,21 @@ async fn windows_script(view: &tauri::Webview, script: String) -> BackendResult<
                             ))
                         }
                     });
-                if let Ok(mut sender) = callback_pending.lock() {
-                    if let Some(sender) = sender.take() {
-                        let _ = sender.send(outcome);
-                    }
+                if let Ok(mut sender) = callback_pending.lock()
+                    && let Some(sender) = sender.take()
+                {
+                    let _ = sender.send(outcome);
                 }
                 Ok(())
             }));
             let script = CoTaskMemPWSTR::from(script.as_str());
             unsafe { view.ExecuteScript(*script.as_ref().as_pcwstr(), &callback) }
         })();
-        if let Err(error) = result {
-            if let Ok(mut sender) = pending.lock() {
-                if let Some(sender) = sender.take() {
-                    let _ = sender.send(Err(BackendError::new("EDIT_FAILED", error.to_string())));
-                }
-            }
+        if let Err(error) = result
+            && let Ok(mut sender) = pending.lock()
+            && let Some(sender) = sender.take()
+        {
+            let _ = sender.send(Err(BackendError::new("EDIT_FAILED", error.to_string())));
         }
     })?;
     tokio::time::timeout(std::time::Duration::from_secs(5), receiver)

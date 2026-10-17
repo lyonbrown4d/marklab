@@ -4,6 +4,12 @@ use crate::native_window::TrustedWindow as WebviewWindow;
 use std::{path::Path, sync::Arc};
 use tauri::Manager;
 
+#[path = "references.rs"]
+mod references;
+#[cfg(test)]
+#[path = "references_tests.rs"]
+mod references_tests;
+
 pub(super) async fn move_path(
     window: WebviewWindow,
     workspace: Arc<Workspace>,
@@ -16,6 +22,7 @@ pub(super) async fn move_path(
     workspace
         .move_path_under_lock(&request.from, &request.to)
         .await?;
+    workspace.clone().schedule_save(window.app_handle().clone());
     super::commands::announce(&window, &workspace).await
 }
 impl Workspace {
@@ -41,6 +48,9 @@ impl Workspace {
         } else {
             self.resolve_async(to).await?
         };
+        // Parse before moving paths so resolution uses the old workspace. The
+        // plan retains each source baseline for the existing save CAS.
+        let rewrites = references::prepare(self, from, to).await?;
         if let Some(parent) = destination.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -61,6 +71,7 @@ impl Workspace {
                 buffers.insert(format!("{to}{}", &path[from.len()..]), buffer);
             }
         }
+        references::publish(&mut buffers, rewrites);
         self.next_revision();
         Ok(())
     }

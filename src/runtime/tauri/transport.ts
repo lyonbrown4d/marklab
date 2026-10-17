@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { ElectronRuntimeEventEnvelope } from '@/runtime/electron'
 import { commandAliases, legacyCommands, runtimeEvents } from '@/runtime/tauri/contract'
 
@@ -138,9 +139,10 @@ export const createEventHub = () => {
     attempt: () => nativeAttempt,
     install: async (): Promise<void> => {
       try {
+        const target = { kind: 'WebviewWindow' as const, label: getCurrentWindow().label }
         // Sequential registration permits complete cleanup on partial failure.
         for (const name of nativeEvents) {
-          unlisten.push(await listen(name, ({ payload }) => publish(name, payload)))
+          unlisten.push(await listen(name, ({ payload }) => publish(name, payload), { target }))
         }
       } catch (error) {
         for (const stop of unlisten.splice(0)) stop()

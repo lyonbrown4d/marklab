@@ -88,10 +88,10 @@ pub async fn open_target(
         app.state::<SettingsStore>().write_session(&label, seed.clone(), Some(true), true).await?;
         if let Some(window) = crate::native_window::get(app, &label) {
             super::geometry::activate(&window, &root).await?;
-            window.emit("workspace-session-seed", super::startup::seed(app, &label, seed)?)?;
+            window.emit_to(tauri::EventTarget::webview_window(window.label()), "workspace-session-seed", super::startup::seed(app, &label, seed)?)?;
             let revision = workspace.current_revision();
             let delta = serde_json::json!({"kind":"invalidated","root":root,"generation":workspace.generation,"previousRevision":revision,"revision":revision});
-            window.emit("fs-changed", &delta)?; window.emit("workspace-tree-changed", &delta)?;
+            window.emit_to(tauri::EventTarget::webview_window(window.label()), "fs-changed", &delta)?; window.emit_to(tauri::EventTarget::webview_window(window.label()), "workspace-tree-changed", &delta)?;
             if let Some(boot) = app.state::<super::startup::StartupState>().boot(&label)? { super::startup::schedule_timeout(app, &label, boot.attempt); }
         } else { create(app, &label, None).await?; }
         Ok(label.clone())

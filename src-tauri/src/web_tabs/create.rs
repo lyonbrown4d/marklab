@@ -49,7 +49,7 @@ pub async fn view(
         .on_new_window(move |url, _| {
             if let Ok(url) = normalize(url.as_str()) {
                 let _ = new_owner.emit_to(
-                    new_owner.label(),
+                    tauri::EventTarget::webview_window(new_owner.label()),
                     "web-tabs-state",
                     Event::OpenRequested {
                         tab_id: new_id.clone(),

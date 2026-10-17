@@ -6,7 +6,7 @@ use crate::{
     workspace::WorkspaceRegistry,
 };
 use serde_json::{Value, json};
-use tauri::{Emitter, State};
+use tauri::{Manager, State};
 
 #[tauri::command]
 pub async fn language_document_open(
@@ -206,22 +206,16 @@ pub async fn markdown_language_rename_references(
             rename::prepare(&index, &request)
         })
         .await?;
-    let _mutation = workspace.mutation.lock().await;
-    for edit in &plan.external {
-        if workspace.open_file_under_lock(&edit.path).await? != edit.before {
-            return Err(BackendError::new(
-                "EDIT_CONFLICT",
-                "A referenced document changed while preparing the rename",
-            ));
-        }
+    let _mutation = registry.lock_binding(window.label(), &workspace).await?;
+    rename::validate_source(&workspace, plan.source.as_ref()).await?;
+    rename::validate_external(&workspace, &plan.external).await?;
+    let changed = !plan.external.is_empty();
+    for status in rename::apply_external(&workspace, plan.external).await? {
+        workspace.emit_to_owners(window.app_handle(), "fs-buffer-status", status)?;
     }
-    for edit in plan.external {
-        workspace
-            .write_file_under_lock(&edit.path, &edit.after)
-            .await?;
-        if let Some(status) = workspace.buffer_status(&edit.path).await? {
-            window.emit("fs-buffer-status", status)?;
-        }
+    if changed {
+        workspace.clone().schedule_save(window.app_handle().clone());
+        workspace.invalidate(window.app_handle())?;
     }
     Ok(plan.result)
 }

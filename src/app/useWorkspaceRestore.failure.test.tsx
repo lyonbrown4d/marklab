@@ -12,7 +12,10 @@ vi.mock('@/app/editorCloseLifecycle', () => ({
   flushEditorChanges: mocks.flushEditorChanges,
 }))
 vi.mock('@/app/workspaceRestoreReady', () => ({ reportWorkspaceRendererReady: mocks.reportReady }))
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/runtime/events', () => ({ listen: vi.fn(async () => vi.fn()) }))
 vi.mock('@/services/fsApi', () => ({
   fsApi: { setRoot: mocks.setRoot, setSingleFile: vi.fn() },

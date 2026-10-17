@@ -4,9 +4,12 @@ use serde::Serialize;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
+mod maintenance;
+#[cfg(test)]
+mod maintenance_tests;
 pub mod markdown;
 mod ranges;
 mod serving;
@@ -51,8 +54,9 @@ struct Grant {
 }
 
 pub struct AssetService {
-    grants: Mutex<HashMap<String, Grant>>,
+    grants: Arc<Mutex<HashMap<String, Grant>>>,
     cache: PathBuf,
+    _maintenance: Option<tokio::task::AbortHandle>,
 }
 
 pub fn now_ms() -> u64 {
@@ -100,11 +104,16 @@ impl AssetService {
     }
 
     pub fn new(data: &Path) -> BackendResult<Self> {
-        let cache = data.join("cache").join("assets");
-        std::fs::create_dir_all(&cache)?;
+        let cache = maintenance::prepare_cache(data)?;
+        // Capabilities are process-local. No file left by the previous process
+        // can still be authorized; this directory never contains source files.
+        maintenance::remove_orphans(&cache)?;
+        let grants = Arc::new(Mutex::new(HashMap::new()));
+        let maintenance = maintenance::schedule(&grants);
         Ok(Self {
-            grants: Mutex::new(HashMap::new()),
+            grants,
             cache,
+            _maintenance: maintenance,
         })
     }
 
@@ -134,22 +143,16 @@ impl AssetService {
         display_path: &str,
         mime: &str,
     ) -> BackendResult<AssetCapability> {
+        use std::io::Write;
         if bytes.len() > 128 * 1024 * 1024 {
             return Err(BackendError::new(
                 "ASSET_TOO_LARGE",
                 "Preview snapshot exceeds the supported size",
             ));
         }
-        let extension = Path::new(display_path)
-            .extension()
-            .and_then(|e| e.to_str())
-            .filter(|e| e.chars().all(|c| c.is_ascii_alphanumeric()))
-            .unwrap_or("bin");
-        let path = self
-            .cache
-            .join(format!("{}.{}", uuid::Uuid::new_v4(), extension));
-        std::fs::write(&path, bytes)?;
-        self.grant(owner, path, mime.into(), true)
+        let mut file = self.create_snapshot(display_path)?;
+        file.write_all(bytes)?;
+        self.issue_snapshot(owner, file, display_path, mime)
     }
 
     pub fn issue_remote_bytes(
@@ -170,8 +173,22 @@ impl AssetService {
         mime: String,
         temporary: bool,
     ) -> BackendResult<AssetCapability> {
-        let identity = std::sync::Arc::new(same_file::Handle::from_path(&path)?);
-        let metadata = std::fs::metadata(&path)?;
+        let result = self.register_grant(owner, &path, mime, temporary);
+        if result.is_err() && temporary {
+            remove_temporary(&path);
+        }
+        result
+    }
+
+    fn register_grant(
+        &self,
+        owner: &str,
+        path: &Path,
+        mime: String,
+        temporary: bool,
+    ) -> BackendResult<AssetCapability> {
+        let identity = std::sync::Arc::new(same_file::Handle::from_path(path)?);
+        let metadata = std::fs::metadata(path)?;
         let modified = metadata.modified()?;
         let mut entropy = Vec::from(uuid::Uuid::new_v4().as_bytes());
         entropy.extend_from_slice(uuid::Uuid::new_v4().as_bytes());
@@ -181,30 +198,19 @@ impl AssetService {
             .grants
             .lock()
             .map_err(|_| BackendError::new("STATE_ERROR", "Asset registry is unavailable"))?;
-        grants.retain(|_, grant| {
-            if grant.expires > now_ms() {
-                true
-            } else {
-                if grant.temporary {
-                    remove_temporary(&grant.path);
-                }
-                false
-            }
-        });
+        maintenance::expire(&mut grants, now_ms());
         if grants.len() >= 4096 {
-            if temporary {
-                remove_temporary(&path);
-            }
             return Err(BackendError::new(
                 "ASSET_LIMIT",
                 "Too many active preview assets",
             ));
         }
+        maintenance::check_budget(&grants, if temporary { metadata.len() } else { 0 })?;
         grants.insert(
             token.clone(),
             Grant {
                 owner: owner.into(),
-                path,
+                path: path.into(),
                 identity,
                 expires,
                 mime,

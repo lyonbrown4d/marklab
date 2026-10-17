@@ -48,9 +48,18 @@ pub async fn clipboard_read_text(
     request: EmptyRequest,
 ) -> BackendResult<String> {
     let _ = request;
-    tauri::async_runtime::spawn_blocking(move || window.clipboard().read_text().map_err(failure))
-        .await
-        .map_err(failure)?
+    let text = tauri::async_runtime::spawn_blocking(move || {
+        window.clipboard().read_text().map_err(failure)
+    })
+    .await
+    .map_err(failure)??;
+    if text.len() > 8 * 1024 * 1024 {
+        return Err(BackendError::new(
+            "CLIPBOARD_TOO_LARGE",
+            "Clipboard text exceeds 8 MiB",
+        ));
+    }
+    Ok(text)
 }
 #[tauri::command]
 pub async fn clipboard_write_text(

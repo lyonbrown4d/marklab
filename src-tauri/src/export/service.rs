@@ -144,7 +144,7 @@ impl ExportService {
                     if registry.ensure_binding(window.label(), &workspace).is_ok()
                         && let Ok(mut outputs) = service.inner.outputs.lock()
                     {
-                        outputs.insert(output, task.owner.clone());
+                        outputs.insert(output.clone(), task.owner.clone());
                     }
                     event.status = "finished".into();
                     event.progress = Some(1.0);
@@ -163,6 +163,19 @@ impl ExportService {
             }
             if !task.cancelled.load(Ordering::Acquire) {
                 emit(&window, &event);
+                if matches!(event.status.as_str(), "finished" | "failed") {
+                    crate::notifications::notify(
+                        window.app_handle(),
+                        crate::notifications::Request::export(
+                            &event.id,
+                            event.format.extension(),
+                            &output,
+                            &task.owner,
+                            event.status == "finished",
+                        )
+                        .with_owner(&window),
+                    );
+                }
             }
             if let Ok(mut tasks) = service.inner.tasks.lock() {
                 tasks.remove(&event.id);
@@ -219,7 +232,11 @@ impl ExportService {
 }
 
 fn emit(window: &WebviewWindow, payload: &ExportTaskEvent) {
-    if let Err(error) = window.emit("export-task", payload) {
+    if let Err(error) = window.emit_to(
+        tauri::EventTarget::webview_window(window.label()),
+        "export-task",
+        payload,
+    ) {
         log::warn!("Export progress delivery failed: {error}");
     }
 }

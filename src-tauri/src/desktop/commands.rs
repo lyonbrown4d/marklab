@@ -27,7 +27,7 @@ pub async fn app_ready(window: WebviewWindow, request: ReadyRequest) -> BackendR
     }
     let _lifecycle = super::lifecycle_guard(window.app_handle()).await;
     super::startup::ready(&window, &request.phase, request.error, request.attempt).await?;
-    window.emit("system-theme-changed",serde_json::json!({"colorMode":if window.theme()?==tauri::Theme::Dark{"dark"}else{"light"}}))?;
+    window.emit_to(tauri::EventTarget::webview_window(window.label()), "system-theme-changed",serde_json::json!({"colorMode":if window.theme()?==tauri::Theme::Dark{"dark"}else{"light"}}))?;
     Ok(OkResult::success())
 }
 #[tauri::command]
@@ -222,7 +222,11 @@ pub async fn menu_dispatch(window: WebviewWindow, request: MenuRequest) -> Backe
         "window.open_current_workspace_in_new_window" => {
             open_current_workspace_in_new_window(window.clone(), EmptyRequest {}).await?;
         }
-        _ => window.emit("menu-action", request.id)?,
+        _ => window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
+            "menu-action",
+            request.id,
+        )?,
     }
     Ok(OkResult::success())
 }

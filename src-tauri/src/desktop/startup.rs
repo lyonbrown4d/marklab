@@ -133,7 +133,11 @@ pub fn emit_progress(app: &AppHandle, label: &str) {
     if let Ok(Some(boot)) = app.state::<StartupState>().boot(label) {
         for target in [label.to_string(), format!("opening-{label}")] {
             if let Some(window) = crate::native_window::get(app, &target) {
-                let _ = window.emit("window-opening-progress", boot.progress.clone());
+                let _ = window.emit_to(
+                    tauri::EventTarget::webview_window(window.label()),
+                    "window-opening-progress",
+                    boot.progress.clone(),
+                );
             }
         }
     }
@@ -198,7 +202,11 @@ pub async fn ready(
             {
                 boot.phase = Phase::Interactive;
             }
-            window.emit("window-presented", ())?;
+            window.emit_to(
+                tauri::EventTarget::webview_window(window.label()),
+                "window-presented",
+                (),
+            )?;
             super::launch::flush(app, window)?;
         }
         ReadyAction::ShowFailure => {

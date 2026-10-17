@@ -38,19 +38,36 @@ pub fn symbols(request: &MarkdownRequest) -> BackendResult<Value> {
         request.content.clone(),
     )?;
     let mut offset = 0;
-    Ok(json!(symbol_level(&file.headings, &mut offset, 0)))
+    Ok(json!(symbol_level(&file, &mut offset, 0)))
 }
-fn symbol_level(headings: &[Heading], offset: &mut usize, parent: u8) -> Vec<Value> {
+fn symbol_level(file: &Document, offset: &mut usize, parent: u8) -> Vec<Value> {
     let mut output = Vec::new();
-    while let Some(heading) = headings.get(*offset) {
+    while let Some(heading) = file.headings.get(*offset) {
         if heading.level <= parent {
             break;
         }
         *offset += 1;
-        let children = symbol_level(headings, offset, heading.level);
-        output.push(json!({"name":heading.text,"level":heading.level,"line":heading.line,"column":heading.column,"endColumn":heading.column+heading.text.encode_utf16().count(),"lspKind":15,"children":children}));
+        let children = symbol_level(file, offset, heading.level);
+        let column = symbol_column(file, heading);
+        output.push(json!({"name":heading.text,"level":heading.level,"line":heading.line,"column":column,"endColumn":column+heading.text.encode_utf16().count().max(1),"lspKind":15,"children":children}));
     }
     output
+}
+
+fn symbol_column(file: &Document, heading: &Heading) -> usize {
+    let line = file.content.lines().nth(heading.line - 1).unwrap_or("");
+    let trimmed = line.trim_start();
+    let markers = trimmed.bytes().take_while(|byte| *byte == b'#').count();
+    let start = if (1..=6).contains(&markers) && trimmed[markers..].starts_with(char::is_whitespace)
+    {
+        line.len() - trimmed[markers..].trim_start().len()
+    } else {
+        0
+    };
+    let start = line[start..]
+        .find(&heading.text)
+        .map_or(start, |offset| start + offset);
+    line[..start].encode_utf16().count() + 1
 }
 
 pub fn link_at<'a>(index: &'a Index, request: &MarkdownRequest) -> Option<&'a Link> {
@@ -134,6 +151,9 @@ pub fn hover(index: &Index, request: &MarkdownRequest) -> Value {
         return Value::Null;
     }
     let path = link.target_path.as_deref().unwrap_or(&link.target);
+    if index.paths.contains(path) && !index.files.contains_key(path) {
+        return json!({"path":path,"line":link.line,"heading":null,"markdown":format!("### Local file\n\n`{path}`\n\nThis workspace file can be opened as a preview.")});
+    }
     let definition = definition(index, request);
     if !definition.is_null() {
         let line = definition["line"].as_u64().unwrap_or(1);
@@ -179,7 +199,11 @@ pub fn code_actions(index: &Index, request: &MarkdownRequest) -> Value {
         return json!([]);
     };
     if !index.paths.contains(path) {
-        return json!([{"title":format!("Create missing Markdown file \"{path}\""),"kind":"create-file","path":path,"isPreferred":true,"content":link.target_anchor.as_ref().map(|anchor|format!("# {}\n",anchor.replace(['-','_']," ")))}]);
+        let mut action = json!({"title":format!("Create missing Markdown file \"{path}\""),"kind":"create-file","path":path,"isPreferred":true});
+        if let Some(anchor) = &link.target_anchor {
+            action["content"] = json!(format!("# {}\n", anchor.replace(['-', '_'], " ")));
+        }
+        return json!([action]);
     }
     let Some(anchor) = &link.target_heading_slug else {
         return json!([]);
@@ -190,11 +214,19 @@ pub fn code_actions(index: &Index, request: &MarkdownRequest) -> Value {
     if file.headings.iter().any(|heading| &heading.slug == anchor) {
         return json!([]);
     }
+    if link.offset >= link.end_offset
+        || request.content.get(link.offset..link.end_offset) != Some(link.target.as_str())
+    {
+        return json!([]);
+    }
     let Some(hash) = link.target.find('#') else {
         return json!([]);
     };
     let mut actions = Vec::new();
-    for (n, heading) in file.headings.iter().take(3).enumerate() {
+    for (n, heading) in heading_replacements::closest(anchor, &file.headings)
+        .into_iter()
+        .enumerate()
+    {
         actions.push(json!({"title":format!("Replace missing heading anchor with #{}",heading.slug),"kind":"replace-text","isPreferred":n==0,"edit":{"path":request.path,"line":link.line,"startColumn":link.column+link.target[..hash].encode_utf16().count(),"endColumn":link.column+link.target.encode_utf16().count(),"newText":format!("#{}",heading.slug)}}));
     }
     actions.push(json!({"title":"Remove missing heading anchor","kind":"replace-text","isPreferred":actions.is_empty(),"edit":{"path":request.path,"line":link.line,"startColumn":link.column+link.target[..hash].encode_utf16().count(),"endColumn":link.column+link.target.encode_utf16().count(),"newText":""}}));
@@ -202,5 +234,30 @@ pub fn code_actions(index: &Index, request: &MarkdownRequest) -> Value {
 }
 
 pub fn diagnostics(index: &Index, file: &Document) -> Value {
-    json!(crate::analysis::diagnostics(index,file).into_iter().map(|diagnostic|json!({"message":diagnostic["message"],"range":{"start":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["start_column"].as_u64().unwrap_or(1)-1},"end":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["end_column"].as_u64().unwrap_or(2)-1}},"severity":2,"source":"markdown"})).collect::<Vec<_>>())
+    let mut diagnostics = crate::analysis::diagnostics(index,file).into_iter().map(|diagnostic|json!({"message":diagnostic["message"],"range":{"start":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["start_column"].as_u64().unwrap_or(1)-1},"end":{"line":diagnostic["line"].as_u64().unwrap_or(1)-1,"character":diagnostic["end_column"].as_u64().unwrap_or(2)-1}},"severity":2,"source":"markdown"})).collect::<Vec<_>>();
+    diagnostics.extend(reference_diagnostics::compute(&file.content));
+    diagnostics.sort_by(|left, right| {
+        for field in ["line", "character"] {
+            let order = left["range"]["start"][field]
+                .as_u64()
+                .cmp(&right["range"]["start"][field].as_u64());
+            if !order.is_eq() {
+                return order;
+            }
+        }
+        left["message"].as_str().cmp(&right["message"].as_str())
+    });
+    diagnostics.dedup();
+    json!(diagnostics)
 }
+
+#[path = "heading_replacements.rs"]
+mod heading_replacements;
+#[cfg(test)]
+#[path = "quickfix_tests.rs"]
+mod quickfix_tests;
+#[path = "reference_diagnostics.rs"]
+mod reference_diagnostics;
+#[cfg(test)]
+#[path = "markdown_tests.rs"]
+mod tests;

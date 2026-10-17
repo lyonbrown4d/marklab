@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createEventHub, invokeLegacyCommand } from '@/runtime/tauri/transport'
+import type { EventTarget, Options } from '@tauri-apps/api/event'
+import { createEventHub, invokeLegacyCommand, nativeEvents } from '@/runtime/tauri/transport'
 import { createGitApi } from '@/runtime/tauri/git'
 
 const native = vi.hoisted(() => ({
@@ -7,14 +8,17 @@ const native = vi.hoisted(() => ({
   listen: vi.fn(),
   handlers: new Map<string, (event: { payload: unknown }) => void>(),
   stops: [] as ReturnType<typeof vi.fn>[],
+  rootLabel: 'main',
 }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: native.invoke }))
 vi.mock('@tauri-apps/api/event', () => ({ listen: native.listen }))
+vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ label: native.rootLabel }) }))
 
 beforeEach(() => {
   native.invoke.mockReset().mockResolvedValue({ ok: true })
   native.handlers.clear()
   native.stops = []
+  native.rootLabel = 'main'
   native.listen.mockReset().mockImplementation(async (name, handler) => {
     native.handlers.set(name, handler)
     const stop = vi.fn()
@@ -98,6 +102,92 @@ describe('Tauri command boundary', () => {
 })
 
 describe('Tauri event bridge', () => {
+  it('targets every native subscription to its exact root WebviewWindow', async () => {
+    native.rootLabel = 'workspace-root-42'
+    const hub = createEventHub()
+    await hub.install()
+    expect(native.listen).toHaveBeenCalledTimes(nativeEvents.length)
+    for (const [index, name] of nativeEvents.entries()) {
+      expect(native.listen).toHaveBeenNthCalledWith(index + 1, name, expect.any(Function), {
+        target: { kind: 'WebviewWindow', label: 'workspace-root-42' },
+      })
+    }
+    hub.dispose()
+  })
+
+  it('keeps same-generation owner events separate while accepting app broadcasts', async () => {
+    const registrations: Array<{
+      name: string
+      target?: Options['target']
+      receive: (event: { payload: unknown }) => void
+    }> = []
+    native.listen.mockImplementation(async (name, receive, options?: Options) => {
+      registrations.push({ name, receive, target: options?.target })
+      return vi.fn()
+    })
+    const first = createEventHub()
+    native.rootLabel = 'workspace-a'
+    await first.install()
+    const second = createEventHub()
+    native.rootLabel = 'workspace-b'
+    await second.install()
+    const firstMenu = vi.fn()
+    const secondMenu = vi.fn()
+    const firstSeed = vi.fn()
+    const secondSeed = vi.fn()
+    const firstGlobal = vi.fn()
+    const secondGlobal = vi.fn()
+    first.on('menu-action', firstMenu)
+    second.on('menu-action', secondMenu)
+    first.on('workspace-session-seed', firstSeed)
+    second.on('workspace-session-seed', secondSeed)
+    first.on('recent-workspaces-changed', firstGlobal)
+    second.on('recent-workspaces-changed', secondGlobal)
+    // Tauri sends app broadcasts to all targets, and unscoped Any listeners
+    // receive even owner-targeted events. Match that boundary in this fixture.
+    const emit = (target: EventTarget, name: string, payload: unknown) => {
+      for (const registration of registrations) {
+        if (registration.name !== name) continue
+        const subscribed =
+          typeof registration.target === 'string'
+            ? { kind: 'AnyLabel', label: registration.target }
+            : registration.target
+        if (
+          target.kind === 'Any' ||
+          !subscribed ||
+          subscribed.kind === 'Any' ||
+          ((subscribed.kind === target.kind || subscribed.kind === 'AnyLabel') &&
+            'label' in subscribed &&
+            'label' in target &&
+            subscribed.label === target.label)
+        ) {
+          registration.receive({ payload })
+        }
+      }
+    }
+    emit({ kind: 'WebviewWindow', label: 'workspace-a' }, 'menu-action', 'edit.paste')
+    emit({ kind: 'WebviewWindow', label: 'workspace-a' }, 'workspace-session-seed', {
+      state: { rootPath: '/a' },
+      nativeAttempt: 1,
+      nativeGeneration: 1,
+    })
+    emit({ kind: 'Webview', label: 'workspace-a' }, 'menu-action', 'edit.cut')
+    emit({ kind: 'WebviewWindow', label: 'workspace-b' }, 'workspace-session-seed', {
+      state: { rootPath: '/b' },
+      nativeAttempt: 1,
+      nativeGeneration: 1,
+    })
+    emit({ kind: 'Any' }, 'recent-workspaces-changed', { updated: true })
+    expect(firstMenu).toHaveBeenCalledExactlyOnceWith('edit.paste')
+    expect(secondMenu).not.toHaveBeenCalled()
+    expect(firstSeed).toHaveBeenCalledExactlyOnceWith({ state: { rootPath: '/a' } })
+    expect(secondSeed).toHaveBeenCalledExactlyOnceWith({ state: { rootPath: '/b' } })
+    expect(firstGlobal).toHaveBeenCalledExactlyOnceWith({ updated: true })
+    expect(secondGlobal).toHaveBeenCalledExactlyOnceWith({ updated: true })
+    first.dispose()
+    second.dispose()
+  })
+
   it('replays early seeds, preserves envelopes, and removes subscribers', async () => {
     const hub = createEventHub()
     await hub.install()

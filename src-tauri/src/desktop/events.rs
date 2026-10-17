@@ -26,7 +26,8 @@ pub fn window_event(window: &Window, event: &WindowEvent) {
             let _ = super::menus::refresh_shortcuts(window.app_handle(), window.label());
         }
         WindowEvent::ThemeChanged(theme) => {
-            let _ = window.emit(
+            let _ = window.emit_to(
+                tauri::EventTarget::webview_window(window.label()),
                 "system-theme-changed",
                 serde_json::json!({"colorMode":if *theme==tauri::Theme::Dark{"dark"}else{"light"}}),
             );
@@ -48,6 +49,7 @@ pub fn window_event(window: &Window, event: &WindowEvent) {
 }
 pub fn run_event(app: &AppHandle, event: RunEvent) {
     match event {
+        RunEvent::Exit => log::logger().flush(),
         RunEvent::MainEventsCleared => super::visibility::refresh(app),
         RunEvent::ExitRequested { api, code, .. } => {
             if code.is_none() {

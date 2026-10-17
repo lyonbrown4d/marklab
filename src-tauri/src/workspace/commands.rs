@@ -18,7 +18,8 @@ async fn change_root(
     let previous = registry.get(window.label())?;
     let next = registry.open_async(window.label(), path, single).await?;
     let followup: BackendResult<()> = async {
-        window.emit(
+        window.emit_to(
+            tauri::EventTarget::webview_window(window.label()),
             "workspace-generation-changed",
             serde_json::json!({"generation":next.generation}),
         )?;
@@ -91,6 +92,7 @@ pub struct PathMetadata {
     path: String,
     kind: String,
     size_bytes: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     modified_ms: Option<u64>,
     readonly: bool,
 }
@@ -221,4 +223,28 @@ pub async fn fs_delete_path(
         .await
         .retain(|p, _| p != &request.path && !p.starts_with(&prefix));
     announce(&window, &workspace).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PathMetadata;
+
+    #[test]
+    fn metadata_omits_missing_time_and_preserves_valid_milliseconds() {
+        let mut metadata = PathMetadata {
+            path: "preview.pdf".into(),
+            kind: "file".into(),
+            size_bytes: 42,
+            modified_ms: None,
+            readonly: false,
+        };
+        let expected = serde_json::json!({
+            "path": "preview.pdf", "kind": "file", "size_bytes": 42, "readonly": false,
+        });
+        assert_eq!(serde_json::to_value(&metadata).unwrap(), expected);
+        metadata.modified_ms = Some(1_700_000_000_123);
+        let value = serde_json::to_value(&metadata).unwrap();
+        assert_eq!(value["modified_ms"], 1_700_000_000_123u64);
+        assert_eq!(value["path"], "preview.pdf");
+    }
 }

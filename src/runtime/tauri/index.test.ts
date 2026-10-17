@@ -11,6 +11,7 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: native.invoke, isTauri: native.
 vi.mock('@tauri-apps/api/event', () => ({ listen: native.listen }))
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
+    label: 'main',
     onCloseRequested: async () => vi.fn(),
     isVisible: async () => false,
     scaleFactor: async () => 1,
@@ -51,6 +52,12 @@ describe('Tauri renderer initialization', () => {
     const first = initializeDesktopRuntime()
     expect(initializeDesktopRuntime()).toBe(first)
     await first
+    expect(
+      native.listen.mock.calls.every(
+        ([, , options]) =>
+          options?.target?.kind === 'WebviewWindow' && options.target.label === 'main',
+      ),
+    ).toBe(true)
     const { getElectronRuntime, isElectronRuntime } = await import('@/runtime/electron')
     expect(isElectronRuntime()).toBe(true)
     const api = getElectronRuntime()

@@ -1,5 +1,5 @@
 use crate::error::{BackendError, BackendResult};
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -7,6 +7,9 @@ use std::{
     ops::Range,
     sync::{Arc, LazyLock},
 };
+#[path = "link_positions.rs"]
+mod link_positions;
+pub use link_positions::position;
 
 static WIKI: LazyLock<Result<Regex, regex::Error>> =
     LazyLock::new(|| Regex::new(r"!?\[\[([^\]\n]+?)\]\]"));
@@ -57,6 +60,7 @@ struct PendingLink {
     text: String,
     range: Range<usize>,
     image: bool,
+    inline: bool,
 }
 
 pub fn parse(path: String, content: String) -> BackendResult<Document> {
@@ -108,17 +112,27 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
             }
             Event::Start(Tag::CodeBlock(_)) => code_depth += 1,
             Event::End(TagEnd::CodeBlock) => code_depth = code_depth.saturating_sub(1),
-            Event::Start(Tag::Link { dest_url, .. }) => pending_links.push(PendingLink {
+            Event::Start(Tag::Link {
+                dest_url,
+                link_type,
+                ..
+            }) => pending_links.push(PendingLink {
                 target: dest_url.into_string(),
                 text: String::new(),
                 range,
                 image: false,
+                inline: link_type == LinkType::Inline,
             }),
-            Event::Start(Tag::Image { dest_url, .. }) => pending_links.push(PendingLink {
+            Event::Start(Tag::Image {
+                dest_url,
+                link_type,
+                ..
+            }) => pending_links.push(PendingLink {
                 target: dest_url.into_string(),
                 text: String::new(),
                 range,
                 image: true,
+                inline: link_type == LinkType::Inline,
             }),
             Event::End(TagEnd::Link | TagEnd::Image) => {
                 if let Some(pending) = pending_links.pop() {
@@ -129,6 +143,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
                         pending.text,
                         "markdown",
                         pending.range,
+                        pending.inline,
                     );
                     if pending.image {
                         assets.push(item);
@@ -184,6 +199,7 @@ pub fn parse(path: String, content: String) -> BackendResult<Document> {
                 label.trim().into(),
                 "wiki",
                 range.start + found.start()..range.start + found.end(),
+                true,
             );
             if found.as_str().starts_with('!') {
                 assets.push(item);
@@ -226,11 +242,13 @@ fn link_at(
     text: String,
     kind: &str,
     range: Range<usize>,
+    inline: bool,
 ) -> Link {
     let raw = &content[range.clone()];
-    let destination = raw
-        .find(&target)
-        .map_or(range.start, |index| range.start + index);
+    // Resolved reference-style destinations are outside this usage span.
+    // Never mistake matching label text for a writable destination.
+    let found = link_positions::destination(raw, &target, kind, inline);
+    let destination = found.map_or(range.start, |index| range.start + index);
     let (line, column) = position(content, destination);
     let context = content
         .lines()
@@ -238,7 +256,7 @@ fn link_at(
         .unwrap_or("")
         .trim()
         .to_owned();
-    let end_offset = destination + target.len();
+    let end_offset = destination + found.map_or(0, |_| target.len());
     Link {
         source_path: path.into(),
         target,
@@ -277,18 +295,4 @@ pub fn slug(text: &str) -> String {
     } else {
         value
     }
-}
-
-// Monaco and LSP columns are UTF-16 code units, not byte offsets.
-pub fn position(text: &str, offset: usize) -> (usize, usize) {
-    let before = &text[..offset.min(text.len())];
-    let line = before.bytes().filter(|byte| *byte == b'\n').count() + 1;
-    let column = before
-        .rsplit('\n')
-        .next()
-        .unwrap_or("")
-        .encode_utf16()
-        .count()
-        + 1;
-    (line, column)
 }
