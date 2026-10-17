@@ -16,8 +16,8 @@ describe('native asset resource origins', () => {
       'marklab-asset://local/../../private',
     )
   })
-  it('retains Electron and WKWebView capability URLs', () => {
-    vi.stubGlobal('window', { marklabElectron: {} })
+  it('retains browser-preview and WKWebView capability URLs', () => {
+    vi.stubGlobal('window', {})
     vi.stubGlobal('navigator', { userAgent: 'Windows NT 10.0' })
     expect(toWebviewAssetUrl(capability)).toBe(capability)
     vi.stubGlobal('window', { marklabTauri: {} })

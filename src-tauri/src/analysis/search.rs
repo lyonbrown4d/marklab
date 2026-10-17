@@ -5,13 +5,9 @@ use crate::{
 };
 use regex::RegexBuilder;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
-use std::{
-    collections::BTreeSet,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 #[derive(Deserialize)]
@@ -74,78 +70,15 @@ impl AnalysisService {
     ) -> BackendResult<Vec<SearchResult>> {
         let limit = request.limit.unwrap_or(100);
         validate(&request.query, limit)?;
-        let index = self.index(workspace.clone()).await?;
-        let expression = request
-            .query
-            .split_whitespace()
-            .map(|word| format!("\"{}\"*", word.replace('"', "\"\"")))
-            .collect::<Vec<_>>()
-            .join(" AND ");
-        let selected: BTreeSet<String> = {
-            let _build = self.build.lock().await;
-            workspace.ensure_active()?;
-            if workspace.current_revision() != index.revision {
-                return Err(super::service::changed());
-            }
-            if self.persisted_index_matches(&index).await {
-                match sqlx::query("SELECT path,bm25(analysis_fts) AS rank FROM analysis_fts WHERE analysis_fts MATCH ? AND scope=? ORDER BY rank LIMIT ?").bind(expression).bind(&index.scope).bind((limit*4) as i64).fetch_all(&self.pool).await {
-                    Ok(rows)=>rows.into_iter().filter_map(|row|row.try_get::<String,_>("path").ok()).collect(),
-                    Err(error)=>{log::warn!("Analysis search cache unavailable: {}",error);BTreeSet::new()}
-                }
-            } else {
-                BTreeSet::new()
-            }
-        };
-        let filter = (!selected.is_empty() && request.query.is_ascii()).then_some(selected);
-        let regex = RegexBuilder::new(&regex::escape(&request.query))
-            .case_insensitive(true)
-            .build()
-            .map_err(regex_error)?;
-        let _worker = self
-            .workers
-            .clone()
-            .acquire_owned()
-            .await
-            .map_err(|_| invalid("Search worker unavailable"))?;
-        tokio::task::spawn_blocking(move || {
-            let mut results = Vec::new();
-            for file in index.files.values().filter(|file| {
-                filter
-                    .as_ref()
-                    .is_none_or(|paths| paths.contains(&file.path))
-            }) {
-                let mut found = false;
-                for (line, text) in file.content.lines().enumerate() {
-                    if let Some(matched) = regex.find(text) {
-                        results.push(result(file, line, text, matched.start(), matched.end()));
-                        found = true;
-                        break;
-                    }
-                }
-                if !found
-                    && format!("{} {}", file.path, file.title)
-                        .to_lowercase()
-                        .contains(&request.query.to_lowercase())
-                {
-                    results.push(SearchResult {
-                        path: file.path.clone(),
-                        title: file.title.clone(),
-                        line: 1,
-                        column: 1,
-                        end_column: 1,
-                        snippet: file.title.clone(),
-                        snippet_highlights: Vec::new(),
-                        score: 0.5,
-                    });
-                }
-                if results.len() >= limit {
-                    break;
-                }
-            }
-            Ok(results)
-        })
+        let index = self.index(workspace).await?;
+        self.counted_search(
+            index,
+            request.query,
+            limit,
+            Arc::new(AtomicBool::new(false)),
+        )
         .await
-        .map_err(|error| invalid(&error.to_string()))?
+        .map(|result| result.results)
     }
 
     pub async fn occurrences(
@@ -253,7 +186,13 @@ pub fn scan(
     })
 }
 
-fn result(file: &Document, line: usize, text: &str, start: usize, end: usize) -> SearchResult {
+pub(super) fn result(
+    file: &Document,
+    line: usize,
+    text: &str,
+    start: usize,
+    end: usize,
+) -> SearchResult {
     let before = text[..start].chars().count();
     let snippet_start = before.saturating_sub(80);
     let snippet: String = text.chars().skip(snippet_start).take(240).collect();

@@ -100,7 +100,10 @@ pub async fn create(
         builder = builder
             .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
-            .traffic_light_position(tauri::LogicalPosition::new(16.0, 16.0));
+            // Wry's vertical inset positions the native titlebar container,
+            // rather than the button's top edge. Center the controls in our
+            // 52-point titlebar (the old inset was 10pt high).
+            .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
     }
     let window = builder.build()?;
     crate::native_window::register(&window)?;
@@ -110,12 +113,13 @@ pub async fn create(
             .into_iter()
             .map(|monitor| {
                 let area = *monitor.work_area();
-                (
-                    area.position.x,
-                    area.position.y,
-                    area.size.width,
-                    area.size.height,
-                )
+                super::policy::DisplayArea {
+                    x: area.position.x,
+                    y: area.position.y,
+                    width: area.size.width,
+                    height: area.size.height,
+                    scale_factor: monitor.scale_factor(),
+                }
             })
             .collect::<Vec<_>>();
         if super::policy::visible_rectangle(x, y, state.width, state.height, &displays) {

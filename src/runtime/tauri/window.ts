@@ -1,18 +1,63 @@
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import type { ElectronFileDropEvent, RendererSafeElectronApi } from '@/runtime/electron'
+import type { DesktopFileDropEvent, DesktopRuntimeApi } from '@/runtime/desktop'
 import { request, type TauriEventHub } from '@/runtime/tauri/transport'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
 // Keep visibility native and current across attempts that hide/reuse a renderer.
 export const isTauriWindowVisible = (): Promise<boolean> => getCurrentWindow().isVisible()
 
 type CloseHandler = () => Promise<void> | void
 
+type NativeWindow = Pick<ReturnType<typeof getCurrentWindow>, 'isMaximized' | 'onResized'>
+
+const watchNativeMaximized = async (
+  nativeWindow: NativeWindow,
+  handler: (maximized: boolean) => void,
+): Promise<() => void> => {
+  let active = true
+  let readVersion = 0
+  let previous: boolean | undefined
+  let stop: (() => void) | undefined
+  const read = async (): Promise<void> => {
+    const version = ++readVersion
+    try {
+      const maximized = await nativeWindow.isMaximized()
+      if (!active || version !== readVersion || previous === maximized) return
+      previous = maximized
+      handler(maximized)
+    } catch (error) {
+      if (active && version === readVersion) throw error
+    }
+  }
+  const dispose = () => {
+    if (!active) return
+    active = false
+    readVersion += 1
+    stop?.()
+  }
+  try {
+    // Capture this native root, and subscribe before reading restored geometry.
+    stop = await nativeWindow.onResized(() => {
+      void read().catch((error: unknown) =>
+        rendererDiagnostics.warn('window.state', 'maximized-read-failed', error),
+      )
+    })
+    await read()
+    return dispose
+  } catch (error) {
+    dispose()
+    throw error
+  }
+}
+
 export const createWindowApis = (events: TauriEventHub) => {
   const nativeWindow = getCurrentWindow()
   const closeHandlers = new Set<CloseHandler>()
-  const dropHandlers = new Set<(event: ElectronFileDropEvent) => void>()
+  const dropHandlers = new Set<(event: DesktopFileDropEvent) => void>()
   const unlisten: Array<() => void> = []
+  const maximizedSubscriptions = new Set<() => void>()
+  let disposed = false
   let closing: Promise<void> | null = null
   let flushing: Promise<void> | null = null
   let scaleFactor = 1
@@ -60,13 +105,28 @@ export const createWindowApis = (events: TauriEventHub) => {
     return operation
   }
 
-  const windowApi: RendererSafeElectronApi['window'] = {
+  const windowApi: DesktopRuntimeApi['window'] = {
     setVimKeyboardOwnership: (active) => request('window_set_vim_keyboard_ownership', { active }),
     onPresented: (handler) => events.on('window-presented', handler),
     minimize: () => nativeWindow.minimize(),
     maximize: () => nativeWindow.maximize(),
     unmaximize: () => nativeWindow.unmaximize(),
     isMaximized: () => nativeWindow.isMaximized(),
+    onMaximizedChanged: async (handler) => {
+      if (disposed) return () => {}
+      const stop = await watchNativeMaximized(nativeWindow, (maximized) => {
+        if (!disposed) handler(maximized)
+      })
+      if (disposed) {
+        stop()
+        return () => {}
+      }
+      maximizedSubscriptions.add(stop)
+      return () => {
+        maximizedSubscriptions.delete(stop)
+        stop()
+      }
+    },
     close,
     onCloseRequested: (handler) => {
       closeHandlers.add(handler)
@@ -78,7 +138,7 @@ export const createWindowApis = (events: TauriEventHub) => {
   return {
     window: windowApi,
     webview: {
-      onFileDrop: (handler: (event: ElectronFileDropEvent) => void) => {
+      onFileDrop: (handler: (event: DesktopFileDropEvent) => void) => {
         dropHandlers.add(handler)
         return () => dropHandlers.delete(handler)
       },
@@ -129,6 +189,9 @@ export const createWindowApis = (events: TauriEventHub) => {
       }
     },
     dispose: (): void => {
+      disposed = true
+      for (const stop of maximizedSubscriptions) stop()
+      maximizedSubscriptions.clear()
       for (const stop of unlisten.splice(0)) stop()
       closeHandlers.clear()
       dropHandlers.clear()

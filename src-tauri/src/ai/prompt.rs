@@ -4,22 +4,22 @@ use serde_json::json;
 pub fn validate(input: &InlineRequest) -> BackendResult<()> {
     policy::validate_id(&input.provider_id)?;
     if input.completion_session_id.is_empty()
-        || input.completion_session_id.chars().count() > 128
+        || policy::utf16_len(&input.completion_session_id) > 128
         || input.revision > i32::MAX as u32
         || input.prefix.is_empty()
-        || input.prefix.chars().count() > 8192
-        || input.suffix.chars().count() > 4096
+        || policy::utf16_len(&input.prefix) > 8192
+        || policy::utf16_len(&input.suffix) > 4096
         || input
             .heading
             .as_ref()
-            .is_some_and(|value| value.chars().count() > 512)
+            .is_some_and(|value| policy::utf16_len(value) > 512)
         || !["auto", "zh-CN", "en"].contains(&input.language.as_str())
         || !["short", "medium", "long"].contains(&input.length.as_str())
         || input.excluded_suggestions.len() > 2
         || input
             .excluded_suggestions
             .iter()
-            .any(|value| value.is_empty() || value.chars().count() > 512)
+            .any(|value| value.is_empty() || policy::utf16_len(value) > 512)
     {
         return Err(policy::invalid("Invalid inline completion request"));
     }
@@ -84,5 +84,12 @@ pub fn clean(raw: &str, input: &InlineRequest) -> String {
     {
         return String::new();
     }
-    output.chars().take(512).collect()
+    let mut units = 0;
+    output
+        .chars()
+        .take_while(|character| {
+            units += character.len_utf16();
+            units <= 512
+        })
+        .collect()
 }

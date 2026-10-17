@@ -1,5 +1,9 @@
 # Search and Settings Design QA
 
+> Historical design QA recorded against the Electron implementation. The paths,
+> screenshots, test counts, and findings below describe that source version; they
+> are not Tauri runtime, Windows integration, or current automated test results.
+
 ## Evidence
 
 - Global search design: `C:\Users\12783\.codex\generated_images\01a0ec98-36a6-7d52-8af7-b9ea0d998f93\exec-f92adf11-0845-42a6-b621-cb8b00bafece.png`
@@ -54,6 +58,10 @@ final result: passed
 ---
 
 # Workspace Publication Dialog Design QA
+
+> Historical Electron design QA. These screenshots and pass statements preserve
+> the original evidence; the current Tauri publication flow requires its own
+> visual and native export verification.
 
 ## Evidence
 

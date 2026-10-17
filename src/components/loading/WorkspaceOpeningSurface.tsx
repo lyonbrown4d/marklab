@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type { WindowOpeningProgress } from '@/types/windowOpening'
 
 const labels = () => {
@@ -35,7 +35,7 @@ export const WorkspaceOpeningSurface = () => {
 
   useEffect(() => {
     mounted.current = true
-    const unlisten = getElectronRuntime().opening.onProgress(setProgress)
+    const unlisten = getDesktopRuntime().opening.onProgress(setProgress)
     return () => {
       mounted.current = false
       unlisten()
@@ -46,7 +46,7 @@ export const WorkspaceOpeningSurface = () => {
     setRetrying(true)
     setProgress((current) => ({ ...current, error: undefined, stage: 'starting' }))
     try {
-      const result = await getElectronRuntime().opening.retry()
+      const result = await getDesktopRuntime().opening.retry()
       if (!mounted.current) return
       if (result.ok) return
       setProgress((current) => ({

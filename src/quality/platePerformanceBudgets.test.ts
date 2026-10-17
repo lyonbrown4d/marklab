@@ -11,7 +11,7 @@ import {
 } from '@/../e2e/performance/performanceStatistics'
 
 describe('Plate performance budgets', () => {
-  it.each(['native-gpu', 'software-rendering'])('%s gates long tasks', (project) => {
+  it.each(['renderer-gpu', 'software-rendering'])('%s gates long tasks', (project) => {
     const budget = performanceBudgetForProject(project) as ReturnType<
       typeof performanceBudgetForProject
     > & {
@@ -27,7 +27,7 @@ describe('Plate performance budgets', () => {
     expect(budget.maxFrameMs).toBeLessThanOrEqual(500)
   })
 
-  it.each(['native-gpu', 'software-rendering'])(
+  it.each(['renderer-gpu', 'software-rendering'])(
     '%s gates every measured latency shape',
     (project) => {
       const budget = performanceBudgetForProject(project) as Record<string, number>

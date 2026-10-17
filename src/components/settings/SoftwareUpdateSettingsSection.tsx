@@ -119,7 +119,7 @@ type UpdateActionsProps = {
   onInstall: () => Promise<void>
   installOnQuit: boolean
   onSetInstallOnQuit: (enabled: boolean) => Promise<void>
-  status: import('@/runtime/electron').ElectronUpdateStatus
+  status: import('@/runtime/desktop').DesktopUpdateStatus
 }
 
 const UpdateActions = ({

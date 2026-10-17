@@ -40,6 +40,14 @@ impl AnalysisService {
             .entries
             .iter()
             .filter(|entry| entry.kind == "file")
+            .filter(|entry| {
+                self.excluded_directory.as_ref().is_none_or(|excluded| {
+                    !workspace
+                        .root_directory()
+                        .join(&entry.path)
+                        .starts_with(excluded)
+                })
+            })
             .map(|entry| entry.path.clone())
             .collect();
         let mut raw = BTreeMap::new();

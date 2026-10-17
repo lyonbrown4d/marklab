@@ -4,8 +4,8 @@
 
 Status: in progress
 
-The Markdown language service is embedded in the Electron backend. It should not
-start an external LSP process for now.
+The Markdown language service runs inside the Rust backend and reuses the workspace
+analysis index. It does not start an external LSP or Node.js process.
 
 1. [x] Go to definition
 
@@ -73,7 +73,10 @@ Status: implemented
 - [x] Lossless GFM table resize, row/column controls, and safe CSV/TSV paste.
 - [x] Fuzzy/recent slash commands and contextual block/list/Markdown/AI actions.
 - [x] Active-heading and scroll-progress feedback in the compact status surface.
-- [x] Unit, component, and Electron E2E regression coverage for these workflows.
+- [x] Unit and component regression coverage for these workflows. Historical Electron
+      E2E results remain archival evidence. Production renderer Chromium tests and
+      Rust library tests now cover their respective boundaries; native Tauri window
+      behavior requires separate WebDriver or manual verification.
 
 ## Embedded Non-Markdown Document Previews
 

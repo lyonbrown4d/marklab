@@ -12,9 +12,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@electron/*": ["./electron/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["e2e/**/*.ts"]
+  "include": ["e2e/**/*.ts", "wdio.tauri.conf.ts"]
 }

@@ -1,8 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import type { ElectronRuntimeEventEnvelope } from '@/runtime/electron'
-import { commandAliases, legacyCommands, runtimeEvents } from '@/runtime/tauri/contract'
+import type { DesktopRuntimeEventEnvelope } from '@/runtime/desktop'
+import { commandAliases, workspaceCommands, runtimeEvents } from '@/runtime/tauri/contract'
 
 export const request = <T>(command: string, payload: unknown = {}): Promise<T> =>
   invoke<T>(command, { request: payload }).catch((error: unknown) => {
@@ -21,8 +21,8 @@ export const request = <T>(command: string, payload: unknown = {}): Promise<T> =
     throw new Error(typeof error === 'string' ? error : 'Desktop operation failed.')
   })
 
-const commandAllowlist: ReadonlySet<string> = new Set(legacyCommands)
-export const invokeLegacyCommand = async <T>(
+const commandAllowlist: ReadonlySet<string> = new Set(workspaceCommands)
+export const invokeWorkspaceCommand = async <T>(
   command: string,
   payload?: Record<string, unknown>,
 ): Promise<T> => {
@@ -36,7 +36,7 @@ export const invokeLegacyCommand = async <T>(
     }
     if (bytes.byteLength > 32 * 1024 * 1024)
       throw new Error('Asset exceeds the 32 MiB import limit.')
-    // This specific compatibility DTO needs JSON bytes; ArrayBuffer otherwise
+    // The binary import DTO needs JSON bytes; ArrayBuffer otherwise
     // becomes {} across Tauri IPC. No unrelated request data is traversed.
     return request<T>(command, {
       ...payload,
@@ -60,7 +60,7 @@ export const nativeEvents = [
   'workspace-generation-changed',
 ] as const
 
-type EventHandler = (event: ElectronRuntimeEventEnvelope) => void
+type EventHandler = (event: DesktopRuntimeEventEnvelope) => void
 const replayEvents = new Set<string>([
   'workspace-session-seed',
   'window-opening-progress',
@@ -71,7 +71,7 @@ const replayEvents = new Set<string>([
 // their subscriptions and initial workspace seeds survive late React mounts.
 export const createEventHub = () => {
   const handlers = new Map<string, Set<EventHandler>>()
-  const latest = new Map<string, ElectronRuntimeEventEnvelope>()
+  const latest = new Map<string, DesktopRuntimeEventEnvelope>()
   const unlisten: UnlistenFn[] = []
   let nextId = 0
   let nativeAttempt: number | undefined
@@ -116,14 +116,14 @@ export const createEventHub = () => {
   }
   const subscribe = <T>(
     event: string,
-    handler: (event: ElectronRuntimeEventEnvelope<T>) => void,
+    handler: (event: DesktopRuntimeEventEnvelope<T>) => void,
   ): UnlistenFn => {
     if (!nativeEvents.some((name) => name === event)) {
       throw new Error(`Unsupported event: ${event}`)
     }
     const listeners = handlers.get(event) ?? new Set<EventHandler>()
     handlers.set(event, listeners)
-    const receive: EventHandler = (envelope) => handler(envelope as ElectronRuntimeEventEnvelope<T>)
+    const receive: EventHandler = (envelope) => handler(envelope as DesktopRuntimeEventEnvelope<T>)
     listeners.add(receive)
     const cached = latest.get(event)
     if (cached) receive(cached)

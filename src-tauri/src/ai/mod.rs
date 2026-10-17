@@ -1,12 +1,21 @@
 mod commands;
 mod generation;
+#[cfg(test)]
+mod generation_tests;
+#[cfg(test)]
+mod http_fixture;
 mod jobs;
 mod policy;
 mod prompt;
 mod providers;
+#[cfg(test)]
+mod response_tests;
+mod sampling;
+mod sdk;
 pub(crate) mod secrets;
 #[cfg(test)]
 mod tests;
+mod transport;
 mod types;
 use crate::error::{BackendError, BackendResult};
 pub use commands::*;

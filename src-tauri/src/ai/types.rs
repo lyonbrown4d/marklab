@@ -1,11 +1,33 @@
 use super::secrets::SecretUpdate;
 use serde::{Deserialize, Serialize};
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProviderKind {
+    Openai,
+    Anthropic,
+    Google,
+    Deepseek,
+    OpenaiCompatible,
+    Ollama,
+}
+impl ProviderKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Openai => "openai",
+            Self::Anthropic => "anthropic",
+            Self::Google => "google",
+            Self::Deepseek => "deepseek",
+            Self::OpenaiCompatible => "openai-compatible",
+            Self::Ollama => "ollama",
+        }
+    }
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProviderMetadata {
     pub id: String,
     pub label: String,
-    pub kind: String,
+    pub kind: ProviderKind,
     pub model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_url: Option<String>,
@@ -15,7 +37,7 @@ pub struct ProviderMetadata {
 pub struct ProviderUpdate {
     pub id: String,
     pub label: String,
-    pub kind: String,
+    pub kind: ProviderKind,
     pub model: String,
     pub base_url: Option<String>,
     #[serde(default)]

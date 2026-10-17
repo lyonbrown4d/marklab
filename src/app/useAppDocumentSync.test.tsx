@@ -30,8 +30,9 @@ vi.mock('@/runtime/environment', () => ({
   isDesktopRuntime: () => true,
   isTauriRuntime: () => false,
 }))
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => true,
+  getDesktopRuntime: () => ({
     window: {
       onCloseRequested: (handler: () => Promise<void> | void) => {
         mocks.closeHandler = handler

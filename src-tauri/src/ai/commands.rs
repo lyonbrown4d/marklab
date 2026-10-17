@@ -1,7 +1,7 @@
 use super::*;
 use crate::native_window::TrustedWindow as WebviewWindow;
 use crate::{error::BackendResult, settings::SettingsStore, workspace::WorkspaceRegistry};
-use tauri::State;
+use tauri::{Manager, State};
 #[tauri::command]
 pub async fn ai_list_providers(
     window: WebviewWindow,
@@ -72,7 +72,9 @@ pub async fn ai_start_generation(
     service: State<'_, AiService>,
     request: GenerateRequest,
 ) -> BackendResult<StartResult> {
-    registry.get(window.label())?;
+    let workspace = registry.get(window.label())?;
+    let _lifecycle = crate::desktop::lifecycle_guard(window.app_handle()).await;
+    registry.ensure_binding(window.label(), &workspace)?;
     service.start_generation(window, request, None).await
 }
 #[tauri::command]
@@ -94,7 +96,9 @@ pub async fn ai_completion_start(
     settings: State<'_, SettingsStore>,
     request: InlineRequest,
 ) -> BackendResult<StartResult> {
-    registry.get(window.label())?;
+    let workspace = registry.get(window.label())?;
+    let _lifecycle = crate::desktop::lifecycle_guard(window.app_handle()).await;
+    registry.ensure_binding(window.label(), &workspace)?;
     service.start_inline(window, &settings, request).await
 }
 #[tauri::command]

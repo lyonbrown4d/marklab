@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EventTarget, Options } from '@tauri-apps/api/event'
-import { createEventHub, invokeLegacyCommand, nativeEvents } from '@/runtime/tauri/transport'
+import { createEventHub, invokeWorkspaceCommand, nativeEvents } from '@/runtime/tauri/transport'
 import { createGitApi } from '@/runtime/tauri/git'
 
 const native = vi.hoisted(() => ({
@@ -30,7 +30,7 @@ beforeEach(() => {
 describe('Tauri command boundary', () => {
   it('serializes only the binary asset DTO and rejects oversized imports before invoking Rust', async () => {
     const bytes = new Uint8Array([0, 127, 255])
-    await invokeLegacyCommand('fs_import_markdown_asset_bytes', {
+    await invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
       fileName: 'image.png',
       bytes: bytes.buffer,
     })
@@ -39,7 +39,7 @@ describe('Tauri command boundary', () => {
     })
     native.invoke.mockClear()
     await expect(
-      invokeLegacyCommand('fs_import_markdown_asset_bytes', {
+      invokeWorkspaceCommand('fs_import_markdown_asset_bytes', {
         bytes: new Uint8Array(32 * 1024 * 1024 + 1),
       }),
     ).rejects.toThrow('32 MiB')
@@ -48,7 +48,7 @@ describe('Tauri command boundary', () => {
 
   it('preserves structured Rust error messages and codes for existing UI error states', async () => {
     native.invoke.mockRejectedValueOnce({ code: 'STALE_SESSION', message: 'Workspace changed' })
-    const error = await invokeLegacyCommand('fs_read_file', { path: 'notes.md' }).catch(
+    const error = await invokeWorkspaceCommand('fs_read_file', { path: 'notes.md' }).catch(
       (error: unknown) => error,
     )
     expect(error).toBeInstanceOf(Error)
@@ -56,14 +56,14 @@ describe('Tauri command boundary', () => {
   })
 
   it('preserves DTOs and maps legacy names without exposing arbitrary native commands', async () => {
-    await invokeLegacyCommand('fs_read_file', { path: 'notes.md' })
-    await invokeLegacyCommand('knowledge.engine.workspaceStatus')
+    await invokeWorkspaceCommand('fs_read_file', { path: 'notes.md' })
+    await invokeWorkspaceCommand('knowledge.engine.workspaceStatus')
     expect(native.invoke.mock.calls).toEqual([
       ['fs_read_file', { request: { path: 'notes.md' } }],
       ['knowledge_engine_workspace_status', { request: {} }],
     ])
     native.invoke.mockClear()
-    await expect(invokeLegacyCommand('plugin:shell|execute', { command: 'sh' })).rejects.toThrow(
+    await expect(invokeWorkspaceCommand('plugin:shell|execute', { command: 'sh' })).rejects.toThrow(
       'Unsupported command',
     )
     expect(native.invoke).not.toHaveBeenCalled()

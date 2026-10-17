@@ -1,6 +1,5 @@
 import { useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 
-import { isTauriRuntime } from '@/runtime/environment'
 import { isDesktopRuntime, type RuntimeWindowHandle } from '@/runtime/window'
 import type { AppPlatform } from '@/services/appApi'
 import { rendererDiagnostics } from '@/services/rendererDiagnostics'
@@ -11,7 +10,7 @@ export const useTitlebarDrag = (
 ) => {
   return useCallback(
     (e: ReactMouseEvent) => {
-      if (!isDesktopRuntime() || (platform !== 'macos' && !isTauriRuntime())) return
+      if (!isDesktopRuntime()) return
       if (e.button !== 0) return
       const target = e.target as HTMLElement
       if (
@@ -23,7 +22,7 @@ export const useTitlebarDrag = (
       void getAppWindow()
         .then(async (windowHandle) => {
           if (!windowHandle) return
-          if (isTauriRuntime() && platform !== 'macos' && e.detail === 2) {
+          if (platform !== 'macos' && e.detail === 2) {
             if (await windowHandle.isMaximized()) await windowHandle.unmaximize()
             else await windowHandle.maximize()
           } else {

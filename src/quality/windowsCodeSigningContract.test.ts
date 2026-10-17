@@ -2,12 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 
-const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8') as string
+const fileText = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8')
 
-describe('Windows Authenticode and retained local Electron signing contract', () => {
-  it('keeps Windows OS signing unconfigured while preserving Tauri updater signing', () => {
+describe('Windows Authenticode availability and Tauri artifact verification', () => {
+  it('keeps unconfigured OS signing distinct from Tauri updater signing', () => {
     const workflow = fileText('../../.github/workflows/release.yml')
-
     const native = JSON.parse(fileText('../../src-tauri/tauri.conf.json')) as {
       bundle: { windows?: { certificateThumbprint?: string; signCommand?: string } }
     }
@@ -20,46 +19,36 @@ describe('Windows Authenticode and retained local Electron signing contract', ()
     expect(native.bundle.windows?.certificateThumbprint).toBeUndefined()
     expect(native.bundle.windows?.signCommand).toBeUndefined()
     expect(action?.env?.TAURI_SIGNING_PRIVATE_KEY).toBe('${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}')
-    expect(workflow).not.toContain('WINDOWS_CSC_LINK')
-    expect(workflow).not.toContain('WINDOWS_CSC_KEY_PASSWORD')
+    expect(fileText('../../docs/release.md')).toContain(
+      'Windows Authenticode signing is not configured',
+    )
   })
 
-  it('selects and validates a certificate from a local Windows store', () => {
-    const packageJson = fileText('../../package.json')
-    const packager = fileText('../../scripts/package-signed-windows.ps1')
-
-    const scripts = (JSON.parse(packageJson) as { scripts: Record<string, string> }).scripts
-    expect(scripts['electron:dist:win:signed']).toContain('scripts/package-signed-windows.ps1')
-    expect(scripts['dist:win']).toBe('moon run desktop:dist-win')
-    expect(packager).toContain('MARKLAB_WINDOWS_CERTIFICATE_SHA1')
-    expect(packager).toContain('Cert:\\CurrentUser\\My')
-    expect(packager).toContain('Cert:\\LocalMachine\\My')
-    expect(packager).toContain('HasPrivateKey')
-    expect(packager).toContain('1.3.6.1.5.5.7.3.3')
-    expect(packager).toContain('forceCodeSigning=true')
-    expect(packager).toContain('certificateSha1=')
-  })
-
-  it('requires SHA-256, RFC 3161 timestamping, and verifies both executables', () => {
-    const packageJson = fileText('../../package.json')
+  it('verifies the native executable and every available NSIS/MSI installer using Windows SDK tools', () => {
     const verifier = fileText('../../scripts/verify-windows-signatures.ps1')
-
-    expect(packageJson).toContain('signingHashAlgorithms')
-    expect(packageJson).toContain('sha256')
-    expect(packageJson).toContain('rfc3161TimeStampServer')
-    expect(verifier).toContain('signtool.exe')
+    const manifest = fileText('../../src-tauri/Cargo.toml')
+    expect(manifest).toContain('name = "marklab-desktop"')
+    expect(verifier).toContain("'marklab-desktop.exe'")
+    expect(verifier).toContain("'bundle'")
+    expect(verifier).toContain("@('nsis', 'msi')")
+    expect(verifier).toContain("'*.exe'")
+    expect(verifier).toContain("'*.msi'")
+    expect(verifier).toContain('$installerFiles.Count -eq 0')
+    expect(verifier).toContain('$files.Count -gt 1')
+    expect(verifier).toContain('Windows Kits\\10\\bin')
     expect(verifier).toContain("'verify', '/pa', '/all', '/tw', '/v'")
-    expect(verifier).toContain('Get-AuthenticodeSignature')
-    expect(verifier).toContain("'*-setup.exe'")
-    expect(verifier).toContain('Marklab.exe')
+    expect(verifier).not.toMatch(/electron-builder|ELECTRON_BUILDER_CACHE|win-unpacked/)
+  })
+
+  it('fails unsigned, invalid, non-timestamped, missing, or stale ambiguous artifact sets', () => {
+    const verifier = fileText('../../scripts/verify-windows-signatures.ps1')
+    expect(verifier).toContain('Get-AuthenticodeSignature -LiteralPath $target')
     expect(verifier).toContain("$signature.Status -ne 'Valid'")
     expect(verifier).toContain('$signature.TimeStamperCertificate')
     expect(verifier).toContain('missing a trusted timestamp')
-  })
-
-  it('keeps private-key containers out of version control', () => {
+    expect(verifier).toContain('$LASTEXITCODE -ne 0')
+    expect(verifier).toContain('-PathType Leaf')
     const gitignore = fileText('../../.gitignore')
-
     expect(gitignore).toContain('*.pfx')
     expect(gitignore).toContain('*.p12')
   })

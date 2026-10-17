@@ -40,10 +40,8 @@ pub fn start(app: &AppHandle) {
     });
 }
 async fn initialize(app: &AppHandle) -> BackendResult<()> {
-    let data = app.path().app_data_dir()?.join("v1");
-    tokio::fs::create_dir_all(&data).await?;
-    let database = crate::database::Database::open(&data).await?;
-    let settings = SettingsStore::new(database.pool.clone());
+    let services = crate::composition::DesktopServices::open(app).await?;
+    let settings = &services.settings;
     let additional = settings.restore_sessions().await?;
     let saved = settings.read_session("main").await?;
     let locale = settings
@@ -57,26 +55,6 @@ async fn initialize(app: &AppHandle) -> BackendResult<()> {
                 .map(String::from)
         })
         .unwrap_or_else(|| std::env::var("LANG").unwrap_or_else(|_| "en-US".into()));
-    let source_data = data.clone();
-    let pool = database.pool.clone();
-    let registry = tauri::async_runtime::spawn_blocking(move || {
-        WorkspaceRegistry::with_history(&source_data, pool)
-    })
-    .await
-    .map_err(|error| BackendError::new("WORKSPACE_INIT_FAILED", error.to_string()))??;
-    crate::git::initialize().await?;
-    let ai = crate::ai::AiService::new(database.pool.clone()).await?;
-    let sync = crate::sync::SyncService::new(database.pool.clone()).await?;
-    let preview = crate::link_preview::LinkPreviewService::new(
-        database.pool.clone(),
-        app.path().app_cache_dir()?.join("web-previews"),
-    )
-    .await?;
-    let asset_data = data.clone();
-    let assets =
-        tauri::async_runtime::spawn_blocking(move || crate::assets::AssetService::new(&asset_data))
-            .await
-            .map_err(|error| BackendError::new("ASSET_INIT_FAILED", error.to_string()))??;
     let args: Vec<_> = std::env::args().collect();
     let mut arguments = super::windows::open_targets(&args).await;
     let argument = if arguments.is_empty() {
@@ -103,27 +81,7 @@ async fn initialize(app: &AppHandle) -> BackendResult<()> {
         .and_then(Value::as_str)
         .map(String::from);
     let target = super::policy::choose_startup_target(native_first, argument, saved_path);
-    // Construct every service before publishing managed state, so a failed initialization can retry cleanly.
-    app.manage(crate::history::HistoryStore::new(database.pool.clone()));
-    app.manage(crate::graph_layout::GraphLayoutStore::new(
-        database.pool.clone(),
-    ));
-    app.manage(crate::analysis::AnalysisService::new(database.pool.clone()));
-    app.manage(crate::language::LanguageService::default());
-    app.manage(crate::web_tabs::WebTabs::default());
-    app.manage(preview);
-    app.manage(settings);
-    app.manage(registry);
-    app.manage(ai);
-    app.manage(sync);
-    app.manage(database);
-    app.manage(assets);
-    app.manage(crate::git::GitState::default());
-    app.manage(crate::terminal::TerminalState::default());
-    app.manage(crate::platform::save_paths::SavePathGrants::default());
-    app.manage(crate::platform::clipboard::RichClipboard::default());
-    app.manage(crate::export::ExportService::default());
-    app.manage(crate::platform::updates::UpdateService::new(app));
+    services.publish(app);
     app.state::<StartupState>()
         .initialized
         .store(true, Ordering::Release);
@@ -233,7 +191,7 @@ pub async fn reopen(app: &AppHandle) -> BackendResult<()> {
     Ok(())
 }
 pub(super) async fn seed_internal(app: &AppHandle, locale: &str) -> BackendResult<()> {
-    let data = app.path().app_data_dir()?.join("v1");
+    let data = crate::composition::AppPaths::resolve(app).await?.data_dir;
     let mut resources = app.path().resource_dir()?.join("workspace-guide");
     #[cfg(debug_assertions)]
     {

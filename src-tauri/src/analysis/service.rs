@@ -48,6 +48,7 @@ pub struct Index {
 }
 pub struct AnalysisService {
     pub(super) pool: SqlitePool,
+    pub(super) excluded_directory: Option<std::path::PathBuf>,
     pub(super) cached: Cache<IndexKey, Arc<Index>>,
     pub(super) documents: Cache<DocumentKey, Arc<Document>>,
     pub(super) queries: Cache<QueryKey, Arc<serde_json::Value>>,
@@ -62,6 +63,7 @@ impl AnalysisService {
     pub fn new(pool: SqlitePool) -> Self {
         Self {
             pool,
+            excluded_directory: None,
             cached: Cache::builder()
                 .name("analysis-indexes")
                 .max_capacity(64 * 1024 * 1024)
@@ -93,6 +95,11 @@ impl AnalysisService {
             searches: Mutex::new(HashMap::new()),
             workers: Arc::new(Semaphore::new(2)),
         }
+    }
+    pub fn with_excluded_directory(pool: SqlitePool, directory: std::path::PathBuf) -> Self {
+        let mut service = Self::new(pool);
+        service.excluded_directory = Some(directory);
+        service
     }
     pub fn is_indexing(&self, generation: u64) -> bool {
         self.indexing.load(Ordering::Acquire) == generation

@@ -229,7 +229,10 @@ impl UpdateService {
         };
         // The official plugin verifies signatures before returning bytes. Cache on disk
         // so the downloaded application does not remain resident until next launch.
-        let directory = app.path().app_cache_dir()?.join("updates");
+        let directory = crate::composition::AppPaths::resolve(app)
+            .await?
+            .cache_dir
+            .join("updates");
         tokio::fs::create_dir_all(&directory).await?;
         let path = directory.join(format!("{}.update", uuid::Uuid::new_v4()));
         tokio::fs::write(&path, &bytes).await?;

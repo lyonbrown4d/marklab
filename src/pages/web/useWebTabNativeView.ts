@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react'
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type { WorkspaceTab } from '@/store/appTypes'
 import type { WebTabBounds, WebTabState } from '@/types/webTabs'
 import { useWorkspaceStore } from '@/store/useWorkspaceStore'
@@ -54,7 +54,7 @@ export const useWebTabNativeView = ({
   const hostRef: RefCallback<HTMLDivElement> = useCallback((element) => setHost(element), [])
 
   useEffect(() => {
-    return getElectronRuntime().webTabs.onState((event) => {
+    return getDesktopRuntime().webTabs.onState((event) => {
       if (event.type === 'open-requested') {
         if (event.tabId === tab.id && event.url) onOpenRequested(event.url)
         return
@@ -86,7 +86,7 @@ export const useWebTabNativeView = ({
 
   useEffect(() => {
     if (!host) return
-    const webTabs = getElectronRuntime().webTabs
+    const webTabs = getDesktopRuntime().webTabs
     const syncBounds = () => {
       frameRef.current = null
       const bounds = measureBounds(host)
@@ -145,7 +145,7 @@ export const useWebTabNativeView = ({
   }, [host, suspended, tab.id, tab.url])
 
   useEffect(() => {
-    const webTabs = getElectronRuntime().webTabs
+    const webTabs = getDesktopRuntime().webTabs
     const hide = () => void webTabs.hide({ tabId: tab.id })
     const show = () => {
       const bounds = lastBoundsRef.current
@@ -163,7 +163,7 @@ export const useWebTabNativeView = ({
 
   useEffect(() => {
     const bounds = lastBoundsRef.current
-    const webTabs = getElectronRuntime().webTabs
+    const webTabs = getDesktopRuntime().webTabs
     if (suspended || !bounds) {
       if (suspended) void webTabs.hide({ tabId: tab.id })
       return

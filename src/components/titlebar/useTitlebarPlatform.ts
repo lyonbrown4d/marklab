@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { inferPlatformFromUserAgent } from '@/runtime/environment'
 import { getCurrentRuntimeWindow, isDesktopRuntime } from '@/runtime/window'
 import { appApi, type AppPlatform } from '@/services/appApi'
+import { rendererDiagnostics } from '@/services/rendererDiagnostics'
 
 export const useTitlebarPlatform = () => {
   const [platform, setPlatform] = useState<AppPlatform>(inferPlatformFromUserAgent())
@@ -12,14 +13,22 @@ export const useTitlebarPlatform = () => {
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
+    let active = true
     void appApi
       .getPlatform()
-      .then((next) => setPlatform(next))
-      .catch(() => {})
+      .then((next) => {
+        if (active) setPlatform(next)
+      })
+      .catch((error: unknown) => {
+        if (active)
+          rendererDiagnostics.warn('window.platform', 'native-platform-unavailable', error)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
-  const isWindows =
-    typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('windows')
+  const isWindows = platform === 'windows'
 
   return {
     platform,

@@ -58,7 +58,10 @@ fn sanitize(css: &str) -> BackendResult<()> {
 }
 
 async fn directory(window: &WebviewWindow) -> BackendResult<PathBuf> {
-    let path = window.path().app_data_dir()?.join("v1/themes");
+    let path = crate::composition::AppPaths::resolve(window.app_handle())
+        .await?
+        .data_dir
+        .join("themes");
     tokio::fs::create_dir_all(&path).await?;
     Ok(path)
 }

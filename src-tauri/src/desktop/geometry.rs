@@ -82,12 +82,13 @@ pub async fn activate(window: &WebviewWindow, root: &RootInfo) -> BackendResult<
                 .into_iter()
                 .map(|monitor| {
                     let rect = *monitor.work_area();
-                    (
-                        rect.position.x,
-                        rect.position.y,
-                        rect.size.width,
-                        rect.size.height,
-                    )
+                    super::policy::DisplayArea {
+                        x: rect.position.x,
+                        y: rect.position.y,
+                        width: rect.size.width,
+                        height: rect.size.height,
+                        scale_factor: monitor.scale_factor(),
+                    }
                 })
                 .collect::<Vec<_>>();
             if super::policy::visible_rectangle(x, y, state.width, state.height, &displays) {

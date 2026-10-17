@@ -1,7 +1,7 @@
-import type { ElectronGitApi } from '@/runtime/git'
+import type { DesktopGitApi } from '@/runtime/git'
 import { request } from '@/runtime/tauri/transport'
 
-export const createGitApi = (): ElectronGitApi => {
+export const createGitApi = (): DesktopGitApi => {
   const run = (command: string, payload = {}, expectedRoot?: string): Promise<unknown> =>
     request(command, { ...payload, ...(expectedRoot === undefined ? {} : { expectedRoot }) })
   return {

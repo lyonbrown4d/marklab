@@ -1,10 +1,10 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 
 export const workspaceTreeApi: WorkspaceTreeApi = {
-  initialFile: () => getElectronRuntime().workspaceTree.initialFile(),
-  listChildren: (request) => getElectronRuntime().workspaceTree.listChildren(request),
-  onChanged: (handler) => getElectronRuntime().workspaceTree.onChanged(handler),
-  pathsExist: (request) => getElectronRuntime().workspaceTree.pathsExist(request),
-  search: (request) => getElectronRuntime().workspaceTree.search(request),
+  initialFile: () => getDesktopRuntime().workspaceTree.initialFile(),
+  listChildren: (request) => getDesktopRuntime().workspaceTree.listChildren(request),
+  onChanged: (handler) => getDesktopRuntime().workspaceTree.onChanged(handler),
+  pathsExist: (request) => getDesktopRuntime().workspaceTree.pathsExist(request),
+  search: (request) => getDesktopRuntime().workspaceTree.search(request),
 }

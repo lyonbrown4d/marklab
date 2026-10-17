@@ -1,8 +1,8 @@
-import type { RendererSafeElectronApi } from '@/runtime/electron'
+import type { DesktopRuntimeApi } from '@/runtime/desktop'
 import type { WorkspaceSyncApi } from '@/runtime/workspaceSync'
 import { request, type TauriEventHub } from '@/runtime/tauri/transport'
 
-type WorkspaceSurfaces = Pick<RendererSafeElectronApi, 'assets' | 'workspace' | 'workspaceTree'>
+type WorkspaceSurfaces = Pick<DesktopRuntimeApi, 'assets' | 'workspace' | 'workspaceTree'>
 
 export const createWorkspaceApis = (events: TauriEventHub): WorkspaceSurfaces => ({
   assets: { issueCapability: (payload) => request('assets_issue_capability', payload) },

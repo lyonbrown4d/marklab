@@ -50,7 +50,7 @@ describe('logo design preview build', () => {
     expect(breakpoints).toContain('(max-width:900px)')
     expect(config).toContain("logo: path.resolve(import.meta.dirname, 'logo-preview.html')")
     expect(config).toContain("outDir: '.tmp/design-preview'")
-    expect(config).not.toContain('electron(')
+    expect(entry).not.toContain('initializeDesktopRuntime')
     expect(ignore).toContain('.tmp/')
     expect(JSON.parse(packageJson).scripts['build:design-preview']).toBe(
       'vite build --config vite.design-preview.config.ts',

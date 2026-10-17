@@ -1,5 +1,6 @@
 use super::{
-    AiService, ProviderMetadata, ProviderUpdate, PublicProvider, StoredProvider, policy, secrets,
+    AiService, ProviderKind, ProviderMetadata, ProviderUpdate, PublicProvider, StoredProvider,
+    policy, secrets,
 };
 use crate::error::{BackendError, BackendResult};
 use sqlx::Row;
@@ -13,12 +14,14 @@ impl AiService {
         .fetch_optional(&self.inner.pool)
         .await?
         .ok_or_else(|| BackendError::new("AI_PROVIDER_NOT_FOUND", "AI provider was not found"))?;
-        Ok(StoredProvider {
+        let provider = StoredProvider {
             metadata: serde_json::from_str(row.get("metadata_json"))?,
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             secret_ref: row.get("secret_ref"),
-        })
+        };
+        policy::validate_stored(&provider, id)?;
+        Ok(provider)
     }
     pub async fn list_providers(&self) -> BackendResult<Vec<PublicProvider>> {
         let ids: Vec<String> = sqlx::query_scalar(
@@ -97,20 +100,30 @@ impl AiService {
             Err(error) if error.code == "AI_PROVIDER_NOT_FOUND" => return Ok(()),
             Err(error) => return Err(error),
         };
-        if let Some(reference) = current.secret_ref {
-            secrets::delete(&reference).await?;
-        }
         sqlx::query("DELETE FROM ai_providers WHERE id=?")
             .bind(id)
             .execute(&self.inner.pool)
             .await?;
+        // A failed SQL deletion must leave the still-live row's credential intact.
+        // A cleanup failure after commit is an orphan secret, never a broken provider.
+        if let Some(reference) = current.secret_ref
+            && let Err(error) = secrets::delete(&reference).await
+        {
+            log::warn!(
+                "Deleted AI provider credential cleanup failed: {}",
+                error.code
+            );
+        }
         Ok(())
     }
     pub(crate) async fn provider_key(&self, provider: &StoredProvider) -> BackendResult<String> {
+        if provider.metadata.kind == ProviderKind::Ollama {
+            return Ok(String::new());
+        }
         if let Some(reference) = &provider.secret_ref {
             return secrets::read(reference).await;
         }
-        if let Some(key) = policy::environment_key(&provider.metadata.kind) {
+        if let Some(key) = policy::environment_key(provider.metadata.kind) {
             return Ok(key);
         }
         if policy::local(&provider.metadata) {

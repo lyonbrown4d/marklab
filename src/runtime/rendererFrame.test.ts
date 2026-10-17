@@ -58,11 +58,11 @@ describe('native renderer frame readiness', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it.each(['visible Tauri', 'Electron'] as const)(
+  it.each(['visible Tauri', 'browser preview'] as const)(
     'requires an actual frame for %s',
     async (runtime) => {
       native.visible = runtime === 'visible Tauri'
-      native.tauri = runtime !== 'Electron'
+      native.tauri = runtime !== 'browser preview'
       let resolved = false
       const pending = nextRendererFrame().then(() => {
         resolved = true

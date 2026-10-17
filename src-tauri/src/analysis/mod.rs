@@ -6,12 +6,20 @@ mod graph;
 mod graph_storage;
 mod queries;
 mod search;
+mod search_fuzzy;
+mod search_matches;
+#[cfg(test)]
+mod search_tests;
+mod search_text;
 mod service;
 mod status;
 mod storage;
 pub mod targets;
 pub use queries::diagnostics;
+pub use search::{Highlight, SearchResult};
+pub use search_matches::CountedSearch;
 pub use service::{AnalysisService, Index};
+pub use status::LogicalStorageStats;
 
 #[cfg(test)]
 mod tests;

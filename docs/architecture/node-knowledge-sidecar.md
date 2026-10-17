@@ -1,116 +1,31 @@
-# Node Knowledge Sidecar
+# 工作区分析与原 Node 侧车迁移
 
-Marklab runs workspace knowledge capabilities in an Electron
-`utilityProcess`. The implementation is TypeScript/Node.js only; development,
-build, packaging, and runtime do not require Rust, Cargo, gRPC, protobuf code
-generation, or a platform-specific knowledge-engine executable.
+原 Electron `utilityProcess` 和 Node 知识侧车已移除。本页保留旧链接入口，说明当前由 Rust 承接的边界；不再分发 `dist-electron`、Node MCP 入口或嵌入式 Markdown LSP。
 
-## Runtime boundary
+## 当前职责
 
-- Electron main owns lifecycle, typed renderer IPC, and one runtime per active
-  workspace.
-- `electron/sidecar/knowledgeSidecarEntry.ts` is compiled to
-  `dist-electron/knowledgeSidecarEntry.js` and forked with
-  `utilityProcess.fork` after Electron is ready.
-- `NodeSidecarRpcClient` carries structured-clone request/response messages
-  across the process boundary. Requests are matched by numeric IDs and all
-  pending calls fail if the utility process exits.
-- The utility process receives the canonical workspace root and its isolated
-  engine-data directory as positional arguments. Workspace file paths are
-  resolved through the existing path guard, so absolute paths and parent
-  traversal are rejected. Search data is written only below the engine-data
-  directory, never into the user's workspace.
-- Renderer code continues to use the existing preload and IPC contracts. It
-  never talks to the utility process directly.
+`src-tauri/src/workspace` 负责规范化根路径、共享缓冲区、文件变更、保存冲突与原生监听；`analysis` 负责 Markdown 元数据、搜索、图、页面和文档洞察；`language` 提供补全、诊断、符号、跳转、引用、悬停与安全重命名。Markdown 解析复用 pulldown-cmark，搜索复用 SQLite FTS5。React 服务通过现有类型化异步命令访问这些结果。
 
-## Capability ownership
+同根窗口共享工作区对象，绑定与 mutation guard 防止旧窗口请求修改已切换的工作区。分析缓存包含内容版本、路径和工作区身份；磁盘缓存损坏后回源重建，用户文档仍是业务源。容量与过期规则见 [Tauri 缓存说明](../tauri-migration.md#缓存与工作区隔离)。
 
-The Node sidecar owns:
+## 原生 MCP
 
-- workspace file snapshots, reads, writes, creates, renames, deletes, and path
-  metadata
-- workspace-scoped Markdown search index rebuild, upsert, remove, prefix
-  removal, filtering, ordering, pagination, and diagnostics
-- open-document overlays for unsaved Markdown, incremental edits, symbols, and
-  links
-- workspace mind-map graph and document outline graph construction
-
-Electron main retains workspace watcher coordination, buffer flush ordering,
-renderer event publication, and the existing service/API compatibility layer.
-
-## Lifecycle and failure isolation
-
-`WorkspaceSidecarManager` creates a utility process lazily per workspace,
-waits for the process `spawn` event, probes capabilities, and then opens the
-workspace. Close requests clear the child state and terminate the process. A
-process crash changes only that workspace runtime and rejects its outstanding
-RPC requests; it does not execute knowledge work on the Electron main thread.
-
-Each workspace search index is persisted as `search.sqlite3` below its isolated
-engine-data directory. SQLite FTS5 owns retrieval and ranking while mutations
-run in bounded transactions. The database uses WAL mode and can be deleted and
-rebuilt from workspace files when its schema or contents are invalid.
-
-## Build and packaging
-
-Vite treats the sidecar as an Electron main entry, so the compiled JavaScript
-is included by the existing `dist-electron/**/*` packaging rule. No
-`extraResources` engine directory or per-platform executable is required.
-
-## Dependency policy
-
-Runtime dependencies for the sidecar must have an active release history,
-documented compatibility and a stable public API. Prefer maintainers that own
-the relevant protocol or editor implementation over thin community wrappers.
-The current implementation uses SQLite FTS5 for the persistent local search
-index, Microsoft's `vscode-markdown-languageservice` for embedded Markdown
-language features and the official `@modelcontextprotocol/sdk` for MCP.
-
-Dependency upgrades must keep the lockfile reproducible and pass the sidecar,
-MCP, multi-workspace isolation and persistence-recovery suites. Major-version
-overrides of transitive packages are not accepted as an audit workaround.
-MCP SDK v2 is tracked as a dedicated migration because its split package model
-and nominal types require coordinated API changes; v1 and v2 types must not be
-mixed in the same runtime boundary.
-
-### Read-only MCP entry
-
-The former Rust `marklab-mcp` binary is replaced by
-`electron/mcp/marklabMcpEntry.ts`, compiled as
-`dist-electron/marklabMcpEntry.js`. It uses the official Model Context
-Protocol SDK over stdio and exposes only two read-only tools:
-
-- `marklab_workspace_status` reads workspace, health, index, and storage status.
-- `marklab_search_workspace` reads the same persisted SQLite FTS5 index used by
-  the knowledge sidecar. It accepts a required query and a limit from 1 through 50.
-
-The MCP process does not expose workspace mutation or command execution. Pass
-the canonical workspace and engine-data paths explicitly:
+同一个原生可执行文件提供 `mcp` 子命令，使用 rmcp 3.5.1 的 stdio transport。它绑定一个明确工作区，不读取 UI 当前窗口的工作区：
 
 ```text
-node dist-electron/marklabMcpEntry.js --workspace-root <workspace> --engine-data-dir <engine-data> --default-search-limit 10
+marklab-desktop mcp --workspace-root <existing-directory> --engine-data-dir <existing-directory> --default-search-limit 10
 ```
 
-Each MCP process is bound to exactly one explicit workspace root and its own
-engine-data directory for its lifetime. It never consults Electron's active
-workspace, so multi-window clients start one MCP process per workspace/window
-and cannot accidentally search another window's index.
+macOS 应用内可执行文件为 `Marklab.app/Contents/MacOS/marklab-desktop`，Windows 为 `marklab-desktop.exe`。显式参数优先于 `MARKLAB_MCP_WORKSPACE_ROOT`、`MARKLAB_MCP_ENGINE_DATA_DIR` 和 `MARKLAB_MCP_DEFAULT_SEARCH_LIMIT`；默认搜索条数为 10，可选范围为 1–50。未知或重复参数被拒绝。
 
-The Electron executable can also host the same built entry in Node mode:
+只暴露两个工具：`marklab_workspace_status` 与 `marklab_search_workspace`。源文档只读；指定的 engine data 目录允许维护 `tauri-storage/marklab.sqlite` 缓存，不读取旧 Node SQLite 数据。状态返回的字节数表示该工作区缓存的逻辑占用，不是共享数据库的物理长度。
 
-```text
-ELECTRON_RUN_AS_NODE=1 <electron-executable> dist-electron/marklabMcpEntry.js --workspace-root <workspace> --engine-data-dir <engine-data>
-```
+## 检查范围
 
-`MARKLAB_MCP_WORKSPACE_ROOT`, `MARKLAB_MCP_ENGINE_DATA_DIR`, and
-`MARKLAB_MCP_DEFAULT_SEARCH_LIMIT` remain supported for MCP client
-configurations that prefer environment variables; explicit CLI arguments take
-precedence.
-
-Focused verification:
-
-```text
+```bash
 pnpm test:knowledge:integration
-node node_modules/typescript/bin/tsc6 -p tsconfig.electron.json
-pnpm exec vite build --mode electron
+pnpm tauri:test --lib language::
+pnpm tauri:test --lib mcp::
 ```
+
+这些命令检查原生库和临时工作区，不启动应用事件循环。MCP 新实现的测试结果须以对应源码的实际执行记录为准；不能沿用旧 Node 测试或更早的 Rust 基线宣布通过。真实 WebView 与多窗口界面另按[桌面检查表](../quality-gates.md#desktop-smoke-checklist)验收。

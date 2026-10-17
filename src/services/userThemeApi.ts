@@ -1,16 +1,16 @@
-import { getElectronRuntime, type ElectronUserThemeInfo } from '@/runtime/electron'
+import { getDesktopRuntime, type DesktopUserThemeInfo } from '@/runtime/desktop'
 
-export type UserThemeInfo = ElectronUserThemeInfo
+export type UserThemeInfo = DesktopUserThemeInfo
 
 const themeError = (fallback: string, error?: string): Error => new Error(error || fallback)
 
-const runtimeThemes = () => getElectronRuntime()?.themes ?? null
+const runtimeThemes = () => getDesktopRuntime()?.themes ?? null
 
 export const userThemeApi = {
-  isSupported: () => Boolean(getElectronRuntime()?.themes && getElectronRuntime()?.dialog),
+  isSupported: () => Boolean(getDesktopRuntime()?.themes && getDesktopRuntime()?.dialog),
 
   async pickCssFile(): Promise<string | null> {
-    const runtime = getElectronRuntime()
+    const runtime = getDesktopRuntime()
     if (!runtime?.dialog) return null
     const selected = await runtime.dialog.open({
       title: 'Import CSS Theme',

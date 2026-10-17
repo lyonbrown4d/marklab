@@ -58,23 +58,36 @@ pub fn argument_targets(args: &[String], cwd: &Path) -> Vec<String> {
         })
         .collect()
 }
+pub struct DisplayArea {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub scale_factor: f64,
+}
 pub fn visible_rectangle(
     x: i32,
     y: i32,
     width: u32,
     height: u32,
-    displays: &[(i32, i32, u32, u32)],
+    displays: &[DisplayArea],
 ) -> bool {
-    displays.iter().any(|(dx, dy, dw, dh)| {
+    displays.iter().any(|display| {
+        if !display.scale_factor.is_finite() || display.scale_factor <= 0.0 {
+            return false;
+        }
+        // Persisted sizes are logical pixels, while desktop positions and
+        // monitor work areas are physical. Each monitor has its own DPI.
+        let size = tauri::LogicalSize::new(width, height).to_physical::<u32>(display.scale_factor);
         let (x, y, w, h, dx, dy, dw, dh) = (
             i64::from(x),
             i64::from(y),
-            i64::from(width),
-            i64::from(height),
-            i64::from(*dx),
-            i64::from(*dy),
-            i64::from(*dw),
-            i64::from(*dh),
+            i64::from(size.width),
+            i64::from(size.height),
+            i64::from(display.x),
+            i64::from(display.y),
+            i64::from(display.width),
+            i64::from(display.height),
         );
         x < dx + dw && x + w > dx && y < dy + dh && y + h > dy
     })
@@ -125,26 +138,38 @@ mod tests {
     }
     #[test]
     fn geometry_checks_support_negative_monitors_and_reject_disconnected_displays() {
-        assert!(visible_rectangle(
-            -1000,
-            0,
-            800,
-            600,
-            &[(-1920, 0, 1920, 1080)]
-        ));
-        assert!(!visible_rectangle(
-            10000,
-            0,
-            800,
-            600,
-            &[(0, 0, 1920, 1080)]
-        ));
+        let display = |x| DisplayArea {
+            x,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            scale_factor: 1.0,
+        };
+        assert!(visible_rectangle(-1000, 0, 800, 600, &[display(-1920)]));
+        assert!(!visible_rectangle(10000, 0, 800, 600, &[display(0)]));
         assert!(!visible_rectangle(
             i32::MAX,
             i32::MAX,
             u32::MAX,
             u32::MAX,
-            &[(0, 0, 1920, 1080)]
+            &[display(0)]
         ));
+    }
+    #[test]
+    fn restored_logical_sizes_use_the_target_monitors_scale() {
+        let display = |scale_factor| DisplayArea {
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            scale_factor,
+        };
+        assert!(!visible_rectangle(-1100, 0, 800, 600, &[display(1.0)]));
+        assert!(visible_rectangle(-1100, 0, 800, 600, &[display(2.0)]));
+        assert!(!visible_rectangle(0, -900, 800, 600, &[display(1.0)]));
+        assert!(visible_rectangle(0, -900, 800, 600, &[display(2.0)]));
+        for scale in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert!(!visible_rectangle(0, 0, 800, 600, &[display(scale)]));
+        }
     }
 }

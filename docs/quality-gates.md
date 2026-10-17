@@ -1,34 +1,25 @@
 # Quality Gates
 
-Marklab is a desktop-first app with several runtime boundaries. Most regressions come from a
-change crossing one of those boundaries without a matching check. Use this guide before merging
-non-trivial changes.
+Marklab uses a React renderer and a Tauri/Rust desktop backend. Check the boundary
+that changed, and keep browser, native-library, and actual desktop evidence separate.
 
 ## Ownership Boundaries
 
-- Tauri/Rust owns native menus, windows, dialogs, filesystem access, app identity, deep links,
-  and packaging. Node.js is build tooling for the default application.
-- Named Tauri commands and typed runtime adapters own renderer-to-desktop communication.
-  The explicit Electron baseline retains its isolated preload boundary.
-- Monaco owns source-code editing behavior. App commands may bridge into Monaco actions, but
-  native text accelerators should stay native.
-- Plate owns WYSIWYG editing behavior. Editor shortcuts should run through the Plate command
-  layer.
-- React Flow owns graph canvas interaction. Graph data must explicitly map to registered node
-  renderers.
-- Zustand owns renderer preferences and persisted UI defaults.
-- Rust services own indexing, persistence, Git, PTY, and sync work. Workspace bindings, mutation
-  guards, and native capabilities enforce isolation. The old Node knowledge service remains
-  covered by the retained Electron baseline tests.
-
-If two layers handle the same input, persistence value, or lifecycle event, consolidate ownership
-before adding behavior.
+- Rust owns native windows, menus, dialogs, filesystem access, app identity,
+  deep links, indexing, SQLite persistence, Git, PTY, sync, and packaging.
+- `src/services/*` and the typed `src/runtime/*` adapter own desktop calls and
+  scoped event subscriptions. Commands validate requests and root ownership;
+  external child webviews have no desktop capability.
+- Monaco owns source editing; Plate owns rich editing; React Flow owns graph
+  interaction and layout. Native edit routing respects actual focus and Vim ownership.
+- Zustand owns renderer preferences. Rust's settings allowlist and per-window
+  session rules control persistence.
+- Node.js is build/test tooling. The former Electron runtime, preload, Node
+  knowledge sidecar, and dedicated packaging/test entry points have been removed.
 
 ## Change Impact Checklist
 
-Mark every touched area, then run the matching checks.
-
-Use the helper before committing to map changed files to likely impact areas:
+Use the shared impact rules to select focused checks:
 
 ```bash
 pnpm quality:impact
@@ -39,94 +30,109 @@ pnpm test:coverage:critical
 pnpm check
 ```
 
-`pnpm check` runs the quality impact helper as part of the project-level gate, so local
-verification and CI use the same entry point. It also rejects human-maintained TypeScript and Rust
-source files over 300 non-blank effective lines, including root-level tooling and configuration files;
-downloaded shadcn source is kept intact and extended through composition.
-The unit-test task additionally collects coverage for critical Markdown-worker, startup-window,
-command-palette, Plate, and workspace-map integration surfaces. Every listed file must independently
-reach 85 percent for lines, functions, statements, and branches; aggregate coverage cannot mask an
-untested boundary.
+`pnpm check` runs impact reporting, source line limits, lint, typecheck, and the
+frontend coverage gate. Human-maintained TypeScript and Rust files must stay
+within 300 non-blank effective lines, including root-level tooling and configuration files.
+Downloaded shadcn source remains intact and is extended through composition.
 
-| Impact area                      | Common risk                                                    | Required checks                                                 |
-| -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Tauri native runtime             | workspace isolation, unsafe IPC, platform or cache mismatch    | Rust checks, native window/edit/save/cache acceptance           |
-| Electron menu/window/preload     | double dispatch, unsafe IPC, baseline regression               | retained Electron menu, window, and preload tests               |
-| Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                         |
-| WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests                  |
-| React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests            |
-| Settings / persisted preferences | default drift, missing partialize field, inaccessible controls | settings tests, affected component option tests                 |
-| Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, workspace map/editor shortcut tests |
-| IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                          |
-| Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                        |
-| Knowledge engine / Node runtime  | retained Electron indexing, worker, or lifecycle regression    | Node baseline service tests and typecheck                       |
-| Renderer lifecycle / route cache | stale workspace routes or retained workers                     | route cache/worker tests, focused release Electron regression   |
-| Document preview lifecycle       | cross-workspace preview data or retained preview resources     | preview component tests, focused release Electron regression    |
-| Build/package                    | CI/task drift, missing resources, oversized bundles            | Tauri static/build checks, native packaging acceptance          |
-| i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests                     |
-| Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`          |
+Coverage remains **85 percent independently for lines, functions, statements,
+and branches in every selected file**. The original 16 retained editor/worker
+files remain selected; six current runtime, renderer lifecycle/frame, and Tauri
+adapter files replace the nine removed backend files. Native Rust behavior is
+covered by its own real service tests, rather than counted as frontend coverage.
 
-Changes under `e2e/performance/`, `playwright.performance.config.ts`, or the Plate performance
-workflow map to the WYSIWYG / Plate boundary and require `pnpm test:perf:software`.
+| Impact area                      | Common risk                                                    | Required checks                                                                |
+| -------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Tauri native runtime             | workspace isolation, unsafe IPC, lifecycle or cache drift      | Rust checks and affected native acceptance                                     |
+| Native menus / windows           | double dispatch, focus, close/quit or splash races             | native lifecycle/menu and focused edit tests; native window smoke              |
+| Source editor / Monaco           | duplicate edits, option or navigation drift                    | source editor and focused edit tests                                           |
+| WYSIWYG / Plate                  | paste/drop, serialization, readiness or performance regression | editor integration, preview/zoom and renderer performance tests                |
+| React Flow graph                 | node mapping, drag/selection or model drift                    | graph logic, workspace map and style tests                                     |
+| Settings / persisted preferences | missing field, defaults or session isolation                   | settings allowlist contract, Rust settings/session tests and affected controls |
+| Keyboard shortcuts               | missing defaults, scope or settings drift                      | shortcut catalog, settings and editor/map tests                                |
+| IPC / runtime services           | DTO mismatch, broad capabilities or stale events               | typed runtime/service and native capability tests                              |
+| Workspace filesystem/services    | path escape, external changes, lost saves or restore races     | real Rust workspace/history/asset tests and native multi-window smoke          |
+| Knowledge engine / Rust analysis | parsing, FTS, cache, graph or language drift                   | native analysis/language/MCP tests and `pnpm test:knowledge:integration`       |
+| Renderer lifecycle / route cache | stale routes or retained workers                               | route/worker tests and `pnpm test:renderer:e2e`                                |
+| Document preview lifecycle       | stale preview data or retained resources                       | preview components, renderer smoke and affected native asset tests             |
+| Build/package                    | missing resources, CI or artifact drift                        | renderer build, Rust checks and target packaging                               |
+| i18n                             | renderer/native locale mismatch                                | locale/resource and affected UI tests                                          |
+| Quality gates                    | stale commands, missing assertions or misleading evidence      | quality tests, impact reporting and lint                                       |
 
 ## Plate Large-Document Performance Gate
 
-The merge-gating profile is the independent GitHub Actions job named
-`Plate performance (software rendering)`. It builds the Electron production bundles, runs one
-warmup plus three measured sessions under Xvfb/software rendering, and uploads metrics, budgets,
-Electron logs, screenshots, and the HTML report even on failure. Repository administrators must add
-that exact job name as a required status check in the protected `main` branch rules; workflow files
-cannot make themselves required.
+`Plate performance (software rendering)` retains its CI job name and numerical
+budgets. It now builds the production renderer and runs Playwright Chromium with
+a test-side typed backend fixture. The fixture is installed by the test harness;
+it does not add a production automation API. The `renderer-gpu` project uses
+Chromium's default graphics configuration; its name does not prove hardware
+acceleration or native Tauri performance.
 
-This remains an Electron performance baseline. It does not establish Tauri startup, memory,
-rendering, or packaged-app performance acceptance. Preserve its required status and budgets while
-collecting separate Tauri measurements.
+Both document scenarios use one warmup and five measured runs. Preserve fixture
+line/byte/block/sentinel assertions, a single ready editor, first and continuous
+input latency, scroll/scrollbar/select-all interactions, frame/long-task/layout
+metrics, loading/blank-frame checks, and saved markers in the fixture filesystem.
+The attempt budget permits collecting evidence after a failure; any failed
+attempt still fails the gate. An unsupported scrollbar must fail explicitly.
+Reports retain screenshots, metrics and failure evidence under
+`test-results/renderer/` and `playwright-report/renderer/`.
 
-The gate requires:
+```bash
+pnpm test:renderer:e2e
+pnpm test:perf:software
+pnpm test:perf:all
+```
 
-- an initialization probe installed before Plate reaches ready, with window-open-to-ready timing;
-- DOM-mutation-to-next-paint first/p95/max input latency without artificial typing delay;
-- frame support flags, drained observer records, a minimum frame count, visible Slate content, and
-  no ready-to-loading transition;
-- a fixed 29,256 non-empty-line fixture with byte and block-scale assertions;
-- isolated runtime/userData/settings paths plus captured GPU feature status;
-- marker persistence after editor blur and an explicit workspace-buffer flush;
-- a real native scrollbar gutter; overlay-only environments fail with an explicit unsupported
-  reason instead of substituting a document-content drag.
+Install Chromium with `pnpm exec playwright install chromium` for local use;
+CI installs Chromium and its system dependencies. The production renderer is
+built once by each wrapper command; `:run` reuses that build.
 
-Budget changes need retained artifacts from one warmup and at least three measured runs. Use the
-software profile for the merge threshold; native-GPU samples are informative and hardware-specific.
+The existing `windowOpenToReady*` metric fields measure browser-page startup in
+this harness. They do not measure the native hidden-window/splash handshake.
+Fixture saves do not execute Rust filesystem/CAS code, and browser memory or CPU
+observations do not represent native process totals. The historical Electron
+[startup](performance/electron-startup-2026-10-13.md) and
+[presentation](performance/window-presentation-2026-10-14.md) samples retain their
+original evidence; their removed commands are not current test entry points.
+
+Repository administrators control required checks. The workflow retains the
+existing job name and failure artifacts; account-disabled Actions currently
+cannot supply a hosted status result.
 
 ## Regression Test Rule
 
-Every bug fix should leave one narrow regression test at the boundary that failed.
-
-Examples:
-
-- A native menu shortcut fires twice: test the native menu dispatch and edit routing for the affected runtime.
-- A file/root graph node ignores theme: test that `file` nodes map to a custom React Flow node.
-- A setting does not affect Monaco: test the store-to-surface option path.
-- An IPC response shape drifts: test the service adapter contract, not only the component.
-
-Prefer contract tests over snapshots. The assertion should name the behavior that must not regress.
+Each fix should leave one focused assertion at the boundary that failed. For
+example, duplicate menu actions require native dispatch/edit-routing coverage;
+wrong graph renderers require node-mapping coverage; persistence drift requires
+comparison with the native allowlist; stale IPC needs adapter/event isolation.
+Do not replace behavioral assertions with snapshots or file existence alone.
 
 ## Desktop Smoke Checklist
 
-Run this manually for broad UI/runtime iterations:
+Native library tests and Chromium fixture tests complement actual Tauri checks.
+Embedded Tauri WebDriver coverage, when configured for the supported platform,
+uses the actual native app and must report its own run separately:
 
-- Open a project and a single file.
-- Create, rename, save, and reopen a Markdown file.
-- WYSIWYG: type, paste, cut, copy, select all, undo, redo, insert link/image.
-- Source: type, paste, cut, copy, select all, undo, redo, jump to diagnostics/backlinks.
-- Graph: open, select, drag, keyboard navigate, create/delete heading, double-click open.
-- Settings: toggle a changed setting, reload, confirm persistence.
-- Theme and locale: switch once and check menus, dialogs, settings, graph, and editors.
-- Tauri native menu: check File, Edit, View, Settings, and About entries.
-- Build sanity: run the native target build for changes touching Rust, runtime adapters, packaging, or assets.
+- Launch from a fresh temporary profile; verify splash, readiness, failure/retry,
+  custom titlebar, focus, geometry and close/quit flush behavior.
+- Open a directory and a single file; switch roots and use multiple windows,
+  including two windows sharing one root and a third using another root.
+- Create, rename, move, edit, save, reopen and restore history; verify external
+  modifications preserve drafts and report conflicts without overwriting disk.
+- In both editors, check typing, paste, cut/copy, select-all, undo/redo, links,
+  images, source navigation and Vim shortcut ownership.
+- Exercise graph selection, dragging, keyboard navigation and opening files.
+- Change preferences, locale and theme, then reopen and verify persistence and
+  native menus/dialogs.
+- Exercise affected Git, PTY, WebDAV, AI, export, PDF/media preview and native
+  child-webview behavior. Use real target-platform resources where required. Windows custom-window
+  behavior is limited to static review in this acceptance pass; do not report a
+  Windows integration result.
+- Verify installers, OS signing and updater installation separately from source
+  builds. System notification authorization is outside the current authorized
+  acceptance pass; its policy/library tests do not prove OS permission behavior.
 
 ## Standard Verification
-
-Use the narrowest checks while working, then broaden before committing:
 
 ```bash
 pnpm exec vitest run <affected tests>
@@ -135,43 +141,26 @@ pnpm lint
 pnpm build:renderer
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-git diff --check
+cargo test --manifest-path src-tauri/Cargo.toml --lib --locked -- --test-threads=2
 ```
 
-For Rust runtime changes, add native unit and affected integration tests after the static review
-and initial migration commit/push. Static compilation does not execute those tests.
-For changes affecting the retained Electron knowledge baseline, also run:
+Cargo uses the repository's `src-tauri/target` by default. Do not redirect ordinary
+build/test artifacts to a temporary target directory. The release workflow runs
+renderer regressions before native build jobs; each native job runs library tests
+and strict Clippy before drafting artifacts. The separate native workflow covers
+Linux x64, macOS ARM and Windows x64 without an application GUI event loop.
 
-```bash
-pnpm exec vitest run electron/services/knowledgeEngine
-pnpm typecheck
-pnpm test:electron:build
-```
+## Recorded Acceptance Boundaries
 
-For dependency updates or packaging changes, prefer `pnpm build:desktop` or the platform-specific
-dist command after targeted tests pass.
+Before removal of the Electron baseline, the full frontend run passed **942 test
+files / 5,102 tests** and the existing per-file four-dimensional **85%** gate.
+That result applies to the pre-cleanup source tree, not automatically to the
+replacement Chromium harness, renamed runtime files, or new AI/MCP work.
 
-For release-critical renderer lifecycle changes, run the focused Electron gate. It builds the
-Electron bundles once, then runs the release lifecycle regressions, the application smoke flow
-(including Double Shift command-palette focus), and Plate editor integration coverage:
-
-```bash
-pnpm test:electron:release
-```
-
-The release workflow runs this focused gate once on Ubuntu under Xvfb before the three packaging
-jobs. Playwright retains traces and failure screenshots, and CI uploads them with the HTML report.
-
-## Tauri Migration Acceptance Status
-
-The migration first establishes a static review baseline, then commits and pushes that baseline
-before native integration testing. Record the exact executed checks and their results with each
-commit; this guide does not claim that compilation proves runtime parity. Native multiwindow,
-workspace switching, save/cancel races, PTY, Git, sync, preview, signing, updater, and packaged-app
-acceptance remain pending until run on the matching platform. Fixes from those checks receive
-follow-up commits.
-
-The release workflow retains `pnpm check` and the focused Electron release regressions. It also
-compiles Rust test targets with Clippy on Linux, macOS ARM, and Windows. Its Tauri build uploads
-signed updater artifacts to a draft release; successful CI still requires platform acceptance and
-release review. See [Tauri migration](tauri-migration.md) for signing and updater prerequisites.
+Earlier macOS Rust results and cache coverage are recorded in
+[Tauri migration](tauri-migration.md). Current cleanup/AI/MCP/native and renderer
+checks must record their own executed results against matching source. Workflow
+configuration, source inspection and successful compilation do not prove actual
+WebView, multi-window, notification permission, installation, signing, updater,
+or cross-platform runtime acceptance. GitHub Actions remains unavailable because
+the account is disabled; this limitation is not a successful CI result.

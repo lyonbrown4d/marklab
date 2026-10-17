@@ -111,3 +111,29 @@ fn oversize_unicode_log_records_stop_before_unbounded_formatting() {
     assert!(record.ends_with("[Truncated]"));
     assert!(record.contains("中文😀"));
 }
+
+#[test]
+fn sdk_completion_payloads_never_enter_the_file_transport() {
+    let directory = tempfile::tempdir().expect("temporary logs");
+    let logger = file_logger(directory.path(), true);
+    for target in ["rig::completions", "rig::streaming"] {
+        logger.log(
+            &log::Record::builder()
+                .level(log::Level::Error)
+                .target(target)
+                .args(format_args!("PRIVATE_DOCUMENT_CONTENT"))
+                .build(),
+        );
+    }
+    logger.log(
+        &log::Record::builder()
+            .level(log::Level::Info)
+            .target("marklab_desktop::ai")
+            .args(format_args!("generation-completed"))
+            .build(),
+    );
+    logger.flush();
+    let output = std::fs::read_to_string(directory.path().join("main.log")).expect("written logs");
+    assert!(output.contains("generation-completed"));
+    assert!(!output.contains("PRIVATE_DOCUMENT_CONTENT"));
+}

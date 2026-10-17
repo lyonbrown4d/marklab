@@ -47,18 +47,20 @@ jobs:
         run: node --experimental-strip-types scripts/prepare-tauri-release.ts validate
       - name: Project check (including existing 85 percent coverage gates)
         run: pnpm check
-      - name: Run retained Electron release regressions
-        run: xvfb-run --auto-servernum pnpm test:electron:release
-      - name: Upload Electron baseline regression evidence
+      - name: Install Chromium and browser dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run production renderer regressions
+        run: pnpm test:renderer:e2e
+      - name: Upload renderer regression evidence
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: electron-release-regressions
+          name: renderer-release-regressions
           if-no-files-found: warn
           retention-days: 14
           path: |
-            output/playwright/electron/
-            playwright-report/
+            test-results/renderer/
+            playwright-report/renderer/
 
   build:
     name: Build Tauri ${{ matrix.name }}
@@ -99,6 +101,7 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: '1.99.1'
           targets: ${{ matrix.target }}
           components: rustfmt,clippy
       - uses: swatinem/rust-cache@v2
@@ -126,6 +129,8 @@ jobs:
         run: pnpm icons:generate
       - name: Check Rust targets and tests without executing them
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Run native library regression tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --lib --locked
       - name: Build and upload signed updater artifacts to draft release
         uses: tauri-apps/tauri-action@v1
         env:

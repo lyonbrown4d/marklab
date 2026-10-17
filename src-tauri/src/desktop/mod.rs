@@ -27,7 +27,7 @@ pub fn run() -> BackendResult<()> {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(logging::builder().build())
+        .plugin(logging::builder()?.build())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -110,6 +110,8 @@ pub fn run() -> BackendResult<()> {
         .invoke_handler(invoke::handler());
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_macos_fps::init());
+    #[cfg(all(feature = "e2e-testing", debug_assertions))]
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
     let app = builder.build(tauri::generate_context!())?;
     app.run(lifecycle::run_event);
     Ok(())

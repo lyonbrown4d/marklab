@@ -1,13 +1,8 @@
-import { isElectronRuntime as hasElectronRuntime } from '@/runtime/electron'
+import { isDesktopRuntime as hasDesktopRuntime } from '@/runtime/desktop'
 import type { AppPlatform } from '@/services/appApi'
-export const isElectronRuntime = () => {
-  return hasElectronRuntime()
-}
-export const isDesktopRuntime = () => {
-  return isElectronRuntime()
-}
-export const isTauriRuntime = () =>
-  typeof window !== 'undefined' && window.marklabTauri !== undefined
+
+export const isDesktopRuntime = (): boolean => hasDesktopRuntime()
+export const isTauriRuntime = (): boolean => hasDesktopRuntime()
 export const runInDesktop = async <T>(callback: () => Promise<T> | T) => {
   if (!isDesktopRuntime()) return null
   return callback()

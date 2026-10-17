@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import { invoke } from '@/runtime/ipc'
 import {
   backgroundTaskStatusSchema,
@@ -57,7 +57,7 @@ export const fsApi = {
   },
   async readTextPreview(path: string, limitBytes: number) {
     const limit = fsTextPreviewLimitSchema.parse(limitBytes)
-    const result = await getElectronRuntime().workspace.readTextPreview(path, limit)
+    const result = await getDesktopRuntime().workspace.readTextPreview(path, limit)
     return fsTextPreviewSchema.parse(result)
   },
   async getWorkspaceGraph() {
@@ -145,7 +145,7 @@ export const fsApi = {
   },
   async toAssetUrl(relativePath: string) {
     const path = workspaceRelativeAssetPathSchema.parse(relativePath)
-    const result = await getElectronRuntime().assets.issueCapability({ path })
+    const result = await getDesktopRuntime().assets.issueCapability({ path })
     const capability = fsAssetCapabilitySchema.parse(result)
     if (capability.expires_at_ms <= Date.now()) {
       throw new Error('Issued asset capability has already expired')
@@ -153,13 +153,13 @@ export const fsApi = {
     return capability
   },
   openPathInSystem(path: string) {
-    return getElectronRuntime().workspace.openPathInSystem(path)
+    return getDesktopRuntime().workspace.openPathInSystem(path)
   },
   revealPathInSystem(path: string) {
-    return getElectronRuntime().workspace.revealPathInSystem(path)
+    return getDesktopRuntime().workspace.revealPathInSystem(path)
   },
   copyAbsolutePathToClipboard(path: string) {
-    return getElectronRuntime().workspace.copyAbsolutePathToClipboard(path)
+    return getDesktopRuntime().workspace.copyAbsolutePathToClipboard(path)
   },
   async importMarkdownAsset({
     sourcePath,

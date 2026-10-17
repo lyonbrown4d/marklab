@@ -6,7 +6,7 @@ use crate::{
     error::{BackendError, BackendResult},
     settings::SettingsStore,
 };
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tokio::sync::watch;
 impl AiService {
     pub async fn start_generation(
@@ -16,6 +16,9 @@ impl AiService {
         inline: Option<InlineRequest>,
     ) -> BackendResult<StartResult> {
         policy::validate_generate(&request)?;
+        let workspace = window
+            .state::<crate::workspace::WorkspaceRegistry>()
+            .get(window.label())?;
         let request_id = uuid::Uuid::new_v4().to_string();
         let channel = if inline.is_some() {
             "ai-completion-event"
@@ -27,6 +30,9 @@ impl AiService {
             .map(|input| input.completion_session_id.clone());
         let (cancel, mut cancelled) = watch::channel(false);
         let mut jobs = self.inner.jobs.lock().await;
+        window
+            .state::<crate::workspace::WorkspaceRegistry>()
+            .ensure_binding(window.label(), &workspace)?;
         if let Some(session) = &session {
             let previous = jobs
                 .iter()
@@ -134,6 +140,9 @@ impl AiService {
         );
         {
             let mut attempts = self.inner.attempts.lock().await;
+            window
+                .state::<crate::workspace::WorkspaceRegistry>()
+                .get(window.label())?;
             if attempts.len() >= 8 && !attempts.contains_key(&key) {
                 return Err(BackendError::new(
                     "AI_QUEUE_FULL",

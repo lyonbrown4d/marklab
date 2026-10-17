@@ -31,18 +31,9 @@ pub fn normalize_update(input: &mut ProviderUpdate) -> BackendResult<()> {
     input.label = input.label.trim().into();
     input.model = input.model.trim().into();
     if input.label.is_empty()
-        || input.label.chars().count() > 80
+        || utf16_len(&input.label) > 80
         || input.model.is_empty()
-        || input.model.chars().count() > 160
-        || ![
-            "openai",
-            "anthropic",
-            "google",
-            "deepseek",
-            "ollama",
-            "openai-compatible",
-        ]
-        .contains(&input.kind.as_str())
+        || utf16_len(&input.model) > 160
     {
         return Err(invalid("Invalid provider metadata"));
     }
@@ -51,7 +42,10 @@ pub fn normalize_update(input: &mut ProviderUpdate) -> BackendResult<()> {
     {
         return Err(invalid("Invalid API key"));
     }
-    let custom = ["ollama", "openai-compatible"].contains(&input.kind.as_str());
+    let custom = matches!(
+        input.kind,
+        ProviderKind::Ollama | ProviderKind::OpenaiCompatible
+    );
     match &input.base_url {
         None if custom => return Err(invalid("This provider requires baseUrl")),
         Some(_) if !custom => {
@@ -69,7 +63,7 @@ pub fn normalize_update(input: &mut ProviderUpdate) -> BackendResult<()> {
                 || url.fragment().is_some()
                 || url.host_str().is_none()
                 || (url.scheme() == "http" && !loopback(&url))
-                || (input.kind == "ollama" && !loopback(&url))
+                || (input.kind == ProviderKind::Ollama && !loopback(&url))
             {
                 return Err(invalid(
                     "Provider URL must use HTTPS or loopback HTTP without credentials, queries or fragments",
@@ -81,22 +75,48 @@ pub fn normalize_update(input: &mut ProviderUpdate) -> BackendResult<()> {
     }
     Ok(())
 }
+pub(super) fn validate_stored(provider: &StoredProvider, id: &str) -> BackendResult<()> {
+    let mut input = ProviderUpdate {
+        id: provider.metadata.id.clone(),
+        label: provider.metadata.label.clone(),
+        kind: provider.metadata.kind,
+        model: provider.metadata.model.clone(),
+        base_url: provider.metadata.base_url.clone(),
+        api_key: SecretUpdate::Unchanged,
+    };
+    normalize_update(&mut input)?;
+    if provider.metadata.id != id
+        || chrono::DateTime::parse_from_rfc3339(&provider.created_at).is_err()
+        || chrono::DateTime::parse_from_rfc3339(&provider.updated_at).is_err()
+        || provider.secret_ref.as_deref().is_some_and(|reference| {
+            !reference
+                .strip_prefix("ai:")
+                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok())
+        })
+    {
+        return Err(invalid("Stored AI provider configuration is invalid"));
+    }
+    Ok(())
+}
+pub(super) fn utf16_len(value: &str) -> usize {
+    value.encode_utf16().count()
+}
 pub fn local(provider: &ProviderMetadata) -> bool {
-    provider.kind == "ollama"
-        || (provider.kind == "openai-compatible"
+    provider.kind == ProviderKind::Ollama
+        || (provider.kind == ProviderKind::OpenaiCompatible
             && provider
                 .base_url
                 .as_deref()
                 .and_then(|url| Url::parse(url).ok())
                 .is_some_and(|url| loopback(&url)))
 }
-pub fn environment_key(kind: &str) -> Option<String> {
+pub fn environment_key(kind: ProviderKind) -> Option<String> {
     let name = match kind {
-        "openai" => "OPENAI_API_KEY",
-        "anthropic" => "ANTHROPIC_API_KEY",
-        "google" => "GOOGLE_GENERATIVE_AI_API_KEY",
-        "deepseek" => "DEEPSEEK_API_KEY",
-        _ => return None,
+        ProviderKind::Openai => "OPENAI_API_KEY",
+        ProviderKind::Anthropic => "ANTHROPIC_API_KEY",
+        ProviderKind::Google => "GOOGLE_GENERATIVE_AI_API_KEY",
+        ProviderKind::Deepseek => "DEEPSEEK_API_KEY",
+        ProviderKind::Ollama | ProviderKind::OpenaiCompatible => return None,
     };
     std::env::var(name)
         .ok()
@@ -111,7 +131,7 @@ pub fn public(provider: StoredProvider) -> PublicProvider {
     let requires_api_key = locality != "local";
     let source = if provider.secret_ref.is_some() {
         "stored"
-    } else if environment_key(&provider.metadata.kind).is_some() {
+    } else if environment_key(provider.metadata.kind).is_some() {
         "environment"
     } else {
         "none"
@@ -135,11 +155,11 @@ pub fn public(provider: StoredProvider) -> PublicProvider {
 pub fn validate_generate(request: &GenerateRequest) -> BackendResult<()> {
     validate_id(&request.provider_id)?;
     if request.prompt.is_empty()
-        || request.prompt.chars().count() > 100_000
+        || utf16_len(&request.prompt) > 100_000
         || request
             .system
             .as_ref()
-            .is_some_and(|system| system.chars().count() > 50_000)
+            .is_some_and(|system| utf16_len(system) > 50_000)
         || request
             .max_output_tokens
             .is_some_and(|tokens| !(1..=32768).contains(&tokens))

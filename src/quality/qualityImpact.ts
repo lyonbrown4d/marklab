@@ -1,7 +1,8 @@
 import qualityImpactRulesData from '@/quality/qualityImpactRules.json'
 
 export type QualityImpactArea =
-  | 'Electron menu/window/preload'
+  | 'Tauri native runtime'
+  | 'Native menus / windows'
   | 'Source editor / Monaco'
   | 'WYSIWYG / Plate'
   | 'React Flow graph'
@@ -9,7 +10,9 @@ export type QualityImpactArea =
   | 'Keyboard shortcuts'
   | 'IPC / runtime services'
   | 'Workspace filesystem/services'
-  | 'Knowledge engine / Node runtime'
+  | 'Knowledge engine / Rust analysis'
+  | 'Renderer lifecycle / route cache'
+  | 'Document preview lifecycle'
   | 'Build/package'
   | 'i18n'
   | 'Quality gates'

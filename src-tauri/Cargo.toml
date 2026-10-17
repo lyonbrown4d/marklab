@@ -4,11 +4,14 @@ version = "0.2.8"
 description = "Marklab desktop application"
 authors = ["Marklab"]
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.99.1"
 
 [lib]
 name = "marklab_desktop"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
+
+[features]
+e2e-testing = ["dep:tauri-plugin-wdio-webdriver", "tauri/custom-protocol"]
 
 [build-dependencies]
 tauri-build = { version = "2.7.3", features = [] }
@@ -22,6 +25,7 @@ tauri-plugin-deep-link = "2.6.2"
 tauri-plugin-single-instance = { version = "2.5.4", features = ["deep-link"] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-wdio-webdriver = { version = "=1.5.0", optional = true }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = "1"
 thiserror = "2"
@@ -39,11 +43,13 @@ strsim = "0.11.1"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream", "form"] }
 url = "2.5.8"
 base64 = "0.22"
+bytes = "1"
 mime_guess = "2.0.5"
 pathdiff = "0.2"
 percent-encoding = "2"
 git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl"] }
 futures-util = "0.3"
+fluxdi = { version = "=2.0.0", default-features = false, features = ["macros", "thread-safe", "async-factory"] }
 moka = { version = "0.12.16", default-features = false, features = ["future", "sync"] }
 clipboard-rs = { version = "0.3.5", default-features = false, features = ["wayland"] }
 cssparser = "0.38"
@@ -66,6 +72,9 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 scraper = "0.27"
 ammonia = "4.1"
 imagesize = "0.15"
+rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io"] }
+rig-core = { version = "=0.44.0", default-features = false }
+rig-reqwest = { version = "=0.44.0", default-features = false, features = ["rustls"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-plugin-macos-fps = "0.1.0"
@@ -97,6 +106,7 @@ lto = "thin"
 strip = true
 
 [dev-dependencies]
+rmcp = { version = "3.5.1", default-features = false, features = ["client"] }
 tauri = { version = "2.12.4", features = ["test"] }
 tempfile = "3.27.0"
 zip = { version = "8.6", default-features = false, features = ["deflate"] }

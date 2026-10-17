@@ -6,8 +6,8 @@ A desktop Markdown workspace that blends immersive editing with a project graph.
 [Downloads](https://github.com/lyonbrown4d/marklab/releases)
 
 Marklab uses Tauri and Rust for its desktop runtime and native integration, with a
-React editor and typed runtime boundary. Electron remains an explicit migration
-baseline for regression and performance comparisons.
+React editor and typed runtime boundary. The former Electron backend and its
+packaging dependencies have been removed; historical measurements remain in `docs/performance/`.
 
 ## Features
 
@@ -27,7 +27,7 @@ baseline for regression and performance comparisons.
 ## Development
 
 Install the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/)
-and Rust 1.94 or newer. Use Node.js 24 LTS and pnpm 12.11.2 (pinned in
+and Rust 1.99.1 or newer. Use Node.js 24 LTS and pnpm 12.11.2 (pinned in
 `package.json`) for build tooling; the Tauri app does not embed Node.js.
 Dependency build permissions, including `canvas`, are declared in
 `pnpm-workspace.yaml` using `allowBuilds`. Newly published packages can be installed
@@ -37,17 +37,6 @@ immediately because this project sets `minimumReleaseAge: 0`.
 pnpm install --frozen-lockfile
 pnpm dev
 ```
-
-The retained Electron baseline still downloads Electron during dependency setup.
-For downloads through npmmirror, set the `ELECTRON_MIRROR` environment
-variable before installing. pnpm 12 no longer reads custom settings from `.npmrc`.
-
-```bash
-ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ pnpm install --frozen-lockfile
-```
-
-In PowerShell, set `$env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'`
-before running `pnpm install --frozen-lockfile`.
 
 ## Desktop (Tauri)
 
@@ -61,10 +50,6 @@ See [the Tauri migration and release guide](docs/tauri-migration.md) for native
 prerequisites, platform targets, signing configuration, and outstanding acceptance
 checks. Automatic updates remain unavailable until the updater key and endpoint
 are supplied to the build.
-
-The explicit Electron baseline is available through `pnpm electron:dev`,
-`pnpm electron:build`, and `pnpm electron:dist`.
-See [the historical Electron migration guide](docs/electron-migration.md).
 
 ## Quality Gates
 

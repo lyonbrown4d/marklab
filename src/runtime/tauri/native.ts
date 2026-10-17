@@ -1,8 +1,8 @@
-import type { RendererSafeElectronApi } from '@/runtime/electron'
+import type { DesktopRuntimeApi } from '@/runtime/desktop'
 import { request, type TauriEventHub } from '@/runtime/tauri/transport'
 
 type NativeSurfaces = Pick<
-  RendererSafeElectronApi,
+  DesktopRuntimeApi,
   | 'aiCompletion'
   | 'clipboard'
   | 'dialog'

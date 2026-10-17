@@ -275,7 +275,7 @@ describe('focused source editor clipboard', () => {
     expect(native.warn).toHaveBeenCalledWith('editor.clipboard', 'source-paste-failed', failure)
   })
 
-  it('keeps the Electron Monaco paste action unchanged', () => {
+  it('keeps browser-preview Monaco paste on its standard editor action', () => {
     native.tauri = false
     const { editor } = createEditor()
     executeFocusedCodeEditorCommand('edit.paste')

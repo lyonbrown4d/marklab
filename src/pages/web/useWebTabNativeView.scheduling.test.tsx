@@ -8,8 +8,9 @@ const webTabs = vi.hoisted(() => ({
   setBounds: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({ webTabs }),
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => true,
+  getDesktopRuntime: () => ({ webTabs }),
 }))
 vi.mock('@/store/useWorkspaceStore', () => ({
   useWorkspaceStore: { getState: () => ({ setTabs: vi.fn(), tabs: [] }) },

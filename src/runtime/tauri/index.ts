@@ -1,9 +1,9 @@
 import { isTauri } from '@tauri-apps/api/core'
-import type { RendererSafeElectronApi } from '@/runtime/electron'
+import type { DesktopRuntimeApi } from '@/runtime/desktop'
 import type { WorkspaceSessionSeedPayload } from '@/runtime/rendererLifecycle'
 import { createGitApi } from '@/runtime/tauri/git'
 import { createNativeApis } from '@/runtime/tauri/native'
-import { createEventHub, invokeLegacyCommand, request } from '@/runtime/tauri/transport'
+import { createEventHub, invokeWorkspaceCommand, request } from '@/runtime/tauri/transport'
 import { createWindowApis } from '@/runtime/tauri/window'
 import { createWorkspaceApis, createWorkspaceSyncApi } from '@/runtime/tauri/workspace'
 
@@ -36,11 +36,11 @@ const installRuntime = async (): Promise<void> => {
     throw error
   }
 
-  const appReady: RendererSafeElectronApi['appReady'] = (signal = { phase: 'shell' }) => {
+  const appReady: DesktopRuntimeApi['appReady'] = (signal = { phase: 'shell' }) => {
     const attempt = events.attempt()
     return request('app_ready', { ...signal, ...(attempt !== undefined ? { attempt } : {}) })
   }
-  const api: RendererSafeElectronApi = {
+  const api: DesktopRuntimeApi = {
     ...createNativeApis(events),
     ...createWorkspaceApis(events),
     appReady,
@@ -50,7 +50,7 @@ const installRuntime = async (): Promise<void> => {
       invoke: <T>(command: string, payload?: Record<string, unknown>): Promise<T> =>
         command === 'app-ready'
           ? (appReady(payload as Parameters<typeof appReady>[0]) as Promise<T>)
-          : invokeLegacyCommand<T>(command, payload),
+          : invokeWorkspaceCommand<T>(command, payload),
     },
     events: { listen: events.subscribe },
     git: createGitApi(),
@@ -66,7 +66,6 @@ const installRuntime = async (): Promise<void> => {
     window: windows.window,
     webview: windows.webview,
   }
-  // Existing services retain their narrow typed domain surface while the
-  // compatibility name remains available to the current renderer test suite.
+  // Publish only after native subscriptions and workspace recovery are ready.
   window.marklabTauri = api
 }

@@ -5,8 +5,28 @@ use tauri_plugin_log::{FileOpenStrategy, RotationStrategy, Target, TargetKind, T
 const MAX_RECORD_BYTES: usize = 56 * 1024;
 const MAX_FILE_BYTES: u128 = 5 * 1024 * 1024;
 
-pub(super) fn builder() -> tauri_plugin_log::Builder {
-    configured(cfg!(debug_assertions))
+pub(super) fn builder() -> crate::error::BackendResult<tauri_plugin_log::Builder> {
+    let builder = configured(cfg!(debug_assertions));
+    #[cfg(all(feature = "e2e-testing", debug_assertions))]
+    let builder = {
+        let cache = std::env::var_os("MARKLAB_E2E_CACHE_DIR")
+            .map(std::path::PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .ok_or_else(|| {
+                crate::error::BackendError::new(
+                    "E2E_PATHS_INVALID",
+                    "Native E2E logging requires an isolated absolute cache directory",
+                )
+            })?;
+        builder.targets([
+            Target::new(TargetKind::Stdout),
+            Target::new(TargetKind::Folder {
+                path: cache.join("logs"),
+                file_name: Some("main".into()),
+            }),
+        ])
+    };
+    Ok(builder)
 }
 
 fn configured(development: bool) -> tauri_plugin_log::Builder {
@@ -16,11 +36,15 @@ fn configured(development: bool) -> tauri_plugin_log::Builder {
         log::LevelFilter::Info
     };
     tauri_plugin_log::Builder::new()
-        // Electron only logged application scopes. Keep dependency diagnostics
-        // at warning level instead of exposing HTTP/SQL debug payloads.
+        // Keep dependency diagnostics at warning level so HTTP/SQL debug
+        // payloads cannot expose document content or credentials.
         .level(log::LevelFilter::Warn)
         .level_for("marklab_desktop", level)
         .level_for("renderer", level)
+        // Rig's completion traces can include entire prompts and responses.
+        // They remain disabled even if application logging becomes more verbose.
+        .level_for("rig::completions", log::LevelFilter::Off)
+        .level_for("rig::streaming", log::LevelFilter::Off)
         .max_file_size(MAX_FILE_BYTES)
         .rotation_strategy(RotationStrategy::KeepSome(1))
         .file_open_strategy(FileOpenStrategy::Append)

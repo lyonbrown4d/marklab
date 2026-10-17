@@ -104,14 +104,18 @@ describe('Tauri release workflow contract', () => {
     expect(workflow.jobs.build.steps.some((step) => step.run?.includes('draft=false'))).toBe(false)
   })
 
-  it('preserves serialization, project coverage, Electron regressions, and macOS verification', () => {
+  it('preserves serialization, project coverage, renderer regressions and native tests, and macOS verification', () => {
     expect(workflow.concurrency).toEqual({ group: 'release-desktop', 'cancel-in-progress': false })
     expect(workflow.jobs.validate.steps.map((step) => step.run)).toEqual(
-      expect.arrayContaining([
-        'pnpm check',
-        'xvfb-run --auto-servernum pnpm test:electron:release',
-      ]),
+      expect.arrayContaining(['pnpm check', 'pnpm test:renderer:e2e']),
     )
+    expect(
+      workflow.jobs.build.steps.some(
+        (step) =>
+          step.run ===
+          'cargo test --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --lib --locked',
+      ),
+    ).toBe(true)
     const prepare = workflow.jobs.build.steps.find((step) =>
       step.run?.endsWith('prepare-tauri-release.ts configure'),
     )

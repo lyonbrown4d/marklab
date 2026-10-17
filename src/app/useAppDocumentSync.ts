@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect } from 'react'
 import { useUserThemeCss } from '@/hooks/useUserThemeCss'
 import { isDesktopRuntime } from '@/runtime/environment'
 import { listen } from '@/runtime/events'
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type { ThemeMode } from '@/store/appTypes'
 import { usePreferencesStore } from '@/store/usePreferencesStore'
 import { isDarkThemeMode } from '@/logic/themes'
@@ -87,7 +87,7 @@ export const useAppDocumentSync = ({ theme }: UseAppDocumentSyncOptions) => {
 
   useEffect(() => {
     if (!isDesktopRuntime()) return
-    return getElectronRuntime().window.onCloseRequested(flushEditorChangesForClose)
+    return getDesktopRuntime().window.onCloseRequested(flushEditorChangesForClose)
   }, [])
 
   useLayoutEffect(() => {

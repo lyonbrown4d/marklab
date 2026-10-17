@@ -66,6 +66,7 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: '1.99.1'
           targets: ${{ matrix.target }}
           components: rustfmt,clippy
       - uses: swatinem/rust-cache@v2

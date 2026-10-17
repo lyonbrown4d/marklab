@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  getElectronRuntime,
-  isElectronRuntime,
-  type ElectronUpdateResult,
-  type ElectronUpdateState,
-} from '@/runtime/electron'
+  getDesktopRuntime,
+  isDesktopRuntime,
+  type DesktopUpdateResult,
+  type DesktopUpdateState,
+} from '@/runtime/desktop'
 
 type UpdateAction = 'check' | 'download' | 'install' | 'install-on-quit'
 type InitialRequestState = 'loading' | 'success' | 'error'
@@ -17,11 +17,11 @@ type SoftwareUpdateController = {
   initialRequestState: InitialRequestState
   install: () => Promise<void>
   pendingAction: UpdateAction | null
-  state: ElectronUpdateState | null
+  state: DesktopUpdateState | null
   setInstallOnQuit: (enabled: boolean) => Promise<void>
 }
 
-const unavailableState: ElectronUpdateState = {
+const unavailableState: DesktopUpdateState = {
   currentVersion: '—',
   error: {
     code: 'UNAVAILABLE',
@@ -36,8 +36,8 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
 export const useSoftwareUpdate = (): SoftwareUpdateController => {
-  const runtimeAvailable = isElectronRuntime()
-  const [state, setState] = useState<ElectronUpdateState | null>(() =>
+  const runtimeAvailable = isDesktopRuntime()
+  const [state, setState] = useState<DesktopUpdateState | null>(() =>
     runtimeAvailable ? null : unavailableState,
   )
   const [initialRequestState, setInitialRequestState] = useState<InitialRequestState>(() =>
@@ -57,7 +57,7 @@ export const useSoftwareUpdate = (): SoftwareUpdateController => {
       }
     }
 
-    const updates = getElectronRuntime().updates
+    const updates = getDesktopRuntime().updates
     let eventReceived = false
     const unsubscribe = updates.onEvent((event) => {
       eventReceived = true
@@ -88,7 +88,7 @@ export const useSoftwareUpdate = (): SoftwareUpdateController => {
 
   const runAction = async (
     action: UpdateAction,
-    operation: () => Promise<ElectronUpdateResult>,
+    operation: () => Promise<DesktopUpdateResult>,
   ): Promise<void> => {
     if (inFlightRef.current) return
     inFlightRef.current = action
@@ -107,7 +107,7 @@ export const useSoftwareUpdate = (): SoftwareUpdateController => {
     }
   }
 
-  const updates = runtimeAvailable ? getElectronRuntime().updates : null
+  const updates = runtimeAvailable ? getDesktopRuntime().updates : null
   return {
     actionError,
     check: () => (updates ? runAction('check', updates.check) : Promise.resolve()),

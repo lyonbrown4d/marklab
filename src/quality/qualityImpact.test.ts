@@ -9,33 +9,33 @@ import qualityImpactRulesData from '@/quality/qualityImpactRules.json'
 describe('quality impact rules', () => {
   it('maps changed files to the expected boundary checks', () => {
     const impacts = analyzeChangedFiles([
-      'electron/menu.ts',
+      'src-tauri/src/desktop/menus.rs',
       'src/components/SourceCodeEditorSurface.tsx',
       'src/logic/shortcuts.ts',
       'src/store/usePreferencesStore.ts',
-      'electron/services/workspace/workspaceFileService.ts',
-      'electron/services/knowledgeEngine/nodeWorkspaceClient.ts',
+      'src-tauri/src/workspace/buffers.rs',
+      'src-tauri/src/analysis/storage.rs',
     ])
 
     expect(impacts.map((impact) => impact.area)).toEqual(
       expect.arrayContaining([
-        'Electron menu/window/preload',
+        'Native menus / windows',
         'Source editor / Monaco',
         'Keyboard shortcuts',
         'Settings / persisted preferences',
         'Workspace filesystem/services',
-        'Knowledge engine / Node runtime',
+        'Knowledge engine / Rust analysis',
       ]),
     )
     expect(impacts.find((impact) => impact.area === 'Source editor / Monaco')?.checks).toContain(
       'source editor tests',
     )
     expect(
-      impacts.find((impact) => impact.area === 'Knowledge engine / Node runtime')?.checks,
-    ).toContain('knowledge engine Node runtime tests')
+      impacts.find((impact) => impact.area === 'Knowledge engine / Rust analysis')?.checks,
+    ).toContain('Rust analysis/language/MCP tests')
     expect(
       impacts.find((impact) => impact.area === 'Workspace filesystem/services')?.checks,
-    ).toContain('workspace service tests')
+    ).toContain('Rust workspace/history/asset tests')
   })
 
   it('flags quality gate changes as their own impact area', () => {
@@ -56,7 +56,7 @@ describe('quality impact rules', () => {
   it('routes performance gate changes to the Plate performance checks', () => {
     const impacts = analyzeChangedFiles([
       'e2e/performance/frameProbe.ts',
-      'playwright.performance.config.ts',
+      'playwright.renderer.config.ts',
       '.github/workflows/performance.yml',
     ])
 
@@ -64,7 +64,7 @@ describe('quality impact rules', () => {
     expect(plateImpact?.files).toEqual(
       expect.arrayContaining([
         'e2e/performance/frameProbe.ts',
-        'playwright.performance.config.ts',
+        'playwright.renderer.config.ts',
         '.github/workflows/performance.yml',
       ]),
     )
