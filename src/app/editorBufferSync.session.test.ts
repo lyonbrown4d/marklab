@@ -15,12 +15,12 @@ describe('editor buffer session sync', () => {
       )
     const sync = createEditorBufferSync({
       applyBufferUpdate,
-      getBufferStatus: async () => ({
-        path: 'note.md',
-        revision: 0,
-        dirty: false,
-        session_generation: 3,
-      }),
+    })
+    sync.seed('workspace:note.md', '', {
+      path: 'note.md',
+      revision: 0,
+      dirty: false,
+      session_generation: 3,
     })
     const first = sync.enqueue({
       identity: 'workspace:note.md',
@@ -61,14 +61,14 @@ describe('editor buffer session sync', () => {
     }))
     const sync = createEditorBufferSync({
       applyBufferUpdate,
-      getBufferStatus: async () => ({
-        path: 'note.md',
-        revision: 2,
-        dirty: false,
-        session_generation: 3,
-      }),
     })
 
+    sync.seed('old-workspace:note.md', 'old', {
+      path: 'note.md',
+      revision: 2,
+      dirty: false,
+      session_generation: 3,
+    })
     await expect(
       sync.enqueue({
         identity: 'old-workspace:note.md',

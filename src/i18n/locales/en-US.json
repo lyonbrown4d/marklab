@@ -1525,5 +1525,12 @@
   "scm.merge.discardReload": "Discard and reload",
   "scm.merge.reloadTitle": "Reload conflict",
   "scm.merge.reloadDescription": "Discard this unsaved draft and load the current file and index versions? This cannot be undone.",
-  "scm.merge.stale": "The file or conflict index changed. Your draft is preserved; reload before resolving against the new versions."
+  "scm.merge.stale": "The file or conflict index changed. Your draft is preserved; reload before resolving against the new versions.",
+  "scm.credentials.title": "HTTPS authentication",
+  "scm.credentials.username": "Username",
+  "scm.credentials.token": "Access token",
+  "scm.credentials.storage": "Stored in the system credential store.",
+  "scm.credentials.save": "Save credentials",
+  "scm.credentials.remove": "Remove credentials",
+  "scm.credentials.saved": "Updated. Retry the operation."
 }

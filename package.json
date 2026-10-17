@@ -11,7 +11,7 @@
     "node": "^22.22.0 || ^24.0.0 || ^25.0.0"
   },
   "scripts": {
-    "dev": "moon run desktop:electron-dev",
+    "dev": "moon run desktop:tauri-dev",
     "build": "moon run desktop:build",
     "build:analyze": "pnpm typecheck && vite build --mode analyze",
     "build:compiler": "pnpm typecheck && vite build --mode compiler",
@@ -24,12 +24,11 @@
     "electron:dev": "moon run desktop:electron-dev",
     "electron:build": "moon run desktop:electron-build",
     "electron:start": "pnpm electron:build && electron .",
-    "dev:desktop": "moon run desktop:electron-dev",
+    "dev:desktop": "moon run desktop:tauri-dev",
     "build:desktop": "moon run desktop:build",
     "package": "moon run desktop:package",
     "dist": "moon run desktop:dist",
     "dist:win": "moon run desktop:dist-win",
-    "dist:win:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-signed-windows.ps1",
     "dist:mac": "moon run desktop:dist-mac",
     "dist:linux": "moon run desktop:dist-linux",
     "lint": "moon run desktop:lint",
@@ -61,7 +60,20 @@
     "prepare": "husky install",
     "moon": "moon",
     "check": "moon run desktop:check",
-    "lint:check": "moon run desktop:lint"
+    "lint:check": "moon run desktop:lint",
+    "dev:renderer": "vite --mode tauri",
+    "build:renderer": "node --experimental-strip-types scripts/build-renderer.ts",
+    "tauri:dev": "moon run desktop:tauri-dev",
+    "tauri:build": "moon run desktop:build",
+    "tauri:check": "pnpm icons:generate && cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri:test": "pnpm icons:generate && cargo test --manifest-path src-tauri/Cargo.toml",
+    "tauri:bundle": "moon run desktop:package",
+    "electron:package": "moon run desktop:electron-package",
+    "electron:dist": "moon run desktop:electron-dist",
+    "electron:dist:win": "moon run desktop:electron-dist-win",
+    "electron:dist:mac": "moon run desktop:electron-dist-mac",
+    "electron:dist:linux": "moon run desktop:electron-dist-linux",
+    "electron:dist:win:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-signed-windows.ps1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,css,md,json,yml,yaml}": [
@@ -252,6 +264,7 @@
     "@tanstack/react-hotkeys": "^0.14.3",
     "@tanstack/react-query": "5.104.3",
     "@tanstack/react-virtual": "^3.14.20",
+    "@tauri-apps/api": "^2.12.4",
     "@uiw/codemirror-theme-eclipse": "^4.25.12",
     "@use-gesture/react": "10.3.1",
     "@xterm/addon-fit": "^0.11.0",
@@ -356,6 +369,7 @@
     "@rolldown/plugin-babel": "0.2.4",
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query-devtools": "5.104.3",
+    "@tauri-apps/cli": "^2.12.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -400,6 +414,7 @@
     "vite": "8.3.4",
     "vite-plugin-electron": "^1.1.2",
     "vite-plugin-electron-renderer": "^1.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "zx": "^8.8.5"
   }
 }

@@ -8,13 +8,15 @@ import { createEditorTextPatchAsync } from '@/components/editorTextPatchWorkerCl
 
 type EditorBufferSyncApi = {
   applyBufferUpdate: (request: FsBufferUpdateRequest) => Promise<FsBufferUpdateResult>
-  getBufferStatus: (path: string) => Promise<FsBufferSyncStatus | null>
 }
+
+export type LoadedEditorRevision = Readonly<{ revision: number; session_generation: number }>
 
 type EditorBufferSyncUpdate = {
   identity: string
   path: string
   previous: string
+  loadedRevision?: LoadedEditorRevision
   content: string
   changes?: FsBufferTextChange[]
   onApplied?: (status: FsBufferSyncStatus) => void
@@ -23,10 +25,9 @@ type EditorBufferSyncUpdate = {
 
 type DocumentSyncState = {
   acknowledgedContent: string | null
-  forceCheckpoint: boolean
+  failure: Error | null
   generation: number
-  revision: number | null
-  sessionGeneration: number | null
+  loadedRevision: { revision: number; session_generation: number }
   tail: Promise<void>
 }
 
@@ -58,23 +59,32 @@ const changesProduceContent = (
 export const createEditorBufferSync = (api: EditorBufferSyncApi) => {
   const documents = new Map<string, DocumentSyncState>()
 
-  const stateFor = (identity: string): DocumentSyncState => {
-    const existing = documents.get(identity)
-    if (existing) return existing
-    const created = {
-      acknowledgedContent: null,
-      forceCheckpoint: false,
+  const seed = (identity: string, content: string, status: FsBufferSyncStatus): void => {
+    documents.set(identity, {
+      acknowledgedContent: content,
+      failure: null,
       generation: 0,
-      revision: null,
-      sessionGeneration: null,
+      loadedRevision: { revision: status.revision, session_generation: status.session_generation },
       tail: Promise.resolve(),
-    }
-    documents.set(identity, created)
-    return created
+    })
   }
 
   const enqueue = (update: EditorBufferSyncUpdate): Promise<void> => {
-    const state = stateFor(update.identity)
+    let state = documents.get(update.identity)
+    // A disposed editor can emit its final snapshot after clean cache eviction.
+    // Its captured revision remains a valid CAS precondition; never fetch a newer one.
+    if (!state && update.loadedRevision) {
+      state = {
+        acknowledgedContent: update.previous,
+        failure: null,
+        generation: 0,
+        loadedRevision: update.loadedRevision,
+        tail: Promise.resolve(),
+      }
+      documents.set(update.identity, state)
+    }
+    if (!state)
+      return Promise.reject(new Error('Load a versioned document snapshot before editing'))
     state.generation += 1
     const generation = state.generation
 
@@ -85,50 +95,39 @@ export const createEditorBufferSync = (api: EditorBufferSyncApi) => {
         }
       }
       ensureActive()
-      if (state.revision === null) {
-        const status = await api.getBufferStatus(update.path)
-        if (!status) throw new Error('Workspace buffer status is unavailable')
-        state.revision = status.revision
-        state.sessionGeneration = status.session_generation
-        if (!state.forceCheckpoint) state.acknowledgedContent = update.previous
-      }
-      ensureActive()
-      const canPatch = !state.forceCheckpoint && state.acknowledgedContent === update.previous
-      const changes = canPatch
-        ? (update.changes ?? (await createEditorTextPatchAsync(update.previous, update.content)))
-        : null
+      if (state.failure) throw state.failure
+      if (state.acknowledgedContent !== update.previous)
+        throw new Error(
+          'Editor content no longer matches its loaded revision. Reload before saving; unsaved text is retained.',
+        )
+      const changes =
+        update.changes ?? (await createEditorTextPatchAsync(update.previous, update.content))
       const usePatch =
         changes != null &&
         changes.length > 0 &&
         changesProduceContent(update.previous, update.content, changes)
       const request: FsBufferUpdateRequest = {
         path: update.path,
-        base_revision: state.revision,
-        session_generation: state.sessionGeneration!,
+        base_revision: state.loadedRevision.revision,
+        session_generation: state.loadedRevision.session_generation,
         update: usePatch
           ? { kind: 'patch', changes }
           : { kind: 'snapshot', content: update.content },
       }
       ensureActive()
-      let result = await api.applyBufferUpdate(request)
-      if (result.kind === 'resync_required') {
-        result = await api.applyBufferUpdate({
-          path: update.path,
-          base_revision: result.revision,
-          session_generation: result.session_generation,
-          update: { kind: 'snapshot', content: update.content },
-        })
-      }
+      const result = await api.applyBufferUpdate(request)
       if (result.kind === 'session_mismatch') {
         throw new Error('Workspace changed before the editor buffer update was applied')
       }
       if (result.kind === 'resync_required') {
-        throw new Error('Workspace buffer resynchronization was rejected')
+        throw new Error(
+          'Document changed in another editor. Reload before saving; your unsaved text is retained.',
+        )
       }
-      state.revision = result.revision
-      state.sessionGeneration = result.session_generation
+      state.loadedRevision.revision = result.revision
+      state.loadedRevision.session_generation = result.session_generation
       state.acknowledgedContent = update.content
-      state.forceCheckpoint = false
+      state.failure = null
       if (state.generation === generation) update.onApplied?.(result)
     }
 
@@ -136,10 +135,7 @@ export const createEditorBufferSync = (api: EditorBufferSyncApi) => {
       try {
         await run()
       } catch (error) {
-        state.acknowledgedContent = null
-        state.forceCheckpoint = true
-        state.revision = null
-        state.sessionGeneration = null
+        state.failure = error instanceof Error ? error : new Error(String(error))
         throw error
       }
     }
@@ -150,7 +146,15 @@ export const createEditorBufferSync = (api: EditorBufferSyncApi) => {
 
   return {
     clear: () => documents.clear(),
+    clearWorkspace: (workspace: string) => {
+      const prefix = `${workspace.length}:${workspace}`
+      for (const identity of documents.keys())
+        if (identity.startsWith(prefix)) documents.delete(identity)
+    },
     forget: (identity: string) => documents.delete(identity),
+    revisionFor: (identity: string): LoadedEditorRevision | undefined =>
+      documents.get(identity)?.loadedRevision,
     enqueue,
+    seed,
   }
 }

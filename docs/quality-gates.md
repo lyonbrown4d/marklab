@@ -6,10 +6,10 @@ non-trivial changes.
 
 ## Ownership Boundaries
 
-- Electron owns native menus, windows, dialogs, shell access, app identity, deep links, and
-  packaging.
-- Preload and runtime adapters own typed renderer-to-desktop communication. Renderer code should
-  not call Electron directly.
+- Tauri/Rust owns native menus, windows, dialogs, filesystem access, app identity, deep links,
+  and packaging. Node.js is build tooling for the default application.
+- Named Tauri commands and typed runtime adapters own renderer-to-desktop communication.
+  The explicit Electron baseline retains its isolated preload boundary.
 - Monaco owns source-code editing behavior. App commands may bridge into Monaco actions, but
   native text accelerators should stay native.
 - Plate owns WYSIWYG editing behavior. Editor shortcuts should run through the Plate command
@@ -17,8 +17,9 @@ non-trivial changes.
 - React Flow owns graph canvas interaction. Graph data must explicitly map to registered node
   renderers.
 - Zustand owns renderer preferences and persisted UI defaults.
-- The Node knowledge runtime owns indexing and knowledge-heavy work inside Electron's main-process
-  service boundary. Electron owns lifecycle, workspace isolation, and request routing.
+- Rust services own indexing, persistence, Git, PTY, and sync work. Workspace bindings, mutation
+  guards, and native capabilities enforce isolation. The old Node knowledge service remains
+  covered by the retained Electron baseline tests.
 
 If two layers handle the same input, persistence value, or lifecycle event, consolidate ownership
 before adding behavior.
@@ -39,8 +40,8 @@ pnpm check
 ```
 
 `pnpm check` runs the quality impact helper as part of the project-level gate, so local
-verification and CI use the same entry point. It also rejects human-maintained TypeScript files
-over 300 non-blank effective lines, including root-level tooling and configuration files;
+verification and CI use the same entry point. It also rejects human-maintained TypeScript and Rust
+source files over 300 non-blank effective lines, including root-level TypeScript tooling and configuration;
 downloaded shadcn source is kept intact and extended through composition.
 The unit-test task additionally collects coverage for critical Markdown-worker, startup-window,
 command-palette, Plate, and workspace-map integration surfaces. Every listed file must independently
@@ -49,7 +50,7 @@ untested boundary.
 
 | Impact area                      | Common risk                                                    | Required checks                                                 |
 | -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Electron menu/window/preload     | double dispatch, unsafe IPC, platform mismatch                 | relevant Electron/preload tests, `pnpm typecheck`               |
+| Tauri native / Electron baseline | double dispatch, unsafe IPC, platform mismatch                 | Rust checks, native acceptance, retained Electron/preload tests |
 | Source editor / Monaco           | duplicated edit commands, option drift, focus routing          | source editor tests, focused edit tests                         |
 | WYSIWYG / Plate                  | command mismatch, paste/drop regression, editor sync drift     | Plate command/paste/sync and performance tests                  |
 | React Flow graph                 | default node renderer fallback, drag/selection conflicts       | graph logic, graph node, and graph interaction tests            |
@@ -57,10 +58,10 @@ untested boundary.
 | Keyboard shortcuts               | missing defaults, unhandled action, shortcut settings drift    | shortcut catalog, settings, workspace map/editor shortcut tests |
 | IPC / runtime services           | stringly payloads, broad capability exposure                   | runtime/preload/service contract tests                          |
 | Workspace filesystem/services    | path normalization, sidecar routing, unsafe asset access       | workspace service and sidecar/path tests                        |
-| Knowledge engine / Node runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Node runtime tests, typecheck, Electron build                   |
+| Knowledge engine / Rust runtime  | workspace isolation, blocking I/O, index or lifecycle drift    | Rust service tests, typecheck, retained Node baseline tests     |
 | Renderer lifecycle / route cache | stale workspace routes or retained workers                     | route cache/worker tests, focused release Electron regression   |
 | Document preview lifecycle       | cross-workspace preview data or retained preview resources     | preview component tests, focused release Electron regression    |
-| Build/package                    | CI/task drift, missing resources, oversized bundles            | Electron build or targeted packaging checks                     |
+| Build/package                    | CI/task drift, missing resources, oversized bundles            | Tauri static/build checks, native packaging acceptance          |
 | i18n                             | untranslated menu/settings text                                | locale resource checks or affected UI tests                     |
 | Quality gates                    | stale checklist, missing boundary guard, outdated guidance     | quality gate tests, `pnpm quality:impact`, `pnpm lint`          |
 
@@ -75,6 +76,10 @@ warmup plus three measured sessions under Xvfb/software rendering, and uploads m
 Electron logs, screenshots, and the HTML report even on failure. Repository administrators must add
 that exact job name as a required status check in the protected `main` branch rules; workflow files
 cannot make themselves required.
+
+This remains an Electron performance baseline. It does not establish Tauri startup, memory,
+rendering, or packaged-app performance acceptance. Preserve its required status and budgets while
+collecting separate Tauri measurements.
 
 The gate requires:
 
@@ -97,7 +102,7 @@ Every bug fix should leave one narrow regression test at the boundary that faile
 
 Examples:
 
-- A native menu shortcut fires twice: test that the native menu uses Electron edit roles.
+- A native menu shortcut fires twice: test the native menu dispatch and edit routing for the affected runtime.
 - A file/root graph node ignores theme: test that `file` nodes map to a custom React Flow node.
 - A setting does not affect Monaco: test the store-to-surface option path.
 - An IPC response shape drifts: test the service adapter contract, not only the component.
@@ -115,8 +120,8 @@ Run this manually for broad UI/runtime iterations:
 - Graph: open, select, drag, keyboard navigate, create/delete heading, double-click open.
 - Settings: toggle a changed setting, reload, confirm persistence.
 - Theme and locale: switch once and check menus, dialogs, settings, graph, and editors.
-- Electron native menu: check File, Edit, View, Settings, and About entries.
-- Build sanity: run the targeted build for changes touching Electron, preload, packaging, or assets.
+- Tauri native menu: check File, Edit, View, Settings, and About entries.
+- Build sanity: run the native target build for changes touching Rust, runtime adapters, packaging, or assets.
 
 ## Standard Verification
 
@@ -126,11 +131,15 @@ Use the narrowest checks while working, then broaden before committing:
 pnpm exec vitest run <affected tests>
 pnpm typecheck
 pnpm lint
-pnpm exec vite build --mode electron --logLevel error
+pnpm build:renderer
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
 git diff --check
 ```
 
-For knowledge-engine runtime changes, add:
+For Rust runtime changes, add native unit and affected integration tests after the static review
+and initial migration commit/push. Static compilation does not execute those tests.
+For changes affecting the retained Electron knowledge baseline, also run:
 
 ```bash
 pnpm exec vitest run electron/services/knowledgeEngine
@@ -151,3 +160,17 @@ pnpm test:electron:release
 
 The release workflow runs this focused gate once on Ubuntu under Xvfb before the three packaging
 jobs. Playwright retains traces and failure screenshots, and CI uploads them with the HTML report.
+
+## Tauri Migration Acceptance Status
+
+The migration first establishes a static review baseline, then commits and pushes that baseline
+before native integration testing. Record the exact executed checks and their results with each
+commit; this guide does not claim that compilation proves runtime parity. Native multiwindow,
+workspace switching, save/cancel races, PTY, Git, sync, preview, signing, updater, and packaged-app
+acceptance remain pending until run on the matching platform. Fixes from those checks receive
+follow-up commits.
+
+The release workflow retains `pnpm check` and the focused Electron release regressions. It also
+compiles Rust test targets with Clippy on Linux, macOS ARM, and Windows. Its Tauri build uploads
+signed updater artifacts to a draft release; successful CI still requires platform acceptance and
+release review. See [Tauri migration](tauri-migration.md) for signing and updater prerequisites.

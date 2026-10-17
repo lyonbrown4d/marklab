@@ -1,3 +1,4 @@
+import { toWebviewAssetUrl } from '@/runtime/assetUrl'
 import { lazy, Suspense } from 'react'
 import { FileText, Music } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
@@ -33,10 +34,11 @@ const FilePreviewSurface = ({
   readonly = false,
   snapshot = false,
   onOpenInSystem,
-  src,
+  src: capabilityUrl,
   title,
 }: FilePreviewSurfaceProps) => {
   const { t } = useI18n()
+  const src = toWebviewAssetUrl(capabilityUrl)
 
   if (kind === 'source') {
     return (

@@ -1,27 +1,25 @@
-# Release Packaging
+# Electron Baseline Packaging
 
-Marklab uses Vite for the renderer, Electron main, and preload bundles. The
+These instructions describe the retained Electron baseline. The default commands now use
+Tauri; see [Tauri migration and release](tauri-migration.md) for current packaging.
+
+The Electron baseline uses Vite for the renderer, Electron main, and preload bundles. The
 release package step is intended to run after that build and produce desktop
 artifacts with `electron-builder`.
 
 ## Required Package
 
-Install before using the package scripts:
-
-```sh
-pnpm add -D electron-builder
-```
-
-`electron-builder` creates the app bundles and installers.
+`electron-builder` is already a pinned development dependency. Install with
+`pnpm install --frozen-lockfile`; it creates the baseline bundles and installers.
 
 ## Scripts
 
-- `pnpm build:desktop`: build `dist` and `dist-electron`.
-- `pnpm package`: create an unpacked app directory for local inspection.
-- `pnpm dist`: build distributable artifacts for the current host platform.
-- `pnpm dist:win`: build Windows `nsis` and `zip` artifacts.
-- `pnpm dist:mac`: build macOS `dmg` and `zip` artifacts.
-- `pnpm dist:linux`: build Linux `AppImage`, `deb`, and `tar.gz` artifacts.
+- `pnpm electron:build`: build `dist` and `dist-electron`.
+- `pnpm electron:package`: create an unpacked app directory for local inspection.
+- `pnpm electron:dist`: build distributable artifacts for the current host platform.
+- `pnpm electron:dist:win`: build Windows `nsis` and `zip` artifacts.
+- `pnpm electron:dist:mac`: build macOS `dmg` and `zip` artifacts.
+- `pnpm electron:dist:linux`: build Linux `AppImage`, `deb`, and `tar.gz` artifacts.
 
 All packaged artifacts are written to `release/`. Artifact names use:
 
@@ -51,7 +49,8 @@ avoiding a full production dependency copy.
 ## Windows Signing
 
 Signed Windows releases use a certificate installed in the local user's Windows
-certificate store. CI remains unsigned and does not receive signing credentials.
+certificate store. The baseline's ordinary Windows commands remain unsigned;
+this signing flow is local and separate from the Tauri release workflow.
 
 The certificate must be in `Cert:\CurrentUser\My` or
 `Cert:\LocalMachine\My`, be currently valid, include an accessible private key,
@@ -69,7 +68,7 @@ Set the thumbprint for the current shell and run the local signed package task:
 
 ```powershell
 $env:MARKLAB_WINDOWS_CERTIFICATE_SHA1 = '<certificate-thumbprint>'
-pnpm dist:win:signed
+pnpm electron:dist:win:signed
 ```
 
 The task validates the certificate before building, requires Electron Builder to
@@ -80,7 +79,7 @@ non-timestamped artifacts fail the task. A Windows SDK installation providing
 `signtool.exe` is required for verification; the script can also use Electron
 Builder's cached x64 SignTool.
 
-Normal `pnpm dist:win` builds remain unsigned for development. Private-key
+Normal `pnpm electron:dist:win` builds remain unsigned for development. Private-key
 containers (`*.pfx` and `*.p12`) are ignored by Git even though this workflow
 does not read them directly.
 

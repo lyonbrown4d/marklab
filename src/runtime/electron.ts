@@ -257,15 +257,19 @@ export type ElectronRuntimeApi = RendererSafeElectronApi
 declare global {
   interface Window {
     marklabElectron?: RendererSafeElectronApi
+    marklabTauri?: RendererSafeElectronApi
   }
 }
 
 export const getElectronRuntime = (): RendererSafeElectronApi => {
-  if (typeof window === 'undefined' || !window.marklabElectron) {
-    throw new Error('Electron runtime API is unavailable.')
+  const api =
+    typeof window === 'undefined' ? undefined : (window.marklabTauri ?? window.marklabElectron)
+  if (!api) {
+    throw new Error('Desktop runtime API is unavailable.')
   }
-  return window.marklabElectron
+  return api
 }
 
 export const isElectronRuntime = () =>
-  typeof window !== 'undefined' && window.marklabElectron !== undefined
+  typeof window !== 'undefined' &&
+  (window.marklabTauri !== undefined || window.marklabElectron !== undefined)

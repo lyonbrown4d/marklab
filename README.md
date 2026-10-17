@@ -5,8 +5,9 @@ A desktop Markdown workspace that blends immersive editing with a project graph.
 [Website and user guide](https://lyonbrown4d.github.io/marklab/) ·
 [Downloads](https://github.com/lyonbrown4d/marklab/releases)
 
-Marklab uses Electron for its desktop runtime and native integration while keeping
-the React editor and typed runtime boundary explicit.
+Marklab uses Tauri and Rust for its desktop runtime and native integration, with a
+React editor and typed runtime boundary. Electron remains an explicit migration
+baseline for regression and performance comparisons.
 
 ## Features
 
@@ -19,14 +20,15 @@ the React editor and typed runtime boundary explicit.
 ## Tech Stack
 
 - React 19 + Vite + TypeScript
-- Electron desktop runtime
-- vite-plugin-electron for Electron main/preload integration
+- Tauri 2 + async Rust desktop backend
 - Plate, Monaco
 - React Flow, Zustand, Radix UI, Tailwind CSS
 
 ## Development
 
-Use Node.js 24 LTS and pnpm 12.11.2 (the version pinned in `package.json`).
+Install the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/)
+and Rust 1.94 or newer. Use Node.js 24 LTS and pnpm 12.11.2 (pinned in
+`package.json`) for build tooling; the Tauri app does not embed Node.js.
 Dependency build permissions, including `canvas`, are declared in
 `pnpm-workspace.yaml` using `allowBuilds`. Newly published packages can be installed
 immediately because this project sets `minimumReleaseAge: 0`.
@@ -36,7 +38,8 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-For Electron downloads through npmmirror, set the `ELECTRON_MIRROR` environment
+The retained Electron baseline still downloads Electron during dependency setup.
+For downloads through npmmirror, set the `ELECTRON_MIRROR` environment
 variable before installing. pnpm 12 no longer reads custom settings from `.npmrc`.
 
 ```bash
@@ -46,22 +49,22 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ pnpm install --frozen-lo
 In PowerShell, set `$env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'`
 before running `pnpm install --frozen-lockfile`.
 
-## Desktop (Electron)
+## Desktop (Tauri)
 
 ```bash
-pnpm electron:dev
+pnpm dev:desktop   # same as pnpm dev
+pnpm build:desktop # compile release binary, without bundling
+pnpm package       # compile and bundle for the host platform
 ```
 
-Compatibility aliases are also available:
+See [the Tauri migration and release guide](docs/tauri-migration.md) for native
+prerequisites, platform targets, signing configuration, and outstanding acceptance
+checks. Automatic updates remain unavailable until the updater key and endpoint
+are supplied to the build.
 
-```bash
-pnpm dev:desktop
-pnpm build:desktop
-```
-
-## Electron Migration
-
-See [docs/electron-migration.md](docs/electron-migration.md).
+The explicit Electron baseline is available through `pnpm electron:dev`,
+`pnpm electron:build`, and `pnpm electron:dist`.
+See [the historical Electron migration guide](docs/electron-migration.md).
 
 ## Quality Gates
 

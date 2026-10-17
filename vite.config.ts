@@ -93,7 +93,7 @@ export default defineConfig(({ command, mode }) => {
     server: {
       host: process.env.MARKLAB_DEV_SERVER_HOST ?? DEFAULT_DEV_SERVER_HOST,
       port: devServerPort,
-      strictPort: false,
+      strictPort: mode === 'tauri',
       warmup: {
         clientFiles: devWarmupClientFiles,
       },

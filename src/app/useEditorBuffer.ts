@@ -62,7 +62,6 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     () =>
       createEditorBufferSync({
         applyBufferUpdate: (request) => fsApi.applyBufferUpdate(request),
-        getBufferStatus: (path) => fsApi.getBufferStatus(path),
       }),
     [],
   )
@@ -135,6 +134,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
 
   useEffect(() => {
     if (workspaceSessionRef.current === workspaceKey) return
+    const previousWorkspace = workspaceSessionRef.current
     workspaceSessionRef.current = workspaceKey
     loadToken.current += 1
     syncedContentsRef.current = {}
@@ -142,7 +142,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     changeVersionRef.current = {}
     persistence.clearRevisions()
     void flushNow().then(
-      () => bufferSync.clear(),
+      () => bufferSync.clearWorkspace(previousWorkspace),
       (error) => reportFlushError(error),
     )
   }, [bufferSync, flushNow, persistence, reportFlushError, workspaceKey])
@@ -175,9 +175,11 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     setPathLoading(workspaceKey, activePath, !hasLoadedContent)
 
     void fsApi
-      .openFile(activePath)
-      .then((content) => {
+      .openBufferSnapshot(activePath)
+      .then((snapshot) => {
+        const { content } = snapshot
         if (!isCurrentLoad()) return
+        bufferSync.seed(identity, content, snapshot)
         setWorkspaceFileContents((prev) =>
           produce(prev, (draft) => {
             const contents = draft[workspaceKey] ?? (draft[workspaceKey] = {})
@@ -188,7 +190,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
         latestContentsRef.current[identity] = content
         syncedContentsRef.current[identity] = content
         delete changeVersionRef.current[identity]
-        persistence.deleteRevision(identity)
+        persistence.resetDocument(identity)
         setWorkspaceDirtyPaths((prev) =>
           produce(prev, (draft) => {
             const dirty = draft[workspaceKey]
@@ -233,6 +235,7 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     }
   }, [
     activePath,
+    bufferSync,
     dirtyPathsRef,
     fileContentsRef,
     loadGeneration,
@@ -270,6 +273,9 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
   const onEditorChange = useEditorBufferChanges({
     activePath,
     loadedContent: activePath ? fileContents[activePath] : undefined,
+    loadedRevision: activePath
+      ? bufferSync.revisionFor(editorBufferIdentity(workspaceKey, activePath))
+      : undefined,
     loadedVersion: activePath
       ? loadedVersions[editorBufferIdentity(workspaceKey, activePath)]
       : undefined,
@@ -289,6 +295,9 @@ export const useEditorBuffer = ({ activePath, workspaceKey, openPaths }: UseEdit
     bufferSync,
   })
   const onPersistedContentChange = usePersistedEditorBufferContent({
+    bufferSync,
+    workspaceKeyRef,
+    markPathDirty,
     workspace: workspaceKey,
     latestContentsRef,
     changeVersionRef,

@@ -1,19 +1,5 @@
 import { fsApi } from '@/services/fsApi'
+import { createDocumentBufferSession } from '@/services/documentBufferSession'
 
-export type DrawioSaveOptions = {
-  flush: boolean
-  path: string
-  xml: string
-}
-
-export const drawioDocumentApi = {
-  load(path: string) {
-    return fsApi.readFile(path)
-  },
-  async save({ flush, path, xml }: DrawioSaveOptions) {
-    const status = await fsApi.updateBuffer(path, xml)
-    if (!flush) return status
-    await fsApi.flushBuffers()
-    return { ...status, dirty: false }
-  },
-}
+export const createDrawioDocumentSession = createDocumentBufferSession
+export const drawioDocumentApi = { load: (path: string) => fsApi.openBufferSnapshot(path) }

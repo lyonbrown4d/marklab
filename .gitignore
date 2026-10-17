@@ -159,3 +159,7 @@ resources/icons/
 
 # Astro generated types and content caches
 website/.astro/
+
+# Rust/Tauri build output and generated permission schemas
+src-tauri/target/
+src-tauri/gen/schemas/

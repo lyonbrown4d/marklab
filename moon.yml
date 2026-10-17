@@ -87,6 +87,7 @@ tasks:
     command: pnpm quality:line-limits
     inputs:
       - electron/**/*
+      - src-tauri/src/**/*
       - e2e/**/*
       - scripts/**/*
       - src/**/*
@@ -150,7 +151,56 @@ tasks:
       - dist/**/*
       - dist-electron/**/*
 
+  tauri-dev:
+    command: pnpm exec tauri dev
+    deps:
+      - ~:prepare-dev
+    options:
+      cache: false
+      persistent: true
+
   build:
+    command: pnpm exec tauri build --no-bundle
+    deps:
+      - ~:prepare
+    options:
+      cache: false
+
+  package:
+    command: pnpm exec tauri bundle
+    deps:
+      - ~:build
+    options:
+      cache: false
+
+  dist:
+    deps:
+      - ~:package
+    options:
+      cache: false
+
+  dist-win:
+    command: pnpm exec tauri build --target x86_64-pc-windows-msvc --bundles nsis,msi
+    deps:
+      - ~:prepare
+    options:
+      cache: false
+
+  dist-mac:
+    command: pnpm exec tauri build --target aarch64-apple-darwin --bundles app,dmg
+    deps:
+      - ~:prepare
+    options:
+      cache: false
+
+  dist-linux:
+    command: pnpm exec tauri build --target x86_64-unknown-linux-gnu --bundles appimage,deb
+    deps:
+      - ~:prepare
+    options:
+      cache: false
+
+  electron-release-build:
     deps:
       - ~:typecheck
       - ~:electron-build
@@ -159,10 +209,10 @@ tasks:
       cache: false
       runDepsInParallel: false
 
-  package:
+  electron-package:
     command: pnpm exec electron-builder --dir --publish never
     deps:
-      - ~:build
+      - ~:electron-release-build
     inputs:
       - package.json
       - pnpm-lock.yaml
@@ -174,10 +224,10 @@ tasks:
     options:
       cache: false
 
-  dist:
+  electron-dist:
     command: pnpm exec electron-builder --publish never
     deps:
-      - ~:build
+      - ~:electron-release-build
     inputs:
       - package.json
       - pnpm-lock.yaml
@@ -189,10 +239,10 @@ tasks:
     options:
       cache: false
 
-  dist-win:
+  electron-dist-win:
     command: pnpm exec electron-builder --win --publish never
     deps:
-      - ~:build
+      - ~:electron-release-build
     inputs:
       - package.json
       - pnpm-lock.yaml
@@ -204,10 +254,10 @@ tasks:
     options:
       cache: false
 
-  dist-mac:
+  electron-dist-mac:
     command: pnpm exec electron-builder --mac --publish never
     deps:
-      - ~:build
+      - ~:electron-release-build
     inputs:
       - package.json
       - pnpm-lock.yaml
@@ -219,10 +269,10 @@ tasks:
     options:
       cache: false
 
-  dist-linux:
+  electron-dist-linux:
     command: pnpm exec electron-builder --linux --publish never
     deps:
-      - ~:build
+      - ~:electron-release-build
     inputs:
       - package.json
       - pnpm-lock.yaml

@@ -1,0 +1,375 @@
+{
+  "diagramDeclarations": [
+    {
+      "detail": "Create a directed flowchart",
+      "kind": 9,
+      "label": "flowchart diagram",
+      "newText": "flowchart ${1:TD}\n  ${0}"
+    },
+    {
+      "detail": "Create a sequence diagram",
+      "kind": 9,
+      "label": "sequence diagram",
+      "newText": "sequenceDiagram\n  ${0}"
+    },
+    {
+      "detail": "Create a class diagram",
+      "kind": 9,
+      "label": "class diagram",
+      "newText": "classDiagram\n  ${0}"
+    },
+    {
+      "detail": "Create a state diagram",
+      "kind": 9,
+      "label": "state diagram",
+      "newText": "stateDiagram-v2\n  ${0}"
+    },
+    {
+      "detail": "Create an entity relationship diagram",
+      "kind": 9,
+      "label": "ER diagram",
+      "newText": "erDiagram\n  ${0}"
+    },
+    {
+      "detail": "Create a Gantt chart",
+      "kind": 9,
+      "label": "Gantt chart",
+      "newText": "gantt\n  ${0}"
+    },
+    {
+      "detail": "Create a mindmap",
+      "kind": 9,
+      "label": "mindmap",
+      "newText": "mindmap\n  root((${1:Topic}))\n    ${0}"
+    },
+    { "detail": "Create a timeline", "kind": 9, "label": "timeline", "newText": "timeline\n  ${0}" }
+  ],
+  "classMemberStatements": [
+    {
+      "detail": "Add a public method",
+      "kind": 15,
+      "label": "public method",
+      "newText": "+${1:method}(${2}) ${3:void}"
+    },
+    {
+      "detail": "Add a private field",
+      "kind": 15,
+      "label": "private field",
+      "newText": "-${1:field} ${2:string}"
+    },
+    {
+      "detail": "Add an abstract method",
+      "kind": 15,
+      "label": "abstract method",
+      "newText": "+${1:method}(${2})* ${3:void}"
+    },
+    {
+      "detail": "Add a static method",
+      "kind": 15,
+      "label": "static method",
+      "newText": "+${1:method}(${2})$ ${3:void}"
+    }
+  ],
+  "erAttributeStatements": [
+    {
+      "detail": "Add a primary key attribute",
+      "kind": 15,
+      "label": "primary key attribute",
+      "newText": "${1:string} ${2:id} PK"
+    },
+    {
+      "detail": "Add an entity attribute",
+      "kind": 15,
+      "label": "attribute",
+      "newText": "${1:string} ${2:name}"
+    },
+    {
+      "detail": "Add a foreign key attribute",
+      "kind": 15,
+      "label": "foreign key attribute",
+      "newText": "${1:int} ${2:owner_id} FK"
+    }
+  ],
+  "statementCatalog": {
+    "class": [
+      {
+        "detail": "Declare a class with members",
+        "kind": 15,
+        "label": "class",
+        "newText": "class ${1:ClassName} {\n  ${0}\n}"
+      },
+      {
+        "detail": "Add an inheritance relationship",
+        "kind": 15,
+        "label": "inheritance",
+        "newText": "${1:Base} <|-- ${2:Derived}"
+      },
+      {
+        "detail": "Add an association relationship",
+        "kind": 15,
+        "label": "association",
+        "newText": "${1:ClassA} --> ${2:ClassB} : ${3:label}"
+      },
+      {
+        "detail": "Add a composition relationship",
+        "kind": 15,
+        "label": "composition",
+        "newText": "${1:Whole} *-- ${2:Part}"
+      },
+      {
+        "detail": "Add a class annotation",
+        "kind": 15,
+        "label": "annotation",
+        "newText": "<<${1:interface}>> ${2:ClassName}"
+      },
+      {
+        "detail": "Group classes in a namespace",
+        "kind": 15,
+        "label": "namespace",
+        "newText": "namespace ${1:name} {\n  ${0}\n}"
+      }
+    ],
+    "er": [
+      {
+        "detail": "Declare an entity",
+        "kind": 15,
+        "label": "entity",
+        "newText": "${1:ENTITY} {\n  ${2:string} ${3:id} PK\n  ${0}\n}"
+      },
+      {
+        "detail": "Declare an entity relationship",
+        "kind": 15,
+        "label": "relationship",
+        "newText": "${1:CUSTOMER} ||--o{ ${2:ORDER} : \"${3:places}\""
+      }
+    ],
+    "flowchart": [
+      {
+        "detail": "Add a flowchart node",
+        "kind": 15,
+        "label": "node",
+        "newText": "${1:id}[${2:Label}]"
+      },
+      {
+        "detail": "Connect two flowchart nodes",
+        "kind": 15,
+        "label": "edge",
+        "newText": "${1:A} --> ${2:B}"
+      },
+      {
+        "detail": "Group flowchart nodes",
+        "kind": 15,
+        "label": "subgraph",
+        "newText": "subgraph ${1:name}\n  ${0}\nend"
+      },
+      {
+        "detail": "Set the flow direction",
+        "kind": 15,
+        "label": "direction",
+        "newText": "direction ${1|TB,TD,BT,RL,LR|}"
+      },
+      {
+        "detail": "Attach a link to a node",
+        "kind": 15,
+        "label": "click",
+        "newText": "click ${1:id} \"${2:https://example.com}\""
+      },
+      {
+        "detail": "Define a reusable node style",
+        "kind": 15,
+        "label": "class definition",
+        "newText": "classDef ${1:name} ${2:fill:#fff,stroke:#333}"
+      }
+    ],
+    "gantt": [
+      {
+        "detail": "Set the chart title",
+        "kind": 15,
+        "label": "title",
+        "newText": "title ${1:Project plan}"
+      },
+      {
+        "detail": "Set the input date format",
+        "kind": 15,
+        "label": "date format",
+        "newText": "dateFormat ${1:YYYY-MM-DD}"
+      },
+      {
+        "detail": "Set the displayed date format",
+        "kind": 15,
+        "label": "axis format",
+        "newText": "axisFormat ${1:%m/%d}"
+      },
+      {
+        "detail": "Create a task section",
+        "kind": 15,
+        "label": "section",
+        "newText": "section ${1:Section}"
+      },
+      {
+        "detail": "Add a task",
+        "kind": 15,
+        "label": "task",
+        "newText": "${1:Task name} :${2:active}, ${3:task-id}, ${4:2026-01-01}, ${5:3d}"
+      },
+      {
+        "detail": "Add a milestone",
+        "kind": 15,
+        "label": "milestone",
+        "newText": "${1:Milestone} :milestone, ${2:id}, ${3:2026-01-01}, 0d"
+      }
+    ],
+    "mindmap": [
+      {
+        "detail": "Add the central topic",
+        "kind": 15,
+        "label": "root node",
+        "newText": "root((${1:Topic}))\n  ${0}"
+      },
+      {
+        "detail": "Add a child topic",
+        "kind": 15,
+        "label": "branch",
+        "newText": "${1:Topic}\n  ${0}"
+      },
+      {
+        "detail": "Add a rounded topic",
+        "kind": 15,
+        "label": "rounded node",
+        "newText": "${1:id}(${2:Topic})"
+      },
+      {
+        "detail": "Add a cloud topic",
+        "kind": 15,
+        "label": "cloud node",
+        "newText": "${1:id})${2:Topic}("
+      },
+      {
+        "detail": "Attach an icon class",
+        "kind": 15,
+        "label": "icon",
+        "newText": "::icon(${1:fa fa-book})"
+      }
+    ],
+    "sequence": [
+      {
+        "detail": "Declare a participant",
+        "kind": 15,
+        "label": "participant",
+        "newText": "participant ${1:Alice} as ${2:Alice}"
+      },
+      {
+        "detail": "Declare an actor",
+        "kind": 15,
+        "label": "actor",
+        "newText": "actor ${1:User} as ${2:User}"
+      },
+      {
+        "detail": "Send a synchronous message",
+        "kind": 15,
+        "label": "message",
+        "newText": "${1:Alice}->>${2:Bob}: ${3:Message}"
+      },
+      {
+        "detail": "Send a dotted reply",
+        "kind": 15,
+        "label": "reply",
+        "newText": "${1:Bob}-->>${2:Alice}: ${3:Reply}"
+      },
+      {
+        "detail": "Add a note over participants",
+        "kind": 15,
+        "label": "note",
+        "newText": "Note over ${1:Alice},${2:Bob}: ${3:Note}"
+      },
+      {
+        "detail": "Add an alternative flow",
+        "kind": 15,
+        "label": "alt block",
+        "newText": "alt ${1:condition}\n  ${0}\nelse ${2:otherwise}\nend"
+      },
+      {
+        "detail": "Add an optional flow",
+        "kind": 15,
+        "label": "optional block",
+        "newText": "opt ${1:condition}\n  ${0}\nend"
+      },
+      {
+        "detail": "Add a repeated flow",
+        "kind": 15,
+        "label": "loop block",
+        "newText": "loop ${1:description}\n  ${0}\nend"
+      },
+      {
+        "detail": "Add parallel flows",
+        "kind": 15,
+        "label": "parallel block",
+        "newText": "par ${1:action}\n  ${0}\nand ${2:other action}\nend"
+      }
+    ],
+    "state": [
+      {
+        "detail": "Declare a state",
+        "kind": 15,
+        "label": "state",
+        "newText": "state \"${1:Label}\" as ${2:State}"
+      },
+      {
+        "detail": "Add a state transition",
+        "kind": 15,
+        "label": "transition",
+        "newText": "${1:StateA} --> ${2:StateB} : ${3:event}"
+      },
+      {
+        "detail": "Connect the start pseudo-state",
+        "kind": 15,
+        "label": "start transition",
+        "newText": "[*] --> ${1:State}"
+      },
+      {
+        "detail": "Connect the end pseudo-state",
+        "kind": 15,
+        "label": "end transition",
+        "newText": "${1:State} --> [*]"
+      },
+      {
+        "detail": "Declare a composite state",
+        "kind": 15,
+        "label": "composite state",
+        "newText": "state ${1:State} {\n  ${0}\n}"
+      },
+      {
+        "detail": "Declare a choice pseudo-state",
+        "kind": 15,
+        "label": "choice",
+        "newText": "state ${1:choice} <<choice>>"
+      },
+      {
+        "detail": "Add a note to a state",
+        "kind": 15,
+        "label": "note",
+        "newText": "note right of ${1:State}\n  ${0}\nend note"
+      }
+    ],
+    "timeline": [
+      {
+        "detail": "Set the timeline title",
+        "kind": 15,
+        "label": "title",
+        "newText": "title ${1:Timeline}"
+      },
+      {
+        "detail": "Create a timeline section",
+        "kind": 15,
+        "label": "section",
+        "newText": "section ${1:Period}"
+      },
+      {
+        "detail": "Add a dated event",
+        "kind": 15,
+        "label": "event",
+        "newText": "${1:2026} : ${2:Event}"
+      }
+    ]
+  }
+}

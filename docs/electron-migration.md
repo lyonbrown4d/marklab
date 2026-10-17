@@ -83,8 +83,8 @@ Renderer constraints:
 - `pnpm electron:dev`: run Vite in Electron mode with Electron hot restart.
 - `pnpm electron:build`: build renderer, Electron main, and preload through Vite.
 - `pnpm electron:start`: build and launch the local Electron entry.
-- `pnpm dev:desktop`: compatibility alias for `pnpm electron:dev`.
-- `pnpm build:desktop`: compatibility alias for `pnpm electron:build`.
+- `pnpm electron:dev`: retained Electron development entry point; `pnpm dev:desktop` now uses Tauri.
+- `pnpm electron:build`: retained Electron build entry point; `pnpm build:desktop` now uses Tauri.
 
 This project does not currently add `electron-builder`. Add a packaging tool only
 after the release entry, asset layout, native module rebuild strategy, and

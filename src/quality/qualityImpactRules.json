@@ -1,5 +1,23 @@
 [
   {
+    "area": "Tauri native runtime",
+    "risk": "workspace isolation, save integrity, window lifecycle, native permissions, or cache invalidation regression",
+    "patterns": [
+      "^src-tauri/",
+      "^src/runtime/tauri/",
+      "^src/runtime/assetUrl",
+      "^scripts/build-renderer",
+      "^scripts/prepare-tauri-release"
+    ],
+    "checks": [
+      "pnpm tauri:check",
+      "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+      "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings",
+      "pnpm tauri:test after the reviewed baseline is pushed",
+      "native multi-window/edit/save/splash acceptance after the reviewed baseline is pushed"
+    ]
+  },
+  {
     "area": "Electron menu/window/preload",
     "risk": "double dispatch, unsafe desktop capability, or platform-specific runtime drift",
     "patterns": [

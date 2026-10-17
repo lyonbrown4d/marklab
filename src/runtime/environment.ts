@@ -6,6 +6,8 @@ export const isElectronRuntime = () => {
 export const isDesktopRuntime = () => {
   return isElectronRuntime()
 }
+export const isTauriRuntime = () =>
+  typeof window !== 'undefined' && window.marklabTauri !== undefined
 export const runInDesktop = async <T>(callback: () => Promise<T> | T) => {
   if (!isDesktopRuntime()) return null
   return callback()

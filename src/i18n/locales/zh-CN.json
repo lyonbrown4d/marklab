@@ -1525,5 +1525,12 @@
   "scm.merge.discardReload": "丢弃并重新加载",
   "scm.merge.reloadTitle": "重新加载冲突",
   "scm.merge.reloadDescription": "丢弃未保存的草稿并加载当前文件及索引版本？此操作无法撤销。",
-  "scm.merge.stale": "文件或冲突索引已发生变化。草稿已保留，请重新加载后再基于新版本解决冲突。"
+  "scm.merge.stale": "文件或冲突索引已发生变化。草稿已保留，请重新加载后再基于新版本解决冲突。",
+  "scm.credentials.title": "HTTPS 身份验证",
+  "scm.credentials.username": "用户名",
+  "scm.credentials.token": "访问令牌",
+  "scm.credentials.storage": "保存在系统凭据库中。",
+  "scm.credentials.save": "保存凭据",
+  "scm.credentials.remove": "移除凭据",
+  "scm.credentials.saved": "已更新，请重试操作。"
 }

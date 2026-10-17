@@ -1,3 +1,4 @@
+import { toWebviewAssetUrl } from '@/runtime/assetUrl'
 import { useLink } from '@platejs/link/react'
 import { Maximize2 } from 'lucide-react'
 import type { TElement, TLinkElement } from 'platejs'
@@ -146,7 +147,7 @@ export const ResolvedPlateImage = ({ alt, documentPath, src, title }: ResolvedPl
             )
           }
         }}
-        src={current.url}
+        src={toWebviewAssetUrl(current.url)}
         title={title}
       />
       <Button
@@ -280,7 +281,7 @@ export const createImageElement = ({ getDocumentPath }: PlatePreviewOptions = {}
           <ResolvedPlateImage
             alt={imageAlt(props.element)}
             documentPath={getDocumentPath?.() ?? null}
-            src={target}
+            src={toWebviewAssetUrl(target)}
             title={props.element.title}
           />
           {imageAlt(props.element) ? (

@@ -13,6 +13,7 @@ import type { WorkspaceTab } from '@/store/appTypes'
 
 const native = vi.hoisted(() => ({
   openFile: vi.fn(),
+  openBufferSnapshot: vi.fn(),
   applyBufferUpdate: vi.fn(),
   getBufferStatus: vi.fn(),
   flushBuffers: vi.fn(),
@@ -142,6 +143,10 @@ const Shell = () => {
 }
 
 beforeEach(() => {
+  native.openBufferSnapshot.mockImplementation(async (path: string) => {
+    const content = await native.openFile(path)
+    return { ...(await native.getBufferStatus(path)), path, content }
+  })
   unmounts.mockClear()
   native.openFile.mockImplementation((path: string) => Promise.resolve(path))
   native.applyBufferUpdate.mockResolvedValue({

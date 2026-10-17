@@ -21,6 +21,7 @@ vi.mock('@/services/fsApi', () => ({
     flushBuffers: vi.fn(),
     openPathInSystem: vi.fn(),
     readFile: vi.fn(),
+    openBufferSnapshot: vi.fn(),
     updateBuffer: vi.fn(),
   },
 }))
@@ -95,11 +96,19 @@ describe('DrawioEditorSurface', () => {
     workspaceIdentity.rootKind = 'external'
     workspaceIdentity.rootPath = 'C:/one'
     vi.clearAllMocks()
+    vi.mocked(fsApi.openBufferSnapshot).mockImplementation(async (path: string) => ({
+      content: await fsApi.readFile(path),
+      path,
+      revision: 0,
+      dirty: false,
+      session_generation: 1,
+    }))
     vi.mocked(fsApi.readFile).mockResolvedValue('<mxfile />')
     vi.mocked(fsApi.updateBuffer).mockResolvedValue({
       dirty: true,
       path: 'diagrams/flow.drawio',
       revision: 1,
+      session_generation: 1,
     })
     vi.mocked(fsApi.flushBuffers).mockResolvedValue(1)
     useDrawioSettingsStore.setState({
@@ -136,6 +145,7 @@ describe('DrawioEditorSurface', () => {
       expect(fsApi.updateBuffer).toHaveBeenCalledWith(
         'diagrams/flow.drawio',
         '<mxfile>current</mxfile>',
+        { path: 'diagrams/flow.drawio', revision: 0, dirty: false, session_generation: 1 },
       ),
     )
     expect(
@@ -178,6 +188,9 @@ describe('DrawioEditorSurface', () => {
     const view = renderSurface()
     const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
 
+    await waitFor(() =>
+      expect(view.client.getQueryCache().getAll()[0]?.state.status).toBe('success'),
+    )
     drawioMessage(iframe, { event: 'save', xml: '<mxfile>pending</mxfile>' })
     await waitFor(() => expect(fsApi.updateBuffer).toHaveBeenCalledOnce())
 
@@ -283,9 +296,12 @@ describe('DrawioEditorSurface', () => {
   })
 
   it('flushes workspace buffers when the iframe sends exported xml', async () => {
-    renderSurface()
+    const view = renderSurface()
     const iframe = (await screen.findByTitle(/flow\.drawio/)) as HTMLIFrameElement
 
+    await waitFor(() =>
+      expect(view.client.getQueryCache().getAll()[0]?.state.status).toBe('success'),
+    )
     drawioMessage(iframe, {
       event: 'export',
       xml: '<mxfile>saved</mxfile>',
@@ -295,6 +311,7 @@ describe('DrawioEditorSurface', () => {
       expect(fsApi.updateBuffer).toHaveBeenCalledWith(
         'diagrams/flow.drawio',
         '<mxfile>saved</mxfile>',
+        { path: 'diagrams/flow.drawio', revision: 0, dirty: false, session_generation: 1 },
       )
     })
     expect(fsApi.flushBuffers).toHaveBeenCalled()

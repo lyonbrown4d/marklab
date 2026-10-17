@@ -9,6 +9,7 @@ const fsApiMock = vi.hoisted(() => ({
   flushBuffers: vi.fn(),
   getBufferStatus: vi.fn(),
   openFile: vi.fn(),
+  openBufferSnapshot: vi.fn(),
   updateBuffer: vi.fn(),
 }))
 
@@ -125,6 +126,10 @@ const PersistedContentHarness = () => {
 }
 
 beforeEach(() => {
+  fsApiMock.openBufferSnapshot.mockImplementation(async (path: string) => {
+    const content = await fsApiMock.openFile(path)
+    return { ...(await fsApiMock.getBufferStatus(path)), path, content }
+  })
   eventHandlers.clear()
   fsApiMock.flushBuffers.mockResolvedValue(0)
   fsApiMock.getBufferStatus.mockResolvedValue({
@@ -165,6 +170,7 @@ describe('useEditorBuffer', () => {
     fsApiMock.applyBufferUpdate.mockClear()
     fsApiMock.flushBuffers.mockClear()
 
+    fsApiMock.openFile.mockResolvedValueOnce('restored')
     await user.click(screen.getByRole('button', { name: 'restore persisted' }))
 
     expect(screen.getByTestId('persisted-value')).toHaveTextContent('restored')

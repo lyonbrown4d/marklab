@@ -22,46 +22,34 @@ env:
   CI: 'true'
   NODE_VERSION: '24'
   PNPM_VERSION: '12.11.2'
-  RELEASE_REPOSITORY: 'lyonbrown4d/marklab'
 
 jobs:
   validate:
     name: Validate
     runs-on: ubuntu-22.04
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Verify release repository identity
-        shell: bash
-        run: |
-          if [ "$GITHUB_REPOSITORY" != "$RELEASE_REPOSITORY" ]; then
-            echo "Release workflow must run from $RELEASE_REPOSITORY." >&2
-            exit 1
-          fi
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Project check
+      - run: pnpm install --frozen-lockfile
+      - name: Validate repository, versions, and tag
+        id: release
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: node --experimental-strip-types scripts/prepare-tauri-release.ts validate
+      - name: Project check (including existing 85 percent coverage gates)
         run: pnpm check
-
-      - name: Run focused Electron release regressions
+      - name: Run retained Electron release regressions
         run: xvfb-run --auto-servernum pnpm test:electron:release
-
-      - name: Upload Electron regression evidence
+      - name: Upload Electron baseline regression evidence
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
@@ -73,8 +61,10 @@ jobs:
             playwright-report/
 
   build:
-    name: Build ${{ matrix.name }}
+    name: Build Tauri ${{ matrix.name }}
     needs: validate
+    permissions:
+      contents: write
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -82,241 +72,84 @@ jobs:
         include:
           - name: linux
             os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb
           - name: macos
             os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: app,dmg
           - name: windows
             os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Linux packaging dependencies
-        if: matrix.os == 'ubuntu-22.04'
+      - uses: actions/checkout@v7
+      - name: Install Linux native dependencies
+        if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils libfuse2
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Require macOS signing credentials
-        if: matrix.name == 'macos'
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        shell: bash
-        run: |
-          if [ -z "$CSC_LINK" ] || [ -z "$CSC_KEY_PASSWORD" ]; then
-            echo "Stable releases require macOS signing credentials." >&2
-            exit 1
-          fi
-
-      - name: Build Electron bundles
-        run: pnpm electron:build
-
-      - name: Package Linux
-        if: matrix.name == 'linux'
-        run: pnpm exec electron-builder --linux --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-
-      - name: Package Windows
-        if: matrix.name == 'windows'
-        run: pnpm exec electron-builder --win --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-
-      - name: Package signed macOS
-        if: matrix.name == 'macos'
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        run: pnpm exec electron-builder --mac --publish never -c.publish.provider=github -c.publish.owner=lyonbrown4d -c.publish.repo=marklab -c.publish.tagNamePrefix=app-v -c.extraMetadata.marklabMacAutoUpdateSupported=true
-
-      - name: Verify Windows updater artifact contract
-        if: matrix.name == 'windows'
-        shell: pwsh
-        run: |
-          if (-not (Test-Path -LiteralPath 'release/latest.yml')) {
-            throw 'Missing Windows updater metadata: release/latest.yml'
-          }
-          $installers = @(Get-ChildItem -LiteralPath 'release' -Filter '*-setup.exe' -File)
-          $blockmaps = @(Get-ChildItem -LiteralPath 'release' -Filter '*-setup.exe.blockmap' -File)
-          if ($installers.Count -lt 1) { throw 'Missing Windows NSIS installer.' }
-          if ($blockmaps.Count -lt 1) { throw 'Missing Windows NSIS .exe.blockmap.' }
-
-      - name: Verify macOS updater artifact contract
-        if: matrix.name == 'macos'
-        shell: bash
-        run: |
-          compgen -G 'release/*.zip' >/dev/null
-          compgen -G 'release/*.dmg' >/dev/null
-          test -f release/latest-mac.yml
-          app_bundle="$(find release -type d -name '*.app' -print -quit)"
-          test -n "$app_bundle"
-          codesign --verify --deep --strict --verbose=2 "$app_bundle"
-
-      - name: Verify Linux updater artifact contract
-        if: matrix.name == 'linux'
-        shell: bash
-        run: |
-          test -f release/latest-linux.yml
-          compgen -G 'release/*.AppImage' >/dev/null
-          compgen -G 'release/*.deb' >/dev/null
-          compgen -G 'release/*.tar.gz' >/dev/null
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          name: marklab-${{ matrix.name }}
-          if-no-files-found: error
-          path: |
-            release/*.AppImage
-            release/*.deb
-            release/*.dmg
-            release/*.exe
-            release/*.tar.gz
-            release/*.zip
-            release/*.blockmap
-            release/*.yml
-            !release/builder-debug.yml
-
-  publish-release:
-    name: Publish GitHub Release
-    needs: build
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+          targets: ${{ matrix.target }}
+          components: rustfmt,clippy
+      - uses: swatinem/rust-cache@v2
         with:
-          path: downloaded-artifacts
-
-      - name: Resolve release tag
-        id: release-tag
+          workspaces: './src-tauri -> target'
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare public updater configuration and require signing credentials
         env:
-          REQUESTED_TAG: ${{ github.event.inputs.tag }}
-        shell: bash
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            release_tag="${GITHUB_REF_NAME}"
-          elif [ -n "$REQUESTED_TAG" ]; then
-            release_tag="$REQUESTED_TAG"
-          else
-            package_version="$(node -p "require('./package.json').version")"
-            release_tag="app-v${package_version}"
-          fi
-
-          package_version="$(node -p "require('./package.json').version")"
-          if [[ ! "$package_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Package version must be a stable semantic version without prerelease data." >&2
-            exit 1
-          fi
-          expected_tag="app-v${package_version}"
-          if [ "$release_tag" != "$expected_tag" ]; then
-            echo "Release tag must exactly match $expected_tag." >&2
-            exit 1
-          fi
-
-          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
-
-      - name: Verify downloaded updater artifact contract
-        shell: bash
-        run: |
-          test -f downloaded-artifacts/marklab-windows/latest.yml
-          compgen -G 'downloaded-artifacts/marklab-windows/*-setup.exe' >/dev/null
-          compgen -G 'downloaded-artifacts/marklab-windows/*-setup.exe.blockmap' >/dev/null
-          compgen -G 'downloaded-artifacts/marklab-macos/*.zip' >/dev/null
-          compgen -G 'downloaded-artifacts/marklab-macos/*.dmg' >/dev/null
-          test -f downloaded-artifacts/marklab-macos/latest-mac.yml
-          test -f downloaded-artifacts/marklab-linux/latest-linux.yml
-          compgen -G 'downloaded-artifacts/marklab-linux/*.AppImage' >/dev/null
-
-      - name: Create or update draft release
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PUBLIC_KEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          RELEASE_PLATFORM: ${{ matrix.name }}
+          TAURI_RELEASE_CONFIG: ${{ runner.temp }}/marklab-release.json
+          REQUESTED_TAG: ${{ needs.validate.outputs.tag }}
+        run: node --experimental-strip-types scripts/prepare-tauri-release.ts configure
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Generate application icons before compiling native targets
+        run: pnpm icons:generate
+      - name: Check Rust targets and tests without executing them
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Build and upload signed updater artifacts to draft release
+        uses: tauri-apps/tauri-action@v1
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
-        shell: bash
-        run: |
-          if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" \
-              --repo "$RELEASE_REPOSITORY" \
-              --draft \
-              --title "marklab $RELEASE_TAG" \
-              --notes "Automated desktop release. Installers are attached below."
-            exit 0
-          fi
-
-          create_args=(
-            "$RELEASE_TAG"
-            --repo "$RELEASE_REPOSITORY"
-            --draft
-            --title "marklab $RELEASE_TAG"
-            --notes "Automated desktop release. Installers are attached below."
-          )
-
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            create_args+=(--verify-tag)
-          else
-            create_args+=(--target "$GITHUB_SHA")
-          fi
-
-          gh release create "${create_args[@]}"
-
-      - name: Upload release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
-        shell: bash
-        run: |
-          mapfile -t assets < <(
-            find downloaded-artifacts -type f \
-              ! -name 'builder-debug.yml' \
-              \( -name '*.AppImage' \
-              -o -name '*.deb' \
-              -o -name '*.dmg' \
-              -o -name '*.exe' \
-              -o -name '*.tar.gz' \
-              -o -name '*.zip' \
-              -o -name '*.blockmap' \
-              -o -name '*.yml' \) \
-              | sort
-          )
-
-          if [ "${#assets[@]}" -eq 0 ]; then
-            echo "No release assets found." >&2
-            exit 1
-          fi
-
-          gh release upload "$RELEASE_TAG" "${assets[@]}" \
-            --repo "$RELEASE_REPOSITORY" \
-            --clobber
-
-      - name: Publish verified release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ steps.release-tag.outputs.tag }}
-        shell: bash
-        run: |
-          release_id="$(gh api "repos/$RELEASE_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.id')"
-          gh api \
-            --method PATCH \
-            "repos/$RELEASE_REPOSITORY/releases/$release_id" \
-            -F draft=false \
-            >/dev/null
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PUBLIC_KEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: pnpm exec tauri
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config "${{ runner.temp }}/marklab-release.json"
+          tagName: ${{ needs.validate.outputs.tag }}
+          releaseName: Marklab ${{ needs.validate.outputs.tag }}
+          releaseBody: 'Tauri desktop artifacts. Review all three platform builds and acceptance evidence before publishing this draft.'
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
+          uploadWorkflowArtifacts: true
+      - name: Verify macOS code signature
+        if: matrix.name == 'macos'
+        run: codesign --verify --deep --strict --verbose=2 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Marklab.app

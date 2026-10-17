@@ -164,9 +164,7 @@ const WysiwygEditorPage = ({
     }
 
     try {
-      await fsApi.createFile(calendarPath)
-      await fsApi.updateBuffer(calendarPath, INITIAL_ICS_CONTENT)
-      await fsApi.flushBuffers()
+      await fsApi.createFile(calendarPath, INITIAL_ICS_CONTENT)
       toast.success(t('calendar.fileCreated'))
       return markdownLinkForCalendar(activePath, calendarPath)
     } catch (error) {
