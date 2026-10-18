@@ -1,4 +1,4 @@
-import type { Value } from 'platejs'
+import { normalizeNodeIdWithEditor, type Value } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import type { RefObject } from 'react'
 import { isEqualWith } from 'lodash-es'
@@ -42,7 +42,12 @@ export const replacePlateEditorValue = (
   editor: PlateEditor,
   value: Value,
   externalApplyRef?: RefObject<boolean>,
-) => applyEditorValue(editor, () => (editor.children = value), externalApplyRef)
+) =>
+  applyEditorValue(
+    editor,
+    () => (editor.children = normalizeNodeIdWithEditor(editor, value)),
+    externalApplyRef,
+  )
 
 export const appendPlateEditorValue = (
   editor: PlateEditor,
@@ -51,8 +56,10 @@ export const appendPlateEditorValue = (
   externalApplyRef?: RefObject<boolean>,
 ) =>
   applyAsyncEditorValue(() => {
-    if (firstChunk) editor.children = value
-    else editor.children.push(...value)
+    // Direct hydration bypasses Slate insert operations, including node ID assignment.
+    const incoming = normalizeNodeIdWithEditor(editor, value)
+    if (firstChunk) editor.children = incoming
+    else editor.children.push(...incoming)
     editor.api.onChange()
   }, externalApplyRef)
 
@@ -71,7 +78,7 @@ export const restorePlateEditorValue = (
   externalApplyRef?: RefObject<boolean>,
 ) =>
   applyAsyncEditorValue(() => {
-    editor.children = value
+    editor.children = normalizeNodeIdWithEditor(editor, value)
     resetPlateEditorHydrationState(editor)
     editor.api.onChange()
   }, externalApplyRef)

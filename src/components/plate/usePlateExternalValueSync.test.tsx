@@ -29,7 +29,7 @@ vi.mock('@/services/plateMarkdownWorkerClient', () => ({
 
 import { usePlateExternalValueSync } from '@/components/plate/usePlateExternalValueSync'
 
-const paragraph = (text: string) => ({ type: 'p', children: [{ text }] })
+const paragraph = (text: string) => ({ type: 'p', id: text, children: [{ text }] })
 
 const createEditor = (initialTexts = ['Initial']) => {
   const children = initialTexts.map(paragraph) as Value

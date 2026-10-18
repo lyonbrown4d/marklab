@@ -29,6 +29,7 @@ import type {
 import { useI18n } from '@/i18n/useI18n'
 
 type BlockActionMenuProps = BlockActionAvailability & {
+  autoFocusFirstItem?: boolean
   onAction: (action: BlockMenuAction) => void
 }
 
@@ -48,6 +49,7 @@ const ActionItem = ({ children, disabled, icon: Icon, onSelect, tone }: ActionIt
 )
 
 export const BlockActionMenu = ({
+  autoFocusFirstItem = false,
   canMoveDown,
   canMoveUp,
   canSetType,
@@ -58,6 +60,16 @@ export const BlockActionMenu = ({
     <DropdownMenuContent
       align="start"
       className={menuSurfaceStyles({ className: 'w-52' })}
+      onFocus={(event) => {
+        // A newly mounted Radix root did not observe the opening Enter key.
+        if (!autoFocusFirstItem || event.target !== event.currentTarget) return
+        const firstItem = event.currentTarget.querySelector<HTMLElement>(
+          '[role="menuitem"]:not([data-disabled])',
+        )
+        if (!firstItem) return
+        event.preventDefault()
+        firstItem.focus({ preventScroll: true })
+      }}
       side="right"
       sideOffset={6}
     >

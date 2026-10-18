@@ -69,6 +69,7 @@ const focusAdjacentHandle = (handle: HTMLButtonElement, direction: 'next' | 'pre
 export const BlockDraggable = ({ children, element }: PlateElementProps) => {
   const editor = useEditorRef()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpenedWithKeyboard, setMenuOpenedWithKeyboard] = useState(false)
   const draggedRef = useRef(false)
   const handleElementRef = useRef<HTMLButtonElement | null>(null)
   const id = element.id as string
@@ -84,7 +85,10 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
 
   const openMenu = (event: MouseEvent<HTMLButtonElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
-    if (!draggedRef.current) setMenuOpen(true)
+    if (!draggedRef.current) {
+      setMenuOpenedWithKeyboard(false)
+      setMenuOpen(true)
+    }
   }
 
   const handleAction = (action: BlockMenuAction) => {
@@ -134,6 +138,7 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
     ) {
       event.preventDefault()
       event.stopPropagation()
+      setMenuOpenedWithKeyboard(true)
       setMenuOpen(true)
       return
     }
@@ -164,73 +169,80 @@ export const BlockDraggable = ({ children, element }: PlateElementProps) => {
       data-block-selected={isSelected ? 'true' : 'false'}
       ref={nodeRef}
     >
-      <DropdownMenu
-        open={menuOpen}
-        onOpenChange={(open) => {
-          if (open) return
-          setMenuOpen(false)
-          queueMicrotask(() => {
-            const handle = handleElementRef.current
-            if (!handle?.isConnected) return
-            activateRovingHandle(handle)
-            handle.focus()
-          })
+      <Button
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        aria-keyshortcuts="Enter Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown"
+        aria-label={i18n.t('plate.blockDrag.moveLabel')}
+        aria-pressed={isSelected}
+        className={cn(
+          'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
+          'active:cursor-grabbing',
+          isSelected && 'bg-primary/10 text-primary',
+        )}
+        contentEditable={false}
+        data-block-id={id}
+        data-block-drag-handle="true"
+        data-plate-prevent-unselect="true"
+        onClick={openMenu}
+        onDragEnd={handleDragEnd}
+        onDragStart={() => {
+          draggedRef.current = true
         }}
+        onKeyDown={handleKeyDown}
+        onPointerDown={(event) => {
+          draggedRef.current = false
+          selectBlockFromHandle(editor, id, event)
+        }}
+        ref={(handle) => {
+          handleElementRef.current = handle
+          handleRef(handle)
+        }}
+        size="icon"
+        tabIndex={initialTabIndex}
+        title={i18n.t('plate.blockDrag.instructions')}
+        type="button"
+        variant="ghost"
       >
-        <DropdownMenuTrigger asChild>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-1 size-7"
-            tabIndex={-1}
-          />
-        </DropdownMenuTrigger>
-        <Button
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
-          aria-keyshortcuts="Enter Space Control+Space Meta+Space Shift+Space ArrowUp ArrowDown Alt+ArrowUp Alt+ArrowDown"
-          aria-label={i18n.t('plate.blockDrag.moveLabel')}
-          aria-pressed={isSelected}
+        <GripVertical
+          aria-hidden="true"
           className={cn(
-            'group/handle pointer-events-auto absolute left-0 top-1 z-10 size-7 cursor-grab p-0 text-muted-foreground shadow-none',
-            'active:cursor-grabbing',
-            isSelected && 'bg-primary/10 text-primary',
+            'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
+            'group-hover/handle:opacity-100 group-hover/block:opacity-100',
+            'group-focus-within/block:opacity-100',
+            isDragging && 'opacity-100',
           )}
-          contentEditable={false}
-          data-block-id={id}
-          data-block-drag-handle="true"
-          data-plate-prevent-unselect="true"
-          onClick={openMenu}
-          onDragEnd={handleDragEnd}
-          onDragStart={() => {
-            draggedRef.current = true
+        />
+      </Button>
+      {/* Closed Radix menu roots register document listeners for every keystroke. */}
+      {menuOpen && (
+        <DropdownMenu
+          open={menuOpen}
+          onOpenChange={(open) => {
+            if (open) return
+            setMenuOpen(false)
+            queueMicrotask(() => {
+              const handle = handleElementRef.current
+              if (!handle?.isConnected) return
+              activateRovingHandle(handle)
+              handle.focus()
+            })
           }}
-          onKeyDown={handleKeyDown}
-          onPointerDown={(event) => {
-            draggedRef.current = false
-            selectBlockFromHandle(editor, id, event)
-          }}
-          ref={(handle) => {
-            handleElementRef.current = handle
-            handleRef(handle)
-          }}
-          size="icon"
-          tabIndex={initialTabIndex}
-          title={i18n.t('plate.blockDrag.instructions')}
-          type="button"
-          variant="ghost"
         >
-          <GripVertical
-            aria-hidden="true"
-            className={cn(
-              'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
-              'group-hover/handle:opacity-100 group-hover/block:opacity-100',
-              'group-focus-within/block:opacity-100',
-              isDragging && 'opacity-100',
-            )}
+          <DropdownMenuTrigger asChild>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-1 size-7"
+              tabIndex={-1}
+            />
+          </DropdownMenuTrigger>
+          <BlockActionMenu
+            {...availability}
+            autoFocusFirstItem={menuOpenedWithKeyboard}
+            onAction={handleAction}
           />
-        </Button>
-        <BlockActionMenu {...availability} onAction={handleAction} />
-      </DropdownMenu>
+        </DropdownMenu>
+      )}
       {dropLine === 'top' ? (
         <div
           aria-hidden="true"
