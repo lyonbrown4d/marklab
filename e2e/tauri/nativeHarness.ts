@@ -61,6 +61,31 @@ export const openEditor = async () => {
   await browser
     .$('[data-testid="markdown-editor"][data-state="ready"]')
     .waitForDisplayed({ timeout: 90_000 })
+  await browser.waitUntil(
+    () =>
+      browser.executeAsync((done) => {
+        const host = window as unknown as {
+          __TAURI_INTERNALS__: {
+            metadata: { currentWindow: { label: string } }
+            invoke: (command: string, payload: { label: string }) => Promise<boolean>
+          }
+        }
+        const internals = host.__TAURI_INTERNALS__
+        internals.invoke('plugin:window|is_visible', internals.metadata.currentWindow).then(
+          (visible) =>
+            done(
+              visible &&
+                document.visibilityState === 'visible' &&
+                !document.querySelector('.window-presentation-pending'),
+            ),
+          () => done(false),
+        )
+      }),
+    {
+      timeout: 30_000,
+      timeoutMsg: 'Native workspace was rendered but never presented for editing',
+    },
+  )
 }
 
 export const waitForRustMarker = async (marker: string) => {
@@ -73,6 +98,31 @@ export const waitForRustMarker = async (marker: string) => {
     },
     { timeout: 20_000, timeoutMsg: 'Plate edit did not reach the actual Rust buffer' },
   )
+}
+
+export const typeAtEditorEnd = async (text: string) => {
+  const editor = await browser.$('[data-testid="markdown-editor"]')
+  await editor.click()
+  // The embedded driver's click focuses the element without placing a caret.
+  // Position selection only; send-keys must still enter through the real editor.
+  await browser.execute((element) => {
+    const leaves = element.querySelectorAll('[data-slate-string]')
+    const last = leaves.item(leaves.length - 1)
+    if (!last) throw new Error('Plate has no text leaf for native input')
+    element.focus()
+    const range = document.createRange()
+    range.selectNodeContents(last)
+    range.collapse(false)
+    const selection = window.getSelection()
+    if (!selection) throw new Error('Native WebView selection is unavailable')
+    selection.removeAllRanges()
+    selection.addRange(range)
+    document.dispatchEvent(new Event('selectionchange'))
+  }, editor)
+  await editor.addValue(text)
+  await browser.waitUntil(async () => (await editor.getText()).includes(text.trim()), {
+    timeoutMsg: 'WebDriver text input did not reach the Plate DOM',
+  })
 }
 
 export const invokeNative = <T>(command: string, payload?: DesktopCommandArguments): Promise<T> =>

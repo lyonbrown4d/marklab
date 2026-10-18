@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 // Node owns only the test runner. The official service owns the real app process.
 const repository = fileURLToPath(new URL('../../', import.meta.url))
 const fixture = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-tauri-e2e-')))
+let exitCode = 1
 try {
   for (const name of ['data', 'cache', 'alpha', 'beta']) await fs.mkdir(path.join(fixture, name))
   for (const name of ['alpha', 'beta']) {
@@ -33,8 +34,18 @@ try {
   })
   process.env.MARKLAB_E2E_DRIVER_PORT = String(port)
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'), {})
-  process.exitCode = (await launcher.run()) ?? 1
+  exitCode = (await launcher.run()) ?? 1
+} catch (error) {
+  console.error(error)
 } finally {
   // Launcher.run settles after the service has stopped its owned app process.
-  await fs.rm(fixture, { recursive: true, force: true })
+  try {
+    await fs.rm(fixture, { recursive: true, force: true })
+  } catch (error) {
+    console.error(error)
+    exitCode = 1
+  }
 }
+// WDIO's async-exit-hook forces beforeExit to 0, overriding process.exitCode.
+// Match WDIO's CLI: exit explicitly, after service teardown and fixture cleanup.
+process.exit(exitCode)

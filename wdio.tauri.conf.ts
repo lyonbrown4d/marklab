@@ -18,6 +18,9 @@ const artifacts = path.join(repository, 'test-results/tauri')
 const capability: TauriCapabilities = {
   browserName: 'tauri',
   'tauri:options': { application: binary },
+  // Splash can disappear while the driver queries its user agent. Bind the
+  // session to the durable application root using the service's native option.
+  'wdio:tauriServiceOptions': { windowLabel: 'main' },
 }
 
 export const config: WebdriverIO.Config = {

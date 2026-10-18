@@ -42,7 +42,7 @@ A graphical desktop session is required; on Linux, use the CI display/Xvfb setup
 ## Checks and evidence
 
 The first journey waits for the actual renderer handshake, verifies the CLI root,
-types into Plate, calls the production buffer flush, and checks the Rust-written
+inserts text into Plate through WebDriver's element send-keys endpoint, calls the production buffer flush, and checks the Rust-written
 file and buffer snapshot. The second opens a second real native window through
 the production command, switches WebDriver window handles, edits a different
 workspace, confirms its edit reached the Rust buffer, and closes that owner through the
@@ -54,6 +54,16 @@ The test checks the closed owner's
 final file content and removal from the isolated SQLite session metadata, then
 verifies the original window and file remain isolated. Failures retain a screenshot and bounded page source in
 `test-results/tauri`; fixtures contain no user documents.
+
+The pinned embedded driver's Actions keyboard endpoint dispatches JavaScript
+keyboard events without inserting text into a contenteditable element. These
+journeys position the DOM caret at a real Slate text leaf, then use the supported
+element send-keys endpoint. They wait for native visibility and renderer presentation
+before editing. They do not
+establish native OS keyboard or IME correctness.
+
+The launcher exits with the WDIO result after service and fixture cleanup. It
+does not rely on `process.exitCode`, which WDIO's exit hook can override.
 
 These journeys supplement native Rust tests. They do not replace the existing
 coverage threshold, performance budgets, platform compilation, or OS clipboard,

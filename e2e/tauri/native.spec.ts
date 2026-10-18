@@ -12,6 +12,7 @@ import {
   invokeNative,
   openEditor,
   switchToWorkspace,
+  typeAtEditorEnd,
   waitForRustMarker,
 } from './nativeHarness.js'
 /* eslint-enable no-restricted-imports */
@@ -30,9 +31,7 @@ describe('real Tauri desktop', () => {
     await openEditor()
     const editor = await browser.$('[data-testid="markdown-editor"]')
     assert.match(await editor.getText(), /alpha-only native workspace/)
-    await editor.click()
-    await browser.keys([process.platform === 'darwin' ? 'Meta' : 'Control', 'End'])
-    await browser.keys(' native-persisted-marker')
+    await typeAtEditorEnd(' native-persisted-marker')
     // The production flush command drains actual Rust buffers, not a test handler.
     await waitForRustMarker('native-persisted-marker')
     await invokeNative<number>('fs_flush_buffers')
@@ -45,6 +44,7 @@ describe('real Tauri desktop', () => {
       path: 'Editor.md',
     })
     assert.match(snapshot.content, /native-persisted-marker/)
+    assert.match(snapshot.content, /alpha-only native workspace/)
     assert.equal((await fs.readdir(fixture.data)).includes('v1'), true)
   })
 
@@ -63,9 +63,7 @@ describe('real Tauri desktop', () => {
     await openEditor()
     const editor = await browser.$('[data-testid="markdown-editor"]')
     assert.match(await editor.getText(), /beta-only native workspace/)
-    await editor.click()
-    await browser.keys([process.platform === 'darwin' ? 'Meta' : 'Control', 'End'])
-    await browser.keys(' beta-persisted-marker')
+    await typeAtEditorEnd(' beta-persisted-marker')
     await waitForRustMarker('beta-persisted-marker')
     assert.equal(sessionOwnerCount(fixture.data, betaHandle), 1)
     await closeThroughApplication('beta-persisted-marker')
@@ -76,6 +74,10 @@ describe('real Tauri desktop', () => {
     assert.match(
       await fs.readFile(path.join(fixture.beta, 'Editor.md'), 'utf8'),
       /beta-persisted-marker/,
+    )
+    assert.match(
+      await fs.readFile(path.join(fixture.beta, 'Editor.md'), 'utf8'),
+      /beta-only native workspace/,
     )
     assert.equal(sessionOwnerCount(fixture.data, betaHandle), 0)
     await browser.switchToWindow(alphaHandle)
