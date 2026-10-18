@@ -33,12 +33,15 @@ const collectPositions = (
     return [...ownPosition, ...collectPositions(node.children ?? [], x, y)]
   })
 
+const WORKER_IDLE_TIMEOUT_MS = 30_000
+
 const createAbortError = () => new DOMException('Graph layout was cancelled.', 'AbortError')
 
 export class GraphLayoutWorkerClient {
   private readonly createEngine: (onFatalError: FatalWorkerErrorHandler) => GraphLayoutEngineLike
   private engine: GraphLayoutEngineLike | null = null
   private readonly pending = new Set<PendingLayout>()
+  private idleTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(createEngine: (onFatalError: FatalWorkerErrorHandler) => GraphLayoutEngineLike) {
     this.createEngine = createEngine
@@ -46,6 +49,7 @@ export class GraphLayoutWorkerClient {
 
   warmup(): void {
     this.ensureEngine()
+    this.scheduleIdleTermination()
   }
 
   layout(graph: GraphLayoutWorkerGraph, signal?: AbortSignal): Promise<GraphLayoutPosition[]> {
@@ -61,6 +65,7 @@ export class GraphLayoutWorkerClient {
         if (this.engine !== engine) return
         // ELK cannot interrupt an in-flight layout within a worker. Restarting that shared
         // worker cancels the CPU work; sibling requests are rejected so none remain stranded.
+        this.clearIdleTimer()
         this.engine = null
         engine.terminateWorker()
         this.rejectPendingForEngine(
@@ -76,14 +81,19 @@ export class GraphLayoutWorkerClient {
       }
       signal?.addEventListener('abort', handleAbort, { once: true })
       this.pending.add(task)
-      void engine.layout(graph).then(
-        (result) => this.resolveTask(task, result),
-        (error: unknown) => this.rejectTask(task, error),
-      )
+      try {
+        void engine.layout(graph).then(
+          (result) => this.resolveTask(task, result),
+          (error: unknown) => this.rejectTask(task, error),
+        )
+      } catch (error) {
+        this.rejectTask(task, error)
+      }
     })
   }
 
   terminate(): void {
+    this.clearIdleTimer()
     const engine = this.engine
     this.engine = null
     this.rejectPending(new Error('Graph layout worker terminated.'))
@@ -91,6 +101,7 @@ export class GraphLayoutWorkerClient {
   }
 
   private ensureEngine(): GraphLayoutEngineLike {
+    this.clearIdleTimer()
     if (this.engine) return this.engine
     let createdEngine: GraphLayoutEngineLike | null = null
     let earlyError: Error | null = null
@@ -108,7 +119,9 @@ export class GraphLayoutWorkerClient {
   }
 
   private failEngine(engine: GraphLayoutEngineLike, error: Error): void {
-    if (this.engine === engine) this.engine = null
+    if (this.engine !== engine) return
+    this.clearIdleTimer()
+    this.engine = null
     engine.terminateWorker()
     this.rejectPendingForEngine(engine, error)
   }
@@ -117,12 +130,28 @@ export class GraphLayoutWorkerClient {
     if (!this.pending.delete(task)) return
     task.removeAbortListener()
     task.resolve(collectPositions(result.children ?? []))
+    this.scheduleIdleTermination()
   }
 
   private rejectTask(task: PendingLayout, error: unknown): void {
     if (!this.pending.delete(task)) return
     task.removeAbortListener()
     task.reject(error)
+    this.scheduleIdleTermination()
+  }
+
+  private clearIdleTimer(): void {
+    clearTimeout(this.idleTimer)
+    this.idleTimer = undefined
+  }
+
+  private scheduleIdleTermination(): void {
+    this.clearIdleTimer()
+    if (!this.engine || this.pending.size > 0) return
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = undefined
+      if (this.pending.size === 0) this.terminate()
+    }, WORKER_IDLE_TIMEOUT_MS)
   }
 
   private rejectPending(error: Error): void {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   GraphLayoutWorkerClient,
   type GraphLayoutEngineLike,
@@ -7,6 +7,8 @@ import type {
   GraphLayoutEngineResult,
   GraphLayoutWorkerGraph,
 } from '@/logic/graphLayoutWorkerMessages'
+
+vi.mock('elkjs/lib/elk-worker.min.js?url', () => ({ default: 'test-elk-worker.js' }))
 
 class FakeEngine implements GraphLayoutEngineLike {
   private readonly rejects: Array<(error: Error) => void> = []
@@ -38,6 +40,102 @@ const graph: GraphLayoutWorkerGraph = {
 }
 
 describe('GraphLayoutWorkerClient', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+  it('expires warmup and completed workers after one idle interval', async () => {
+    const first = new FakeEngine()
+    const second = new FakeEngine()
+    const createEngine = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second)
+    const client = new GraphLayoutWorkerClient(createEngine)
+    client.warmup()
+    await vi.advanceTimersByTimeAsync(20_000)
+    client.warmup()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(first.terminateWorker).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(first.terminateWorker).toHaveBeenCalledOnce()
+
+    const result = client.layout(graph)
+    second.resolve(0, { ...graph, children: [] })
+    await expect(result).resolves.toEqual([])
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(second.terminateWorker).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('never expires overlapping work and restarts idle time after the final result', async () => {
+    const engine = new FakeEngine()
+    const client = new GraphLayoutWorkerClient(() => engine)
+    client.warmup()
+    await vi.advanceTimersByTimeAsync(29_000)
+    const first = client.layout(graph)
+    const second = client.layout(graph)
+    engine.resolve(0, { ...graph, children: [] })
+    await first
+    client.warmup()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(engine.terminateWorker).not.toHaveBeenCalled()
+    engine.resolve(1, { ...graph, children: [] })
+    await second
+    await vi.advanceTimersByTimeAsync(29_999)
+    expect(engine.terminateWorker).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(engine.terminateWorker).toHaveBeenCalledOnce()
+  })
+
+  it('clears idle timers on manual termination and expires failed layouts', async () => {
+    const engine = new FakeEngine()
+    const client = new GraphLayoutWorkerClient(() => engine)
+    client.warmup()
+    client.terminate()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(engine.terminateWorker).toHaveBeenCalledOnce()
+
+    const result = client.layout(graph)
+    const rejected = expect(result).rejects.toThrow('failed')
+    engine.reject(0, new Error('failed'))
+    await rejected
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(engine.terminateWorker).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores stale results and fatal events after cancellation replaces an engine', async () => {
+    const first = new FakeEngine()
+    const second = new FakeEngine()
+    const handlers: Array<(error: Error) => void> = []
+    const createEngine = vi.fn((handler: (error: Error) => void) => {
+      handlers.push(handler)
+      return handlers.length === 1 ? first : second
+    })
+    const client = new GraphLayoutWorkerClient(createEngine)
+    const controller = new AbortController()
+    const cancelled = client.layout(graph, controller.signal)
+    const rejected = expect(cancelled).rejects.toMatchObject({ name: 'AbortError' })
+    controller.abort()
+    await rejected
+    const current = client.layout(graph)
+    first.resolve(0, { ...graph, children: [] })
+    handlers[0]?.(new Error('late failure'))
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(first.terminateWorker).toHaveBeenCalledOnce()
+    expect(second.terminateWorker).not.toHaveBeenCalled()
+    second.resolve(0, { ...graph, children: [] })
+    await expect(current).resolves.toEqual([])
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(second.terminateWorker).toHaveBeenCalledOnce()
+  })
+
+  it('releases synchronous layout failures without keeping the engine busy forever', async () => {
+    const engine = new FakeEngine()
+    engine.layout.mockImplementationOnce(() => {
+      throw new Error('synchronous failure')
+    })
+    const client = new GraphLayoutWorkerClient(() => engine)
+    await expect(client.layout(graph)).rejects.toThrow('synchronous failure')
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(engine.terminateWorker).toHaveBeenCalledOnce()
+  })
+
   it('starts the official ELK worker proxy during feature warmup', () => {
     const engine = new FakeEngine()
     const createEngine = vi.fn(() => engine)

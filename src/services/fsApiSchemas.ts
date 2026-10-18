@@ -197,6 +197,25 @@ export const workspaceGraphNodeDetailsRequestSchema = z
   })
   .strict()
 
+export const workspaceGraphPreviewSchema = z
+  .object({
+    html: z.string().max(32_768),
+    math: z
+      .array(
+        z
+          .object({
+            id: z.string().regex(/^graph-math-\d{1,2}$/),
+            expression: z.string().max(1_680),
+            displayMode: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(64),
+  })
+  .strict()
+
+export type WorkspaceGraphPreview = z.infer<typeof workspaceGraphPreviewSchema>
+
 export const workspaceGraphNodeDetailsResultSchema = z
   .object({
     items: z.array(
@@ -204,6 +223,7 @@ export const workspaceGraphNodeDetailsResultSchema = z
         .object({
           id: z.string(),
           content: z.string(),
+          preview: workspaceGraphPreviewSchema.optional(),
           content_blocks: z.array(fsMarkdownBlockSchema).optional(),
         })
         .strict(),

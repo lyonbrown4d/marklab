@@ -35,6 +35,7 @@ export const mergeWorkspaceMapNodeDetails = (
         data: {
           ...node.data,
           content: detail.content,
+          preview: detail.preview,
           contentBlocks: normalizeMarkdownBlocks(detail.content_blocks),
         },
       }

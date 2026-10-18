@@ -1,5 +1,5 @@
 import { MiniMap, useStore } from '@xyflow/react'
-import type { CSSProperties } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { useI18n } from '@/i18n/useI18n'
 import {
   getGraphMiniMapSize,
@@ -43,27 +43,29 @@ type GraphMiniMapProps = {
   show: boolean
 }
 
-export const GraphMiniMap = ({ narrowFallbacks, nodeCount, offsets, show }: GraphMiniMapProps) => {
-  const { t } = useI18n()
-  const preferredPosition = usePreferencesStore((state) => state.graphMiniMapPosition)
-  const size = usePreferencesStore((state) => state.graphMiniMapSize)
-  const canvasWidth = useStore((state) => state.width)
-  const position =
-    canvasWidth > 0 && canvasWidth < 760
-      ? (narrowFallbacks?.[preferredPosition] ?? preferredPosition)
-      : preferredPosition
+export const GraphMiniMap = memo(
+  ({ narrowFallbacks, nodeCount, offsets, show }: GraphMiniMapProps) => {
+    const { t } = useI18n()
+    const preferredPosition = usePreferencesStore((state) => state.graphMiniMapPosition)
+    const size = usePreferencesStore((state) => state.graphMiniMapSize)
+    const canvasWidth = useStore((state) => state.width)
+    const position =
+      canvasWidth > 0 && canvasWidth < 760
+        ? (narrowFallbacks?.[preferredPosition] ?? preferredPosition)
+        : preferredPosition
 
-  if (!shouldRenderGraphMiniMap(show, nodeCount)) return null
+    if (!shouldRenderGraphMiniMap(show, nodeCount)) return null
 
-  return (
-    <MiniMap
-      ariaLabel={t('graph.minimapLabel')}
-      className="graph-minimap overflow-hidden rounded-[calc(var(--radius)+2px)] border border-[color-mix(in_srgb,hsl(var(--border))_82%,transparent)] !bg-[color-mix(in_srgb,hsl(var(--card))_94%,transparent)] shadow-[0_12px_28px_-20px_hsl(var(--foreground)/42%)] backdrop-blur-[12px] [&_.react-flow__minimap-mask]:!fill-[hsl(var(--background)/68%)]"
-      nodeColor={getMiniMapNodeColor}
-      pannable
-      position={position}
-      style={{ ...getGraphMiniMapSize(size), ...offsets?.[position] }}
-      zoomable
-    />
-  )
-}
+    return (
+      <MiniMap
+        ariaLabel={t('graph.minimapLabel')}
+        className="graph-minimap overflow-hidden rounded-[calc(var(--radius)+2px)] border border-[color-mix(in_srgb,hsl(var(--border))_82%,transparent)] !bg-[color-mix(in_srgb,hsl(var(--card))_94%,transparent)] shadow-[0_12px_28px_-20px_hsl(var(--foreground)/42%)] backdrop-blur-[12px] [&_.react-flow__minimap-mask]:!fill-[hsl(var(--background)/68%)]"
+        nodeColor={getMiniMapNodeColor}
+        pannable
+        position={position}
+        style={{ ...getGraphMiniMapSize(size), ...offsets?.[position] }}
+        zoomable
+      />
+    )
+  },
+)

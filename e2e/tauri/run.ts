@@ -18,6 +18,10 @@ try {
     )
     await fs.writeFile(path.join(fixture, name, 'Second.md'), `# Second ${name}\n`)
   }
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Memory.md'),
+    '# Native memory\n\nalpha-only memory workspace.\n',
+  )
   await fs.writeFile(path.join(fixture, '.marklab-e2e'), 'native-wdio-v1\n')
   process.env.MARKLAB_TAURI_E2E_ROOT = fixture
   process.env.MARKLAB_E2E_DATA_DIR = path.join(fixture, 'data')

@@ -7,6 +7,43 @@ const mouseEvent = (target: HTMLElement) =>
   ({ preventDefault: vi.fn(), target }) as unknown as ReactMouseEvent
 
 describe('useWorkspaceMapInteractions', () => {
+  it('keeps pointer handlers stable when only the web-view wrapper changes', () => {
+    const activate = vi.fn()
+    const deactivate = vi.fn()
+    const options = {
+      activePath: null,
+      clearNeighborhood: vi.fn(),
+      exitFocusedView: vi.fn(() => false),
+      fitWorkspace: vi.fn(),
+      flow: null,
+      focusNode: vi.fn(),
+      mode: 'overview' as const,
+      nodes: [],
+      onActivateEditor: vi.fn(),
+      onCloseEditor: vi.fn(),
+      onModeChange: vi.fn(),
+      onOpenFile: vi.fn(),
+      onOpenSearch: vi.fn(),
+    }
+    const { result, rerender } = renderHook(() =>
+      useWorkspaceMapInteractions({ ...options, webViews: { activate, deactivate } }),
+    )
+    const previous = result.current
+    rerender()
+    expect(result.current.onNodeClick).toBe(previous.onNodeClick)
+    expect(result.current.onNodeDoubleClick).toBe(previous.onNodeDoubleClick)
+    expect(result.current.onPaneClick).toBe(previous.onPaneClick)
+    result.current.onNodeDoubleClick(mouseEvent(document.createElement('div')), {
+      id: 'external:site',
+      type: 'external',
+      position: { x: 0, y: 0 },
+      data: { label: 'Site', url: 'https://example.com' },
+    })
+    result.current.onPaneClick()
+    expect(activate).toHaveBeenCalledExactlyOnceWith('external:site')
+    expect(deactivate).toHaveBeenCalledOnce()
+  })
+
   it('fits only when the double click comes from the canvas pane', () => {
     const fitWorkspace = vi.fn()
     const { result } = renderHook(() =>

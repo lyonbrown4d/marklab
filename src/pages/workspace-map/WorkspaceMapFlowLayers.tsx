@@ -1,4 +1,5 @@
 import { Background, BackgroundVariant, Controls } from '@xyflow/react'
+import { memo } from 'react'
 import type { Node } from '@xyflow/react'
 import { GraphMiniMap } from '@/pages/graph/GraphMiniMapView'
 import type { GraphNodeData } from '@/logic/graph'
@@ -12,11 +13,9 @@ type WorkspaceMapFlowLayersProps = {
   showMiniMap: boolean
 }
 
-export const WorkspaceMapFlowLayers = ({
-  mode,
-  nodes,
-  showMiniMap,
-}: WorkspaceMapFlowLayersProps) => (
+const FIT_VIEW_OPTIONS = { maxZoom: 1, minZoom: 0.35, padding: 0.22 }
+
+const WorkspaceMapFlowControls = memo(() => (
   <>
     <Background
       variant={BackgroundVariant.Dots}
@@ -24,16 +23,20 @@ export const WorkspaceMapFlowLayers = ({
       size={1}
       color="hsl(var(--muted-foreground) / 0.22)"
     />
-    {mode === 'overview' ? <WorkspaceMapGroupRegions nodes={nodes} /> : null}
-    <Controls
-      position="bottom-right"
-      showInteractive={false}
-      fitViewOptions={{ maxZoom: 1, minZoom: 0.35, padding: 0.22 }}
-    />
-    <GraphMiniMap
-      nodeCount={nodes.length}
-      offsets={workspaceMapToolbarAwareMiniMapOffsets}
-      show={showMiniMap}
-    />
+    <Controls position="bottom-right" showInteractive={false} fitViewOptions={FIT_VIEW_OPTIONS} />
   </>
+))
+
+export const WorkspaceMapFlowLayers = memo(
+  ({ mode, nodes, showMiniMap }: WorkspaceMapFlowLayersProps) => (
+    <>
+      <WorkspaceMapFlowControls />
+      {mode === 'overview' ? <WorkspaceMapGroupRegions nodes={nodes} /> : null}
+      <GraphMiniMap
+        nodeCount={nodes.length}
+        offsets={workspaceMapToolbarAwareMiniMapOffsets}
+        show={showMiniMap}
+      />
+    </>
+  ),
 )

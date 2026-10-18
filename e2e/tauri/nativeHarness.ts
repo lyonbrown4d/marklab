@@ -47,7 +47,7 @@ export const switchToWorkspace = async (root: string) => {
     throw new Error('Refusing to operate on a non-E2E application')
 }
 
-export const openEditor = async () => {
+export const openEditor = async (file = 'Editor.md') => {
   const root = await currentRoot()
   if (typeof root !== 'string') throw new Error('No native workspace is bound')
   await browser.$('[data-app-focus-zone="titlebar"]').waitForDisplayed({ timeout: 30_000 })
@@ -60,10 +60,10 @@ export const openEditor = async () => {
   // Reopening a window can remount the file tree. Do not keep an element handle
   // from before the drawer transition: the embedded driver can retain detached DOM.
   await browser.waitUntil(
-    async () => (await browser.$('button[data-file-tree-node]=Editor.md')).isDisplayed(),
-    { timeout: 30_000, timeoutMsg: 'The live file tree never displayed Editor.md' },
+    async () => (await browser.$(`button[data-file-tree-node]=${file}`)).isDisplayed(),
+    { timeout: 30_000, timeoutMsg: `The live file tree never displayed ${file}` },
   )
-  await browser.$('button[data-file-tree-node]=Editor.md').click()
+  await browser.$(`button[data-file-tree-node]=${file}`).click()
   await browser
     .$('[data-testid="markdown-editor"][data-state="ready"]')
     .waitForDisplayed({ timeout: 90_000 })
@@ -94,11 +94,11 @@ export const openEditor = async () => {
   )
 }
 
-export const waitForRustMarker = async (marker: string) => {
+export const waitForRustMarker = async (marker: string, path = 'Editor.md') => {
   await browser.waitUntil(
     async () => {
       const snapshot = await invokeNative<{ content: string }>('fs_open_buffer_snapshot', {
-        path: 'Editor.md',
+        path,
       })
       return snapshot.content.includes(marker)
     },

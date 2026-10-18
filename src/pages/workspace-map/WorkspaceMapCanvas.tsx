@@ -27,6 +27,8 @@ import { getWorkspaceMapViewportLod } from '@/pages/workspace-map/workspaceMapVi
 import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
 import { useWorkspaceMapNavigationRequests } from '@/pages/workspace-map/useWorkspaceMapNavigationRequests'
 
+const FLOW_PRO_OPTIONS = { hideAttribution: true }
+
 export const WorkspaceMapCanvas = (props: WorkspaceMapCanvasProps) => (
   <WorkspaceMapCanvasContent key={props.graphIdentity} {...props} />
 )
@@ -58,6 +60,7 @@ const WorkspaceMapCanvasContent = ({
     setCanvasElement(element)
   }, [])
   const graphWithDetails = useWorkspaceMapNodeDetails({
+    active: routeActive,
     activePath,
     container: canvasElement,
     graph,
@@ -141,7 +144,7 @@ const WorkspaceMapCanvasContent = ({
     nodes,
     setNodes,
   })
-  const persistence = useWorkspaceMapCanvasPersistence({
+  const { handleNodesChange, scheduleViewportSave } = useWorkspaceMapCanvasPersistence({
     disclosedNodes,
     enabled: layout.status === 'ready',
     flow,
@@ -182,6 +185,14 @@ const WorkspaceMapCanvasContent = ({
     nodes,
     workspaceKey: graphIdentity,
   })
+  const handleOpenSearch = useCallback(() => setSearchOpen(true), [])
+  const handleToggleExternalResources = useCallback(() => {
+    setExternalState((current) => ({
+      graphIdentity,
+      showExternalResources:
+        current.graphIdentity === graphIdentity ? !current.showExternalResources : true,
+    }))
+  }, [graphIdentity])
   const interactions = useWorkspaceMapInteractions({
     activePath,
     clearNeighborhood,
@@ -195,7 +206,7 @@ const WorkspaceMapCanvasContent = ({
     onCloseEditor,
     onOpenFile,
     onModeChange: handleModeChange,
-    onOpenSearch: () => setSearchOpen(true),
+    onOpenSearch: handleOpenSearch,
     webViews,
   })
   const handleViewportMove = useCallback((_event: unknown, viewport: { zoom: number }) => {
@@ -206,9 +217,9 @@ const WorkspaceMapCanvasContent = ({
     notifyAnimatedCursorViewport(canvasRef.current)
   }, [])
   const handleViewportMoveEnd = useCallback(() => {
-    persistence.scheduleViewportSave()
+    scheduleViewportSave()
     setViewportRevision((revision) => revision + 1)
-  }, [persistence])
+  }, [scheduleViewportSave])
 
   if (layout.status === 'loading') {
     return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
@@ -242,7 +253,7 @@ const WorkspaceMapCanvasContent = ({
         nodes={disclosedNodes}
         edges={presentedEdges}
         nodeTypes={workspaceMapNodeTypes}
-        onNodesChange={persistence.handleNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={setFlow}
         onKeyDown={interactions.onKeyDown}
@@ -273,25 +284,19 @@ const WorkspaceMapCanvasContent = ({
         onlyRenderVisibleElements
         minZoom={0.35}
         maxZoom={2.2}
-        proOptions={{ hideAttribution: true }}
+        proOptions={FLOW_PRO_OPTIONS}
       >
         <WorkspaceMapFlowLayers mode={mode} nodes={disclosedNodes} showMiniMap={showMiniMap} />
       </ReactFlow>
       <WorkspaceMapToolbar
         externalCount={totalExternalCount}
         mode={mode}
-        nodes={disclosedNodes}
+        nodes={renderedGraph.nodes}
         onArrange={layout.arrange}
         onFocusNode={interactions.focusNode}
         onModeChange={handleModeChange}
         onSearchOpenChange={setSearchOpen}
-        onToggleExternalResources={() =>
-          setExternalState((current) => ({
-            graphIdentity,
-            showExternalResources:
-              current.graphIdentity === graphIdentity ? !current.showExternalResources : true,
-          }))
-        }
+        onToggleExternalResources={handleToggleExternalResources}
         showExternalResources={showExternalResources}
         searchOpen={searchOpen}
       />

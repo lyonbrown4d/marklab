@@ -11,6 +11,7 @@ const MAX_VISIBLE_NODE_DETAILS = 32
 const VISIBLE_NODE_DEBOUNCE_MS = 80
 
 type Options = {
+  active?: boolean
   activePath: string | null
   container: HTMLElement | null
   graph: GraphData
@@ -19,6 +20,7 @@ type Options = {
 }
 
 export const useWorkspaceMapNodeDetails = ({
+  active = true,
   activePath,
   container,
   graph,
@@ -29,7 +31,7 @@ export const useWorkspaceMapNodeDetails = ({
   const contentMode = graph.nodes.find((node) => node.type === 'file')?.data.contentMode ?? 'none'
 
   useEffect(() => {
-    if (!container || contentMode === 'none') {
+    if (!active || !container || contentMode === 'none') {
       const timer = setTimeout(() => setVisibleNodeIds([]), 0)
       return () => clearTimeout(timer)
     }
@@ -54,15 +56,17 @@ export const useWorkspaceMapNodeDetails = ({
       clearTimeout(timer)
       observer.disconnect()
     }
-  }, [activePath, container, contentMode, graph.layoutKey, viewportRevision])
+  }, [active, activePath, container, contentMode, graph.layoutKey, viewportRevision])
 
+  // Detach the old batch immediately so Query can cancel and collect its detail data.
+  const queryNodeIds = active ? visibleNodeIds : []
   const detailsQuery = useQuery({
     queryKey: [
       'workspace-graph-node-details',
       graphIdentity,
       graph.revision,
       contentMode,
-      visibleNodeIds,
+      active ? queryNodeIds : null,
     ],
     queryFn: async ({ signal }) => {
       signal.throwIfAborted()
@@ -70,7 +74,7 @@ export const useWorkspaceMapNodeDetails = ({
       if (!revision) throw new Error('Workspace graph revision is unavailable')
       const result = await fsApi.getWorkspaceGraphNodeDetails({
         mode: contentMode === 'full' ? 'full' : 'summary',
-        node_ids: visibleNodeIds,
+        node_ids: queryNodeIds,
         max_nodes: MAX_VISIBLE_NODE_DETAILS,
         revision,
       })
@@ -79,13 +83,20 @@ export const useWorkspaceMapNodeDetails = ({
       return result
     },
     enabled:
+      active &&
       Boolean(container) &&
       Boolean(graph.revision) &&
       contentMode !== 'none' &&
-      visibleNodeIds.length > 0,
+      queryNodeIds.length > 0,
     gcTime: 0,
+    // An empty inactive batch also releases QueryObserver's last defined previews.
+    initialData: active
+      ? undefined
+      : { items: [], revision: graph.revision ?? 'inactive', truncated: false },
     placeholderData: (previousData, previousQuery) =>
-      previousQuery?.queryKey[2] === graph.revision && previousQuery?.queryKey[3] === contentMode
+      active &&
+      previousQuery?.queryKey[2] === graph.revision &&
+      previousQuery?.queryKey[3] === contentMode
         ? previousData
         : undefined,
     retry: (failureCount, error) =>
@@ -94,8 +105,8 @@ export const useWorkspaceMapNodeDetails = ({
   })
 
   return useMemo(
-    () => mergeWorkspaceMapNodeDetails(graph, detailsQuery.data?.items ?? []),
-    [detailsQuery.data?.items, graph],
+    () => (active ? mergeWorkspaceMapNodeDetails(graph, detailsQuery.data?.items ?? []) : graph),
+    [active, detailsQuery.data?.items, graph],
   )
 }
 

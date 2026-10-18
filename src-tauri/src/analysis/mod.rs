@@ -3,6 +3,7 @@ mod cache;
 pub mod commands;
 pub mod document;
 mod graph;
+mod graph_preview;
 mod graph_storage;
 mod queries;
 mod search;

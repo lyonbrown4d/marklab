@@ -35,13 +35,22 @@ describe('workspace map node details', () => {
     }
 
     const merged = mergeWorkspaceMapNodeDetails(graph, [
-      { id: 'file:a.md', content: 'Summary', content_blocks: [] },
+      {
+        id: 'file:a.md',
+        content: 'Summary',
+        content_blocks: [],
+        preview: { html: '<p>Summary</p>', math: [] },
+      },
     ])
 
     expect(merged.nodes[0]).toMatchObject({
       id: 'file:a.md',
       position: { x: 10, y: 20 },
-      data: { content: 'Summary', contentBlocks: [] },
+      data: {
+        content: 'Summary',
+        contentBlocks: [],
+        preview: { html: '<p>Summary</p>', math: [] },
+      },
     })
     expect(merged.edges).toBe(graph.edges)
     expect(merged.layoutKey).toBe('topology')

@@ -229,7 +229,7 @@ const WorkspaceMapEmbeddedEditor = ({
           </div>
         ) : data.content ? (
           <div className="h-full overflow-hidden bg-muted/10 px-8 py-7 text-sm leading-6 text-foreground/85">
-            <WorkspaceMapStaticMarkdownPreview markdown={data.content} />
+            <WorkspaceMapStaticMarkdownPreview markdown={data.content} preview={data.preview} />
           </div>
         ) : (
           <div

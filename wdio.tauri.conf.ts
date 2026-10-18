@@ -27,7 +27,9 @@ export const config: WebdriverIO.Config = {
   runner: 'local',
   // The embedded service owns one resident app. Keep these journeys ordered in
   // one worker so window-state starts with the CLI-selected alpha workspace.
-  specs: [['./e2e/tauri/windowState.spec.ts', './e2e/tauri/native.spec.ts']],
+  specs: [
+    ['./e2e/tauri/windowState.spec.ts', './e2e/tauri/native.spec.ts', './e2e/tauri/memory.spec.ts'],
+  ],
   maxInstances: 1,
   capabilities: [capability],
   services: [

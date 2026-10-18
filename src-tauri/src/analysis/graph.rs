@@ -102,7 +102,9 @@ pub fn details(index: &Index, request: DetailsRequest) -> BackendResult<Value> {
             id.strip_prefix("file:")
                 .and_then(|path| index.files.get(path))
                 .map(|file| {
-                    let mut item = json!({"id":id,"content":summary(file)});
+                    let content = summary(file);
+                    let preview = super::graph_preview::render(&content);
+                    let mut item = json!({"id":id,"content":content,"preview":preview});
                     if request.mode == "full" {
                         item["content_blocks"] = blocks(file);
                     }

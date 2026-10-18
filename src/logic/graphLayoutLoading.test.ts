@@ -97,4 +97,34 @@ describe('graphLayout loading', () => {
 
     expect(workerState.layout).toHaveBeenCalledTimes(10)
   })
+  it('evicts least-recently-used geometry when the total position budget is reached', async () => {
+    const { layoutGraphWithElk } = await import('@/logic/graphLayout')
+    const nodes: Node<GraphNodeData>[] = Array.from({ length: 4_000 }, (_, index) => ({
+      id: `node:${index}`,
+      data: { label: `${index}` },
+      position: { x: 0, y: 0 },
+    }))
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:first' })
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:second' })
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:first' })
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:third' })
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:first' })
+    expect(workerState.layout).toHaveBeenCalledTimes(3)
+    await layoutGraphWithElk(nodes, [], { layoutKey: 'size:second' })
+    expect(workerState.layout).toHaveBeenCalledTimes(4)
+  })
+
+  it('returns oversized layouts without retaining them in the geometry cache', async () => {
+    const { layoutGraphWithElk } = await import('@/logic/graphLayout')
+    const nodes: Node<GraphNodeData>[] = Array.from({ length: 10_001 }, (_, index) => ({
+      id: `large:${index}`,
+      data: { label: `${index}` },
+      position: { x: 0, y: 0 },
+    }))
+    const first = await layoutGraphWithElk(nodes, [], { layoutKey: 'size:oversized' })
+    const second = await layoutGraphWithElk(nodes, [], { layoutKey: 'size:oversized' })
+    expect(first).toHaveLength(nodes.length)
+    expect(second.at(-1)?.position).toEqual({ x: 1_000_000, y: 500_000 })
+    expect(workerState.layout).toHaveBeenCalledTimes(2)
+  })
 })

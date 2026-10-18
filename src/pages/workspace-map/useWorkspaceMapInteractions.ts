@@ -38,10 +38,11 @@ export const useWorkspaceMapInteractions = ({
   onOpenSearch,
   webViews,
 }: WorkspaceMapInteractionsOptions) => {
+  const { activate, deactivate } = webViews
   const activateNode = useCallback(
     (node: Node<GraphNodeData>) => {
       if (node.type === 'external' && node.data.url) {
-        webViews.activate(node.id)
+        activate(node.id)
         return
       }
       const path = node.data.path
@@ -52,7 +53,7 @@ export const useWorkspaceMapInteractions = ({
       const openPath = getWorkspaceMapNodeOpenPath(node)
       if (openPath) onOpenFile(openPath)
     },
-    [onActivateEditor, onOpenFile, webViews],
+    [activate, onActivateEditor, onOpenFile],
   )
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node<GraphNodeData>) => {
@@ -72,8 +73,8 @@ export const useWorkspaceMapInteractions = ({
   )
   const onPaneClick = useCallback(() => {
     clearNeighborhood()
-    webViews.deactivate()
-  }, [clearNeighborhood, webViews])
+    deactivate()
+  }, [clearNeighborhood, deactivate])
   const onCanvasDoubleClick = useCallback(
     (event: MouseEvent) => {
       if (!(event.target instanceof HTMLElement)) return

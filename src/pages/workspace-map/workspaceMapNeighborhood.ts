@@ -69,18 +69,24 @@ export const presentWorkspaceMapNeighborhoodNodes = (
     })
     return changed ? clearedNodes : nodes
   }
-  return nodes.map((node) => {
+  let changed = false
+  const presented = nodes.map((node) => {
     const relationClass =
       node.id === neighborhood.engagedNodeId
         ? 'workspace-map-flow-node--spotlight'
         : neighborhood.nodeIds.has(node.id)
           ? 'workspace-map-flow-node--neighbor'
           : 'workspace-map-flow-node--dimmed'
-    return {
-      ...node,
-      className: withPresentationClass(node.className, NODE_PRESENTATION_CLASSES, relationClass),
-    }
+    const className = withPresentationClass(
+      node.className,
+      NODE_PRESENTATION_CLASSES,
+      relationClass,
+    )
+    if (className === node.className) return node
+    changed = true
+    return { ...node, className }
   })
+  return changed ? presented : nodes
 }
 
 export const presentWorkspaceMapNeighborhoodEdges = (
@@ -88,14 +94,18 @@ export const presentWorkspaceMapNeighborhoodEdges = (
   neighborhood: WorkspaceMapNeighborhood,
 ): Edge[] => {
   if (!neighborhood.engagedNodeId) return edges
-  return edges.map((edge) => ({
-    ...edge,
-    className: withPresentationClass(
+  let changed = false
+  const presented = edges.map((edge) => {
+    const className = withPresentationClass(
       edge.className,
       EDGE_PRESENTATION_CLASSES,
       neighborhood.edgeIds.has(edge.id)
         ? 'workspace-map-flow-edge--connected'
         : 'workspace-map-flow-edge--muted',
-    ),
-  }))
+    )
+    if (className === edge.className) return edge
+    changed = true
+    return { ...edge, className }
+  })
+  return changed ? presented : edges
 }

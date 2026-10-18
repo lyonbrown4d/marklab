@@ -46,6 +46,55 @@ describe('PlateEditorSurface cached route lifecycle', () => {
     vi.restoreAllMocks()
   })
 
+  it('retains unsaved text, selection and independent undo/redo stacks across cached views', async () => {
+    const firstRef = createRef<PlateEditorSurfaceHandle>()
+    const secondRef = createRef<PlateEditorSurfaceHandle>()
+    const view = render(<SurfacePair active="first" firstRef={firstRef} secondRef={secondRef} />)
+    const firstEditor = firstRef.current!.getEditor()
+    const secondEditor = secondRef.current!.getEditor()
+    act(() => {
+      firstEditor.tf.select({
+        anchor: { offset: 5, path: [0, 0] },
+        focus: { offset: 5, path: [0, 0] },
+      })
+      firstEditor.tf.insertText(' unsaved')
+    })
+    const selection = structuredClone(firstEditor.selection)
+    await waitFor(async () =>
+      expect((await firstRef.current?.getMarkdown())?.trim()).toBe('First unsaved'),
+    )
+
+    view.rerender(<SurfacePair active="second" firstRef={firstRef} secondRef={secondRef} />)
+    act(() => {
+      secondEditor.tf.select({
+        anchor: { offset: 6, path: [0, 0] },
+        focus: { offset: 6, path: [0, 0] },
+      })
+      secondEditor.tf.insertText(' separate')
+    })
+    view.rerender(<SurfacePair active={null} firstRef={firstRef} secondRef={secondRef} />)
+    view.rerender(<SurfacePair active="first" firstRef={firstRef} secondRef={secondRef} />)
+    expect(firstRef.current?.getEditor()).toBe(firstEditor)
+    expect(firstEditor.selection).toEqual(selection)
+    act(() => firstEditor.undo())
+    await waitFor(async () => expect((await firstRef.current?.getMarkdown())?.trim()).toBe('First'))
+    act(() => firstEditor.redo())
+    await waitFor(async () =>
+      expect((await firstRef.current?.getMarkdown())?.trim()).toBe('First unsaved'),
+    )
+
+    view.rerender(<SurfacePair active="second" firstRef={firstRef} secondRef={secondRef} />)
+    expect(secondRef.current?.getEditor()).toBe(secondEditor)
+    await waitFor(async () =>
+      expect((await secondRef.current?.getMarkdown())?.trim()).toBe('Second separate'),
+    )
+    act(() => secondEditor.undo())
+    await waitFor(async () =>
+      expect((await secondRef.current?.getMarkdown())?.trim()).toBe('Second'),
+    )
+    expect((await firstRef.current?.getMarkdown())?.trim()).toBe('First unsaved')
+  })
+
   it('does not publish snapshots from an inactive cached editor', async () => {
     vi.useFakeTimers()
     const ref = createRef<PlateEditorSurfaceHandle>()

@@ -14,6 +14,8 @@ type GraphLayoutOptions = {
 }
 
 const MAX_CACHED_LAYOUTS = 8
+// Bound retained geometry across all graphs, including compound group positions.
+const MAX_CACHED_POSITIONS = 10_000
 const layoutCache = new Map<string, GraphLayoutPosition[]>()
 
 const getCachedLayout = (layoutKey: string) => {
@@ -26,10 +28,13 @@ const getCachedLayout = (layoutKey: string) => {
 
 const cacheLayout = (layoutKey: string, positions: GraphLayoutPosition[]) => {
   layoutCache.delete(layoutKey)
+  if (positions.length > MAX_CACHED_POSITIONS) return
   layoutCache.set(layoutKey, positions)
-  while (layoutCache.size > MAX_CACHED_LAYOUTS) {
+  let totalPositions = [...layoutCache.values()].reduce((total, entry) => total + entry.length, 0)
+  while (layoutCache.size > MAX_CACHED_LAYOUTS || totalPositions > MAX_CACHED_POSITIONS) {
     const oldestKey = layoutCache.keys().next().value
     if (oldestKey === undefined) break
+    totalPositions -= layoutCache.get(oldestKey)?.length ?? 0
     layoutCache.delete(oldestKey)
   }
 }

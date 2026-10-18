@@ -5,6 +5,7 @@ import type { PreviewFileKind } from '@/logic/fileTypes'
 import type { GraphContentMode } from '@/store/appTypes'
 import { normalizeMarkdownBlocks, type MarkdownBlock } from '@/logic/markdownBlocks'
 import { createGraphLayoutKey } from '@/logic/graphLayoutKey'
+import type { WorkspaceGraphPreview } from '@/services/fsApiSchemas'
 
 export type GraphNodeData = Record<string, unknown> & {
   label: string
@@ -15,6 +16,7 @@ export type GraphNodeData = Record<string, unknown> & {
   slug?: string
   url?: string
   content?: string
+  preview?: WorkspaceGraphPreview
   contentBlocks?: MarkdownBlock[]
   contentStartLine?: number
   contentEndLine?: number

@@ -75,6 +75,24 @@ describe('workspace map neighborhood presentation', () => {
     expect(neighborhood.edgeIds.size).toBe(12)
   })
 
+  it('reuses unchanged neighbors and edges when focus moves between related nodes', () => {
+    const first = createWorkspaceMapNeighborhood(edges, 'a')
+    const firstNodes = presentWorkspaceMapNeighborhoodNodes(nodes, first)
+    const firstEdges = presentWorkspaceMapNeighborhoodEdges(edges, first)
+    expect(presentWorkspaceMapNeighborhoodNodes(firstNodes, first)).toBe(firstNodes)
+    expect(presentWorkspaceMapNeighborhoodEdges(firstEdges, first)).toBe(firstEdges)
+
+    const next = createWorkspaceMapNeighborhood(edges, 'b')
+    const nextNodes = presentWorkspaceMapNeighborhoodNodes(firstNodes, next)
+    const nextEdges = presentWorkspaceMapNeighborhoodEdges(firstEdges, next)
+    expect(nextNodes[3]).toBe(firstNodes[3])
+    expect(nextNodes[0]).not.toBe(firstNodes[0])
+    expect(nextNodes[0]?.className).toContain('workspace-map-flow-node--neighbor')
+    expect(nextEdges[0]).toBe(firstEdges[0])
+    expect(nextEdges[1]).not.toBe(firstEdges[1])
+    expect(nextEdges[1]?.className).toContain('workspace-map-flow-edge--muted')
+  })
+
   it('removes only neighborhood classes when engagement clears', () => {
     const engaged = createWorkspaceMapNeighborhood(edges, 'a')
     const presentedNodes = presentWorkspaceMapNeighborhoodNodes(nodes, engaged)
