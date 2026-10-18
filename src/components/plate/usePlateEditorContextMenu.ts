@@ -13,7 +13,7 @@ import {
 } from '@/components/plate/plateClipboardSerialization'
 import { readClipboardText, writeClipboardContent, writeClipboardText } from '@/runtime/clipboard'
 import { queueFocusedEditCommand } from '@/runtime/editCommands'
-import { isElectronRuntime } from '@/runtime/electron'
+import { isDesktopRuntime } from '@/runtime/desktop'
 
 type UsePlateEditorContextMenuOptions = {
   getEditor: () => PlateEditor | null
@@ -91,7 +91,7 @@ const handleClipboardEvent = (
   const content = serializePlateSelectionClipboard(editor)
   if (!content) return
   writeClipboardEvent(event, content)
-  if (isElectronRuntime()) void writeClipboardContent(content).catch(() => undefined)
+  if (isDesktopRuntime()) void writeClipboardContent(content).catch(() => undefined)
   if (event.defaultPrevented && event.type === 'cut') {
     editor.tf.withNewBatch(() => editor.tf.deleteFragment())
   }

@@ -3,8 +3,8 @@ import path from 'node:path'
 
 const MAX_EFFECTIVE_LINES = 300
 const ROOT_SOURCE_DIRECTORY = '.'
-const SOURCE_ROOTS = ['electron', 'e2e', 'scripts', 'src'] as const
-const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx'])
+const SOURCE_ROOTS = ['e2e', 'scripts', 'src', 'src-tauri/src'] as const
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.rs'])
 const EXEMPT_FILES = new Set([
   // Downloaded shadcn source. Project-specific behavior must be composed around it.
   'src/components/ui/sidebar.tsx',

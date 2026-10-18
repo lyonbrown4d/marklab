@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
 
 export const useWebTabActions = (tabId: string) => {
   return useMemo(() => {
-    const webTabs = getElectronRuntime().webTabs
+    const webTabs = getDesktopRuntime().webTabs
     const request = { tabId }
     return {
       close: () => webTabs.close(request),

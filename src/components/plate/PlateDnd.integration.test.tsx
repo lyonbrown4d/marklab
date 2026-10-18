@@ -40,6 +40,41 @@ const createDropEditor = () => {
 }
 
 describe('Plate drag-and-drop integration', () => {
+  it('activates global menu input listeners only while a block menu is open', async () => {
+    const addListener = vi.spyOn(document, 'addEventListener')
+    render(
+      <PlateEditorSurface
+        activePath="notes/menu-listeners.md"
+        onChange={vi.fn()}
+        placeholder="Write"
+        value={'First\n\nSecond\n\nThird'}
+      />,
+    )
+    const handles = screen.getAllByRole('button', { name: 'Move block' })
+    const pointerListeners = () =>
+      addListener.mock.calls.filter(
+        ([type, , options]) =>
+          type === 'pointermove' && typeof options === 'object' && options?.once,
+      )
+    addListener.mockClear()
+    fireEvent.keyDown(screen.getByTestId('markdown-editor'), { key: 'a' })
+    expect(pointerListeners()).toHaveLength(0)
+
+    fireEvent.click(handles[1])
+    await screen.findByRole('menuitem', { name: 'Paragraph' })
+    addListener.mockClear()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'a' })
+    expect(pointerListeners()).toHaveLength(1)
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    await waitFor(() => expect(handles[1]).toHaveFocus())
+    expect(screen.getAllByRole('button', { name: 'Move block' })[1]).toBe(handles[1])
+    addListener.mockClear()
+    fireEvent.keyDown(screen.getByTestId('markdown-editor'), { key: 'b' })
+    expect(pointerListeners()).toHaveLength(0)
+  })
+
   it('disables the window-scoped plugin scroller', () => {
     const ref = createRef<PlateEditorSurfaceHandle>()
     render(

@@ -6,6 +6,7 @@ import { useEditorBuffer } from '@/app/useEditorBuffer'
 const api = vi.hoisted(() => ({
   applyBufferUpdate: vi.fn(),
   openFile: vi.fn(),
+  openBufferSnapshot: vi.fn(),
   updateBuffer: vi.fn(),
   flushBuffers: vi.fn(),
   getBufferStatus: vi.fn(),
@@ -68,6 +69,10 @@ const changed = (
 }
 
 beforeEach(() => {
+  api.openBufferSnapshot.mockImplementation(async (path: string) => {
+    const content = await api.openFile(path)
+    return { ...(await api.getBufferStatus(path)), path, content }
+  })
   tree.handler = null
   revision = 0
   vi.clearAllMocks()

@@ -9,8 +9,8 @@ const runtime = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
 }))
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: () => ({
+vi.mock('@/runtime/desktop', () => ({
+  getDesktopRuntime: () => ({
     webTabs: {
       onState: (handler: (event: WebTabEvent) => void) => {
         runtime.handler = handler
@@ -19,7 +19,7 @@ vi.mock('@/runtime/electron', () => ({
       setShortcutBindings: runtime.setShortcutBindings,
     },
   }),
-  isElectronRuntime: () => true,
+  isDesktopRuntime: () => true,
 }))
 
 import { useWebTabShortcutBridge } from '@/app/useWebTabShortcutBridge'

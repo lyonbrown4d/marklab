@@ -9,7 +9,10 @@ import { fsApi } from '@/services/fsApi'
 let treeListener: ((event: WorkspaceTreeDeltaEvent) => void) | undefined
 const lifecycle = vi.hoisted(() => ({ flushEditorChanges: vi.fn() }))
 
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/app/editorCloseLifecycle', () => lifecycle)
 vi.mock('@/runtime/events', () => ({ listen: vi.fn(async () => vi.fn()) }))
 vi.mock('@/services/workspaceTreeApi', () => ({

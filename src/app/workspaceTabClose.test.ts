@@ -4,7 +4,7 @@ import type { WorkspaceTab } from '@/store/appTypes'
 import { gitDiffTabId } from '@/logic/tabs'
 import { requestGitConflictClose } from '@/features/git/conflicts/conflictDraftStore'
 
-vi.mock('@/runtime/electron', () => ({ isElectronRuntime: () => false }))
+vi.mock('@/runtime/desktop', () => ({ isDesktopRuntime: () => false }))
 vi.mock('@/features/git/conflicts/conflictDraftStore', () => ({
   requestGitConflictClose: vi.fn(() => false),
 }))

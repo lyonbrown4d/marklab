@@ -6,7 +6,7 @@
 
 **Register:** Product
 
-**Platform:** Web-rendered desktop application in an Electron shell
+**Platform:** Tauri desktop application with a React renderer and Rust services
 **Primary users:** Individuals and technical knowledge workers who maintain local Markdown notes, documentation, and wiki-style workspaces.
 
 ## Purpose

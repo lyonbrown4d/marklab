@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import { aiCompletionApi } from '@/services/aiCompletionApi'
 
 const start = vi.fn()
 const cancel = vi.fn()
 const onEvent = vi.fn()
 
-vi.mock('@/runtime/electron', () => ({
-  getElectronRuntime: vi.fn(() => ({
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => true,
+  getDesktopRuntime: vi.fn(() => ({
     aiCompletion: { start, cancel, onEvent },
   })),
 }))
@@ -26,7 +27,7 @@ const request = {
 
 describe('aiCompletionApi', () => {
   beforeEach(() => {
-    vi.mocked(getElectronRuntime).mockClear()
+    vi.mocked(getDesktopRuntime).mockClear()
     start.mockReset()
     cancel.mockReset()
     onEvent.mockReset()

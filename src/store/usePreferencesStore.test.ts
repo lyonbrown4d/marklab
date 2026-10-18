@@ -8,7 +8,7 @@ const storage = vi.hoisted(() => ({
 }))
 
 vi.mock('@/store/persistStorage', () => ({
-  createElectronSettingsJsonStorage: () => storage,
+  createDesktopSettingsJsonStorage: () => storage,
 }))
 
 beforeEach(() => {

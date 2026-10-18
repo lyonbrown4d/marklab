@@ -14,8 +14,14 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/i18n/useI18n'
 import { useDeferredOpenContent } from '@/hooks/useDeferredOpenContent'
+import { usePdfSource } from '@/components/previews/usePdfSource'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
+const nativeRangeOptions = {
+  rangeChunkSize: 256 * 1024,
+  disableAutoFetch: true,
+  disableStream: true,
+}
 
 type MarkdownPdfPreviewProps = {
   documentPath: string | null
@@ -65,7 +71,7 @@ const useMeasuredWidth = (fallback: number, ready: boolean) => {
 
 export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
   const { t } = useI18n()
-  const file = fileUrl.split('#')[0] ?? fileUrl
+  const { file, failed } = usePdfSource(fileUrl.split('#')[0] ?? fileUrl)
   const [pageState, setPageState] = useState({ key: '', numPages: 0, pageNumber: 1 })
   const [documentRef, documentWidth] = useMeasuredWidth(mode === 'modal' ? 920 : 680, true)
   const pageWidth = Math.max(240, Math.min(documentWidth - 24, mode === 'modal' ? 960 : 720))
@@ -94,11 +100,20 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
     [fileUrl],
   )
 
+  if (!file || failed) {
+    return (
+      <PdfPreviewStatus
+        failed={failed}
+        label={t(failed ? 'preview.pdfFailed' : 'preview.pdfReading')}
+      />
+    )
+  }
   if (mode === 'graph') {
     return (
       <Document
         className="marklab-pdf-viewer marklab-pdf-viewer--graph"
         file={file}
+        options={typeof file === 'string' ? undefined : nativeRangeOptions}
         suspense={false}
         loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
         error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}
@@ -119,6 +134,7 @@ export const PdfPreviewSurface = ({ fileUrl, mode }: PdfViewerSurfaceProps) => {
     <Document
       className={`marklab-pdf-viewer marklab-pdf-viewer--${mode}`}
       file={file}
+      options={typeof file === 'string' ? undefined : nativeRangeOptions}
       suspense={false}
       loading={<PdfPreviewStatus failed={false} label={t('preview.pdfReading')} />}
       error={<PdfPreviewStatus failed label={t('preview.pdfFailed')} />}

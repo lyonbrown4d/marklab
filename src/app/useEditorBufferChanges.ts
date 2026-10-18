@@ -8,7 +8,7 @@ import {
   type SaveState,
 } from '@/app/useEditorBufferState'
 import type { EditorTextChange } from '@/types/editorChanges'
-import type { createEditorBufferSync } from '@/app/editorBufferSync'
+import type { createEditorBufferSync, LoadedEditorRevision } from '@/app/editorBufferSync'
 
 type WorkspaceContents = Record<string, Record<string, string>>
 type WorkspaceLoadingPaths = Record<string, Record<string, true>>
@@ -17,6 +17,7 @@ export type EditorWorkspaceBinding = { workspace: string }
 type EditorBufferChangesOptions = {
   activePath: string | null
   loadedContent: string | undefined
+  loadedRevision: LoadedEditorRevision | undefined
   loadedVersion: number | undefined
   loadedVersionsRef: RefObject<Record<string, number>>
   binding: EditorWorkspaceBinding
@@ -37,6 +38,7 @@ type EditorBufferChangesOptions = {
 export const useEditorBufferChanges = ({
   activePath,
   loadedContent,
+  loadedRevision,
   loadedVersion,
   loadedVersionsRef,
   binding,
@@ -112,6 +114,7 @@ export const useEditorBufferChanges = ({
         identity,
         path,
         previous,
+        loadedRevision,
         content: value,
         changes,
         shouldApply: () => currentBindingRef.current === binding,
@@ -147,6 +150,7 @@ export const useEditorBufferChanges = ({
     [
       activePath,
       loadedContent,
+      loadedRevision,
       loadedVersion,
       loadedVersionsRef,
       bufferSync,

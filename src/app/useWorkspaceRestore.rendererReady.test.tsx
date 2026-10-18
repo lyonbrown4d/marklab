@@ -25,7 +25,10 @@ vi.mock('@/runtime/rendererLifecycle', () => ({
   signalRendererReady: lifecycle.signalRendererReady,
   waitForWorkspaceInteractivePaint: lifecycle.waitForWorkspaceInteractivePaint,
 }))
-vi.mock('@/runtime/environment', () => ({ isDesktopRuntime: () => true }))
+vi.mock('@/runtime/environment', () => ({
+  isDesktopRuntime: () => true,
+  isTauriRuntime: () => false,
+}))
 vi.mock('@/app/editorCloseLifecycle', () => ({ flushEditorChanges: vi.fn() }))
 vi.mock('@/services/workspaceTreeApi', () => ({
   workspaceTreeApi: { onChanged: vi.fn(() => vi.fn()) },

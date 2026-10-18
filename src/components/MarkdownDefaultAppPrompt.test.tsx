@@ -8,9 +8,9 @@ const translate = (key: string) => key
 
 vi.mock('sonner', () => ({ toast: notifications.show }))
 vi.mock('@/i18n/useI18n', () => ({ useI18n: () => ({ t: translate }) }))
-vi.mock('@/runtime/electron', () => ({
-  isElectronRuntime: () => runtime.desktop,
-  getElectronRuntime: () => ({ platform: { get: runtime.getPlatform } }),
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => runtime.desktop,
+  getDesktopRuntime: () => ({ platform: { get: runtime.getPlatform } }),
 }))
 
 const openInstructions = async () => {
@@ -101,7 +101,7 @@ describe('on-demand Markdown default app instructions', () => {
     expect(screen.queryByText('defaultAppPrompt.instructions.windows')).not.toBeInTheDocument()
   })
 
-  it('does not expose a desktop action outside Electron', () => {
+  it('does not expose a desktop action outside Desktop', () => {
     runtime.desktop = false
     render(<MarkdownDefaultAppPrompt />)
     expect(screen.queryByRole('button')).not.toBeInTheDocument()

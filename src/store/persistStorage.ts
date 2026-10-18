@@ -1,6 +1,6 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
 import { RENDERER_PERSIST_KEYS, type RendererPersistKey } from '@/types/persistenceKeys'
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 type IdleHandle =
   | {
       kind: 'idle'
@@ -99,11 +99,11 @@ export const createIdleJsonStorage = <S>(
     },
   }
 }
-export const createElectronSettingsJsonStorage = <S>(
+export const createDesktopSettingsJsonStorage = <S>(
   name: RendererPersistKey = RENDERER_PERSIST_KEYS.preferences,
 ): PersistStorage<S> | undefined => {
-  const electronPersist = isElectronRuntime() ? getElectronRuntime().settings?.persist : undefined
-  if (!electronPersist) return createIdleJsonStorage<S>(name)
+  const desktopPersist = isDesktopRuntime() ? getDesktopRuntime().settings.persist : undefined
+  if (!desktopPersist) return createIdleJsonStorage<S>(name)
   const serializedValues = new Map<string, string>()
   const mutationEpochs = new Map<string, number>()
   const bumpMutationEpoch = (key: string) => {
@@ -112,7 +112,7 @@ export const createElectronSettingsJsonStorage = <S>(
   return {
     getItem: async (key) => {
       const mutationEpoch = mutationEpochs.get(key) ?? 0
-      const value = await electronPersist.getItem(key)
+      const value = await desktopPersist.getItem(key)
       if (value !== null && (mutationEpochs.get(key) ?? 0) === mutationEpoch) {
         serializedValues.set(key, JSON.stringify(value))
       }
@@ -124,7 +124,7 @@ export const createElectronSettingsJsonStorage = <S>(
       if (serializedValues.get(key) === serialized) return
       bumpMutationEpoch(key)
       serializedValues.set(key, serialized)
-      const result = await electronPersist.setItem(key, cloned)
+      const result = await desktopPersist.setItem(key, cloned)
       if (result.ok) return
       if (serializedValues.get(key) === serialized) serializedValues.delete(key)
       throw new Error(result.error ?? 'Unable to persist settings.')
@@ -132,7 +132,7 @@ export const createElectronSettingsJsonStorage = <S>(
     removeItem: async (key) => {
       bumpMutationEpoch(key)
       serializedValues.delete(key)
-      const result = await electronPersist.removeItem(key)
+      const result = await desktopPersist.removeItem(key)
       if (!result.ok) throw new Error(result.error ?? 'Unable to remove persisted settings.')
     },
   }

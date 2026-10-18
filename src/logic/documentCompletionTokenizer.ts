@@ -93,6 +93,8 @@ const wordTokens = (text: string): DocumentCompletionToken[] => {
 }
 
 const cjkNgrams = (text: string): DocumentCompletionToken[] => {
+  // Grapheme segmentation only contributes Han n-grams.
+  if (!isHan(text)) return []
   const result: DocumentCompletionToken[] = []
   let run: Array<{ index: number; segment: string }> = []
   const flush = () => {

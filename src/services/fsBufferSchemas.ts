@@ -91,3 +91,8 @@ export type FsBufferSyncStatus = z.infer<typeof fsBufferSyncStatusSchema>
 export type FsBufferTextChange = z.infer<typeof fsBufferTextChangeSchema>
 export type FsBufferUpdateRequest = z.infer<typeof fsBufferUpdateRequestSchema>
 export type FsBufferUpdateResult = z.infer<typeof fsBufferUpdateResultSchema>
+
+export const fsBufferSnapshotSchema = fsBufferSyncStatusSchema
+  .extend({ content: z.string() })
+  .strict()
+export type FsBufferSnapshot = z.infer<typeof fsBufferSnapshotSchema>

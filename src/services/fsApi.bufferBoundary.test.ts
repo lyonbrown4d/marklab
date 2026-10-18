@@ -36,7 +36,7 @@ describe('fsApi buffer update boundary', () => {
       label: 'an oversized snapshot',
       update: { kind: 'snapshot', content: 'x'.repeat(16_777_217) },
     },
-  ])('rejects $label before invoking Electron', async ({ update }) => {
+  ])('rejects $label before invoking Desktop', async ({ update }) => {
     await expect(fsApi.applyBufferUpdate({ ...baseRequest, update } as never)).rejects.toThrow()
     expect(invoke).not.toHaveBeenCalled()
   })

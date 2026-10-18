@@ -1,6 +1,6 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 
 export const linkPreviewApi = {
-  capture: (url: string) => getElectronRuntime().linkPreview.capture(url),
-  fetch: (url: string) => getElectronRuntime().linkPreview.fetch(url),
+  capture: (url: string) => getDesktopRuntime().linkPreview.capture(url),
+  fetch: (url: string) => getDesktopRuntime().linkPreview.fetch(url),
 }

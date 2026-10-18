@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useI18n } from '@/i18n/useI18n'
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 
 const MarkdownDefaultAppPrompt = () => {
   const { t } = useI18n()
@@ -19,9 +19,9 @@ const MarkdownDefaultAppPrompt = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!open || !isElectronRuntime()) return undefined
+    if (!open || !isDesktopRuntime()) return undefined
     let cancelled = false
-    void getElectronRuntime()
+    void getDesktopRuntime()
       .platform.get()
       .then((info) => {
         if (!cancelled) setPlatform(info.platform)
@@ -37,7 +37,7 @@ const MarkdownDefaultAppPrompt = () => {
     }
   }, [open])
 
-  if (!isElectronRuntime()) return null
+  if (!isDesktopRuntime()) return null
 
   return (
     <Dialog

@@ -1,16 +1,38 @@
 [
   {
-    "area": "Electron menu/window/preload",
+    "area": "Tauri native runtime",
+    "risk": "workspace isolation, save integrity, window lifecycle, native permissions, or cache invalidation regression",
+    "patterns": [
+      "^src-tauri/",
+      "^src/runtime/tauri/",
+      "^src/runtime/assetUrl",
+      "^scripts/build-renderer",
+      "^scripts/prepare-tauri-release"
+    ],
+    "checks": [
+      "pnpm tauri:check",
+      "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+      "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings",
+      "pnpm tauri:test",
+      "native multi-window/edit/save/splash acceptance"
+    ]
+  },
+  {
+    "area": "Native menus / windows",
     "risk": "double dispatch, unsafe desktop capability, or platform-specific runtime drift",
     "patterns": [
-      "^electron/menu",
-      "^electron/main/window",
-      "^electron/preload",
-      "^electron/services/menuDispatch",
+      "^src-tauri/src/desktop/",
+      "^src-tauri/src/native_window",
       "^src/app/useAppMenuAction",
       "^src/components/WindowControls"
     ],
-    "checks": ["electron menu/window/preload tests", "pnpm typecheck", "pnpm lint"]
+    "checks": [
+      "native lifecycle/menu tests",
+      "focused edit tests",
+      "native window smoke checks",
+      "pnpm typecheck",
+      "pnpm lint"
+    ]
   },
   {
     "area": "Source editor / Monaco",
@@ -38,8 +60,9 @@
       "^src/styles/plate-editor",
       "^src/styles/source-editor",
       "^e2e/performance/",
-      "^playwright\\.performance\\.config\\.ts$",
-      "^\\.github/workflows/performance\\.yml$"
+      "^playwright\\.renderer\\.config\\.ts$",
+      "^\\.github/workflows/performance\\.yml$",
+      "^e2e/renderer/"
     ],
     "checks": [
       "Plate command/paste/sync tests",
@@ -69,13 +92,18 @@
     "area": "Settings / persisted preferences",
     "risk": "default drift, missing persisted field, inaccessible control, or migration mismatch",
     "patterns": [
-      "^electron/services/settings",
+      "^src-tauri/src/settings/",
       "^src/components/settings/",
       "^src/components/SettingsDialog",
       "^src/store/preferences",
       "^src/store/usePreferencesStore"
     ],
-    "checks": ["settings tests", "affected component option tests", "pnpm typecheck"]
+    "checks": [
+      "Rust settings/session isolation tests",
+      "settings tests",
+      "affected component option tests",
+      "pnpm typecheck"
+    ]
   },
   {
     "area": "Keyboard shortcuts",
@@ -100,29 +128,34 @@
     "area": "IPC / runtime services",
     "risk": "stringly payloads, broad capability exposure, or renderer/runtime contract drift",
     "patterns": [
-      "^electron/channels",
-      "^electron/ipc/",
-      "^electron/preload",
+      "^src-tauri/capabilities/",
+      "^src-tauri/src/native_window",
+      "^src-tauri/src/.+/commands\\.rs$",
+      "^src-tauri/src/desktop/invoke",
       "^src/runtime/",
       "^src/services/.+Api"
     ],
-    "checks": ["runtime/preload/service contract tests", "pnpm typecheck"]
+    "checks": ["runtime/service contract tests", "native IPC capability tests", "pnpm typecheck"]
   },
   {
     "area": "Workspace filesystem/services",
-    "risk": "workspace boundary drift, path normalization mismatch, sidecar routing regression, or asset access bug",
-    "patterns": ["^electron/services/workspace/"],
-    "checks": ["workspace service tests", "workspace sidecar/path tests", "pnpm typecheck"]
+    "risk": "workspace binding drift, path normalization mismatch, save conflicts, watcher invalidation, or asset access bug",
+    "patterns": ["^src-tauri/src/workspace/", "^src-tauri/src/assets/", "^src-tauri/src/history/"],
+    "checks": [
+      "Rust workspace/history/asset tests",
+      "native multi-window save/restore smoke checks",
+      "pnpm typecheck"
+    ]
   },
   {
-    "area": "Knowledge engine / Node runtime",
+    "area": "Knowledge engine / Rust analysis",
     "risk": "workspace isolation drift, blocking I/O, index mismatch, or runtime lifecycle regression",
-    "patterns": [
-      "^buf\\.",
-      "^electron/generated/knowledge-engine/",
-      "^electron/services/knowledgeEngine/"
-    ],
-    "checks": ["knowledge engine Node runtime tests", "pnpm typecheck", "pnpm test:electron:build"]
+    "patterns": ["^src-tauri/src/analysis/", "^src-tauri/src/language/", "^src-tauri/src/mcp/"],
+    "checks": [
+      "Rust analysis/language/MCP tests",
+      "pnpm test:knowledge:integration",
+      "pnpm typecheck"
+    ]
   },
   {
     "area": "Renderer lifecycle / route cache",
@@ -134,11 +167,7 @@
       "^src/app/useAppLayoutOutlet",
       "^src/services/boundedWorkerPool"
     ],
-    "checks": [
-      "route cache and worker lifecycle tests",
-      "pnpm test:electron:release",
-      "pnpm typecheck"
-    ]
+    "checks": ["route cache and worker lifecycle tests", "pnpm test:renderer:e2e", "pnpm typecheck"]
   },
   {
     "area": "Document preview lifecycle",
@@ -149,7 +178,7 @@
       "^src/services/fsApi",
       "^src/types/workspace.*Preview"
     ],
-    "checks": ["document preview component tests", "pnpm test:electron:release", "pnpm typecheck"]
+    "checks": ["document preview component tests", "pnpm test:renderer:e2e", "pnpm typecheck"]
   },
   {
     "area": "Build/package",
@@ -164,16 +193,12 @@
       "^vite",
       "^tsconfig"
     ],
-    "checks": [
-      "pnpm typecheck",
-      "pnpm lint",
-      "pnpm exec vite build --mode electron --logLevel error"
-    ]
+    "checks": ["pnpm typecheck", "pnpm lint", "pnpm build:renderer", "pnpm tauri:check"]
   },
   {
     "area": "i18n",
     "risk": "untranslated menu/settings text or renderer/native locale mismatch",
-    "patterns": ["^electron/menuLocalization", "^src/i18n/"],
+    "patterns": ["^src-tauri/src/desktop/menu", "^src/i18n/"],
     "checks": ["locale/resource tests", "affected UI tests"]
   },
   {

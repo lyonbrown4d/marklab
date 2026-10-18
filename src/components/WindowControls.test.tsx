@@ -1,14 +1,24 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WindowControls from '@/components/WindowControls'
+import { useState } from 'react'
 
 const runtimeMock = vi.hoisted(() => ({
   isDesktopRuntime: vi.fn(() => true),
+  subscribe: vi.fn(),
+  warn: vi.fn(),
+  toast: vi.fn(),
+  maximized: undefined as undefined | ((maximized: boolean) => void),
 }))
 
 vi.mock('@/runtime/window', () => ({
   isDesktopRuntime: runtimeMock.isDesktopRuntime,
+  onWindowMaximizedChanged: runtimeMock.subscribe,
 }))
+vi.mock('@/services/rendererDiagnostics', () => ({
+  rendererDiagnostics: { warn: runtimeMock.warn },
+}))
+vi.mock('sonner', () => ({ toast: { error: runtimeMock.toast } }))
 
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
@@ -29,13 +39,36 @@ vi.mock('@/i18n/useI18n', () => ({
 const createWindowHandle = (maximized: boolean) => ({
   close: vi.fn().mockResolvedValue(undefined),
   isMaximized: vi.fn().mockResolvedValue(maximized),
-  maximize: vi.fn().mockResolvedValue(undefined),
+  maximize: vi.fn(async () => {
+    runtimeMock.maximized?.(true)
+  }),
   minimize: vi.fn().mockResolvedValue(undefined),
-  unmaximize: vi.fn().mockResolvedValue(undefined),
+  unmaximize: vi.fn(async () => {
+    runtimeMock.maximized?.(false)
+  }),
 })
 
+const StatefulControls = () => {
+  const [isMaximized, setIsMaximized] = useState(false)
+  return (
+    <WindowControls
+      platform="windows"
+      isWindows
+      isMaximized={isMaximized}
+      setIsMaximized={setIsMaximized}
+      getAppWindow={vi.fn()}
+    />
+  )
+}
+
 beforeEach(() => {
+  vi.clearAllMocks()
   runtimeMock.isDesktopRuntime.mockReturnValue(true)
+  runtimeMock.maximized = undefined
+  runtimeMock.subscribe.mockImplementation(async (handler) => {
+    runtimeMock.maximized = handler
+    return vi.fn()
+  })
 })
 
 describe('WindowControls', () => {
@@ -64,7 +97,9 @@ describe('WindowControls', () => {
     expect(closeButton).toHaveAttribute('title', 'Close')
 
     fireEvent.click(minimizeButton)
+    await waitFor(() => expect(minimizeButton).not.toBeDisabled())
     fireEvent.click(maximizeButton)
+    await waitFor(() => expect(maximizeButton).not.toBeDisabled())
     fireEvent.click(closeButton)
 
     await waitFor(() => {
@@ -133,5 +168,71 @@ describe('WindowControls', () => {
     )
 
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('reflects restored geometry and later native maximize/restore events', async () => {
+    runtimeMock.subscribe.mockImplementationOnce(async (handler) => {
+      runtimeMock.maximized = handler
+      handler(true)
+      return vi.fn()
+    })
+    render(<StatefulControls />)
+    expect(await screen.findByRole('button', { name: 'Restore' })).toHaveTextContent('\uE923')
+    act(() => runtimeMock.maximized?.(false))
+    expect(screen.getByRole('button', { name: 'Maximize' })).toHaveTextContent('\uE922')
+  })
+
+  it('shows dirty-close failure, clears pending state, and allows retry', async () => {
+    const handle = createWindowHandle(false)
+    const error = new Error('External disk conflict')
+    handle.close.mockRejectedValueOnce(error)
+    render(
+      <WindowControls
+        platform="windows"
+        isWindows
+        isMaximized={false}
+        setIsMaximized={vi.fn()}
+        getAppWindow={vi.fn().mockResolvedValue(handle)}
+      />,
+    )
+    const close = screen.getByRole('button', { name: 'Close' })
+    fireEvent.click(close)
+    await waitFor(() =>
+      expect(runtimeMock.toast).toHaveBeenCalledWith('editor.flushBuffersFailed', {
+        description: 'External disk conflict',
+      }),
+    )
+    expect(runtimeMock.warn).toHaveBeenCalledWith('window.controls', 'native-action-failed', error)
+    await waitFor(() => expect(close).not.toBeDisabled())
+    fireEvent.click(close)
+    await waitFor(() => expect(handle.close).toHaveBeenCalledTimes(2))
+  })
+
+  it('prevents duplicate caption actions while the native handle is pending', async () => {
+    const handle = createWindowHandle(false)
+    let complete: (value: typeof handle) => void = () => undefined
+    const getWindow = vi.fn(
+      () =>
+        new Promise<typeof handle>((resolve) => {
+          complete = resolve
+        }),
+    )
+    render(
+      <WindowControls
+        platform="windows"
+        isWindows
+        isMaximized={false}
+        setIsMaximized={vi.fn()}
+        getAppWindow={getWindow}
+      />,
+    )
+    const minimize = screen.getByRole('button', { name: 'Minimize' })
+    fireEvent.click(minimize)
+    fireEvent.click(minimize)
+    expect(minimize).toBeDisabled()
+    expect(getWindow).toHaveBeenCalledOnce()
+    complete(handle)
+    await waitFor(() => expect(handle.minimize).toHaveBeenCalledOnce())
+    await waitFor(() => expect(minimize).not.toBeDisabled())
   })
 })

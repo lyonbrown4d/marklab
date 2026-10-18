@@ -66,17 +66,45 @@ export const captureSentinelOrder = (page: Page, sentinels: readonly string[]) =
     { selector: PLATE_EDITOR_SELECTOR, values: [...sentinels] },
   )
 
-export const selectionState = (page: Page) =>
-  page.evaluate((selector) => {
-    const editor = document.querySelector<HTMLElement>(selector)
-    const selection = window.getSelection()
-    return {
-      insideEditor:
+export const selectionState = (page: Page, inspectBlocks = false) =>
+  page.evaluate(
+    (selector) => {
+      const editor = document.querySelector<HTMLElement>(selector.editor)
+      const selection = window.getSelection()
+      const insideEditor =
         Boolean(selection?.anchorNode && editor?.contains(selection.anchorNode)) &&
-        Boolean(selection?.focusNode && editor?.contains(selection.focusNode)),
-      textLength: selection?.toString().length ?? 0,
-    }
-  }, EDITABLE_PLATE_EDITOR_SELECTOR)
+        Boolean(selection?.focusNode && editor?.contains(selection.focusNode))
+      // Plate focuses a body-level shadow input for block selection, outside the DOM text range.
+      const wrappers =
+        !insideEditor || selector.inspectBlocks
+          ? [...(editor?.querySelectorAll<HTMLElement>('[data-block-drag-wrapper="true"]') ?? [])]
+          : null
+      const selected = wrappers?.filter((block) => block.dataset.blockSelected === 'true')
+      return {
+        insideEditor,
+        textLength: selection?.toString().length ?? 0,
+        blockSelection: wrappers
+          ? {
+              shadowInputFocused:
+                document.activeElement?.matches('input.slate-shadow-input') ?? false,
+              blockCount: wrappers.length,
+              selectedBlockCount: selected?.length ?? 0,
+              selectedTextLength:
+                selected?.reduce(
+                  (total, block) =>
+                    total +
+                    [...block.querySelectorAll('[data-slate-string]')].reduce(
+                      (length, leaf) => length + (leaf.textContent?.length ?? 0),
+                      0,
+                    ),
+                  0,
+                ) ?? 0,
+            }
+          : null,
+      }
+    },
+    { editor: EDITABLE_PLATE_EDITOR_SELECTOR, inspectBlocks },
+  )
 
 export const dragNativeScrollbar = async (page: Page, viewport: Locator) => {
   const box = await viewport.boundingBox()

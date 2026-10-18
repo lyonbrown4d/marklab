@@ -57,12 +57,12 @@ describe('useProjectLoader editor buffer boundary', () => {
       .mockRejectedValueOnce(new Error('queued update failed'))
     const sync = createEditorBufferSync({
       applyBufferUpdate,
-      getBufferStatus: vi.fn(async () => ({
-        path: 'note.md',
-        revision: 0,
-        dirty: false,
-        session_generation: 4,
-      })),
+    })
+    sync.seed('workspace:note.md', '# One', {
+      path: 'note.md',
+      revision: 0,
+      dirty: false,
+      session_generation: 4,
     })
     const persistence = createEditorBufferPersistence()
     const first = sync.enqueue({

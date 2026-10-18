@@ -5,7 +5,7 @@ import {
   normalizeDrawioEmbedUrl,
   type DrawioEditorMode,
 } from '@/logic/drawioEmbed'
-import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { createDesktopSettingsJsonStorage } from '@/store/persistStorage'
 import { RENDERER_PERSIST_KEYS } from '@/types/persistenceKeys'
 
 type DrawioSettingsState = {
@@ -35,7 +35,7 @@ export const useDrawioSettingsStore = create<DrawioSettingsState>()(
     }),
     {
       name: RENDERER_PERSIST_KEYS.drawio,
-      storage: createElectronSettingsJsonStorage<DrawioSettingsPersistedState>(
+      storage: createDesktopSettingsJsonStorage<DrawioSettingsPersistedState>(
         RENDERER_PERSIST_KEYS.drawio,
       ),
       version: 1,

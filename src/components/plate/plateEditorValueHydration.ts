@@ -1,7 +1,7 @@
-import type { Value } from 'platejs'
+import { normalizeNodeIdWithEditor, type Value } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import type { RefObject } from 'react'
-import { isEqualWith } from 'lodash-es'
+import { isEqualWith, isPlainObject, omit } from 'lodash-es'
 
 export const resetPlateEditorHydrationState = (editor: PlateEditor) => {
   editor.selection = null
@@ -42,7 +42,12 @@ export const replacePlateEditorValue = (
   editor: PlateEditor,
   value: Value,
   externalApplyRef?: RefObject<boolean>,
-) => applyEditorValue(editor, () => (editor.children = value), externalApplyRef)
+) =>
+  applyEditorValue(
+    editor,
+    () => (editor.children = normalizeNodeIdWithEditor(editor, value)),
+    externalApplyRef,
+  )
 
 export const appendPlateEditorValue = (
   editor: PlateEditor,
@@ -51,8 +56,10 @@ export const appendPlateEditorValue = (
   externalApplyRef?: RefObject<boolean>,
 ) =>
   applyAsyncEditorValue(() => {
-    if (firstChunk) editor.children = value
-    else editor.children.push(...value)
+    // Direct hydration bypasses Slate insert operations, including node ID assignment.
+    const incoming = normalizeNodeIdWithEditor(editor, value)
+    if (firstChunk) editor.children = incoming
+    else editor.children.push(...incoming)
     editor.api.onChange()
   }, externalApplyRef)
 
@@ -71,13 +78,27 @@ export const restorePlateEditorValue = (
   externalApplyRef?: RefObject<boolean>,
 ) =>
   applyAsyncEditorValue(() => {
-    editor.children = value
+    editor.children = normalizeNodeIdWithEditor(editor, value)
     resetPlateEditorHydrationState(editor)
     editor.api.onChange()
   }, externalApplyRef)
 
-const plateNodesEqual = (current: unknown, next: unknown) =>
-  isEqualWith(current, next, (_current, _next, key) => (key === 'id' ? true : undefined))
+const plateNodesEqual = (current: unknown, next: unknown): boolean =>
+  isEqualWith(current, next, (currentNode: unknown, nextNode: unknown, key) => {
+    if (key === 'id') return true
+    if (
+      currentNode &&
+      nextNode &&
+      typeof currentNode === 'object' &&
+      typeof nextNode === 'object' &&
+      isPlainObject(currentNode) &&
+      isPlainObject(nextNode) &&
+      Object.hasOwn(currentNode, 'id') !== Object.hasOwn(nextNode, 'id')
+    ) {
+      return plateNodesEqual(omit(currentNode, 'id'), omit(nextNode, 'id'))
+    }
+    return undefined
+  })
 
 type TextPatch = { path: number[]; previousText: string; text: string }
 type TextOperation = {

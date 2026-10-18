@@ -1,4 +1,4 @@
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import type {
   WebDavProfile,
   WebDavProfileInput,
@@ -10,7 +10,7 @@ import type {
   WorkspaceSyncResult,
 } from '@/types/workspaceSync'
 
-const runtime = () => getElectronRuntime().workspaceSync
+const runtime = () => getDesktopRuntime().workspaceSync
 
 export const workspaceSyncApi = {
   listConflicts: (rootPath: string) => runtime().conflicts.list(rootPath),

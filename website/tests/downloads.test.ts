@@ -66,6 +66,70 @@ test('supports the actual Linux x86_64 and earlier Windows installer names', () 
   assert.equal(getDownload(releases, 'win-x64')?.filename, 'Marklab-0.2.0-win-x64.exe')
 })
 
+test('resolves Tauri installers and preserves the published asset metadata', () => {
+  const filenames = {
+    'mac-arm64': 'Marklab_0.2.8_aarch64.dmg',
+    'win-x64': 'Marklab_0.2.8_x64-setup.exe',
+    'linux-x64': 'marklab_0.2.8_amd64.AppImage',
+  }
+  const release = fixture('0.2.8', Object.values(filenames))
+  const releases = parseReleases([release])
+  for (const platform of platforms) {
+    const asset = release.assets.find((entry) => entry.name === filenames[platform])!
+    assert.deepEqual(getDownload(releases, platform), {
+      platform,
+      version: '0.2.8',
+      url: asset.browser_download_url,
+      filename: asset.name,
+      size: asset.size,
+      releaseUrl: release.html_url,
+    })
+  }
+  const productNameRelease = parseReleases([fixture('0.2.8', ['Marklab_0.2.8_amd64.AppImage'])])
+  assert.equal(
+    getDownload(productNameRelease, 'linux-x64')?.filename,
+    'Marklab_0.2.8_amd64.AppImage',
+  )
+})
+
+test('selects the latest available installer across Tauri and Electron releases', () => {
+  const releases = parseReleases([
+    fixture('0.2.7', [
+      'Marklab-0.2.7-mac-arm64.dmg',
+      'Marklab-0.2.7-win-x64-setup.exe',
+      'Marklab-0.2.7-linux-x64.AppImage',
+    ]),
+    fixture('0.2.8', ['Marklab_0.2.8_aarch64.dmg', 'marklab_0.2.8_amd64.AppImage']),
+  ])
+  assert.equal(getDownload(releases, 'mac-arm64')?.filename, 'Marklab_0.2.8_aarch64.dmg')
+  assert.equal(getDownload(releases, 'linux-x64')?.filename, 'marklab_0.2.8_amd64.AppImage')
+  assert.equal(getDownload(releases, 'win-x64')?.filename, 'Marklab-0.2.7-win-x64-setup.exe')
+})
+
+test('rejects Tauri artifacts with wrong versions, architectures, or auxiliary formats', () => {
+  const releases = parseReleases([
+    fixture('0.2.8', [
+      'Marklab_0.2.7_aarch64.dmg',
+      'Marklab_0.2.7_x64-setup.exe',
+      'marklab_0.2.7_amd64.AppImage',
+      'Marklab_0.2.8_x64.dmg',
+      'Marklab_0.2.8_universal.dmg',
+      'Marklab_0.2.8_arm64-setup.exe',
+      'Marklab_0.2.8_x86-setup.exe',
+      'marklab_0.2.8_aarch64.AppImage',
+      'marklab_0.2.8_i386.AppImage',
+      'Marklab_0.2.8_aarch64.dmg.sig',
+      'Marklab_0.2.8_aarch64.app.tar.gz',
+      'Marklab_0.2.8_x64-setup.exe.sig',
+      'Marklab_0.2.8_x64-setup.exe.blockmap',
+      'Marklab_0.2.8_x64-setup.exe.zip',
+      'marklab_0.2.8_amd64.AppImage.sig',
+      'marklab_0.2.8_amd64.AppImage.tar.gz',
+    ]),
+  ])
+  for (const platform of platforms) assert.equal(getDownload(releases, platform), null)
+})
+
 test('rejects untrusted asset and release URLs', () => {
   const invalid = fixture('0.2.7', ['Marklab-0.2.7-mac-arm64.dmg'])
   invalid.assets[0]!.browser_download_url = 'https://example.com/untrusted.dmg'

@@ -6,6 +6,7 @@ import { EDITOR_BUFFER_CACHE_LIMITS } from '@/app/editorBufferCachePolicy'
 
 const mocks = vi.hoisted(() => ({
   openFile: vi.fn(),
+  openBufferSnapshot: vi.fn(),
   applyBufferUpdate: vi.fn(),
   getBufferStatus: vi.fn(),
   flushBuffers: vi.fn(),
@@ -35,6 +36,10 @@ const deferred = <T,>() => {
 }
 
 beforeEach(() => {
+  mocks.openBufferSnapshot.mockImplementation(async (path: string) => {
+    const content = await mocks.openFile(path)
+    return { ...(await mocks.getBufferStatus(path)), path, content }
+  })
   vi.clearAllMocks()
   mocks.openFile.mockImplementation((path: string) => Promise.resolve(`disk:${path}`))
   mocks.applyBufferUpdate.mockResolvedValue({ kind: 'applied', ...status(true) })
@@ -199,6 +204,7 @@ describe('editor buffer cache lifecycle', () => {
     )
     await waitFor(() => expect(mocks.applyBufferUpdate).toHaveBeenCalledOnce())
     rerender({ ...initialProps, activePath: null, openPaths: [] })
+    mocks.openFile.mockResolvedValueOnce('persisted replacement')
     act(() => result.current.onPersistedContentChange('a.md', 'persisted replacement'))
     expect(result.current.fileContents['a.md']).toBe('persisted replacement')
     await act(async () => {

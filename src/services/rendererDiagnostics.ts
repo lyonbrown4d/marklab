@@ -1,4 +1,4 @@
-import { getElectronRuntime, isElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime, isDesktopRuntime } from '@/runtime/desktop'
 import type {
   RendererDiagnosticError,
   RendererDiagnosticLevel,
@@ -122,9 +122,9 @@ const safeStack = (error: Error): { stack?: string } => {
 let desktopReporter: RendererDiagnosticReporter | null = null
 
 const getDesktopReporter = (): RendererDiagnosticReporter | null => {
-  if (!isElectronRuntime()) return null
+  if (!isDesktopRuntime()) return null
   desktopReporter ??= createRendererDiagnosticReporter({
-    invoke: (command, args) => getElectronRuntime().commands.invoke(command, args),
+    invoke: (command, args) => getDesktopRuntime().commands.invoke(command, args),
   })
   return desktopReporter
 }

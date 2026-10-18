@@ -4,7 +4,10 @@ import { WorkspaceOpeningSurface } from '@/components/loading/WorkspaceOpeningSu
 import type { WindowOpeningProgress } from '@/types/windowOpening'
 
 const bridge = vi.hoisted(() => ({ retry: vi.fn(), onProgress: vi.fn(), unlisten: vi.fn() }))
-vi.mock('@/runtime/electron', () => ({ getElectronRuntime: () => ({ opening: bridge }) }))
+vi.mock('@/runtime/desktop', () => ({
+  isDesktopRuntime: () => true,
+  getDesktopRuntime: () => ({ opening: bridge }),
+}))
 
 describe('shared workspace opening surface', () => {
   let progress: (value: WindowOpeningProgress) => void

@@ -1,3 +1,4 @@
+import { toWebviewAssetUrl } from '@/runtime/assetUrl'
 import { ArrowUpRight, Globe2, ImageIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -88,7 +89,7 @@ export const ExternalWebPreviewSurface = ({
               )}
               loading="lazy"
               referrerPolicy="no-referrer"
-              src={result.src}
+              src={toWebviewAssetUrl(result.src)}
             />
             {variant === 'editor' ? (
               <PreviewFooter
@@ -186,7 +187,7 @@ const WebpagePreview = (props: WebpagePreviewProps) => {
             className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover/link-card:scale-[1.025] motion-reduce:transform-none"
             height={props.capture.height}
             loading="lazy"
-            src={props.capture.src}
+            src={toWebviewAssetUrl(props.capture.src)}
             width={props.capture.width}
           />
         ) : (

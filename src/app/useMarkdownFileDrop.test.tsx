@@ -73,7 +73,7 @@ describe('useMarkdownFileDrop', () => {
     expect(toast.info).toHaveBeenCalledWith('Opened the first Markdown file; ignored 1 more.')
   })
 
-  it('unsubscribes from the preload bridge on unmount', async () => {
+  it('unsubscribes from the native runtime bridge on unmount', async () => {
     const { unmount } = renderHook(() => useMarkdownFileDrop(vi.fn()))
     await waitFor(() => expect(dropHandler).not.toBeNull())
 

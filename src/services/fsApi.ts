@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
-import { getElectronRuntime } from '@/runtime/electron'
+import { getDesktopRuntime } from '@/runtime/desktop'
 import { invoke } from '@/runtime/ipc'
 import {
   backgroundTaskStatusSchema,
   fsAssetCapabilitySchema,
-  fsBufferStatusSchema,
   fsBufferSyncStatusSchema,
+  fsBufferSnapshotSchema,
   fsBufferUpdateRequestSchema,
   fsBufferUpdateResultSchema,
   fsGraphSchema,
@@ -26,6 +26,7 @@ import {
   workspaceGraphNodeDetailsResultSchema,
   type WorkspaceOccurrenceSearchRequest,
   type FsBufferUpdateRequest,
+  type FsBufferSyncStatus,
   type WorkspaceGraphNodeDetailsRequest,
   type MarkdownAssetImportStrategy,
 } from '@/services/fsApiSchemas'
@@ -48,12 +49,15 @@ export const fsApi = {
   openFile(path: string) {
     return invoke<string>('fs_open_file', { path })
   },
+  async openBufferSnapshot(path: string) {
+    return fsBufferSnapshotSchema.parse(await invoke<unknown>('fs_open_buffer_snapshot', { path }))
+  },
   readFile(path: string) {
     return invoke<string>('fs_read_file', { path })
   },
   async readTextPreview(path: string, limitBytes: number) {
     const limit = fsTextPreviewLimitSchema.parse(limitBytes)
-    const result = await getElectronRuntime().workspace.readTextPreview(path, limit)
+    const result = await getDesktopRuntime().workspace.readTextPreview(path, limit)
     return fsTextPreviewSchema.parse(result)
   },
   async getWorkspaceGraph() {
@@ -86,37 +90,27 @@ export const fsApi = {
     const result = await invoke<unknown>('fs_apply_buffer_update', payload)
     return fsBufferUpdateResultSchema.parse(result)
   },
-  async updateBuffer(path: string, content: string) {
-    let status = await this.getBufferStatus(path)
-    if (!status) {
-      await this.openFile(path)
-      status = await this.getBufferStatus(path)
-    }
-    if (!status) throw new Error('Workspace buffer session is unavailable')
-    let result = await this.applyBufferUpdate({
+  async updateBuffer(path: string, content: string, loadedStatus: FsBufferSyncStatus) {
+    const status = fsBufferSyncStatusSchema.parse(loadedStatus)
+    if (status.path !== path)
+      throw new Error('Loaded buffer status belongs to a different document')
+    const result = await this.applyBufferUpdate({
       path,
       base_revision: status.revision,
       session_generation: status.session_generation,
       update: { kind: 'snapshot', content },
     })
-    if (result.kind === 'resync_required') {
-      result = await this.applyBufferUpdate({
-        path,
-        base_revision: result.revision,
-        session_generation: result.session_generation,
-        update: { kind: 'snapshot', content },
-      })
-    }
-    if (result.kind === 'session_mismatch') {
+    if (result.kind === 'session_mismatch')
       throw new Error('Workspace changed before the buffer update was applied')
-    }
-    if (result.kind === 'resync_required') {
-      throw new Error('Workspace buffer snapshot resynchronization was rejected')
-    }
-    return fsBufferStatusSchema.parse({
+    if (result.kind === 'resync_required')
+      throw new Error(
+        'Document changed in another editor. Reload before saving; your unsaved text is retained.',
+      )
+    return fsBufferSyncStatusSchema.parse({
       path: result.path,
       revision: result.revision,
       dirty: result.dirty,
+      session_generation: result.session_generation,
     })
   },
   flushBuffers() {
@@ -151,7 +145,7 @@ export const fsApi = {
   },
   async toAssetUrl(relativePath: string) {
     const path = workspaceRelativeAssetPathSchema.parse(relativePath)
-    const result = await getElectronRuntime().assets.issueCapability({ path })
+    const result = await getDesktopRuntime().assets.issueCapability({ path })
     const capability = fsAssetCapabilitySchema.parse(result)
     if (capability.expires_at_ms <= Date.now()) {
       throw new Error('Issued asset capability has already expired')
@@ -159,13 +153,13 @@ export const fsApi = {
     return capability
   },
   openPathInSystem(path: string) {
-    return getElectronRuntime().workspace.openPathInSystem(path)
+    return getDesktopRuntime().workspace.openPathInSystem(path)
   },
   revealPathInSystem(path: string) {
-    return getElectronRuntime().workspace.revealPathInSystem(path)
+    return getDesktopRuntime().workspace.revealPathInSystem(path)
   },
   copyAbsolutePathToClipboard(path: string) {
-    return getElectronRuntime().workspace.copyAbsolutePathToClipboard(path)
+    return getDesktopRuntime().workspace.copyAbsolutePathToClipboard(path)
   },
   async importMarkdownAsset({
     sourcePath,

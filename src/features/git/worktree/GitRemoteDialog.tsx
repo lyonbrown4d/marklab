@@ -12,6 +12,8 @@ import {
 import { useNativeSurfaceOcclusion } from '@/app/nativeSurfaceOcclusion'
 import { useI18n } from '@/i18n/useI18n'
 import type { GitRemoteStatus } from '@/services/gitApi'
+import { GitCredentialForm } from '@/features/git/worktree/GitCredentialForm'
+import { gitCredentialsApi } from '@/services/gitCredentialsApi'
 
 export const GitRemoteDialog = ({
   open,
@@ -104,6 +106,9 @@ export const GitRemoteDialog = ({
             {t('scm.saveRemote')}
           </Button>
         </form>
+        {gitCredentialsApi.available() && (
+          <GitCredentialForm key={url} url={url || status?.remotes[0]?.fetch_url || ''} />
+        )}
         {error ? (
           <p role="alert" className="break-words text-xs text-destructive">
             {String(error)}

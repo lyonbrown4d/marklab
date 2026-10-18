@@ -1,12 +1,16 @@
-import type { Value } from 'platejs'
-import type { PlateEditor } from 'platejs/react'
+import { BlockSelectionPlugin } from '@platejs/selection/react'
+import { ElementApi, type Value } from 'platejs'
+import { createPlateEditor, type PlateEditor } from 'platejs/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   appendPlateEditorValue,
   finalizePatchedPlateEditorValue,
   patchPlateEditorValue,
   reconcilePlateEditorValue,
+  replacePlateEditorValue,
+  restorePlateEditorValue,
 } from '@/components/plate/plateEditorValueHydration'
+import { createPlateEditorPlugins } from '@/components/plate/plateEditorConfig'
 
 const paragraph = (text: string, id: string) => ({
   children: [{ text }],
@@ -37,7 +41,7 @@ const createEditor = (children: Value, onApply?: () => void) =>
         onApply?.()
       },
     ),
-    api: { onChange: vi.fn() },
+    api: { isBlock: (node: unknown) => ElementApi.isElement(node), onChange: vi.fn() },
     children,
     tf: {
       insertNodes: vi.fn((node, options: { at: number[] }) => {
@@ -51,6 +55,56 @@ const createEditor = (children: Value, onApply?: () => void) =>
   }) as unknown as PlateEditor
 
 describe('Plate editor value hydration patches', () => {
+  it('assigns unique block ids to incoming chunks and makes every hydrated block selectable', async () => {
+    const editor = createPlateEditor({ nodeId: true, plugins: createPlateEditorPlugins() })
+    const retained = paragraph('retained', 'existing-id')
+    const inline = { children: [{ text: 'link' }], type: 'a', url: 'https://example.com' }
+    const firstChunk = [retained, { children: [{ text: '' }, inline, { text: '' }], type: 'p' }]
+
+    await appendPlateEditorValue(editor, firstChunk, true)
+    const firstBlocks = [...editor.children]
+    await appendPlateEditorValue(editor, [{ children: [{ text: 'appended' }], type: 'p' }], false)
+
+    const ids = editor.children.map((node) => node.id)
+    expect(ids).toEqual([retained.id, expect.any(String), expect.any(String)])
+    expect(new Set(ids).size).toBe(3)
+    expect(editor.children[0]).toBe(retained)
+    expect(editor.children[0]).toBe(firstBlocks[0])
+    expect(editor.children[1]).toBe(firstBlocks[1])
+    expect(editor.children[1].children[1]).toBe(inline)
+    expect(inline).not.toHaveProperty('id')
+    expect(firstChunk[1]).not.toHaveProperty('id')
+
+    editor.getApi(BlockSelectionPlugin).blockSelection.selectAll()
+    expect(editor.getOptions(BlockSelectionPlugin).selectedIds).toEqual(new Set(ids))
+  })
+
+  it.each([
+    { name: 'replacement', apply: replacePlateEditorValue },
+    { name: 'restoration', apply: restorePlateEditorValue },
+  ])(
+    'initializes missing ids during $name without replacing unchanged nodes',
+    async ({ apply }) => {
+      const editor = createPlateEditor({ nodeId: true, plugins: createPlateEditorPlugins() })
+      const retained = paragraph('retained', 'existing-id')
+      const value = [retained, { children: [{ text: 'missing id' }], type: 'p' }]
+
+      await apply(editor, value)
+      const hydrated = editor.children
+      const ids = hydrated.map((node) => node.id)
+      expect(ids).toEqual([retained.id, expect.any(String)])
+      expect(new Set(ids).size).toBe(2)
+      expect(hydrated[0]).toBe(retained)
+      expect(value[1]).not.toHaveProperty('id')
+
+      await apply(editor, hydrated)
+      expect(editor.children).toBe(hydrated)
+      expect(editor.children.map((node) => node.id)).toEqual(ids)
+      expect(reconcilePlateEditorValue(hydrated, value, 0)).toEqual(hydrated)
+      expect(reconcilePlateEditorValue(hydrated, value, 0)[1]).toBe(hydrated[1])
+    },
+  )
+
   it('keeps external apply suppression active through streamed change microtasks', async () => {
     const externalApplyRef = { current: false }
     const observedSuppression: boolean[] = []
@@ -75,6 +129,45 @@ describe('Plate editor value hydration patches', () => {
     const next = [paragraph('same', 'parsed')] as Value
 
     expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(current[0])
+  })
+
+  it('reuses nested blocks when ids are missing on either side', () => {
+    const current = [{ children: [paragraph('same', 'nested')], id: 'parent', type: 'blockquote' }]
+    const next = [{ children: [{ children: [{ text: 'same' }], type: 'p' }], type: 'blockquote' }]
+
+    expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(current[0])
+    expect(reconcilePlateEditorValue(next, current, 0)[0]).toBe(next[0])
+  })
+
+  it.each([
+    { name: 'added property', current: {}, next: { align: 'center' } },
+    { name: 'removed property', current: { align: 'center' }, next: {} },
+  ])('does not reuse a block with a non-id $name', ({ current, next }) => {
+    const baseline = [{ ...paragraph('same', 'existing'), ...current }]
+    const parsed = [{ children: [{ text: 'same' }], type: 'p', ...next }]
+
+    expect(reconcilePlateEditorValue(baseline, parsed, 0)[0]).toBe(parsed[0])
+  })
+
+  it('does not reuse blocks whose nested children changed order', () => {
+    const current = [
+      {
+        children: [paragraph('one', 'first'), paragraph('two', 'second')],
+        id: 'parent',
+        type: 'blockquote',
+      },
+    ]
+    const next = [
+      {
+        children: [
+          { children: [{ text: 'two' }], type: 'p' },
+          { children: [{ text: 'one' }], type: 'p' },
+        ],
+        type: 'blockquote',
+      },
+    ]
+
+    expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(next[0])
   })
 
   it('updates only changed slices and skips unchanged commits', async () => {

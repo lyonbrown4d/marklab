@@ -13,7 +13,7 @@ import {
   selectPreferencesPersistedState,
   type PreferencesPersistedState,
 } from '@/store/preferencesPersist'
-import { createElectronSettingsJsonStorage } from '@/store/persistStorage'
+import { createDesktopSettingsJsonStorage } from '@/store/persistStorage'
 import {
   createAiCompletionPreferencesSlice,
   type AiCompletionPreferencesState,
@@ -258,7 +258,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: RENDERER_PERSIST_KEYS.preferences,
-      storage: createElectronSettingsJsonStorage<PreferencesPersistedState>(
+      storage: createDesktopSettingsJsonStorage<PreferencesPersistedState>(
         RENDERER_PERSIST_KEYS.preferences,
       ),
       version: 2,

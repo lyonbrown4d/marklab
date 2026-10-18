@@ -1,3 +1,4 @@
+import { toWebviewAssetUrl } from '@/runtime/assetUrl'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import {
@@ -260,7 +261,7 @@ export const ZoomableVisualViewport = ({ labels, visual }: ZoomableVisualViewpor
                     width: naturalWidth,
                   })
                 }}
-                src={visual.src}
+                src={toWebviewAssetUrl(visual.src)}
                 style={{ height: visual.naturalHeight, width: visual.naturalWidth }}
               />
             ) : null}

@@ -28,7 +28,7 @@ pnpm --filter @marklab/website preview
 - `src/assets/`：真实应用截图，使用公开示例工作区。
 - `src/data/releases.json`：已验证的公开发行版本快照。
 
-官网是独立 workspace，不导入桌面应用的 React、Electron、IPC 或编辑器运行时代码。所有页面预渲染，托管端只提供静态文件。
+官网是独立 workspace，不导入桌面应用的 React、Tauri、IPC 或编辑器运行时代码。所有页面预渲染，托管端只提供静态文件。
 
 维护边界及部署流程见 [docs/website.md](../docs/website.md)。
 
@@ -46,11 +46,6 @@ pnpm --filter @marklab/website releases:sync
 
 ## 更新截图
 
-先构建桌面应用，然后从根目录执行：
+截图应来自实际 Tauri 应用，使用公开示例工作区，并记录对应构建版本。可以先运行 `pnpm build:desktop` 构建本机应用，再按[原生验收说明](../docs/quality-gates.md#desktop-smoke-checklist)打开隔离工作区并人工采集。
 
-```sh
-pnpm build:desktop
-pnpm test:electron:run website-assets.spec.ts
-```
-
-脚本创建独立示例笔记和 Git 仓库，使用隔离 Electron 配置生成截图并清理临时工作区。截图经 Astro 图片管线压缩为响应式 WebP。
+原 Electron 专用截图脚本已移除。Chromium renderer 测试截图仅用于前端诊断，不能当作原生窗口或系统菜单的产品截图。现有官网图片保留其原始来源；替换前需完成对应版本的界面验收。图片经 Astro 管线压缩为响应式 WebP。

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import type { Value } from 'platejs'
+import { ElementApi, type Value } from 'platejs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const workerMock = vi.hoisted(() => ({
@@ -31,7 +31,10 @@ import { usePlateAsyncInitialValue } from '@/components/plate/usePlateAsyncIniti
 const createStreamingEditor = () => {
   const observedOperations: unknown[][] = []
   const editor = {
-    api: { onChange: vi.fn(() => observedOperations.push([...editor.operations])) },
+    api: {
+      isBlock: (node: unknown) => ElementApi.isElement(node),
+      onChange: vi.fn(() => observedOperations.push([...editor.operations])),
+    },
     children: [] as Value,
     history: { redos: [] as unknown[], undos: [] as unknown[] },
     marks: null as unknown,
@@ -93,15 +96,17 @@ describe('usePlateAsyncInitialValue', () => {
       await workerMock.streams[0]?.emit([{ type: 'h1', children: [{ text: 'Title' }] }])
     })
     expect(result.current).toBe(false)
-    expect(editor.children).toEqual([{ type: 'h1', children: [{ text: 'Title' }] }])
+    expect(editor.children).toEqual([
+      { type: 'h1', id: expect.any(String), children: [{ text: 'Title' }] },
+    ])
 
     await act(async () => {
       await workerMock.streams[0]?.emit([{ type: 'p', children: [{ text: 'Body' }] }])
     })
     expect(result.current).toBe(false)
     expect(editor.children).toEqual([
-      { type: 'h1', children: [{ text: 'Title' }] },
-      { type: 'p', children: [{ text: 'Body' }] },
+      { type: 'h1', id: expect.any(String), children: [{ text: 'Title' }] },
+      { type: 'p', id: expect.any(String), children: [{ text: 'Body' }] },
     ])
     expect(editor.api.onChange).toHaveBeenCalledTimes(2)
 
@@ -125,12 +130,14 @@ describe('usePlateAsyncInitialValue', () => {
 
     await act(async () => workerMock.streams[0]?.emit(nodes.slice(0, 20)))
     expect(editor.api.onChange).toHaveBeenCalledOnce()
-    expect(editor.children).toEqual(nodes.slice(0, 20))
+    expect(editor.children).toEqual(
+      nodes.slice(0, 20).map((node) => ({ ...node, id: expect.any(String) })),
+    )
 
     await act(async () => workerMock.streams[0]?.emit(nodes.slice(20)))
 
     expect(editor.api.onChange).toHaveBeenCalledTimes(2)
-    expect(editor.children).toEqual(nodes)
+    expect(editor.children).toEqual(nodes.map((node) => ({ ...node, id: expect.any(String) })))
   })
 
   it('aborts incremental hydration when the editor changes', () => {
@@ -178,7 +185,9 @@ describe('usePlateAsyncInitialValue', () => {
       await latestStream?.emit([{ type: 'p', children: [{ text: 'B prefix' }] }])
     })
     expect(result.current).toBe(false)
-    expect(editor.children).toEqual([{ type: 'p', children: [{ text: 'B prefix' }] }])
+    expect(editor.children).toEqual([
+      { type: 'p', id: expect.any(String), children: [{ text: 'B prefix' }] },
+    ])
 
     await act(async () => {
       await latestStream?.emit([{ type: 'p', children: [{ text: 'B end' }] }])
@@ -186,8 +195,8 @@ describe('usePlateAsyncInitialValue', () => {
     })
     await waitFor(() => expect(result.current).toBe(true))
     expect(editor.children).toEqual([
-      { type: 'p', children: [{ text: 'B prefix' }] },
-      { type: 'p', children: [{ text: 'B end' }] },
+      { type: 'p', id: expect.any(String), children: [{ text: 'B prefix' }] },
+      { type: 'p', id: expect.any(String), children: [{ text: 'B end' }] },
     ])
   })
 
