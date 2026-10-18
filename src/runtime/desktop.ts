@@ -10,7 +10,11 @@ import type {
 import type { WorkspaceSyncApi } from '@/runtime/workspaceSync'
 import type { LanguageIntelligenceApi } from '@/types/languageIntelligence'
 import type { WorkspaceTextPreview } from '@/types/workspaceTextPreview'
-import type { LinkPreviewCapture, LinkPreviewResult } from '@/types/linkPreview'
+import type {
+  LinkPreviewCapture,
+  LinkPreviewCaptureOptions,
+  LinkPreviewResult,
+} from '@/types/linkPreview'
 import type { WebTabsApi } from '@/types/webTabs'
 import type { WorkspaceTreeApi } from '@/types/workspaceTree'
 import type { RendererReadySignal } from '@/types/rendererReady'
@@ -43,7 +47,9 @@ export type DesktopWorkspacePathApi = {
 }
 
 export type DesktopLinkPreviewApi = {
-  capture: (url: string) => Promise<LinkPreviewCapture>
+  capture: (url: string, options: LinkPreviewCaptureOptions) => Promise<LinkPreviewCapture>
+  cancel: (requestId: string) => Promise<void>
+  promote: (requestId: string) => Promise<void>
   fetch: (url: string) => Promise<LinkPreviewResult>
 }
 

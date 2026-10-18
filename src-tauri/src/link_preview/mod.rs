@@ -3,6 +3,7 @@ mod capture;
 mod disk_cache;
 mod metadata;
 mod network;
+mod queue;
 mod sanitize;
 use crate::{
     error::BackendResult, native_window::TrustedWindow as WebviewWindow,
@@ -14,6 +15,24 @@ use tauri::{Manager, State};
 #[serde(deny_unknown_fields)]
 pub struct Request {
     pub url: String,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct CaptureRequest {
+    pub url: String,
+    pub request_id: String,
+    #[serde(default)]
+    pub priority: queue::Priority,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct CaptureControl {
+    pub request_id: String,
+}
+fn validate_id(value: &str) -> BackendResult<()> {
+    uuid::Uuid::parse_str(value).map(|_| ()).map_err(|_| {
+        crate::error::BackendError::new("INVALID_REQUEST", "Invalid preview request ID")
+    })
 }
 #[derive(Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
@@ -69,12 +88,19 @@ pub async fn link_preview_capture(
     window: WebviewWindow,
     registry: State<'_, WorkspaceRegistry>,
     service: State<'_, LinkPreviewService>,
-    request: Request,
+    request: CaptureRequest,
 ) -> BackendResult<Capture> {
+    validate_id(&request.request_id)?;
     let workspace = registry.get(window.label())?;
     workspace.ensure_active()?;
     let result = service
-        .capture(&window, request.url, workspace.generation)
+        .capture(
+            &window,
+            request.url,
+            workspace.generation,
+            request.request_id,
+            request.priority,
+        )
         .await?;
     workspace.ensure_active()?;
     if registry.get(window.label())?.generation != workspace.generation {
@@ -83,6 +109,29 @@ pub async fn link_preview_capture(
         ));
     }
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn link_preview_cancel(
+    window: WebviewWindow,
+    service: State<'_, LinkPreviewService>,
+    request: CaptureControl,
+) -> BackendResult<()> {
+    validate_id(&request.request_id)?;
+    service
+        .cancel_capture(window.label().into(), request.request_id)
+        .await
+}
+#[tauri::command]
+pub async fn link_preview_promote(
+    window: WebviewWindow,
+    service: State<'_, LinkPreviewService>,
+    request: CaptureControl,
+) -> BackendResult<()> {
+    validate_id(&request.request_id)?;
+    service
+        .promote_capture(window.label().into(), request.request_id)
+        .await
 }
 
 fn ensure_generation(app: &tauri::AppHandle, owner: &str, generation: u64) -> BackendResult<()> {

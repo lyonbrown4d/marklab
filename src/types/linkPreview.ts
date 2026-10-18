@@ -9,6 +9,11 @@ const safeHttpUrl = z
   .transform((value) => new URL(value).toString())
 
 export const linkPreviewRequestSchema = z.object({ url: safeHttpUrl })
+export const linkPreviewCaptureRequestSchema = linkPreviewRequestSchema.extend({
+  priority: z.enum(['background', 'interactive']).default('interactive'),
+  requestId: z.uuid(),
+})
+export const linkPreviewCaptureControlSchema = z.object({ requestId: z.uuid() })
 
 const remoteImageCapability = z.string().regex(/^marklab-asset:\/\/remote\/v1\/[A-Za-z0-9_-]{43}$/)
 
@@ -43,6 +48,11 @@ export const linkPreviewResultSchema = z.discriminatedUnion('kind', [
 ])
 
 export type LinkPreviewRequest = z.infer<typeof linkPreviewRequestSchema>
+export type PreviewCapturePriority = z.infer<typeof linkPreviewCaptureRequestSchema>['priority']
+export type LinkPreviewCaptureOptions = Pick<
+  z.infer<typeof linkPreviewCaptureRequestSchema>,
+  'priority' | 'requestId'
+>
 export type LinkPreviewCapture = z.infer<typeof linkPreviewCaptureSchema>
 export type LinkPreviewResult = z.infer<typeof linkPreviewResultSchema>
 export type LinkPreviewWebpage = z.infer<typeof linkPreviewWebpageSchema>

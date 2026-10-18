@@ -67,36 +67,85 @@ fn stale_callbacks_do_not_match_a_recreated_tab_with_the_same_id() {
         .entry("main".into())
         .or_default()
         .entries
-        .insert(
-            "one".into(),
-            Entry {
-                view: None,
-                state: TabState {
-                    active: true,
-                    can_go_back: false,
-                    can_go_forward: false,
-                    error: None,
-                    status: "loading".into(),
-                    tab_id: "one".into(),
-                    title: String::new(),
-                    url: "https://example.com/".into(),
-                },
-                bounds: Bounds {
-                    width: 100,
-                    height: 100,
-                    x: 0,
-                    y: 0,
-                },
-                touched: 0,
-                generation: 0,
-                monitor: None,
-                instance: "new-native-view".into(),
-                load: None,
-                focused: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-            },
-        );
+        .insert("one".into(), entry("one", true, 0));
     assert!(manager.current("main", "one", "new-native-view"));
     assert!(!manager.current("main", "one", "old-native-view"));
     manager.close_window("main");
     assert!(!manager.current("main", "one", "new-native-view"));
+}
+
+fn entry(id: &str, active: bool, touched: u64) -> Entry {
+    Entry {
+        view: None,
+        state: TabState {
+            active,
+            can_go_back: false,
+            can_go_forward: false,
+            error: None,
+            status: "loading".into(),
+            tab_id: id.into(),
+            title: String::new(),
+            url: "https://example.com/".into(),
+        },
+        bounds: Bounds {
+            width: 100,
+            height: 100,
+            x: 0,
+            y: 0,
+        },
+        touched,
+        generation: 0,
+        monitor: None,
+        instance: "new-native-view".into(),
+        load: None,
+        focused: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+    }
+}
+
+#[test]
+fn resident_capacity_evicts_only_the_owners_least_recently_used_inactive_tab() {
+    let manager = WebTabs::default();
+    {
+        let mut owners = manager.inner.owners.lock().unwrap();
+        owners.insert(
+            "first".into(),
+            Owner {
+                entries: [
+                    entry("active", true, 0),
+                    entry("newer", false, 20),
+                    entry("oldest", false, 10),
+                ]
+                .into_iter()
+                .map(|entry| (entry.state.tab_id.clone(), entry))
+                .collect(),
+                ..Owner::default()
+            },
+        );
+        owners.insert(
+            "second".into(),
+            Owner {
+                entries: [("other".into(), entry("other", false, 0))].into(),
+                ..Owner::default()
+            },
+        );
+    }
+    // These placeholders also represent failed creation attempts: they still
+    // consume registry capacity and must not permit unbounded failed entries.
+    assert_eq!(
+        activation::eviction_candidate(&manager.entries("first")).unwrap(),
+        Some("oldest".into())
+    );
+    assert_eq!(
+        activation::eviction_candidate(&manager.entries("second")).unwrap(),
+        None
+    );
+    assert_eq!(activation::eviction_candidate(&[]).unwrap(), None);
+    assert!(
+        activation::eviction_candidate(&[
+            entry("one", true, 0),
+            entry("two", true, 1),
+            entry("three", true, 2)
+        ])
+        .is_err()
+    );
 }

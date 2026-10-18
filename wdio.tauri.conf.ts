@@ -28,7 +28,15 @@ export const config: WebdriverIO.Config = {
   // The embedded service owns one resident app. Keep these journeys ordered in
   // one worker so window-state starts with the CLI-selected alpha workspace.
   specs: [
-    ['./e2e/tauri/windowState.spec.ts', './e2e/tauri/native.spec.ts', './e2e/tauri/memory.spec.ts'],
+    [
+      './e2e/tauri/windowState.spec.ts',
+      './e2e/tauri/native.spec.ts',
+      './e2e/tauri/memory.spec.ts',
+      './e2e/tauri/webTabs.spec.ts',
+      ...(process.env.MARKLAB_E2E_NETWORK_PREVIEWS === '1'
+        ? ['./e2e/tauri/previews.network.spec.ts']
+        : []),
+    ],
   ],
   maxInstances: 1,
   capabilities: [capability],

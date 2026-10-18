@@ -43,6 +43,25 @@ afterEach(() => {
 })
 
 describe('Tauri renderer initialization', () => {
+  it('forwards preview subscriber controls through named typed commands', async () => {
+    const { initializeDesktopRuntime } = await import('@/runtime/tauri')
+    await initializeDesktopRuntime()
+    const preview = window.marklabTauri!.linkPreview
+    const requestId = '6070af3a-dcdd-45aa-af57-97ab3b012345'
+    await preview.capture('https://example.com/', { requestId, priority: 'background' })
+    expect(native.invoke).toHaveBeenLastCalledWith('link_preview_capture', {
+      request: { url: 'https://example.com/', requestId, priority: 'background' },
+    })
+    await preview.promote(requestId)
+    expect(native.invoke).toHaveBeenLastCalledWith('link_preview_promote', {
+      request: { requestId },
+    })
+    await preview.cancel(requestId)
+    expect(native.invoke).toHaveBeenLastCalledWith('link_preview_cancel', {
+      request: { requestId },
+    })
+  })
+
   it('exposes domain APIs after the seed is available and replays it to late subscribers', async () => {
     const seed = { version: 3, state: { workspacePath: '/work' } }
     native.invoke.mockImplementation(async (command) =>

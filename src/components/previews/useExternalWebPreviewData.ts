@@ -1,10 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef } from 'react'
 
-import {
-  previewCaptureQueue,
-  type PreviewCapturePriority,
-} from '@/components/previews/previewCaptureQueue'
+import type { PreviewCapturePriority } from '@/types/linkPreview'
 import { linkPreviewApi } from '@/services/linkPreviewApi'
 
 type ExternalWebPreviewDataOptions = {
@@ -19,8 +16,7 @@ const captureDemandByUrl = new Map<string, number>()
 const isRetryableQueueError = (error: unknown) => {
   if (!(error instanceof Error)) return false
   return (
-    error.name === 'PreviewCaptureQueueFullError' ||
-    error.name === 'PreviewCaptureQueueCancelledError'
+    'code' in error && (error.code === 'PREVIEW_QUEUE_FULL' || error.code === 'PREVIEW_CANCELLED')
   )
 }
 
@@ -36,7 +32,7 @@ export const retainPreviewCaptureDemand = (url: string): (() => void) => {
       return
     }
     captureDemandByUrl.delete(url)
-    previewCaptureQueue.cancel(url)
+    void linkPreviewApi.cancel(url).catch(() => undefined)
   }
 }
 
@@ -55,13 +51,7 @@ export const useExternalWebPreviewData = ({
   })
   const capture = useQuery({
     enabled: captureRequested,
-    queryFn: ({ signal }) =>
-      previewCaptureQueue.enqueue({
-        key: url,
-        priority: capturePriority,
-        run: () => linkPreviewApi.capture(url),
-        signal,
-      }),
+    queryFn: ({ signal }) => linkPreviewApi.capture(url, { priority: capturePriority, signal }),
     queryKey: ['link-preview-capture', url],
     retry: false,
     staleTime: 30 * 60 * 1000,
@@ -79,7 +69,7 @@ export const useExternalWebPreviewData = ({
       return
     }
     if (!captureRequested) return
-    previewCaptureQueue.promote(url)
+    void linkPreviewApi.promote(url).catch(() => undefined)
     if (
       capture.isError &&
       isRetryableQueueError(capture.error) &&

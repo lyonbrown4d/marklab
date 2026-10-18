@@ -6,23 +6,19 @@ const fetchLinkPreview = vi.hoisted(() => vi.fn())
 const captureLinkPreview = vi.hoisted(() => vi.fn())
 const openWebTab = vi.hoisted(() => vi.fn())
 const cancelCapture = vi.hoisted(() => vi.fn())
-const enqueueCapture = vi.hoisted(() => vi.fn(({ run }: { run: () => Promise<unknown> }) => run()))
 const promoteCapture = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/linkPreviewApi', () => ({
-  linkPreviewApi: { capture: captureLinkPreview, fetch: fetchLinkPreview },
+  linkPreviewApi: {
+    cancel: cancelCapture,
+    capture: captureLinkPreview,
+    fetch: fetchLinkPreview,
+    promote: promoteCapture,
+  },
 }))
 
 vi.mock('@/app/useOpenWebTab', () => ({
   useOpenWebTab: () => openWebTab,
-}))
-
-vi.mock('@/components/previews/previewCaptureQueue', () => ({
-  previewCaptureQueue: {
-    cancel: cancelCapture,
-    enqueue: enqueueCapture,
-    promote: promoteCapture,
-  },
 }))
 
 import ExternalLinkPreview from '@/components/previews/ExternalLinkPreview'
@@ -41,6 +37,8 @@ describe('ExternalLinkPreview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     captureLinkPreview.mockRejectedValue(new Error('capture unavailable'))
+    cancelCapture.mockResolvedValue(undefined)
+    promoteCapture.mockResolvedValue(undefined)
   })
 
   afterEach(() => vi.unstubAllGlobals())
@@ -92,12 +90,10 @@ describe('ExternalLinkPreview', () => {
       ),
     )
     await screen.findByText('Visible article')
-    await waitFor(() => expect(enqueueCapture).toHaveBeenCalledOnce())
-    expect(enqueueCapture).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'https://example.com/article',
-        priority: 'background',
-      }),
+    await waitFor(() => expect(captureLinkPreview).toHaveBeenCalledOnce())
+    expect(captureLinkPreview).toHaveBeenCalledWith(
+      'https://example.com/article',
+      expect.objectContaining({ priority: 'background', signal: expect.any(AbortSignal) }),
     )
 
     fireEvent.pointerEnter(screen.getByRole('article'))
@@ -137,13 +133,12 @@ describe('ExternalLinkPreview', () => {
       url: 'https://example.com/article',
     })
     let rejectBackpressure!: (error: Error) => void
-    enqueueCapture
-      .mockReturnValueOnce(
-        new Promise((_, reject) => {
-          rejectBackpressure = reject
-        }),
-      )
-      .mockImplementationOnce(({ run }: { run: () => Promise<unknown> }) => run())
+    captureLinkPreview.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectBackpressure = reject
+      }),
+    )
+
     captureLinkPreview.mockResolvedValue({
       height: 360,
       src: 'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -158,13 +153,13 @@ describe('ExternalLinkPreview', () => {
         {} as IntersectionObserver,
       ),
     )
-    await waitFor(() => expect(enqueueCapture).toHaveBeenCalledOnce())
+    await waitFor(() => expect(captureLinkPreview).toHaveBeenCalledOnce())
     fireEvent.pointerEnter(screen.getByRole('article'))
     const queueError = new Error('queue full')
-    queueError.name = 'PreviewCaptureQueueFullError'
+    Object.assign(queueError, { code: 'PREVIEW_QUEUE_FULL' })
     rejectBackpressure(queueError)
 
-    await waitFor(() => expect(enqueueCapture).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(captureLinkPreview).toHaveBeenCalledTimes(2))
     expect(await screen.findByRole('img', { name: 'Article preview' })).toBeVisible()
   })
 
@@ -282,6 +277,9 @@ describe('ExternalLinkPreview', () => {
       'src',
       'marklab-asset://remote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     )
-    expect(captureLinkPreview).toHaveBeenCalledExactlyOnceWith('https://example.com/article')
+    expect(captureLinkPreview).toHaveBeenCalledExactlyOnceWith(
+      'https://example.com/article',
+      expect.objectContaining({ priority: 'interactive', signal: expect.any(AbortSignal) }),
+    )
   })
 })

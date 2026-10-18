@@ -51,6 +51,7 @@ git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl"] }
 futures-util = "0.3"
 fluxdi = { version = "=2.0.0", default-features = false, features = ["macros", "thread-safe", "async-factory"] }
 moka = { version = "0.12.16", default-features = false, features = ["future", "sync"] }
+deadpool = { version = "0.13.1", default-features = false, features = ["managed"] }
 clipboard-rs = { version = "0.3.5", default-features = false, features = ["wayland"] }
 cssparser = "0.38"
 log = "0.4"

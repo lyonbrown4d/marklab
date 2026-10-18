@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
-import { linkPreviewRequestSchema } from '@/types/linkPreview'
+import {
+  linkPreviewCaptureControlSchema,
+  linkPreviewCaptureRequestSchema,
+  linkPreviewRequestSchema,
+} from '@/types/linkPreview'
 
 describe('link preview contracts', () => {
+  it('requires a capture subscriber ID and validates priority', () => {
+    const requestId = '6070af3a-dcdd-45aa-af57-97ab3b012345'
+    expect(
+      linkPreviewCaptureRequestSchema.parse({ url: 'https://example.com', requestId }),
+    ).toEqual({ url: 'https://example.com/', requestId, priority: 'interactive' })
+    expect(() =>
+      linkPreviewCaptureRequestSchema.parse({
+        url: 'https://example.com',
+        requestId,
+        priority: 'highest',
+      }),
+    ).toThrow()
+    expect(() => linkPreviewCaptureControlSchema.parse({ requestId: 'invalid' })).toThrow()
+  })
   it('accepts and normalizes HTTP and HTTPS URLs', () => {
     expect(linkPreviewRequestSchema.parse({ url: 'https://example.com/docs' })).toEqual({
       url: 'https://example.com/docs',

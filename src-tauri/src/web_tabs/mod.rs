@@ -1,3 +1,4 @@
+mod activation;
 mod commands;
 mod create;
 mod native;
@@ -7,6 +8,7 @@ use crate::{
     error::{BackendError, BackendResult},
     native_window::TrustedWindow,
 };
+pub use activation::*;
 pub use commands::*;
 use std::{
     collections::HashMap,

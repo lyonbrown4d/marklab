@@ -81,7 +81,10 @@ pub async fn view(
     let position = tauri::LogicalPosition::new(bounds.x as f64, bounds.y as f64);
     let size = tauri::LogicalSize::new(bounds.width as f64, bounds.height as f64);
     let view = crate::blocking::run(move || Ok(parent.add_child(builder, position, size)?)).await?;
-    view.hide()?;
+    if let Err(error) = view.hide() {
+        let _ = view.close();
+        return Err(error.into());
+    }
     Ok(view)
 }
 pub fn bounds(window: &TrustedWindow, bounds: &Bounds) -> BackendResult<Bounds> {

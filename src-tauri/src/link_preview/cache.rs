@@ -1,6 +1,8 @@
 use super::{
-    Capture, LinkPreviewService, PreviewResult, capture, disk_cache::DiskCache, ensure_generation,
-    metadata, network,
+    Capture, LinkPreviewService, PreviewResult, capture,
+    disk_cache::DiskCache,
+    ensure_generation, metadata, network,
+    queue::{CaptureQueue, Priority},
 };
 use crate::{assets::AssetService, error::BackendResult, native_window::TrustedWindow};
 use moka::future::Cache;
@@ -24,7 +26,8 @@ pub(super) struct Inner {
     screenshots: Cache<String, Arc<Vec<u8>>>,
     disk: Arc<DiskCache>,
     semaphore: Semaphore,
-    captures: Semaphore,
+    workers: capture::Workers,
+    queue: CaptureQueue,
     maintenance: tokio::task::AbortHandle,
 }
 impl Drop for Inner {
@@ -80,12 +83,15 @@ impl LinkPreviewService {
                     .build(),
                 disk,
                 semaphore: Semaphore::new(4),
-                captures: Semaphore::new(2),
+                workers: capture::Workers::new()?,
+                queue: CaptureQueue::new(),
                 maintenance,
             }),
         })
     }
     pub async fn close_window(&self, owner: &str) {
+        self.inner.queue.close(owner.into()).await;
+        self.inner.workers.close_window(owner);
         let owner = owner.to_owned();
         if let Err(error) = self
             .inner
@@ -150,10 +156,55 @@ impl LinkPreviewService {
         window: &TrustedWindow,
         url: String,
         generation: u64,
+        id: String,
+        priority: Priority,
     ) -> BackendResult<Capture> {
         let url = network::normalize(&url)?.to_string();
-        let bytes = self
-            .inner
+        let bytes = if let Some(bytes) = self.inner.screenshots.get(&url).await {
+            bytes
+        } else {
+            let service = self.clone();
+            let window = window.clone();
+            let target = url.clone();
+            self.inner
+                .queue
+                .enqueue(
+                    (window.label().into(), generation, url.clone()),
+                    id,
+                    priority,
+                    Box::pin(
+                        async move { service.capture_bytes(&window, target, generation).await },
+                    ),
+                )?
+                .wait()
+                .await?
+        };
+        // Memory hits count as disk-cache activity as well. Maintenance is best effort.
+        if let Err(error) = self.inner.disk.touch(&url).await {
+            log::warn!("Preview cache touch failed: {}", error.code);
+        }
+        let src = issue(window, generation, bytes, "image/png".into()).await?;
+        Ok(Capture {
+            width: 1920,
+            height: 1080,
+            src,
+            url,
+        })
+    }
+    pub(super) async fn cancel_capture(&self, owner: String, id: String) -> BackendResult<()> {
+        self.inner.queue.cancel(owner, id).await
+    }
+    pub(super) async fn promote_capture(&self, owner: String, id: String) -> BackendResult<()> {
+        self.inner.queue.promote(owner, id).await
+    }
+    async fn capture_bytes(
+        &self,
+        window: &TrustedWindow,
+        url: String,
+        generation: u64,
+    ) -> BackendResult<Arc<Vec<u8>>> {
+        ensure_generation(window.app_handle(), window.label(), generation)?;
+        self.inner
             .screenshots
             .try_get_with(url.clone(), async {
                 match self.inner.disk.get(&url).await {
@@ -171,32 +222,16 @@ impl LinkPreviewService {
                     Ok(None) => (),
                     Err(error) => log::warn!("Preview cache read failed: {}", error.code),
                 }
-                let _permit = self
-                    .inner
-                    .captures
-                    .acquire()
-                    .await
-                    .map_err(|_| network::failure("Capture service is closed"))?;
-                let bytes = Arc::new(capture::capture(window, url.clone(), generation).await?);
+                let bytes = Arc::new(
+                    capture::capture(&self.inner.workers, window, url.clone(), generation).await?,
+                );
                 if let Err(error) = self.inner.disk.set(&url, bytes.clone()).await {
                     log::warn!("Preview cache write failed: {}", error.code);
                 }
                 Ok::<_, crate::error::BackendError>(bytes)
             })
             .await
-            .map_err(|error| (*error).clone())?;
-        // Memory hits count as disk-cache activity as well. Cache maintenance
-        // is best effort; its failure must never prevent a valid preview.
-        if let Err(error) = self.inner.disk.touch(&url).await {
-            log::warn!("Preview cache touch failed: {}", error.code);
-        }
-        let src = issue(window, generation, bytes, "image/png".into()).await?;
-        Ok(Capture {
-            width: 1920,
-            height: 1080,
-            src,
-            url,
-        })
+            .map_err(|error| (*error).clone())
     }
 }
 async fn issue(

@@ -11,7 +11,7 @@ import {
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { normalizeNavigableWebUrl } from '@/pages/web/webTabUrl'
-import type { PreviewCapturePriority } from '@/components/previews/previewCaptureQueue'
+import type { PreviewCapturePriority } from '@/types/linkPreview'
 import { useExternalWebPreviewData } from '@/components/previews/useExternalWebPreviewData'
 
 type ExternalWebPreviewSurfaceProps = {

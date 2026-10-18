@@ -22,7 +22,12 @@ const nativeState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/services/linkPreviewApi', () => ({
-  linkPreviewApi: { capture, fetch: fetchPreview },
+  linkPreviewApi: {
+    cancel: vi.fn().mockResolvedValue(undefined),
+    capture,
+    fetch: fetchPreview,
+    promote: vi.fn().mockResolvedValue(undefined),
+  },
 }))
 vi.mock('@/app/useOpenWebTab', () => ({ useOpenWebTab: () => openWebTab }))
 vi.mock('@/app/nativeSurfaceOcclusion', () => ({

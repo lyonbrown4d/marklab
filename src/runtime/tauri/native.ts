@@ -42,7 +42,9 @@ export const createNativeApis = (events: TauriEventHub): NativeSurfaces => ({
     diagnostics: (payload) => request('language_diagnostics', payload),
   },
   linkPreview: {
-    capture: (url) => request('link_preview_capture', { url }),
+    capture: (url, options) => request('link_preview_capture', { url, ...options }),
+    cancel: (requestId) => request('link_preview_cancel', { requestId }),
+    promote: (requestId) => request('link_preview_promote', { requestId }),
     fetch: (url) => request('link_preview_fetch', { url }),
   },
   settings: {
