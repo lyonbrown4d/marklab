@@ -18,18 +18,15 @@ mod protocol;
 mod startup;
 mod transitions;
 mod visibility;
+mod window_state;
 pub mod windows;
 use crate::error::BackendResult;
 pub(crate) use flush::with_flushed_windows;
 use tauri::{Emitter, Manager};
 pub fn run() -> BackendResult<()> {
     let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(logging::builder()?.build())
-        .plugin(tauri_plugin_deep_link::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(startup::StartupState::default())
+        .manage(launch::LaunchState::default())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let app = app.clone();
             tauri::async_runtime::spawn(async move {
@@ -73,6 +70,12 @@ pub fn run() -> BackendResult<()> {
                 }
             });
         }))
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(logging::builder()?.build())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("marklab-asset", protocol::serve)
         .setup(|app| {
             logging::install_panic_hook();
@@ -83,8 +86,6 @@ pub fn run() -> BackendResult<()> {
                 }
                 Err(error) => log::warn!("Native notifications unavailable: {}", error.code),
             }
-            app.manage(startup::StartupState::default());
-            app.manage(launch::LaunchState::default());
             for argument in std::env::args().skip(1) {
                 launch::publish(app.handle(), &argument, launch::Source::Startup)?;
             }

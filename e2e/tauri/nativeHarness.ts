@@ -51,13 +51,19 @@ export const openEditor = async () => {
   const root = await currentRoot()
   if (typeof root !== 'string') throw new Error('No native workspace is bound')
   await browser.$('[data-app-focus-zone="titlebar"]').waitForDisplayed({ timeout: 30_000 })
-  const file = await browser.$('button[data-file-tree-node]=Editor.md')
-  if (!(await file.isDisplayed())) {
-    // The production shortcut opens the Files panel when its persisted default is collapsed.
-    await browser.keys([process.platform === 'darwin' ? 'Meta' : 'Control', 'Shift', 'l'])
+  const pinned = await browser
+    .$('[data-app-focus-zone="editor"]')
+    .getAttribute('data-sidebar-pinned')
+  if (pinned !== 'true') {
+    await browser.$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-panel-left)').click()
   }
-  await file.waitForDisplayed({ timeout: 30_000 })
-  await file.click()
+  // Reopening a window can remount the file tree. Do not keep an element handle
+  // from before the drawer transition: the embedded driver can retain detached DOM.
+  await browser.waitUntil(
+    async () => (await browser.$('button[data-file-tree-node]=Editor.md')).isDisplayed(),
+    { timeout: 30_000, timeoutMsg: 'The live file tree never displayed Editor.md' },
+  )
+  await browser.$('button[data-file-tree-node]=Editor.md').click()
   await browser
     .$('[data-testid="markdown-editor"][data-state="ready"]')
     .waitForDisplayed({ timeout: 90_000 })
@@ -105,24 +111,61 @@ export const typeAtEditorEnd = async (text: string) => {
   await editor.click()
   // The embedded driver's click focuses the element without placing a caret.
   // Position selection only; send-keys must still enter through the real editor.
-  await browser.execute((element) => {
-    const leaves = element.querySelectorAll('[data-slate-string]')
-    const last = leaves.item(leaves.length - 1)
-    if (!last) throw new Error('Plate has no text leaf for native input')
-    element.focus()
-    const range = document.createRange()
-    range.selectNodeContents(last)
-    range.collapse(false)
-    const selection = window.getSelection()
-    if (!selection) throw new Error('Native WebView selection is unavailable')
-    selection.removeAllRanges()
-    selection.addRange(range)
-    document.dispatchEvent(new Event('selectionchange'))
-  }, editor)
+  let stable = 0
+  await browser.waitUntil(
+    async () => {
+      const atEnd = await browser.execute((element) => {
+        const leaves = element.querySelectorAll('[data-slate-string]')
+        const last = leaves.item(leaves.length - 1)
+        if (!last) throw new Error('Plate has no text leaf for native input')
+        const selection = window.getSelection()
+        if (!selection) throw new Error('Native WebView selection is unavailable')
+        if (
+          document.activeElement === element &&
+          selection.isCollapsed &&
+          selection.anchorNode &&
+          last.contains(selection.anchorNode)
+        ) {
+          const prefix = document.createRange()
+          prefix.selectNodeContents(last)
+          prefix.setEnd(selection.anchorNode, selection.anchorOffset)
+          if (prefix.toString() === last.textContent) return true
+        }
+        element.focus()
+        const range = document.createRange()
+        range.selectNodeContents(last)
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        document.dispatchEvent(new Event('selectionchange'))
+        return false
+      }, editor)
+      stable = atEnd ? stable + 1 : 0
+      return stable >= 3
+    },
+    {
+      interval: 100,
+      timeout: 5_000,
+      timeoutMsg: 'The real editor caret never stabilized at the document end',
+    },
+  )
   await editor.addValue(text)
-  await browser.waitUntil(async () => (await editor.getText()).includes(text.trim()), {
-    timeoutMsg: 'WebDriver text input did not reach the Plate DOM',
-  })
+  await browser.waitUntil(
+    () =>
+      browser.execute(
+        (element, expected) => {
+          const leaves = element.querySelectorAll('[data-slate-string]')
+          return Array.from(leaves, (leaf) => leaf.textContent ?? '')
+            .join('')
+            .endsWith(expected)
+        },
+        editor,
+        text,
+      ),
+    {
+      timeoutMsg: 'WebDriver text input did not reach the Plate DOM',
+    },
+  )
 }
 
 export const invokeNative = <T>(command: string, payload?: DesktopCommandArguments): Promise<T> =>

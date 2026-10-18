@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { DocumentLoadingLines } from '@/components/loading/DocumentLoadingLines'
+import { SplashScreen } from '@/splash/SplashScreen'
 import { getDesktopRuntime } from '@/runtime/desktop'
 import type { WindowOpeningProgress } from '@/types/windowOpening'
 
@@ -24,7 +22,7 @@ const labels = () => {
       }
 }
 
-export const WorkspaceOpeningSurface = () => {
+export const WorkspaceOpeningSurface = ({ standalone = false }: { standalone?: boolean }) => {
   const copy = labels()
   const [progress, setProgress] = useState<WindowOpeningProgress>({
     stage: 'starting',
@@ -67,35 +65,20 @@ export const WorkspaceOpeningSurface = () => {
   }
 
   const status = progress.error ?? copy[progress.stage]
+  const surface = (
+    <SplashScreen
+      status={status}
+      workspacePath={progress.workspacePath}
+      failed={progress.stage === 'failed'}
+      retrying={retrying}
+      retryLabel={copy.retry}
+      onRetry={() => void retry()}
+    />
+  )
+  if (standalone) return surface
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-background p-8">
-      <Card className="w-full max-w-xl py-6">
-        <CardContent className="flex flex-col gap-4 px-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <span
-              aria-live={progress.stage === 'failed' ? 'assertive' : 'polite'}
-              role={progress.stage === 'failed' ? 'alert' : 'status'}
-              aria-busy={progress.stage !== 'failed'}
-            >
-              {status}
-            </span>
-          </div>
-          <div className="truncate text-xs text-muted-foreground" title={progress.workspacePath}>
-            {progress.workspacePath || copy.starting}
-          </div>
-          {progress.stage === 'failed' ? null : <DocumentLoadingLines />}
-          {progress.stage === 'failed' ? (
-            <Button
-              className="self-start"
-              disabled={retrying}
-              variant="outline"
-              onClick={() => void retry()}
-            >
-              {copy.retry}
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
+      <div className="h-[196px] w-[344px] max-w-full">{surface}</div>
     </div>
   )
 }

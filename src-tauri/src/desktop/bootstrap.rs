@@ -41,6 +41,7 @@ pub fn start(app: &AppHandle) {
 }
 async fn initialize(app: &AppHandle) -> BackendResult<()> {
     let services = crate::composition::DesktopServices::open(app).await?;
+    super::window_state::install(app).await?;
     let settings = &services.settings;
     let additional = settings.restore_sessions().await?;
     let saved = settings.read_session("main").await?;

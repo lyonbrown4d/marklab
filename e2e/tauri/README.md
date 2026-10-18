@@ -33,8 +33,10 @@ argument. Do not invoke the WDIO config directly: the launcher supplies and chec
 the owned fixture paths.
 
 The service owns the spawned application and stops it during teardown. Its
-embedded driver binds to `127.0.0.1` on a fresh OS-allocated port, with one application and one worker per
-run. The launcher passes that port explicitly to the service and app. Before any
+embedded driver binds to `127.0.0.1` on a fresh OS-allocated port, with one application and one worker at a time.
+The separate spec files run as one ordered group against that resident app;
+window-state runs first, before another journey selects a second workspace.
+The launcher passes that port explicitly to the service and app. Before any
 mutation, tests verify the real application identifier and generated workspace
 root; an unrelated listener cannot be accepted as the test application. The launcher removes its temporary files after service teardown.
 A graphical desktop session is required; on Linux, use the CI display/Xvfb setup.
@@ -57,10 +59,34 @@ final file content and removal from the isolated SQLite session metadata, then
 verifies the original window and file remain isolated. Failures retain a screenshot and bounded page source in
 `test-results/tauri`; fixtures contain no user documents.
 
+The macOS-only `windowState.spec.ts` journey resizes and closes the main window,
+checks the official window-state plugin's file beneath the isolated data root,
+and launches a second process to reopen the existing application through native
+single-instance IPC. It checks workspace geometry precedence and stable window
+height. It then removes only the generated fixture's SQLite geometry records and
+checks that the plugin restores the default position. Splash, opening and ephemeral
+workspace window labels must not appear in the plugin's persistent file.
+Another case temporarily replaces only that generated preference file with a
+directory and verifies that a plugin write failure does not prevent document
+persistence or production window close.
+
+Window-state tracks the main window's default position, plus its default size on
+Windows/Linux. Existing SQLite layouts take precedence; the plugin supplies the
+fallback when neither a workspace layout nor the previous default exists.
+Workspace-specific geometry and deferred maximization remain in SQLite.
+On macOS, size stays in SQLite because released plugin version 2.5.0
+captures overlay webview bounds but restores the content rectangle. Neither the
+plugin's visibility nor decoration/fullscreen restoration is enabled; production
+editor readiness and custom titlebar code continue to own those behaviors.
+
 The pinned embedded driver's Actions keyboard endpoint dispatches JavaScript
 keyboard events without inserting text into a contenteditable element. These
-journeys position the DOM caret at a real Slate text leaf, then use the supported
-element send-keys endpoint. They wait for native visibility and renderer presentation
+journeys position the DOM caret at a real Slate text leaf and observe a stable
+document-end selection across Slate's 100 ms selection throttle before using the
+supported element send-keys endpoint. Assertions read actual Slate text leaves,
+excluding completion hints. File-tree elements are queried again after drawer or
+window recreation rather than retaining detached handles.
+They wait for native visibility and renderer presentation
 before editing. They do not
 establish native OS keyboard or IME correctness.
 

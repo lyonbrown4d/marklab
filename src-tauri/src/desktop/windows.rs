@@ -32,33 +32,37 @@ fn workspace_navigation(url: &url::Url) -> bool {
             && url.password().is_none())
 }
 pub fn create_splash(app: &AppHandle) -> BackendResult<()> {
-    let window =
-        WebviewWindowBuilder::new(app, "splash", WebviewUrl::App("splashscreen.html".into()))
-            .title("Marklab")
-            .inner_size(344.0, 196.0)
-            .resizable(false)
-            .decorations(false)
-            .center()
-            .visible(false)
-            .focused(false)
-            .skip_taskbar(true)
-            .on_navigation(trusted_navigation)
-            .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
-            .on_page_load(|window, payload| {
-                if payload.event() == tauri::webview::PageLoadEvent::Finished {
-                    let _ = window.show();
-                }
-            })
-            .build()?;
+    create_loading(app, "splash", "splashscreen.html")?;
+    Ok(())
+}
+fn create_loading(app: &AppHandle, label: &str, page: &str) -> BackendResult<WebviewWindow> {
+    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
+        .title("Marklab")
+        .inner_size(344.0, 196.0)
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .no_redirection_bitmap(true)
+        .center()
+        .visible(false)
+        .focused(false)
+        .skip_taskbar(true)
+        .on_navigation(trusted_navigation)
+        .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+        .on_page_load(|window, payload| {
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                let _ = window.show();
+            }
+        })
+        .build()?;
     crate::native_window::register(&window)?;
-    let handle = app.clone();
+    let fallback = window.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(700)).await;
-        if let Some(window) = crate::native_window::get(&handle, "splash") {
-            let _ = window.show();
-        }
+        let _ = fallback.show();
     });
-    Ok(())
+    Ok(window)
 }
 pub fn ensure_opening(app: &AppHandle, label: &str) -> BackendResult<WebviewWindow> {
     let opening = format!("opening-{label}");
@@ -66,20 +70,7 @@ pub fn ensure_opening(app: &AppHandle, label: &str) -> BackendResult<WebviewWind
         window.show()?;
         return Ok(window.as_ref().clone());
     }
-    let window =
-        WebviewWindowBuilder::new(app, &opening, WebviewUrl::App("window-opening.html".into()))
-            .title("Marklab")
-            .inner_size(580.0, 320.0)
-            .min_inner_size(480.0, 280.0)
-            .resizable(false)
-            .center()
-            .focused(false)
-            .visible(true)
-            .on_navigation(trusted_navigation)
-            .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
-            .build()?;
-    crate::native_window::register(&window)?;
-    Ok(window)
+    create_loading(app, &opening, "window-opening.html")
 }
 pub async fn create(
     app: &AppHandle,
@@ -117,7 +108,8 @@ pub async fn create(
         .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
     let window = builder.build()?;
     crate::native_window::register(&window)?;
-    if let (Some(x), Some(y)) = (state.x, state.y) {
+    let default_restored = super::geometry::apply_default(&window)?;
+    if !default_restored && let (Some(x), Some(y)) = (state.x, state.y) {
         let displays = window
             .available_monitors()?
             .into_iter()

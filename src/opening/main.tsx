@@ -15,4 +15,4 @@ window.addEventListener('pagehide', unlistenClose, { once: true })
 const root = document.getElementById('opening-root')
 if (!root) throw new Error('Window opening root is missing.')
 
-createRoot(root).render(<WorkspaceOpeningSurface />)
+createRoot(root).render(<WorkspaceOpeningSurface standalone />)
