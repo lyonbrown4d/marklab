@@ -47,6 +47,8 @@ export default defineConfig({
       use: {
         trace: 'off',
         launchOptions: {
+          // Headless Chromium hides scrollbars by default; this gate must drag one.
+          ignoreDefaultArgs: ['--hide-scrollbars'],
           args: [
             '--disable-gpu',
             '--disable-gpu-compositing',
@@ -61,7 +63,13 @@ export default defineConfig({
       name: 'renderer-gpu',
       testMatch: '**/performance.spec.ts',
       timeout: 600_000,
-      use: { trace: 'off' },
+      use: {
+        trace: 'off',
+        launchOptions: {
+          ignoreDefaultArgs: ['--hide-scrollbars'],
+          args: ['--disable-features=OverlayScrollbar,OverlayScrollbars'],
+        },
+      },
     },
   ],
 })

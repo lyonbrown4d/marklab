@@ -96,15 +96,17 @@ describe('usePlateAsyncInitialValue', () => {
       await workerMock.streams[0]?.emit([{ type: 'h1', children: [{ text: 'Title' }] }])
     })
     expect(result.current).toBe(false)
-    expect(editor.children).toMatchObject([{ type: 'h1', children: [{ text: 'Title' }] }])
+    expect(editor.children).toEqual([
+      { type: 'h1', id: expect.any(String), children: [{ text: 'Title' }] },
+    ])
 
     await act(async () => {
       await workerMock.streams[0]?.emit([{ type: 'p', children: [{ text: 'Body' }] }])
     })
     expect(result.current).toBe(false)
-    expect(editor.children).toMatchObject([
-      { type: 'h1', children: [{ text: 'Title' }] },
-      { type: 'p', children: [{ text: 'Body' }] },
+    expect(editor.children).toEqual([
+      { type: 'h1', id: expect.any(String), children: [{ text: 'Title' }] },
+      { type: 'p', id: expect.any(String), children: [{ text: 'Body' }] },
     ])
     expect(editor.api.onChange).toHaveBeenCalledTimes(2)
 
@@ -128,12 +130,14 @@ describe('usePlateAsyncInitialValue', () => {
 
     await act(async () => workerMock.streams[0]?.emit(nodes.slice(0, 20)))
     expect(editor.api.onChange).toHaveBeenCalledOnce()
-    expect(editor.children).toMatchObject(nodes.slice(0, 20))
+    expect(editor.children).toEqual(
+      nodes.slice(0, 20).map((node) => ({ ...node, id: expect.any(String) })),
+    )
 
     await act(async () => workerMock.streams[0]?.emit(nodes.slice(20)))
 
     expect(editor.api.onChange).toHaveBeenCalledTimes(2)
-    expect(editor.children).toMatchObject(nodes)
+    expect(editor.children).toEqual(nodes.map((node) => ({ ...node, id: expect.any(String) })))
   })
 
   it('aborts incremental hydration when the editor changes', () => {
@@ -181,16 +185,18 @@ describe('usePlateAsyncInitialValue', () => {
       await latestStream?.emit([{ type: 'p', children: [{ text: 'B prefix' }] }])
     })
     expect(result.current).toBe(false)
-    expect(editor.children).toMatchObject([{ type: 'p', children: [{ text: 'B prefix' }] }])
+    expect(editor.children).toEqual([
+      { type: 'p', id: expect.any(String), children: [{ text: 'B prefix' }] },
+    ])
 
     await act(async () => {
       await latestStream?.emit([{ type: 'p', children: [{ text: 'B end' }] }])
       latestStream?.resolve()
     })
     await waitFor(() => expect(result.current).toBe(true))
-    expect(editor.children).toMatchObject([
-      { type: 'p', children: [{ text: 'B prefix' }] },
-      { type: 'p', children: [{ text: 'B end' }] },
+    expect(editor.children).toEqual([
+      { type: 'p', id: expect.any(String), children: [{ text: 'B prefix' }] },
+      { type: 'p', id: expect.any(String), children: [{ text: 'B end' }] },
     ])
   })
 

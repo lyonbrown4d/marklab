@@ -38,6 +38,8 @@ run. The launcher passes that port explicitly to the service and app. Before any
 mutation, tests verify the real application identifier and generated workspace
 root; an unrelated listener cannot be accepted as the test application. The launcher removes its temporary files after service teardown.
 A graphical desktop session is required; on Linux, use the CI display/Xvfb setup.
+On macOS, unlock the desktop and keep the test window visible during input and
+presentation checks.
 
 ## Checks and evidence
 

@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import type { Value } from 'platejs'
+import { ElementApi, type Value } from 'platejs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const workerMock = vi.hoisted(() => ({
@@ -54,7 +54,7 @@ const createEditor = (initialTexts = ['Initial']) => {
             : `${textNode.text.slice(0, operation.offset)}${operation.text}${textNode.text.slice(operation.offset)}`
       },
     ),
-    api: { onChange: vi.fn() },
+    api: { isBlock: (node: unknown) => ElementApi.isElement(node), onChange: vi.fn() },
     children,
     history: { redos: [] as unknown[], undos: [] as unknown[] },
     marks: null as unknown,
@@ -117,7 +117,7 @@ describe('usePlateExternalValueSync', () => {
     await act(async () => workerMock.streams[0]?.emit(nodes))
 
     expect(editor.api.onChange).toHaveBeenCalledTimes(11)
-    expect(editor.children).toEqual(nodes)
+    expect(editor.children).toEqual([{ ...nodes[0], id: 'Initial' }, ...nodes.slice(1)])
     expect(result.current.loading).toBe(true)
 
     await act(async () => workerMock.streams[0]?.resolve())
@@ -142,7 +142,7 @@ describe('usePlateExternalValueSync', () => {
       stale?.resolve()
       await latest?.emit([paragraph('latest')])
     })
-    expect(editor.children).toEqual([paragraph('latest')])
+    expect(editor.children).toEqual([{ ...paragraph('latest'), id: 'Initial' }])
     expect(result.current.loading).toBe(true)
 
     await act(async () => latest?.resolve())

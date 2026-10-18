@@ -1,7 +1,7 @@
 import { normalizeNodeIdWithEditor, type Value } from 'platejs'
 import type { PlateEditor } from 'platejs/react'
 import type { RefObject } from 'react'
-import { isEqualWith } from 'lodash-es'
+import { isEqualWith, isPlainObject, omit } from 'lodash-es'
 
 export const resetPlateEditorHydrationState = (editor: PlateEditor) => {
   editor.selection = null
@@ -83,8 +83,22 @@ export const restorePlateEditorValue = (
     editor.api.onChange()
   }, externalApplyRef)
 
-const plateNodesEqual = (current: unknown, next: unknown) =>
-  isEqualWith(current, next, (_current, _next, key) => (key === 'id' ? true : undefined))
+const plateNodesEqual = (current: unknown, next: unknown): boolean =>
+  isEqualWith(current, next, (currentNode: unknown, nextNode: unknown, key) => {
+    if (key === 'id') return true
+    if (
+      currentNode &&
+      nextNode &&
+      typeof currentNode === 'object' &&
+      typeof nextNode === 'object' &&
+      isPlainObject(currentNode) &&
+      isPlainObject(nextNode) &&
+      Object.hasOwn(currentNode, 'id') !== Object.hasOwn(nextNode, 'id')
+    ) {
+      return plateNodesEqual(omit(currentNode, 'id'), omit(nextNode, 'id'))
+    }
+    return undefined
+  })
 
 type TextPatch = { path: number[]; previousText: string; text: string }
 type TextOperation = {

@@ -40,10 +40,22 @@ attempt still fails the gate. Checks retain sentinel order, complete selection,
 actual browser scrollbar dragging, editor/chunk/DOM limits, zero blank/loading
 frames, input first/p95/max thresholds, and renderer buffer flush verification.
 
+Both performance projects remove Chromium's headless `--hide-scrollbars` default
+and disable overlay scrollbar features. Each must expose a measurable native
+scrollbar gutter and successfully drag it. A real text-leaf click restores the
+caret after dragging. One select-all shortcut must produce either a DOM text
+range or Plate's block selection. Block mode requires its shadow input to own
+focus, every fixture block to be selected, and the same full-text character
+threshold. Escape must clear the block selection before typing resumes. Raw DOM
+selection metrics, performance budgets, sample counts and failed attempts remain
+recorded separately.
+
 The initialization metric is browser navigation to Plate readiness. It uses the
 existing numerical initialization budget but does not represent native process
-or window startup. The GPU project measures Chromium rendering on its runner;
-it does not certify Tauri's platform webview or GPU configuration.
+or window startup. Project names describe the requested Chromium launch options;
+they do not establish hardware acceleration. Chromium may fall back to software
+rendering such as SwiftShader, so report the observed backend separately. These
+projects do not certify Tauri's platform webview or GPU configuration.
 
 Artifacts under `test-results/renderer` and `playwright-report/renderer` include
 metric collections, unchanged budget values, failed attempts, renderer errors,

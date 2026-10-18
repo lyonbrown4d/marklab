@@ -131,6 +131,45 @@ describe('Plate editor value hydration patches', () => {
     expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(current[0])
   })
 
+  it('reuses nested blocks when ids are missing on either side', () => {
+    const current = [{ children: [paragraph('same', 'nested')], id: 'parent', type: 'blockquote' }]
+    const next = [{ children: [{ children: [{ text: 'same' }], type: 'p' }], type: 'blockquote' }]
+
+    expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(current[0])
+    expect(reconcilePlateEditorValue(next, current, 0)[0]).toBe(next[0])
+  })
+
+  it.each([
+    { name: 'added property', current: {}, next: { align: 'center' } },
+    { name: 'removed property', current: { align: 'center' }, next: {} },
+  ])('does not reuse a block with a non-id $name', ({ current, next }) => {
+    const baseline = [{ ...paragraph('same', 'existing'), ...current }]
+    const parsed = [{ children: [{ text: 'same' }], type: 'p', ...next }]
+
+    expect(reconcilePlateEditorValue(baseline, parsed, 0)[0]).toBe(parsed[0])
+  })
+
+  it('does not reuse blocks whose nested children changed order', () => {
+    const current = [
+      {
+        children: [paragraph('one', 'first'), paragraph('two', 'second')],
+        id: 'parent',
+        type: 'blockquote',
+      },
+    ]
+    const next = [
+      {
+        children: [
+          { children: [{ text: 'two' }], type: 'p' },
+          { children: [{ text: 'one' }], type: 'p' },
+        ],
+        type: 'blockquote',
+      },
+    ]
+
+    expect(reconcilePlateEditorValue(current, next, 0)[0]).toBe(next[0])
+  })
+
   it('updates only changed slices and skips unchanged commits', async () => {
     const current = [paragraph('one', '1'), paragraph('two', '2')] as Value
     const editor = createEditor([...current])

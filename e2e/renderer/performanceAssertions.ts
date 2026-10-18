@@ -61,8 +61,19 @@ export const assertRendererSample = (
   expect.soft(sample.persistence.markerPersisted).toBe(true)
   expect.soft(sample.persistence.sentinels.allPresent).toBe(true)
   expect.soft(sample.persistence.sentinels.ordered).toBe(true)
-  expect.soft(sample.selectAll.insideEditor).toBe(true)
-  expect.soft(sample.selectAll.textLength).toBeGreaterThan(minimumSelection)
+  if (sample.selectAll.mode === 'text') {
+    expect.soft(sample.selectAll.insideEditor).toBe(true)
+    expect.soft(sample.selectAll.textLength).toBeGreaterThan(minimumSelection)
+  } else {
+    const blocks = sample.selectAll.blockSelection
+    expect.soft(sample.selectAll.insideEditor).toBe(false)
+    expect.soft(blocks?.shadowInputFocused, 'focused Plate block selection input').toBe(true)
+    expect.soft(blocks?.blockCount, 'all fixture block wrappers are present').toBe(stats.blockCount)
+    expect.soft(blocks?.selectedBlockCount, 'selected every fixture block').toBe(stats.blockCount)
+    expect.soft(blocks?.selectedTextLength).toBeGreaterThan(minimumSelection)
+  }
+  expect.soft(sample.selectionAfterEscape.blockSelection?.shadowInputFocused).toBe(false)
+  expect.soft(sample.selectionAfterEscape.blockSelection?.selectedBlockCount).toBe(0)
   expect.soft(sample.wheel.distance).toBeGreaterThan(0)
   expect
     .soft(

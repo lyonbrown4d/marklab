@@ -71,9 +71,37 @@ export const runRendererPerformanceSample = async ({
     const scrollbar = await measureFrames(page, async () => {
       browserScrollbar = await dragNativeScrollbar(page, viewport)
     })
+    // Establish a real Slate caret after the scrollbar moved focus out of the editor.
+    await editor
+      .locator('[data-slate-string]')
+      .last()
+      .click({ position: { x: 2, y: 2 } })
+    await expect(editor).toBeFocused()
     await page.keyboard.press('ControlOrMeta+A')
-    const selectAll = await selectionState(page)
-    await editor.focus()
+    await expect
+      .poll(async () => {
+        const selection = await selectionState(page)
+        const blocks = selection.blockSelection
+        return (
+          (selection.insideEditor && selection.textLength > 0) ||
+          (blocks?.shadowInputFocused &&
+            blocks.blockCount > 0 &&
+            blocks.selectedBlockCount === blocks.blockCount)
+        )
+      })
+      .toBe(true)
+    const selection = await selectionState(page)
+    const mode: 'text' | 'blocks' = selection.insideEditor ? 'text' : 'blocks'
+    const selectAll = { ...selection, mode }
+    await page.keyboard.press('Escape')
+    await expect
+      .poll(async () => (await selectionState(page, true)).blockSelection?.selectedBlockCount)
+      .toBe(0)
+    const selectionAfterEscape = await selectionState(page, true)
+    await editor
+      .locator('[data-slate-string]')
+      .last()
+      .click({ position: { x: 2, y: 2 } })
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End')
     await expect
       .poll(async () => {
@@ -120,6 +148,7 @@ export const runRendererPerformanceSample = async ({
       firstInput,
       continuousInput,
       selectAll,
+      selectionAfterEscape,
       wheel: { ...wheel, distance: afterWheel - beforeWheel },
       scrollbar: { ...scrollbar, browser: browserScrollbar },
       typing,
