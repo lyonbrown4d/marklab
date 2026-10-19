@@ -8,11 +8,13 @@ import { fixturePaths } from './e2e/tauri/fixturePaths.js'
 const repository = fileURLToPath(new URL('./', import.meta.url))
 const fixture = fixturePaths()
 const binaryVariant =
-  process.env.MARKLAB_E2E_BASELINE === '1'
-    ? '-baseline'
-    : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
-      ? '-react-profiler'
-      : ''
+  process.env.MARKLAB_E2E_CANVAS_BASELINE === '1'
+    ? '-uninstrumented'
+    : process.env.MARKLAB_E2E_BASELINE === '1'
+      ? '-baseline'
+      : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
+        ? '-react-profiler'
+        : ''
 const binary = path.join(
   repository,
   `src-tauri/target/debug/marklab-desktop${binaryVariant}${process.platform === 'win32' ? '.exe' : ''}`,

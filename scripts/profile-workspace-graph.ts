@@ -38,6 +38,8 @@ try {
   })
   process.env.MARKLAB_E2E_DRIVER_PORT = String(port)
   process.env.MARKLAB_E2E_BASELINE = process.argv.includes('--baseline') ? '1' : '0'
+  process.env.MARKLAB_E2E_CANVAS_BASELINE = process.argv.includes('--canvas-baseline') ? '1' : '0'
+  process.env.MARKLAB_E2E_GRAPH_ALL = process.argv.includes('--all') ? '1' : '0'
   process.env.MARKLAB_E2E_RENDER_LAYERS = process.argv.includes('--layers') ? '1' : '0'
   process.env.MARKLAB_E2E_REACT_PROFILE = process.argv.includes('--react') ? '1' : '0'
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'), {

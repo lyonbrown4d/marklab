@@ -62,6 +62,8 @@ On macOS, build the debug E2E app as above, then profile a workspace copy:
 
 ```sh
 node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki"
+node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --all
+node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --canvas-baseline
 node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --baseline
 ```
 
@@ -76,18 +78,63 @@ For comparison, preserve an E2E-enabled baseline executable at
 binary. `--baseline` sets the test-only `MARKLAB_E2E_BASELINE=1` selector for that
 fixed filename; the normal run selects `marklab-desktop`. The profiler runs only
 `wikiPerformance.spec.ts`, rather than the full acceptance group.
+`--canvas-baseline` selects the separately preserved `marklab-desktop-uninstrumented`
+binary from the Canvas renderer before native layout/community tabs. The normal
+run opens the default community; `--all` explicitly selects the whole workspace.
+Keep both baselines unchanged while rebuilding the current executable.
 
 The `WIKI_GRAPH_PROFILE` console record includes graph payload timing and size,
 graph opening time, animation-frame intervals during scripted pan/zoom, rendered
-DOM counts, and initial, active, and settled WebContent memory samples. The RSS
+DOM counts, and initial, first-layout, active, and settled memory samples. The RSS
 field retains the aggregate RSS of newly observed `WebKit.WebContent` processes.
 On macOS, physical footprint is sampled for that same PID set with Apple's
 `footprint` tool (two-second timeout per PID, at most two concurrent reads).
 Any failed read makes the physical aggregate `null`; the record includes a failure
-count and availability reason. These are separate snapshots, not whole-app memory.
+count and availability reason. The same sampling includes the newly launched native
+app process and their combined physical footprint. This sum excludes shared GPU
+and network services. These are separate snapshots, not a continuous peak or total
+system memory measurement.
 Compare runs under the same conditions;
 these measurements do not establish native OS input correctness. Failure
 artifacts can contain content from the copied workspace.
+
+After rebuilding, the independent community acceptance entry is:
+
+```sh
+node --experimental-strip-types scripts/test-graph-communities.ts
+```
+
+It creates 111 linked Markdown files in an owned fixture and exercises the real
+Rust partition command, bounded community tabs, All, cross-community search,
+one mounted Canvas, and Plate undo/redo and autosave after a tab round trip.
+The original workspace and production application data are not used.
+
+### 2026-10-19 macOS comparison
+
+These single-run samples used the same copied workspace (274 nodes, 1,032 edges),
+900 × 700 outer window, device scale 2, production renderer and debug E2E native
+binary. The existing production single-instance relaunch brings the owner forward
+before initial sampling and after the 36-second wait; the secondary process exits
+before memory is read. Visibility assertions remain active during every pan/zoom.
+The baseline Canvas is 900 × 619; the new tab strip leaves 900 × 582.
+
+| Sample                                                | Previous Canvas, All | Native, default community | Native, All |
+| ----------------------------------------------------- | -------------------: | ------------------------: | ----------: |
+| Assigned nodes                                        |                  274 |                        43 |         274 |
+| First-layout WebContent physical footprint (MiB)      |                715.2 |                     527.7 |       683.2 |
+| After interaction WebContent physical footprint (MiB) |                817.1 |                     586.5 |       752.0 |
+| Initial pan / zoom p95 frame interval (ms)            |              17 / 18 |                   10 / 12 |     13 / 15 |
+| Mounted cards after interaction                       |                   33 |                        16 |          21 |
+
+The default community reduces the first-layout snapshot by about 26%; keeping All
+reduces it by about 4.5%. These differences include viewport layout, camera and
+visible-card changes, not just the Rust algorithm. They are snapshots, not measured
+peaks or guarantees for a release build. The old settled sample gained a second
+WebContent process and is excluded from memory comparisons. Initial and active
+snapshots above each had one new native process and one new WebContent process.
+The process-difference method cannot prove attribution if unrelated WebContent
+processes start during a run. Native physical footprint after interaction was
+76.6 / 72.2 / 77.0 MiB respectively; it does not include shared GPU/network services.
 
 ## Checks and evidence
 
@@ -137,6 +184,10 @@ editor readiness and custom titlebar code continue to own those behaviors.
 
 The pinned embedded driver's Actions keyboard endpoint dispatches JavaScript
 keyboard events without inserting text into a contenteditable element. These
+manual Radix tab tests focus a tab and press Enter; the click endpoint alone does
+not emit the mouse-down event needed to activate a manual tab. Graph search
+targets a unique file-path option rather than assuming fuzzy search has one result.
+The editor
 journeys position the DOM caret at a real Slate text leaf and observe a stable
 document-end selection across Slate's 100 ms selection throttle before using the
 supported element send-keys endpoint. Assertions read actual Slate text leaves,

@@ -1,234 +1,113 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
-import Elk from 'elkjs/lib/elk.bundled.js'
-import { layoutGraphWithElk } from '@/logic/graphLayout'
-import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
 import type { GraphNodeData } from '@/logic/graph'
-import type {
-  GraphLayoutNodeResult,
-  GraphLayoutPosition,
-  GraphLayoutWorkerGraph,
-} from '@/logic/graphLayoutWorkerMessages'
+import { layoutGraphNative } from '@/logic/graphLayout'
+import { getGraphNodeLayoutSize } from '@/logic/graphLayoutMetrics'
+import { graphComputeApi } from '@/services/graphComputeApi'
 
-const workerState = vi.hoisted(() => ({
-  layout: vi.fn(async (graph: { children: Array<{ id: string }> }) =>
-    graph.children.map((child, index) => ({ id: child.id, x: index * 1_000, y: 0 })),
-  ),
-  warmup: vi.fn(),
-}))
-
-vi.mock('@/logic/graphLayoutWorkerClient', () => ({
-  graphLayoutWorkerClient: workerState,
-}))
-
-const node = (
-  id: string,
-  data: Partial<GraphNodeData> = {},
-  type: Node<GraphNodeData>['type'] = 'heading',
-): Node<GraphNodeData> => ({
+vi.mock('@/services/graphComputeApi', () => ({ graphComputeApi: { layout: vi.fn() } }))
+const node = (id: string, data: Partial<GraphNodeData> = {}): Node<GraphNodeData> => ({
   id,
-  type,
-  data: {
-    label: id,
-    ...data,
-  },
+  type: 'file',
+  data: { label: id, ...data },
   position: { x: 0, y: 0 },
 })
 
-const overlaps = (left: Node<GraphNodeData>, right: Node<GraphNodeData>) => {
-  const leftSize = getGraphNodeLayoutSize(left)
-  const rightSize = getGraphNodeLayoutSize(right)
-  return !(
-    left.position.x + leftSize.width <= right.position.x ||
-    right.position.x + rightSize.width <= left.position.x ||
-    left.position.y + leftSize.height <= right.position.y ||
-    right.position.y + rightSize.height <= left.position.y
-  )
-}
-
-const collectPositions = (
-  nodes: GraphLayoutNodeResult[],
-  parentX = 0,
-  parentY = 0,
-): GraphLayoutPosition[] =>
-  nodes.flatMap((current) => {
-    const x = parentX + (current.x ?? 0)
-    const y = parentY + (current.y ?? 0)
-    const own = current.x == null || current.y == null ? [] : [{ id: current.id, x, y }]
-    return [...own, ...collectPositions(current.children ?? [], x, y)]
-  })
-
-const getBounds = (nodes: Node<GraphNodeData>[]) => {
-  const left = Math.min(...nodes.map((current) => current.position.x))
-  const top = Math.min(...nodes.map((current) => current.position.y))
-  const right = Math.max(
-    ...nodes.map((current) => current.position.x + getGraphNodeLayoutSize(current).width),
-  )
-  const bottom = Math.max(
-    ...nodes.map((current) => current.position.y + getGraphNodeLayoutSize(current).height),
-  )
-  return { height: bottom - top, width: right - left }
-}
-
-describe('graphLayout', () => {
-  it('uses larger layout boxes for content-rich heading nodes', () => {
-    const compact = node('heading:compact')
-    const full = node('heading:full', {
-      contentMode: 'full',
-      contentBlocks: [
-        { id: 'code', kind: 'code', language: 'ts', text: 'const value = 1', editable: false },
-        { id: 'quote', kind: 'blockquote', text: 'Quoted context', editable: false },
+describe('native graph layout renderer boundary', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(graphComputeApi.layout).mockResolvedValue({
+      engineVersion: 'native-workspace-map-v1',
+      positions: [
+        { id: 'b', x: 90, y: 120 },
+        { id: 'a', x: 30, y: 60 },
       ],
     })
-
-    expect(getGraphNodeLayoutSize(full).width).toBeGreaterThan(
-      getGraphNodeLayoutSize(compact).width,
-    )
-    expect(getGraphNodeLayoutSize(full).height).toBeGreaterThan(
-      getGraphNodeLayoutSize(compact).height,
-    )
   })
-
-  it('lays out variable-size graph nodes without bounding-box overlap', async () => {
-    const nodes = [
-      node('file:root', {}, 'file'),
-      node('heading:large', {
-        contentMode: 'full',
-        contentBlocks: [
-          { id: 'code', kind: 'code', language: 'ts', text: 'const value = 1', editable: false },
-          {
-            id: 'list',
-            kind: 'list',
-            ordered: false,
-            items: ['One', 'Two', 'Three'],
-            editable: false,
-          },
-          { id: 'quote', kind: 'blockquote', text: 'Quoted context', editable: false },
+  it('sends dimensions and known topology, preserving renderer data and node order', async () => {
+    const onChange = vi.fn()
+    const a = node('a', {
+      content: 'Private text',
+      onUpdateContent: onChange,
+      workspaceGroup: { key: 'docs', label: 'Docs', source: 'path' },
+    })
+    const b = { ...node('b'), width: 610, height: 430 }
+    const edges: Edge[] = [
+      { id: 'ab', source: 'a', target: 'b', data: { text: 'Private edge' } },
+      { id: 'unknown-target', source: 'a', target: 'missing' },
+      { id: 'unknown-source', source: 'missing', target: 'b' },
+    ]
+    const result = await layoutGraphNative([a, b], edges)
+    expect(graphComputeApi.layout).toHaveBeenCalledWith(
+      {
+        mode: 'focus',
+        nodes: [
+          { id: 'a', ...getGraphNodeLayoutSize(a) },
+          { id: 'b', width: 610, height: 430 },
         ],
-      }),
-      node('heading:sibling', { contentMode: 'summary', content: 'Summary text' }),
-      node('preview:asset', {}, 'preview'),
-    ]
-    const edges: Edge[] = [
-      { id: 'root-large', source: 'file:root', target: 'heading:large' },
-      { id: 'root-sibling', source: 'file:root', target: 'heading:sibling' },
-      { id: 'large-preview', source: 'heading:large', target: 'preview:asset' },
-    ]
-
-    const layoutNodes = await layoutGraphWithElk(nodes, edges)
-
-    layoutNodes.forEach((current, index) => {
-      layoutNodes.slice(index + 1).forEach((next) => {
-        expect(overlaps(current, next)).toBe(false)
-      })
-    })
-  })
-
-  it('sends duplicate endpoint pairs to the layout worker only once', async () => {
-    const nodes = [node('file:root', {}, 'file'), node('heading:child')]
-    const edges: Edge[] = [
-      { id: 'first', source: 'file:root', target: 'heading:child' },
-      { id: 'duplicate', source: 'file:root', target: 'heading:child' },
-    ]
-
-    await layoutGraphWithElk(nodes, edges)
-
-    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as { edges: Edge[] }
-    expect(workerGraph.edges).toHaveLength(1)
-  })
-
-  it('asks ELK to minimize crossings and favor straighter routed edges', async () => {
-    await layoutGraphWithElk(
-      [node('root'), node('child')],
-      [{ id: 'edge', source: 'root', target: 'child' }],
+        edges: [{ source: 'a', target: 'b' }],
+      },
+      undefined,
     )
-
-    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as {
-      layoutOptions: Record<string, string>
-    }
-    expect(workerGraph.layoutOptions).toMatchObject({
-      'elk.edgeRouting': 'ORTHOGONAL',
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.nodePlacement.favorStraightEdges': 'true',
-    })
+    expect(result.map(({ id, position }) => ({ id, position }))).toEqual([
+      { id: 'a', position: { x: 30, y: 60 } },
+      { id: 'b', position: { x: 90, y: 120 } },
+    ])
+    expect(result[0]?.data).toBe(a.data)
+    expect(result[0]?.data.onUpdateContent).toBe(onChange)
+    expect(result[1]).toMatchObject({ width: 610, height: 430 })
+    expect(a.position).toEqual({ x: 0, y: 0 })
   })
-
-  it('uses compound ELK groups that keep overview cards separated', async () => {
-    await layoutGraphWithElk(
-      [
-        node('file:docs/a.md', {
-          workspaceMap: true,
-          workspaceMapMode: 'overview',
-          workspaceGroup: { key: 'docs', label: 'Documentation', source: 'semantic' },
-        }),
-        node('file:docs/b.md', {
-          workspaceMap: true,
-          workspaceMapMode: 'overview',
-          workspaceGroup: { key: 'docs', label: 'Documentation', source: 'semantic' },
-        }),
-        node('file:ops/a.md', {
-          workspaceMap: true,
-          workspaceMapMode: 'overview',
-          workspaceGroup: { key: 'ops', label: 'Operations', source: 'frontmatter' },
-        }),
-      ],
-      [],
-    )
-
-    const workerGraph = workerState.layout.mock.lastCall?.[0] as unknown as {
-      children: Array<{ children?: Array<{ id: string }>; id: string }>
-      edges: Edge[]
-      layoutOptions: Record<string, string>
-    }
-    expect(workerGraph.layoutOptions).toMatchObject({
-      'elk.algorithm': 'box',
-      'elk.aspectRatio': '3',
-      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+  it('sends overview group identifiers without labels or reference edges', async () => {
+    const a = node('a', {
+      workspaceMapMode: 'overview',
+      workspaceGroup: { key: 'group:a', label: 'Private group label', source: 'semantic' },
     })
-    expect(workerGraph.children.map((child) => child.id)).toEqual(
-      expect.arrayContaining(['workspace-group:docs', 'workspace-group:ops']),
+    const b = node('b', { workspaceMapMode: 'overview' })
+    await layoutGraphNative([a, b], [{ id: 'ab', source: 'a', target: 'b' }])
+    expect(graphComputeApi.layout).toHaveBeenCalledWith(
+      {
+        mode: 'overview',
+        nodes: [
+          { id: 'a', ...getGraphNodeLayoutSize(a), group: 'group:a' },
+          { id: 'b', ...getGraphNodeLayoutSize(b) },
+        ],
+        edges: [],
+      },
+      undefined,
     )
-    expect(
-      workerGraph.children.find((child) => child.id === 'workspace-group:docs')?.children,
-    ).toHaveLength(2)
-    expect(workerGraph.edges).toHaveLength(0)
   })
-
-  it('packs several overview groups across a wide canvas', async () => {
-    const elk = new Elk()
-    workerState.layout.mockImplementationOnce(async (input) => {
-      const result = await elk.layout(input as unknown as GraphLayoutWorkerGraph)
-      return collectPositions(result.children ?? [])
+  it('does not compute empty or already-cancelled input', async () => {
+    const empty: Node<GraphNodeData>[] = []
+    expect(await layoutGraphNative(empty, [])).toBe(empty)
+    await expect(
+      layoutGraphNative([node('a')], [], { signal: AbortSignal.abort() }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(graphComputeApi.layout).not.toHaveBeenCalled()
+  })
+  it.each([
+    { name: 'missing', ids: ['a'] },
+    { name: 'duplicate replacing a node', ids: ['a', 'a'] },
+    { name: 'unrelated', ids: ['a', 'other'] },
+    { name: 'extra', ids: ['a', 'b', 'other'] },
+    { name: 'duplicate extra coordinate', ids: ['a', 'b', 'b'] },
+  ])('rejects $name positions', async ({ ids }) => {
+    vi.mocked(graphComputeApi.layout).mockResolvedValueOnce({
+      engineVersion: 'native-workspace-map-v1',
+      positions: ids.map((id) => ({ id, x: 1, y: 2 })),
     })
-    const nodes = Array.from({ length: 6 }, (_, groupIndex) =>
-      Array.from({ length: groupIndex % 2 === 0 ? 2 : 3 }, (_, nodeIndex) =>
-        node(`file:group-${groupIndex}/page-${nodeIndex}.md`, {
-          workspaceMap: true,
-          workspaceMapMode: 'overview',
-          workspaceGroup: {
-            key: `group-${groupIndex}`,
-            label: `Group ${groupIndex}`,
-            source: 'semantic',
-          },
-        }),
-      ),
-    ).flat()
-
-    const layoutNodes = await layoutGraphWithElk(nodes, [])
-    const bounds = getBounds(layoutNodes)
-    const distinctGroupColumns = new Set(
-      Array.from({ length: 6 }, (_, groupIndex) => {
-        const firstMember = layoutNodes.find((current) =>
-          current.id.startsWith(`file:group-${groupIndex}/`),
-        )
-        return Math.round((firstMember?.position.x ?? 0) / 100)
-      }),
+    await expect(layoutGraphNative([node('a'), node('b')], [])).rejects.toThrow(
+      'incomplete positions',
     )
-
-    expect(distinctGroupColumns.size).toBeGreaterThanOrEqual(3)
-    expect(bounds.width).toBeGreaterThan(bounds.height)
-    layoutNodes.forEach((current, index) => {
-      layoutNodes.slice(index + 1).forEach((next) => expect(overlaps(current, next)).toBe(false))
-    })
+  })
+  it('passes cancellation through and preserves native failure identity', async () => {
+    const signal = new AbortController().signal
+    const failure = new Error('Native layout failed')
+    vi.mocked(graphComputeApi.layout).mockRejectedValueOnce(failure)
+    await expect(layoutGraphNative([node('a')], [], { signal })).rejects.toBe(failure)
+    expect(graphComputeApi.layout).toHaveBeenCalledWith(expect.any(Object), signal)
+    const abort = new DOMException('Cancelled', 'AbortError')
+    vi.mocked(graphComputeApi.layout).mockRejectedValueOnce(abort)
+    await expect(layoutGraphNative([node('a')], [])).rejects.toBe(abort)
   })
 })

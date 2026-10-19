@@ -96,6 +96,7 @@ const renderCanvas = (activePath: string | null = null, graphIdentity = 'workspa
       activePath={activePath}
       editorLoadState={{ status: 'ready', content: '# Home' }}
       graph={createWorkspaceMapProductTestGraph()}
+      searchNodes={createWorkspaceMapProductTestGraph().nodes}
       graphIdentity={graphIdentity}
       onActivateEditor={vi.fn()}
       onChange={vi.fn()}
@@ -127,11 +128,18 @@ describe('WorkspaceMapCanvas product readiness', () => {
       screen.getByRole('button', { name: 'workspaceMap.showExternalResources' }),
     ).toHaveTextContent('1')
 
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.searchNodes' }))
+    expect(screen.queryByRole('option', { name: /External docs/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.searchNodes' }))
+
     fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.showExternalResources' }))
 
     await waitFor(() => expect(flowPropsRef.current?.nodes).toHaveLength(15))
     expect(flowPropsRef.current?.edges).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'workspaceMap.hideExternalResources' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.searchNodes' }))
+    expect(await screen.findByRole('option', { name: /External docs/ })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.searchNodes' }))
 
     const external = flowPropsRef.current?.nodes.find((node) => node.type === 'external')
     expect(external?.data).toMatchObject({

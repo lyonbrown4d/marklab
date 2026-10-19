@@ -48,13 +48,13 @@ fn bounds_pending_and_reserves_execution_for_interactive_demand() {
     let interactive = policy.start().unwrap();
     assert!(policy.start().is_none());
     for index in 0..7 {
-        let _ = enqueue(
+        drop(enqueue(
             &mut policy,
             "a",
             &format!("pending-{index}"),
             &format!("pending-{index}"),
             Priority::Background,
-        );
+        ));
     }
     let mut overflow = enqueue(
         &mut policy,

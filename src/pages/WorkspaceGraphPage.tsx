@@ -10,6 +10,9 @@ import { buildWorkspaceMapGraph } from '@/logic/workspaceMapGraph'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { WorkspaceMapCanvas } from '@/pages/workspace-map/WorkspaceMapCanvas'
 import { WorkspaceMapState } from '@/pages/workspace-map/WorkspaceMapState'
+import { useWorkspaceMapCommunities } from '@/pages/workspace-map/useWorkspaceMapCommunities'
+import { WorkspaceMapCommunityTabs } from '@/pages/workspace-map/WorkspaceMapCommunityTabs'
+import { WorkspaceMapEditorPortalProvider } from '@/pages/workspace-map/WorkspaceMapEditorPortal'
 
 const WorkspaceGraphPage = () => {
   const context = useLayoutContext(
@@ -36,6 +39,12 @@ const WorkspaceGraphPage = () => {
   const navigate = useNavigate()
   const { t } = useI18n()
   const mapGraph = useMemo(() => buildWorkspaceMapGraph(context.graph), [context.graph])
+  const workspaceKey = `${context.rootKind}:${context.rootPath}`
+  const groups = useWorkspaceMapCommunities({
+    activePath: context.graphEditorPath,
+    graph: mapGraph,
+    workspaceKey,
+  })
   const { openEditor, closeEditor } = useWorkspaceMapEditorRoute({
     enabled: true,
     entries: context.files,
@@ -80,23 +89,60 @@ const WorkspaceGraphPage = () => {
     return <WorkspaceMapState label={t('workspaceMap.empty')} />
   }
 
+  const canvas = groups.loading ? (
+    <WorkspaceMapState label={t('workspaceMap.grouping')} loading />
+  ) : groups.error ? (
+    <WorkspaceMapState
+      label={t('workspaceMap.groupingFailed')}
+      actionLabel={t('workspaceMap.retry')}
+      onAction={() => void groups.retry()}
+    />
+  ) : (
+    <WorkspaceMapCanvas
+      activePath={context.graphEditorPath}
+      editorLoadState={editorLoadState}
+      graph={groups.viewGraph}
+      graphIdentity={workspaceKey}
+      viewId={groups.viewId}
+      searchNodes={mapGraph.nodes}
+      onNavigateNode={groups.navigateNode}
+      onActivateEditor={openEditor}
+      onChange={context.onEditorChange}
+      onCloseEditor={closeEditor}
+      onOpenFile={context.onOpenFile}
+      onRetryEditor={retryEditorLoad}
+      readOnly={context.editorReadOnlyMode}
+      showMiniMap={context.graphMiniMapEnabled}
+    />
+  )
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
-      <div className="min-h-0 flex-1">
-        <WorkspaceMapCanvas
-          activePath={context.graphEditorPath}
-          editorLoadState={editorLoadState}
-          graph={mapGraph}
-          graphIdentity={`${context.rootKind}:${context.rootPath}`}
-          onActivateEditor={openEditor}
-          onChange={context.onEditorChange}
-          onCloseEditor={closeEditor}
-          onOpenFile={context.onOpenFile}
-          onRetryEditor={retryEditorLoad}
-          readOnly={context.editorReadOnlyMode}
-          showMiniMap={context.graphMiniMapEnabled}
-        />
-      </div>
+      <WorkspaceMapEditorPortalProvider
+        activePath={context.graphEditorPath}
+        editorLoadState={editorLoadState}
+        onChange={context.onEditorChange}
+        onCloseEditor={closeEditor}
+        readOnly={context.editorReadOnlyMode}
+        visible={!groups.loading && !groups.error && groups.editorVisible}
+        workspaceKey={workspaceKey}
+      >
+        <div className="min-h-0 flex-1">
+          {groups.communities.length > 0 ? (
+            <WorkspaceMapCommunityTabs
+              communities={groups.communities}
+              links={groups.links}
+              onNavigateNode={groups.navigateNode}
+              onSelect={groups.selectView}
+              totalNodes={mapGraph.nodes.length}
+              viewId={groups.viewId}
+            >
+              {canvas}
+            </WorkspaceMapCommunityTabs>
+          ) : (
+            canvas
+          )}
+        </div>
+      </WorkspaceMapEditorPortalProvider>
       {context.graphError ? (
         <div
           className="absolute right-3 top-3 flex items-center gap-2 rounded-md border border-destructive/30 bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur"

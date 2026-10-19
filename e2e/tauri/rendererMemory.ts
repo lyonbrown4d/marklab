@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import pLimit from 'p-limit'
 import { z } from 'zod'
 import { $ } from 'zx'
@@ -46,35 +47,78 @@ export const readRendererMemory = async (fixtureRoot: string) => {
   const processes = stdout
     .split('\n')
     .map((line) => line.trim().split(/\s+/))
-    .filter(([pid, , command]) => pid && !before.has(pid) && command?.includes('WebKit.WebContent'))
+    .filter(([pid]) => pid && !before.has(pid))
+  const webContent = processes.filter(([, , command]) => command?.includes('WebKit.WebContent'))
+  const native = processes.filter((row) =>
+    /^marklab-desktop(?:-uninstrumented|-baseline|-react-profiler)?$/.test(
+      path.basename(row.slice(2).join(' ')),
+    ),
+  )
   const rss = {
-    webContentProcesses: processes.length,
-    webContentRssMiB: processes.reduce((sum, row) => sum + Number(row[1]) / 1024, 0),
+    webContentProcesses: webContent.length,
+    webContentRssMiB: webContent.reduce((sum, row) => sum + Number(row[1]) / 1024, 0),
+    nativeProcesses: native.length,
+    nativeRssMiB: native.reduce((sum, row) => sum + Number(row[1]) / 1024, 0),
   }
-  if (process.platform !== 'darwin' || processes.length === 0) {
+  if (process.platform !== 'darwin' || webContent.length === 0) {
     return {
       ...rss,
       webContentPhysicalFootprintMiB: null,
       webContentPhysicalFootprintFailedProcesses: 0,
+      nativePhysicalFootprintMiB: null,
+      measuredCombinedPhysicalFootprintMiB: null,
       webContentPhysicalFootprintError:
         process.platform !== 'darwin' ? 'unsupported-platform' : 'no-webcontent-processes',
     }
   }
   // Separate reports preserve per-PID failures; cap simultaneous Apple tools.
   const limit = pLimit(2)
-  const samples = await Promise.allSettled(
-    processes.map(([pid]) => limit(() => readPhysicalFootprint(Number(pid)))),
-  )
-  let total = 0
-  let failures = 0
-  for (const sample of samples) {
-    if (sample.status === 'rejected' || sample.value === null) failures += 1
-    else total += sample.value
+  const sampleGroup = async (rows: string[][]) => {
+    const samples = await Promise.allSettled(
+      rows.map(([pid]) => limit(() => readPhysicalFootprint(Number(pid)))),
+    )
+    let total = 0
+    let failures = 0
+    for (const sample of samples) {
+      if (sample.status === 'rejected' || sample.value === null) failures += 1
+      else total += sample.value
+    }
+    return { failures, miB: failures || !rows.length ? null : total / 1024 / 1024 }
   }
+  const [webSample, nativeSample] = await Promise.all([
+    sampleGroup(webContent),
+    sampleGroup(native),
+  ])
   return {
     ...rss,
-    webContentPhysicalFootprintMiB: failures ? null : total / 1024 / 1024,
-    webContentPhysicalFootprintFailedProcesses: failures,
-    webContentPhysicalFootprintError: failures ? 'footprint-read-failed' : null,
+    webContentPhysicalFootprintMiB: webSample.miB,
+    webContentPhysicalFootprintFailedProcesses: webSample.failures,
+    webContentPhysicalFootprintError: webSample.failures ? 'footprint-read-failed' : null,
+    nativePhysicalFootprintMiB: nativeSample.miB,
+    // This sum covers the native app and its WebContent processes, not shared
+    // system GPU/network services. Preserve missing samples rather than zeroing them.
+    measuredCombinedPhysicalFootprintMiB:
+      webSample.miB === null || nativeSample.miB === null ? null : webSample.miB + nativeSample.miB,
   }
+}
+
+// Bring the existing owner forward through production single-instance handling.
+// The secondary process exits before sampling; no native test-only focus API.
+export const presentProfileOwner = async () => {
+  const variant =
+    process.env.MARKLAB_E2E_CANVAS_BASELINE === '1'
+      ? '-uninstrumented'
+      : process.env.MARKLAB_E2E_BASELINE === '1'
+        ? '-baseline'
+        : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
+          ? '-react-profiler'
+          : ''
+  const binary = fileURLToPath(
+    new URL(`../../src-tauri/target/debug/marklab-desktop${variant}`, import.meta.url),
+  )
+  await $({
+    quiet: true,
+    timeout: '15s',
+    env: { ...process.env, TAURI_WEBDRIVER_PORT: process.env.MARKLAB_E2E_DRIVER_PORT },
+  })`${binary}`
 }

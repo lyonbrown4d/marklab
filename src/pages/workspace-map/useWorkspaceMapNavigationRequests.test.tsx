@@ -127,4 +127,62 @@ describe('useWorkspaceMapNavigationRequests', () => {
     expect(focusNode).toHaveBeenCalledExactlyOnceWith(node)
     expect(workspaceMapNavigationStore.getState().request).toBeNull()
   })
+
+  it.each([node.id, 'workspace'])(
+    'waits for the requested view before restoring %s even when both views contain the node',
+    (nodeId) => {
+      const viewport = { x: 8, y: 16, zoom: 0.65 }
+      const request = { nodeId, viewport, viewId: 'community:b', workspaceKey: 'workspace:a' }
+      requestWorkspaceMapNodeFocus(request)
+      const setViewport = vi.fn(async () => true)
+      const { rerender } = renderHook(
+        ({ viewId, workspaceKey }) =>
+          useWorkspaceMapNavigationRequests({
+            fitWorkspace: vi.fn(),
+            flow: { setViewport },
+            focusNeighborhoodNode: vi.fn(),
+            focusNode: vi.fn(),
+            nodes: [node],
+            viewId,
+            workspaceKey,
+          }),
+        { initialProps: { viewId: 'community:a', workspaceKey: 'workspace:a' } },
+      )
+
+      expect(setViewport).not.toHaveBeenCalled()
+      expect(workspaceMapNavigationStore.getState().request).toBe(request)
+      rerender({ viewId: 'community:b', workspaceKey: 'workspace:other' })
+      expect(setViewport).not.toHaveBeenCalled()
+      expect(workspaceMapNavigationStore.getState().request).toBe(request)
+      rerender({ viewId: 'community:b', workspaceKey: 'workspace:a' })
+      expect(setViewport).toHaveBeenCalledExactlyOnceWith(viewport, { duration: 180 })
+      expect(workspaceMapNavigationStore.getState().request).toBeNull()
+    },
+  )
+
+  it('keeps a legacy request pending while the selected view layout is not ready', () => {
+    const request = { nodeId: node.id, workspaceKey: 'workspace:a' }
+    requestWorkspaceMapNodeFocus(request)
+    const focusNode = vi.fn()
+    const { rerender } = renderHook(
+      ({ ready, viewId }) =>
+        useWorkspaceMapNavigationRequests({
+          fitWorkspace: vi.fn(),
+          flow: { setViewport: vi.fn(async () => true) },
+          focusNeighborhoodNode: vi.fn(),
+          focusNode,
+          nodes: [node],
+          ready,
+          viewId,
+          workspaceKey: 'workspace:a',
+        }),
+      { initialProps: { ready: false, viewId: 'community:a' } },
+    )
+
+    expect(focusNode).not.toHaveBeenCalled()
+    expect(workspaceMapNavigationStore.getState().request).toBe(request)
+    rerender({ ready: true, viewId: 'community:b' })
+    expect(focusNode).toHaveBeenCalledExactlyOnceWith(node)
+    expect(workspaceMapNavigationStore.getState().request).toBeNull()
+  })
 })

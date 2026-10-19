@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
-const { loadGraphPage, preloadFailure, warmup } = vi.hoisted(() => ({
+const { loadGraphPage, preloadFailure, layout } = vi.hoisted(() => ({
   loadGraphPage: vi.fn(),
   preloadFailure: vi.fn(),
-  warmup: vi.fn(),
+  layout: vi.fn(),
 }))
 
 vi.mock('@/pages/WorkspaceGraphPage', () => {
@@ -11,8 +11,8 @@ vi.mock('@/pages/WorkspaceGraphPage', () => {
   return { default: () => null }
 })
 
-vi.mock('@/logic/graphLayoutWorkerClient', () => ({
-  graphLayoutWorkerClient: { warmup },
+vi.mock('@/services/graphComputeApi', () => ({
+  graphComputeApi: { layout },
 }))
 
 vi.mock('@/services/rendererDiagnostics', () => ({
@@ -23,7 +23,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-it('preloads the graph page once without creating a layout worker', async () => {
+it('preloads the graph page once without starting native layout', async () => {
   const { preloadGraphView } = await import('@/lib/preloadFeatures')
 
   preloadGraphView()
@@ -31,6 +31,6 @@ it('preloads the graph page once without creating a layout worker', async () => 
   await vi.dynamicImportSettled()
 
   expect(loadGraphPage).toHaveBeenCalledOnce()
-  expect(warmup).not.toHaveBeenCalled()
+  expect(layout).not.toHaveBeenCalled()
   expect(preloadFailure).not.toHaveBeenCalled()
 })

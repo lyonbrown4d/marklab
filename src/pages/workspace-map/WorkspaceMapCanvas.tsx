@@ -20,7 +20,10 @@ import { useWorkspaceMapViewNavigation } from '@/pages/workspace-map/useWorkspac
 import { presentWorkspaceMapNeighborhoodNodes } from '@/pages/workspace-map/workspaceMapNeighborhood'
 import { mergeWorkspaceMapNodeGeometry } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspaceMapViewModel'
-import { workspaceMapNodeTypes } from '@/pages/workspace-map/workspaceMapCanvasConfig'
+import {
+  createWorkspaceMapLayoutFlow,
+  workspaceMapNodeTypes,
+} from '@/pages/workspace-map/workspaceMapCanvasConfig'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 import type { WorkspaceMapCanvasProps } from '@/pages/workspace-map/workspaceMapCanvasTypes'
 import { useWorkspaceMapViewport } from '@/pages/workspace-map/useWorkspaceMapViewport'
@@ -30,7 +33,7 @@ import { hideWorkspaceMapOverviewEdges } from '@/pages/workspace-map/workspaceMa
 const FLOW_PRO_OPTIONS = { hideAttribution: true }
 
 export const WorkspaceMapCanvas = (props: WorkspaceMapCanvasProps) => (
-  <WorkspaceMapCanvasContent key={props.graphIdentity} {...props} />
+  <WorkspaceMapCanvasContent key={`${props.graphIdentity}\0${props.viewId ?? 'all'}`} {...props} />
 )
 
 const WorkspaceMapCanvasContent = ({
@@ -38,6 +41,9 @@ const WorkspaceMapCanvasContent = ({
   editorLoadState,
   graph,
   graphIdentity,
+  viewId = 'all',
+  searchNodes,
+  onNavigateNode,
   onActivateEditor,
   onChange,
   onCloseEditor,
@@ -72,7 +78,7 @@ const WorkspaceMapCanvasContent = ({
     mode: 'overview',
   })
   const mode = modeState.graphIdentity === graphIdentity ? modeState.mode : 'overview'
-  const { compact, presentedGraph, renderedGraph, totalExternalCount, webViews } =
+  const { compact, presentedGraph, renderedGraph, searchableNodes, totalExternalCount, webViews } =
     useWorkspaceMapPresentedGraph({
       activePath,
       editorLoadState,
@@ -84,6 +90,7 @@ const WorkspaceMapCanvasContent = ({
       onRetryEditor,
       readOnly,
       showExternalResources,
+      searchNodes,
     })
   const [nodes, setNodes, onNodesChange] = useNodesState(renderedGraph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(presentedGraph.edges)
@@ -113,21 +120,7 @@ const WorkspaceMapCanvasContent = ({
     nodes,
     setNodes,
   })
-  const layoutFlow = useMemo(
-    () =>
-      flow
-        ? {
-            fitView: (options?: Parameters<typeof flow.fitView>[0]) =>
-              flow.fitView({
-                ...options,
-                maxZoom: Math.min(options?.maxZoom ?? 1, 1),
-                minZoom: Math.max(options?.minZoom ?? 0.35, 0.35),
-              }),
-            setViewport: flow.setViewport,
-          }
-        : null,
-    [flow],
-  )
+  const layoutFlow = useMemo(() => createWorkspaceMapLayoutFlow(flow), [flow])
   const initialFocusPath = useMemo(
     () => getWorkspaceMapInitialFocusPath(renderedGraph),
     [renderedGraph],
@@ -137,6 +130,7 @@ const WorkspaceMapCanvasContent = ({
     flow: layoutFlow,
     focusPath: activePath ?? initialFocusPath,
     graph: renderedGraph,
+    viewId,
     mode,
     nodes,
     setNodes,
@@ -172,6 +166,7 @@ const WorkspaceMapCanvasContent = ({
     flow,
     focusNeighborhoodNode,
     graphIdentity,
+    viewId,
   })
   useWorkspaceMapNavigationRequests({
     active: routeActive,
@@ -181,6 +176,8 @@ const WorkspaceMapCanvasContent = ({
     focusNode: viewNavigation.focusNode,
     nodes,
     workspaceKey: graphIdentity,
+    viewId,
+    ready: layout.status === 'ready',
   })
   const handleOpenSearch = useCallback(() => setSearchOpen(true), [])
   const handleToggleExternalResources = useCallback(() => {
@@ -228,6 +225,8 @@ const WorkspaceMapCanvasContent = ({
     <div
       className="relative h-full w-full"
       data-marklab-cursor-viewport
+      data-graph-view-id={viewId}
+      data-graph-node-count={renderedGraph.nodes.length}
       data-viewport-lod={lod}
       ref={bindElement}
     >
@@ -286,9 +285,13 @@ const WorkspaceMapCanvasContent = ({
       <WorkspaceMapToolbar
         externalCount={totalExternalCount}
         mode={mode}
-        nodes={renderedGraph.nodes}
+        nodes={searchableNodes}
         onArrange={layout.arrange}
-        onFocusNode={interactions.focusNode}
+        onFocusNode={(node) => {
+          if (renderedGraph.nodes.some((candidate) => candidate.id === node.id))
+            interactions.focusNode(node)
+          else onNavigateNode?.(node.id)
+        }}
         onModeChange={handleModeChange}
         onSearchOpenChange={setSearchOpen}
         onToggleExternalResources={handleToggleExternalResources}

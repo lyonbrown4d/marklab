@@ -76,4 +76,23 @@ describe('navigationHistoryStore', () => {
 
     expect(navigationHistoryStore.getState().recent()).toEqual([source])
   })
+
+  it.each(['docs/guide.md', 'workspace'])(
+    'isolates %s viewport history by view while retaining legacy records',
+    (nodeId) => {
+      const history = navigationHistoryStore.getState()
+      const viewport = { x: 12, y: 24, zoom: 0.75 }
+      const first = { kind: 'graph' as const, nodeId, viewId: 'community:a', viewport }
+      const second = { kind: 'graph' as const, nodeId, viewId: 'community:b' }
+      const legacy = { kind: 'graph' as const, nodeId }
+      history.visit(first)
+      history.visit(second)
+      history.visit(legacy)
+
+      expect(navigationHistoryStore.getState().entries).toEqual([first, second, legacy])
+      expect(navigationHistoryStore.getState().recent()).toEqual([legacy, second, first])
+      expect(history.back()).toEqual(second)
+      expect(history.back()).toEqual(first)
+    },
+  )
 })

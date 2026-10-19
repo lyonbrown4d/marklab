@@ -14,6 +14,7 @@ type Options = {
   activePath: string | null
   editorLoadState: WorkspaceMapEditorLoadState
   graph: GraphData
+  searchNodes?: Node<GraphNodeData>[]
   mode: WorkspaceMapMode
   onChange: (value: string) => void
   onCloseEditor: () => void
@@ -27,6 +28,7 @@ export const useWorkspaceMapPresentedGraph = ({
   activePath,
   editorLoadState,
   graph,
+  searchNodes,
   mode,
   onChange,
   onCloseEditor,
@@ -115,5 +117,11 @@ export const useWorkspaceMapPresentedGraph = ({
     [presentedGraph, webViews.renderedNodes],
   )
 
-  return { compact, presentedGraph, renderedGraph, totalExternalCount, webViews }
+  const searchableNodes = useMemo(() => {
+    const candidates = searchNodes ?? renderedGraph.nodes
+    return showExternalResources
+      ? candidates
+      : candidates.filter((node) => node.type !== 'external')
+  }, [searchNodes, renderedGraph.nodes, showExternalResources])
+  return { compact, presentedGraph, renderedGraph, searchableNodes, totalExternalCount, webViews }
 }

@@ -1532,5 +1532,11 @@
   "scm.credentials.storage": "保存在系统凭据库中。",
   "scm.credentials.save": "保存凭据",
   "scm.credentials.remove": "移除凭据",
-  "scm.credentials.saved": "已更新，请重试操作。"
+  "scm.credentials.saved": "已更新，请重试操作。",
+  "workspaceMap.graphTabs": "关联分组",
+  "workspaceMap.allGraph": "全部",
+  "workspaceMap.relatedGraphs": "关联小图",
+  "workspaceMap.unlinked": "未连接",
+  "workspaceMap.grouping": "正在整理链接关系",
+  "workspaceMap.groupingFailed": "链接分组失败"
 }

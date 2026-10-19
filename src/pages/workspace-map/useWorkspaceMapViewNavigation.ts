@@ -14,6 +14,7 @@ type WorkspaceMapViewNavigationOptions = {
   flow: WorkspaceMapNavigationFlow | null
   focusNeighborhoodNode: (nodeId: string) => void
   graphIdentity: string
+  viewId?: string
   reducedMotion?: boolean
 }
 
@@ -28,6 +29,7 @@ export const useWorkspaceMapViewNavigation = ({
   flow,
   focusNeighborhoodNode,
   graphIdentity,
+  viewId,
   reducedMotion = systemPrefersReducedMotion(),
 }: WorkspaceMapViewNavigationOptions) => {
   const focusedRef = useRef(false)
@@ -41,7 +43,7 @@ export const useWorkspaceMapViewNavigation = ({
     return () => {
       navigationSequenceRef.current += 1
     }
-  }, [active, graphIdentity])
+  }, [active, graphIdentity, viewId])
 
   const recordViewportAfter = useCallback(
     (navigation: Promise<boolean>, nodeId: string) => {
@@ -52,12 +54,13 @@ export const useWorkspaceMapViewNavigation = ({
           navigationHistoryStore.getState().visit({
             kind: 'graph',
             nodeId,
+            ...(viewId === undefined ? {} : { viewId }),
             viewport: flow.getViewport(),
           })
         })
         .catch(() => undefined)
     },
-    [active, flow],
+    [active, flow, viewId],
   )
 
   const focusNode = useCallback(

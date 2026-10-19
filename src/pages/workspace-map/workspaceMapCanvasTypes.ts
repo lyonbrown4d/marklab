@@ -5,6 +5,9 @@ export type WorkspaceMapCanvasProps = {
   editorLoadState: WorkspaceMapEditorLoadState
   graph: GraphData
   graphIdentity: string
+  viewId?: string
+  searchNodes?: GraphData['nodes']
+  onNavigateNode?: (nodeId: string) => void
   onActivateEditor: (path: string) => void
   onChange: (value: string) => void
   onCloseEditor: () => void

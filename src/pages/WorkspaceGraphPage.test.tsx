@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspaceGraphPage from '@/pages/WorkspaceGraphPage'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+
+vi.mock('@/pages/workspace-map/WorkspaceMapEditorPortal', () => ({
+  WorkspaceMapEditorPortalProvider: ({ children }: { children: ReactNode }) => children,
+}))
 
 const contextRef = vi.hoisted(() => ({ value: {} as Record<string, unknown> }))
 
@@ -87,13 +93,20 @@ const LocationState = () => {
   )
 }
 
-const renderPage = (entry = '/workspace/graph') =>
-  render(
+const renderPage = (entry = '/workspace/graph') => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
     <MemoryRouter initialEntries={[entry]}>
       <WorkspaceGraphPage />
       <LocationState />
     </MemoryRouter>,
+    {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    },
   )
+}
 
 beforeEach(() => {
   contextRef.value = {

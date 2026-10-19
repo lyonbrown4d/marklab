@@ -29,10 +29,10 @@ pub async fn web_tabs_activate(
     }
     let existed = manager.entry(window.label(), &request.tab_id).ok();
     if existed.as_ref().is_none_or(|entry| entry.view.is_none()) {
-        if existed.is_none() {
-            if let Some(id) = eviction_candidate(&manager.entries(window.label()))? {
-                commands::close(&window, &manager, &id)?;
-            }
+        if existed.is_none()
+            && let Some(id) = eviction_candidate(&manager.entries(window.label()))?
+        {
+            commands::close(&window, &manager, &id)?;
         }
         // Views stay assigned to their tab: history, forms and callbacks cannot be
         // safely reassigned to another tab as a generic connection pool would do.

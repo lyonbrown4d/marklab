@@ -2,12 +2,12 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphData } from '@/logic/graph'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
-import { layoutGraphWithElk } from '@/logic/graphLayout'
+import { layoutGraphNative } from '@/logic/graphLayout'
 
 type WorkspaceMapFlow = NonNullable<Parameters<typeof useWorkspaceMapLayout>[0]['flow']>
 
 vi.mock('@/logic/graphLayout', () => ({
-  layoutGraphWithElk: vi.fn(async (nodes) => nodes),
+  layoutGraphNative: vi.fn(async (nodes) => nodes),
 }))
 
 const createGraph = (activePath: string | null, value = ''): GraphData => ({
@@ -47,7 +47,7 @@ describe('useWorkspaceMapLayout', () => {
 
   it('keeps nodes hidden until asynchronous layout is ready', async () => {
     let resolveLayout: (nodes: GraphData['nodes']) => void = () => undefined
-    vi.mocked(layoutGraphWithElk).mockImplementationOnce(
+    vi.mocked(layoutGraphNative).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           resolveLayout = resolve
@@ -61,7 +61,7 @@ describe('useWorkspaceMapLayout', () => {
 
     expect(result.current.status).toBe('loading')
     expect(setNodes).not.toHaveBeenCalled()
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
 
     await act(async () => {
       resolveLayout(
@@ -83,7 +83,7 @@ describe('useWorkspaceMapLayout', () => {
   it('exposes layout failures instead of leaving the map in loading state', async () => {
     const error = new Error('layout failed')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    vi.mocked(layoutGraphWithElk)
+    vi.mocked(layoutGraphNative)
       .mockRejectedValueOnce(error)
       .mockImplementationOnce(async (nodes) => nodes)
     const setNodes = vi.fn()
@@ -100,7 +100,7 @@ describe('useWorkspaceMapLayout', () => {
     expect(warn).toHaveBeenCalledWith('Workspace map layout failed.', error)
     act(() => result.current.retry())
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(layoutGraphWithElk).toHaveBeenCalledTimes(2)
+    expect(layoutGraphNative).toHaveBeenCalledTimes(2)
     warn.mockRestore()
   })
 
@@ -134,11 +134,11 @@ describe('useWorkspaceMapLayout', () => {
     })
 
     rerender({ activePath: 'notes/a.md', flow: flowA, graph: createGraph('notes/a.md', 'typed') })
-    expect(layoutGraphWithElk).toHaveBeenCalledOnce()
+    expect(layoutGraphNative).toHaveBeenCalledOnce()
 
     const nextGraph = createGraph('notes/b.md')
     rerender({ activePath: 'notes/b.md', flow: flowA, graph: nextGraph })
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
     expect(fitViewA).toHaveBeenCalledOnce()
 
     rerender({ activePath: 'notes/b.md', flow: flowB, graph: nextGraph })
@@ -153,7 +153,7 @@ describe('useWorkspaceMapLayout', () => {
     const setNodes = vi.fn((update: React.SetStateAction<GraphData['nodes']>) => {
       currentNodes = typeof update === 'function' ? update(currentNodes) : update
     })
-    vi.mocked(layoutGraphWithElk)
+    vi.mocked(layoutGraphNative)
       .mockImplementationOnce(async (nodes) =>
         nodes.map((node, index) => ({ ...node, position: { x: index * 280, y: 0 } })),
       )
@@ -166,7 +166,7 @@ describe('useWorkspaceMapLayout', () => {
       { initialProps: { activePath: null as string | null, graph: inactiveGraph } },
     )
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     expect(currentNodes[1]?.position.x).toBe(280)
 
     rerender({
@@ -174,7 +174,7 @@ describe('useWorkspaceMapLayout', () => {
       graph: { ...createGraph('notes/a.md'), layoutKey: 'map:stable' },
     })
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
     expect(currentNodes[1]?.position.x).toBe(720)
   })
 
@@ -193,7 +193,7 @@ describe('useWorkspaceMapLayout', () => {
     )
 
     await waitFor(() => expect(fitViewA).toHaveBeenCalledOnce())
-    vi.mocked(layoutGraphWithElk).mockImplementationOnce(
+    vi.mocked(layoutGraphNative).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           resolveLayout = resolve
@@ -213,7 +213,7 @@ describe('useWorkspaceMapLayout', () => {
 
   it('aborts obsolete worker layout requests when the layout key changes', async () => {
     let firstSignal: AbortSignal | undefined
-    vi.mocked(layoutGraphWithElk)
+    vi.mocked(layoutGraphNative)
       .mockImplementationOnce((_nodes, _edges, options) => {
         firstSignal = options?.signal
         return new Promise(() => undefined)
@@ -227,12 +227,12 @@ describe('useWorkspaceMapLayout', () => {
       { initialProps: { graph: firstGraph } },
     )
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     rerender({ graph: nextGraph })
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
     expect(firstSignal?.aborted).toBe(true)
-    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[2]?.layoutKey).toMatch(
+    expect(vi.mocked(layoutGraphNative).mock.calls[1]?.[2]?.layoutKey).toMatch(
       new RegExp(`^${nextGraph.layoutKey}:runtime:`),
     )
   })
@@ -248,13 +248,13 @@ describe('useWorkspaceMapLayout', () => {
       { initialProps: { graph: firstGraph } },
     )
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     currentNodes = currentNodes.map((node) =>
       node.id === 'file:notes/a.md' ? { ...node, position: { x: 640, y: 360 } } : node,
     )
     rerender({ graph: { ...createGraph(null), layoutKey: 'map:refreshed' } })
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
     expect(currentNodes.find((node) => node.id === 'file:notes/a.md')?.position).toEqual({
       x: 640,
       y: 360,
@@ -272,7 +272,7 @@ describe('useWorkspaceMapLayout', () => {
       { initialProps: { mode: 'focus' as 'focus' | 'overview' } },
     )
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     currentNodes = currentNodes.map((node) =>
       node.id === 'file:notes/a.md'
         ? {
@@ -286,7 +286,7 @@ describe('useWorkspaceMapLayout', () => {
 
     rerender({ mode: 'overview' as 'focus' | 'overview' })
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
     expect(currentNodes.find((node) => node.id === 'file:notes/a.md')).toMatchObject({
       data: { workspaceMapPinned: true },
       draggable: false,

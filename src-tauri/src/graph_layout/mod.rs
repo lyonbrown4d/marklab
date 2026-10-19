@@ -1,3 +1,4 @@
+mod compute_commands;
 #[cfg(test)]
 mod tests;
 mod types;
@@ -7,6 +8,7 @@ use crate::{
     error::{BackendError, BackendResult},
     workspace::{RootInfo, WorkspaceRegistry},
 };
+pub use compute_commands::*;
 use sqlx::{Row, SqlitePool};
 use tauri::State;
 pub use types::*;

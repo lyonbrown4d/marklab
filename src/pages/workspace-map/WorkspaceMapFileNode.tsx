@@ -1,15 +1,7 @@
-import {
-  Suspense,
-  lazy,
-  memo,
-  type KeyboardEvent,
-  type SyntheticEvent,
-  type WheelEvent,
-} from 'react'
+import { memo, type KeyboardEvent, type SyntheticEvent, type WheelEvent } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { FileText, GripVertical } from 'lucide-react'
-import { useMarkdownEditorSlashLabels } from '@/components/editor/useMarkdownEditorSlashLabels'
 import { Button } from '@/components/ui/button'
 import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import type { GraphNodeData } from '@/logic/graph'
@@ -26,11 +18,10 @@ import { WorkspaceMapNodeResizeControl } from '@/pages/workspace-map/WorkspaceMa
 import { WorkspaceMapNodeDisclosure } from '@/pages/workspace-map/WorkspaceMapNodeDisclosure'
 import { WorkspaceMapNodeToolbar } from '@/pages/workspace-map/WorkspaceMapNodeToolbar'
 import { WorkspaceMapStaticMarkdownPreview } from '@/pages/workspace-map/WorkspaceMapStaticMarkdownPreview'
+import { WorkspaceMapEditorPortal } from '@/pages/workspace-map/WorkspaceMapEditorPortal'
 import { useWorkspaceMapNodeTools } from '@/pages/workspace-map/useWorkspaceMapNodeTools'
 
 type WorkspaceMapFileGraphNode = Node<GraphNodeData, 'file'>
-
-const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor'))
 
 const stopGraphEvent = (event: SyntheticEvent) => event.stopPropagation()
 
@@ -72,7 +63,6 @@ const WorkspaceMapEmbeddedEditor = ({
   selected,
 }: WorkspaceMapEmbeddedEditorProps) => {
   const { t } = useI18n()
-  const slashLabels = useMarkdownEditorSlashLabels()
   const disclosure = data.workspaceMapDisclosure
 
   if (disclosure?.collapsed && !editor) {
@@ -191,23 +181,13 @@ const WorkspaceMapEmbeddedEditor = ({
         onWheelCapture={handleWheel}
       >
         {editor?.loadState.status === 'ready' ? (
-          <Suspense fallback={<EditorPaneFallback label={t('workspaceMap.loadingDocument')} />}>
-            <div
-              className="absolute inset-0 overflow-hidden [contain:strict] [&>div]:h-full [&>div]:min-h-0 [&>div]:overflow-hidden [&>div>div:first-child]:h-full [&>div>div:first-child]:min-h-0 [&>div>div:first-child]:overflow-hidden"
-              data-testid="workspace-map-editor-viewport"
-            >
-              <MarkdownEditor
-                activePath={data.path ?? null}
-                autoFocus
-                value={editor.loadState.content}
-                onChange={editor.onChange}
-                placeholder={t('editor.placeholder')}
-                readOnly={editor.readOnly}
-                slashLabels={slashLabels}
-                variant="embedded"
-              />
-            </div>
-          </Suspense>
+          <WorkspaceMapEditorPortal
+            activePath={data.path ?? null}
+            value={editor.loadState.content}
+            onChange={editor.onChange}
+            onCloseEditor={editor.onClose}
+            readOnly={editor.readOnly}
+          />
         ) : editor?.loadState.status === 'loading' ? (
           <EditorPaneFallback label={t('workspaceMap.loadingDocument')} path={data.path} />
         ) : editor?.loadState.status === 'error' ? (

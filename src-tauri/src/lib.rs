@@ -7,6 +7,7 @@ pub mod database;
 pub mod error;
 pub mod export;
 pub mod git;
+pub mod graph_compute;
 pub mod graph_layout;
 pub mod history;
 pub mod language;

@@ -1,11 +1,13 @@
 /// <reference types="mocha" />
 import assert from 'node:assert/strict'
 import { browser } from '@wdio/globals'
+import { Key } from 'webdriverio'
 /* eslint-disable no-restricted-imports -- Real native performance fixture only. */
 import { fixturePaths } from './fixturePaths.js'
 import { switchToWorkspace } from './nativeHarness.js'
 import { startReactProfile, stopReactProfile } from './reactProfile.js'
-import { readRendererMemory } from './rendererMemory.js'
+import { presentProfileOwner, readRendererMemory } from './rendererMemory.js'
+import { probeGraphLayers } from './wikiGraphLayers.js'
 /* eslint-enable no-restricted-imports */
 
 type InteractionSample = {
@@ -135,48 +137,11 @@ const exercise = async (mode: 'pan' | 'zoom') => {
   }
 }
 
-const probeLayers = async () => {
-  const samples = []
-  const canvasEdges = await browser.execute(
-    () => document.querySelector('canvas.workspace-map-overview-edges') !== null,
-  )
-  try {
-    for (const [name, css] of [
-      ['normal', ''],
-      [
-        'without-edge-paint',
-        '.workspace-map-canvas :is(.react-flow__edges,.workspace-map-overview-edges) {display:none!important}',
-      ],
-      [
-        'fast-edge-paint',
-        '.workspace-map-canvas .react-flow__edge-path {shape-rendering:optimizeSpeed!important}',
-      ],
-      [
-        'flat-groups',
-        '.workspace-map-group-region {isolation:auto!important;contain:none!important;opacity:1!important}',
-      ],
-    ]) {
-      if (canvasEdges && name === 'fast-edge-paint') continue
-      await browser.execute((text) => {
-        let style = document.querySelector<HTMLStyleElement>('#wiki-profile-layers')
-        if (!style) {
-          style = document.createElement('style')
-          style.id = 'wiki-profile-layers'
-          document.head.append(style)
-        }
-        style.textContent = text
-      }, css)
-      samples.push({ name, pan: await exercise('pan'), zoom: await exercise('zoom') })
-    }
-    return samples
-  } finally {
-    await browser.execute(() => document.querySelector('#wiki-profile-layers')?.remove())
-  }
-}
-
 describe('workspace graph performance profile', () => {
   it('measures native graph payload, interaction frames and WebContent RSS', async () => {
     await switchToWorkspace(fixturePaths().alpha)
+    await presentProfileOwner()
+    await browser.setWindowRect(120, 140, 900, 700)
     await browser.waitUntil(
       () =>
         browser.execute(
@@ -187,6 +152,11 @@ describe('workspace graph performance profile', () => {
       { timeout: 30_000, timeoutMsg: 'Native profile owner was never presented' },
     )
     const initialMemory = await memory()
+    assert.equal(
+      initialMemory.nativeProcesses,
+      1,
+      'Profile requires one freshly launched native app',
+    )
     const native = await browser.execute(async () => {
       const runtime = window.marklabTauri
       if (!runtime) return null
@@ -208,6 +178,21 @@ describe('workspace graph performance profile', () => {
     await browser.$('[data-app-focus-zone="titlebar"] button:has(svg.lucide-network)').click()
     const canvas = await browser.$('.workspace-map-canvas')
     await canvas.waitForDisplayed({ timeout: 90_000 })
+    if (process.env.MARKLAB_E2E_GRAPH_ALL === '1') {
+      const all = await browser.$('[data-graph-tab-id="all"]')
+      if (await all.isExisting()) {
+        await all.click()
+        await browser.keys(Key.Enter)
+        await browser.waitUntil(
+          () =>
+            browser.execute(
+              () =>
+                document.querySelector('[data-graph-view-id="all"] .workspace-map-canvas') !== null,
+            ),
+          { timeout: 90_000 },
+        )
+      }
+    }
     await browser.waitUntil(
       async () => browser.execute(() => document.querySelectorAll('.react-flow__node').length > 0),
       {
@@ -215,6 +200,7 @@ describe('workspace graph performance profile', () => {
       },
     )
     const openMs = Date.now() - started
+    const firstLayoutMemory = await memory()
     const profileReact = process.env.MARKLAB_E2E_REACT_PROFILE === '1'
     if (profileReact) await startReactProfile()
     const pan = await exercise('pan')
@@ -226,6 +212,11 @@ describe('workspace graph performance profile', () => {
       viewportWidth: document.querySelector('.workspace-map-canvas')?.clientWidth,
       viewportHeight: document.querySelector('.workspace-map-canvas')?.clientHeight,
       renderedNodes: document.querySelectorAll('.react-flow__node').length,
+      viewId:
+        document.querySelector('[data-graph-view-id]')?.getAttribute('data-graph-view-id') ?? 'all',
+      viewNodes: document
+        .querySelector('[data-graph-node-count]')
+        ?.getAttribute('data-graph-node-count'),
       renderedEdges: document.querySelectorAll('.react-flow__edge').length,
       svgEdgePaths: document.querySelectorAll('.react-flow__edge-path[d]').length,
       edgeSurfaces: document.querySelectorAll(
@@ -243,15 +234,21 @@ describe('workspace graph performance profile', () => {
       transform: document.querySelector('.react-flow__viewport')?.getAttribute('style'),
     }))
     assert.ok(dom.renderedEdges > 0, 'The sampled graph lost its visible relations')
-    // The layout worker has a 30-second idle lifetime. Include a settled sample
-    // rather than treating its short-lived peak as permanent renderer memory.
+    // Keep the same 36-second settled point as the saved JS-worker baseline.
+    // Active and settled snapshots are not continuous memory-peak sampling.
     await browser.waitUntil(async () => Date.now() - started >= 36_000, {
       timeout: 45_000,
       interval: 1_000,
     })
+    await presentProfileOwner()
+    await browser.waitUntil(() => browser.execute(() => document.visibilityState === 'visible'), {
+      timeout: 30_000,
+      timeoutMsg: 'Settled profile owner was never presented',
+    })
     const settledMemory = await memory()
     const settledInteraction = { pan: await exercise('pan'), zoom: await exercise('zoom') }
-    const layers = process.env.MARKLAB_E2E_RENDER_LAYERS === '1' ? await probeLayers() : undefined
+    const layers =
+      process.env.MARKLAB_E2E_RENDER_LAYERS === '1' ? await probeGraphLayers(exercise) : undefined
     // Read pixels after frame/memory sampling so verification does not affect it.
     const raster = await browser.execute(async () => {
       await new Promise<void>((resolve) =>
@@ -279,6 +276,7 @@ describe('workspace graph performance profile', () => {
         native,
         initialMemory,
         openMs,
+        firstLayoutMemory,
         pan,
         zoom,
         graphMemory,

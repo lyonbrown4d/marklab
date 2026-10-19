@@ -43,6 +43,27 @@ describe('useNavigationHistory', () => {
     expect(onNavigate).not.toHaveBeenCalled()
   })
 
+  it('retains a scoped graph camera when app navigation reports the same generic target', () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) =>
+        useNavigationHistory({
+          workspaceKey: 'directory:/workspace',
+          currentLocation: enabled ? { kind: 'graph', nodeId: 'one.md' } : null,
+          onNavigate: vi.fn(),
+        }),
+      { initialProps: { enabled: false } },
+    )
+    const scoped = {
+      kind: 'graph' as const,
+      nodeId: 'one.md',
+      viewId: 'community-a',
+      viewport: { x: 12, y: 20, zoom: 1 },
+    }
+    act(() => result.current.visit(scoped))
+    rerender({ enabled: true })
+    expect(navigationHistoryStore.getState().entries).toEqual([scoped])
+  })
+
   it('records the current location again when another workspace has the same relative path', () => {
     const location = { kind: 'file' as const, path: 'README.md', view: 'edit' as const }
     const { result, rerender } = renderHook(

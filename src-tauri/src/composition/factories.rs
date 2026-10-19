@@ -20,6 +20,10 @@ pub(super) fn graph_layout(database: Shared<Database>) -> Result<Shared<GraphLay
     Ok(Shared::new(GraphLayoutStore::new(database.pool.clone())))
 }
 
+pub(super) fn graph_compute() -> Result<Shared<crate::graph_compute::GraphComputeService>, Error> {
+    Ok(Shared::new(crate::graph_compute::GraphComputeService::new()))
+}
+
 pub(super) async fn ai(database: Shared<Database>) -> Result<Shared<AiService>, Error> {
     AiService::new(database.pool.clone())
         .await

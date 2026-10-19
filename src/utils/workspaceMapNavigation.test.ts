@@ -12,6 +12,7 @@ describe('workspace map navigation requests', () => {
       nodeId: 'notes/Home.md',
       viewport: { x: 12, y: 24, zoom: 0.8 },
       workspaceKey: 'workspace:a',
+      viewId: 'community:a',
     }
 
     requestWorkspaceMapNodeFocus(request)

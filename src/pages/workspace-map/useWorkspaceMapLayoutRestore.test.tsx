@@ -3,12 +3,12 @@ import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { GraphData } from '@/logic/graph'
-import { layoutGraphWithElk } from '@/logic/graphLayout'
+import { layoutGraphNative } from '@/logic/graphLayout'
 import { useWorkspaceMapLayout } from '@/pages/workspace-map/useWorkspaceMapLayout'
 import { graphLayoutApi } from '@/services/graphLayoutApi'
 
 vi.mock('@/logic/graphLayout', () => ({
-  layoutGraphWithElk: vi.fn(async (nodes) =>
+  layoutGraphNative: vi.fn(async (nodes) =>
     nodes.map((node: GraphData['nodes'][number], index: number) => ({
       ...node,
       position: { x: index * 400, y: index * 100 },
@@ -72,7 +72,7 @@ describe('useWorkspaceMapLayout persistence restore', () => {
     })
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(layoutGraphWithElk).not.toHaveBeenCalled()
+    expect(layoutGraphNative).not.toHaveBeenCalled()
     expect(result.current.nodes[0]).toMatchObject({
       data: { workspaceMapPinned: true },
       position: { x: 120, y: 240 },
@@ -112,7 +112,7 @@ describe('useWorkspaceMapLayout persistence restore', () => {
     })
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(layoutGraphWithElk).toHaveBeenCalledOnce()
+    expect(layoutGraphNative).toHaveBeenCalledOnce()
     expect(result.current.nodes[0]).toMatchObject({
       data: { workspaceMapPersistedCollapsed: true, workspaceMapPinned: true },
       position: { x: 120, y: 240 },
@@ -141,6 +141,6 @@ describe('useWorkspaceMapLayout persistence restore', () => {
 
     act(() => result.current.arrange())
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
   })
 })

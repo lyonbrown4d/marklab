@@ -37,6 +37,7 @@ type Options = {
   focusPath?: string | null
   graph: GraphData
   mode?: WorkspaceMapMode
+  viewId?: string
   nodes?: Node<GraphNodeData>[]
   setNodes: Dispatch<SetStateAction<Node<GraphNodeData>[]>>
 }
@@ -82,7 +83,7 @@ export const createWorkspaceMapRuntimeLayoutKey = (
   nodes: Node<GraphNodeData>[],
 ) => `${requestKey}:${createGraphLayoutKey('runtime', nodes, [])}`
 
-export const WORKSPACE_MAP_LAYOUT_ENGINE_VERSION = 'elk-workspace-map-v1'
+export const WORKSPACE_MAP_LAYOUT_ENGINE_VERSION = 'native-workspace-map-v1'
 
 export const useWorkspaceMapLayout = ({
   activePath,
@@ -90,6 +91,7 @@ export const useWorkspaceMapLayout = ({
   focusPath = activePath,
   graph,
   mode = 'focus',
+  viewId = 'all',
   nodes = graph.nodes,
   setNodes,
 }: Options) => {
@@ -111,6 +113,7 @@ export const useWorkspaceMapLayout = ({
   const retry = useCallback(() => setRetryGeneration((generation) => generation + 1), [])
   const arrange = useCallback(() => setArrangeGeneration((generation) => generation + 1), [])
   const baseLayoutKey = graph.layoutKey ?? 'workspace-map'
+  const storageKey = `workspace-map:${mode}${viewId === 'all' ? '' : `:${viewId}`}`
   const arrangementKey =
     mode === 'focus' && arrangeGeneration === 0
       ? baseLayoutKey
@@ -125,10 +128,10 @@ export const useWorkspaceMapLayout = ({
       ({
         engineVersion: WORKSPACE_MAP_LAYOUT_ENGINE_VERSION,
         graphRevision: createWorkspaceMapRuntimeLayoutKey(persistenceScopeKey, graph.nodes),
-        layoutKey: `workspace-map:${mode}`,
+        layoutKey: storageKey,
         mode,
       }) as const,
-    [graph.nodes, mode, persistenceScopeKey],
+    [graph.nodes, mode, persistenceScopeKey, storageKey],
   )
 
   useEffect(() => {
@@ -141,7 +144,7 @@ export const useWorkspaceMapLayout = ({
     const layoutPersistenceRequest = {
       engineVersion: WORKSPACE_MAP_LAYOUT_ENGINE_VERSION,
       graphRevision: createWorkspaceMapRuntimeLayoutKey(persistenceScopeKey, layoutGraph.nodes),
-      layoutKey: `workspace-map:${mode}`,
+      layoutKey: storageKey,
       mode,
     } as const
     const layoutStateKey = stateKey
@@ -162,8 +165,8 @@ export const useWorkspaceMapLayout = ({
         restoredViewportRef.current = stored.viewport
         return { nodes: restored, persisted: true }
       }
-      const { layoutGraphWithElk } = await import('@/logic/graphLayout')
-      const arranged = await layoutGraphWithElk(layoutNodes, layoutGraph.edges, {
+      const { layoutGraphNative } = await import('@/logic/graphLayout')
+      const arranged = await layoutGraphNative(layoutNodes, layoutGraph.edges, {
         layoutKey,
         signal: controller.signal,
       })
@@ -237,6 +240,7 @@ export const useWorkspaceMapLayout = ({
     retryGeneration,
     setNodes,
     stateKey,
+    storageKey,
   ])
 
   const status = layoutState.key === stateKey ? layoutState.status : 'loading'

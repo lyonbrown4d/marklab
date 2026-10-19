@@ -1532,5 +1532,11 @@
   "scm.credentials.storage": "Stored in the system credential store.",
   "scm.credentials.save": "Save credentials",
   "scm.credentials.remove": "Remove credentials",
-  "scm.credentials.saved": "Updated. Retry the operation."
+  "scm.credentials.saved": "Updated. Retry the operation.",
+  "workspaceMap.graphTabs": "Link groups",
+  "workspaceMap.allGraph": "All",
+  "workspaceMap.relatedGraphs": "Related graphs",
+  "workspaceMap.unlinked": "Unlinked",
+  "workspaceMap.grouping": "Grouping linked documents",
+  "workspaceMap.groupingFailed": "Could not group linked documents"
 }

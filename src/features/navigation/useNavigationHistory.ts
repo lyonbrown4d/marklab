@@ -24,7 +24,20 @@ export const useNavigationHistory = ({
   }, [workspaceKey])
 
   useEffect(() => {
-    if (currentLocation) navigationHistoryStore.getState().visit(currentLocation)
+    if (!currentLocation) return
+    const history = navigationHistoryStore.getState()
+    const current = history.entries[history.index]
+    // App-level location updates do not know the active graph tab. Retain its
+    // more precise camera entry instead of appending an ambiguous duplicate.
+    if (
+      currentLocation.kind === 'graph' &&
+      !currentLocation.viewId &&
+      current?.kind === 'graph' &&
+      current.viewId &&
+      current.nodeId === currentLocation.nodeId
+    )
+      return
+    history.visit(currentLocation)
   }, [currentLocation, workspaceKey])
 
   const visit = useCallback((location: NavigationLocation) => {

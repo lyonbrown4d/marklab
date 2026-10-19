@@ -24,6 +24,7 @@ type NavigationSourceLocation = {
 type NavigationGraphLocation = {
   kind: 'graph'
   nodeId: string
+  viewId?: string
   viewport?: { x: number; y: number; zoom: number }
 }
 
@@ -54,7 +55,7 @@ const locationKey = (location: NavigationLocation) => {
     return `source:${location.path}:${location.line}:${location.column}:${location.endColumn ?? ''}`
   }
   const viewport = location.viewport
-  return `graph:${location.nodeId}:${viewport?.x ?? ''}:${viewport?.y ?? ''}:${viewport?.zoom ?? ''}`
+  return `graph:${location.nodeId}:${JSON.stringify(location.viewId ?? null)}:${viewport?.x ?? ''}:${viewport?.y ?? ''}:${viewport?.zoom ?? ''}`
 }
 
 const isGenericViewOf = (current: NavigationLocation, next: NavigationLocation) => {
@@ -68,7 +69,12 @@ const mergeGraphViewport = (
   current: NavigationLocation | undefined,
   next: NavigationLocation,
 ): NavigationLocation | null => {
-  if (current?.kind !== 'graph' || next.kind !== 'graph' || current.nodeId !== next.nodeId) {
+  if (
+    current?.kind !== 'graph' ||
+    next.kind !== 'graph' ||
+    current.nodeId !== next.nodeId ||
+    current.viewId !== next.viewId
+  ) {
     return null
   }
   return next.viewport ? next : current

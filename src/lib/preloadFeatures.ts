@@ -42,7 +42,7 @@ export const preloadWysiwygEditor = () => {
 export const preloadGraphView = () => {
   if (typeof window === 'undefined') return
   graphViewPreload ??= resetOnFailure(
-    // A persisted layout may avoid ELK entirely; create its worker only on demand.
+    // Geometry is computed and cached in Rust; preloading only loads the UI.
     import('@/pages/WorkspaceGraphPage'),
     () => {
       graphViewPreload = null

@@ -139,4 +139,42 @@ describe('useWorkspaceMapViewNavigation', () => {
 
     expect(navigationHistoryStore.getState().recent()).toEqual([])
   })
+
+  it('records the selected view and discards a viewport measured for the previous view', async () => {
+    navigationHistoryStore.getState().reset('external:/workspace')
+    let finishFit: ((completed: boolean) => void) | undefined
+    const viewport = { x: 12, y: 24, zoom: 0.8 }
+    const flow = {
+      fitView: vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishFit = resolve
+          }),
+      ),
+      getViewport: vi.fn(() => viewport),
+      setViewport: vi.fn().mockResolvedValue(true),
+    }
+    const { result, rerender } = renderHook(
+      ({ viewId }) =>
+        useWorkspaceMapViewNavigation({
+          clearNeighborhood: vi.fn(),
+          flow,
+          focusNeighborhoodNode: vi.fn(),
+          graphIdentity: 'workspace:a',
+          viewId,
+        }),
+      { initialProps: { viewId: 'community:a' } },
+    )
+
+    act(() => result.current.focusNode(node))
+    rerender({ viewId: 'community:b' })
+    await act(async () => finishFit?.(true))
+    expect(navigationHistoryStore.getState().entries).toEqual([])
+
+    act(() => result.current.fitWorkspace())
+    await act(async () => finishFit?.(true))
+    expect(navigationHistoryStore.getState().entries).toEqual([
+      { kind: 'graph', nodeId: 'workspace', viewId: 'community:b', viewport },
+    ])
+  })
 })

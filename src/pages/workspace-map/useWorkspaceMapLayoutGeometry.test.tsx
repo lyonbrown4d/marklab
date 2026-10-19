@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphData } from '@/logic/graph'
-import { layoutGraphWithElk } from '@/logic/graphLayout'
+import { layoutGraphNative } from '@/logic/graphLayout'
 import {
   createWorkspaceMapRuntimeLayoutKey,
   useWorkspaceMapLayout,
@@ -11,7 +11,7 @@ import {
 type WorkspaceMapFlow = NonNullable<Parameters<typeof useWorkspaceMapLayout>[0]['flow']>
 
 vi.mock('@/logic/graphLayout', () => ({
-  layoutGraphWithElk: vi.fn(async (nodes) => nodes),
+  layoutGraphNative: vi.fn(async (nodes) => nodes),
 }))
 
 const createGraph = (activePath: string | null = 'notes/a.md'): GraphData => ({
@@ -64,7 +64,7 @@ describe('useWorkspaceMapLayout geometry', () => {
   })
 
   it('keeps resized editor geometry while a forced arrange applies new positions', async () => {
-    vi.mocked(layoutGraphWithElk)
+    vi.mocked(layoutGraphNative)
       .mockImplementationOnce(async (nodes) => nodes)
       .mockImplementationOnce(async (nodes) =>
         nodes.map((node, index) => ({ ...node, position: { x: index * 800, y: 120 } })),
@@ -82,7 +82,7 @@ describe('useWorkspaceMapLayout geometry', () => {
       })
       return { ...layout, nodes, setNodes }
     })
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     act(() =>
       result.current.setNodes((current) =>
         current.map((node) =>
@@ -101,8 +101,8 @@ describe('useWorkspaceMapLayout geometry', () => {
 
     act(() => result.current.arrange())
 
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
-    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[0]?.[0]).toMatchObject({
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(layoutGraphNative).mock.calls[1]?.[0]?.[0]).toMatchObject({
       height: 620,
       width: 760,
     })
@@ -131,7 +131,7 @@ describe('useWorkspaceMapLayout geometry', () => {
       },
       { initialProps: { activePath: 'notes/a.md' as string | null, graph: activeGraph } },
     )
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     act(() =>
       result.current.setNodes((current) =>
         current.map((node) =>
@@ -149,16 +149,16 @@ describe('useWorkspaceMapLayout geometry', () => {
     )
 
     rerender({ activePath: null, graph: createGraph(null) })
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
-    expect(vi.mocked(layoutGraphWithElk).mock.calls[1]?.[0]?.[0]).toMatchObject({
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(layoutGraphNative).mock.calls[1]?.[0]?.[0]).toMatchObject({
       height: 620,
       width: 760,
     })
     expect(result.current.nodes[0]).toMatchObject({ height: 620, width: 760 })
 
     rerender({ activePath: 'notes/a.md', graph: createGraph() })
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(3))
-    expect(vi.mocked(layoutGraphWithElk).mock.calls[2]?.[0]?.[0]).toMatchObject({
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(3))
+    expect(vi.mocked(layoutGraphNative).mock.calls[2]?.[0]?.[0]).toMatchObject({
       height: 620,
       width: 760,
     })
@@ -170,7 +170,7 @@ describe('useWorkspaceMapLayout geometry', () => {
       callback(0)
       return 1
     })
-    vi.mocked(layoutGraphWithElk)
+    vi.mocked(layoutGraphNative)
       .mockImplementationOnce(async (nodes) => nodes)
       .mockImplementationOnce(async (nodes) =>
         nodes.map((node) => ({ ...node, position: { x: 900, y: 700 } })),
@@ -193,7 +193,7 @@ describe('useWorkspaceMapLayout geometry', () => {
       },
       { initialProps: { flow: { fitView: fitViewA } as WorkspaceMapFlow } },
     )
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledOnce())
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledOnce())
     act(() =>
       result.current.setNodes((current) =>
         current.map((node) =>
@@ -209,7 +209,7 @@ describe('useWorkspaceMapLayout geometry', () => {
       ),
     )
     act(() => result.current.arrange())
-    await waitFor(() => expect(layoutGraphWithElk).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(layoutGraphNative).toHaveBeenCalledTimes(2))
 
     rerender({ flow: { fitView: fitViewB } })
 

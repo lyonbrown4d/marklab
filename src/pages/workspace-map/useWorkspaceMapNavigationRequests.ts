@@ -15,6 +15,8 @@ type WorkspaceMapNavigationRequestOptions = {
   focusNode: (node: Node<GraphNodeData>) => void
   nodes: Node<GraphNodeData>[]
   reducedMotion?: boolean
+  ready?: boolean
+  viewId?: string
   workspaceKey: string
 }
 
@@ -30,12 +32,15 @@ export const useWorkspaceMapNavigationRequests = ({
   focusNode,
   nodes,
   reducedMotion = systemPrefersReducedMotion(),
+  ready = true,
+  viewId,
   workspaceKey,
 }: WorkspaceMapNavigationRequestOptions) => {
   const request = useStore(workspaceMapNavigationStore, (state) => state.request)
 
   useEffect(() => {
-    if (!active || !request || request.workspaceKey !== workspaceKey || !flow) return
+    if (!active || !ready || !request || request.workspaceKey !== workspaceKey || !flow) return
+    if (request.viewId !== undefined && request.viewId !== viewId) return
     if (request.nodeId === 'workspace') {
       if (request.viewport) {
         void flow.setViewport(request.viewport, { duration: reducedMotion ? 0 : 180 })
@@ -64,7 +69,9 @@ export const useWorkspaceMapNavigationRequests = ({
     focusNode,
     nodes,
     reducedMotion,
+    ready,
     request,
+    viewId,
     workspaceKey,
   ])
 }
