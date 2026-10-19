@@ -13,8 +13,6 @@ import { isImeKeyboardEvent } from '@/logic/ime'
 const DEFAULT_MAX_CANDIDATES = 3
 const hasModifierKey = (event: KeyboardEvent) =>
   event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
-const isWordAccept = (event: KeyboardEvent) =>
-  (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
 
 export const normalizePlateInlineCompletionCandidates = (
   result: PlateInlineCompletionResult,
@@ -32,16 +30,6 @@ export const normalizePlateInlineCompletionCandidates = (
     candidates.push(candidate)
   }
   return candidates
-}
-
-const nextWordPrefix = (text: string) => {
-  if (!text) return ''
-  if (typeof Intl.Segmenter === 'function') {
-    for (const segment of new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)) {
-      if (segment.isWordLike) return text.slice(0, segment.index + segment.segment.length)
-    }
-  }
-  return text.match(/^\s*(?:[\p{L}\p{N}_]+|.)/u)?.[0] ?? text[0] ?? ''
 }
 
 export const createPlateInlineCompletionController = (
@@ -191,7 +179,7 @@ export const createPlateInlineCompletionController = (
   const accept = (text: string) => {
     if (!text || !hasCurrentAnchor()) return false
     cancel()
-    editor.tf.insertText(text)
+    editor.tf.withNewBatch(() => editor.tf.insertText(text))
     return true
   }
   const acceptAt = (index = 0) => {
@@ -266,14 +254,6 @@ export const createPlateInlineCompletionController = (
       if (event.key === 'Tab' && !hasModifierKey(event)) {
         event.preventDefault()
         return accept(candidate.text)
-      }
-      if (state.kind === 'document' && event.key === 'Enter' && !hasModifierKey(event)) {
-        event.preventDefault()
-        return accept(candidate.text)
-      }
-      if (state.kind === 'ai' && event.key === 'ArrowRight' && isWordAccept(event)) {
-        event.preventDefault()
-        return accept(nextWordPrefix(candidate.text))
       }
       if (
         state.kind === 'document' &&

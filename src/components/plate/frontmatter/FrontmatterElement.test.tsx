@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createPlateEditor, Plate, PlateContent } from 'platejs/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -110,6 +110,11 @@ describe('FrontmatterElement', () => {
       ['nested:', '  owner: Marklab', 'shared: &shared exact', 'copy: *shared'].join('\n'),
     )
     expect(serialized).toContain('# keep this comment')
+    act(() => editor.tf.undo())
+    expect(serializePlateMarkdown(editor)).toContain('aliases: [one, two]')
+    expect(serializePlateMarkdown(editor)).toContain('published: true')
+    act(() => editor.tf.redo())
+    expect(serializePlateMarkdown(editor)).toBe(serialized)
   })
 
   it('provides source mode and uses it as the fallback for malformed YAML', () => {

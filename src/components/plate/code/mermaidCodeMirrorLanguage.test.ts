@@ -58,6 +58,10 @@ describe('createMermaidCodeMirrorIntelligence', () => {
     await vi.waitFor(() =>
       expect(currentCompletions(view.state).map(({ label }) => label)).toContain('flowchart'),
     )
+    expect(currentCompletions(view.state)[0]).toMatchObject({
+      detail: 'Mermaid',
+      info: 'Diagram direction',
+    })
     await vi.waitFor(() => expect(diagnosticCount(view.state)).toBe(1))
     expect(languageClient.changeDocument).toHaveBeenCalledWith(
       expect.objectContaining({

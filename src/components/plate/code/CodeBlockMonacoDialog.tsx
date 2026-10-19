@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { DocumentLoadingState } from '@/components/loading/DocumentLoadingState'
+import { monacoSuggestionOptions } from '@/components/source-code/monacoSuggestionOptions'
+import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
 
 type CodeBlockMonacoDialogProps = {
   cancelLabel: string
@@ -94,7 +96,11 @@ const CodeBlockMonacoDialog = ({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div ref={rootRef} className="flex min-h-0 flex-col overflow-hidden rounded-md border">
+        <div
+          {...manualTextInputAttributes}
+          ref={rootRef}
+          className="flex min-h-0 flex-col overflow-hidden rounded-md border"
+        >
           <div className="min-h-0 flex-1">
             {error ? (
               <div
@@ -111,6 +117,7 @@ const CodeBlockMonacoDialog = ({
                 onMount={setEditor}
                 onChange={(value) => setDraft(value ?? '')}
                 options={{
+                  ...monacoSuggestionOptions,
                   automaticLayout: true,
                   lineNumbers: 'on',
                   minimap: { enabled: false },

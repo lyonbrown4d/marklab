@@ -2,11 +2,6 @@ import { render, screen } from '@testing-library/react'
 import type { PlateLeafProps } from 'platejs/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PlateInlineCompletionLeaf } from '@/components/plate/completion/PlateInlineCompletionLeaf'
-import { inferPlatformFromUserAgent } from '@/runtime/environment'
-
-vi.mock('@/runtime/environment', () => ({
-  inferPlatformFromUserAgent: vi.fn(() => 'windows'),
-}))
 
 const renderLeaf = (leafOverrides: Record<string, unknown> = {}) =>
   render(
@@ -24,25 +19,19 @@ const renderLeaf = (leafOverrides: Record<string, unknown> = {}) =>
   )
 
 describe('PlateInlineCompletionLeaf', () => {
-  it('renders ghost text as inert escaped content', () => {
+  it('renders AI text as an escaped candidate with its source, without an inline ghost', () => {
     renderLeaf({
       plateInlineCompletion: '<img src=x onerror=alert(1)>',
       plateInlineCompletionKind: 'ai',
     })
-
-    const ghost = screen.getByText('<img src=x onerror=alert(1)>')
-    const completion = ghost.closest('[data-completion-kind="ai"]')
-    expect(completion).toHaveAttribute('contenteditable', 'false')
-    expect(completion).toHaveAttribute('data-completion-kind', 'ai')
+    expect(screen.getByRole('option')).toHaveTextContent('<img src=x onerror=alert(1)>')
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    const hint = document.querySelector('[data-completion-hint]')
-    expect(hint).toHaveTextContent('AI')
-    expect(hint).toHaveTextContent('Tab accept')
-    expect(hint).toHaveTextContent('Ctrl+→ accept word')
-    expect(hint).toHaveTextContent('Esc dismiss')
-    expect(document.querySelector('[data-completion-source]')).toHaveTextContent('AI')
-    expect(screen.getByRole('status')).toHaveTextContent('AI: <img src=x onerror=alert(1)>')
+    expect(document.querySelector('[data-completion-ghost]')).toBeNull()
+    expect(screen.getByRole('option').querySelector('[data-completion-meta]')).toHaveTextContent(
+      'AI',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('<img src=x onerror=alert(1)>')
   })
 
   it('does not render an empty ghost node', () => {
@@ -51,28 +40,20 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(document.querySelector('[data-completion-ghost]')).toBeNull()
   })
 
-  it('renders one document candidate as quiet inline ghost text', () => {
+  it('renders a single document candidate in the menu and accepts only a primary click', () => {
     const accept = vi.fn()
     renderLeaf({
       plateInlineCompletionAccept: accept,
       plateInlineCompletionCandidates: [{ source: 'document', text: ' write notes' }],
       plateInlineCompletionKind: 'document',
     })
-
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    expect(document.querySelector('[data-completion-kind="document"]')).toHaveAttribute(
-      'contenteditable',
-      'false',
-    )
-    expect(document.querySelector('[data-completion-ghost]')).toHaveTextContent('write notes')
-    const hint = document.querySelector('[data-completion-hint]')
-    expect(hint).toHaveTextContent('Document')
-    expect(hint).toHaveTextContent('Tab accept')
-    expect(hint).toHaveTextContent('Esc dismiss')
-    expect(screen.getByRole('status')).toHaveTextContent('Document: write notes')
-
+    const option = screen.getByRole('option')
+    expect(option).toHaveTextContent('write notes')
+    expect(option.querySelector('[data-completion-meta]')).toHaveTextContent('Document')
+    expect(document.querySelector('[data-completion-ghost]')).toBeNull()
+    expect(accept).not.toHaveBeenCalled()
     const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
-    document.querySelector('[data-completion-kind="document"]')?.dispatchEvent(event)
+    option.dispatchEvent(event)
     expect(event.defaultPrevented).toBe(true)
     expect(accept).toHaveBeenCalledWith(0)
   })
@@ -163,15 +144,18 @@ describe('PlateInlineCompletionLeaf', () => {
     expect(accept).toHaveBeenCalledWith(1)
   })
 
-  it('uses a platform-aware partial acceptance label for AI completion', () => {
-    vi.mocked(inferPlatformFromUserAgent).mockReturnValueOnce('macos')
+  it('accepts an AI candidate from the menu without writing anything while it appears', () => {
+    const accept = vi.fn()
     renderLeaf({
       plateInlineCompletion: ' tomorrow',
       plateInlineCompletionKind: 'ai',
+      plateInlineCompletionAccept: accept,
     })
-
-    expect(document.querySelector('[data-completion-hint]')).toHaveTextContent('⌘→ accept word')
-    expect(document.querySelector('[data-completion-hint]')).not.toHaveTextContent('Ctrl+→')
+    expect(accept).not.toHaveBeenCalled()
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    screen.getByRole('option').dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(accept).toHaveBeenCalledWith(0)
   })
 
   it.each(['document', 'workspace-link'])(

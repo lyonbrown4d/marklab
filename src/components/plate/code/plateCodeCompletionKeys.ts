@@ -21,7 +21,7 @@ export const resolvePlateCodeCompletionKey = ({
   if (!menuOpen) return 'none'
   if (key === 'ArrowDown') return 'next'
   if (key === 'ArrowUp') return 'previous'
-  if (key === 'Enter' || key === 'Tab') return 'accept'
+  if (key === 'Tab') return 'accept'
   if (key === 'Escape') return 'cancel'
   return 'none'
 }

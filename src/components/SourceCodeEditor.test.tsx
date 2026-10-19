@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef } from 'react'
 import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourceCodeEditor from '@/components/SourceCodeEditor'
+
+vi.mock('@/components/markdownSourceTextCompletion', () => ({
+  registerMarkdownSourceTextCompletion: () => ({ dispose: vi.fn() }),
+}))
 import { configureMonaco } from '@/lib/monaco'
 import type { CompletionMock, SymbolMock } from '@/components/sourceEditorTestTypes'
 
@@ -207,7 +211,7 @@ describe('SourceCodeEditor', () => {
     })
 
     expect(result?.suggestions[1]).toMatchObject({
-      label: 'target',
+      label: { label: 'target', description: 'Markdown' },
       insertText: 'target.md',
       detail: 'notes/target.md',
       range: {

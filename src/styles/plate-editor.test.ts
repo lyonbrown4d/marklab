@@ -22,7 +22,6 @@ describe('Plate editor styles', () => {
     expect(styles).toContain("[data-slate-node='element']")
     expect(styles).toContain("[data-slate-chunk='true']")
     expect(styles).toContain("@use './plate-editor/code-highlight';")
-    expect(styles).toContain("@use './plate-editor/completion';")
     expect(styles).toContain("@use './plate-editor/pdf-preview';")
     expect(styles).not.toContain('.milkdown')
     expect(styles).not.toContain('.ProseMirror')

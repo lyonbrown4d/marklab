@@ -24,6 +24,7 @@ type EditorSuggestionMenuBaseProps<T> = {
   renderMeta?: (item: T) => ReactNode
   renderScreenReaderDescription?: (item: T) => ReactNode
   selectionHint?: string
+  metaVisible?: boolean
 }
 
 type EditorSuggestionMenuGroupingProps<T> =
@@ -75,6 +76,7 @@ export const EditorSuggestionMenu = <T,>({
   renderMeta,
   renderScreenReaderDescription,
   selectionHint,
+  metaVisible = false,
 }: EditorSuggestionMenuProps<T>) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const generatedId = useId()
@@ -162,7 +164,13 @@ export const EditorSuggestionMenu = <T,>({
                       {getLabel(item)}
                     </span>
                     {meta ? (
-                      <span className="max-w-32 truncate text-[11px] text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                      <span
+                        className={cn(
+                          'max-w-32 truncate text-[11px] text-muted-foreground',
+                          !metaVisible &&
+                            'opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none',
+                        )}
+                      >
                         {meta}
                       </span>
                     ) : null}

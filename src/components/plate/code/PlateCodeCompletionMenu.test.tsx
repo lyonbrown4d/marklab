@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PlateCodeCompletionMenu } from '@/components/plate/code/PlateCodeCompletionMenu'
 
 describe('PlateCodeCompletionMenu', () => {
-  it('uses the shared menu surface and keeps metadata progressive', () => {
+  it('uses the shared menu surface and displays the suggestion source', () => {
     render(
       <PlateCodeCompletionMenu
         activeIndex={0}
@@ -22,8 +22,8 @@ describe('PlateCodeCompletionMenu', () => {
     expect(menu).toHaveAttribute('id', 'code-suggestions')
     expect(option).toHaveClass('group', 'min-h-8')
     expect(option.id).not.toBe('')
-    expect(screen.getByText('Mermaid diagram')).toHaveClass('opacity-0', 'group-hover:opacity-100')
+    expect(screen.getByText('Mermaid')).not.toHaveClass('opacity-0')
     expect(menu).toBeInTheDocument()
-    expect(screen.getByText('Enter')).toBeInTheDocument()
+    expect(screen.getByText('Tab')).toBeInTheDocument()
   })
 })

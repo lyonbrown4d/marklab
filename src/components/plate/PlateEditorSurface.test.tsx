@@ -59,6 +59,7 @@ describe('PlateEditorSurface', () => {
     const { rerender } = render(<PlateEditorSurface {...props} />)
 
     expect(screen.getByTestId('markdown-editor')).toHaveAttribute('contenteditable', 'true')
+    expect(screen.getByTestId('markdown-editor')).toHaveAttribute('writingsuggestions', 'false')
 
     rerender(<PlateEditorSurface {...props} readOnly />)
 

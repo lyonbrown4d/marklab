@@ -1,3 +1,4 @@
+import { monacoSuggestionOptions } from '@/components/source-code/monacoSuggestionOptions'
 import { useEffect, useImperativeHandle, useRef, useState, type RefObject } from 'react'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor, IDisposable } from 'monaco-editor'
@@ -141,6 +142,7 @@ export const ConflictResultEditor = ({
         onReady()
       }}
       options={{
+        ...monacoSuggestionOptions,
         readOnly: pending,
         originalEditable: false,
         renderSideBySide: true,

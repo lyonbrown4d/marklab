@@ -2,6 +2,7 @@ import type { Value } from 'platejs'
 import { Plate, PlateContent } from 'platejs/react'
 import { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
 import {
   renderPlateEditorChunk,
   renderReadOnlyPlateEditorChunk,
@@ -235,6 +236,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
             renderLeaf={completion.renderLeaf}
           >
             <PlateContent
+              {...manualTextInputAttributes}
               aria-label={placeholder}
               aria-busy={!contentReady}
               aria-hidden={!contentReady ? 'true' : undefined}

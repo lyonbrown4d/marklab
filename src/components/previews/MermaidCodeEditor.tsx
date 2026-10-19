@@ -1,4 +1,4 @@
-import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
+import { acceptCompletion, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import {
   bracketMatching,
@@ -26,6 +26,7 @@ import { getVimEditorRoot } from '@/components/vim/vimKeyboardScope'
 import { useCodeMirrorVim } from '@/components/vim/useCodeMirrorVim'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { useI18n } from '@/i18n/useI18n'
+import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
 
 type MermaidCodeEditorProps = {
   onBlur: () => void
@@ -131,13 +132,12 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
         indentOnInput(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         bracketMatching(),
-        closeBrackets(),
         EditorView.lineWrapping,
         highlightActiveLine(),
         vimCompartment.of([]),
         keymap.of([
-          ...completionKeymap,
-          ...closeBracketsKeymap,
+          { key: 'Tab', run: acceptCompletion },
+          ...completionKeymap.filter((binding) => binding.key !== 'Enter'),
           ...historyKeymap,
           ...defaultKeymap,
           indentWithTab,
@@ -179,6 +179,7 @@ const MermaidCodeEditor = ({ onBlur, onChange, uri, value }: MermaidCodeEditorPr
   const height = Math.min(420, Math.max(200, value.split('\n').length * 20 + 64))
   return (
     <div
+      {...manualTextInputAttributes}
       aria-label={t('preview.mermaidEditSource')}
       className="mt-2 flex flex-col overflow-hidden rounded-lg border border-border bg-background"
       contentEditable={false}

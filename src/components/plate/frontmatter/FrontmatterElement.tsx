@@ -1,6 +1,12 @@
 import { Braces, Code2, ListTree } from 'lucide-react'
 import type { TElement } from 'platejs'
-import { PlateElement, type PlateElementProps, useEditorRef, useReadOnly } from 'platejs/react'
+import {
+  PlateElement,
+  type PlateElementProps,
+  useEditorRef,
+  usePath,
+  useReadOnly,
+} from 'platejs/react'
 import { useMemo, useState } from 'react'
 import { useI18n } from '@/i18n/useI18n'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/AppTooltip'
@@ -25,6 +31,7 @@ const nodeText = (node: unknown): string => {
 export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNode>) => {
   const { t } = useI18n()
   const editor = useEditorRef()
+  const path = usePath()
   const readOnly = useReadOnly()
   const source = nodeText(props.element)
   const model = useMemo(() => parseFrontmatter(source), [source])
@@ -34,14 +41,12 @@ export const FrontmatterElement = (props: PlateElementProps<FrontmatterElementNo
   const visibleMode = model.error ? 'source' : mode
 
   const replaceSource = (currentSource: string, nextSource: string) => {
-    const path = editor.api.findPath(props.element)
-    const range = path ? editor.api.range(path) : null
+    const range = editor.api.range(path)
     if (!range || nextSource === currentSource) return
     editor.tf.withNewBatch(() => editor.tf.insertText(nextSource, { at: range }))
   }
   const updateField = (field: FrontmatterField, value: boolean | string | string[]) => {
-    const path = editor.api.findPath(props.element)
-    const currentSource = path ? editor.api.string(path) : source
+    const currentSource = editor.api.string(path)
     const currentField = parseFrontmatter(currentSource).fields.find(({ key }) => key === field.key)
     if (!currentField) return
     replaceSource(currentSource, updateFrontmatterField(currentSource, currentField, value))

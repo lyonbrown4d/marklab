@@ -34,7 +34,7 @@ describe('Plate inline document completion', () => {
     controller.destroy()
   })
 
-  it('navigates the document menu and accepts with Enter', async () => {
+  it('navigates the document menu and accepts with Tab', async () => {
     const editor = createCompletionEditor()
     const controller = createPlateInlineCompletionController(editor, {
       canComplete: () => true,
@@ -60,7 +60,7 @@ describe('Plate inline document completion', () => {
     expect(controller.keyDown(up)).toBe(true)
     expect(controller.getSnapshot()).toMatchObject({ index: 1, kind: 'document' })
 
-    const enter = new KeyboardEvent('keydown', { cancelable: true, key: 'Enter' })
+    const enter = new KeyboardEvent('keydown', { cancelable: true, key: 'Tab' })
     expect(controller.keyDown(enter)).toBe(true)
     expect(enter.defaultPrevented).toBe(true)
     expect(editor.api.string([])).toBe('I plan to review tasks')
@@ -100,6 +100,10 @@ describe('Plate inline document completion', () => {
 
   it.each([
     ['Shift+Tab', { key: 'Tab', shiftKey: true }],
+    ['Space', { key: ' ' }],
+    ['Enter', { key: 'Enter' }],
+    ['Opening bracket', { key: '(' }],
+    ['Closing bracket', { key: ')' }],
     ['Shift+Enter', { key: 'Enter', shiftKey: true }],
     ['Control+Enter', { ctrlKey: true, key: 'Enter' }],
     ['Meta+Enter', { key: 'Enter', metaKey: true }],

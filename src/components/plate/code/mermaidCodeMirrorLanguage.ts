@@ -88,8 +88,8 @@ const toCompletion = (item: CompletionItem): Completion => {
             })
           }
         : insertText,
-    detail: item.detail,
-    info: documentationText(item),
+    detail: item.labelDetails?.description ?? 'Mermaid',
+    info: [item.detail, documentationText(item)].filter(Boolean).join('\n\n') || undefined,
     label: item.label,
     sortText: item.sortText,
     type: item.kind ? completionType[item.kind] : 'keyword',
@@ -163,6 +163,7 @@ export const createMermaidCodeMirrorIntelligence = ({
       mermaid(),
       autocompletion({
         activateOnTyping: true,
+        defaultKeymap: false,
         closeOnBlur: false,
         override: [complete],
       }),

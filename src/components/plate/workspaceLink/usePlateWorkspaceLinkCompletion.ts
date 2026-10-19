@@ -159,7 +159,7 @@ export const usePlateWorkspaceLinkCompletion = ({
       }
       if (!state || !isCurrent()) return false
       if (
-        (event.key === 'Enter' || event.key === 'Tab') &&
+        event.key === 'Tab' &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&

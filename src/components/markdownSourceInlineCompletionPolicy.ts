@@ -1,5 +1,5 @@
 import { aiApi } from '@/services/aiApi'
-import type { SourceProviderLocality } from '@/components/markdownSourceInlineCompletionTypes'
+import type { SourceProviderLocality } from '@/components/markdownSourceTextCompletionTypes'
 
 export const createSourceCompletionSessionId = () => {
   const randomUuid = globalThis.crypto?.randomUUID

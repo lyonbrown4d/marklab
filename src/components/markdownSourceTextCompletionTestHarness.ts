@@ -1,8 +1,9 @@
 import { vi } from 'vitest'
 
-export type SourceInlineProvider = {
-  onDidChangeInlineCompletions: (listener: () => void) => { dispose: () => void }
-  provideInlineCompletions: (...args: unknown[]) => { items: { insertText?: string }[] }
+export type SourceTextProvider = {
+  provideCompletionItems: (...args: unknown[]) => Promise<{
+    suggestions: { insertText?: string; label?: { label: string; description: string } }[]
+  }>
 }
 
 export const sourceCompletionPreferences = () => ({
@@ -24,6 +25,7 @@ export const createSourceCompletionHarness = (
 ) => {
   let contentListener: () => void = () => undefined
   let modelListener: () => void = () => undefined
+  let blurListener: () => void = () => undefined
   let value = initialValue
   let version = 1
   let path = 'notes/current.md'
@@ -37,6 +39,11 @@ export const createSourceCompletionHarness = (
         .reduce((total, line) => total + line.length + 1, 0) +
       column -
       1,
+    getWordUntilPosition: ({ lineNumber, column }: { lineNumber: number; column: number }) => {
+      const word =
+        (getLines()[lineNumber - 1] ?? '').slice(0, column - 1).match(/[\p{L}\p{N}_]+$/u)?.[0] ?? ''
+      return { word, startColumn: column - word.length, endColumn: column }
+    },
     getValue: vi.fn(() => value),
     getVersionId: () => version,
     isDisposed: () => false,
@@ -51,6 +58,10 @@ export const createSourceCompletionHarness = (
     },
     getRawOptions: () => ({ readOnly: false }),
     inComposition: false,
+    onDidBlurEditorText: (listener: () => void) => {
+      blurListener = listener
+      return { dispose: vi.fn() }
+    },
     onDidChangeModel: (listener: () => void) => {
       modelListener = listener
       return { dispose: vi.fn() }
@@ -61,7 +72,7 @@ export const createSourceCompletionHarness = (
     },
     trigger: vi.fn(),
   }
-  let provider: SourceInlineProvider | null = null
+  let provider: SourceTextProvider | null = null
   const monaco = {
     KeyCode: { BracketLeft: 92, BracketRight: 94 },
     KeyMod: { Alt: 512 },
@@ -84,7 +95,8 @@ export const createSourceCompletionHarness = (
       }
     },
     languages: {
-      registerInlineCompletionsProvider: vi.fn((_language: string, next: SourceInlineProvider) => {
+      CompletionItemKind: { Text: 18 },
+      registerCompletionItemProvider: vi.fn((_language: string, next: SourceTextProvider) => {
         provider = next
         return { dispose: vi.fn() }
       }),
@@ -100,9 +112,10 @@ export const createSourceCompletionHarness = (
   }
   const complete = () => {
     if (!provider) throw new Error('Inline provider was not registered')
-    return provider.provideInlineCompletions(model, editor.getPosition(), {}, token)
+    return provider.provideCompletionItems(model, editor.getPosition(), {}, token)
   }
   return {
+    blur: () => blurListener(),
     cancelToken: () => {
       token.isCancellationRequested = true
       tokenListeners.forEach((listener) => listener())

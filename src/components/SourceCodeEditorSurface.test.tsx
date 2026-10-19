@@ -167,7 +167,15 @@ describe('SourceCodeEditorSurface', () => {
     renderSurface(false)
     expect(editorMock.options?.minimap?.enabled).toBe(false)
     expect(editorMock.options?.contextmenu).toBe(false)
-    expect(editorMock.options?.inlineSuggest?.enabled).toBe(true)
+    expect(editorMock.options?.inlineSuggest?.enabled).toBe(false)
+    expect(editorMock.options).toMatchObject({
+      acceptSuggestionOnCommitCharacter: false,
+      acceptSuggestionOnEnter: 'off',
+      autoClosingBrackets: 'never',
+      autoClosingQuotes: 'never',
+      autoSurround: 'never',
+      suggest: { preview: false, showInlineDetails: true },
+    })
   })
 
   it('scopes Monaco model paths to the workspace identity', () => {

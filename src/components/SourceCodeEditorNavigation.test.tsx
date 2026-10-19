@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SourceCodeEditor from '@/components/SourceCodeEditor'
+
+vi.mock('@/components/markdownSourceTextCompletion', () => ({
+  registerMarkdownSourceTextCompletion: () => ({ dispose: vi.fn() }),
+}))
 import { configureMonaco } from '@/lib/monaco'
 import { requestFocusSourcePosition } from '@/utils/editorNavigation'
 

@@ -100,7 +100,7 @@ describe('Plate inline AI completion', () => {
     controller.sync()
     await vi.advanceTimersByTimeAsync(0)
 
-    for (const key of ['ArrowDown', 'ArrowUp', 'Enter']) {
+    for (const key of ['ArrowDown', 'ArrowUp', 'Enter', ' ', '(', ')', '"']) {
       const event = new KeyboardEvent('keydown', { cancelable: true, key })
       expect(controller.keyDown(event)).toBe(false)
       expect(event.defaultPrevented).toBe(false)
@@ -108,7 +108,7 @@ describe('Plate inline AI completion', () => {
     controller.destroy()
   })
 
-  it('partially accepts an AI ghost with Ctrl+Right', async () => {
+  it('keeps word navigation from accepting an AI suggestion', async () => {
     const editor = createCompletionEditor()
     const controller = createPlateInlineCompletionController(editor, {
       canComplete: () => true,
@@ -124,9 +124,9 @@ describe('Plate inline AI completion', () => {
       ctrlKey: true,
       key: 'ArrowRight',
     })
-    expect(controller.keyDown(event)).toBe(true)
-    expect(event.defaultPrevented).toBe(true)
-    expect(editor.api.string([])).toBe('I plan to write')
+    expect(controller.keyDown(event)).toBe(false)
+    expect(event.defaultPrevented).toBe(false)
+    expect(editor.api.string([])).toBe('I plan to')
     controller.destroy()
   })
 

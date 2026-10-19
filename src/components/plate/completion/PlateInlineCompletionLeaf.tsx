@@ -4,12 +4,13 @@ import { FilePlus2, FileText, Heading } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { menuItemStyles, menuSurfaceStyles } from '@/components/overlay/overlayStyles'
-import { InlineCompletionGhost } from '@/components/plate/completion/InlineCompletionGhost'
-import type { PlateInlineDocumentCompletion } from '@/components/plate/completion/types'
+import type {
+  PlateInlineCompletionCandidate,
+  PlateInlineDocumentCompletion,
+} from '@/components/plate/completion/types'
 import type { PlateWorkspaceLinkItem } from '@/components/plate/workspaceLink/plateWorkspaceLinkCompletion'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
-import { inferPlatformFromUserAgent } from '@/runtime/environment'
 
 type CompletionLeaf = TText & {
   plateDiagnosticMessage?: string
@@ -99,14 +100,14 @@ type PlateInlineCompletionLeafProps = {
   leaf: TText
 }
 
-const DocumentCompletionMenu = ({
+const TextCompletionMenu = ({
   accept,
   activeIndex,
   candidates,
 }: {
   accept?: (index: number) => void
   activeIndex: number
-  candidates: readonly PlateInlineDocumentCompletion[]
+  candidates: readonly PlateInlineCompletionCandidate[]
 }) => {
   const { t } = useI18n()
   const activeCandidate = candidates[activeIndex]
@@ -158,7 +159,11 @@ const DocumentCompletionMenu = ({
                 className="shrink-0 text-[0.6875rem] text-muted-foreground"
                 data-completion-meta=""
               >
-                {t('editor.completionSourceDocument')}
+                {t(
+                  candidate.source === 'ai'
+                    ? 'editor.completionSourceAi'
+                    : 'editor.completionSourceDocument',
+                )}
               </span>
             </Button>
           ))}
@@ -184,10 +189,10 @@ export const PlateInlineCompletionLeaf = ({
   const candidates = completionLeaf.plateInlineCompletionCandidates ?? []
   const workspaceLinkItems = completionLeaf.plateWorkspaceLinkItems ?? []
   const text = completionLeaf.plateInlineCompletion
-  const singleDocumentCandidate =
-    completionLeaf.plateInlineCompletionKind === 'document' && candidates.length === 1
-      ? candidates[0]
-      : null
+  const textCandidates: readonly PlateInlineCompletionCandidate[] =
+    completionLeaf.plateInlineCompletionKind === 'ai' && text
+      ? [{ source: 'ai', text }]
+      : candidates
   return (
     <span
       {...attributes}
@@ -210,30 +215,11 @@ export const PlateInlineCompletionLeaf = ({
           items={workspaceLinkItems}
           label={t('editor.workspaceLinkSuggestions')}
         />
-      ) : singleDocumentCandidate ? (
-        <InlineCompletionGhost
-          accept={() => completionLeaf.plateInlineCompletionAccept?.(0)}
-          acceptLabel={t('editor.completionAccept')}
-          dismissLabel={t('editor.completionDismiss')}
-          source="document"
-          sourceLabel={t('editor.completionSourceDocument')}
-          text={singleDocumentCandidate.text}
-        />
-      ) : completionLeaf.plateInlineCompletionKind === 'document' && candidates.length > 1 ? (
-        <DocumentCompletionMenu
+      ) : textCandidates.length ? (
+        <TextCompletionMenu
           accept={completionLeaf.plateInlineCompletionAccept}
           activeIndex={completionLeaf.plateInlineCompletionIndex ?? 0}
-          candidates={candidates}
-        />
-      ) : completionLeaf.plateInlineCompletionKind === 'ai' && text ? (
-        <InlineCompletionGhost
-          acceptLabel={t('editor.completionAccept')}
-          acceptWordLabel={t('editor.completionAcceptWord')}
-          dismissLabel={t('editor.completionDismiss')}
-          partialAcceptShortcut={inferPlatformFromUserAgent() === 'macos' ? '⌘→' : 'Ctrl+→'}
-          source="ai"
-          sourceLabel={t('editor.completionSourceAi')}
-          text={text}
+          candidates={textCandidates}
         />
       ) : null}
     </span>

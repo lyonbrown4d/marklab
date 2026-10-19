@@ -28,6 +28,7 @@ type CancellationLike = Pick<CancellationToken, 'isCancellationRequested'> &
   Partial<Pick<CancellationToken, 'onCancellationRequested'>>
 type MarkdownCompletionItem = {
   label: string
+  source?: string
   kind: 'file' | 'heading' | 'language' | number
   insertText: string
   detail?: string
@@ -115,7 +116,7 @@ export const registerMarkdownCompletionProvider = (
                 position.column,
               )
           return {
-            label: item.label,
+            label: { label: item.label, description: item.source ?? 'Markdown' },
             kind:
               typeof item.kind === 'number'
                 ? toMonacoCompletionKind(monaco, item.kind)
@@ -253,6 +254,7 @@ export const fromLanguageCompletion = (item: CompletionItem): MarkdownCompletion
   const label = item.label
   return {
     label,
+    source: item.labelDetails?.description ?? 'Markdown',
     kind: item.kind ?? 'language',
     insertText: textEdit?.newText ?? item.insertText ?? label,
     detail: item.detail,

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles/plate-editor.scss"
+        ],
+        "createdAt": "2026-10-19T13:18:59.443Z",
+        "reason": "Agent review: the only matching border is the existing semantic Markdown blockquote marker, not decorative card styling; this iteration only removes an unused stylesheet import."
+      }
+    ]
+  }
+}

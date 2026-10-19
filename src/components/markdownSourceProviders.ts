@@ -12,7 +12,7 @@ import { registerMarkdownHoverProvider } from '@/components/markdownSourceHover'
 import { registerMarkdownLinkDecorations } from '@/components/markdownSourceLinkDecorations'
 import { registerMarkdownReferenceProvider } from '@/components/markdownSourceReferences'
 import { registerMarkdownRenameProvider } from '@/components/markdownSourceRename'
-import { registerMarkdownSourceInlineCompletion } from '@/components/markdownSourceInlineCompletion'
+import { registerMarkdownSourceTextCompletion } from '@/components/markdownSourceTextCompletion'
 import { registerMarkdownSourceLanguageDiagnostics } from '@/components/markdownSourceLanguageDiagnostics'
 import { requestAiInlineCompletion } from '@/services/aiInlineCompletionRequest'
 import { languageIntelligenceApi } from '@/services/languageIntelligenceApi'
@@ -41,17 +41,14 @@ export const registerMarkdownSourceProviders = ({
     editor,
     getPath: () => getContext().activePath,
   })
-  const inlineCompletionDisposable =
-    typeof monaco.languages.registerInlineCompletionsProvider === 'function'
-      ? registerMarkdownSourceInlineCompletion({
-          monaco,
-          editor,
-          getDocumentKey: () => getContext().activePath,
-          getPreferences: usePreferencesStore.getState,
-          requestCompletion: requestAiInlineCompletion,
-          subscribePreferences: (listener) => usePreferencesStore.subscribe(listener),
-        })
-      : { dispose: () => undefined }
+  const textCompletionDisposable = registerMarkdownSourceTextCompletion({
+    monaco,
+    editor,
+    getDocumentKey: () => getContext().activePath,
+    getPreferences: usePreferencesStore.getState,
+    requestCompletion: requestAiInlineCompletion,
+    subscribePreferences: (listener) => usePreferencesStore.subscribe(listener),
+  })
   const disposables: Disposable[] = [
     documentSession,
     registerMarkdownCompletionProvider(monaco, getContext, documentSession, {
@@ -64,7 +61,7 @@ export const registerMarkdownSourceProviders = ({
       editor,
       monaco,
     }),
-    inlineCompletionDisposable,
+    textCompletionDisposable,
     registerMarkdownDocumentSymbolProvider(monaco, getContext),
     editor.onDidChangeModelContent(() => scheduleDiagnostics()),
     registerMarkdownDefinitionClick({ editor, getContext, getWorkspaceKey, onOpenFileView }),

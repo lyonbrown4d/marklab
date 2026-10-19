@@ -9,6 +9,33 @@ describe('Plate inline completion lifecycle', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
+  it('keeps normal typing literal and undoes only the explicitly accepted suggestion', async () => {
+    const editor = createCompletionEditor()
+    editor.tf.insertText(' (')
+    const controller = createPlateInlineCompletionController(editor, {
+      canComplete: () => true,
+      debounceMs: () => 100,
+      enabled: () => true,
+      getDocumentCompletions: () => [{ source: 'document', text: 'suggestion)' }],
+      requestCompletion: async () => null,
+    })
+    controller.sync()
+    await settleCompletion()
+    const space = new KeyboardEvent('keydown', { key: ' ', cancelable: true })
+    expect(controller.keyDown(space)).toBe(false)
+    editor.tf.insertText(' ')
+    expect(editor.api.string([])).toBe('I plan to ( ')
+    controller.sync()
+    await settleCompletion()
+    expect(controller.keyDown(new KeyboardEvent('keydown', { key: 'Tab' }))).toBe(true)
+    expect(editor.api.string([])).toBe('I plan to ( suggestion)')
+    editor.tf.undo()
+    expect(editor.api.string([])).toBe('I plan to ( ')
+    editor.tf.redo()
+    expect(editor.api.string([])).toBe('I plan to ( suggestion)')
+    controller.destroy()
+  })
+
   it('drops a queued document candidate after the document changes', async () => {
     const editor = createCompletionEditor()
     const controller = createPlateInlineCompletionController(editor, {

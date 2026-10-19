@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { resolvePlateCodeCompletionKey } from '@/components/plate/code/plateCodeCompletionKeys'
 
 describe('resolvePlateCodeCompletionKey', () => {
+  it.each([' ', 'Enter', '(', ')', '"'])(
+    'does not accept a visible candidate with ordinary input %s',
+    (key) => {
+      expect(
+        resolvePlateCodeCompletionKey({ key, composing: false, menuOpen: true, ctrl: false }),
+      ).toBe('none')
+    },
+  )
   it('ignores every key while IME composition is active', () => {
     expect(
       resolvePlateCodeCompletionKey({ key: 'Enter', composing: true, menuOpen: true, ctrl: false }),

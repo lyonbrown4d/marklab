@@ -160,7 +160,7 @@ describe('Markdown source completion lifecycle', () => {
     })
     expect(result?.suggestions).toEqual([
       expect.objectContaining({
-        label: 'Target',
+        label: { label: 'Target', description: 'Markdown' },
         insertText: '../notes/target.md',
         kind: 20,
         filterText: '/url',

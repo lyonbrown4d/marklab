@@ -15,6 +15,8 @@ import { monacoLanguageForPath } from '@/logic/sourceLanguages'
 import type { EditorChangeHandler } from '@/types/editorChanges'
 import { toEditorTextChanges } from '@/components/sourceCodeChanges'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
+import { monacoSuggestionOptions } from '@/components/source-code/monacoSuggestionOptions'
+import { manualTextInputAttributes } from '@/components/editor/manualTextInputAttributes'
 
 type SourceCodeEditorSurfaceProps = {
   activePath: string | null
@@ -85,6 +87,7 @@ export const SourceCodeEditorSurface = ({
   })
   const surface = (
     <div
+      {...manualTextInputAttributes}
       ref={rootRef}
       className={cn(
         'source-code-editor flex h-full flex-col overflow-hidden',
@@ -123,12 +126,11 @@ export const SourceCodeEditorSurface = ({
               onMount(host, monaco)
             }}
             options={{
+              ...monacoSuggestionOptions,
               contextmenu: false,
               readOnly,
               domReadOnly: readOnly,
               minimap: { enabled: sourceCodeMiniMapEnabled },
-              inlineSuggest: { enabled: true, showToolbar: 'onHover' },
-              suggest: { preview: true },
               wordWrap: 'on',
               tabSize: 2,
               scrollBeyondLastLine: false,

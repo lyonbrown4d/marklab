@@ -107,7 +107,7 @@ describe('CodeBlockElement language intelligence', () => {
     vi.clearAllMocks()
   })
 
-  it('opens suggestions explicitly and accepts the active item with Enter', async () => {
+  it('opens suggestions explicitly and accepts the active item with Tab', async () => {
     const { editor, container } = renderCodeBlock()
     const code = container.querySelector('pre')
     expect(code).not.toBeNull()
@@ -123,7 +123,7 @@ describe('CodeBlockElement language intelligence', () => {
     expect(editorRoot).toHaveAttribute('aria-controls', listbox.id)
     expect(editorRoot).toHaveAttribute('aria-activedescendant', option.id)
     expect(editorRoot).toHaveAttribute('aria-expanded', 'true')
-    fireEvent.keyDown(code!, { key: 'Enter' })
+    fireEvent.keyDown(code!, { key: 'Tab' })
 
     expect(editor.api.string([0, 0])).toBe('flowchart')
     expect(editorRoot).not.toHaveAttribute('aria-controls')

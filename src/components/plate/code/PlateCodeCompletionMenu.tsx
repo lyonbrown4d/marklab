@@ -33,11 +33,12 @@ export const PlateCodeCompletionMenu = ({
       items={suggestions}
       label={label}
       menuId={menuId}
+      metaVisible
       onActiveIndexChange={onActiveIndexChange}
       onSelect={onSelect}
-      renderMeta={(suggestion) => suggestion.detail}
+      renderMeta={(suggestion) => suggestion.labelDetails?.description ?? 'Mermaid'}
       renderScreenReaderDescription={itemDocumentation}
-      selectionHint="Enter"
+      selectionHint="Tab"
     />
   )
 }

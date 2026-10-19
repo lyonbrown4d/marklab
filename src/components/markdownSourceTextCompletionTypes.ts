@@ -9,20 +9,11 @@ export type SourceProviderLocality = 'local' | 'remote' | 'unavailable'
 export type SourceCompletionSnapshot = {
   context: MarkdownSourceInlineCompletionContext
   documentKey: string
-  key: string
   model: MonacoEditor.ITextModel
   position: Position
   preferenceKey: string
   providerId: string
   revision: number
-}
-
-export type SourceCompletionRequest = {
-  controller: AbortController
-  generation: number
-  key: string
-  timer: ReturnType<typeof setTimeout>
-  tokenSubscription: { dispose: () => void }
 }
 
 export type InlineCompletionPreferences = Pick<
@@ -38,7 +29,7 @@ export type InlineCompletionPreferences = Pick<
   | 'documentCompletionEnabled'
 >
 
-export type MarkdownSourceInlineCompletionOptions = {
+export type MarkdownSourceTextCompletionOptions = {
   editor: MonacoEditor.IStandaloneCodeEditor
   getDocumentKey: () => string | null
   getPreferences: () => InlineCompletionPreferences
