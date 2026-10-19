@@ -15,32 +15,34 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub use types::{ExportFormat, PublicationOptions, SourceDocument};
 
 pub fn check_cancelled(cancelled: &AtomicBool) -> BackendResult<()> {
-    if cancelled.load(Ordering::Acquire) {
-        Err(BackendError::new("EXPORT_CANCELLED", "Export cancelled"))
-    } else {
-        Ok(())
-    }
+  if cancelled.load(Ordering::Acquire) {
+    Err(BackendError::new("EXPORT_CANCELLED", "Export cancelled"))
+  } else {
+    Ok(())
+  }
 }
 
 pub fn render(
-    format: ExportFormat,
-    documents: &[SourceDocument],
-    options: &PublicationOptions,
-    cancelled: &AtomicBool,
+  format: ExportFormat,
+  documents: &[SourceDocument],
+  options: &PublicationOptions,
+  cancelled: &AtomicBool,
 ) -> BackendResult<Vec<u8>> {
-    options.validate()?;
-    check_cancelled(cancelled)?;
-    match format {
-        ExportFormat::Pdf => pdf::render(documents, options, cancelled),
-        ExportFormat::Docx => docx::render(documents, options, cancelled),
-        ExportFormat::Html => html::render(documents, options, cancelled),
-        ExportFormat::Markdown => Ok(documents
-            .iter()
-            .map(|document| document.markdown.as_str())
-            .collect::<Vec<_>>()
-            .join("\n\n")
-            .into_bytes()),
-    }
+  options.validate()?;
+  check_cancelled(cancelled)?;
+  match format {
+    ExportFormat::Pdf => pdf::render(documents, options, cancelled),
+    ExportFormat::Docx => docx::render(documents, options, cancelled),
+    ExportFormat::Html => html::render(documents, options, cancelled),
+    ExportFormat::Markdown => Ok(
+      documents
+        .iter()
+        .map(|document| document.markdown.as_str())
+        .collect::<Vec<_>>()
+        .join("\n\n")
+        .into_bytes(),
+    ),
+  }
 }
 
 #[cfg(test)]

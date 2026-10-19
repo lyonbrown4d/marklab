@@ -16,6 +16,10 @@ describe('documentAdapters', () => {
     expect(documentAdapterForPath('src/widget.TSX')?.kind).toBe('source')
     expect(documentAdapterForPath('data/report.csv')?.kind).toBe('source')
     expect(documentAdapterForPath('data/report.tsv')?.kind).toBe('source')
+    expect(documentAdapterForPath('data/report.XLSX')?.kind).toBe('spreadsheet')
+    expect(documentAdapterForPath('data/report.xlsm')?.kind).toBe('spreadsheet')
+    expect(documentAdapterForPath('diagrams/flow.mmd')?.kind).toBe('source')
+    expect(documentAdapterForPath('diagrams/flow.mermaid')?.kind).toBe('source')
     for (const extension of ['puml', 'plantuml', 'pu', 'wsd', 'iuml']) {
       expect(documentAdapterForPath(`diagrams/schema.${extension}`)?.kind).toBe('source')
     }

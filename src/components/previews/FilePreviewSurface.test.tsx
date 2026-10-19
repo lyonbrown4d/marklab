@@ -11,6 +11,12 @@ vi.mock('@/components/previews/SourcePreviewSurface', () => ({
   ),
 }))
 
+vi.mock('@/components/previews/SpreadsheetPreviewSurface', () => ({
+  default: ({ path, src }: { path: string; src?: string }) => (
+    <div data-testid="spreadsheet-preview" data-path={path} data-source={src} />
+  ),
+}))
+
 vi.mock('@/i18n/useI18n', () => ({
   useI18n: () => ({
     t: (key: string) =>
@@ -21,6 +27,23 @@ vi.mock('@/i18n/useI18n', () => ({
 }))
 
 describe('FilePreviewSurface', () => {
+  it('routes Excel snapshots through the native spreadsheet preview and keeps graph nodes cheap', async () => {
+    const props = {
+      kind: 'spreadsheet' as const,
+      path: 'report.xlsx',
+      src: 'marklab-asset://local/v1/snapshot',
+      title: 'report.xlsx',
+    }
+    const view = render(<FilePreviewSurface {...props} snapshot />)
+    const table = await screen.findByTestId('spreadsheet-preview')
+    expect(table).toHaveAttribute('data-path', 'report.xlsx')
+    expect(table).toHaveAttribute('data-source', props.src)
+    view.rerender(<FilePreviewSurface {...props} presentation="graph" />)
+    expect(screen.queryByTestId('spreadsheet-preview')).not.toBeInTheDocument()
+    expect(
+      view.container.querySelector('[data-slot="graph-preview-placeholder"]'),
+    ).toBeInTheDocument()
+  })
   it('routes source resources through the bounded source preview', async () => {
     render(
       <FilePreviewSurface

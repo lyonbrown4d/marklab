@@ -159,7 +159,17 @@ export const fsGraphNodeSchema = z.object({
   content_start_line: z.number().nullable().optional(),
   content_end_line: z.number().nullable().optional(),
   preview_kind: z
-    .enum(['audio', 'docx', 'drawio', 'excalidraw', 'image', 'pdf', 'source', 'video'])
+    .enum([
+      'audio',
+      'docx',
+      'drawio',
+      'excalidraw',
+      'image',
+      'pdf',
+      'source',
+      'spreadsheet',
+      'video',
+    ])
     .nullable()
     .optional(),
   source_path: z.string().nullable().optional(),

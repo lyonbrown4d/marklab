@@ -1,0 +1,3 @@
+/* Keep the lazy third-party grid below Tailwind utilities so app sizing and
+   theme tokens override the library defaults without duplicating its styles. */
+@import 'react-data-grid/lib/styles.css' layer(components);

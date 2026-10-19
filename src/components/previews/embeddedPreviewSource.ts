@@ -27,7 +27,9 @@ const issueAssetSource = async (relativePath: string, target: string) => {
 }
 const isExternalTarget = (target: string) => externalProtocolPattern.test(target.trim())
 const isBlockedExternalTarget = (kind: PreviewFileKind, target: string) =>
-  kind === 'source' || (kind === 'pdf' && blockedExternalPdfPattern.test(target.trim()))
+  kind === 'source' ||
+  kind === 'spreadsheet' ||
+  (kind === 'pdf' && blockedExternalPdfPattern.test(target.trim()))
 const sourceForResolvedPath = (kind: PreviewFileKind, relativePath: string, target: string) =>
   kind === 'source' ? Promise.resolve('') : issueAssetSource(relativePath, target)
 

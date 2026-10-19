@@ -9,41 +9,41 @@ const DESTINATION: &str = "org.freedesktop.Notifications";
 const PATH: &str = "/org/freedesktop/Notifications";
 #[derive(Clone)]
 struct Shown {
-    server_id: u32,
-    owner: String,
-    token: String,
+  server_id: u32,
+  owner: String,
+  token: String,
 }
 type ShownMap = Arc<Mutex<HashMap<String, Shown>>>;
 struct Session {
-    connection: Connection,
-    listener: tokio::task::JoinHandle<()>,
-    body_markup: bool,
+  connection: Connection,
+  listener: tokio::task::JoinHandle<()>,
+  body_markup: bool,
 }
 impl Drop for Session {
-    fn drop(&mut self) {
-        self.listener.abort();
-    }
+  fn drop(&mut self) {
+    self.listener.abort();
+  }
 }
 pub(super) struct Backend {
-    session: OnceCell<Session>,
-    shown: ShownMap,
-    events: EventHandler,
-    desktop_entry: String,
+  session: OnceCell<Session>,
+  shown: ShownMap,
+  events: EventHandler,
+  desktop_entry: String,
 }
 impl Backend {
-    pub fn new(app: &tauri::AppHandle, events: EventHandler) -> BackendResult<Self> {
-        Ok(Self {
-            session: OnceCell::new(),
-            shown: Arc::new(Mutex::new(HashMap::new())),
-            events,
-            desktop_entry: app.config().identifier.clone(),
-        })
-    }
-    pub async fn prepare(&self) -> BackendResult<()> {
-        Ok(())
-    }
-    async fn session(&self) -> BackendResult<&Session> {
-        self.session
+  pub fn new(app: &tauri::AppHandle, events: EventHandler) -> BackendResult<Self> {
+    Ok(Self {
+      session: OnceCell::new(),
+      shown: Arc::new(Mutex::new(HashMap::new())),
+      events,
+      desktop_entry: app.config().identifier.clone(),
+    })
+  }
+  pub async fn prepare(&self) -> BackendResult<()> {
+    Ok(())
+  }
+  async fn session(&self) -> BackendResult<&Session> {
+    self.session
             .get_or_try_init(|| async {
                 let connection = tokio::time::timeout(
                     Duration::from_secs(10),
@@ -141,126 +141,126 @@ impl Backend {
                 })
             })
             .await
+  }
+  pub async fn show(&self, message: &NativeMessage) -> BackendResult<()> {
+    self.close(&message.id).await?;
+    let session = self.session().await?;
+    let bus = Proxy::new(
+      &session.connection,
+      "org.freedesktop.DBus",
+      "/org/freedesktop/DBus",
+      "org.freedesktop.DBus",
+    )
+    .await
+    .map_err(bus_error)?;
+    let owner: String = bus
+      .call("GetNameOwner", &(DESTINATION,))
+      .await
+      .map_err(bus_error)?;
+    // Pin this call to the unique daemon identity. Numeric ids may be reused after restart.
+    let proxy = Proxy::new_owned(session.connection.clone(), owner.clone(), PATH, DESTINATION)
+      .await
+      .map_err(bus_error)?;
+    let mut shown = self.shown.lock().await;
+    if shown.len() >= 256 {
+      return Err(BackendError::new(
+        "NOTIFICATION_LIMIT",
+        "Too many active notifications",
+      ));
     }
-    pub async fn show(&self, message: &NativeMessage) -> BackendResult<()> {
-        self.close(&message.id).await?;
-        let session = self.session().await?;
-        let bus = Proxy::new(
-            &session.connection,
-            "org.freedesktop.DBus",
-            "/org/freedesktop/DBus",
-            "org.freedesktop.DBus",
-        )
-        .await
-        .map_err(bus_error)?;
-        let owner: String = bus
-            .call("GetNameOwner", &(DESTINATION,))
-            .await
-            .map_err(bus_error)?;
-        // Pin this call to the unique daemon identity. Numeric ids may be reused after restart.
-        let proxy = Proxy::new_owned(session.connection.clone(), owner.clone(), PATH, DESTINATION)
-            .await
-            .map_err(bus_error)?;
-        let mut shown = self.shown.lock().await;
-        if shown.len() >= 256 {
-            return Err(BackendError::new(
-                "NOTIFICATION_LIMIT",
-                "Too many active notifications",
-            ));
-        }
-        let server_id: u32 = proxy
-            .call(
-                "Notify",
-                &notify_body(message, &self.desktop_entry, session.body_markup),
-            )
-            .await
-            .map_err(bus_error)?;
-        shown.insert(
-            message.id.clone(),
-            Shown {
-                server_id,
-                owner,
-                token: message.token.clone(),
-            },
-        );
-        Ok(())
+    let server_id: u32 = proxy
+      .call(
+        "Notify",
+        &notify_body(message, &self.desktop_entry, session.body_markup),
+      )
+      .await
+      .map_err(bus_error)?;
+    shown.insert(
+      message.id.clone(),
+      Shown {
+        server_id,
+        owner,
+        token: message.token.clone(),
+      },
+    );
+    Ok(())
+  }
+  pub async fn close(&self, id: &str) -> BackendResult<()> {
+    let Some(session) = self.session.get() else {
+      return Ok(());
+    };
+    let mut shown = self.shown.lock().await;
+    if let Some(entry) = shown.get(id) {
+      close_native(&session.connection, &entry.owner, entry.server_id).await?;
+      let token = entry.token.clone();
+      shown.remove(id);
+      drop(shown);
+      (self.events)(Event::Dismissed(token));
     }
-    pub async fn close(&self, id: &str) -> BackendResult<()> {
-        let Some(session) = self.session.get() else {
-            return Ok(());
-        };
-        let mut shown = self.shown.lock().await;
-        if let Some(entry) = shown.get(id) {
-            close_native(&session.connection, &entry.owner, entry.server_id).await?;
-            let token = entry.token.clone();
-            shown.remove(id);
-            drop(shown);
-            (self.events)(Event::Dismissed(token));
-        }
-        Ok(())
-    }
+    Ok(())
+  }
 }
 async fn close_native(connection: &Connection, owner: &str, id: u32) -> BackendResult<()> {
-    let proxy = Proxy::new(connection, owner, PATH, DESTINATION)
-        .await
-        .map_err(bus_error)?;
-    match proxy.call::<_, _, ()>("CloseNotification", &(id,)).await {
-        Ok(()) => Ok(()),
-        Err(zbus::Error::MethodError(name, _, _))
-            if matches!(
-                name.as_str(),
-                "org.freedesktop.DBus.Error.ServiceUnknown"
-                    | "org.freedesktop.DBus.Error.NameHasNoOwner"
-            ) =>
-        {
-            Ok(())
-        }
-        Err(error) => Err(bus_error(error)),
+  let proxy = Proxy::new(connection, owner, PATH, DESTINATION)
+    .await
+    .map_err(bus_error)?;
+  match proxy.call::<_, _, ()>("CloseNotification", &(id,)).await {
+    Ok(()) => Ok(()),
+    Err(zbus::Error::MethodError(name, _, _))
+      if matches!(
+        name.as_str(),
+        "org.freedesktop.DBus.Error.ServiceUnknown" | "org.freedesktop.DBus.Error.NameHasNoOwner"
+      ) =>
+    {
+      Ok(())
     }
+    Err(error) => Err(bus_error(error)),
+  }
 }
 fn escaped_body(body: &str) -> String {
-    body.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+  body
+    .replace('&', "&amp;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
 }
 type NotifyBody<'a> = (
-    &'static str,
-    u32,
-    &'static str,
-    &'a str,
-    String,
-    Vec<&'static str>,
-    HashMap<&'static str, zbus::Variant<'a>>,
-    i32,
+  &'static str,
+  u32,
+  &'static str,
+  &'a str,
+  String,
+  Vec<&'static str>,
+  HashMap<&'static str, zbus::Variant<'a>>,
+  i32,
 );
 fn notify_body<'a>(
-    message: &'a NativeMessage,
-    desktop_entry: &'a str,
-    body_markup: bool,
+  message: &'a NativeMessage,
+  desktop_entry: &'a str,
+  body_markup: bool,
 ) -> NotifyBody<'a> {
-    (
-        "Marklab",
-        0,
-        "",
-        &message.title,
-        if body_markup {
-            escaped_body(&message.body)
-        } else {
-            message.body.clone()
-        },
-        vec!["default", "Open Marklab"],
-        HashMap::from([("desktop-entry", zbus::Variant::from(desktop_entry))]),
-        -1,
-    )
+  (
+    "Marklab",
+    0,
+    "",
+    &message.title,
+    if body_markup {
+      escaped_body(&message.body)
+    } else {
+      message.body.clone()
+    },
+    vec!["default", "Open Marklab"],
+    HashMap::from([("desktop-entry", zbus::Variant::from(desktop_entry))]),
+    -1,
+  )
 }
 fn bus_error(_error: zbus::Error) -> BackendError {
-    unavailable()
+  unavailable()
 }
 fn unavailable() -> BackendError {
-    BackendError::new(
-        "NOTIFICATION_DBUS_FAILED",
-        "The desktop notification service is unavailable",
-    )
+  BackendError::new(
+    "NOTIFICATION_DBUS_FAILED",
+    "The desktop notification service is unavailable",
+  )
 }
 
 #[cfg(test)]

@@ -183,6 +183,8 @@ export default defineConfig(({ command, mode }) => {
       testTimeout: 10_000,
     },
     build: {
+      // React Data Grid uses light-dark(); preserve it when minifying vendor CSS.
+      cssTarget: 'esnext',
       chunkSizeWarningLimit: 500,
       reportCompressedSize: shouldReportCompressedSize,
       rolldownOptions: {

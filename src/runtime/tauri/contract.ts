@@ -1,6 +1,8 @@
 // All commands take one named request DTO: invoke(command, { request }).
 // Rust derives the workspace from the calling WebviewWindow, never a renderer window ID.
 export const workspaceCommands = [
+  'spreadsheet_read_page',
+  'html_preview_render',
   'plantuml_render',
   'plantuml_cancel',
   'app-ready',

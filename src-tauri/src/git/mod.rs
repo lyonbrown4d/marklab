@@ -34,28 +34,28 @@ pub use commands3::*;
 pub use commands4::*;
 pub use commands5::*;
 use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::{Arc, Weak},
+  collections::HashMap,
+  path::{Path, PathBuf},
+  sync::{Arc, Weak},
 };
 use tokio::sync::Mutex;
 #[derive(Default)]
 pub struct GitState {
-    locks: Mutex<HashMap<PathBuf, Weak<RepositoryGate>>>,
-    queries: cache::Queries,
+  locks: Mutex<HashMap<PathBuf, Weak<RepositoryGate>>>,
+  queries: cache::Queries,
 }
 impl GitState {
-    pub async fn lock(&self, root: &Path) -> Arc<RepositoryGate> {
-        let root = cache::root_key(root);
-        let mut locks = self.locks.lock().await;
-        locks.retain(|_, value| value.strong_count() > 0);
-        if let Some(lock) = locks.get(&root).and_then(Weak::upgrade) {
-            return lock;
-        }
-        let lock = Arc::new(RepositoryGate::default());
-        locks.insert(root, Arc::downgrade(&lock));
-        lock
+  pub async fn lock(&self, root: &Path) -> Arc<RepositoryGate> {
+    let root = cache::root_key(root);
+    let mut locks = self.locks.lock().await;
+    locks.retain(|_, value| value.strong_count() > 0);
+    if let Some(lock) = locks.get(&root).and_then(Weak::upgrade) {
+      return lock;
     }
+    let lock = Arc::new(RepositoryGate::default());
+    locks.insert(root, Arc::downgrade(&lock));
+    lock
+  }
 }
 #[cfg(test)]
 mod tests;
@@ -68,7 +68,7 @@ mod test_remote;
 mod test_support;
 
 pub async fn initialize() -> crate::error::BackendResult<()> {
-    crate::blocking::run(process::initialize).await
+  crate::blocking::run(process::initialize).await
 }
 
 #[cfg(test)]
@@ -77,10 +77,10 @@ mod test_sequences;
 #[derive(Default)]
 pub struct RepositoryGate(tokio::sync::RwLock<()>);
 impl RepositoryGate {
-    pub async fn lock(&self) -> tokio::sync::RwLockWriteGuard<'_, ()> {
-        self.0.write().await
-    }
-    async fn read(&self) -> tokio::sync::RwLockReadGuard<'_, ()> {
-        self.0.read().await
-    }
+  pub async fn lock(&self) -> tokio::sync::RwLockWriteGuard<'_, ()> {
+    self.0.write().await
+  }
+  async fn read(&self) -> tokio::sync::RwLockReadGuard<'_, ()> {
+    self.0.read().await
+  }
 }

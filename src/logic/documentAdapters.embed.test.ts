@@ -22,6 +22,10 @@ describe('document adapter markdown embed helpers', () => {
     expect(documentAdapterForMarkdownEmbedPath('sketch.excalidraw')?.kind).toBe('excalidraw')
     expect(documentAdapterForMarkdownEmbedPath('src/example.ts')?.kind).toBe('source')
     expect(documentAdapterForMarkdownEmbedPath('data/example.csv')?.kind).toBe('source')
+    expect(documentAdapterForMarkdownEmbedPath('data/example.xlsx')?.kind).toBe('spreadsheet')
+    expect(documentAdapterForMarkdownEmbedPath('data/example.tsv')?.kind).toBe('source')
+    expect(documentAdapterForMarkdownEmbedPath('diagrams/example.mmd')?.kind).toBe('source')
+    expect(documentAdapterForMarkdownEmbedPath('web/example.html')?.kind).toBe('source')
   })
 
   it('exposes adapter-specific extensions for picker filters', () => {

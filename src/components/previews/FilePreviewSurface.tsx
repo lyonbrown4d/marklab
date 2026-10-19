@@ -10,6 +10,9 @@ const DocxPreviewSurface = lazy(() => import('@/components/previews/DocxPreviewS
 const DrawioEditorSurface = lazy(() => import('@/components/previews/DrawioEditorSurface'))
 const ExcalidrawEditorSurface = lazy(() => import('@/components/previews/ExcalidrawEditorSurface'))
 const SourcePreviewSurface = lazy(() => import('@/components/previews/SourcePreviewSurface'))
+const SpreadsheetPreviewSurface = lazy(
+  () => import('@/components/previews/SpreadsheetPreviewSurface'),
+)
 const PdfPreviewSurface = lazy(() =>
   import('@/components/previews/PdfPreviewSurface').then((module) => ({
     default: module.PdfPreviewSurface,
@@ -53,7 +56,10 @@ const FilePreviewSurface = ({
     )
   }
 
-  if (presentation === 'graph' && (kind === 'docx' || kind === 'drawio' || kind === 'excalidraw')) {
+  if (
+    presentation === 'graph' &&
+    (kind === 'docx' || kind === 'drawio' || kind === 'excalidraw' || kind === 'spreadsheet')
+  ) {
     return (
       <div
         className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-3 text-center"
@@ -67,6 +73,19 @@ const FilePreviewSurface = ({
           </div>
         </div>
       </div>
+    )
+  }
+
+  if (kind === 'spreadsheet') {
+    return (
+      <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+        <SpreadsheetPreviewSurface
+          path={path}
+          src={capabilityUrl}
+          title={title}
+          presentation={presentation}
+        />
+      </Suspense>
     )
   }
 

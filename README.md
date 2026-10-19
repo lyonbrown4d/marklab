@@ -17,6 +17,9 @@ packaging dependencies have been removed; historical measurements remain in `doc
 - [Vim mode](docs/vim-mode.md) for source editors, with global and per-tab controls.
 - PlantUML previews in `plantuml` / `puml` code fences and standalone
   `.puml`, `.plantuml`, `.pu`, and `.wsd` files.
+- Inline and standalone spreadsheet previews for `.xlsx`, `.xlsm`, `.csv`, and
+  `.tsv`, with worksheet selection, pagination, resizable columns and cell copying.
+- Standalone and embedded Mermaid (`.mmd`, `.mermaid`) and static HTML previews.
 - Desktop app targeting Windows, macOS, and Linux.
 
 PlantUML rendering uses the Cargo-managed `puml` library in Rust, without Java or
@@ -25,6 +28,23 @@ PlantUML preview button to switch views. Multi-page diagrams include a page sele
 and zoom controls. `.iuml` include fragments open as source. Rendering compatibility
 follows `puml` rather than the official PlantUML engine; unsupported features may
 produce errors or rendering notes. Local-file and URL includes are not enabled.
+
+Spreadsheets use Rust `calamine` / `csv` readers and a virtualized React Data Grid.
+Excel previews initially show saved cell values. Select a cell to inspect its
+formula; use **Calculate formulas** to calculate supported scalar formulas in Rust
+with IronCalc. Supported functions are `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`,
+`IF`, `IFERROR` and `ROUND`, including local cross-sheet references. Calculation
+is limited to 20,000 cells, 128 formulas and 8 worksheets. Unsupported formulas
+produce an error; switching back restores the saved-value preview. Calculation
+does not modify the workbook. SheetJS formats visible cell values; dates use ISO
+formats, while custom number formats, original styling and charts are not
+reproduced. Macros and external data connections are never executed.
+Files are limited to 16 MiB with additional
+expanded-data and page limits. CSV/TSV retain their source editor and preview the
+current buffer. Embed supported files with `![](path/to/file)`.
+HTML previews retain inline styles inside a sandboxed frame. Scripts, navigation,
+external stylesheets and network resources are disabled. Local images referenced
+by relative paths are not loaded; embedded raster data images are supported.
 
 ## Tech Stack
 

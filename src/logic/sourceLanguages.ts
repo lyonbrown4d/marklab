@@ -39,6 +39,8 @@ const languagesByExtension: Readonly<Record<string, SourceLanguage>> = {
   markdown: { id: 'markdown', label: 'Markdown' },
   md: { id: 'markdown', label: 'Markdown' },
   mjs: { id: 'javascript', label: 'JavaScript' },
+  mmd: { id: 'plaintext', label: 'Mermaid' },
+  mermaid: { id: 'plaintext', label: 'Mermaid' },
   mts: { id: 'typescript', label: 'TypeScript' },
   php: { id: 'php', label: 'PHP' },
   properties: { id: 'properties', label: 'Properties' },

@@ -60,6 +60,11 @@ log = "0.4"
 keyring = "4.2.0"
 tempfile = "3.27.0"
 quick-xml = { version = "0.42.0", features = ["serialize"] }
+calamine = { version = "0.37.0", default-features = false }
+csv = "1.4.0"
+csv-core = "0.1.13"
+ironcalc_base = { version = "0.9.0", default-features = false }
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
 typst = "0.15"
 typst-layout = "0.15"
 typst-pdf = "0.15"
@@ -120,4 +125,3 @@ strip = true
 rmcp = { version = "3.5.1", default-features = false, features = ["client"] }
 tauri = { version = "2.12.4", features = ["test"] }
 tempfile = "3.27.0"
-zip = { version = "9.0.5", default-features = false, features = ["deflate"] }

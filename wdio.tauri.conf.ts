@@ -31,23 +31,43 @@ const capability: TauriCapabilities = {
   'wdio:tauriServiceOptions': { windowLabel: 'main' },
 }
 
+const selectedSpecs = (() => {
+  const source = process.env.MARKLAB_E2E_SPEC_FILES
+  if (!source) return []
+  let selected: unknown
+  try {
+    selected = JSON.parse(source)
+  } catch {
+    throw new Error('MARKLAB_E2E_SPEC_FILES must be a JSON array of non-empty spec paths')
+  }
+  if (!Array.isArray(selected))
+    throw new Error('MARKLAB_E2E_SPEC_FILES must be a JSON array of non-empty spec paths')
+  return selected.map((file: unknown) => {
+    if (typeof file !== 'string' || file.trim().length === 0)
+      throw new Error('MARKLAB_E2E_SPEC_FILES must contain only non-empty spec paths')
+    return file
+  })
+})()
+
+const defaultSpecs = [
+  './e2e/tauri/windowState.spec.ts',
+  './e2e/tauri/titlebar.spec.ts',
+  './e2e/tauri/native.spec.ts',
+  './e2e/tauri/memory.spec.ts',
+  './e2e/tauri/webTabs.spec.ts',
+  './e2e/tauri/plantuml.spec.ts',
+  './e2e/tauri/documentPreviews.spec.ts',
+  ...(process.env.MARKLAB_E2E_NETWORK_PREVIEWS === '1'
+    ? ['./e2e/tauri/previews.network.spec.ts']
+    : []),
+  './e2e/tauri/cli.spec.ts',
+]
+
 export const config: WebdriverIO.Config = {
   runner: 'local',
   // The embedded service owns one resident app. Keep these journeys ordered in
   // one worker so window-state starts with the CLI-selected alpha workspace.
-  specs: [
-    [
-      './e2e/tauri/windowState.spec.ts',
-      './e2e/tauri/native.spec.ts',
-      './e2e/tauri/memory.spec.ts',
-      './e2e/tauri/webTabs.spec.ts',
-      './e2e/tauri/plantuml.spec.ts',
-      ...(process.env.MARKLAB_E2E_NETWORK_PREVIEWS === '1'
-        ? ['./e2e/tauri/previews.network.spec.ts']
-        : []),
-      './e2e/tauri/cli.spec.ts',
-    ],
-  ],
+  specs: [selectedSpecs.length > 0 ? selectedSpecs : defaultSpecs],
   maxInstances: 1,
   capabilities: [capability],
   services: [

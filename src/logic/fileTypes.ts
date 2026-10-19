@@ -45,6 +45,15 @@ export const isSourcePreviewFilePath = (value: string): boolean =>
 export const isPlantUmlFilePath = (value: string): boolean =>
   ['puml', 'plantuml', 'pu', 'wsd'].includes(fileExtension(value))
 
+export const isMermaidFilePath = (value: string): boolean =>
+  ['mmd', 'mermaid'].includes(fileExtension(value))
+
+export const isHtmlFilePath = (value: string): boolean =>
+  ['html', 'htm'].includes(fileExtension(value))
+
+export const isDelimitedFilePath = (value: string): boolean =>
+  ['csv', 'tsv'].includes(fileExtension(value))
+
 export const isPreviewOnlyFilePath = (value: string): boolean => {
   const kind = getPreviewFileKind(value)
   return kind !== null && kind !== 'source'

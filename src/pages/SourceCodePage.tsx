@@ -6,10 +6,12 @@ import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus, type EditorCursorPosition } from '@/components/EditorDocumentStatus'
 import type { EditorChangeHandler } from '@/types/editorChanges'
 import { isPlantUmlFilePath } from '@/logic/fileTypes'
+import SourceDocumentPreview, {
+  hasSourceDocumentPreview,
+} from '@/components/previews/SourceDocumentPreview'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/useI18n'
 const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
-const PlantUmlPreview = lazy(() => import('@/components/previews/PlantUmlPreview'))
 type SourceCodePageProps = {
   activePath: string | null
   workspaceKey: string
@@ -37,7 +39,8 @@ const SourceCodePage = ({
   const interactionActive = !keepAlive.cacheKey || keepAlive.active
   const [previewPath, setPreviewPath] = useState<string | null>(null)
   const plantuml = isPlantUmlFilePath(activePath ?? '')
-  const preview = plantuml && Boolean(activePath) && previewPath === activePath
+  const previewAvailable = hasSourceDocumentPreview(activePath ?? '')
+  const preview = previewAvailable && Boolean(activePath) && previewPath === activePath
   const [cursor, setCursor] = useState<{
     path: string | null
     position: EditorCursorPosition | null
@@ -61,24 +64,28 @@ const SourceCodePage = ({
   )
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {plantuml ? (
+      {previewAvailable ? (
         <div className="flex shrink-0 justify-end border-b border-border px-3 py-1">
           <Button
-            aria-label={t('preview.plantumlTitle')}
+            aria-label={`${t(plantuml ? 'preview.plantumlTitle' : 'preview.sourcePreview')}${preview ? `: ${t('preview.sourceEdit')}` : ''}`}
             aria-pressed={preview}
             onClick={() => setPreviewPath(preview ? null : activePath)}
             size="sm"
             variant="ghost"
             type="button"
           >
-            {preview ? t('preview.plantumlEditSource') : t('preview.plantumlTitle')}
+            {preview ? t('preview.sourceEdit') : t('preview.sourcePreview')}
           </Button>
         </div>
       ) : null}
       {preview && interactionActive ? (
         <div className="min-h-0 flex-1 overflow-auto p-4">
           <Suspense fallback={<EditorPaneFallback />}>
-            <PlantUmlPreview source={value} />
+            <SourceDocumentPreview
+              path={activePath ?? ''}
+              source={value}
+              title={activePath ?? ''}
+            />
           </Suspense>
         </div>
       ) : null}

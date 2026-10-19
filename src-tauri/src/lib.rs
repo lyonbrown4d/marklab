@@ -10,6 +10,7 @@ pub mod git;
 pub mod graph_compute;
 pub mod graph_layout;
 pub mod history;
+pub mod html_preview;
 pub mod language;
 pub mod link_preview;
 pub mod mcp;
@@ -18,16 +19,17 @@ pub mod notifications;
 pub mod plantuml;
 pub mod platform;
 pub mod settings;
+pub mod spreadsheet;
 pub mod sync;
 pub mod terminal;
 pub mod web_tabs;
 pub mod workspace;
 
 pub fn run() {
-    if let Err(error) = desktop::run() {
-        desktop::logging::report_startup_failure(&error);
-        std::process::exit(1);
-    }
+  if let Err(error) = desktop::run() {
+    desktop::logging::report_startup_failure(&error);
+    std::process::exit(1);
+  }
 }
 
 mod desktop;

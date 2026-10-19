@@ -27,6 +27,30 @@ try {
   )
   await fs.writeFile(path.join(fixture, '.marklab-e2e'), 'native-wdio-v1\n')
   const diagram = '@startuml\nAlice -> Bob: native-plantuml\n@enduml\n'
+  await fs.copyFile(
+    path.join(repository, 'e2e/tauri/fixtures/Workbook.xlsx'),
+    path.join(fixture, 'alpha', 'Workbook.xlsx'),
+  )
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Table.csv'),
+    'Name,Count\nnative-csv-preview,42\n',
+  )
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Table.tsv'),
+    'Name\tCount\nnative-tsv-preview\t21\n',
+  )
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Flow.mmd'),
+    'flowchart LR\n A[native-mermaid-file] --> B[Preview]\n',
+  )
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Page.html'),
+    '<style>p { color: red }</style><p>native-html-preview</p><script>parent.__html_preview_escape=true</script>',
+  )
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Previews.md'),
+    '# Embedded previews\n\n![](Table.csv)\n\n![](Workbook.xlsx)\n\n![](Flow.mmd)\n\n![](Page.html)\n',
+  )
   await fs.writeFile(path.join(fixture, 'alpha', 'Diagram.puml'), diagram)
   await fs.writeFile(
     path.join(fixture, 'alpha', 'Diagram.md'),
@@ -77,12 +101,12 @@ try {
     })
   }
   const selectedSpecs = process.argv.slice(2)
-  const launcher = new Launcher(
-    path.join(repository, 'wdio.tauri.conf.ts'),
-    selectedSpecs.length
-      ? { spec: selectedSpecs.map((spec) => path.resolve(repository, spec)) }
-      : {},
+  // Keep positional selections in the same ordered worker as the default suite.
+  // CLI `spec` overrides flatten groups and restart the resident native service.
+  process.env.MARKLAB_E2E_SPEC_FILES = JSON.stringify(
+    selectedSpecs.map((spec) => path.resolve(repository, spec)),
   )
+  const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'))
   exitCode = (await launcher.run()) ?? 1
 } catch (error) {
   console.error(error)

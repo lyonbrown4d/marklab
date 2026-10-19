@@ -120,6 +120,9 @@ describe('embeddedPreviewSource', () => {
     ).resolves.toBeNull()
     expect(resolveMarkdownAsset).not.toHaveBeenCalled()
     expect(toAssetUrl).not.toHaveBeenCalled()
+    await expect(
+      resolveEmbeddedPreviewTarget('notes/current.md', 'https://site.test/report.xlsx'),
+    ).resolves.toBeNull()
   })
 
   it('keeps supported external document targets loadable without filesystem resolution', async () => {

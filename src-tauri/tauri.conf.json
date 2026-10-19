@@ -38,6 +38,21 @@
         "ext": ["puml", "plantuml", "pu", "wsd", "iuml"],
         "name": "PlantUML Document",
         "role": "Editor"
+      },
+      {
+        "ext": ["mmd", "mermaid"],
+        "name": "Mermaid Document",
+        "role": "Editor"
+      },
+      {
+        "ext": ["csv", "tsv", "html", "htm"],
+        "name": "Source Document",
+        "role": "Editor"
+      },
+      {
+        "ext": ["xlsx", "xlsm"],
+        "name": "Spreadsheet",
+        "role": "Viewer"
       }
     ],
     "macOS": {

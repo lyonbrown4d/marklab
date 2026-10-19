@@ -21,9 +21,15 @@ import { fsApi } from '@/services/fsApi'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { readPreviewTextAsset } from '@/services/readPreviewAsset'
-import { isPlantUmlFilePath } from '@/logic/fileTypes'
+import { isDelimitedFilePath, isMermaidFilePath } from '@/logic/fileTypes'
+import SourceDocumentPreview, {
+  canRenderMermaidSource,
+  hasSourceDocumentPreview,
+} from '@/components/previews/SourceDocumentPreview'
 
-const PlantUmlPreview = lazy(() => import('@/components/previews/PlantUmlPreview'))
+const SpreadsheetPreviewSurface = lazy(
+  () => import('@/components/previews/SpreadsheetPreviewSurface'),
+)
 
 export const MAX_SOURCE_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 export const MAX_SOURCE_PREVIEW_CHARACTERS = 200_000
@@ -70,6 +76,7 @@ const SourcePreviewSurface = ({
   const rootPath = useLayoutContext((state) => state.rootPath)
   const language = sourceLanguageForPath(path)
   const graphPresentation = presentation === 'graph'
+  const delimitedDocument = isDelimitedFilePath(path) && !graphPresentation
   const byteLimit = graphPresentation ? GRAPH_SOURCE_PREVIEW_BYTES : MAX_SOURCE_PREVIEW_BYTES
   const maxCharacters = graphPresentation
     ? GRAPH_SOURCE_PREVIEW_CHARACTERS
@@ -90,6 +97,7 @@ const SourcePreviewSurface = ({
         truncated: preview.truncated || rendered.renderTruncated,
       }
     },
+    enabled: !delimitedDocument,
     gcTime: 0,
     retry: false,
   })
@@ -114,6 +122,19 @@ const SourcePreviewSurface = ({
     event.stopPropagation()
   }
 
+  if (delimitedDocument) {
+    return (
+      <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+        <SpreadsheetPreviewSurface
+          path={path}
+          src={src}
+          title={title}
+          presentation={presentation}
+        />
+      </Suspense>
+    )
+  }
+
   if (sourceQuery.isLoading) {
     return <PreviewLoadingFallback label={t('preview.sourceLoading')} />
   }
@@ -129,10 +150,21 @@ const SourcePreviewSurface = ({
   const data = sourceQuery.data
   if (!data) return null
 
-  if (isPlantUmlFilePath(path) && !data.truncated && !graphPresentation) {
+  const renderableDiagram = !isMermaidFilePath(path) || canRenderMermaidSource(data.content)
+  if (
+    hasSourceDocumentPreview(path) &&
+    !data.truncated &&
+    !graphPresentation &&
+    renderableDiagram
+  ) {
     return (
       <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
-        <PlantUmlPreview source={data.content} />
+        <SourceDocumentPreview
+          path={path}
+          source={data.content}
+          title={title}
+          presentation={presentation}
+        />
       </Suspense>
     )
   }
