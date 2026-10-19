@@ -1,6 +1,6 @@
 [package]
 name = "marklab-desktop"
-version = "0.2.9"
+version = "0.2.8"
 description = "Marklab desktop application"
 authors = ["Marklab"]
 edition = "2024"
