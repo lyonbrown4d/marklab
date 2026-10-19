@@ -165,7 +165,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
       rootPath,
     })
 
-    const titlebarDrag = useTitlebarDrag(getAppWindow)
+    const titlebarDrag = useTitlebarDrag(platform, getAppWindow)
     return (
       <header
         data-app-focus-zone="titlebar"
@@ -174,7 +174,7 @@ const Titlebar = forwardRef<TitlebarHandle, TitlebarProps>(
           isMacDesktop && 'pl-[76px]',
         )}
         onMouseDown={titlebarDrag.onMouseDown}
-        onDoubleClick={titlebarDrag.onDoubleClick}
+        onMouseUp={titlebarDrag.onMouseUp}
       >
         <ImmersiveTitlebarChrome
           activePath={activePath}

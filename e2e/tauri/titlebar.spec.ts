@@ -27,8 +27,11 @@ const doubleClick = (selector: string) =>
     const target = document.querySelector(targetSelector)
     if (!target) throw new Error(`Missing titlebar double-click target: ${targetSelector}`)
     // The embedded driver's click uses HTMLElement.click(), while pointer actions
-    // do not synthesize dblclick. Exercise the real React handler with the DOM event.
-    target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, button: 0, detail: 2 }))
+    // do not synthesize a counted second press. Exercise the real React handlers
+    // at the same press/release coordinates, following Tauri's platform timing.
+    const event = { bubbles: true, button: 0, detail: 2, clientX: 100, clientY: 20 }
+    target.dispatchEvent(new MouseEvent('mousedown', event))
+    target.dispatchEvent(new MouseEvent('mouseup', event))
   }, selector)
 
 const waitForMaximized = (expected: boolean) =>

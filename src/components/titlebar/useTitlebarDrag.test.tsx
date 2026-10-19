@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTitlebarDrag } from '@/components/titlebar/useTitlebarDrag'
+import type { AppPlatform } from '@/services/appApi'
 
 const native = vi.hoisted(() => ({ desktop: true, warn: vi.fn(), getWindow: vi.fn() }))
 vi.mock('@/runtime/window', () => ({ isDesktopRuntime: () => native.desktop }))
@@ -13,8 +13,8 @@ const handle = {
   maximize: vi.fn(async () => undefined),
   unmaximize: vi.fn(async () => undefined),
 }
-const Chrome = () => {
-  const drag = useTitlebarDrag(native.getWindow)
+const Chrome = ({ platform = 'macos' }: { platform?: AppPlatform }) => {
+  const drag = useTitlebarDrag(platform, native.getWindow)
   return (
     <header {...drag}>
       <span>Window title</span>
@@ -38,6 +38,11 @@ const Chrome = () => {
     </header>
   )
 }
+const secondClick = (target: HTMLElement, x = 120, y = 20) => {
+  const event = { button: 0, detail: 2, clientX: x, clientY: y }
+  fireEvent.mouseDown(target, event)
+  fireEvent.mouseUp(target, event)
+}
 beforeEach(() => {
   vi.clearAllMocks()
   native.desktop = true
@@ -55,18 +60,40 @@ describe('native titlebar dragging and resizing', () => {
     expect(handle.maximize).not.toHaveBeenCalled()
   })
 
-  it('maximizes and restores on double click, including macOS without custom caption buttons', async () => {
-    const user = userEvent.setup()
+  it.each(['macos', 'windows', 'linux'] as const)(
+    'maximizes and restores at the native second-click timing on %s without double toggling',
+    async (platform) => {
+      render(<Chrome platform={platform} />)
+      const title = screen.getByText('Window title')
+      const event = { button: 0, detail: 2, clientX: 120, clientY: 20 }
+      fireEvent.mouseDown(title, event)
+      if (platform === 'macos') {
+        expect(native.getWindow).not.toHaveBeenCalled()
+        fireEvent.mouseUp(title, event)
+      }
+      await waitFor(() => expect(handle.maximize).toHaveBeenCalledOnce())
+      // A later release or browser dblclick must not apply a second resize,
+      // even after the first native operation has completed.
+      fireEvent.mouseUp(title, event)
+      fireEvent.doubleClick(title, event)
+      expect(handle.maximize).toHaveBeenCalledOnce()
+      expect(native.getWindow).toHaveBeenCalledOnce()
+      expect(handle.startDragging).not.toHaveBeenCalled()
+      handle.isMaximized.mockResolvedValue(true)
+      secondClick(title)
+      await waitFor(() => expect(handle.unmaximize).toHaveBeenCalledOnce())
+    },
+  )
+
+  it('cancels macOS resizing when the pointer moves or the second press is missing', () => {
     render(<Chrome />)
     const title = screen.getByText('Window title')
-    await user.dblClick(title)
-    await waitFor(() => expect(handle.maximize).toHaveBeenCalledOnce())
-    // Only the first press starts a drag; the second press preserves double click.
-    expect(handle.startDragging).toHaveBeenCalledOnce()
-    handle.isMaximized.mockResolvedValue(true)
-    await user.dblClick(title)
-    await waitFor(() => expect(handle.unmaximize).toHaveBeenCalledOnce())
-    expect(handle.startDragging).toHaveBeenCalledTimes(2)
+    fireEvent.mouseUp(title, { button: 0, detail: 2, clientX: 120, clientY: 20 })
+    fireEvent.mouseDown(title, { button: 0, detail: 2, clientX: 120, clientY: 20 })
+    fireEvent.mouseMove(title, { clientX: 124, clientY: 20 })
+    fireEvent.mouseUp(title, { button: 0, detail: 2, clientX: 124, clientY: 20 })
+    fireEvent.mouseUp(title, { button: 0, detail: 2, clientX: 120, clientY: 20 })
+    expect(native.getWindow).not.toHaveBeenCalled()
   })
 
   it('does not drag or resize interactive descendants or explicit exclusions', () => {
@@ -82,7 +109,7 @@ describe('native titlebar dragging and resizing', () => {
     ]
     for (const target of excluded) {
       fireEvent.mouseDown(target, { button: 0 })
-      fireEvent.doubleClick(target, { button: 0 })
+      secondClick(target)
     }
     expect(native.getWindow).not.toHaveBeenCalled()
   })
@@ -91,12 +118,12 @@ describe('native titlebar dragging and resizing', () => {
     render(<Chrome />)
     const title = screen.getByText('Window title')
     fireEvent.mouseDown(title, { button: 2 })
-    fireEvent.doubleClick(title, { button: 2 })
-    title.addEventListener('dblclick', (event) => event.preventDefault(), { once: true })
-    fireEvent.doubleClick(title, { button: 0 })
+    fireEvent.mouseUp(title, { button: 2, detail: 2 })
+    title.addEventListener('mousedown', (event) => event.preventDefault(), { once: true })
+    secondClick(title)
     native.desktop = false
     fireEvent.mouseDown(title, { button: 0 })
-    fireEvent.doubleClick(title, { button: 0 })
+    secondClick(title)
     expect(native.getWindow).not.toHaveBeenCalled()
   })
 
@@ -114,9 +141,9 @@ describe('native titlebar dragging and resizing', () => {
       expect(native.warn).toHaveBeenCalledWith('window.titlebar', 'native-action-failed', failure),
     )
     handle.maximize.mockRejectedValueOnce(failure)
-    fireEvent.doubleClick(title, { button: 0 })
+    secondClick(title)
     await waitFor(() => expect(native.warn).toHaveBeenCalledTimes(2))
-    fireEvent.doubleClick(title, { button: 0 })
+    secondClick(title)
     await waitFor(() => expect(handle.maximize).toHaveBeenCalledTimes(2))
   })
 
@@ -129,14 +156,14 @@ describe('native titlebar dragging and resizing', () => {
         resolveWindow = resolve
       }),
     )
-    fireEvent.doubleClick(title, { button: 0 })
-    fireEvent.doubleClick(title, { button: 0 })
+    secondClick(title)
+    secondClick(title)
     expect(native.getWindow).toHaveBeenCalledOnce()
     resolveWindow(null)
     await waitFor(() => expect(handle.maximize).not.toHaveBeenCalled())
     // Flush the completed request's finally handler before retrying.
     await Promise.resolve()
-    fireEvent.doubleClick(title, { button: 0 })
+    secondClick(title)
     await waitFor(() => expect(handle.maximize).toHaveBeenCalledOnce())
   })
 })
