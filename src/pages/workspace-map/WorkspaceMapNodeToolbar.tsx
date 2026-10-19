@@ -30,6 +30,8 @@ export const WorkspaceMapNodeToolbar = ({
   visible,
 }: WorkspaceMapNodeToolbarProps) => {
   const { t } = useI18n()
+  // React Flow toolbars subscribe to every viewport frame even when isVisible is false.
+  if (!visible) return null
   return (
     <NodeToolbar
       align="end"

@@ -32,6 +32,11 @@ vi.mock('@/pages/workspace-map/useWorkspaceMapNodeDetails', () => ({
   useWorkspaceMapNodeDetails: ({ graph }: { graph: GraphData }) => graph,
 }))
 
+// This fixture tests canvas orchestration; edge drawing has its own store-backed tests.
+vi.mock('@/pages/workspace-map/WorkspaceMapOverviewEdges', () => ({
+  WorkspaceMapOverviewEdges: () => <div data-testid="workspace-map-overview-edges" />,
+}))
+
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
   BackgroundVariant: { Dots: 'dots' },
@@ -115,6 +120,8 @@ describe('WorkspaceMapCanvas product readiness', () => {
     expect(flowPropsRef.current?.nodes.every((node) => node.width === 248)).toBe(true)
     expect(flowPropsRef.current?.nodes.every((node) => node.height === 112)).toBe(true)
     expect(flowPropsRef.current?.edges).toHaveLength(1)
+    expect(flowPropsRef.current?.edges.every((edge) => edge.hidden)).toBe(true)
+    expect(screen.getByTestId('workspace-map-overview-edges')).toBeInTheDocument()
     expect(layoutGraphRef.current?.nodes).toHaveLength(14)
     expect(
       screen.getByRole('button', { name: 'workspaceMap.showExternalResources' }),
@@ -152,6 +159,10 @@ describe('WorkspaceMapCanvas product readiness', () => {
     expect(documentation.style.top).toMatch(/px$/)
     expect(documentation.style.transform).toBe('')
     expect(screen.getByTestId('workspace-map-group-libraries')).toHaveTextContent('Libraries')
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceMap.focusMode' }))
+    await waitFor(() => expect(flowPropsRef.current?.edges[0]?.hidden).not.toBe(true))
+    expect(screen.queryByTestId('workspace-map-overview-edges')).not.toBeInTheDocument()
+    expect(flowPropsRef.current?.edges[0]?.type).toBe('smoothstep')
   })
 
   it('focuses a searched node at a readable zoom and keeps the canvas minimum readable', async () => {

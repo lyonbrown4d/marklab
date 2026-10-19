@@ -27,26 +27,6 @@ initializeReactScan(import.meta.env.DEV, import.meta.env.VITE_REACT_SCAN)
 installRendererDiagnostics()
 await initializeRendererLifecycle()
 
-if (import.meta.env.DEV && import.meta.env.VITE_REACT_DEVTOOLS === 'true') {
-  const loadReactDevTools = () => {
-    const script = document.createElement('script')
-    script.src = 'http://localhost:8097'
-    script.async = true
-    script.onload = () => {
-      console.log('React DevTools loaded')
-    }
-    script.onerror = () => {
-      console.warn('React DevTools not available. Start the standalone DevTools first.')
-    }
-
-    // 延迟加载，确保 React 已初始化
-    setTimeout(() => {
-      document.head.appendChild(script)
-    }, 1000)
-  }
-
-  loadReactDevTools()
-}
 createRoot(document.getElementById('root')!, {
   onCaughtError: (error, info) => reportReactError('caught-error', error, info.componentStack),
   onRecoverableError: (error, info) =>

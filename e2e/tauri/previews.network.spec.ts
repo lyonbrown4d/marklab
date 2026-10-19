@@ -18,9 +18,9 @@ describe('native preview worker reuse (public network)', () => {
     await switchToWorkspace(fixture.beta)
     const owner = await browser.getWindowHandle()
     await browser.setTimeout({ script: 60_000 })
-    const result = await browser.executeAsync<PreviewJourney, []>((done) => {
+    const result = await browser.execute(async (): Promise<PreviewJourney> => {
       const runtime = window.marklabTauri
-      if (!runtime) return done({ error: 'Native runtime is unavailable' })
+      if (!runtime) return { error: 'Native runtime is unavailable' }
       const internals = (
         window as unknown as {
           __TAURI_INTERNALS__: {
@@ -35,38 +35,36 @@ describe('native preview worker reuse (public network)', () => {
             .map((view) => view.label)
             .sort(),
         )
-      void (async () => {
-        let outcome: PreviewJourney
-        try {
-          const capture = (url: string) =>
-            runtime.linkPreview.capture(url, {
-              requestId: crypto.randomUUID(),
-              priority: 'interactive',
-            })
-          const nonce = crypto.randomUUID()
-          const first = await capture(`https://example.com/?marklab-preview=${nonce}-first`)
-          const firstWorkers = await workers()
-          const second = await capture(`https://example.com/?marklab-preview=${nonce}-second`)
-          const secondWorkers = await workers()
-          outcome = {
-            reused: firstWorkers.length === 1 && firstWorkers.join() === secondWorkers.join(),
-            images: [first, second].every(
-              (image) =>
-                image.width === 1920 &&
-                image.height === 1080 &&
-                image.src.startsWith('marklab-asset://remote/v1/'),
-            ),
-          }
-        } catch (error) {
-          outcome = { error: String(error) }
+      let outcome: PreviewJourney
+      try {
+        const capture = (url: string) =>
+          runtime.linkPreview.capture(url, {
+            requestId: crypto.randomUUID(),
+            priority: 'interactive',
+          })
+        const nonce = crypto.randomUUID()
+        const first = await capture(`https://example.com/?marklab-preview=${nonce}-first`)
+        const firstWorkers = await workers()
+        const second = await capture(`https://example.com/?marklab-preview=${nonce}-second`)
+        const secondWorkers = await workers()
+        outcome = {
+          reused: firstWorkers.length === 1 && firstWorkers.join() === secondWorkers.join(),
+          images: [first, second].every(
+            (image) =>
+              image.width === 1920 &&
+              image.height === 1080 &&
+              image.src.startsWith('marklab-asset://remote/v1/'),
+          ),
         }
-        done(outcome)
-        // Use the production close handshake to exercise queue cancellation,
-        // worker reclamation and owner-scoped capability cleanup as well.
-        window.setTimeout(() => {
-          void runtime.window.close().catch(console.error)
-        }, 0)
-      })().catch((error: unknown) => done({ error: String(error) }))
+      } catch (error) {
+        outcome = { error: String(error) }
+      }
+      // Use the production close handshake to exercise queue cancellation,
+      // worker reclamation and owner-scoped capability cleanup as well.
+      window.setTimeout(() => {
+        void runtime.window.close().catch(console.error)
+      }, 0)
+      return outcome
     })
     await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(owner), {
       timeout: 30_000,

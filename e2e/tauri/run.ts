@@ -1,11 +1,14 @@
 import { Launcher } from '@wdio/cli'
+import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import net from 'node:net'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 
-// Node owns only the test runner. The official service owns the real app process.
+// Node runs short CLI preflights; the official service owns the resident app.
 const repository = fileURLToPath(new URL('../../', import.meta.url))
 const fixture = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'marklab-tauri-e2e-')))
 let exitCode = 1
@@ -37,6 +40,36 @@ try {
     })
   })
   process.env.MARKLAB_E2E_DRIVER_PORT = String(port)
+  // Exercise cold terminal exits before the service owns a resident singleton.
+  const binary = path.join(
+    repository,
+    `src-tauri/target/debug/marklab-desktop${process.platform === 'win32' ? '.exe' : ''}`,
+  )
+  const execute = promisify(execFile)
+  const options = {
+    timeout: 15_000,
+    env: { ...process.env, TAURI_WEBDRIVER_PORT: String(port) },
+  }
+  const help = await execute(binary, ['--help'], options)
+  assert.match(help.stdout, /--workspace/)
+  assert.match(help.stdout, /--file/)
+  const manifest = JSON.parse(await fs.readFile(path.join(repository, 'package.json'), 'utf8')) as {
+    version: string
+  }
+  const version = await execute(binary, ['--version'], options)
+  assert.equal(version.stdout.trim().split(/\s+/).at(-1), manifest.version)
+  for (const args of [
+    ['--workspace', path.join(fixture, 'missing-workspace')],
+    [path.join(fixture, 'missing.js')],
+  ]) {
+    await assert.rejects(execute(binary, args, options), (error: unknown) => {
+      assert.ok(error instanceof Error && 'code' in error && 'stderr' in error)
+      assert.equal(error.code, 1)
+      // The production startup reporter prints the message, not BackendError.code.
+      assert.match(String(error.stderr), /Cannot open/)
+      return true
+    })
+  }
   const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'), {})
   exitCode = (await launcher.run()) ?? 1
 } catch (error) {

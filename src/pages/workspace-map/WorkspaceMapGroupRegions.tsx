@@ -26,7 +26,7 @@ export const WorkspaceMapGroupRegions = memo(({ nodes }: WorkspaceMapGroupRegion
   return (
     <ViewportPortal>
       <div
-        className="workspace-map-groups pointer-events-none absolute inset-0 z-0"
+        className="workspace-map-groups pointer-events-none absolute inset-0 -z-20"
         aria-hidden="true"
       >
         {regions.map((region) => (

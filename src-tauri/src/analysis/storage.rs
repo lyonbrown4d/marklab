@@ -15,7 +15,7 @@ struct Archive {
     positions: Vec<[usize; 4]>,
 }
 fn hash(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 fn encode(document: &Document) -> BackendResult<String> {
     let positions = document

@@ -42,10 +42,8 @@ export const preloadWysiwygEditor = () => {
 export const preloadGraphView = () => {
   if (typeof window === 'undefined') return
   graphViewPreload ??= resetOnFailure(
-    Promise.all([
-      import('@/pages/WorkspaceGraphPage'),
-      import('@/logic/graphLayout').then(({ preloadGraphLayout }) => preloadGraphLayout()),
-    ]),
+    // A persisted layout may avoid ELK entirely; create its worker only on demand.
+    import('@/pages/WorkspaceGraphPage'),
     () => {
       graphViewPreload = null
     },

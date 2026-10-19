@@ -112,6 +112,7 @@ fn rich_pdf_and_docx_exports_produce_real_documents() {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&docx)).expect("DOCX ZIP");
     let images = archive
         .file_names()
+        .map(|name| name.expect("valid DOCX entry name"))
         .filter(|name| name.starts_with("word/media/") && name.ends_with(".png"))
         .count();
     assert!(
@@ -202,21 +203,18 @@ fn drawing_sizes(xml: &str) -> Vec<(u64, u64)> {
     let mut sizes = Vec::new();
     loop {
         match reader.read_event().expect("valid drawing XML") {
-            Event::Empty(element) if element.name().as_ref() == b"wp:extent" => {
+            Event::Empty(element) if element.name().as_ref() == "wp:extent" => {
                 let attributes: BTreeMap<_, _> = element
                     .attributes()
                     .map(|value| {
                         let attribute = value.expect("drawing attribute");
                         (
-                            attribute.key.as_ref().to_vec(),
-                            String::from_utf8(attribute.value.into_owned())
-                                .expect("numeric attribute")
-                                .parse::<u64>()
-                                .expect("EMU dimension"),
+                            attribute.key.as_ref().to_owned(),
+                            attribute.value.parse::<u64>().expect("EMU dimension"),
                         )
                     })
                     .collect();
-                sizes.push((attributes[b"cx".as_slice()], attributes[b"cy".as_slice()]));
+                sizes.push((attributes["cx"], attributes["cy"]));
             }
             Event::Eof => break,
             _ => (),
@@ -247,9 +245,10 @@ fn docx_images_and_footnotes_fit_narrow_page_text_area_without_stretching() {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("DOCX ZIP");
     let image_name = archive
         .file_names()
+        .map(|name| name.expect("valid DOCX entry name"))
         .find(|name| name.starts_with("word/media/") && name.ends_with(".png"))
         .expect("embedded chart")
-        .to_owned();
+        .into_owned();
     let mut png = Vec::new();
     std::io::Read::read_to_end(
         &mut archive.by_name(&image_name).expect("image part"),

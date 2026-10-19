@@ -56,8 +56,7 @@ async fn initialize(app: &AppHandle) -> BackendResult<()> {
                 .map(String::from)
         })
         .unwrap_or_else(|| std::env::var("LANG").unwrap_or_else(|_| "en-US".into()));
-    let args: Vec<_> = std::env::args().collect();
-    let mut arguments = super::windows::open_targets(&args).await;
+    let mut arguments = app.state::<super::cli::LaunchArguments>().0.clone();
     let argument = if arguments.is_empty() {
         None
     } else {

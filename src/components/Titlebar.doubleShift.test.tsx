@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRef, useState, type ComponentProps } from 'react'
 import Titlebar from '@/components/Titlebar'
+// Load the real dialog during collection so cold compilation precedes the shortcut test budget.
+import '@/components/TitlebarCommandDialog'
 import type { TitlebarHandle } from '@/components/Titlebar'
 import {
   useNativeSurfaceOcclusion,
@@ -96,8 +98,6 @@ describe('Titlebar double-Shift shortcut', () => {
   })
 
   it('opens the existing command dialog in quick-open mode after the second tap', async () => {
-    // This test exercises the shortcut/mode contract, not the lazy chunk timing.
-    await import('@/components/TitlebarCommandDialog')
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })

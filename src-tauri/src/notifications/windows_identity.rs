@@ -174,7 +174,7 @@ unsafe fn load_link(path: &Path) -> BackendResult<IShellLinkW> {
 }
 pub(super) fn tag(value: &str) -> String {
     // Keep both tag and group within the original Windows 10 16-character limit.
-    format!("{:x}", Sha256::digest(value))[..16].into()
+    hex::encode(Sha256::digest(value))[..16].into()
 }
 fn wide(path: &Path) -> Vec<u16> {
     path.as_os_str()

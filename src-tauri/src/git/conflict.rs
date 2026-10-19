@@ -57,7 +57,7 @@ fn revision(file: &str, stages: &[Stage], result: &str, deleted: bool, attribute
     hash.update([deleted as u8]);
     hash.update(attribute.as_bytes());
     hash.update(result.as_bytes());
-    format!("{:x}", hash.finalize())
+    hex::encode(hash.finalize())
 }
 async fn details(root: &Path, file: &str) -> BackendResult<Result<Details, &'static str>> {
     safety::file_path(file)?;

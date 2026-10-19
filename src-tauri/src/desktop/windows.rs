@@ -2,10 +2,7 @@ use crate::{
     error::BackendResult,
     workspace::{Workspace, WorkspaceRegistry},
 };
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::sync::Arc;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 fn trusted_navigation(url: &url::Url) -> bool {
     let page = url.path().trim_start_matches('/');
@@ -165,25 +162,6 @@ pub(super) async fn bind_root(
         .await
 }
 pub use super::transitions::{open_target, restore_window};
-pub async fn open_targets(args: &[String]) -> Vec<String> {
-    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
-    existing_targets(args, &cwd).await
-}
-pub async fn existing_targets(args: &[String], cwd: &Path) -> Vec<String> {
-    let mut targets = Vec::new();
-    for path in super::policy::argument_targets(args, cwd) {
-        if targets.contains(&path) {
-            continue;
-        }
-        if tokio::fs::metadata(&path)
-            .await
-            .is_ok_and(|metadata| metadata.is_file() || metadata.is_dir())
-        {
-            targets.push(path);
-        }
-    }
-    targets
-}
 
 pub async fn activate_workspace_geometry(
     window: &WebviewWindow,

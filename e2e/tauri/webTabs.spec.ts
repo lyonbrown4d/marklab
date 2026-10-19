@@ -31,9 +31,9 @@ describe('native webpage residents', () => {
       // The embedded driver enumerates WebviewWindows, which temporarily omits
       // a root with child views. Complete this journey in one root invocation;
       // all children are closed before another WebDriver request is issued.
-      const result = await browser.executeAsync<PoolJourney, [string]>((base, done) => {
+      const result = await browser.execute(async (base): Promise<PoolJourney> => {
         const runtime = window.marklabTauri
-        if (!runtime) return done({ error: 'Native runtime is unavailable' })
+        if (!runtime) return { error: 'Native runtime is unavailable' }
         const host = window as unknown as {
           __TAURI_INTERNALS__: {
             invoke: (command: string) => Promise<Array<{ label: string }>>
@@ -69,24 +69,22 @@ describe('native webpage residents', () => {
           residentCounts.push(current.length)
           return current
         }
-        void (async () => {
-          let outcome: PoolJourney
-          try {
-            await activate(ids[0]!)
-            await activate(ids[1]!)
-            const before = await activate(ids[2]!)
-            const after = await activate(ids[0]!)
-            await activate(ids[3]!)
-            await activate(ids[1]!)
-            outcome = { counts: residentCounts, reused: before.join() === after.join() }
-          } catch (error) {
-            outcome = { error: String(error) }
-          } finally {
-            for (const tabId of ids) await runtime.webTabs.close({ tabId })
-            unsubscribe()
-          }
-          done(outcome)
-        })().catch((error: unknown) => done({ error: String(error) }))
+        let outcome: PoolJourney
+        try {
+          await activate(ids[0]!)
+          await activate(ids[1]!)
+          const before = await activate(ids[2]!)
+          const after = await activate(ids[0]!)
+          await activate(ids[3]!)
+          await activate(ids[1]!)
+          outcome = { counts: residentCounts, reused: before.join() === after.join() }
+        } catch (error) {
+          outcome = { error: String(error) }
+        } finally {
+          for (const tabId of ids) await runtime.webTabs.close({ tabId })
+          unsubscribe()
+        }
+        return outcome
       }, `http://127.0.0.1:${address.port}`)
       assert.equal(result.error, undefined)
       assert.equal(result.reused, true)

@@ -66,10 +66,7 @@ async fn persisted_ast_hydrates_offsets_and_corruption_falls_back_to_source() {
         .index(workspace.clone())
         .await
         .expect("persisted index");
-    let hash = format!(
-        "{:x}",
-        Sha256::digest(first.files["start.md"].content.as_bytes())
-    );
+    let hash = hex::encode(Sha256::digest(first.files["start.md"].content.as_bytes()));
     let reopened = AnalysisService::new(service.pool.clone());
     reopened.ensure_schema().await.expect("schema");
     let archived = reopened

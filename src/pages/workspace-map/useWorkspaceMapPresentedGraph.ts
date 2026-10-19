@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
+import type { Node } from '@xyflow/react'
 import { useGraphRenderedNodes } from '@/pages/graph/useGraphWebViewState'
-import type { GraphData, WorkspaceMapEditorLoadState } from '@/logic/graph'
+import type { GraphData, GraphNodeData, WorkspaceMapEditorLoadState } from '@/logic/graph'
 import { presentWorkspaceMapNode } from '@/pages/workspace-map/workspaceMapNodePresentation'
 import {
   applyWorkspaceMapCompactGeometry,
@@ -39,17 +40,37 @@ export const useWorkspaceMapPresentedGraph = ({
     [graph, showExternalResources],
   )
   const compact = useMemo(() => shouldCompactWorkspaceMap(viewGraph.nodes), [viewGraph.nodes])
-  const baseNodes = useMemo(
-    () =>
-      viewGraph.nodes.map((node) => {
+  const presentNodes = useMemo(() => {
+    let cache = new Map<Node<GraphNodeData>, Node<GraphNodeData>>()
+    return (nodes: Node<GraphNodeData>[]) => {
+      const nextCache = new Map<Node<GraphNodeData>, Node<GraphNodeData>>()
+      const presentedNodes = nodes.map((node) => {
+        const cached = cache.get(node)
+        if (cached) {
+          nextCache.set(node, cached)
+          return cached
+        }
         const presented = presentWorkspaceMapNode(node, activePath)
-        return applyWorkspaceMapCompactGeometry(
+        const result = applyWorkspaceMapCompactGeometry(
           { ...presented, data: { ...presented.data, workspaceMapMode: mode } },
           compact,
           activePath,
         )
-      }),
-    [activePath, compact, mode, viewGraph.nodes],
+        nextCache.set(node, result)
+        return result
+      })
+      cache = nextCache
+      return presentedNodes
+    }
+  }, [activePath, compact, mode])
+  const baseNodes = useMemo(() => presentNodes(viewGraph.nodes), [presentNodes, viewGraph.nodes])
+  const presentedEdges = useMemo(
+    () =>
+      viewGraph.edges.map((edge) => ({
+        ...edge,
+        type: mode === 'overview' ? 'default' : 'smoothstep',
+      })),
+    [mode, viewGraph.edges],
   )
   const presentedGraph = useMemo<GraphData>(() => {
     const activeIndex = baseNodes.findIndex(
@@ -75,11 +96,7 @@ export const useWorkspaceMapPresentedGraph = ({
         },
       }
     }
-    const edges = viewGraph.edges.map((edge) => ({
-      ...edge,
-      type: mode === 'overview' ? 'default' : 'smoothstep',
-    }))
-    return { edges, layoutKey: viewGraph.layoutKey ?? 'workspace-map', nodes }
+    return { edges: presentedEdges, layoutKey: viewGraph.layoutKey ?? 'workspace-map', nodes }
   }, [
     activePath,
     baseNodes,
@@ -89,8 +106,7 @@ export const useWorkspaceMapPresentedGraph = ({
     onOpenFile,
     onRetryEditor,
     readOnly,
-    mode,
-    viewGraph.edges,
+    presentedEdges,
     viewGraph.layoutKey,
   ])
   const webViews = useGraphRenderedNodes(presentedGraph.nodes, presentedGraph.layoutKey)

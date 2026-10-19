@@ -48,7 +48,6 @@ impl Backend {
                 let connection = tokio::time::timeout(
                     Duration::from_secs(10),
                     zbus::connection::Builder::session()
-                        .map_err(bus_error)?
                         .method_timeout(Duration::from_secs(10))
                         .build(),
                 )
@@ -231,7 +230,7 @@ type NotifyBody<'a> = (
     &'a str,
     String,
     Vec<&'static str>,
-    HashMap<&'static str, zbus::zvariant::Value<'a>>,
+    HashMap<&'static str, zbus::Variant<'a>>,
     i32,
 );
 fn notify_body<'a>(
@@ -250,7 +249,7 @@ fn notify_body<'a>(
             message.body.clone()
         },
         vec!["default", "Open Marklab"],
-        HashMap::from([("desktop-entry", zbus::zvariant::Value::from(desktop_entry))]),
+        HashMap::from([("desktop-entry", zbus::Variant::from(desktop_entry))]),
         -1,
     )
 }

@@ -2,24 +2,21 @@ import { browser } from '@wdio/globals'
 import type { DesktopRuntimeApi, DesktopCommandArguments } from '@/runtime/desktop'
 
 export const applicationIdentifier = () =>
-  browser.executeAsync((done) => {
+  browser.execute(async () => {
     const host = window as unknown as {
       __TAURI_INTERNALS__?: { invoke: (command: string) => Promise<string> }
     }
-    if (!host.__TAURI_INTERNALS__) return done(null)
-    host.__TAURI_INTERNALS__.invoke('plugin:app|identifier').then(
-      (value) => done(value),
-      () => done(null),
-    )
+    if (!host.__TAURI_INTERNALS__) return null
+    return host.__TAURI_INTERNALS__.invoke('plugin:app|identifier').catch(() => null)
   })
 
 export const currentRoot = () =>
-  browser.executeAsync((done) => {
+  browser.execute(async () => {
     const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
-    if (!runtime) return done(null)
-    runtime.commands.invoke<{ kind: string; path: string }>('fs_get_root_info').then(
-      (root) => done(root.path),
-      () => done(null),
+    if (!runtime) return null
+    return runtime.commands.invoke<{ kind: string; path: string }>('fs_get_root_info').then(
+      (root) => root.path,
+      () => null,
     )
   })
 
@@ -69,7 +66,7 @@ export const openEditor = async (file = 'Editor.md') => {
     .waitForDisplayed({ timeout: 90_000 })
   await browser.waitUntil(
     () =>
-      browser.executeAsync((done) => {
+      browser.execute(async () => {
         const host = window as unknown as {
           __TAURI_INTERNALS__: {
             metadata: { currentWindow: { label: string } }
@@ -77,14 +74,12 @@ export const openEditor = async (file = 'Editor.md') => {
           }
         }
         const internals = host.__TAURI_INTERNALS__
-        internals.invoke('plugin:window|is_visible', internals.metadata.currentWindow).then(
+        return internals.invoke('plugin:window|is_visible', internals.metadata.currentWindow).then(
           (visible) =>
-            done(
-              visible &&
-                document.visibilityState === 'visible' &&
-                !document.querySelector('.window-presentation-pending'),
-            ),
-          () => done(false),
+            visible &&
+            document.visibilityState === 'visible' &&
+            !document.querySelector('.window-presentation-pending'),
+          () => false,
         )
       }),
     {
@@ -170,13 +165,13 @@ export const typeAtEditorEnd = async (text: string) => {
 
 export const invokeNative = <T>(command: string, payload?: DesktopCommandArguments): Promise<T> =>
   browser
-    .executeAsync(
-      (name, request, done) => {
+    .execute(
+      async (name, request) => {
         const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
-        if (!runtime) return done({ ok: false, error: 'Real Tauri runtime was not initialized' })
-        runtime.commands.invoke(name, request).then(
-          (value) => done({ ok: true, value }),
-          () => done({ ok: false, error: `Native command failed: ${name}` }),
+        if (!runtime) return { ok: false, error: 'Real Tauri runtime was not initialized' }
+        return runtime.commands.invoke(name, request).then(
+          (value) => ({ ok: true, value }),
+          () => ({ ok: false, error: `Native command failed: ${name}` }),
         )
       },
       command,
@@ -191,34 +186,34 @@ export const invokeNative = <T>(command: string, payload?: DesktopCommandArgumen
 type CloseAcknowledgment = { scheduled: true } | { scheduled: false; error: string }
 
 export const closeThroughApplication = async (marker: string) => {
-  const acknowledgment = await browser.executeAsync<CloseAcknowledgment, [string]>(
-    (expectedMarker, done) => {
+  const acknowledgment = await browser.execute(
+    async (expectedMarker): Promise<CloseAcknowledgment> => {
       const runtime: DesktopRuntimeApi | undefined = window.marklabTauri
-      if (!runtime) return done({ scheduled: false, error: 'Real Tauri runtime is unavailable' })
-      runtime.commands
+      if (!runtime) return { scheduled: false, error: 'Real Tauri runtime is unavailable' }
+      return runtime.commands
         .invoke<{ content: string }>('fs_open_buffer_snapshot', {
           path: 'Editor.md',
         })
         .then(
           (snapshot) => {
             if (!snapshot.content.includes(expectedMarker)) {
-              return done({
-                scheduled: false,
+              return {
+                scheduled: false as const,
                 error: 'Close must begin after the actual Rust buffer receives the edit',
-              })
+              }
             }
             // Autosave can settle during a WebDriver round trip, so dirty is not
             // a stable E2E precondition. Never manually flush before this close.
             // The driver close endpoint destroys the window directly. Acknowledge this
             // script first, then run the application's editor/native flush handshake.
-            done({ scheduled: true })
             window.setTimeout(() => {
               void runtime.window
                 .close()
                 .catch((error: unknown) => console.error('Production window close failed', error))
             }, 0)
+            return { scheduled: true as const }
           },
-          () => done({ scheduled: false, error: 'Cannot inspect the pending native edit' }),
+          () => ({ scheduled: false as const, error: 'Cannot inspect the pending native edit' }),
         )
     },
     marker,

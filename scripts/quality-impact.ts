@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { $ } from 'zx'
 
 type QualityImpactRuleData = {
   area: string
@@ -34,7 +34,7 @@ const parseMode = (args: string[]): QualityImpactMode => {
   return { kind: 'working-tree' }
 }
 
-const changedFilesForMode = (mode: QualityImpactMode) => {
+const changedFilesForMode = async (mode: QualityImpactMode) => {
   if (mode.kind === 'files') return mode.files
 
   const diffArgs =
@@ -44,24 +44,25 @@ const changedFilesForMode = (mode: QualityImpactMode) => {
         ? ['diff', '--name-only', `${mode.ref}...HEAD`]
         : ['diff', '--name-only', 'HEAD']
 
-  const files = gitLines(diffArgs)
-  if (mode.kind !== 'working-tree') return files
+  if (mode.kind !== 'working-tree') return gitLines(diffArgs)
 
-  return Array.from(
-    new Set([...files, ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
-  )
+  const [files, untracked] = await Promise.all([
+    gitLines(diffArgs),
+    gitLines(['ls-files', '--others', '--exclude-standard']),
+  ])
+  return Array.from(new Set([...files, ...untracked]))
 }
 
-const gitLines = (args: string[]) => {
-  const output = execFileSync('git', args, { encoding: 'utf8' })
-  return output
+const gitLines = async (args: string[]) => {
+  const output = await $({ quiet: true })`git ${args}`
+  return output.stdout
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
 }
 
 const mode = parseMode(process.argv.slice(2))
-const files = changedFilesForMode(mode)
+const files = await changedFilesForMode(mode)
 
 const formatQualityImpactReport = (files: string[]) => {
   const impacts = analyzeChangedFiles(files)

@@ -10,6 +10,10 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { devOptimizeDepsInclude, devWarmupClientFiles } from './vite.development.ts'
 // eslint-disable-next-line no-restricted-imports -- Worker config helpers live at repository root before app aliases are available.
 import { plateMarkdownWorkerPlugins } from './vite.worker.ts'
+// eslint-disable-next-line no-restricted-imports -- Development-only HTML integration is a root Vite helper.
+import { reactDevToolsPlugin } from './vite.reactDevTools.ts'
+// eslint-disable-next-line no-restricted-imports -- Shared dotenv-backed configuration belongs to Node tooling.
+import { loadDevelopmentConfig } from './scripts/development-config.ts'
 
 const isEnabled = (value: string | undefined) => value === '1' || value === 'true'
 
@@ -60,6 +64,10 @@ export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build'
   const isServe = command === 'serve'
   const isPerf = mode === 'perf'
+  const development =
+    isServe && !isPerf && !process.env.VITEST
+      ? loadDevelopmentConfig(mode).configuration
+      : undefined
   const shouldAnalyze = isBuild && (mode === 'analyze' || isEnabled(process.env.MARKLAB_ANALYZE))
   const shouldReportCompressedSize =
     mode === 'analyze' || isEnabled(process.env.MARKLAB_REPORT_COMPRESSED_SIZE)
@@ -87,6 +95,7 @@ export default defineConfig(({ command, mode }) => {
       plugins: plateMarkdownWorkerPlugins,
     },
     plugins: [
+      development && reactDevToolsPlugin(development),
       react(),
       shouldUseReactCompiler &&
         babel({

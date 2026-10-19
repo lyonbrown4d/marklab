@@ -97,7 +97,7 @@ tasks:
     options:
       cache: false
   tauri-dev:
-    command: pnpm exec tauri dev
+    command: node --experimental-strip-types scripts/dev-desktop.ts
     deps:
       - ~:prepare-dev
     options:

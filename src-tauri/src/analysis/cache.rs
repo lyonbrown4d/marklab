@@ -72,7 +72,7 @@ impl AnalysisService {
         task: impl FnOnce(&Index, R) -> BackendResult<Value> + Send + 'static,
     ) -> BackendResult<Arc<Value>> {
         let bytes = serde_json::to_vec(&request)?;
-        let query = format!("{kind}:{:x}", Sha256::digest(bytes));
+        let query = format!("{kind}:{}", hex::encode(Sha256::digest(bytes)));
         let epoch = index.epoch;
         let key = QueryKey {
             generation: index.generation,

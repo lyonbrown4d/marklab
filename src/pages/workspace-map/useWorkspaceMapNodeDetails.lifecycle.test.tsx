@@ -127,4 +127,22 @@ describe('workspace map detail route lifecycle', () => {
         ),
     ).toBe(true)
   })
+
+  it('releases placeholder details when the active viewport has no file nodes', async () => {
+    vi.mocked(fsApi.getWorkspaceGraphNodeDetails).mockResolvedValue({
+      items: [{ id: 'file:a.md', content: 'preview' }],
+      revision: 'one',
+      truncated: false,
+    })
+    const { container, result } = setup(true)
+    await advance(100)
+    await advance(1)
+    expect(result.current.nodes[0]?.data.content).toBe('preview')
+
+    container.querySelector('.react-flow__node')!.remove()
+    await advance(100)
+    await advance(1)
+    expect(result.current.nodes[0]?.data.content).toBeUndefined()
+    expect(fsApi.getWorkspaceGraphNodeDetails).toHaveBeenCalledOnce()
+  })
 })

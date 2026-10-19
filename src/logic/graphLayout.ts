@@ -132,8 +132,6 @@ const applyPositions = (nodes: Node<GraphNodeData>[], positions: GraphLayoutPosi
   })
 }
 
-export const preloadGraphLayout = () => graphLayoutWorkerClient.warmup()
-
 export const layoutGraphWithElk = async (
   nodes: Node<GraphNodeData>[],
   edges: Edge[],

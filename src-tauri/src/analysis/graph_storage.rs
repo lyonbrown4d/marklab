@@ -11,8 +11,7 @@ impl AnalysisService {
         let payload: String = row.try_get("payload").ok()?;
         let hash: String = row.try_get("payload_hash").ok()?;
         let mut value = tokio::task::spawn_blocking(move || {
-            if payload.len() > MAX_GRAPH
-                || format!("{:x}", Sha256::digest(payload.as_bytes())) != hash
+            if payload.len() > MAX_GRAPH || hex::encode(Sha256::digest(payload.as_bytes())) != hash
             {
                 return None;
             }
@@ -39,7 +38,7 @@ impl AnalysisService {
                 object.remove("revision");
             }
             let payload = serde_json::to_string(&value)?;
-            let hash = format!("{:x}", Sha256::digest(payload.as_bytes()));
+            let hash = hex::encode(Sha256::digest(payload.as_bytes()));
             Ok::<_, serde_json::Error>((payload, hash))
         })
         .await

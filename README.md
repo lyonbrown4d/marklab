@@ -38,6 +38,21 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
+`pnpm dev` opens the official standalone React DevTools and waits for its backend
+before starting Tauri. Its blocking development HTML script installs the React hook
+before React DOM loads. Closing either launched process stops the other; Ctrl+C
+cleans up both process trees. An already-running DevTools backend is reused and
+remains open when this development session ends.
+
+Copy `.env.example` to `.env.local` to customize the DevTools port or readiness
+timeout. Set `MARKLAB_REACT_DEVTOOLS=false` to start without DevTools. Explicit
+process environment variables override dotenv settings. The development runner
+adds the local DevTools script/WebSocket origins only to Tauri's `devCsp` override;
+production CSP and renderer assets keep their existing configuration. Clients use
+127.0.0.1; the upstream standalone server may listen on all network interfaces.
+For render profiling, `VITE_REACT_SCAN=false` disables the separate React
+Scan overlay. Arguments passed to the development task are forwarded to `tauri dev`.
+
 ## Desktop (Tauri)
 
 ```bash
@@ -50,6 +65,29 @@ See [the Tauri migration and release guide](docs/tauri-migration.md) for native
 prerequisites, platform targets, signing configuration, and outstanding acceptance
 checks. Automatic updates remain unavailable until the updater key and endpoint
 are supplied to the build.
+
+## Command line
+
+On macOS, invoke the executable inside the installed app bundle:
+
+```sh
+/Applications/Marklab.app/Contents/MacOS/marklab-desktop --workspace "/path/to/workspace"
+/Applications/Marklab.app/Contents/MacOS/marklab-desktop --file "/path/to/note.md"
+/Applications/Marklab.app/Contents/MacOS/marklab-desktop "/path/to/workspace" "/path/to/another/note.md"
+/Applications/Marklab.app/Contents/MacOS/marklab-desktop --help
+```
+
+`-w` and `-f` are aliases for `--workspace` and `--file`. Named targets cannot
+be combined with each other or positional targets. Multiple positional paths open
+in separate windows. Relative paths use the calling process's working directory;
+use `--` before positional paths beginning with a hyphen. The existing `mcp`
+subcommand still starts the MCP stdio service before desktop initialization.
+
+When Marklab is already running, the official single-instance plugin forwards
+arguments and exits the calling process with code `0` before CLI validation.
+Help/version output therefore goes to the running app's console, and invalid
+arguments show an error dialog there; the caller's exit code does not report
+validation failure. A rejected request does not reopen the previous workspace.
 
 ## Quality Gates
 

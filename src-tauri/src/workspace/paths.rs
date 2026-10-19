@@ -79,5 +79,5 @@ pub fn display_relative(root: &Path, path: &Path) -> BackendResult<String> {
 
 pub fn fingerprint(content: &str) -> String {
     use sha2::{Digest, Sha256};
-    format!("{:x}", Sha256::digest(content.as_bytes()))
+    hex::encode(Sha256::digest(content.as_bytes()))
 }

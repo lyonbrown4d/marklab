@@ -1,0 +1,228 @@
+diff --git a/dist/cjs/index.js b/dist/cjs/index.js
+index 7707403ba38c4493db29a82e50802051f58d64e0..db28b3c36e55f918e61e7c3cce407d038eef4529 100644
+--- a/dist/cjs/index.js
++++ b/dist/cjs/index.js
+@@ -2946,12 +2946,14 @@ async function resolveLabelToHandle(browser, targetLabel) {
+     for (const handle of handles) {
+         try {
+             await browser.switchToWindow(handle);
+-            const handleLabel = await browser.executeAsync(`var done = arguments[arguments.length - 1];
+-         try {
+-           window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label')
+-             .then(function(l) { done(l); })
+-             ['catch'](function() { done(null); });
+-         } catch(e) { done(null); }`);
++            const handleLabel = await browser.execute(async () => {
++                try {
++                    return await window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label');
++                }
++                catch {
++                    return null;
++                }
++            });
+             if (handleLabel) {
+                 discovered.set(handleLabel, handle);
+                 if (handleLabel === targetLabel) {
+@@ -3731,12 +3733,15 @@ async function createBrowserModeMock(command, browser) {
+     };
+     mock.withImplementation = async (implFn, callbackFn) => {
+         const script = interceptor.buildWithImplementationScript(command, implFn, callbackFn);
+-        const result = await browser.executeAsync((s, done) => {
+-            // eslint-disable-next-line no-new-func
+-            const fn = new Function(`return (${s})`)();
+-            Promise.resolve(fn()).then(done, (err) => {
+-                done({ __wdioAsyncErr__: err instanceof Error ? err.message : String(err) });
+-            });
++        const result = await browser.execute(async (s) => {
++            try {
++                // eslint-disable-next-line no-new-func
++                const fn = new Function(`return (${s})`)();
++                return await fn();
++            }
++            catch (err) {
++                return { __wdioAsyncErr__: err instanceof Error ? err.message : String(err) };
++            }
+         }, script);
+         if (result && typeof result === 'object' && '__wdioAsyncErr__' in result) {
+             throw new Error(result.__wdioAsyncErr__);
+@@ -4263,7 +4268,7 @@ class TauriWorkerService {
+                 }
+             }
+             return result;
+-        }, false);
++        }, { attachToElement: false });
+     }
+     /**
+      * Add Tauri API to browser object
+@@ -4396,7 +4401,6 @@ class TauriWorkerService {
+             return;
+         }
+         const originalExecute = browser.execute.bind(browser);
+-        const originalExecuteAsync = browser.executeAsync.bind(browser);
+         const isEmbedded = this.driverProvider === 'embedded';
+         const patchedExecute = async function patchedExecute(script, ...args) {
+             const scriptString = typeof script === 'function' ? script.toString() : script;
+@@ -4407,38 +4411,35 @@ class TauriWorkerService {
+                 // serialization via its standard polyfill wrapper.
+                 return originalExecute(script, ...args);
+             }
+-            // Non-embedded (tauri-driver/official): use executeAsync for both functions and strings.
+-            // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute.
++            // WebdriverIO 10 execute() awaits returned promises for functions and strings.
+             if (typeof script === 'function') {
+-                // Function scripts: use executeAsync with .then() callbacks to handle async results
+-                // Wrap in Promise.resolve to handle both sync and async function return values
++                // Keep console forwarding and the existing structured error boundary.
+                 const wrappedScript = `
+             ${CONSOLE_WRAPPER_SCRIPT}
+-            Promise.resolve((${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1))).then(
+-                (r) => arguments[arguments.length-1](r),
+-                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
++            return Promise.resolve((${scriptString}).apply(null, arguments)).then(
++                (r) => r,
++                (e) => ({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+             );
+         `;
+-                const asyncResult = await originalExecuteAsync(wrappedScript, ...args);
++                const asyncResult = await originalExecute(wrappedScript, ...args);
+                 if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+                     throw new Error(asyncResult.__wdio_error__);
+                 }
+                 return asyncResult;
+             }
+             else {
+-                // For strings: use executeAsync with explicit done callback
+-                // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
++                // Return the async body so execute() can await its result.
+                 const trimmed = scriptString.trim();
+                 const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
+                 const wrappedBody = hasStatementKeyword || nativeUtils.hasSemicolonOutsideQuotes(trimmed) ? scriptString : `return ${scriptString};`;
+                 const wrappedScript = `
+             ${CONSOLE_WRAPPER_SCRIPT}
+-            (async function() { ${wrappedBody} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
+-                (r) => arguments[arguments.length-1](r),
+-                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
++            return (async function() { ${wrappedBody} }).apply(null, arguments).then(
++                (r) => r,
++                (e) => ({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+             );
+         `;
+-                const asyncResult = await originalExecuteAsync(wrappedScript, ...args);
++                const asyncResult = await originalExecute(wrappedScript, ...args);
+                 if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+                     throw new Error(asyncResult.__wdio_error__);
+                 }
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index daf24be418bf9009ae5076595add15a1affe6af6..258d3dd91e1210560bd28b91d57974df3f8b9cb7 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -2942,12 +2942,14 @@ async function resolveLabelToHandle(browser, targetLabel) {
+     for (const handle of handles) {
+         try {
+             await browser.switchToWindow(handle);
+-            const handleLabel = await browser.executeAsync(`var done = arguments[arguments.length - 1];
+-         try {
+-           window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label')
+-             .then(function(l) { done(l); })
+-             ['catch'](function() { done(null); });
+-         } catch(e) { done(null); }`);
++            const handleLabel = await browser.execute(async () => {
++                try {
++                    return await window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label');
++                }
++                catch {
++                    return null;
++                }
++            });
+             if (handleLabel) {
+                 discovered.set(handleLabel, handle);
+                 if (handleLabel === targetLabel) {
+@@ -3727,12 +3729,15 @@ async function createBrowserModeMock(command, browser) {
+     };
+     mock.withImplementation = async (implFn, callbackFn) => {
+         const script = interceptor.buildWithImplementationScript(command, implFn, callbackFn);
+-        const result = await browser.executeAsync((s, done) => {
+-            // eslint-disable-next-line no-new-func
+-            const fn = new Function(`return (${s})`)();
+-            Promise.resolve(fn()).then(done, (err) => {
+-                done({ __wdioAsyncErr__: err instanceof Error ? err.message : String(err) });
+-            });
++        const result = await browser.execute(async (s) => {
++            try {
++                // eslint-disable-next-line no-new-func
++                const fn = new Function(`return (${s})`)();
++                return await fn();
++            }
++            catch (err) {
++                return { __wdioAsyncErr__: err instanceof Error ? err.message : String(err) };
++            }
+         }, script);
+         if (result && typeof result === 'object' && '__wdioAsyncErr__' in result) {
+             throw new Error(result.__wdioAsyncErr__);
+@@ -4259,7 +4264,7 @@ class TauriWorkerService {
+                 }
+             }
+             return result;
+-        }, false);
++        }, { attachToElement: false });
+     }
+     /**
+      * Add Tauri API to browser object
+@@ -4392,7 +4397,6 @@ class TauriWorkerService {
+             return;
+         }
+         const originalExecute = browser.execute.bind(browser);
+-        const originalExecuteAsync = browser.executeAsync.bind(browser);
+         const isEmbedded = this.driverProvider === 'embedded';
+         const patchedExecute = async function patchedExecute(script, ...args) {
+             const scriptString = typeof script === 'function' ? script.toString() : script;
+@@ -4403,38 +4407,35 @@ class TauriWorkerService {
+                 // serialization via its standard polyfill wrapper.
+                 return originalExecute(script, ...args);
+             }
+-            // Non-embedded (tauri-driver/official): use executeAsync for both functions and strings.
+-            // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute.
++            // WebdriverIO 10 execute() awaits returned promises for functions and strings.
+             if (typeof script === 'function') {
+-                // Function scripts: use executeAsync with .then() callbacks to handle async results
+-                // Wrap in Promise.resolve to handle both sync and async function return values
++                // Keep console forwarding and the existing structured error boundary.
+                 const wrappedScript = `
+             ${CONSOLE_WRAPPER_SCRIPT}
+-            Promise.resolve((${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1))).then(
+-                (r) => arguments[arguments.length-1](r),
+-                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
++            return Promise.resolve((${scriptString}).apply(null, arguments)).then(
++                (r) => r,
++                (e) => ({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+             );
+         `;
+-                const asyncResult = await originalExecuteAsync(wrappedScript, ...args);
++                const asyncResult = await originalExecute(wrappedScript, ...args);
+                 if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+                     throw new Error(asyncResult.__wdio_error__);
+                 }
+                 return asyncResult;
+             }
+             else {
+-                // For strings: use executeAsync with explicit done callback
+-                // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
++                // Return the async body so execute() can await its result.
+                 const trimmed = scriptString.trim();
+                 const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
+                 const wrappedBody = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed) ? scriptString : `return ${scriptString};`;
+                 const wrappedScript = `
+             ${CONSOLE_WRAPPER_SCRIPT}
+-            (async function() { ${wrappedBody} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
+-                (r) => arguments[arguments.length-1](r),
+-                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
++            return (async function() { ${wrappedBody} }).apply(null, arguments).then(
++                (r) => r,
++                (e) => ({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+             );
+         `;
+-                const asyncResult = await originalExecuteAsync(wrappedScript, ...args);
++                const asyncResult = await originalExecute(wrappedScript, ...args);
+                 if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+                     throw new Error(asyncResult.__wdio_error__);
+                 }

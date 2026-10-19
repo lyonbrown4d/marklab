@@ -35,7 +35,10 @@ impl AnalysisService {
         };
         let snapshot = workspace.snapshot().await?;
         let scope = crate::database::workspace_key(&snapshot.root.kind, &snapshot.root.path)?;
-        let scope = format!("analysis-v1:{:x}", Sha256::digest(scope.as_bytes()));
+        let scope = format!(
+            "analysis-v1:{}",
+            hex::encode(Sha256::digest(scope.as_bytes()))
+        );
         let paths: BTreeSet<_> = snapshot
             .entries
             .iter()
@@ -67,7 +70,7 @@ impl AnalysisService {
             let path = path.clone();
             let hash_path = path.clone();
             let (content, hash) = tokio::task::spawn_blocking(move || {
-                let hash = format!("{:x}", Sha256::digest(content.as_bytes()));
+                let hash = hex::encode(Sha256::digest(content.as_bytes()));
                 (content, hash)
             })
             .await
@@ -106,7 +109,7 @@ impl AnalysisService {
             hasher.update((path.len() as u64).to_le_bytes());
             hasher.update(path.as_bytes());
         }
-        let fingerprint = format!("{:x}", hasher.finalize());
+        let fingerprint = hex::encode(hasher.finalize());
         let mut files = raw.clone();
         let resolve_paths = paths.clone();
         let files = tokio::task::spawn_blocking(move || {

@@ -51,6 +51,34 @@
     },
     "macos-fps": {
       "enabled": true
+    },
+    "cli": {
+      "description": "Open a Marklab workspace or document.",
+      "afterHelp": "Use --workspace for one directory or --file for one document. Named targets cannot be combined. Supply multiple positional paths to open them in separate windows. Relative paths use the calling process working directory. Use -- before paths beginning with a hyphen. The mcp subcommand starts the existing MCP stdio service instead of the desktop app.",
+      "args": [
+        {
+          "name": "workspace",
+          "short": "w",
+          "description": "Open an existing workspace directory",
+          "takesValue": true,
+          "conflictsWithAll": ["file", "paths"]
+        },
+        {
+          "name": "file",
+          "short": "f",
+          "description": "Open an existing document file",
+          "takesValue": true,
+          "conflictsWithAll": ["workspace", "paths"]
+        },
+        {
+          "name": "paths",
+          "description": "Existing files or directories to open in separate windows",
+          "index": 1,
+          "takesValue": true,
+          "multiple": true,
+          "minValues": 1
+        }
+      ]
     }
   }
 }

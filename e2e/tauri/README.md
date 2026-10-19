@@ -9,6 +9,13 @@ The project runs this integration suite on macOS ARM and Linux. The upstream
 embedded driver also supports Windows; Windows integration is not being run in
 the current migration validation. Native Windows compilation remains a CI gate.
 
+WebdriverIO 10 requires Node.js 22.19 or later; the repository's Node requirement
+is stricter. The latest official Tauri service 1.5.0 still declares a WebdriverIO
+9 peer and uses removed APIs. The registered pnpm patches migrate its async
+execution and command override calls, including native-utils 2.8.0, to the public
+WebdriverIO 10 API. The upstream peer warning remains visible. Remove these
+temporary patches when upstream supports 10 and native acceptance passes.
+
 ## Build and run
 
 Use the normal repository target directory and an explicit test configuration:
@@ -28,20 +35,59 @@ The launcher creates generated Markdown workspaces plus separate canonical,
 non-overlapping data/cache directories beneath its own temporary directory.
 `MARKLAB_E2E_DATA_DIR` and `MARKLAB_E2E_CACHE_DIR` are required by the backend's
 test-only path resolver. No HOME override or production app-data directory is
-used. The native application receives the first external workspace as a real CLI
-argument. Do not invoke the WDIO config directly: the launcher supplies and checks
-the owned fixture paths.
+used. The native application receives `--workspace <alpha>` as real CLI arguments.
+Do not invoke the WDIO config directly: the launcher supplies and checks the owned
+fixture paths.
+
+Before starting the resident app, the launcher checks cold `--help` and
+`--version` output and verifies that missing workspace and positional `.js` targets
+exit with code `1` and a startup error. Each preflight has a 15-second process timeout and
+uses the same isolated fixture environment.
 
 The service owns the spawned application and stops it during teardown. Its
 embedded driver binds to `127.0.0.1` on a fresh OS-allocated port, with one application and one worker at a time.
 The separate spec files run as one ordered group against that resident app;
-window-state runs first, before another journey selects a second workspace.
+window-state runs first, before another journey selects a second workspace;
+`cli.spec.ts` runs last.
 The launcher passes that port explicitly to the service and app. Before any
 mutation, tests verify the real application identifier and generated workspace
 root; an unrelated listener cannot be accepted as the test application. The launcher removes its temporary files after service teardown.
 A graphical desktop session is required; on Linux, use the CI display/Xvfb setup.
 On macOS, unlock the desktop and keep the test window visible during input and
 presentation checks.
+
+## Profile a workspace graph
+
+On macOS, build the debug E2E app as above, then profile a workspace copy:
+
+```sh
+node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki"
+node --experimental-strip-types scripts/profile-workspace-graph.ts "/path/to/wiki" --baseline
+```
+
+The script reads the source and copies it into an owned temporary fixture, skipping
+`.git`, `node_modules`, `.marklab`, and symlinks. It uses separate test data/cache
+directories and removes the copy after service teardown; it does not edit the
+source workspace. Keep the graphical session unlocked and the graph window
+visible while sampling.
+
+For comparison, preserve an E2E-enabled baseline executable at
+`src-tauri/target/debug/marklab-desktop-baseline` before rebuilding the current
+binary. `--baseline` sets the test-only `MARKLAB_E2E_BASELINE=1` selector for that
+fixed filename; the normal run selects `marklab-desktop`. The profiler runs only
+`wikiPerformance.spec.ts`, rather than the full acceptance group.
+
+The `WIKI_GRAPH_PROFILE` console record includes graph payload timing and size,
+graph opening time, animation-frame intervals during scripted pan/zoom, rendered
+DOM counts, and initial, active, and settled WebContent memory samples. The RSS
+field retains the aggregate RSS of newly observed `WebKit.WebContent` processes.
+On macOS, physical footprint is sampled for that same PID set with Apple's
+`footprint` tool (two-second timeout per PID, at most two concurrent reads).
+Any failed read makes the physical aggregate `null`; the record includes a failure
+count and availability reason. These are separate snapshots, not whole-app memory.
+Compare runs under the same conditions;
+these measurements do not establish native OS input correctness. Failure
+artifacts can contain content from the copied workspace.
 
 ## Checks and evidence
 
@@ -57,7 +103,7 @@ Runtime and native buffer tests cover deterministic dirty-flush failure paths.
 The test checks the closed owner's
 final file content and removal from the isolated SQLite session metadata, then
 verifies the original window and file remain isolated. Failures retain a screenshot and bounded page source in
-`test-results/tauri`; fixtures contain no user documents.
+`test-results/tauri`; the standard launcher creates synthetic documents only.
 
 The macOS-only `windowState.spec.ts` journey resizes and closes the main window,
 checks the official window-state plugin's file beneath the isolated data root,
@@ -69,6 +115,16 @@ workspace window labels must not appear in the plugin's persistent file.
 Another case temporarily replaces only that generated preference file with a
 directory and verifies that a plugin write failure does not prevent document
 persistence or production window close.
+
+The final `cli.spec.ts` journeys launch the actual executable again with
+`--workspace` and `--file`. Both send relative target names from a different
+working directory containing spaces. They check the exact native root and kind,
+the requested document in the editor, and isolation of the original workspace.
+Created windows close through the production handshake. The official
+single-instance plugin exits the sender with code `0` before validation;
+forwarded help/version output belongs to the running app's console, and invalid
+arguments display a dialog there. See the [CLI usage](../../README.md#command-line)
+for this terminal limitation.
 
 Window-state tracks the main window's default position, plus its default size on
 Windows/Linux. Existing SQLite layouts take precedence; the plugin supplies the

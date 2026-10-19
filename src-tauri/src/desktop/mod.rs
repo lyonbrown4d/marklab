@@ -1,4 +1,5 @@
 mod bootstrap;
+mod cli;
 pub mod commands;
 mod controls;
 mod diagnostics;
@@ -28,48 +29,72 @@ pub fn run() -> BackendResult<()> {
         .manage(startup::StartupState::default())
         .manage(launch::LaunchState::default())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            let app = app.clone();
-            tauri::async_runtime::spawn(async move {
-                for argument in &args {
-                    let _ = launch::publish(&app, argument, launch::Source::SecondInstance);
-                }
-                let paths = windows::existing_targets(&args, std::path::Path::new(&cwd)).await;
-                if app
-                    .state::<startup::StartupState>()
-                    .queue_native(&paths)
-                    .unwrap_or(true)
-                {
-                    return;
-                }
-                if paths.is_empty() {
-                    if let Some(window) = menus::focused(&app) {
-                        let _ = window.unminimize();
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        let _ = window.emit_to(
-                            tauri::EventTarget::webview_window(window.label()),
-                            "single-instance",
-                            serde_json::json!({"args":args,"cwd":cwd}),
-                        );
-                    } else if !windows::activate_existing(&app).unwrap_or(false) {
-                        let _ = bootstrap::reopen(&app).await;
+            let callback_app = app.clone();
+            // Dispatch native window operations onto the main thread.
+            let dispatched = app.run_on_main_thread(move || {
+                let app = callback_app;
+                tauri::async_runtime::spawn(async move {
+                    let paths = match cli::prepare_forwarded(
+                        &app,
+                        args.clone(),
+                        std::path::Path::new(&cwd),
+                    )
+                    .await
+                    {
+                        Ok(cli::Outcome::Open(paths)) => paths,
+                        Ok(cli::Outcome::Output(output)) => {
+                            println!("{output}");
+                            return;
+                        }
+                        Err(error) => {
+                            cli::report_forward_error(&app, &error);
+                            return;
+                        }
+                    };
+                    for argument in &args {
+                        let _ = launch::publish(&app, argument, launch::Source::SecondInstance);
                     }
-                } else {
-                    for (index, path) in paths.into_iter().enumerate() {
-                        let current = if index == 0
-                            && !app.state::<startup::StartupState>().interactive("main")
-                        {
-                            Some("main")
-                        } else {
-                            None
-                        };
-                        if let Err(error) = windows::open_target(&app, &path, current).await {
-                            log::warn!("Native path open failed: {}", error.code);
+                    if app
+                        .state::<startup::StartupState>()
+                        .queue_native(&paths)
+                        .unwrap_or(true)
+                    {
+                        return;
+                    }
+                    if paths.is_empty() {
+                        if let Some(window) = menus::focused(&app) {
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.emit_to(
+                                tauri::EventTarget::webview_window(window.label()),
+                                "single-instance",
+                                serde_json::json!({"args":args,"cwd":cwd}),
+                            );
+                        } else if !windows::activate_existing(&app).unwrap_or(false) {
+                            let _ = bootstrap::reopen(&app).await;
+                        }
+                    } else {
+                        for (index, path) in paths.into_iter().enumerate() {
+                            let current = if index == 0
+                                && !app.state::<startup::StartupState>().interactive("main")
+                            {
+                                Some("main")
+                            } else {
+                                None
+                            };
+                            if let Err(error) = windows::open_target(&app, &path, current).await {
+                                log::warn!("Native path open failed: {}", error.code);
+                            }
                         }
                     }
-                }
+                });
             });
+            if let Err(error) = dispatched {
+                log::warn!("Could not dispatch forwarded command line: {error}");
+            }
         }))
+        .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -114,6 +139,25 @@ pub fn run() -> BackendResult<()> {
     #[cfg(all(feature = "e2e-testing", debug_assertions))]
     let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
     let app = builder.build(tauri::generate_context!())?;
+    let arguments = std::env::args().collect();
+    let outcome = tauri::async_runtime::block_on(async {
+        let cwd = std::env::current_dir()?;
+        cli::prepare(app.handle(), arguments, &cwd).await
+    });
+    match outcome {
+        Ok(cli::Outcome::Open(paths)) => {
+            app.manage(cli::LaunchArguments(paths));
+        }
+        Ok(cli::Outcome::Output(output)) => {
+            println!("{output}");
+            tauri_plugin_single_instance::destroy(&app);
+            return Ok(());
+        }
+        Err(error) => {
+            tauri_plugin_single_instance::destroy(&app);
+            return Err(error);
+        }
+    }
     app.run(lifecycle::run_event);
     Ok(())
 }

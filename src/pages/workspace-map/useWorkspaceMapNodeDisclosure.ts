@@ -163,26 +163,28 @@ const createNodePresenter = () => {
         Boolean(node.data.webView?.active)
       const collapsed = collapsedNodeIds.has(node.id)
       const cached = cache.get(node.id)
-      if (
-        cached?.sourceNode === node &&
+      const sameDisclosure =
+        cached !== undefined &&
         cached.active === active &&
         cached.collapsed === collapsed &&
         cached.toggle === toggleNode
-      ) {
+      if (cached?.sourceNode === node && sameDisclosure) {
         nextCache.set(node.id, cached)
         return cached.renderedNode
       }
       const presentedNode = presentNodeGeometry(node, active, collapsed)
       const renderedNode =
-        active && presentedNode.data.workspaceMapDisclosure === undefined
-          ? presentedNode
-          : {
-              ...presentedNode,
-              data: {
-                ...presentedNode.data,
-                workspaceMapDisclosure: active ? undefined : { collapsed, toggle: toggleNode },
-              },
-            }
+        sameDisclosure && cached.sourceNode.data === node.data
+          ? { ...presentedNode, data: cached.renderedNode.data }
+          : active && presentedNode.data.workspaceMapDisclosure === undefined
+            ? presentedNode
+            : {
+                ...presentedNode,
+                data: {
+                  ...presentedNode.data,
+                  workspaceMapDisclosure: active ? undefined : { collapsed, toggle: toggleNode },
+                },
+              }
       nextCache.set(node.id, {
         active,
         collapsed,

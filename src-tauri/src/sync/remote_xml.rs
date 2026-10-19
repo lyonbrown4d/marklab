@@ -23,7 +23,7 @@ pub(super) fn parse(remote: &DavRemote, body: &[u8]) -> BackendResult<Vec<Remote
         {
             Event::DocType(_) => return Err(paths::invalid("WebDAV XML cannot declare entities")),
             Event::Start(tag) => {
-                let name = String::from_utf8_lossy(tag.local_name().as_ref()).to_string();
+                let name = tag.local_name().as_ref().to_owned();
                 if name == "response" {
                     response = Some(Response::default());
                 }
@@ -36,7 +36,7 @@ pub(super) fn parse(remote: &DavRemote, body: &[u8]) -> BackendResult<Vec<Remote
                 content.clear();
             }
             Event::Empty(tag) => {
-                if tag.local_name().as_ref() == b"collection"
+                if tag.local_name().as_ref() == "collection"
                     && let Some(response) = &mut response
                 {
                     response.directory = true;
@@ -44,33 +44,22 @@ pub(super) fn parse(remote: &DavRemote, body: &[u8]) -> BackendResult<Vec<Remote
             }
             Event::Text(text) => {
                 if response.is_some() {
-                    content.push_str(
-                        &text
-                            .decode()
-                            .map_err(|_| paths::invalid("Invalid WebDAV XML text"))?,
-                    );
+                    content.push_str(text.as_ref());
                 }
             }
             Event::CData(text) => {
                 if response.is_some() {
-                    content.push_str(
-                        &text
-                            .decode()
-                            .map_err(|_| paths::invalid("Invalid WebDAV XML text"))?,
-                    );
+                    content.push_str(text.as_ref());
                 }
             }
             Event::GeneralRef(reference) => {
-                let reference = reference
-                    .decode()
-                    .map_err(|_| paths::invalid("Invalid WebDAV XML entity"))?;
-                let entity = format!("&{reference};");
+                let entity = format!("&{};", reference.as_ref());
                 let decoded = quick_xml::escape::unescape(&entity)
                     .map_err(|_| paths::invalid("Unknown WebDAV XML entity"))?;
                 content.push_str(&decoded);
             }
             Event::End(tag) => {
-                if tag.local_name().as_ref() == field.as_bytes()
+                if tag.local_name().as_ref() == field
                     && let Some(response) = &mut response
                 {
                     let text = content.trim();
@@ -89,7 +78,7 @@ pub(super) fn parse(remote: &DavRemote, body: &[u8]) -> BackendResult<Vec<Remote
                         _ => {}
                     }
                 }
-                if tag.local_name().as_ref() == b"response"
+                if tag.local_name().as_ref() == "response"
                     && let Some(response) = response.take()
                     && response.success
                 {
@@ -172,6 +161,13 @@ mod tests {
         assert_eq!(values[0].path, "a&b.md");
         assert_eq!(values[0].etag.as_deref(), Some("\"v1\""));
         assert_eq!(values[0].size, 5);
+        let unicode = String::from_utf8(xml.to_vec())
+            .unwrap()
+            .replace("a&amp;b.md", "笔记&#x4E2D;.md")
+            .replace("&quot;v1&quot;", "<![CDATA[\"版&本\"]]>");
+        let values = parse(&remote(), unicode.as_bytes()).unwrap();
+        assert_eq!(values[0].path, "笔记中.md");
+        assert_eq!(values[0].etag.as_deref(), Some("\"版&本\""));
         let external = String::from_utf8(xml.to_vec())
             .unwrap()
             .replace("/dav/notes/a&amp;b.md", "https://evil.example/secret");

@@ -29,7 +29,7 @@ impl DiskCache {
         }))
     }
     fn key(url: &str) -> String {
-        format!("{:x}", Sha256::digest(format!("static-preview-v1:{url}")))
+        hex::encode(Sha256::digest(format!("static-preview-v1:{url}")))
     }
     fn file(&self, key: &str) -> PathBuf {
         self.root.join(format!("{key}.png"))

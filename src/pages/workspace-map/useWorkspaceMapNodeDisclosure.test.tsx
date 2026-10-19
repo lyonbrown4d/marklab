@@ -191,4 +191,33 @@ describe('useWorkspaceMapNodeDisclosure', () => {
 
     expect(result.current.nodes[1]).toBe(unaffected)
   })
+
+  it('preserves card data while geometry and neighborhood classes change', () => {
+    const { result } = renderHook(() => useHarness(null, true))
+    const previous = result.current.nodes[0]!
+
+    act(() =>
+      result.current.setNodes((current) =>
+        current.map((node) => ({
+          ...node,
+          className: 'workspace-map-flow-node--neighbor',
+          position: { x: node.position.x + 50, y: 60 },
+        })),
+      ),
+    )
+
+    expect(result.current.nodes[0]).toMatchObject({
+      className: 'workspace-map-flow-node--neighbor',
+      position: { x: 50, y: 60 },
+    })
+    expect(result.current.nodes[0]?.data).toBe(previous.data)
+
+    act(() =>
+      result.current.setNodes((current) =>
+        current.map((node) => ({ ...node, data: { ...node.data, label: 'Updated' } })),
+      ),
+    )
+    expect(result.current.nodes[0]?.data.label).toBe('Updated')
+    expect(result.current.nodes[0]?.data).not.toBe(previous.data)
+  })
 })

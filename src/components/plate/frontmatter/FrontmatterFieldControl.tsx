@@ -88,7 +88,7 @@ export const FrontmatterFieldControl = ({
         {heading}
         <Textarea
           aria-label={label}
-          className="min-h-20 resize-y font-mono text-xs leading-5"
+          className="field-sizing-fixed min-h-20 resize-y font-mono text-xs leading-5"
           disabled={disabled}
           onChange={(event) => setDraft({ base: savedValue, value: event.currentTarget.value })}
           onBlur={commit}

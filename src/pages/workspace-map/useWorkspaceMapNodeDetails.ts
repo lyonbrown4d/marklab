@@ -95,6 +95,7 @@ export const useWorkspaceMapNodeDetails = ({
       : { items: [], revision: graph.revision ?? 'inactive', truncated: false },
     placeholderData: (previousData, previousQuery) =>
       active &&
+      queryNodeIds.length > 0 &&
       previousQuery?.queryKey[2] === graph.revision &&
       previousQuery?.queryKey[3] === contentMode
         ? previousData

@@ -2,6 +2,8 @@ packages:
   - website
 minimumReleaseAge: 0
 overrides:
+  'react-devtools>electron': 44.9.0
+  'react-devtools>cross-spawn': 7.0.6
   '@excalidraw/excalidraw>sass': 1.105.2
   '@excalidraw/excalidraw>nanoid': 3.3.20
   '@excalidraw/mermaid-to-excalidraw>nanoid': 5.1.16
@@ -10,12 +12,18 @@ overrides:
   katex: 0.19.0
   monaco-editor>dompurify: 3.4.17
   react-pdf>pdfjs-dist: 6.4.299
-  rollup: 4.64.7
+  postcss-nested>postcss-selector-parser: 7.1.6
+  rollup: 4.64.10
   lodash-es: 4.18.1
 allowBuilds:
   '@parcel/watcher': true
   canvas: true
   edgedriver: false
+  # React DevTools uses Electron for its standalone development UI.
+  electron: true
   esbuild: true
   geckodriver: false
   msgpackr-extract: true
+patchedDependencies:
+  '@wdio/native-utils@2.8.0': patches/@wdio__native-utils@2.8.0.patch
+  '@wdio/tauri-service@1.5.0': patches/@wdio__tauri-service@1.5.0.patch

@@ -115,7 +115,7 @@ pub fn fingerprint(
         return Err(failure("Sync file changed while reading"));
     }
     Ok(Some(Fingerprint {
-        hash: format!("{:x}", hash.finalize()),
+        hash: hex::encode(hash.finalize()),
         size,
         modified: after.modified()?,
     }))
@@ -184,7 +184,7 @@ pub async fn snapshot(
             output.write_all(&buffer[..count])?;
         }
         target_check(&root, &path)?;
-        if copied != size || format!("{:x}", hash.finalize()) != expected {
+        if copied != size || hex::encode(hash.finalize()) != expected {
             return Err(failure("Local upload changed after scanning"));
         }
         Ok(file)

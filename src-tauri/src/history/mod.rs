@@ -69,7 +69,7 @@ impl HistoryStore {
                 reason: "file-too-large",
             });
         }
-        let hash = format!("{:x}", Sha256::digest(content.as_bytes()));
+        let hash = hex::encode(Sha256::digest(content.as_bytes()));
         let mut transaction = self.pool.begin().await?;
         let latest = sqlx::query("SELECT id,content_hash,created_at_ms FROM history_entries WHERE workspace_key=? AND path=? ORDER BY created_at_ms DESC,id DESC LIMIT 1")
             .bind(&key).bind(&path).fetch_optional(&mut *transaction).await?;

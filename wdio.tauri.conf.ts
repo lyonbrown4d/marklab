@@ -7,9 +7,15 @@ import { fixturePaths } from './e2e/tauri/fixturePaths.js'
 
 const repository = fileURLToPath(new URL('./', import.meta.url))
 const fixture = fixturePaths()
+const binaryVariant =
+  process.env.MARKLAB_E2E_BASELINE === '1'
+    ? '-baseline'
+    : process.env.MARKLAB_E2E_REACT_PROFILE === '1'
+      ? '-react-profiler'
+      : ''
 const binary = path.join(
   repository,
-  `src-tauri/target/debug/marklab-desktop${process.platform === 'win32' ? '.exe' : ''}`,
+  `src-tauri/target/debug/marklab-desktop${binaryVariant}${process.platform === 'win32' ? '.exe' : ''}`,
 )
 const driverPort = Number(process.env.MARKLAB_E2E_DRIVER_PORT)
 if (!Number.isInteger(driverPort) || driverPort < 1024 || driverPort > 65535)
@@ -36,6 +42,7 @@ export const config: WebdriverIO.Config = {
       ...(process.env.MARKLAB_E2E_NETWORK_PREVIEWS === '1'
         ? ['./e2e/tauri/previews.network.spec.ts']
         : []),
+      './e2e/tauri/cli.spec.ts',
     ],
   ],
   maxInstances: 1,
@@ -46,7 +53,7 @@ export const config: WebdriverIO.Config = {
       {
         driverProvider: 'embedded',
         appBinaryPath: binary,
-        appArgs: [fixture.alpha],
+        appArgs: ['--workspace', fixture.alpha],
         embeddedPort: driverPort,
         autoInstallTauriDriver: false,
         autoDownloadEdgeDriver: false,
@@ -76,9 +83,13 @@ export const config: WebdriverIO.Config = {
     await browser.setTimeout({ script: 20_000, pageLoad: 30_000, implicit: 0 })
   },
   afterTest: async (_test, _context, result) => {
-    if (result.passed) return
+    if (result.passed && process.env.MARKLAB_E2E_GRAPH_SCREENSHOT !== '1') return
     const { browser } = await import('@wdio/globals')
     await fs.mkdir(artifacts, { recursive: true })
+    if (result.passed) {
+      await browser.saveScreenshot(path.join(artifacts, 'wiki-graph-current.png'))
+      return
+    }
     // Only generated fixture documents can appear in these failure artifacts.
     await browser.saveScreenshot(path.join(artifacts, 'native-failure.png')).catch(() => undefined)
     const source = await browser.getPageSource().catch(() => '<!-- native page unavailable -->')

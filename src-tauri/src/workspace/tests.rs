@@ -1,6 +1,14 @@
 use super::{Workspace, WorkspaceRegistry, types::*};
 use std::sync::Arc;
 
+#[test]
+fn fingerprints_preserve_lowercase_sha256_cache_keys() {
+    assert_eq!(
+        super::paths::fingerprint("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+}
+
 pub(super) async fn fixture() -> (tempfile::TempDir, Arc<WorkspaceRegistry>, Arc<Workspace>) {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path().join("notes");

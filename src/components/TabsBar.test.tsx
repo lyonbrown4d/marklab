@@ -39,6 +39,8 @@ beforeEach(async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(720)
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(32)
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(720)
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(32)
   usePreferencesStore.setState({ locale: 'en-US' })
   await i18n.changeLanguage('en-US')
 })

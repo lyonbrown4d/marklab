@@ -1,4 +1,4 @@
-use zbus::zvariant::Type;
+use zbus::Type;
 
 #[test]
 fn notify_body_matches_the_freedesktop_wire_signature() {

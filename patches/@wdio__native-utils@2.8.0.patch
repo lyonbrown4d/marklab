@@ -1,0 +1,26 @@
+diff --git a/dist/cjs/index.js b/dist/cjs/index.js
+index fd0e8f53219e4bfa0ed58911febf85797088edd3..c1c39fe4efab3bb719402a5e30d22ba190e14901 100644
+--- a/dist/cjs/index.js
++++ b/dist/cjs/index.js
+@@ -112,7 +112,7 @@ function installMockSyncOverride(browser, commandName, syncMocks) {
+         };
+         return existing ? existing.apply(this, [serviceCommand, ...args]) : serviceCommand(...args);
+     };
+-    browser.overwriteCommand(commandName, override, true);
++    browser.overwriteCommand(commandName, override, { attachToElement: true });
+ }
+ 
+ // biome-ignore-all lint/suspicious/noTsIgnore: Allowing ts-ignore for runtime imports
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index 5e76181ebf28ba2b460fc0f2b2dd051cc663bf10..21feeb1143a35c664e683eea8187587dd36b2541 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -109,7 +109,7 @@ function installMockSyncOverride(browser, commandName, syncMocks) {
+         };
+         return existing ? existing.apply(this, [serviceCommand, ...args]) : serviceCommand(...args);
+     };
+-    browser.overwriteCommand(commandName, override, true);
++    browser.overwriteCommand(commandName, override, { attachToElement: true });
+ }
+ 
+ // biome-ignore-all lint/suspicious/noTsIgnore: Allowing ts-ignore for runtime imports

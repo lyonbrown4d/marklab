@@ -1,4 +1,3 @@
-use std::path::{Path, PathBuf};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
     Loading,
@@ -36,27 +35,6 @@ pub fn choose_startup_target(
     saved: Option<String>,
 ) -> Option<String> {
     native.or(arguments).or(saved)
-}
-pub fn argument_targets(args: &[String], cwd: &Path) -> Vec<String> {
-    args.iter()
-        .skip(1)
-        .filter(|value| !value.starts_with('-') && !value.contains('\0') && !value.contains("://"))
-        .filter_map(|value| {
-            let path = PathBuf::from(value);
-            let path = if path.is_absolute() {
-                path
-            } else {
-                cwd.join(path)
-            };
-            // Development process arguments can include app entry points; open document/directory arguments only.
-            let extension = path
-                .extension()
-                .and_then(|value| value.to_str())
-                .unwrap_or_default();
-            (!matches!(extension, "js" | "mjs" | "cjs" | "asar"))
-                .then(|| path.to_string_lossy().into_owned())
-        })
-        .collect()
 }
 pub struct DisplayArea {
     pub x: i32,

@@ -2,9 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceMapNodeToolbar } from '@/pages/workspace-map/WorkspaceMapNodeToolbar'
 
+const flowToolbar = vi.hoisted(() => vi.fn())
+
 vi.mock('@xyflow/react', () => ({
-  NodeToolbar: ({ children, isVisible }: { children: React.ReactNode; isVisible: boolean }) =>
-    isVisible ? <div>{children}</div> : null,
+  NodeToolbar: (props: { children: React.ReactNode; isVisible: boolean }) => {
+    flowToolbar(props)
+    return props.isVisible ? <div>{props.children}</div> : null
+  },
   Position: { Top: 'top' },
 }))
 
@@ -32,9 +36,22 @@ describe('WorkspaceMapNodeToolbar', () => {
     expect(handlers.onTogglePin).toHaveBeenCalledOnce()
   })
 
-  it('stays hidden until its node is selected or being edited', () => {
-    render(<WorkspaceMapNodeToolbar {...handlers} pinned={false} visible={false} />)
+  it('mounts the viewport-subscribing toolbar only while selected or being edited', () => {
+    const { rerender } = render(
+      <WorkspaceMapNodeToolbar {...handlers} pinned={false} visible={false} />,
+    )
 
+    expect(
+      screen.queryByRole('button', { name: 'workspaceMap.focusRelations' }),
+    ).not.toBeInTheDocument()
+    expect(flowToolbar).not.toHaveBeenCalled()
+
+    rerender(<WorkspaceMapNodeToolbar {...handlers} pinned={false} visible />)
+    expect(screen.getByRole('button', { name: 'workspaceMap.focusRelations' })).toBeVisible()
+    flowToolbar.mockClear()
+
+    rerender(<WorkspaceMapNodeToolbar {...handlers} pinned={false} visible={false} />)
+    expect(flowToolbar).not.toHaveBeenCalled()
     expect(
       screen.queryByRole('button', { name: 'workspaceMap.focusRelations' }),
     ).not.toBeInTheDocument()

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PanOnScrollMode, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react'
 import { useKeepAliveContext } from 'keepalive-for-react'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
@@ -23,9 +23,9 @@ import { getWorkspaceMapInitialFocusPath } from '@/pages/workspace-map/workspace
 import { workspaceMapNodeTypes } from '@/pages/workspace-map/workspaceMapCanvasConfig'
 import type { WorkspaceMapMode } from '@/pages/workspace-map/workspaceMapMode'
 import type { WorkspaceMapCanvasProps } from '@/pages/workspace-map/workspaceMapCanvasTypes'
-import { getWorkspaceMapViewportLod } from '@/pages/workspace-map/workspaceMapViewportLod'
-import { notifyAnimatedCursorViewport } from '@/components/plate/animatedCursorViewport'
+import { useWorkspaceMapViewport } from '@/pages/workspace-map/useWorkspaceMapViewport'
 import { useWorkspaceMapNavigationRequests } from '@/pages/workspace-map/useWorkspaceMapNavigationRequests'
+import { hideWorkspaceMapOverviewEdges } from '@/pages/workspace-map/workspaceMapOverviewEdgeGeometry'
 
 const FLOW_PRO_OPTIONS = { hideAttribution: true }
 
@@ -50,22 +50,15 @@ const WorkspaceMapCanvasContent = ({
   const { t } = useI18n()
   const routeCache = useKeepAliveContext()
   const routeActive = !routeCache.cacheKey || routeCache.active
-  const canvasRef = useRef<HTMLDivElement>(null)
-  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null)
-  const [viewportRevision, setViewportRevision] = useState(0)
-  const [viewportLod, setViewportLod] = useState(() => getWorkspaceMapViewportLod(1))
+  const { bindElement, element, lod, onMove, revision, settle } = useWorkspaceMapViewport()
   const [searchOpen, setSearchOpen] = useState(false)
-  const handleCanvasRef = useCallback((element: HTMLDivElement | null) => {
-    canvasRef.current = element
-    setCanvasElement(element)
-  }, [])
   const graphWithDetails = useWorkspaceMapNodeDetails({
     active: routeActive,
     activePath,
-    container: canvasElement,
+    container: element,
     graph,
     graphIdentity,
-    viewportRevision,
+    viewportRevision: revision,
   })
   const [flow, setFlow] = useState<ReactFlowInstance<Node<GraphNodeData>, Edge> | null>(null)
   const [externalState, setExternalState] = useState({
@@ -109,6 +102,10 @@ const WorkspaceMapCanvasContent = ({
     edges,
     nodes: renderedGraph.nodes,
   })
+  const flowEdges = useMemo(
+    () => (mode === 'overview' ? hideWorkspaceMapOverviewEdges(presentedEdges) : presentedEdges),
+    [mode, presentedEdges],
+  )
   const { nodes: disclosedNodes } = useWorkspaceMapNodeDisclosure({
     activePath,
     defaultCollapsed: compact,
@@ -209,17 +206,10 @@ const WorkspaceMapCanvasContent = ({
     onOpenSearch: handleOpenSearch,
     webViews,
   })
-  const handleViewportMove = useCallback((_event: unknown, viewport: { zoom: number }) => {
-    setViewportLod((current) => {
-      const next = getWorkspaceMapViewportLod(viewport.zoom)
-      return current === next ? current : next
-    })
-    notifyAnimatedCursorViewport(canvasRef.current)
-  }, [])
   const handleViewportMoveEnd = useCallback(() => {
     scheduleViewportSave()
-    setViewportRevision((revision) => revision + 1)
-  }, [scheduleViewportSave])
+    settle()
+  }, [scheduleViewportSave, settle])
 
   if (layout.status === 'loading') {
     return <WorkspaceMapState label={t('workspaceMap.loadingDocument')} loading />
@@ -238,8 +228,8 @@ const WorkspaceMapCanvasContent = ({
     <div
       className="relative h-full w-full"
       data-marklab-cursor-viewport
-      data-viewport-lod={viewportLod}
-      ref={handleCanvasRef}
+      data-viewport-lod={lod}
+      ref={bindElement}
     >
       <ReactFlow<Node<GraphNodeData>, Edge>
         aria-label={t('workspaceMap.canvas')}
@@ -251,7 +241,7 @@ const WorkspaceMapCanvasContent = ({
           activePath && 'is-editing',
         )}
         nodes={disclosedNodes}
-        edges={presentedEdges}
+        edges={flowEdges}
         nodeTypes={workspaceMapNodeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
@@ -263,7 +253,7 @@ const WorkspaceMapCanvasContent = ({
         onNodeDoubleClick={interactions.onNodeDoubleClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
-        onMove={handleViewportMove}
+        onMove={onMove}
         onMoveEnd={handleViewportMoveEnd}
         onPaneClick={interactions.onPaneClick}
         onDoubleClick={interactions.onCanvasDoubleClick}
@@ -286,7 +276,12 @@ const WorkspaceMapCanvasContent = ({
         maxZoom={2.2}
         proOptions={FLOW_PRO_OPTIONS}
       >
-        <WorkspaceMapFlowLayers mode={mode} nodes={disclosedNodes} showMiniMap={showMiniMap} />
+        <WorkspaceMapFlowLayers
+          edges={presentedEdges}
+          mode={mode}
+          nodes={disclosedNodes}
+          showMiniMap={showMiniMap}
+        />
       </ReactFlow>
       <WorkspaceMapToolbar
         externalCount={totalExternalCount}
