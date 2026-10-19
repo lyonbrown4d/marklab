@@ -15,7 +15,16 @@ packaging dependencies have been removed; historical measurements remain in `doc
 - Graph view built on React Flow for navigating relationships.
 - Tabs, recent projects, and theme switching.
 - [Vim mode](docs/vim-mode.md) for source editors, with global and per-tab controls.
+- PlantUML previews in `plantuml` / `puml` code fences and standalone
+  `.puml`, `.plantuml`, `.pu`, and `.wsd` files.
 - Desktop app targeting Windows, macOS, and Linux.
+
+PlantUML rendering uses the Cargo-managed `puml` library in Rust, without Java or
+an additional executable. Standalone files retain the source editor; use the
+PlantUML preview button to switch views. Multi-page diagrams include a page selector
+and zoom controls. `.iuml` include fragments open as source. Rendering compatibility
+follows `puml` rather than the official PlantUML engine; unsupported features may
+produce errors or rendering notes. Local-file and URL includes are not enabled.
 
 ## Tech Stack
 

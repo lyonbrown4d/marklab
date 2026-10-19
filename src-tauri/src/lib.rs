@@ -15,6 +15,7 @@ pub mod link_preview;
 pub mod mcp;
 pub mod native_window;
 pub mod notifications;
+pub mod plantuml;
 pub mod platform;
 pub mod settings;
 pub mod sync;

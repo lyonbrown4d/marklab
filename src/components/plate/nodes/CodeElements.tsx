@@ -12,7 +12,7 @@ import { CodeBlockToolbar, type CodeCopyStatus } from '@/components/plate/code/C
 import { PlateCodeCompletionMenu } from '@/components/plate/code/PlateCodeCompletionMenu'
 import { replacePlateCodeSource } from '@/components/plate/code/plateCodeCompletionEdits'
 import { usePlateCodeCompletion } from '@/components/plate/code/usePlateCodeCompletion'
-import { isMermaidLanguage } from '@/components/plate/nodes/previewAdapters'
+import { isMermaidLanguage, isPlantUmlLanguage } from '@/components/plate/nodes/previewAdapters'
 import MermaidPreview from '@/components/previews/MermaidPreview'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ import { writeClipboardText } from '@/runtime/clipboard'
 
 const MermaidCodeEditor = lazy(() => import('@/components/previews/MermaidCodeEditor'))
 const CodeBlockMonacoDialog = lazy(() => import('@/components/plate/code/CodeBlockMonacoDialog'))
+const PlantUmlPreview = lazy(() => import('@/components/previews/PlantUmlPreview'))
 
 type CodeBlockNode = TElement & { lang?: string }
 
@@ -45,6 +46,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
   const mermaidLanguage = isMermaidLanguage(language)
   const showMermaidPreview = mermaidLanguage && Boolean(source.trim())
   const showMermaidEditor = mermaidLanguage && editingMermaid && !readOnly
+  const showPlantUmlPreview = isPlantUmlLanguage(language) && Boolean(source.trim())
   const completion = usePlateCodeCompletion({
     editor: props.editor,
     language: showMermaidEditor ? '' : language,
@@ -75,6 +77,20 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
 
   return (
     <PlateElement {...props} as="div" className="group/code relative my-4">
+      {showPlantUmlPreview ? (
+        <Suspense
+          fallback={
+            <div contentEditable={false} role="status">
+              {t('preview.mermaidLoading')}
+            </div>
+          }
+        >
+          <PlantUmlPreview
+            source={source}
+            onActivateEdit={readOnly ? undefined : () => setEditingExpanded(true)}
+          />
+        </Suspense>
+      ) : null}
       {showMermaidPreview ? (
         <MermaidPreview
           onActivateEdit={readOnly ? undefined : activateMermaidSource}
@@ -113,7 +129,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
         )}
         data-line-numbers={lineNumbers}
         data-wrap={wrap}
-        hidden={showMermaidPreview || showMermaidEditor}
+        hidden={showMermaidPreview || showMermaidEditor || showPlantUmlPreview}
         onCompositionEnd={completion.onCompositionEnd}
         onCompositionStart={completion.onCompositionStart}
         onInput={completion.onInput}
@@ -122,7 +138,7 @@ export const CodeBlockElement = (props: PlateElementProps<CodeBlockNode>) => {
       >
         <code data-language={language || undefined}>{props.children}</code>
       </pre>
-      {!mermaidLanguage ? (
+      {!mermaidLanguage && !showPlantUmlPreview ? (
         <CodeBlockToolbar
           copyStatus={copyStatus}
           labels={{

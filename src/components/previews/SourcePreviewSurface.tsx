@@ -1,4 +1,11 @@
-import { useState, type MouseEvent, type PointerEvent, type SyntheticEvent } from 'react'
+import {
+  lazy,
+  Suspense,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type SyntheticEvent,
+} from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 import AppAlert from '@/components/AppAlert'
@@ -14,6 +21,9 @@ import { fsApi } from '@/services/fsApi'
 import { MAX_WORKSPACE_TEXT_PREVIEW_BYTES } from '@/types/workspaceTextPreview'
 import { useLayoutContext } from '@/pages/useLayoutContext'
 import { readPreviewTextAsset } from '@/services/readPreviewAsset'
+import { isPlantUmlFilePath } from '@/logic/fileTypes'
+
+const PlantUmlPreview = lazy(() => import('@/components/previews/PlantUmlPreview'))
 
 export const MAX_SOURCE_PREVIEW_BYTES = MAX_WORKSPACE_TEXT_PREVIEW_BYTES
 export const MAX_SOURCE_PREVIEW_CHARACTERS = 200_000
@@ -118,6 +128,14 @@ const SourcePreviewSurface = ({
 
   const data = sourceQuery.data
   if (!data) return null
+
+  if (isPlantUmlFilePath(path) && !data.truncated && !graphPresentation) {
+    return (
+      <Suspense fallback={<PreviewLoadingFallback label={t('preview.loading')} />}>
+        <PlantUmlPreview source={data.content} />
+      </Suspense>
+    )
+  }
 
   const copyLabel =
     currentCopyStatus === 'copied'

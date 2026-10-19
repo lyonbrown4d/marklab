@@ -5,7 +5,11 @@ import EditorPaneFallback from '@/pages/EditorPaneFallback'
 import { useDocumentStats } from '@/pages/useDocumentStats'
 import { EditorDocumentStatus, type EditorCursorPosition } from '@/components/EditorDocumentStatus'
 import type { EditorChangeHandler } from '@/types/editorChanges'
+import { isPlantUmlFilePath } from '@/logic/fileTypes'
+import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n/useI18n'
 const SourceCodeEditor = lazy(() => import('@/components/SourceCodeEditor'))
+const PlantUmlPreview = lazy(() => import('@/components/previews/PlantUmlPreview'))
 type SourceCodePageProps = {
   activePath: string | null
   workspaceKey: string
@@ -28,8 +32,12 @@ const SourceCodePage = ({
   showStatusBar,
   readOnly,
 }: SourceCodePageProps) => {
+  const { t } = useI18n()
   const keepAlive = useKeepAliveContext()
   const interactionActive = !keepAlive.cacheKey || keepAlive.active
+  const [previewPath, setPreviewPath] = useState<string | null>(null)
+  const plantuml = isPlantUmlFilePath(activePath ?? '')
+  const preview = plantuml && Boolean(activePath) && previewPath === activePath
   const [cursor, setCursor] = useState<{
     path: string | null
     position: EditorCursorPosition | null
@@ -53,7 +61,28 @@ const SourceCodePage = ({
   )
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="editor-stage min-h-0 flex-1 overflow-hidden">
+      {plantuml ? (
+        <div className="flex shrink-0 justify-end border-b border-border px-3 py-1">
+          <Button
+            aria-label={t('preview.plantumlTitle')}
+            aria-pressed={preview}
+            onClick={() => setPreviewPath(preview ? null : activePath)}
+            size="sm"
+            variant="ghost"
+            type="button"
+          >
+            {preview ? t('preview.plantumlEditSource') : t('preview.plantumlTitle')}
+          </Button>
+        </div>
+      ) : null}
+      {preview && interactionActive ? (
+        <div className="min-h-0 flex-1 overflow-auto p-4">
+          <Suspense fallback={<EditorPaneFallback />}>
+            <PlantUmlPreview source={value} />
+          </Suspense>
+        </div>
+      ) : null}
+      <div hidden={preview} className="editor-stage min-h-0 flex-1 overflow-hidden">
         <div className="editor-paper relative h-full w-full overflow-hidden">
           <div className="motion-view h-full">
             <Suspense fallback={<EditorPaneFallback />}>
@@ -67,12 +96,13 @@ const SourceCodePage = ({
                 onOpenFileView={onOpenFileView}
                 onCursorChange={showStatusBar ? onCursorChange : undefined}
                 readOnly={readOnly}
+                interactionActive={interactionActive && !preview}
               />
             </Suspense>
           </div>
         </div>
       </div>
-      {showStatusBar && activePath && (
+      {showStatusBar && activePath && !preview && (
         <EditorDocumentStatus
           activePath={activePath}
           viewMode="source"

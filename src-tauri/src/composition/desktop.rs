@@ -16,6 +16,7 @@ use crate::{
     history::HistoryStore,
     language::LanguageService,
     link_preview::LinkPreviewService,
+    plantuml::PlantUmlService,
     platform::{clipboard::RichClipboard, save_paths::SavePathGrants, updates::UpdateService},
     settings::SettingsStore,
     sync::SyncService,
@@ -57,6 +58,8 @@ static_module! {
         #[scope(root)]
         language: LanguageService = factories::defaults::<LanguageService>();
         #[scope(root)]
+        plantuml: PlantUmlService = factories::defaults::<PlantUmlService>();
+        #[scope(root)]
         web_tabs: WebTabs = factories::defaults::<WebTabs>();
         #[scope(root)]
         terminal: TerminalState = factories::defaults::<TerminalState>();
@@ -85,6 +88,7 @@ pub(crate) struct DesktopServices {
     assets: AssetService,
     git: GitState,
     language: LanguageService,
+    plantuml: PlantUmlService,
     web_tabs: WebTabs,
     terminal: TerminalState,
     save_paths: SavePathGrants,
@@ -121,6 +125,7 @@ impl DesktopServices {
         let preview = graph.preview().await.map_err(graph_error)?;
         let assets = graph.assets().await.map_err(graph_error)?;
         let language = graph.language().map_err(graph_error)?;
+        let plantuml = graph.plantuml().map_err(graph_error)?;
         let web_tabs = graph.web_tabs().map_err(graph_error)?;
         let terminal = graph.terminal().map_err(graph_error)?;
         let save_paths = graph.save_paths().map_err(graph_error)?;
@@ -145,6 +150,7 @@ impl DesktopServices {
             assets: take(assets)?,
             git: take(git)?,
             language: take(language)?,
+            plantuml: take(plantuml)?,
             web_tabs: take(web_tabs)?,
             terminal: take(terminal)?,
             save_paths: take(save_paths)?,
@@ -168,6 +174,7 @@ impl DesktopServices {
         app.manage(self.assets);
         app.manage(self.git);
         app.manage(self.language);
+        app.manage(self.plantuml);
         app.manage(self.web_tabs);
         app.manage(self.terminal);
         app.manage(self.save_paths);

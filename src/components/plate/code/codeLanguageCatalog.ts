@@ -25,6 +25,7 @@ export const codeLanguageCatalog: readonly CodeLanguageOption[] = [
   { id: 'markdown', label: 'Markdown', aliases: ['md'] },
   { id: 'mermaid', label: 'Mermaid', aliases: ['mmd'] },
   { id: 'php', label: 'PHP' },
+  { id: 'plantuml', label: 'PlantUML', aliases: ['puml'], monacoId: 'plaintext' },
   { id: 'powershell', label: 'PowerShell', aliases: ['ps1'] },
   { id: 'python', label: 'Python', aliases: ['py'] },
   { id: 'ruby', label: 'Ruby', aliases: ['rb'] },

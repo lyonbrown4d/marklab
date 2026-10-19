@@ -16,6 +16,9 @@ describe('documentAdapters', () => {
     expect(documentAdapterForPath('src/widget.TSX')?.kind).toBe('source')
     expect(documentAdapterForPath('data/report.csv')?.kind).toBe('source')
     expect(documentAdapterForPath('data/report.tsv')?.kind).toBe('source')
+    for (const extension of ['puml', 'plantuml', 'pu', 'wsd', 'iuml']) {
+      expect(documentAdapterForPath(`diagrams/schema.${extension}`)?.kind).toBe('source')
+    }
   })
 
   it('keeps source preview support on a controlled extension allowlist', () => {

@@ -28,6 +28,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
             crate::analysis::commands::knowledge_engine_workspace_status,
             crate::analysis::commands::knowledge_engine_workspaces,
             crate::assets::assets_issue_capability,
+            crate::plantuml::commands::plantuml_render,
+            crate::plantuml::commands::plantuml_cancel,
             crate::assets::markdown::fs_import_markdown_asset,
             crate::assets::markdown::fs_import_markdown_asset_bytes,
             crate::assets::markdown::fs_resolve_markdown_asset,

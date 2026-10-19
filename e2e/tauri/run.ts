@@ -26,6 +26,12 @@ try {
     '# Native memory\n\nalpha-only memory workspace.\n',
   )
   await fs.writeFile(path.join(fixture, '.marklab-e2e'), 'native-wdio-v1\n')
+  const diagram = '@startuml\nAlice -> Bob: native-plantuml\n@enduml\n'
+  await fs.writeFile(path.join(fixture, 'alpha', 'Diagram.puml'), diagram)
+  await fs.writeFile(
+    path.join(fixture, 'alpha', 'Diagram.md'),
+    `# Diagram\n\n\`\`\`plantuml\n${diagram}\`\`\`\n`,
+  )
   process.env.MARKLAB_TAURI_E2E_ROOT = fixture
   process.env.MARKLAB_E2E_DATA_DIR = path.join(fixture, 'data')
   process.env.MARKLAB_E2E_CACHE_DIR = path.join(fixture, 'cache')
@@ -70,7 +76,13 @@ try {
       return true
     })
   }
-  const launcher = new Launcher(path.join(repository, 'wdio.tauri.conf.ts'), {})
+  const selectedSpecs = process.argv.slice(2)
+  const launcher = new Launcher(
+    path.join(repository, 'wdio.tauri.conf.ts'),
+    selectedSpecs.length
+      ? { spec: selectedSpecs.map((spec) => path.resolve(repository, spec)) }
+      : {},
+  )
   exitCode = (await launcher.run()) ?? 1
 } catch (error) {
   console.error(error)

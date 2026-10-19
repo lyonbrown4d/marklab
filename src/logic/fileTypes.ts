@@ -42,6 +42,9 @@ export const isPreviewableFilePath = (value: string): boolean => getPreviewFileK
 export const isSourcePreviewFilePath = (value: string): boolean =>
   getPreviewFileKind(value) === 'source'
 
+export const isPlantUmlFilePath = (value: string): boolean =>
+  ['puml', 'plantuml', 'pu', 'wsd'].includes(fileExtension(value))
+
 export const isPreviewOnlyFilePath = (value: string): boolean => {
   const kind = getPreviewFileKind(value)
   return kind !== null && kind !== 'source'

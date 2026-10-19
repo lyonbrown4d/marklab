@@ -41,6 +41,7 @@ type SourceCodeEditorProps = {
   onOpenFileView?: (path: string, view: FileViewKind) => void
   onCursorChange?: (position: EditorCursorPosition | null) => void
   readOnly?: boolean
+  interactionActive?: boolean
 }
 
 const SourceCodeEditor = ({
@@ -53,6 +54,7 @@ const SourceCodeEditor = ({
   onOpenFileView,
   onCursorChange,
   readOnly = false,
+  interactionActive,
 }: SourceCodeEditorProps) => {
   const { t } = useI18n()
   const darkMode = useDarkMode()
@@ -272,6 +274,7 @@ const SourceCodeEditor = ({
   return (
     <SourceCodeEditorSurface
       activePath={activePath}
+      interactionActive={interactionActive}
       workspaceKey={workspaceKey}
       darkMode={darkMode}
       errorMessage={

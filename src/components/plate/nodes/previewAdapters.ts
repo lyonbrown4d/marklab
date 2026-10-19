@@ -13,6 +13,9 @@ const SCHEME = /^([a-z][a-z\d+.-]*):/i
 export const isMermaidLanguage = (language: string) =>
   MERMAID_LANGUAGES.has(language.trim().toLowerCase())
 
+export const isPlantUmlLanguage = (language: string) =>
+  ['plantuml', 'puml'].includes(language.trim().toLowerCase())
+
 export const platePreviewKindForTarget = (target: string) => embeddedPreviewKindForTarget(target)
 
 export type PlateEmbeddedPreviewLink = {

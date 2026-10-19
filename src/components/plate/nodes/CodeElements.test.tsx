@@ -41,6 +41,16 @@ vi.mock('@/components/previews/MermaidPreview', () => ({
     </div>
   ),
 }))
+vi.mock('@/components/previews/PlantUmlPreview', () => ({
+  default: ({ onActivateEdit, source }: { onActivateEdit?: () => void; source: string }) => (
+    <div data-testid="plantuml-preview">
+      {source}
+      <button onClick={onActivateEdit} disabled={!onActivateEdit}>
+        Edit PlantUML source
+      </button>
+    </div>
+  ),
+}))
 vi.mock('@/components/previews/MermaidCodeEditor', () => ({
   default: ({
     onBlur,
@@ -188,6 +198,22 @@ describe('CodeBlockElement language intelligence', () => {
 
     expect(container.querySelector('code[data-language="typescript"]')).toBeVisible()
     expect(screen.queryByText('Mermaid preview')).not.toBeInTheDocument()
+  })
+
+  it('renders PlantUML fences and applies source edits as one undoable change', async () => {
+    const source = '@startuml\nAlice -> Bob\n@enduml'
+    const { editor, container } = renderCodeBlock({ language: 'puml', source })
+    await screen.findByTestId('plantuml-preview')
+    expect(container.querySelector('code[data-language="puml"]')).not.toBeVisible()
+    const original = structuredClone(editor.children)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit PlantUML source' }))
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Expanded code editor' }), {
+      target: { value: '@startuml\nAlice -> Carol\n@enduml' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(readPlateCodeSource(editor, [0])).toContain('Carol')
+    editor.tf.undo()
+    expect(editor.children).toEqual(original)
   })
 
   it('changes the fenced-code language without changing its source', async () => {

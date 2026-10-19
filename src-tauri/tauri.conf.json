@@ -33,6 +33,11 @@
         "ext": ["md", "markdown"],
         "name": "Markdown Document",
         "role": "Editor"
+      },
+      {
+        "ext": ["puml", "plantuml", "pu", "wsd", "iuml"],
+        "name": "PlantUML Document",
+        "role": "Editor"
       }
     ],
     "macOS": {
