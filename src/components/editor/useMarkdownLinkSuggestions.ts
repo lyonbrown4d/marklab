@@ -21,7 +21,7 @@ export const useMarkdownLinkSuggestions = ({
   client,
   enabled,
   query,
-}: UseMarkdownLinkSuggestionsOptions): MarkdownLinkSuggestion[] => {
+}: UseMarkdownLinkSuggestionsOptions) => {
   const sessionRef = useRef<ReturnType<typeof createMarkdownLinkCompletionSession> | null>(null)
   const requestRef = useRef(0)
   const [result, setResult] = useState<{
@@ -29,6 +29,7 @@ export const useMarkdownLinkSuggestions = ({
     client: MarkdownLinkCompletionClient
     query: string
     suggestions: MarkdownLinkSuggestion[]
+    failed: boolean
   } | null>(null)
 
   useEffect(() => {
@@ -58,26 +59,28 @@ export const useMarkdownLinkSuggestions = ({
         .complete(query)
         .then((next) => {
           if (requestRef.current === request) {
-            setResult({ activePath, client, query, suggestions: next })
+            setResult({ activePath, client, query, suggestions: next, failed: false })
           }
         })
         .catch((error: unknown) => {
           if (requestRef.current !== request) return
-          setResult({ activePath, client, query, suggestions: [] })
+          setResult({ activePath, client, query, suggestions: [], failed: true })
           console.warn('Failed to load Markdown link suggestions', error)
         })
     }, COMPLETION_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [activePath, client, enabled, query])
 
-  if (
-    !enabled ||
-    !client ||
-    result?.activePath !== activePath ||
-    result.client !== client ||
-    result.query !== query
-  ) {
-    return []
+  if (!enabled || !client) return { suggestions: [], status: 'disabled' as const }
+  if (result?.activePath !== activePath || result.client !== client || result.query !== query) {
+    return { suggestions: [], status: 'loading' as const }
   }
-  return result.suggestions
+  return {
+    suggestions: result.suggestions,
+    status: result.failed
+      ? ('error' as const)
+      : result.suggestions.length
+        ? ('ready' as const)
+        : ('empty' as const),
+  }
 }

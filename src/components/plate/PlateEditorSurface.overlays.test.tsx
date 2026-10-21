@@ -93,10 +93,10 @@ describe('PlateEditorSurface overlay lifecycle', () => {
     const editor = ref.current!.getEditor()
     editor.tf.select(editor.api.range([])!)
 
-    expect(ref.current?.openLinkDialog()).toBe(true)
+    expect(ref.current?.openLinkInput()).toBe(true)
 
     editor.selection = null
-    expect(ref.current?.openLinkDialog()).toBe(false)
+    expect(ref.current?.openLinkInput()).toBe(false)
   })
 
   it('invalidates open slash UI when a cached editor becomes inactive', () => {
@@ -143,8 +143,8 @@ describe('PlateEditorSurface overlay lifecycle', () => {
     const scrollListener = addWindowListener.mock.calls.find(([type]) => type === 'scroll')?.[1]
     expect(scrollListener).toBeTypeOf('function')
 
-    act(() => activeController?.urlDialog.open(request))
-    expect(overlayControllers.get('first.md')?.urlDialog.request).toBe(request)
+    act(() => activeController?.urlInput.open(request))
+    expect(overlayControllers.get('first.md')?.urlInput.request).toBe(request)
 
     view.rerender(<SurfacePair activePath="second.md" firstRef={firstRef} firstValue="/head" />)
 
@@ -153,7 +153,7 @@ describe('PlateEditorSurface overlay lifecycle', () => {
 
     view.rerender(<SurfacePair activePath="first.md" firstRef={firstRef} firstValue="/head" />)
     expect(screen.getByRole('toolbar', { name: 'Formatting first.md' })).toBeInTheDocument()
-    expect(overlayControllers.get('first.md')?.urlDialog.request).toBeNull()
+    expect(overlayControllers.get('first.md')?.urlInput.request).toBeNull()
     expect(overlayControllers.get('first.md')?.menu.open).toBe(false)
   })
 
@@ -167,14 +167,14 @@ describe('PlateEditorSurface overlay lifecycle', () => {
     } as unknown as PlateSlashUrlInsertionRequest
     const view = render(<SurfacePair activePath="first.md" />)
 
-    act(() => overlayControllers.get('first.md')?.urlDialog.open(request))
-    expect(overlayControllers.get('first.md')?.urlDialog.request).toBe(request)
+    act(() => overlayControllers.get('first.md')?.urlInput.open(request))
+    expect(overlayControllers.get('first.md')?.urlInput.request).toBe(request)
 
     view.rerender(<SurfacePair activePath="first.md" firstContentVisible={false} />)
     expect(invalidate).toHaveBeenCalledOnce()
 
     view.rerender(<SurfacePair activePath="first.md" />)
-    expect(overlayControllers.get('first.md')?.urlDialog.request).toBeNull()
+    expect(overlayControllers.get('first.md')?.urlInput.request).toBeNull()
     expect(overlayControllers.get('first.md')?.menu.open).toBe(false)
   })
 })

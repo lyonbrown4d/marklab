@@ -1,4 +1,5 @@
 import type { PlateEditor } from 'platejs/react'
+import { createPlateInsertionAnchor } from '@/components/plate/selection/plateInsertionAnchor'
 import type {
   PlateSlashTrigger,
   PlateSlashUrlInsertionRequest,
@@ -26,6 +27,7 @@ export const capturePlateSlashUrlInsertion = (
   }
 
   return {
+    anchor: createPlateInsertionAnchor(editor, target),
     initialText: '',
     kind,
     invalidate: () => {
@@ -44,22 +46,24 @@ export const capturePlateSlashUrlInsertion = (
       const destination = url.trim()
       if (!destination) throw new Error('A URL is required')
       if (isUnsafeDestination(destination)) throw new Error('This URL scheme is not allowed')
-      editor.tf.select(takeTarget())
-      editor.tf.delete()
-      if (kind === 'link') {
-        editor.tf.insertNodes({
-          children: [{ text: text.trim() || destination }],
-          type: 'a',
-          url: destination,
-        })
-      } else {
-        editor.tf.insertNodes({
-          alt: text.trim(),
-          children: [{ text: '' }],
-          type: 'img',
-          url: destination,
-        })
-      }
+      editor.tf.withNewBatch(() => {
+        editor.tf.select(takeTarget())
+        editor.tf.delete()
+        if (kind === 'link') {
+          editor.tf.insertNodes({
+            children: [{ text: text.trim() || destination }],
+            type: 'a',
+            url: destination,
+          })
+        } else {
+          editor.tf.insertNodes({
+            alt: text.trim(),
+            children: [{ text: '' }],
+            type: 'img',
+            url: destination,
+          })
+        }
+      })
       inserted = true
     },
   }

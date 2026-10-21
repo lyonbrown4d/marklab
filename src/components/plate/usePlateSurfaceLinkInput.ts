@@ -3,14 +3,18 @@ import type { PlateEditor } from 'platejs/react'
 import { capturePlateSelectionLinkInsertion } from '@/components/plate/selection/plateSelectionLinkInsertion'
 import { capturePlateSlashUrlInsertion } from '@/components/plate/slash'
 
-type PlateUrlDialog = {
+type PlateUrlInput = {
   open: (request: NonNullable<ReturnType<typeof capturePlateSlashUrlInsertion>>) => void
 }
 
-export const usePlateSurfaceLinkDialog = (editor: PlateEditor, urlDialog: PlateUrlDialog) =>
+export const usePlateSurfaceLinkInput = (
+  editor: PlateEditor,
+  urlInput: PlateUrlInput,
+  canEdit: () => boolean,
+) =>
   useCallback(
     (targetEditor: PlateEditor = editor) => {
-      if (!targetEditor.selection) return false
+      if (!canEdit() || !targetEditor.selection) return false
       const request =
         capturePlateSelectionLinkInsertion(targetEditor) ??
         capturePlateSlashUrlInsertion(targetEditor, 'link', {
@@ -18,8 +22,8 @@ export const usePlateSurfaceLinkDialog = (editor: PlateEditor, urlDialog: PlateU
           range: targetEditor.selection,
           slashText: '',
         })
-      urlDialog.open(request)
+      urlInput.open(request)
       return true
     },
-    [editor, urlDialog],
+    [canEdit, editor, urlInput],
   )

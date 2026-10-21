@@ -22,7 +22,7 @@ type PlateEditorDomEventsOptions = {
   editor: PlateEditor
   flushSnapshot: () => void
   onSlashKeyDown: PlateSlashCommandsController['onKeyDown']
-  openLinkDialog: () => boolean
+  openLinkInput: () => boolean
   pickAndImportImage: () => unknown
   queueSnapshot: () => void
   readOnly: boolean
@@ -38,7 +38,7 @@ export const usePlateEditorDomEvents = ({
   editor,
   flushSnapshot,
   onSlashKeyDown,
-  openLinkDialog,
+  openLinkInput,
   pickAndImportImage,
   queueSnapshot,
   readOnly,
@@ -63,7 +63,7 @@ export const usePlateEditorDomEvents = ({
       if (!onSlashKeyDown(event)) {
         handlePlateEditorShortcut(editor, event, shortcutOverrides, {
           onImageImport: () => void pickAndImportImage(),
-          onLinkInsert: openLinkDialog,
+          onLinkInsert: openLinkInput,
         })
       }
     }
@@ -123,7 +123,7 @@ export const usePlateEditorDomEvents = ({
     editor,
     flushSnapshot,
     onSlashKeyDown,
-    openLinkDialog,
+    openLinkInput,
     pickAndImportImage,
     queueSnapshot,
     readOnly,

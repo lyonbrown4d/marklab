@@ -199,7 +199,7 @@ describe('usePlateSlashCommands', () => {
 
     act(() => result.current.onKeyDown(keyboardEvent('Enter')))
 
-    await waitFor(() => expect(result.current.urlDialog.request?.kind).toBe('link'))
+    await waitFor(() => expect(result.current.urlInput.request?.kind).toBe('link'))
     expect(editor.api.string([])).toBe('/link')
   })
 

@@ -1,6 +1,6 @@
 export { PlateSlashMenu } from '@/components/plate/slash/PlateSlashMenu'
 export { PlateSlashOverlays } from '@/components/plate/slash/PlateSlashOverlays'
-export { PlateSlashUrlDialog } from '@/components/plate/slash/PlateSlashUrlDialog'
+export { PlateSlashUrlInput } from '@/components/plate/slash/PlateSlashUrlInput'
 export {
   createPlateSlashCommands,
   filterPlateSlashCommands,
@@ -9,7 +9,7 @@ export {
 } from '@/components/plate/slash/plateSlashCommands'
 export { capturePlateSlashUrlInsertion } from '@/components/plate/slash/plateSlashUrlInsertion'
 export { usePlateSlashCommands } from '@/components/plate/slash/usePlateSlashCommands'
-export { usePlateSlashUrlDialog } from '@/components/plate/slash/usePlateSlashUrlDialog'
+export { usePlateSlashUrlInput } from '@/components/plate/slash/usePlateSlashUrlInput'
 export type {
   PlateSlashCommand,
   PlateSlashCommandLabels,

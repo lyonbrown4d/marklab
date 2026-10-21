@@ -44,6 +44,7 @@ export type PlateSlashTrigger = {
 export type PlateSlashUrlValues = { text: string; url: string }
 
 export type PlateSlashUrlInsertionRequest = {
+  anchor?: { getBoundingClientRect: () => DOMRect }
   initialText: string
   insert: (values: PlateSlashUrlValues) => void
   invalidate: () => void

@@ -23,7 +23,7 @@ vi.mock('@/components/plate/PlateEditorSurface', () => ({
         focus: vi.fn(),
         getEditor: () => null as never,
         getMarkdown: () => Promise.resolve(''),
-        openLinkDialog: () => false,
+        openLinkInput: () => false,
       }))
       return <div data-testid="mock-plate-surface">Partially rendered document</div>
     },

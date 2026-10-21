@@ -17,7 +17,7 @@ import type {
   RunPlateSlashCommandOptions,
 } from '@/components/plate/slash/types'
 import { usePlateSlashDeferredTasks } from '@/components/plate/slash/usePlateSlashDeferredTasks'
-import { usePlateSlashUrlDialog } from '@/components/plate/slash/usePlateSlashUrlDialog'
+import { usePlateSlashUrlInput } from '@/components/plate/slash/usePlateSlashUrlInput'
 import { usePlateSlashCommandHistory } from '@/components/plate/slash/usePlateSlashCommandHistory'
 import { isImeKeyboardEvent } from '@/logic/ime'
 
@@ -81,7 +81,7 @@ export const usePlateSlashCommands = ({
   const [active, setActive] = useState<ActiveSlash | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const commandHistory = usePlateSlashCommandHistory()
-  const urlDialog = usePlateSlashUrlDialog(documentIdentity)
+  const urlInput = usePlateSlashUrlInput(documentIdentity)
   const {
     cancelAnimationFrameTask,
     cancelPending,
@@ -115,15 +115,15 @@ export const usePlateSlashCommands = ({
     setActive(null)
     setSelectedIndex(0)
   }, [cancelPending])
-  const invalidateUrlDialog = urlDialog.invalidate
+  const invalidateUrlInput = urlInput.invalidate
 
   useEffect(() => {
     if (!interactionActive) return
     return () => {
       dismiss()
-      invalidateUrlDialog()
+      invalidateUrlInput()
     }
-  }, [dismiss, interactionActive, invalidateUrlDialog])
+  }, [dismiss, interactionActive, invalidateUrlInput])
 
   useEditorSuggestionAria({ activeOptionId, editor, menuId, open: menuOpen })
 
@@ -207,7 +207,7 @@ export const usePlateSlashCommands = ({
         onCalendarFileCreate,
         onError,
         onImageImport,
-        onUrlInsert: urlDialog.open,
+        onUrlInsert: urlInput.open,
         trigger,
       })
       return true
@@ -221,7 +221,7 @@ export const usePlateSlashCommands = ({
       onCalendarFileCreate,
       onError,
       onImageImport,
-      urlDialog.open,
+      urlInput.open,
     ],
   )
 
@@ -293,7 +293,7 @@ export const usePlateSlashCommands = ({
     },
     onKeyDown,
     syncFromEditor,
-    urlDialog,
+    urlInput,
   }
 }
 

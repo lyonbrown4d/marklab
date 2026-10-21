@@ -1,6 +1,7 @@
 import type { PlateEditor } from 'platejs/react'
 import { upsertLink } from '@platejs/link'
 import type { PlateSlashUrlInsertionRequest } from '@/components/plate/slash'
+import { createPlateInsertionAnchor } from '@/components/plate/selection/plateInsertionAnchor'
 
 const isUnsafeDestination = (destination: string) => {
   const normalized = [...destination].filter((character) => character.charCodeAt(0) > 32).join('')
@@ -24,6 +25,7 @@ export const capturePlateSelectionLinkInsertion = (
   }
 
   return {
+    anchor: createPlateInsertionAnchor(editor, target),
     initialText,
     kind: 'link',
     invalidate: () => {
@@ -41,11 +43,14 @@ export const capturePlateSelectionLinkInsertion = (
       if (!destination || isUnsafeDestination(destination)) {
         throw new Error('This URL is not allowed')
       }
-      editor.tf.select(takeTarget())
-      upsertLink(editor, {
-        skipValidation: true,
-        text: text.trim() || initialText || destination,
-        url: destination,
+      editor.tf.withNewBatch(() => {
+        editor.tf.select(takeTarget())
+        upsertLink(editor, {
+          skipValidation: true,
+          ...(text === initialText ? {} : { text: text.trim() || initialText || destination }),
+          url: destination,
+        })
+        editor.tf.collapse({ edge: 'end' })
       })
       inserted = true
     },

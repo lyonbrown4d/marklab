@@ -25,7 +25,7 @@ import { usePlateEditorDomEvents } from '@/components/plate/usePlateEditorDomEve
 import { useConfiguredPlateEditor } from '@/components/plate/useConfiguredPlateEditor'
 import { usePlateEditorChangeHandlers } from '@/components/plate/usePlateEditorChangeHandlers'
 import { usePlateSurfaceDecorations } from '@/components/plate/usePlateSurfaceDecorations'
-import { usePlateSurfaceLinkDialog } from '@/components/plate/usePlateSurfaceLinkDialog'
+import { usePlateSurfaceLinkInput } from '@/components/plate/usePlateSurfaceLinkInput'
 import { useCachedEditorInteractionGate } from '@/components/useCachedEditorInteractionGate'
 import {
   serializePlateMarkdown,
@@ -136,7 +136,11 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       onImageImport: onImageImport ?? pickAndImportImage,
     })
     const { onKeyDown: onSlashKeyDown, syncFromEditor: syncSlashFromEditor } = slash
-    const openLinkDialog = usePlateSurfaceLinkDialog(editor, slash.urlDialog)
+    const openLinkInput = usePlateSurfaceLinkInput(
+      editor,
+      slash.urlInput,
+      () => !readOnly && isEditorReady(),
+    )
     const scheduleTypewriterScroll = usePlateTypewriterScroll({
       editableRef,
       enabled: typewriterScroll && !readOnly,
@@ -186,7 +190,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       editor,
       flushSnapshot,
       onSlashKeyDown,
-      openLinkDialog,
+      openLinkInput,
       pickAndImportImage,
       queueSnapshot,
       readOnly,
@@ -200,7 +204,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
       },
       getEditor: () => editor,
       getMarkdown,
-      openLinkDialog,
+      openLinkInput,
     }))
 
     const { handleSelectionChange, handleValueChange } = usePlateEditorChangeHandlers({
@@ -266,7 +270,7 @@ const PlateEditorSurfaceImpl = forwardRef<PlateEditorSurfaceHandle, PlateEditorS
               editor={editor}
               interactionActive={interactionActive}
               labels={slashLabels}
-              onLink={openLinkDialog}
+              onLink={openLinkInput}
               readOnly={readOnly}
               selectionLabels={selectionToolbarLabels}
               slash={slash}

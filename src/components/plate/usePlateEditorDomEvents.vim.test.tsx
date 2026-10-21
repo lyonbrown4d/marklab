@@ -37,7 +37,7 @@ describe('nested Vim editor keyboard priority', () => {
         flushSnapshot: vi.fn(),
         queueSnapshot: vi.fn(),
         onSlashKeyDown: slashKeyDown,
-        openLinkDialog: () => false,
+        openLinkInput: () => false,
         pickAndImportImage: vi.fn(),
         shortcutOverrides: {},
       }),

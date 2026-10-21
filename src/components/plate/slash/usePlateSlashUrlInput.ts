@@ -4,10 +4,11 @@ import type {
   PlateSlashUrlValues,
 } from '@/components/plate/slash/types'
 
-export const usePlateSlashUrlDialog = (documentIdentity: string | null | undefined) => {
+export const usePlateSlashUrlInput = (documentIdentity: string | null | undefined) => {
   const pendingRef = useRef<PlateSlashUrlInsertionRequest | null>(null)
   const [request, setRequest] = useState<PlateSlashUrlInsertionRequest | null>(null)
   const [failed, setFailed] = useState(false)
+  const [requestId, setRequestId] = useState(0)
 
   const invalidate = useCallback(() => {
     pendingRef.current?.invalidate()
@@ -23,11 +24,12 @@ export const usePlateSlashUrlDialog = (documentIdentity: string | null | undefin
     pendingRef.current = next
     setFailed(false)
     setRequest(next)
+    setRequestId((current) => current + 1)
   }, [])
 
-  const cancel = useCallback((target: PlateSlashUrlInsertionRequest) => {
+  const cancel = useCallback((target: PlateSlashUrlInsertionRequest, restoreFocus = true) => {
     if (pendingRef.current !== target) return
-    target.restoreFocus()
+    if (restoreFocus) target.restoreFocus()
     target.invalidate()
     pendingRef.current = null
     setRequest(null)
@@ -46,12 +48,15 @@ export const usePlateSlashUrlDialog = (documentIdentity: string | null | undefin
         pendingRef.current = target
         setFailed(true)
         console.error('Failed to insert Plate slash URL', error)
+        return
       }
+      target.restoreFocus()
+      target.invalidate()
     },
     [],
   )
 
-  return { cancel, failed, invalidate, open, request, submit }
+  return { cancel, failed, invalidate, open, request, requestId, submit }
 }
 
-export type PlateSlashUrlDialogState = ReturnType<typeof usePlateSlashUrlDialog>
+export type PlateSlashUrlInputState = ReturnType<typeof usePlateSlashUrlInput>

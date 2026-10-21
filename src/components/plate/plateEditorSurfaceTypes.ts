@@ -9,7 +9,7 @@ export type PlateEditorSurfaceHandle = {
   focus: () => void
   getEditor: () => PlateEditor
   getMarkdown: () => Promise<string>
-  openLinkDialog: () => boolean
+  openLinkInput: () => boolean
 }
 
 export type PlateEditorSurfaceProps = {

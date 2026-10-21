@@ -30,4 +30,25 @@ describe('capturePlateSelectionLinkInsertion', () => {
     const request = capturePlateSelectionLinkInsertion(createEditor())
     expect(() => request?.insert({ text: 'Bad', url: 'javascript:alert(1)' })).toThrow()
   })
+
+  it('preserves the exact selected text and its formatting', () => {
+    const editor = createPlateEditor({
+      plugins: createPlateEditorPlugins(),
+      value: [
+        { type: 'p', children: [{ text: ' ' }, { text: 'Guide', bold: true }, { text: ' ' }] },
+      ],
+    })
+    editor.tf.select(editor.api.range([])!)
+    const request = capturePlateSelectionLinkInsertion(editor)!
+    request.insert({ text: request.initialText, url: './guide.md' })
+    expect(editor.api.string([])).toBe(' Guide ')
+    expect(editor.children[0]).toMatchObject({
+      children: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'a',
+          children: expect.arrayContaining([{ text: 'Guide', bold: true }]),
+        }),
+      ]),
+    })
+  })
 })

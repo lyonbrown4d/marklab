@@ -1,6 +1,6 @@
 import type { MarkdownLinkCompletionClient } from '@/components/editor/markdownLinkCompletionSession'
 import { PlateSlashMenu } from '@/components/plate/slash/PlateSlashMenu'
-import { PlateSlashUrlDialog } from '@/components/plate/slash/PlateSlashUrlDialog'
+import { PlateSlashUrlInput } from '@/components/plate/slash/PlateSlashUrlInput'
 import type { PlateSlashCommandsController } from '@/components/plate/slash/usePlateSlashCommands'
 import type { PlateSlashCommandLabels } from '@/components/plate/slash/types'
 
@@ -24,11 +24,12 @@ export const PlateSlashOverlays = ({
       onDismiss={controller.dismiss}
       onSelect={controller.menu.selectCommand}
     />
-    <PlateSlashUrlDialog
+    <PlateSlashUrlInput
+      key={controller.urlInput.requestId}
       activePath={activePath}
       completionClient={completionClient}
       labels={labels}
-      state={controller.urlDialog}
+      state={controller.urlInput}
     />
   </>
 )
